@@ -231,7 +231,8 @@ export function resetStub() {
 	spaces.clear();
 }
 
-const id = (s: Space, prefix: string) => `${prefix}-${++s.seq}`;
+/** Every stub id starts with `stub-`, so the fallback can route follow-up calls on stub plans here. */
+const id = (s: Space, prefix: string) => `stub-${prefix}-${++s.seq}`;
 const actorOf = (ctx: CallContext): Actor => ctx.actor;
 const forbidden = (ctx: CallContext, scope: string) =>
 	!ctx.scopes.includes(scope) ? err('FORBIDDEN', `${ctx.actor.kind} lacks scope ${scope}`) : null;

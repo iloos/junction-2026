@@ -1,7 +1,7 @@
 import { TOOL_NAMES, type DomainError, type Result, type ToolName } from '$lib/core/contracts';
 import type { CallContext, ToolHandlers } from '$lib/core/ports';
 import { createHandlers } from '$lib/core/services/handlers';
-import { createFixturePorts } from '$lib/server/store/fixture-ports';
+import { createDbPorts } from '$lib/server/store/db-ports';
 import { stubHandlers } from './stub-handlers';
 
 type AnyHandler = (ctx: CallContext, input: unknown) => Promise<Result<unknown>>;
@@ -9,6 +9,16 @@ type AnyHandler = (ctx: CallContext, input: unknown) => Promise<Result<unknown>>
 /** core-db marks unfinished slices with this message; those tools fall back to the stub. */
 export function isNotImplemented(e: DomainError): boolean {
 	return e.code === 'PROVIDER_UNAVAILABLE' && e.message.startsWith('not implemented yet');
+}
+
+/** A call that names a stub-made plan or approval must stay in the stub (the real store has no such row). */
+function refersToStub(input: unknown): boolean {
+	if (!input || typeof input !== 'object') return false;
+	const { planId, approvalId } = input as { planId?: unknown; approvalId?: unknown };
+	return (
+		(typeof planId === 'string' && planId.startsWith('stub-')) ||
+		(typeof approvalId === 'string' && approvalId.startsWith('stub-'))
+	);
 }
 
 /**
@@ -22,6 +32,7 @@ export function withStubFallback(real: ToolHandlers, stub: ToolHandlers): ToolHa
 		const r = real[name] as AnyHandler;
 		const s = stub[name] as AnyHandler;
 		out[name] = async (ctx, input) => {
+			if (refersToStub(input)) return s(ctx, input);
 			const res = await r(ctx, input);
 			if (res.ok || !isNotImplemented(res.error)) return res;
 			if (!warned.has(name)) {
@@ -34,17 +45,22 @@ export function withStubFallback(real: ToolHandlers, stub: ToolHandlers): ToolHa
 	return out as unknown as ToolHandlers;
 }
 
-let real: ToolHandlers | null = null;
-/** The ~17.5k-product catalogue loads on first use, not at import. */
-function realHandlers(): ToolHandlers {
-	real ??= createHandlers(createFixturePorts());
+/**
+ * One process-wide store: PGlite in memory with the seed kitchens for `ws-demo`/`run-1` (boot ≈ 1 s,
+ * so it starts on first use and is shared by REST, MCP and the agent).
+ */
+let real: Promise<ToolHandlers> | null = null;
+export function realHandlers(): Promise<ToolHandlers> {
+	real ??= createDbPorts().then(({ ports }) => createHandlers(ports));
+	real.catch(() => (real = null));
 	return real;
 }
 
 const lazyReal = Object.fromEntries(
 	TOOL_NAMES.map((n) => [
 		n,
-		(ctx: CallContext, input: unknown) => (realHandlers()[n] as AnyHandler)(ctx, input)
+		async (ctx: CallContext, input: unknown) =>
+			((await realHandlers())[n] as AnyHandler)(ctx, input)
 	])
 ) as unknown as ToolHandlers;
 

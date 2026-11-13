@@ -178,16 +178,12 @@ describe('stub handlers through the gate (s5 shape)', () => {
 });
 
 describe('real handlers with stub fallback', () => {
-	it('serves quote from the real catalogue and place_order from the stub', async () => {
+	it('serves quote and place_order for real and plan_event from the stub', async () => {
 		const { handlers } = await import('./handlers');
 		const q = await serveTool('quote', ext, { productIds: ['464201', '479999'] }, handlers);
 		if (!q.ok) throw new Error(q.error.message);
-		const v = q.value as {
-			offers: { productId: string; price: { provenance: { source: string } } | null }[];
-			notFound: string[];
-		};
-		expect(v.notFound).toEqual(['479999']);
-		expect(v.offers[0].price?.provenance.source).not.toBe('seed');
+		expect((q.value as { notFound: string[] }).notFound).toEqual(['479999']);
+
 		const p = await serveTool(
 			'place_order',
 			ext,
@@ -199,6 +195,23 @@ describe('real handlers with stub fallback', () => {
 			},
 			handlers
 		);
-		expect(p.ok).toBe(true);
+		if (!p.ok) throw new Error(p.error.message);
+		const planId = (p.value as { plan: { id: string } }).plan.id;
+		expect(planId.startsWith('stub-')).toBe(false);
+		const real = await serveTool('get_plan', ext, { planId }, handlers);
+		expect(real.ok).toBe(true);
+
+		const agent = contextFor('kitchen_agent', 'test-agent', 'test');
+		const ev = await serveTool(
+			'plan_event',
+			agent,
+			{ kitchenId: 'k-hotel', eventId: 'event-xmas-140' },
+			handlers
+		);
+		if (!ev.ok) throw new Error(ev.error.message);
+		const stubPlan = (ev.value as { plan: { id: string } }).plan.id;
+		expect(stubPlan.startsWith('stub-')).toBe(true);
+		const got = await serveTool('get_plan', agent, { planId: stubPlan }, handlers);
+		expect(got.ok).toBe(true);
 	}, 60000);
 });
