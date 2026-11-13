@@ -176,6 +176,8 @@ export const Receipt = z.object({
 	confirmed: z.array(
 		z.object({ productId: ProductId, qty: SalesQty, lotId: z.string().optional() })
 	),
+	/** Terminal (unknown-quantity) lines: ordered, not confirmed; they stay unconfirmed cover. */
+	awaitingSupplier: z.array(z.object({ productId: ProductId, qty: SalesQty })).default([]),
 	at: IsoDateTime,
 	provenance: Provenance
 });

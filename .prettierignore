@@ -18,3 +18,5 @@ bun.lockb
 skills-lock.json
 *.md
 /.mcp.json
+
+drizzle/

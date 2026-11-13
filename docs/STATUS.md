@@ -2,9 +2,17 @@
 
 _The lead rewrites this at each checkpoint. It is the "now": what works, what's next, what bites._
 
-**Updated:** Sat 14 Nov ~02:00 (lead session).
-**State:** concept and foundations complete; scaffold merged on main (SvelteKit 2.70, adapter-node 5.5.8, Dockerfile); **no app code yet**. Next is the contracts commit, then lanes.
-**Works end to end:** nothing yet. **Deployed URL:** none yet.
+**Updated:** Sat 14 Nov ~01:40 (lead session).
+**State:** contracts on main (`cad586d`, D6 implemented: zod types, ports, `ToolHandlers` seam, pure `applyOps`, Drizzle schema + `drizzle/0000_init.sql` with pgvector, PGlite fixture DB). `pnpm check` + server tests green. Evals + hero rescue merged (`6c4c7fe`). Lanes fanned out (owners below).
+**Works end to end:** nothing user-facing yet. **Deployed URL:** none yet; `/healthz` against Aiven PG verified on lane/deploy; Aiven Runtime awaits the user (GitHub connect + `startup-20-512` yes).
+
+**Lanes now (ARCHITECTURE.md lanes table has owned paths):**
+| Lane | Who | Worktree |
+|---|---|---|
+| contracts review → **core-db** (critical path, evals runner, slices: quote → order/approve/commit → plan_event → substitutes) | junc26-8d | `junc26-lanes/core-db` |
+| **deploy** → **ops** (SSE + bus + control room) | junc26-9c | `junc26-lanes/deploy`, `…/ops` |
+| **agent** (auth, tool serving REST/MCP/OpenAPI, Decide/Llm adapters, agent loop; stub handlers until core-db) | lead's background agent | `junc26-lanes/agent` |
+| **kitchen** (chef journey UI on fixture plans, flips to `/api/tools`) | lead's background agent | `junc26-lanes/kitchen` |
 
 **Read these, in order:**
 1. [DECISIONS.md](DECISIONS.md): D1 (Valio), D3 (one container on Aiven, Aiven Postgres), D4 (big scope on the real stack, built in rings 0→3).

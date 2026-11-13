@@ -45,7 +45,11 @@ export interface Catalog {
 /** Simulator: stock truth and scenario overlays (contention, split delivery, cut-off). */
 export interface Simulator {
 	/** Atomic conditional consume at commit (`… where available >= qty`). Runs inside the store transaction. */
-	consume(tx: Tx, productId: ProductId, qty: number): Promise<Result<{ lotId: string }>>;
+	consume(
+		tx: Tx,
+		productId: ProductId,
+		qty: number
+	): Promise<Result<{ lotId: string | null; confirmed: boolean }>>;
 	events(sinceSimTime?: string): SimEvent[];
 }
 
@@ -116,11 +120,11 @@ export interface Store {
 	/** Idempotency: unique per (workspace, caller, key) with a request hash. */
 	idempotency(
 		tx: Tx,
-		k: { workspaceId: string; caller: string; key: string; requestHash: string }
+		k: { workspaceId: string; caller: string; tool: string; key: string; requestHash: string }
 	): Promise<{ status: 'new' } | { status: 'replay'; response: unknown } | { status: 'conflict' }>;
 	rememberResponse(
 		tx: Tx,
-		k: { workspaceId: string; caller: string; key: string },
+		k: { workspaceId: string; caller: string; tool: string; key: string },
 		response: unknown
 	): Promise<void>;
 	/** Locked weekly budget row: returns spent cents for the kitchen/week under the transaction's lock. */

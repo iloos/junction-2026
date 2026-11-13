@@ -14,9 +14,10 @@
 				"id": "prior-1",
 				"committedAt": "2026-11-11T10:00:00+02:00",
 				"totalCents": 390000,
-				"comment": "earlier orders this week (Mon 9 – Sun 15 Nov)"
+				"comment": "earlier committed orders for delivery in ISO week 2026-W47 (Mon 16 – Sun 22 Nov)"
 			}
-		]
+		],
+		"budgetWeek": "2026-W47"
 	},
 	"overrides": {
 		"availability": [],
@@ -66,7 +67,7 @@
 			"actor": "approver",
 			"action": "approve",
 			"input": {
-				"ref": "order:ext-A",
+				"ref": "plan:ext-A",
 				"terms": "as quoted"
 			}
 		},
@@ -74,16 +75,16 @@
 			"actor": "external_agent",
 			"action": "commit",
 			"input": {
-				"ref": "order:ext-A",
-				"idempotencyKey": "ext-A"
+				"ref": "plan:ext-A",
+				"idempotencyKey": "ext-A-commit"
 			}
 		},
 		{
 			"actor": "external_agent",
 			"action": "commit",
 			"input": {
-				"ref": "order:ext-A",
-				"idempotencyKey": "ext-A"
+				"ref": "plan:ext-A",
+				"idempotencyKey": "ext-A-commit"
 			},
 			"comment": "retry"
 		},
@@ -140,21 +141,6 @@
 		"valioCalls": {
 			"neverInclude": ["479999"]
 		},
-		"orders": [
-			{
-				"key": "ext-A",
-				"totalCents": 69550,
-				"states": ["pending", "approved", "committed"],
-				"reasons": ["external_agent_needs_approval"]
-			},
-			{
-				"key": "ext-B",
-				"totalCents": 69550,
-				"state": "held",
-				"tier": "sign_off",
-				"reasons": ["CAP_EXCEEDED.weekly"]
-			}
-		],
 		"receipts": 1,
 		"duplicateReceipts": 0,
 		"sameReceiptOnRetry": true,
@@ -199,7 +185,23 @@
 				"error": "DUPLICATE",
 				"retryable": false
 			}
-		]
+		],
+		"plans": [
+			{
+				"key": "ext-A",
+				"totalCents": 69550,
+				"states": ["quoted", "held", "ready", "committed"],
+				"reasons": ["external_agent_needs_approval"]
+			},
+			{
+				"key": "ext-B",
+				"totalCents": 69550,
+				"state": "held",
+				"tier": "sign_off",
+				"reasons": ["CAP_EXCEEDED.weekly"]
+			}
+		],
+		"approvalStates": ["pending", "granted"]
 	},
-	"notes": "Prices ex VAT: 464201 €1.56 × 200 = 312.00; 470418 €25.20 × 10 = 252.00; 472186 €2.63 × 50 = 131.50; total 695.50. Weekly: 3,900 + 695.50 = 4,595.50 ≤ 5,000; adding another 695.50 = 5,291 > 5,000, so B is held. 479999 is inside the id range but not in the catalogue: unknown ids look 'undeliverable' at the API, so they are rejected before calling."
+	"notes": "Prices ex VAT: 464201 €1.56 × 200 = 312.00; 470418 €25.20 × 10 = 252.00; 472186 €2.63 × 50 = 131.50; total 695.50. Weekly: 3,900 + 695.50 = 4,595.50 ≤ 5,000; adding another 695.50 = 5,291 > 5,000, so B is held. 479999 is inside the id range but not in the catalogue: unknown ids look 'undeliverable' at the API, so they are rejected before calling. The budget week is the ISO week of the delivery date (2026-W47 for both 16 and 18 Nov). Plans are keyed by their place_order idempotency key; commits use their own key, because idempotency is per (workspace, caller, key)."
 }

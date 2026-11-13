@@ -114,8 +114,7 @@ describe('applyOps', () => {
 				type: 'EditLine',
 				planId: 'p1',
 				baseVersion: 3,
-				lineId: 'l1',
-				line: null,
+				lines: [{ lineId: 'l1', line: null }],
 				summary: 'x'
 			})
 		]);
