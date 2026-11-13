@@ -1,0 +1,85 @@
+{
+	"$comment": "Three demo kitchen profiles (horeca-profiles.md §2, ★P1–P3). Fictional kitchens. Weights sum to 1 per kitchen. Money is EUR ex VAT. Mandate caps are team estimates, chosen so Ring 0 scenarios exercise each cap; replace with a chef's words when we have them (PRODUCT §7).",
+	"source": "docs/research/horeca-profiles.md §2 (profiles, weights, constraints); docs/concept/PRODUCT.md ★4 (mandate); caps = team estimate",
+	"kitchens": [
+		{
+			"id": "k-hotel",
+			"profile": "P1",
+			"name": "Hotel Rautatientori (fictional)",
+			"kind": "city_hotel",
+			"city": "Helsinki",
+			"size": { "rooms": 250, "breakfastCovers": 300, "bistroCovers": 80 },
+			"deliveryDays": ["mon", "tue", "wed", "thu", "fri", "sat"],
+			"weights": { "reliability": 0.35, "price": 0.25, "finnish": 0.2, "carbon": 0.2, "organic": 0 },
+			"constraints": {
+				"origin": [{ "categoryGroup": "meat", "rule": "prefer", "country": "fi" }],
+				"allergens": { "freeFrom": [], "unknownCounts": "hold" },
+				"tenderListOnly": false,
+				"labels": ["allergen labelling on buffet", "meat origin shown (Decree 154/2019)"]
+			},
+			"mandate": {
+				"words": "Order alone up to €800 a line and €1,000 an order, €4,000 a week. Never change an allergen. Ask me before any new supplier or any substitute I haven't seen.",
+				"lineCap": 800,
+				"orderCap": 1000,
+				"weeklyCap": 4000,
+				"neverDelegate": ["allergen_change", "new_sku", "substitute_breaks_preference"]
+			},
+			"factorSensitivity": { "event": 1.0, "month": 1.0, "holiday": 1.0, "schoolHoliday": 0, "weather": 0 }
+		},
+		{
+			"id": "k-lounas",
+			"profile": "P2",
+			"name": "Lounas Ruoholahti (fictional)",
+			"kind": "lunch_restaurant",
+			"city": "Helsinki",
+			"size": { "lunchCovers": 320 },
+			"deliveryDays": ["mon", "wed", "fri"],
+			"menuCycleWeeks": 5,
+			"weights": { "price": 0.5, "reliability": 0.2, "finnish": 0.15, "carbon": 0.15, "organic": 0 },
+			"constraints": {
+				"origin": [],
+				"allergens": { "freeFrom": [], "unknownCounts": "hold" },
+				"tenderListOnly": false,
+				"labels": ["diet codes on every dish (G, L, M, VEG)"]
+			},
+			"mandate": {
+				"words": "Run the weekly order alone up to €1,500 an order and €5,000 a week, max €400 a line. Cheapest that does the job.",
+				"lineCap": 400,
+				"orderCap": 1500,
+				"weeklyCap": 5000,
+				"neverDelegate": ["allergen_change"]
+			},
+			"factorSensitivity": { "event": 0.3, "month": 1.0, "holiday": 1.0, "schoolHoliday": 0.2, "weather": 1.0 }
+		},
+		{
+			"id": "k-central",
+			"profile": "P3",
+			"name": "Espoo Central Kitchen (fictional)",
+			"kind": "public_central_kitchen",
+			"city": "Espoo",
+			"size": { "mealsPerDay": 2000 },
+			"deliveryDays": ["mon", "tue", "wed", "thu", "fri"],
+			"menuCycleWeeks": 6,
+			"weights": { "price": 0.4, "finnish": 0.3, "carbon": 0.2, "organic": 0.1, "reliability": 0 },
+			"constraints": {
+				"origin": [
+					{ "categoryGroup": "meat", "rule": "require", "country": "fi" },
+					{ "categoryGroup": "fish", "rule": "require", "country": "fi" },
+					{ "categoryGroup": "milk", "rule": "require", "country": "fi" }
+				],
+				"allergens": { "freeFrom": [], "unknownCounts": "hold" },
+				"tenderListOnly": true,
+				"tenderList": ["464201", "464073", "463335", "462016", "475214", "466964", "463437", "472186"],
+				"labels": ["tender list only", "special diets per child", "budget per meal"]
+			},
+			"mandate": {
+				"words": "Only tender-list products, Finnish meat, fish and milk. Alone up to €300 a line, €2,500 an order, €8,000 a week. Anything off the list comes to me.",
+				"lineCap": 300,
+				"orderCap": 2500,
+				"weeklyCap": 8000,
+				"neverDelegate": ["allergen_change", "off_tender_list", "origin_requirement"]
+			},
+			"factorSensitivity": { "event": 0, "month": 0.5, "holiday": 1.0, "schoolHoliday": 1.0, "weather": 0 }
+		}
+	]
+}

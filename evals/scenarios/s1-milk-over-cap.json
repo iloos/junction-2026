@@ -1,0 +1,30 @@
+{
+	"id": "s1-milk-over-cap",
+	"title": "1,000 l lactose-free milk by Monday: over the order cap, approved once, one receipt",
+	"stories": ["★1", "★4", "★5", "★6"],
+	"edgeCases": [4, 6, 11],
+	"seeds": { "kitchen": "k-hotel" },
+	"clock": "2026-11-14T12:00:00+02:00",
+	"state": { "weekSpentEx": 0, "priorOrders": [] },
+	"overrides": { "availability": [], "price": [] },
+	"steps": [
+		{ "actor": "chef", "action": "request", "input": { "text": "1000 l laktoositonta maitoa maanantaiksi", "deliverBy": "2026-11-16" } },
+		{ "actor": "approver", "action": "approve", "input": { "ref": { "sku": "464201" }, "terms": { "sku": "464201", "qty": 1000, "unit": "ST", "priceEx": 1.56, "deliveryDate": "2026-11-16" } } },
+		{ "actor": "chef", "action": "commit", "input": { "ref": "order", "idempotencyKey": "s1-commit-1" } },
+		{ "actor": "chef", "action": "commit", "input": { "ref": "order", "idempotencyKey": "s1-commit-1" }, "comment": "double click or network retry" }
+	],
+	"expect": {
+		"lines": [
+			{ "sku": "464201", "qty": 1000, "unit": "ST", "state": "committed", "priceEx": 1.56, "lineEx": 1560.0, "deliveryDate": "2026-11-16", "historyStates": ["held"], "tier": "sign_off", "reasons": ["over_line_cap", "over_order_cap"] }
+		],
+		"notProposed": ["464440"],
+		"rejected": [{ "sku": "464440", "reasons": ["undeliverable"], "source": "valio_rule" }],
+		"receipts": 1,
+		"duplicateReceipts": 0,
+		"sameReceiptOnRetry": true,
+		"weekSpentEx": 1560.0,
+		"ops": { "mustInclude": [{ "type": "line.held", "actor": "kitchen_agent" }, { "type": "approval.granted", "actor": "approver" }, { "type": "order.committed" }] },
+		"why": { "sku": "464201", "steps": ["request", "catalogue match", "price (live or cache, labelled)", "availability: unlimited, Stock", "1000 l / 1 l = 1000 ST (= 100 KI)", "€1,560 > order cap €1,000 → sign-off"] }
+	},
+	"notes": "Sales unit is ST (1 l); KI = 10 ST. Availability 9999999999 means unlimited (≥ 1e6). Cut-off for Mon 16 Nov is Sun 15 Nov 17:00 (Stock). Valio's own substitution rule 464201 → 464440 points at an undeliverable product, so it is skipped and labelled as Valio's rule."
+}

@@ -1,0 +1,37 @@
+{
+	"id": "s2-christmas-plan",
+	"title": "Christmas buffet for 140 → kg → packs; the ham edit recomputes; outages and unknowns flagged",
+	"stories": ["★2", "★8"],
+	"edgeCases": [2, 3, 9],
+	"seeds": { "kitchen": "k-hotel", "event": "event-xmas-140" },
+	"clock": "2026-11-14T12:00:00+02:00",
+	"state": { "weekSpentEx": 0, "priorOrders": [] },
+	"overrides": { "availability": [], "price": [] },
+	"steps": [
+		{ "actor": "chef", "action": "plan_event", "input": { "eventId": "event-xmas-140" } },
+		{ "actor": "chef", "action": "edit_line", "input": { "dish": "Joulukinkku (Christmas ham)", "field": "gServed", "value": 120 } }
+	],
+	"expect": {
+		"lines": [
+			{ "sku": "462150", "qty": 20, "unit": "KG", "needKg": 11.53 },
+			{ "sku": "463876", "qty": 2, "unit": "ST" },
+			{ "sku": "463804", "qty": 2, "unit": "ST" },
+			{ "sku": "463928", "qty": 2, "unit": "ST" },
+			{ "sku": "463860", "qty": 6, "unit": "ST", "state": "held", "reasons": ["unknown_quantity"] },
+			{ "sku": "461210", "qty": 3, "unit": "KI", "state": "held", "reasons": ["unknown_quantity"] },
+			{ "sku": "462455", "qty": 3, "unit": "KI", "state": "held", "reasons": ["unknown_quantity"] },
+			{ "sku": "475214", "qty": 2, "unit": "ST" },
+			{ "sku": "466964", "qty": 2, "unit": "BAG" },
+			{ "sku": "464201", "qty": 11, "unit": "ST" }
+		],
+		"needsAfterEdit": [
+			{ "sku": "462490", "needKg": 24.0, "qty": 28, "unit": "KG", "state": "unorderable", "reasons": ["out_of_stock"], "comment": "the 7 kg lot step absorbs the 135 → 120 g edit: still 4 hams" },
+			{ "sku": "462482", "needKg": 5.6, "qty": 8, "unit": "ST", "state": "unorderable", "reasons": ["out_of_stock"] }
+		],
+		"unconfirmedCover": ["463860", "461210", "462455"],
+		"why": { "sku": "462150", "steps": ["dish: Graavilohi", "70 g/guest served", "× 140 guests", "÷ yield 0.85 = 11.53 kg", "lot step 10 kg → 20 kg", "€14.11/kg → €282.20", "source: team estimate (horeca.md §7); price fetched 14 Nov"] },
+		"timing": { "recomputeMs": 1000 },
+		"receipts": 0
+	},
+	"notes": "No commit here: this scenario checks the plan only. Quantities and rounding are worked out in fixtures/seeds/christmas-buffet-140.json. The ham edit lands on the out-of-stock whole ham; its substitute 462919 goes from 8 to 7 ST (16.8 kg), which s4 checks."
+}
