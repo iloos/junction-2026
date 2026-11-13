@@ -14,6 +14,9 @@ ENV NODE_ENV=production PORT=3000 HOST=0.0.0.0
 COPY --from=build /app/build ./build
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/package.json ./
+# Read at runtime: SQL migrations (drizzle migrate) and demo seeds.
+COPY --from=build /app/drizzle ./drizzle
+COPY --from=build /app/fixtures ./fixtures
 EXPOSE 3000
 USER node
 CMD ["node", "build"]
