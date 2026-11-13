@@ -1,6 +1,6 @@
 {
 	"id": "s4-real-outages-stale-approval",
-	"title": "Three real outages (whole ham, lanttulaatikko at 0; joulutorttu undeliverable): substitutes held as unknown quantity, a residual shortfall stated, and a price change voids the approval",
+	"title": "Three real outages: whole ham out → Finnish palvikinkku in stock (13 of 15), lanttulaatikko out → Terminal 6×400 g held as unknown quantity, joulutorttu undeliverable → make in house; a price change voids the approval",
 	"stories": ["★3", "★5"],
 	"edgeCases": [2, 3, 5],
 	"seeds": {
@@ -50,13 +50,13 @@
 			"action": "approve",
 			"input": {
 				"ref": {
-					"productId": "462919"
+					"productId": "476768"
 				},
 				"terms": {
-					"productId": "462919",
-					"qty": 8,
+					"productId": "476768",
+					"qty": 13,
 					"unit": "ST",
-					"priceCents": 2920,
+					"priceCents": 1543,
 					"deliveryDate": "2026-12-11"
 				}
 			}
@@ -65,8 +65,8 @@
 			"actor": "system",
 			"action": "set_price",
 			"input": {
-				"productId": "462919",
-				"priceCents": 3150,
+				"productId": "476768",
+				"priceCents": 1650,
 				"label": "simulated: price update after approval"
 			}
 		},
@@ -75,7 +75,7 @@
 			"action": "commit",
 			"input": {
 				"ref": {
-					"productId": "462919"
+					"productId": "476768"
 				},
 				"idempotencyKey": "s4-commit-1"
 			}
@@ -85,13 +85,13 @@
 			"action": "approve",
 			"input": {
 				"ref": {
-					"productId": "462919"
+					"productId": "476768"
 				},
 				"terms": {
-					"productId": "462919",
-					"qty": 8,
+					"productId": "476768",
+					"qty": 13,
 					"unit": "ST",
-					"priceCents": 3150,
+					"priceCents": 1650,
 					"deliveryDate": "2026-12-11"
 				}
 			}
@@ -101,7 +101,7 @@
 			"action": "commit",
 			"input": {
 				"ref": {
-					"productId": "462919"
+					"productId": "476768"
 				},
 				"idempotencyKey": "s4-commit-2"
 			}
@@ -115,14 +115,14 @@
 				"reasons": ["out"]
 			},
 			{
-				"productId": "462919",
-				"qty": 8,
+				"productId": "476768",
+				"qty": 13,
 				"unit": "ST",
 				"state": "committed",
-				"priceCents": 3150,
-				"lineCents": 25200,
-				"historyStates": ["held", "held"],
-				"historyReasons": ["UNKNOWN_REQUIRED"]
+				"priceCents": 1650,
+				"lineCents": 21450,
+				"historyStates": ["held", "committed"],
+				"historyReasons": ["new_sku"]
 			},
 			{
 				"productId": "462482",
@@ -136,6 +136,27 @@
 				"state": "held",
 				"reasons": ["UNKNOWN_REQUIRED"],
 				"lineCents": 5436
+			},
+			{
+				"productId": "473317",
+				"state": "unorderable",
+				"reasons": ["undeliverable"]
+			},
+			{
+				"productId": "460373",
+				"qty": 13,
+				"unit": "RAS",
+				"state": "held",
+				"tier": "sign_off",
+				"reasons": ["allergen_change"]
+			},
+			{
+				"productId": "461378",
+				"qty": 3,
+				"unit": "PRK",
+				"state": "held",
+				"tier": "sign_off",
+				"reasons": ["allergen_change"]
 			}
 		],
 		"rejected": [
@@ -164,19 +185,8 @@
 				"reasons": ["undeliverable"]
 			}
 		],
-		"unorderable": [
-			{
-				"productId": "473317",
-				"reasons": ["undeliverable"]
-			}
-		],
-		"residualShortfall": [
-			{
-				"dish": "Joulutorttu (prune star tart)",
-				"kg": 8.4
-			}
-		],
-		"unconfirmedCover": ["462919", "462157"],
+		"residualShortfall": [],
+		"unconfirmedCover": ["463860", "461210", "462455", "462157"],
 		"commitResults": [
 			{
 				"idempotencyKey": "s4-commit-1",
@@ -191,7 +201,7 @@
 		],
 		"receipts": 1,
 		"duplicateReceipts": 0,
-		"weekSpentCents": 25200,
+		"weekSpentCents": 21450,
 		"approvalStates": ["pending", "granted", "invalidated", "pending", "granted"],
 		"availabilityKinds": {
 			"462490": "out",
@@ -200,10 +210,14 @@
 			"462210": "undeliverable",
 			"471247": "undeliverable",
 			"473317": "undeliverable",
-			"462919": "unknown",
-			"462157": "unknown"
+			"462157": "unknown",
+			"476768": "known"
 		},
-		"wordingMustDiffer": ["out", "undeliverable"]
+		"wordingMustDiffer": ["out", "undeliverable"],
+		"rank": {
+			"need": "Joulukinkku (Christmas ham)",
+			"first": "476768"
+		}
 	},
-	"notes": "Both outages are real in the static mock (amount 0). The substitutes are Terminal (999999), so their quantity is unknown: they are held as 'confirm with Valio' and never counted as cover, even after commit. Delivery 2026-12-11 (Fri) assumes delivery the day before the Sat 12 Dec event; the Terminal lead time of 3–4 days puts its cut-off around Mon 7 Dec on the simulator clock."
+	"notes": "Both stock outages and the tart are real in the static mock. Ham: HK Palvikinkku 476768 (FI, Stock 15 ST, €10.29/kg) outranks the Terminal juhlakinkku 462919 on price at equal origin, reliability and carbon; 18.9 kg cooked → 13 × 1.5 kg (13 of the 15 in stock: a contention beat). Lanttulaatikko: no ready-made option in Stock, so the Terminal 6×400 g case 462157 is proposed and held as unknown quantity. Joulutorttu: every product is undeliverable, so the seed rescue recipe (puff pastry 460373 + prune purée 461378) is proposed as make-in-house, sign-off tier. The price of 476768 changes after approval (simulated), so the first commit fails TERMS_CHANGED."
 }

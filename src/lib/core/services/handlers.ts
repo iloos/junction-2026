@@ -15,6 +15,7 @@ import type { CallContext, ToolHandlers } from '../ports';
 import { editLine, explainLine, planEvent, type ServicePorts } from './events';
 import { approve, commitOrder, getPlan, placeOrder } from './orders';
 import { quote, searchProducts } from './quote';
+import { findSubstitutes } from './substitutes';
 
 type Impl<N extends ToolName> = (
 	ports: ServicePorts,
@@ -33,7 +34,7 @@ const IMPLS: { [N in ToolName]: Impl<N> } = {
 	plan_event: planEvent,
 	place_order: placeOrder,
 	edit_line: editLine,
-	find_substitutes: notYet('slice 4'),
+	find_substitutes: findSubstitutes,
 	get_plan: getPlan,
 	explain_line: explainLine,
 	approve,
@@ -61,10 +62,17 @@ export function createHandlers(ports: ServicePorts): ToolHandlers {
 		const impl = IMPLS[name] as Impl<ToolName>;
 		out[name] = async (ctx, input) => {
 			if (!ctx.scopes.includes(schema.scope))
-				return err('FORBIDDEN', `${ctx.actor.kind} lacks scope "${schema.scope}" for ${name}`);
+				return err('FORBIDDEN', `${ctx.actor.kind} lacks scope "${schema.scope}" for ${name}`, {
+					sub: 'scope'
+				});
 			const parsed = schema.input.safeParse(input);
 			if (!parsed.success) return invalid(parsed.error.issues);
-			return impl(ports, ctx, parsed.data as ToolInput<ToolName>);
+			try {
+				return await impl(ports, ctx, parsed.data as ToolInput<ToolName>);
+			} catch (e) {
+				// A throw is a bug on our side, never the caller's: report it as INTERNAL, not a crash.
+				return err('INTERNAL', `${name}: ${e instanceof Error ? e.message : String(e)}`);
+			}
 		};
 	}
 	return out as unknown as ToolHandlers;

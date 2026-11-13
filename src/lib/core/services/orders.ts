@@ -22,7 +22,13 @@ import {
 	type ToolOutput
 } from '../contracts';
 import { requestHash, sha256Hex, termsHash } from '../hash';
-import { isoWeek, tierLines, type DraftLine, type TierResult } from '../mandate/tier';
+import {
+	draftFromLine,
+	isoWeek,
+	tierLines,
+	type DraftLine,
+	type TierResult
+} from '../mandate/tier';
 import type { CallContext, Ports, Tx } from '../ports';
 import type { WorkspaceState } from '../state';
 
@@ -327,14 +333,7 @@ export async function commitOrder(
 		const open = plan.lines.filter((l) => l.state !== 'committed');
 		const t = tierLines({
 			kitchen,
-			lines: open.map((l) => ({
-				id: l.id,
-				needId: l.needId,
-				productId: l.productId,
-				qty: l.qty,
-				provenance: l.provenance,
-				substituteFor: l.substituteFor
-			})),
+			lines: open.map(draftFromLine),
 			offers: new Map(offers.map((o) => [o.productId, o])),
 			products,
 			weekSpentCents: spent,
@@ -367,7 +366,9 @@ export async function commitOrder(
 		if (selected.length === 0)
 			return fail(
 				plan.lines.some((l) => l.state === 'held')
-					? err('FORBIDDEN', 'the open lines are held and need a granted approval').error
+					? err('FORBIDDEN', 'the open lines are held and need a granted approval', {
+							sub: 'approval_required'
+						}).error
 					: err('INVALID_INPUT', 'no open line to commit').error
 			);
 		const lines = selected.map((id) => byId.get(id)).filter((l): l is Line => Boolean(l));
@@ -381,7 +382,10 @@ export async function commitOrder(
 			authority = 'mandate';
 		} else {
 			if (!granted || !lines.every((l) => granted.lineIds.includes(l.id)))
-				return fail(err('FORBIDDEN', 'these lines need a granted approval').error);
+				return fail(
+					err('FORBIDDEN', 'these lines need a granted approval', { sub: 'approval_required' })
+						.error
+				);
 			if (
 				granted.mandateVersion !== kitchen.mandate.version ||
 				new Date(granted.expiresAt) <= ports.clock.now()

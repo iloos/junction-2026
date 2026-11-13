@@ -22,6 +22,25 @@ export interface DraftLine {
 	qty: SalesQty;
 	provenance: Line['provenance'];
 	substituteFor?: string;
+	/** Reasons the caller adds (e.g. allergen_change for a make-in-house recipe). */
+	extraReasons?: LineReason[];
+}
+
+/** Reasons a caller adds that the data can't recompute; they survive every re-quote. */
+const STICKY: ReadonlySet<string> = new Set(['allergen_change', 'substitute_breaks_preference']);
+
+/** A stored line back to a draft for re-quoting, keeping its sticky reasons. */
+export function draftFromLine(l: Line): DraftLine {
+	const extraReasons = l.reasons.filter((r) => STICKY.has(r));
+	return {
+		id: l.id,
+		needId: l.needId,
+		productId: l.productId,
+		qty: l.qty,
+		provenance: l.provenance,
+		substituteFor: l.substituteFor,
+		...(extraReasons.length ? { extraReasons } : {})
+	};
 }
 
 export interface TierInput {
@@ -59,7 +78,8 @@ const TIER_OF: Partial<Record<string, Tier>> = {
 	substitute_breaks_preference: 'sign_off',
 	off_tender_list: 'sign_off',
 	origin_required: 'sign_off',
-	external_agent_needs_approval: 'sign_off'
+	external_agent_needs_approval: 'sign_off',
+	allergen_change: 'sign_off'
 };
 const tierOf = (r: LineReason): Tier =>
 	r.startsWith('CAP_EXCEEDED') ? 'sign_off' : (TIER_OF[r] ?? 'propose');
@@ -107,6 +127,7 @@ export function tierLines(input: TierInput): TierResult {
 		if (kitchen.constraints.allergens.freeFrom.length > 0 && product && !product.allergens.declared)
 			reasons.push('allergen_unknown');
 		if (lineCents !== null && lineCents > m.lineCapCents) reasons.push('CAP_EXCEEDED.line');
+		reasons.push(...(draft.extraReasons ?? []));
 		return { draft, offer, reasons, orderable: true, lineCents };
 	});
 
@@ -129,6 +150,7 @@ export function tierLines(input: TierInput): TierResult {
 			id: w.draft.id,
 			needId: w.draft.needId,
 			productId: w.draft.productId,
+			productName: products.get(w.draft.productId)?.nameFi,
 			qty: w.draft.qty,
 			state,
 			tier,
