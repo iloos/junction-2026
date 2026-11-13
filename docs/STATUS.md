@@ -2,17 +2,19 @@
 
 _The lead rewrites this at each checkpoint. It is the "now": what works, what's next, what bites._
 
-**Updated:** Sat 14 Nov ~01:40 (lead session).
-**State:** contracts on main (`cad586d`, D6 implemented: zod types, ports, `ToolHandlers` seam, pure `applyOps`, Drizzle schema + `drizzle/0000_init.sql` with pgvector, PGlite fixture DB). `pnpm check` + server tests green. Evals + hero rescue merged (`6c4c7fe`). Lanes fanned out (owners below).
-**Works end to end:** nothing user-facing yet. **Deployed URL:** none yet; `/healthz` against Aiven PG verified on lane/deploy; Aiven Runtime awaits the user (GitHub connect + `startup-20-512` yes).
+**Updated:** Sat 14 Nov ~01:50 (lead session).
+**State:** Ring 0 backbone on main (`fc98e0c`): contracts (D6 + review fixes), core-db slices 1–3 (quote, place_order/approve/commit, plan_event/edit_line/explain_line, Postgres catalog), agent lane (bearer auth, one `serveTool` gate, REST `/api/tools/<name>`, MCP `/mcp` + `/mcp/k/<key>`, OpenAPI, Decide/Llm adapters, routine agent), kitchen lane (full PITCH table demo on fixture tools), ops lane (bus, SSE `/api/events`, `/ops` control room), deploy (`/healthz`, Dockerfile). 101 server tests, `pnpm eval` s1/s2/s5 gate, s3/s4 wait on slice 4.
+**Works end to end (seen, local dev against Aiven):** `/healthz` db ok + TLS verified; REST quote (real cached Valio terms, unknown id → notFound); plan_event → 13 lines held; op stream returns the ops; `/` and `/ops` render. **Aiven:** pg-1dfeeeed migrated (`pnpm db:migrate`) + seeded (`pnpm db:seed`: 17,546 products, 11,269 offers). **Deployed URL:** Aiven Runtime service `mandate` building from `main` (9c reports the URL).
 
-**Lanes now (ARCHITECTURE.md lanes table has owned paths):**
-| Lane | Who | Worktree |
+**Lanes now:**
+| Lane | Who | Next |
 |---|---|---|
-| contracts review → **core-db** (critical path, evals runner, slices: quote → order/approve/commit → plan_event → substitutes) | junc26-8d | `junc26-lanes/core-db` |
-| **deploy** → **ops** (SSE + bus + control room) | junc26-9c | `junc26-lanes/deploy`, `…/ops` |
-| **agent** (auth, tool serving REST/MCP/OpenAPI, Decide/Llm adapters, agent loop; stub handlers until core-db) | lead's background agent | `junc26-lanes/agent` |
-| **kitchen** (chef journey UI on fixture plans, flips to `/api/tools`) | lead's background agent | `junc26-lanes/kitchen` |
+| core-db | junc26-8d | slice 4: find_substitutes + rank + make_in_house; fill `Need.dish`, `Line.productName` (kitchen live flip) |
+| deploy/ops | junc26-9c | Runtime URL + smoke; local container check; `/api/agent/run` + trace drawer; 10× /ops stress |
+| kitchen | lead (background agent, paused) | flip `VITE_KITCHEN_API=live` once slice 4 + dish data land; fonts via @fontsource |
+| agent | lead (done) | Needs left: kitchen-per-key in CallContext, `IMPLEMENTED_TOOLS` export |
+
+**Open questions for the user:** none blocking. Before public: history squash (secrets redacted in files at `d332715`, still in history), rotate the Valio key, fix "Data stays in Finland" in platform drafts.
 
 **Read these, in order:**
 1. [DECISIONS.md](DECISIONS.md): D1 (Valio), D3 (one container on Aiven, Aiven Postgres), D4 (big scope on the real stack, built in rings 0→3).
