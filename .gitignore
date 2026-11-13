@@ -31,3 +31,15 @@ Misc/
 
 # event guidebook has staff phone numbers; keep local
 docs/event/guidebook.txt
+
+# vite
+vite.config.ts.timestamp-*
+.netlify/
+.wrangler/
+Thumbs.db
+
+# Playwright MCP snapshots
+.playwright-mcp/
+
+# Valio challenge data (third-party, large): copy into lane worktrees like .env
+data/valio/
