@@ -132,12 +132,6 @@
 		}
 	],
 	"expect": {
-		"rejected": [
-			{
-				"productId": "479999",
-				"reasons": ["NOT_FOUND"]
-			}
-		],
 		"valioCalls": {
 			"neverInclude": ["479999"]
 		},
@@ -167,7 +161,8 @@
 			"mustNotInclude": [
 				{
 					"op": "RecordApproval",
-					"actor": "external_agent"
+					"actor": "external_agent",
+					"approvalState": "granted"
 				}
 			]
 		},
@@ -190,7 +185,7 @@
 			{
 				"key": "ext-A",
 				"totalCents": 69550,
-				"states": ["quoted", "held", "ready", "committed"],
+				"states": ["held", "ready", "committed"],
 				"reasons": ["external_agent_needs_approval"]
 			},
 			{

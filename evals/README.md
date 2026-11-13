@@ -37,6 +37,7 @@ Vocabulary follows [D6](../docs/DECISIONS.md): the six-digit Valio `productId` i
 | `approve` | `ref` (line or order), `terms` | approval bound to the exact terms shown |
 | `commit` | `ref`, `idempotencyKey` | commit approved or in-mandate lines into an order and receipt |
 | `set_price` / `set_availability` | `productId`, value, `label` | simulator change after a step |
+| `find_substitutes` | `productId` | the agent asks for ranked substitutes for that product's line in the scenario's plan |
 
 ### Line states (D6)
 `proposed → eligible | held{tier: propose|sign_off, reasons} | rejected | unorderable → committed`. "Acted" = committed by the agent within the mandate (tier `act`). `rejected` is a candidate refused by a rule (never a pickable option); `unorderable` means this product cannot be bought for this need at all.

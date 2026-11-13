@@ -21,6 +21,7 @@ import { isoWeek, tierLines, type DraftLine } from '../mandate/tier';
 import type { CallContext, Ports, Tx } from '../ports';
 import type { WorkspaceState } from '../state';
 import { quoteOps, toLot } from './orders';
+import { AVAILABILITY_WORDING } from './wording';
 
 /** Ports plus the event seeds the server loaded (core reads no files). */
 export type ServicePorts = Ports & { events?: Record<string, EventSeed> };
@@ -280,6 +281,13 @@ export async function explainLine(
 			text: `need ${need.amount.value} ${need.amount.unit}${need.amount.basis ? ` (${need.amount.basis})` : ''}`,
 			source: 'computed'
 		});
+	} else {
+		const product = (await ports.catalog.get([line.productId])).get(line.productId);
+		steps.push({
+			text: `requested: ${line.qty.value} ${line.qty.unit} of ${line.productId}`,
+			source: line.provenance.note ?? line.provenance.source
+		});
+		if (product) steps.push({ text: `catalogue: ${product.nameFi}`, source: 'valio_static' });
 	}
 	steps.push({
 		text: line.qty.rounding ?? `${line.qty.value} ${line.qty.unit}`,
@@ -294,7 +302,7 @@ export async function explainLine(
 	const a = line.offer?.availability;
 	if (a)
 		steps.push({
-			text: `availability: ${a.kind}${a.amount !== null ? ` (${a.amount})` : a.kind === 'known' ? ' (unlimited)' : ''}${a.logisticModel ? `, ${a.logisticModel}` : ''}`,
+			text: `availability: ${AVAILABILITY_WORDING[a.kind]}${a.amount !== null ? ` (${a.amount})` : a.kind === 'known' ? ' (unlimited)' : ''}${a.logisticModel ? `, ${a.logisticModel}` : ''}`,
 			source: a.provenance.note ?? a.provenance.source
 		});
 	steps.push({

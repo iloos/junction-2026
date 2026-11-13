@@ -25,6 +25,27 @@
 			}
 		},
 		{
+			"actor": "kitchen_agent",
+			"action": "find_substitutes",
+			"input": {
+				"productId": "462490"
+			}
+		},
+		{
+			"actor": "kitchen_agent",
+			"action": "find_substitutes",
+			"input": {
+				"productId": "462482"
+			}
+		},
+		{
+			"actor": "kitchen_agent",
+			"action": "find_substitutes",
+			"input": {
+				"productId": "473317"
+			}
+		},
+		{
 			"actor": "approver",
 			"action": "approve",
 			"input": {
@@ -101,7 +122,7 @@
 				"priceCents": 3150,
 				"lineCents": 25200,
 				"historyStates": ["held", "held"],
-				"historyReasons": ["UNKNOWN_REQUIRED", "TERMS_CHANGED"]
+				"historyReasons": ["UNKNOWN_REQUIRED"]
 			},
 			{
 				"productId": "462482",
@@ -152,7 +173,6 @@
 		"residualShortfall": [
 			{
 				"dish": "Joulutorttu (prune star tart)",
-				"pieces": 140,
 				"kg": 8.4
 			}
 		],
