@@ -43,3 +43,9 @@ Thumbs.db
 
 # Valio challenge data (third-party, large): copy into lane worktrees like .env
 data/valio/
+
+# venue dataset (OSM ODbL + scraped menus; regenerate with scripts/venues/, copied into lanes by lane-setup)
+data/venues/
+
+# S-Pankki challenge data (third-party, large)
+data/s-pankki/
