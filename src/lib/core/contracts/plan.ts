@@ -68,6 +68,17 @@ export const Need = z.object({
 	label: z.string(),
 	/** Demand after factors: demand + target stock − usable stock − confirmed inbound (D6). */
 	amount: Measure,
+	/** For event dishes: what the chef edits and how the need was derived (the Why drawer and the kitchen table read this). */
+	dish: z
+		.object({
+			gServed: z.number().nonnegative(),
+			defaultGServed: z.number().nonnegative(),
+			guests: z.int().nonnegative(),
+			yield: z.number().positive(),
+			/** e.g. "135 g × 140 ÷ 0.70 = 27.0 kg". */
+			formula: z.string()
+		})
+		.optional(),
 	provenance: Provenance
 });
 export type Need = z.infer<typeof Need>;
@@ -85,6 +96,8 @@ export const Line = z.object({
 	id: z.string(),
 	needId: z.string().optional(),
 	productId: ProductId,
+	/** Display name (short Finnish name from the catalogue), so clients don't need a catalogue lookup. */
+	productName: z.string().optional(),
 	qty: SalesQty,
 	state: LineState,
 	tier: Tier.optional(),

@@ -12,7 +12,9 @@ export const ErrorCode = z.enum([
 	'BELOW_LOT',
 	'CAP_EXCEEDED',
 	'DUPLICATE',
-	'PROVIDER_UNAVAILABLE'
+	'PROVIDER_UNAVAILABLE',
+	/** A bug on our side; not retryable. */
+	'INTERNAL'
 ]);
 export type ErrorCode = z.infer<typeof ErrorCode>;
 
@@ -28,14 +30,18 @@ export const RETRYABLE: Record<ErrorCode, boolean> = {
 	BELOW_LOT: false,
 	CAP_EXCEEDED: false,
 	DUPLICATE: false,
-	PROVIDER_UNAVAILABLE: true
+	PROVIDER_UNAVAILABLE: true,
+	INTERNAL: false
 };
 
 export const DomainError = z.object({
 	code: ErrorCode,
 	message: z.string(),
 	retryable: z.boolean(),
-	/** Sub-code, e.g. CAP_EXCEEDED → "weekly"; the eval vocabulary writes it as "CAP_EXCEEDED.weekly". */
+	/**
+	 * Sub-code, e.g. CAP_EXCEEDED → "weekly" (eval vocabulary: "CAP_EXCEEDED.weekly").
+	 * FORBIDDEN uses "scope" (never allowed for this caller) vs "approval_required" (wait for a human).
+	 */
 	sub: z.string().optional(),
 	detail: z.record(z.string(), z.unknown()).optional()
 });

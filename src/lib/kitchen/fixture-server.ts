@@ -225,7 +225,12 @@ const handlers: { [N in ToolName]?: Handler<N> } = {
 		const dish = s.built.view.dishes.find((d) => d.rescue?.forLineId === input.lineId);
 		const chosen =
 			s.built.plan.lines.find((l) => l.substituteFor && l.needId === dish?.needId) ?? null;
-		return { plan: s.built.plan, chosen };
+		return {
+			plan: s.built.plan,
+			kind: chosen ? ('product' as const) : ('none' as const),
+			chosen: chosen ? [chosen] : [],
+			candidates: []
+		};
 	},
 	explain_line: async (input) => ({ steps: s.built.view.why[input.lineId] ?? [] }),
 	approve: async (input) => {

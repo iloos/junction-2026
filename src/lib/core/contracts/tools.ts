@@ -1,7 +1,7 @@
 import { z } from 'zod';
-import { ApprovalState, Line, Plan } from './plan';
+import { ApprovalState, Line, Plan, ScoreBreakdown } from './plan';
 import { Offer, Product } from './product';
-import { IsoDate, KitchenId, ProductId, SalesQty } from './primitives';
+import { IsoDate, KitchenId, Measure, ProductId, SalesQty } from './primitives';
 
 /**
  * One tool registry, exposed three ways: MCP (`/mcp`), REST (`/api/tools/<name>`) and OpenAPI (`/api/openapi.json`).
@@ -57,7 +57,7 @@ export const toolSchemas = {
 			idempotencyKey: z.string().min(1).max(128),
 			lines: z
 				.array(
-					z.object({ productId: z.string(), qty: SalesQty.shape.value, unit: SalesQty.shape.unit })
+					z.object({ productId: ProductId, qty: SalesQty.shape.value, unit: SalesQty.shape.unit })
 				)
 				.min(1)
 		}),
@@ -83,8 +83,30 @@ export const toolSchemas = {
 		scope: 'plan',
 		description:
 			"Rank substitutes for a line under the kitchen's weights and rules: Valio's rules first, then domain search.",
-		input: PlanRef.extend({ lineId: z.string() }),
-		output: z.object({ plan: Plan, chosen: Line.nullable() })
+		input: PlanRef.extend({
+			lineId: z.string(),
+			/** Rank under these weights instead of the kitchen's (the "Same shortage. Your rules." beat); not persisted. */
+			weights: z.record(z.string(), z.number().min(0)).optional(),
+			/** Extra origin requirement for this ranking only, e.g. "fi". */
+			requireOrigin: z.string().length(2).optional()
+		}),
+		output: z.object({
+			plan: Plan,
+			kind: z.enum(['product', 'make_in_house', 'none']),
+			chosen: z.array(Line),
+			candidates: z.array(
+				z.object({
+					productId: ProductId,
+					productName: z.string().optional(),
+					rank: z.int().positive().nullable(),
+					score: ScoreBreakdown.optional(),
+					rejectedReasons: z.array(z.string()),
+					fromValioRule: z.boolean()
+				})
+			),
+			labourNote: z.string().optional(),
+			residual: Measure.optional()
+		})
 	},
 	get_plan: {
 		scope: 'read',
@@ -109,7 +131,11 @@ export const toolSchemas = {
 		scope: 'read',
 		description: 'The Why drawer for one line: ordered steps with sources.',
 		input: z.object({ planId: z.string(), lineId: z.string() }),
-		output: z.object({ steps: z.array(z.object({ text: z.string(), source: z.string() })) })
+		output: z.object({
+			steps: z.array(
+				z.object({ text: z.string(), source: z.string(), detail: z.string().optional() })
+			)
+		})
 	},
 	approve: {
 		scope: 'approve',

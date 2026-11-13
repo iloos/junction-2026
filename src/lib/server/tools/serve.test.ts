@@ -171,9 +171,9 @@ describe('stub handlers through the gate (s5 shape)', () => {
 			{ planId: plan.id, version: plan.version, lineId: (ham as { id?: string }).id },
 			stubHandlers
 		);
-		expect(subs.ok && (subs.value as { chosen: { productId: string } }).chosen.productId).toBe(
-			'476768'
-		);
+		expect(
+			subs.ok && (subs.value as unknown as { chosen: { productId: string }[] }).chosen[0]?.productId
+		).toBe('476768');
 	});
 });
 

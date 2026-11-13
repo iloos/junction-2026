@@ -26,7 +26,8 @@ export const HTTP_STATUS: Record<ErrorCode, number> = {
 	INSUFFICIENT_STOCK: 422,
 	BELOW_LOT: 422,
 	CAP_EXCEEDED: 422,
-	PROVIDER_UNAVAILABLE: 503
+	PROVIDER_UNAVAILABLE: 503,
+	INTERNAL: 500
 };
 
 export type Served<N extends ToolName = ToolName> =
@@ -105,9 +106,9 @@ async function run<N extends ToolName>(
 		result = await handler(ctx, input.data);
 	} catch (e) {
 		// A thrown handler is a bug or an outage we did not classify; the closed code set has no
-		// INTERNAL, so it is reported as a retryable provider failure with HTTP 500.
+		// INTERNAL: a bug on our side, not retryable.
 		console.error(`[tools] ${name} threw`, e);
-		return fail(err('PROVIDER_UNAVAILABLE', `${name} failed unexpectedly`).error, 500);
+		return fail(err('INTERNAL', `${name} failed unexpectedly`).error, 500);
 	}
 	if (!result.ok) return fail(result.error);
 
@@ -115,7 +116,7 @@ async function run<N extends ToolName>(
 	if (!output.success) {
 		console.error(`[tools] ${name} returned an invalid output`, z.prettifyError(output.error));
 		return fail(
-			err('PROVIDER_UNAVAILABLE', `${name} returned an invalid output`, {
+			err('INTERNAL', `${name} returned an invalid output`, {
 				detail: { issues: output.error.issues }
 			}).error,
 			500
