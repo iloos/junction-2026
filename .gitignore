@@ -1,0 +1,33 @@
+node_modules/
+.svelte-kit/
+build/
+dist/
+.vercel/
+.output/
+test-results/
+playwright-report/
+scratch/
+*.log
+.DS_Store
+nul
+
+# secrets
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+client_secret*.json
+sa-*.json
+
+# python (Modal workers)
+__pycache__/
+.venv/
+*.pyc
+
+# large local data (generated; regenerate with gen:data)
+data/generated/
+Misc/*.pdf
+
+# event guidebook has staff phone numbers; keep local
+docs/event/guidebook.txt
