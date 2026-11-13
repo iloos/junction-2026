@@ -15,6 +15,7 @@ import type { CallContext, ToolHandlers } from '../ports';
 import { editLine, explainLine, planEvent, type ServicePorts } from './events';
 import { approve, commitOrder, getPlan, placeOrder } from './orders';
 import { quote, searchProducts } from './quote';
+import { findSubstitutes } from './substitutes';
 
 type Impl<N extends ToolName> = (
 	ports: ServicePorts,
@@ -33,7 +34,7 @@ const IMPLS: { [N in ToolName]: Impl<N> } = {
 	plan_event: planEvent,
 	place_order: placeOrder,
 	edit_line: editLine,
-	find_substitutes: notYet('slice 4'),
+	find_substitutes: findSubstitutes,
 	get_plan: getPlan,
 	explain_line: explainLine,
 	approve,

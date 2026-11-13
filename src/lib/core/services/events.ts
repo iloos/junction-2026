@@ -17,7 +17,7 @@ import {
 } from '../contracts';
 import { sha256Hex } from '../hash';
 import { planEventDemand, type EventSeed } from '../demand';
-import { isoWeek, tierLines, type DraftLine } from '../mandate/tier';
+import { draftFromLine, isoWeek, tierLines, type DraftLine } from '../mandate/tier';
 import type { CallContext, Ports, Tx } from '../ports';
 import type { WorkspaceState } from '../state';
 import { quoteOps, toLot } from './orders';
@@ -85,7 +85,7 @@ const orderedBefore = (state: WorkspaceState, kitchenId: string) =>
 	);
 
 /** Tiers the open drafts (committed lines stay) and returns the quote ops for the plan. */
-async function requote(
+export async function requote(
 	ports: Ports,
 	ctx: CallContext,
 	tx: Tx,
@@ -169,14 +169,7 @@ export async function editLine(
 			};
 		const kitchen = kitchens.find((k) => k.id === plan.kitchenId);
 		if (!kitchen) return { error: err('NOT_FOUND', `kitchen ${plan.kitchenId}`).error };
-		const toDraft = (l: Line): DraftLine => ({
-			id: l.id,
-			needId: l.needId,
-			productId: l.productId,
-			qty: l.qty,
-			provenance: l.provenance,
-			substituteFor: l.substituteFor
-		});
+		const toDraft = draftFromLine;
 		let drafts = plan.lines.filter((l) => l.state !== 'committed').map(toDraft);
 		let need: Need | undefined;
 		let summary: string;
