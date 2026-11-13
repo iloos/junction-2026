@@ -10,11 +10,26 @@
 		"kind": "estimate",
 		"label": "team estimate, not yet reviewed by a chef",
 		"sources": [
-			{ "what": "per-guest working table for a full joulupöytä", "ref": "docs/research/horeca.md §7" },
-			{ "what": "buffet protein 150–250 g, veg 100–150 g, starch 80–200 g", "url": "https://kitchennmbrs.app/en/knowledge-base/portioning-standardization/how-do-i-calculate-the-ideal-quantity-per-product-for-a-buffet-of-50-people" },
-			{ "what": "cook to guarantee; overset ~3%", "url": "https://www.geosociety.org/GSA/GSA/Section_Manual/Budgets/fbTips.aspx" },
-			{ "what": "rosolli ~100 g raw vegetables per person", "ref": "docs/research/horeca.md §7 (Kuluttajaneuvonta via search)" },
-			{ "what": "pack sizes, lot steps, prices, availability", "ref": "Valio catalogue + mock API, cache tag support-seeds" }
+			{
+				"what": "per-guest working table for a full joulupöytä",
+				"ref": "docs/research/horeca.md §7"
+			},
+			{
+				"what": "buffet protein 150–250 g, veg 100–150 g, starch 80–200 g",
+				"url": "https://kitchennmbrs.app/en/knowledge-base/portioning-standardization/how-do-i-calculate-the-ideal-quantity-per-product-for-a-buffet-of-50-people"
+			},
+			{
+				"what": "cook to guarantee; overset ~3%",
+				"url": "https://www.geosociety.org/GSA/GSA/Section_Manual/Budgets/fbTips.aspx"
+			},
+			{
+				"what": "rosolli ~100 g raw vegetables per person",
+				"ref": "docs/research/horeca.md §7 (Kuluttajaneuvonta via search)"
+			},
+			{
+				"what": "pack sizes, lot steps, prices, availability",
+				"ref": "Valio catalogue + mock API, cache tag support-seeds"
+			}
 		],
 		"totalGramsServedPerGuest": 691
 	},
@@ -37,7 +52,11 @@
 			"editCheck": {
 				"gServed": 120,
 				"needKg": 24.0,
-				"order": { "qty": 28, "unit": "KG", "rounding": "24.0 kg → still 4 × 7 kg = 28 kg: the lot step absorbs the edit" }
+				"order": {
+					"qty": 28,
+					"unit": "KG",
+					"rounding": "24.0 kg → still 4 × 7 kg = 28 kg: the lot step absorbs the edit"
+				}
 			},
 			"candidates": [
 				{
@@ -68,10 +87,32 @@
 			"order": { "qty": 20, "unit": "KG", "rounding": "11.53 kg → 2 × 10 kg lot = 20 kg" },
 			"priceEx": 14.11,
 			"lineEx": 282.2,
-			"availability": { "kind": "known", "amount": 43, "logisticModel": "Stock", "note": "live 43 kg; simulator contention leaves 9 kg in scenario S3" },
+			"availability": {
+				"kind": "known",
+				"amount": 43,
+				"logisticModel": "Stock",
+				"note": "live 43 kg; simulator contention leaves 9 kg in scenario S3"
+			},
 			"candidates": [
-				{ "sku": "462016", "skuName": "KIRJOLOHIFILEE C-leikattu 10 kg (Finnish trout)", "lotStep": 10, "priceEx": 15.77, "lineEx": 315.4, "order": { "qty": 20, "unit": "KG" }, "availability": { "kind": "known", "amount": 40 }, "origin": "fi", "reliability": 1.0 },
-				{ "sku": "471898", "skuName": "Kalaneuvos savukirjolohifilee buffet n700 g", "priceEx": 22.3, "availability": { "kind": "out", "amount": 0 }, "reliability": 0.33, "expected": "rejected: out of stock and reliability 0.33" }
+				{
+					"sku": "462016",
+					"skuName": "KIRJOLOHIFILEE C-leikattu 10 kg (Finnish trout)",
+					"lotStep": 10,
+					"priceEx": 15.77,
+					"lineEx": 315.4,
+					"order": { "qty": 20, "unit": "KG" },
+					"availability": { "kind": "known", "amount": 40 },
+					"origin": "fi",
+					"reliability": 1.0
+				},
+				{
+					"sku": "471898",
+					"skuName": "Kalaneuvos savukirjolohifilee buffet n700 g",
+					"priceEx": 22.3,
+					"availability": { "kind": "out", "amount": 0 },
+					"reliability": 0.33,
+					"expected": "rejected: out of stock and reliability 0.33"
+				}
 			]
 		},
 		{
@@ -128,7 +169,11 @@
 			"salesUnit": "ST",
 			"pack": { "netKg": 2.5 },
 			"needKg": 12.6,
-			"order": { "qty": 6, "unit": "ST", "rounding": "12.6 / 2.5 = 5.04 → 6 ST (15 kg); a 3 kg pack would fit better but 462494 and 462491 are undeliverable" },
+			"order": {
+				"qty": 6,
+				"unit": "ST",
+				"rounding": "12.6 / 2.5 = 5.04 → 6 ST (15 kg); a 3 kg pack would fit better but 462494 and 462491 are undeliverable"
+			},
 			"priceEx": 13.03,
 			"lineEx": 78.18,
 			"availability": { "kind": "unknown", "amount": 999999, "logisticModel": "Terminal" }
@@ -148,10 +193,36 @@
 			"availability": { "kind": "out", "amount": 0, "logisticModel": "Stock" },
 			"realOutage": true,
 			"candidates": [
-				{ "sku": "462157", "skuName": "6 x Saarioinen Lanttulaatikko 400g", "salesUnit": "KI", "pack": { "netKg": 2.4 }, "needKg": 5.6, "order": { "qty": 3, "unit": "KI", "rounding": "5.6 / 2.4 = 2.33 → 3 KI (7.2 kg)" }, "priceEx": 18.12, "lineEx": 54.36, "availability": { "kind": "unknown", "amount": 999999, "logisticModel": "Terminal" } },
-				{ "sku": "462447", "skuName": "Saarioinen Lanttulaatikko 2,8kg", "availability": { "kind": "out", "amount": 0 }, "expected": "rejected: out of stock" },
-				{ "sku": "462210", "skuName": "Kymppi Lanttulaatikko 2 kg raakapakaste", "availability": { "kind": "undeliverable" }, "expected": "rejected: undeliverable (not the same as out of stock)" },
-				{ "sku": "471247", "skuName": "Valio kypsä lanttulaatikko 2,8 kg laktoositon", "availability": { "kind": "undeliverable" }, "reliability": 0.636, "expected": "rejected: undeliverable" }
+				{
+					"sku": "462157",
+					"skuName": "6 x Saarioinen Lanttulaatikko 400g",
+					"salesUnit": "KI",
+					"pack": { "netKg": 2.4 },
+					"needKg": 5.6,
+					"order": { "qty": 3, "unit": "KI", "rounding": "5.6 / 2.4 = 2.33 → 3 KI (7.2 kg)" },
+					"priceEx": 18.12,
+					"lineEx": 54.36,
+					"availability": { "kind": "unknown", "amount": 999999, "logisticModel": "Terminal" }
+				},
+				{
+					"sku": "462447",
+					"skuName": "Saarioinen Lanttulaatikko 2,8kg",
+					"availability": { "kind": "out", "amount": 0 },
+					"expected": "rejected: out of stock"
+				},
+				{
+					"sku": "462210",
+					"skuName": "Kymppi Lanttulaatikko 2 kg raakapakaste",
+					"availability": { "kind": "undeliverable" },
+					"expected": "rejected: undeliverable (not the same as out of stock)"
+				},
+				{
+					"sku": "471247",
+					"skuName": "Valio kypsä lanttulaatikko 2,8 kg laktoositon",
+					"availability": { "kind": "undeliverable" },
+					"reliability": 0.636,
+					"expected": "rejected: undeliverable"
+				}
 			]
 		},
 		{

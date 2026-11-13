@@ -10,7 +10,13 @@
 			"city": "Helsinki",
 			"size": { "rooms": 250, "breakfastCovers": 300, "bistroCovers": 80 },
 			"deliveryDays": ["mon", "tue", "wed", "thu", "fri", "sat"],
-			"weights": { "reliability": 0.35, "price": 0.25, "finnish": 0.2, "carbon": 0.2, "organic": 0 },
+			"weights": {
+				"reliability": 0.35,
+				"price": 0.25,
+				"finnish": 0.2,
+				"carbon": 0.2,
+				"organic": 0
+			},
 			"constraints": {
 				"origin": [{ "categoryGroup": "meat", "rule": "prefer", "country": "fi" }],
 				"allergens": { "freeFrom": [], "unknownCounts": "hold" },
@@ -24,7 +30,13 @@
 				"weeklyCap": 4000,
 				"neverDelegate": ["allergen_change", "new_sku", "substitute_breaks_preference"]
 			},
-			"factorSensitivity": { "event": 1.0, "month": 1.0, "holiday": 1.0, "schoolHoliday": 0, "weather": 0 }
+			"factorSensitivity": {
+				"event": 1.0,
+				"month": 1.0,
+				"holiday": 1.0,
+				"schoolHoliday": 0,
+				"weather": 0
+			}
 		},
 		{
 			"id": "k-lounas",
@@ -35,7 +47,13 @@
 			"size": { "lunchCovers": 320 },
 			"deliveryDays": ["mon", "wed", "fri"],
 			"menuCycleWeeks": 5,
-			"weights": { "price": 0.5, "reliability": 0.2, "finnish": 0.15, "carbon": 0.15, "organic": 0 },
+			"weights": {
+				"price": 0.5,
+				"reliability": 0.2,
+				"finnish": 0.15,
+				"carbon": 0.15,
+				"organic": 0
+			},
 			"constraints": {
 				"origin": [],
 				"allergens": { "freeFrom": [], "unknownCounts": "hold" },
@@ -49,7 +67,13 @@
 				"weeklyCap": 5000,
 				"neverDelegate": ["allergen_change"]
 			},
-			"factorSensitivity": { "event": 0.3, "month": 1.0, "holiday": 1.0, "schoolHoliday": 0.2, "weather": 1.0 }
+			"factorSensitivity": {
+				"event": 0.3,
+				"month": 1.0,
+				"holiday": 1.0,
+				"schoolHoliday": 0.2,
+				"weather": 1.0
+			}
 		},
 		{
 			"id": "k-central",
@@ -69,7 +93,16 @@
 				],
 				"allergens": { "freeFrom": [], "unknownCounts": "hold" },
 				"tenderListOnly": true,
-				"tenderList": ["464201", "464073", "463335", "462016", "475214", "466964", "463437", "472186"],
+				"tenderList": [
+					"464201",
+					"464073",
+					"463335",
+					"462016",
+					"475214",
+					"466964",
+					"463437",
+					"472186"
+				],
 				"labels": ["tender list only", "special diets per child", "budget per meal"]
 			},
 			"mandate": {
@@ -79,7 +112,13 @@
 				"weeklyCap": 8000,
 				"neverDelegate": ["allergen_change", "off_tender_list", "origin_requirement"]
 			},
-			"factorSensitivity": { "event": 0, "month": 0.5, "holiday": 1.0, "schoolHoliday": 1.0, "weather": 0 }
+			"factorSensitivity": {
+				"event": 0,
+				"month": 0.5,
+				"holiday": 1.0,
+				"schoolHoliday": 1.0,
+				"weather": 0
+			}
 		}
 	]
 }

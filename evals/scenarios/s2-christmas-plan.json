@@ -9,7 +9,11 @@
 	"overrides": { "availability": [], "price": [] },
 	"steps": [
 		{ "actor": "chef", "action": "plan_event", "input": { "eventId": "event-xmas-140" } },
-		{ "actor": "chef", "action": "edit_line", "input": { "dish": "Joulukinkku (Christmas ham)", "field": "gServed", "value": 120 } }
+		{
+			"actor": "chef",
+			"action": "edit_line",
+			"input": { "dish": "Joulukinkku (Christmas ham)", "field": "gServed", "value": 120 }
+		}
 	],
 	"expect": {
 		"lines": [
@@ -25,11 +29,37 @@
 			{ "sku": "464201", "qty": 11, "unit": "ST" }
 		],
 		"needsAfterEdit": [
-			{ "sku": "462490", "needKg": 24.0, "qty": 28, "unit": "KG", "state": "unorderable", "reasons": ["out_of_stock"], "comment": "the 7 kg lot step absorbs the 135 → 120 g edit: still 4 hams" },
-			{ "sku": "462482", "needKg": 5.6, "qty": 8, "unit": "ST", "state": "unorderable", "reasons": ["out_of_stock"] }
+			{
+				"sku": "462490",
+				"needKg": 24.0,
+				"qty": 28,
+				"unit": "KG",
+				"state": "unorderable",
+				"reasons": ["out_of_stock"],
+				"comment": "the 7 kg lot step absorbs the 135 → 120 g edit: still 4 hams"
+			},
+			{
+				"sku": "462482",
+				"needKg": 5.6,
+				"qty": 8,
+				"unit": "ST",
+				"state": "unorderable",
+				"reasons": ["out_of_stock"]
+			}
 		],
 		"unconfirmedCover": ["463860", "461210", "462455"],
-		"why": { "sku": "462150", "steps": ["dish: Graavilohi", "70 g/guest served", "× 140 guests", "÷ yield 0.85 = 11.53 kg", "lot step 10 kg → 20 kg", "€14.11/kg → €282.20", "source: team estimate (horeca.md §7); price fetched 14 Nov"] },
+		"why": {
+			"sku": "462150",
+			"steps": [
+				"dish: Graavilohi",
+				"70 g/guest served",
+				"× 140 guests",
+				"÷ yield 0.85 = 11.53 kg",
+				"lot step 10 kg → 20 kg",
+				"€14.11/kg → €282.20",
+				"source: team estimate (horeca.md §7); price fetched 14 Nov"
+			]
+		},
 		"timing": { "recomputeMs": 1000 },
 		"receipts": 0
 	},

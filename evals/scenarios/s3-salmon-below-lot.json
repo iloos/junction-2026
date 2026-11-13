@@ -7,14 +7,35 @@
 	"clock": "2026-11-14T12:00:00+02:00",
 	"state": { "weekSpentEx": 0, "priorOrders": [] },
 	"overrides": {
-		"availability": [{ "sku": "462150", "amount": 9, "label": "simulated: 34 of the live 43 kg committed by other kitchens" }],
+		"availability": [
+			{
+				"sku": "462150",
+				"amount": 9,
+				"label": "simulated: 34 of the live 43 kg committed by other kitchens"
+			}
+		],
 		"price": []
 	},
 	"steps": [{ "actor": "chef", "action": "plan_event", "input": { "eventId": "event-xmas-140" } }],
 	"expect": {
 		"lines": [
-			{ "sku": "462150", "qty": 20, "unit": "KG", "state": "unorderable", "reasons": ["below_lot_step"], "comment": "need 11.53 kg → 20 kg; 9 kg available < one 10 kg lot" },
-			{ "sku": "462016", "qty": 20, "unit": "KG", "state": "held", "tier": "propose", "reasons": ["new_sku"], "lineEx": 315.4 }
+			{
+				"sku": "462150",
+				"qty": 20,
+				"unit": "KG",
+				"state": "unorderable",
+				"reasons": ["below_lot_step"],
+				"comment": "need 11.53 kg → 20 kg; 9 kg available < one 10 kg lot"
+			},
+			{
+				"sku": "462016",
+				"qty": 20,
+				"unit": "KG",
+				"state": "held",
+				"tier": "propose",
+				"reasons": ["new_sku"],
+				"lineEx": 315.4
+			}
 		],
 		"rank": { "need": "Graavilohi (cured salmon), cured in-house", "first": "462016" },
 		"rejected": [{ "sku": "471898", "reasons": ["out_of_stock", "low_reliability"] }],
