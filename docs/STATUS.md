@@ -21,7 +21,10 @@ _The lead rewrites this at each checkpoint. It is the "now": what works, what's 
 
 **Key facts (from the probes):** the Valio API ignores date and customer and is static (our simulator owns time and cut-offs); 18% of products are undeliverable; data has a `substitutions` field (250 rules); **no product images** (Cloudinary only for a document workflow); net weight 56% (89% with name parsing); no rate limiting seen (we use ≤4 concurrent, ≤200 ids, cache-through in `data/valio/cache/`). Gemini Decisions API works (`gemini-decision-1`, v1beta, 120 questions in ~0.56 s); key is `GEMINI_STUDIO_API_KEY`. Gemma on Featherless works (`gemma-4-E4B-it`). Nemotron has no endpoint yet. Slush is Wed 18–Thu 19 Nov (event hook). `GMAPS_API` is in `.env` (Google Maps; later, for app polish or validation).
 
-**In flight:** the venue dataset agent (OSM + Exa + Context.dev → `data/venues/`, `docs/research/venues.md`).
+**In flight:**
+- Venue dataset agent (OSM + Exa + Context.dev → `data/venues/`, `scripts/venues/`, `docs/research/venues.md`; uncommitted). When it lands: commit the scripts, the OSM file with ODbL attribution and venues.md; keep scraped menus out of git.
+- Peer session **junc26-8d** (second brain, own worktree, branch `contracts-support`): `scripts/lane-setup`, `evals/` format + first 5 Ring 0 scenarios, `fixtures/seeds/` (3 demo kitchen profiles, Christmas buffet for 140, calendar factors incl. Slush). It messages the lead with a sha on handoff, then reviews the contracts commit against PRODUCT.md Ring 0. The lead writes ARCHITECTURE.md, `src/lib/core/**`, db schema, ports, tool registry and deps; 8d doesn't touch those.
+- Contracts must include `workspaceId` + `actor` on every record and op (seam for the later roadmap in PLAN.md).
 
 **Platform submissions (created Fri night; no new ones can be created now, all editable until Sun 10:00):**
 - Real drafts named `Mandate`: Valio Aimo (primary; 8 tech challenges ticked), Context.dev real-time web, Exa butler, AfterQuery break-the-agent, S-Pankki trainer.
