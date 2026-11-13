@@ -1,6 +1,9 @@
 import { readFileSync } from 'node:fs';
 import postgres from 'postgres';
+import { drizzle } from 'drizzle-orm/postgres-js';
+import { migrate } from 'drizzle-orm/postgres-js/migrator';
 import { env } from '$env/dynamic/private';
+import * as schema from './schema';
 
 export type DbMode = 'postgres' | 'fixture';
 
@@ -45,6 +48,14 @@ export function sql(): Sql {
 	if (!url) throw new Error('DATABASE_URL is not set (fixture mode has no Postgres).');
 	return (g.__mandateSql ??= connect(url));
 }
+
+/** Drizzle over the shared pool: the Aiven counterpart of createFixtureDb (pglite.ts). */
+export async function createPgDb({ runMigrations = true } = {}) {
+	const db = drizzle({ client: sql(), schema });
+	if (runMigrations) await migrate(db, { migrationsFolder: 'drizzle' });
+	return db;
+}
+export type PgDb = Awaited<ReturnType<typeof createPgDb>>;
 
 export type DbHealth =
 	| { db: 'fixture' }
