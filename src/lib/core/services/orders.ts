@@ -366,7 +366,9 @@ export async function commitOrder(
 		if (selected.length === 0)
 			return fail(
 				plan.lines.some((l) => l.state === 'held')
-					? err('FORBIDDEN', 'the open lines are held and need a granted approval').error
+					? err('FORBIDDEN', 'the open lines are held and need a granted approval', {
+							sub: 'approval_required'
+						}).error
 					: err('INVALID_INPUT', 'no open line to commit').error
 			);
 		const lines = selected.map((id) => byId.get(id)).filter((l): l is Line => Boolean(l));
@@ -380,7 +382,10 @@ export async function commitOrder(
 			authority = 'mandate';
 		} else {
 			if (!granted || !lines.every((l) => granted.lineIds.includes(l.id)))
-				return fail(err('FORBIDDEN', 'these lines need a granted approval').error);
+				return fail(
+					err('FORBIDDEN', 'these lines need a granted approval', { sub: 'approval_required' })
+						.error
+				);
 			if (
 				granted.mandateVersion !== kitchen.mandate.version ||
 				new Date(granted.expiresAt) <= ports.clock.now()

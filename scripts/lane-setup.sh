@@ -38,7 +38,7 @@ fi
 # 2. Local-only files (never committed). cp -u copies new and newer files only.
 if [[ -f "$main_root/.env" ]]; then cp "$main_root/.env" "$wt/.env"; echo "copied    .env"
 else echo "warning: no .env in the main checkout; fixture mode only" >&2; fi
-for d in data/valio data/venues; do
+for d in data/valio data/venues certs; do
 	if [[ -d "$main_root/$d" ]]; then mkdir -p "$wt/$d"; cp -ru "$main_root/$d/." "$wt/$d/"; echo "copied    $d"; fi
 done
 

@@ -83,7 +83,9 @@ export async function findSubstitutes(
 	const existing = plan0.lines.find(
 		(l) => l.substituteFor === line.productId && l.needId === line.needId
 	);
-	if (existing) return ok({ plan: plan0, chosen: existing }); // already proposed: asking again is a read
+	// Per-call weights / origin re-rank without persisting (the "Your rules" beat); so does asking again.
+	const preview = Boolean(input.weights || input.requireOrigin || existing);
+	const rankKitchen = input.weights ? { ...kitchen, weights: input.weights } : kitchen;
 
 	const seed = plan0.eventId ? ports.events?.[plan0.eventId] : undefined;
 	const need = plan0.needs.find((n) => n.id === line.needId);
@@ -136,7 +138,7 @@ export async function findSubstitutes(
 		else unsized.push(id);
 	}
 	const ranked = rankCandidates({
-		kitchen,
+		kitchen: rankKitchen,
 		candidates: [...sized].map(([productId, qty]) => ({
 			productId,
 			fromValioRule: pool.get(productId)!.fromValioRule,
@@ -145,9 +147,22 @@ export async function findSubstitutes(
 		products,
 		offers: new Map(offers.map((o) => [o.productId, o]))
 	});
+	if (input.requireOrigin) {
+		for (const r of ranked)
+			if (r.rank !== null && products.get(r.productId)?.origin !== input.requireOrigin) {
+				r.rank = null;
+				r.score = undefined;
+				r.rejectedReasons = ['origin_required'];
+			}
+		let n = 1;
+		for (const r of ranked.filter((x) => x.rank !== null).sort((a, b) => a.rank! - b.rank!))
+			r.rank = n++;
+	}
+	const nameOf = (id: string) => products.get(id)?.nameFi;
 	const candidates = [
 		...ranked.map((r) => ({
 			productId: r.productId,
+			productName: nameOf(r.productId),
 			rank: r.rank,
 			score: r.score,
 			rejectedReasons: r.rejectedReasons as string[],
@@ -155,6 +170,7 @@ export async function findSubstitutes(
 		})),
 		...unsized.map((productId) => ({
 			productId,
+			productName: nameOf(productId),
 			rank: null,
 			// Availability is the true reason when it already excludes the product; otherwise it can't be sized.
 			rejectedReasons: [unsizedReason(offers.find((o) => o.productId === productId))],
@@ -162,8 +178,8 @@ export async function findSubstitutes(
 		}))
 	];
 
-	const best = ranked.find((r) => r.rank === 1);
-	let kind: 'product' | 'make_in_house' = 'product';
+	const best = ranked.filter((r) => r.rank !== null).sort((a, b) => a.rank! - b.rank!)[0];
+	let kind: 'product' | 'make_in_house' | 'none' = 'product';
 	let labourNote: string | undefined;
 	let drafts: DraftLine[] = [];
 	if (best)
@@ -197,9 +213,31 @@ export async function findSubstitutes(
 				note: rescue.chosen.recipe?.provenance ?? 'make in house'
 			}
 		}));
+	} else kind = 'none';
+	const residual = kind === 'none' && need ? need.amount : undefined;
+	const proposedOf = (d: DraftLine): Line => ({
+		...d,
+		productName: nameOf(d.productId),
+		state: 'proposed',
+		reasons: [],
+		offer: null,
+		lineCents: null
+	});
+	if (preview) {
+		const already = plan0.lines.filter(
+			(l) => l.substituteFor === line.productId && l.needId === line.needId
+		);
+		return ok({
+			plan: plan0,
+			kind: existing ? (existing.id.includes('-mih-') ? 'make_in_house' : 'product') : kind,
+			chosen: existing ? already : drafts.map(proposedOf),
+			candidates,
+			labourNote,
+			residual
+		});
 	}
 
-	const r = await ports.store.transact<{ plan: Plan; chosen: Line | null }>(
+	const r = await ports.store.transact<{ plan: Plan; chosen: Line[] }>(
 		ctx.workspaceId,
 		async (tx, state) => {
 			const plan = state.plans[input.planId];
@@ -207,13 +245,7 @@ export async function findSubstitutes(
 				return {
 					error: err('STALE_VERSION', 'the plan changed while substitutes were ranked').error
 				};
-			const proposed: Line[] = drafts.map((d) => ({
-				...d,
-				state: 'proposed',
-				reasons: [],
-				offer: null,
-				lineCents: null
-			}));
+			const proposed: Line[] = drafts.map(proposedOf);
 			const op = {
 				workspaceId: ctx.workspaceId,
 				runId: ctx.runId,
@@ -224,7 +256,7 @@ export async function findSubstitutes(
 					planId: plan.id,
 					baseVersion: plan.version,
 					forLineId: line.id,
-					kind,
+					kind: kind === 'make_in_house' ? ('make_in_house' as const) : ('product' as const),
 					lines: proposed,
 					labourNote,
 					candidates
@@ -243,9 +275,12 @@ export async function findSubstitutes(
 			const q = await requote(ports, ctx, tx, state, after, kitchen, open);
 			return {
 				ops: [op, ...q.ops],
-				value: { plan: q.plan, chosen: q.plan.lines.find((l) => l.id === drafts[0]?.id) ?? null }
+				value: {
+					plan: q.plan,
+					chosen: q.plan.lines.filter((l) => drafts.some((d) => d.id === l.id))
+				}
 			};
 		}
 	);
-	return r.ok ? ok(r.value.value) : r;
+	return r.ok ? ok({ ...r.value.value, kind, candidates, labourNote, residual }) : r;
 }

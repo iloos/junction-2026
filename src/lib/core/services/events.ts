@@ -54,11 +54,23 @@ function overridesOf(plan: Plan): Record<string, number> {
 
 function demandLines(planId: string, seed: EventSeed, overrides: Record<string, number>) {
 	const d = planEventDemand(seed, { gServedOverrides: overrides });
-	const needs: Need[] = d.needs.map((n) =>
-		overrides[n.id] !== undefined
-			? { ...n, provenance: { ...n.provenance, note: `gServed=${overrides[n.id]}` } }
-			: n
-	);
+	const guests = seed.guests.estimate;
+	const needs: Need[] = d.needs.map((n) => {
+		const withNote =
+			overrides[n.id] !== undefined
+				? { ...n, provenance: { ...n.provenance, note: `gServed=${overrides[n.id]}` } }
+				: n;
+		// The editable g/guest and how the need follows from it (kitchen table + Why drawer).
+		const dish = seed.dishes.find((x) => x.dish === n.label);
+		if (dish?.gServed === undefined) return withNote;
+		const g = overrides[n.id] ?? dish.gServed;
+		const y = dish.yield ?? 1;
+		const formula = `${g} g × ${guests}${y !== 1 ? ` ÷ ${y.toFixed(2)}` : ''} = ${n.amount.value.toFixed(1)} ${n.amount.unit}`;
+		return {
+			...withNote,
+			dish: { gServed: g, defaultGServed: dish.gServed, guests, yield: y, formula }
+		};
+	});
 	const drafts: DraftLine[] = d.lines.map((l) => ({
 		id: `${planId}-${l.needId}`,
 		needId: l.needId,

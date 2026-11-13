@@ -5,7 +5,7 @@
 .DESCRIPTION
   Idempotent: run it again to re-copy changed data, re-run pnpm i and print the same port.
   - Worktree: <parent of main checkout>\junc26-lanes\<name>, branch lane/<name> from main.
-  - Copies .env, data\valio\ and data\venues\ (if present) from the main checkout. These are gitignored or uncommitted: never commit them.
+  - Copies .env, data\valio\, data\venues\ and certs\ (if present) from the main checkout. These are gitignored or uncommitted: never commit them.
   - Runs pnpm i inside the worktree. Never junction or symlink node_modules: `git worktree remove --force` deletes through links.
   - Picks a dev port in 5171-5179 that is neither listening nor recorded by another lane, and records it in scratch\lane-port.
 
@@ -51,7 +51,7 @@ if ($listed -contains $wt.TrimEnd('\')) {
 $envSrc = Join-Path $mainRoot '.env'
 if (Test-Path $envSrc) { Copy-Item $envSrc (Join-Path $wt '.env') -Force; Write-Host 'copied    .env' }
 else { Write-Warning '.env not found in the main checkout; the lane runs in fixture mode only.' }
-foreach ($d in 'data\valio', 'data\venues') {
+foreach ($d in 'data\valio', 'data\venues', 'certs') {
 	$src = Join-Path $mainRoot $d
 	if (Test-Path $src) {
 		robocopy $src (Join-Path $wt $d) /E /XO /NFL /NDL /NJH /NJS /NP | Out-Null

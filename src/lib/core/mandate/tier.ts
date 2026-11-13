@@ -150,6 +150,7 @@ export function tierLines(input: TierInput): TierResult {
 			id: w.draft.id,
 			needId: w.draft.needId,
 			productId: w.draft.productId,
+			productName: products.get(w.draft.productId)?.nameFi,
 			qty: w.draft.qty,
 			state,
 			tier,
