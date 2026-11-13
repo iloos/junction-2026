@@ -176,3 +176,29 @@ describe('stub handlers through the gate (s5 shape)', () => {
 		);
 	});
 });
+
+describe('real handlers with stub fallback', () => {
+	it('serves quote from the real catalogue and place_order from the stub', async () => {
+		const { handlers } = await import('./handlers');
+		const q = await serveTool('quote', ext, { productIds: ['464201', '479999'] }, handlers);
+		if (!q.ok) throw new Error(q.error.message);
+		const v = q.value as {
+			offers: { productId: string; price: { provenance: { source: string } } | null }[];
+			notFound: string[];
+		};
+		expect(v.notFound).toEqual(['479999']);
+		expect(v.offers[0].price?.provenance.source).not.toBe('seed');
+		const p = await serveTool(
+			'place_order',
+			ext,
+			{
+				kitchenId: 'k-lounas',
+				deliverBy: '2026-11-16',
+				idempotencyKey: 'fallback-1',
+				lines: [{ productId: '464201', qty: 2, unit: 'ST' }]
+			},
+			handlers
+		);
+		expect(p.ok).toBe(true);
+	}, 60000);
+});
