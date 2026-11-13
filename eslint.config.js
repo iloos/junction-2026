@@ -34,8 +34,36 @@ export default defineConfig(
 		}
 	},
 	{
-		// Override or add rule settings here, such as:
-		// 'svelte/button-has-type': 'error'
-		rules: {}
+		// Pure core (CLAUDE.md rule 2): no Svelte, no DOM-bound modules, no Node built-ins, no vendor SDKs.
+		files: ['src/lib/core/**/*.ts'],
+		ignores: ['src/lib/core/**/*.test.ts'],
+		rules: {
+			'no-restricted-imports': [
+				'error',
+				{
+					patterns: [
+						{
+							group: [
+								'svelte',
+								'svelte/*',
+								'$app/*',
+								'$env/*',
+								'$lib/server/*',
+								'node:*',
+								'@google/genai',
+								'ai',
+								'@ai-sdk/*',
+								'drizzle-orm',
+								'drizzle-orm/*',
+								'postgres',
+								'@electric-sql/*',
+								'@modelcontextprotocol/*'
+							],
+							message: 'src/lib/core is pure TS: depend on a port in core/ports.ts instead.'
+						}
+					]
+				}
+			]
+		}
 	}
 );
