@@ -52,7 +52,7 @@ A food wholesaler can now let any outside purchasing agent order on a kitchen's 
 ## Risks and the spike that kills each one
 | Risk | Spike | Result |
 |---|---|---|
-| Valio's mock API is thin or slow | 20 min: read the portal, call every endpoint, measure latency | Data is rich (17.5k products, pack units, CO2, reliability). API is price + availability only; latency still to measure |
+| Valio's mock API is thin or slow | 20 min: read the portal, call every endpoint, measure latency | Data is rich (17.5k products, pack units, CO2, reliability). API is price + availability only. Base `https://junction26.valioaimo.fi`, header `X-API-Key`, body `{customer, requestedDate, products[≤1000]}`. Measured: ~0.1 s for 2 products, 0.25 s for 1,000 prices (660 kB), 0.16 s for 1,000 availabilities. Availability returns order closing time, logistic model and schedule lines (amount and date per sales unit), so cut-off-time exceptions are real |
 | Scraping real menus is slow or blocked | 20 min: Context.dev on 5 Helsinki restaurant sites, extract structured menus | _pending_ |
 | Gemini Decisions API access or semantics unclear | Ask at the DeepMind booth; read the `typesafe-ai` skill; one test call when the key arrives | _pending_ |
 | Nemotron is too weak as the critic | 10 test cases: does it catch the planted problems? | _pending_ |
