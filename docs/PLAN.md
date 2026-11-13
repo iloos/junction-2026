@@ -4,8 +4,10 @@ The only plan. Markers: `[x]` done · `[~]` in progress · `[ ]` todo · `[!]` b
 
 ## Now: rings (D4). This section supersedes the phases below where they differ
 - [x] Concept, research, foundations, Valio probe, outside reviews, platform drafts (Fri night)
-- [ ] **Contracts commit** (lead): ARCHITECTURE.md, types, Drizzle schema, ports + fixtures, tool registry, eval format, lane-setup
-- [ ] **Lanes** (worktrees): core-db · agent · kitchen · ops · jobs; then web, Lab, Personal per D4
+- [x] **Contracts commit** (lead): ARCHITECTURE.md, types, Drizzle schema, ports + fixtures, tool registry, eval format, lane-setup (`bb8c78e`, review fixes `a3a97b2`)
+- [~] **Lanes**: core-db (slices 1–3 merged, slice 4 next) · agent [x] · kitchen [x] fixture, live flip next · ops [x] · deploy [~] Runtime building · jobs [ ]
+- [x] Aiven Postgres migrated + seeded (17,546 products, 11,269 offers)
+- [ ] **Ring 0 tracks** (review 01:55, docs/reviews/2026-11-14-0155.md): R0-a rank + make_in_house · R0-b kitchen live flip · R0-c Request (Valio's NL order flow) · R0-d demo hygiene (scenario clock, reset run, deployed smoke) · R0-e Postgres double-commit race test · R0-f agent run route + trace drawer · R0-g external agent on stage (MCP client)
 - [ ] **Ring 0 deployed** by Sat ~08:00–10:00: Christmas buffet for 140 (ham 462490 and lanttulaatikko 462482 really out), event as a diff, rescue with a visibly rejected substitute, mandate + exact-term approval + idempotent commit, external agent through the same gate, why drawer (PRODUCT.md, 8 stories)
 - [ ] Ring 1 (Operations, Context.dev change, Exa discovery) · Ring 2 (Lab/evals, Modal jobs, Gemma/Verda) · Ring 3 (Personal for S-Pankki, Nemotron documents)
 - [ ] Rough video Sat 22:00 · feature freeze Sun 06:00 · drafts → FINAL by 09:30

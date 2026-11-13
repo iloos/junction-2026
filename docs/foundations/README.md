@@ -21,6 +21,7 @@ _Between the concept (CONCEPT v2.1, SCORECARD) and the lanes. Goal: every servic
 | [ux.md](ux.md) | Interaction model, screens, control room, design direction | [x] |
 | [valio-data.md](valio-data.md) | Valio catalogue + API probe, cache, limits, hero products | [x] |
 | [s-pankki.md](s-pankki.md) | S-Pankki brief and dataset (Ring 3) | [x] |
+| [deploy.md](deploy.md) | Aiven Runtime service `mandate`, redeploy, smoke, plan B (Verda) | [x] |
 
 ## DevOps for the lane phase
 - **Lanes:** one worktree + branch each; `scripts/lane-setup` copies `.env` and `data/valio/`, runs `pnpm i`, sets the dev port. Project `.mcp.json` is shared; Verda and Aiven MCPs stay local to the lead (they can spend money).
