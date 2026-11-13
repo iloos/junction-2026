@@ -13,7 +13,10 @@ import type {
 	ProductId,
 	Result,
 	ServerEvent,
-	SimEvent
+	SimEvent,
+	ToolInput,
+	ToolName,
+	ToolOutput
 } from './contracts';
 import type { WorkspaceState } from './state';
 
@@ -143,6 +146,15 @@ export interface CallContext {
 	scopes: readonly string[];
 	via: string;
 }
+
+/**
+ * The seam between lanes: core-db implements one handler per tool (services), agent serves them as
+ * MCP + REST + OpenAPI and uses them in the agent loop, kitchen/ops call them over REST.
+ * Handlers check `ctx.scopes` against the tool's scope before doing anything.
+ */
+export type ToolHandlers = {
+	[N in ToolName]: (ctx: CallContext, input: ToolInput<N>) => Promise<Result<ToolOutput<N>>>;
+};
 
 export interface Ports {
 	clock: Clock;
