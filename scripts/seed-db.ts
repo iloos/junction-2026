@@ -110,9 +110,11 @@ if (!url)
 
 const host = new URL(url).hostname;
 const local = host === 'localhost' || host === '127.0.0.1' || host === '::1';
-const ca = process.env.PG_CA_CERT;
-const sql = postgres(url, {
-	ssl: ca ? { ca } : local ? false : 'require',
+const caEnv = process.env.PG_CA_CERT;
+// PG_CA_CERT is PEM text or a path to a PEM file (certs/aiven-ca.pem locally).
+const ca = caEnv && !caEnv.includes('-----BEGIN') ? readFileSync(caEnv, 'utf8') : caEnv;
+const sql = postgres(stripSslMode(url), {
+	ssl: ca ? { ca, rejectUnauthorized: true } : local ? false : 'require',
 	max: 1,
 	onnotice: () => {}
 });
@@ -172,4 +174,11 @@ try {
 	);
 } finally {
 	await sql.end();
+}
+
+/** sslmode in the URL would override the ssl object and skip certificate checks. */
+function stripSslMode(u: string): string {
+	const x = new URL(u);
+	x.searchParams.delete('sslmode');
+	return x.toString();
 }
