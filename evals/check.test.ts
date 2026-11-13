@@ -7,7 +7,7 @@ import type { EndState } from './types.ts';
 
 const base = (): EndState => ({
 	lines: [],
-	orders: [],
+	plans: [],
 	attempts: [],
 	receipts: [],
 	approvalStates: [],
@@ -64,7 +64,7 @@ const s1Good = (): EndState => ({
 	approvalStates: ['pending', 'granted'],
 	weekSpentCents: 156000,
 	ops: [
-		{ op: 'CreatePlan', actor: 'chef' },
+		{ op: 'CreatePlan', actor: 'kitchen_agent' },
 		{ op: 'RecordApproval', actor: 'approver', approvalState: 'granted' },
 		{ op: 'CommitOrder', actor: 'chef' }
 	],

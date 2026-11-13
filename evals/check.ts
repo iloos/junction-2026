@@ -148,11 +148,11 @@ const CHECKERS: Record<string, Checker> = {
 				: ok(key);
 		}),
 
-	orders: (want, end) =>
+	plans: (want, end) =>
 		(want as Obj[]).map((w) => {
-			const key = `orders[${w.key}]`;
-			const o = end.orders.find((x) => x.key === w.key);
-			if (!o) return fail(key, 'no order');
+			const key = `plans[${w.key}]`;
+			const o = end.plans.find((x) => x.key === w.key);
+			if (!o) return fail(key, 'no plan');
 			const p: string[] = [];
 			if (w.totalCents !== undefined && o.totalCents !== w.totalCents)
 				p.push(`totalCents ${o.totalCents}`);

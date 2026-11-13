@@ -68,7 +68,7 @@ export interface AttemptOutcome {
 	receiptId?: string;
 }
 
-export interface OrderView {
+export interface PlanView {
 	key: string;
 	totalCents: number;
 	state: string;
@@ -81,7 +81,7 @@ export interface EndState {
 	lines: LineView[];
 	/** Lines after the last edit, when a scenario edits (s2). Defaults to `lines`. */
 	linesAfterEdit?: LineView[];
-	orders: OrderView[];
+	plans: PlanView[];
 	attempts: AttemptOutcome[];
 	receipts: { id: string; idempotencyKey?: string }[];
 	approvalStates: string[];

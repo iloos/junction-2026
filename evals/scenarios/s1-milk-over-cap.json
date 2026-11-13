@@ -17,12 +17,20 @@
 	},
 	"steps": [
 		{
-			"actor": "chef",
-			"action": "request",
+			"actor": "kitchen_agent",
+			"action": "place_order",
 			"input": {
-				"text": "1000 l laktoositonta maitoa maanantaiksi",
-				"deliverBy": "2026-11-16"
-			}
+				"idempotencyKey": "s1-place",
+				"deliverBy": "2026-11-16",
+				"lines": [
+					{
+						"productId": "464201",
+						"qty": 1000,
+						"unit": "ST"
+					}
+				]
+			},
+			"comment": "the agent turned \"1000 l laktoositonta maitoa maanantaiksi\" into this line (agent lane, tested separately)"
 		},
 		{
 			"actor": "approver",
@@ -89,7 +97,7 @@
 			"mustInclude": [
 				{
 					"op": "CreatePlan",
-					"actor": "chef"
+					"actor": "kitchen_agent"
 				},
 				{
 					"op": "RecordApproval",
