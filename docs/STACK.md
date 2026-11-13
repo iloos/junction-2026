@@ -4,8 +4,8 @@ Chosen for: least overhead, fast iteration, impressive UI at scale, and one depl
 
 | Layer | Pick | Why / note |
 |---|---|---|
-| Framework | **SvelteKit 3** (as `sv` 1.3 scaffolds it) + Svelte 5.57 (runes) + Vite 8 | `+server.ts` API routes keep the LLM proxy and keys in the same app. Kit 3 is new: look up surprises via context7. Fallback to Kit 2.70 per D0. |
-| Adapter | **`adapter-vercel`** (D0d); fallback `adapter-node` on Fly | Deploy the empty scaffold at 19:30. |
+| Framework | **SvelteKit 2.70** + Svelte 5.57 (runes) + Vite 8, scaffolded with `sv@0.17.1` | `+server.ts` API routes keep the LLM proxy and keys in the same app. Kit 2 is what coding agents know best (D0). |
+| Adapter | **`@sveltejs/adapter-vercel@^6`** (the Kit 2 line; 7.x needs Kit 3) (D0d); fallback `adapter-node@^5` on Fly | Deploy the empty scaffold at 19:30. |
 | Styling | Tailwind 4.3 (`@tailwindcss/vite`) | No config file needed; tokens as CSS vars in `app.css`. |
 | Components | **bits-ui 2.21** (headless) | Low overhead. Pull in **shadcn-svelte** only for the boring parts (dialog, command palette, sheet, tabs, sonner). |
 | Icons / toasts / util | `@lucide/svelte`, `svelte-sonner`, `runed`, `mode-watcher` | |
@@ -59,9 +59,11 @@ Dependency direction: `routes → state/agent/viz → ports → core`. `core` im
 
 ```powershell
 # in the repo root (it already has docs/ and CLAUDE.md, so scaffold into a temp dir, then move the files up)
-pnpm dlx sv@1.3 create scratch/app --template minimal --types ts   # add-ons: tailwindcss, prettier, eslint, vitest, playwright
+pnpm dlx sv@0.17.1 create scratch/app --template minimal --types ts   # 0.17.1 = last sv that scaffolds Kit 2 (1.x scaffolds Kit 3)
+#   # add-ons: tailwindcss, prettier, eslint, vitest, playwright
 # move scratch/app/* (incl. dotfiles) to the repo root, merge .gitignore, delete scratch/app
-pnpm add -D @sveltejs/adapter-vercel          # swap it into svelte.config.js (D0d)
+pnpm add -D @sveltejs/adapter-vercel@^6      # swap it into svelte.config.js (D0d)
+# sanity check: pnpm list @sveltejs/kit  → 2.70.x
 pnpm add bits-ui @lucide/svelte svelte-sonner runed mode-watcher zod dexie d3
 pnpm add -D @types/d3
 pnpm add ai @ai-sdk/svelte @ai-sdk/anthropic @ai-sdk/google @ai-sdk/openai-compatible

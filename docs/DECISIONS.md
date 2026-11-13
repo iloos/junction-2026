@@ -2,8 +2,8 @@
 
 `D#` · choice · why · what would reopen it. Append only.
 
-### D0 · SvelteKit 3 as scaffolded by `sv` 1.3 — 13 Nov (replaces the earlier "Kit 2" note)
-`sv create` now scaffolds `@sveltejs/kit ^3` / `adapter-auto ^8` / Vite 8. Pinning Kit 2 would fight the tool. Kit 3.2 is the third release and needs the same peers (Svelte ≥5.57, Vite 8) that already work for us. Check Kit 3 changes via context7 when something surprises us. Reopen if: Kit 3 breaks an adapter or a library in the first 30 min (fallback: `pnpm add -D @sveltejs/kit@^2.70 @sveltejs/adapter-vercel@^6`).
+### D0 · SvelteKit 2.70, scaffolded with `sv@0.17.1`, not Kit 3 — 13 Nov
+Kit 3.0 shipped 1 Oct 2026 (six weeks ago), and `sv` ≥1.0 scaffolds it by default. We stay on Kit 2 because the coding agents' training knowledge and our own experience are Kit 2. On Kit 3 every agent would be guessing at changes, which is costly with parallel lanes in auto mode. Kit 2.70.4 is still maintained, and its peers (Svelte 5.57, Vite 8) are the same versions, so we lose nothing we'd use. Pair it with `adapter-vercel@^6` (7.x requires Kit 3). Reopen if: a library we need requires Kit 3.
 
 ### D0b · IndexedDB (Dexie) for datasets, localStorage for prefs, both behind StoragePort — 13 Nov
 "Lots of data points" exceeds localStorage's ~5 MB, and having no server DB keeps the overhead low. Reopen if: the challenge needs state shared across users (then use a tiny hosted SQLite behind the same port), or it's the MariaDB challenge.

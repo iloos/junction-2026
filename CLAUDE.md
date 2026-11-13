@@ -1,7 +1,7 @@
 # Junction 2026: team repo
 
 **Is:** our Junction 2026 hackathon build (Espoo, 13–15 Nov 2026). Challenge: _TBD, see [docs/event/CHALLENGE.md](docs/event/CHALLENGE.md)_.
-**Stack:** SvelteKit 3 + Svelte 5 runes + Vite 8, Tailwind 4, bits-ui, d3 (maybe one three.js view), LLM behind one port (Claude / Gemini / Featherless / Verda). Datasets in IndexedDB behind a storage port. See [docs/STACK.md](docs/STACK.md).
+**Stack:** SvelteKit 2.70 + Svelte 5 runes + Vite 8, Tailwind 4, bits-ui, d3 (maybe one three.js view), LLM behind one port (Claude / Gemini / Featherless / Verda). Datasets in IndexedDB behind a storage port. See [docs/STACK.md](docs/STACK.md).
 **Deploy:** Vercel (`adapter-vercel`), fallback Fly (D0d). The empty scaffold is deployed first.
 **Commit:** terse, past-tense subject ≤72 chars; body only when it carries the why.
 
