@@ -8,7 +8,10 @@
  */
 import type { OpEnvelope, Scope, ServerEvent, SimEvent } from '$lib/core/contracts';
 import type { Ops } from '$lib/core/ports';
+import { and, asc, eq, gt } from 'drizzle-orm';
 import { dbMode } from '$lib/server/db/client';
+import * as schema from '$lib/server/db/schema';
+import type { AnyDb } from '$lib/server/store/drizzle-store';
 import { hasSeq, MemoryBus } from './memory';
 import { allocateSeq, PgTransport, readOps } from './pg';
 import { SYNTH_WORKSPACE, syntheticRun } from './synthetic';
@@ -56,6 +59,19 @@ export async function publishSim(scope: Scope, event: SimEvent): Promise<void> {
 	const seq = pg ? await allocateSeq(scope.workspaceId) : bus().local.reserveSeq(scope.workspaceId);
 	if (seq === null) throw new Error(`workspace ${scope.workspaceId} not found`);
 	await publish(scope.workspaceId, [{ kind: 'sim', seq, ...scope, event }]);
+}
+
+/** An OpsReader over any Drizzle db with our schema (PGlite or Postgres). */
+export function drizzleOpsReader(db: AnyDb): OpsReader {
+	return async (workspaceId, after, limit) => {
+		const rows = await db
+			.select({ envelope: schema.ops.envelope })
+			.from(schema.ops)
+			.where(and(eq(schema.ops.workspaceId, workspaceId), gt(schema.ops.seq, after)))
+			.orderBy(asc(schema.ops.seq))
+			.limit(limit);
+		return rows.map((r: { envelope: unknown }) => r.envelope as OpEnvelope);
+	};
 }
 
 /** Fixture mode: let the PGlite store answer op catch-up instead of the in-memory ring. */
