@@ -4,16 +4,24 @@
  */
 import type { Kitchen, ServerEvent } from '$lib/core/contracts';
 import { Kitchen as KitchenSchema } from '$lib/core/contracts';
-import type { Ports } from '$lib/core/ports';
 import { createFixtureDb } from '../db/pglite';
 import { createSimulator } from '../adapters/simulator/stock';
 import { SimOverlay } from '../adapters/simulator/overlay';
 import { createFixturePorts } from './fixture-ports';
 import { createDrizzleStore, type AnyDb } from './drizzle-store';
 import seedKitchens from '../../../../fixtures/seeds/kitchens.json';
+import buffetSeed from '../../../../fixtures/seeds/christmas-buffet-140.json';
+import { EventSeed } from '$lib/core/demand';
+import type { ServicePorts } from '$lib/core/services/events';
 
 export const DEMO_WORKSPACE = 'ws-demo';
 export const DEMO_RUN = 'run-1';
+
+/** Event seeds by id (core reads no files; handlers get them through ports.events). */
+export function loadSeedEvents(): Record<string, EventSeed> {
+	const e = EventSeed.parse(buffetSeed);
+	return { [String(buffetSeed.id)]: e };
+}
 
 export function loadSeedKitchens(): Kitchen[] {
 	return seedKitchens.kitchens.map((k) => KitchenSchema.parse(k));
@@ -51,6 +59,11 @@ export async function createDbPorts(o: DbPortsOptions = {}) {
 	});
 	const today = () =>
 		new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Helsinki' }).format(base.clock.now());
-	const ports: Ports = { ...base, store, simulator: createSimulator(base.catalog, { today }) };
+	const ports: ServicePorts = {
+		...base,
+		store,
+		simulator: createSimulator(base.catalog, { today }),
+		events: loadSeedEvents()
+	};
 	return { ports, store, db, overlay: base.overlay, workspaceId, runId };
 }

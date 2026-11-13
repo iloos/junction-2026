@@ -11,12 +11,13 @@ import {
 	type ToolName,
 	type ToolOutput
 } from '../contracts';
-import type { CallContext, Ports, ToolHandlers } from '../ports';
+import type { CallContext, ToolHandlers } from '../ports';
+import { editLine, explainLine, planEvent, type ServicePorts } from './events';
 import { approve, commitOrder, getPlan, placeOrder } from './orders';
 import { quote, searchProducts } from './quote';
 
 type Impl<N extends ToolName> = (
-	ports: Ports,
+	ports: ServicePorts,
 	ctx: CallContext,
 	input: ToolInput<N>
 ) => Promise<Result<ToolOutput<N>>>;
@@ -29,12 +30,12 @@ const notYet =
 const IMPLS: { [N in ToolName]: Impl<N> } = {
 	search_products: searchProducts,
 	quote,
-	plan_event: notYet('slice 3'),
+	plan_event: planEvent,
 	place_order: placeOrder,
-	edit_line: notYet('slice 3'),
+	edit_line: editLine,
 	find_substitutes: notYet('slice 4'),
 	get_plan: getPlan,
-	explain_line: notYet('slice 3'),
+	explain_line: explainLine,
 	approve,
 	commit_order: commitOrder,
 	set_mandate: notYet('slice 2')
@@ -50,7 +51,7 @@ function invalid(issues: { path: PropertyKey[]; message: string }[]): {
 	);
 }
 
-export function createHandlers(ports: Ports): ToolHandlers {
+export function createHandlers(ports: ServicePorts): ToolHandlers {
 	const out = {} as Record<
 		ToolName,
 		(ctx: CallContext, input: unknown) => Promise<Result<unknown>>
