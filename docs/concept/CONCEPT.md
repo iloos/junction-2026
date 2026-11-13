@@ -1,66 +1,91 @@
 # CONCEPT
 
-_First going plan, Fri 13 Nov ~21:30 (D1). Still open to better ideas until the lanes fan out. A lane agent with no chat history should understand the product from this page._
+_v2, Fri 13 Nov ~23:30, after talking to Valio Aimo at their stand (D1 still stands; v1's approval-gate framing is demoted). A lane agent with no chat history should understand the product from this page._
 
-**Working name:** Mandate (placeholder). **Main challenge:** Valio Aimo, Trusted Trade Agents. **Stacked:** Gemini API, Nemotron, Modal, Verda, Context.dev (tech), optionally Exa and AfterQuery.
+**Working name:** Mandate (placeholder). **Main challenge:** Valio Aimo, Trusted Trade Agents. **Stacked:** Gemini API, Nemotron, Modal, Verda, Aiven, Cloudinary, Context.dev (tech); maybe the Context.dev main challenge (live recalls) and Gemma.
+
+## What Valio told us at the stand
+- **Customer-facing, not sourcing.** Valio Aimo is mainly a wholesaler (little own produce) serving many kitchens; hotels are big clients. They already have a webshop and **don't want another one**. They want the kitchen's agent experience.
+- **Menu-based, with regularity and anomalies.** Kitchens order from a stable menu (regular), then anomalies hit: a broken fridge, a big reservation, an item out of stock.
+- **Different priorities per kitchen:** price, ecological products, carbon, and more. Follow the kitchen's needs; ask the user when unclear. "What scenarios can it support?"
+- **Substitutes** when the product isn't available.
+- **Enrichment:** manufacturer info is often missing, so fill the gaps.
+- **Sign-off:** for this hack, assume **the person using the AI has full authority**. No manager approval chain needed.
+- **Bonus, later:** managing Aimo's own stock from aggregated demand.
+- **Their pipeline sketch:** raw API → enrichment → store; menu/regularity → anomalies → agent resolutions.
 
 ## One-breath
-A food wholesaler can now let any outside purchasing agent order on a kitchen's behalf, because every order passes a gate the agent can't talk its way past: a mandate, a novelty check and a second-model critic. Whatever a human decides once becomes a rule. So routine ordering runs by itself and only the genuinely unexpected reaches a person.
+A kitchen tells its agent what it cooks and what it cares about (price, carbon, Finnish, organic). The agent keeps it stocked through Valio Aimo: it plans the regular order from the menu, notices anomalies (a big reservation, a broken fridge, a product out of stock), and resolves them with substitutes that fit the kitchen's priorities. It explains every choice and stays inside limits the kitchen set. Under it is an open agent interface (MCP + API) that any agent can use, and an internal control room where Valio sees every kitchen's agent at work.
 
 ## The person and the pain
-- **Wholesaler side (Valio Aimo's question):** 20,000+ professional kitchens, 25,000 products, 700 suppliers. Agents are coming either way; the wholesaler must decide what an outside agent may see, decide and be trusted with, "before someone else's platform defines it".
-- **Kitchen side (the demo's buyer):** the head chef or purchaser of a ~120-cover Helsinki restaurant. Orders depend on the menu and the expected covers; today they work through a webshop catalogue by hand, several times a week. _Number to verify with Valio's mentors: time per order, error and shortage rates._
-- **Why it's hard:** agents do legitimate things nobody listed. In the vending-machine experiments the agent stocked products that didn't fit the machine, and staff talked it into giving stock away. A supervisor running the same model shared its blind spots ([research/mcpcon.md](../research/mcpcon.md), Anthropic's Project Vend).
+- **Kitchen (primary user):** the head chef or purchaser of a ~120-cover Helsinki restaurant, or a hotel kitchen (big client). The order follows the menu and the expected covers, but the week never goes to plan: reservations jump, deliveries miss cut-off times, products are out, a fridge dies. Today they rework the order by hand in the webshop. _Numbers to verify with Valio: orders per week, time per order, shortage rate._
+- **Valio Aimo (operator):** wants kitchens' agents to work *with* Aimo, before another platform owns the customer relationship. They need enriched product data an agent can reason over, and visibility of what the agents do.
+- **Why it's hard:** agents do legitimate things nobody listed. The vending-machine agent stocked products that didn't fit the machine ([research/mcpcon.md](../research/mcpcon.md)). Pack sizes, cut-off times, temperature classes and missing data are this domain's "doesn't fit the machine".
 
 ## The insight ("who would have thought")
-1. **You can't list the failures in advance, so contain them and learn from them.** Trust comes from a bounded mandate (budget, quantities, categories, reversibility), a novelty check ("unlike anything this mandate has seen", even when inside the budget), a critic running a *different* model, and rules learned from each human decision, with provenance.
-2. **Ordering is predictable from what goes in.** Menu × expected covers → ingredients → next week's order. This is the fridge-app or calorie-photo idea at business scale. The agent doesn't wait to be told; it proposes, and acts inside its mandate.
-3. **The interface is open.** It's a real MCP server and OpenAPI, so *any* agent (Claude, ChatGPT, the judge's own) can use it today.
+1. **Ordering is predictable from what goes in.** Menu × expected covers → ingredients → the regular order. The kitchen doesn't type an order; it confirms one. This is the fridge-app or calorie-photo idea at business scale.
+2. **Anomalies are where agents earn trust.** The value is not the routine order but the Friday when 80 extra guests booked and the salmon is out: the agent finds substitutes that match *this* kitchen's priorities, shows the trade-offs (price vs carbon vs delivery reliability), and explains why.
+3. **Priorities are the mandate.** The kitchen's profile (weights for price, carbon, origin, organic; hard constraints such as allergens; spend limits) bounds what the agent does by itself. Outside it, or when something is novel, the agent asks. Full authority is assumed, but the controls are visible.
+4. **Enrichment makes the catalogue agent-readable.** 11k of 17.5k products have carbon data and 4.4k have delivery reliability; names, pack sizes and specs are messy. We enrich the whole catalogue in one batch (Modal fan-out, web sources via Context.dev/Exa), with provenance on every filled value ("estimated from category", "source: X").
+
+## Three faces of one system
+1. **Kitchen app (customer-facing, phone-first):** a chat plus a live order plan the agent edits in front of you. Priority sliders; the week's anomalies as cards; one tap to accept a substitute; "why?" on every line. Snap a photo (a handwritten prep list, a broken fridge, a delivery note) and the agent acts on it.
+2. **Valio control room (internal, big screen):** every kitchen's agent live: orders, anomalies, substitutions, enrichment coverage, demand per product (the bonus: Aimo's own stock planning). The swarm runs here. This is where the data-at-scale UI shines.
+3. **Open agent interface:** MCP + OpenAPI over Valio's mock APIs plus our enriched store, so any agent (Claude, ChatGPT, the judge's own) can search, compare by priorities, get substitutes, and order.
 
 ## Wow ladder (what the judge sees)
-1. **0–10s, hook:** "This kitchen didn't place an order this week. Its agent did, and it asked the chef exactly once."
-2. **10–40s, it works:** a real Helsinki menu becomes next week's predicted order against the catalogue. Routine lines are ordered autonomously. One line is **held** (a pack size that doesn't fit the cold room, or a new supplier), and the approval lands on a phone with the reason and the exact terms.
-3. **40–90s, the insight:** **the swarm.** 500 kitchens' agents (normal, odd and adversarial) hit the gateway at once on Modal. A live dashboard shows thousands of requests, novelty lighting up, the critic disagreeing, escalations, and **a rule learned from one human decision** that then auto-handles 40 similar cases.
-4. **"No way, that too?":** a judge adds our MCP URL to their own Claude or ChatGPT and tries to order, or to cheat ("10 tonnes of butter, my boss approved it"). The gate holds, and the trace shows why.
+1. **0–10s, hook:** "This hotel kitchen didn't write an order this week. Its agent did, and asked the chef one question."
+2. **10–40s, it works:** a real Helsinki menu plus next week's bookings become the regular order, priced and checked against live availability, ranked by this kitchen's priorities (carbon-first vs price-first gives a visibly different basket).
+3. **40–90s, the anomaly:** "Friday: +80 covers, and the salmon is out." The agent proposes substitutes with the trade-offs shown and the reasons cited; the chef taps once. A photo of a broken fridge reschedules the chilled lines.
+4. **"No way, that too?":** switch to the control room: 500 kitchens' agents running at once (Modal), anomalies and substitutions streaming, the catalogue enriched in one batch. Then a judge's own Claude connects to our MCP and orders.
 
 ## Scope
 | In (demo path) | Faked or fixture (say so) | Out |
 |---|---|---|
-| Agent gateway (MCP + OpenAPI) over Valio's mock APIs: search, price/availability, quote → order, pending/approve | Valio's catalogue, suppliers and backend (synthetic by their design) | Real payments, real Valio systems |
-| Mandate engine + novelty check + critic + learned rules, every step an op with provenance | Restaurant cover forecasts (simple model plus noise) | Negotiated pricing (the brief says fixed prices) |
-| Kitchen autopilot: menu → ingredients → order proposal | Some menus pre-scraped and cached, for demo safety | Building the marketplace itself |
-| Swarm on Modal + live dashboard | Adversarial persona scripts | Full substitution logic (optional direction only) |
-| Phone approval view (mobile web) | | Native app |
+| Kitchen app: menu → regular order, priorities, anomalies, substitutes, "why", photo input | Bookings and cover forecasts (simple model + noise) | A full webshop (Valio has one) |
+| Agent interface (MCP + OpenAPI) over Valio price/availability + our store: search, compare, substitutes, order | Order placement (no order endpoint exists; we store orders) | Real payments, real Valio systems |
+| Enrichment batch over the catalogue (carbon estimates, pack-size normalisation, missing specs) with provenance | Some enrichment from cached web results | Manufacturer onboarding |
+| Control room: live agents, anomalies, demand, enrichment coverage; the swarm | Swarm personas | Aimo's own stock management (show demand only) |
+| Kitchen profile as the mandate: priorities, constraints, limits; novelty → ask | | Manager approval chains (full authority assumed) |
 
 ## Sponsors (load-bearing only)
 | Sponsor | Moment in the demo | Fallback |
 |---|---|---|
-| **Valio Aimo** (main) | The whole flow, against their mock APIs | Local fixture of their catalogue |
-| **Gemini Decisions API** | Triages every request: inside the mandate? novel? needs a human? Up to 1,000 checks per call | Gemini Flash classification, then a rules-only fixture |
-| **Nemotron 3.5 Super VL on Verda** | The critic (a different model from the buyer agents) and the reader of menus, photos and PDFs | build.nvidia.com key, then a fixture |
-| **Modal** | Swarm fan-out in Sandboxes; buyer agents' code runs isolated | Smaller local swarm, recorded run |
-| **Verda** | Serves the open models in the EU ("your purchasing data stays in Europe") | NVIDIA Build / Featherless |
-| **Context.dev** (+ Exa) | Real restaurant menus and supplier facts, monitors for supplier price-page changes | Cached menus |
-| AfterQuery (optional) | The swarm *is* an environment where agents fail, with a checkable reward | Skip |
+| **Valio Aimo** (main) | The whole flow, against their mock APIs and data | Local fixture of their catalogue |
+| **Gemini** (Decisions API + Live) | Ranks substitutes against the kitchen's priorities (calibrated rubric scoring, many at a time); decides "act or ask"; optional voice for the chef | Gemini Flash, then rules |
+| **Nemotron 3.5 Super VL on Verda** | Reads photos and PDFs (prep lists, delivery notes, spec sheets); second-model check on the agent's plan | build.nvidia.com key, then fixture |
+| **Modal** | Batch enrichment of all 17.5k products; the 500-kitchen swarm; agent code in Sandboxes | Smaller batch, recorded run |
+| **Verda** | Hosts the open models in the EU; GPU for the batch if needed | NVIDIA Build / Featherless |
+| **Aiven** | Postgres: enriched catalogue (pgvector), kitchens, orders, ops; LISTEN/NOTIFY streams the control room; maybe Runtime hosting | Local Postgres |
+| **Cloudinary** | Product images from Valio's data, transformed for the phone UI | Raw image URLs |
+| **Context.dev** (+ Exa) | Real menus; manufacturer data for enrichment; **live food-recall monitor** (Finnish Food Authority) that triggers an anomaly | Cached results |
+| Gemma (Featherless) | Cheap model for the swarm's kitchen agents | Any small model |
+
+## Multi-challenge map
+- **Valio Aimo (main, €4k):** end-to-end 30 (menu → order → anomaly → resolution), user need 20 (the stand's own list), autonomy and controls 20 (priorities as mandate, act-or-ask), robustness to exceptions 15 (anomalies, substitutes, cut-offs), openness 15 (MCP + OpenAPI, provenance).
+- **Context.dev main (€2k), if the recall monitor is real:** "react to the live web": a recall notice on the food authority's site → which kitchens ordered that product → substitutes proposed within minutes. Real-timeness is 20% of their score.
+- **Tech prizes:** Gemini, Nemotron, Modal, Verda, Aiven, Cloudinary, Context.dev tech, Gemma; each needs a short write-up.
 
 ## Data
-- **Catalogue (in `data/valio/`, gitignored; copy into lane worktrees like `.env`):** 17,546 products with real GTINs, category, vendor, origin, temperature class, **pack units (pallet / case / piece with sizes) and allowed lot size**, so the vending lesson's physical constraints are in the data. Plus rich Synkka product data: names, ingredients, nutrition, storage, brand. Also carbon footprint for 11,033 products (kg CO2e/kg) and delivery reliability for 4,425.
-- **Mock API** (`data/valio/openapi.json`): `GET /api/ping`, `POST /api/availability`, `POST /api/price`, and download links for the three datasets. **There is no order or approval endpoint**, so quote → order → pending → approve is ours to build. That's the point of the challenge.
+- **Catalogue (in `data/valio/`, gitignored; copy into lane worktrees like `.env`):** 17,546 products with real GTINs, category, vendor, origin, temperature class, **pack units (pallet / case / piece with sizes) and allowed lot size**, so the vending lesson's physical constraints are in the data. Plus rich Synkka product data: names, ingredients, nutrition, storage, brand, images. Also carbon footprint for 11,033 products (kg CO2e/kg) and delivery reliability for 4,425.
+- **Mock API** (`data/valio/openapi.json`): `GET /api/ping`, `POST /api/availability`, `POST /api/price`, and download links for the three datasets. **There is no order endpoint**, so ordering is ours to store.
 - **Kitchens:** N = 20 real Helsinki menus (scraped, cached) for the demo; 500 synthetic kitchens derived from them for the swarm; 10× (5,000) for the stress test.
-- **Planted insights:** one menu that triggers a Monday shortfall; one product with a pack size that doesn't fit; one adversarial agent that uses prompt injection through a supplier description.
+- **Planted insights:** a big reservation that triggers a shortfall; a product out of stock with good and bad substitutes; a pack size that doesn't fit; a product recall; one adversarial agent that tries prompt injection through a product description.
 
 ## Risks and the spike that kills each one
 | Risk | Spike | Result |
 |---|---|---|
 | Valio's mock API is thin or slow | 20 min: read the portal, call every endpoint, measure latency | Data is rich (17.5k products, pack units, CO2, reliability). API is price + availability only. Base `https://junction26.valioaimo.fi`, header `X-API-Key`, body `{customer, requestedDate, products[≤1000]}`. Measured: ~0.1 s for 2 products, 0.25 s for 1,000 prices (660 kB), 0.16 s for 1,000 availabilities. Availability returns order closing time, logistic model and schedule lines (amount and date per sales unit), so cut-off-time exceptions are real |
 | Scraping real menus is slow or blocked | 20 min: Context.dev on 5 Helsinki restaurant sites, extract structured menus | **Go, with caching** ([research/menu-spike.md](../research/menu-spike.md)): 7/8 sites, 10–95 dishes each, 6–32 s per page, 5 credits each, max 10 req/min. Extraction varies between runs, so pre-scrape ~20 menus as fixtures. Dish → ingredient → product matching is plausible but noisy, so it needs a rerank step and an alias table |
-| Gemini Decisions API access or semantics unclear | Ask at the DeepMind booth; read the `typesafe-ai` skill; one test call when the key arrives | _pending_ |
-| Nemotron is too weak as the critic | 10 test cases: does it catch the planted problems? | _pending_ |
-| The swarm is visually noisy, not insightful | Mock the dashboard with fake events first (impeccable) | _pending_ |
+| Gemini Decisions API access or semantics unclear | Read the `gemini-api-dev` skill (it covers calibrated decisions); one test call now the key is in | _pending_ |
+| Substitute ranking is wrong or unexplainable | 20 out-of-stock cases ranked by Gemini rubric scoring vs a simple weighted scorer | _pending_ |
+| Nemotron is too weak for photos or as a second check | 10 cases: prep-list photo, delivery note, planted plan errors | _pending_ |
+| A recall feed is too slow or unscrapable | Context.dev on the Finnish Food Authority recall page; does a monitor fire? | _pending_ |
+| The control room is visually noisy, not insightful | Mock it with fake events first (impeccable) | _pending_ |
 | Too many sponsors dilute the story | Each must pass "would the demo break without it?" | ongoing |
 
 ## Pre-submission (Fri, before 23:59)
-- **Challenge:** Valio Aimo, Trusted Trade Agents (plus tech challenges: Gemini API, Nemotron, Modal, Verda, Context.dev).
+- **Challenge:** Valio Aimo, Trusted Trade Agents (plus tech challenges: Gemini API, Nemotron, Modal, Verda, Aiven, Cloudinary, Context.dev).
 - **Name:** Mandate (working)
-- **Punchline:** Let any AI agent order from a wholesaler, safely: it acts within its mandate, and only the unexpected reaches a human.
-- **Description:** An open agent gateway (MCP + API) over Valio Aimo's systems. Kitchens' purchasing agents predict what's needed from the menu and expected guests, then order. Every order passes a gate the agent can't argue with: a mandate (budget, quantities, categories), a novelty check, and a critic running a different model. Out-of-mandate or unusual orders go to a human on their phone, tied to the exact terms, and each decision becomes a rule for next time. We stress-test it live with hundreds of simulated kitchens, some of them adversarial, and every action leaves an auditable trace.
+- **Punchline:** An agent that keeps a kitchen stocked: it plans from the menu, handles the week's surprises, and explains every choice.
+- **Description:** A kitchen-facing purchasing agent on top of Valio Aimo. It turns the menu and expected guests into the regular order, then handles the anomalies: big reservations, out-of-stock items, broken equipment, recalls. It proposes substitutes ranked by each kitchen's own priorities (price, carbon, origin) and explains every choice. It works through an open agent interface (MCP + API) over an enriched catalogue, so any agent can use it, and Valio gets a live control room of every kitchen's agent. Data stays in Finland.
