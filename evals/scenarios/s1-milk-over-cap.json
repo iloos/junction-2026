@@ -76,19 +76,12 @@
 				"priceCents": 156,
 				"lineCents": 156000,
 				"deliveryDate": "2026-11-16",
-				"historyStates": ["proposed", "held"],
+				"historyStates": ["held", "committed"],
 				"tier": "sign_off",
 				"reasons": ["CAP_EXCEEDED.line", "CAP_EXCEEDED.order"]
 			}
 		],
 		"notProposed": ["464440"],
-		"rejected": [
-			{
-				"productId": "464440",
-				"reasons": ["undeliverable"],
-				"source": "valio_rule"
-			}
-		],
 		"receipts": 1,
 		"duplicateReceipts": 0,
 		"sameReceiptOnRetry": true,

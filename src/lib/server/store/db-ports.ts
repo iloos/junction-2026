@@ -3,6 +3,7 @@
  * which is the fixture path for tests, evals and the offline demo; pass a Postgres-backed `db` for Aiven.
  */
 import type { Kitchen, ServerEvent } from '$lib/core/contracts';
+import type { Catalog } from '$lib/core/ports';
 import { Kitchen as KitchenSchema } from '$lib/core/contracts';
 import { createFixtureDb } from '../db/pglite';
 import { createSimulator } from '../adapters/simulator/stock';
@@ -35,6 +36,8 @@ export interface DbPortsOptions {
 	/** Simulator clock; default Sat 14 Nov 2026 12:00 Helsinki. */
 	now?: string;
 	overlay?: SimOverlay;
+	/** Catalog to use instead of the file catalog (e.g. createPgCatalog on Aiven). */
+	catalog?: Catalog;
 	/** The ops lane's bus; called after each committed transaction. */
 	publish?: (workspaceId: string, events: ServerEvent[]) => void;
 }
@@ -45,7 +48,7 @@ export async function createDbPorts(o: DbPortsOptions = {}) {
 	const now = o.now ?? '2026-11-14T12:00:00+02:00';
 	const db = o.db ?? ((await createFixtureDb()).db as unknown as AnyDb);
 	const overlay = o.overlay ?? new SimOverlay();
-	const base = createFixturePorts({ now, overlay });
+	const base = createFixturePorts({ now, overlay, catalog: o.catalog });
 	const store = createDrizzleStore(db, {
 		runOf: () => runId,
 		now: base.clock.now,

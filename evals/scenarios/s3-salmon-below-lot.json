@@ -29,6 +29,13 @@
 			"input": {
 				"eventId": "event-xmas-140"
 			}
+		},
+		{
+			"actor": "kitchen_agent",
+			"action": "find_substitutes",
+			"input": {
+				"productId": "462150"
+			}
 		}
 	],
 	"expect": {

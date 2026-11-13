@@ -13,7 +13,8 @@ export type Action =
 	| 'approve'
 	| 'commit'
 	| 'set_price'
-	| 'set_availability';
+	| 'set_availability'
+	| 'find_substitutes';
 
 export interface Step {
 	actor: Actor;

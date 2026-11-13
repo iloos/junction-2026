@@ -18,7 +18,9 @@ export interface FixturePortsOptions {
 	now?: string;
 	dir?: string;
 	overlay?: SimOverlay;
-	/** Partial overrides, e.g. a store once slice 2 lands. */
+	/** A catalog to use instead of the file catalog; the file catalog is then never loaded (production has no data/valio). */
+	catalog?: Catalog;
+	/** Partial overrides. */
 	ports?: Partial<Ports>;
 }
 
@@ -26,11 +28,12 @@ export interface FixturePortsOptions {
 export function createFixturePorts(o: FixturePortsOptions = {}): Ports & { overlay: SimOverlay } {
 	const overlay = o.overlay ?? sharedOverlay ?? new SimOverlay();
 	sharedOverlay ??= overlay;
-	sharedCatalog ??= createValioCatalog({ dir: o.dir, overlay: sharedOverlay });
+	const catalog =
+		o.catalog ?? (sharedCatalog ??= createValioCatalog({ dir: o.dir, overlay: sharedOverlay }));
 	const now = new Date(o.now ?? '2026-11-14T12:00:00+02:00');
 	const base: Ports = {
 		clock: { now: () => now },
-		catalog: sharedCatalog,
+		catalog,
 		simulator: { consume: unavailable('simulator.consume'), events: () => [] },
 		decide: {
 			yesNo: unavailable('decide'),
