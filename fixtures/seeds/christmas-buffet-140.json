@@ -4,7 +4,12 @@
 	"title": "Christmas dinner buffet, 140 guests",
 	"kitchenId": "k-hotel",
 	"date": "2026-12-12",
-	"guests": { "estimate": 140, "guarantee": null, "guaranteeDueHoursBefore": 72, "oversetPct": 3 },
+	"guests": {
+		"estimate": 140,
+		"guarantee": null,
+		"guaranteeDueHoursBefore": 72,
+		"oversetPct": 3
+	},
 	"serviceStyle": "buffet",
 	"provenance": {
 		"kind": "estimate",
@@ -31,7 +36,7 @@
 				"ref": "Valio catalogue + mock API, cache tag support-seeds"
 			}
 		],
-		"totalGramsServedPerGuest": 691
+		"totalGramsServedPerGuest": 751
 	},
 	"dishes": [
 		{
@@ -39,15 +44,23 @@
 			"gServed": 135,
 			"yield": 0.7,
 			"yieldNote": "raw on the bone → cooked, sliced: ~10% bone + ~20% cooking loss (team estimate)",
-			"sku": "462490",
-			"skuName": "HK Viljaporsaan Juhlakinkku potkalla tuoresuolattu 6-8 kg",
+			"productId": "462490",
+			"productName": "HK Viljaporsaan Juhlakinkku potkalla tuoresuolattu 6-8 kg",
 			"salesUnit": "KG",
 			"lotStep": 7,
 			"needKg": 27.0,
-			"order": { "qty": 28, "unit": "KG", "rounding": "27.0 kg → 4 × 7 kg lot = 28 kg" },
-			"priceEx": 6.37,
-			"lineEx": 178.36,
-			"availability": { "kind": "out", "amount": 0, "logisticModel": "Stock" },
+			"order": {
+				"qty": 28,
+				"unit": "KG",
+				"rounding": "27.0 kg → 4 × 7 kg lot = 28 kg"
+			},
+			"priceCents": 637,
+			"lineCents": 17836,
+			"availability": {
+				"kind": "out",
+				"amount": 0,
+				"logisticModel": "Stock"
+			},
 			"realOutage": true,
 			"editCheck": {
 				"gServed": 120,
@@ -60,17 +73,32 @@
 			},
 			"candidates": [
 				{
-					"sku": "462919",
-					"skuName": "HK Joulun Juhlakinkku viipaloitu 2,5 kg",
+					"productId": "462919",
+					"productName": "HK Joulun Juhlakinkku viipaloitu 2,5 kg",
 					"yield": 1.0,
 					"note": "already cooked and sliced",
 					"needKg": 18.9,
-					"order": { "qty": 8, "unit": "ST", "rounding": "18.9 kg / 2.5 kg → 8 ST = 20 kg" },
-					"priceEx": 29.2,
-					"comparisonEx": 11.68,
-					"lineEx": 233.6,
-					"availability": { "kind": "unknown", "amount": 999999, "logisticModel": "Terminal" },
-					"editCheck": { "gServed": 120, "needKg": 16.8, "order": { "qty": 7, "unit": "ST" } }
+					"order": {
+						"qty": 8,
+						"unit": "ST",
+						"rounding": "18.9 kg / 2.5 kg → 8 ST = 20 kg"
+					},
+					"priceCents": 2920,
+					"comparisonCents": 1168,
+					"lineCents": 23360,
+					"availability": {
+						"kind": "unknown",
+						"amount": 999999,
+						"logisticModel": "Terminal"
+					},
+					"editCheck": {
+						"gServed": 120,
+						"needKg": 16.8,
+						"order": {
+							"qty": 7,
+							"unit": "ST"
+						}
+					}
 				}
 			]
 		},
@@ -79,14 +107,18 @@
 			"gServed": 70,
 			"yield": 0.85,
 			"yieldNote": "fillet → cured, sliced, trimmed (team estimate)",
-			"sku": "462150",
-			"skuName": "LOHIFILEE C-LEIKATTU 10KG",
+			"productId": "462150",
+			"productName": "LOHIFILEE C-LEIKATTU 10KG",
 			"salesUnit": "KG",
 			"lotStep": 10,
 			"needKg": 11.53,
-			"order": { "qty": 20, "unit": "KG", "rounding": "11.53 kg → 2 × 10 kg lot = 20 kg" },
-			"priceEx": 14.11,
-			"lineEx": 282.2,
+			"order": {
+				"qty": 20,
+				"unit": "KG",
+				"rounding": "11.53 kg → 2 × 10 kg lot = 20 kg"
+			},
+			"priceCents": 1411,
+			"lineCents": 28220,
 			"availability": {
 				"kind": "known",
 				"amount": 43,
@@ -95,21 +127,30 @@
 			},
 			"candidates": [
 				{
-					"sku": "462016",
-					"skuName": "KIRJOLOHIFILEE C-leikattu 10 kg (Finnish trout)",
+					"productId": "462016",
+					"productName": "KIRJOLOHIFILEE C-leikattu 10 kg (Finnish trout)",
 					"lotStep": 10,
-					"priceEx": 15.77,
-					"lineEx": 315.4,
-					"order": { "qty": 20, "unit": "KG" },
-					"availability": { "kind": "known", "amount": 40 },
+					"priceCents": 1577,
+					"lineCents": 31540,
+					"order": {
+						"qty": 20,
+						"unit": "KG"
+					},
+					"availability": {
+						"kind": "known",
+						"amount": 40
+					},
 					"origin": "fi",
 					"reliability": 1.0
 				},
 				{
-					"sku": "471898",
-					"skuName": "Kalaneuvos savukirjolohifilee buffet n700 g",
-					"priceEx": 22.3,
-					"availability": { "kind": "out", "amount": 0 },
+					"productId": "471898",
+					"productName": "Kalaneuvos savukirjolohifilee buffet n700 g",
+					"priceCents": 2230,
+					"availability": {
+						"kind": "out",
+						"amount": 0
+					},
 					"reliability": 0.33,
 					"expected": "rejected: out of stock and reliability 0.33"
 				}
@@ -120,106 +161,170 @@
 			"gServed": 17,
 			"yield": 1.0,
 			"yieldNote": "bucket is 2.5 kg gross / 1.25 kg drained; serve drained",
-			"sku": "463876",
-			"skuName": "AIMO 2,5/1,25KG SINAPPISILLI MSC",
+			"productId": "463876",
+			"productName": "AIMO 2,5/1,25KG SINAPPISILLI MSC",
 			"salesUnit": "ST",
-			"pack": { "grossKg": 2.5, "drainedKg": 1.25 },
+			"pack": {
+				"grossKg": 2.5,
+				"drainedKg": 1.25
+			},
 			"needKg": 2.38,
-			"order": { "qty": 2, "unit": "ST", "rounding": "2.38 kg drained / 1.25 → 2 ST" },
-			"priceEx": 24.66,
-			"comparisonEx": 19.73,
+			"order": {
+				"qty": 2,
+				"unit": "ST",
+				"rounding": "2.38 kg drained / 1.25 → 2 ST"
+			},
+			"priceCents": 2466,
+			"comparisonCents": 1973,
 			"comparisonNote": "comparison price is per drained kg (24.66 / 1.25)",
-			"lineEx": 49.32,
-			"availability": { "kind": "unlimited", "amount": 9999999999, "logisticModel": "Stock" }
+			"lineCents": 4932,
+			"availability": {
+				"kind": "unlimited",
+				"amount": 9999999999,
+				"logisticModel": "Stock"
+			}
 		},
 		{
 			"dish": "Tomaattisilli (tomato herring)",
 			"gServed": 17,
 			"yield": 1.0,
-			"sku": "463804",
-			"skuName": "AIMO 2,5/1,25KG TOMAATTISILLI MSC",
+			"productId": "463804",
+			"productName": "AIMO 2,5/1,25KG TOMAATTISILLI MSC",
 			"salesUnit": "ST",
-			"pack": { "grossKg": 2.5, "drainedKg": 1.25 },
+			"pack": {
+				"grossKg": 2.5,
+				"drainedKg": 1.25
+			},
 			"needKg": 2.38,
-			"order": { "qty": 2, "unit": "ST" },
-			"priceEx": 24.66,
-			"lineEx": 49.32,
-			"availability": { "kind": "unlimited", "amount": 9999999999, "logisticModel": "Stock" }
+			"order": {
+				"qty": 2,
+				"unit": "ST"
+			},
+			"priceCents": 2466,
+			"lineCents": 4932,
+			"availability": {
+				"kind": "unlimited",
+				"amount": 9999999999,
+				"logisticModel": "Stock"
+			}
 		},
 		{
 			"dish": "Lasimestarinsilli (glassblower's herring)",
 			"gServed": 17,
 			"yield": 1.0,
-			"sku": "463928",
-			"skuName": "AIMO 2,5/1,25KG LASIMESTARINSILLI MSC",
+			"productId": "463928",
+			"productName": "AIMO 2,5/1,25KG LASIMESTARINSILLI MSC",
 			"salesUnit": "ST",
-			"pack": { "grossKg": 2.5, "drainedKg": 1.25 },
+			"pack": {
+				"grossKg": 2.5,
+				"drainedKg": 1.25
+			},
 			"needKg": 2.38,
-			"order": { "qty": 2, "unit": "ST" },
-			"priceEx": 23.39,
-			"lineEx": 46.78,
-			"availability": { "kind": "unlimited", "amount": 9999999999, "logisticModel": "Stock" }
+			"order": {
+				"qty": 2,
+				"unit": "ST"
+			},
+			"priceCents": 2339,
+			"lineCents": 4678,
+			"availability": {
+				"kind": "unlimited",
+				"amount": 9999999999,
+				"logisticModel": "Stock"
+			}
 		},
 		{
 			"dish": "Rosolli (beetroot salad)",
 			"gServed": 90,
 			"yield": 1.0,
-			"sku": "463860",
-			"skuName": "Atria Rosolli 2,5kg",
+			"productId": "463860",
+			"productName": "Atria Rosolli 2,5kg",
 			"salesUnit": "ST",
-			"pack": { "netKg": 2.5 },
+			"pack": {
+				"netKg": 2.5
+			},
 			"needKg": 12.6,
 			"order": {
 				"qty": 6,
 				"unit": "ST",
 				"rounding": "12.6 / 2.5 = 5.04 → 6 ST (15 kg); a 3 kg pack would fit better but 462494 and 462491 are undeliverable"
 			},
-			"priceEx": 13.03,
-			"lineEx": 78.18,
-			"availability": { "kind": "unknown", "amount": 999999, "logisticModel": "Terminal" }
+			"priceCents": 1303,
+			"lineCents": 7818,
+			"availability": {
+				"kind": "unknown",
+				"amount": 999999,
+				"logisticModel": "Terminal"
+			}
 		},
 		{
 			"dish": "Lanttulaatikko (swede casserole)",
 			"gServed": 40,
 			"yield": 1.0,
-			"sku": "462482",
-			"skuName": "Saarioinen Lanttulaatikko 700g",
+			"productId": "462482",
+			"productName": "Saarioinen Lanttulaatikko 700g",
 			"salesUnit": "ST",
-			"pack": { "netKg": 0.7 },
+			"pack": {
+				"netKg": 0.7
+			},
 			"needKg": 5.6,
-			"order": { "qty": 8, "unit": "ST", "rounding": "5.6 / 0.7 = 8 ST" },
-			"priceEx": 4.09,
-			"lineEx": 32.72,
-			"availability": { "kind": "out", "amount": 0, "logisticModel": "Stock" },
+			"order": {
+				"qty": 8,
+				"unit": "ST",
+				"rounding": "5.6 / 0.7 = 8 ST"
+			},
+			"priceCents": 409,
+			"lineCents": 3272,
+			"availability": {
+				"kind": "out",
+				"amount": 0,
+				"logisticModel": "Stock"
+			},
 			"realOutage": true,
 			"candidates": [
 				{
-					"sku": "462157",
-					"skuName": "6 x Saarioinen Lanttulaatikko 400g",
+					"productId": "462157",
+					"productName": "6 x Saarioinen Lanttulaatikko 400g",
 					"salesUnit": "KI",
-					"pack": { "netKg": 2.4 },
+					"pack": {
+						"netKg": 2.4
+					},
 					"needKg": 5.6,
-					"order": { "qty": 3, "unit": "KI", "rounding": "5.6 / 2.4 = 2.33 → 3 KI (7.2 kg)" },
-					"priceEx": 18.12,
-					"lineEx": 54.36,
-					"availability": { "kind": "unknown", "amount": 999999, "logisticModel": "Terminal" }
+					"order": {
+						"qty": 3,
+						"unit": "KI",
+						"rounding": "5.6 / 2.4 = 2.33 → 3 KI (7.2 kg)"
+					},
+					"priceCents": 1812,
+					"lineCents": 5436,
+					"availability": {
+						"kind": "unknown",
+						"amount": 999999,
+						"logisticModel": "Terminal"
+					}
 				},
 				{
-					"sku": "462447",
-					"skuName": "Saarioinen Lanttulaatikko 2,8kg",
-					"availability": { "kind": "out", "amount": 0 },
+					"productId": "462447",
+					"productName": "Saarioinen Lanttulaatikko 2,8kg",
+					"availability": {
+						"kind": "out",
+						"amount": 0
+					},
 					"expected": "rejected: out of stock"
 				},
 				{
-					"sku": "462210",
-					"skuName": "Kymppi Lanttulaatikko 2 kg raakapakaste",
-					"availability": { "kind": "undeliverable" },
+					"productId": "462210",
+					"productName": "Kymppi Lanttulaatikko 2 kg raakapakaste",
+					"availability": {
+						"kind": "undeliverable"
+					},
 					"expected": "rejected: undeliverable (not the same as out of stock)"
 				},
 				{
-					"sku": "471247",
-					"skuName": "Valio kypsä lanttulaatikko 2,8 kg laktoositon",
-					"availability": { "kind": "undeliverable" },
+					"productId": "471247",
+					"productName": "Valio kypsä lanttulaatikko 2,8 kg laktoositon",
+					"availability": {
+						"kind": "undeliverable"
+					},
 					"reliability": 0.636,
 					"expected": "rejected: undeliverable"
 				}
@@ -229,30 +334,50 @@
 			"dish": "Porkkanalaatikko (carrot casserole)",
 			"gServed": 40,
 			"yield": 1.0,
-			"sku": "461210",
-			"skuName": "6 x Saarioinen Porkkanalaatikko 400g",
+			"productId": "461210",
+			"productName": "6 x Saarioinen Porkkanalaatikko 400g",
 			"salesUnit": "KI",
-			"pack": { "netKg": 2.4 },
+			"pack": {
+				"netKg": 2.4
+			},
 			"needKg": 5.6,
-			"order": { "qty": 3, "unit": "KI", "rounding": "5.6 / 2.4 = 2.33 → 3 KI" },
-			"priceEx": 18.67,
-			"lineEx": 56.01,
-			"availability": { "kind": "unknown", "amount": 999999, "logisticModel": "Terminal" },
+			"order": {
+				"qty": 3,
+				"unit": "KI",
+				"rounding": "5.6 / 2.4 = 2.33 → 3 KI"
+			},
+			"priceCents": 1867,
+			"lineCents": 5601,
+			"availability": {
+				"kind": "unknown",
+				"amount": 999999,
+				"logisticModel": "Terminal"
+			},
 			"note": "700 g 462477 is undeliverable, so the 6 × 400 g case is the base SKU"
 		},
 		{
 			"dish": "Imelletty perunalaatikko (sweetened potato casserole)",
 			"gServed": 40,
 			"yield": 1.0,
-			"sku": "462455",
-			"skuName": "6 x Saarioinen Perunalaatikko 350g",
+			"productId": "462455",
+			"productName": "6 x Saarioinen Perunalaatikko 350g",
 			"salesUnit": "KI",
-			"pack": { "netKg": 2.1 },
+			"pack": {
+				"netKg": 2.1
+			},
 			"needKg": 5.6,
-			"order": { "qty": 3, "unit": "KI", "rounding": "5.6 / 2.1 = 2.67 → 3 KI" },
-			"priceEx": 17.37,
-			"lineEx": 52.11,
-			"availability": { "kind": "unknown", "amount": 999999, "logisticModel": "Terminal" },
+			"order": {
+				"qty": 3,
+				"unit": "KI",
+				"rounding": "5.6 / 2.1 = 2.67 → 3 KI"
+			},
+			"priceCents": 1737,
+			"lineCents": 5211,
+			"availability": {
+				"kind": "unknown",
+				"amount": 999999,
+				"logisticModel": "Terminal"
+			},
 			"note": "700 g 462498 and 2.8 kg 462465 are out of stock (0)"
 		},
 		{
@@ -260,52 +385,451 @@
 			"gServed": 125,
 			"yield": 0.95,
 			"yieldNote": "peeled raw → boiled (team estimate)",
-			"sku": "475214",
-			"skuName": "SPL Raaka annosperuna veitsikuorittu 10kg",
+			"productId": "475214",
+			"productName": "SPL Raaka annosperuna veitsikuorittu 10kg",
 			"salesUnit": "ST",
-			"pack": { "netKg": 10 },
+			"pack": {
+				"netKg": 10
+			},
 			"needKg": 18.42,
-			"order": { "qty": 2, "unit": "ST", "rounding": "18.42 / 10 → 2 ST" },
-			"priceEx": 7.91,
-			"lineEx": 15.82,
-			"availability": { "kind": "known", "amount": 1029, "logisticModel": "Stock" }
+			"order": {
+				"qty": 2,
+				"unit": "ST",
+				"rounding": "18.42 / 10 → 2 ST"
+			},
+			"priceCents": 791,
+			"lineCents": 1582,
+			"availability": {
+				"kind": "known",
+				"amount": 1029,
+				"logisticModel": "Stock"
+			}
 		},
 		{
 			"dish": "Riisipuuro (rice porridge): rice",
 			"gServed": 100,
-			"perKgDish": { "riceKg": 0.12, "milkL": 0.75 },
+			"perKgDish": {
+				"riceKg": 0.12,
+				"milkL": 0.75
+			},
 			"perKgNote": "about 1.2 dl rice + 7.5 dl milk per kg cooked porridge (team estimate)",
-			"sku": "466964",
-			"skuName": "Myllyn Paras Puuroriisi 1kg",
+			"productId": "466964",
+			"productName": "Myllyn Paras Puuroriisi 1kg",
 			"salesUnit": "BAG",
-			"pack": { "netKg": 1 },
+			"pack": {
+				"netKg": 1
+			},
 			"needKg": 1.68,
-			"order": { "qty": 2, "unit": "BAG", "rounding": "14 kg porridge × 0.12 = 1.68 kg → 2 BAG" },
-			"priceEx": 2.3,
-			"lineEx": 4.6,
-			"availability": { "kind": "known", "amount": 150, "logisticModel": "Stock" }
+			"order": {
+				"qty": 2,
+				"unit": "BAG",
+				"rounding": "14 kg porridge × 0.12 = 1.68 kg → 2 BAG"
+			},
+			"priceCents": 230,
+			"lineCents": 460,
+			"availability": {
+				"kind": "known",
+				"amount": 150,
+				"logisticModel": "Stock"
+			}
 		},
 		{
 			"dish": "Riisipuuro (rice porridge): milk",
-			"sku": "464201",
-			"skuName": "Valio kevytmaito 1 l laktoositon UHT",
+			"productId": "464201",
+			"productName": "Valio kevytmaito 1 l laktoositon UHT",
 			"salesUnit": "ST",
-			"pack": { "netL": 1 },
+			"pack": {
+				"netL": 1
+			},
 			"needL": 10.5,
-			"order": { "qty": 11, "unit": "ST", "rounding": "14 kg porridge × 0.75 = 10.5 l → 11 ST" },
-			"priceEx": 1.56,
-			"lineEx": 17.16,
-			"availability": { "kind": "unlimited", "amount": 9999999999, "logisticModel": "Stock" },
+			"order": {
+				"qty": 11,
+				"unit": "ST",
+				"rounding": "14 kg porridge × 0.75 = 10.5 l → 11 ST"
+			},
+			"priceCents": 156,
+			"lineCents": 1716,
+			"availability": {
+				"kind": "unlimited",
+				"amount": 9999999999,
+				"logisticModel": "Stock"
+			},
 			"note": "Valio's own rule points to 464440 (0.5 l), which is undeliverable: skip it"
+		},
+		{
+			"dish": "Joulutorttu (prune star tart)",
+			"gServed": 60,
+			"yield": 1.0,
+			"yieldNote": "one 60 g tart per guest",
+			"productId": "473317",
+			"productName": "Vaasan Joulutorttu 40x60g",
+			"salesUnit": "KI",
+			"pack": {
+				"pieces": 40,
+				"netKg": 2.4
+			},
+			"needKg": 8.4,
+			"order": {
+				"qty": 4,
+				"unit": "KI",
+				"rounding": "140 pcs / 40 → 4 KI (160 pcs)"
+			},
+			"priceCents": 2385,
+			"lineCents": 9540,
+			"availability": {
+				"kind": "undeliverable",
+				"logisticModel": null
+			},
+			"realOutage": true,
+			"candidates": [
+				{
+					"productId": "473482",
+					"productName": "Vaasan Tähtitorttu 40x60g",
+					"priceCents": 2096,
+					"availability": {
+						"kind": "undeliverable"
+					},
+					"expected": "rejected: undeliverable"
+				},
+				{
+					"productId": "464273",
+					"productName": "Valio tähtitorttuaihio 60 g x 60 / 3,6 kg laktoositon",
+					"availability": {
+						"kind": "undeliverable"
+					},
+					"expected": "rejected: undeliverable"
+				},
+				{
+					"productId": "468013",
+					"productName": "Fazer Luumutähtitorttu 80 x 72g, raakapakaste",
+					"availability": {
+						"kind": "undeliverable"
+					},
+					"reliability": 1.0,
+					"expected": "rejected: undeliverable"
+				}
+			],
+			"residual": {
+				"pieces": 140,
+				"suggestion": "bake in-house or drop the dish; no deliverable joulutorttu in the catalogue"
+			}
 		}
 	],
 	"totals": {
-		"asPlannedEx": 862.58,
-		"withHamSubstituteEx": 917.82,
-		"withHamAndLanttuSubstitutesEx": 939.46,
-		"lines": 12,
-		"realOutages": ["462490", "462482"],
-		"unknownQuantityLines": ["463860", "461210", "462455"],
-		"omitted": "Joulutorttu (prune tarts) left out: every catalogue option checked (473317, 473482, 464273, 468013) is undeliverable"
+		"asPlannedCents": 95798,
+		"orderableWithSubstitutesCents": 93946,
+		"orderableNote": "planned lines with ham → 462919 and lanttulaatikko → 462157; joulutorttu has no deliverable option, so it is left out of the orderable total",
+		"lines": 13,
+		"realOutages": ["462490", "462482", "473317"],
+		"unknownQuantityLines": ["463860", "461210", "462455"]
+	},
+	"rescue": {
+		"$comment": "Hero preflight (14 Nov, cache tag hero-preflight): one Stock option with known availability per real outage, hand-checked against the catalogue (pack, lot step, origin, ingredients) and the live mock (price, availability). Money in integer cents ex VAT. Recipes and yields are team estimates. A Stock amount is live at fetch time and can be contended in the simulator.",
+		"whole-ham-462490": {
+			"need": {
+				"gServed": 135,
+				"guests": 140,
+				"cookedKg": 18.9
+			},
+			"chosen": {
+				"productId": "476768",
+				"productName": "HK Palvikinkku viipaloitu 1,5 kg",
+				"origin": "fi",
+				"salesUnit": "ST",
+				"lotStep": 0.01,
+				"pack": {
+					"netKg": 1.5
+				},
+				"yield": 1.0,
+				"yieldNote": "already cooked and sliced",
+				"order": {
+					"qty": 13,
+					"unit": "ST",
+					"rounding": "18.9 kg / 1.5 → 13 ST = 19.5 kg"
+				},
+				"priceCents": 1543,
+				"comparisonCents": 1029,
+				"lineCents": 20059,
+				"availability": {
+					"kind": "known",
+					"amount": 15,
+					"logisticModel": "Stock",
+					"cutoff": "D-1 17:00"
+				},
+				"reliability": 1.0,
+				"co2PerKg": 10.09,
+				"co2Note": "group average",
+				"editCheck": {
+					"gServed": 120,
+					"cookedKg": 16.8,
+					"order": {
+						"qty": 12,
+						"unit": "ST"
+					},
+					"lineCents": 18516
+				},
+				"tier": "propose",
+				"reasons": ["new_sku"],
+				"caveats": [
+					"smoked cooked ham (palvikinkku), not an oven-baked juhlakinkku: a dish-fit question for the chef (Gemini fit score)",
+					"uses 13 of the 15 in stock: if another kitchen takes 3 or more, it no longer covers the need (a good contention beat)"
+				],
+				"residualKg": 0
+			},
+			"alternatives": [
+				{
+					"productId": "476648",
+					"productName": "Vataja Maalaiskinkku savustettu pala n. 1,8 kg",
+					"origin": "fi",
+					"salesUnit": "KG",
+					"lotStep": 1.8,
+					"availability": {
+						"kind": "known",
+						"amount": 13,
+						"logisticModel": "Stock"
+					},
+					"priceCents": 1193,
+					"verdict": "partial: 13 kg < 18.9 kg, residual 5.9 kg; whole piece, carve in-house"
+				},
+				{
+					"productId": "463159",
+					"productName": "Mattila Bros. Aito Saunapalvikinkku n. 1,8 kg, siivutettu",
+					"origin": "de",
+					"salesUnit": "KG",
+					"lotStep": 1.8,
+					"availability": {
+						"kind": "known",
+						"amount": 9999999999,
+						"note": "unlimited sentinel (an assumption per D6)",
+						"logisticModel": "Stock"
+					},
+					"priceCents": 1568,
+					"order": {
+						"qty": 19.8,
+						"unit": "KG",
+						"rounding": "18.9 → 11 × 1.8 kg lots"
+					},
+					"lineCents": 31046,
+					"tier": "sign_off",
+					"reasons": ["substitute_breaks_preference"],
+					"verdict": "full cover, but German origin breaks the hotel prefer-FI meat rule"
+				},
+				{
+					"productId": "462919",
+					"productName": "HK Joulun Juhlakinkku viipaloitu 2,5 kg",
+					"origin": "fi",
+					"availability": {
+						"kind": "unknown",
+						"amount": 999999,
+						"logisticModel": "Terminal"
+					},
+					"verdict": "the right dish, but Terminal: unknown quantity never counts as cover (s4)"
+				}
+			]
+		},
+		"lanttulaatikko-462482": {
+			"need": {
+				"gServed": 40,
+				"guests": 140,
+				"bakedKg": 5.6
+			},
+			"readyMadeChecked": {
+				"out": ["462482", "462447"],
+				"undeliverable": ["462210", "471247", "472119", "475912", "462835", "461311"],
+				"unknown": ["462157"],
+				"verdict": "no ready-made lanttulaatikko is in Stock"
+			},
+			"chosen": {
+				"kind": "make_in_house",
+				"recipe": {
+					"perKgBaked": {
+						"peeledSwedeKg": 0.85,
+						"creamL": 0.09,
+						"breadcrumbsKg": 0.02,
+						"eggs": 1,
+						"syrupKg": 0.035
+					},
+					"pantry": ["salt", "white pepper", "nutmeg", "butter for the dish"],
+					"swedePeelYield": 0.8,
+					"labour": "about 40 min prep + 2 h at 150 °C (team estimate)",
+					"provenance": "team estimate from standard Finnish home recipes; have a chef check it"
+				},
+				"ingredients": [
+					{
+						"productId": "460879",
+						"productName": "LANTTU BRITANNIA",
+						"origin": "nl",
+						"salesUnit": "KG",
+						"lotStep": 0.01,
+						"need": "5.6 × 0.85 / 0.8 = 5.95 kg unpeeled",
+						"order": {
+							"qty": 6.0,
+							"unit": "KG"
+						},
+						"priceCents": 235,
+						"lineCents": 1410,
+						"availability": {
+							"kind": "known",
+							"amount": 9999999999,
+							"logisticModel": "Stock"
+						},
+						"note": "Finnish swede 460687 is undeliverable; peeled 462931 and 462982 are Terminal"
+					},
+					{
+						"productId": "464249",
+						"productName": "Valio ruokakerma 15 % 1 l UHT laktoositon",
+						"origin": "fi",
+						"salesUnit": "ST",
+						"lotStep": 0.01,
+						"need": "0.50 l",
+						"order": {
+							"qty": 1,
+							"unit": "ST"
+						},
+						"priceCents": 263,
+						"lineCents": 263,
+						"availability": {
+							"kind": "known",
+							"amount": 9999999999,
+							"logisticModel": "Stock"
+						}
+					},
+					{
+						"productId": "460613",
+						"productName": "Myllyn Paras Korppujauho 300 g",
+						"origin": "fi",
+						"salesUnit": "ST",
+						"lotStep": 0.01,
+						"need": "0.11 kg",
+						"order": {
+							"qty": 1,
+							"unit": "ST"
+						},
+						"priceCents": 103,
+						"lineCents": 103,
+						"availability": {
+							"kind": "known",
+							"amount": 219,
+							"logisticModel": "Stock"
+						}
+					},
+					{
+						"productId": "467464",
+						"productName": "Kieku Vapaan kanan muna irto S90 4320g",
+						"origin": "fi",
+						"salesUnit": "KI",
+						"lotStep": 0.01,
+						"need": "6 eggs",
+						"order": {
+							"qty": 1,
+							"unit": "KI"
+						},
+						"priceCents": 1187,
+						"lineCents": 1187,
+						"availability": {
+							"kind": "known",
+							"amount": 9999999999,
+							"logisticModel": "Stock"
+						},
+						"note": "case of 90; the other 84 go to the breakfast par"
+					},
+					{
+						"productId": "461314",
+						"productName": "Dansukker Vaalea Siirappi 700g",
+						"origin": "fi",
+						"salesUnit": "ST",
+						"lotStep": 0.01,
+						"need": "0.20 kg",
+						"order": {
+							"qty": 1,
+							"unit": "ST"
+						},
+						"priceCents": 195,
+						"lineCents": 195,
+						"availability": {
+							"kind": "known",
+							"amount": 9999999999,
+							"logisticModel": "Stock"
+						}
+					}
+				],
+				"totalCents": 3158,
+				"vsReadyMadeCents": 3272,
+				"tier": "sign_off",
+				"reasons": ["new_sku", "allergen_unknown"],
+				"caveats": [
+					"allergens: milk (lactose-free cream), egg, wheat; compare with the 462482 label before serving (the hotel never delegates an allergen change)",
+					"swede origin NL, not FI"
+				],
+				"residualKg": 0
+			}
+		},
+		"joulutorttu-473317": {
+			"need": {
+				"pieces": 140,
+				"gEach": 60
+			},
+			"readyMadeChecked": {
+				"undeliverable": ["473317", "473482", "464273", "468013"],
+				"verdict": "no ready-made joulutorttu is deliverable"
+			},
+			"chosen": {
+				"kind": "make_in_house",
+				"recipe": {
+					"perTart": {
+						"puffPastryG": 45,
+						"pruneFillingG": 15
+					},
+					"labour": "about 1 h to cut, fill and bake 140 (team estimate)",
+					"provenance": "team estimate; prune purée is thinner than jam, a chef may prefer to cook it down"
+				},
+				"ingredients": [
+					{
+						"productId": "460373",
+						"productName": "Myllyn Paras Lehtitaikina 500g",
+						"origin": "fi",
+						"salesUnit": "RAS",
+						"lotStep": 0.01,
+						"need": "140 × 45 g = 6.3 kg → 13 × 0.5 kg",
+						"order": {
+							"qty": 13,
+							"unit": "RAS"
+						},
+						"priceCents": 279,
+						"lineCents": 3627,
+						"availability": {
+							"kind": "known",
+							"amount": 32,
+							"logisticModel": "Stock"
+						}
+					},
+					{
+						"productId": "461378",
+						"productName": "Bonne Luumusose 1L",
+						"origin": "fi",
+						"salesUnit": "PRK",
+						"lotStep": 0.01,
+						"need": "140 × 15 g = 2.1 kg → 3 × 1 l",
+						"order": {
+							"qty": 3,
+							"unit": "PRK"
+						},
+						"priceCents": 470,
+						"lineCents": 1410,
+						"availability": {
+							"kind": "known",
+							"amount": 462,
+							"logisticModel": "Stock"
+						}
+					}
+				],
+				"totalCents": 5037,
+				"vsReadyMadeCents": 9540,
+				"tier": "propose",
+				"reasons": ["new_sku"],
+				"residualPieces": 0
+			}
+		},
+		"summary": "All three real outages have a Stock rescue with known availability: ham by HK Palvikinkku 476768 (13 of 15 in stock), lanttulaatikko and joulutorttu made in-house from Stock ingredients. Terminal options stay unknown and never count as cover."
 	}
 }

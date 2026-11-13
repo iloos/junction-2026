@@ -1,24 +1,41 @@
 {
 	"id": "s4-real-outages-stale-approval",
-	"title": "Whole ham and lanttulaatikko really at 0: substitutes held as unknown quantity; a price change voids the approval",
+	"title": "Three real outages (whole ham, lanttulaatikko at 0; joulutorttu undeliverable): substitutes held as unknown quantity, a residual shortfall stated, and a price change voids the approval",
 	"stories": ["★3", "★5"],
 	"edgeCases": [2, 3, 5],
-	"seeds": { "kitchen": "k-hotel", "event": "event-xmas-140" },
+	"seeds": {
+		"kitchen": "k-hotel",
+		"event": "event-xmas-140"
+	},
 	"clock": "2026-11-14T12:00:00+02:00",
-	"state": { "weekSpentEx": 0, "priorOrders": [] },
-	"overrides": { "availability": [], "price": [] },
+	"state": {
+		"weekSpentCents": 0,
+		"priorOrders": []
+	},
+	"overrides": {
+		"availability": [],
+		"price": []
+	},
 	"steps": [
-		{ "actor": "chef", "action": "plan_event", "input": { "eventId": "event-xmas-140" } },
+		{
+			"actor": "chef",
+			"action": "plan_event",
+			"input": {
+				"eventId": "event-xmas-140"
+			}
+		},
 		{
 			"actor": "approver",
 			"action": "approve",
 			"input": {
-				"ref": { "sku": "462919" },
+				"ref": {
+					"productId": "462919"
+				},
 				"terms": {
-					"sku": "462919",
+					"productId": "462919",
 					"qty": 8,
 					"unit": "ST",
-					"priceEx": 29.2,
+					"priceCents": 2920,
 					"deliveryDate": "2026-12-11"
 				}
 			}
@@ -27,26 +44,33 @@
 			"actor": "system",
 			"action": "set_price",
 			"input": {
-				"sku": "462919",
-				"priceEx": 31.5,
+				"productId": "462919",
+				"priceCents": 3150,
 				"label": "simulated: price update after approval"
 			}
 		},
 		{
 			"actor": "chef",
 			"action": "commit",
-			"input": { "ref": { "sku": "462919" }, "idempotencyKey": "s4-commit-1" }
+			"input": {
+				"ref": {
+					"productId": "462919"
+				},
+				"idempotencyKey": "s4-commit-1"
+			}
 		},
 		{
 			"actor": "approver",
 			"action": "approve",
 			"input": {
-				"ref": { "sku": "462919" },
+				"ref": {
+					"productId": "462919"
+				},
 				"terms": {
-					"sku": "462919",
+					"productId": "462919",
 					"qty": 8,
 					"unit": "ST",
-					"priceEx": 31.5,
+					"priceCents": 3150,
 					"deliveryDate": "2026-12-11"
 				}
 			}
@@ -54,50 +78,112 @@
 		{
 			"actor": "chef",
 			"action": "commit",
-			"input": { "ref": { "sku": "462919" }, "idempotencyKey": "s4-commit-2" }
+			"input": {
+				"ref": {
+					"productId": "462919"
+				},
+				"idempotencyKey": "s4-commit-2"
+			}
 		}
 	],
 	"expect": {
 		"lines": [
-			{ "sku": "462490", "state": "unorderable", "reasons": ["out_of_stock"] },
 			{
-				"sku": "462919",
+				"productId": "462490",
+				"state": "unorderable",
+				"reasons": ["out"]
+			},
+			{
+				"productId": "462919",
 				"qty": 8,
 				"unit": "ST",
 				"state": "committed",
-				"priceEx": 31.5,
-				"lineEx": 252.0,
+				"priceCents": 3150,
+				"lineCents": 25200,
 				"historyStates": ["held", "held"],
-				"historyReasons": ["unknown_quantity", "approval_stale_terms"]
+				"historyReasons": ["UNKNOWN_REQUIRED", "TERMS_CHANGED"]
 			},
-			{ "sku": "462482", "state": "unorderable", "reasons": ["out_of_stock"] },
 			{
-				"sku": "462157",
+				"productId": "462482",
+				"state": "unorderable",
+				"reasons": ["out"]
+			},
+			{
+				"productId": "462157",
 				"qty": 3,
 				"unit": "KI",
 				"state": "held",
-				"reasons": ["unknown_quantity"],
-				"lineEx": 54.36
+				"reasons": ["UNKNOWN_REQUIRED"],
+				"lineCents": 5436
 			}
 		],
 		"rejected": [
-			{ "sku": "462447", "reasons": ["out_of_stock"] },
-			{ "sku": "462210", "reasons": ["undeliverable"] },
-			{ "sku": "471247", "reasons": ["undeliverable"] }
+			{
+				"productId": "462447",
+				"reasons": ["out"]
+			},
+			{
+				"productId": "462210",
+				"reasons": ["undeliverable"]
+			},
+			{
+				"productId": "471247",
+				"reasons": ["undeliverable"]
+			},
+			{
+				"productId": "473482",
+				"reasons": ["undeliverable"]
+			},
+			{
+				"productId": "464273",
+				"reasons": ["undeliverable"]
+			},
+			{
+				"productId": "468013",
+				"reasons": ["undeliverable"]
+			}
 		],
-		"wording": {
-			"out_of_stock": "out of stock",
-			"undeliverable": "not deliverable",
-			"mustDiffer": true
-		},
+		"unorderable": [
+			{
+				"productId": "473317",
+				"reasons": ["undeliverable"]
+			}
+		],
+		"residualShortfall": [
+			{
+				"dish": "Joulutorttu (prune star tart)",
+				"pieces": 140,
+				"kg": 8.4
+			}
+		],
 		"unconfirmedCover": ["462919", "462157"],
 		"commitResults": [
-			{ "idempotencyKey": "s4-commit-1", "result": "refused", "reason": "approval_stale_terms" },
-			{ "idempotencyKey": "s4-commit-2", "result": "receipt" }
+			{
+				"idempotencyKey": "s4-commit-1",
+				"result": "error",
+				"error": "TERMS_CHANGED",
+				"retryable": false
+			},
+			{
+				"idempotencyKey": "s4-commit-2",
+				"result": "receipt"
+			}
 		],
 		"receipts": 1,
 		"duplicateReceipts": 0,
-		"weekSpentEx": 252.0
+		"weekSpentCents": 25200,
+		"approvalStates": ["pending", "granted", "invalidated", "pending", "granted"],
+		"availabilityKinds": {
+			"462490": "out",
+			"462482": "out",
+			"462447": "out",
+			"462210": "undeliverable",
+			"471247": "undeliverable",
+			"473317": "undeliverable",
+			"462919": "unknown",
+			"462157": "unknown"
+		},
+		"wordingMustDiffer": ["out", "undeliverable"]
 	},
 	"notes": "Both outages are real in the static mock (amount 0). The substitutes are Terminal (999999), so their quantity is unknown: they are held as 'confirm with Valio' and never counted as cover, even after commit. Delivery 2026-12-11 (Fri) assumes delivery the day before the Sat 12 Dec event; the Terminal lead time of 3–4 days puts its cut-off around Mon 7 Dec on the simulator clock."
 }

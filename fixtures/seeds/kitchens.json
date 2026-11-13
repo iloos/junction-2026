@@ -8,7 +8,11 @@
 			"name": "Hotel Rautatientori (fictional)",
 			"kind": "city_hotel",
 			"city": "Helsinki",
-			"size": { "rooms": 250, "breakfastCovers": 300, "bistroCovers": 80 },
+			"size": {
+				"rooms": 250,
+				"breakfastCovers": 300,
+				"bistroCovers": 80
+			},
 			"deliveryDays": ["mon", "tue", "wed", "thu", "fri", "sat"],
 			"weights": {
 				"reliability": 0.35,
@@ -18,16 +22,25 @@
 				"organic": 0
 			},
 			"constraints": {
-				"origin": [{ "categoryGroup": "meat", "rule": "prefer", "country": "fi" }],
-				"allergens": { "freeFrom": [], "unknownCounts": "hold" },
+				"origin": [
+					{
+						"categoryGroup": "meat",
+						"rule": "prefer",
+						"country": "fi"
+					}
+				],
+				"allergens": {
+					"freeFrom": [],
+					"unknownCounts": "hold"
+				},
 				"tenderListOnly": false,
 				"labels": ["allergen labelling on buffet", "meat origin shown (Decree 154/2019)"]
 			},
 			"mandate": {
 				"words": "Order alone up to €800 a line and €1,000 an order, €4,000 a week. Never change an allergen. Ask me before any new supplier or any substitute I haven't seen.",
-				"lineCap": 800,
-				"orderCap": 1000,
-				"weeklyCap": 4000,
+				"lineCapCents": 80000,
+				"orderCapCents": 100000,
+				"weeklyCapCents": 400000,
 				"neverDelegate": ["allergen_change", "new_sku", "substitute_breaks_preference"]
 			},
 			"factorSensitivity": {
@@ -44,7 +57,9 @@
 			"name": "Lounas Ruoholahti (fictional)",
 			"kind": "lunch_restaurant",
 			"city": "Helsinki",
-			"size": { "lunchCovers": 320 },
+			"size": {
+				"lunchCovers": 320
+			},
 			"deliveryDays": ["mon", "wed", "fri"],
 			"menuCycleWeeks": 5,
 			"weights": {
@@ -56,15 +71,18 @@
 			},
 			"constraints": {
 				"origin": [],
-				"allergens": { "freeFrom": [], "unknownCounts": "hold" },
+				"allergens": {
+					"freeFrom": [],
+					"unknownCounts": "hold"
+				},
 				"tenderListOnly": false,
 				"labels": ["diet codes on every dish (G, L, M, VEG)"]
 			},
 			"mandate": {
 				"words": "Run the weekly order alone up to €1,500 an order and €5,000 a week, max €400 a line. Cheapest that does the job.",
-				"lineCap": 400,
-				"orderCap": 1500,
-				"weeklyCap": 5000,
+				"lineCapCents": 40000,
+				"orderCapCents": 150000,
+				"weeklyCapCents": 500000,
 				"neverDelegate": ["allergen_change"]
 			},
 			"factorSensitivity": {
@@ -81,17 +99,40 @@
 			"name": "Espoo Central Kitchen (fictional)",
 			"kind": "public_central_kitchen",
 			"city": "Espoo",
-			"size": { "mealsPerDay": 2000 },
+			"size": {
+				"mealsPerDay": 2000
+			},
 			"deliveryDays": ["mon", "tue", "wed", "thu", "fri"],
 			"menuCycleWeeks": 6,
-			"weights": { "price": 0.4, "finnish": 0.3, "carbon": 0.2, "organic": 0.1, "reliability": 0 },
+			"weights": {
+				"price": 0.4,
+				"finnish": 0.3,
+				"carbon": 0.2,
+				"organic": 0.1,
+				"reliability": 0
+			},
 			"constraints": {
 				"origin": [
-					{ "categoryGroup": "meat", "rule": "require", "country": "fi" },
-					{ "categoryGroup": "fish", "rule": "require", "country": "fi" },
-					{ "categoryGroup": "milk", "rule": "require", "country": "fi" }
+					{
+						"categoryGroup": "meat",
+						"rule": "require",
+						"country": "fi"
+					},
+					{
+						"categoryGroup": "fish",
+						"rule": "require",
+						"country": "fi"
+					},
+					{
+						"categoryGroup": "milk",
+						"rule": "require",
+						"country": "fi"
+					}
 				],
-				"allergens": { "freeFrom": [], "unknownCounts": "hold" },
+				"allergens": {
+					"freeFrom": [],
+					"unknownCounts": "hold"
+				},
 				"tenderListOnly": true,
 				"tenderList": [
 					"464201",
@@ -107,9 +148,9 @@
 			},
 			"mandate": {
 				"words": "Only tender-list products, Finnish meat, fish and milk. Alone up to €300 a line, €2,500 an order, €8,000 a week. Anything off the list comes to me.",
-				"lineCap": 300,
-				"orderCap": 2500,
-				"weeklyCap": 8000,
+				"lineCapCents": 30000,
+				"orderCapCents": 250000,
+				"weeklyCapCents": 800000,
 				"neverDelegate": ["allergen_change", "off_tender_list", "origin_requirement"]
 			},
 			"factorSensitivity": {
