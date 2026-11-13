@@ -16,3 +16,6 @@ Least ceremony for SvelteKit: git push deploys, streaming responses work, previe
 
 ### D0e · LLM behind one port with four adapters plus a fixture — 13 Nov
 `@ai-sdk/anthropic`, `@ai-sdk/google`, and `@ai-sdk/openai-compatible` (Featherless, Verda), plus fixture. Lets us pick the best model per task and show sponsor use without rewiring. Reopen if: the `ai` SDK fights a needed feature (then call the raw SDK inside the same adapter).
+
+### D1 · First going plan: Valio Aimo "trusted trade agents" with a live immune system (Mandate) — 13 Nov ~21:30
+Main challenge Valio Aimo, with Gemini API, Nemotron, Modal, Verda and Context.dev stacked as load-bearing parts ([concept/CONCEPT.md](concept/CONCEPT.md)). Why: the biggest software-only main prize. Its rubric (end-to-end 30, autonomy and controls 20, robustness 15, openness 15) rewards the gate, mandate and provenance design we already have. Every side prize gets a central role, and the swarm plus a judge's own agent gives the peer-review "no way" moment. Beat: finance slice (crowded, mobile-first scoring) and Wikipedia through time (original, but smaller prizes and needs a MariaDB server). Reopen if: Valio's mock API is too thin (spike), or a better idea scores higher in `idea-pick` before lanes fan out.

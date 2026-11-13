@@ -2,14 +2,19 @@
 
 _The lead rewrites this at each checkpoint. It is the "now": what works, what's next, what bites._
 
-**Updated:** Fri 13 Nov, pre-event.
-**State:** prep done; no project code (by rule); challenge not chosen.
+**Updated:** Fri 13 Nov ~21:30.
+**State:** first going plan chosen (D1: Valio Aimo + stacked tech prizes, [concept/CONCEPT.md](concept/CONCEPT.md)). A parallel session is scaffolding the app (uncommitted).
 **Works end to end:** nothing yet.
 **Deployed URL:** none yet.
 
 **Next 3 steps**
-1. Watch the challenge videos (19:10); fill [event/CHALLENGE.md](event/CHALLENGE.md) from the platform.
-2. 19:30: a background agent scaffolds and deploys the empty app (STACK.md) while we brainstorm and research.
-3. `idea-pick` → spikes → decide by ~22:30 → pre-submit by 23:30 → CONCEPT + ARCHITECTURE → contracts → lanes (ORCHESTRATION.md).
+1. Spikes: Valio resource portal and mock API; Context.dev menu scrape; Gemini Decisions API access (key arrives by email tonight).
+2. Pre-submit on the platform by 23:30 (text in CONCEPT.md); claim credits (Modal, Verda, Exa, Context.dev, NVIDIA Build keys per teammate).
+3. ARCHITECTURE.md (gateway, mandate engine, ops, ports) → contracts commit → lanes.
 
-**Traps:** no project code before 19:30 · pre-submission Fri 23:55 on the platform (guidebook says 23:59; aim for 23:30) · whole team at peer review Sun 10:30 · the metro stops around midnight and you can't sleep at the venue.
+**Traps:**
+- Pre-submission closes 23:55 on the platform.
+- Whole team at peer review Sun 10:30.
+- Before going public, scrub the Valio API key and redeem codes from `docs/event/challenges/` and squash history.
+- Recordings in docs/research/mcpcon.md quote hallway talk; trim before committing.
+- Free NVIDIA API is about 40 req/min per key.
