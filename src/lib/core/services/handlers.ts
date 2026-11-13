@@ -12,6 +12,7 @@ import {
 	type ToolOutput
 } from '../contracts';
 import type { CallContext, Ports, ToolHandlers } from '../ports';
+import { approve, commitOrder, getPlan, placeOrder } from './orders';
 import { quote, searchProducts } from './quote';
 
 type Impl<N extends ToolName> = (
@@ -29,13 +30,13 @@ const IMPLS: { [N in ToolName]: Impl<N> } = {
 	search_products: searchProducts,
 	quote,
 	plan_event: notYet('slice 3'),
-	place_order: notYet('slice 2'),
+	place_order: placeOrder,
 	edit_line: notYet('slice 3'),
 	find_substitutes: notYet('slice 4'),
-	get_plan: notYet('slice 2'),
+	get_plan: getPlan,
 	explain_line: notYet('slice 3'),
-	approve: notYet('slice 2'),
-	commit_order: notYet('slice 2'),
+	approve,
+	commit_order: commitOrder,
 	set_mandate: notYet('slice 2')
 };
 

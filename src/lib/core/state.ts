@@ -202,7 +202,17 @@ export function applyOps(state: WorkspaceState, ops: OpEnvelope[]): Result<Works
 					(plan.version !== a.planVersion || plan.termsHash !== a.termsHash)
 				)
 					return err('TERMS_CHANGED', `approval ${a.id} no longer matches plan ${plan.id}`);
-				s = { ...s, approvals: { ...s.approvals, [a.id]: a } };
+				// A grant that covers every held line makes the plan ready to commit.
+				const held = plan.lines.filter((l) => l.state === 'held').map((l) => l.id);
+				const ready =
+					a.state === 'granted' &&
+					plan.state === 'held' &&
+					held.every((id) => a.lineIds.includes(id));
+				s = {
+					...s,
+					approvals: { ...s.approvals, [a.id]: a },
+					plans: ready ? { ...s.plans, [plan.id]: { ...plan, state: 'ready' } } : s.plans
+				};
 				break;
 			}
 			case 'CommitOrder': {
