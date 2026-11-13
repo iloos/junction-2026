@@ -134,7 +134,7 @@
 					<TriangleAlert size={16} class="mt-0.5 shrink-0 text-signoff" aria-hidden="true" />
 					<span>
 						<b class="font-medium">Shortfall, stated:</b>
-						{rescue.residual.text}. Nothing else qualifies under your rules.
+						{rescue.residual.text}. No option covers it all under your rules.
 					</span>
 				</p>
 				{#if rescue.residual.fitGrams && rescue.residual.fitGrams < grams}

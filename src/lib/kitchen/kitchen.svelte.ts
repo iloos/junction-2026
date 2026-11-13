@@ -40,6 +40,7 @@ export class KitchenStore {
 	/** Line ids that changed in the last update, for the row flash. */
 	flash = $state.raw<Set<string>>(new Set());
 	whyLineId = $state<string | null>(null);
+	whySteps = $state.raw<{ text: string; source: string; detail?: string }[]>([]);
 	lastCommit = $state.raw<CommitNote | null>(null);
 	readonly mode = API_MODE;
 	#seq = 0;
@@ -170,8 +171,20 @@ export class KitchenStore {
 		});
 	}
 
-	openWhy(lineId: string) {
-		this.whyLineId = lineId;
+	async openWhy(lineId: string) {
+		if (!this.plan) return;
+		try {
+			const out = await call('explain_line', { planId: this.plan.id, lineId });
+			this.whySteps = out.steps;
+			this.whyLineId = lineId;
+		} catch (e) {
+			if (e instanceof ToolError) this.error = e.error;
+			else throw e;
+		}
+	}
+
+	closeWhy() {
+		this.whyLineId = null;
 	}
 
 	async #run(fn: () => Promise<void>) {

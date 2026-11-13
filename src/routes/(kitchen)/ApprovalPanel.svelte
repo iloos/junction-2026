@@ -180,7 +180,13 @@
 			disabled={busy || eligible.length === 0}
 			onclick={oncommit}
 		>
-			<span>{eligible.length ? `Commit ${eligible.length} lines` : 'Nothing to commit'}</span>
+			<span
+				>{eligible.length
+					? `Commit ${eligible.length} lines`
+					: committedN
+						? `${committedN} lines committed`
+						: 'Nothing to commit yet'}</span
+			>
 			<span class="mono">{eligible.length ? money(eligibleCents) : ''}</span>
 		</button>
 		{#if pending && eligible.length}

@@ -24,6 +24,19 @@
 	const names = new Map(Object.values(PRODUCTS).map((p) => [p.productId, p.name]));
 	let open = $state<Record<string, boolean>>({ ham: true });
 
+	// The phone's sticky "needs you" bar steps aside once the approval card itself is on screen.
+	let approvalInView = $state(false);
+	$effect(() => {
+		if (!snap) return;
+		const el = document.getElementById('approval');
+		if (!el) return;
+		const io = new IntersectionObserver(([e]) => (approvalInView = e.isIntersecting), {
+			threshold: 0.15
+		});
+		io.observe(el);
+		return () => io.disconnect();
+	});
+
 	const snap = $derived(k.snap);
 	const view = $derived(k.view);
 	const plan = $derived(k.plan);
@@ -427,7 +440,7 @@
 		</aside>
 	</main>
 
-	{#if approval?.state === 'pending'}
+	{#if approval?.state === 'pending' && !approvalInView}
 		<a
 			href="#approval"
 			class="fixed inset-x-3 bottom-3 z-30 flex h-12 items-center justify-between rounded-lg bg-ink px-4 text-[14px] font-medium text-sheet shadow-[0_8px_24px_-8px_oklch(0.2_0.02_255/0.5)] lg:hidden"
@@ -442,7 +455,7 @@
 		line={whyLine}
 		productName={whyLine ? (names.get(whyLine.productId) ?? whyLine.productId) : ''}
 		dishName={whyDish ? `${whyDish.nameFi} (${whyDish.name})` : ''}
-		steps={k.whyLineId ? (view.why[k.whyLineId] ?? []) : []}
-		onclose={() => (k.whyLineId = null)}
+		steps={k.whySteps}
+		onclose={() => k.closeWhy()}
 	/>
 {/if}
