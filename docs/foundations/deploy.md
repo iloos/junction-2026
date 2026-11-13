@@ -23,14 +23,16 @@ pnpm build && node --env-file=.env build          # Postgres mode on :3000
 pnpm build && node build                           # fixture mode
 scripts/deploy/local-container.sh 3000             # image + Aiven PG, as Runtime runs it (needs Docker)
 ```
+Container facts (tested on fc98e0c): Postgres mode uses ~170 MiB and serves `/healthz` (verified TLS), `/api/tools/quote` and `/api/events` from Aiven. **Fixture mode in a container** needs the gitignored Valio cache mounted *writable* (the catalogue writes `data/valio/normalized/`): `docker run -u root -v "$PWD/data/valio:/app/data/valio" …`, and uses ~850 MiB, so it does not fit the 512 MB Runtime plan. The deployed app is Postgres mode only.
 
-## Aiven Runtime (plan A)
-Prerequisites (user, once): connect GitHub to the Aiven org (console → Integrations → GitHub, grant `iloos/junction-2026`), since the repo is private. Approve plan `startup-20-512` in `aws-eu-central-1` (~$0.0164/h catalog price; Runtime has no `do-fra`).
+## Aiven Runtime (live)
+**URL: https://widely-many-scorpion.eur-1.aiven.app** (service `mandate`, project `junction26jq`, `startup-20-512`, `aws-eu-central-1`, ~$0.0164/h catalog price). GitHub is connected to the Aiven org (integration `vcs5f404a66b3d`, repo id `1456805781`).
 
-Create (once, via the Aiven MCP `aiven_application_create`):
+How it was created (once, via the Aiven MCP `aiven_application_create`):
 - project `junction26jq`, service `mandate`, repo `https://github.com/iloos/junction-2026`, branch `main`, port `3000`, Dockerfile `Dockerfile`, build path `.`
 - integration: `pg-1dfeeeed` → `connection_string` as `DATABASE_URL` (the platform also injects `PROJECT_CA_CERT`)
 - env: `NODE_ENV=production`, `LLM_PROVIDER=fixture`; add API keys as `secret` kind only when a live provider is switched on.
+- Tool routes (`/api/tools/*`, `/mcp`) accept only keys from `MCP_KEYS`, or the public fixture keys when `MANDATE_FIXTURE_KEYS=1`; production has neither until one is set.
 
 **Redeploy after a merge** (lead):
 1. `git push origin main`
