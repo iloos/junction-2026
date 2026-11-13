@@ -209,8 +209,9 @@ describe('real handlers with stub fallback', () => {
 			handlers
 		);
 		if (!ev.ok) throw new Error(ev.error.message);
+		// plan_event is real since core-db slice 3, so its plan id is not a stub id.
 		const stubPlan = (ev.value as { plan: { id: string } }).plan.id;
-		expect(stubPlan.startsWith('stub-')).toBe(true);
+		expect(stubPlan.startsWith('stub-')).toBe(false);
 		const got = await serveTool('get_plan', agent, { planId: stubPlan }, handlers);
 		expect(got.ok).toBe(true);
 	}, 60000);
