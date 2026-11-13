@@ -129,7 +129,7 @@ IT/Tech integrations & Data governance: Tommi Nurmi-Aro, Ville Takanen, Riku Tap
 Access the challenge resources here:
 https://junction26.valioaimo.fi/
 
-Resource portal password: aimo_ai_challenge
+Resource portal password: [REDACTED]
 
 The resource portal contains downloadable datasets, API documentation and instructions for accessing the mock backend systems.
 

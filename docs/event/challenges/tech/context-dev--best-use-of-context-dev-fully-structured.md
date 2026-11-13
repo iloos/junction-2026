@@ -79,7 +79,7 @@ File parsing: parse PDFs and documents.
 Social media: scrape feeds such as TikTok and Instagram.
 Getting started
 Create an account at context.dev/signup. Coding agents can use context.dev/auth.md.
-Redeem code JUNCTION26 at Redeem credits to receive 50,000 API credits per team, with no expiry.
+Redeem code [REDACTED] at Redeem credits to receive 50,000 API credits per team, with no expiry.
 Copy a secret key from the API keys page.
 Install the SDK: npm install context.dev or pip install context.dev.
 Scrape your first page using the code in the Quickstart. You should see the Junction homepage printed as Markdown. Swap in any URL, or try brand, search, news or monitors. Start building!

@@ -89,7 +89,7 @@ Main contact: Beer van der Drift, CTO, beer@context.dev
 
 Technologies
 
-Every team gets 50,000 free Context.dev API credits that don't expire: sign up at context.dev/signup and redeem code JUNCTION26 at context.dev/dashboard/redeem-credits. Start with the Quickstart at docs.context.dev/quickstart (full docs: docs.context.dev). Each team can run up to 50 concurrent requests.
+Every team gets 50,000 free Context.dev API credits that don't expire: sign up at context.dev/signup and redeem code [REDACTED] at context.dev/dashboard/redeem-credits. Start with the Quickstart at docs.context.dev/quickstart (full docs: docs.context.dev). Each team can run up to 50 concurrent requests.
 
 Web: search, scrape (markdown, HTML, screenshots, images), crawl, URL mapping, structured extraction, research answers
 Entities: brand data (logos, colors, fonts, style guides), company and people search and enrichment, NAICS/SIC classification

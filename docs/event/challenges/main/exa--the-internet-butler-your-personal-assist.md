@@ -69,7 +69,7 @@ We will also provide Websets for building verified lists of people, companies an
 
 Exa engineers will be on site throughout the event to help with technical questions and project ideas, and there will also be a Discord channel to receive asynchronous advice.
 
-Free $50 Exa Credits: EXA50JUNCTION (Redeem it at dashboard.exa.ai/billing)
+Free $50 Exa Credits: [REDACTED] (Redeem it at dashboard.exa.ai/billing)
 
 ## About the company
 
