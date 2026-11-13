@@ -29,7 +29,7 @@
 
 ## Pitch skeleton (3:00 hard; the mic dies)
 - 0:00–0:20 Problem with a real person and a number. One breath.
-- 0:20–1:50 Live demo of the wow ladder, steps 1→3. One person drives, one talks.
+- 0:20–1:50 Live demo of the wow ladder, steps 1→3. The presenter drives the demo themselves with the single handheld mic in the other hand (the guidebook advises one person on stage). Rehearse driving one-handed. Hotkeys or a preset demo route help.
 - 1:50–2:20 Why now / why hard: the insight competitors don't have; how agent failure is handled (guardrails, evals, human in control).
 - 2:20–2:50 Impact plus business: who pays, the next 3 months, path to scale (Verda/Modal).
 - 2:50–3:00 Closing line plus the name.

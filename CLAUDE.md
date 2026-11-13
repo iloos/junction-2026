@@ -1,40 +1,44 @@
-# Junction 2026 — team repo
+# Junction 2026: team repo
 
 **Is:** our Junction 2026 hackathon build (Espoo, 13–15 Nov 2026). Challenge: _TBD, see [docs/event/CHALLENGE.md](docs/event/CHALLENGE.md)_.
-**Stack:** SvelteKit 2 + Svelte 5 runes + Vite 8, Tailwind 4, bits-ui, d3 (and maybe one three.js view), Claude/Gemini behind one LLM port. Persistence = localStorage/IndexedDB behind a storage port. See [docs/STACK.md](docs/STACK.md).
-**Deploy:** _TBD in hour 2_ (single service: SvelteKit adapter-node, or adapter-static + one API host).
-**Commit:** terse, past-tense subject ≤72 chars, body only when it carries the why. Commit + push to `main` often; short-lived branches only.
+**Stack:** SvelteKit 3 + Svelte 5 runes + Vite 8, Tailwind 4, bits-ui, d3 (maybe one three.js view), LLM behind one port (Claude / Gemini / Featherless / Verda). Datasets in IndexedDB behind a storage port. See [docs/STACK.md](docs/STACK.md).
+**Deploy:** Vercel (`adapter-vercel`), fallback Fly (D0d). The empty scaffold is deployed first.
+**Commit:** terse, past-tense subject ≤72 chars; body only when it carries the why.
 
-## Event rules that bind code (read once, never break)
-- **No code written before the event** (hacking starts Fri 13 Nov 19:30). Docs, plans and tooling config are prep; app code is not. Do not copy code from other repos on this machine (another company, reasoner3, another-repo, roadmap...). Re-deriving a *pattern* is fine; pasting a file is not.
-- Nothing "related to an already existing company" — the project must stand alone. Ideas that overlap with another company are framed generically and built from scratch.
-- Everything submitted is MIT-licensed and public. No secrets, no proprietary data in git.
-- Final submission **Sun 15 Nov 10:00** (hard). 2-min video, pitch deck PDF, demo + source link. Feature freeze Sun 06:00.
+## Event rules (break one and we're disqualified)
+- **No project code before Fri 13 Nov 19:30.** Docs, plans and tool config are prep. No `.ts`/`.svelte` file, not even a stub, before then. Do not copy files from any other repo on this machine; open-source libraries are fine.
+- The project must stand alone: not related to any existing company, no employer code, no private data.
+- Everything is MIT-licensed and public at submission. No secrets in git.
+- Final submission **Sun 15 Nov 10:00**, hard. Our feature freeze: **Sun 06:00**.
 
 ## Hard rules
-1. **Thin slice first.** One end-to-end path (data in → transform → dashboard → agent answers about it) working and deployed before any part goes deep. Integration beats parallel pillars.
-2. **Pure core, ports at the edge.** `src/lib/core/` is plain TS: no Svelte, no DOM, no vendor SDKs. LLM, storage, search (Exa/context.dev/Cala...) are ports in `src/lib/ports/` with a real adapter and a fake/fixture adapter. Every pipeline has a no-LLM / fixture path so the demo survives a dead API.
-3. **One door for writes.** State changes go through `applyOps(state, ops)` (or the equivalent). Agent tool calls *propose* ops; the UI applies them visibly.
-4. **Data at scale:** loaded datasets are `$state.raw` and reassigned, never mutated. Pass ids, not objects, into chart/graph libs. Build indexes lazily. Charts get explicit heights. Stress-test with the generator at 10× the demo size.
-5. **Secrets server-side only.** Keys live in `.env` (gitignored) and are read in `src/lib/server/`. Never in client code, never committed. `.env.example` lists names only.
-6. **If it isn't traced, it didn't happen.** Every LLM call logs model, tokens, latency, and tool calls to the dev console / a trace panel. No debug-logging sprints in the last hour.
-7. **Don't claim what isn't wired.** PITCH.md claims must each point at a working thing; run the `vision-check` skill every ~6h.
-8. **No artifacts at repo root.** Scratch output goes to `scratch/` (gitignored). On Windows watch for stray `nul` / pasted-shell-line files.
+1. **Thin slice first.** One end-to-end path (data in → transform → view → agent acts on it) working and deployed before anything goes deep.
+2. **Pure core, ports at the edge.** `src/lib/core/` is plain TS: no Svelte, no DOM, no vendor SDK. LLM, storage, search and sponsor APIs are ports with a real adapter and a **fixture** adapter. Every flow has a fixture path, so the demo survives a dead API or Wi-Fi.
+3. **If the agent changes state, it goes through one function** (`applyOps`), and the UI shows the change happening.
+4. **Data at scale:** datasets are `$state.raw` and reassigned, never mutated in place. Pass ids, not objects, to chart/graph libs. Build indexes lazily. Charts get explicit heights. Test at 10× demo size.
+5. **Secrets stay server-side** in `src/lib/server/`, read from `.env` (gitignored). `.env.example` holds names only.
+6. **Spend caps:** `LLM_PROVIDER=fixture` by default in dev. The app uses `claude-sonnet-5-5` (or an open model via Featherless/Verda); Opus only by explicit choice. Every call sets `max_tokens`; agent loops cap at 8 steps. Every provider console has a spend limit.
+7. **Traced or it didn't happen.** Every LLM call logs model, tokens, latency and tool calls (dev console plus the trace drawer).
+8. **Done means seen.** Verify UI changes with a Playwright screenshot or in the browser before saying they're done. Don't claim in PITCH.md what isn't wired.
+9. **Dependencies:** prefer an existing OSS library to writing it ([docs/BUILDING-BLOCKS.md](docs/BUILDING-BLOCKS.md)). Any new dependency over ~500 kB is cleared with the lead first.
+10. **Parallel lanes** ([docs/ORCHESTRATION.md](docs/ORCHESTRATION.md)): concept and contracts first, then one brief + branch + worktree per lane (`docs/lanes/<lane>.md`). Edit only your owned paths; shared files are lead-only (use the brief's **Needs**). `pnpm i` inside the worktree (never symlink `node_modules`); own dev port. Only the lead merges to `main`. Rebase on `main` about every 90 min. Lane agents use the `lane` skill; the lead uses `integrate`.
+11. **No artifacts at repo root.** Scratch goes to `scratch/` (gitignored). On Windows, check `git status` for stray `nul` / pasted-line files.
 
-## Docs (split by tense — keep each short)
-| File | Tense | Rule |
+## Docs (keep each short)
+| File | Who edits | What |
 |---|---|---|
-| [docs/OVERVIEW.md](docs/OVERVIEW.md) | now | Rewritten to match reality. What exists and works. |
-| [docs/PLAN.md](docs/PLAN.md) | future | The only plan. `[x] [~] [ ] [!]` markers. Old plans move to `docs/archive/`. |
-| [docs/LOG.md](docs/LOG.md) | past | Append-only, timestamped, one line per meaningful step. |
-| [docs/DECISIONS.md](docs/DECISIONS.md) | past | `D#` · choice · why · what would reopen it. |
-| [docs/handoff.md](docs/handoff.md) | now | Rewritten at the end of every session/shift: state, next 3 steps, traps. |
-| [docs/PITCH.md](docs/PITCH.md) | future | One-breath opener, demo beats, claim → evidence. |
+| [docs/STATUS.md](docs/STATUS.md) | lead | Now: what works, next 3 steps, traps. Rewritten each checkpoint. |
+| [docs/PLAN.md](docs/PLAN.md) | everyone, own lines only | The one plan: phases, roles, shifts, `[x] [~] [ ] [!]` markers |
+| [docs/DECISIONS.md](docs/DECISIONS.md) | anyone | `D#` · choice · why · what would reopen it. Append only. |
+| [docs/concept/](docs/concept/CONCEPT.md) | lead + team | CONCEPT (product) and ARCHITECTURE (contracts, lanes). Frozen at fan-out; changed only via the lead. |
+| docs/lanes/<lane>.md | that lane | Brief, Needs, Report |
+| docs/research/<topic>.md | research agents | ≤1 page: sources, findings, "means for us" |
+| [docs/PITCH.md](docs/PITCH.md) | pitch owner | Opener, demo beats, claim → evidence |
 
-Reference (look up, don't preload): [docs/event/](docs/event/) (rules, schedule, sponsors, challenge), [docs/strategy/WINNING.md](docs/strategy/WINNING.md), [docs/LESSONS.md](docs/LESSONS.md), [docs/STACK.md](docs/STACK.md), [docs/BUILDING-BLOCKS.md](docs/BUILDING-BLOCKS.md) (OSS to reuse; prefer an existing library over writing it), [docs/TOOLING.md](docs/TOOLING.md), [docs/ideas/IDEAS.md](docs/ideas/IDEAS.md).
+`git log` is the history log. Reference (look up, don't preload): [docs/event/](docs/event/EVENT.md), [docs/strategy/WINNING.md](docs/strategy/WINNING.md), [docs/STACK.md](docs/STACK.md), [docs/BUILDING-BLOCKS.md](docs/BUILDING-BLOCKS.md), [docs/LESSONS.md](docs/LESSONS.md), [docs/TOOLING.md](docs/TOOLING.md), [docs/ideas/](docs/ideas/IDEAS.md).
 
 ## Commands
-_Fill in at scaffold time (Fri 19:30+)._ Expected: `pnpm dev`, `pnpm check` (svelte-check + tsc + lint + unit), `pnpm test:e2e`, `pnpm gen:data -- --n 100000`.
+_Fill in at scaffold time._ Expected: `pnpm dev`, `pnpm check` (svelte-check + lint + vitest), `pnpm test:e2e`, `pnpm gen:data -- --n 100000 --seed 42`.
 
 ## Comments
 Say what is true now and why, never how the code got there.

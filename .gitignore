@@ -27,7 +27,7 @@ __pycache__/
 
 # large local data (generated; regenerate with gen:data)
 data/generated/
-Misc/*.pdf
+Misc/
 
 # event guidebook has staff phone numbers; keep local
 docs/event/guidebook.txt

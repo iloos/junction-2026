@@ -8,15 +8,16 @@ Rule check: "All code outside open-source libraries must be written at the event
 | **duckdb-wasm** (duckdb/duckdb-wasm) | SQL over millions of rows *in the browser*. The agent writes SQL, the dashboard renders it. The answer to "robust data, lots of points" without a server DB. | MIT | S–M |
 | **Mosaic** (uwdata/mosaic) | Linked, cross-filtered views over DuckDB that scale to millions of points | BSD-3 *(check)* | M |
 | **Perspective** (perspective-dev/perspective) | WASM pivot grid and charts for huge or streaming data; a web component, so it drops into Svelte | Apache-2.0 | S |
-| **cosmos.gl** (cosmosgl/graph) | GPU force layout, 100k–1M nodes. The "whoa" graph. | MIT | M |
+| **cosmos.gl** (cosmosgl/graph; npm `@cosmos.gl/graph`) | GPU force layout, 100k–1M nodes. The "whoa" graph. | MIT | M |
 | **3d-force-graph** (vasturiano) | Easy 3D graph hero view | MIT | S |
 | **sigma.js + graphology** | Robust 2D big-graph rendering plus graph algorithms (paths, centrality, communities) | MIT | S–M |
 | **Vercel AI SDK + @ai-sdk/svelte** | Streaming, tools, Claude and Gemini providers, a `Chat` class | Apache-2.0 *(check)* | S |
-| **Svelte AI Elements** (SikandarJODD/ai-elements) | shadcn-svelte port of AI Elements: message, tool-call, reasoning and prompt-input components. Skips chat-UI work. | MIT | S |
+| **Svelte AI Elements** (SikandarJODD/ai-elements) | shadcn-svelte port of AI Elements: message, tool-call, reasoning and prompt-input components. Skips chat-UI work. **Targets `ai` v6**: pin v6 or adapt. | MIT | S–M |
 | **shadcn-svelte + bits-ui** | Dashboard and sidebar blocks for layout; skip boilerplate | MIT | S |
 | **Svelte Flow** (xyflow) | A visual editor for data-transform pipelines ("mechanisms that transform the data", made visible) | MIT | S–M |
 | **LayerChart** | Svelte-native d3 charts | MIT | S |
-| **MCP TS SDK + MCP Inspector** | Expose our app as an MCP server ("no way, that too?") | MIT *(check)* | S |
+| **MCP TS SDK + MCP Apps** (`@modelcontextprotocol/ext-apps` 2.0, stable) + Inspector | Expose our app as an MCP server, and render our view *inside Claude/ChatGPT* ("no way, that too?") | MIT *(check)* | S–M |
+| **Featherless** (sponsor) via `@ai-sdk/openai-compatible` | ~22.5k open models behind one OpenAI-compatible endpoint: bulk transforms, a model arena | service | S |
 
 ## Tier 2: if the idea needs it
 | Block | Use when | License |

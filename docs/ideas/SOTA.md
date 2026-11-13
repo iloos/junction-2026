@@ -4,13 +4,18 @@ Scanned on 13 Nov 2026. Web coverage in this window is noisy (aggregator blogs c
 
 Note: Meta's TRIBE v2 (brain encoding) came out in March 2026, so it no longer reads as new.
 
+## Top 3 (start here; the rest is reference)
+1. **MCP Apps** (confirmed: `@modelcontextprotocol/ext-apps` 2.0, stable spec; renders in Claude, ChatGPT, VS Code, Goose). Our view runs *inside Claude*.
+2. **Featherless model arena** (sponsor; ~22.5k open models on one endpoint) or **Kimi K3.1 Pro on Verda** (confirmed `kimi-k3-1-pro`, 1M ctx).
+3. **Apple Embedding Atlas** (`embedding-atlas` 0.26, confirmed): millions of points in WebGPU, with zero design effort.
+
 ## Best fit for our stack (web + data + agents)
 | Pick | What | Access | Effort | Wow it enables |
 |---|---|---|---|---|
-| **MCP Apps** (SEP-1865, `modelcontextprotocol/ext-apps`) [S] | MCP servers return *interactive UI* that renders inside Claude, ChatGPT and VS Code | Open spec + SDK | 3–5h | Our Svelte/d3 views appear live *inside Claude* as tool output. "No way, that too?" with our main stack, and it lands squarely on the agentic-ecosystem theme. |
+| **MCP Apps** (SEP-1865, `modelcontextprotocol/ext-apps`) [P] | MCP servers return *interactive UI* that renders inside Claude, ChatGPT and VS Code | Open spec + SDK | 3–5h | Our Svelte/d3 views appear live *inside Claude* as tool output. "No way, that too?" with our main stack, and it lands squarely on the agentic-ecosystem theme. |
 | **Apple Embedding Atlas** [P, older] | WebGPU scatter of millions of embedded points, with search and clustering | MIT, npm | 2–4h | "Here's every company/claim/meeting as a point; the agent flies you to clusters." An instant data wow. |
-| **TripoSplat** (VAST-AI, MIT, SIGGRAPH '26) [P] + **three.js r186 native Gaussian splats** [S] | One photo → 3D splat; three.js renders it | Modal GPU | 4–6h | Photo → walkable 3D in seconds. Our three.js moment, with no 3D modelling skill needed. |
-| **Kimi K3.1 Pro on Verda** (1M context) [S/U] | Drop-in OpenAI-compatible LLM | Verda coupon; confirm the endpoint with staff | 1–2h | "It read the entire corpus in one pass." A clean, load-bearing Verda use, judged by their CTO. |
+| **TripoSplat** (VAST-AI, MIT, SIGGRAPH '26) [P] + **three.js r186 native Gaussian splats** [S; WebGPURenderer only, no LoD] | One photo → 3D splat; three.js renders it | Modal GPU | 4–6h | Photo → walkable 3D in seconds. Our three.js moment, with no 3D modelling skill needed. |
+| **Kimi K3.1 Pro on Verda** (1M context) [P] | Drop-in OpenAI-compatible LLM (`kimi-k3-1-pro` at `inference.verda.com/v1`) | Verda coupon | 1–2h | "It read the entire corpus in one pass." A clean, load-bearing Verda use, judged by their CTO. |
 | **Transformers.js 4 (WebGPU)** [S] | Small LLMs and embeddings running in the browser, with tool calling | npm | 2–4h | Works offline and keeps data private. Pairs with duckdb-wasm for a server-less data agent. |
 | **Meta Muse Glimmer** (30B, Apache-2.0, Aug 2026) [S] | Open-weight agent model; reads screenshots, charts and documents | Modal GPU / quantized local | 3–5h | A local, private document agent (FinTech/Healthcare privacy story). |
 | **Agent payments: x402 / Stripe MPP / AP2** [S] | Agents pay per call | Testnets/sandboxes | 4–6h | Agentic-economy demo: our MCP tool charges another agent per query. |

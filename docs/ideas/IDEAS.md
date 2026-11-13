@@ -8,11 +8,10 @@ Decide by **Fri ~22:30**. Before then: diverge (each person brings 3), then scor
 | Problem worth solving: a real user, a real pain | 3 |
 | Wow in 30s, explains itself | 3 |
 | Data richness / scale story (many data points) | 2 |
-| Sponsor stack: load-bearing tools (Cala/Exa/Context.dev/Modal/Verda) | 2 |
-| Feasible thin slice by Sat 12:00 | 3 |
-| Transfer value for us (graph KB, coaching, agentic ecosystem) without being company-related | 1 |
+| Sponsor stack: load-bearing tools (Cala/Exa/Context.dev/Featherless/Modal/Verda) | 2 |
+| Feasible thin slice by Sat 06:00 (cut-off 08:00) | 3 |
 
-## Pre-event directions (concept only, no code). Our interests: knowledge graphs over digital context, coaching, the agentic economy (MCP, tool ecosystems).
+## Pre-event directions (concept only, no code). Themes we like: knowledge graphs over digital context, coaching, the agentic economy (MCP, tool ecosystems).
 
 ### A. Cala, Make Unicorns Real: "the hidden map of who backs whom"
 3D/2D living graph of investors, rounds, companies and founders. Ask the agent "who could warm-intro me to X" or "which investors back founders like me", and the graph flies to the path, with each edge cited. Exa finds "companies like mine", Context.dev adds real logos and colours plus live site diffs ("they just launched pricing"). Modal batch-enriches 10k companies live. Exposed as MCP so a founder's own agent can call it. *Slush is next week, so the timing story writes itself.* Fits: graph KB, agentic ecosystem, data scale, 3–4 sponsors, judges who are VCs.
@@ -27,7 +26,7 @@ A dense spending dashboard (thousands of transactions) plus a coaching agent tha
 A visual marketplace where purchasing agents and supplier agents transact over MCP-style tools. The human sees every proposal as a reviewable op, with failure modes surfaced. Speaks directly to the RL judge ("why does the agent fail"). Agentic-economy transfer.
 
 ### E. Open, digital-context graph (Context.dev open challenge or Agentic AI track)
-Turn a pile of meeting notes, emails and docs into a typed knowledge graph (closed node and edge kinds), plus an agent that answers with paths and pre-meeting coaching nudges. Closest to our interests, and also **closest to company territory**: frame it generically, use public or synthetic data, write it all at the event.
+Turn a pile of meeting notes, emails and docs into a typed knowledge graph (closed node and edge kinds), plus an agent that answers with paths and pre-meeting coaching nudges. Use public datasets (QMSum, AMI) or synthetic corpora.
 
 Novelty multipliers (new models, protocols, breakthroughs): see [SOTA.md](SOTA.md). Pick at most one per idea.
 
