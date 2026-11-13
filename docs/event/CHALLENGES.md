@@ -43,12 +43,15 @@ Arduino Green Renaissance (UNO Q edge AI) · Meta AI glasses · Intel Physical A
 - **MariaDB:** open to any team for "an interesting use of the database".
 - **Cloudinary:** submit via form `cld.media/hackathon-survey`.
 
+See [KICKOFF.md](KICKOFF.md) for workshops, MLH extras and more partner detail.
+
 ## Credits to claim (one person per team where noted)
 | Who | What | How |
 |---|---|---|
 | Anthropic | $20 per participant | Platform |
 | OpenAI | $100 Codex per participant | Platform |
-| Google DeepMind | Gemini credits | Platform |
+| Google DeepMind | Gemini key per team (≤5 people), emailed tonight; **side prize** for cool Gemini use | AI Studio |
+| NVIDIA | **Bounty: 2 RTX GPUs** for building on Nemotron 3.5 Super VL (via Verda) | Discord NVIDIA channel |
 | Verda | €200 | Console sign-up + form |
 | Modal | $100 per participant | Booth / Discord |
 | Exa | $50 per participant | Platform |
