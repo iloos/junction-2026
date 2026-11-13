@@ -26,6 +26,8 @@ _The lead rewrites this at each checkpoint. It is the "now": what works, what's 
 
 **Venues (done):** 3,560 real Helsinki/Espoo/Vantaa venues from OSM (ODbL), 8 profiles, 15 with structured menus (574 dishes); Exa found menu/banquet pages for ~19/29; Google Places skipped (no menus, restrictive terms). Demo picks: Scandic Kallio (chain Christmas lunch menu), Factory Elimäenkatu (weekly lunch), Don Corleone. Real names + invented volumes: anonymise in video. `data/venues/` is gitignored; [research/venues.md](research/venues.md).
 
+**Sessions:** this lead session (orchestrator) + peer junc26-8d + one more peer session (starting now). Roles and rules: ORCHESTRATION.md "Sessions". New peers: read STATUS → DECISIONS (D4–D6) → PRODUCT → PITCH, then message the lead for a chunk.
+
 **In flight:**
 - Venue dataset agent (OSM + Exa + Context.dev → `data/venues/`, `scripts/venues/`, `docs/research/venues.md`; uncommitted). When it lands: commit the scripts, the OSM file with ODbL attribution and venues.md; keep scraped menus out of git.
 - **Merged (9df92c2):** `scripts/lane-setup.{ps1,sh}` (worktree + copies .env, data/valio, data/venues; port 5171–5179), `evals/` (format + s1–s5 covering all 8 Ring 0 stories), `fixtures/seeds/` (k-hotel / k-lounas / k-central, Christmas buffet for 140 at 691 g/guest, calendar factors). Align field names in the contracts: line states `acted | held{tier} | rejected | committed | unorderable` and the README's reason codes. Also new: [research/supply-chain.md](research/supply-chain.md) (Promise status incl. `limited`/`below_lot`, Reservation with expiry, usage-capped fair share at cut-off, 5 simulator events).

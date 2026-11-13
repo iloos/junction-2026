@@ -37,6 +37,11 @@ Typical lanes (adjust in ARCHITECTURE.md): `data` (generator, fixtures, sponsor 
 5. **Report in the brief, not in chat.** At the end of each run, the lane agent appends to its brief's **Report** section: what's done, what's stubbed, what's needed. The lead reads the reports, merges, and updates STATUS.md.
 6. **Auto mode safe zone.** A project permission allowlist (see TOOLING.md; it's installed by a human, not by an agent) allows `pnpm`, `git` (no force-push), `npx`, `modal` and Playwright, and asks before `git push`. Lanes never push to `main`, and never touch `.env` or other lanes' worktrees.
 
+### Sessions: one lead, peer sessions that think
+- **Lead session** (orchestrator): owns the main checkout, contracts, merges, DECISIONS numbering and STATUS. Assigns chunks with owned paths and a "done when".
+- **Peer sessions** (2 now): own worktrees and branches; may run their own subagents. They are **not passive executors**: each one keeps checking the whole shape (concept ↔ contracts ↔ evals ↔ demo ↔ scorecard), flags drift, contradictions and risks, and proposes improvements. Proposals arrive as a short message to the lead or as a branch with a sha; the lead decides and merges.
+- Messages only for handoffs, blockers, real disagreements or improvements worth acting on; no status chatter. Findings go into repo docs (Report/Needs, research notes), not only chat.
+
 ### Overnight guardrails (round-2 review)
 - One merger and one decision-number allocator (the lead). Peer sessions hand over a SHA + review; they never change the main checkout's branch.
 - Each lane pins its base SHA, schema hash and seed hash, and its owned paths. Core-db owns persistence *implementations*, not the lead-owned contracts or migrations. Ops consumes store projections; jobs never own simulator truth.
