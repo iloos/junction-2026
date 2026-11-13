@@ -61,3 +61,13 @@ See [KICKOFF.md](KICKOFF.md) for workshops, MLH extras and more partner detail.
 | CRACI | €1000 CI/compute per team | Invite code in Discord #craci |
 | IronShard | Dataset buckets (S3 + MCP) for artefacts >100 MiB | Platform |
 | Oxylabs | First month of the $500 plan free with code JUNCTION2026 | **Card required; cancel after** |
+
+## Side prizes we're targeting: known facts vs. questions to ask
+| Prize | Known | Ask at the booth / on Discord |
+|---|---|---|
+| **Google Gemini** | "Big prize money" for building Gemini into the app in a cool or interesting way. One AI Studio key per team (≤5 people), emailed Fri night. Gemini 4: Argon (frontier), Carbon (coding, agents), Hydrogen (fast); Decisions API ("Jev"), Live audio with tool calls, smart transcription; Gemini API agent skill | Amount; criteria; how to enter (tag on platform or a form?); does Decisions API usage count; do we need a model (Gemini 4) in the *runtime*, not just dev |
+| **NVIDIA** | 2 teams win an RTX GPU; project must be *powered by* Nemotron 3.5 Super VL (120B MoE, 12B active, multimodal); Verda key via the NVIDIA channel on Discord | How "powered by" is judged (main model vs. one call); rate limits on the key; how to enter |
+| **Modal** | Tech challenge on top of the main pick; $100 per participant; Sandboxes, web endpoints, Volumes, Dojo fine-tuning; workshop **Sat 13:30–14:00**, Loft | Prize; criteria (load-bearing use vs. a token call); is the Junction starter kit online |
+| **Verda** | €200 credits; the CTO is on the grand jury; workshop **Fri 20:30–21:00**, Loft | Is there a separate best-use prize (the Tech Challenges tab wasn't saved) |
+
+Fri workshops: DeepMind 20:00–20:30 (Loft), Verda 20:30–21:00 (Loft), MLH × GitHub 21:00–21:30. Sat: Cala 11:00, Intel 12:00, Hostinger keynote 13:00, Modal 13:30, Kiuas 14:30, Exa 16:30, Context.dev 17:30, MariaDB 18:00. Sun: Top-5 pitches 14:15; challenge winners 15:10; Junction winner 15:50.
