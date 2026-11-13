@@ -14,7 +14,7 @@ _Between the concept (CONCEPT v2.1, SCORECARD) and the lanes. Goal: every servic
 | [gemini.md](gemini.md) | Decisions API (calibrated decisions), Live API, models, SDK | [x] |
 | [models.md](models.md) | Nemotron 3.5 Super VL (Verda / NVIDIA Build), Gemma (Featherless / Verda), one LLM port | [x] |
 | [modal.md](modal.md) | Fan-out batch (catalogue enrichment), swarm runner, Sandboxes, web endpoints | [x] |
-| [data.md](data.md) | Aiven Postgres + pgvector + LISTEN/NOTIFY, Drizzle, PGlite fixture, Aiven Runtime | [ ] |
+| [data.md](data.md) | Aiven Postgres + pgvector + LISTEN/NOTIFY, Drizzle, PGlite fixture, Aiven Runtime | [x] |
 | [mcp.md](mcp.md) | MCP server (SDK v2) inside SvelteKit, MCP Apps, OpenAPI from zod, testing with Inspector | [x] |
 | [web.md](web.md) | Context.dev (menus, manufacturer data, recall monitor), Exa, caching | partly: [../research/menu-spike.md](../research/menu-spike.md) |
 | [media.md](media.md) | Cloudinary for Valio product images | [ ] |
