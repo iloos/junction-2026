@@ -1,0 +1,160 @@
+{
+	"$comment": "Demand factors with a source each (horeca-profiles.md §3 and §5). A factor multiplies covers for the kitchens whose factorSensitivity for that kind is > 0 (applied as 1 + (value − 1) × sensitivity), clamped to [0.5, 2.0]. kind 'data' = taken from the cited source; 'estimate' = team estimate, and the 'why' panel must say 'team estimate'. A factor without a source stays at 1.0.",
+	"timezone": "Europe/Helsinki",
+	"clamp": [0.5, 2.0],
+	"holidays": {
+		"source": {
+			"name": "Nager.Date public holidays FI",
+			"url": "https://date.nager.at/api/v3/PublicHolidays/2026/FI",
+			"fetchedAt": "2026-11-14"
+		},
+		"days": [
+			{ "date": "2026-12-06", "name": "Itsenäisyyspäivä (Independence Day)", "weekday": "sun" },
+			{ "date": "2026-12-24", "name": "Jouluaatto (Christmas Eve)", "weekday": "thu" },
+			{ "date": "2026-12-25", "name": "Joulupäivä (Christmas Day)", "weekday": "fri" },
+			{ "date": "2026-12-26", "name": "Tapaninpäivä (St Stephen's Day)", "weekday": "sat" },
+			{ "date": "2027-01-01", "name": "Uudenvuodenpäivä (New Year's Day)", "weekday": "fri" },
+			{ "date": "2027-01-06", "name": "Loppiainen (Epiphany)", "weekday": "wed" }
+		],
+		"deliveryRule": {
+			"rule": "no deliveries on public holidays; a delivery that falls on one moves to the previous delivery day, with that day's cut-off",
+			"kind": "estimate",
+			"note": "ask Valio how the holiday delivery calendar shifts (horeca-profiles.md §5 mentor question c)"
+		}
+	},
+	"factors": [
+		{
+			"id": "slush-2026",
+			"name": "Slush",
+			"kind": "event",
+			"from": "2026-11-18",
+			"to": "2026-11-19",
+			"applyFrom": "2026-11-18",
+			"applyTo": "2026-11-20",
+			"value": 1.2,
+			"valueKind": "estimate",
+			"appliesTo": ["breakfastCovers"],
+			"source": {
+				"name": "Helsinki Linked Events: event 'Slush', 18 Nov 00:01 – 19 Nov 23:59",
+				"url": "https://api.hel.fi/linkedevents/v1/event/?text=slush&start=2026-11-16&end=2026-11-22",
+				"fetchedAt": "2026-11-14"
+			},
+			"note": "dates are data; the +20% breakfast lift is a team estimate (horeca-profiles.md §3)"
+		},
+		{
+			"id": "month-2026-11-fnb",
+			"name": "November, food and beverage service",
+			"kind": "month",
+			"from": "2026-11-01",
+			"to": "2026-11-30",
+			"value": 1.01,
+			"valueKind": "data",
+			"appliesTo": ["lunchCovers", "bistroCovers", "mealsPerDay"],
+			"source": {
+				"name": "Statistics Finland 14k7, TOL 56, mean 2023–2025, month ÷ year mean",
+				"url": "https://pxdata.stat.fi/PxWeb/pxweb/en/StatFin/StatFin__plv/statfin_plv_pxt_14k7.px/",
+				"fetchedAt": "2026-11-14"
+			}
+		},
+		{
+			"id": "month-2026-12-fnb",
+			"name": "December, food and beverage service",
+			"kind": "month",
+			"from": "2026-12-01",
+			"to": "2026-12-31",
+			"value": 1.05,
+			"valueKind": "data",
+			"appliesTo": ["lunchCovers", "bistroCovers", "mealsPerDay"],
+			"source": {
+				"name": "Statistics Finland 14k7, TOL 56, mean 2023–2025",
+				"url": "https://pxdata.stat.fi/PxWeb/pxweb/en/StatFin/StatFin__plv/statfin_plv_pxt_14k7.px/",
+				"fetchedAt": "2026-11-14"
+			}
+		},
+		{
+			"id": "month-2026-11-hotel",
+			"name": "November, Helsinki hotel occupancy vs January",
+			"kind": "month",
+			"from": "2026-11-01",
+			"to": "2026-11-30",
+			"value": 1.46,
+			"valueKind": "data",
+			"appliesTo": ["breakfastCovers"],
+			"source": {
+				"name": "Statistics Finland 11lm, Helsinki room occupancy 2025: Nov 70% / Jan 48%",
+				"url": "https://pxdata.stat.fi/PxWeb/pxweb/en/StatFin/StatFin__matk/statfin_matk_pxt_11lm.px/",
+				"fetchedAt": "2026-11-14"
+			},
+			"note": "relative to a January base week; use only if the kitchen's base covers are January-calibrated"
+		},
+		{
+			"id": "independence-day-2026",
+			"name": "Independence Day (Sunday)",
+			"kind": "holiday",
+			"from": "2026-12-06",
+			"to": "2026-12-06",
+			"value": 0,
+			"valueKind": "data",
+			"appliesTo": ["lunchCovers", "mealsPerDay"],
+			"source": {
+				"name": "Nager.Date FI 2026",
+				"url": "https://date.nager.at/api/v3/PublicHolidays/2026/FI"
+			},
+			"note": "a Sunday anyway for P2/P3; no effect on Monday's menu"
+		},
+		{
+			"id": "christmas-eve-2026",
+			"name": "Christmas Eve to Boxing Day",
+			"kind": "holiday",
+			"from": "2026-12-24",
+			"to": "2026-12-26",
+			"value": 0,
+			"valueKind": "data",
+			"appliesTo": ["lunchCovers", "mealsPerDay"],
+			"source": {
+				"name": "Nager.Date FI 2026",
+				"url": "https://date.nager.at/api/v3/PublicHolidays/2026/FI"
+			}
+		},
+		{
+			"id": "school-christmas-break-2026",
+			"name": "School Christmas break (Helsinki)",
+			"kind": "schoolHoliday",
+			"from": "2026-12-21",
+			"to": "2027-01-06",
+			"value": 0,
+			"valueKind": "data",
+			"appliesTo": ["mealsPerDay"],
+			"source": {
+				"name": "Helsinki upper-secondary school calendar (Mäkelänrinteen lukio)",
+				"url": "https://www.hel.fi/fi/kasvatus-ja-koulutus/makelanrinteen-lukio/opiskelu/kalenteri-lukuvuoden-aikataulut",
+				"fetchedAt": "2026-11-14"
+			},
+			"note": "Espoo dates may differ by a day; check espoo.fi before the demo if P3 is shown"
+		},
+		{
+			"id": "pikkujoulu-weekends-2026",
+			"name": "Pikkujoulu weekends",
+			"kind": "event",
+			"from": "2026-11-20",
+			"to": "2026-12-12",
+			"weekdays": ["fri", "sat"],
+			"value": 1.1,
+			"valueKind": "estimate",
+			"appliesTo": ["bistroCovers"],
+			"source": {
+				"name": "Yle / Yrittäjät–MaRa: season shrunk to a few weekends, 20% of food restaurants expected growth",
+				"url": "https://www.yrittajat.fi/uutiset/pikkujoulukausi-pettymys-ravintoloille-iskee-eniten-pieniin-yrityksiin/"
+			},
+			"note": "the weekends are sourced; +10% is a team estimate"
+		}
+	],
+	"notApplied": [
+		{
+			"name": "weather",
+			"value": 1.0,
+			"reason": "no Finnish magnitude found (horeca-profiles.md §3)"
+		},
+		{ "name": "payday", "value": 1.0, "reason": "no source for Finland" }
+	]
+}

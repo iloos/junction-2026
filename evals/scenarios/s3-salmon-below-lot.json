@@ -1,0 +1,47 @@
+{
+	"id": "s3-salmon-below-lot",
+	"title": "Salmon contended to 9 kg, below the 10 kg lot step: unorderable; Finnish trout ranks first; the unreliable trout is rejected",
+	"stories": ["★3"],
+	"edgeCases": [2, 8, 9, 15],
+	"seeds": { "kitchen": "k-hotel", "event": "event-xmas-140" },
+	"clock": "2026-11-14T12:00:00+02:00",
+	"state": { "weekSpentEx": 0, "priorOrders": [] },
+	"overrides": {
+		"availability": [
+			{
+				"sku": "462150",
+				"amount": 9,
+				"label": "simulated: 34 of the live 43 kg committed by other kitchens"
+			}
+		],
+		"price": []
+	},
+	"steps": [{ "actor": "chef", "action": "plan_event", "input": { "eventId": "event-xmas-140" } }],
+	"expect": {
+		"lines": [
+			{
+				"sku": "462150",
+				"qty": 20,
+				"unit": "KG",
+				"state": "unorderable",
+				"reasons": ["below_lot_step"],
+				"comment": "need 11.53 kg → 20 kg; 9 kg available < one 10 kg lot"
+			},
+			{
+				"sku": "462016",
+				"qty": 20,
+				"unit": "KG",
+				"state": "held",
+				"tier": "propose",
+				"reasons": ["new_sku"],
+				"lineEx": 315.4
+			}
+		],
+		"rank": { "need": "Graavilohi (cured salmon), cured in-house", "first": "462016" },
+		"rejected": [{ "sku": "471898", "reasons": ["out_of_stock", "low_reliability"] }],
+		"residualShortfall": [],
+		"labels": [{ "sku": "462150", "mustSay": "simulated" }],
+		"receipts": 0
+	},
+	"notes": "The 9 kg is a simulator overlay on real data (live 43 kg), and the UI must say so. Trout 462016 is Finnish, 40 kg live, reliability 1.0, carbon 4.9 (group average, same group as salmon), €15.77/kg vs €14.11. For k-hotel (reliability 0.35, Finnish 0.2) it should beat ready-cured trout 469987 (origin no, reliability 0.889, €22.98/kg, 23 kg)."
+}

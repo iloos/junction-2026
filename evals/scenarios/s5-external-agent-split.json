@@ -1,0 +1,107 @@
+{
+	"id": "s5-external-agent-split",
+	"title": "Outside agent orders through the gate: pending, human-approved, idempotent; a split second order still hits the weekly cap; an unknown id never reaches Valio",
+	"stories": ["★4", "★6", "★7"],
+	"edgeCases": [4, 6],
+	"seeds": { "kitchen": "k-lounas" },
+	"clock": "2026-11-14T12:00:00+02:00",
+	"state": {
+		"weekSpentEx": 3900.0,
+		"priorOrders": [
+			{
+				"id": "prior-1",
+				"committedAt": "2026-11-11T10:00:00+02:00",
+				"totalEx": 3900.0,
+				"comment": "earlier orders this week (Mon 9 – Sun 15 Nov)"
+			}
+		]
+	},
+	"overrides": { "availability": [], "price": [] },
+	"steps": [
+		{
+			"actor": "external_agent",
+			"action": "search",
+			"input": { "query": "laktoositon maito 1 l" }
+		},
+		{
+			"actor": "external_agent",
+			"action": "quote",
+			"input": { "skus": ["464201", "470418", "472186", "479999"] }
+		},
+		{
+			"actor": "external_agent",
+			"action": "place_order",
+			"input": {
+				"idempotencyKey": "ext-A",
+				"deliverBy": "2026-11-16",
+				"lines": [
+					{ "sku": "464201", "qty": 200, "unit": "ST" },
+					{ "sku": "470418", "qty": 10, "unit": "ST" },
+					{ "sku": "472186", "qty": 50, "unit": "ST" }
+				]
+			}
+		},
+		{
+			"actor": "approver",
+			"action": "approve",
+			"input": { "ref": "order:ext-A", "terms": "as quoted" }
+		},
+		{
+			"actor": "external_agent",
+			"action": "commit",
+			"input": { "ref": "order:ext-A", "idempotencyKey": "ext-A" }
+		},
+		{
+			"actor": "external_agent",
+			"action": "commit",
+			"input": { "ref": "order:ext-A", "idempotencyKey": "ext-A" },
+			"comment": "retry"
+		},
+		{
+			"actor": "external_agent",
+			"action": "place_order",
+			"input": {
+				"idempotencyKey": "ext-B",
+				"deliverBy": "2026-11-18",
+				"lines": [
+					{ "sku": "464201", "qty": 200, "unit": "ST" },
+					{ "sku": "470418", "qty": 10, "unit": "ST" },
+					{ "sku": "472186", "qty": 50, "unit": "ST" }
+				]
+			},
+			"comment": "same basket as a second order: under the €1,500 order cap, over the weekly cap in total"
+		}
+	],
+	"expect": {
+		"rejected": [{ "sku": "479999", "reasons": ["unknown_product"] }],
+		"valioCalls": { "neverInclude": ["479999"] },
+		"orders": [
+			{
+				"key": "ext-A",
+				"totalEx": 695.5,
+				"states": ["pending", "approved", "committed"],
+				"reasons": ["external_agent_needs_approval"]
+			},
+			{
+				"key": "ext-B",
+				"totalEx": 695.5,
+				"state": "held",
+				"tier": "sign_off",
+				"reasons": ["over_weekly_cap"]
+			}
+		],
+		"receipts": 1,
+		"duplicateReceipts": 0,
+		"sameReceiptOnRetry": true,
+		"weekSpentEx": 4595.5,
+		"tools": { "externalAgentMustNotHave": ["approve", "approve_order", "set_mandate"] },
+		"ops": {
+			"mustInclude": [
+				{ "type": "order.placed", "actor": "external_agent" },
+				{ "type": "approval.granted", "actor": "approver" },
+				{ "type": "order.held", "actor": "external_agent" }
+			]
+		}
+	},
+	"notes": "Prices ex VAT: 464201 €1.56 × 200 = 312.00; 470418 €25.20 × 10 = 252.00; 472186 €2.63 × 50 = 131.50; total 695.50. Weekly: 3,900 + 695.50 = 4,595.50 ≤ 5,000; adding another 695.50 = 5,291 > 5,000, so B is held. 479999 is inside the id range but not in the catalogue: unknown ids look 'undeliverable' at the API, so they are rejected before calling."
+}

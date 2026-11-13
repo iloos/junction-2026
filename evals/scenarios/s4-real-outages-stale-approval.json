@@ -1,0 +1,103 @@
+{
+	"id": "s4-real-outages-stale-approval",
+	"title": "Whole ham and lanttulaatikko really at 0: substitutes held as unknown quantity; a price change voids the approval",
+	"stories": ["★3", "★5"],
+	"edgeCases": [2, 3, 5],
+	"seeds": { "kitchen": "k-hotel", "event": "event-xmas-140" },
+	"clock": "2026-11-14T12:00:00+02:00",
+	"state": { "weekSpentEx": 0, "priorOrders": [] },
+	"overrides": { "availability": [], "price": [] },
+	"steps": [
+		{ "actor": "chef", "action": "plan_event", "input": { "eventId": "event-xmas-140" } },
+		{
+			"actor": "approver",
+			"action": "approve",
+			"input": {
+				"ref": { "sku": "462919" },
+				"terms": {
+					"sku": "462919",
+					"qty": 8,
+					"unit": "ST",
+					"priceEx": 29.2,
+					"deliveryDate": "2026-12-11"
+				}
+			}
+		},
+		{
+			"actor": "system",
+			"action": "set_price",
+			"input": {
+				"sku": "462919",
+				"priceEx": 31.5,
+				"label": "simulated: price update after approval"
+			}
+		},
+		{
+			"actor": "chef",
+			"action": "commit",
+			"input": { "ref": { "sku": "462919" }, "idempotencyKey": "s4-commit-1" }
+		},
+		{
+			"actor": "approver",
+			"action": "approve",
+			"input": {
+				"ref": { "sku": "462919" },
+				"terms": {
+					"sku": "462919",
+					"qty": 8,
+					"unit": "ST",
+					"priceEx": 31.5,
+					"deliveryDate": "2026-12-11"
+				}
+			}
+		},
+		{
+			"actor": "chef",
+			"action": "commit",
+			"input": { "ref": { "sku": "462919" }, "idempotencyKey": "s4-commit-2" }
+		}
+	],
+	"expect": {
+		"lines": [
+			{ "sku": "462490", "state": "unorderable", "reasons": ["out_of_stock"] },
+			{
+				"sku": "462919",
+				"qty": 8,
+				"unit": "ST",
+				"state": "committed",
+				"priceEx": 31.5,
+				"lineEx": 252.0,
+				"historyStates": ["held", "held"],
+				"historyReasons": ["unknown_quantity", "approval_stale_terms"]
+			},
+			{ "sku": "462482", "state": "unorderable", "reasons": ["out_of_stock"] },
+			{
+				"sku": "462157",
+				"qty": 3,
+				"unit": "KI",
+				"state": "held",
+				"reasons": ["unknown_quantity"],
+				"lineEx": 54.36
+			}
+		],
+		"rejected": [
+			{ "sku": "462447", "reasons": ["out_of_stock"] },
+			{ "sku": "462210", "reasons": ["undeliverable"] },
+			{ "sku": "471247", "reasons": ["undeliverable"] }
+		],
+		"wording": {
+			"out_of_stock": "out of stock",
+			"undeliverable": "not deliverable",
+			"mustDiffer": true
+		},
+		"unconfirmedCover": ["462919", "462157"],
+		"commitResults": [
+			{ "idempotencyKey": "s4-commit-1", "result": "refused", "reason": "approval_stale_terms" },
+			{ "idempotencyKey": "s4-commit-2", "result": "receipt" }
+		],
+		"receipts": 1,
+		"duplicateReceipts": 0,
+		"weekSpentEx": 252.0
+	},
+	"notes": "Both outages are real in the static mock (amount 0). The substitutes are Terminal (999999), so their quantity is unknown: they are held as 'confirm with Valio' and never counted as cover, even after commit. Delivery 2026-12-11 (Fri) assumes delivery the day before the Sat 12 Dec event; the Terminal lead time of 3–4 days puts its cut-off around Mon 7 Dec on the simulator clock."
+}
