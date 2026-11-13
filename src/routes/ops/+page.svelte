@@ -3,6 +3,7 @@
 	import { resolve } from '$app/paths';
 	import { OpsStream } from './stream.svelte';
 	import Ticket from './Ticket.svelte';
+	import TraceDrawer from './TraceDrawer.svelte';
 	import { ACTOR, euro, lineIsHeld, opPlanId, opSummary, SIM_KIND } from './labels';
 
 	let { data } = $props();
@@ -14,6 +15,8 @@
 		stream.start();
 		return () => stream.stop();
 	});
+
+	let tracesOpen = $state(false);
 
 	const kitchenName = (id: string) => data.kitchens.find((k) => k.id === id)?.name ?? id;
 	const plans = $derived(Object.values(stream.state.plans));
@@ -130,8 +133,16 @@
 			{#if stream.simClock}
 				<p class="clock"><span>Simulator clock</span>{simTime(stream.simClock)}</p>
 			{/if}
+			<button class="traces" onclick={() => (tracesOpen = true)} aria-haspopup="dialog">
+				Agent traces
+				{#if stream.traces.length}<span class="count">{stream.traces.length}</span>{/if}
+				{#if stream.traces[0] && !stream.traces[0].done}<i class="busy" aria-label="running"
+					></i>{/if}
+			</button>
 		</div>
 	</header>
+
+	<TraceDrawer runs={stream.traces} bind:open={tracesOpen} canRun={data.canRunAgent} />
 
 	{#if data.simulated}
 		<p class="banner">
@@ -379,6 +390,44 @@
 		font-size: 15px;
 	}
 
+	.traces {
+		margin-top: 10px;
+		display: inline-flex;
+		align-items: center;
+		gap: 8px;
+		padding: 6px 14px;
+		border-radius: 6px;
+		border: 1px solid var(--line);
+		background: var(--raise);
+		color: var(--text);
+		font: inherit;
+		font-size: 16px;
+		cursor: pointer;
+	}
+	.traces:hover {
+		border-color: var(--muted);
+	}
+	.count {
+		font-family: var(--mono);
+		color: var(--propose);
+	}
+	.busy {
+		width: 8px;
+		height: 8px;
+		border-radius: 50%;
+		background: var(--done);
+		animation: pulse 1s ease-in-out infinite alternate;
+	}
+	@keyframes pulse {
+		to {
+			opacity: 0.3;
+		}
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.busy {
+			animation: none;
+		}
+	}
 	.banner {
 		margin: 0;
 		padding: 10px 16px;
