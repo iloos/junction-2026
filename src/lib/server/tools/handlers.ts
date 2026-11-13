@@ -1,7 +1,7 @@
 import { TOOL_NAMES, type DomainError, type Result, type ToolName } from '$lib/core/contracts';
 import type { CallContext, ToolHandlers } from '$lib/core/ports';
 import { createHandlers } from '$lib/core/services/handlers';
-import { createDbPorts } from '$lib/server/store/db-ports';
+import { createServerPorts } from '$lib/server/store/server-ports';
 import { stubHandlers } from './stub-handlers';
 
 type AnyHandler = (ctx: CallContext, input: unknown) => Promise<Result<unknown>>;
@@ -46,12 +46,12 @@ export function withStubFallback(real: ToolHandlers, stub: ToolHandlers): ToolHa
 }
 
 /**
- * One process-wide store: PGlite in memory with the seed kitchens for `ws-demo`/`run-1` (boot ≈ 1 s,
- * so it starts on first use and is shared by REST, MCP and the agent).
+ * One process-wide store: Aiven Postgres when DATABASE_URL is set, otherwise PGlite in memory with the seed
+ * kitchens for `ws-demo`/`run-1`. Built on first use and shared by REST, MCP and the agent.
  */
 let real: Promise<ToolHandlers> | null = null;
 export function realHandlers(): Promise<ToolHandlers> {
-	real ??= createDbPorts().then(({ ports }) => createHandlers(ports));
+	real ??= createServerPorts().then(({ ports }) => createHandlers(ports));
 	real.catch(() => (real = null));
 	return real;
 }
