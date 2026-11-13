@@ -2,6 +2,9 @@ import { TOOL_NAMES, type DomainError, type Result, type ToolName } from '$lib/c
 import type { CallContext, ToolHandlers } from '$lib/core/ports';
 import { createHandlers } from '$lib/core/services/handlers';
 import { createServerPorts } from '$lib/server/store/server-ports';
+import { createOps, drizzleOpsReader, publish, setFixtureOpsReader } from '$lib/server/bus';
+import { dbMode } from '$lib/server/db/client';
+import type { AnyDb } from '$lib/server/store/drizzle-store';
 import { stubHandlers } from './stub-handlers';
 
 type AnyHandler = (ctx: CallContext, input: unknown) => Promise<Result<unknown>>;
@@ -51,7 +54,11 @@ export function withStubFallback(real: ToolHandlers, stub: ToolHandlers): ToolHa
  */
 let real: Promise<ToolHandlers> | null = null;
 export function realHandlers(): Promise<ToolHandlers> {
-	real ??= createServerPorts().then(({ ports }) => createHandlers(ports));
+	real ??= createServerPorts({ publish: (ws, ev) => void publish(ws, ev) }).then((b) => {
+		// Fixture mode: the event stream catches up from the same PGlite the tools write to.
+		if (dbMode() === 'fixture') setFixtureOpsReader(drizzleOpsReader(b.db as unknown as AnyDb));
+		return createHandlers({ ...b.ports, ops: createOps() });
+	});
 	real.catch(() => (real = null));
 	return real;
 }
