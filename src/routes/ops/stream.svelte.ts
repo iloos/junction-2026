@@ -5,9 +5,24 @@ export type LogEntry =
 	| { kind: 'op'; seq: number; envelope: OpEnvelope; rejected?: string }
 	| { kind: 'sim'; seq: number; runId: string; event: SimEvent };
 
+/** One agent run as seen through its trace events (CLAUDE.md rule 7). */
+export interface TraceRun {
+	id: string;
+	goal: string;
+	startedAt: string;
+	steps: TraceRow[];
+	done?: { stopped: string; summary: string; at: string };
+}
+export interface TraceRow {
+	at: string;
+	step: Extract<ServerEvent, { kind: 'trace' }>['step'];
+	data: Record<string, unknown>;
+}
+
 export type Status = 'connecting' | 'live' | 'reconnecting' | 'polling' | 'offline';
 
 const LOG_CAP = 200;
+const TRACE_RUN_CAP = 20;
 const POLL_MS = 2500;
 /** Consecutive EventSource errors before falling back to polling. */
 const MAX_SSE_ERRORS = 3;
@@ -25,6 +40,8 @@ export class OpsStream {
 	fresh = $state(0);
 	catchupError: string | null = $state(null);
 	simClock: string | null = $state(null);
+	/** Agent runs, newest first; traces are live only (they have no seq and no catch-up). */
+	traces: TraceRun[] = $state.raw([]);
 
 	private es: EventSource | null = null;
 	private queue: ServerEvent[] = [];
@@ -61,6 +78,7 @@ export class OpsStream {
 		const onEvent = (m: MessageEvent) => this.enqueue(JSON.parse(m.data) as ServerEvent);
 		es.addEventListener('op', onEvent);
 		es.addEventListener('sim', onEvent);
+		es.addEventListener('trace', (m) => this.onTrace(JSON.parse((m as MessageEvent).data)));
 		es.addEventListener('ready', () => {
 			this.errors = 0;
 			this.status = 'live';
@@ -95,6 +113,32 @@ export class OpsStream {
 			this.status = 'offline';
 			this.pollTimer = setTimeout(() => this.poll(), POLL_MS);
 		}
+	}
+
+	private onTrace(e: Extract<ServerEvent, { kind: 'trace' }>): void {
+		const id = typeof e.data.agentRun === 'string' ? e.data.agentRun : 'untagged';
+		const runs = [...this.traces];
+		let i = runs.findIndex((r) => r.id === id);
+		if (i < 0) {
+			runs.unshift({
+				id,
+				goal: typeof e.data.goal === 'string' ? e.data.goal : '',
+				startedAt: e.at,
+				steps: []
+			});
+			i = 0;
+		}
+		const run = { ...runs[i] };
+		if (e.step === 'done')
+			run.done = {
+				stopped: String(e.data.stopped),
+				summary: String(e.data.summary ?? ''),
+				at: e.at
+			};
+		else if (!(e.step === 'step' && e.data.n === 0))
+			run.steps = [...run.steps, { at: e.at, step: e.step, data: e.data }];
+		runs[i] = run;
+		this.traces = runs.slice(0, TRACE_RUN_CAP);
 	}
 
 	private enqueue(e: ServerEvent): void {
