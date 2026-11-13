@@ -10,6 +10,13 @@ The only plan. Markers: `[x]` done · `[~]` in progress · `[ ]` todo · `[!]` b
 - [ ] Ring 1 (Operations, Context.dev change, Exa discovery) · Ring 2 (Lab/evals, Modal jobs, Gemma/Verda) · Ring 3 (Personal for S-Pankki, Nemotron documents)
 - [ ] Rough video Sat 22:00 · feature freeze Sun 06:00 · drafts → FINAL by 09:30
 
+## Later roadmap (not a priority now; keep the seams in the contracts)
+- **Multi-user and multi-tenant:** workspaces (kitchen, chain, Valio ops), users with roles (chef, purchaser, approver, ops), auth (Better Auth on SvelteKit), every record and op carries `workspaceId` + `actor`.
+- **Memory:** per-kitchen memory of preferences, accepted/rejected substitutes, learned rules and past events, stored server-side and used by the agent (with provenance, editable by the kitchen).
+- **Shared server-side work:** enrichment, normalisation, caches and web monitors run once on the server and benefit every kitchen (no per-client recomputation).
+- **Many clients:** many agents (MCP/REST) and UIs at once; per-key rate limits and quotas; stateless server so it scales horizontally.
+- **No collisions or double orders:** idempotency keys on every commit; approvals bound to a terms hash + version; stock reservation as an atomic conditional update in one transaction (`... where available >= qty`), optimistic concurrency on plans; cumulative spend caps checked inside the same transaction.
+
 
 ## Roles (fill in Fri 19:30)
 | Role | Who | Owns |
