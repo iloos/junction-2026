@@ -44,14 +44,15 @@ A food wholesaler can now let any outside purchasing agent order on a kitchen's 
 | AfterQuery (optional) | The swarm *is* an environment where agents fail, with a checkable reward | Skip |
 
 ## Data
-- **Catalogue:** Valio's synthetic catalogue and mock backend (prices, availability behaviour, lead times, certificates). _To check in their resource portal: size and realism._
+- **Catalogue (in `data/valio/`, gitignored; copy into lane worktrees like `.env`):** 17,546 products with real GTINs, category, vendor, origin, temperature class, **pack units (pallet / case / piece with sizes) and allowed lot size**, so the vending lesson's physical constraints are in the data. Plus rich Synkka product data: names, ingredients, nutrition, storage, brand. Also carbon footprint for 11,033 products (kg CO2e/kg) and delivery reliability for 4,425.
+- **Mock API** (`data/valio/openapi.json`): `GET /api/ping`, `POST /api/availability`, `POST /api/price`, and download links for the three datasets. **There is no order or approval endpoint**, so quote → order → pending → approve is ours to build. That's the point of the challenge.
 - **Kitchens:** N = 20 real Helsinki menus (scraped, cached) for the demo; 500 synthetic kitchens derived from them for the swarm; 10× (5,000) for the stress test.
 - **Planted insights:** one menu that triggers a Monday shortfall; one product with a pack size that doesn't fit; one adversarial agent that uses prompt injection through a supplier description.
 
 ## Risks and the spike that kills each one
 | Risk | Spike | Result |
 |---|---|---|
-| Valio's mock API is thin or slow | 20 min: read the portal, call every endpoint, measure latency | _pending_ |
+| Valio's mock API is thin or slow | 20 min: read the portal, call every endpoint, measure latency | Data is rich (17.5k products, pack units, CO2, reliability). API is price + availability only; latency still to measure |
 | Scraping real menus is slow or blocked | 20 min: Context.dev on 5 Helsinki restaurant sites, extract structured menus | _pending_ |
 | Gemini Decisions API access or semantics unclear | Ask at the DeepMind booth; read the `typesafe-ai` skill; one test call when the key arrives | _pending_ |
 | Nemotron is too weak as the critic | 10 test cases: does it catch the planted problems? | _pending_ |
