@@ -2,24 +2,35 @@
 
 _The lead rewrites this at each checkpoint. It is the "now": what works, what's next, what bites._
 
-**Updated:** Fri 13 Nov ~21:30.
-**State:** first going plan chosen (D1: Valio Aimo + stacked tech prizes, [concept/CONCEPT.md](concept/CONCEPT.md)). A parallel session is scaffolding the app (uncommitted).
-**Works end to end:** nothing yet.
-**Deployed URL:** none yet.
+**Updated:** Sat 14 Nov ~02:00 (lead session).
+**State:** concept and foundations complete; scaffold merged on main (SvelteKit 2.70, adapter-node 5.5.8, Dockerfile); **no app code yet**. Next is the contracts commit, then lanes.
+**Works end to end:** nothing yet. **Deployed URL:** none yet.
+
+**Read these, in order:**
+1. [DECISIONS.md](DECISIONS.md): D1 (Valio), D3 (one container on Aiven, Aiven Postgres), D4 (big scope on the real stack, built in rings 0→3).
+2. [concept/CONCEPT.md](concept/CONCEPT.md), [concept/PRODUCT.md](concept/PRODUCT.md) (Ring 0 = 8 stories), [concept/SCORECARD.md](concept/SCORECARD.md).
+3. [foundations/](foundations/README.md): ux, gemini, mcp, modal, models, data, valio-data (+ valio-profile.json).
+4. [research/](research/): horeca, horeca-profiles, menu-spike, agent-harness, mcpcon; [review/](review/): REVIEW-GPT-6, MULTI-CHALLENGE-STRATEGY-GPT-6.
 
 **Next 3 steps**
-1. Spikes: Valio resource portal and mock API; Context.dev menu scrape; Gemini Decisions API access (key arrives by email tonight).
-2. Pre-submit on the platform by 23:30 (text in CONCEPT.md); claim credits (Modal, Verda, Exa, Context.dev, NVIDIA Build keys per teammate).
-3. ARCHITECTURE.md (gateway, mandate engine, ops, ports) → contracts commit → lanes.
+1. **Contracts commit (lead):** ARCHITECTURE.md; zod types (kitchen, mandate, product, offer, plan/lines, approval bound to a terms hash + version, order/receipt, anomaly, event, op, factor-with-source); Drizzle schema + migrations; PGlite snapshot; ports + fixture adapters (Catalog = cache-through to Valio + simulator owning time/stock; Decide = Gemini Decisions → replay → rules; Llm; Web; Jobs); service signatures; one tool registry → MCP + REST + OpenAPI; deps; `core/` purity lint; eval format + first 5 scenarios; `scripts/lane-setup`. Freeze: one substitute-ranking formula; unknown (999999, missing carbon/allergens) = hold.
+2. **Fan out 5 lanes** in worktrees: core-db, agent, kitchen, ops, jobs (web, Lab, Personal later per D4).
+3. **First deployed end-to-end by Sat ~08:00–10:00** (Ring 0). Hero: Christmas buffet for 140 where **whole ham `462490` and lanttulaatikko `462482` are really out of stock** (salmon only runs short when contended by other kitchens, labelled simulated).
+
+**Open on the user's side:** Aiven Hobbyist Postgres in Helsinki → `DATABASE_URL`; ask #aiven for Runtime; #nvidia for the Verda Nemotron key + an NVIDIA Build key; ask about S-Pankki data and the AfterQuery harness; Valio mentor questions (PRODUCT.md §6, horeca-profiles.md); time today's Christmas order in the real webshop as a baseline.
+
+**Key facts (from the probes):** the Valio API ignores date and customer and is static (our simulator owns time and cut-offs); 18% of products are undeliverable; data has a `substitutions` field (250 rules); **no product images** (Cloudinary only for a document workflow); net weight 56% (89% with name parsing); no rate limiting seen (we use ≤4 concurrent, ≤200 ids, cache-through in `data/valio/cache/`). Gemini Decisions API works (`gemini-decision-1`, v1beta, 120 questions in ~0.56 s); key is `GEMINI_STUDIO_API_KEY`. Gemma on Featherless works (`gemma-4-E4B-it`). Nemotron has no endpoint yet. Slush is Wed 18–Thu 19 Nov (event hook). `GMAPS_API` is in `.env` (Google Maps; later, for app polish or validation).
+
+**In flight:** the venue dataset agent (OSM + Exa + Context.dev → `data/venues/`, `docs/research/venues.md`).
 
 **Platform submissions (created Fri night; no new ones can be created now, all editable until Sun 10:00):**
 - Real drafts named `Mandate`: Valio Aimo (primary; 8 tech challenges ticked), Context.dev real-time web, Exa butler, AfterQuery break-the-agent, S-Pankki trainer.
 - Placeholders named `PLACEHOLDER (Mandate)`: Cala, MariaDB, Tieto. They only keep a pivot open.
-- Before Sun 10:00: set the real ones to **Final** (drafts are not reviewed); leave unused ones as drafts. One submission per challenge per project name.
+- Before Sun 10:00: set the real ones to **Final** (drafts are not reviewed); leave unused ones as drafts. One submission per challenge per project name. Drop "data stays in Finland" from the descriptions.
 
 **Traps:**
-- Pre-submission closes 23:55 on the platform.
-- Whole team at peer review Sun 10:30.
-- Before going public, scrub the Valio API key and redeem codes from `docs/event/challenges/` and squash history.
-- Recordings in docs/research/mcpcon.md quote hallway talk; trim before committing.
-- Free NVIDIA API is about 40 req/min per key.
+- Lead owns the main checkout; other sessions must not switch branches there (junc26-a8 did once).
+- `adapter-node@6` needs Kit 3: stay on ^5.5.8.
+- Before going public: scrub the Valio API key and redeem codes from `docs/event/challenges/`, squash history, trim hallway quotes in `docs/research/mcpcon.md` (still uncommitted), check redistribution rights of Valio data (never committed).
+- Whole team at peer review Sun 10:30; record a rough video Sat 22:00; solo, so the shift table in PLAN.md is out of date.
+- Free NVIDIA API is ~40 req/min per key; Context.dev 10 req/min.
