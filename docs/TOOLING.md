@@ -26,3 +26,15 @@
 
 ## Agent workflow
 See [ORCHESTRATION.md](ORCHESTRATION.md): concept first (brainstorming, research subagents, CONCEPT/ARCHITECTURE, contracts), then parallel lanes (`lane` / `integrate` skills). Design: `/impeccable` with PRODUCT.md/DESIGN.md in the polish phase; `frontend-design` for direction.
+
+## Event-night setup (Fri 13 Nov)
+| Tool | State | Use |
+|---|---|---|
+| `claude` CLI | Native install in `~/.local/bin` (on user PATH; new terminals) | Start lane sessions in worktrees |
+| `modal` CLI | `uv tool`; profile set from `.env`; hello-world ran | Swarm fan-out, Sandboxes |
+| `verda` CLI | v1.10.0 from GitHub release (checksum verified); logged in | GPU/VM management; its MCP is local-scope only (it can spend money) |
+| `avn` CLI | aiven-client 4.15 | Postgres service; Aiven MCP is local-scope only (full access) |
+| `cloudflared` | winget, 2026.11.0; quick tunnel tested | `cloudflared tunnel --url http://localhost:5173` gives a public HTTPS URL for outside agents during dev |
+| MCP Inspector | No install: `npx @modelcontextprotocol/inspector` (2.15) | Test the gateway's MCP tools like an outside agent would |
+| Project MCP (`.mcp.json`) | context (OAuth), exa (`EXA_API_KEY` env), geminiDocs | Shared with teammates and lanes |
+| Skills | gemini-api-dev, gemini-live-api-dev, build-with-exa, exa-search, exa-contents, context-dev | Coding agents know the new APIs |
