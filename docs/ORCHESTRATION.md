@@ -37,6 +37,14 @@ Typical lanes (adjust in ARCHITECTURE.md): `data` (generator, fixtures, sponsor 
 5. **Report in the brief, not in chat.** At the end of each run, the lane agent appends to its brief's **Report** section: what's done, what's stubbed, what's needed. The lead reads the reports, merges, and updates STATUS.md.
 6. **Auto mode safe zone.** A project permission allowlist (see TOOLING.md; it's installed by a human, not by an agent) allows `pnpm`, `git` (no force-push), `npx`, `modal` and Playwright, and asks before `git push`. Lanes never push to `main`, and never touch `.env` or other lanes' worktrees.
 
+### Overnight guardrails (round-2 review)
+- One merger and one decision-number allocator (the lead). Peer sessions hand over a SHA + review; they never change the main checkout's branch.
+- Each lane pins its base SHA, schema hash and seed hash, and its owned paths. Core-db owns persistence *implementations*, not the lead-owned contracts or migrations. Ops consumes store projections; jobs never own simulator truth.
+- Missing contract → stop and write **Needs**; never invent a replacement.
+- While the lead sleeps: no contract edits or merges; lanes checkpoint on the frozen base (no 90-min rebase); rebase after the lead wakes. Shared-contract changes need the lead's approval before lanes resume.
+- Small commits; deterministic fixture checks; no network-dependent pass/fail; a browser screenshot for any UI claim.
+- Start lanes with `pwsh scripts/lane-setup.ps1 <name>` (worktree + copies .env and data, own port).
+
 ### Starting a lane (lead)
 ```powershell
 git worktree add ../junc26-lanes/viz -b lane/viz main

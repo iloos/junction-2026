@@ -4,6 +4,9 @@ _One row per criterion: what in our build scores it, and the evidence a judge se
 
 Status: `[ ]` not started · `[~]` in progress · `[x]` shown working · `[!]` at risk.
 
+## Disposition now (round-2 review, 14 Nov ~03:00)
+Keep: **Valio, Gemini, Aiven** (Aiven's gate: real shared Postgres commit + reload recovery). Stretch R1: **Context.dev** (main + tech), **Exa**. Stretch R2: **AfterQuery, Modal, Gemma, Verda**. Stretch R3: **S-Pankki**. Dropped from immediate execution (seams kept): **Cloudinary** (no product images), **Nemotron** (no endpoint yet). "Stretch" = we keep the ring but make no winning claim until its single evidence gate passes (table in the review).
+
 ## Valio Aimo: Trusted Trade Agents (main, €4k)
 | Criterion (weight) | What scores it | Evidence the judge sees | Status |
 |---|---|---|---|

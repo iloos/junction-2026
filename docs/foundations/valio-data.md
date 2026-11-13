@@ -108,7 +108,7 @@ Ramp through the cache helper, distinct keys, 200 ids per call: concurrency 1 (3
 | Valio's example | 464201 | Valio kevytmaito 1 l laktoositon UHT (fi) | ST, KI=10, PAL=600 | €1.56 (€1.56/l) | 1.1 | 1.0 | Stock, unlimited; rule → 464440 (0.5 l, undeliverable) |
 | alt milk | 464073 / 463335 | täysmaito 1 l LF UHT / Eila 3% 1 l | ST, KI=10 / KI=5 | €1.64 / €1.40 | 1.1 | 1.0 | unlimited; 464073 rule → Arla 12×1 l 464768 (€30.42/KI, Terminal) |
 | oat alternative | 470863 | Oatly Kaurajuoma Kevyt 1 l (se) | ST, KI=6 | €1.40 | 0.44 | 1.0 | 1,414 |
-| salmon (out) | 462150 | LOHIFILEE C-leikattu 10 kg (no) | KG | €14.11/kg | 4.9 | 0.96 | **43 kg** |
+| salmon (short only under simulated contention; 140-guest need ≈11.5 kg → 20 kg in 10 kg lots) | 462150 | LOHIFILEE C-leikattu 10 kg (no) | KG | €14.11/kg | 4.9 | 0.96 | **43 kg** |
 | Finnish trout | 462016 | KIRJOLOHIFILEE C-leikattu 10 kg (fi) | KG | €15.77/kg | 4.9 | 1.0 | **40 kg** |
 | unreliable trout | 471898 | Kalaneuvos savukirjolohifilee buffet n700 g | KG | €22.30/kg | 6.0 | **0.33** | **0** |
 | Christmas ham | 462919 | HK Joulun Juhlakinkku viipaloitu 2.5 kg (fi) | ST, KI=4 | €29.20 (€11.68/kg) | 10.1 | 1.0 | Terminal, cut-off Thu |

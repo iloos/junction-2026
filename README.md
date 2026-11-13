@@ -1,6 +1,6 @@
 # Junction 2026
 
-_Project name and punchline TBD._
+**Mandate**: a purchasing agent for professional kitchens on Valio Aimo's catalogue. It plans from the menu, handles the week's surprises with substitutes ranked by the kitchen's own rules, and asks before it acts. Exact-term approvals, no double orders, every decision traced.
 
 Hackathon repo for Junction 2026 (Espoo, 13–15 Nov 2026). MIT licensed.
 

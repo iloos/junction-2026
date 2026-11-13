@@ -1,11 +1,3 @@
-# Our challenge (fill in on Fri 19:10–21:00)
+# Our challenge
 
-- **Primary challenge:**
-- **Stacked tech challenges:** (Verda? Modal? Exa? Context.dev?)
-- **Partner judging criteria (verbatim from the platform):**
-- **Data/APIs provided:**
-- **Mentor(s) and Discord channel:**
-- **Questions to ask the mentor** (ask before 23:00 Friday):
-  1. What would make you say "we'd use this on Monday"?
-  2. Which part of the data is richest or most underused?
-  3. What did last year's / other teams' entries miss?
+Filled: main challenge **Valio Aimo, Trusted Trade Agents** (D1). Verbatim brief and weights: [challenges/main/valio-aimo--trusted-trade-agents.md](challenges/main/valio-aimo--trusted-trade-agents.md). Their printed info sheet (required flow Request → Lookup → Order → Approval; "not a chatbot"; "query the APIs only when needed") is summarised in [../concept/CONCEPT.md](../concept/CONCEPT.md). Stacked entries and their status: [../concept/SCORECARD.md](../concept/SCORECARD.md). Mentor questions: [../concept/PRODUCT.md](../concept/PRODUCT.md) §6 and [../research/horeca-profiles.md](../research/horeca-profiles.md).
