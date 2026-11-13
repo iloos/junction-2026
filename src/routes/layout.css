@@ -1,1 +1,100 @@
 @import 'tailwindcss';
+
+/*
+ * Mandate kitchen: a calm operational surface. Warm paper neutrals, one teal accent for actions,
+ * and a small semantic set for line states. Each state also carries an icon and a word, never colour alone.
+ */
+@theme static {
+	--font-sans: 'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif;
+	--font-mono: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+
+	--color-paper: oklch(0.978 0.005 85);
+	--color-sheet: oklch(0.996 0.002 85);
+	--color-well: oklch(0.955 0.007 85);
+	--color-rule: oklch(0.895 0.008 85);
+	--color-rule-strong: oklch(0.82 0.01 85);
+
+	--color-ink: oklch(0.22 0.014 255);
+	--color-ink-2: oklch(0.4 0.014 255);
+	--color-ink-3: oklch(0.52 0.012 255);
+
+	--color-accent: oklch(0.46 0.085 195);
+	--color-accent-ink: oklch(0.36 0.07 195);
+	--color-accent-wash: oklch(0.95 0.025 195);
+
+	--color-propose: oklch(0.47 0.13 255);
+	--color-propose-wash: oklch(0.95 0.025 255);
+	--color-signoff: oklch(0.5 0.11 65);
+	--color-signoff-wash: oklch(0.955 0.04 80);
+	--color-out: oklch(0.52 0.17 28);
+	--color-out-wash: oklch(0.955 0.025 28);
+	--color-undeliv: oklch(0.45 0.04 280);
+	--color-undeliv-wash: oklch(0.95 0.012 280);
+	--color-ok: oklch(0.48 0.09 155);
+	--color-ok-wash: oklch(0.955 0.03 155);
+
+	/* Score criteria: muted, distinguishable, not state colours. */
+	--color-c-price: oklch(0.6 0.1 195);
+	--color-c-reliability: oklch(0.55 0.08 255);
+	--color-c-finnish: oklch(0.62 0.1 240);
+	--color-c-carbon: oklch(0.62 0.1 145);
+	--color-c-organic: oklch(0.7 0.1 95);
+}
+
+@layer base {
+	html {
+		background: var(--color-paper);
+		color: var(--color-ink);
+		font-family: var(--font-sans);
+		font-size: 15px;
+		-webkit-font-smoothing: antialiased;
+		text-rendering: optimizeLegibility;
+	}
+	body {
+		background: var(--color-paper);
+		min-height: 100dvh;
+	}
+	::selection {
+		background: oklch(0.88 0.06 195);
+		color: var(--color-ink);
+	}
+	:focus-visible {
+		outline: 2px solid var(--color-accent);
+		outline-offset: 2px;
+		border-radius: 3px;
+	}
+	* {
+		scrollbar-width: thin;
+		scrollbar-color: var(--color-rule-strong) transparent;
+	}
+	.num {
+		font-variant-numeric: tabular-nums;
+		font-feature-settings: 'tnum' 1;
+	}
+	.mono {
+		font-family: var(--font-mono);
+		font-variant-numeric: tabular-nums;
+		letter-spacing: -0.01em;
+	}
+	@media (prefers-reduced-motion: reduce) {
+		*,
+		*::before,
+		*::after {
+			transition-duration: 0ms !important;
+			animation-duration: 0ms !important;
+		}
+	}
+}
+
+/* A changed row: tint lands at once and fades, so the eye finds what the edit touched. */
+@keyframes land {
+	from {
+		background-color: oklch(0.93 0.05 195);
+	}
+	to {
+		background-color: transparent;
+	}
+}
+.landed {
+	animation: land 1.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
