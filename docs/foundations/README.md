@@ -11,14 +11,14 @@ _Between the concept (CONCEPT v2.1, SCORECARD) and the lanes. Goal: every servic
 ## Notes
 | Note | Covers | Status |
 |---|---|---|
-| [gemini.md](gemini.md) | Decisions API (calibrated decisions), Live API, models, SDK | [ ] |
+| [gemini.md](gemini.md) | Decisions API (calibrated decisions), Live API, models, SDK | [x] |
 | [models.md](models.md) | Nemotron 3.5 Super VL (Verda / NVIDIA Build), Gemma (Featherless / Verda), one LLM port | [ ] |
 | [modal.md](modal.md) | Fan-out batch (catalogue enrichment), swarm runner, Sandboxes, web endpoints | [ ] |
 | [data.md](data.md) | Aiven Postgres + pgvector + LISTEN/NOTIFY, Drizzle, PGlite fixture, Aiven Runtime | [ ] |
 | [mcp.md](mcp.md) | MCP server (SDK v2) inside SvelteKit, MCP Apps, OpenAPI from zod, testing with Inspector | [ ] |
 | [web.md](web.md) | Context.dev (menus, manufacturer data, recall monitor), Exa, caching | partly: [../research/menu-spike.md](../research/menu-spike.md) |
 | [media.md](media.md) | Cloudinary for Valio product images | [ ] |
-| [ux.md](ux.md) | Interaction model, screens, control room, design direction | [ ] |
+| [ux.md](ux.md) | Interaction model, screens, control room, design direction | [x] |
 
 ## DevOps for the lane phase
 - **Lanes:** one worktree + branch each; `scripts/lane-setup` copies `.env` and `data/valio/`, runs `pnpm i`, sets the dev port. Project `.mcp.json` is shared; Verda and Aiven MCPs stay local to the lead (they can spend money).
