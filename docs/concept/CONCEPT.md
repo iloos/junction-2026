@@ -25,6 +25,8 @@ _v2.1, Fri 13 Nov ~23:45, after Valio Aimo's stand and their printed info sheet 
 ## One-breath
 A kitchen tells its agent what it cooks and what it cares about (price, carbon, Finnish, organic). The agent keeps it stocked through Valio Aimo: it plans the regular order from the menu, notices anomalies (a big reservation, a broken fridge, a product out of stock), and resolves them with substitutes that fit the kitchen's priorities. It explains every choice and stays inside limits the kitchen set. Under it is an open agent interface (MCP + API) that any agent can use, and an internal control room where Valio sees every kitchen's agent at work.
 
+**Wedge and buyer (PRODUCT.md):** the wedge is the exceptions, not the routine order (Valio already has templates, recipe-to-cart and an AI assistant, A.I.mo). The buyer is Valio Aimo (it runs the agent gate and offers it free to kitchens); the user is the kitchen. Scope and order of work: D4 rings, Ring 0 = the 8 stories in [PRODUCT.md](PRODUCT.md).
+
 ## The person and the pain
 - **Kitchen (primary user):** the head chef or purchaser of a ~120-cover Helsinki restaurant, or a hotel kitchen (big client). The order follows the menu and the expected covers, but the week never goes to plan: reservations jump, deliveries miss cut-off times, products are out, a fridge dies. Today they rework the order by hand in the webshop. _Numbers to verify with Valio: orders per week, time per order, shortage rate._
 - **Valio Aimo (operator):** wants kitchens' agents to work *with* Aimo, before another platform owns the customer relationship. They need enriched product data an agent can reason over, and visibility of what the agents do.
@@ -44,7 +46,7 @@ A kitchen tells its agent what it cooks and what it cares about (price, carbon, 
 ## Wow ladder (what the judge sees)
 1. **0–10s, hook:** "This hotel kitchen didn't write an order this week. Its agent did, and asked the chef one question."
 2. **10–40s, it works:** a real Helsinki menu plus next week's bookings become the regular order, priced and checked against live availability, ranked by this kitchen's priorities (carbon-first vs price-first gives a visibly different basket).
-3. **40–90s, the deviation:** the hotel tells the agent "Christmas dinner on the 12th, 140 guests, buffet". The agent proposes the adjustments against the normal order (quantities per dish, extra lines, delivery timing before cut-off), visualised as a diff of the usual week, and the chef shapes it interactively, then signs off. Then an anomaly: "Friday: +80 covers, and the salmon is out." The agent proposes substitutes with the trade-offs shown and the reasons cited; the chef taps once. A photo of a broken fridge reschedules the chilled lines.
+3. **40–90s, the deviation:** the hotel tells the agent "Christmas dinner on the 12th, 140 guests, buffet". The agent proposes the adjustments against the normal order (quantities per dish, extra lines, delivery timing before cut-off), visualised as a diff of the usual week, and the chef shapes it interactively, then signs off. Then the real shortage: **whole ham (`462490`) and lanttulaatikko (`462482`) are out of stock in Valio's own data**; the agent finds valid substitutes, visibly rejects one that breaks a rule, and the chef approves the exact terms. (Salmon only runs short when contended by other kitchens: label that as simulated.) The agent proposes substitutes with the trade-offs shown and the reasons cited; the chef taps once. A photo of a broken fridge reschedules the chilled lines.
 4. **"No way, that too?":** switch to the control room: 500 kitchens' agents running at once (Modal), anomalies and substitutions streaming, the catalogue enriched in one batch. Then a judge's own Claude connects to our MCP and orders.
 
 ## Scope
@@ -66,7 +68,7 @@ A kitchen tells its agent what it cooks and what it cares about (price, carbon, 
 | **Modal** | Batch enrichment of all 17.5k products (from the data files, not the API); the 500-kitchen swarm against our simulator of Valio's API; agent code in Sandboxes | Smaller batch, recorded run |
 | **Verda** | Hosts the open models in the EU; GPU for the batch if needed | NVIDIA Build / Featherless |
 | **Aiven** | Postgres: enriched catalogue (pgvector), kitchens, orders, ops; LISTEN/NOTIFY streams the control room; maybe Runtime hosting | Local Postgres |
-| **Cloudinary** | Product images from Valio's data, transformed for the phone UI | Raw image URLs |
+| **Cloudinary** | Valio's data has **no product images** (media ids only), so: a document workflow (receipt / prep-list / BEO upload, crop, linked to extracted fields), or drop it | Skip |
 | **Context.dev** (+ Exa) | Real menus; manufacturer data for enrichment; **live food-recall monitor** (Finnish Food Authority) that triggers an anomaly | Cached results |
 | Gemma (Featherless) | Cheap model for the swarm's kitchen agents | Any small model |
 
@@ -76,7 +78,7 @@ A kitchen tells its agent what it cooks and what it cares about (price, carbon, 
 - **Tech prizes:** Gemini, Nemotron, Modal, Verda, Aiven, Cloudinary, Context.dev tech, Gemma; each needs a short write-up.
 
 ## Data
-- **Catalogue (in `data/valio/`, gitignored; copy into lane worktrees like `.env`):** 17,546 products with real GTINs, category, vendor, origin, temperature class, **pack units (pallet / case / piece with sizes) and allowed lot size**, so the vending lesson's physical constraints are in the data. Plus rich Synkka product data: names, ingredients, nutrition, storage, brand, images. Also carbon footprint for 11,033 products (kg CO2e/kg) and delivery reliability for 4,425.
+- **Catalogue (in `data/valio/`, gitignored; copy into lane worktrees like `.env`):** 17,546 products with real GTINs, category, vendor, origin, temperature class, **pack units (pallet / case / piece with sizes) and allowed lot size**, so the vending lesson's physical constraints are in the data. Plus Synkka product data: names, ingredients, nutrition, storage, brand (media ids only, **no image URLs**). Net weight for 56% of products (89% with name parsing). 349 category codes without names. Facts: [foundations/valio-data.md](../foundations/valio-data.md). Also carbon footprint for 11,033 products (kg CO2e/kg) and delivery reliability for 4,425.
 - **Mock API** (`data/valio/openapi.json`): `GET /api/ping`, `POST /api/availability`, `POST /api/price`, and download links for the three datasets. **There is no order endpoint**, so ordering is ours to store.
 - **Kitchens:** N = 20 real Helsinki menus (scraped, cached) for the demo; 500 synthetic kitchens derived from them for the swarm; 10× (5,000) for the stress test.
 - **Planted insights:** a big reservation that triggers a shortfall; a product out of stock with good and bad substitutes; a pack size that doesn't fit; a product recall; one adversarial agent that tries prompt injection through a product description.

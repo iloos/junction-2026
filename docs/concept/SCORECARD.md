@@ -32,10 +32,13 @@ Rules from their sheet: not a chatbot; query their APIs only when needed (the sw
 | **Modal** ($2k + $3k credits) | Effective use 40 · ambition 25 · impact 20 · live demo 15 | Enrichment batch over 17.5k products; 500-kitchen swarm; Sandboxes | Run dashboard: containers, throughput, cost; live deployed app | [ ] |
 | **Verda** ($10k credits) | Ambition · fit · working prototype · path to scale (25 each) | Hosts open models in the EU (Nemotron, Gemma); GPU batch if needed | Documented process; **summary link posted in their Discord channel** | [ ] |
 | **Aiven** (€1k) | Meaningful use 40 · tech 30 · impact 20 · creativity 10 | Postgres: enriched catalogue (pgvector), orders, ops; LISTEN/NOTIFY drives the control room; maybe Runtime hosting | Architecture slide; the live stream visibly fed by Postgres | [ ] |
-| **Cloudinary** ($500 voucher per member) | Innovation 30 · tech 20 · UX/design 30 · impact 20 | Product images from Valio data, transformed (crop, format, background) for the phone UI and order cards | Before/after images; **submit their form** | [ ] |
+| **Cloudinary** ($500 voucher per member) | Innovation 30 · tech 20 · UX/design 30 · impact 20 | Valio data has no product images: only a document workflow (receipt / prep list / BEO upload → crop → extracted fields → order change), else drop | Before/after document crops; **submit their form** | [ ] |
 | **Context.dev tech** (€750) | Creative use 40 · centrality of live web 30 · execution 30 | Real menus, manufacturer enrichment, recall monitor | Same as the main entry | [ ] |
 | **Gemma** (€1k ×3) | Open | Cheap model for the swarm's kitchen agents (Featherless/Verda) | One line in the write-up + swarm config | [ ] |
 | AfterQuery (main, optional) | Gap 30 · difficulty 30 · reward integrity 25 · craft 15 | Only if the swarm becomes a reproducible environment with a checkable reward | One-command eval | skip unless time |
+
+## Honest demo metrics (PRODUCT.md)
+Edits per plan · gate outcomes (acted / held / rejected; 0 duplicates after a retry) · time to rescue and lookup economy. Path to production: the 4-week hotel pilot in PRODUCT.md.
 
 ## Shared assets that serve many rows
 - **The op log with provenance:** Valio controls and openness, Context.dev sources, Nemotron "grounded outputs".

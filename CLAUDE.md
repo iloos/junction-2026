@@ -1,8 +1,9 @@
 # Junction 2026: team repo
 
-**Is:** our Junction 2026 hackathon build (Espoo, 13–15 Nov 2026). Challenge: _TBD, see [docs/event/CHALLENGE.md](docs/event/CHALLENGE.md)_.
-**Stack:** SvelteKit 2.70 + Svelte 5 runes + Vite 8, Tailwind 4, bits-ui, d3 (maybe one three.js view), LLM behind one port (Claude / Gemini / Featherless / Verda). Datasets in IndexedDB behind a storage port. See [docs/STACK.md](docs/STACK.md).
-**Deploy:** Vercel (`adapter-vercel`), fallback Fly (D0d). The empty scaffold is deployed first.
+**Is:** our Junction 2026 hackathon build (Espoo, 13–15 Nov 2026). Challenge: **Valio Aimo "Trusted Trade Agents"** (D1), plus stacked challenges. Product: **Mandate**, a kitchen purchasing agent with an enforceable mandate; see [docs/concept/CONCEPT.md](docs/concept/CONCEPT.md) and [docs/STATUS.md](docs/STATUS.md).
+**Stack:** SvelteKit 2.70 + Svelte 5 runes + Vite 8, Tailwind 4, bits-ui, d3 (maybe one three.js view), LLM behind one port (Gemini decisions, Gemma/Nemotron via OpenAI-compatible). Data in **Postgres** (Aiven; PGlite as the fixture) via Drizzle behind a store port (D3). See [docs/STACK.md](docs/STACK.md).
+**Deploy:** one container (`adapter-node@^5` + Dockerfile) on Aiven Runtime, fallback a Verda VM (D3). **Not Vercel.**
+**Team:** solo lead plus parallel agent lanes. The lead session owns the main checkout; other sessions never switch branches there (D4).
 **Commit:** terse, past-tense subject ≤72 chars; body only when it carries the why.
 
 ## Event rules (break one and we're disqualified)
@@ -30,7 +31,9 @@
 | [docs/STATUS.md](docs/STATUS.md) | lead | Now: what works, next 3 steps, traps. Rewritten each checkpoint. |
 | [docs/PLAN.md](docs/PLAN.md) | everyone, own lines only | The one plan: phases, roles, shifts, `[x] [~] [ ] [!]` markers |
 | [docs/DECISIONS.md](docs/DECISIONS.md) | anyone | `D#` · choice · why · what would reopen it. Append only. |
-| [docs/concept/](docs/concept/CONCEPT.md) | lead + team | CONCEPT (product) and ARCHITECTURE (contracts, lanes). Frozen at fan-out; changed only via the lead. |
+| [docs/concept/](docs/concept/CONCEPT.md) | lead + team | CONCEPT (product), PRODUCT (personas, stories, flows, edge cases), SCORECARD (criteria → evidence) and ARCHITECTURE (contracts, lanes). Frozen at fan-out; changed only via the lead. |
+| [docs/foundations/](docs/foundations/README.md) | lead | Per-service notes (gemini, models, modal, data, mcp, ux, valio-data). Read before touching that service. |
+| docs/review/ | outside reviewers | Adversarial reviews and the prompt that produced them |
 | docs/lanes/<lane>.md | that lane | Brief, Needs, Report |
 | docs/research/<topic>.md | research agents | ≤1 page: sources, findings, "means for us" |
 | [docs/PITCH.md](docs/PITCH.md) | pitch owner | Opener, demo beats, claim → evidence |
@@ -38,7 +41,7 @@
 `git log` is the history log. Reference (look up, don't preload): [docs/event/](docs/event/EVENT.md), [docs/strategy/WINNING.md](docs/strategy/WINNING.md), [docs/STACK.md](docs/STACK.md), [docs/BUILDING-BLOCKS.md](docs/BUILDING-BLOCKS.md), [docs/LESSONS.md](docs/LESSONS.md), [docs/TOOLING.md](docs/TOOLING.md), [docs/ideas/](docs/ideas/IDEAS.md).
 
 ## Commands
-_Fill in at scaffold time._ Expected: `pnpm dev`, `pnpm check` (svelte-check + lint + vitest), `pnpm test:e2e`, `pnpm gen:data -- --n 100000 --seed 42`.
+`pnpm dev` · `pnpm check` (svelte-check) · `pnpm lint` (prettier + eslint) · `pnpm test:unit` (vitest) · `pnpm test:e2e` (Playwright) · `pnpm build` then `node build`. Valio probe (cache-through): `python -I scripts/probe/valio_probe.py` with `VALIO_API_KEY` exported; cache in `data/valio/cache/` (gitignored, copy into lane worktrees with `.env` and `data/valio/`).
 
 ## Comments
 Say what is true now and why, never how the code got there.

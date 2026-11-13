@@ -6,13 +6,13 @@
 Kit 3.0 shipped 1 Oct 2026 (six weeks ago), and `sv` ≥1.0 scaffolds it by default. We stay on Kit 2 because the coding agents' training knowledge and our own experience are Kit 2. On Kit 3 every agent would be guessing at changes, which is costly with parallel lanes in auto mode. Kit 2.70.4 is still maintained, and its peers (Svelte 5.57, Vite 8) are the same versions, so we lose nothing we'd use. Pair it with `adapter-vercel@^6` (7.x requires Kit 3). Reopen if: a library we need requires Kit 3.
 
 ### D0b · IndexedDB (Dexie) for datasets, localStorage for prefs, both behind StoragePort — 13 Nov
-"Lots of data points" exceeds localStorage's ~5 MB, and having no server DB keeps the overhead low. Reopen if: the challenge needs state shared across users (then use a tiny hosted SQLite behind the same port), or it's the MariaDB challenge.
+_Superseded by D3 (Postgres; localStorage only for UI prefs)._ "Lots of data points" exceeds localStorage's ~5 MB, and having no server DB keeps the overhead low. Reopen if: the challenge needs state shared across users (then use a tiny hosted SQLite behind the same port), or it's the MariaDB challenge.
 
 ### D0c · d3 for maths and 2D; one optional 3D hero view behind a 1h spike — 13 Nov
 3D impresses but costs readability and time. Reopen if: the spike shows 50k nodes smooth *and* 3D reveals structure 2D can't.
 
 ### D0d · Deploy on Vercel (`adapter-vercel`); fallback Fly (`adapter-node`) — 13 Nov
-Least ceremony for SvelteKit: git push deploys, streaming responses work, preview URLs per branch. `fly` CLI is already installed as the fallback. Deploy the *empty scaffold* at 19:30 so deploy problems surface before anything matters. Reopen if: we need long-running jobs over 5 min (move them to Modal, not off Vercel), or Hostinger offers a prize for hosting there.
+_Superseded by D3 (one container on Aiven Runtime, fallback a Verda VM; not Vercel)._ Least ceremony for SvelteKit: git push deploys, streaming responses work, preview URLs per branch. `fly` CLI is already installed as the fallback. Deploy the *empty scaffold* at 19:30 so deploy problems surface before anything matters. Reopen if: we need long-running jobs over 5 min (move them to Modal, not off Vercel), or Hostinger offers a prize for hosting there.
 
 ### D0e · LLM behind one port with four adapters plus a fixture — 13 Nov
 `@ai-sdk/anthropic`, `@ai-sdk/google`, and `@ai-sdk/openai-compatible` (Featherless, Verda), plus fixture. Lets us pick the best model per task and show sponsor use without rewiring. Reopen if: the `ai` SDK fights a needed feature (then call the raw SDK inside the same adapter).
@@ -28,3 +28,14 @@ The app ships as one container (`adapter-node` + Dockerfile), so the host is a c
 
 ### D4 · Big scope, built straight on the real stack, in rings — 14 Nov ~01:30
 We build the big version (Kitchen, Operations, open agent interface, web intelligence, Lab, Personal), but in rings with one integration target each: Ring 0 spine (one kitchen, a Christmas event as a diff, one real shortage rescue, approval bound to exact terms, idempotent commit, cumulative caps, Gemini decisions, Postgres, MCP gate, deployed) → Ring 1 visible value (Operations, Context.dev change, Exa discovery) → Ring 2 scale and proof (Lab/evals, Modal jobs, Gemma/Verda) → Ring 3 extra entries (Personal for S-Pankki, Nemotron documents). No serial hardcode → JSON → SQL ladder: contracts first, then lanes build directly on the real stack (Drizzle + Postgres, with PGlite as the fixture), each with a fixture path; isolated experiments only where something is unknown. Lanes run in parallel; a ring counts as done only when a full journey works deployed. Why: the user wants the big version and moves fast with many agents; the outside review (docs/review/REVIEW-GPT-6.md) is right that disconnected pieces lose, so integration is the gate, not the build order. Reopen if: Ring 0 isn't deployed by Sat ~10:00 (then pause rings 2–3 lanes and swarm on the spine).
+
+### D5 · Service roles and integration choices, from the foundation notes — 14 Nov ~02:00
+- **Valio:** cache-through adapter (key = endpoint + customer + date + sorted ids; `data/valio/cache/`), ≤4 concurrent, ≤200 ids per call, backoff; **our simulator owns time, cut-offs and stock** because the mock API ignores date/customer and is static. Validate ids against the catalogue first (unknown id looks like "not deliverable"). Rank Valio's own `substitutions` rules first. Availability 999999 = unknown; empty schedule lines = undeliverable.
+- **Unknown means hold:** missing availability, carbon or allergen data never counts as fine or as zero.
+- **Gemini:** Decisions API (`gemini-decision-1`, v1beta, `@google/genai`) for recipe fit, hard-constraint checks per candidate and the act/propose/sign-off grey zone; hard limits stay in code. Price, carbon and reliability are weighted in code (one formula, frozen in the contracts). Fallbacks: replay of recorded answers, then rules, each tagged with its source.
+- **Models:** Gemma (`gemma-4-E4B-it` on Featherless, or Modal endpoints) for the simulated kitchens; Nemotron 3.5 Super VL for documents only once a key works (stretch). Images as bytes.
+- **Modal:** jobs only (catalogue normalisation/enrichment, Lab episodes, swarm, Sandboxes), writing back through our API; the Valio simulator stays in the app.
+- **Data:** Drizzle + postgres-js on Aiven (Hobbyist, Helsinki); PGlite snapshot as the fixture for lanes, tests and offline demo; append-only `ops` with `seq` cursor; NOTIFY → SSE with replay.
+- **MCP:** v2 server, stateless, inside SvelteKit; one tool registry → MCP + REST + OpenAPI; scoped keys so contexts that read untrusted text never see `place_order`; approval only via a separate authority, bound to a terms hash + version; idempotency keys on commit; cumulative spend caps.
+- **Cloudinary:** Valio data has no product images, so only a document workflow (receipts, prep lists) or drop it. **No data-residency claim** (Modal runs in US regions).
+Reopen if: a foundation assumption breaks in the lanes (note it here with the evidence).

@@ -2,10 +2,19 @@
 
 The only plan. Markers: `[x]` done · `[~]` in progress · `[ ]` todo · `[!]` blocked/risk. Edit only your own lines; the lead owns the structure.
 
+## Now: rings (D4). This section supersedes the phases below where they differ
+- [x] Concept, research, foundations, Valio probe, outside reviews, platform drafts (Fri night)
+- [ ] **Contracts commit** (lead): ARCHITECTURE.md, types, Drizzle schema, ports + fixtures, tool registry, eval format, lane-setup
+- [ ] **Lanes** (worktrees): core-db · agent · kitchen · ops · jobs; then web, Lab, Personal per D4
+- [ ] **Ring 0 deployed** by Sat ~08:00–10:00: Christmas buffet for 140 (ham 462490 and lanttulaatikko 462482 really out), event as a diff, rescue with a visibly rejected substitute, mandate + exact-term approval + idempotent commit, external agent through the same gate, why drawer (PRODUCT.md, 8 stories)
+- [ ] Ring 1 (Operations, Context.dev change, Exa discovery) · Ring 2 (Lab/evals, Modal jobs, Gemma/Verda) · Ring 3 (Personal for S-Pankki, Nemotron documents)
+- [ ] Rough video Sat 22:00 · feature freeze Sun 06:00 · drafts → FINAL by 09:30
+
+
 ## Roles (fill in Fri 19:30)
 | Role | Who | Owns |
 |---|---|---|
-| Lead / integrator | | `main`, merges, STATUS.md, `core/` + `ports/` contracts, deploy |
+| Lead / integrator | solo builder + the lead Claude session | `main`, merges, STATUS.md, `core/` + `ports/` contracts, deploy |
 | Viz / UI | | views, d3/3D, design direction (PRODUCT.md / DESIGN.md), polish |
 | Agent / data | | LLM port, tools, data generator plus fixtures, sponsor adapters |
 | Pitch / story | | PITCH.md, deck, video, peer-review table, workshop notes |
@@ -14,6 +23,7 @@ Solo or 2–3 people: merge roles in this order: lead+agent, viz, pitch. **Pitch
 **Workshops:** Cala Sat 11:00 · Modal 13:30 · Exa 16:30 · Context.dev 17:30. One person each, notes into `docs/event/notes-<sponsor>.md`, and only for sponsors we use.
 
 ## Shifts (you can't sleep at the venue; the metro stops ~00:00)
+**Solo:** lanes run in auto mode while you sleep, against strict briefs and fixtures; the lead integrates what's green. The table below was written for four people and no longer applies.
 | Window | Who's on | Who sleeps (off-site) |
 |---|---|---|
 | Fri 19:30–Sat 02:00 | all | — |
@@ -33,10 +43,10 @@ Transport owner: ___ (night bus or taxi; see guidebook).
 
 ## Phase 1: Concept (Fri 19:10 → ~Sat 00:30). Think hard first; see ORCHESTRATION.md
 - [ ] Challenge videos → CHALLENGE.md; ask the mentors the CHALLENGE.md questions
-- [ ] **Background agent, from 19:30:** scaffold per STACK.md → empty app deployed on Vercel (D0d)
+- [x] **Background agent, from 19:30:** scaffold (adapter-node + Dockerfile, D3); not deployed yet
 - [ ] Diverge (brainstorming) → research subagents → `docs/research/*.md`
-- [ ] `idea-pick` → spikes on the top 2 → decide by ~22:30 (D1)
-- [ ] **Pre-submission draft by 23:30**
+- [x] Decided without `idea-pick`: Valio (D1), concept v2.1 after the stand
+- [x] **Pre-submission draft by 23:30** (8 drafts, see STATUS)
 - [ ] `docs/concept/CONCEPT.md` (product, wow ladder, scope) + design direction (`PRODUCT.md` / `DESIGN.md` at the root, 15 min)
 - [ ] `docs/concept/ARCHITECTURE.md` (data model, ops, ports, routes, lanes)
 - [ ] **Contracts commit** by the lead: core types and ops, ports, fixtures, generator stub → `main`
