@@ -12,6 +12,11 @@ _The lead rewrites this at each checkpoint. It is the "now": what works, what's 
 2. Pre-submit on the platform by 23:30 (text in CONCEPT.md); claim credits (Modal, Verda, Exa, Context.dev, NVIDIA Build keys per teammate).
 3. ARCHITECTURE.md (gateway, mandate engine, ops, ports) → contracts commit → lanes.
 
+**Platform submissions (created Fri night; no new ones can be created now, all editable until Sun 10:00):**
+- Real drafts named `Mandate`: Valio Aimo (primary; 8 tech challenges ticked), Context.dev real-time web, Exa butler, AfterQuery break-the-agent, S-Pankki trainer.
+- Placeholders named `PLACEHOLDER (Mandate)`: Cala, MariaDB, Tieto. They only keep a pivot open.
+- Before Sun 10:00: set the real ones to **Final** (drafts are not reviewed); leave unused ones as drafts. One submission per challenge per project name.
+
 **Traps:**
 - Pre-submission closes 23:55 on the platform.
 - Whole team at peer review Sun 10:30.
