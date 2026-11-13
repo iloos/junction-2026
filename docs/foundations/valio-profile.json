@@ -1,0 +1,7931 @@
+{
+ "generatedFrom": "data/valio product_data.json + carbon/reliability CSVs",
+ "products": 17546,
+ "topLevelFill": {
+  "allowedLotSize": {
+   "pct": 100.0,
+   "types": {
+    "float": 17546
+   }
+  },
+  "baseUnit": {
+   "pct": 100.0,
+   "types": {
+    "str": 17546
+   }
+  },
+  "category": {
+   "pct": 100.0,
+   "types": {
+    "str": 17546
+   }
+  },
+  "countryOfOrigin": {
+   "pct": 99.9,
+   "types": {
+    "str": 17537
+   }
+  },
+  "deleted": {
+   "pct": 100.0,
+   "types": {
+    "bool": 17546
+   }
+  },
+  "deposits": {
+   "pct": 2.9,
+   "types": {
+    "list": 17546
+   }
+  },
+  "id": {
+   "pct": 100.0,
+   "types": {
+    "str": 17546
+   }
+  },
+  "salesUnit": {
+   "pct": 100.0,
+   "types": {
+    "str": 17546
+   }
+  },
+  "salesUnitGtin": {
+   "pct": 99.1,
+   "types": {
+    "str": 17387
+   }
+  },
+  "substitutions": {
+   "pct": 1.1,
+   "types": {
+    "list": 196
+   }
+  },
+  "synkkaData": {
+   "pct": 100.0,
+   "types": {
+    "dict": 17546
+   }
+  },
+  "temperatureCondition": {
+   "pct": 99.7,
+   "types": {
+    "int": 17485
+   }
+  },
+  "units": {
+   "pct": 100.0,
+   "types": {
+    "list": 17546
+   }
+  },
+  "vendorName": {
+   "pct": 100.0,
+   "types": {
+    "str": 17546
+   }
+  }
+ },
+ "synkkaFill": {
+  "names": {
+   "pct": 100.0,
+   "types": {
+    "list": 17546
+   }
+  },
+  "classifications": {
+   "pct": 99.9,
+   "types": {
+    "list": 17546
+   }
+  },
+  "gtin": {
+   "pct": 82.5,
+   "types": {
+    "str": 14478
+   }
+  },
+  "lastUpdated": {
+   "pct": 82.5,
+   "types": {
+    "str": 14478
+   }
+  },
+  "variableUnit": {
+   "pct": 82.5,
+   "types": {
+    "bool": 14478
+   }
+  },
+  "vatCode": {
+   "pct": 82.5,
+   "types": {
+    "str": 14478
+   }
+  },
+  "unitConversions": {
+   "pct": 82.5,
+   "types": {
+    "list": 14478
+   }
+  },
+  "producers": {
+   "pct": 82.5,
+   "types": {
+    "list": 14478
+   }
+  },
+  "countriesOfOrigin": {
+   "pct": 82.4,
+   "types": {
+    "list": 14478
+   }
+  },
+  "brand": {
+   "pct": 82.4,
+   "types": {
+    "str": 14463
+   }
+  },
+  "keyIngredients": {
+   "pct": 80.1,
+   "types": {
+    "list": 17546
+   }
+  },
+  "mediasLastUpdated": {
+   "pct": 76.2,
+   "types": {
+    "str": 13375
+   }
+  },
+  "medias": {
+   "pct": 76.2,
+   "types": {
+    "list": 17546
+   }
+  },
+  "nutritionalContent": {
+   "pct": 69.8,
+   "types": {
+    "list": 17546
+   }
+  },
+  "marketingTexts": {
+   "pct": 67.9,
+   "types": {
+    "list": 17546
+   }
+  },
+  "maxTemperature": {
+   "pct": 58.5,
+   "types": {
+    "float": 10266
+   }
+  },
+  "minTemperature": {
+   "pct": 57.9,
+   "types": {
+    "float": 10156
+   }
+  },
+  "storageInstructions": {
+   "pct": 49.4,
+   "types": {
+    "list": 14478
+   }
+  },
+  "disposalInformations": {
+   "pct": 26.4,
+   "types": {
+    "list": 14478
+   }
+  },
+  "ingredients": {
+   "pct": 21.3,
+   "types": {
+    "list": 14478
+   }
+  },
+  "usageInstructions": {
+   "pct": 21.1,
+   "types": {
+    "list": 14478
+   }
+  },
+  "preparationInstructions": {
+   "pct": 19.8,
+   "types": {
+    "list": 14478
+   }
+  },
+  "safetyData": {
+   "pct": 3.8,
+   "types": {
+    "list": 14478
+   }
+  },
+  "fishingReports": {
+   "pct": 2.0,
+   "types": {
+    "list": 14478
+   }
+  },
+  "materialAdditionalDescriptions": {
+   "pct": 0.1,
+   "types": {
+    "list": 17546
+   }
+  }
+ },
+ "categories": {
+  "distinct": 349,
+  "codeLengths": {
+   "5": 349
+  },
+  "top30": [
+   [
+    "17300",
+    443
+   ],
+   [
+    "22630",
+    432
+   ],
+   [
+    "41763",
+    349
+   ],
+   [
+    "64004",
+    343
+   ],
+   [
+    "41760",
+    244
+   ],
+   [
+    "63235",
+    238
+   ],
+   [
+    "41755",
+    221
+   ],
+   [
+    "22601",
+    190
+   ],
+   [
+    "21917",
+    184
+   ],
+   [
+    "63114",
+    181
+   ],
+   [
+    "64001",
+    180
+   ],
+   [
+    "41764",
+    179
+   ],
+   [
+    "63120",
+    164
+   ],
+   [
+    "22700",
+    157
+   ],
+   [
+    "52210",
+    152
+   ],
+   [
+    "10412",
+    150
+   ],
+   [
+    "18720",
+    149
+   ],
+   [
+    "21596",
+    147
+   ],
+   [
+    "41753",
+    146
+   ],
+   [
+    "21380",
+    140
+   ],
+   [
+    "41705",
+    140
+   ],
+   [
+    "41820",
+    139
+   ],
+   [
+    "41731",
+    136
+   ],
+   [
+    "41762",
+    131
+   ],
+   [
+    "10600",
+    129
+   ],
+   [
+    "41710",
+    129
+   ],
+   [
+    "63001",
+    125
+   ],
+   [
+    "64003",
+    125
+   ],
+   [
+    "22140",
+    125
+   ],
+   [
+    "41800",
+    124
+   ]
+  ],
+  "byPrefix2": [
+   [
+    "41",
+    3262
+   ],
+   [
+    "21",
+    3219
+   ],
+   [
+    "17",
+    2237
+   ],
+   [
+    "22",
+    1902
+   ],
+   [
+    "63",
+    1817
+   ],
+   [
+    "10",
+    1524
+   ],
+   [
+    "64",
+    1039
+   ],
+   [
+    "20",
+    889
+   ],
+   [
+    "52",
+    628
+   ],
+   [
+    "18",
+    608
+   ],
+   [
+    "90",
+    224
+   ],
+   [
+    "11",
+    81
+   ],
+   [
+    "85",
+    59
+   ],
+   [
+    "84",
+    26
+   ],
+   [
+    "67",
+    13
+   ],
+   [
+    "32",
+    13
+   ],
+   [
+    "30",
+    3
+   ],
+   [
+    "77",
+    2
+   ]
+  ],
+  "byPrefix3": 43,
+  "sizeDistribution": {
+   "p0": 1,
+   "p5": 3,
+   "p25": 16,
+   "p50": 32,
+   "p75": 64,
+   "p95": 146,
+   "p100": 443
+  },
+  "singletons": 4,
+  "top30WithNameHints": [
+   [
+    "17300",
+    443,
+    [
+     "casserole",
+     "soup",
+     "vegetable",
+     "chicken"
+    ]
+   ],
+   [
+    "22630",
+    432,
+    [
+     "ground",
+     "seasoning",
+     "whole",
+     "powder"
+    ]
+   ],
+   [
+    "41763",
+    349,
+    [
+     "frozen",
+     "chocolate",
+     "ready",
+     "tart"
+    ]
+   ],
+   [
+    "64004",
+    343,
+    [
+     "lid",
+     "brown",
+     "box",
+     "container"
+    ]
+   ],
+   [
+    "41760",
+    244,
+    [
+     "bread",
+     "frozen",
+     "rye",
+     "baked"
+    ]
+   ],
+   [
+    "63235",
+    238,
+    [
+     "napkin",
+     "fold",
+     "ply",
+     "dunisoft"
+    ]
+   ],
+   [
+    "41755",
+    221,
+    [
+     "frozen",
+     "onion",
+     "chicken",
+     "baked"
+    ]
+   ],
+   [
+    "22601",
+    190,
+    [
+     "chocolate",
+     "vanilla",
+     "powder",
+     "white"
+    ]
+   ],
+   [
+    "21917",
+    184,
+    [
+     "bbq",
+     "pesto",
+     "dressing",
+     "teriyaki"
+    ]
+   ],
+   [
+    "63114",
+    181,
+    [
+     "purpose",
+     "all",
+     "disinfectant",
+     "oven"
+    ]
+   ],
+   [
+    "64001",
+    180,
+    [
+     "cup",
+     "paperboard",
+     "lid",
+     "glass"
+    ]
+   ],
+   [
+    "41764",
+    179,
+    [
+     "frozen",
+     "bun",
+     "lactose",
+     "cinnamon"
+    ]
+   ],
+   [
+    "63120",
+    164,
+    [
+     "cloth",
+     "brush",
+     "handle",
+     "floor"
+    ]
+   ],
+   [
+    "22700",
+    157,
+    [
+     "bottle",
+     "lemonade",
+     "plastic",
+     "can"
+    ]
+   ],
+   [
+    "52210",
+    152,
+    [
+     "bag",
+     "confectionery",
+     "liquorice",
+     "chocolate"
+    ]
+   ],
+   [
+    "10412",
+    150,
+    [
+     "yoghurt",
+     "lactose",
+     "valiojogurtti",
+     "natural"
+    ]
+   ],
+   [
+    "18720",
+    149,
+    [
+     "steak",
+     "striploin",
+     "tenderloin",
+     "chilled"
+    ]
+   ],
+   [
+    "21596",
+    147,
+    [
+     "peppers",
+     "garlic",
+     "sliced",
+     "brine"
+    ]
+   ],
+   [
+    "41753",
+    146,
+    [
+     "frozen",
+     "cooked",
+     "vegetable",
+     "patty"
+    ]
+   ],
+   [
+    "21380",
+    140,
+    [
+     "penne",
+     "macaroni",
+     "fusilli",
+     "spaghetti"
+    ]
+   ],
+   [
+    "41705",
+    140,
+    [
+     "frozen",
+     "fried",
+     "patty",
+     "meatball"
+    ]
+   ],
+   [
+    "41820",
+    139,
+    [
+     "lactose",
+     "scoop",
+     "sorbet",
+     "chocolate"
+    ]
+   ],
+   [
+    "41731",
+    136,
+    [
+     "frozen",
+     "greens",
+     "carrot",
+     "diced"
+    ]
+   ],
+   [
+    "41762",
+    131,
+    [
+     "frozen",
+     "pastry",
+     "pie",
+     "pasty"
+    ]
+   ],
+   [
+    "10600",
+    129,
+    [
+     "gouda",
+     "oltermanni",
+     "reggiano",
+     "polar"
+    ]
+   ],
+   [
+    "41710",
+    129,
+    [
+     "chicken",
+     "frozen",
+     "fillet",
+     "roasted"
+    ]
+   ],
+   [
+    "63001",
+    125,
+    [
+     "soap",
+     "hand",
+     "dispenser",
+     "foam"
+    ]
+   ],
+   [
+    "64003",
+    125,
+    [
+     "round",
+     "doily",
+     "white",
+     "straw"
+    ]
+   ],
+   [
+    "22140",
+    125,
+    [
+     "syrup",
+     "vanilla",
+     "caramel",
+     "puree"
+    ]
+   ],
+   [
+    "41800",
+    124,
+    [
+     "stick",
+     "cone",
+     "lactose",
+     "chocolate"
+    ]
+   ]
+  ]
+ },
+ "vendors": {
+  "distinct": 648,
+  "top20": [
+   [
+    "DUNI OY, PROFESSIONAL",
+    817
+   ],
+   [
+    "VALIO OY TUORE",
+    788
+   ],
+   [
+    "ATRIA SUOMI OY TUORE",
+    300
+   ],
+   [
+    "E. GAVRIELIDES OY",
+    284
+   ],
+   [
+    "HKFOODS FINLAND OY",
+    266
+   ],
+   [
+    "FEELIA OY",
+    260
+   ],
+   [
+    "MAUSTE-SALLINEN OY",
+    252
+   ],
+   [
+    "SANTA MARIA AB",
+    251
+   ],
+   [
+    "OY ESSITY FINLAND AB",
+    245
+   ],
+   [
+    "OY LANTMÄNNEN UNIBAKE AB FINLAND",
+    242
+   ],
+   [
+    "FAZER MAKEISET OY",
+    241
+   ],
+   [
+    "WULFF OY AB",
+    232
+   ],
+   [
+    "PRESCOTT OY",
+    219
+   ],
+   [
+    "ARLA OY",
+    208
+   ],
+   [
+    "HUHTAMAKI FOODSERVICE NORDIC OY",
+    190
+   ],
+   [
+    "DIVERSEY SUOMI OY",
+    186
+   ],
+   [
+    "MEIRA OY",
+    180
+   ],
+   [
+    "SAMBONET PADERNO INDUSTRIE S.P.A.",
+    177
+   ],
+   [
+    "OY ROLLFOODS AB PAKASTE",
+    163
+   ],
+   [
+    "KIILTOCLEAN OY",
+    157
+   ]
+  ]
+ },
+ "countryOfOrigin": {
+  "distinct": 98,
+  "top20": [
+   [
+    "fi",
+    7849
+   ],
+   [
+    "de",
+    1029
+   ],
+   [
+    "it",
+    977
+   ],
+   [
+    "se",
+    874
+   ],
+   [
+    "cn",
+    741
+   ],
+   [
+    "nl",
+    659
+   ],
+   [
+    "fr",
+    599
+   ],
+   [
+    "pl",
+    431
+   ],
+   [
+    "es",
+    404
+   ],
+   [
+    "be",
+    383
+   ],
+   [
+    "dk",
+    379
+   ],
+   [
+    "gb",
+    289
+   ],
+   [
+    "gr",
+    271
+   ],
+   [
+    "ee",
+    249
+   ],
+   [
+    "th",
+    223
+   ],
+   [
+    "zy",
+    179
+   ],
+   [
+    "no",
+    145
+   ],
+   [
+    "at",
+    141
+   ],
+   [
+    "ch",
+    114
+   ],
+   [
+    "us",
+    110
+   ]
+  ],
+  "missing": 9
+ },
+ "synkkaCountriesOfOrigin": {
+  "top10": [
+   [
+    "246",
+    6976
+   ],
+   [
+    "276",
+    987
+   ],
+   [
+    "752",
+    770
+   ],
+   [
+    "380",
+    551
+   ],
+   [
+    "528",
+    521
+   ],
+   [
+    "250",
+    438
+   ],
+   [
+    "156",
+    431
+   ],
+   [
+    "616",
+    393
+   ],
+   [
+    "208",
+    378
+   ],
+   [
+    "056",
+    294
+   ]
+  ],
+  "fiTopLevelButSynkkaNot246": 182
+ },
+ "temperatureCondition": {
+  "8": {
+   "n": 10053,
+   "medianMinC": 10.0,
+   "medianMaxC": 22.0,
+   "nameWords": [
+    "white",
+    "napkin",
+    "chocolate",
+    "coffee",
+    "bag",
+    "ply"
+   ]
+  },
+  "7": {
+   "n": 3152,
+   "medianMinC": -25.0,
+   "medianMaxC": -18.0,
+   "nameWords": [
+    "frozen",
+    "lactose",
+    "chicken",
+    "cooked",
+    "chocolate",
+    "ready"
+   ]
+  },
+  "4": {
+   "n": 1803,
+   "medianMinC": 4.0,
+   "medianMaxC": 8.0,
+   "nameWords": [
+    "lactose",
+    "yoghurt",
+    "slices",
+    "chicken",
+    "fat",
+    "vanilla"
+   ]
+  },
+  "3": {
+   "n": 1673,
+   "medianMinC": 2.0,
+   "medianMaxC": 6.0,
+   "nameWords": [
+    "chicken",
+    "pork",
+    "soup",
+    "potato",
+    "sausage",
+    "salad"
+   ]
+  },
+  "2": {
+   "n": 324,
+   "medianMinC": 2.0,
+   "medianMaxC": 4.0,
+   "nameWords": [
+    "pork",
+    "chicken",
+    "fillet",
+    "carrot",
+    "minced",
+    "salad"
+   ]
+  },
+  "1": {
+   "n": 240,
+   "medianMinC": 0.0,
+   "medianMaxC": 3.0,
+   "nameWords": [
+    "fillet",
+    "trout",
+    "salmon",
+    "rainbow",
+    "pork",
+    "asc"
+   ]
+  },
+  "5": {
+   "n": 221,
+   "medianMinC": 2.0,
+   "medianMaxC": 7.0,
+   "nameWords": [
+    "mimis",
+    "box",
+    "tomato",
+    "onion",
+    "netherlands",
+    "flower"
+   ]
+  },
+  "None": {
+   "n": 61,
+   "medianMinC": 15.0,
+   "medianMaxC": 25.0,
+   "nameWords": [
+    "scriva",
+    "marker",
+    "edding",
+    "stabilo",
+    "pencil",
+    "rubber"
+   ]
+  },
+  "6": {
+   "n": 10,
+   "medianMinC": 4.0,
+   "medianMaxC": 20.0,
+   "nameWords": [
+    "pointed",
+    "lactose",
+    "uht",
+    "salami",
+    "pickstick",
+    "class"
+   ]
+  },
+  "9": {
+   "n": 9,
+   "medianMinC": 0.0,
+   "medianMaxC": 2.0,
+   "nameWords": [
+    "deepfrost",
+    "pork",
+    "brisket",
+    "spagetti",
+    "croissant",
+    "wholemeal"
+   ]
+  }
+ },
+ "deleted": {
+  "False": 17546
+ },
+ "salesUnit": [
+  [
+   "KI",
+   8005
+  ],
+  [
+   "ST",
+   5607
+  ],
+  [
+   "KG",
+   1068
+  ],
+  [
+   "PAK",
+   880
+  ],
+  [
+   "BAG",
+   697
+  ],
+  [
+   "RAS",
+   328
+  ],
+  [
+   "PRK",
+   320
+  ],
+  [
+   "BOT",
+   310
+  ],
+  [
+   "SK",
+   120
+  ],
+  [
+   "CS",
+   72
+  ],
+  [
+   "KLE",
+   66
+  ],
+  [
+   "KRT",
+   48
+  ],
+  [
+   "KAN",
+   13
+  ],
+  [
+   "PAL",
+   4
+  ],
+  [
+   "NIP",
+   3
+  ],
+  [
+   "DSP",
+   3
+  ],
+  [
+   "DZ",
+   2
+  ]
+ ],
+ "baseUnit": [
+  [
+   "ST",
+   9770
+  ],
+  [
+   "PAK",
+   1725
+  ],
+  [
+   "KI",
+   1573
+  ],
+  [
+   "BAG",
+   1222
+  ],
+  [
+   "KG",
+   1106
+  ],
+  [
+   "BOT",
+   893
+  ],
+  [
+   "PRK",
+   533
+  ],
+  [
+   "RAS",
+   494
+  ],
+  [
+   "SK",
+   89
+  ],
+  [
+   "CS",
+   74
+  ],
+  [
+   "KRT",
+   41
+  ],
+  [
+   "KAN",
+   14
+  ],
+  [
+   "PAL",
+   4
+  ],
+  [
+   "NIP",
+   3
+  ],
+  [
+   "DSP",
+   3
+  ],
+  [
+   "DZ",
+   2
+  ]
+ ],
+ "salesEqBase": 62.3,
+ "units": {
+  "unitIdCounts": [
+   [
+    "KI",
+    14157
+   ],
+   [
+    "ST",
+    9832
+   ],
+   [
+    "PAL",
+    8303
+   ],
+   [
+    "KRS",
+    5288
+   ],
+   [
+    "PAK",
+    1813
+   ],
+   [
+    "BAG",
+    1246
+   ],
+   [
+    "KG",
+    1131
+   ],
+   [
+    "BOT",
+    903
+   ],
+   [
+    "PRK",
+    534
+   ],
+   [
+    "RAS",
+    524
+   ],
+   [
+    "CS",
+    227
+   ],
+   [
+    "SK",
+    129
+   ],
+   [
+    "KRT",
+    97
+   ],
+   [
+    "KLE",
+    69
+   ],
+   [
+    "ZML",
+    37
+   ],
+   [
+    "DOL",
+    26
+   ],
+   [
+    "KAN",
+    14
+   ],
+   [
+    "DSP",
+    11
+   ],
+   [
+    "KOR",
+    6
+   ],
+   [
+    "NIP",
+    5
+   ],
+   [
+    "PNT",
+    2
+   ],
+   [
+    "DZ",
+    2
+   ],
+   [
+    "MDO",
+    1
+   ]
+  ],
+  "sizeInBaseUnitsByUnit": {
+   "PAL": {
+    "p0": 1.0,
+    "p5": 30.0,
+    "p25": 100.0,
+    "p50": 288.0,
+    "p75": 768.0,
+    "p95": 2688.0,
+    "p100": 56000.0
+   },
+   "KI": {
+    "p0": 0.75,
+    "p5": 1.0,
+    "p25": 4.0,
+    "p50": 6.0,
+    "p75": 12.0,
+    "p95": 25.0,
+    "p100": 600.0
+   },
+   "RAS": {
+    "p0": 1.0,
+    "p5": 1.0,
+    "p25": 1.0,
+    "p50": 1.0,
+    "p75": 1.0,
+    "p95": 5.0,
+    "p100": 3360.0
+   },
+   "SK": {
+    "p0": 1.0,
+    "p5": 1.0,
+    "p25": 1.0,
+    "p50": 1.0,
+    "p75": 5.0,
+    "p95": 21.0,
+    "p100": 36.0
+   },
+   "ST": {
+    "p0": 0.4,
+    "p5": 1.0,
+    "p25": 1.0,
+    "p50": 1.0,
+    "p75": 1.0,
+    "p95": 1.0,
+    "p100": 20.0
+   },
+   "BAG": {
+    "p0": 1.0,
+    "p5": 1.0,
+    "p25": 1.0,
+    "p50": 1.0,
+    "p75": 1.0,
+    "p95": 1.0,
+    "p100": 1920.0
+   },
+   "PAK": {
+    "p0": 1.0,
+    "p5": 1.0,
+    "p25": 1.0,
+    "p50": 1.0,
+    "p75": 1.0,
+    "p95": 1.0,
+    "p100": 63.0
+   },
+   "KRS": {
+    "p0": 1.0,
+    "p5": 6.0,
+    "p25": 20.0,
+    "p50": 60.0,
+    "p75": 152.0,
+    "p95": 390.0,
+    "p100": 5600.0
+   },
+   "KG": {
+    "p0": 0.2,
+    "p5": 1.0,
+    "p25": 1.0,
+    "p50": 1.0,
+    "p75": 1.0,
+    "p95": 1.0,
+    "p100": 5.0
+   },
+   "KRT": {
+    "p0": 1.0,
+    "p5": 1.0,
+    "p25": 1.0,
+    "p50": 5.0,
+    "p75": 36.0,
+    "p95": 600.0,
+    "p100": 1440.0
+   },
+   "PRK": {
+    "p0": 1.0,
+    "p5": 1.0,
+    "p25": 1.0,
+    "p50": 1.0,
+    "p75": 1.0,
+    "p95": 1.0,
+    "p100": 3.63
+   },
+   "BOT": {
+    "p0": 1.0,
+    "p5": 1.0,
+    "p25": 1.0,
+    "p50": 1.0,
+    "p75": 1.0,
+    "p95": 1.0,
+    "p100": 3312.0
+   },
+   "NIP": {
+    "p0": 1.0,
+    "p5": 1.0,
+    "p25": 1.0,
+    "p50": 1.0,
+    "p75": 6.0,
+    "p95": 6.0,
+    "p100": 336.0
+   },
+   "CS": {
+    "p0": 1.0,
+    "p5": 1.0,
+    "p25": 1.0,
+    "p50": 20.0,
+    "p75": 48.0,
+    "p95": 320.0,
+    "p100": 1344.0
+   },
+   "ZML": {
+    "p0": 0.0,
+    "p5": 0.05,
+    "p25": 0.449,
+    "p50": 1.0,
+    "p75": 1.0,
+    "p95": 1.717,
+    "p100": 5.149
+   },
+   "PNT": {
+    "p0": 5.0,
+    "p5": 5.0,
+    "p25": 5.0,
+    "p50": 5.0,
+    "p75": 5.0,
+    "p95": 5.0,
+    "p100": 5.0
+   },
+   "DSP": {
+    "p0": 1.0,
+    "p5": 1.0,
+    "p25": 1.0,
+    "p50": 80.0,
+    "p75": 80.0,
+    "p95": 90.0,
+    "p100": 120.0
+   },
+   "KAN": {
+    "p0": 1.0,
+    "p5": 1.0,
+    "p25": 1.0,
+    "p50": 1.0,
+    "p75": 1.0,
+    "p95": 1.0,
+    "p100": 1.0
+   },
+   "DOL": {
+    "p0": 24.0,
+    "p5": 48.0,
+    "p25": 96.0,
+    "p50": 96.0,
+    "p75": 160.0,
+    "p95": 336.0,
+    "p100": 336.0
+   },
+   "KOR": {
+    "p0": 20.0,
+    "p5": 20.0,
+    "p25": 20.0,
+    "p50": 20.0,
+    "p75": 20.0,
+    "p95": 20.0,
+    "p100": 20.0
+   },
+   "DZ": {
+    "p0": 1.0,
+    "p5": 1.0,
+    "p25": 1.0,
+    "p50": 1.0,
+    "p75": 1.0,
+    "p95": 1.0,
+    "p100": 1.0
+   },
+   "KLE": {
+    "p0": 2.0,
+    "p5": 2.0,
+    "p25": 12.0,
+    "p50": 24.0,
+    "p75": 24.0,
+    "p95": 24.0,
+    "p100": 280.0
+   },
+   "MDO": {
+    "p0": 144.0,
+    "p5": 144.0,
+    "p25": 144.0,
+    "p50": 144.0,
+    "p75": 144.0,
+    "p95": 144.0,
+    "p100": 144.0
+   }
+  },
+  "unitsPerProduct": {
+   "1": 2693,
+   "2": 6645,
+   "3": 4532,
+   "4": 3626,
+   "5": 34,
+   "6": 11,
+   "7": 2,
+   "8": 3
+  },
+  "salesUnitPresentInUnitsPct": 100.0
+ },
+ "allowedLotSize": [
+  [
+   0.01,
+   16872
+  ],
+  [
+   2.0,
+   92
+  ],
+  [
+   3.0,
+   85
+  ],
+  [
+   1.5,
+   62
+  ],
+  [
+   5.0,
+   54
+  ],
+  [
+   10.0,
+   40
+  ],
+  [
+   1.0,
+   39
+  ],
+  [
+   4.0,
+   34
+  ],
+  [
+   2.5,
+   21
+  ],
+  [
+   1.8,
+   17
+  ],
+  [
+   6.0,
+   15
+  ],
+  [
+   15.0,
+   14
+  ],
+  [
+   1.6,
+   14
+  ],
+  [
+   1.2,
+   13
+  ],
+  [
+   0.9,
+   13
+  ]
+ ],
+ "lotSizeBySalesUnit": {
+  "KI": [
+   [
+    0.01,
+    8003
+   ],
+   [
+    1.0,
+    1
+   ],
+   [
+    2.0,
+    1
+   ]
+  ],
+  "ST": [
+   [
+    0.01,
+    5607
+   ]
+  ],
+  "KG": [
+   [
+    0.01,
+    396
+   ],
+   [
+    2.0,
+    91
+   ],
+   [
+    3.0,
+    85
+   ],
+   [
+    1.5,
+    62
+   ],
+   [
+    5.0,
+    54
+   ]
+  ],
+  "PAK": [
+   [
+    0.01,
+    880
+   ]
+  ],
+  "BAG": [
+   [
+    0.01,
+    697
+   ]
+  ],
+  "RAS": [
+   [
+    0.01,
+    328
+   ]
+  ],
+  "PRK": [
+   [
+    0.01,
+    320
+   ]
+  ],
+  "BOT": [
+   [
+    0.01,
+    310
+   ]
+  ]
+ },
+ "unitConversions": {
+  "packagingTypes": [
+   [
+    "BASE_UNIT_OR_EACH",
+    8215
+   ],
+   [
+    "CASE",
+    6249
+   ],
+   [
+    "PALLET",
+    10
+   ]
+  ],
+  "netWeightAnyPct": 55.8,
+  "netWeightBaseUnitPct": 45.7
+ },
+ "variableUnit": {
+  "False": 13846,
+  "None": 3068,
+  "True": 632
+ },
+ "vatCode": {
+  "MEDIUM": 11719,
+  "None": 3068,
+  "STANDARD": 2593,
+  "MEDIUM MEDIUM": 159,
+  "": 4,
+  "LOW": 1,
+  "NOT_APPLICABLE": 1,
+  "STANDARD MEDIUM": 1
+ },
+ "textFillByLanguagePct": {
+  "names": {
+   "fi": 100.0,
+   "en": 100.0,
+   "sv": 91.8,
+   "es": 0.1,
+   "nl": 0.0
+  },
+  "marketingTexts": {
+   "fi": 67.9,
+   "sv": 64.0,
+   "en": 62.8
+  },
+  "storageInstructions": {
+   "fi": 49.4,
+   "sv": 49.4,
+   "en": 45.9
+  },
+  "usageInstructions": {
+   "fi": 21.1,
+   "sv": 21.0,
+   "en": 18.8
+  },
+  "preparationInstructions": {
+   "sv": 19.8,
+   "fi": 19.8,
+   "en": 18.0
+  },
+  "keyIngredients": {
+   "fi": 80.0,
+   "sv": 71.6,
+   "en": 66.1,
+   "et": 0.4,
+   "da": 0.4,
+   "de": 0.1
+  },
+  "materialAdditionalDescriptions": {
+   "en": 0.1,
+   "sv": 0.1,
+   "fi": 0.1
+  },
+  "disposalInformations": {
+   "fi": 26.4,
+   "sv": 26.3,
+   "en": 25.7
+  }
+ },
+ "noNameAtAll": 0,
+ "nameUppercaseShare": 17.6,
+ "nameFlags": {
+  "POISTO": 32,
+  "VANHA": 26,
+  "ÄLÄ": 4
+ },
+ "classificationGroupsPct": {
+  "packagingMarkedLabel": 98.3,
+  "nutritionFact": 69.8,
+  "gda": 65.6,
+  "nutritionalClaim": 43.4,
+  "allergen": 41.1,
+  "nonAllergen": 29.2,
+  "mineral": 10.2,
+  "vitamin": 4.1,
+  "composition": 0.1
+ },
+ "allergenUnits": [
+  [
+   "CONTAINS",
+   15610
+  ],
+  [
+   "MAY_CONTAIN",
+   9956
+  ],
+  [
+   "UNDECLARED",
+   303
+  ]
+ ],
+ "allergenIdsTop20": [
+  [
+   "AM",
+   3902
+  ],
+  [
+   "AW",
+   3113
+  ],
+  [
+   "UW",
+   2899
+  ],
+  [
+   "AY",
+   2077
+  ],
+  [
+   "AE",
+   1910
+  ],
+  [
+   "AN",
+   1538
+  ],
+  [
+   "SA",
+   931
+  ],
+  [
+   "BM",
+   890
+  ],
+  [
+   "GO",
+   857
+  ],
+  [
+   "SH",
+   796
+  ],
+  [
+   "AS",
+   778
+  ],
+  [
+   "NR",
+   731
+  ],
+  [
+   "GB",
+   627
+  ],
+  [
+   "AF",
+   546
+  ],
+  [
+   "AP",
+   532
+  ],
+  [
+   "ML",
+   527
+  ],
+  [
+   "ST",
+   390
+  ],
+  [
+   "AU",
+   354
+  ],
+  [
+   "SW",
+   350
+  ],
+  [
+   "SC",
+   326
+  ]
+ ],
+ "labelsAndClaimsTop25": [
+  [
+   "packagingMarkedLabel",
+   "warmTemperature",
+   10057
+  ],
+  [
+   "nutritionalClaim",
+   "LACTOSE",
+   4499
+  ],
+  [
+   "packagingMarkedLabel",
+   "coolTemperature",
+   4060
+  ],
+  [
+   "packagingMarkedLabel",
+   "freezeTemperature",
+   3245
+  ],
+  [
+   "nutritionalClaim",
+   "GLUTEN",
+   3047
+  ],
+  [
+   "nutritionalClaim",
+   "VEGAN",
+   2959
+  ],
+  [
+   "nutritionalClaim",
+   "VEGETARIAN",
+   2358
+  ],
+  [
+   "packagingMarkedLabel",
+   "GOODS_FROM_FINLAND_BLUE_SWAN",
+   2057
+  ],
+  [
+   "packagingMarkedLabel",
+   "MADE_IN_FINLAND_FLAG_WITH_KEY",
+   1772
+  ],
+  [
+   "nutritionalClaim",
+   "PRESERVATIVES",
+   1526
+  ],
+  [
+   "nutritionalClaim",
+   "COLOURING_AGENTS",
+   932
+  ],
+  [
+   "packagingMarkedLabel",
+   "FINNISH_HEART_SYMBOL",
+   826
+  ],
+  [
+   "nutritionalClaim",
+   "ADDITIVES",
+   690
+  ],
+  [
+   "nutritionalClaim",
+   "SUGARS",
+   662
+  ],
+  [
+   "packagingMarkedLabel",
+   "EU_ORGANIC_FARMING",
+   456
+  ],
+  [
+   "nutritionalClaim",
+   "FIBRE",
+   420
+  ],
+  [
+   "nutritionalClaim",
+   "EGGS",
+   418
+  ],
+  [
+   "nutritionalClaim",
+   "SODIUM_SALT",
+   403
+  ],
+  [
+   "nutritionalClaim",
+   "PROTEIN",
+   403
+  ],
+  [
+   "packagingMarkedLabel",
+   "SVANEN",
+   362
+  ],
+  [
+   "nutritionalClaim",
+   "SWEETENERS",
+   358
+  ],
+  [
+   "nutritionalClaim",
+   "SOY",
+   337
+  ],
+  [
+   "nutritionalClaim",
+   "FAT",
+   267
+  ],
+  [
+   "packagingMarkedLabel",
+   "RAINFOREST_ALLIANCE",
+   234
+  ],
+  [
+   "packagingMarkedLabel",
+   "EU_ECO_LABEL",
+   195
+  ]
+ ],
+ "nutrientIdsTop15": [
+  [
+   "ENER-KJO",
+   12178
+  ],
+  [
+   "PRO-",
+   12164
+  ],
+  [
+   "FAT",
+   12153
+  ],
+  [
+   "CHOAVL",
+   12138
+  ],
+  [
+   "ENER-E14",
+   12080
+  ],
+  [
+   "SALTEQ",
+   11952
+  ],
+  [
+   "FASAT",
+   11889
+  ],
+  [
+   "SUGAR-",
+   11841
+  ],
+  [
+   "FIBTG",
+   6070
+  ],
+  [
+   "LACS",
+   3573
+  ],
+  [
+   "NA",
+   1078
+  ],
+  [
+   "CA",
+   954
+  ],
+  [
+   "VITD-",
+   602
+  ],
+  [
+   "VITB12",
+   583
+  ],
+  [
+   "FAMSCIS",
+   567
+  ]
+ ],
+ "ingredientsWithOriginPct": 19.8,
+ "fishSpeciesTop15": [
+  [
+   "TRR",
+   79
+  ],
+  [
+   "SAL",
+   70
+  ],
+  [
+   "HER",
+   59
+  ],
+  [
+   "ALK",
+   23
+  ],
+  [
+   "POK",
+   22
+  ],
+  [
+   "COD",
+   16
+  ],
+  [
+   "PLN",
+   9
+  ],
+  [
+   "FPI",
+   8
+  ],
+  [
+   "FVE",
+   7
+  ],
+  [
+   "FPP",
+   6
+  ],
+  [
+   "SKJ",
+   6
+  ],
+  [
+   "BFT",
+   6
+  ],
+  [
+   "FLE",
+   5
+  ],
+  [
+   "FPE",
+   5
+  ],
+  [
+   "FRO",
+   5
+  ]
+ ],
+ "medias": {
+  "countsPerProduct": {
+   "0": 4171,
+   "1": 8395,
+   "2": 2926,
+   "3": 872,
+   "4": 365,
+   "5": 45,
+   "6": 360,
+   "7": 32,
+   "8": 8,
+   "9": 299,
+   "10": 5,
+   "11": 3
+  },
+  "withAnyPct": 76.2,
+  "withPrimaryPct": 68.3,
+  "exampleObjects": [
+   {
+    "id": 52633,
+    "primary": true
+   },
+   {
+    "id": 94328,
+    "primary": true
+   },
+   {
+    "id": 3691839,
+    "primary": true
+   }
+  ],
+  "keys": {
+   "id": 24977,
+   "primary": 24977
+  }
+ },
+ "deposits": {
+  "withAnyPct": 2.9,
+  "materialsTop10": [
+   [
+    "1",
+    160
+   ],
+   [
+    "4",
+    155
+   ],
+   [
+    "3",
+    119
+   ],
+   [
+    "171",
+    69
+   ],
+   [
+    "147",
+    46
+   ],
+   [
+    "2",
+    25
+   ],
+   [
+    "9708918",
+    2
+   ]
+  ]
+ },
+ "substitutions": {
+  "productsWithAny": 189,
+  "productsWithAnyPct": 1.1,
+  "rules": 250,
+  "perProduct": {
+   "p0": 1,
+   "p5": 1,
+   "p25": 1,
+   "p50": 1,
+   "p75": 1,
+   "p95": 3,
+   "p100": 5
+  },
+  "selfProductFieldMatchesId": 100.0,
+  "targetsInCatalogPct": 100.0,
+  "sameCategoryPct": 92.0,
+  "targetCarbonPct": 92.0
+ },
+ "ids": {
+  "duplicateIds": 0,
+  "idRange": [
+   "460000",
+   "477545"
+  ],
+  "idNumericPct": 100.0,
+  "salesUnitGtinPct": 99.1,
+  "duplicateSalesGtins": 0,
+  "duplicateFiNames": 70,
+  "productsSharingFiName": 140
+ },
+ "sizeInNamePct": 81.2,
+ "nameVsNetWeight": {
+  "checked": 6013,
+  "contradictions": 669,
+  "contradictionPct": 11.1,
+  "exampleIds": [
+   "460038",
+   "460046",
+   "460086",
+   "460188",
+   "460214",
+   "460233",
+   "460341",
+   "460346"
+  ]
+ },
+ "weightResolvablePct": 89.4,
+ "joins": {
+  "carbonRows": 11033,
+  "carbonInCatalog": 11033,
+  "carbonCatalogPct": 62.9,
+  "reliabilityRows": 4425,
+  "reliabilityInCatalog": 4425,
+  "reliabilityCatalogPct": 25.2,
+  "all3": 3123,
+  "reliabilityWithoutCarbon": 1302,
+  "carbonDistinctValues": 177,
+  "carbonPercentiles": {
+   "p0": 0.13,
+   "p5": 0.38,
+   "p25": 1.16,
+   "p50": 2.11,
+   "p75": 4.975,
+   "p95": 10.09,
+   "p100": 30.46
+  },
+  "reliabilityPercentiles": {
+   "p0": 0.0,
+   "p1": 0.5,
+   "p5": 0.871,
+   "p10": 0.936,
+   "p25": 0.985,
+   "p50": 1.0,
+   "p75": 1.0,
+   "p100": 1.0
+  },
+  "reliabilityEq1Pct": 56.3,
+  "reliabilityLt09Pct": 6.6,
+  "reliabilityLt07": 94,
+  "categoriesWithCarbon": 279,
+  "categoriesWithSingleCarbonValuePct": 68.1,
+  "categoriesFullyCoveredByCarbonPct": 14.0,
+  "categoriesPartlyCovered": 230,
+  "carbonByTemperature": {
+   "4": {
+    "p5": 0.37,
+    "p50": 2.19,
+    "p95": 8.135
+   },
+   "8": {
+    "p5": 0.57,
+    "p50": 1.71,
+    "p95": 8.135
+   },
+   "5": {
+    "p5": 0.25,
+    "p50": 0.38,
+    "p95": 1.96
+   },
+   "3": {
+    "p5": 0.3,
+    "p50": 2.315,
+    "p95": 15.915
+   },
+   "7": {
+    "p5": 0.39,
+    "p50": 2.11,
+    "p95": 15.79
+   },
+   "2": {
+    "p5": 0.3,
+    "p50": 3.005,
+    "p95": 26.195
+   },
+   "6": {
+    "p5": 0.3,
+    "p50": 1.1,
+    "p95": 5.19
+   },
+   "None": {
+    "p5": 0.145,
+    "p50": 0.79,
+    "p95": 4.67
+   },
+   "9": {
+    "p5": 1.42,
+    "p50": 2.355,
+    "p95": 26.195
+   },
+   "1": {
+    "p5": 3.98,
+    "p50": 6.375,
+    "p95": 26.195
+   }
+  },
+  "carbonByPrefix2": {
+   "41": {
+    "n": 3262,
+    "carbon": {
+     "p5": 0.46,
+     "p50": 2.11,
+     "p95": 15.79
+    },
+    "carbonCovPct": 77.6,
+    "reliabilityCovPct": 26.1,
+    "words": [
+     "frozen",
+     "lactose",
+     "chicken",
+     "cooked",
+     "chocolate",
+     "ready",
+     "bun"
+    ]
+   },
+   "21": {
+    "n": 3219,
+    "carbon": {
+     "p5": 0.57,
+     "p50": 1.78,
+     "p95": 8.135
+    },
+    "carbonCovPct": 80.2,
+    "reliabilityCovPct": 27.6,
+    "words": [
+     "apple",
+     "flour",
+     "tomato",
+     "oat",
+     "mayonnaise",
+     "dressing",
+     "concentrate"
+    ]
+   },
+   "17": {
+    "n": 2237,
+    "carbon": {
+     "p5": 0.205,
+     "p50": 2.19,
+     "p95": 10.09
+    },
+    "carbonCovPct": 83.0,
+    "reliabilityCovPct": 32.2,
+    "words": [
+     "potato",
+     "chicken",
+     "sausage",
+     "salad",
+     "ham",
+     "casserole",
+     "soup"
+    ]
+   },
+   "22": {
+    "n": 1902,
+    "carbon": {
+     "p5": 0.3,
+     "p50": 2.315,
+     "p95": 7.12
+    },
+    "carbonCovPct": 84.0,
+    "reliabilityCovPct": 25.8,
+    "words": [
+     "coffee",
+     "ground",
+     "syrup",
+     "seasoning",
+     "bottle",
+     "powder",
+     "chocolate"
+    ]
+   },
+   "63": {
+    "n": 1817,
+    "carbon": {
+     "p5": 0.79,
+     "p50": 0.79,
+     "p95": 0.79
+    },
+    "carbonCovPct": 0.3,
+    "reliabilityCovPct": 32.6,
+    "words": [
+     "napkin",
+     "ply",
+     "white",
+     "fold",
+     "dispenser",
+     "hand",
+     "dunisoft"
+    ]
+   },
+   "10": {
+    "n": 1524,
+    "carbon": {
+     "p5": 0.46,
+     "p50": 1.93,
+     "p95": 5.33
+    },
+    "carbonCovPct": 85.1,
+    "reliabilityCovPct": 25.7,
+    "words": [
+     "lactose",
+     "yoghurt",
+     "bread",
+     "oat",
+     "slices",
+     "oil",
+     "uht"
+    ]
+   },
+   "64": {
+    "n": 1039,
+    "carbon": {
+     "p5": 0.79,
+     "p50": 0.79,
+     "p95": 0.79
+    },
+    "carbonCovPct": 0.8,
+    "reliabilityCovPct": 16.0,
+    "words": [
+     "lid",
+     "box",
+     "cup",
+     "brown",
+     "white",
+     "bag",
+     "paperboard"
+    ]
+   },
+   "20": {
+    "n": 889,
+    "carbon": {
+     "p5": 0.79,
+     "p50": 0.79,
+     "p95": 0.79
+    },
+    "carbonCovPct": 0.1,
+    "reliabilityCovPct": 7.1,
+    "words": [
+     "pan",
+     "glass",
+     "bowl",
+     "arc",
+     "plate",
+     "white",
+     "lid"
+    ]
+   },
+   "52": {
+    "n": 628,
+    "carbon": {
+     "p5": 1.215,
+     "p50": 1.215,
+     "p95": 2.88
+    },
+    "carbonCovPct": 74.5,
+    "reliabilityCovPct": 21.7,
+    "words": [
+     "chocolate",
+     "bar",
+     "bag",
+     "liquorice",
+     "pastille",
+     "xylitol",
+     "tablet"
+    ]
+   },
+   "18": {
+    "n": 608,
+    "carbon": {
+     "p5": 3.28,
+     "p50": 6.245,
+     "p95": 26.195
+    },
+    "carbonCovPct": 90.5,
+    "reliabilityCovPct": 15.0,
+    "words": [
+     "fillet",
+     "pork",
+     "chicken",
+     "steak",
+     "herring",
+     "trout",
+     "sirloin"
+    ]
+   },
+   "90": {
+    "n": 224,
+    "carbon": {},
+    "carbonCovPct": 0.0,
+    "reliabilityCovPct": 3.6,
+    "words": [
+     "marker",
+     "plastic",
+     "edding",
+     "folder",
+     "white",
+     "permanent",
+     "connect"
+    ]
+   },
+   "11": {
+    "n": 81,
+    "carbon": {
+     "p5": 2.38,
+     "p50": 2.38,
+     "p95": 2.38
+    },
+    "carbonCovPct": 85.2,
+    "reliabilityCovPct": 3.7,
+    "words": [
+     "loaf",
+     "bun",
+     "filling",
+     "pie",
+     "blueberry",
+     "pastry",
+     "chocolate"
+    ]
+   },
+   "85": {
+    "n": 59,
+    "carbon": {
+     "p5": 0.68,
+     "p50": 0.68,
+     "p95": 0.91
+    },
+    "carbonCovPct": 86.4,
+    "reliabilityCovPct": 13.6,
+    "words": [
+     "non",
+     "alcoholic",
+     "beer",
+     "bottle",
+     "sparkling",
+     "alcohol",
+     "vol"
+    ]
+   },
+   "84": {
+    "n": 26,
+    "carbon": {
+     "p5": 0.82,
+     "p50": 0.87,
+     "p95": 0.87
+    },
+    "carbonCovPct": 61.5,
+    "reliabilityCovPct": 15.4,
+    "words": [
+     "beer",
+     "can",
+     "alcohol",
+     "non",
+     "alcoholic",
+     "lager",
+     "ipa"
+    ]
+   },
+   "67": {
+    "n": 13,
+    "carbon": {},
+    "carbonCovPct": 0.0,
+    "reliabilityCovPct": 23.1,
+    "words": [
+     "iltalehti",
+     "edition",
+     "iltasanomat",
+     "box",
+     "gift",
+     "remote",
+     "led"
+    ]
+   },
+   "32": {
+    "n": 13,
+    "carbon": {},
+    "carbonCovPct": 0.0,
+    "reliabilityCovPct": 30.8,
+    "words": [
+     "lighter",
+     "matches",
+     "megalighter",
+     "boxes",
+     "firestarter",
+     "lights",
+     "minutes"
+    ]
+   },
+   "30": {
+    "n": 3,
+    "carbon": {},
+    "carbonCovPct": 0.0,
+    "reliabilityCovPct": 66.7,
+    "words": [
+     "flower",
+     "xpert",
+     "soil",
+     "aerosol",
+     "insecticide",
+     "catcher",
+     "kärpäspaperi"
+    ]
+   },
+   "77": {
+    "n": 2,
+    "carbon": {},
+    "carbonCovPct": 0.0,
+    "reliabilityCovPct": 100.0,
+    "words": [
+     "carbonic",
+     "acid",
+     "typpikaasu"
+    ]
+   }
+  }
+ },
+ "categoryLabelHints": {
+  "17300": {
+   "n": 443,
+   "words": [
+    "casserole",
+    "soup",
+    "vegetable",
+    "chicken",
+    "potato"
+   ],
+   "carbonValues": [
+    2.19,
+    3.005,
+    15.79
+   ]
+  },
+  "22630": {
+   "n": 432,
+   "words": [
+    "ground",
+    "seasoning",
+    "whole",
+    "powder",
+    "unsalted"
+   ],
+   "carbonValues": [
+    0.79,
+    1.71,
+    4.975
+   ]
+  },
+  "41763": {
+   "n": 349,
+   "words": [
+    "frozen",
+    "chocolate",
+    "ready",
+    "tart",
+    "product"
+   ],
+   "carbonValues": [
+    0.79,
+    1.44,
+    2.11
+   ]
+  },
+  "64004": {
+   "n": 343,
+   "words": [
+    "lid",
+    "brown",
+    "box",
+    "container",
+    "comp"
+   ],
+   "carbonValues": []
+  },
+  "41760": {
+   "n": 244,
+   "words": [
+    "bread",
+    "frozen",
+    "rye",
+    "baked",
+    "sliced"
+   ],
+   "carbonValues": [
+    1.44,
+    5.21
+   ]
+  },
+  "63235": {
+   "n": 238,
+   "words": [
+    "napkin",
+    "fold",
+    "ply",
+    "dunisoft",
+    "dunilin"
+   ],
+   "carbonValues": []
+  },
+  "41755": {
+   "n": 221,
+   "words": [
+    "frozen",
+    "onion",
+    "chicken",
+    "baked",
+    "mozzarella"
+   ],
+   "carbonValues": [
+    0.39,
+    2.19,
+    3.48,
+    5.425000000000001
+   ]
+  },
+  "22601": {
+   "n": 190,
+   "words": [
+    "chocolate",
+    "vanilla",
+    "powder",
+    "white",
+    "filling"
+   ],
+   "carbonValues": [
+    0.98,
+    5.0
+   ]
+  },
+  "21917": {
+   "n": 184,
+   "words": [
+    "bbq",
+    "pesto",
+    "dressing",
+    "teriyaki",
+    "sriracha"
+   ],
+   "carbonValues": [
+    0.79,
+    1.71
+   ]
+  },
+  "63114": {
+   "n": 181,
+   "words": [
+    "purpose",
+    "all",
+    "disinfectant",
+    "oven",
+    "grill"
+   ],
+   "carbonValues": [
+    0.79
+   ]
+  },
+  "64001": {
+   "n": 180,
+   "words": [
+    "cup",
+    "paperboard",
+    "lid",
+    "glass",
+    "rpet"
+   ],
+   "carbonValues": [
+    0.79
+   ]
+  },
+  "41764": {
+   "n": 179,
+   "words": [
+    "frozen",
+    "bun",
+    "lactose",
+    "cinnamon",
+    "croissant"
+   ],
+   "carbonValues": [
+    1.16,
+    1.42
+   ]
+  },
+  "63120": {
+   "n": 164,
+   "words": [
+    "cloth",
+    "brush",
+    "handle",
+    "floor",
+    "towel"
+   ],
+   "carbonValues": []
+  },
+  "22700": {
+   "n": 157,
+   "words": [
+    "bottle",
+    "lemonade",
+    "plastic",
+    "can",
+    "zero"
+   ],
+   "carbonValues": [
+    0.585,
+    0.82
+   ]
+  },
+  "52210": {
+   "n": 152,
+   "words": [
+    "bag",
+    "confectionery",
+    "liquorice",
+    "chocolate",
+    "remix"
+   ],
+   "carbonValues": [
+    1.215,
+    2.8
+   ]
+  },
+  "10412": {
+   "n": 150,
+   "words": [
+    "yoghurt",
+    "lactose",
+    "valiojogurtti",
+    "natural",
+    "greek"
+   ],
+   "carbonValues": [
+    1.93
+   ]
+  },
+  "18720": {
+   "n": 149,
+   "words": [
+    "steak",
+    "striploin",
+    "tenderloin",
+    "chilled",
+    "sirloin"
+   ],
+   "carbonValues": [
+    26.195
+   ]
+  },
+  "21596": {
+   "n": 147,
+   "words": [
+    "peppers",
+    "garlic",
+    "sliced",
+    "brine",
+    "jalapeno"
+   ],
+   "carbonValues": [
+    8.135
+   ]
+  },
+  "41753": {
+   "n": 146,
+   "words": [
+    "frozen",
+    "cooked",
+    "vegetable",
+    "patty",
+    "fried"
+   ],
+   "carbonValues": [
+    0.79,
+    2.195,
+    4.46
+   ]
+  },
+  "21380": {
+   "n": 140,
+   "words": [
+    "penne",
+    "macaroni",
+    "fusilli",
+    "spaghetti",
+    "rigate"
+   ],
+   "carbonValues": [
+    1.44
+   ]
+  },
+  "41705": {
+   "n": 140,
+   "words": [
+    "frozen",
+    "fried",
+    "patty",
+    "meatball",
+    "cooked"
+   ],
+   "carbonValues": [
+    1.73,
+    2.195,
+    3.48,
+    4.46
+   ]
+  },
+  "41820": {
+   "n": 139,
+   "words": [
+    "lactose",
+    "scoop",
+    "sorbet",
+    "chocolate",
+    "vanilla"
+   ],
+   "carbonValues": [
+    0.79
+   ]
+  },
+  "41731": {
+   "n": 136,
+   "words": [
+    "frozen",
+    "greens",
+    "carrot",
+    "diced",
+    "kotimainen"
+   ],
+   "carbonValues": [
+    0.6
+   ]
+  },
+  "41762": {
+   "n": 131,
+   "words": [
+    "frozen",
+    "pastry",
+    "pie",
+    "pasty",
+    "baked"
+   ],
+   "carbonValues": [
+    2.32,
+    3.48
+   ]
+  },
+  "10600": {
+   "n": 129,
+   "words": [
+    "gouda",
+    "oltermanni",
+    "reggiano",
+    "polar",
+    "app"
+   ],
+   "carbonValues": [
+    5.115
+   ]
+  },
+  "41710": {
+   "n": 129,
+   "words": [
+    "chicken",
+    "frozen",
+    "fillet",
+    "roasted",
+    "iqf"
+   ],
+   "carbonValues": [
+    5.085
+   ]
+  },
+  "63001": {
+   "n": 125,
+   "words": [
+    "soap",
+    "hand",
+    "dispenser",
+    "foam",
+    "gel"
+   ],
+   "carbonValues": [
+    0.79
+   ]
+  },
+  "64003": {
+   "n": 125,
+   "words": [
+    "round",
+    "doily",
+    "white",
+    "straw",
+    "foil"
+   ],
+   "carbonValues": [
+    0.79
+   ]
+  },
+  "22140": {
+   "n": 125,
+   "words": [
+    "syrup",
+    "vanilla",
+    "caramel",
+    "puree",
+    "strawberry"
+   ],
+   "carbonValues": [
+    0.3,
+    0.82,
+    0.885,
+    2.56
+   ]
+  },
+  "41800": {
+   "n": 124,
+   "words": [
+    "stick",
+    "cone",
+    "lactose",
+    "chocolate",
+    "caramel"
+   ],
+   "carbonValues": [
+    1.44
+   ]
+  },
+  "17306": {
+   "n": 123,
+   "words": [
+    "fava",
+    "strips",
+    "mince",
+    "sausage",
+    "oats"
+   ],
+   "carbonValues": [
+    0.79,
+    1.73
+   ]
+  },
+  "41720": {
+   "n": 122,
+   "words": [
+    "frozen",
+    "fillet",
+    "trout",
+    "rainbow",
+    "salmon"
+   ],
+   "carbonValues": [
+    4.46,
+    6.244999999999999
+   ]
+  },
+  "41761": {
+   "n": 119,
+   "words": [
+    "bun",
+    "frozen",
+    "roll",
+    "brioche",
+    "burger"
+   ],
+   "carbonValues": [
+    0.79,
+    1.16,
+    1.42
+   ]
+  },
+  "20012": {
+   "n": 119,
+   "words": [
+    "pan",
+    "lid",
+    "white",
+    "container",
+    "drainer"
+   ],
+   "carbonValues": []
+  },
+  "63100": {
+   "n": 117,
+   "words": [
+    "dishwashing",
+    "machine",
+    "detergent",
+    "rinse",
+    "pur"
+   ],
+   "carbonValues": []
+  },
+  "63232": {
+   "n": 113,
+   "words": [
+    "dunicel",
+    "tete",
+    "evolin",
+    "tet",
+    "tablecover"
+   ],
+   "carbonValues": []
+  },
+  "21902": {
+   "n": 111,
+   "words": [
+    "bouillon",
+    "fond",
+    "powder",
+    "chicken",
+    "vegetable"
+   ],
+   "carbonValues": [
+    9.74
+   ]
+  },
+  "20022": {
+   "n": 110,
+   "words": [
+    "spatula",
+    "silicone",
+    "strainer",
+    "rst",
+    "gastromax"
+   ],
+   "carbonValues": []
+  },
+  "41702": {
+   "n": 109,
+   "words": [
+    "frozen",
+    "raw",
+    "steak",
+    "minced",
+    "burger"
+   ],
+   "carbonValues": [
+    15.79,
+    26.195
+   ]
+  },
+  "22300": {
+   "n": 109,
+   "words": [
+    "coffee",
+    "ground",
+    "filter",
+    "rac",
+    "coarse"
+   ],
+   "carbonValues": [
+    0.79,
+    7.12
+   ]
+  },
+  "41801": {
+   "n": 109,
+   "words": [
+    "lactose",
+    "homepackage",
+    "chocolate",
+    "vanilla",
+    "caramel"
+   ],
+   "carbonValues": [
+    1.44
+   ]
+  },
+  "17210": {
+   "n": 108,
+   "words": [
+    "pork",
+    "cooked",
+    "chicken",
+    "smoked",
+    "sliced"
+   ],
+   "carbonValues": [
+    0.5750000000000001,
+    2.19,
+    9.21
+   ]
+  },
+  "18750": {
+   "n": 107,
+   "words": [
+    "chicken",
+    "fillet",
+    "salted",
+    "lightly",
+    "app"
+   ],
+   "carbonValues": [
+    5.085
+   ]
+  },
+  "22530": {
+   "n": 106,
+   "words": [
+    "bags",
+    "rfa",
+    "grey",
+    "earl",
+    "horeca"
+   ],
+   "carbonValues": [
+    1.55
+   ]
+  },
+  "20031": {
+   "n": 106,
+   "words": [
+    "bowl",
+    "plate",
+    "elements",
+    "mex",
+    "sendan"
+   ],
+   "carbonValues": []
+  },
+  "18710": {
+   "n": 106,
+   "words": [
+    "pork",
+    "sirloin",
+    "kpl",
+    "steak",
+    "escalop"
+   ],
+   "carbonValues": [
+    0.79,
+    6.245
+   ]
+  },
+  "17443": {
+   "n": 105,
+   "words": [
+    "cucumber",
+    "tomato",
+    "cabbage",
+    "paprika",
+    "strip"
+   ],
+   "carbonValues": [
+    0.37,
+    0.705,
+    1.085,
+    8.135
+   ]
+  },
+  "17301": {
+   "n": 102,
+   "words": [
+    "salad",
+    "chicken",
+    "beetroot",
+    "cabbage",
+    "potato"
+   ],
+   "carbonValues": [
+    2.315
+   ]
+  },
+  "17200": {
+   "n": 99,
+   "words": [
+    "sausage",
+    "grill",
+    "oven",
+    "bratwurst",
+    "kabanossi"
+   ],
+   "carbonValues": [
+    2.19,
+    5.425000000000001
+   ]
+  },
+  "21140": {
+   "n": 96,
+   "words": [
+    "biscuit",
+    "gingerbread",
+    "chocolate",
+    "cookies",
+    "oat"
+   ],
+   "carbonValues": [
+    0.79,
+    3.08
+   ]
+  },
+  "21450": {
+   "n": 95,
+   "words": [
+    "filling",
+    "raspberry",
+    "strawberry",
+    "preserve",
+    "curd"
+   ],
+   "carbonValues": [
+    1.215
+   ]
+  },
+  "20032": {
+   "n": 95,
+   "words": [
+    "glass",
+    "arc",
+    "kpl",
+    "beer",
+    "wine"
+   ],
+   "carbonValues": []
+  },
+  "21403": {
+   "n": 94,
+   "words": [
+    "apple",
+    "hedelmätarha",
+    "natur",
+    "pineapple",
+    "fruits"
+   ],
+   "carbonValues": [
+    0.67,
+    3.355
+   ]
+  },
+  "63231": {
+   "n": 94,
+   "words": [
+    "napkin",
+    "ply",
+    "fold",
+    "lunch",
+    "box"
+   ],
+   "carbonValues": []
+  },
+  "52200": {
+   "n": 91,
+   "words": [
+    "bar",
+    "chocolate",
+    "liquorice",
+    "countline",
+    "xfazer"
+   ],
+   "carbonValues": [
+    0.79,
+    2.8
+   ]
+  },
+  "10400": {
+   "n": 91,
+   "words": [
+    "skimmed",
+    "lactose",
+    "semi",
+    "uht",
+    "novobox"
+   ],
+   "carbonValues": [
+    1.1
+   ]
+  },
+  "52290": {
+   "n": 90,
+   "words": [
+    "chocolate",
+    "praline",
+    "pralines",
+    "box",
+    "egg"
+   ],
+   "carbonValues": [
+    0.79,
+    2.45,
+    2.8
+   ]
+  },
+  "10602": {
+   "n": 89,
+   "words": [
+    "slices",
+    "lactose",
+    "processed",
+    "oltermanni",
+    "gouda"
+   ],
+   "carbonValues": [
+    5.21
+   ]
+  },
+  "64005": {
+   "n": 88,
+   "words": [
+    "bag",
+    "plastic",
+    "pocket",
+    "seal",
+    "heat"
+   ],
+   "carbonValues": []
+  },
+  "21400": {
+   "n": 88,
+   "words": [
+    "trip",
+    "glogg",
+    "juissi",
+    "pear",
+    "apple"
+   ],
+   "carbonValues": [
+    0.68
+   ]
+  },
+  "21910": {
+   "n": 87,
+   "words": [
+    "mayonnaise",
+    "aioli",
+    "garlic",
+    "cucumber",
+    "sriracha"
+   ],
+   "carbonValues": [
+    2.56,
+    3.0500000000000003
+   ]
+  },
+  "20033": {
+   "n": 87,
+   "words": [
+    "bowl",
+    "jug",
+    "basket",
+    "zen",
+    "melamine"
+   ],
+   "carbonValues": []
+  },
+  "63115": {
+   "n": 83,
+   "words": [
+    "air",
+    "freshener",
+    "block",
+    "toilet",
+    "tablet"
+   ],
+   "carbonValues": []
+  },
+  "17203": {
+   "n": 82,
+   "words": [
+    "ham",
+    "sliced",
+    "smoked",
+    "cooked",
+    "pork"
+   ],
+   "carbonValues": [
+    0.79,
+    5.19,
+    10.09
+   ]
+  },
+  "11030": {
+   "n": 81,
+   "words": [
+    "loaf",
+    "bun",
+    "filling",
+    "pie",
+    "blueberry"
+   ],
+   "carbonValues": [
+    0.79,
+    2.38
+   ]
+  },
+  "21918": {
+   "n": 81,
+   "words": [
+    "dressing",
+    "salad",
+    "mustard",
+    "garlic",
+    "caesar"
+   ],
+   "carbonValues": [
+    0.79,
+    2.56
+   ]
+  },
+  "41765": {
+   "n": 81,
+   "words": [
+    "frozen",
+    "pie",
+    "apple",
+    "chocolate",
+    "pastry"
+   ],
+   "carbonValues": [
+    2.11
+   ]
+  },
+  "18701": {
+   "n": 81,
+   "words": [
+    "fillet",
+    "salmon",
+    "asc",
+    "trout",
+    "rainbow"
+   ],
+   "carbonValues": [
+    5.415,
+    6.375
+   ]
+  },
+  "52240": {
+   "n": 80,
+   "words": [
+    "pastille",
+    "xylitol",
+    "drop",
+    "cough",
+    "full"
+   ],
+   "carbonValues": [
+    1.215
+   ]
+  },
+  "63230": {
+   "n": 79,
+   "words": [
+    "napkin",
+    "ply",
+    "fold",
+    "dunisoft",
+    "cocktail"
+   ],
+   "carbonValues": []
+  },
+  "21590": {
+   "n": 78,
+   "words": [
+    "tomato",
+    "tomatoes",
+    "sundried",
+    "oil",
+    "dried"
+   ],
+   "carbonValues": [
+    7.220000000000001
+   ]
+  },
+  "41751": {
+   "n": 78,
+   "words": [
+    "frozen",
+    "fries",
+    "potato",
+    "skin",
+    "surecrisp"
+   ],
+   "carbonValues": [
+    0.39,
+    0.79
+   ]
+  },
+  "22701": {
+   "n": 78,
+   "words": [
+    "can",
+    "carbonated",
+    "edition",
+    "bcaa",
+    "focus"
+   ],
+   "carbonValues": [
+    1.195
+   ]
+  },
+  "63071": {
+   "n": 77,
+   "words": [
+    "glove",
+    "nitrile",
+    "plaster",
+    "cederroth",
+    "cotton"
+   ],
+   "carbonValues": [
+    0.79
+   ]
+  },
+  "10603": {
+   "n": 77,
+   "words": [
+    "grated",
+    "lactose",
+    "cottage",
+    "mozzarella",
+    "shredded"
+   ],
+   "carbonValues": [
+    5.21
+   ]
+  },
+  "20021": {
+   "n": 76,
+   "words": [
+    "victorinox",
+    "knife",
+    "tramontina",
+    "board",
+    "chefs"
+   ],
+   "carbonValues": []
+  },
+  "41723": {
+   "n": 74,
+   "words": [
+    "frozen",
+    "appr",
+    "cooked",
+    "patty",
+    "salmon"
+   ],
+   "carbonValues": [
+    1.73,
+    2.195,
+    4.46,
+    15.79
+   ]
+  },
+  "21370": {
+   "n": 71,
+   "words": [
+    "flakes",
+    "oat",
+    "wholegrain",
+    "instant",
+    "oatmeal"
+   ],
+   "carbonValues": [
+    0.995
+   ]
+  },
+  "10901": {
+   "n": 71,
+   "words": [
+    "bread",
+    "oat",
+    "toast",
+    "white",
+    "sliced"
+   ],
+   "carbonValues": [
+    0.79,
+    1.16
+   ]
+  },
+  "21150": {
+   "n": 70,
+   "words": [
+    "bar",
+    "chocolate",
+    "biscuit",
+    "oats",
+    "oat"
+   ],
+   "carbonValues": [
+    1.515
+   ]
+  },
+  "17303": {
+   "n": 68,
+   "words": [
+    "chicken",
+    "bread",
+    "ham",
+    "filled",
+    "rye"
+   ],
+   "carbonValues": [
+    15.915
+   ]
+  },
+  "41766": {
+   "n": 66,
+   "words": [
+    "frozen",
+    "dough",
+    "pastry",
+    "base",
+    "puff"
+   ],
+   "carbonValues": [
+    1.07
+   ]
+  },
+  "10402": {
+   "n": 66,
+   "words": [
+    "oat",
+    "uht",
+    "barista",
+    "coconut",
+    "vanilla"
+   ],
+   "carbonValues": [
+    0.43499999999999994
+   ]
+  },
+  "21340": {
+   "n": 66,
+   "words": [
+    "grain",
+    "basmati",
+    "sushi",
+    "parboiled",
+    "risotto"
+   ],
+   "carbonValues": [
+    2.52,
+    2.645
+   ]
+  },
+  "22620": {
+   "n": 65,
+   "words": [
+    "vinegar",
+    "wine",
+    "white",
+    "apple",
+    "spirit"
+   ],
+   "carbonValues": [
+    0.79,
+    0.98
+   ]
+  },
+  "21595": {
+   "n": 65,
+   "words": [
+    "pitted",
+    "olive",
+    "olives",
+    "kalamata",
+    "sliced"
+   ],
+   "carbonValues": [
+    0.57
+   ]
+  },
+  "41742": {
+   "n": 64,
+   "words": [
+    "frozen",
+    "puree",
+    "pure",
+    "xravifruit",
+    "pur"
+   ],
+   "carbonValues": [
+    0.705,
+    0.79,
+    1.405
+   ]
+  },
+  "22641": {
+   "n": 64,
+   "words": [
+    "paste",
+    "curry",
+    "thai",
+    "oelek",
+    "sambal"
+   ],
+   "carbonValues": [
+    0.79,
+    1.215,
+    2.645
+   ]
+  },
+  "21460": {
+   "n": 64,
+   "words": [
+    "almond",
+    "nuts",
+    "diced",
+    "hazelnuts",
+    "cashew"
+   ],
+   "carbonValues": [
+    1.78
+   ]
+  },
+  "17206": {
+   "n": 63,
+   "words": [
+    "salami",
+    "chorizo",
+    "pepperoni",
+    "sliced",
+    "medwurst"
+   ],
+   "carbonValues": [
+    5.19,
+    10.09
+   ]
+  },
+  "22706": {
+   "n": 63,
+   "words": [
+    "mineral",
+    "bottle",
+    "vellamo",
+    "xkevytolo",
+    "xolvi"
+   ],
+   "carbonValues": [
+    0.17
+   ]
+  },
+  "52209": {
+   "n": 62,
+   "words": [
+    "loose",
+    "tutti",
+    "frutti",
+    "salty",
+    "chocolate"
+   ],
+   "carbonValues": [
+    1.215
+   ]
+  },
+  "64010": {
+   "n": 61,
+   "words": [
+    "candle",
+    "pillar",
+    "white",
+    "antique",
+    "xhavi"
+   ],
+   "carbonValues": []
+  },
+  "21401": {
+   "n": 61,
+   "words": [
+    "concentrate",
+    "mixed",
+    "sugared",
+    "apple",
+    "glogg"
+   ],
+   "carbonValues": [
+    2.52
+   ]
+  },
+  "21461": {
+   "n": 61,
+   "words": [
+    "dried",
+    "dates",
+    "raisin",
+    "freeze",
+    "pitted"
+   ],
+   "carbonValues": [
+    4.475
+   ]
+  },
+  "20011": {
+   "n": 60,
+   "words": [
+    "opa",
+    "pan",
+    "pot",
+    "frypan",
+    "mari"
+   ],
+   "carbonValues": []
+  },
+  "18705": {
+   "n": 59,
+   "words": [
+    "herring",
+    "onion",
+    "matjes",
+    "piquant",
+    "mustard"
+   ],
+   "carbonValues": [
+    3.28
+   ]
+  },
+  "21310": {
+   "n": 59,
+   "words": [
+    "flour",
+    "rye",
+    "wheat",
+    "breadcrumbs",
+    "birkkalan"
+   ],
+   "carbonValues": [
+    1.685
+   ]
+  },
+  "52201": {
+   "n": 58,
+   "words": [
+    "tablet",
+    "chocolate",
+    "dark",
+    "bar",
+    "white"
+   ],
+   "carbonValues": [
+    2.88
+   ]
+  },
+  "21904": {
+   "n": 57,
+   "words": [
+    "tetra",
+    "sooci",
+    "hollandaise",
+    "creamy",
+    "wine"
+   ],
+   "carbonValues": [
+    6.4
+   ]
+  },
+  "21994": {
+   "n": 56,
+   "words": [
+    "salsa",
+    "chunky",
+    "medium",
+    "mild",
+    "thick"
+   ],
+   "carbonValues": [
+    0.79,
+    1.42,
+    1.71
+   ]
+  },
+  "41701": {
+   "n": 56,
+   "words": [
+    "frozen",
+    "pork",
+    "cebo",
+    "iberico",
+    "ribs"
+   ],
+   "carbonValues": [
+    0.79,
+    6.245,
+    10.09
+   ]
+  },
+  "17454": {
+   "n": 55,
+   "words": [
+    "mimis",
+    "cress",
+    "box",
+    "sprout",
+    "mustard"
+   ],
+   "carbonValues": [
+    0.25,
+    0.38
+   ]
+  },
+  "21600": {
+   "n": 54,
+   "words": [
+    "from",
+    "mth",
+    "uht",
+    "onni",
+    "babyfood"
+   ],
+   "carbonValues": []
+  },
+  "21594": {
+   "n": 54,
+   "words": [
+    "beans",
+    "tomato",
+    "pouch",
+    "kidney",
+    "giant"
+   ],
+   "carbonValues": [
+    0.595,
+    8.135
+   ]
+  },
+  "10635": {
+   "n": 54,
+   "words": [
+    "lactose",
+    "viola",
+    "natural",
+    "processed",
+    "spreadable"
+   ],
+   "carbonValues": [
+    2.85
+   ]
+  },
+  "20035": {
+   "n": 54,
+   "words": [
+    "spoon",
+    "fork",
+    "knife",
+    "victory",
+    "style"
+   ],
+   "carbonValues": [
+    0.79
+   ]
+  },
+  "10401": {
+   "n": 53,
+   "words": [
+    "lactose",
+    "uht",
+    "cooking",
+    "whipping",
+    "keittiön"
+   ],
+   "carbonValues": [
+    1.81
+   ]
+  },
+  "63113": {
+   "n": 52,
+   "words": [
+    "color",
+    "powder",
+    "sensitive",
+    "detergent",
+    "washing"
+   ],
+   "carbonValues": []
+  },
+  "41721": {
+   "n": 52,
+   "words": [
+    "frozen",
+    "asc",
+    "cooked",
+    "shrimp",
+    "peeled"
+   ],
+   "carbonValues": [
+    0.79,
+    2.32
+   ]
+  },
+  "21905": {
+   "n": 51,
+   "words": [
+    "base",
+    "tetra",
+    "flavor",
+    "brown",
+    "white"
+   ],
+   "carbonValues": [
+    1.8900000000000001
+   ]
+  },
+  "21130": {
+   "n": 50,
+   "words": [
+    "wafer",
+    "biscuit",
+    "domino",
+    "waffle",
+    "raspberry"
+   ],
+   "carbonValues": [
+    0.79,
+    2.395,
+    2.51
+   ]
+  },
+  "21404": {
+   "n": 50,
+   "words": [
+    "apple",
+    "mango",
+    "raikas",
+    "strawberry",
+    "banana"
+   ],
+   "carbonValues": [
+    1.79
+   ]
+  },
+  "17445": {
+   "n": 50,
+   "words": [
+    "cube",
+    "pineapple",
+    "peel",
+    "apple",
+    "diced"
+   ],
+   "carbonValues": [
+    0.705,
+    1.0
+   ]
+  },
+  "21990": {
+   "n": 49,
+   "words": [
+    "chips",
+    "flavoured",
+    "potato",
+    "onion",
+    "sourcream"
+   ],
+   "carbonValues": [
+    1.315
+   ]
+  },
+  "41732": {
+   "n": 49,
+   "words": [
+    "frozen",
+    "vegetable",
+    "greens",
+    "vegetables",
+    "root"
+   ],
+   "carbonValues": [
+    0.245
+   ]
+  },
+  "17431": {
+   "n": 49,
+   "words": [
+    "washed",
+    "carrot",
+    "yellow",
+    "radish",
+    "bunch"
+   ],
+   "carbonValues": [
+    0.37
+   ]
+  },
+  "10430": {
+   "n": 49,
+   "words": [
+    "lactose",
+    "quark",
+    "keittiön",
+    "profeel",
+    "vanilla"
+   ],
+   "carbonValues": [
+    1.93
+   ]
+  },
+  "21591": {
+   "n": 49,
+   "words": [
+    "cucumber",
+    "pickled",
+    "sauvos",
+    "sliced",
+    "relish"
+   ],
+   "carbonValues": [
+    8.025
+   ]
+  },
+  "17209": {
+   "n": 49,
+   "words": [
+    "cooked",
+    "strips",
+    "pork",
+    "chicken",
+    "sausage"
+   ],
+   "carbonValues": [
+    4.5649999999999995
+   ]
+  },
+  "90011": {
+   "n": 49,
+   "words": [
+    "plastic",
+    "folder",
+    "white",
+    "standard",
+    "indices"
+   ],
+   "carbonValues": []
+  },
+  "17442": {
+   "n": 49,
+   "words": [
+    "carrot",
+    "grated",
+    "root",
+    "bits",
+    "särä"
+   ],
+   "carbonValues": [
+    0.37
+   ]
+  },
+  "21980": {
+   "n": 48,
+   "words": [
+    "mousse",
+    "kissel",
+    "soup",
+    "raspberry",
+    "powder"
+   ],
+   "carbonValues": [
+    2.19,
+    2.395
+   ]
+  },
+  "10900": {
+   "n": 47,
+   "words": [
+    "bread",
+    "rye",
+    "wholegrain",
+    "dark",
+    "whole"
+   ],
+   "carbonValues": [
+    0.79,
+    1.02
+   ]
+  },
+  "20034": {
+   "n": 47,
+   "words": [
+    "ladle",
+    "spatula",
+    "slip",
+    "non",
+    "tongs"
+   ],
+   "carbonValues": []
+  },
+  "22702": {
+   "n": 47,
+   "words": [
+    "tonic",
+    "can",
+    "ale",
+    "mixer",
+    "non"
+   ],
+   "carbonValues": [
+    0.3,
+    0.68
+   ]
+  },
+  "10636": {
+   "n": 47,
+   "words": [
+    "feta",
+    "cubes",
+    "lactose",
+    "pdo",
+    "greek"
+   ],
+   "carbonValues": [
+    4.66
+   ]
+  },
+  "41754": {
+   "n": 47,
+   "words": [
+    "frozen",
+    "burger",
+    "pea",
+    "deep",
+    "balls"
+   ],
+   "carbonValues": [
+    1.07,
+    1.73,
+    2.11
+   ]
+  },
+  "10413": {
+   "n": 46,
+   "words": [
+    "gurt",
+    "oat",
+    "fermented",
+    "based",
+    "soygurt"
+   ],
+   "carbonValues": [
+    0.45999999999999996,
+    0.5750000000000001,
+    1.93
+   ]
+  },
+  "63272": {
+   "n": 46,
+   "words": [
+    "film",
+    "sheets",
+    "cling",
+    "foil",
+    "baking"
+   ],
+   "carbonValues": []
+  },
+  "41712": {
+   "n": 46,
+   "words": [
+    "chicken",
+    "frozen",
+    "breaded",
+    "cooked",
+    "kiev"
+   ],
+   "carbonValues": [
+    3.48,
+    5.085,
+    15.79
+   ]
+  },
+  "22610": {
+   "n": 45,
+   "words": [
+    "mustard",
+    "dijon",
+    "mild",
+    "strong",
+    "traditional"
+   ],
+   "carbonValues": [
+    1.77
+   ]
+  },
+  "10531": {
+   "n": 45,
+   "words": [
+    "oil",
+    "olive",
+    "virgin",
+    "virg",
+    "monum"
+   ],
+   "carbonValues": [
+    2.11
+   ]
+  },
+  "90012": {
+   "n": 45,
+   "words": [
+    "marker",
+    "edding",
+    "permanent",
+    "stabilo",
+    "boss"
+   ],
+   "carbonValues": []
+  },
+  "17404": {
+   "n": 44,
+   "words": [
+    "cabbage",
+    "cauliflower",
+    "kale",
+    "purple",
+    "broccoli"
+   ],
+   "carbonValues": [
+    1.13
+   ]
+  },
+  "63121": {
+   "n": 44,
+   "words": [
+    "bag",
+    "waste",
+    "garbage",
+    "roll",
+    "trash"
+   ],
+   "carbonValues": []
+  },
+  "22410": {
+   "n": 44,
+   "words": [
+    "coffee",
+    "beans",
+    "whole",
+    "fairtrade",
+    "rac"
+   ],
+   "carbonValues": [
+    6.9
+   ]
+  },
+  "17302": {
+   "n": 43,
+   "words": [
+    "salaattimestari",
+    "product",
+    "piping",
+    "bag",
+    "salmon"
+   ],
+   "carbonValues": [
+    3.005,
+    10.96
+   ]
+  },
+  "21920": {
+   "n": 43,
+   "words": [
+    "curry",
+    "bolognese",
+    "wok",
+    "thai",
+    "sour"
+   ],
+   "carbonValues": [
+    3.0500000000000003
+   ]
+  },
+  "21580": {
+   "n": 42,
+   "words": [
+    "pineapple",
+    "peach",
+    "halves",
+    "syrup",
+    "slices"
+   ],
+   "carbonValues": [
+    0.79,
+    1.0
+   ]
+  },
+  "21993": {
+   "n": 42,
+   "words": [
+    "rye",
+    "flavoured",
+    "balls",
+    "chips",
+    "jerky"
+   ],
+   "carbonValues": [
+    1.62,
+    2.31,
+    3.5250000000000004
+   ]
+  },
+  "10515": {
+   "n": 42,
+   "words": [
+    "oivariini",
+    "hyla",
+    "spread",
+    "vegetable",
+    "fat"
+   ],
+   "carbonValues": [
+    5.33
+   ]
+  },
+  "64011": {
+   "n": 42,
+   "words": [
+    "lantern",
+    "led",
+    "lamp",
+    "nour",
+    "metallic"
+   ],
+   "carbonValues": []
+  },
+  "63240": {
+   "n": 42,
+   "words": [
+    "white",
+    "towel",
+    "hand",
+    "roll",
+    "ply"
+   ],
+   "carbonValues": []
+  },
+  "10431": {
+   "n": 42,
+   "words": [
+    "lactose",
+    "profeel",
+    "chocolate",
+    "pudding",
+    "strawberry"
+   ],
+   "carbonValues": [
+    1.195,
+    1.93
+   ]
+  },
+  "17441": {
+   "n": 42,
+   "words": [
+    "salad",
+    "iceberg",
+    "lettuce",
+    "romaine",
+    "spinach"
+   ],
+   "carbonValues": [
+    0.37,
+    1.2349999999999999
+   ]
+  },
+  "17403": {
+   "n": 41,
+   "words": [
+    "lettuce",
+    "salad",
+    "romaine",
+    "netherlands",
+    "iceberg"
+   ],
+   "carbonValues": [
+    0.38,
+    1.22
+   ]
+  },
+  "21921": {
+   "n": 41,
+   "words": [
+    "dek",
+    "boon",
+    "som",
+    "japanese",
+    "less"
+   ],
+   "carbonValues": [
+    0.57
+   ]
+  },
+  "21320": {
+   "n": 40,
+   "words": [
+    "flour",
+    "bread",
+    "bun",
+    "dark",
+    "oat"
+   ],
+   "carbonValues": [
+    1.14
+   ]
+  },
+  "22600": {
+   "n": 40,
+   "words": [
+    "sea",
+    "iodine",
+    "seasoning",
+    "iodised",
+    "flakes"
+   ],
+   "carbonValues": [
+    0.42
+   ]
+  },
+  "22100": {
+   "n": 40,
+   "words": [
+    "granulated",
+    "brown",
+    "cane",
+    "cubes",
+    "fairtrade"
+   ],
+   "carbonValues": [
+    0.79,
+    0.885
+   ]
+  },
+  "63233": {
+   "n": 40,
+   "words": [
+    "napkin",
+    "dispenser",
+    "ply",
+    "fold",
+    "xpressnap"
+   ],
+   "carbonValues": []
+  },
+  "52202": {
+   "n": 40,
+   "words": [
+    "chocolate",
+    "praline",
+    "sweets",
+    "chocolates",
+    "hazelnut"
+   ],
+   "carbonValues": [
+    2.8
+   ]
+  },
+  "41830": {
+   "n": 39,
+   "words": [
+    "frozen",
+    "pancake",
+    "mämmi",
+    "pastry",
+    "bag"
+   ],
+   "carbonValues": [
+    0.45999999999999996
+   ]
+  },
+  "21981": {
+   "n": 39,
+   "words": [
+    "topping",
+    "chocolate",
+    "vanilla",
+    "lactose",
+    "flavouring"
+   ],
+   "carbonValues": [
+    1.88
+   ]
+  },
+  "41703": {
+   "n": 39,
+   "words": [
+    "frozen",
+    "reindeer",
+    "elk",
+    "venison",
+    "roast"
+   ],
+   "carbonValues": [
+    3.49
+   ]
+  },
+  "63241": {
+   "n": 38,
+   "words": [
+    "dispenser",
+    "roll",
+    "toilet",
+    "white",
+    "towel"
+   ],
+   "carbonValues": []
+  },
+  "63210": {
+   "n": 37,
+   "words": [
+    "toilet",
+    "white",
+    "roll",
+    "jumbo",
+    "ply"
+   ],
+   "carbonValues": [
+    0.79
+   ]
+  },
+  "90022": {
+   "n": 37,
+   "words": [
+    "tape",
+    "mmx",
+    "scriva",
+    "rapid",
+    "rubber"
+   ],
+   "carbonValues": []
+  },
+  "17201": {
+   "n": 37,
+   "words": [
+    "frankfurter",
+    "sausage",
+    "skinless",
+    "wiener",
+    "popsi"
+   ],
+   "carbonValues": [
+    4.92
+   ]
+  },
+  "20036": {
+   "n": 36,
+   "words": [
+    "steel",
+    "pourer",
+    "plastic",
+    "shaker",
+    "siphon"
+   ],
+   "carbonValues": []
+  },
+  "21451": {
+   "n": 36,
+   "words": [
+    "pur",
+    "puree",
+    "mango",
+    "peach",
+    "strawberry"
+   ],
+   "carbonValues": [
+    0.79,
+    0.8200000000000001
+   ]
+  },
+  "63300": {
+   "n": 36,
+   "words": [
+    "unisex",
+    "hejco",
+    "shirt",
+    "svart",
+    "kockrock"
+   ],
+   "carbonValues": []
+  },
+  "21992": {
+   "n": 35,
+   "words": [
+    "nuts",
+    "peanuts",
+    "salted",
+    "cashew",
+    "coated"
+   ],
+   "carbonValues": [
+    1.78
+   ]
+  },
+  "21462": {
+   "n": 35,
+   "words": [
+    "seeds",
+    "seed",
+    "peeled",
+    "sunflower",
+    "pumpkin"
+   ],
+   "carbonValues": [
+    1.52
+   ]
+  },
+  "64000": {
+   "n": 35,
+   "words": [
+    "plate",
+    "white",
+    "palm",
+    "fiber",
+    "bagasse"
+   ],
+   "carbonValues": []
+  },
+  "41740": {
+   "n": 35,
+   "words": [
+    "frozen",
+    "currant",
+    "raspberry",
+    "strawberry",
+    "finnish"
+   ],
+   "carbonValues": [
+    1.405
+   ]
+  },
+  "52208": {
+   "n": 34,
+   "words": [
+    "lollipop",
+    "chocolate",
+    "liquorice",
+    "strawberry",
+    "sour"
+   ],
+   "carbonValues": [
+    1.215
+   ]
+  },
+  "20014": {
+   "n": 34,
+   "words": [
+    "bag",
+    "freezer",
+    "fido",
+    "jar",
+    "bottle"
+   ],
+   "carbonValues": []
+  },
+  "21120": {
+   "n": 33,
+   "words": [
+    "salted",
+    "cracker",
+    "valitut",
+    "cakes",
+    "biscuits"
+   ],
+   "carbonValues": [
+    0.79,
+    2.31
+   ]
+  },
+  "21912": {
+   "n": 33,
+   "words": [
+    "ketchup",
+    "tomato",
+    "less",
+    "dispenser",
+    "bag"
+   ],
+   "carbonValues": [
+    0.79,
+    0.84
+   ]
+  },
+  "21991": {
+   "n": 33,
+   "words": [
+    "chips",
+    "corn",
+    "tortillas",
+    "medium",
+    "wrap"
+   ],
+   "carbonValues": [
+    1.23
+   ]
+  },
+  "64002": {
+   "n": 33,
+   "words": [
+    "waxed",
+    "fork",
+    "spoon",
+    "wooden",
+    "wood"
+   ],
+   "carbonValues": [
+    0.79
+   ]
+  },
+  "17415": {
+   "n": 32,
+   "words": [
+    "thailand",
+    "rica",
+    "costa",
+    "spain",
+    "melon"
+   ],
+   "carbonValues": [
+    0.705
+   ]
+  },
+  "21211": {
+   "n": 32,
+   "words": [
+    "crispbread",
+    "koulunäkki",
+    "rye",
+    "wholegrain",
+    "bread"
+   ],
+   "carbonValues": [
+    1.62
+   ]
+  },
+  "17455": {
+   "n": 32,
+   "words": [
+    "mimis",
+    "flower",
+    "box",
+    "ras",
+    "verbena"
+   ],
+   "carbonValues": [
+    0.25,
+    0.38
+   ]
+  },
+  "17423": {
+   "n": 32,
+   "words": [
+    "potato",
+    "cooked",
+    "precooked",
+    "cubes",
+    "skin"
+   ],
+   "carbonValues": [
+    0.20500000000000002,
+    3.005
+   ]
+  },
+  "90024": {
+   "n": 32,
+   "words": [
+    "connect",
+    "ink",
+    "casio",
+    "grip",
+    "color"
+   ],
+   "carbonValues": []
+  },
+  "17305": {
+   "n": 32,
+   "words": [
+    "hummus",
+    "beetroot",
+    "spread",
+    "chickpea",
+    "tahini"
+   ],
+   "carbonValues": [
+    3.45
+   ]
+  },
+  "63271": {
+   "n": 31,
+   "words": [
+    "filter",
+    "coffee",
+    "unbleached",
+    "white",
+    "coffeefilter"
+   ],
+   "carbonValues": []
+  },
+  "21381": {
+   "n": 31,
+   "words": [
+    "noodles",
+    "wheat",
+    "whole",
+    "noodle",
+    "wok"
+   ],
+   "carbonValues": [
+    1.5550000000000002
+   ]
+  },
+  "41704": {
+   "n": 31,
+   "words": [
+    "frozen",
+    "vac",
+    "tenderloin",
+    "minced",
+    "entrecote"
+   ],
+   "carbonValues": [
+    6.245,
+    30.46
+   ]
+  },
+  "21402": {
+   "n": 31,
+   "words": [
+    "soup",
+    "berry",
+    "strawberry",
+    "added",
+    "bilberry"
+   ],
+   "carbonValues": [
+    1.79,
+    2.32
+   ]
+  },
+  "90015": {
+   "n": 31,
+   "words": [
+    "post",
+    "pad",
+    "notebook",
+    "wire",
+    "bound"
+   ],
+   "carbonValues": []
+  },
+  "85001": {
+   "n": 31,
+   "words": [
+    "beer",
+    "non",
+    "alcoholic",
+    "bottle",
+    "alcohol"
+   ],
+   "carbonValues": [
+    0.68
+   ]
+  },
+  "10406": {
+   "n": 30,
+   "words": [
+    "cooking",
+    "coconut",
+    "oat",
+    "uht",
+    "whipping"
+   ],
+   "carbonValues": [
+    0.45999999999999996,
+    4.21
+   ]
+  },
+  "22670": {
+   "n": 30,
+   "words": [
+    "powder",
+    "gelatin",
+    "acid",
+    "citric",
+    "vinegar"
+   ],
+   "carbonValues": [
+    1.73
+   ]
+  },
+  "20023": {
+   "n": 30,
+   "words": [
+    "lux",
+    "rack",
+    "frame",
+    "compartment",
+    "scraper"
+   ],
+   "carbonValues": []
+  },
+  "17401": {
+   "n": 29,
+   "words": [
+    "tomato",
+    "cherry",
+    "fin",
+    "yellow",
+    "plum"
+   ],
+   "carbonValues": [
+    1.96
+   ]
+  },
+  "21452": {
+   "n": 29,
+   "words": [
+    "marmalade",
+    "jelly",
+    "raspberry",
+    "bake",
+    "stable"
+   ],
+   "carbonValues": [
+    1.165
+   ]
+  },
+  "17451": {
+   "n": 29,
+   "words": [
+    "bunch",
+    "dill",
+    "parsley",
+    "basil",
+    "box"
+   ],
+   "carbonValues": [
+    0.38
+   ]
+  },
+  "64007": {
+   "n": 29,
+   "words": [
+    "box",
+    "boxong",
+    "glance",
+    "brun",
+    "base"
+   ],
+   "carbonValues": []
+  },
+  "10419": {
+   "n": 29,
+   "words": [
+    "lactose",
+    "sour",
+    "kefir",
+    "gefilus",
+    "smetana"
+   ],
+   "carbonValues": [
+    1.93
+   ]
+  },
+  "21300": {
+   "n": 28,
+   "words": [
+    "flour",
+    "wheat",
+    "coarse",
+    "semi",
+    "pizzaflour"
+   ],
+   "carbonValues": [
+    0.77,
+    1.685
+   ]
+  },
+  "21390": {
+   "n": 28,
+   "words": [
+    "lentils",
+    "beans",
+    "chickpeas",
+    "seed",
+    "hemp"
+   ],
+   "carbonValues": [
+    1.3050000000000002
+   ]
+  },
+  "21360": {
+   "n": 28,
+   "words": [
+    "starch",
+    "thickening",
+    "potato",
+    "cornstarch",
+    "dark"
+   ],
+   "carbonValues": [
+    1.65
+   ]
+  },
+  "21373": {
+   "n": 28,
+   "words": [
+    "muesli",
+    "granola",
+    "oat",
+    "blueberry",
+    "oats"
+   ],
+   "carbonValues": [
+    2.44
+   ]
+  },
+  "17406": {
+   "n": 27,
+   "words": [
+    "capsicum",
+    "dried",
+    "mexico",
+    "netherlands",
+    "yellow"
+   ],
+   "carbonValues": [
+    0.57
+   ]
+  },
+  "22703": {
+   "n": 27,
+   "words": [
+    "carbonated",
+    "non",
+    "shot",
+    "flavoured",
+    "vitamins"
+   ],
+   "carbonValues": [
+    0.67
+   ]
+  },
+  "21382": {
+   "n": 27,
+   "words": [
+    "quinoa",
+    "couscous",
+    "bulgur",
+    "grain",
+    "whole"
+   ],
+   "carbonValues": [
+    4.67
+   ]
+  },
+  "22540": {
+   "n": 27,
+   "words": [
+    "chocolate",
+    "cocoa",
+    "powder",
+    "lactose",
+    "play"
+   ],
+   "carbonValues": [
+    2.315
+   ]
+  },
+  "22413": {
+   "n": 27,
+   "words": [
+    "coffee",
+    "latte",
+    "lactose",
+    "fairtrade",
+    "low"
+   ],
+   "carbonValues": [
+    6.4,
+    20.81
+   ]
+  },
+  "10641": {
+   "n": 27,
+   "words": [
+    "grated",
+    "vegetable",
+    "fat",
+    "block",
+    "style"
+   ],
+   "carbonValues": [
+    1.0
+   ]
+  },
+  "85028": {
+   "n": 27,
+   "words": [
+    "sparkling",
+    "vol",
+    "bottle",
+    "alcohol",
+    "wine"
+   ],
+   "carbonValues": [
+    0.91
+   ]
+  },
+  "21530": {
+   "n": 26,
+   "words": [
+    "oil",
+    "tuna",
+    "sunflower",
+    "smoked",
+    "tunafish"
+   ],
+   "carbonValues": [
+    6.79
+   ]
+  },
+  "10640": {
+   "n": 26,
+   "words": [
+    "lactose",
+    "bread",
+    "squeaky",
+    "paneer",
+    "lactosefree"
+   ],
+   "carbonValues": [
+    2.85,
+    3.3,
+    3.93,
+    5.115
+   ]
+  },
+  "20013": {
+   "n": 26,
+   "words": [
+    "tin",
+    "pan",
+    "aluminium",
+    "bowl",
+    "steel"
+   ],
+   "carbonValues": []
+  },
+  "17205": {
+   "n": 26,
+   "words": [
+    "sausage",
+    "ham",
+    "sliced",
+    "fat",
+    "low"
+   ],
+   "carbonValues": [
+    5.19
+   ]
+  },
+  "63002": {
+   "n": 25,
+   "words": [
+    "toothpaste",
+    "toothbrush",
+    "kids",
+    "white",
+    "toothpick"
+   ],
+   "carbonValues": []
+  },
+  "41771": {
+   "n": 25,
+   "words": [
+    "frozen",
+    "mozzarella",
+    "lactose",
+    "iqf",
+    "goat"
+   ],
+   "carbonValues": [
+    5.21
+   ]
+  },
+  "21371": {
+   "n": 25,
+   "words": [
+    "semolina",
+    "barley",
+    "wholegrain",
+    "broken",
+    "pearl"
+   ],
+   "carbonValues": [
+    1.155
+   ]
+  },
+  "10632": {
+   "n": 25,
+   "words": [
+    "aura",
+    "mould",
+    "gorgonzola",
+    "app",
+    "white"
+   ],
+   "carbonValues": [
+    0.79,
+    4.715
+   ]
+  },
+  "21550": {
+   "n": 25,
+   "words": [
+    "sauvos",
+    "brine",
+    "mushrooms",
+    "borde",
+    "cubed"
+   ],
+   "carbonValues": [
+    0.14
+   ]
+  },
+  "10530": {
+   "n": 24,
+   "words": [
+    "oil",
+    "rapeseed",
+    "frying",
+    "deep",
+    "formspray"
+   ],
+   "carbonValues": [
+    2.425
+   ]
+  },
+  "17405": {
+   "n": 24,
+   "words": [
+    "onion",
+    "garlic",
+    "bag",
+    "bunch",
+    "netherlands"
+   ],
+   "carbonValues": [
+    0.3
+   ]
+  },
+  "10631": {
+   "n": 24,
+   "words": [
+    "white",
+    "mould",
+    "matured",
+    "outside",
+    "from"
+   ],
+   "carbonValues": [
+    5.21
+   ]
+  },
+  "22412": {
+   "n": 23,
+   "words": [
+    "coffee",
+    "instant",
+    "fairtrade",
+    "sticks",
+    "rac"
+   ],
+   "carbonValues": [
+    0.79,
+    20.81
+   ]
+  },
+  "22531": {
+   "n": 23,
+   "words": [
+    "rfa",
+    "loose",
+    "grey",
+    "earl",
+    "lady"
+   ],
+   "carbonValues": [
+    1.55
+   ]
+  },
+  "10411": {
+   "n": 23,
+   "words": [
+    "lactose",
+    "fermented",
+    "viilis",
+    "curdled",
+    "layered"
+   ],
+   "carbonValues": [
+    1.93
+   ]
+  },
+  "17402": {
+   "n": 22,
+   "words": [
+    "pumpkin",
+    "cucumber",
+    "yellow",
+    "courgette",
+    "courgettes"
+   ],
+   "carbonValues": [
+    0.825
+   ]
+  },
+  "17407": {
+   "n": 22,
+   "words": [
+    "asparagus",
+    "eggplant",
+    "thailand",
+    "fennel",
+    "rhubarbs"
+   ],
+   "carbonValues": [
+    1.085
+   ]
+  },
+  "17432": {
+   "n": 22,
+   "words": [
+    "peeled",
+    "vörlö",
+    "onion",
+    "carrot",
+    "swede"
+   ],
+   "carbonValues": [
+    0.3,
+    1.13
+   ]
+  },
+  "17471": {
+   "n": 21,
+   "words": [
+    "mushroom",
+    "kaiteki",
+    "oyster",
+    "fin",
+    "champ"
+   ],
+   "carbonValues": [
+    0.13
+   ]
+  },
+  "64006": {
+   "n": 21,
+   "words": [
+    "bag",
+    "brown",
+    "shopping",
+    "white",
+    "roll"
+   ],
+   "carbonValues": []
+  },
+  "63072": {
+   "n": 21,
+   "words": [
+    "wet",
+    "wipe",
+    "sensitive",
+    "nail",
+    "mineas"
+   ],
+   "carbonValues": []
+  },
+  "52260": {
+   "n": 21,
+   "words": [
+    "xylitol",
+    "chewing",
+    "gum",
+    "full",
+    "flavoured"
+   ],
+   "carbonValues": [
+    1.37
+   ]
+  },
+  "21372": {
+   "n": 21,
+   "words": [
+    "flakes",
+    "corn",
+    "oat",
+    "cereals",
+    "wholegrain"
+   ],
+   "carbonValues": [
+    2.37
+   ]
+  },
+  "64301": {
+   "n": 21,
+   "words": [
+    "led",
+    "alkaline",
+    "oiva",
+    "coin",
+    "cell"
+   ],
+   "carbonValues": [
+    0.79
+   ]
+  },
+  "22532": {
+   "n": 21,
+   "words": [
+    "peach",
+    "rooibos",
+    "flavoured",
+    "juissi",
+    "sugarfree"
+   ],
+   "carbonValues": [
+    0.79,
+    1.55
+   ]
+  },
+  "63130": {
+   "n": 21,
+   "words": [
+    "sistema",
+    "klip",
+    "bottle",
+    "box",
+    "storage"
+   ],
+   "carbonValues": []
+  },
+  "17202": {
+   "n": 21,
+   "words": [
+    "bacon",
+    "cooked",
+    "smoked",
+    "pekoni",
+    "sliced"
+   ],
+   "carbonValues": [
+    6.01
+   ]
+  },
+  "10592": {
+   "n": 21,
+   "words": [
+    "egg",
+    "barn",
+    "eggs",
+    "whole",
+    "bib"
+   ],
+   "carbonValues": [
+    2.6399999999999997
+   ]
+  },
+  "17421": {
+   "n": 20,
+   "words": [
+    "potato",
+    "washed",
+    "pre",
+    "early",
+    "potatoes"
+   ],
+   "carbonValues": [
+    0.20500000000000002
+   ]
+  },
+  "21919": {
+   "n": 20,
+   "words": [
+    "balsamic",
+    "dark",
+    "xsevan",
+    "oyster",
+    "white"
+   ],
+   "carbonValues": [
+    0.98,
+    2.1799999999999997,
+    2.645
+   ]
+  },
+  "10500": {
+   "n": 20,
+   "words": [
+    "butter",
+    "salted",
+    "lactose",
+    "eila",
+    "unsalted"
+   ],
+   "carbonValues": [
+    6.635
+   ]
+  },
+  "10633": {
+   "n": 20,
+   "words": [
+    "lactose",
+    "koskenlaskija",
+    "processed",
+    "dippi",
+    "strong"
+   ],
+   "carbonValues": [
+    2.85,
+    4.49,
+    5.21
+   ]
+  },
+  "22150": {
+   "n": 19,
+   "words": [
+    "honey",
+    "hunaja",
+    "kesäkukka",
+    "luomuhunaja",
+    "kaupan"
+   ],
+   "carbonValues": [
+    0.98
+   ]
+  },
+  "22646": {
+   "n": 19,
+   "words": [
+    "puree",
+    "onion",
+    "card",
+    "xtrm",
+    "flavour"
+   ],
+   "carbonValues": [
+    1.1500000000000001
+   ]
+  },
+  "18761": {
+   "n": 19,
+   "words": [
+    "burger",
+    "pork",
+    "steak",
+    "overcooked",
+    "karaleian"
+   ],
+   "carbonValues": [
+    25.619999999999997
+   ]
+  },
+  "63122": {
+   "n": 19,
+   "words": [
+    "bin",
+    "durabin",
+    "litre",
+    "grey",
+    "lid"
+   ],
+   "carbonValues": []
+  },
+  "64300": {
+   "n": 18,
+   "words": [
+    "thermometer",
+    "rento",
+    "aluminium",
+    "sauna",
+    "indoor"
+   ],
+   "carbonValues": []
+  },
+  "18703": {
+   "n": 18,
+   "words": [
+    "crayfish",
+    "brine",
+    "boiled",
+    "tails",
+    "fin"
+   ],
+   "carbonValues": [
+    5.415
+   ]
+  },
+  "18760": {
+   "n": 18,
+   "words": [
+    "minced",
+    "pork",
+    "burger",
+    "mince",
+    "xminced"
+   ],
+   "carbonValues": [
+    25.619999999999997
+   ]
+  },
+  "18708": {
+   "n": 18,
+   "words": [
+    "fillet",
+    "sliced",
+    "smoked",
+    "trout",
+    "rainbow"
+   ],
+   "carbonValues": [
+    3.98
+   ]
+  },
+  "63000": {
+   "n": 18,
+   "words": [
+    "hair",
+    "shampoo",
+    "hairspray",
+    "pure",
+    "sensitive"
+   ],
+   "carbonValues": []
+  },
+  "10532": {
+   "n": 17,
+   "words": [
+    "oil",
+    "coconut",
+    "roasted",
+    "guan",
+    "aik"
+   ],
+   "carbonValues": [
+    2.355
+   ]
+  },
+  "22705": {
+   "n": 17,
+   "words": [
+    "carbonated",
+    "vellamo",
+    "bottle",
+    "xkevytolo",
+    "still"
+   ],
+   "carbonValues": [
+    0.17
+   ]
+  },
+  "17481": {
+   "n": 17,
+   "words": [
+    "punnet",
+    "box",
+    "raspberry",
+    "strawberry",
+    "currants"
+   ],
+   "carbonValues": [
+    1.405
+   ]
+  },
+  "10637": {
+   "n": 17,
+   "words": [
+    "mozzarella",
+    "burrata",
+    "lactose",
+    "antica",
+    "fattoria"
+   ],
+   "carbonValues": [
+    3.9
+   ]
+  },
+  "41770": {
+   "n": 17,
+   "words": [
+    "roast",
+    "cafitesse",
+    "cubes",
+    "frozen",
+    "crystal"
+   ],
+   "carbonValues": [
+    5.21
+   ]
+  },
+  "41741": {
+   "n": 17,
+   "words": [
+    "frozen",
+    "greens",
+    "apple",
+    "product",
+    "smoothiemix"
+   ],
+   "carbonValues": [
+    0.705
+   ]
+  },
+  "22640": {
+   "n": 17,
+   "words": [
+    "seasoning",
+    "smoke",
+    "bottle",
+    "flavour",
+    "garlic"
+   ],
+   "carbonValues": [
+    0.98
+   ]
+  },
+  "17411": {
+   "n": 16,
+   "words": [
+    "oranges",
+    "rsa",
+    "grapefruit",
+    "size",
+    "egypt"
+   ],
+   "carbonValues": [
+    0.34500000000000003
+   ]
+  },
+  "17412": {
+   "n": 16,
+   "words": [
+    "apple",
+    "pear",
+    "gala",
+    "apples",
+    "granny"
+   ],
+   "carbonValues": [
+    0.16499999999999998
+   ]
+  },
+  "21510": {
+   "n": 16,
+   "words": [
+    "pork",
+    "product",
+    "soup",
+    "pea",
+    "meatballs"
+   ],
+   "carbonValues": [
+    20.465
+   ]
+  },
+  "17453": {
+   "n": 16,
+   "words": [
+    "box",
+    "mixed",
+    "shiso",
+    "sakura",
+    "netherlands"
+   ],
+   "carbonValues": [
+    0.38
+   ]
+  },
+  "63234": {
+   "n": 16,
+   "words": [
+    "napkin",
+    "dispenser",
+    "xpressnap",
+    "grey",
+    "counter"
+   ],
+   "carbonValues": []
+  },
+  "17204": {
+   "n": 16,
+   "words": [
+    "sliced",
+    "turkey",
+    "smoked",
+    "fillet",
+    "thin"
+   ],
+   "carbonValues": [
+    1.93
+   ]
+  },
+  "17207": {
+   "n": 16,
+   "words": [
+    "liver",
+    "pat",
+    "sausage",
+    "delicacy",
+    "country"
+   ],
+   "carbonValues": [
+    10.96
+   ]
+  },
+  "10902": {
+   "n": 16,
+   "words": [
+    "roll",
+    "bun",
+    "bread",
+    "sämpylä",
+    "dog"
+   ],
+   "carbonValues": [
+    1.16
+   ]
+  },
+  "10432": {
+   "n": 16,
+   "words": [
+    "vanilla",
+    "lactose",
+    "uht",
+    "keittiön",
+    "based"
+   ],
+   "carbonValues": [
+    1.5950000000000002
+   ]
+  },
+  "10639": {
+   "n": 16,
+   "words": [
+    "halloumi",
+    "pdo",
+    "lactose",
+    "reduced",
+    "halla"
+   ],
+   "carbonValues": [
+    3.93
+   ]
+  },
+  "18702": {
+   "n": 16,
+   "words": [
+    "smoked",
+    "fillet",
+    "trout",
+    "rainbow",
+    "vac"
+   ],
+   "carbonValues": [
+    3.98,
+    5.970000000000001
+   ]
+  },
+  "17444": {
+   "n": 15,
+   "words": [
+    "onion",
+    "diced",
+    "ring",
+    "leek",
+    "sliced"
+   ],
+   "carbonValues": [
+    0.3,
+    1.2349999999999999
+   ]
+  },
+  "21453": {
+   "n": 15,
+   "words": [
+    "butter",
+    "peanut",
+    "spread",
+    "hazelnut",
+    "cacao"
+   ],
+   "carbonValues": [
+    2.8
+   ]
+  },
+  "84966": {
+   "n": 15,
+   "words": [
+    "beer",
+    "can",
+    "lager",
+    "alcohol",
+    "non"
+   ],
+   "carbonValues": [
+    0.87
+   ]
+  },
+  "22704": {
+   "n": 15,
+   "words": [
+    "raspberry",
+    "flavoured",
+    "peach",
+    "blueberry",
+    "pie"
+   ],
+   "carbonValues": [
+    3.975
+   ]
+  },
+  "10405": {
+   "n": 14,
+   "words": [
+    "powder",
+    "skimmed",
+    "lactose",
+    "eila",
+    "instant"
+   ],
+   "carbonValues": [
+    14.67
+   ]
+  },
+  "64500": {
+   "n": 14,
+   "words": [
+    "box",
+    "present",
+    "gift",
+    "segreto",
+    "flower"
+   ],
+   "carbonValues": []
+  },
+  "21901": {
+   "n": 13,
+   "words": [
+    "soup",
+    "lactose",
+    "miso",
+    "hikari",
+    "transport"
+   ],
+   "carbonValues": [
+    1.79
+   ]
+  },
+  "32990": {
+   "n": 13,
+   "words": [
+    "lighter",
+    "matches",
+    "megalighter",
+    "boxes",
+    "firestarter"
+   ],
+   "carbonValues": []
+  },
+  "64008": {
+   "n": 12,
+   "words": [
+    "epp",
+    "valk",
+    "eps",
+    "kontti",
+    "kylmägeelimatto"
+   ],
+   "carbonValues": []
+  },
+  "63273": {
+   "n": 12,
+   "words": [
+    "bag",
+    "roasting",
+    "cmx",
+    "vacuum",
+    "ham"
+   ],
+   "carbonValues": []
+  },
+  "90021": {
+   "n": 12,
+   "words": [
+    "bubble",
+    "mailer",
+    "brown",
+    "bag",
+    "propac"
+   ],
+   "carbonValues": []
+  },
+  "17414": {
+   "n": 11,
+   "words": [
+    "grapes",
+    "peach",
+    "avocado",
+    "dark",
+    "seedless"
+   ],
+   "carbonValues": [
+    0.385
+   ]
+  },
+  "63900": {
+   "n": 11,
+   "words": [
+    "knife",
+    "electr",
+    "sharpen",
+    "wand",
+    "white"
+   ],
+   "carbonValues": []
+  },
+  "21900": {
+   "n": 11,
+   "words": [
+    "soup",
+    "tomato",
+    "pea",
+    "meal",
+    "peasoup"
+   ],
+   "carbonValues": [
+    2.19
+   ]
+  },
+  "17452": {
+   "n": 11,
+   "words": [
+    "min",
+    "basil",
+    "pea",
+    "shoot",
+    "thyme"
+   ],
+   "carbonValues": [
+    0.38
+   ]
+  },
+  "63070": {
+   "n": 11,
+   "words": [
+    "ultra",
+    "pad",
+    "regular",
+    "tampon",
+    "liner"
+   ],
+   "carbonValues": []
+  },
+  "64100": {
+   "n": 11,
+   "words": [
+    "charcoal",
+    "grill",
+    "quebracho",
+    "ranch",
+    "marabu"
+   ],
+   "carbonValues": []
+  },
+  "41733": {
+   "n": 11,
+   "words": [
+    "greens",
+    "frozen",
+    "chopped",
+    "dill",
+    "nettle"
+   ],
+   "carbonValues": [
+    0.38,
+    0.6
+   ]
+  },
+  "22707": {
+   "n": 11,
+   "words": [
+    "concentrate",
+    "slush",
+    "bib",
+    "zero",
+    "mango"
+   ],
+   "carbonValues": [
+    2.52
+   ]
+  },
+  "17424": {
+   "n": 11,
+   "words": [
+    "potato",
+    "raw",
+    "cube",
+    "piece",
+    "rosamunda"
+   ],
+   "carbonValues": [
+    0.20500000000000002,
+    0.37
+   ]
+  },
+  "90014": {
+   "n": 11,
+   "words": [
+    "rll",
+    "bpa",
+    "thermopaperroll",
+    "roller",
+    "cach"
+   ],
+   "carbonValues": []
+  },
+  "21200": {
+   "n": 10,
+   "words": [
+    "rye",
+    "bread",
+    "crispy",
+    "hapankorppuja",
+    "thin"
+   ],
+   "carbonValues": [
+    1.62
+   ]
+  },
+  "22190": {
+   "n": 10,
+   "words": [
+    "sweetener",
+    "sweeteners",
+    "granulated",
+    "dispenser",
+    "tablet"
+   ],
+   "carbonValues": [
+    0.62
+   ]
+  },
+  "21463": {
+   "n": 10,
+   "words": [
+    "seaweed",
+    "dried",
+    "wakame",
+    "nori",
+    "sushi"
+   ],
+   "carbonValues": [
+    6.8500000000000005,
+    8.025,
+    8.135
+   ]
+  },
+  "17422": {
+   "n": 10,
+   "words": [
+    "peeled",
+    "potato",
+    "raw",
+    "mash",
+    "portion"
+   ],
+   "carbonValues": [
+    0.20500000000000002
+   ]
+  },
+  "21593": {
+   "n": 10,
+   "words": [
+    "beetroots",
+    "pickle",
+    "beetroot",
+    "sauvos",
+    "sliced"
+   ],
+   "carbonValues": [
+    0.15
+   ]
+  },
+  "63131": {
+   "n": 10,
+   "words": [
+    "white",
+    "bucket",
+    "grey",
+    "dark",
+    "lid"
+   ],
+   "carbonValues": []
+  },
+  "10630": {
+   "n": 10,
+   "words": [
+    "log",
+    "goat",
+    "goatcheese",
+    "sheep",
+    "vacuum"
+   ],
+   "carbonValues": [
+    5.21,
+    5.81
+   ]
+  },
+  "17408": {
+   "n": 9,
+   "words": [
+    "beans",
+    "pea",
+    "haricot",
+    "sugarpeas",
+    "cleaned"
+   ],
+   "carbonValues": [
+    0.5
+   ]
+  },
+  "21592": {
+   "n": 9,
+   "words": [
+    "cabbage",
+    "salad",
+    "sauerkraut",
+    "apple",
+    "kimchi"
+   ],
+   "carbonValues": [
+    0.79,
+    1.13
+   ]
+  },
+  "41711": {
+   "n": 9,
+   "words": [
+    "frozen",
+    "breast",
+    "whole",
+    "barbarie",
+    "magret"
+   ],
+   "carbonValues": [
+    4.78
+   ]
+  },
+  "10903": {
+   "n": 9,
+   "words": [
+    "pasty",
+    "bun",
+    "panino",
+    "vuoksen",
+    "small"
+   ],
+   "carbonValues": [
+    0.79,
+    1.16
+   ]
+  },
+  "10590": {
+   "n": 9,
+   "words": [
+    "egg",
+    "barn",
+    "eggs",
+    "viiriäisen",
+    "munia"
+   ],
+   "carbonValues": [
+    1.8
+   ]
+  },
+  "63242": {
+   "n": 8,
+   "words": [
+    "nessu",
+    "facial",
+    "white",
+    "hankie",
+    "sheet"
+   ],
+   "carbonValues": []
+  },
+  "21394": {
+   "n": 8,
+   "words": [
+    "potato",
+    "mashed",
+    "flakes",
+    "powder",
+    "mielihyvä"
+   ],
+   "carbonValues": [
+    0.575
+   ]
+  },
+  "21540": {
+   "n": 8,
+   "words": [
+    "snails",
+    "chantifrais",
+    "snail",
+    "brine",
+    "shells"
+   ],
+   "carbonValues": [
+    6.79,
+    20.465
+   ]
+  },
+  "41722": {
+   "n": 8,
+   "words": [
+    "roe",
+    "trout",
+    "frozen",
+    "from",
+    "whitefish"
+   ],
+   "carbonValues": [
+    4.46
+   ]
+  },
+  "21950": {
+   "n": 8,
+   "words": [
+    "effervescent",
+    "tablet",
+    "mineral",
+    "kaps",
+    "strong"
+   ],
+   "carbonValues": [
+    0.79
+   ]
+  },
+  "41752": {
+   "n": 8,
+   "words": [
+    "frozen",
+    "patty",
+    "salmon",
+    "timbale",
+    "asc"
+   ],
+   "carbonValues": []
+  },
+  "41734": {
+   "n": 7,
+   "words": [
+    "frozen",
+    "pur",
+    "treated",
+    "quick",
+    "pellets"
+   ],
+   "carbonValues": [
+    0.89
+   ]
+  },
+  "22660": {
+   "n": 7,
+   "words": [
+    "yeast",
+    "instant",
+    "bakeing",
+    "brad"
+   ],
+   "carbonValues": [
+    5.07
+   ]
+  },
+  "67800": {
+   "n": 7,
+   "words": [
+    "box",
+    "gift",
+    "remote",
+    "led",
+    "serpentine"
+   ],
+   "carbonValues": []
+  },
+  "10517": {
+   "n": 7,
+   "words": [
+    "oil",
+    "product",
+    "rapeseed",
+    "lactose",
+    "fat"
+   ],
+   "carbonValues": [
+    4.21
+   ]
+  },
+  "10404": {
+   "n": 7,
+   "words": [
+    "condensed",
+    "sweetened",
+    "lactose",
+    "caramelized",
+    "caramelised"
+   ],
+   "carbonValues": [
+    1.23
+   ]
+  },
+  "90013": {
+   "n": 7,
+   "words": [
+    "colour",
+    "laser",
+    "zoom",
+    "copier",
+    "copy"
+   ],
+   "carbonValues": []
+  },
+  "21903": {
+   "n": 6,
+   "words": [
+    "tetra",
+    "bouillon",
+    "signature",
+    "veal",
+    "vegetable"
+   ],
+   "carbonValues": [
+    5.145
+   ]
+  },
+  "21393": {
+   "n": 6,
+   "words": [
+    "chrushed",
+    "mince",
+    "pea",
+    "dark",
+    "soyabean"
+   ],
+   "carbonValues": [
+    2.08
+   ]
+  },
+  "10516": {
+   "n": 6,
+   "words": [
+    "portionpacket",
+    "margarine",
+    "portion",
+    "normal",
+    "salted"
+   ],
+   "carbonValues": [
+    5.33
+   ]
+  },
+  "17413": {
+   "n": 6,
+   "words": [
+    "banana",
+    "box",
+    "fair",
+    "thailand",
+    "plantain"
+   ],
+   "carbonValues": [
+    0.3
+   ]
+  },
+  "41750": {
+   "n": 6,
+   "words": [
+    "frozen",
+    "treated",
+    "quick",
+    "pellets",
+    "heat"
+   ],
+   "carbonValues": [
+    15.79
+   ]
+  },
+  "63200": {
+   "n": 6,
+   "words": [
+    "white",
+    "household",
+    "emilia",
+    "rolls",
+    "absorbent"
+   ],
+   "carbonValues": [
+    0.79
+   ]
+  },
+  "18704": {
+   "n": 6,
+   "words": [
+    "seaweed",
+    "prepara",
+    "cavi",
+    "roe",
+    "preparation"
+   ],
+   "carbonValues": [
+    28.27
+   ]
+  },
+  "67730": {
+   "n": 6,
+   "words": [
+    "iltalehti",
+    "edition",
+    "iltasanomat",
+    "sanomat",
+    "ilta"
+   ],
+   "carbonValues": []
+  },
+  "84988": {
+   "n": 6,
+   "words": [
+    "spritz",
+    "pink",
+    "grapefruit",
+    "raspberry",
+    "pineapple"
+   ],
+   "carbonValues": [
+    0.82
+   ]
+  },
+  "21391": {
+   "n": 5,
+   "words": [
+    "malt",
+    "extract",
+    "kotikalja",
+    "rye",
+    "crushed"
+   ],
+   "carbonValues": [
+    3.495
+   ]
+  },
+  "17472": {
+   "n": 5,
+   "words": [
+    "china",
+    "shimeji",
+    "mushroom",
+    "chanterelles",
+    "loose"
+   ],
+   "carbonValues": [
+    0.14500000000000002
+   ]
+  },
+  "10518": {
+   "n": 5,
+   "words": [
+    "margarine",
+    "baking",
+    "lactose",
+    "improver",
+    "bread"
+   ],
+   "carbonValues": [
+    4.015
+   ]
+  },
+  "17208": {
+   "n": 5,
+   "words": [
+    "jelly",
+    "style",
+    "country",
+    "bit",
+    "porkaspic"
+   ],
+   "carbonValues": [
+    14.98
+   ]
+  },
+  "20024": {
+   "n": 5,
+   "words": [
+    "thermometer",
+    "oventhermometer",
+    "cooking",
+    "timer",
+    "cmx"
+   ],
+   "carbonValues": []
+  },
+  "84967": {
+   "n": 5,
+   "words": [
+    "alcohol",
+    "apple",
+    "non",
+    "alcoholic",
+    "zero"
+   ],
+   "carbonValues": [
+    0.87,
+    1.15
+   ]
+  },
+  "21982": {
+   "n": 4,
+   "words": [
+    "sweetened",
+    "condensated",
+    "layers",
+    "size",
+    "condensed"
+   ],
+   "carbonValues": [
+    0.43499999999999994,
+    1.07
+   ]
+  },
+  "22411": {
+   "n": 4,
+   "words": [
+    "coffee",
+    "ground",
+    "filter",
+    "intermezzo",
+    "decaf"
+   ],
+   "carbonValues": [
+    0.79,
+    7.12
+   ]
+  },
+  "20000": {
+   "n": 4,
+   "words": [
+    "crunchy",
+    "treats",
+    "stick",
+    "chicken",
+    "skin"
+   ],
+   "carbonValues": []
+  },
+  "17433": {
+   "n": 4,
+   "words": [
+    "pulp",
+    "finnish",
+    "carrot",
+    "swede",
+    "jerusalem"
+   ],
+   "carbonValues": [
+    0.37
+   ]
+  },
+  "64310": {
+   "n": 4,
+   "words": [
+    "lasipesu",
+    "oil",
+    "lamp",
+    "parking",
+    "disc"
+   ],
+   "carbonValues": []
+  },
+  "10418": {
+   "n": 4,
+   "words": [
+    "fraiche",
+    "cooking",
+    "plant",
+    "dipping",
+    "dream"
+   ],
+   "carbonValues": [
+    1.88
+   ]
+  },
+  "21100": {
+   "n": 4,
+   "words": [
+    "rolls",
+    "rusk",
+    "torn",
+    "whole",
+    "grain"
+   ],
+   "carbonValues": [
+    1.42
+   ]
+  },
+  "21405": {
+   "n": 4,
+   "words": [
+    "beer",
+    "box",
+    "bottle",
+    "alcohol",
+    "made"
+   ],
+   "carbonValues": [
+    0.82
+   ]
+  },
+  "17456": {
+   "n": 3,
+   "words": [
+    "sprouts",
+    "alfalfa",
+    "mung",
+    "bag",
+    "fin"
+   ],
+   "carbonValues": [
+    1.39
+   ]
+  },
+  "21121": {
+   "n": 3,
+   "words": [
+    "croutons",
+    "leben",
+    "onion",
+    "land",
+    "garl"
+   ],
+   "carbonValues": [
+    2.74
+   ]
+  },
+  "18706": {
+   "n": 3,
+   "words": [
+    "fillet",
+    "trout",
+    "rainbow",
+    "deboned",
+    "cut"
+   ],
+   "carbonValues": [
+    4.9350000000000005
+   ]
+  },
+  "18740": {
+   "n": 3,
+   "words": [
+    "hind",
+    "chilled",
+    "boneless",
+    "leg",
+    "vac"
+   ],
+   "carbonValues": [
+    30.46
+   ]
+  },
+  "10501": {
+   "n": 3,
+   "words": [
+    "butter",
+    "salted",
+    "low",
+    "portion"
+   ],
+   "carbonValues": [
+    6.635
+   ]
+  },
+  "30010": {
+   "n": 3,
+   "words": [
+    "flower",
+    "xpert",
+    "soil",
+    "aerosol",
+    "insecticide"
+   ],
+   "carbonValues": []
+  },
+  "17304": {
+   "n": 3,
+   "words": [
+    "fettuccine",
+    "spinach",
+    "naturel",
+    "gnocchi",
+    "potato"
+   ],
+   "carbonValues": [
+    2.68
+   ]
+  },
+  "18707": {
+   "n": 3,
+   "words": [
+    "trout",
+    "grilled",
+    "rainbow",
+    "cajun",
+    "piece"
+   ],
+   "carbonValues": [
+    6.245
+   ]
+  },
+  "17457": {
+   "n": 2,
+   "words": [
+    "bananaleaves",
+    "thailand",
+    "bananaleave",
+    "cups"
+   ],
+   "carbonValues": [
+    1.09
+   ]
+  },
+  "63270": {
+   "n": 2,
+   "words": [
+    "piippo",
+    "wire",
+    "tie",
+    "white",
+    "cotton"
+   ],
+   "carbonValues": []
+  },
+  "64130": {
+   "n": 2,
+   "words": [
+    "roll",
+    "white",
+    "biodegradable",
+    "poop",
+    "bag"
+   ],
+   "carbonValues": []
+  },
+  "77722": {
+   "n": 2,
+   "words": [
+    "carbonic",
+    "acid",
+    "typpikaasu"
+   ],
+   "carbonValues": []
+  },
+  "17473": {
+   "n": 2,
+   "words": [
+    "mushroom",
+    "salted",
+    "vacuum"
+   ],
+   "carbonValues": [
+    0.14
+   ]
+  },
+  "21952": {
+   "n": 2,
+   "words": [
+    "amylase",
+    "thickener",
+    "coldswelling",
+    "resistant",
+    "puhdas"
+   ],
+   "carbonValues": []
+  },
+  "10502": {
+   "n": 1,
+   "words": [
+    "butter",
+    "barbeque",
+    "flavoured"
+   ],
+   "carbonValues": [
+    6.635
+   ]
+  },
+  "18751": {
+   "n": 1,
+   "words": [
+    "fil",
+    "barbarie",
+    "lbdf"
+   ],
+   "carbonValues": [
+    4.78
+   ]
+  },
+  "18730": {
+   "n": 1,
+   "words": [
+    "chilled",
+    "reindeer",
+    "topside"
+   ],
+   "carbonValues": [
+    3.49
+   ]
+  },
+  "85034": {
+   "n": 1,
+   "words": [
+    "cidre"
+   ],
+   "carbonValues": [
+    1.15
+   ]
+  }
+ },
+ "heroMatchCounts": {
+  "lactoseFreeMilk": 86,
+  "salmon": 144,
+  "rainbowTrout": 82,
+  "hamChristmas": 15,
+  "herring": 62,
+  "butter": 116,
+  "potato": 316,
+  "cream": 605,
+  "oatDrink": 47,
+  "beefMince": 105,
+  "lanttulaatikko": 24
+ },
+ "sample": {
+  "path": "data/valio/probe/sample.json",
+  "n": 200,
+  "seed": 42,
+  "composition": "hero candidates (top 4 per query) + 80 random with carbon+reliability + random fill"
+ },
+ "api": {
+  "ping": {
+   "status": 200,
+   "latency_ms": 178,
+   "body": {
+    "status": "ok"
+   },
+   "headers": [
+    "CF-RAY",
+    "Cache-Control",
+    "Connection",
+    "Content-Length",
+    "Content-Type",
+    "Date",
+    "Server",
+    "cf-cache-status",
+    "x-robots-tag"
+   ]
+  },
+  "pingBadKey": {
+   "status": 401,
+   "body": {
+    "detail": "Invalid or missing API key"
+   }
+  },
+  "dates": {
+   "today": "2026-11-14",
+   "plus3": "2026-11-17",
+   "plus14": "2026-11-28",
+   "sunday": "2026-11-15",
+   "past": "2026-11-01"
+  },
+  "price_plus3": {
+   "status": 200,
+   "latency_ms": 110,
+   "n": 200,
+   "topKeys": [
+    "currency",
+    "customerId",
+    "pricingDate",
+    "products"
+   ],
+   "currency": "EUR",
+   "pricingDate": "2026-11-17T00:00:00+0200",
+   "customerId": "123",
+   "errorTrue": 0,
+   "netPriceFound": {
+    "False": 194,
+    "True": 6
+   },
+   "comparisonUnit": {
+    "L": 34,
+    "KG": 141,
+    "None": 25
+   },
+   "taxRate": {
+    "13.5": 179,
+    "25.5": 21
+   },
+   "quantity": {
+    "1.0": 200
+   },
+   "orderPreserved": true,
+   "catalogPrice": {
+    "p0": 0.27,
+    "p5": 1.5,
+    "p25": 4.82,
+    "p50": 15.33,
+    "p75": 34.22,
+    "p95": 83.47,
+    "p100": 199.68
+   },
+   "listGtCatalogPct": 99.5,
+   "listEqCatalogPct": 0.5,
+   "discountVsList": {
+    "p0": 0.0,
+    "p5": 0.149,
+    "p25": 0.15,
+    "p50": 0.18,
+    "p75": 0.2,
+    "p95": 0.2,
+    "p100": 0.361
+   },
+   "priceWithTaxEqCatalogWithTaxPct": 100.0,
+   "validity": {
+    "2026-05-01T00:00:00+0300..9999-12-31T00:00:00+0200": 96,
+    "2026-09-01T00:00:00+0300..9999-12-31T00:00:00+0200": 35,
+    "2026-01-13T00:00:00+0200..9999-12-31T00:00:00+0200": 15,
+    "2025-01-02T00:00:00+0200..9999-12-31T00:00:00+0200": 7,
+    "2026-09-01T00:00:00+0300..2026-12-31T00:00:00+0200": 4
+   },
+   "listValidity": {
+    "2026-05-01T00:00:00+0300..9999-12-31T00:00:00+0200": 97,
+    "2026-09-01T00:00:00+0300..9999-12-31T00:00:00+0200": 37,
+    "2026-01-13T00:00:00+0200..9999-12-31T00:00:00+0200": 15
+   },
+   "nullFields": {}
+  },
+  "avail_plus3": {
+   "status": 200,
+   "latency_ms": 106,
+   "n": 200,
+   "timeNow": "2026-11-14T00:30:40+0200",
+   "requestedDate": "2026-11-17T00:00:00+0200",
+   "logisticModel": {
+    "Terminal": 57,
+    "Stock": 110,
+    "None": 33
+   },
+   "salesBlock": {
+    "False": 200
+   },
+   "lineSalesBlock": {
+    "False": 167
+   },
+   "scheduleLinesLen": {
+    "1": 167,
+    "0": 33
+   },
+   "amount999999": 57,
+   "amount0": 3,
+   "amountOther": {
+    "p0": 1.0,
+    "p5": 4.0,
+    "p25": 32.0,
+    "p50": 227.0,
+    "p75": 9999999999.0,
+    "p95": 9999999999.0,
+    "p100": 9999999999.0
+   },
+   "amountOtherN": 107,
+   "availableDateDeltaDays": {
+    "-1": 164
+   },
+   "closingTimes": {
+    "2026-11-15T17:00:00+0200": 104,
+    "2026-11-12T15:00:00+0200": 39,
+    "None": 33,
+    "2026-11-13T13:00:00+0200": 6,
+    "2026-11-12T13:00:00+0200": 5,
+    "2026-11-12T14:00:00+0200": 5
+   },
+   "closingTimeDistinct": 10,
+   "salesUnits": {
+    "KI": 61,
+    "ST": 58,
+    "KG": 17,
+    "BAG": 8,
+    "KLE": 3,
+    "PAK": 4,
+    "PRK": 5,
+    "BOT": 6,
+    "RAS": 5
+   },
+   "modelVsAmount": {
+    "Terminal:999999": 57,
+    "Stock:n": 107,
+    "None:none": 33,
+    "Stock:0": 3
+   },
+   "orderPreserved": true
+  },
+  "customerEffect": {
+   "price": {
+    "compared": 200,
+    "changed": {}
+   },
+   "availability": {
+    "compared": 200,
+    "changed": {}
+   },
+   "customerIdEcho": "900001"
+  },
+  "dateEffect": {
+   "avail_today": {
+    "status": 200,
+    "latency_ms": 75,
+    "n": 200,
+    "timeNow": "2026-11-14T00:30:41+0200",
+    "requestedDate": "2026-11-14T00:00:00+0200",
+    "logisticModel": {
+     "Terminal": 57,
+     "Stock": 110,
+     "None": 33
+    },
+    "salesBlock": {
+     "False": 200
+    },
+    "lineSalesBlock": {
+     "False": 167
+    },
+    "scheduleLinesLen": {
+     "1": 167,
+     "0": 33
+    },
+    "amount999999": 57,
+    "amount0": 3,
+    "amountOther": {
+     "p0": 1.0,
+     "p5": 4.0,
+     "p25": 32.0,
+     "p50": 227.0,
+     "p75": 9999999999.0,
+     "p95": 9999999999.0,
+     "p100": 9999999999.0
+    },
+    "amountOtherN": 107,
+    "availableDateDeltaDays": {
+     "2": 164
+    },
+    "closingTimes": {
+     "2026-11-15T17:00:00+0200": 104,
+     "2026-11-12T15:00:00+0200": 39,
+     "None": 33,
+     "2026-11-13T13:00:00+0200": 6,
+     "2026-11-12T13:00:00+0200": 5,
+     "2026-11-12T14:00:00+0200": 5
+    },
+    "closingTimeDistinct": 10,
+    "salesUnits": {
+     "KI": 61,
+     "ST": 58,
+     "KG": 17,
+     "BAG": 8,
+     "KLE": 3,
+     "PAK": 4,
+     "PRK": 5,
+     "BOT": 6,
+     "RAS": 5
+    },
+    "modelVsAmount": {
+     "Terminal:999999": 57,
+     "Stock:n": 107,
+     "None:none": 33,
+     "Stock:0": 3
+    },
+    "orderPreserved": true,
+    "vsPlus3": {
+     "compared": 200,
+     "changed": {}
+    }
+   },
+   "avail_plus14": {
+    "status": 200,
+    "latency_ms": 106,
+    "n": 200,
+    "timeNow": "2026-11-14T00:30:41+0200",
+    "requestedDate": "2026-11-28T00:00:00+0200",
+    "logisticModel": {
+     "Terminal": 57,
+     "Stock": 110,
+     "None": 33
+    },
+    "salesBlock": {
+     "False": 200
+    },
+    "lineSalesBlock": {
+     "False": 167
+    },
+    "scheduleLinesLen": {
+     "1": 167,
+     "0": 33
+    },
+    "amount999999": 57,
+    "amount0": 3,
+    "amountOther": {
+     "p0": 1.0,
+     "p5": 4.0,
+     "p25": 32.0,
+     "p50": 227.0,
+     "p75": 9999999999.0,
+     "p95": 9999999999.0,
+     "p100": 9999999999.0
+    },
+    "amountOtherN": 107,
+    "availableDateDeltaDays": {
+     "-12": 164
+    },
+    "closingTimes": {
+     "2026-11-15T17:00:00+0200": 104,
+     "2026-11-12T15:00:00+0200": 39,
+     "None": 33,
+     "2026-11-13T13:00:00+0200": 6,
+     "2026-11-12T13:00:00+0200": 5,
+     "2026-11-12T14:00:00+0200": 5
+    },
+    "closingTimeDistinct": 10,
+    "salesUnits": {
+     "KI": 61,
+     "ST": 58,
+     "KG": 17,
+     "BAG": 8,
+     "KLE": 3,
+     "PAK": 4,
+     "PRK": 5,
+     "BOT": 6,
+     "RAS": 5
+    },
+    "modelVsAmount": {
+     "Terminal:999999": 57,
+     "Stock:n": 107,
+     "None:none": 33,
+     "Stock:0": 3
+    },
+    "orderPreserved": true,
+    "vsPlus3": {
+     "compared": 200,
+     "changed": {}
+    }
+   },
+   "avail_sunday": {
+    "status": 200,
+    "latency_ms": 90,
+    "n": 200,
+    "timeNow": "2026-11-14T00:30:41+0200",
+    "requestedDate": "2026-11-15T00:00:00+0200",
+    "logisticModel": {
+     "Terminal": 57,
+     "Stock": 110,
+     "None": 33
+    },
+    "salesBlock": {
+     "False": 200
+    },
+    "lineSalesBlock": {
+     "False": 167
+    },
+    "scheduleLinesLen": {
+     "1": 167,
+     "0": 33
+    },
+    "amount999999": 57,
+    "amount0": 3,
+    "amountOther": {
+     "p0": 1.0,
+     "p5": 4.0,
+     "p25": 32.0,
+     "p50": 227.0,
+     "p75": 9999999999.0,
+     "p95": 9999999999.0,
+     "p100": 9999999999.0
+    },
+    "amountOtherN": 107,
+    "availableDateDeltaDays": {
+     "1": 164
+    },
+    "closingTimes": {
+     "2026-11-15T17:00:00+0200": 104,
+     "2026-11-12T15:00:00+0200": 39,
+     "None": 33,
+     "2026-11-13T13:00:00+0200": 6,
+     "2026-11-12T13:00:00+0200": 5,
+     "2026-11-12T14:00:00+0200": 5
+    },
+    "closingTimeDistinct": 10,
+    "salesUnits": {
+     "KI": 61,
+     "ST": 58,
+     "KG": 17,
+     "BAG": 8,
+     "KLE": 3,
+     "PAK": 4,
+     "PRK": 5,
+     "BOT": 6,
+     "RAS": 5
+    },
+    "modelVsAmount": {
+     "Terminal:999999": 57,
+     "Stock:n": 107,
+     "None:none": 33,
+     "Stock:0": 3
+    },
+    "orderPreserved": true,
+    "vsPlus3": {
+     "compared": 200,
+     "changed": {}
+    }
+   },
+   "avail_past": {
+    "status": 200,
+    "latency_ms": 89,
+    "n": 200,
+    "timeNow": "2026-11-14T00:30:41+0200",
+    "requestedDate": "2026-11-01T00:00:00+0200",
+    "logisticModel": {
+     "Terminal": 57,
+     "Stock": 110,
+     "None": 33
+    },
+    "salesBlock": {
+     "False": 200
+    },
+    "lineSalesBlock": {
+     "False": 167
+    },
+    "scheduleLinesLen": {
+     "1": 167,
+     "0": 33
+    },
+    "amount999999": 57,
+    "amount0": 3,
+    "amountOther": {
+     "p0": 1.0,
+     "p5": 4.0,
+     "p25": 32.0,
+     "p50": 227.0,
+     "p75": 9999999999.0,
+     "p95": 9999999999.0,
+     "p100": 9999999999.0
+    },
+    "amountOtherN": 107,
+    "availableDateDeltaDays": {
+     "15": 164
+    },
+    "closingTimes": {
+     "2026-11-15T17:00:00+0200": 104,
+     "2026-11-12T15:00:00+0200": 39,
+     "None": 33,
+     "2026-11-13T13:00:00+0200": 6,
+     "2026-11-12T13:00:00+0200": 5,
+     "2026-11-12T14:00:00+0200": 5
+    },
+    "closingTimeDistinct": 10,
+    "salesUnits": {
+     "KI": 61,
+     "ST": 58,
+     "KG": 17,
+     "BAG": 8,
+     "KLE": 3,
+     "PAK": 4,
+     "PRK": 5,
+     "BOT": 6,
+     "RAS": 5
+    },
+    "modelVsAmount": {
+     "Terminal:999999": 57,
+     "Stock:n": 107,
+     "None:none": 33,
+     "Stock:0": 3
+    },
+    "orderPreserved": true,
+    "vsPlus3": {
+     "compared": 200,
+     "changed": {}
+    }
+   },
+   "price_plus14": {
+    "status": 200,
+    "latency_ms": 125,
+    "n": 200,
+    "topKeys": [
+     "currency",
+     "customerId",
+     "pricingDate",
+     "products"
+    ],
+    "currency": "EUR",
+    "pricingDate": "2026-11-28T00:00:00+0200",
+    "customerId": "123",
+    "errorTrue": 0,
+    "netPriceFound": {
+     "False": 194,
+     "True": 6
+    },
+    "comparisonUnit": {
+     "L": 34,
+     "KG": 141,
+     "None": 25
+    },
+    "taxRate": {
+     "13.5": 179,
+     "25.5": 21
+    },
+    "quantity": {
+     "1.0": 200
+    },
+    "orderPreserved": true,
+    "catalogPrice": {
+     "p0": 0.27,
+     "p5": 1.5,
+     "p25": 4.82,
+     "p50": 15.33,
+     "p75": 34.22,
+     "p95": 83.47,
+     "p100": 199.68
+    },
+    "listGtCatalogPct": 99.5,
+    "listEqCatalogPct": 0.5,
+    "discountVsList": {
+     "p0": 0.0,
+     "p5": 0.149,
+     "p25": 0.15,
+     "p50": 0.18,
+     "p75": 0.2,
+     "p95": 0.2,
+     "p100": 0.361
+    },
+    "priceWithTaxEqCatalogWithTaxPct": 100.0,
+    "validity": {
+     "2026-05-01T00:00:00+0300..9999-12-31T00:00:00+0200": 96,
+     "2026-09-01T00:00:00+0300..9999-12-31T00:00:00+0200": 35,
+     "2026-01-13T00:00:00+0200..9999-12-31T00:00:00+0200": 15,
+     "2025-01-02T00:00:00+0200..9999-12-31T00:00:00+0200": 7,
+     "2026-09-01T00:00:00+0300..2026-12-31T00:00:00+0200": 4
+    },
+    "listValidity": {
+     "2026-05-01T00:00:00+0300..9999-12-31T00:00:00+0200": 97,
+     "2026-09-01T00:00:00+0300..9999-12-31T00:00:00+0200": 37,
+     "2026-01-13T00:00:00+0200..9999-12-31T00:00:00+0200": 15
+    },
+    "nullFields": {},
+    "vsPlus3": {
+     "compared": 200,
+     "changed": {}
+    }
+   },
+   "price_past": {
+    "status": 200,
+    "latency_ms": 106,
+    "n": 200,
+    "topKeys": [
+     "currency",
+     "customerId",
+     "pricingDate",
+     "products"
+    ],
+    "currency": "EUR",
+    "pricingDate": "2026-11-01T00:00:00+0200",
+    "customerId": "123",
+    "errorTrue": 0,
+    "netPriceFound": {
+     "False": 194,
+     "True": 6
+    },
+    "comparisonUnit": {
+     "L": 34,
+     "KG": 141,
+     "None": 25
+    },
+    "taxRate": {
+     "13.5": 179,
+     "25.5": 21
+    },
+    "quantity": {
+     "1.0": 200
+    },
+    "orderPreserved": true,
+    "catalogPrice": {
+     "p0": 0.27,
+     "p5": 1.5,
+     "p25": 4.82,
+     "p50": 15.33,
+     "p75": 34.22,
+     "p95": 83.47,
+     "p100": 199.68
+    },
+    "listGtCatalogPct": 99.5,
+    "listEqCatalogPct": 0.5,
+    "discountVsList": {
+     "p0": 0.0,
+     "p5": 0.149,
+     "p25": 0.15,
+     "p50": 0.18,
+     "p75": 0.2,
+     "p95": 0.2,
+     "p100": 0.361
+    },
+    "priceWithTaxEqCatalogWithTaxPct": 100.0,
+    "validity": {
+     "2026-05-01T00:00:00+0300..9999-12-31T00:00:00+0200": 96,
+     "2026-09-01T00:00:00+0300..9999-12-31T00:00:00+0200": 35,
+     "2026-01-13T00:00:00+0200..9999-12-31T00:00:00+0200": 15,
+     "2025-01-02T00:00:00+0200..9999-12-31T00:00:00+0200": 7,
+     "2026-09-01T00:00:00+0300..2026-12-31T00:00:00+0200": 4
+    },
+    "listValidity": {
+     "2026-05-01T00:00:00+0300..9999-12-31T00:00:00+0200": 97,
+     "2026-09-01T00:00:00+0300..9999-12-31T00:00:00+0200": 37,
+     "2026-01-13T00:00:00+0200..9999-12-31T00:00:00+0200": 15
+    },
+    "nullFields": {},
+    "vsPlus3": {
+     "compared": 200,
+     "changed": {}
+    }
+   }
+  },
+  "repeatSameRequest": {
+   "availability": {
+    "compared": 200,
+    "changed": {}
+   },
+   "price": {
+    "compared": 200,
+    "changed": {}
+   },
+   "latency_ms": [
+    76,
+    119
+   ],
+   "timeNowFirst": "2026-11-14T00:30:40+0200",
+   "timeNowRepeat": "2026-11-14T00:30:41+0200"
+  },
+  "errors": {
+   "unknownIdsPrice": {
+    "status": 200
+   },
+   "unknownIdAvail": {
+    "status": 200
+   },
+   "badDate": {
+    "status": 422,
+    "body": {
+     "detail": [
+      {
+       "type": "date_from_datetime_parsing",
+       "loc": [
+        "body",
+        "requestedDate"
+       ],
+       "msg": "Input should be a valid date or datetime, month value is outside expected range of 1-12",
+       "input": "2026-13-45",
+       "ctx": {
+        "error": "month value is outside expected range of 1-12"
+       }
+      }
+     ]
+    }
+   },
+   "emptyList": {
+    "status": 422,
+    "body": {
+     "detail": [
+      {
+       "type": "too_short",
+       "loc": [
+        "body",
+        "products"
+       ],
+       "msg": "List should have at least 1 item after validation, not 0",
+       "input": [],
+       "ctx": {
+        "field_type": "List",
+        "min_length": 1,
+        "actual_length": 0
+       }
+      }
+     ]
+    }
+   },
+   "over1000": {
+    "status": 422,
+    "body": "{'detail': [{'type': 'too_long', 'loc': ['body', 'products'], 'msg': 'List should have at most 1000 items after validation, not 1001', 'input': ['460000', '460001', '460002', '460003', '460004', '4600"
+   },
+   "missingCustomer": {
+    "status": 422,
+    "body": "{'detail': [{'type': 'missing', 'loc': ['body', 'customer'], 'msg': 'Field required', 'input': {'requestedDate': '2026-11-17', 'products': ['462626', '477044']}}]}"
+   }
+  },
+  "limits": {
+   "levels": [
+    {
+     "concurrency": 1,
+     "requests": 3,
+     "statuses": {
+      "200": 3
+     },
+     "latency_ms": {
+      "p0": 103,
+      "p50": 166,
+      "p100": 345
+     },
+     "wall_ms": 641
+    },
+    {
+     "concurrency": 2,
+     "requests": 4,
+     "statuses": {
+      "200": 4
+     },
+     "latency_ms": {
+      "p0": 108,
+      "p50": 118,
+      "p100": 127
+     },
+     "wall_ms": 277
+    },
+    {
+     "concurrency": 4,
+     "requests": 8,
+     "statuses": {
+      "200": 8
+     },
+     "latency_ms": {
+      "p0": 118,
+      "p50": 154,
+      "p100": 191
+     },
+     "wall_ms": 437
+    },
+    {
+     "concurrency": 8,
+     "requests": 16,
+     "statuses": {
+      "200": 16
+     },
+     "latency_ms": {
+      "p0": 124,
+      "p50": 172,
+      "p100": 204
+     },
+     "wall_ms": 555
+    }
+   ],
+   "stoppedBecause": null,
+   "rateHeadersSeen": {},
+   "batch1000_price": {
+    "status": 200,
+    "latency_ms": 310,
+    "bytes": 698981,
+    "cached": false
+   },
+   "batch1000_availability": {
+    "status": 200,
+    "latency_ms": 257,
+    "bytes": 201956,
+    "cached": false
+   },
+   "sampleHeaders": [
+    "CF-RAY",
+    "Cache-Control",
+    "Connection",
+    "Content-Length",
+    "Content-Type",
+    "Date",
+    "Server",
+    "cf-cache-status",
+    "x-robots-tag"
+   ]
+  }
+ }
+}
