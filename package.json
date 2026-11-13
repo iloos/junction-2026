@@ -15,7 +15,7 @@
 		"test:unit": "vitest",
 		"test": "npm run test:unit -- --run && npm run test:e2e",
 		"test:e2e": "playwright install && playwright test",
-		"eval": "node evals/run.ts --adapter fixture"
+		"eval": "vitest run --project server src/lib/server/evals"
 	},
 	"devDependencies": {
 		"@eslint/js": "^10.0.1",
