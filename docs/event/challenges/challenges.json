@@ -1,0 +1,1662 @@
+[
+ {
+  "kind": "main",
+  "id": 357,
+  "title": "Decode the Noise",
+  "sponsor": "Hostinger",
+  "track": "Agentic AI",
+  "url": "https://hackjunction.app/participate/45/challenges/357",
+  "website": "https://www.hostinger.com/",
+  "prizes": [
+   {
+    "place": "All three winning teams",
+    "prize": "All three winning teams will also receive **one year of Hostinger hosting and a domain** to keep their project live, **Hostinger swag**, and a **spotlight on Hostinger's social media channels**."
+   },
+   {
+    "place": "1st Place",
+    "prize": "2000 €"
+   },
+   {
+    "place": "2nd Place",
+    "prize": "1000 €"
+   },
+   {
+    "place": "3rd Place",
+    "prize": "500 €"
+   }
+  ],
+  "criteria": [
+   {
+    "name": "Detection quality (accuracy, false-positive handling, explainability)",
+    "weight": 40,
+    "note": ""
+   },
+   {
+    "name": "Technical execution & live deployment on Hostinger",
+    "weight": 25,
+    "note": ""
+   },
+   {
+    "name": "Originality & real-world impact",
+    "weight": 20,
+    "note": ""
+   },
+   {
+    "name": "Demo clarity",
+    "weight": 15,
+    "note": ""
+   }
+  ],
+  "links": [
+   "https://docs.hostinger.com/hostinger-connector",
+   "https://developers.hostinger.com/",
+   "https://github.com/hostinger/api-mcp-server",
+   "https://www.hostinger.com/"
+  ],
+  "file": "main/hostinger--decode-the-noise.md"
+ },
+ {
+  "kind": "main",
+  "id": 351,
+  "title": "Earned Trust in AI Code",
+  "sponsor": "Tieto",
+  "track": "Agentic AI",
+  "url": "https://hackjunction.app/participate/45/challenges/351",
+  "website": "https://www.tieto.com/",
+  "prizes": [
+   {
+    "place": "1st Place",
+    "prize": "€2,000 cash prize for the winning team."
+   },
+   {
+    "place": "2nd Place",
+    "prize": "€1,000 cash prize for the runner-up team."
+   },
+   {
+    "place": "3rd Place",
+    "prize": "€500 cash prize for the third-place team."
+   }
+  ],
+  "criteria": [
+   {
+    "name": "Clarity",
+    "weight": 30,
+    "note": "A clear recommendation with stated principles, explicit trade-offs and limits."
+   },
+   {
+    "name": "Practicality",
+    "weight": 25,
+    "note": "The concept could work in a real pull-request flow and scale, with a named human owning each decision."
+   },
+   {
+    "name": "Measurement",
+    "weight": 25,
+    "note": "Shows how trust is measured: reverts and incidents don't rise as review time falls, AI findings are real and accepted, time to merge, share routed to humans."
+   },
+   {
+    "name": "Evidence",
+    "weight": 20,
+    "note": "Evidence traceable to a requirement lets a named human accept a change without a full read, incl. what the AI found, what it refused to decide, and why."
+   }
+  ],
+  "links": [
+   "https://github.com/te-industry-tech-office/junction26-messagepack-csharp",
+   "https://github.com/MessagePack-CSharp/MessagePack-CSharp/issues/2283",
+   "https://github.com/MessagePack-CSharp/MessagePack-CSharp/issues/2234",
+   "https://github.com/MessagePack-CSharp/MessagePack-CSharp/issues/2129",
+   "https://github.com/MessagePack-CSharp/MessagePack-CSharp/issues/2297",
+   "https://www.tieto.com/"
+  ],
+  "file": "main/tieto--earned-trust-in-ai-code.md"
+ },
+ {
+  "kind": "main",
+  "id": 350,
+  "title": "Make Unicorns Real",
+  "sponsor": "Cala",
+  "track": "Agentic AI",
+  "url": "https://hackjunction.app/participate/45/challenges/350",
+  "website": "https://www.cala.ai/",
+  "prizes": [
+   {
+    "place": "1st",
+    "prize": "5,000€ to attend any hackathon on the planet + 1,000€ in Cala credits + Cala Merch"
+   },
+   {
+    "place": "Runner Up",
+    "prize": "500€ + Cala Merch"
+   }
+  ],
+  "criteria": [
+   {
+    "name": "Real need",
+    "weight": 25,
+    "note": "a clear user with a problem worth solving"
+   },
+   {
+    "name": "Execution",
+    "weight": 25,
+    "note": "it works smoothly, end to end"
+   },
+   {
+    "name": "Originality",
+    "weight": 25,
+    "note": "a fresh angle, even on a familiar problem"
+   },
+   {
+    "name": "Use of Cala",
+    "weight": 25,
+    "note": "Cala is core to the product, not an add-on"
+   }
+  ],
+  "links": [
+   "mailto:elies@cala.ai",
+   "https://www.cala.ai/"
+  ],
+  "file": "main/cala--make-unicorns-real.md"
+ },
+ {
+  "kind": "main",
+  "id": 349,
+  "title": "Spread",
+  "sponsor": "Bahn Express",
+  "track": "Agentic AI",
+  "url": "https://hackjunction.app/participate/45/challenges/349",
+  "website": "https://www.bahnexpress.com/",
+  "prizes": [
+   {
+    "place": "1st Place",
+    "prize": "2000€"
+   },
+   {
+    "place": "2nd Place",
+    "prize": "1000€"
+   },
+   {
+    "place": "3rd Place",
+    "prize": "500€"
+   }
+  ],
+  "criteria": [],
+  "links": [
+   "https://spread.bahnexpress.com/join",
+   "https://spread.bahnexpress.com/llms.txt",
+   "https://www.bahnexpress.com/"
+  ],
+  "file": "main/bahn-express--spread.md"
+ },
+ {
+  "kind": "main",
+  "id": 328,
+  "title": "Break the Agent",
+  "sponsor": "AfterQuery",
+  "track": "Agentic AI",
+  "url": "https://hackjunction.app/participate/45/challenges/328",
+  "website": "https://www.afterquery.com/",
+  "prizes": [
+   {
+    "place": "1st Place",
+    "prize": "3,000€ + A work trial at AfterQuery + Merch"
+   },
+   {
+    "place": "2nd Place",
+    "prize": "1,500€ + Merch"
+   },
+   {
+    "place": "3rd Place",
+    "prize": "500€"
+   }
+  ],
+  "criteria": [
+   {
+    "name": "The gap",
+    "weight": 30,
+    "note": "Full points: the frontier agent consistently scores below a stronger reference run your team demonstrates; both results can be reproduced across repeated runs. Zero points: no measurable gap, or the c"
+   },
+   {
+    "name": "Meaningful difficulty",
+    "weight": 30,
+    "note": "Full points: you can explain the agent's main mistakes and connect them to decisions in the task; the information and tools needed to do better are available to it. Zero points: the gap comes from unf"
+   },
+   {
+    "name": "Reward Integrity",
+    "weight": 25,
+    "note": "Full points: the reward measures success at the task and holds up when judges try to exploit it; doing nothing or stopping early earns little or no credit; completing the task well remains the best wa"
+   },
+   {
+    "name": "Craft",
+    "weight": 15,
+    "note": "Full points: the environment's rules and behavior make sense for the setting; judges can run the evaluation from your README with one command and reproduce your reported results. Zero points: the envi"
+   }
+  ],
+  "links": [
+   "https://www.afterquery.com/"
+  ],
+  "file": "main/afterquery--break-the-agent.md"
+ },
+ {
+  "kind": "main",
+  "id": 327,
+  "title": "Trusted Trade Agents",
+  "sponsor": "Valio Aimo",
+  "track": "Agentic AI",
+  "url": "https://hackjunction.app/participate/45/challenges/327",
+  "website": "https://www.valioaimo.fi/",
+  "prizes": [
+   {
+    "place": "1st place",
+    "prize": "4 000€"
+   },
+   {
+    "place": "2nd place",
+    "prize": "2 000€"
+   },
+   {
+    "place": "3rd place",
+    "prize": "1 000€"
+   }
+  ],
+  "criteria": [
+   {
+    "name": "Working end-to-end demo",
+    "weight": 30,
+    "note": "The solution runs through a full request → lookup → order/approval flow in the mocked environment, not just isolated pieces."
+   },
+   {
+    "name": "Solving the problem and user need",
+    "weight": 20,
+    "note": "how Precisely the agent matches what the buyer actually asked for, with the least manual correction needed."
+   },
+   {
+    "name": "Autonomy and controls",
+    "weight": 20,
+    "note": "Quality of the guardrails design. What the agent can decide alone, what needs human sign-off, and how decisions are logged and auditable."
+   },
+   {
+    "name": "Robustness to exception situations",
+    "weight": 15,
+    "note": "Handling of partial availability, substitutions and delivery constraints beyond the happy path."
+   },
+   {
+    "name": "Openness and credible path toward production",
+    "weight": 15,
+    "note": "Open, documented standards rather than a proprietary format, clear visibility of assumptions, well-justified technical choices, and a credible view of next development steps"
+   }
+  ],
+  "links": [
+   "https://junction26.valioaimo.fi/",
+   "https://www.valioaimo.fi/"
+  ],
+  "file": "main/valio-aimo--trusted-trade-agents.md"
+ },
+ {
+  "kind": "main",
+  "id": 298,
+  "title": "The Internet Butler / Your Personal Assistant",
+  "sponsor": "Exa",
+  "track": "Agentic AI",
+  "url": "https://hackjunction.app/participate/45/challenges/298",
+  "website": "https://exa.ai/",
+  "prizes": [
+   {
+    "place": "1st Place",
+    "prize": "$2,500 Cash, $5,000 in Exa credits, Exa hoodie per person & Exa branded TRMNL dashboard"
+   },
+   {
+    "place": "2nd Place",
+    "prize": "$1500 cash, $3,000 in Exa credits, Exa hoodie per person & Exa branded macropad"
+   },
+   {
+    "place": "3rd Place",
+    "prize": "$500 Cash, $1k Exa credits & Exa hoodie per person"
+   },
+   {
+    "place": "Participation Trophy",
+    "prize": "Every Junction participant get free $50 Exa Credits"
+   }
+  ],
+  "criteria": [
+   {
+    "name": "Use of Exa",
+    "weight": 20,
+    "note": "Use of Exa to retrieve information that could not have come from a model’s training data alone"
+   },
+   {
+    "name": "Usefulness",
+    "weight": 20,
+    "note": "Usefulness to a specific group of real people"
+   },
+   {
+    "name": "Clarity",
+    "weight": 20,
+    "note": "Clarity in showing sources"
+   },
+   {
+    "name": "Originality",
+    "weight": 20,
+    "note": "How original the idea is?"
+   },
+   {
+    "name": "Working Implementation",
+    "weight": 20,
+    "note": "Whether the demo works on live queries, including ones the judges try themselves"
+   }
+  ],
+  "links": [
+   "https://demos.exa.ai/",
+   "https://dashboard.exa.ai/billing",
+   "https://exa.ai/"
+  ],
+  "file": "main/exa--the-internet-butler-your-personal-assist.md"
+ },
+ {
+  "kind": "main",
+  "id": 356,
+  "title": "The Green European Renaissance",
+  "sponsor": "Arduino",
+  "track": "Hardware (Arduino)",
+  "url": "https://hackjunction.app/participate/45/challenges/356",
+  "website": "https://www.arduino.cc/",
+  "prizes": [
+   {
+    "place": "1st Team",
+    "prize": "Ventuno Q unit per Team member"
+   },
+   {
+    "place": "2nd Team",
+    "prize": "UNO Q 4G + Plug and Make Kits per Team member"
+   },
+   {
+    "place": "3rd Team",
+    "prize": "Plug and Make Kit per Team member"
+   }
+  ],
+  "criteria": [
+   {
+    "name": "Technical Implementation & Edge AI",
+    "weight": 30,
+    "note": "How well the UNO Q, sensors and on-device AI are used"
+   },
+   {
+    "name": "Environmental & Social Impact",
+    "weight": 30,
+    "note": "How much the solution improves the environment and people's lives"
+   },
+   {
+    "name": "Creativity & Innovation",
+    "weight": 20,
+    "note": "Originality of the idea and approach"
+   },
+   {
+    "name": "Working Prototype & Demo",
+    "weight": 20,
+    "note": "A functioning physical prototype"
+   }
+  ],
+  "links": [
+   "https://projecthub.arduino.cc/",
+   "https://www.arduino.cc/en/software/#app-lab-section",
+   "https://www.arduino.cc/"
+  ],
+  "file": "main/arduino--the-green-european-renaissance.md"
+ },
+ {
+  "kind": "main",
+  "id": 342,
+  "title": "AI Glasses for Everyone, Everyday",
+  "sponsor": "Meta",
+  "track": "Hardware (Arduino)",
+  "url": "https://hackjunction.app/participate/45/challenges/342",
+  "website": "",
+  "prizes": [
+   {
+    "place": "Best overall",
+    "prize": "Each member of the winning team will receive a pair of Ray-Ban Meta glasses."
+   }
+  ],
+  "criteria": [
+   {
+    "name": "Creativity and use case",
+    "weight": 25,
+    "note": ""
+   },
+   {
+    "name": "Technical execution",
+    "weight": 25,
+    "note": ""
+   },
+   {
+    "name": "Real-world value and feasibility",
+    "weight": 25,
+    "note": ""
+   },
+   {
+    "name": "User experience: input, accessibility and trust",
+    "weight": 25,
+    "note": ""
+   }
+  ],
+  "links": [],
+  "file": "main/meta--ai-glasses-for-everyone-everyday.md"
+ },
+ {
+  "kind": "main",
+  "id": 330,
+  "title": "Stop Simulating, Start Moving: See It. Detect It. Act on It. The Intel Physical AI Challenge",
+  "sponsor": "Ignite Next x Intel",
+  "track": "Hardware (Arduino)",
+  "url": "https://hackjunction.app/participate/45/challenges/330",
+  "website": "",
+  "prizes": [
+   {
+    "place": "1st Place",
+    "prize": "€5,000"
+   },
+   {
+    "place": "2nd Place",
+    "prize": "€3,000"
+   },
+   {
+    "place": "3rd Place",
+    "prize": "€2,000"
+   }
+  ],
+  "criteria": [
+   {
+    "name": "Task success",
+    "weight": 30,
+    "note": "Covers accuracy, cycle time and robustness to shifted or cluttered bricks"
+   },
+   {
+    "name": "Intel technology integration",
+    "weight": 30,
+    "note": "Covers deployment with OpenVINO Physical AI and the Robotics AI Suite and offloading to NPU and integrated GPU"
+   },
+   {
+    "name": "Dataset and pipeline quality",
+    "weight": 20,
+    "note": "Covers clean teleoperation data and fine-tuning in Physical AI Studio"
+   },
+   {
+    "name": "System efficiency",
+    "weight": 20,
+    "note": "Covers inference latency, thermal headroom and power consumption on Core Ultra"
+   }
+  ],
+  "links": [
+   "https://drive.google.com/file/d/1nKs-e-4FNk-AoMq1fCeRKM_6mpIkArRt/view?usp=sharing",
+   "mailto:marvin.mueller@ignitenext.com"
+  ],
+  "file": "main/ignite-next-x-intel--stop-simulating-start-moving-see-it-dete.md"
+ },
+ {
+  "kind": "main",
+  "id": 326,
+  "title": "The Robot Teleoperation Challenge",
+  "sponsor": "Rokoko",
+  "track": "Hardware (Arduino)",
+  "url": "https://hackjunction.app/participate/45/challenges/326",
+  "website": "https://www.rokoko.com/",
+  "prizes": [
+   {
+    "place": "1st place",
+    "prize": "1x pair of Smartgloves II + 1x SDK license + featured post on Rokoko’s blog and extended support from Rokoko team (valued at €4,990)"
+   },
+   {
+    "place": "2nd Place",
+    "prize": "1x Smartsuit Pro II (valued at €2,295)"
+   },
+   {
+    "place": "3rd place",
+    "prize": "1x pair of Smartgloves I (1st gen gloves) + Rokoko merch (valued at €1,095)"
+   }
+  ],
+  "criteria": [
+   {
+    "name": "Technical execution",
+    "weight": 35,
+    "note": "Quality of the implementation – physical or simulated."
+   },
+   {
+    "name": "Originality & creativity",
+    "weight": 25,
+    "note": "How fresh and surprising the idea and approach are."
+   },
+   {
+    "name": "Usefulness & potential impact",
+    "weight": 25,
+    "note": "The real-world value or potential impact of the application."
+   },
+   {
+    "name": "Demonstration of human-controlled robotics",
+    "weight": 15,
+    "note": "How effectively the project shows the potential of robotic teleoperation."
+   }
+  ],
+  "links": [
+   "https://docs.google.com/forms/d/e/1FAIpQLSdCZTfoFzWbZS8fuvpKjhhP8xvOAX_vhJhTKYMpuRB8JMIHIQ/viewform",
+   "https://www.rokoko.com/"
+  ],
+  "file": "main/rokoko--the-robot-teleoperation-challenge.md"
+ },
+ {
+  "kind": "main",
+  "id": 320,
+  "title": "Aaltonomous Humanoid",
+  "sponsor": "Aalto University",
+  "track": "Hardware (Arduino)",
+  "url": "https://hackjunction.app/participate/45/challenges/320",
+  "website": "https://aalto.fi/",
+  "prizes": [
+   {
+    "place": "Winning Team",
+    "prize": "2,000€ + a visit to the Aalto robotics lab"
+   },
+   {
+    "place": "Top 5",
+    "prize": "🤖 **Top ~5 teams** (chosen by performance in simulation) get to run their solution **live on the real Unitree G1**."
+   }
+  ],
+  "criteria": [
+   {
+    "name": "Real-world result",
+    "weight": 40,
+    "note": "How well it works on the real robot"
+   },
+   {
+    "name": "Generality",
+    "weight": 25,
+    "note": "Holds up when things change"
+   },
+   {
+    "name": "Originality",
+    "weight": 20,
+    "note": "Freshness of idea and approach"
+   },
+   {
+    "name": "Presentation",
+    "weight": 15,
+    "note": "Clarity of what you built and why it matters"
+   }
+  ],
+  "links": [
+   "https://github.com/zupermiez/aaltonomous-humanoid",
+   "https://aalto.fi/"
+  ],
+  "file": "main/aalto-university--aaltonomous-humanoid.md"
+ },
+ {
+  "kind": "main",
+  "id": 344,
+  "title": "Equal Care Across Finland",
+  "sponsor": "AstraZeneca",
+  "track": "Healthcare",
+  "url": "https://hackjunction.app/participate/45/challenges/344",
+  "website": "",
+  "prizes": [
+   {
+    "place": "Best Overall",
+    "prize": "1000€"
+   },
+   {
+    "place": "2nd Overall",
+    "prize": "750€"
+   },
+   {
+    "place": "3rd Overall",
+    "prize": "250€"
+   }
+  ],
+  "criteria": [
+   {
+    "name": "Actionability",
+    "weight": 30,
+    "note": "Are the improvement proposals concrete enough for a health center or wellbeing services county to implement?"
+   },
+   {
+    "name": "Insight",
+    "weight": 25,
+    "note": "Does the solution reveal a real and meaningful gap, and show where it emerges in the care pathway?"
+   },
+   {
+    "name": "Data quality & transparency",
+    "weight": 20,
+    "note": "Are the sources clear, limitations acknowledged, and findings free from unsupported assumptions?"
+   },
+   {
+    "name": "Clarity",
+    "weight": 10,
+    "note": "Can a decision-maker understand the key message and proposed action within two minutes?"
+   },
+   {
+    "name": "Execution",
+    "weight": 15,
+    "note": "Does the solution work in a live demonstration in front of the judges?"
+   }
+  ],
+  "links": [
+   "https://files.hackjunction.app/resources/Kansallinen_syopastrategia_2026_2035_FINAL.pdf",
+   "https://files.hackjunction.app/resources/Sy%C3%B6p%C3%A4strategiat%20ja%20sy%C3%B6p%C3%A4data_linkkikokoelma.pdf",
+   "https://files.hackjunction.app/resources/Kansallinen_syopastrategia_toimeenpanon_tiekartta_2026_2031.pdf"
+  ],
+  "file": "main/astrazeneca--equal-care-across-finland.md"
+ },
+ {
+  "kind": "main",
+  "id": 343,
+  "title": "Beyond the Clinic",
+  "sponsor": "Aalto University",
+  "track": "Healthcare",
+  "url": "https://hackjunction.app/participate/45/challenges/343",
+  "website": "https://aalto.fi/",
+  "prizes": [
+   {
+    "place": "2000€ for the best team",
+    "prize": "A prize for the winning team, a visit to the brain stimulation lab, and for the most promising idea, a change to keep developing it together with the researchers"
+   }
+  ],
+  "criteria": [
+   {
+    "name": "Usefulness",
+    "weight": 25,
+    "note": "Could it really help people stay well at home?"
+   },
+   {
+    "name": "Ease of use",
+    "weight": 25,
+    "note": "Would someone recovering from depression actually use it every day?"
+   },
+   {
+    "name": "Smart sensing",
+    "weight": 25,
+    "note": "Does it make clever use of what can be measured at home, and learn what works for each person?"
+   },
+   {
+    "name": "Creativity",
+    "weight": 25,
+    "note": "How original and delightful is the idea?"
+   }
+  ],
+  "links": [
+   "https://soihtudtx.com/",
+   "https://meruhealth.com/",
+   "https://aalto.fi/"
+  ],
+  "file": "main/aalto-university--beyond-the-clinic.md"
+ },
+ {
+  "kind": "main",
+  "id": 335,
+  "title": "Make Blueprints Talk",
+  "sponsor": "Stoa",
+  "track": "AI Infrastructure (Verda)",
+  "url": "https://hackjunction.app/participate/45/challenges/335",
+  "website": "https://stoabuild.com/",
+  "prizes": [
+   {
+    "place": "Best Overall",
+    "prize": "1000€ + A work trial at Stoa"
+   },
+   {
+    "place": "2nd Overall",
+    "prize": "750€"
+   },
+   {
+    "place": "3rd Overall",
+    "prize": "250€"
+   }
+  ],
+  "criteria": [
+   {
+    "name": "Accuracy of answers",
+    "weight": 25,
+    "note": ""
+   },
+   {
+    "name": "How well the solution visualizes its reasoning so a human can verify the answer",
+    "weight": 25,
+    "note": ""
+   },
+   {
+    "name": "Creativity",
+    "weight": 25,
+    "note": ""
+   },
+   {
+    "name": "Low inference cost",
+    "weight": 25,
+    "note": ""
+   }
+  ],
+  "links": [
+   "https://fwjydgxpttajiqpfmqtj.supabase.co/storage/v1/object/public/stoa-junction-2026/junction-dataset-preview.zip",
+   "https://fwjydgxpttajiqpfmqtj.supabase.co/storage/v1/object/public/stoa-junction-2026/junction-dataset.zip",
+   "https://stoabuild.com/"
+  ],
+  "file": "main/stoa--make-blueprints-talk.md"
+ },
+ {
+  "kind": "main",
+  "id": 332,
+  "title": "The Web Is Your Real-Time Database",
+  "sponsor": "Context.dev",
+  "track": "Data",
+  "url": "https://hackjunction.app/participate/45/challenges/332",
+  "website": "",
+  "prizes": [
+   {
+    "place": "1st Place",
+    "prize": "€2,000 + swag"
+   },
+   {
+    "place": "2nd Place",
+    "prize": "€500 + swag"
+   },
+   {
+    "place": "3rd Place",
+    "prize": "Swag"
+   }
+  ],
+  "criteria": [
+   {
+    "name": "Real-world impact",
+    "weight": 20,
+    "note": "Does this connect to a real business or consumer need?"
+   },
+   {
+    "name": "Creative use of live web data",
+    "weight": 20,
+    "note": "One scrape call or interesting combination of different sources?"
+   },
+   {
+    "name": "Completeness of demo",
+    "weight": 20,
+    "note": "How ready is it for production?"
+   },
+   {
+    "name": "Technical execution",
+    "weight": 20,
+    "note": "Latency and accuracy of data"
+   },
+   {
+    "name": "Real-timeness",
+    "weight": 20,
+    "note": "Does it react to change over time or take a one-off snapshot?"
+   }
+  ],
+  "links": [
+   "https://gpurentalprices.com/",
+   "https://www.producthunt.com/products/yapper-leaderboard",
+   "https://www.context.dev/blog/stan-builds-an-internal-leaderboard-with-context-dev",
+   "https://cve.now/",
+   "https://www.context.dev/blog/ferndesk-achieved-personalized-onboarding-in-minutes-with-brand-dev",
+   "mailto:beer@context.dev",
+   "https://context.dev/signup",
+   "https://context.dev/dashboard/redeem-credits",
+   "https://docs.context.dev/quickstart",
+   "https://docs.context.dev/"
+  ],
+  "file": "main/context-dev--the-web-is-your-real-time-database.md"
+ },
+ {
+  "kind": "main",
+  "id": 319,
+  "title": "Rethinking Recruitment",
+  "sponsor": "City of Espoo",
+  "track": "Data",
+  "url": "https://hackjunction.app/participate/45/challenges/319",
+  "website": "https://www.espoo.fi/",
+  "prizes": [
+   {
+    "place": "Best overall",
+    "prize": "1500€"
+   },
+   {
+    "place": "2nd Overall",
+    "prize": "1000€"
+   },
+   {
+    "place": "3rd Overall",
+    "prize": "500€"
+   }
+  ],
+  "criteria": [
+   {
+    "name": "Impact & Relevance",
+    "weight": 45,
+    "note": "Does the solution solve a real matchmaking or recruitment challenge and create meaningful value for companies, talent or event organisers?"
+   },
+   {
+    "name": "Innovation & User Experience",
+    "weight": 35,
+    "note": "Does the solution challenge existing approaches and provide an engaging, intuitive and useful user experience?"
+   },
+   {
+    "name": "Responsible & Feasible Execution",
+    "weight": 20,
+    "note": "Is the solution technically credible, responsibly designed and realistic enough to be further developed for real-world use?"
+   }
+  ],
+  "links": [
+   "https://tem.fi/documents/1410877/177691663/FRI+Packalen+National+Forum+for+Skills+Anticipation+2021-2024.pdf/daba07ab-5667-c10f-e122-ba54c8f3085b/FRI+Packalen+National+Forum+for+Skills+Anticipation+2021-2024.pdf?t=1698222758405",
+   "https://www.businessespoo.com/",
+   "https://www.espoo.fi/"
+  ],
+  "file": "main/city-of-espoo--rethinking-recruitment.md"
+ },
+ {
+  "kind": "main",
+  "id": 307,
+  "title": "Wikipedia Through Time.",
+  "sponsor": "MariaDB",
+  "track": "Data",
+  "url": "https://hackjunction.app/participate/45/challenges/307",
+  "website": "https://mariadb.org/",
+  "prizes": [
+   {
+    "place": "1st Place",
+    "prize": "€1,000 in cash, €1,000 in UpCloud credits, and a MariaDB certification for every team member (5 vouchers at learn.mariadb.com, value 750 USD)."
+   },
+   {
+    "place": "2nd Place",
+    "prize": "€500 in cash."
+   },
+   {
+    "place": "3rd Place",
+    "prize": "€250 in cash."
+   },
+   {
+    "place": "All Winners",
+    "prize": "All winning teams to be credited in blog on mariadb.org."
+   }
+  ],
+  "criteria": [
+   {
+    "name": "Effective and Creative use of MariaDB",
+    "weight": 20,
+    "note": "Effective and creative use of MariaDB RAG and/or system-versioned tables"
+   },
+   {
+    "name": "Implementation",
+    "weight": 20,
+    "note": "Technical execution and scalability across the provided datasets"
+   },
+   {
+    "name": "Usefulness",
+    "weight": 20,
+    "note": "Real-world usefulness for Wikipedia readers or editors"
+   },
+   {
+    "name": "Design and demo quality",
+    "weight": 20,
+    "note": "Design and demo quality"
+   },
+   {
+    "name": "Originality",
+    "weight": 20,
+    "note": "The most original and unique implementation of the project"
+   },
+   {
+    "name": "Bonus",
+    "weight": 0,
+    "note": "Added technical ambition for teams taking on the SVT track or combining both tracks"
+   }
+  ],
+  "links": [
+   "https://github.com/MariaDB/mariadb-wikipedia-datasets",
+   "https://github.com/MariaDB/mariadb-vector-wikipedia-rag",
+   "https://mariadb.org/"
+  ],
+  "file": "main/mariadb--wikipedia-through-time.md"
+ },
+ {
+  "kind": "main",
+  "id": 311,
+  "title": "Personal Economic Trainer",
+  "sponsor": "S-Pankki",
+  "track": "FinTech",
+  "url": "https://hackjunction.app/participate/45/challenges/311",
+  "website": "https://www.s-pankki.fi/",
+  "prizes": [
+   {
+    "place": "1st Prize",
+    "prize": "2000€ Airbnb Gift Card"
+   },
+   {
+    "place": "2nd Prize",
+    "prize": "1000€ Airbnb Gift Card"
+   },
+   {
+    "place": "3rd Prize",
+    "prize": "500€ Airbnb Gift Card"
+   }
+  ],
+  "criteria": [
+   {
+    "name": "Impact on financial literacy (including the pedagogical angle)",
+    "weight": 20,
+    "note": ""
+   },
+   {
+    "name": "Originality of AI integration",
+    "weight": 20,
+    "note": ""
+   },
+   {
+    "name": "Clarity of the mobile user experience",
+    "weight": 20,
+    "note": ""
+   },
+   {
+    "name": "Feasibility",
+    "weight": 20,
+    "note": ""
+   },
+   {
+    "name": "Potential to integrate into S-mobiili",
+    "weight": 20,
+    "note": ""
+   }
+  ],
+  "links": [
+   "https://github.com/hackjunction/Junction-2026-S-pankki",
+   "https://www.s-pankki.fi/"
+  ],
+  "file": "main/s-pankki--personal-economic-trainer.md"
+ },
+ {
+  "kind": "tech",
+  "id": 56,
+  "title": "Verda Compute Track",
+  "sponsor": "Verda",
+  "track": "Tech challenge (stacks on a main challenge)",
+  "url": "https://hackjunction.app/participate/45/tech-challenges/56",
+  "website": "http://verda.com/",
+  "prizes": [
+   {
+    "place": "1st Place",
+    "prize": "$10,000 in Verda cloud credits + Verda hoodies"
+   },
+   {
+    "place": "2nd Place",
+    "prize": "$2,500 in cloud credits"
+   },
+   {
+    "place": "3rd Place",
+    "prize": "$2,500 in cloud credits"
+   }
+  ],
+  "criteria": [
+   {
+    "name": "Ambition",
+    "weight": 25,
+    "note": "How much did compute let you do that you otherwise couldn't?"
+   },
+   {
+    "name": "Fit",
+    "weight": 25,
+    "note": "Did you pick the right Verda services and use them well?"
+   },
+   {
+    "name": "Working prototype",
+    "weight": 25,
+    "note": "Does it run, and is the process documented?"
+   },
+   {
+    "name": "Path To Scale",
+    "weight": 25,
+    "note": "Is there a credible way from demo to real users?"
+   }
+  ],
+  "links": [
+   "http://verda.com/"
+  ],
+  "file": "tech/verda--verda-compute-track.md"
+ },
+ {
+  "kind": "tech",
+  "id": 55,
+  "title": "Best Use of MongoDB Atlas",
+  "sponsor": "Major League Hacking",
+  "track": "Tech challenge (stacks on a main challenge)",
+  "url": "https://hackjunction.app/participate/45/tech-challenges/55",
+  "website": "",
+  "prizes": [
+   {
+    "place": "Best Overall",
+    "prize": "M5Stack IoT Kit"
+   }
+  ],
+  "criteria": [],
+  "links": [
+   "https://mlh.link/mongodb"
+  ],
+  "file": "tech/major-league-hacking--best-use-of-mongodb-atlas.md"
+ },
+ {
+  "kind": "tech",
+  "id": 54,
+  "title": "Best Use of Vultr",
+  "sponsor": "Major League Hacking",
+  "track": "Tech challenge (stacks on a main challenge)",
+  "url": "https://hackjunction.app/participate/45/tech-challenges/54",
+  "website": "",
+  "prizes": [
+   {
+    "place": "Best Overall",
+    "prize": "M5Stack mini programmable monitor"
+   }
+  ],
+  "criteria": [],
+  "links": [
+   "https://mlh.link/vultr"
+  ],
+  "file": "tech/major-league-hacking--best-use-of-vultr.md"
+ },
+ {
+  "kind": "tech",
+  "id": 53,
+  "title": "Best Use of Tiger Data",
+  "sponsor": "Major League Hacking",
+  "track": "Tech challenge (stacks on a main challenge)",
+  "url": "https://hackjunction.app/participate/45/tech-challenges/53",
+  "website": "",
+  "prizes": [
+   {
+    "place": "Best Overall",
+    "prize": "Stream Deck Mini"
+   }
+  ],
+  "criteria": [],
+  "links": [
+   "https://mlh.link/tigerdata"
+  ],
+  "file": "tech/major-league-hacking--best-use-of-tiger-data.md"
+ },
+ {
+  "kind": "tech",
+  "id": 52,
+  "title": "Best Use of Solana",
+  "sponsor": "Major League Hacking",
+  "track": "Tech challenge (stacks on a main challenge)",
+  "url": "https://hackjunction.app/participate/45/tech-challenges/52",
+  "website": "",
+  "prizes": [
+   {
+    "place": "Best Overall",
+    "prize": "Unruggable Hardware Wallets"
+   }
+  ],
+  "criteria": [],
+  "links": [
+   "https://mlh.link/solana"
+  ],
+  "file": "tech/major-league-hacking--best-use-of-solana.md"
+ },
+ {
+  "kind": "tech",
+  "id": 51,
+  "title": "Best Use of Entire",
+  "sponsor": "Major League Hacking",
+  "track": "Tech challenge (stacks on a main challenge)",
+  "url": "https://hackjunction.app/participate/45/tech-challenges/51",
+  "website": "",
+  "prizes": [
+   {
+    "place": "Best Overall",
+    "prize": "Mini Portable Projector"
+   }
+  ],
+  "criteria": [],
+  "links": [
+   "https://mlh.link/junction-26",
+   "https://mlh.link/entire"
+  ],
+  "file": "tech/major-league-hacking--best-use-of-entire.md"
+ },
+ {
+  "kind": "tech",
+  "id": 50,
+  "title": "Best Use of ElevenLabs",
+  "sponsor": "Major League Hacking",
+  "track": "Tech challenge (stacks on a main challenge)",
+  "url": "https://hackjunction.app/participate/45/tech-challenges/50",
+  "website": "",
+  "prizes": [
+   {
+    "place": "Best Overall",
+    "prize": "Wireless Earbuds"
+   }
+  ],
+  "criteria": [],
+  "links": [
+   "https://mlh.link/junction-26",
+   "https://mlh.link/elevenlabs"
+  ],
+  "file": "tech/major-league-hacking--best-use-of-elevenlabs.md"
+ },
+ {
+  "kind": "tech",
+  "id": 49,
+  "title": "Best Use of Codex",
+  "sponsor": "OpenAI",
+  "track": "Tech challenge (stacks on a main challenge)",
+  "url": "https://hackjunction.app/participate/45/tech-challenges/49",
+  "website": "https://openai.com/",
+  "prizes": [
+   {
+    "place": "1st Overall",
+    "prize": "$10 000 API Credits"
+   },
+   {
+    "place": "2nd Overall",
+    "prize": "$5000 API Credits"
+   },
+   {
+    "place": "3rd Overall",
+    "prize": "$2500 API Credits"
+   }
+  ],
+  "criteria": [],
+  "links": [
+   "https://developers.openai.com/codex",
+   "https://developers.openai.com/codex/quickstart",
+   "https://platform.openai.com/docs",
+   "https://openai.com/"
+  ],
+  "file": "tech/openai--best-use-of-codex.md"
+ },
+ {
+  "kind": "tech",
+  "id": 48,
+  "title": "Best Use of Gemini API",
+  "sponsor": "Google DeepMind",
+  "track": "Tech challenge (stacks on a main challenge)",
+  "url": "https://hackjunction.app/participate/45/tech-challenges/48",
+  "website": "https://deepmind.google/",
+  "prizes": [
+   {
+    "place": "1st Overall",
+    "prize": "The winning team will receive 4000€, plus $1,000 in Google Cloud credits per team member."
+   },
+   {
+    "place": "2nd Overall",
+    "prize": "2000€"
+   },
+   {
+    "place": "3rd Overall",
+    "prize": "1000€"
+   }
+  ],
+  "criteria": [],
+  "links": [
+   "https://aistudio.google.com/",
+   "https://ai.google.dev/gemini-api/docs",
+   "https://ai.google.dev/gemini-api/docs/quickstart",
+   "https://deepmind.google/"
+  ],
+  "file": "tech/google-deepmind--best-use-of-gemini-api.md"
+ },
+ {
+  "kind": "tech",
+  "id": 47,
+  "title": "Best Use of Gemma",
+  "sponsor": "Google DeepMind",
+  "track": "Tech challenge (stacks on a main challenge)",
+  "url": "https://hackjunction.app/participate/45/tech-challenges/47",
+  "website": "https://deepmind.google/",
+  "prizes": [
+   {
+    "place": "Top 3",
+    "prize": "€1,000 per team for the top 3 teams, with no ranking between winners."
+   }
+  ],
+  "criteria": [],
+  "links": [
+   "https://featherless.ai/models?families=gemma",
+   "https://modal.com/",
+   "https://verda.com/",
+   "https://aistudio.google.com/",
+   "https://huggingface.co/google",
+   "https://ai.google.dev/gemma/docs",
+   "https://deepmind.google/"
+  ],
+  "file": "tech/google-deepmind--best-use-of-gemma.md"
+ },
+ {
+  "kind": "tech",
+  "id": 46,
+  "title": "Best Use of Nemotron",
+  "sponsor": "NVIDIA",
+  "track": "Tech challenge (stacks on a main challenge)",
+  "url": "https://hackjunction.app/participate/45/tech-challenges/46",
+  "website": "https://www.nvidia.com/en-us/",
+  "prizes": [
+   {
+    "place": "Two best teams",
+    "prize": "1x NVIDIA RTX 5080"
+   }
+  ],
+  "criteria": [
+   {
+    "name": "Meaningful Nemotron Usage",
+    "weight": 25,
+    "note": "Nemotron is central to the project's value. The team clearly explains what it does and why it matters."
+   },
+   {
+    "name": "Technical Execution",
+    "weight": 25,
+    "note": "The demo works reliably and shows thoughtful implementation choices around architecture, data flow, tool use, latency, or error handling."
+   },
+   {
+    "name": "Quality of AI Output",
+    "weight": 25,
+    "note": "Outputs are useful, relevant, and grounded where appropriate. The team demonstrates efforts to improve quality through prompting, evaluation, or feedback loops."
+   },
+   {
+    "name": "Creativity and Differentiation",
+    "weight": 25,
+    "note": "The team uses Nemotron thoughtfully or inventively, with a distinct approach to the problem."
+   }
+  ],
+  "links": [
+   "https://integrate.api.nvidia.com/v1",
+   "mailto:ewinch@nvidia.com",
+   "https://www.nvidia.com/en-us/"
+  ],
+  "file": "tech/nvidia--best-use-of-nemotron.md"
+ },
+ {
+  "kind": "tech",
+  "id": 45,
+  "title": "Best use of Arduino Uno Q",
+  "sponsor": "Arduino",
+  "track": "Tech challenge (stacks on a main challenge)",
+  "url": "https://hackjunction.app/participate/45/tech-challenges/45",
+  "website": "https://www.arduino.cc/",
+  "prizes": [
+   {
+    "place": "Arduino UNO Q & Plug and Make kit for each team member",
+    "prize": "Each member of the winning team receives an Arduino UNO Q and an Arduino Plug and Make Kit."
+   }
+  ],
+  "criteria": [
+   {
+    "name": "Use of Arduino hardware & Edge AI",
+    "weight": 50,
+    "note": ""
+   },
+   {
+    "name": "Working prototype & demo",
+    "weight": 30,
+    "note": ""
+   },
+   {
+    "name": "Creativity",
+    "weight": 20,
+    "note": ""
+   }
+  ],
+  "links": [
+   "https://2026.hackjunction.com/hardware",
+   "https://projecthub.arduino.cc/",
+   "https://www.arduino.cc/en/software/#app-lab-section",
+   "https://www.arduino.cc/"
+  ],
+  "file": "tech/arduino--best-use-of-arduino-uno-q.md"
+ },
+ {
+  "kind": "tech",
+  "id": 44,
+  "title": "Best Use of Context.dev: Fully Structured Web",
+  "sponsor": "Context.dev",
+  "track": "Tech challenge (stacks on a main challenge)",
+  "url": "https://hackjunction.app/participate/45/tech-challenges/44",
+  "website": "",
+  "prizes": [
+   {
+    "place": "1st Place",
+    "prize": "€750 + swag"
+   },
+   {
+    "place": "2nd Place",
+    "prize": "€250 + swag"
+   },
+   {
+    "place": "3rd Place",
+    "prize": "Swag"
+   }
+  ],
+  "criteria": [
+   {
+    "name": "Creative use of Context.dev",
+    "weight": 40,
+    "note": "Unusual sources, combining several endpoints."
+   },
+   {
+    "name": "How central live web data is to the product",
+    "weight": 30,
+    "note": ""
+   },
+   {
+    "name": "Technical execution",
+    "weight": 30,
+    "note": "Accuracy, latency, handling of change over time."
+   }
+  ],
+  "links": [
+   "https://context.dev/signup",
+   "https://context.dev/auth.md",
+   "https://context.dev/dashboard/redeem-credits",
+   "https://context.dev/dashboard/api-keys",
+   "https://docs.context.dev/quickstart",
+   "https://docs.context.dev/agent-quickstart",
+   "https://mcp.context.dev/mcp",
+   "https://docs.context.dev/install-mcp",
+   "https://gist.github.com/contextualbeer/c602446780d9270a4d817a4a677c6317",
+   "https://gist.github.com/contextualbeer/d2a016dcd6c535e4eeffa4d6988bd403",
+   "https://docs.context.dev/install-cli",
+   "https://docs.context.dev/install-skill",
+   "https://www.context.dev/playground/scrape",
+   "https://docs.context.dev/",
+   "https://docs.context.dev/use-cases/live-web-context-for-agents",
+   "https://docs.context.dev/api-reference/web-scraping/scrape",
+   "https://docs.context.dev/account/credits",
+   "https://gpu.context.dev/",
+   "https://github.com/context-dot-dev/gpu-terminal",
+   "https://yappers.context.dev/",
+   "https://github.com/context-dot-dev",
+   "mailto:beer@context.dev",
+   "https://status.context.dev/"
+  ],
+  "file": "tech/context-dev--best-use-of-context-dev-fully-structured.md"
+ },
+ {
+  "kind": "tech",
+  "id": 43,
+  "title": "Best Use of Aiven",
+  "sponsor": "Aiven",
+  "track": "Tech challenge (stacks on a main challenge)",
+  "url": "https://hackjunction.app/participate/45/tech-challenges/43",
+  "website": "https://aiven.io/",
+  "prizes": [
+   {
+    "place": "Best Use of Aiven",
+    "prize": "1000€"
+   },
+   {
+    "place": "2nd Overall",
+    "prize": "750€"
+   },
+   {
+    "place": "3rd Overall",
+    "prize": "500€"
+   }
+  ],
+  "criteria": [
+   {
+    "name": "Meaningful use of Aiven technology",
+    "weight": 40,
+    "note": ""
+   },
+   {
+    "name": "Technical implementatation",
+    "weight": 30,
+    "note": ""
+   },
+   {
+    "name": "Impact on the Overall Solution",
+    "weight": 20,
+    "note": ""
+   },
+   {
+    "name": "Creativity",
+    "weight": 10,
+    "note": ""
+   }
+  ],
+  "links": [
+   "https://console.aiven.io/signup",
+   "https://aiven.io/docs/",
+   "https://templates.aiven.io/",
+   "https://aiven.io/"
+  ],
+  "file": "tech/aiven--best-use-of-aiven.md"
+ },
+ {
+  "kind": "tech",
+  "id": 42,
+  "title": "Best use of CRACI",
+  "sponsor": "Craci",
+  "track": "Tech challenge (stacks on a main challenge)",
+  "url": "https://hackjunction.app/participate/45/tech-challenges/42",
+  "website": "https://craci.com/",
+  "prizes": [
+   {
+    "place": "1st Team",
+    "prize": "LEGO set for each team member"
+   },
+   {
+    "place": "2nd Team",
+    "prize": "24-pack of Red Bull for each team member"
+   },
+   {
+    "place": "3rd Team",
+    "prize": "invite to the CRACI x OpenAI lunch event during Slush."
+   },
+   {
+    "place": "Top 5 Teams",
+    "prize": "Each of the top 5 teams receives 50,000 CRACI CI/CD build minutes per team member, plus the opportunity to interview for a job at CRACI."
+   }
+  ],
+  "criteria": [
+   {
+    "name": "Technical depth",
+    "weight": 50,
+    "note": ""
+   },
+   {
+    "name": "How creatively you use CRACI's features",
+    "weight": 50,
+    "note": "SBOMs, AI fixes, provenance, network traces and the API. Original ideas we have not seen before score highest, so do not just add runs-on: Craci to a project and stop there."
+   }
+  ],
+  "links": [
+   "https://docs.craci.com/",
+   "https://platform.craci.com/",
+   "https://docs.craci.com/skills/craci/SKILL.md",
+   "https://api.craci.com/openapi.json",
+   "https://craci.com/"
+  ],
+  "file": "tech/craci--best-use-of-craci.md"
+ },
+ {
+  "kind": "tech",
+  "id": 41,
+  "title": "Best Use of Cloudinary",
+  "sponsor": "Cloudinary",
+  "track": "Tech challenge (stacks on a main challenge)",
+  "url": "https://hackjunction.app/participate/45/tech-challenges/41",
+  "website": "https://cloudinary.com/",
+  "prizes": [
+   {
+    "place": "1st",
+    "prize": "$500 worth Amazon gift cards (for your local Amazon) / team member"
+   }
+  ],
+  "criteria": [
+   {
+    "name": "Innovation",
+    "weight": 30,
+    "note": ""
+   },
+   {
+    "name": "Technical Implementation",
+    "weight": 20,
+    "note": ""
+   },
+   {
+    "name": "UX / Design",
+    "weight": 30,
+    "note": ""
+   },
+   {
+    "name": "Impact / Usefulness",
+    "weight": 20,
+    "note": ""
+   }
+  ],
+  "links": [
+   "https://cld.media/hackathons",
+   "https://cld.media/hackathon-survey",
+   "https://cloudinary.com/documentation",
+   "https://cloudinary.com/pages/hackathons/",
+   "https://cloudinary.com/"
+  ],
+  "file": "tech/cloudinary--best-use-of-cloudinary.md"
+ },
+ {
+  "kind": "tech",
+  "id": 40,
+  "title": "Best use of Modal",
+  "sponsor": "Modal",
+  "track": "Tech challenge (stacks on a main challenge)",
+  "url": "https://hackjunction.app/participate/45/tech-challenges/40",
+  "website": "https://modal.com/",
+  "prizes": [
+   {
+    "place": "1st team",
+    "prize": "$2000 in cash prize & $3000 in Modal credits"
+   }
+  ],
+  "criteria": [
+   {
+    "name": "Effective use of Modal",
+    "weight": 40,
+    "note": "how central Modal is to the project and how well you use it, from GPU inference to Sandboxes, training and scaling out"
+   },
+   {
+    "name": "Technical ambition",
+    "weight": 25,
+    "note": "how hard the build is and how far you pushed it in 48 hours"
+   },
+   {
+    "name": "Impact",
+    "weight": 20,
+    "note": "how well it solves a real problem from your main challenge"
+   },
+   {
+    "name": "Demo",
+    "weight": 15,
+    "note": "a live, deployed app the judges can actually use"
+   }
+  ],
+  "links": [
+   "https://modal.fillout.com/t/qMXCmRGseUus?code=[REDACTED]",
+   "https://modal.com/"
+  ],
+  "file": "tech/modal--best-use-of-modal.md"
+ },
+ {
+  "kind": "tech",
+  "id": 32,
+  "title": "Best agentic usecase of Oxylabs Web API",
+  "sponsor": "Oxylabs",
+  "track": "Tech challenge (stacks on a main challenge)",
+  "url": "https://hackjunction.app/participate/45/tech-challenges/32",
+  "website": "https://oxylabs.io/",
+  "prizes": [
+   {
+    "place": "The winning team",
+    "prize": "The winning team will receive a €1,000 Apple gift voucher, plus $500 in Oxylabs product credits for each team member to use our web data collection products and explore their potential for future projects."
+   }
+  ],
+  "criteria": [
+   {
+    "name": "Use of the Web API",
+    "weight": 30,
+    "note": "How well and how creatively it is used: search-to-scrape, AI Parsing, dedicated scrapers, geo-targeting."
+   },
+   {
+    "name": "Real-world value",
+    "weight": 25,
+    "note": "A clear user and a problem that live web data solves."
+   },
+   {
+    "name": "Trust",
+    "weight": 20,
+    "note": "Answers are current, sourced and honest about failures."
+   },
+   {
+    "name": "Execution",
+    "weight": 15,
+    "note": "It works live in front of the judges."
+   },
+   {
+    "name": "Originality",
+    "weight": 10,
+    "note": "Something we have not seen before."
+   }
+  ],
+  "links": [
+   "https://developers.oxylabs.io/get-started/quick-start-web-api",
+   "mailto:justas.kaseta@oxylabs.io",
+   "https://oxylabs.io/"
+  ],
+  "file": "tech/oxylabs--best-agentic-usecase-of-oxylabs-web-api.md"
+ },
+ {
+  "kind": "tech",
+  "id": 29,
+  "title": "Atech Real World Challenge",
+  "sponsor": "Atech",
+  "track": "Tech challenge (stacks on a main challenge)",
+  "url": "https://hackjunction.app/participate/45/tech-challenges/29",
+  "website": "https://atech.dev/",
+  "prizes": [
+   {
+    "place": "Best Overall",
+    "prize": "The winning team gets a special Pro Atech kit for the team to keep building."
+   },
+   {
+    "place": "Runner ups",
+    "prize": "Runner-up teams get Atech kits and swag. Top teams are invited to show their project on Atech's channels and visit us in Copenhagen."
+   }
+  ],
+  "criteria": [
+   {
+    "name": "Real-world validation of usefulness",
+    "weight": 25,
+    "note": "Evidence it's genuinely useful: tested with real users, experts or real-world data"
+   },
+   {
+    "name": "Real-world impact",
+    "weight": 25,
+    "note": "A real user and a real problem, solved convincingly"
+   },
+   {
+    "name": "Use of Atech",
+    "weight": 25,
+    "note": "How well and how creatively the hardware and AI platform were used"
+   },
+   {
+    "name": "Working demo & storytelling",
+    "weight": 25,
+    "note": "It runs live on the hardware in front of the judges, with a clear story and pitch"
+   },
+   {
+    "name": "BONUS",
+    "weight": 0,
+    "note": "Extra credit for combining several modules, or connecting the device to AI models and external APIs."
+   }
+  ],
+  "links": [
+   "https://discord.gg/SkTkQW4De",
+   "mailto:julius@atech.dev",
+   "mailto:tomas@atech.dev",
+   "mailto:gustav@atech.dev",
+   "https://atech.dev/"
+  ],
+  "file": "tech/atech--atech-real-world-challenge.md"
+ }
+]
