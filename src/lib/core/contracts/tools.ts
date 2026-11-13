@@ -68,7 +68,9 @@ export const toolSchemas = {
 		description:
 			'Change one line or need (qty, g/guest, product). Invalidates the quote and any approval.',
 		input: PlanRef.extend({
-			lineId: z.string(),
+			/** A line edit (qty, product) or a need edit (gramsPerGuest, which recomputes its lines). */
+			lineId: z.string().optional(),
+			needId: z.string().optional(),
 			patch: z.object({
 				qty: z.number().nonnegative().optional(),
 				productId: ProductId.optional(),
@@ -88,7 +90,20 @@ export const toolSchemas = {
 		scope: 'read',
 		description: 'Current plan with lines, states, reasons and the approval state.',
 		input: z.object({ planId: z.string() }),
-		output: z.object({ plan: Plan, approvalState: ApprovalState.nullable() })
+		output: z.object({
+			plan: Plan,
+			/** The current approval for the plan (newest pending/granted), with what it is bound to. */
+			approval: z
+				.object({
+					id: z.string(),
+					state: ApprovalState,
+					planVersion: z.int(),
+					termsHash: z.string(),
+					lineIds: z.array(z.string()),
+					tier: z.enum(['act', 'propose', 'sign_off'])
+				})
+				.nullable()
+		})
 	},
 	explain_line: {
 		scope: 'read',
@@ -111,8 +126,18 @@ export const toolSchemas = {
 		scope: 'order',
 		description:
 			'Revalidate terms, check caps under lock, atomically consume simulated stock, write one order + receipt. Retrying the same key returns the same receipt.',
-		input: PlanRef.extend({ idempotencyKey: z.string().min(1).max(128) }),
-		output: z.object({ orderId: z.string(), receiptId: z.string(), totalCents: z.int() })
+		input: PlanRef.extend({
+			idempotencyKey: z.string().min(1).max(128),
+			/** Default: every eligible line plus every line covered by a granted approval. */
+			lineIds: z.array(z.string()).optional()
+		}),
+		output: z.object({
+			orderId: z.string(),
+			receiptId: z.string(),
+			totalCents: z.int(),
+			committedLineIds: z.array(z.string()),
+			awaitingSupplier: z.array(z.string())
+		})
 	},
 	set_mandate: {
 		scope: 'mandate:write',

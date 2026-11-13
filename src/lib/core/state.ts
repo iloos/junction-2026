@@ -57,6 +57,42 @@ function invalidateApprovals(state: WorkspaceState, planId: string): Record<stri
 }
 
 /**
+ * Who may commit which lines (★5/★7). Within the mandate: only `act`-tier eligible lines, never for an
+ * external caller or an externally created plan. With an approval: it must be granted, bound to this exact
+ * plan version and terms, and cover every line that isn't act-tier eligible.
+ */
+function commitAuthority(
+	state: WorkspaceState,
+	plan: Plan,
+	order: Order,
+	actorKind: string
+): Result<true> {
+	if (plan.version !== order.planVersion || plan.termsHash !== order.termsHash)
+		return err('TERMS_CHANGED', `order does not match plan ${plan.id} v${plan.version}`);
+	const byId = new Map(plan.lines.map((l) => [l.id, l]));
+	const external = actorKind === 'external_agent' || plan.createdBy.kind === 'external_agent';
+	const approval =
+		order.authority === 'mandate' ? null : state.approvals[order.authority.approvalId];
+	if (order.authority !== 'mandate') {
+		if (!approval || approval.planId !== plan.id) return err('NOT_FOUND', 'approval');
+		if (approval.state !== 'granted')
+			return err('TERMS_CHANGED', `approval ${approval.id} is ${approval.state}`);
+		if (approval.planVersion !== plan.version || approval.termsHash !== plan.termsHash)
+			return err('TERMS_CHANGED', `approval ${approval.id} no longer matches the plan`);
+	}
+	for (const ol of order.lines) {
+		const line = byId.get(ol.lineId);
+		if (!line) return err('NOT_FOUND', `line ${ol.lineId}`);
+		if (line.state === 'committed') return err('DUPLICATE', `line ${ol.lineId} already committed`);
+		const inMandate = !external && line.state === 'eligible' && line.tier === 'act';
+		const approved = approval?.lineIds.includes(ol.lineId) ?? false;
+		if (!inMandate && !approved)
+			return err('FORBIDDEN', `line ${ol.lineId} needs an approval to commit`);
+	}
+	return ok(true);
+}
+
+/**
  * The one way state changes (CLAUDE.md rule 3). Pure: validates each op against the current state and reduces.
  * Authorisation, locking, stock consumption and persistence are the server command handler's job.
  */
@@ -77,13 +113,25 @@ export function applyOps(state: WorkspaceState, ops: OpEnvelope[]): Result<Works
 				const r = checkVersion(s, op.planId, op.baseVersion);
 				if (!r.ok) return r;
 				const plan = r.value;
-				const lines = op.line
-					? plan.lines.some((l) => l.id === op.lineId)
-						? plan.lines.map((l) => (l.id === op.lineId ? op.line! : l))
-						: [...plan.lines, op.line]
-					: plan.lines.filter((l) => l.id !== op.lineId);
+				let lines = plan.lines;
+				for (const e of op.lines) {
+					const prev = lines.find((l) => l.id === e.lineId);
+					if (prev?.state === 'committed')
+						return err('STALE_VERSION', `line ${e.lineId} is committed and can't be edited`);
+					lines = e.line
+						? prev
+							? lines.map((l) => (l.id === e.lineId ? e.line! : l))
+							: [...lines, e.line]
+						: lines.filter((l) => l.id !== e.lineId);
+				}
+				const needs = op.need
+					? plan.needs.some((n) => n.id === op.need!.id)
+						? plan.needs.map((n) => (n.id === op.need!.id ? op.need! : n))
+						: [...plan.needs, op.need]
+					: plan.needs;
 				const next: Plan = {
 					...plan,
+					needs,
 					lines,
 					version: plan.version + 1,
 					state: 'draft',
@@ -101,6 +149,10 @@ export function applyOps(state: WorkspaceState, ops: OpEnvelope[]): Result<Works
 				const r = checkVersion(s, op.planId, op.baseVersion);
 				if (!r.ok) return r;
 				const plan = r.value;
+				const kept = new Map(op.lines.map((l) => [l.id, l]));
+				for (const l of plan.lines)
+					if (l.state === 'committed' && kept.get(l.id)?.state !== 'committed')
+						return err('STALE_VERSION', `quote dropped committed line ${l.id}`);
 				const termsChanged = plan.termsHash !== null && plan.termsHash !== op.termsHash;
 				const next: Plan = {
 					...plan,
@@ -121,13 +173,13 @@ export function applyOps(state: WorkspaceState, ops: OpEnvelope[]): Result<Works
 				const r = checkVersion(s, op.planId, op.baseVersion);
 				if (!r.ok) return r;
 				const plan = r.value;
-				const lines = op.line ? [...plan.lines, op.line] : plan.lines;
 				const next: Plan = {
 					...plan,
-					lines,
+					lines: [...plan.lines, ...op.lines],
 					version: plan.version + 1,
 					state: 'draft',
-					termsHash: null
+					termsHash: null,
+					totalCents: null
 				};
 				s = {
 					...s,
@@ -172,16 +224,16 @@ export function applyOps(state: WorkspaceState, ops: OpEnvelope[]): Result<Works
 				}
 				const plan = s.plans[o.order.planId];
 				if (!plan) return err('NOT_FOUND', `plan ${o.order.planId}`);
-				if (plan.state === 'committed')
-					return err('DUPLICATE', `plan ${plan.id} already committed`);
-				if (plan.version !== o.order.planVersion || plan.termsHash !== o.order.termsHash)
-					return err('TERMS_CHANGED', `order does not match plan ${plan.id} v${plan.version}`);
+				const auth = commitAuthority(s, plan, o.order, env.actor.kind);
+				if (!auth.ok) return auth;
 				const committed = new Set(o.order.lines.map((l) => l.lineId));
-				const next: Plan = {
-					...plan,
-					state: 'committed',
-					lines: plan.lines.map((l) => (committed.has(l.id) ? { ...l, state: 'committed' } : l))
-				};
+				const lines = plan.lines.map((l) =>
+					committed.has(l.id) ? { ...l, state: 'committed' as const } : l
+				);
+				const open = lines.some(
+					(l) => l.state === 'proposed' || l.state === 'eligible' || l.state === 'held'
+				);
+				const next: Plan = { ...plan, lines, state: open ? plan.state : 'committed' };
 				s = {
 					...s,
 					plans: { ...s.plans, [plan.id]: next },

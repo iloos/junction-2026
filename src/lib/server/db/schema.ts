@@ -127,7 +127,7 @@ export const approvals = pgTable(
 	(t) => [primaryKey({ columns: [t.workspaceId, t.id] })]
 );
 
-/** Immutable once written. One order per (workspace, plan). */
+/** Immutable once written. A plan can have several orders (partial commits), one per idempotency key. */
 export const orders = pgTable(
 	'orders',
 	{
@@ -136,13 +136,14 @@ export const orders = pgTable(
 		planId: text('plan_id').notNull(),
 		kitchenId: text('kitchen_id').notNull(),
 		totalCents: integer('total_cents').notNull(),
+		idempotencyKey: text('idempotency_key').notNull(),
 		doc: jsonb('doc').notNull(),
 		receipt: jsonb('receipt').notNull(),
 		committedAt: ts('committed_at').notNull()
 	},
 	(t) => [
 		primaryKey({ columns: [t.workspaceId, t.id] }),
-		uniqueIndex('orders_plan_uq').on(t.workspaceId, t.planId)
+		uniqueIndex('orders_plan_key_uq').on(t.workspaceId, t.planId, t.idempotencyKey)
 	]
 );
 
@@ -166,12 +167,13 @@ export const idempotency = pgTable(
 	{
 		workspaceId: text('workspace_id').notNull(),
 		caller: text('caller').notNull(),
+		tool: text('tool').notNull(),
 		key: text('key').notNull(),
 		requestHash: text('request_hash').notNull(),
 		response: jsonb('response'),
 		createdAt: ts('created_at').notNull().defaultNow()
 	},
-	(t) => [primaryKey({ columns: [t.workspaceId, t.caller, t.key] })]
+	(t) => [primaryKey({ columns: [t.workspaceId, t.caller, t.tool, t.key] })]
 );
 
 /** The op log (contracts/ops.ts OpEnvelope). Append-only. */

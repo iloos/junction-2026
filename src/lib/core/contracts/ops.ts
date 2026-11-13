@@ -1,7 +1,17 @@
 import { z } from 'zod';
 import { DomainError } from './errors';
 import { Offer } from './product';
-import { Approval, Anomaly, Line, Order, Plan, PlanState, Receipt, ScoreBreakdown } from './plan';
+import {
+	Approval,
+	Anomaly,
+	Line,
+	Need,
+	Order,
+	Plan,
+	PlanState,
+	Receipt,
+	ScoreBreakdown
+} from './plan';
 import { Actor, Cents, IsoDateTime, ProductId, Provenance, Scope } from './primitives';
 
 /**
@@ -11,14 +21,19 @@ import { Actor, Cents, IsoDateTime, ProductId, Provenance, Scope } from './primi
  */
 export const CreatePlan = z.object({ type: z.literal('CreatePlan'), plan: Plan });
 
+/**
+ * A chef or agent edit: optionally a need (g/guest, covers) and the lines recomputed from it.
+ * Committed lines can't be edited.
+ */
 export const EditLine = z.object({
 	type: z.literal('EditLine'),
 	planId: z.string(),
 	baseVersion: z.int().nonnegative(),
-	lineId: z.string(),
-	/** The line after the edit; null removes it. */
-	line: Line.nullable(),
-	/** What the chef or agent changed, for the op log ("g/guest 135 → 120"). */
+	/** The need after the edit (replaces the need with the same id). */
+	need: Need.optional(),
+	/** Each line after the edit; `line: null` removes it; an unknown lineId adds it. */
+	lines: z.array(z.object({ lineId: z.string(), line: Line.nullable() })),
+	/** What changed, for the op log ("g/guest 135 → 120"). */
 	summary: z.string()
 });
 
@@ -39,8 +54,12 @@ export const ProposeSubstitute = z.object({
 	planId: z.string(),
 	baseVersion: z.int().nonnegative(),
 	forLineId: z.string(),
-	/** The chosen replacement line (held or eligible by tier), or null when nothing qualifies. */
-	line: Line.nullable(),
+	/** `product`: one replacement SKU. `make_in_house`: ingredient lines for a recipe (team estimate). */
+	kind: z.enum(['product', 'make_in_house']),
+	/** The chosen replacement line(s), held or eligible by tier; empty when nothing qualifies. */
+	lines: z.array(Line),
+	/** Labour/oven note for make-in-house ("~40 min prep, 2 h oven"). */
+	labourNote: z.string().optional(),
 	/** Every candidate considered, ranked, with exclusions: the Why drawer reads this. */
 	candidates: z.array(
 		z.object({

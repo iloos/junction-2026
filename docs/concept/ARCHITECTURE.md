@@ -44,8 +44,19 @@ adapters catalog (Valio cache-through + simulator) · decide (Gemini → replay 
 4. `store.transact(workspaceId)`: idempotency check (replay / conflict → `DUPLICATE`), re-read the plan, compare versions/terms, lock the budget row, `simulator.consume` for commits, compute ops, `applyOps`, persist rows + ops, bump `workspaces.last_seq`.
 5. After commit: publish `ServerEvent`s (NOTIFY on Postgres, in-memory bus on PGlite).
 
+## Rules the handlers enforce (from the contracts review, 8d)
+- **Partial commits.** `commit_order` commits `lineIds` (default: eligible act-tier lines + lines covered by a granted approval). A plan has several orders, one per idempotency key; it becomes `committed` only when no line is proposed/eligible/held. Committed lines can't be edited or re-quoted away.
+- **Authority (also checked in `applyOps`).** `mandate` = only act-tier eligible lines, never for an external caller or an externally created plan. `{approvalId}` = granted, same plan version + terms hash, covers the line.
+- **Re-approval.** Any `RecordOffer` that leaves lines held emits a new `RecordApproval(pending)` bound to the new version and hash (s4: pending → granted → invalidated → pending → granted). `get_plan` returns the current approval with what it is bound to.
+- **Unknown supply.** Terminal lines can be committed: `Simulator.consume` returns `{lotId: null, confirmed: false}`; the receipt lists them in `awaitingSupplier` and they stay unconfirmed cover. `UNKNOWN_REQUIRED` is an error only when a must-cover need would be covered by unknown supply alone.
+- **Caps** gate the `act` tier only; a granted sign_off approval authorises exceeding them. `CAP_EXCEEDED` at commit applies to `authority: 'mandate'`. Budget week = ISO week of `deliverBy`. Tiering reads the locked budget row inside `transact`.
+- **Mandate version and expiry** are checked at commit with the Clock: kitchen `mandate_version` must equal `approval.mandateVersion` and `expiresAt` must be in the future, else `TERMS_CHANGED`.
+- **Idempotency** is keyed (workspace, caller, tool, key) + request hash.
+- **Need edits.** `edit_line` with `needId` + `gramsPerGuest` emits one `EditLine` carrying the new `need` and its recomputed lines.
+- **Make in house.** `ProposeSubstitute{kind: 'make_in_house', lines[], labourNote}` with team-estimate provenance; sign_off tier (new SKUs + allergen check).
+
 ## Tables (`server/db/schema.ts`)
-`workspaces` (last_seq) · `runs` · `kitchens` (doc, mandate_version) · `products` (doc, embedding vector(768)) · `offer_cache` (per product, like the Valio cache) · `sim_stock` (atomic consume) · `plans` (doc, version) · `approvals` · `orders` (unique per plan, receipt) · `budgets` (locked row per kitchen-week) · `idempotency` (workspace, caller, key, request hash) · `ops` (workspace, seq) · `api_keys` (hashed, scopes).
+`workspaces` (last_seq) · `runs` · `kitchens` (doc, mandate_version) · `products` (doc, embedding vector(768)) · `offer_cache` (per product, like the Valio cache) · `sim_stock` (atomic consume) · `plans` (doc, version) · `approvals` · `orders` (unique per plan + idempotency key, receipt) · `budgets` (locked row per kitchen-week) · `idempotency` (workspace, caller, tool, key, request hash) · `ops` (workspace, seq) · `api_keys` (hashed, scopes).
 
 ## Ranking (frozen, D6)
 Hard constraints first (availability kind, lot, origin `require`, tender list, allergens), candidates from Valio's `substitutions` then domain search. Score = Σ wⱼ·utilityⱼ (price, carbon, origin, reliability; weights normalised) + w_fit·fit/4 (Decide.score 0–4). Missing value = utility 0. Tie-break on productId. Returns components, exclusions and residual (`ProposeSubstitute.candidates`).

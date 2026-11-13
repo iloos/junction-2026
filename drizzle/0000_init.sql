@@ -33,11 +33,12 @@ CREATE TABLE "budgets" (
 CREATE TABLE "idempotency" (
 	"workspace_id" text NOT NULL,
 	"caller" text NOT NULL,
+	"tool" text NOT NULL,
 	"key" text NOT NULL,
 	"request_hash" text NOT NULL,
 	"response" jsonb,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
-	CONSTRAINT "idempotency_workspace_id_caller_key_pk" PRIMARY KEY("workspace_id","caller","key")
+	CONSTRAINT "idempotency_workspace_id_caller_tool_key_pk" PRIMARY KEY("workspace_id","caller","tool","key")
 );
 --> statement-breakpoint
 CREATE TABLE "kitchens" (
@@ -77,6 +78,7 @@ CREATE TABLE "orders" (
 	"plan_id" text NOT NULL,
 	"kitchen_id" text NOT NULL,
 	"total_cents" integer NOT NULL,
+	"idempotency_key" text NOT NULL,
 	"doc" jsonb NOT NULL,
 	"receipt" jsonb NOT NULL,
 	"committed_at" timestamp with time zone NOT NULL,
@@ -133,6 +135,6 @@ ALTER TABLE "api_keys" ADD CONSTRAINT "api_keys_workspace_id_workspaces_id_fk" F
 ALTER TABLE "kitchens" ADD CONSTRAINT "kitchens_workspace_id_workspaces_id_fk" FOREIGN KEY ("workspace_id") REFERENCES "public"."workspaces"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "runs" ADD CONSTRAINT "runs_workspace_id_workspaces_id_fk" FOREIGN KEY ("workspace_id") REFERENCES "public"."workspaces"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 CREATE INDEX "ops_run_idx" ON "ops" USING btree ("workspace_id","run_id","seq");--> statement-breakpoint
-CREATE UNIQUE INDEX "orders_plan_uq" ON "orders" USING btree ("workspace_id","plan_id");--> statement-breakpoint
+CREATE UNIQUE INDEX "orders_plan_key_uq" ON "orders" USING btree ("workspace_id","plan_id","idempotency_key");--> statement-breakpoint
 CREATE INDEX "plans_run_idx" ON "plans" USING btree ("workspace_id","run_id");--> statement-breakpoint
 CREATE INDEX "products_category_idx" ON "products" USING btree ("category");
