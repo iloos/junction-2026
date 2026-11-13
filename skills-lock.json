@@ -1,0 +1,42 @@
+{
+  "version": 2,
+  "skills": {
+    "build-with-exa": {
+      "source": "exa-labs/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/build-with-exa/SKILL.md",
+      "computedHash": "4e705e486ddee1afce99066178ea37647def817d1a40483549c74fa830808de2"
+    },
+    "context-dev": {
+      "source": "docs.context.dev",
+      "sourceUrl": "https://docs.context.dev",
+      "sourceType": "well-known",
+      "computedHash": "6b752d50b6e1deae827a8ec2fff9e8118958ddb33f89ff3430d79adebbd75cf3",
+      "wellKnownDigest": "sha256:f2282ad6ae1f9806c47881a007b4efe6aeaa11fe9797450751452fc0e380d582"
+    },
+    "exa-contents": {
+      "source": "exa-labs/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/exa-contents/SKILL.md",
+      "computedHash": "aa3d9c205f9c2051d8fbe536fdf29964e9e200869fcd331d830e5f3462baf304"
+    },
+    "exa-search": {
+      "source": "exa-labs/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/exa-search/SKILL.md",
+      "computedHash": "79e732e0be4fd8fc7bd339cf3ac412bee7e1a0e74b1a97cff2b94855c64553a4"
+    },
+    "gemini-api-dev": {
+      "source": "google-gemini/gemini-skills",
+      "sourceType": "github",
+      "skillPath": "skills/gemini-api-dev/SKILL.md",
+      "computedHash": "38a616b2d5e40a6d32dff294ce043404af08121503bd7a86ba0cf177af68ac5f"
+    },
+    "gemini-live-api-dev": {
+      "source": "google-gemini/gemini-skills",
+      "sourceType": "github",
+      "skillPath": "skills/gemini-live-api-dev/SKILL.md",
+      "computedHash": "d3a558b43681fd11798a25c63650368be6c2623d0aba6fabe7835483d092509b"
+    }
+  }
+}

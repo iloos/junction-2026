@@ -1,0 +1,19 @@
+{
+  "mcpServers": {
+    "context": {
+      "type": "http",
+      "url": "https://mcp.context.dev/mcp"
+    },
+    "exa": {
+      "type": "http",
+      "url": "https://mcp.exa.ai/mcp",
+      "headers": {
+        "x-api-key": "${EXA_API_KEY:-}"
+      }
+    },
+    "geminiDocs": {
+      "type": "http",
+      "url": "https://gemini-api-docs-mcp.dev"
+    }
+  }
+}
