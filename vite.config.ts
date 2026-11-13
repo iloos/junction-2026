@@ -39,6 +39,8 @@ export default defineConfig({
 				test: {
 					name: 'server',
 					environment: 'node',
+					// Tests always run on the PGlite fixture, never against the shared Aiven database.
+					env: { DATABASE_URL: '' },
 					include: ['src/**/*.{test,spec}.{js,ts}'],
 					exclude: ['src/**/*.svelte.{test,spec}.{js,ts}']
 				}
