@@ -735,3 +735,68 @@ describe('D18: packs and cases make a need too (R11-02)', () => {
 		expect(r.chosen.map((l) => l.productId)).toEqual(['470420']); // lactose-free, never 470418
 	});
 });
+
+describe('D18: a line is bound to its need (R11-01, R11-05)', () => {
+	it('250 ml asked is never 250 sales units of a 1 l milk, whatever the entry sent', async () => {
+		const { h } = await harness();
+		const p = must(
+			await h.place_order(ctx('chef'), {
+				kitchenId: 'k-hotel',
+				deliverBy: '2026-12-10',
+				idempotencyKey: 'ml',
+				lines: [
+					{
+						productId: '464201',
+						qty: 250,
+						unit: 'ST',
+						ask: { words: '250 ml maitoa', qty: 250, unit: 'ml' }
+					}
+				]
+			})
+		).plan;
+		expect(p.lines[0].state).toBe('unorderable');
+		expect(p.lines[0].reasons).toContain('exceeds_need');
+	});
+
+	it('an explicit unit nobody recognised holds instead of buying', async () => {
+		const { h } = await harness();
+		const p = must(
+			await h.place_order(ctx('kitchen_agent'), {
+				kitchenId: 'k-hotel',
+				deliverBy: '2026-12-10',
+				idempotencyKey: 'tlk',
+				lines: [
+					{ productId: '464201', qty: 3, unit: 'ST', ask: { qty: 3, unit: { unknown: 'tlk' } } }
+				]
+			})
+		).plan;
+		expect(p.lines[0].state).toBe('held');
+		expect(p.lines[0].reasons).toContain('need_size_unknown');
+	});
+
+	it('4 l → 0 → 4 l restores one active purchase', async () => {
+		const { h } = await harness();
+		const p = must(
+			await h.place_order(ctx('chef'), {
+				kitchenId: 'k-hotel',
+				deliverBy: '2026-12-10',
+				idempotencyKey: 'restore',
+				lines: [{ productId: '464201', qty: 4, unit: 'ST', amount: { value: 4, unit: 'l' } }]
+			})
+		).plan;
+		const set = async (version: number, value: number) =>
+			must(
+				await h.edit_line(ctx('chef'), {
+					planId: p.id,
+					version,
+					needId: p.needs[0].id,
+					patch: { amount: { value, unit: 'l' } }
+				})
+			).plan;
+		const zero = await set(p.version, 0);
+		expect(zero.lines[0].qty.value).toBe(0);
+		const back = await set(zero.version, 4);
+		expect(back.lines[0].qty.value).toBe(4);
+		expect(back.lines[0].state).not.toBe('rejected');
+	});
+});

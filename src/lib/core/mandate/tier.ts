@@ -16,8 +16,14 @@ import type {
 	Tier
 } from '../contracts';
 import type { TermsLine } from '../hash';
+import { toMeasure } from '../demand/convert';
+import { sizeDirect } from '../demand/sizing';
+
 import { meets } from './meets';
 import { forbidden, hardLimitCents, mergeRequirements, validateLine } from './validate';
+
+/** Units an ask can state physically (D18): such an ask binds the line even on a sales-unit need. */
+const PHYSICAL = { g: 1, kg: 1, ml: 1, cl: 1, dl: 1, l: 1 } as const;
 
 export interface DraftLine {
 	id: string;
@@ -200,6 +206,32 @@ export function tierLines(input: TierInput): TierResult {
 				.filter((r) => r.startsWith('requirement_relaxed.'))
 				.map((r) => r.slice('requirement_relaxed.'.length) as 'origin' | 'labels')
 		});
+		// D18: a line is bound to its need's amount. For a direct or menu need (lines sized from the amount), buying more
+		// than the amount rounded up to whole lots is forbidden (250 ml asked, 250 l bought); an unknown content holds.
+		const boundTo = input.needs?.find((n) => n.id === draft.needId);
+		// The amount a line is bound to: a direct or menu need's own, or the physical amount its ask stated ("250 ml")
+		// even when the entry sent sales units. An ask in a unit nobody recognised binds nothing a product could meet.
+		const askUnit = boundTo?.ask?.unit;
+		const asked =
+			boundTo?.ask?.qty != null && typeof askUnit === 'string' && askUnit in PHYSICAL
+				? toMeasure(boundTo.ask.qty, askUnit as keyof typeof PHYSICAL)
+				: undefined;
+		const bound = boundTo && (boundTo.kind === 'direct' || boundTo.source) ? boundTo.amount : asked;
+		if (typeof askUnit === 'object')
+			findings.push({ reason: 'need_size_unknown', effect: 'waive', tier: 'propose' });
+		else if (product && bound && !draft.extraReasons?.includes('superseded')) {
+			const most = sizeDirect(product, bound);
+			if (!most) findings.push({ reason: 'need_size_unknown', effect: 'waive', tier: 'propose' });
+			// One lot step of slack over the need rounded to lots: a pack more is a chef's call, ten times more is not.
+			else if (
+				draft.qty.unit === most.unit &&
+				draft.qty.value >
+					most.value +
+						(product.lotStep > 0.01 ? product.lotStep : product.salesUnit === 'KG' ? 0.01 : 1) +
+						1e-9
+			)
+				findings.push({ reason: 'exceeds_need', effect: 'forbid' });
+		}
 		// The kitchen's calendar is a receiving constraint: another day is an explicit exception a person signs off.
 		if (input.deliverBy && !receivesOn(kitchen, input.deliverBy))
 			findings.push({ reason: 'off_delivery_day', effect: 'waive', tier: 'sign_off' });
