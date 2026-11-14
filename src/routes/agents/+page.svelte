@@ -211,9 +211,19 @@
 
 	<section class="mb-8" aria-labelledby="start">
 		<h2 id="start" class="font-semibold">What your agent reads first</h2>
-		<p class="mt-1 text-sm text-ink-2">The server’s MCP instructions, sent on initialize:</p>
+		<div class="mt-1 flex items-center justify-between gap-2">
+			<p class="text-sm text-ink-2">The server’s MCP instructions, sent on initialize:</p>
+			<button
+				type="button"
+				class="flex shrink-0 items-center gap-1 rounded px-2 py-0.5 text-sm text-accent-ink hover:bg-accent-wash"
+				onclick={() => copy('instructions', data.instructions)}
+			>
+				{#if copied === 'instructions'}<Check size={14} /> Copied{:else}<Copy size={14} /> Copy{/if}
+			</button>
+		</div>
 		<pre
-			class="mt-2 border-l-2 border-accent pl-3 font-sans text-sm whitespace-pre-wrap text-ink-2">{data.instructions}</pre>
+			class="mt-2 border-l-2 border-accent pl-3 font-sans text-sm whitespace-pre-wrap text-ink-2"
+			data-testid="agent-instructions">{data.instructions}</pre>
 	</section>
 
 	<section class="mb-8" aria-labelledby="tools">
