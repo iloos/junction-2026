@@ -155,6 +155,11 @@
 .steps b { color: var(--ink); font-weight: 500; }
 
 /* Partner services: one tile each; the measured number comes from cases.json `sponsors`. */
+.partner .listing { display: flex; gap: 12px; align-items: center; margin: 4px 18px 12px; padding: 10px; border: 1px solid var(--rule); border-radius: 10px; background: var(--sheet); }
+.partner .listing img { width: 56px; height: 56px; object-fit: contain; border-radius: 6px; background: #fff; flex: none; }
+.partner .listing figcaption { display: grid; gap: 2px; font-size: 13px; color: var(--ink-2); min-width: 0; }
+.partner .listing figcaption b { color: var(--ink); font-weight: 500; font-size: 14px; }
+.partner .listing figcaption a { color: var(--accent-ink); text-underline-offset: 3px; }
 .partners { display: grid; gap: 14px; }
 @media (min-width: 720px) { .partners { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (min-width: 960px) { .partners { grid-template-columns: repeat(3, minmax(0, 1fr)); } .partner.wide { grid-column: span 2; } }
@@ -345,7 +350,9 @@
 						<li>The agent searches Valio Aimo's product catalogue.</li>
 						<li>Price and stock for each shortlisted product come live from Valio, cached with the time fetched.</li>
 						<li>Valio's closing time is the order cut-off; a late date is caught before ordering.</li>
+						<li>A photo and the public Valio Aimo page, verified by barcode, for 25 of the 54 demo products (5 more from Open Food Facts).</li>
 					</ul>
+					<figure class="listing" hidden></figure>
 					<div class="measures"></div>
 					<a class="partner-link" href="https://app.mandate.kitchen/request">Try a request →</a>
 				</article>
@@ -518,8 +525,9 @@ function renderPartners(data) {
 		const s = sp.services[name];
 		if (!s) return null;
 		const recent = calls(s.recent);
-		if (s.liveMs != null) return measure(`${s.liveMs} ms`, `last live ${label} call, at ${when(s.last.at)}`, recent ? `${recent} calls in the 15 minutes before` : null);
-		if (recent) return measure(recent, `${label} calls in the 15 minutes before ${at}`, null);
+		const n = (s.recent?.live ?? 0) + (s.recent?.cache ?? 0), callsWord = n === 1 ? 'call' : 'calls';
+		if (s.liveMs != null) return measure(`${s.liveMs} ms`, `last live ${label} call, at ${when(s.last.at)}`, recent ? `${recent} ${callsWord} in the 15 minutes before` : null);
+		if (recent) return measure(recent, `${label} ${callsWord} in the 15 minutes before ${at}`, null);
 		return measure(`No ${label} call yet`, `since the app last started, at ${at}`, null, true);
 	};
 	const put = (key, ...ms) => {
@@ -536,6 +544,20 @@ function renderPartners(data) {
 		race && sends ? measure(`${sends} sends, 1 receipt`, `the same approved order sent at once, at ${when(race.recordedAt)}`) : null
 	);
 	put('valio', service('valio', 'Valio'));
+	// One barcode-verified listing from the app's product card: the photo is hotlinked from Valio Aimo, never copied.
+	const vl = sp.valioListing, fig = document.querySelector('[data-partner="valio"] .listing');
+	if (vl && fig && /^https:\/\//.test(vl.imageUrl) && /^https:\/\/www\.valioaimo\.fi\//.test(vl.pageUrl)) {
+		const img = document.createElement('img');
+		img.src = vl.imageUrl; img.alt = window.readableName ? readableName(vl.name) : vl.name; img.loading = 'lazy'; img.referrerPolicy = 'no-referrer';
+		img.width = 56; img.height = 56;
+		const cap = document.createElement('figcaption');
+		const nm = document.createElement('b'); nm.textContent = img.alt;
+		const chk = document.createElement('span'); chk.textContent = `barcode matches${vl.checkedAt ? ` · checked ${when(vl.checkedAt)}` : ''}`;
+		const a = document.createElement('a'); a.href = vl.pageUrl; a.rel = 'noopener'; a.target = '_blank'; a.textContent = 'See the public listing →';
+		cap.append(nm, chk, a);
+		fig.replaceChildren(img, cap);
+		fig.hidden = false;
+	}
 	put('gemini', service('gemini', 'Gemini'));
 	put('exa', service('exa', 'Exa'));
 	const rl = sp.services.contextdev?.recallList;

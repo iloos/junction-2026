@@ -569,18 +569,19 @@
 		}
 	],
 	"sponsors": {
-		"recordedAt": "2026-11-14T18:43:11.688Z",
-		"appCommit": "4752d001f8eaf471f7940a5fe3985952f3cf6bbb",
+		"recordedAt": "2026-11-14T18:59:36.783Z",
+		"appCommit": "ff7f6c3dd3fc8d3bdc9890476fe4ce5332a56920",
 		"source": {
 			"app": "https://app.mandate.kitchen",
 			"endpoints": [
 				"GET /healthz",
-				"POST /api/web/recall {} (judge key)"
+				"POST /api/web/recall {} (judge key)",
+				"GET /kitchen-api/product/<id>"
 			]
 		},
 		"db": {
 			"ok": true,
-			"latencyMs": 82,
+			"latencyMs": 10,
 			"tls": "verified"
 		},
 		"services": {
@@ -589,60 +590,48 @@
 				"breaker": "closed",
 				"configured": true,
 				"last": {
-					"at": "2026-11-14T18:42:43.852Z",
+					"at": "2026-11-14T18:58:31.430Z",
 					"source": "live",
 					"ok": true,
-					"latencyMs": 60
+					"latencyMs": 96
 				},
 				"lastLive": {
-					"at": "2026-11-14T18:42:43.852Z",
+					"at": "2026-11-14T18:58:31.430Z",
 					"ok": true,
-					"ageS": 28
+					"ageS": 65
 				},
 				"recent": {
-					"live": 19
+					"live": 1
 				},
-				"liveMs": 60
+				"liveMs": 96
 			},
 			"gemini": {
 				"mode": "live",
 				"breaker": "closed",
 				"configured": true,
 				"last": {
-					"at": "2026-11-14T18:42:51.429Z",
+					"at": "2026-11-14T18:59:10.841Z",
 					"source": "live",
 					"ok": true,
-					"latencyMs": 851
+					"latencyMs": 262
 				},
 				"lastLive": {
-					"at": "2026-11-14T18:42:51.429Z",
+					"at": "2026-11-14T18:59:10.841Z",
 					"ok": true,
-					"ageS": 20
+					"ageS": 26
 				},
 				"recent": {
-					"live": 50
+					"live": 4
 				},
-				"liveMs": 851
+				"liveMs": 262
 			},
 			"exa": {
-				"mode": "live",
+				"mode": "idle",
 				"breaker": "closed",
 				"configured": true,
-				"last": {
-					"at": "2026-11-14T18:39:48.902Z",
-					"source": "live",
-					"ok": true,
-					"latencyMs": 0
-				},
-				"lastLive": {
-					"at": "2026-11-14T18:39:48.902Z",
-					"ok": true,
-					"ageS": 203
-				},
-				"recent": {
-					"cache": 12,
-					"live": 6
-				},
+				"last": null,
+				"lastLive": null,
+				"recent": {},
 				"liveMs": null
 			},
 			"contextdev": {
@@ -650,25 +639,37 @@
 				"breaker": "closed",
 				"configured": true,
 				"last": {
-					"at": "2026-11-14T18:43:11.486Z",
+					"at": "2026-11-14T18:59:36.656Z",
 					"source": "cache",
 					"ok": true,
 					"latencyMs": 0
 				},
-				"lastLive": null,
+				"lastLive": {
+					"at": "2026-11-14T18:59:32.980Z",
+					"ok": true,
+					"ageS": 4
+				},
 				"recent": {
-					"cache": 3
+					"live": 1,
+					"cache": 1
 				},
 				"liveMs": null,
 				"recallList": {
-					"readAt": "2026-11-14T18:43:08.916Z",
-					"count": 102,
+					"readAt": "2026-11-14T18:59:34.059Z",
+					"count": 101,
 					"newest": "2026-11-11",
-					"latencyMs": 111,
+					"latencyMs": 145,
 					"endpoint": "POST /api/web/recall {}",
 					"source": "cache"
 				}
 			}
+		},
+		"valioListing": {
+			"productId": "466964",
+			"name": "Myllyn Paras Puuroriisi 1kg",
+			"pageUrl": "https://www.valioaimo.fi/toimitustukku/myllyn-paras-puuroriisi-1-kg/",
+			"imageUrl": "https://imgfly.scarabresearch.com/w_800/https://api.valioaimo.fi/medias/?context=bWFzdGVyfHJvb3R8NTQ3NTQxN3xpbWFnZS9qcGVnfGFEY3pMMmhoWkM4NU1UVTBOekk1T1RZM05qUTJ8NmFkNGZiOTk3M2JhZjZmNjRlZDE4ZGM1ZTYzNjcwMWJkMGZjMDMwMjBkODM3OGI2NzkwYWQwOGU0MWU2MjY4Yg",
+			"checkedAt": "2026-11-14T16:13:03.413Z"
 		}
 	}
 }

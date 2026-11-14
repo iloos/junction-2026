@@ -804,12 +804,28 @@ async function recordSponsors() {
 		};
 	}
 	if (recallList) services.contextdev.recallList = { ...recallList, source: services.contextdev.last?.source ?? null };
+	// One barcode-verified Valio Aimo listing, read from the app's own product card (the photo is hotlinked, never copied).
+	// The claims check covers 25 of the 54 demo products (5 more from Open Food Facts); the tile says so, not "every product".
+	let valioListing = null;
+	{
+		const go = visitor();
+		await go('/kitchen-api/snapshot');
+		for (const id of ['466964', '460373']) {
+			const c = await go(`/kitchen-api/product/${id}`);
+			const l = c.json?.listing;
+			if (c.status === 200 && l?.imageUrl && l?.pageUrl && l.source === 'valioaimo') {
+				valioListing = { productId: id, name: c.json.nameFi, pageUrl: l.pageUrl, imageUrl: l.imageUrl, checkedAt: l.checkedAt ?? null };
+				break;
+			}
+		}
+	}
 	return {
 		recordedAt: h.time ?? new Date().toISOString(),
 		appCommit: h.commit,
-		source: { app: BASE, endpoints: ['GET /healthz', 'POST /api/web/recall {} (judge key)'] },
+		source: { app: BASE, endpoints: ['GET /healthz', 'POST /api/web/recall {} (judge key)', 'GET /kitchen-api/product/<id>'] },
 		db: { ok: h.db === 'ok', latencyMs: h.latencyMs ?? null, tls: h.tls ?? null },
-		services
+		services,
+		valioListing
 	};
 }
 
