@@ -153,7 +153,8 @@ export function proposeMenuHandler(d: ProposeMenuDeps) {
 			store: d.ports.menus,
 			catalog: d.ports.catalog,
 			now: d.ports.clock.now(),
-			llm: d.llm?.(ctx) ?? null
+			llm: d.llm?.(ctx) ?? null,
+			by: ctx.actor
 		});
 		const blocks = r.issues.filter((i) => i.severity === 'block').length;
 		const unresolved = r.proposal.dishes

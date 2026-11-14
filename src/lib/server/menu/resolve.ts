@@ -6,10 +6,10 @@
  * the model's alternative words and any trade name in the label's brackets, for the chooser (choose.ts) to judge with
  * the dish in view. No word lists here: deciding what an ingredient *is* belongs to the chooser, and diet to core.
  *
- * `rememberPin` / `pinnedFor` keep what a kitchen settled (a chef or agent pin, or a model choice) so the same
- * ingredient gets the same product next time. A chef's or agent's pin is never replaced by a model's choice.
+ * `kitchenPins` / `pinnedFor` read what a kitchen settled (a chef's or agent's pin, or a model's pick, marked
+ * `pinnedBy` on the ingredient) from its recent menus, so the same ingredient gets the same product next time.
  */
-import type { ProductId } from '$lib/core/contracts';
+import type { DishIngredient, MenuProposal, ProductId } from '$lib/core/contracts';
 import type { Resolution } from '$lib/core/ports';
 
 /** Words tried per ingredient (each a local, in-memory search). */
@@ -58,43 +58,46 @@ export async function candidatePool(
 /* ── What a kitchen settled ───────────────────────────────────────────────── */
 
 export type PinSource = 'chef' | 'agent' | 'model';
-interface Pin {
+export interface Pin {
 	productId: ProductId;
 	by: PinSource;
 }
+/** Normalised ingredient words → the settled product, or null where a chef turned the product down. */
+export type KitchenPins = Map<string, Pin | null>;
+
+/** How many of the kitchen's recent menus its settled products are read from. */
+export const RECENT_MENUS = 20;
+
+const isPerson = (by: PinSource | undefined) => by === 'chef' || by === 'agent';
 
 /**
- * By workspace + kitchen + normalised ingredient words. In process for now (one container, D3); a reset workspace
- * starts with none. Persisting it is a port change (Needs).
+ * What a kitchen settled, read from its recent menus (newest first; `MenuStore.recent`). A chef's or agent's pin wins
+ * over a model's pick whatever their age; among equals the newest wins; a product a chef turned down (dropped back to
+ * unresolved) stops either from being reused. Keys are the ingredient's search words and its label.
  */
-const pins = new Map<string, Pin>();
-const pinKey = (ws: string, kitchenId: string, words: string) =>
-	`${ws}|${kitchenId}|${norm(words)}`;
-
-export function rememberPin(
-	ws: string,
-	kitchenId: string,
-	words: string[],
-	productId: ProductId,
-	by: PinSource
-) {
-	for (const w of words) {
-		if (!w.trim()) continue;
-		const k = pinKey(ws, kitchenId, w);
-		if (by === 'model' && pins.get(k) && pins.get(k)!.by !== 'model') continue;
-		pins.set(k, { productId, by });
+export function kitchenPins(menus: MenuProposal[]): KitchenPins {
+	const out: KitchenPins = new Map();
+	const keys = (i: DishIngredient) =>
+		[i.provenance.ref ?? '', i.label].map(norm).filter((k) => k.length > 0);
+	const ings = menus.flatMap((m) => m.dishes.flatMap((d) => d.ingredients));
+	for (const i of ings) {
+		const turnedDown = !i.productId && i.unresolved !== undefined && i.provenance.source === 'user';
+		const value =
+			i.productId && isPerson(i.pinnedBy) ? { productId: i.productId, by: i.pinnedBy! } : null;
+		if (!value && !turnedDown) continue;
+		for (const k of keys(i)) if (!out.has(k)) out.set(k, value);
 	}
+	for (const i of ings)
+		if (i.productId && i.pinnedBy === 'model')
+			for (const k of keys(i)) if (!out.has(k)) out.set(k, { productId: i.productId, by: 'model' });
+	return out;
 }
 
-export function pinnedFor(ws: string, kitchenId: string, words: string[]): Pin | undefined {
-	for (const w of words) {
-		const p = pins.get(pinKey(ws, kitchenId, w));
-		if (p) return p;
+/** The settled product for an ingredient's words; undefined when none, or when a chef turned it down. */
+export function pinnedFor(pins: KitchenPins, words: string[]): Pin | undefined {
+	for (const w of words.map(norm)) {
+		if (!pins.has(w)) continue;
+		return pins.get(w) ?? undefined;
 	}
 	return undefined;
-}
-
-/** Tests only. */
-export function clearPins() {
-	pins.clear();
 }

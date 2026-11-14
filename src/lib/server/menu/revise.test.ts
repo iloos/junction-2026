@@ -1,11 +1,10 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { SCOPES_BY_ACTOR } from '$lib/core/contracts';
 import type { CallContext } from '$lib/core/ports';
 import { createDbPorts } from '../store/db-ports';
 import { acceptMenu, proposeForBrief } from './flow';
 import { goldenBrief } from './golden';
 import { proposeMenu } from './proposal';
-import { clearPins, pinnedFor } from './resolve';
 import { memoryMenuStore } from './store';
 import { reviseMenuHandler } from './tool';
 
@@ -37,8 +36,6 @@ async function another(env: Awaited<ReturnType<typeof createDbPorts>>, q: string
 }
 
 describe('revise_menu', () => {
-	afterEach(clearPins);
-
 	it('pins one product: a new revision, the other products unchanged, the agent named, the review cleared', async () => {
 		const { env, d, view, agent, revise } = await setup();
 		const chef = { kind: 'chef' as const, id: 'chef' };
@@ -68,11 +65,8 @@ describe('revise_menu', () => {
 		);
 		expect(p.provenance.note).toContain('"the chef prefers this potato"');
 		expect(r.value.meta?.summary).toContain('A chef accepts this revision');
-		// Remembered as an agent's pin for this kitchen.
-		expect(pinnedFor(env.workspaceId, 'k-hotel', [target.provenance.ref!])).toEqual({
-			productId: pick,
-			by: 'agent'
-		});
+		// Marked as an agent's pin, so the kitchen's next menu starts from it.
+		expect(after.find((i) => i.id === target.id)?.pinnedBy).toBe('agent');
 	});
 
 	it('the pin is used first by the kitchen’s next proposal', async () => {

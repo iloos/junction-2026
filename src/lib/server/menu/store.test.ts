@@ -129,3 +129,27 @@ describe.each(ADAPTERS)('$name MenuStore', ({ make }) => {
 		expect(await proposalDigest(proposal(0, 121))).not.toBe(a);
 	});
 });
+
+describe.each(ADAPTERS)('$name MenuStore.recent', ({ make }) => {
+	it('gives each of the kitchen’s proposals once, at its latest revision, newest first', async () => {
+		const s = await make();
+		const at = (m: number) => new Date(AT.getTime() + m * 60_000).toISOString();
+		const p = (id: string, revision: number, kitchenId: string, m: number): MenuProposal => ({
+			...proposal(revision),
+			id,
+			kitchenId,
+			provenance: { source: 'user', at: at(m) }
+		});
+		await s.put('ws', p('older', 0, 'k-hotel', 0));
+		await s.put('ws', p('newer', 0, 'k-hotel', 1));
+		await s.put('ws', p('elsewhere', 0, 'k-lounas', 2));
+		await s.put('ws', p('older', 1, 'k-hotel', 3));
+		const got = await s.recent('ws', 'k-hotel', 10);
+		expect(got.map((x) => [x.id, x.revision])).toEqual([
+			['older', 1],
+			['newer', 0]
+		]);
+		expect(await s.recent('ws', 'k-hotel', 1)).toHaveLength(1);
+		expect(await s.recent('ws-b', 'k-hotel', 10)).toEqual([]);
+	});
+});
