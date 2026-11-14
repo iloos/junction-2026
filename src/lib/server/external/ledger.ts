@@ -93,3 +93,31 @@ export const sharedLedger = (): GuardSource | null => shared.__sharedLedger ?? n
 export function setSharedLedger(l: GuardSource | null) {
 	shared.__sharedLedger = l;
 }
+
+const localLedgers = new Map<string, SpendLedger>();
+
+/**
+ * A daily cap per caller scope (spend key, else workspace) and per instance for one outside API. Charges the
+ * instance-shared Postgres ledger once the web state is attached (the first charge on a fresh instance attaches
+ * it), else a per-process ledger (`file`, or memory in tests). Never blocks a call that is not sent.
+ */
+export function scopedCap(o: {
+	name: string;
+	limits: SpendLimits;
+	file?: string;
+}): (scope?: { spendKey?: string; workspaceId?: string }) => SpendGuard {
+	const local = () => {
+		let l = localLedgers.get(o.name);
+		if (!l) localLedgers.set(o.name, (l = createSpendLedger(o.file)));
+		return l;
+	};
+	const source = async (): Promise<GuardSource> => {
+		if (!sharedLedger() && !process.env.VITEST)
+			await import('../web').then((m) => m.webStateReady(process.env)).catch(() => {});
+		return sharedLedger() ?? local();
+	};
+	return (scope) => {
+		const key = scope?.spendKey ?? scope?.workspaceId ?? null;
+		return { charge: async (api) => (await source()).guard(key, o.limits).charge(api) };
+	};
+}
