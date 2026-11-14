@@ -11,11 +11,14 @@ import type { FixtureSnapshot } from './fixture-server';
 export type Snapshot = FixtureSnapshot;
 export type MaybeStarted = Snapshot | { started: false; kitchenId: string };
 
-export async function snapshot(mode: ApiMode): Promise<MaybeStarted> {
+/** The current snapshot; with `planId`, opens that plan (an approval link) instead of the kitchen's event plan. */
+export async function snapshot(mode: ApiMode, planId?: string): Promise<MaybeStarted> {
 	if (mode === 'fixture') return fx.snapshot();
 	let res: Response;
 	try {
-		res = await fetch('/kitchen-api/snapshot');
+		res = await fetch(
+			planId ? `/kitchen-api/snapshot?plan=${encodeURIComponent(planId)}` : '/kitchen-api/snapshot'
+		);
 	} catch (e) {
 		throw new Unreachable({
 			code: 'PROVIDER_UNAVAILABLE',
@@ -23,8 +26,13 @@ export async function snapshot(mode: ApiMode): Promise<MaybeStarted> {
 			retryable: true
 		});
 	}
-	const body = (await res.json().catch(() => null)) as MaybeStarted | { message?: string } | null;
+	const body = (await res.json().catch(() => null)) as
+		| MaybeStarted
+		| { message?: string; error?: { code: string; message: string; retryable: boolean } }
+		| null;
 	if (res.ok && body && ('plan' in body || 'started' in body)) return body as MaybeStarted;
+	if (body && 'error' in body && body.error)
+		throw new ToolError({ ...body.error, code: body.error.code as never });
 	throw new ToolError({
 		code: 'PROVIDER_UNAVAILABLE',
 		message: `snapshot failed (HTTP ${res.status})${body && 'message' in body && body.message ? `: ${body.message}` : ''}`,

@@ -14,14 +14,21 @@ export { ToolError };
 /** The server could not be reached at all (as opposed to answering with an error). */
 export class Unreachable extends ToolError {}
 
+/**
+ * What the page currently shows (run, plan, version), sent with every live tool call: the server refuses a
+ * command from a page that is out of date (STALE_VERSION) instead of acting on a plan the chef never saw.
+ */
+export const rendered: { view: { runId: string; planId: string; version: number } | null } = {
+	view: null
+};
+
 export async function livePost<T>(path: string, body: unknown): Promise<T> {
 	let res: Response;
+	const headers: Record<string, string> = { 'content-type': 'application/json' };
+	if (path.startsWith('/kitchen-api/tool/') && rendered.view)
+		headers['x-kitchen-view'] = JSON.stringify(rendered.view);
 	try {
-		res = await fetch(path, {
-			method: 'POST',
-			headers: { 'content-type': 'application/json' },
-			body: JSON.stringify(body)
-		});
+		res = await fetch(path, { method: 'POST', headers, body: JSON.stringify(body) });
 	} catch (e) {
 		throw new Unreachable({
 			code: 'PROVIDER_UNAVAILABLE',

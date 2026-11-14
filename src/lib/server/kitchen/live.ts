@@ -9,7 +9,7 @@
  * snapshot never changes state (planning is the explicit `start` command). Selection is per browser session.
  */
 import { env } from '$env/dynamic/private';
-import type { Approval, Kitchen, ToolInput, ToolName } from '$lib/core/contracts';
+import type { Approval, Kitchen, Plan, ToolInput, ToolName } from '$lib/core/contracts';
 import { isoWeek } from '$lib/core/mandate/tier';
 import { contextFor } from '$lib/server/auth';
 import { createServerPorts } from '$lib/server/store/server-ports';
@@ -35,6 +35,18 @@ export interface Session {
 	kitchenId: string;
 	preset: PresetId;
 	contention: boolean;
+	/**
+	 * A plan opened by link (an agent's or a menu's held plan: `/?kitchen&plan`), shown instead of the kitchen's
+	 * event plan until the chef switches kitchen or starts over.
+	 */
+	planId: string | null;
+}
+
+/** What the page was rendered from; every command must still match it (a stale tab gets STALE_VERSION). */
+export interface RenderedView {
+	runId: string;
+	planId: string;
+	version: number;
 }
 
 /**
@@ -51,7 +63,7 @@ export function session(id: string, workspaceId: string): Session {
 		sessions.set(id, s); // most recently used last
 		return s;
 	}
-	s = { workspaceId, kitchenId: 'k-hotel', preset: 'kitchen', contention: false };
+	s = { workspaceId, kitchenId: 'k-hotel', preset: 'kitchen', contention: false, planId: null };
 	sessions.delete(id);
 	sessions.set(id, s);
 	if (sessions.size > MAX_SESSIONS) sessions.delete(sessions.keys().next().value!);
@@ -87,7 +99,8 @@ export function callTool(
 	sid: string,
 	workspaceId: string,
 	name: string,
-	input: unknown
+	input: unknown,
+	view: RenderedView | null
 ): Promise<Served> {
 	return serial(workspaceId, async () => {
 		const deny = (message: string): Served => ({
@@ -100,6 +113,20 @@ export function callTool(
 		const plan = await findPlan(s);
 		const i = (input ?? {}) as { planId?: string; approvalId?: string };
 		if (!plan) return deny('start the demo first');
+		// The page must still show what the server has: same run, same plan, same version. A tab left open across
+		// a start-over or another tab's edit would otherwise act on a plan its chef never saw.
+		const stale = (message: string): Served => ({
+			ok: false,
+			status: 409,
+			error: { code: 'STALE_VERSION', message, retryable: false }
+		});
+		if (!view) return stale('This page did not say which plan it shows. Reload the page.');
+		if (view.runId !== currentRun(s.workspaceId))
+			return stale('This page is out of date: the sandbox was started over. Reload the page.');
+		if (view.planId !== plan.id || view.version !== plan.version)
+			return stale(
+				`This page is out of date: the plan is now version ${plan.version}. Reload the page.`
+			);
 		if (i.planId !== undefined && i.planId !== plan.id)
 			return deny("that plan is not this session's kitchen plan");
 		if (name === 'approve' && !(i.approvalId ?? '').includes(plan.id))
@@ -108,11 +135,13 @@ export function callTool(
 	});
 }
 
-/** The session kitchen's event plan if it exists: a read, never a planning call. */
+/** The plan opened by link if any, else the session kitchen's event plan if it exists: a read, never planning. */
 async function findPlan(s: Session) {
 	const ctx = chef(s);
 	const b = await createServerPorts();
 	const ws = await b.ports.store.load(ctx.workspaceId, ctx.runId);
+	const linked = s.planId ? ws.plans[s.planId] : undefined;
+	if (linked && linked.kitchenId === s.kitchenId) return linked;
 	return (
 		Object.values(ws.plans).find((p) => p.kitchenId === s.kitchenId && p.eventId === EVENT_ID) ??
 		null
@@ -190,6 +219,37 @@ export type LiveSnapshot = FixtureSnapshot | { started: false; kitchenId: string
 
 export function snapshot(sid: string, workspaceId: string): Promise<LiveSnapshot> {
 	return serial(workspaceId, () => buildSnapshot(session(sid, workspaceId)));
+}
+
+/**
+ * Opens a plan by id (an approval link from MCP, chat or Ops) in this browser's workspace: the session switches
+ * to its kitchen and shows it, with its decisions. Null when this workspace has no such plan.
+ */
+export function focusPlan(
+	sid: string,
+	workspaceId: string,
+	planId: string
+): Promise<LiveSnapshot | null> {
+	return serial(workspaceId, async () => {
+		const s = session(sid, workspaceId);
+		const ctx = chef(s);
+		const b = await createServerPorts();
+		const ws = await b.ports.store.load(ctx.workspaceId, ctx.runId);
+		const plan = ws.plans[planId];
+		if (!plan) return null;
+		s.kitchenId = plan.kitchenId;
+		s.planId = plan.id;
+		return buildSnapshot(s);
+	});
+}
+
+/** A plan that is not the seeded event (an agent's order, a menu): named by what it buys. */
+function titleOf(plan: Plan): string {
+	const labels = plan.needs.map((n) => n.label);
+	if (!labels.length) return 'Order';
+	return labels.length <= 3
+		? labels.join(', ')
+		: `${labels.slice(0, 3).join(', ')} and ${labels.length - 3} more`;
 }
 
 async function buildSnapshot(s: Session): Promise<LiveSnapshot> {
@@ -292,13 +352,16 @@ async function buildSnapshot(s: Session): Promise<LiveSnapshot> {
 			plan,
 			rescues,
 			facts,
-			seed: {
-				title: seed.title,
-				date: seed.date,
-				guests: seed.guests.estimate,
-				serviceStyle: seed.serviceStyle,
-				rescue: (seed as { rescue?: Record<string, unknown> }).rescue
-			},
+			seed:
+				plan.eventId === EVENT_ID
+					? {
+							title: seed.title,
+							date: seed.date,
+							guests: seed.guests.estimate,
+							serviceStyle: seed.serviceStyle,
+							rescue: (seed as { rescue?: Record<string, unknown> }).rescue
+						}
+					: { title: titleOf(plan), date: plan.deliverBy, guests: 0, serviceStyle: '' },
 			rules,
 			weekSpentCents: spent.ok ? spent.value.value : 0,
 			previewRanking: s.preset !== 'kitchen'
@@ -403,6 +466,7 @@ async function applyScenario(
 	else if (action === 'kitchen' && typeof value === 'string') {
 		const before = { ...s };
 		s.kitchenId = value;
+		s.planId = null;
 		s.preset = 'kitchen';
 		try {
 			if (!(await findPlan(s))) await ensurePlan(s);
@@ -435,6 +499,7 @@ async function applyScenario(
 			if (!r.ok && 'retryInMs' in r) throw new Cooldown(r.retryInMs);
 		} else await resetDemoRun(s.workspaceId);
 		s.kitchenId = 'k-hotel';
+		s.planId = null;
 		s.preset = 'kitchen';
 		s.contention = false;
 		b.overlay.clear();
