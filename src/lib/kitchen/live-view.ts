@@ -109,9 +109,9 @@ function verdict(c: CandidateView): string {
 	if (c.rejected.length) return `Rejected: ${c.rejected.join(', ')}`;
 	if (c.kind === 'unknown') return 'Terminal: unknown quantity never counts as cover';
 	if (c.partial) return `Partial: covers ${f1(c.coverValue)} kg`;
-	if (c.tier === 'sign_off') return 'Full cover, needs sign-off';
-	if (c.tier === 'propose') return 'Full cover, one tap to approve';
-	return 'Full cover, within your mandate';
+	if (c.tier === 'sign_off') return 'Known stock for the whole need · needs sign-off';
+	if (c.tier === 'propose') return 'Known stock for the whole need · one tap to approve';
+	return 'Known stock for the whole need · within your mandate';
 }
 
 function candidateViews(
@@ -289,7 +289,7 @@ export function buildLiveView(input: LiveInput): EventView {
 								? `${productSub?.productName ?? productSub?.productId} no longer covers the need: stock was taken by another kitchen.`
 								: productSub && hasUnknown(productSub)
 									? `${productSub.productName ?? productSub.productId} is the pick under these rules, but Valio states no quantity for it: ${f1(served.value)} ${served.unit} stays unconfirmed, not cover.`
-									: `${productSub?.productName ?? productSub?.productId} covers the full ${f1(served.value)} ${served.unit}.`
+									: `${productSub?.productName ?? productSub?.productId} has known stock for the full ${f1(served.value)} ${served.unit} served (planned, not reserved).`
 			};
 		}
 

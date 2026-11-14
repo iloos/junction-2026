@@ -42,8 +42,9 @@
 			<span class="inline-flex items-center gap-1.5">
 				<WifiOff size={13} aria-hidden="true" />
 				<span
-					><b class="font-medium text-ink">Offline demonstration</b>: browser fixture, not the live
-					order</span
+					title="Runs in this browser for when the server can't be reached. Coverage and pack figures are the server's recorded output for the seeded plan, so editing grams here does not move them."
+					><b class="font-medium text-ink">Offline stand-in</b>: a browser copy of the seeded plan,
+					not the live order; coverage is the server's recorded figure</span
 				>
 			</span>
 		{/if}

@@ -172,21 +172,43 @@
 
 	/** Plain-words list of what the order still does not cover (residuals and unconfirmed supply). */
 	const shortfalls = $derived.by(() => {
+		// The server's coverage partition is the one definition (F12/F15); the dish-level fallback is for plans
+		// without a read model.
+		if (coverage.size) {
+			const out: string[] = [];
+			const label = (id: string) => view?.dishes.find((d) => d.needId === id)?.nameFi ?? id;
+			const m = (v: number, u: string) => `${num(v, v < 10 ? 2 : 1)} ${u}`;
+			for (const f of coverage.values()) {
+				if (f.unresolved.value > 0)
+					out.push(`${label(f.needId)}: ${m(f.unresolved.value, f.unresolved.unit)} not covered`);
+				if (f.plannedUnknown.value > 0)
+					out.push(
+						`${label(f.needId)}: ${m(f.plannedUnknown.value, f.plannedUnknown.unit)} planned, but the supplier states no quantity, so it is not cover`
+					);
+			}
+			return out;
+		}
 		const out: string[] = [];
 		for (const d of view?.dishes ?? []) {
 			if (d.rescue?.residual) out.push(`${d.nameFi}: ${d.rescue.residual.text}`);
 			else if (d.status === 'shortfall') out.push(`${d.nameFi}: no option qualifies`);
 		}
-		const unknown = (plan?.lines ?? []).filter(
-			(l) =>
-				(l.state === 'held' || l.state === 'eligible') &&
-				(l.reasons.includes('UNKNOWN_REQUIRED') || l.reasons.includes('unknown'))
-		).length;
-		if (unknown)
-			out.push(
-				`${unknown} lines with no stated supplier quantity: ordered, but not confirmed cover`
-			);
 		return out;
+	});
+
+	/** The header's "what needs you", in D10 terms and on the same basis as the panel and Ops. */
+	const needsYou = $derived.by(() => {
+		const pendingLines = approval?.state === 'pending' ? approval.lineIds.length : 0;
+		const cannot = (plan?.lines ?? []).filter((l) => l.state === 'unorderable').length;
+		const fs = [...coverage.values()];
+		return {
+			pendingLines,
+			cannot,
+			uncovered: fs.filter((f) => f.unresolved.value > 0).length,
+			unknown: fs.length
+				? fs.filter((f) => f.plannedUnknown.value > 0).length
+				: (view?.counts.unknown ?? 0)
+		};
 	});
 
 	/** Open lines by supply kind, for the cut-off timeline. */
@@ -454,10 +476,13 @@
 					<div class="px-4 py-3">
 						<p class="text-[12px] text-ink-3">What needs you</p>
 						<p class="mt-0.5 text-[17px] font-medium text-ink">
-							<span class="mono">{view.counts.held}</span> lines held
+							{#if needsYou.pendingLines}<span class="mono">{needsYou.pendingLines}</span> lines need
+								your approval{:else}No approval needed{/if}
 						</p>
 						<p class="text-[12px] text-ink-3">
-							{view.counts.outages} outages · {view.counts.unknown} unknown supply
+							{needsYou.cannot} can't be ordered · {needsYou.unknown} dishes on unknown stock{needsYou.uncovered
+								? ` · ${needsYou.uncovered} not covered`
+								: ''}
 						</p>
 					</div>
 				</div>

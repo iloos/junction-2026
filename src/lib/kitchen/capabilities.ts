@@ -1,9 +1,8 @@
 /**
- * Server features the kitchen screen depends on that land separately from it.
+ * Server features the kitchen screen switches on as they land.
  *
- * SUBSET_APPROVE: core decides only the listed lines of an approval (`approve{lineIds}`, the rest moving to a new
- * pending approval). The contract has the field, but until core implements the split a `lineIds` grant would grant
- * every line, so the panel instead has the chef confirm each reason group on screen and then sends one grant for
- * all confirmed groups, worded as one decision. Flip to true when core's approve splits (with its 3-group test).
+ * SUBSET_APPROVE: core decides only the listed lines of an approval (`approve{lineIds}`; the rest move to a new
+ * pending approval; each order line names its group's approval). On: each reason group is granted or kept held on
+ * its own. Off: the chef confirms every group on screen, then one grant of the exact terms is sent.
  */
-export const SUBSET_APPROVE = false;
+export const SUBSET_APPROVE = true;
