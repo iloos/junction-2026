@@ -118,7 +118,7 @@ describe('menu review flow', () => {
 		expect(!agent.ok && agent.error.code).toBe('FORBIDDEN');
 	});
 
-	it('planning an accepted menu goes through plan_event{proposal}, or says planning is next', async () => {
+	it('planning an accepted menu goes through plan_event{proposal}, for real (A4)', async () => {
 		const { d, ctx, view, handlers } = await setup();
 		const unaccepted = await planMenu(
 			{ ...d, handlers, ctx },
@@ -129,9 +129,9 @@ describe('menu review flow', () => {
 		const r = await planMenu({ ...d, handlers, ctx }, { id: view.proposal.id, revision: 0 });
 		expect(r.ok).toBe(true);
 		if (!r.ok) return;
-		if (r.value.state === 'planned') {
-			expect(r.value.plan.kitchenId).toBe('k-hotel');
-			expect(r.value.kitchenUrl).toBe(kitchenUrl(r.value.plan));
-		} else expect(r.value.message).toMatch(/nothing was ordered/);
+		expect(r.value.state).toBe('planned');
+		if (r.value.state !== 'planned') return;
+		expect(r.value.plan.kitchenId).toBe('k-hotel');
+		expect(r.value.kitchenUrl).toBe(kitchenUrl(r.value.plan));
 	});
 });

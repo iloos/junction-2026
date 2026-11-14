@@ -22,6 +22,9 @@
 	let { view, busy, plan, onedit, onaccept, onplan }: Props = $props();
 
 	const p = $derived(view.proposal);
+	const kitchenHref = $derived(
+		plan?.state === 'planned' ? resolve('/') + plan.kitchenUrl.slice(1) : null
+	);
 	const guests = $derived(p.brief.guests);
 	/** Typed amounts by ingredient id, as text; cleared when a new revision arrives. */
 	let typed = $state<Record<string, string>>({});
@@ -120,6 +123,17 @@
 					<CircleAlert size={14} class="mt-0.5 shrink-0 text-signoff" aria-hidden="true" />{i.text}
 				</li>{/each}
 		</ul>
+	{/if}
+
+	{#if p.open.length}
+		<div
+			class="mx-3 mt-2 rounded-md border border-signoff/30 bg-signoff-wash px-2.5 py-1.5 text-body"
+		>
+			<p class="font-medium text-ink">Open on this menu</p>
+			<ul class="mt-0.5 space-y-0.5 text-ink-2">
+				{#each p.open as o (o.id)}<li>· {o.text}</li>{/each}
+			</ul>
+		</div>
 	{/if}
 
 	<ol class="mt-2 divide-y divide-rule">
@@ -231,23 +245,17 @@
 				</button>
 			{/if}
 		</div>
+		<!-- eslint-disable svelte/no-navigation-without-resolve -- kitchen deep link with query, built from resolve('/') -->
 		{#if plan?.state === 'planned'}
 			<p class="mt-2 text-body text-ink" data-testid="menu-planned">
 				Planned: {plan.plan.needs.length} needs, {plan.plan.lines.length} lines.
 				<a
-					href={resolve('/') + plan.kitchenUrl.slice(1)}
+					href={kitchenHref}
 					class="inline-flex items-center gap-1 font-medium text-accent-ink underline"
 					>Open the plan in your Kitchen <ArrowRight size={14} aria-hidden="true" /></a
 				>
 			</p>
-		{:else if plan?.state === 'next'}
-			<p
-				class="mt-2 rounded-md border border-rule bg-sheet px-2.5 py-1.5 text-body text-ink-2"
-				data-testid="menu-planning-next"
-			>
-				<b class="font-medium text-ink">Planning: next.</b>
-				{plan.message}
-			</p>
+			<!-- eslint-enable svelte/no-navigation-without-resolve -->
 		{/if}
 	</footer>
 </section>

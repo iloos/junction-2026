@@ -1,12 +1,7 @@
 <script lang="ts">
 	import {
 		ArrowRight,
-		Building2,
-		Database,
-		FlaskConical,
-		Receipt,
 		RotateCcw,
-		Sparkles,
 		TriangleAlert,
 		Check,
 		Repeat
@@ -17,7 +12,8 @@
 	import HoldButton from '$lib/ui/HoldButton.svelte';
 	import SourceTag from '$lib/ui/SourceTag.svelte';
 	import StateChip from '$lib/ui/StateChip.svelte';
-	import { day, money, num, shortHash } from '$lib/ui/format';
+	import { day, money, num, shortHash, storyTime } from '$lib/ui/format';
+	import { useShell } from '$lib/ui/shell/shell.svelte';
 	import Step from '$lib/ui/request/Step.svelte';
 	import Answer from '$lib/ui/request/Answer.svelte';
 	import BriefAsk from '$lib/ui/request/BriefAsk.svelte';
@@ -458,7 +454,32 @@
 		return l.qty.rounding ?? null;
 	}
 
-	const sim = $derived(day(data.today));
+	// The shell shows where the data comes from and the sandbox (workspace, run, clock, start over).
+	const shell = useShell();
+	const valioSource = $derived.by(() => {
+		if (!lookup?.quotedIds.length) return null;
+		const at =
+			lookup.items
+				.flatMap((i) => i.shortlist)
+				.map((c) => c.offer?.price?.provenance.at ?? c.offer?.availability.provenance.at)
+				.find((x): x is string => !!x) ?? data.now;
+		return { live: lookup.offerSources.includes('valio_live'), at };
+	});
+	$effect(() => {
+		if (!shell) return;
+		shell.labels = { source: valioSource, offline: false };
+		shell.sandbox = {
+			workspace: data.workspace.id,
+			run: data.workspace.run,
+			clock: storyTime(data.now),
+			busy,
+			onReset: resetSandbox
+		};
+		return () => {
+			shell.labels = null;
+			shell.sandbox = null;
+		};
+	});
 	/** Offers are dated on the scenario clock, so a cut-off before its now has passed. */
 	const cutoffText = (iso: string | null) =>
 		!iso
@@ -483,48 +504,6 @@
 
 <svelte:head><title>Purchase request · Mandate</title></svelte:head>
 
-<div
-	class="border-b border-rule bg-well text-meta text-ink-2"
-	role="note"
-	aria-label="Data sources"
->
-	<div class="mx-auto flex max-w-[820px] flex-wrap items-center gap-x-4 gap-y-1 px-4 py-1.5">
-		<span class="inline-flex items-center gap-1.5"
-			><Database size={13} class="text-accent" aria-hidden="true" /><b class="font-medium text-ink"
-				>Valio challenge mock</b
-			> cached</span
-		>
-		<span class="inline-flex items-center gap-1.5"
-			><FlaskConical size={13} class="text-undeliv" aria-hidden="true" />Sim clock
-			<b class="font-medium text-ink">{sim}</b></span
-		>
-		<span class="inline-flex items-center gap-1.5"
-			><Receipt size={13} class="text-signoff" aria-hidden="true" />Orders:
-			<b class="font-medium text-ink">local simulated commitment</b></span
-		>
-		<span
-			class="inline-flex items-center gap-1.5"
-			title={data.workspace.stage
-				? 'Presenter mode: the stage run everyone watches on /ops.'
-				: data.workspace.kind === 'own'
-					? 'Only this browser works here: other visitors and the stage run never see your orders, approvals or commits.'
-					: 'Shared with every visitor in this room: their edits and resets reach you too.'}
-			><Building2
-				size={13}
-				class={data.workspace.stage ? 'text-accent' : 'text-propose'}
-				aria-hidden="true"
-			/>{data.workspace.label}
-			<b class="mono font-medium text-ink">{data.workspace.id}</b></span
-		>
-		<span class="inline-flex items-center gap-1.5"
-			><Sparkles size={13} aria-hidden="true" />Parser:
-			<b class="font-medium text-ink"
-				>{data.parser === 'fixture' ? 'rules (offline)' : data.parser}</b
-			></span
-		>
-	</div>
-</div>
-
 <main class="mx-auto max-w-[820px] px-4 pt-6 pb-24 sm:pt-10">
 	<header class="mb-5 flex flex-wrap items-end justify-between gap-3">
 		<div>
@@ -545,16 +524,6 @@
 				{#each data.kitchens as k (k.id)}<option value={k.id}>{k.name}</option>{/each}
 			</select>
 		</label>
-		{#if !data.workspace.stage}
-			<button
-				type="button"
-				disabled={busy || !ready}
-				onclick={resetSandbox}
-				class="inline-flex h-9 items-center gap-1.5 rounded-md border border-rule-strong bg-sheet px-3 text-body text-ink-2 hover:text-ink disabled:opacity-50"
-			>
-				<RotateCcw size={14} aria-hidden="true" /> Start over (sandbox)
-			</button>
-		{/if}
 	</header>
 	{#if sandboxNote}
 		<p class="-mt-2 mb-4 text-body text-ink-2" role="status">{sandboxNote}</p>

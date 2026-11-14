@@ -1,5 +1,5 @@
 {
-	"$comment": "Golden open-event briefs through /request (runRequest, fixture parser): the chef's words, then each brief question answered from `answers` (by field), then the planning the menu track adds. Ends in a held plan where every course is present, every explicit diet is kept and every unresolved ingredient is visible. Plan keys are expectFail until A4 (proposal → review → plan_event{proposal}). Runner: src/lib/server/evals/briefs.test.ts.",
+	"$comment": "Golden open-event briefs through /request (runRequest, fixture parser): the chef's words, then each brief question answered from `answers` (by field), then the planning the menu track adds. Ends in a held plan where every course is present, every explicit diet is kept and every unresolved ingredient is visible. The menu track runs as /request drives it: propose, the chef accepts, plan_event{proposal}. Runner: src/lib/server/evals/briefs.test.ts.",
 	"briefs": [
 		{
 			"id": "five-star-five-course-50",
@@ -17,9 +17,10 @@
 				"date": "2026-12-19",
 				"courses": 5,
 				"dietary": ["lactose-free", "vegetarian:6"],
-				"plan": { "dishesAtLeast": 5 }
-			},
-			"expectFail": { "A4": ["plan"] }
+				"plan": {
+					"dishesAtLeast": 5
+				}
+			}
 		},
 		{
 			"id": "christmas-dinner-50-diets-typed",
@@ -35,9 +36,10 @@
 				"guests": 50,
 				"date": "2026-12-20",
 				"dietary": ["lactose-free", "vegetarian"],
-				"plan": { "dishesAtLeast": 4 }
-			},
-			"expectFail": { "A4": ["plan"] }
+				"plan": {
+					"dishesAtLeast": 4
+				}
+			}
 		}
 	]
 }

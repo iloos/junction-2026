@@ -37,11 +37,12 @@ export interface MenuView {
 	fallback?: string;
 }
 
-/** Where planning stands after the chef accepted a menu. */
-export type MenuPlanResult =
-	| { state: 'planned'; plan: Plan; kitchenUrl: string }
-	/** plan_event cannot plan from a proposal yet (A4): the review is recorded and planning is next. */
-	| { state: 'next'; message: string };
+/** The plan an accepted menu became, and where the Kitchen shows it. */
+export interface MenuPlanResult {
+	state: 'planned';
+	plan: Plan;
+	kitchenUrl: string;
+}
 
 export async function menuView(
 	d: Pick<MenuDeps, 'catalog'>,
@@ -212,8 +213,8 @@ export function kitchenUrl(plan: Pick<Plan, 'kitchenId' | 'id' | 'version'>): st
 }
 
 /**
- * Plans an accepted revision through the tool gate as the chef. Until plan_event plans from a proposal (A4), the
- * review stays recorded and the answer says planning is next.
+ * Plans an accepted revision through the tool gate as the chef: plan_event{proposal} checks the stored review and its
+ * digest, and keeps every unresolved ingredient as a need with its reason.
  */
 export async function planMenu(
 	d: MenuDeps & { handlers: ToolHandlers; ctx: CallContext },
@@ -233,11 +234,5 @@ export async function planMenu(
 		const plan = (r.value as { plan: Plan }).plan;
 		return ok({ state: 'planned', plan, kitchenUrl: kitchenUrl(plan) });
 	}
-	if (r.error.code === 'INVALID_INPUT' && /not available yet/.test(r.error.message))
-		return ok({
-			state: 'next',
-			message:
-				'Menu accepted and recorded. Planning from an accepted menu is the next step to land; nothing was ordered.'
-		});
 	return r;
 }
