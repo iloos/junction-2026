@@ -54,6 +54,21 @@ Env changes go through `aiven_service_update` (`user_config.application.environm
 curl -s -X POST -H "Authorization: Bearer $(grep -E '^MANDATE_KEY_CHEF=' .env | cut -d= -f2-)" https://widely-many-scorpion.eur-1.aiven.app/api/demo/reset
 ```
 
+## Aiven evidence (for the submission)
+_Checked Sat 14 Nov ~03:00 against the live service; each line says how._
+
+| Claim | Evidence |
+|---|---|
+| The app runs on **Aiven Runtime** | Service `mandate` (`startup-20-512`, aws-eu-central-1), built from `main` by Aiven from the Dockerfile; live at https://widely-many-scorpion.eur-1.aiven.app; `scripts/deploy/smoke.sh` passes on fb58016. |
+| Data lives in **Aiven for PostgreSQL** with verified TLS | `pg-1dfeeeed`, PostgreSQL 18.7; `/healthz` returns `"tls":"verified"` (the client checks the project CA from `PROJECT_CA_CERT`; a wrong CA is rejected with "self-signed certificate in certificate chain", tested locally). Pool capped at 3 connections for the free plan's 15. |
+| Schema by migration | Drizzle migration `0000_init` applied (`drizzle.__drizzle_migrations` = 1 row), run by `pnpm db:migrate`, never at request time; it creates the `vector` extension (pgvector 0.8.7). |
+| Real catalogue seeded | `products` holds **17,546** Valio products (`select count(*)`). Embeddings are not populated yet (0 rows), so no vector-search claim. |
+| Live op stream on **LISTEN/NOTIFY** | Every committed op and agent trace is published with `NOTIFY mandate_events` and fanned out from one `LISTEN` connection per process to SSE (`/api/events`). On prod, an SSE client on `ws-demo` received the routine agent's 8 trace events live while `POST /api/agent/run` ran (1.56 s). |
+| Reset keeps the audit trail | `POST /api/demo/reset` starts a new run; old runs stay in `ops` (run-1's 15 ops are still there after three resets), and the stream, tools and /ops follow only the current run. |
+| Catch-up survives history | With 1,116 ops of earlier runs (PGlite, same schema), /ops goes live in 0.87 s showing only the current run's 12 ops; `bus/catchup.test.ts` covers 1,100 old ops + a fresh run (the run filter sits in SQL, before the limit). |
+| Holds at 10× | `ws-stress` (dev) interleaves N synthetic runs at 250 events/s into /ops at 1920×1080: 10× (190 events) 1 long task of 76 ms, 61 fps idle; 50× (950 events, 200 queue rows) 2 long tasks (103 ms total), 20.5 MB heap, 62 fps idle. |
+| No catalogue or model call holds a database lock | `store/prepare.test.ts` fails on any catalogue call made inside a store transaction across the full journey and three concurrent commands; it passes (0). The author's commit (4c553fd) reports 21 such calls on the previous code. |
+
 ## Verda VM (plan B)
 `CPU.4V.16G` at $0.048/h (catalog; €200 balance). Ubuntu 24.04 + Docker, the same image, Caddy in front for HTTPS on `<ip>.sslip.io`. Billed create: needs the user's yes.
 
