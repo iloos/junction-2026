@@ -15,10 +15,17 @@ import type { AnyDb } from '$lib/server/store/drizzle-store';
 import { hasSeq, MemoryBus } from './memory';
 import { allocateSeq, PgTransport, readOps } from './pg';
 import { SYNTH_WORKSPACE, syntheticRun } from './synthetic';
+import { STRESS_WORKSPACE, stressEvents } from './stress';
 
 export { SYNTH_WORKSPACE } from './synthetic';
+export { STRESS_WORKSPACE } from './stress';
 
-type OpsReader = (workspaceId: string, after: number, limit: number) => Promise<OpEnvelope[]>;
+type OpsReader = (
+	workspaceId: string,
+	after: number,
+	limit: number,
+	runId?: string
+) => Promise<OpEnvelope[]>;
 
 interface BusState {
 	local: MemoryBus;
@@ -43,7 +50,8 @@ function bus(): BusState {
 	return g.__mandateBus;
 }
 
-const viaPg = (workspaceId: string) => workspaceId !== SYNTH_WORKSPACE && bus().pg;
+const viaPg = (workspaceId: string) =>
+	workspaceId !== SYNTH_WORKSPACE && workspaceId !== STRESS_WORKSPACE && bus().pg;
 
 /** Deliver events to every subscriber of the workspace (across processes in Postgres mode). */
 export async function publish(workspaceId: string, events: ServerEvent[]): Promise<void> {
@@ -63,11 +71,17 @@ export async function publishSim(scope: Scope, event: SimEvent): Promise<void> {
 
 /** An OpsReader over any Drizzle db with our schema (PGlite or Postgres). */
 export function drizzleOpsReader(db: AnyDb): OpsReader {
-	return async (workspaceId, after, limit) => {
+	return async (workspaceId, after, limit, runId) => {
 		const rows = await db
 			.select({ envelope: schema.ops.envelope })
 			.from(schema.ops)
-			.where(and(eq(schema.ops.workspaceId, workspaceId), gt(schema.ops.seq, after)))
+			.where(
+				and(
+					eq(schema.ops.workspaceId, workspaceId),
+					gt(schema.ops.seq, after),
+					runId ? eq(schema.ops.runId, runId) : undefined
+				)
+			)
 			.orderBy(asc(schema.ops.seq))
 			.limit(limit);
 		return rows.map((r: { envelope: unknown }) => r.envelope as OpEnvelope);
@@ -79,14 +93,14 @@ export function setFixtureOpsReader(reader: OpsReader | null): void {
 	bus().fixtureReader = reader;
 }
 
-async function readOpEnvelopes(workspaceId: string, after: number, limit: number) {
+async function readOpEnvelopes(workspaceId: string, after: number, limit: number, runId?: string) {
 	const b = bus();
-	if (viaPg(workspaceId)) return readOps(workspaceId, after, limit);
-	if (b.fixtureReader && workspaceId !== SYNTH_WORKSPACE)
-		return b.fixtureReader(workspaceId, after, limit);
+	if (viaPg(workspaceId)) return readOps(workspaceId, after, limit, runId);
+	if (b.fixtureReader && workspaceId !== SYNTH_WORKSPACE && workspaceId !== STRESS_WORKSPACE)
+		return b.fixtureReader(workspaceId, after, limit, runId);
 	return b.local
 		.after(workspaceId, after)
-		.flatMap((e) => (e.kind === 'op' ? [e.envelope] : []))
+		.flatMap((e) => (e.kind === 'op' && (!runId || e.envelope.runId === runId) ? [e.envelope] : []))
 		.slice(0, limit);
 }
 
@@ -98,9 +112,7 @@ export async function catchUp(
 	/** Only events of this run (the workspace's current run); all runs when omitted. */
 	runId?: string
 ): Promise<ServerEvent[]> {
-	const ops = (await readOpEnvelopes(workspaceId, after, limit)).filter(
-		(e) => !runId || e.runId === runId
-	);
+	const ops = await readOpEnvelopes(workspaceId, after, limit, runId);
 	const opEvents: ServerEvent[] = ops.map((envelope) => ({
 		kind: 'op',
 		seq: envelope.seq,
@@ -164,4 +176,26 @@ function startSynthetic(): void {
 		b.synth.timer = setTimeout(tick, 400);
 	};
 	play();
+}
+
+/**
+ * Dev-only load for the 10× check: replays `copies` interleaved synthetic runs into STRESS_WORKSPACE in
+ * bursts of BURST events every BURST_MS, as fast as many busy kitchens would produce them.
+ */
+const BURST = 25;
+const BURST_MS = 100;
+export function startStress(copies: number): void {
+	const b = bus();
+	b.local.reset(STRESS_WORKSPACE);
+	const events = stressEvents(copies, `stress-${Date.now().toString(36)}`).map((e) =>
+		'seq' in e ? { ...e, seq: e.seq + b.local.highestSeq(STRESS_WORKSPACE) } : e
+	);
+	for (const e of events) if (e.kind === 'op') e.envelope.seq = e.seq;
+	let i = 0;
+	const tick = () => {
+		b.local.deliver(STRESS_WORKSPACE, events.slice(i, i + BURST));
+		i += BURST;
+		if (i < events.length) setTimeout(tick, BURST_MS);
+	};
+	setTimeout(tick, 300);
 }

@@ -50,7 +50,11 @@ export class OpsStream {
 	private pollTimer: ReturnType<typeof setTimeout> | null = null;
 	private stopped = false;
 
-	constructor(private workspaceId: string) {
+	constructor(
+		private workspaceId: string,
+		/** Extra query for the stream (the dev load test passes copies=N). */
+		private extraQuery = ''
+	) {
 		this.state = emptyState(workspaceId, '');
 	}
 
@@ -68,7 +72,7 @@ export class OpsStream {
 	}
 
 	private url(extra = '') {
-		return `/api/events?workspace=${encodeURIComponent(this.workspaceId)}&after=${this.last}${extra}`;
+		return `/api/events?workspace=${encodeURIComponent(this.workspaceId)}&after=${this.last}${this.extraQuery}${extra}`;
 	}
 
 	private openSse(): void {

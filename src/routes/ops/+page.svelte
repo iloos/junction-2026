@@ -12,7 +12,7 @@
 
 	// Workspace links reload the page (data-sveltekit-reload), so one stream per page load is enough.
 	// svelte-ignore state_referenced_locally
-	const stream = new OpsStream(data.workspace);
+	const stream = new OpsStream(data.workspace, data.copies ? `&copies=${data.copies}` : '');
 	onMount(() => {
 		stream.start();
 		return () => stream.stop();

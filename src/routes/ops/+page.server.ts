@@ -53,6 +53,8 @@ export const load: PageServerLoad = async ({ url }) => {
 		synthWorkspace: SYNTH_WORKSPACE,
 		kitchens,
 		names,
+		/** Dev load test only: how many synthetic runs ws-stress streams. */
+		copies: dev ? Number(url.searchParams.get('copies')) || 0 : 0,
 		/** Wall-clock ms the current run started; the page ticks the scenario clock from it. */
 		runStartedAt: currentRunStartedAt(workspace),
 		canRunAgent: workspace === agentWorkspace() && presenterOpen(),
