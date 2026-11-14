@@ -1153,7 +1153,7 @@
 									<dl class="mt-1.5 grid grid-cols-[6.5rem_1fr] gap-x-2 gap-y-1 text-body">
 										<dt class="text-ink-3">Why this one</dt>
 										<dd>
-											{it.pick.reasons.join('; ') || 'best remaining match'}
+											{it.pick.reasons.join('; ') || 'the first match that can be ordered'}
 											{#if it.rankNote}<span class="block text-ink" data-testid="rank-note"
 													>{it.rankNote}</span
 												>{/if}

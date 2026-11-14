@@ -61,6 +61,7 @@ import { readingOf, reviewReading } from './reading';
 import { howMuchWords, maxAvailable, unitsFor } from './amount';
 import { requestParseCheckpoint, withReview, type ReviewDeps } from '$lib/server/review';
 import { classifyRequest } from './classify';
+import { PLANT_ALT } from './lexicon';
 import { readShares } from './shares';
 import { applyBriefAnswers, draftBrief, nextQuestion } from '../menu/brief';
 
@@ -322,6 +323,17 @@ async function lookupItems(
 			pick = null;
 			picked.delete(p.item.id);
 		}
+		// A stand-in of the asked kind ("vegan milk" → a plant drink) is asked once, never ordered unasked.
+		let nearHold: string | null = null;
+		const nearAt = pick ? views.indexOf(pick) : -1;
+		const near = nearAt >= 0 ? short[nearAt].nearMiss : undefined;
+		if (pick && near && !pin && p.item.kind) {
+			const alt = PLANT_ALT[p.item.kind];
+			nearHold = `No vegan ${p.item.kind} in the catalogue: ${readableName(pick.name)} (a ${alt.name}) instead?`;
+			pick.picked = false;
+			pick = null;
+			picked.delete(p.item.id);
+		}
 		const chosenAt = pick ? views.indexOf(pick) : -1;
 		const rankNote =
 			chosenAt >= 0
@@ -357,7 +369,22 @@ async function lookupItems(
 		const allClosed =
 			closed.length > 0 &&
 			!short.some((r) => !unpickable(offers.get(r.product.productId), r.conversion, now));
-		if (roundingHold) {
+		if (nearHold) {
+			question = nearHold;
+			const options = short
+				.map((r, i) => ({ r, v: views[i] }))
+				.filter(({ r, v }) => r.nearMiss && !unpickable(offers.get(v.productId), r.conversion, now))
+				.slice(0, 4)
+				.map(({ r }) => {
+					const c = r.conversion as { salesQty: number };
+					return {
+						label: readableName(r.product.nameFi),
+						detail: `${salesUnitWords(c.salesQty, r.product.salesUnit)} · ${r.nearMiss}`,
+						answer: { item: idx, productId: r.product.productId }
+					};
+				});
+			answer = { kind: 'choice', item: idx, options };
+		} else if (roundingHold) {
 			question = roundingHold;
 			const options = short
 				.map((r, i) => ({ r, v: views[i] }))
@@ -450,7 +477,9 @@ async function lookupItems(
 				alsoQty: { units: ['kg', 'l', 'pcs'] }
 			};
 		} else if (!short.length)
-			question = `Nothing in the catalogue matched "${p.item.query}". Which product do you mean?`;
+			question = p.item.kind
+				? `No vegan ${p.item.kind} in the catalogue, and no ${PLANT_ALT[p.item.kind].name} that can stand in. Which product do you mean?`
+				: `Nothing in the catalogue matched "${p.item.query}". Which product do you mean?`;
 		else if (!pick && pin && !views.some((v) => v.productId === pin))
 			question = `The product you chose (${pin}) is no longer in the shortlist. Pick again?`;
 		else if (!pick) {

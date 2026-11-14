@@ -8,7 +8,7 @@ import { meets, requirementsFromDiet } from '$lib/core/mandate/meets';
 import { toLot } from '$lib/core/services/orders';
 import { num } from '$lib/ui/format';
 import { convert, type Conversion } from './convert';
-import { PRODUCTS } from './lexicon';
+import { PLANT_ALT, PRODUCTS } from './lexicon';
 import { askOf, clashWith } from './checks';
 import type { ParsedItem } from './parse';
 
@@ -38,6 +38,8 @@ export interface Ranked {
 	conversion: Conversion | null;
 	/** What the smallest order buys over the ask (2 = twice as much), when both are physical; null when unknown. */
 	overshoot?: number | null;
+	/** Set when the candidate stands in for the asked kind (a plant drink for "vegan milk"): asked before ordering. */
+	nearMiss?: string;
 }
 
 /** An order more than this many times the ask is held with a question (need_rounding_large), never placed silently. */
@@ -124,6 +126,17 @@ export function filterHits(
 			rejected.push({ productId: p.productId, name: p.nameFi, reason });
 		const t = tokens(p.nameFi);
 
+		// "vegan milk": only the noun's plant alternative may stand in, labelled; another kind never does.
+		const alt = !lex && item.kind ? PLANT_ALT[item.kind] : undefined;
+		let nearMiss: string | undefined;
+		if (alt) {
+			if (!alt.categories.includes(p.category) || !alt.re.test(p.nameFi)) {
+				reject(`not ${item.kind} or a ${alt.name}`);
+				continue;
+			}
+			nearMiss = `a ${alt.name}: no vegan ${item.kind} in the catalogue`;
+		}
+
 		if (lex?.categories && !lex.categories.includes(p.category)) {
 			reject(`not in the ${lex.key} category (${p.category})`);
 			continue;
@@ -156,7 +169,7 @@ export function filterHits(
 		}
 
 		let score = 0;
-		const reasons: string[] = [];
+		const reasons: string[] = nearMiss ? [nearMiss] : [];
 		if (item.constraints.length)
 			reasons.push(`meets: ${item.constraints.map((c) => c.replace('_', '-')).join(', ')}`);
 		const want =
@@ -181,7 +194,14 @@ export function filterHits(
 		const over = overshoot(item, conversion);
 		if (over !== null && over > 1.25)
 			reasons.push(`the smallest order is ${num(over, 1)}× what you asked`);
-		ranked.push({ product: p, score: +score.toFixed(3), reasons, conversion, overshoot: over });
+		ranked.push({
+			product: p,
+			score: +score.toFixed(3),
+			reasons,
+			conversion,
+			overshoot: over,
+			...(nearMiss ? { nearMiss } : {})
+		});
 	}
 	// The candidate whose smallest order best fits the ask comes first; the scores (and the kitchen's weights) order
 	// the rest.
