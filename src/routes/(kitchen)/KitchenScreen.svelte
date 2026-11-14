@@ -65,6 +65,7 @@
 	import Basket from './Basket.svelte';
 	import NothingPlanned from './NothingPlanned.svelte';
 	import UseElsewhere from '$lib/ui/UseElsewhere.svelte';
+	import { menuTitle, splitNeed, startsDish } from '$lib/kitchen/menu-plan';
 	import {
 		readOwn,
 		saveOwn,
@@ -191,6 +192,19 @@
 				void k.reopen();
 				return;
 			}
+			// Moment 2: the dock (or chat) made this kitchen's first plan while the home is open: show it here.
+			if (k.started === false) {
+				const made = ops.find(
+					(o) =>
+						o.op.type === 'CreatePlan' &&
+						o.op.plan.kitchenId === homeKit.id &&
+						!(o.via === 'kitchen' || o.via === `kitchen#${TAB}`)
+				);
+				if (made && made.op.type === 'CreatePlan') {
+					void openPlan(made.op.plan.id);
+					return;
+				}
+			}
 			const here = k.plan?.id;
 			const products = new Set((k.plan?.lines ?? []).map((l) => l.productId));
 			// This tab's own commands re-read already; another tab's Kitchen commands count as changes.
@@ -238,6 +252,9 @@
 		outside_agent: 'Prepared by an outside agent',
 		kitchen: 'Planned in the Kitchen'
 	};
+	/** A plan made from a menu: its needs are "Dish · ingredient", read as dishes → ingredients → products. */
+	const needNames = $derived(k.view?.dishes.map((d) => d.nameFi) ?? []);
+	const menuName = $derived(k.snap?.plan.eventId ? null : menuTitle(needNames));
 	const originWords = $derived(k.snap?.origin ? (ORIGIN[k.snap.origin] ?? '') : '');
 	const weekday = (iso: string) =>
 		new Intl.DateTimeFormat('en-GB', { weekday: 'long', timeZone: 'UTC' }).format(
@@ -1115,7 +1132,7 @@
 				<!-- The task: decisions left, by when, cover by certainty; the event as a diff of a normal week -->
 				<section aria-label="This task">
 					<TaskHeader
-						title={isEvent ? view.title : readableName(view.title)}
+						title={isEvent ? view.title : (menuName ?? readableName(view.title))}
 						meta={isEvent
 							? `${day(view.date)} · ${num(view.guests)} guests · ${view.serviceStyle} · delivery ${day(plan.deliverBy)}`
 							: [originWords, `delivery ${day(plan.deliverBy)}`].filter(Boolean).join(' · ')}
@@ -1403,8 +1420,16 @@
 							<span>State</span>
 							<span></span>
 						</div>
-						{#each view.dishes as d (d.id)}
+						{#each view.dishes as d, di (d.id)}
 							{@const lines = linesOf(d)}
+							{@const nn = splitNeed(d.nameFi)}
+							{#if menuName && startsDish(needNames, di)}
+								<h3
+									class="border-b border-rule bg-paper/60 px-4 py-1.5 text-meta font-semibold text-ink"
+								>
+									{nn.dish}
+								</h3>
+							{/if}
 							{@const f = coverage.get(d.needId)}
 							{@const r = rowOf(d, lines)}
 							{@const isOpen = !!expanded[d.id]}
@@ -1433,7 +1458,10 @@
 								>
 									<div class="min-w-0">
 										<p class="flex min-w-0 items-center gap-1.5 text-body font-medium text-ink">
-											<span class="truncate">{d.nameFi}</span>
+											<span
+												class="min-w-0 break-words {menuName && nn.dish ? 'pl-3 font-normal' : ''}"
+												>{menuName && nn.dish ? nn.part : d.nameFi}</span
+											>
 											<DietMarks marks={dishMarks(lines)} />
 										</p>
 										<p class="truncate text-meta text-ink-3">
