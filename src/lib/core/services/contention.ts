@@ -7,9 +7,15 @@
  * is committed here: the agent repairs, a person still decides.
  */
 import type { CallContext } from '../ports';
-import type { Anomaly, Line, Plan, Provenance } from '../contracts';
+import type { Anomaly, Line, MeasureUnit, Plan, Product, Provenance } from '../contracts';
 import { ok, type Result } from '../contracts';
-import { rescueFor, seedEntryFor, servedKgOf, type PoolEntry } from '../demand/sizing';
+import {
+	contentValue,
+	rescueFor,
+	seedEntryFor,
+	servedKgOf,
+	type PoolEntry
+} from '../demand/sizing';
 import { draftFromLine } from '../mandate/tier';
 import { editLine, type ServicePorts } from './events';
 import { pending } from './orders';
@@ -34,6 +40,14 @@ export interface ContentionRescue {
 	chosen: Line[];
 	anomalyId: string;
 	plan: Plan;
+}
+
+/** What `units` sales units of `p` deliver in `unit`: by weight for KG-sold, by content, or one piece per unit. */
+function keptAmount(p: Product, units: number, unit: MeasureUnit): number {
+	if (units <= 0) return 0;
+	if (p.salesUnit === 'KG') return unit === 'kg' ? units : 0;
+	if (unit === 'pcs') return units;
+	return units * (contentValue(p, unit) ?? 0);
 }
 
 const open = (l: Line) => l.state !== 'committed' && l.qty.value > 0;
@@ -76,7 +90,13 @@ export async function rescueContention(
 		if (!entry.pack && rescue?.chosen?.productId === line.productId)
 			entry.pack = rescue.chosen.pack;
 		const qtyKept = { ...line.qty, value: kept };
-		const covered = need?.amount.unit === 'kg' ? (servedKgOf(product, entry, qtyKept) ?? 0) : 0;
+		const covered =
+			need?.kind !== 'direct' && need?.amount.unit === 'kg'
+				? (servedKgOf(product, entry, qtyKept) ?? 0)
+				: 0;
+		// A direct need ("4 l milk") counts what is kept in its own unit, so the substitute covers only the rest.
+		const coveredAmount =
+			need?.kind === 'direct' && product ? keptAmount(product, kept, need.amount.unit) : 0;
 		const note = `${kept} of ${line.qty.value} left: ${input.note}`;
 
 		let target: Line = line;
@@ -111,6 +131,7 @@ export async function rescueContention(
 			{
 				keep,
 				coveredServedKg: covered,
+				coveredAmount,
 				exclude: [input.productId],
 				note: input.note,
 				keepOriginal: !original && kept > 0
