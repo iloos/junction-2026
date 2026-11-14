@@ -78,7 +78,7 @@ export const ALLERGEN_NAMES: Record<string, string> = {
 };
 
 const MEAT_WORD =
-	/liha|kinkku|makkara|nakki|broiler|kana(?!pa)|kalkkun|naudan|porsa|possu|sian|lammas|poro|hirvi|pekoni|kassler|salami|maksa|chorizo|meetvursti|liivate/;
+	/liha|kinkku|makkara|nakki|broiler|kana(?!pa|nmun)|kalkkun|naudan|porsa|possu|sian|lammas|poro|hirvi|pekoni|kassler|salami|maksa|chorizo|meetvursti|liivate/;
 const FISH_WORD =
 	/lohi|kala|silli|tonnikala|katkarap|äyriä|muikku|siika|ahven|hauki|turska|seiti|anjovis|makrilli|rapu|simpuk/;
 const PORK_WORD = /porsa|possu|sian|sika|kinkku|pekoni|kassler|salami|chorizo|meetvursti/;
@@ -133,9 +133,10 @@ const fishLike = (p: Product) =>
 const plantRecord = (p: Product) => p.diet.includes('vegan') || p.diet.includes('vegetarian');
 /**
  * Prepared foods: chilled ready meals, salads and sauces (173xx), frozen prepared foods (417xx), sauces, soups and
- * snacks (219xx). Their recipe can hide meat stock or gelatine, so without a diet record they are unknown.
+ * snacks (219xx), sweets (522xx). Their recipe can hide meat stock or gelatine, so without a diet record they are
+ * unknown.
  */
-const PREPARED = ['173', '417', '219'];
+const PREPARED = ['173', '417', '219', '522'];
 
 function excludes(p: Product, x: NonNullable<NeedRequirements['excludes']>[number]): TermResult {
 	return { ...excludesTerm(p, x), code: `excludes:${x}` };
