@@ -296,7 +296,7 @@ h3 { margin: 0; font: 600 18px/1.25 var(--display); }
 		<section class="band" id="rules" aria-labelledby="h-rules">
 			<p class="eyebrow">The kitchen's rules</p>
 			<h2 id="h-rules">Each kitchen's own rules decide what the agent may buy</h2>
-			<p class="slead">Preferences put products in order, requirements rule products out, and the mandate says what the agent may buy without asking.</p>
+			<p class="slead">Each kitchen sets three kinds of rule, one per card below; only the mandate decides what the agent may buy without asking.</p>
 			<div class="cards c3">
 				<div class="card">
 					<div class="hd"><svg class="ic" aria-hidden="true"><use href="#i-rank"/></svg><h3>Preferences</h3></div>
@@ -336,7 +336,7 @@ h3 { margin: 0; font: 600 18px/1.25 var(--display); }
 					<ul class="kinds" aria-label="The seven kitchens">
 						<li>Hotel</li><li>Lunch restaurant</li><li>Public central kitchen</li><li>À la carte</li><li>Care home</li><li>Café</li><li>Ski resort</li>
 					</ul>
-					<p class="presets"><b>Same shortage. Your rules.</b> In the Kitchen, presets show how the same shortage ranks under different preferences: kitchen default, price first, Finnish required, lowest carbon, most reliable. They preview a ranking and change nothing. Not yet checked on the live app.</p>
+					<p class="presets"><b>Rank presets.</b> In the Kitchen, presets show how the same shortage ranks under different preferences: kitchen default, price first, Finnish required, lowest carbon, most reliable. They preview a ranking and change nothing. Not yet checked on the live app.</p>
 				</div>
 			</div>
 
@@ -393,7 +393,7 @@ h3 { margin: 0; font: 600 18px/1.25 var(--display); }
 		<section class="band" id="agent" aria-labelledby="h-agent">
 			<p class="eyebrow">The agent</p>
 			<h2 id="h-agent">The agent prepares the order and leaves the approval to the chef</h2>
-			<p class="slead">It reads what the kitchen asks for, works in a few bounded steps, and stops at a decision the chef must make.</p>
+			<p class="slead">It works in at most 8 steps and stops at any decision the chef must make.</p>
 			<ul class="facts">
 				<li><span class="ico"><svg class="ic" aria-hidden="true"><use href="#i-steps"/></svg></span><b>Six kinds of ask, sorted by rules before any model</b><span class="d">A routine order, the seeded event, a shortage repair, a change to a need, a question about a plan, or something it doesn't do.</span><span class="cite">server/agent/intent.ts</span></li>
 				<li><span class="ico"><svg class="ic" aria-hidden="true"><use href="#i-clock"/></svg></span><b>At most 8 steps</b><span class="d">Each run has a step limit, a deadline and a cancel button.</span><span class="cite">server/agent/loop.ts · runs.ts</span></li>
@@ -466,7 +466,7 @@ h3 { margin: 0; font: 600 18px/1.25 var(--display); }
 							<li><span>A line is quoted out of stock, undeliverable or unknown, each in its own words.<span class="cite">core/services/wording.ts</span></span></li>
 							<li><span>Candidates come from Valio's own substitution rules, then the scenario's hand-checked rescues, then same-category products found by name.<span class="cite">core/services/substitutes.ts · catalog/retrieval.ts</span></span></li>
 							<li><span>Each candidate is sized to the same need.<span class="cite">core/demand/sizing.ts</span></span></li>
-							<li><span>Requirements rule candidates out, each with its reason. Known stock ranks first, then the kitchen's preferences. Gemini Decisions ranks substitutes as one input to the kitchen's ranking; it never approves.<span class="cite">core/rank/rank.ts · server/adapters/decide</span></span></li>
+							<li><span>Requirements rule candidates out, each with its reason. Known stock ranks first, then the kitchen's preferences. Gemini Decisions scores how well each substitute fits the dish, one input to the code's ranking, and can flag a constraint risk that holds the line. It never approves or allows anything.<span class="cite">core/rank/rank.ts · server/adapters/decide</span></span></li>
 							<li><span>Making it in house is an option when every ingredient can be ordered.<span class="cite">core/services/substitutes.ts · D8a</span></span></li>
 							<li><span>A new product, an allergen change or a broken preference holds the line for the chef.<span class="cite">RescueCompare.svelte · core/mandate/tier.ts</span></span></li>
 							<li><span>If another kitchen takes the stock, the rest is sized to the next candidate and the approval is voided. <span class="lim">Tested, simulated.</span><span class="cite">core/services/contention.ts</span></span></li>
@@ -519,8 +519,8 @@ h3 { margin: 0; font: 600 18px/1.25 var(--display); }
 		<!-- Trust -->
 		<section class="band" id="trust" aria-labelledby="h-trust">
 			<p class="eyebrow">Checks behind each claim</p>
-			<h2 id="h-trust">Every claim has a mechanism and a test you can run</h2>
-			<p class="slead">Each row says what we claim, how the code makes it true, and the test that fails if it stops being true.</p>
+			<h2 id="h-trust">The code and the test behind each claim</h2>
+			<p class="slead">Each row is a claim, the code that enforces it, and the test that checks it.</p>
 			<table class="tbl">
 				<thead><tr><th scope="col">Claim</th><th scope="col">How</th><th scope="col">Test</th></tr></thead>
 				<tbody>
@@ -570,7 +570,7 @@ h3 { margin: 0; font: 600 18px/1.25 var(--display); }
 				<div class="card"><div class="hd"><svg class="ic" aria-hidden="true"><use href="#i-flask"/></svg><h3>Simulated run</h3></div><p>A scripted run across the demo kitchens, labelled simulated: real products, invented quantities.</p><span class="cite">server/bus/synthetic.ts</span></div>
 			</div>
 			<div class="card oplog">
-				<h3>The op log: 9 kinds of change, nothing else</h3>
+				<h3>The op log: 9 kinds of change</h3>
 				<p>Every entry has a sequence number, who acted and the door it came through. Open screens update from it after each commit.</p>
 				<ol aria-label="The nine kinds of change">
 					<li>Plan created</li><li>Line edited</li><li>Offer recorded</li><li>Substitute proposed</li><li>Approval recorded</li><li>Order placed</li><li>Incident recorded</li><li>Web finding recorded</li><li>Refusal recorded</li>
@@ -584,7 +584,7 @@ h3 { margin: 0; font: 600 18px/1.25 var(--display); }
 		<!-- Partners -->
 		<section class="band" id="partners" aria-labelledby="h-partners">
 			<p class="eyebrow">Partners and fallbacks</p>
-			<h2 id="h-partners">Each partner does one job, and each has a fallback</h2>
+			<h2 id="h-partners">What each partner service does, and its fallback</h2>
 			<p class="slead">Every outside service sits behind a port, so a dead API or Wi-Fi drops to a fallback that the screen labels. The Partners zone of the <a href="#map">system map</a> shows the same five; this table adds each one's status.</p>
 			<table class="tbl">
 				<thead><tr><th scope="col">Partner</th><th scope="col">Job</th><th scope="col">Fallback</th><th scope="col">Status</th></tr></thead>
@@ -592,7 +592,7 @@ h3 { margin: 0; font: 600 18px/1.25 var(--display); }
 					<tr><th scope="row">Valio Aimo</th><td data-h="Job">The catalogue of 17,546 products; live price and availability for shortlisted products only, at most 200 per call, availability fetched again after 15 minutes.</td><td data-h="Fallback">The cached offer, labelled with its age; the file catalogue; scenario stock.</td><td><span class="pill pl-live">Seen live</span></td></tr>
 					<tr><th scope="row">Gemini 3.5 Flash-Lite</th><td data-h="Job">Reads product requests and chat messages, and writes the chat's reply from the ledger. The agent planner job is opt-in and off on the live app.</td><td data-h="Fallback">The rules parser, the rules classifier, the ledger's own text.</td><td><span class="pill pl-live">Seen live</span></td></tr>
 					<tr><th scope="row">Gemini 3.8 Flash</th><td data-h="Job">Proposes a menu from a brief; every amount is an estimate.</td><td data-h="Fallback">The team's dish templates.</td><td><span class="pill pl-live">Seen live</span></td></tr>
-					<tr><th scope="row">Gemini Decisions</th><td data-h="Job">Ranks substitutes as one input to the kitchen's ranking; it never approves.</td><td data-h="Fallback">A recorded replay, then rules.</td><td><span class="pill pl-test">Tested, one live call</span></td></tr>
+					<tr><th scope="row">Gemini Decisions</th><td data-h="Job">Scores how well each substitute fits the dish, one input to the code's ranking, and can flag a constraint risk that holds the line. It never approves or allows anything.</td><td data-h="Fallback">A recorded replay, then rules.</td><td><span class="pill pl-test">Tested, one live call</span></td></tr>
 					<tr><th scope="row">Aiven</th><td data-h="Job">Runs the app as one container; Postgres holds every table and pushes live updates to Ops.</td><td data-h="Fallback">PGlite with the same migrations, for tests and offline.</td><td><span class="pill pl-live">Seen live</span></td></tr>
 					<tr><th scope="row">Exa</th><td data-h="Job">Cited product facts in the Why drawer: net content, origin, ingredients. Options outside the catalogue.</td><td data-h="Fallback">Recorded responses, under daily caps.</td><td><span class="pill pl-live">Seen live, Why drawer</span></td></tr>
 					<tr><th scope="row">Context.dev</th><td data-h="Job">Checks the recall list every 5 minutes and matches each notice against the catalogue. A matching product's line is held.</td><td data-h="Fallback">Recorded notices; a drill, labelled as one.</td><td><span class="pill pl-live">Seen live, no real recall matched</span></td></tr>
@@ -606,7 +606,7 @@ h3 { margin: 0; font: 600 18px/1.25 var(--display); }
 		<!-- Built / simulated / planned -->
 		<section class="band" id="status" aria-labelledby="h-status">
 			<p class="eyebrow">Built, simulated, planned</p>
-			<h2 id="h-status">What is real today, what is simulated, and what is next</h2>
+			<h2 id="h-status">Which parts are built, simulated or planned</h2>
 			<p class="slead">Everything on this page falls in one of three columns, and the app labels the simulated parts on screen.</p>
 			<div class="status">
 				<div class="col">

@@ -221,7 +221,7 @@
 
 		<section class="band" id="problem">
 			<h2>A buffet for 140, and Valio is out of two products</h2>
-			<p class="sub">In Valio's webshop today, the chef moves order templates to the cart by hand, and an out-of-stock product shows similar products with no reason. An agent can find a replacement in seconds. The kitchen also needs to know what it may buy alone, at what price, and when it has to ask.</p>
+			<p class="sub">In Valio's webshop today, the chef moves order templates to the cart by hand, and an out-of-stock product shows similar products with no reason. An agent can propose a replacement, but the kitchen also has to set what the agent may buy without asking.</p>
 			<div class="facts">
 				<div class="fact">
 					<b>140</b>
@@ -243,7 +243,7 @@
 
 		<section class="band" id="how">
 			<h2>Every door goes through the same checks</h2>
-			<p class="sub">The kitchen screen, the chat and outside agents all call one gate. The limits are data, checked in code at the moment of ordering, so no model can talk its way past them.</p>
+			<p class="sub">The kitchen screen, the chat, MCP and REST all call one gate, which checks the kitchen's limits in code when an order is placed.</p>
 			<div class="gate">
 				<div class="gcol">
 					<h3>Who asks</h3>
@@ -282,8 +282,8 @@
 		<section class="band" id="agents">
 			<div class="grid two">
 				<div>
-					<h2>Bring your own agent, and try to make it overspend</h2>
-					<p class="sub">Your agent gets the same tools over MCP and REST as ours, inside your own sandbox. It can plan and order within the mandate. It has no tool to approve, and the gate refuses it if it tries.</p>
+					<h2>Connect your own agent over MCP or REST</h2>
+					<p class="sub">Your agent gets the same tools over MCP and REST as ours, inside your own sandbox. It can plan and place orders; every line it orders waits for the chef. It has no approve tool, and a call to approve is refused.</p>
 				</div>
 				<ol class="steps">
 					<li><p><b>Get a key.</b> Open <a href="https://app.mandate.kitchen/agents">app.mandate.kitchen/agents</a> to mint one for your sandbox.</p></li>
@@ -299,13 +299,13 @@
 			<ul class="honest">
 				<li><b>Real</b><span>Valio Aimo's catalogue, and live price and availability calls for shortlisted products, cached with the time fetched.</span></li>
 				<li><b>Simulated</b><span>The booking, the clock, stock on hand, recipes, and the order itself. Valio's API has no order endpoint, so nothing is sent to Valio.</span></li>
-				<li><b>Models</b><span>Gemini reads requests and ranks substitutes. Every check that decides what may be ordered runs in plain code. A model can add a caution that holds a line, never one that allows it.</span></li>
+				<li><b>Models</b><span>Gemini reads requests, proposes menus and scores how well each substitute fits the dish. Every check that decides what may be ordered runs in plain code. A model can add a caution that holds a line, never one that allows it.</span></li>
 			</ul>
 		</section>
 
 		<section class="band">
-			<h2>Go deeper</h2>
-			<p class="sub">Each page takes one angle.</p>
+			<h2>The other pages</h2>
+			<p class="sub">The pitch, the system in detail, and the test behind each claim.</p>
 			<div class="grid four deeper">
 				<a href="/story"><b>Story</b><span>The pitch, slide by slide.</span></a>
 				<a href="/how"><b>How it works</b><span>The gate, the ports and the fallbacks.</span></a>
