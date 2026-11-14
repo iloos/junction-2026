@@ -1,4 +1,6 @@
+import type { Availability } from '$lib/core/contracts';
 import type { ClarifyField } from '$lib/core/contracts/task';
+import { onScenario } from '$lib/core/scenario';
 import { addDays, findDate, realDate, weekdayName } from '$lib/server/request/dates';
 import type { ReqUnit } from '$lib/server/request/lexicon';
 import { parseRules } from '$lib/server/request/parse';
@@ -43,12 +45,40 @@ const ask = (
 });
 const refuse = (reason: string): Resolved => ({ kind: 'unsupported', reason });
 
-/** Delivery dates to offer: the next five days on the scenario clock, labelled with the weekday. */
-function dateOptions(today: string): Clarify['options'] {
-	return [1, 2, 3, 4, 5].map((n) => {
-		const d = addDays(today, n);
-		return { label: `${n === 1 ? 'Tomorrow' : weekdayName(d)} ${d.slice(5)}`, value: d };
+/** Delivery dates to offer: five days from `start` (default tomorrow) on the scenario clock, by weekday. */
+function dateOptions(today: string, start = addDays(today, 1)): Clarify['options'] {
+	return [0, 1, 2, 3, 4].map((n) => {
+		const d = addDays(start, n);
+		return {
+			label: `${d === addDays(today, 1) ? 'Tomorrow' : weekdayName(d)} ${d.slice(5)}`,
+			value: d
+		};
 	});
+}
+
+/** When ordering closes for a warehouse (Stock) delivery on `deliverBy`, on the scenario's rules (D-1, 17:00). */
+export function stockCutoff(deliverBy: string): string {
+	return (
+		onScenario(
+			{
+				kind: 'known',
+				amount: null,
+				logisticModel: 'Stock',
+				availableDate: deliverBy,
+				closingTime: null,
+				raw: null,
+				provenance: { source: 'rule' }
+			} as unknown as Availability,
+			deliverBy
+		).closingTime ?? `${deliverBy}T00:00:00Z`
+	);
+}
+
+/** The first delivery day after `today` whose Stock cut-off is still ahead of `now`. */
+export function earliestOpen(today: string, now: string): string {
+	let d = addDays(today, 1);
+	for (let i = 0; i < 14 && Date.parse(stockCutoff(d)) <= Date.parse(now); i++) d = addDays(d, 1);
+	return d;
 }
 
 /** No plan picked: either none is open, or the request does not say which of several. */
@@ -151,6 +181,18 @@ function routineOrder(
 		);
 	if (!deliverByText || deliverBy < c.today)
 		return ask('date', `"${deliverByText}" (${deliverBy}) is in the past.`, dateOptions(c.today));
+	// Ordering for that day may already have closed: say so and offer the first day still open, never shift it.
+	if (c.now) {
+		const closes = stockCutoff(deliverBy);
+		if (Date.parse(closes) <= Date.parse(c.now)) {
+			const first = earliestOpen(c.today, c.now);
+			return ask(
+				'date',
+				`Ordering for ${weekdayName(deliverBy)} ${deliverBy} closed at ${closes.slice(11, 16)} on ${closes.slice(0, 10)} (Valio's cut-off). The earliest delivery still open is ${weekdayName(first)} ${first}. Which day?`,
+				dateOptions(c.today, first)
+			);
+		}
+	}
 
 	// What the chef should see about how the words were read; nothing here changes the order.
 	const notes =

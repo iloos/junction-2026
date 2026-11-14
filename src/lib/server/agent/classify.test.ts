@@ -146,3 +146,23 @@ describe('one nextActionFor(plan) (review §ranked 4)', () => {
 		expect(nextActionFor(p).kind).not.toBe('commit');
 	});
 });
+
+describe('a delivery date past its cut-off is asked about, never shifted', () => {
+	it('Monday 21:40: tomorrow has closed, Wednesday is offered first', () => {
+		const late = ctx({ today: '2026-12-07', now: '2026-12-07T21:40:00+02:00' });
+		const r = resolveIntent('I need lactose-free butter for k-hotel tomorrow', late, {
+			qty: 4,
+			unit: 'kg'
+		});
+		expect(r.clarify).toMatchObject({ field: 'date' });
+		expect(r.clarify?.question).toMatch(/closed at 17:00 on 2026-12-07/);
+		expect(r.clarify?.options[0].value).toBe('2026-12-09');
+		expect(
+			resolveIntent('I need lactose-free butter for k-hotel tomorrow', late, {
+				qty: 4,
+				unit: 'kg',
+				date: '2026-12-09'
+			})
+		).toMatchObject({ kind: 'routine_order', deliverBy: '2026-12-09' });
+	});
+});
