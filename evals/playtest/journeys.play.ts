@@ -178,6 +178,14 @@ journey(
 	async (r, page) => {
 		let planId: string | null = null;
 		let lines: HeroLine[] = [];
+		// The dock names its plan in the chat events (a decision's planId), not always as a link: collect them.
+		const seen: string[] = [];
+		page.on('response', async (res) => {
+			if (!/\/api\/chat\//.test(res.url())) return;
+			const t = await res.text().catch(() => '');
+			for (const m of t.matchAll(/"planId":"(pl-[^"]+)"/g))
+				if (!seen.includes(m[1])) seen.push(m[1]);
+		});
 		await r.step('home', () => home(page));
 		await r.step('ask the agent for the dinner', () => say(r, page, HERO));
 		await r.step('answer what it asks, then "plan it"', async () => {
@@ -216,14 +224,20 @@ journey(
 				await say(r, page, 'plan it');
 			}
 		});
-		await r.step('a plan exists (a plan link in the dock)', async () => {
+		await r.step('a plan exists (named by the dock)', async () => {
 			const dock = await openDock(page);
+			await dock
+				.getByText(/decisions? (for a chef|wait)|nothing ordered|Ordered/)
+				.first()
+				.waitFor({ timeout: 120_000 });
 			const href = await dock
 				.locator('a[href*="plan="]')
 				.last()
-				.getAttribute('href', { timeout: 120_000 });
-			planId = href ? new URL(href, BASE).searchParams.get('plan') : null;
-			if (!planId) throw new Error('no plan link after "plan it"');
+				.getAttribute('href', { timeout: 2_000 })
+				.catch(() => null);
+			planId = seen.at(-1) ?? (href ? new URL(href, BASE).searchParams.get('plan') : null);
+			r.note('planIdsSeen', seen);
+			if (!planId) throw new Error('no plan named after "plan it"');
 			const snap = (await (
 				await page.request.get(`${BASE}/kitchen-api/snapshot?plan=${planId}&peek=1`)
 			).json()) as { plan?: { lines?: HeroLine[]; totalCents?: number } };
@@ -500,7 +514,7 @@ journey('j5', 'Usual order and history', async (r, page) => {
 	await r.step('find the usual order', async () => {
 		if (
 			await page
-				.getByText(/usual (Mon|Tue|Wed|Thu|Fri|Sat|Sun)\w* order|usual is ready/i)
+				.getByText(/usual (Mon|Tue|Wed|Thu|Fri|Sat|Sun)\w* order|usual is ready|^Usual order$/i)
 				.first()
 				.isVisible()
 				.catch(() => false)
