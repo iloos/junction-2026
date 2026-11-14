@@ -170,6 +170,33 @@ export const toolSchemas = {
 							),
 							dropped: z.array(z.object({ productId: ProductId, sentence: z.string() }))
 						})
+						.optional(),
+					/**
+					 * The kitchen's hard constraints (D16), in the requirement vocabulary: they apply to every line on top of a
+					 * need's own requirements, and no agent can relax them.
+					 */
+					constraints: z
+						.object({
+							/** Allergens every product must be free from: the record's code and its readable name. */
+							freeFrom: z.array(z.object({ code: z.string(), name: z.string() })),
+							/** Origin rules by category group: `require` is a hard constraint, `prefer` ranks. */
+							origin: z.array(
+								z.object({
+									categoryGroup: z.string(),
+									rule: z.enum(['prefer', 'require']),
+									country: z.string()
+								})
+							),
+							/**
+							 * The kitchen's own notes on what it buys (clinical diets, "allergens declared for every resident"): context
+							 * for choosing products, not a constraint the tools enforce.
+							 */
+							notes: z.array(z.string()),
+							/** What happens to a product with no allergen record: held for a chef, or rejected. Never ok. */
+							unknownAllergenRecord: z.enum(['hold', 'reject']),
+							/** What happens to a product that may contain traces of an excluded allergen. */
+							traces: z.enum(['hold', 'reject'])
+						})
 						.optional()
 				})
 			),

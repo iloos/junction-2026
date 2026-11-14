@@ -88,4 +88,27 @@ A Claude Code session planned a 7-guest dinner over MCP and hit these problems:
 - Real accounts or OAuth before Ring 4; real Valio ordering (commits stay simulated).
 
 ## Report (the lane agent appends at the end of each run)
--
+
+### Checkpoint, Sat 14 Nov evening (da)
+**Done**
+- agent-door-ids `02fe6a9` (merged into the lead's batch): /agents raw-id sweep fix + Copy button on the instructions; `decisions://open` due times from core `dueOf` (Helsinki words + ISO); R10-15 (a named product or "Which one?" chips, never the lexicon default); drill notices never counted as recalls; real source labels (live/cache/replay).
+- Ring 1, lane/agent-door-v2 `5fa81f5` (merged into the batch): R11-08 `0c4b4ae` (an unadvertised tool is absent on MCP/REST before any work, via `offered()`); absolute links `9d78857` (PUBLIC_ORIGIN, else the request origin, applied at the doors); pairing `bb9f7cc` + `5fa81f5` (/pair, QR + 6-character code, single use, 10 min, sandbox only, keys refused; soft per-client and global miss caps); CONTRACT `4e92499` ResultMeta.reviewUrl; `581cc2b` propose_menu reviewUrl + "give the human the link first" instructions; D17 adversarial suite `715612f` (in eval:agent).
+- D16 side, lane/agent-door-d16 `1eb870d` (next after the batch; includes a local merge of lane/a-atp): CONTRACT `741abc5` + `0aaac60` get_context constraints (kitchen labels exposed as `notes`, since nothing enforces them); requirement_unmet → find_substitutes next step naming requirement + fact; mandate words and prompts in the D16 vocabulary; dock allergen answers through `meets()`.
+- Ring 4 note: per-device sessions (above).
+
+**Open**
+- Ring 2: `reasoning` on write tools (contract + op envelope field, the lead's), `report_issue` (contract, /ops listing with 9c), `detail: compact|full` (contract; 5 hits < 800 tokens measured).
+- Ring 3: `dryRun` on place_order; menus awaiting review in `decisions://open`; pack fit.
+- Not mine: the dock approve card (E), the Kitchen pair button (1f, `<PairDevice/>` is ready), the D15 `/?menu=` deep link (then switch `menuReviewUrl`).
+- agent-rank (per-request ranking preference: cheapest / lowest carbon / prefer Finnish / most reliable; CONTRACT `99a61d9` rankBy) rebased onto main as `962bb2a`; it still needs its light gate before it goes to the lead.
+
+**Risks**
+- PUBLIC_ORIGIN unset on prod: links point at the request host (*.aiven.app behind the proxy). 9c sets it in the console at the deploy.
+- `getClientAddress()` behind Aiven is likely the proxy IP: the pairing limits are built for that (soft per-client, global pause); ADDRESS_HEADER/XFF_DEPTH is unconfirmed.
+- Pairing state is in memory: one container (D3); a restart drops live codes (they last 10 minutes anyway).
+- Product questions are regex-read: unusual phrasings fall through to the plan agent (safe; a missed answer).
+
+**Resume**
+- Branches: lane/agent-door-d16 `1eb870d` (worktree ../junc26-lanes/agent-door-v2, dev port 5193; 5192 belongs to the establish lane); agent-rank `962bb2a` (worktree ../junc26-lanes/agent-rank).
+- Gate rule: `pnpm gate --only check,lint` + targeted tests, then the SHA to the lead.
+- Next 3: (1) light-gate agent-rank and send it; (2) Ring 2, contracts first as their own commit (reasoning, report_issue, detail); (3) Ring 3 `decisions://open` lists menus awaiting review.
