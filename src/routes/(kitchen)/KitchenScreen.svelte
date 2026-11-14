@@ -12,7 +12,6 @@
 		Play,
 		CloudOff,
 		LoaderCircle,
-		CircleX,
 		CircleCheck,
 		Info,
 		Smartphone
@@ -927,97 +926,42 @@
 {:else if k.started === false}
 	{@const kit = KITCHENS.find((x) => x.id === k.startKitchen) ?? KITCHENS[0]}
 	<main class="mx-auto max-w-[760px] px-4 py-10 md:px-6 md:py-14">
-		{#if !preEvent}
-			<NothingPlanned
-				kitchenId={kit.id}
-				kitchenName={kit.name.replace(' (fictional)', '')}
-				mandateWords={kit.mandate.words}
-				notes={joinedAs?.kitchenId === kit.id ? (joinedAs.notes ?? null) : null}
-				onnotes={saveNotes}
-				onplanned={openPlan}
-				onask={askFor}
-			/>
-		{:else}
-			<p class="text-meta text-ink-3">
-				{kit.name.replace(' (fictional)', '')} · a booking to buy for
-			</p>
-			<h1 class="mt-1 text-title font-semibold tracking-[-0.015em] text-ink">{preEvent.title}</h1>
-			<p class="mt-1 text-body text-ink-2">
-				{day(preEvent.date)} · {num(preEvent.guests)} guests · {preEvent.serviceStyle}{preMenu.length
-					? ` · ${preMenu.length} dishes`
-					: ''}
-			</p>
-			<ul class="mt-3 flex flex-wrap gap-1.5" aria-label="Menu">
-				{#each preMenu as d (d)}
-					<li class="rounded-full bg-well px-2 py-0.5 text-meta text-ink-2">{d}</li>
-				{/each}
-			</ul>
-
-			{#if preOutages.length}
-				<section
-					class="mt-6 rounded-lg border border-rule bg-sheet px-4 py-3.5"
-					aria-labelledby="out-h"
-				>
-					<h2 id="out-h" class="text-heading font-semibold text-ink">
-						{preOutages.length} of these Valio can't supply as listed
-					</h2>
-					<ul class="mt-2 space-y-1.5">
-						{#each preOutages as o (o.productId)}
-							<li class="flex items-start gap-2 text-body text-ink">
-								<CircleX size={16} class="mt-0.5 shrink-0 text-sup-missing" aria-hidden="true" />
-								<span
-									><span class="font-medium">{o.dish}</span>: {o.productName}
-									<span class="mono text-meta text-ink-3">{o.productId}</span>
-									<span class="text-ink-2"
-										>· {o.kind === 'out' ? 'out of stock' : "Valio can't deliver it"}</span
-									></span
-								>
-							</li>
-						{/each}
-					</ul>
-					<p class="mt-2 text-meta text-ink-3">
-						From Valio's catalogue at the last check; planning asks Valio again for every product.
-					</p>
-				</section>
-			{/if}
-
-			<blockquote class="mt-4 border-l-2 border-accent pl-3 text-body text-ink">
-				“{kit.mandate.words}”
-				<footer class="mt-1 text-meta text-ink-3">
-					The chef's mandate: what the agent may do alone.
-				</footer>
-			</blockquote>
-
-			<p class="mt-5 max-w-[62ch] text-body leading-relaxed text-ink-2">
-				Planning turns menu × guests into Valio lines, and the agent proposes a rescue for each
-				product above, within the mandate. Nothing is ordered until you approve.
-			</p>
-			<button
-				type="button"
-				class="mt-5 inline-flex h-11 items-center gap-2 rounded-md bg-accent px-5 text-body font-medium text-sheet hover:bg-accent-ink disabled:opacity-50"
-				disabled={k.busy}
-				onclick={() => k.start()}
+		<!-- The kitchen's own home comes first; a seeded booking is offered as an example to try, never as the page. -->
+		<NothingPlanned
+			kitchenId={kit.id}
+			kitchenName={kit.name.replace(' (fictional)', '')}
+			mandateWords={kit.mandate.words}
+			notes={joinedAs?.kitchenId === kit.id ? (joinedAs.notes ?? null) : null}
+			onnotes={saveNotes}
+			onplanned={openPlan}
+			onask={askFor}
+		/>
+		{#if preEvent}
+			<section
+				class="mt-8 rounded-lg border border-dashed border-rule-strong bg-sheet px-4 py-3.5"
+				aria-labelledby="example-h"
 			>
-				<Play size={16} aria-hidden="true" />
-				{k.busy ? 'Planning…' : 'Plan the event'}
-			</button>
-			<details class="mt-10 border-t border-rule pt-4">
-				<summary class="cursor-pointer text-body font-medium text-ink"
-					>Or plan another day: the usual order, or ask the agent</summary
+				<p class="text-micro font-medium tracking-wide text-ink-3 uppercase">Try an example</p>
+				<h2 id="example-h" class="mt-1 text-heading font-semibold text-ink">
+					{preEvent.title}
+				</h2>
+				<p class="mt-0.5 text-meta text-ink-2">
+					A sample booking for this kitchen: {day(preEvent.date)} · {num(preEvent.guests)} guests{preMenu.length
+						? ` · ${preMenu.length} dishes`
+						: ''}{preOutages.length
+						? `. Valio can't supply ${preOutages.length} of its products as listed, so you see the agent find replacements within the mandate.`
+						: '.'}
+				</p>
+				<button
+					type="button"
+					class="mt-3 inline-flex h-9 items-center gap-2 rounded-md border border-rule-strong px-3.5 text-body font-medium text-ink hover:border-accent disabled:opacity-50"
+					disabled={k.busy}
+					onclick={() => k.start()}
 				>
-				<div class="mt-4">
-					<NothingPlanned
-						kitchenId={kit.id}
-						kitchenName={kit.name.replace(' (fictional)', '')}
-						mandateWords={kit.mandate.words}
-						notes={joinedAs?.kitchenId === kit.id ? (joinedAs.notes ?? null) : null}
-						onnotes={saveNotes}
-						onplanned={openPlan}
-						onask={askFor}
-						embedded
-					/>
-				</div>
-			</details>
+					<Play size={14} aria-hidden="true" />
+					{k.busy ? 'Planning…' : 'Plan the event'}
+				</button>
+			</section>
 		{/if}
 		{#if k.progress}
 			<p class="mt-4 flex items-center gap-2 text-body text-ink-2" role="status" aria-live="polite">
