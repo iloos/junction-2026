@@ -1,0 +1,162 @@
+{
+	"recordedAt": "2026-11-14T12:29:55.152Z",
+	"appCommit": "e9ec36c00819399188dde3276d63f704582985f1",
+	"cases": [
+		{
+			"id": "out-of-stock",
+			"recordedAt": "2026-11-14T12:29:50.275Z",
+			"source": {
+				"app": "https://app.mandate.kitchen",
+				"endpoints": [
+					"GET /kitchen-api/snapshot",
+					"POST /kitchen-api/scenario {action:start}"
+				]
+			},
+			"via": "Started in the Kitchen",
+			"request": "Plan the event · Christmas buffet, 140 guests",
+			"steps": [
+				{
+					"icon": "search",
+					"text": "HK Viljaporsaan Juhlakinkku potkalla tuoresuolattu 6-8 kg is out of stock at Valio."
+				},
+				{
+					"icon": "swap",
+					"text": "Proposed HK Palvikinkku viipaloitu 1,5 kg: 13 packs, 19.5 kg. A known-stock candidate: Valio states 15 in stock."
+				},
+				{
+					"icon": "hold",
+					"text": "It is a new product for this kitchen, so it waits for the chef."
+				}
+			],
+			"outcome": {
+				"state": "held",
+				"label": "Needs your approval",
+				"eur": 200.59
+			},
+			"link": "https://app.mandate.kitchen/"
+		},
+		{
+			"id": "lactose-free",
+			"recordedAt": "2026-11-14T12:29:51.460Z",
+			"source": {
+				"app": "https://app.mandate.kitchen",
+				"endpoints": [
+					"POST /request/run"
+				]
+			},
+			"request": "10 l lactose-free milk for Friday",
+			"steps": [
+				{
+					"icon": "search",
+					"text": "Read as 10 l of milk that must be lactose-free, for Fri 11 Dec."
+				},
+				{
+					"icon": "check",
+					"text": "Picked Valio kevytmaito 1 l laktoositon UHT, 10 packs. 78 catalogue matches filtered out, 5 shortlisted."
+				},
+				{
+					"icon": "shield",
+					"text": "Inside the mandate, so it can be ordered without asking."
+				}
+			],
+			"outcome": {
+				"state": "within",
+				"label": "Within your mandate",
+				"eur": 15.6
+			},
+			"link": "https://app.mandate.kitchen/request"
+		},
+		{
+			"id": "cut-off",
+			"recordedAt": "2026-11-14T12:29:52.903Z",
+			"source": {
+				"app": "https://app.mandate.kitchen",
+				"endpoints": [
+					"POST /request/run"
+				]
+			},
+			"request": "4 kg lactose-free butter for tomorrow",
+			"steps": [
+				{
+					"icon": "search",
+					"text": "Read as 4 kg of lactose-free butter for Tue 8 Dec."
+				},
+				{
+					"icon": "clock",
+					"text": "The cut-off for Tue 8 Dec has passed (17:00 Mon); earliest delivery is Wed 9 Dec."
+				},
+				{
+					"icon": "swap",
+					"text": "Offered: Deliver Wed 9 Dec instead."
+				}
+			],
+			"outcome": {
+				"state": "caught",
+				"label": "Nothing ordered"
+			},
+			"link": "https://app.mandate.kitchen/request"
+		},
+		{
+			"id": "agent-cannot-approve",
+			"recordedAt": "2026-11-14T12:29:53.741Z",
+			"source": {
+				"app": "https://app.mandate.kitchen",
+				"endpoints": [
+					"GET /api/demo/judge-key",
+					"POST /api/tools/place_order",
+					"POST /api/tools/approve",
+					"POST /mcp/k/<key> tools/list",
+					"GET /api/events?mode=poll"
+				]
+			},
+			"request": "An outside agent tries to approve its own order",
+			"steps": [
+				{
+					"icon": "hold",
+					"text": "Its order (Valio kevytmaito 1 l laktoositon UHT, 30 packs) is held for the chef."
+				},
+				{
+					"icon": "shield",
+					"text": "It called approve itself: refused (403). Ops logs the attempt; nothing changed."
+				},
+				{
+					"icon": "check",
+					"text": "Over MCP its key gets 15 tools, none of them approve."
+				}
+			],
+			"outcome": {
+				"state": "refused",
+				"label": "Refused"
+			},
+			"link": "https://app.mandate.kitchen/agents"
+		},
+		{
+			"id": "one-receipt",
+			"recordedAt": "2026-11-14T12:29:55.152Z",
+			"source": {
+				"app": "https://app.mandate.kitchen",
+				"endpoints": [
+					"POST /request/run",
+					"POST /request/run {action:commit} ×4"
+				]
+			},
+			"request": "10 l lactose-free milk for Friday, then the order sent 4 times at once",
+			"steps": [
+				{
+					"icon": "receipt",
+					"text": "4 sends of the same order, with one key."
+				},
+				{
+					"icon": "check",
+					"text": "1 receipt for 1 line: ordered once, never twice."
+				}
+			],
+			"outcome": {
+				"state": "ordered",
+				"label": "Ordered · 1 receipt",
+				"eur": 15.6
+			},
+			"link": "https://app.mandate.kitchen/request"
+		}
+	]
+}
