@@ -10,7 +10,16 @@
 	import { BellRing, CalendarPlus, Check, Copy, Download, Rss } from '@lucide/svelte';
 	import { day, storyTime } from './format';
 
-	let { kitchenId, planId = null }: { kitchenId: string; planId?: string | null } = $props();
+	let {
+		kitchenId,
+		planId = null,
+		compact = false
+	}: {
+		kitchenId: string;
+		planId?: string | null;
+		/** Icon only below `sm` (inline next to a deadline, where width is tight). */
+		compact?: boolean;
+	} = $props();
 
 	let open = $state(false);
 	let subscribe = $state(false);
@@ -87,7 +96,9 @@
 			? "Add this plan's decide-by and delivery to your calendar"
 			: 'Kitchen dates in your calendar'}
 	>
-		<CalendarPlus size={13} aria-hidden="true" />Add to calendar
+		<CalendarPlus size={13} aria-hidden="true" /><span
+			class={compact ? 'sr-only sm:not-sr-only' : ''}>Add to calendar</span
+		>
 	</Popover.Trigger>
 	<Popover.Portal>
 		<Popover.Content
