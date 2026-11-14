@@ -44,6 +44,8 @@ const ask = (
 	clarify: { field, question, options: options.slice(0, 6) }
 });
 const refuse = (reason: string): Resolved => ({ kind: 'unsupported', reason });
+/** Finnish words or letters: the refusal answers in the chef's language. */
+const FINNISH = /[äöå]|\b(hyväksy\p{L}*|nosta\p{L}*|muuta\p{L}*|se|ne|kaikki|tilaa)\b/iu;
 
 /** Delivery dates to offer: five days from `start` (default tomorrow) on the scenario clock, by weekday. */
 function dateOptions(today: string, start = addDays(today, 1)): Clarify['options'] {
@@ -104,6 +106,8 @@ export function cutoffPassed(deliverBy: string, closes: string, earliest: string
 
 /** No plan picked: either none is open, or the request does not say which of several. */
 function noPlan(c: AgentContext, none: string): Resolved {
+	// No plan open at all: nothing to pick, so say so rather than ask an unanswerable question.
+	if (!c.openPlans.length) return refuse(none);
 	if (c.openPlans.length < 2) return ask('plan', none);
 	const list = c.openPlans
 		.map((p) => `${p.id} (${p.kitchenId}${p.eventId ? `, ${p.eventId}` : ''})`)
@@ -265,7 +269,9 @@ export function resolveIntent(goalRaw: string, c: AgentContext, slots: Slots = {
 	switch (cls.kind) {
 		case 'authority':
 			return refuse(
-				'Approving and changing the mandate belong to the chef; the agent never does either. Use the approval card or the mandate screen.'
+				FINNISH.test(goal)
+					? 'En voi hyväksyä enkä muuttaa valtuutusta: vain kokki hyväksyy, Keittiö-näkymän hyväksyntäkortilla.'
+					: "I can't approve or change the mandate: only the chef approves, on the approval card in the Kitchen screen."
 			);
 		case 'read':
 			if (!c.currentPlan) return noPlan(c, 'There is no plan yet to show.');

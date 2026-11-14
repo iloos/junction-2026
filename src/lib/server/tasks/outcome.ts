@@ -8,7 +8,7 @@ import {
 } from '$lib/core/contracts';
 import type { TaskLedger } from '$lib/core/contracts/task';
 import type { CallContext, Ports, ToolHandlers } from '$lib/core/ports';
-import { computeLedger, ledgerTotals } from './ledger';
+import { computeLedger } from './ledger';
 
 export type GetOutcomeInput = { planId?: string; taskId?: string };
 export type GetOutcomeOutput = { ledger: TaskLedger; meta?: ResultMeta };
@@ -87,16 +87,35 @@ const fmt = (n: number) => (Math.round(n * 100) / 100).toLocaleString('en-IE');
  * receipt-backed quantity.
  */
 export function ledgerSummary(l: TaskLedger): string {
-	const t = ledgerTotals(l);
-	const unit = t.units.length === 1 ? ` ${t.units[0]}` : '';
 	const parts: string[] = [];
+	// Quantities add up per unit only: "4 kg + 2 l needed", never "6 needed".
+	const units = [...new Set(l.needs.map((n) => n.required.unit))];
+	const per = (
+		k: 'required' | 'supplierConfirmed' | 'awaitingSupplier' | 'planned' | 'unresolved'
+	) =>
+		units
+			.map((u) => {
+				const v = l.needs
+					.filter((n) => n.required.unit === u)
+					.reduce(
+						(s, n) =>
+							s + (k === 'planned' ? n.plannedKnown.value + n.plannedUnknown.value : n[k].value),
+						0
+					);
+				return v > 0 ? `${fmt(v)} ${u}` : '';
+			})
+			.filter(Boolean)
+			.join(' + ');
 	if (l.needs.length) {
-		parts.push(`${fmt(t.required)}${unit} needed`);
-		if (t.supplierConfirmed > 0)
-			parts.push(`${fmt(t.supplierConfirmed)}${unit} supplier confirmed`);
-		if (t.awaitingSupplier > 0) parts.push(`${fmt(t.awaitingSupplier)}${unit} awaiting supplier`);
-		if (t.planned > 0) parts.push(`${fmt(t.planned)}${unit} planned, not yet submitted`);
-		if (t.unresolved > 0) parts.push(`${fmt(t.unresolved)}${unit} unresolved`);
+		parts.push(`${per('required') || '0'} needed`);
+		const add = (k: Parameters<typeof per>[0], words: string) => {
+			const v = per(k);
+			if (v) parts.push(`${v} ${words}`);
+		};
+		add('supplierConfirmed', 'supplier confirmed');
+		add('awaitingSupplier', 'awaiting supplier');
+		add('planned', 'planned, not yet submitted');
+		add('unresolved', 'unresolved');
 	}
 	if (l.receiptIds.length)
 		parts.push(

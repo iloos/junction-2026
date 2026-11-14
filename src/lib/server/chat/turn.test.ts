@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { scenarioDate } from '$lib/core/scenario';
 import { trialWorkspace } from '../agent/trial-harness';
 import { FIDELITY_NOW } from '../evals/fidelity';
-import { chatTurn, readAnswer } from './turn';
+import type { Llm } from '$lib/core/ports';
+import { chatTurn, readAnswer, taskView } from './turn';
+import { messyLlm } from './messy-replay';
 
 async function setup(now = FIDELITY_NOW) {
 	const w = await trialWorkspace();
@@ -102,7 +104,7 @@ describe('suite: chat turns (review §5: multi-turn, approval handoff, adversari
 				const out = await chatTurn({ text }, deps);
 				expect(out.at(-1)).toMatchObject({ type: 'done' });
 				expect(out.at(-1)?.type === 'done' && out.at(-1)).toMatchObject({
-					text: expect.stringMatching(/belong to the chef/)
+					text: expect.stringMatching(/only the chef approves/)
 				});
 			}
 			expect(w.ops).toHaveLength(0);
@@ -238,6 +240,175 @@ describe('suite: chat turns · a question about the plan the screen has open', (
 			});
 			const bogus = await chatTurn({ planId: 'pl-nope', text: 'status' }, deps);
 			expect(bogus.at(-1)).toMatchObject({ text: "I can't see that plan from here." });
+		}
+	);
+});
+
+describe('suite: chat turns · prod bug bash', () => {
+	it(
+		'#8 a new request typed while a question is open starts a new task and keeps its amount',
+		{ timeout: 120_000 },
+		async () => {
+			const { w, deps } = await setup();
+			const t1 = await chatTurn({ text: 'I need lactose-free butter for tomorrow' }, deps);
+			const first = t1[0].taskId;
+			expect(t1[0]).toMatchObject({ type: 'clarify', field: 'qty' });
+
+			// A question while it is open is not the answer.
+			const q = await chatTurn({ taskId: first, text: 'What needs my decision?' }, deps);
+			expect(q.every((e) => e.taskId === first)).toBe(true);
+			const kept = await w.env.ports.tasks!.get(w.env.workspaceId, first);
+			expect(kept?.slots).toEqual({});
+
+			const t2 = await chatTurn({ taskId: first, text: 'Order 60 kg butter for Friday' }, deps);
+			const second = t2.at(-1)!.taskId;
+			expect(second).not.toBe(first);
+			const ledger = t2.find((e) => e.type === 'ledger');
+			if (ledger?.type !== 'ledger') throw new Error('no ledger');
+			expect(ledger.ledger.needs.map((n) => n.required)).toEqual([{ value: 60, unit: 'kg' }]);
+			const d = t2.find((e) => e.type === 'decision');
+			if (d?.type !== 'decision') throw new Error('no decision');
+			// The deep link names the kitchen, the plan and its version, as the Kitchen screen reads them.
+			expect(d.approvalUrl).toBe(`/?kitchen=k-hotel&plan=${d.planId}&v=${d.planVersion}`);
+			// The first task still waits for its amount, untouched.
+			const old = await w.env.ports.tasks!.get(w.env.workspaceId, first);
+			expect(old).toMatchObject({ state: 'awaiting_clarification', slots: {} });
+		}
+	);
+
+	it(
+		'taskView shows the cards as the plans are now: an approval made elsewhere clears the decision',
+		{ timeout: 120_000 },
+		async () => {
+			const { w, chef, deps } = await setup();
+			const t = await chatTurn({ text: 'Order 60 kg butter for Friday' }, deps);
+			const d = t.find((e) => e.type === 'decision');
+			if (d?.type !== 'decision') throw new Error('no decision');
+			expect((await taskView(d.taskId, deps)).map((e) => e.type)).toEqual([
+				'decision',
+				'ledger',
+				'done'
+			]);
+			const v = await w.handlers.get_plan(chef, { planId: d.planId });
+			if (!v.ok || !v.value.approval) throw new Error('no approval');
+			const a = v.value.approval;
+			await w.handlers.approve(chef, {
+				approvalId: a.id,
+				planVersion: a.planVersion,
+				termsHash: a.termsHash,
+				decision: 'grant'
+			});
+			const after = await taskView(d.taskId, deps);
+			expect(after.map((e) => e.type)).toEqual(['ledger', 'done']);
+			expect(after.at(-1)).toMatchObject({ canContinue: true });
+			expect((await taskView('task-nope', { ...deps })).at(-1)).toMatchObject({ state: 'failed' });
+		}
+	);
+});
+
+/** A model whose replies come from a function of the request, named like a live one. */
+const fake = (reply: (prompt: string) => string): Llm => ({
+	async generate(req) {
+		return {
+			text: reply(req.prompt),
+			model: 'gemini-test',
+			tokens: { in: 1, out: 1 },
+			latencyMs: 3
+		};
+	}
+});
+
+describe('suite: chat v2 · understanding, grounded answers, model planning with the script as fallback', () => {
+	it(
+		'a messy message runs as the order it means; the answer is worded from the ledger',
+		{ timeout: 120_000 },
+		async () => {
+			const { deps } = await setup();
+			const out = await chatTurn(
+				{ text: 'hey can you get us like 4 kilos of lactose free butter for tomorrow' },
+				{
+					...deps,
+					models: {
+						understand: messyLlm(),
+						// The planner model never answers usefully: the script takes every step.
+						plan: fake(() => 'no idea'),
+						explain: fake(
+							() =>
+								'4 kg of lactose-free butter is planned; 1 decision waits for you in the Kitchen screen.'
+						)
+					}
+				}
+			);
+			const steps = out.filter((e) => e.type === 'step');
+			expect(steps[0]).toMatchObject({
+				tool: 'understand',
+				summary: expect.stringMatching(/via Gemini/)
+			});
+			expect(steps.map((s) => s.type === 'step' && s.tool)).toContain('place_order');
+			const ledger = out.find((e) => e.type === 'ledger');
+			if (ledger?.type !== 'ledger') throw new Error('no ledger');
+			expect(ledger.ledger.needs[0].required).toEqual({ value: 4, unit: 'kg' });
+			const ex = steps.find((s) => s.type === 'step' && s.tool === 'explain');
+			expect(ex?.type === 'step' && ex.summary).toMatch(/via Gemini · \d+ ms|template/);
+		}
+	);
+
+	it(
+		'a model answer that claims an order without a receipt is replaced by the template',
+		{ timeout: 120_000 },
+		async () => {
+			const { deps } = await setup();
+			const out = await chatTurn(
+				{ text: 'Order 60 kg butter for Friday' },
+				{
+					...deps,
+					models: {
+						explain: fake(() => 'Done! I ordered all 60 kg and the supplier confirmed it.')
+					}
+				}
+			);
+			const done = out.at(-1);
+			expect(done?.type === 'done' && done.text).toMatch(/no order placed yet/);
+			const ex = out.find((e) => e.type === 'step' && e.tool === 'explain');
+			expect(ex?.type === 'step' && ex.summary).toMatch(/model reply not used/);
+		}
+	);
+
+	it('small talk gets a short hello and no task', async () => {
+		const { w, deps } = await setup();
+		const out = await chatTurn(
+			{ text: "thanks, that's great!" },
+			{ ...deps, models: { understand: messyLlm() } }
+		);
+		expect(out).toHaveLength(2);
+		expect(out.at(-1)).toMatchObject({ type: 'done', taskId: '' });
+		expect(await w.env.ports.tasks!.list(w.env.workspaceId)).toEqual([]);
+	});
+});
+
+describe('suite: chat v2 · several products in one message', () => {
+	it(
+		'"tarvitaan 10 kg perunoita ja 5 l maitoa perjantaiksi" orders both on one task',
+		{ timeout: 120_000 },
+		async () => {
+			const { w, deps } = await setup();
+			const out = await chatTurn(
+				{ text: 'tarvitaan 10 kg perunoita ja 5 l maitoa perjantaiksi' },
+				deps
+			);
+			expect(out.some((e) => e.type === 'clarify')).toBe(false);
+			const taskId = out.at(-1)!.taskId;
+			const task = await w.env.ports.tasks!.get(w.env.workspaceId, taskId);
+			expect(task?.plans).toHaveLength(2);
+			expect(task?.plans.map((p) => p.role)).toEqual(['primary', 'touched']);
+			const plans = Object.values((await w.state()).plans);
+			expect(plans.map((p) => p.deliverBy)).toEqual(['2026-12-11', '2026-12-11']);
+			const ledger = out.find((e) => e.type === 'ledger');
+			if (ledger?.type !== 'ledger') throw new Error('no ledger');
+			expect(ledger.ledger.needs.map((n) => n.required)).toEqual([
+				{ value: 10, unit: 'kg' },
+				{ value: 5, unit: 'l' }
+			]);
 		}
 	);
 });

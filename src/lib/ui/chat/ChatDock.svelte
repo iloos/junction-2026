@@ -25,12 +25,23 @@
 		open?: boolean;
 		/** Desktop: always-open column (agent page). Unpinned, it opens and closes like the phone sheet (Kitchen). */
 		pinned?: boolean;
+		/** The plan the screen has open: a turn without a task joins the task that holds it. */
+		planId?: string;
+		/** Open this task (a link to it); otherwise the task remembered for this kitchen. */
+		taskId?: string;
 	}
-	let { kitchenId = 'k-hotel', open = $bindable(false), pinned = true }: Props = $props();
+	let {
+		kitchenId = 'k-hotel',
+		open = $bindable(false),
+		pinned = true,
+		planId,
+		taskId: openTask
+	}: Props = $props();
 
 	type Entry = { kind: 'chef'; text: string } | { kind: 'event'; e: ChatEvent };
-	const KEY = 'mandate.chat.task';
-	let taskId = $state<string | null>(read());
+	/** The dock's task is remembered per kitchen for this browser tab. */
+	const key = () => `mandate.chat.task.${kitchenId}`;
+	let taskId = $state<string | null>(null);
 	let entries = $state.raw<Entry[]>([]);
 	let text = $state('');
 	let busy = $state(false);
@@ -38,19 +49,59 @@
 
 	function read(): string | null {
 		try {
-			return typeof sessionStorage === 'undefined' ? null : sessionStorage.getItem(KEY);
+			return typeof sessionStorage === 'undefined' ? null : sessionStorage.getItem(key());
 		} catch {
 			return null;
 		}
 	}
 	function remember(id: string | null) {
 		try {
-			if (id) sessionStorage.setItem(KEY, id);
-			else sessionStorage.removeItem(KEY);
+			if (id) sessionStorage.setItem(key(), id);
+			else sessionStorage.removeItem(key());
 		} catch {
 			/* storage blocked: the task lives for this page only */
 		}
 	}
+
+	/**
+	 * On opening (and on a kitchen switch): the remembered task's cards as they are now, read from its plans, so an
+	 * approval made on the Kitchen screen meanwhile shows up and an old card never lingers.
+	 */
+	let loadedFor: string | null = null;
+	$effect(() => {
+		const k = `${kitchenId}:${openTask ?? ''}`;
+		if (!open && !pinned) return;
+		if (loadedFor === k) return;
+		loadedFor = k;
+		taskId = openTask ?? read();
+		if (openTask) remember(openTask);
+		entries = [];
+		if (taskId) void restore(taskId);
+	});
+
+	async function restore(id: string) {
+		try {
+			const res = await fetch(`/api/chat/task?id=${encodeURIComponent(id)}`);
+			if (!res.ok) return;
+			const { events } = (await res.json()) as { events: ChatEvent[] };
+			const done = events.at(-1);
+			if (done?.type === 'done' && done.state === 'failed') {
+				newTask();
+				return;
+			}
+			if (taskId === id) entries = events.map((e) => ({ kind: 'event', e }));
+		} catch {
+			/* offline: the next turn reads the task */
+		}
+	}
+
+	/** The newest line stays in view as a turn streams in. */
+	let list = $state<HTMLOListElement | null>(null);
+	$effect(() => {
+		void entries.length;
+		void busy;
+		list?.scrollTo({ top: list.scrollHeight });
+	});
 
 	const last = $derived(entries.findLast((x) => x.kind === 'event'));
 	const pendingClarify = $derived(
@@ -74,7 +125,11 @@
 			const res = await fetch('/api/chat/turn', {
 				method: 'POST',
 				headers: { 'content-type': 'application/json' },
-				body: JSON.stringify({ ...body, ...(taskId ? { taskId } : {}), kitchenId })
+				body: JSON.stringify({
+					...body,
+					...(taskId ? { taskId } : planId ? { planId } : {}),
+					kitchenId
+				})
 			});
 			if (!res.ok || !res.body) {
 				const j = await res.json().catch(() => null);
@@ -98,6 +153,8 @@
 						continue;
 					}
 					if (e.taskId && e.taskId !== taskId) {
+						// The words started another task: the old task's cards leave with it.
+						if (taskId) entries = entries.filter((x) => x.kind === 'chef').slice(-1);
 						taskId = e.taskId;
 						remember(taskId);
 					}
@@ -127,6 +184,8 @@
 	}
 
 	const TOOL: Record<string, string> = {
+		understand: 'Understood',
+		explain: 'Answered',
 		search_products: 'Searched the catalogue',
 		quote: 'Checked price and delivery',
 		place_order: 'Drafted the order',
@@ -184,7 +243,11 @@
 		>
 	</header>
 
-	<ol class="flex-1 space-y-3 overflow-y-auto px-4 py-3 text-body" aria-live="polite">
+	<ol
+		bind:this={list}
+		class="flex-1 space-y-3 overflow-y-auto px-4 py-3 text-body"
+		aria-live="polite"
+	>
 		{#if !entries.length}
 			<li class="text-ink-3">
 				Try “4 kg lactose-free butter for Wednesday” or “what needs my approval?”. Answers to the
@@ -254,9 +317,14 @@
 				<li class="border-l-2 border-accent pl-3 text-ink">
 					<span class="num">{x.e.summary}</span>
 				</li>
-			{:else if x.e.type === 'done' && x === last && x.e.state !== 'awaiting_clarification'}
-				<li class="flex flex-wrap gap-2">
-					{#if x.e.canContinue || x.e.state === 'awaiting_chef'}
+			{:else if x.e.type === 'done' && x.e.state !== 'awaiting_clarification'}
+				{@const ledgerLine = entries[i - 1]}
+				{#if !(ledgerLine?.kind === 'event' && ledgerLine.e.type === 'ledger' && ledgerLine.e.summary === x.e.text)}
+					<!-- The agent's answer, worded from the ledger (the line above carries the numbers). -->
+					<li class="text-ink">{x.e.text}</li>
+				{/if}
+				{#if x === last && (x.e.canContinue || x.e.state === 'awaiting_chef')}
+					<li class="flex flex-wrap gap-2">
 						<button
 							type="button"
 							class="rounded-md bg-accent px-3 py-1.5 text-meta font-semibold text-sheet disabled:opacity-50"
@@ -265,8 +333,8 @@
 						>
 							{x.e.canContinue ? 'Continue: submit what may be ordered' : 'I’ve decided: continue'}
 						</button>
-					{/if}
-				</li>
+					</li>
+				{/if}
 			{/if}
 		{/each}
 		{#if busy}<li class="text-ink-3">Working…</li>{/if}

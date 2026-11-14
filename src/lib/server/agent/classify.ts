@@ -29,12 +29,13 @@ export type GoalClass =
 const Q_START =
 	/^(?:and\s+|so\s+|ok\s+|okay\s+)?(what|what's|whats|which|why|how|when|where|who|whose|is|are|was|were|does|do|did|has|have|show|list|tell me|explain|summari[sz]e|mikä|mitkä|mitä|miksi|miten|milloin|missä|kuka|onko|ovatko|paljonko|kuinka|näytä|kerro|selitä)\b/i;
 /** "Can you …", "could you …": a request to act, not a question about state. */
-const ASK_TO_ACT = /^(?:please\s+)?(can|could|would|will)\s+(you|u)\b/i;
+const ASK_TO_ACT =
+	/^(?:please\s+|hey\s+|hi\s+|so\s+)?((can|could|would|will|may)\s+(you|u|we|i)\b|voi(t|tko|sitko|tteko|sitteko|sinko|nko)\b)/i;
 const APPROVE_IMPERATIVE =
-	/\b(approve|hyväksy\p{L}*|grant|sign\s+off(?:\s+on)?)\s+(it|them|this|that|these|those|the|all|everything|every|each|my|our|plan|plans|line|lines|order|orders|held|for\s+me|now|kaikki|ne|se|tilaus|tilauksen|rivit)\b/iu;
+	/\b(approve|hyväksy\p{L}*|grant|sign\s+off(?:\s+on)?)\s+(it|them|this|that|these|those|the|all|everything|every|each|my|our|plan|plans|line|lines|order|orders|held|for\s+me|now|kaikki|ne|se|sen|niitä|nämä|tämä|tämän|tilaus|tilauksen|tilaukset|rivit|rivi|puolestani|nyt)\b/iu;
 const APPROVE_BARE = /^(?:please\s+)?(approve|hyväksy\p{L}*)\b/iu;
 const CHANGE_AUTHORITY =
-	/\b(raise|increase|lift|change|set|remove|bump|double|drop|nosta\p{L}*|muuta\p{L}*|poista\p{L}*|kasvata\p{L}*)\b.{0,40}\b(cap|caps|limit|limits|mandate|budget|ceiling|katto\p{L}*|valtuu\p{L}*|budjet\p{L}*|raja\p{L}*)\b/iu;
+	/\b(raise|increase|lift|change|set|remove|bump|double|drop|nosta\p{L}*|muuta\p{L}*|poista\p{L}*|kasvata\p{L}*)\b.{0,40}\b(cap|caps|limit|limits|mandate|budget|ceiling|\p{L}*katto\p{L}*|\p{L}*valtuu\p{L}*|\p{L}*budjet\p{L}*|\p{L}*raja\p{L}*)\b/iu;
 const PER_GUEST =
 	/(\d+(?:[.,]\d+)?)\s*(g|grams?|kg)\s*(?:per|\/|a|each)\s*(guest|cover|person|head|hlö|henkilö\p{L}*|vieras\p{L}*)/iu;
 export const SHORTAGE_WORDS =
@@ -92,9 +93,10 @@ function statesAmount(items: ParsedItem[]): boolean {
 export function classifyGoal(text: string, today: string): GoalClass {
 	const t = text.trim();
 	if (isAuthorityImperative(t)) return { kind: 'authority' };
-	if (isQuestion(t)) return { kind: 'read' };
-	if (perGuestIn(t)) return { kind: 'adjust' };
 	const items = parseRules(t, today).items;
+	// "6 kg butter for Wednesday?" is a request with a question mark; a question word makes it a read.
+	if (isQuestion(t) && (Q_START.test(t) || !statesAmount(items))) return { kind: 'read' };
+	if (perGuestIn(t)) return { kind: 'adjust' };
 	if (statesAmount(items)) return { kind: 'order', amount: true };
 	// classifyRequest returns null when an item is a purchase: order wins over the occasion words.
 	const ev = classifyRequest(t, items, '');
