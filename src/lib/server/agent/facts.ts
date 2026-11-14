@@ -259,6 +259,8 @@ export function toFacts(tool: ToolName, value: unknown, intent?: Intent, input?:
 			return { state: code(v.state) };
 		case 'set_mandate':
 			return { mandateVersion: num(v.mandateVersion) };
+		case 'create_kitchen':
+			return { kitchenId: code(obj(v.kitchen).kitchenId) };
 		case 'get_outcome': {
 			const l = obj(v.ledger);
 			return {

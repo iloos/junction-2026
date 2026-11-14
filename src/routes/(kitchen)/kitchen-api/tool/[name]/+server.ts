@@ -24,11 +24,15 @@ function renderedView(header: string | null): RenderedView | null {
 /** The kitchen screen's allowlisted commands, served as the chef on this session's plan only. */
 export const POST: RequestHandler = async (event) => {
 	const { request, params, cookies } = event;
-	const { workspaceId } = await visitorWorkspace(event, env, dev);
+	const { workspaceId, own, kind, presenter } = await visitorWorkspace(event, env, dev);
 	const input = await request.json().catch(() => ({}));
 	const view = renderedView(request.headers.get('x-kitchen-view'));
 	const surface = request.headers.get('x-kitchen-surface') === 'dock' ? 'dock' : 'kitchen';
 	const tab = request.headers.get('x-kitchen-tab')?.match(/^[a-z0-9]{1,12}$/)?.[0];
-	const r = await callTool(sid(cookies), workspaceId, params.name, input, view, surface, tab);
+	const r = await callTool(sid(cookies), workspaceId, params.name, input, view, surface, tab, {
+		own,
+		kind,
+		presenter
+	});
 	return r.ok ? json(r.value) : json({ error: r.error }, { status: r.status });
 };

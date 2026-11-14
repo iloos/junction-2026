@@ -11,7 +11,8 @@ import type { RequestHandler } from './$types';
  * opens that plan (an approval link from MCP, chat or Ops) if this browser's workspace has it.
  */
 export const GET: RequestHandler = async (event) => {
-	const { workspaceId } = await visitorWorkspace(event, env, dev);
+	const { workspaceId, own, kind, presenter } = await visitorWorkspace(event, env, dev);
+	const visitor = { own, kind, presenter };
 	const id = sid(event.cookies);
 	const planId = event.url.searchParams.get('plan');
 	if (planId) {
@@ -19,7 +20,8 @@ export const GET: RequestHandler = async (event) => {
 			id,
 			workspaceId,
 			planId,
-			event.url.searchParams.get('peek') === '1'
+			event.url.searchParams.get('peek') === '1',
+			visitor
 		);
 		if (focused) return json(focused);
 		return json(
@@ -33,5 +35,5 @@ export const GET: RequestHandler = async (event) => {
 			{ status: 404 }
 		);
 	}
-	return json(await snapshot(id, workspaceId));
+	return json(await snapshot(id, workspaceId, visitor));
 };

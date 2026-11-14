@@ -158,6 +158,8 @@ export interface Store {
 	): Promise<Result<{ value: T; ops: OpEnvelope[] }>>;
 	load(workspaceId: string, runId: string): Promise<WorkspaceState>;
 	kitchens(workspaceId: string): Promise<Kitchen[]>;
+	/** Add a kitchen to the workspace (create_kitchen). Absent: kitchens are seeded only. */
+	addKitchen?(workspaceId: string, kitchen: Kitchen): Promise<void>;
 	/** Idempotency: unique per (workspace, caller, key) with a request hash. */
 	idempotency(
 		tx: Tx,
@@ -192,6 +194,11 @@ export interface CallContext {
 	via: string;
 	/** The principal who started an agent run acting under this context (never request-supplied). */
 	initiatedBy?: Actor;
+	/**
+	 * The visitor this call acts for: a hashed id of the browser's own sandbox, set by the server, never from a
+	 * request. A kitchen with an `owner` takes writes only from its owner's visitor (D24); absent fails closed.
+	 */
+	visitor?: string;
 	/** Kitchens this context may act for; absent = every kitchen in the workspace. */
 	kitchenIds?: readonly string[];
 	/**

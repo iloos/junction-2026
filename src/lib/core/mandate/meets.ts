@@ -60,7 +60,7 @@ const CONTRADICTS: Record<string, readonly string[]> = {
 export { ALLERGEN_NAMES };
 
 const MEAT_WORD =
-	/liha|kinkku|makkara|nakki|broiler|kana(?!pa|nmun)|kalkkun|naudan|porsa|possu|sian|lammas|poro|hirvi|pekoni|kassler|salami|maksa|chorizo|meetvursti|liivate/;
+	/liha|kinkku|makkara|nakki|broiler|(?<!k)kana(?!pa|nmun)|kalkkun|naudan|porsa|possu|sian|lammas|poro|hirvi|pekoni|kassler|salami|maksa|chorizo|meetvursti|liivate/;
 const FISH_WORD =
 	/lohi|kala|silli|tonnikala|katkarap|äyriä|muikku|siika|ahven|hauki|turska|seiti|anjovis|makrilli|rapu|simpuk/;
 const PORK_WORD = /porsa|possu|sian|sika|kinkku|pekoni|kassler|salami|chorizo|meetvursti/;
@@ -217,6 +217,9 @@ function dietTerm(p: Product, d: 'vegetarian' | 'vegan'): TermResult {
 	} else if (plantRecord(p)) return ok('diet', d, `diet record: ${p.diet.join(', ')}`);
 	if (PREPARED.some((c) => p.category.startsWith(c)))
 		return unknown('diet', d, 'a prepared food with no diet record');
+	// Raw fruit, vegetables, herbs and mushrooms are plant food by kind, allergen record or not.
+	if (inCategoryGroup(p.category, 'produce'))
+		return ok('diet', d, 'category evidence: fresh fruit, vegetables or herbs');
 	if (d === 'vegan' && !p.allergens.declared) return unknown('diet', d, 'no allergen record');
 	return ok('diet', d, 'not meat or fish');
 }
