@@ -9,6 +9,8 @@
 
 	import StateChip from './StateChip.svelte';
 	import ProductThumb from './ProductThumb.svelte';
+	import SwapPanel from './SwapPanel.svelte';
+	import { Repeat } from '@lucide/svelte';
 	import AgentMark from './AgentMark.svelte';
 	import DietMarks from './DietMarks.svelte';
 	import type { Marks } from './diet';
@@ -30,6 +32,8 @@
 		by?: 'kitchen_agent' | 'external_agent';
 		expanded?: boolean;
 		onwhy?: () => void;
+		/** Offer "Swap" (D28): the plan on screen, and what to do after a pick (re-read). */
+		swap?: { planId: string; version: number; deliverBy?: string; onchanged: () => void };
 	}
 	let {
 		line: l,
@@ -40,8 +44,10 @@
 		by,
 		diet,
 		expanded = $bindable(false),
-		onwhy
+		onwhy,
+		swap
 	}: Props = $props();
+	let swapping = $state(false);
 
 	const rejected = $derived(l.state === 'rejected' || l.state === 'unorderable');
 	const b = $derived(lineBasis(l.qty, l.view));
@@ -113,6 +119,14 @@
 	</span>
 	<span class="col-span-2 flex items-center justify-between gap-2 sm:col-span-1 sm:justify-end">
 		<StateChip state={l.state} tier={l.tier} reasons={l.reasons} {approved} view={l.view} />
+		{#if swap && !rejected && l.state !== 'committed'}
+			<button
+				type="button"
+				class="inline-flex h-7 shrink-0 items-center gap-1 rounded-md px-2 text-meta text-ink-2 hover:bg-well hover:text-ink"
+				aria-expanded={swapping}
+				onclick={() => (swapping = !swapping)}><Repeat size={13} aria-hidden="true" />Swap</button
+			>
+		{/if}
 		{#if onwhy}
 			<button
 				type="button"
@@ -124,3 +138,16 @@
 		{/if}
 	</span>
 </div>
+{#if swap && swapping}
+	<div class="mt-1 mb-2">
+		<SwapPanel
+			planId={swap.planId}
+			version={swap.version}
+			lineId={l.id}
+			current={{ productId: l.productId, name }}
+			deliverBy={swap.deliverBy}
+			onchanged={swap.onchanged}
+			onclose={() => (swapping = false)}
+		/>
+	</div>
+{/if}
