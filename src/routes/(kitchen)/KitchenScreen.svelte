@@ -64,6 +64,7 @@
 	import PairDevice from '$lib/ui/pair/PairDevice.svelte';
 	import Basket from './Basket.svelte';
 	import NothingPlanned from './NothingPlanned.svelte';
+	import UseElsewhere from '$lib/ui/UseElsewhere.svelte';
 	import {
 		readOwn,
 		saveOwn,
@@ -1030,6 +1031,7 @@
 				</button>
 			</section>
 		{/if}
+		{#if mode === 'live' && !roomNotice}<div class="mt-8"><UseElsewhere /></div>{/if}
 		{#if k.progress}
 			<p class="mt-4 flex items-center gap-2 text-body text-ink-2" role="status" aria-live="polite">
 				<LoaderCircle size={15} class="animate-spin text-accent" aria-hidden="true" />
@@ -1090,6 +1092,7 @@
 				onopen={openPlan}
 				onask={askFor}
 			/>
+			{#if mode === 'live' && !roomNotice}<div class="mt-8"><UseElsewhere /></div>{/if}
 		</main>
 	{:else}
 		<main
