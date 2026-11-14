@@ -1,0 +1,32 @@
+{
+	"$comment": "Public Valio Aimo listings for the demo products, recorded from live reads on 14 Nov 2026 (match confirmed by EAN). null = no public page names the product.",
+	"recordedAt": "2026-11-14",
+	"listings": {
+		"462490": {
+			"url": "https://www.valioaimo.fi/toimitustukku/hk-viljaporsaan-juhlakinkku-potkalla-tuoresuolattu-6-8-kg/",
+			"title": "HK Viljaporsaan Juhlakinkku potkalla tuoresuolattu 6-8 kg",
+			"match": "gtin",
+			"imageUrl": "https://imgfly.scarabresearch.com/w_800/https://api.valioaimo.fi/medias/?context=bWFzdGVyfHJvb3R8MTQxMzQ4Mjl8aW1hZ2UvcG5nfGFETXlMMmd3WlM4NU1UZzRNamd5TmpNd01UYzB8OWIxNTRjYzk1MDVkMzU3YmFhNGU1YTFiMjMyODU3MmU0ZmZiNjE4NjUwMzQ5YzRhN2ExMDcyNDc5ZDE0YjgzZQ"
+		},
+		"463380": {
+			"url": "https://www.valioaimo.fi/toimitustukku/arla-cafe-maito-1-l-uht-laktoositon/",
+			"title": "Arla Café maito 1 L UHT laktoositon",
+			"match": "gtin",
+			"imageUrl": "https://imgfly.scarabresearch.com/w_800/https://api.valioaimo.fi/medias/?context=bWFzdGVyfHJvb3R8MjE1NzkwM3xpbWFnZS9qcGVnfGFHTm1MMmd5TlM4NU1UVXpOVEl6TURVMk5qY3d8Mzk1N2QyMTM1ZTEzMjU1YjUzZDEzM2RjNDliYTczN2QxZjMzODVkMmNmNTc0NjZlODRkNDM1ZjZiN2E2ZGNjZA"
+		},
+		"464201": null,
+		"464411": null,
+		"466964": {
+			"url": "https://www.valioaimo.fi/toimitustukku/myllyn-paras-puuroriisi-1-kg/",
+			"title": "Myllyn Paras Puuroriisi 1 kg",
+			"match": "gtin",
+			"imageUrl": "https://imgfly.scarabresearch.com/w_800/https://api.valioaimo.fi/medias/?context=bWFzdGVyfHJvb3R8NTQ3NTQxN3xpbWFnZS9qcGVnfGFEY3pMMmhoWkM4NU1UVTBOekk1T1RZM05qUTJ8NmFkNGZiOTk3M2JhZjZmNjRlZDE4ZGM1ZTYzNjcwMWJkMGZjMDMwMjBkODM3OGI2NzkwYWQwOGU0MWU2MjY4Yg"
+		},
+		"476768": {
+			"url": "https://www.valioaimo.fi/toimitustukku/hk-palvikinkku-viipaloitu-15-kg/",
+			"title": "HK Palvikinkku viipaloitu 1,5 kg",
+			"match": "gtin",
+			"imageUrl": "https://imgfly.scarabresearch.com/w_800/https://api.valioaimo.fi/medias/?context=bWFzdGVyfHJvb3R8MjczMzQ1fGltYWdlL3BuZ3xhR0poTDJnMVlTODVNVFUzTWpRek1UQTVOREEyfDc4Yzc3MmQ2YzBmNDhjZDA2MzQ1MzhiNTFmYzNkODUxNjM2NTkzNWNkYTMzZDZlNjc2ZWFhZDE5ZGY0YTVjMTU"
+		}
+	}
+}
