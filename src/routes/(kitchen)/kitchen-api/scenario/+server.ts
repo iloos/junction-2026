@@ -9,7 +9,7 @@ import type { RequestHandler } from './$types';
 /** Demo commands: start (plans the event), rule preset, kitchen, simulated contention, reset. Returns the snapshot. */
 export const POST: RequestHandler = async (event) => {
 	const { request, cookies } = event;
-	const { workspaceId } = await visitorWorkspace(event, env, dev);
+	const { workspaceId, own, kind, presenter } = await visitorWorkspace(event, env, dev);
 	const body = (await request.json().catch(() => ({}))) as {
 		action?: string;
 		value?: unknown;
@@ -17,7 +17,11 @@ export const POST: RequestHandler = async (event) => {
 	};
 	try {
 		return json(
-			await scenario(sid(cookies), workspaceId, body.action ?? '', body.value, body.plan)
+			await scenario(sid(cookies), workspaceId, body.action ?? '', body.value, body.plan, {
+				own,
+				kind,
+				presenter
+			})
 		);
 	} catch (e) {
 		if (e instanceof Cooldown)
