@@ -1,58 +1,60 @@
 /**
- * Snapshot and demo controls for the current mode. Live: the server assembles the snapshot from the real plan
- * (/kitchen-api/snapshot) and owns the demo controls (/kitchen-api/scenario). Fixture: the in-browser stand-in.
+ * Snapshot and demo commands for one mode. Live: the server assembles the snapshot from the real plan
+ * (/kitchen-api/snapshot, a read) and owns the demo commands (/kitchen-api/scenario). Fixture: the in-browser
+ * stand-in, only for the explicit offline demonstration.
  */
-import { ToolError, apiMode, livePost, useFixture } from './api';
+import { ToolError, Unreachable, livePost, type ApiMode } from './api';
 import type { PresetId } from './fixture-plan';
 import * as fx from './fixture-server';
 import type { FixtureSnapshot } from './fixture-server';
 
 export type Snapshot = FixtureSnapshot;
+export type MaybeStarted = Snapshot | { started: false; kitchenId: string };
 
-/**
- * The server's snapshot. Only an unreachable server (offline demo) switches to the labelled fixture; a server
- * that answers with an error stays live and the error is shown, so fixture data never replaces server results.
- */
-export async function snapshot(): Promise<Snapshot> {
-	if (apiMode() === 'live') {
-		let res: Response;
-		try {
-			res = await fetch('/kitchen-api/snapshot');
-		} catch (e) {
-			console.warn('[kitchen] server unreachable, using the offline fixture:', e);
-			useFixture();
-			return fx.snapshot();
-		}
-		const body = (await res.json().catch(() => null)) as Snapshot | { message?: string } | null;
-		if (res.ok && body && 'plan' in body) return body;
-		throw new ToolError({
+export async function snapshot(mode: ApiMode): Promise<MaybeStarted> {
+	if (mode === 'fixture') return fx.snapshot();
+	let res: Response;
+	try {
+		res = await fetch('/kitchen-api/snapshot');
+	} catch (e) {
+		throw new Unreachable({
 			code: 'PROVIDER_UNAVAILABLE',
-			message: `snapshot failed (HTTP ${res.status})${body && 'message' in body && body.message ? `: ${body.message}` : ''}`,
+			message: `server unreachable: ${e instanceof Error ? e.message : String(e)}`,
 			retryable: true
 		});
 	}
-	return fx.snapshot();
+	const body = (await res.json().catch(() => null)) as MaybeStarted | { message?: string } | null;
+	if (res.ok && body && ('plan' in body || 'started' in body)) return body as MaybeStarted;
+	throw new ToolError({
+		code: 'PROVIDER_UNAVAILABLE',
+		message: `snapshot failed (HTTP ${res.status})${body && 'message' in body && body.message ? `: ${body.message}` : ''}`,
+		retryable: true
+	});
 }
 
 const scenario = (action: string, value?: unknown) =>
-	livePost<Snapshot>('/kitchen-api/scenario', { action, value });
+	livePost<MaybeStarted>('/kitchen-api/scenario', { action, value });
 
-export async function setPreset(preset: PresetId) {
-	if (apiMode() === 'live') await scenario('preset', preset);
+export async function start(mode: ApiMode) {
+	if (mode === 'live') await scenario('start');
+}
+
+export async function setPreset(mode: ApiMode, preset: PresetId) {
+	if (mode === 'live') await scenario('preset', preset);
 	else await fx.setPreset(preset);
 }
 
-export async function setKitchen(kitchenId: string) {
-	if (apiMode() === 'live') await scenario('kitchen', kitchenId);
+export async function setKitchen(mode: ApiMode, kitchenId: string) {
+	if (mode === 'live') await scenario('kitchen', kitchenId);
 	else await fx.setKitchen(kitchenId);
 }
 
-export async function setContention(on: boolean) {
-	if (apiMode() === 'live') await scenario('contention', on);
+export async function setContention(mode: ApiMode, on: boolean) {
+	if (mode === 'live') await scenario('contention', on);
 	else await fx.setContention(on);
 }
 
-export async function reset() {
-	if (apiMode() === 'live') await scenario('reset');
+export async function reset(mode: ApiMode) {
+	if (mode === 'live') await scenario('reset');
 	else await fx.reset();
 }

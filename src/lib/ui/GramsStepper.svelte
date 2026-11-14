@@ -1,40 +1,50 @@
 <script lang="ts">
-	import { Minus, Plus } from '@lucide/svelte';
+	import { Minus, Plus, LoaderCircle } from '@lucide/svelte';
 
 	interface Props {
 		value: number;
 		original: number;
 		step?: number;
 		label: string;
+		/** A requested value the server hasn't confirmed yet: shown, not editable. */
+		pending?: number;
+		disabled?: boolean;
 		onchange: (v: number) => void;
 	}
-	let { value, original, step = 5, label, onchange }: Props = $props();
-	let draft = $derived(String(value));
+	let { value, original, step = 5, label, pending, disabled = false, onchange }: Props = $props();
+	const shown = $derived(pending ?? value);
+	const locked = $derived(disabled || pending !== undefined);
+	let draft = $derived(String(shown));
 
+	// One change at a time: while a change is pending the controls are locked, so edits never race.
 	function commit(v: number) {
+		if (locked) return;
 		const n = Math.max(1, Math.min(1000, Math.round(v)));
 		if (Number.isFinite(n) && n !== value) onchange(n);
 		else draft = String(value);
 	}
-	const edited = $derived(value !== original);
+	const edited = $derived(shown !== original);
 </script>
 
 <div class="inline-flex flex-col items-end gap-0.5">
 	<div
-		class="inline-flex h-8 items-center rounded-md border bg-sheet {edited
+		class="inline-flex h-9 items-center rounded-md border bg-sheet {edited
 			? 'border-accent/60'
-			: 'border-rule-strong'}"
+			: 'border-rule-strong'} {locked ? 'opacity-70' : ''}"
+		aria-busy={pending !== undefined}
 	>
 		<button
 			type="button"
-			class="grid h-full w-7 place-items-center rounded-l-md text-ink-2 hover:bg-well hover:text-ink"
+			class="grid h-full w-9 place-items-center rounded-l-md text-ink-2 hover:bg-well hover:text-ink disabled:cursor-not-allowed disabled:hover:bg-transparent"
 			aria-label="Less {label}"
-			onclick={() => commit(value - step)}><Minus size={13} /></button
+			disabled={locked}
+			onclick={() => commit(shown - step)}><Minus size={14} /></button
 		>
 		<input
-			class="mono h-full w-10 border-x border-rule bg-transparent text-center text-[13.5px] text-ink outline-none focus:bg-accent-wash"
+			class="mono h-full w-11 border-x border-rule bg-transparent text-center text-[13.5px] text-ink outline-none focus:bg-accent-wash disabled:cursor-not-allowed"
 			inputmode="numeric"
 			aria-label="{label}, grams per guest"
+			disabled={locked}
 			bind:value={draft}
 			onkeydown={(e) => {
 				if (e.key === 'Enter') commit(Number(draft));
@@ -51,15 +61,21 @@
 		/>
 		<button
 			type="button"
-			class="grid h-full w-7 place-items-center rounded-r-md text-ink-2 hover:bg-well hover:text-ink"
+			class="grid h-full w-9 place-items-center rounded-r-md text-ink-2 hover:bg-well hover:text-ink disabled:cursor-not-allowed disabled:hover:bg-transparent"
 			aria-label="More {label}"
-			onclick={() => commit(value + step)}><Plus size={13} /></button
+			disabled={locked}
+			onclick={() => commit(shown + step)}><Plus size={14} /></button
 		>
 	</div>
-	{#if edited}
+	{#if pending !== undefined}
+		<span class="inline-flex items-center gap-1 text-[11px] text-accent-ink" role="status">
+			<LoaderCircle size={11} class="animate-spin" aria-hidden="true" /> recomputing
+		</span>
+	{:else if edited}
 		<button
 			type="button"
-			class="text-[11px] text-ink-3 underline decoration-dotted underline-offset-2 hover:text-ink"
+			class="text-[11px] text-ink-3 underline decoration-dotted underline-offset-2 hover:text-ink disabled:no-underline"
+			disabled={locked}
 			onclick={() => onchange(original)}>was {original} g</button
 		>
 	{/if}

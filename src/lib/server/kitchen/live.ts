@@ -3,6 +3,10 @@
  * module acts as the chef through the same tool handlers REST, MCP and the agent use (one gate, one store, one bus).
  * The snapshot is assembled here because the view needs product facts (origin, availability) for every candidate,
  * which the catalogue port has and the tool outputs don't carry.
+ *
+ * Public-demo authority model (round-4 triage #2): this helper is not a general chef. It forwards only the
+ * commands the kitchen screen needs, only against the plan of the session's selected kitchen, and reading the
+ * snapshot never changes state (planning is the explicit `start` command). Selection is per browser session.
  */
 import { env } from '$env/dynamic/private';
 import type { Approval, Kitchen, ToolInput, ToolName } from '$lib/core/contracts';
@@ -23,11 +27,25 @@ const EVENT_ID = 'event-xmas-140';
 /** The palvikinkku the ham rescue relies on (13 of 15 in stock): the contention preset takes 4 of them. */
 const CONTENDED = { productId: '476768', left: 11 };
 
-const state: { kitchenId: string; preset: PresetId; contention: boolean } = {
-	kitchenId: 'k-hotel',
-	preset: 'kitchen',
-	contention: false
-};
+export interface Session {
+	kitchenId: string;
+	preset: PresetId;
+	contention: boolean;
+}
+
+/** Selection per browser session (cookie id). The simulator overlay itself is run-wide: see `contention`. */
+const sessions = new Map<string, Session>();
+export function session(id: string): Session {
+	let s = sessions.get(id);
+	if (!s) {
+		s = { kitchenId: 'k-hotel', preset: 'kitchen', contention: false };
+		sessions.set(id, s);
+	}
+	return s;
+}
+
+/** The commands the screen may send through the helper. Planning and resets go through `scenario`. */
+const ALLOWED = new Set(['get_plan', 'edit_line', 'explain_line', 'approve', 'commit_order']);
 
 const chef = () => contextFor('chef', 'kitchen-ui', 'kitchen', env);
 const agent = () => contextFor('kitchen_agent', 'kitchen-agent', 'kitchen', env);
@@ -43,9 +61,35 @@ function serial<T>(fn: () => Promise<T>): Promise<T> {
 	return next;
 }
 
-/** One tool call as the chef, through the shared gate. */
-export function callTool(name: string, input: unknown): Promise<Served> {
-	return serial(() => serveTool(name, chef(), input, handlers));
+/** One allowlisted tool call as the chef, through the shared gate, and only on this session's plan. */
+export function callTool(sid: string, name: string, input: unknown): Promise<Served> {
+	return serial(async () => {
+		const deny = (message: string): Served => ({
+			ok: false,
+			status: 403,
+			error: { code: 'FORBIDDEN', message, retryable: false }
+		});
+		if (!ALLOWED.has(name)) return deny(`the kitchen screen does not send ${name}`);
+		const plan = await findPlan(session(sid));
+		const i = (input ?? {}) as { planId?: string; approvalId?: string };
+		if (!plan) return deny('start the demo first');
+		if (i.planId !== undefined && i.planId !== plan.id)
+			return deny("that plan is not this session's kitchen plan");
+		if (name === 'approve' && !(i.approvalId ?? '').includes(plan.id))
+			return deny("that approval is not for this session's plan");
+		return serveTool(name, chef(), input, handlers);
+	});
+}
+
+/** The session kitchen's event plan if it exists: a read, never a planning call. */
+async function findPlan(s: Session) {
+	const ctx = chef();
+	const b = await createServerPorts();
+	const ws = await b.ports.store.load(ctx.workspaceId, ctx.runId);
+	return (
+		Object.values(ws.plans).find((p) => p.kitchenId === s.kitchenId && p.eventId === EVENT_ID) ??
+		null
+	);
 }
 
 async function must<N extends ToolName>(
@@ -61,9 +105,9 @@ async function must<N extends ToolName>(
 type PlanOut = { plan: import('$lib/core/contracts').Plan };
 
 /** Plans the event, then lets the kitchen agent propose a rescue for every real outage that has none yet. */
-async function ensurePlan() {
+async function ensurePlan(s: Session) {
 	let { plan } = (await must('plan_event', {
-		kitchenId: state.kitchenId,
+		kitchenId: s.kitchenId,
 		eventId: EVENT_ID
 	})) as PlanOut;
 	// Each outage gets one proposal attempt: a kitchen whose rules reject every proposal must not loop.
@@ -90,25 +134,28 @@ async function ensurePlan() {
 	return plan;
 }
 
-function presetInput(kitchen: Kitchen) {
-	if (state.preset === 'kitchen') return {};
-	const rules = rulesFor(kitchen, state.preset);
+/** Always passes weights, so find_substitutes ranks as a preview and persists nothing. */
+function presetInput(kitchen: Kitchen, s: Session) {
+	const rules = rulesFor(kitchen, s.preset);
 	return {
 		weights: rules.weights as Record<string, number>,
-		...(state.preset === 'finnish' ? { requireOrigin: 'fi' } : {})
+		...(s.preset === 'finnish' ? { requireOrigin: 'fi' } : {})
 	};
 }
 
-export function snapshot(): Promise<FixtureSnapshot> {
-	return serial(buildSnapshot);
+export type LiveSnapshot = FixtureSnapshot | { started: false; kitchenId: string };
+
+export function snapshot(sid: string): Promise<LiveSnapshot> {
+	return serial(() => buildSnapshot(session(sid)));
 }
 
-async function buildSnapshot(): Promise<FixtureSnapshot> {
+async function buildSnapshot(s: Session): Promise<LiveSnapshot> {
 	const ctx = chef();
-	const planned = await ensurePlan();
+	const planned = await findPlan(s);
+	if (!planned) return { started: false, kitchenId: s.kitchenId };
 	const b = await createServerPorts();
 	const kitchens = await b.ports.store.kitchens(ctx.workspaceId);
-	const kitchen = kitchens.find((k) => k.id === state.kitchenId) ?? kitchens[0];
+	const kitchen = kitchens.find((k) => k.id === s.kitchenId) ?? kitchens[0];
 	const { plan } = (await must('get_plan', { planId: planned.id })) as PlanOut;
 
 	// Rankings under the active rules preset (previews: nothing is persisted).
@@ -118,7 +165,7 @@ async function buildSnapshot(): Promise<FixtureSnapshot> {
 			planId: plan.id,
 			version: plan.version,
 			lineId: l.id,
-			...presetInput(kitchen)
+			...presetInput(kitchen, s)
 		})) as SubstitutesOut;
 
 	const ids = [
@@ -182,7 +229,7 @@ async function buildSnapshot(): Promise<FixtureSnapshot> {
 			week
 		})
 	}));
-	const rules = rulesFor(kitchen, state.preset, kitchen.mandate.version);
+	const rules = rulesFor(kitchen, s.preset, kitchen.mandate.version);
 	return {
 		plan,
 		view: buildLiveView({
@@ -198,15 +245,15 @@ async function buildSnapshot(): Promise<FixtureSnapshot> {
 			},
 			rules,
 			weekSpentCents: spent.ok ? spent.value.value : 0,
-			previewRanking: state.preset !== 'kitchen'
+			previewRanking: s.preset !== 'kitchen'
 		}),
 		approval: current,
 		lastInvalidated,
 		orders,
 		kitchen,
 		rules,
-		preset: state.preset,
-		contention: state.contention,
+		preset: s.preset,
+		contention: s.contention,
 		mandateVersion: kitchen.mandate.version,
 		clock: {
 			nowIso: scenarioClock(currentRunStartedAt(ctx.workspaceId)).at(Date.now()).toISOString(),
@@ -216,8 +263,9 @@ async function buildSnapshot(): Promise<FixtureSnapshot> {
 }
 
 /** Re-quotes the plan so a simulator change shows up on its lines (an edit to the same g/guest re-quotes). */
-async function requote() {
-	const plan = await ensurePlan();
+async function requote(s: Session) {
+	const plan = await findPlan(s);
+	if (!plan) return;
 	const need = plan.needs.find(
 		(n) => n.dish && !plan.lines.some((l) => l.needId === n.id && l.state === 'committed')
 	);
@@ -230,44 +278,51 @@ async function requote() {
 	});
 }
 
-export function scenario(action: string, value: unknown): Promise<FixtureSnapshot> {
-	return serial(() => applyScenario(action, value));
+export function scenario(sid: string, action: string, value: unknown): Promise<LiveSnapshot> {
+	return serial(() => applyScenario(session(sid), action, value));
 }
 
-async function applyScenario(action: string, value: unknown): Promise<FixtureSnapshot> {
+async function applyScenario(s: Session, action: string, value: unknown): Promise<LiveSnapshot> {
 	const b = await createServerPorts();
-	if (action === 'preset' && (value === 'kitchen' || value === 'price' || value === 'finnish'))
-		state.preset = value;
+	if (action === 'start') {
+		await ensurePlan(s);
+	} else if (
+		action === 'preset' &&
+		(value === 'kitchen' || value === 'price' || value === 'finnish')
+	)
+		s.preset = value;
 	else if (action === 'kitchen' && typeof value === 'string') {
-		const before = { ...state };
-		state.kitchenId = value;
-		state.preset = 'kitchen';
+		const before = { ...s };
+		s.kitchenId = value;
+		s.preset = 'kitchen';
 		try {
-			return await buildSnapshot();
+			if (!(await findPlan(s))) await ensurePlan(s);
+			return await buildSnapshot(s);
 		} catch (e) {
 			// A kitchen whose plan can't be built must not strand the screen: go back and say why.
-			Object.assign(state, before);
+			Object.assign(s, before);
 			throw new Error(
 				`could not open ${value}: ${e instanceof Error ? e.message : String(e)}; staying on ${before.kitchenId}`
 			);
 		}
 	} else if (action === 'contention') {
-		state.contention = Boolean(value);
+		// The overlay is simulator state of the run (one Valio stock for every kitchen), not a view setting.
+		s.contention = Boolean(value);
 		b.overlay.clear();
-		if (state.contention)
+		if (s.contention)
 			b.overlay.setAvailability({
 				productId: CONTENDED.productId,
 				amount: CONTENDED.left,
 				label: `simulated: another kitchen took 4 × ${CONTENDED.productId}`
 			});
-		await requote();
+		await requote(s);
 	} else if (action === 'reset') {
-		// A fresh run server-side (9c): new plan, no orders or spend; the old run stays in the op log.
+		// A fresh run server-side (9c): no plan, orders or spend; the old run stays in the op log.
 		await resetDemo();
-		state.kitchenId = 'k-hotel';
-		state.preset = 'kitchen';
-		state.contention = false;
+		s.kitchenId = 'k-hotel';
+		s.preset = 'kitchen';
+		s.contention = false;
 		b.overlay.clear();
 	} else throw new Error(`unknown scenario action ${action}`);
-	return buildSnapshot();
+	return buildSnapshot(s);
 }
