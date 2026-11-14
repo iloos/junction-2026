@@ -197,9 +197,7 @@ const CASES: Case[] = [
 ];
 
 /** Reading defects the judge doesn't flag today: open under B, red once caught. */
-const OPEN: Record<string, string> = {
-	'brand-dropped': 'B (no brand or variant check)'
-};
+const OPEN: Record<string, string> = {};
 
 const rows: Record<string, unknown>[] = [];
 afterAll(() => {
