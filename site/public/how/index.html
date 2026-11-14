@@ -14,12 +14,13 @@
 <meta property="og:image:height" content="630" />
 <meta property="og:image:alt" content="The Mandate mark and the line: a kitchen purchasing agent that orders on its own only inside limits the chef sets." />
 <meta name="twitter:card" content="summary_large_image" />
-<meta name="description" content="How Mandate goes from a kitchen's rules to a Valio order: kitchen, event, dish, ingredient, product and order, with what the agent may do alone at each step and what waits for the chef." />
+<meta name="description" content="How Mandate works: the kitchen's rules, the agent, five flows with recorded examples, the checks behind each claim, what Valio sees, the partners and their fallbacks, and what is built, simulated or planned." />
 <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="/site.css" />
+<link rel="stylesheet" href="/how/map.css" />
 <style>
 :root { --display: 'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif; --mono-f: 'IBM Plex Mono', ui-monospace, monospace; }
 .brand svg { border-radius: 6px; box-shadow: 0 0 0 1px color-mix(in oklab, var(--ink) 14%, transparent); }
@@ -27,44 +28,38 @@ body { overflow-x: hidden; }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 h1, h2 { font-family: var(--display); font-weight: 600; letter-spacing: -0.02em; }
 h1 { font-size: clamp(34px, 5vw, 48px); line-height: 1.08; max-width: 17ch; margin: 0 0 18px; }
-h2 { font-size: clamp(24px, 3vw, 30px); line-height: 1.15; margin: 0 0 10px; }
-h3 { margin: 0; }
+h2 { font-size: clamp(24px, 3vw, 30px); line-height: 1.15; margin: 0 0 10px; max-width: 26ch; }
+h3 { margin: 0; font: 600 18px/1.25 var(--display); }
 .ic { width: 20px; height: 20px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .cite { display: block; margin-top: 3px; font: 400 12px/1.5 var(--mono-f); color: var(--ink-3); overflow-wrap: anywhere; }
 .cite code { font-size: 12px; background: none; border: 0; padding: 0; color: var(--ink-2); }
 .label { font: 500 12px/1.3 var(--mono-f); color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.06em; margin: 0 0 10px; }
+.lead { font-size: 18px; line-height: 1.5; color: var(--ink); margin: 0 0 28px; max-width: 36em; text-wrap: pretty; }
+.note2 { margin: 16px 0 0; font-size: 14px; color: var(--ink-2); max-width: 46em; }
+.note2 b { color: var(--ink); font-weight: 500; }
+.src { margin: 14px 0 0; font-size: 13px; color: var(--ink-3); }
+.src code { font-size: 12px; }
+.more { margin: 22px 0 0; font-size: 15px; color: var(--ink-2); }
+.more a, .note2 a { color: var(--accent-ink); font-weight: 500; text-underline-offset: 3px; }
 
-/* Header: the landing's, with the kitchen as the one button */
+/* Header */
 .top .go { min-height: 38px; padding: 0 14px; font-size: 14px; }
 .top .go .short { display: none; }
 .top .right { display: flex; align-items: center; gap: 20px; }
 @media (max-width: 560px) { .top .go .long { display: none; } .top .go .short { display: inline; } .top .right { gap: 14px; } }
 
-/* Intro and the chain index */
-.intro { padding: 36px 0 48px; }
-@media (min-width: 720px) { .intro { padding: 56px 0 64px; } }
+/* Intro */
+.intro { padding: 36px 0 40px; }
+@media (min-width: 720px) { .intro { padding: 56px 0 52px; } }
 .intro .lede { max-width: 38em; }
-.chain { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 8px; grid-template-columns: repeat(2, minmax(0, 1fr)); counter-reset: c; }
-@media (min-width: 720px) { .chain { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-@media (min-width: 1000px) { .chain { grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 0; } }
-.chain li { counter-increment: c; position: relative; display: flex; min-width: 0; }
-.chain a { flex: 1; min-width: 0; display: grid; gap: 4px; align-content: start; padding: 12px 14px 14px; background: var(--sheet); border: 1px solid var(--rule); border-radius: 12px; text-decoration: none; transition: border-color 0.12s ease, transform 0.12s ease; }
-.chain a:hover { border-color: var(--accent); }
-.chain a:active { transform: translateY(1px); }
-@media (min-width: 1000px) {
-	.chain li { padding-right: 22px; }
-	.chain li:last-child { padding-right: 0; }
-	.chain li:not(:last-child)::after { content: ''; position: absolute; right: 3px; top: 50%; width: 16px; height: 16px; margin-top: -8px; background: var(--rule-strong); -webkit-mask: no-repeat center/16px url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12h14M13 6l6 6-6 6'/%3E%3C/svg%3E"); mask: no-repeat center/16px url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12h14M13 6l6 6-6 6'/%3E%3C/svg%3E"); }
-}
-.chain .hd { display: flex; align-items: center; justify-content: space-between; color: var(--accent-ink); }
-.chain .hd::after { content: counter(c, decimal-leading-zero); font: 500 12px/1 var(--mono-f); color: var(--ink-3); }
-.chain b { font-weight: 600; font-size: 15.5px; line-height: 1.25; }
-.chain span.g { font-size: 13.5px; line-height: 1.4; color: var(--ink-2); text-wrap: pretty; overflow-wrap: anywhere; }
-.chain span.g.rec { color: var(--ink); }
-.outcomes { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; margin: 20px 0 0; font-size: 14px; color: var(--ink-2); }
+.outcomes { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; margin: 0; font-size: 14px; color: var(--ink-2); }
+.toc { list-style: none; margin: 28px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.toc a { display: inline-flex; align-items: center; min-height: 36px; padding: 0 12px; border: 1px solid var(--rule); border-radius: 999px; background: var(--sheet); font-size: 14px; color: var(--ink-2); text-decoration: none; transition: border-color 0.12s ease, color 0.12s ease; }
+.toc a:hover { border-color: var(--accent); color: var(--ink); }
+[data-system-map]:empty { display: none; }
 
-/* Outcome chips: the landing's case chips */
-.chip { display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 8px; border-radius: 6px; border: 1px solid; font-size: 13px; font-weight: 500; white-space: nowrap; background: var(--sheet); }
+/* Chips: the landing's case chips */
+.chip { display: inline-flex; align-items: center; gap: 6px; min-height: 26px; padding: 0 8px; border-radius: 6px; border: 1px solid; font-size: 13px; font-weight: 500; white-space: nowrap; background: var(--sheet); }
 .chip .ic { width: 14px; height: 14px; stroke-width: 2; }
 .chip.held { color: var(--auth); border-color: var(--auth); border-style: dashed; }
 .chip.within { color: var(--ink-2); border-color: var(--rule-strong); }
@@ -72,55 +67,38 @@ h3 { margin: 0; }
 .chip.caught { color: var(--warn); border-color: var(--warn); }
 .chip.ordered { color: var(--ok); border-color: var(--ok); }
 
-/* One section per chain step, on a rail */
-.steps-wrap { border-top: 1px solid var(--rule); padding-top: 8px; }
-.step { display: grid; grid-template-columns: 36px minmax(0, 1fr); gap: 0 14px; scroll-margin-top: 16px; }
-@media (min-width: 720px) { .step { grid-template-columns: 52px minmax(0, 1fr); gap: 0 20px; } }
-.rail { position: relative; display: flex; justify-content: center; }
-.rail::before { content: ''; position: absolute; top: 48px; bottom: 0; left: 50%; width: 2px; margin-left: -1px; background: var(--rule); }
-.step:last-child .rail::before { bottom: 48px; }
-.rail .n { position: relative; margin-top: 40px; width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; background: var(--accent-wash); color: var(--accent-ink); border: 1.5px solid var(--accent); }
-@media (min-width: 720px) { .rail .n { width: 44px; height: 44px; } .rail::before { top: 86px; } }
-.rail .n .ic { width: 18px; height: 18px; }
-@media (min-width: 720px) { .rail .n .ic { width: 21px; height: 21px; } }
-.step-body { padding: 40px 0 44px; display: grid; gap: 22px; border-bottom: 1px solid var(--rule); min-width: 0; }
-.step:last-child .step-body { border-bottom: 0; }
-@media (min-width: 900px) { .step-body { grid-template-columns: minmax(0, 1fr) minmax(0, 1.12fr); gap: 40px; align-items: start; } }
-.step .eyebrow { margin: 0 0 6px; }
-.step .eyebrow small { color: var(--ink-3); font-size: inherit; }
-.does { margin: 0; font-size: 17px; line-height: 1.5; color: var(--ink); max-width: 30em; text-wrap: pretty; }
-.does-l { margin: 18px 0 6px; }
-.side { display: grid; gap: 12px; min-width: 0; }
-.part { background: var(--sheet); border: 1px solid var(--rule); border-radius: 12px; padding: 16px 18px; min-width: 0; }
-.part ul { list-style: none; margin: 0; padding: 0; display: grid; }
-.uses li { position: relative; padding: 5px 0 5px 18px; font-size: 15px; line-height: 1.45; color: var(--ink-2); text-wrap: pretty; }
-.uses li::before { content: ''; position: absolute; left: 2px; top: 13px; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
-.uses li b { color: var(--ink); font-weight: 500; }
-.rules li { display: grid; grid-template-columns: 82px minmax(0, 1fr); gap: 12px; padding: 11px 0; font-size: 15px; line-height: 1.45; border-top: 1px dashed var(--rule); }
-.rules li:first-child { border-top: 0; padding-top: 2px; }
-.rules .chip { justify-self: start; }
-.live { display: flex; flex-wrap: wrap; gap: 8px; margin: 18px 0 0; }
-.live a { display: inline-flex; align-items: center; gap: 7px; min-height: 40px; padding: 0 14px; border-radius: 10px; border: 1px solid var(--rule); background: var(--sheet); font-size: 14.5px; font-weight: 500; text-decoration: none; color: var(--accent-ink); transition: background 0.12s ease, border-color 0.12s ease; }
-.live a:hover { border-color: var(--accent); background: var(--accent-wash); }
-.live a .ic { width: 16px; height: 16px; }
+/* Cards */
+.cards { display: grid; gap: 12px; }
+@media (min-width: 820px) { .cards.c3 { grid-template-columns: repeat(3, minmax(0, 1fr)); } .cards.c2 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.card { background: var(--sheet); border: 1px solid var(--rule); border-radius: 14px; padding: 18px 20px; min-width: 0; display: grid; gap: 8px; align-content: start; }
+.card .hd { display: flex; align-items: center; gap: 10px; }
+.card .hd .ic { color: var(--accent-ink); width: 20px; height: 20px; }
+.card p { margin: 0; font-size: 15px; line-height: 1.5; color: var(--ink-2); text-wrap: pretty; }
+.card p b { color: var(--ink); font-weight: 500; }
+.card ul { margin: 2px 0 0; padding: 0; list-style: none; display: grid; gap: 4px; }
+.card li { position: relative; padding-left: 16px; font-size: 14.5px; line-height: 1.45; color: var(--ink-2); }
+.card li::before { content: ''; position: absolute; left: 2px; top: 9px; width: 5px; height: 5px; border-radius: 50%; background: var(--accent); }
+.rec { margin: 4px 0 0; padding: 10px 12px; border-radius: 10px; background: var(--well); font-size: 14px; color: var(--ink-2); }
+.rec b { color: var(--ink); font-weight: 500; }
+.rec small { display: block; font-size: 12px; color: var(--ink-3); margin-top: 2px; }
 
-/* A recorded example from the app, when /cases.json carries one */
-.ex { margin: 18px 0 0; background: var(--well); border: 1px solid var(--rule); border-radius: 12px; padding: 14px 16px; display: grid; gap: 6px; }
-.ex p.label { margin: 0; font-size: 12px; color: var(--accent-ink); }
-.ex b { font-weight: 600; font-size: 15.5px; line-height: 1.35; }
-.ex p { margin: 0; font-size: 14.5px; color: var(--ink-2); text-wrap: pretty; }
-.ex .val { font: 500 17px/1.35 var(--mono-f); color: var(--ink); overflow-wrap: anywhere; }
-.ex .dec { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; font-size: 14.5px; color: var(--ink-2); }
-.ex small { font-size: 12.5px; color: var(--ink-3); }
+/* Seven kitchens */
+.kitchens { margin-top: 28px; display: grid; gap: 12px; }
+@media (min-width: 820px) { .kitchens { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 32px; align-items: start; } }
+.kitchens h3 { margin-bottom: 6px; }
+.kitchens p { margin: 0; font-size: 15px; color: var(--ink-2); max-width: 34em; }
+.kinds { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.kinds li { padding: 6px 10px; border-radius: 8px; background: var(--well); border: 1px solid var(--rule); font-size: 14px; }
+.presets { margin-top: 10px; }
 
-/* When the agent may act alone */
-.gov { display: grid; gap: 12px; margin-top: 24px; align-items: start; }
+/* Goes through / held / refused */
+.gov { display: grid; gap: 12px; margin-top: 32px; align-items: start; }
 @media (min-width: 900px) { .gov { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-.oc { background: var(--sheet); border: 1px solid var(--rule); border-radius: 14px; padding: 18px 20px 8px; }
+.oc { background: var(--sheet); border: 1px solid var(--rule); border-radius: 14px; padding: 18px 20px 8px; min-width: 0; }
 .oc.go { --c: var(--ok); --w: var(--ok-wash); }
 .oc.hold { --c: var(--auth); --w: var(--auth-wash); }
 .oc.no { --c: var(--out); --w: var(--out-wash); }
-.oc h3 { display: flex; gap: 10px; align-items: center; font: 600 22px/1.1 var(--display); }
+.oc h3 { display: flex; gap: 10px; align-items: center; font: 600 21px/1.1 var(--display); }
 .oc h3 .ico { background: var(--w); color: var(--c); }
 .oc .when { color: var(--ink-2); font-size: 14.5px; margin: 8px 0 10px; }
 .oc ul { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--rule); }
@@ -129,73 +107,127 @@ h3 { margin: 0; }
 .oc .tail { color: var(--ink-2); font-size: 13.5px; margin: 0; padding: 10px 0 12px; border-top: 1px solid var(--rule); }
 .appr { display: flex; gap: 14px; align-items: flex-start; margin-top: 12px; background: var(--accent-wash); border: 1px solid var(--rule); border-radius: 14px; padding: 18px 20px; }
 .appr .ico { background: var(--sheet); color: var(--accent-ink); }
-.appr p { margin: 0; font-size: 15.5px; max-width: 40em; }
+.appr p { margin: 0; font-size: 15.5px; max-width: 44em; }
 .appr p span { color: var(--ink-2); }
-.src { margin: 14px 0 0; font-size: 13px; color: var(--ink-3); }
-.src code { font-size: 12px; }
+
+/* The agent */
+.facts { list-style: none; margin: 0; padding: 0; display: grid; gap: 1px; background: var(--rule); border: 1px solid var(--rule); border-radius: 14px; overflow: hidden; }
+@media (min-width: 820px) { .facts { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.facts li { background: var(--sheet); padding: 16px 18px; display: grid; grid-template-columns: 32px minmax(0, 1fr); gap: 4px 14px; align-content: start; min-width: 0; }
+.facts .ico { grid-row: span 3; background: var(--accent-wash); color: var(--accent-ink); }
+.facts li.never .ico { background: var(--out-wash); color: var(--out); }
+.facts b { font-weight: 600; font-size: 16px; line-height: 1.3; }
+.facts span.d { font-size: 14.5px; line-height: 1.45; color: var(--ink-2); text-wrap: pretty; }
+
+/* Flows as tabs */
+.tablist { display: none; }
+.js .tablist { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 18px; padding: 0; }
+.tab { appearance: none; font: 500 14.5px/1.2 var(--display); color: var(--ink-2); background: var(--sheet); border: 1px solid var(--rule); border-radius: 10px; min-height: 42px; padding: 0 14px; display: inline-flex; align-items: center; gap: 8px; cursor: pointer; transition: border-color 0.12s ease, color 0.12s ease, background 0.12s ease; }
+.tab .ic { width: 17px; height: 17px; }
+.tab:hover { border-color: var(--accent); color: var(--ink); }
+.tab[aria-selected='true'] { background: var(--accent-wash); border-color: var(--accent); color: var(--ink); }
+.panels { display: grid; gap: 14px; }
+.panel { background: var(--sheet); border: 1px solid var(--rule); border-radius: 16px; padding: 22px 22px 24px; display: grid; gap: 20px; min-width: 0; }
+@media (min-width: 900px) { .panel { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 32px; align-items: start; } }
+.panel[hidden] { display: none; }
+.panel > .hdr { grid-column: 1 / -1; }
+.panel h3 { font: 600 22px/1.2 var(--display); margin-bottom: 6px; }
+.js .panel h3.ph { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.panel .hdr p { margin: 0; font-size: 16.5px; line-height: 1.5; color: var(--ink); max-width: 40em; text-wrap: pretty; }
+.steps { list-style: none; margin: 0; padding: 0; counter-reset: s; display: grid; min-width: 0; }
+.steps li { counter-increment: s; display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 0 12px; padding: 9px 0; border-top: 1px dashed var(--rule); font-size: 15px; line-height: 1.45; }
+.steps li:first-child { border-top: 0; }
+.steps li::before { content: counter(s); width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; font: 500 12px/1 var(--mono-f); color: var(--accent-ink); border: 1px solid var(--accent); margin-top: 1px; }
+.steps .lim { color: var(--ink-3); font-size: 13.5px; }
+.side { display: grid; gap: 12px; min-width: 0; }
+.live { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; }
+.live a { display: inline-flex; align-items: center; gap: 7px; min-height: 40px; padding: 0 14px; border-radius: 10px; border: 1px solid var(--rule); background: var(--paper); font-size: 14.5px; font-weight: 500; text-decoration: none; color: var(--accent-ink); transition: background 0.12s ease, border-color 0.12s ease; }
+.live a:hover { border-color: var(--accent); background: var(--accent-wash); }
+.live a .ic { width: 16px; height: 16px; }
+.limit { margin: 0; padding: 12px 14px; border: 1px solid color-mix(in oklab, var(--warn) 45%, transparent); background: var(--warn-wash); border-radius: 10px; font-size: 14px; color: var(--ink); }
+
+/* A recorded case from /cases.json */
+.ex { background: var(--well); border: 1px solid var(--rule); border-radius: 12px; padding: 14px 16px; display: grid; gap: 8px; min-width: 0; }
+.ex[hidden] { display: none; }
+.ex .label { margin: 0; color: var(--accent-ink); }
+.ex .ask { font: 500 15.5px/1.4 var(--mono-f); color: var(--ink); overflow-wrap: anywhere; }
+.ex ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.ex ol li { position: relative; padding-left: 16px; font-size: 14.5px; line-height: 1.45; color: var(--ink-2); overflow-wrap: anywhere; }
+.ex ol li::before { content: ''; position: absolute; left: 2px; top: 9px; width: 5px; height: 5px; border-radius: 50%; background: var(--rule-strong); }
+.ex .out { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; font-size: 14.5px; }
+.ex .eur { font: 500 15px var(--mono-f); color: var(--ink); }
+.ex small { font-size: 12.5px; color: var(--ink-3); }
+.ex dl { margin: 0; display: grid; gap: 8px; }
+.ex dl div { display: grid; grid-template-columns: 86px minmax(0, 1fr); gap: 10px; font-size: 14px; }
+.ex dt { font: 500 12px/1.6 var(--mono-f); color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.04em; }
+.ex dd { margin: 0; color: var(--ink-2); overflow-wrap: anywhere; }
+.ex dd b { display: block; color: var(--ink); font-weight: 500; }
+.ex dd .chip { margin-top: 4px; white-space: normal; height: auto; padding: 3px 8px; }
+
+/* Tables: trust, partners */
+.tbl { width: 100%; border-collapse: collapse; font-size: 14.5px; }
+.tbl th, .tbl td { text-align: left; padding: 11px 14px 11px 0; border-top: 1px solid var(--rule); vertical-align: top; }
+.tbl thead th { font: 500 12px var(--mono-f); color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.06em; border-top: 0; padding-bottom: 8px; }
+.tbl tbody th { font-weight: 600; color: var(--ink); min-width: 12em; }
+.tbl td { color: var(--ink-2); }
+.tbl td.t { font: 400 12.5px/1.5 var(--mono-f); color: var(--ink-3); overflow-wrap: anywhere; }
+.tbl td.t code { font-size: 12.5px; background: none; border: 0; padding: 0; color: var(--ink-2); }
+.tbl tr.dim th, .tbl tr.dim td { opacity: 0.78; }
+.st { display: inline-block; white-space: nowrap; font: 500 12px/1 var(--display); padding: 5px 8px; border-radius: 999px; }
+.st.live { background: var(--ok-wash); color: var(--ok); }
+.st.test { background: var(--auth-wash); color: var(--auth); }
+.st.wired { background: var(--warn-wash); color: var(--warn); }
+.st.off { background: var(--well); color: var(--ink-2); }
+@media (max-width: 760px) {
+	.tbl thead { display: none; }
+	.tbl tr { display: grid; grid-template-columns: minmax(0, 1fr); padding: 12px 0; border-top: 1px solid var(--rule); gap: 4px; }
+	.tbl th, .tbl td { border: 0; padding: 0; min-width: 0; }
+	.tbl tbody th { min-width: 0; }
+	.tbl td[data-h]::before { content: attr(data-h) ': '; color: var(--ink-3); font: 500 12px var(--mono-f); text-transform: uppercase; letter-spacing: 0.04em; }
+}
 
 /* State machines */
-.sm { display: grid; gap: 12px; margin-top: 24px; }
+.sm { display: grid; gap: 12px; margin-top: 28px; }
+.sm > h3 { font: 600 21px/1.2 var(--display); }
 .smc { background: var(--sheet); border: 1px solid var(--rule); border-radius: 14px; padding: 18px 20px; display: grid; gap: 12px; align-items: center; min-width: 0; }
 @media (min-width: 900px) { .smc { grid-template-columns: minmax(0, 560px) 1fr; gap: 32px; } }
-.smc h3 { font: 600 22px/1.1 var(--display); margin-bottom: 6px; }
+.smc h4 { font: 600 19px/1.1 var(--display); margin: 0 0 6px; }
 .smc p { margin: 0; font-size: 15px; color: var(--ink-2); max-width: 42ch; }
 .svgw { overflow-x: auto; min-width: 0; }
 .svgw svg { width: 100%; display: block; }
 @media (max-width: 899px) { .svgw svg { min-width: 520px; } }
-.smleg { display: flex; gap: 10px 22px; flex-wrap: wrap; margin-top: 14px; font-size: 13.5px; color: var(--ink-2); }
+.smleg { display: flex; gap: 10px 22px; flex-wrap: wrap; margin-top: 6px; font-size: 13.5px; color: var(--ink-2); }
 .smleg i { display: inline-block; width: 22px; height: 12px; border: 1.5px solid; border-radius: 6px; margin-right: 8px; vertical-align: -1px; }
-.hint { display: none; font: 12px var(--mono-f); color: var(--ink-3); margin: 8px 0 0; }
+.hint { display: none; font: 12px var(--mono-f); color: var(--ink-3); margin: 0; }
 @media (max-width: 899px) { .hint { display: block; } }
 
-/* Further reading: depth on demand */
-.fr { display: grid; gap: 10px; margin-top: 20px; }
-.fr details { background: var(--sheet); border: 1px solid var(--rule); border-radius: 14px; }
-.fr summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 14px; padding: 16px 20px; }
-.fr summary::-webkit-details-marker { display: none; }
-.fr summary b { font: 600 21px/1.15 var(--display); }
-.fr summary span { display: block; font-size: 14px; color: var(--ink-2); }
-.fr summary .chev { margin-left: auto; color: var(--ink-3); transition: transform 0.15s ease; }
-.fr details[open] summary .chev { transform: rotate(180deg); }
-.fr .in { padding: 4px 20px 20px; border-top: 1px solid var(--rule); }
-.zones { list-style: none; margin: 16px 0 0; padding: 0; display: grid; gap: 10px; counter-reset: z; }
-@media (min-width: 900px) { .zones { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
-.zones li { counter-increment: z; background: var(--paper); border: 1px solid var(--rule); border-radius: 12px; padding: 14px; display: grid; gap: 6px; align-content: start; min-width: 0; }
-.zones li.dashed { border-style: dashed; border-color: var(--rule-strong); }
-.zones .k { font: 500 12px var(--mono-f); color: var(--accent-ink); text-transform: uppercase; letter-spacing: 0.06em; }
-.zones .k::before { content: counter(z) ' · '; }
-.zones b { font: 600 18px/1.15 var(--display); }
-.zones p { margin: 0; font-size: 14px; color: var(--ink-2); }
-.ports { width: 100%; border-collapse: collapse; margin-top: 18px; font-size: 14px; }
-.ports caption { text-align: left; font: 500 12px var(--mono-f); color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.06em; padding-bottom: 8px; }
-.ports th, .ports td { text-align: left; padding: 9px 10px 9px 0; border-top: 1px solid var(--rule); vertical-align: top; }
-.ports th { font-weight: 600; white-space: nowrap; }
-.ports td { color: var(--ink-2); }
-.ports td.f { color: var(--ink); }
-@media (max-width: 640px) {
-	.ports thead { display: none; }
-	.ports tr { display: grid; grid-template-columns: 1fr; padding: 8px 0; border-top: 1px solid var(--rule); }
-	.ports th, .ports td { border: 0; padding: 1px 0; }
-	.ports td.f::before { content: 'Fallback: '; color: var(--ink-3); }
-}
-.pr { display: grid; gap: 1px; background: var(--rule); border: 1px solid var(--rule); border-radius: 12px; overflow: hidden; margin-top: 16px; }
-@media (min-width: 720px) { .pr { grid-template-columns: repeat(2, 1fr); } }
-@media (min-width: 1000px) { .pr { grid-template-columns: repeat(3, 1fr); } }
-.pr div { background: var(--sheet); padding: 18px; }
-.pr b { display: block; font: 600 18px/1.2 var(--display); margin-bottom: 6px; }
-.pr span { color: var(--ink-2); font-size: 14px; }
-.more { margin: 22px 0 0; font-size: 15px; color: var(--ink-2); }
-.more a { color: var(--accent-ink); font-weight: 500; text-underline-offset: 3px; }
+/* What Valio sees */
+.oplog { margin-top: 12px; }
+.oplog ol { list-style: none; margin: 4px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.oplog ol li::before { display: none; }
+.oplog ol li { padding: 6px 10px; border-radius: 8px; background: var(--well); border: 1px solid var(--rule); font-size: 14px; color: var(--ink); }
 
-@media (prefers-reduced-motion: reduce) { .chain a, .live a, .fr summary .chev { transition: none; } }
+/* Built / simulated / planned */
+.status { display: grid; gap: 12px; }
+@media (min-width: 900px) { .status { grid-template-columns: 1.25fr 1fr 1fr; align-items: start; } }
+.col { background: var(--sheet); border: 1px solid var(--rule); border-radius: 14px; padding: 18px 20px; min-width: 0; }
+.col.sim { border-style: dashed; border-color: var(--rule-strong); }
+.col.plan { background: transparent; border-style: dashed; }
+.col > h3 { display: flex; align-items: center; gap: 10px; font: 600 21px/1.1 var(--display); margin-bottom: 4px; }
+.col > p { margin: 0 0 12px; font-size: 14px; color: var(--ink-2); }
+.col h4 { margin: 16px 0 6px; }
+.col h4:first-of-type { margin-top: 4px; }
+.col ul { list-style: none; margin: 0; padding: 0; }
+.col li { padding: 10px 0; border-top: 1px solid var(--rule); font-size: 14.5px; line-height: 1.45; color: var(--ink-2); }
+.col li b { color: var(--ink); font-weight: 500; }
+
+@media (prefers-reduced-motion: reduce) { .toc a, .live a, .tab { transition: none; } }
 </style>
 </head>
 <body>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
 	<symbol id="i-kitchen" viewBox="0 0 24 24"><path d="M3 10.5 12 4l9 6.5"/><path d="M5 9.5V20h14V9.5"/><path d="M10 20v-5h4v5"/></symbol>
 	<symbol id="i-event" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/></symbol>
-	<symbol id="i-dish" viewBox="0 0 24 24"><path d="M3 19h18"/><path d="M5 16a7 7 0 0 1 14 0z"/><path d="M12 9V7"/><path d="M10.5 6.5h3"/></symbol>
-	<symbol id="i-ingredient" viewBox="0 0 24 24"><path d="M5 19c0-8 5-13 14-14-1 9-6 14-14 14z"/><path d="M5 19l8-8"/></symbol>
 	<symbol id="i-product" viewBox="0 0 24 24"><path d="M12 3 4 7v10l8 4 8-4V7z"/><path d="m4 7 8 4 8-4M12 11v10"/></symbol>
 	<symbol id="i-order" viewBox="0 0 24 24"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/></symbol>
 	<symbol id="i-go" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
@@ -204,7 +236,15 @@ h3 { margin: 0; }
 	<symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
 	<symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3 5 6v6c0 4.5 3 7.5 7 9 4-1.5 7-4.5 7-9V6z"/><path d="m9 12 2 2 4-4"/></symbol>
 	<symbol id="i-out" viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9"/><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></symbol>
-	<symbol id="i-chev" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+	<symbol id="i-rank" viewBox="0 0 24 24"><path d="M4 6h16M4 12h11M4 18h6"/></symbol>
+	<symbol id="i-swap" viewBox="0 0 24 24"><path d="M4 8h13l-3-3M20 16H7l3 3"/></symbol>
+	<symbol id="i-agent" viewBox="0 0 24 24"><rect x="5" y="8" width="14" height="11" rx="3"/><path d="M12 4v4M9 13h.01M15 13h.01"/></symbol>
+	<symbol id="i-steps" viewBox="0 0 24 24"><path d="M5 6h3M5 12h3M5 18h3M11 6h8M11 12h8M11 18h8"/></symbol>
+	<symbol id="i-ask" viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4z"/><path d="M10 9a2 2 0 1 1 2 2v1"/></symbol>
+	<symbol id="i-plug" viewBox="0 0 24 24"><path d="M9 3v5M15 3v5M6 8h12v3a6 6 0 0 1-12 0zM12 17v4"/></symbol>
+	<symbol id="i-eye" viewBox="0 0 24 24"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="3"/></symbol>
+	<symbol id="i-flask" viewBox="0 0 24 24"><path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 1.7 3h10.6a2 2 0 0 0 1.7-3l-5-9V3"/></symbol>
+	<symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 21s-6-5.5-6-11a6 6 0 0 1 12 0c0 5.5-6 11-6 11z"/><circle cx="12" cy="10" r="2"/></symbol>
 </svg>
 <div class="wrap">
 	<header class="top">
@@ -226,193 +266,76 @@ h3 { margin: 0; }
 		<section class="intro" aria-labelledby="h-intro">
 			<p class="eyebrow">How it works</p>
 			<h1 id="h-intro">From a kitchen's rules to one Valio order</h1>
-			<p class="lede">Mandate turns a kitchen's event into a Valio order, step by step, and at every step it orders alone only what the kitchen's mandate allows.</p>
-			<ol class="chain" aria-label="The chain, step by step">
-				<li><a href="#kitchen"><span class="hd"><svg class="ic" aria-hidden="true"><use href="#i-kitchen"/></svg></span><b>Kitchen</b><span class="g" data-g="kitchen">sets the limits</span></a></li>
-				<li><a href="#event"><span class="hd"><svg class="ic" aria-hidden="true"><use href="#i-event"/></svg></span><b>Event</b><span class="g" data-g="event">becomes a brief</span></a></li>
-				<li><a href="#dish"><span class="hd"><svg class="ic" aria-hidden="true"><use href="#i-dish"/></svg></span><b>Dish</b><span class="g" data-g="dish">a menu the chef accepts</span></a></li>
-				<li><a href="#ingredient"><span class="hd"><svg class="ic" aria-hidden="true"><use href="#i-ingredient"/></svg></span><b>Ingredient</b><span class="g" data-g="ingredient">needs, then whole packs</span></a></li>
-				<li><a href="#product"><span class="hd"><svg class="ic" aria-hidden="true"><use href="#i-product"/></svg></span><b>Product</b><span class="g" data-g="product">known stock first</span></a></li>
-				<li><a href="#order"><span class="hd"><svg class="ic" aria-hidden="true"><use href="#i-order"/></svg></span><b>Order</b><span class="g" data-g="order">one receipt</span></a></li>
-			</ol>
-			<p class="outcomes">At each step, a line either
+			<p class="lede">Mandate is a purchasing agent for a kitchen. It orders from Valio on its own only what the kitchen's mandate allows, and a person decides the rest.</p>
+			<p class="outcomes">Every line it prepares either
 				<span class="chip within"><svg class="ic" aria-hidden="true"><use href="#i-shield"/></svg>goes through</span>
-				<span class="chip held"><svg class="ic" aria-hidden="true"><use href="#i-hold"/></svg>is held for the chef</span>or
+				<span class="chip held"><svg class="ic" aria-hidden="true"><use href="#i-hold"/></svg>is held for a person</span>or
 				<span class="chip refused"><svg class="ic" aria-hidden="true"><use href="#i-no"/></svg>is refused</span>
 			</p>
+			<nav aria-label="On this page">
+				<ul class="toc">
+					<li><a href="#rules">The kitchen's rules</a></li>
+					<li><a href="#agent">The agent</a></li>
+					<li><a href="#flows">Five flows</a></li>
+					<li><a href="#trust">Checks behind each claim</a></li>
+					<li><a href="#ops">What Valio sees</a></li>
+					<li><a href="#partners">Partners</a></li>
+					<li><a href="#status">Built, simulated, planned</a></li>
+				</ul>
+			</nav>
 		</section>
 
-		<div class="steps-wrap">
-			<!-- 1 · Kitchen -->
-			<section class="step" id="kitchen" aria-labelledby="h-kitchen">
-				<div class="rail" aria-hidden="true"><span class="n"><svg class="ic"><use href="#i-kitchen"/></svg></span></div>
-				<div class="step-body">
-					<div>
-						<p class="eyebrow">Kitchen</p>
-						<h2 id="h-kitchen">The kitchen sets the limits</h2>
-						<p class="label does-l">What the agent does</p>
-						<p class="does">Works for one kitchen, inside its mandate: what the agent may buy alone, up to what amount, and on which days goods can arrive.</p>
-						<div class="ex" data-step="kitchen" hidden></div>
-						<p class="live"><a href="https://app.mandate.kitchen/">See it live: Kitchen <svg class="ic" aria-hidden="true"><use href="#i-out"/></svg></a></p>
-					</div>
-					<div class="side">
-						<div class="part uses"><h3 class="label">What it uses</h3><ul>
-							<li><b>The kitchen's mandate:</b> caps per line, per order and per week, and a hard limit</li>
-							<li><b>Its receiving days</b>, for example Monday, Wednesday and Friday</li>
-							<li><b>The products it already buys</b> and its origin preference</li>
-						</ul></div>
-						<div class="part rules"><h3 class="label">What it refuses or holds</h3><ul>
-							<li><span class="chip held"><svg class="ic" aria-hidden="true"><use href="#i-hold"/></svg>Held</span><span>A delivery on a day the kitchen doesn't receive goods<span class="cite"><code>off_delivery_day</code> · purchasing.test.ts</span></span></li>
-							<li><span class="chip refused"><svg class="ic" aria-hidden="true"><use href="#i-no"/></svg>Refused</span><span>An agent approving or changing the mandate: outside agents get no approve or mandate tool<span class="cite"><code>SCOPES_BY_ACTOR</code> · adversarial.test.ts</span></span></li>
-						</ul></div>
-					</div>
-				</div>
-			</section>
+		<div data-system-map></div>
+		<script src="/how/map.js" defer></script>
 
-			<!-- 2 · Event -->
-			<section class="step" id="event" aria-labelledby="h-event">
-				<div class="rail" aria-hidden="true"><span class="n"><svg class="ic"><use href="#i-event"/></svg></span></div>
-				<div class="step-body">
-					<div>
-						<p class="eyebrow">Event</p>
-						<h2 id="h-event">An event becomes a brief</h2>
-						<p class="label does-l">What the agent does</p>
-						<p class="does">Reads the request in plain words, asks for what's missing, such as dietary needs and budget, and keeps every stated requirement.</p>
-						<div class="ex" data-step="event" hidden></div>
-						<p class="live"><a href="https://app.mandate.kitchen/request">See it live: Request <svg class="ic" aria-hidden="true"><use href="#i-out"/></svg></a></p>
-					</div>
-					<div class="side">
-						<div class="part uses"><h3 class="label">What it uses</h3><ul>
-							<li><b>The event brief:</b> occasion, guests, date and requirements</li>
-							<li><b>Rules</b> read the brief's guests, date and requirements, with no model call; <b>Gemini Flash-Lite</b> reads product requests such as “10 l lactose-free milk for Friday”</li>
-							<li><b>The order cut-off:</b> 17:00 the day before delivery</li>
-						</ul></div>
-						<div class="part rules"><h3 class="label">What it refuses or holds</h3><ul>
-							<li><span class="chip caught"><svg class="ic" aria-hidden="true"><use href="#i-clock"/></svg>Caught</span><span>A date past the cut-off: the cut-off is named and the next delivery day offered, never moved silently<span class="cite"><code>checkLate</code> · evals/check.ts</span></span></li>
-						</ul></div>
-					</div>
-				</div>
-			</section>
-
-			<!-- 3 · Dish -->
-			<section class="step" id="dish" aria-labelledby="h-dish">
-				<div class="rail" aria-hidden="true"><span class="n"><svg class="ic"><use href="#i-dish"/></svg></span></div>
-				<div class="step-body">
-					<div>
-						<p class="eyebrow">Dish</p>
-						<h2 id="h-dish">The brief becomes a menu</h2>
-						<p class="label does-l">What the agent does</p>
-						<p class="does">Proposes dishes for the brief, with an amount per guest for each ingredient. The chef reviews the menu and accepts it before anything is planned.</p>
-						<div class="ex" data-step="dish" hidden></div>
-						<p class="live"><a href="https://app.mandate.kitchen/request">See it live: Request <svg class="ic" aria-hidden="true"><use href="#i-out"/></svg></a></p>
-					</div>
-					<div class="side">
-						<div class="part uses"><h3 class="label">What it uses</h3><ul>
-							<li><b>Gemini proposes the menu</b>, and every amount is labelled an estimate</li>
-							<li><b>The brief's guests and dietary needs</b>, such as a vegetarian main</li>
-							<li><b>An accepted menu stays an estimate:</b> accepting it doesn't verify a recipe</li>
-						</ul></div>
-						<div class="part rules"><h3 class="label">What it refuses or holds</h3><ul>
-							<li><span class="chip held"><svg class="ic" aria-hidden="true"><use href="#i-hold"/></svg>Held</span><span>Nothing is planned until the chef accepts the menu<span class="cite"><code>plan_event</code> · core/services/events.ts</span></span></li>
-						</ul></div>
-					</div>
-				</div>
-			</section>
-
-			<!-- 4 · Ingredient -->
-			<section class="step" id="ingredient" aria-labelledby="h-ingredient">
-				<div class="rail" aria-hidden="true"><span class="n"><svg class="ic"><use href="#i-ingredient"/></svg></span></div>
-				<div class="step-body">
-					<div>
-						<p class="eyebrow">Ingredient</p>
-						<h2 id="h-ingredient">Each dish becomes needs, then packs</h2>
-						<p class="label does-l">What the agent does</p>
-						<p class="does">Turns each dish into needs in kilograms or litres, then into whole packs of what Valio sells. The need and the pack count stay apart.</p>
-						<div class="ex" data-step="ingredient" hidden></div>
-						<p class="live"><a href="https://app.mandate.kitchen/">See it live: Kitchen, the Why drawer <svg class="ic" aria-hidden="true"><use href="#i-out"/></svg></a></p>
-					</div>
-					<div class="side">
-						<div class="part uses"><h3 class="label">What it uses</h3><ul>
-							<li><b>Grams per guest × guests ÷ yield</b>, each step labelled with its source</li>
-							<li><b>Valio's catalogue:</b> 17,546 products, with pack sizes and lot steps</li>
-						</ul></div>
-						<div class="part rules"><h3 class="label">What it refuses or holds</h3><ul>
-							<li><span class="chip refused"><svg class="ic" aria-hidden="true"><use href="#i-no"/></svg>Refused</span><span>A part pack, off Valio's lot step<span class="cite"><code>BELOW_LOT</code> · eval s3</span></span></li>
-						</ul></div>
-					</div>
-				</div>
-			</section>
-
-			<!-- 5 · Valio product -->
-			<section class="step" id="product" aria-labelledby="h-product">
-				<div class="rail" aria-hidden="true"><span class="n"><svg class="ic"><use href="#i-product"/></svg></span></div>
-				<div class="step-body">
-					<div>
-						<p class="eyebrow">Product</p>
-						<h2 id="h-product">Each need gets a product from Valio's catalogue</h2>
-						<p class="label does-l">What the agent does</p>
-						<p class="does">Picks a product for each need, known stock first. When a product is out, it ranks substitutes and gives a reason for each one.</p>
-						<div class="ex" data-step="product" hidden></div>
-						<p class="live"><a href="https://app.mandate.kitchen/">See it live: Kitchen, the Why drawer <svg class="ic" aria-hidden="true"><use href="#i-out"/></svg></a></p>
-					</div>
-					<div class="side">
-						<div class="part uses"><h3 class="label">What it uses</h3><ul>
-							<li><b>Valio's live price and availability</b> for the shortlisted products, cached with the time fetched</li>
-							<li><b>Valio's own substitution rules</b>, then name matching</li>
-							<li><b>Gemini Decisions</b> ranks substitutes, with replay and rules fallbacks; it never approves</li>
-							<li><b>Exa web evidence</b> in the Why drawer: net content, origin and ingredients, each cited</li>
-						</ul></div>
-						<div class="part rules"><h3 class="label">What it refuses or holds</h3><ul>
-							<li><span class="chip held"><svg class="ic" aria-hidden="true"><use href="#i-hold"/></svg>Held</span><span>Valio doesn't state a quantity: held for one tap, not counted as cover until the supplier confirms<span class="cite"><code>UNKNOWN_REQUIRED</code> · validate.ts</span></span></li>
-							<li><span class="chip held"><svg class="ic" aria-hidden="true"><use href="#i-hold"/></svg>Held</span><span>A product the kitchen hasn't bought before<span class="cite"><code>new_sku</code> · tier.ts</span></span></li>
-							<li><span class="chip held"><svg class="ic" aria-hidden="true"><use href="#i-hold"/></svg>Held</span><span>An allergen change, decided apart from routine lines<span class="cite"><code>allergen_change</code> · tier.ts · groups.test.ts</span></span></li>
-							<li><span class="chip held"><svg class="ic" aria-hidden="true"><use href="#i-hold"/></svg>Held</span><span>A substitute that breaks the kitchen's origin preference<span class="cite"><code>substitute_breaks_preference</code> · validate.ts</span></span></li>
-							<li><span class="chip held"><svg class="ic" aria-hidden="true"><use href="#i-hold"/></svg>Held</span><span>A product under a recall notice<span class="cite"><code>recall</code> · tier.ts</span></span></li>
-							<li><span class="chip held"><svg class="ic" aria-hidden="true"><use href="#i-hold"/></svg>Held</span><span>A model's caution: a model can hold a line, never allow one<span class="cite"><code>CAUTION.model_*</code> · substitutes.ts</span></span></li>
-							<li><span class="chip refused"><svg class="ic" aria-hidden="true"><use href="#i-no"/></svg>Refused</span><span>On a request, a product that breaks a stated requirement, such as lactose-free, even as a substitute<span class="cite"><code>requirement_unmet</code> · purchasing.test.ts</span></span></li>
-						</ul></div>
-					</div>
-				</div>
-			</section>
-
-			<!-- 6 · Order -->
-			<section class="step" id="order" aria-labelledby="h-order">
-				<div class="rail" aria-hidden="true"><span class="n"><svg class="ic"><use href="#i-order"/></svg></span></div>
-				<div class="step-body">
-					<div>
-						<p class="eyebrow">Order</p>
-						<h2 id="h-order">The order passes the last checks</h2>
-						<p class="label does-l">What the agent does</p>
-						<p class="does">Orders what the mandate allows, holds the rest for the chef with its reason, and writes one receipt, however many times the order is sent.</p>
-						<div class="ex" data-step="order" hidden></div>
-						<p class="live">
-							<a href="https://app.mandate.kitchen/">Kitchen: approve and order <svg class="ic" aria-hidden="true"><use href="#i-out"/></svg></a>
-							<a href="https://app.mandate.kitchen/ops">Ops: held lines by cause <svg class="ic" aria-hidden="true"><use href="#i-out"/></svg></a>
-							<a href="https://app.mandate.kitchen/agents">Agents: connect yours <svg class="ic" aria-hidden="true"><use href="#i-out"/></svg></a>
-						</p>
-					</div>
-					<div class="side">
-						<div class="part uses"><h3 class="label">What it uses</h3><ul>
-							<li><b>The order cut-off:</b> 17:00 the day before delivery</li>
-							<li><b>The exact terms</b> (price, quantity, date) the chef approved</li>
-							<li><b>One locked transaction</b>, so the same order sent twice gives one receipt</li>
-							<li><b>Honest receipts:</b> “supplier confirmed” only where the receipt backs it; the rest read “ordered, awaiting supplier”</li>
-						</ul></div>
-						<div class="part rules"><h3 class="label">What it refuses or holds</h3><ul>
-							<li><span class="chip held"><svg class="ic" aria-hidden="true"><use href="#i-hold"/></svg>Held</span><span>A cost over a cap, even when the order is split<span class="cite"><code>CAP_EXCEEDED.weekly</code> · tier.ts · eval s5</span></span></li>
-							<li><span class="chip held"><svg class="ic" aria-hidden="true"><use href="#i-hold"/></svg>Held</span><span>An outside agent's order<span class="cite"><code>external_agent_needs_approval</code> · tier.ts · eval s5</span></span></li>
-							<li><span class="chip refused"><svg class="ic" aria-hidden="true"><use href="#i-no"/></svg>Refused</span><span>Over the hard limit, even split across lines<span class="cite"><code>over_hard_limit</code> · ceiling.test.ts</span></span></li>
-							<li><span class="chip refused"><svg class="ic" aria-hidden="true"><use href="#i-no"/></svg>Refused</span><span>After the ordering cut-off<span class="cite"><code>cutoff_passed</code> · cutoff.test.ts · eval r5-f9</span></span></li>
-							<li><span class="chip refused"><svg class="ic" aria-hidden="true"><use href="#i-no"/></svg>Refused</span><span>Terms that changed after the approval, such as a new price<span class="cite"><code>TERMS_CHANGED</code> · state.ts · eval s4</span></span></li>
-						</ul></div>
-					</div>
-				</div>
-			</section>
-		</div>
-
+		<!-- The kitchen's rules -->
 		<section class="band" id="rules" aria-labelledby="h-rules">
-			<h2 id="h-rules">When the agent may act alone</h2>
-			<p class="sub">The rules from every step, in one place. The same checks run for every caller, and a person decides everything the mandate doesn't allow.</p>
+			<p class="eyebrow">The kitchen's rules</p>
+			<h2 id="h-rules">Each kitchen's own rules decide what the agent may buy</h2>
+			<p class="lead">Preferences put products in order, requirements rule products out, and the mandate says what the agent may buy without asking.</p>
+			<div class="cards c3">
+				<div class="card">
+					<div class="hd"><svg class="ic" aria-hidden="true"><use href="#i-rank"/></svg><h3>Preferences</h3></div>
+					<p><b>They only change the order of the list.</b> Weights over price, reliability, Finnish origin, carbon and organic.</p>
+					<span class="cite"><code>Kitchen.weights</code> · core/rank/rank.ts</span>
+				</div>
+				<div class="card">
+					<div class="hd"><svg class="ic" aria-hidden="true"><use href="#i-no"/></svg><h3>Requirements</h3></div>
+					<p><b>A product that breaks one is out, with the reason shown.</b></p>
+					<ul>
+						<li>Origin rules per category: prefer or require</li>
+						<li>Allergens the kitchen must be free from, and what to do when Valio has no record</li>
+						<li>Tender list only, and labels such as vegetarian on a need</li>
+					</ul>
+					<span class="cite"><code>Kitchen.constraints</code> · <code>NeedRequirements</code> · core/mandate/categories.ts</span>
+				</div>
+				<div class="card">
+					<div class="hd"><svg class="ic" aria-hidden="true"><use href="#i-shield"/></svg><h3>The mandate</h3></div>
+					<p><b>The chef's words and the numbers that enforce them.</b></p>
+					<ul>
+						<li>Caps per line, per order and per week</li>
+						<li>A hard limit: by default the larger of five times the order cap and twice the weekly cap</li>
+						<li>Five decisions it never delegates: an allergen change, a new product, a broken preference, a product off the tender list, an origin requirement</li>
+					</ul>
+					<p class="rec" data-kitchen-rec hidden></p>
+					<span class="cite"><code>Mandate</code> · core/contracts/kitchen.ts · versioned</span>
+				</div>
+			</div>
+
+			<div class="kitchens">
+				<div>
+					<h3>Seven kitchens, each with its own rules</h3>
+					<p>All seven are fictional seed kitchens, each with its own city, size, receiving days, menu cycle and mandate.</p>
+					<span class="cite">fixtures/seeds/kitchens.json</span>
+				</div>
+				<div>
+					<ul class="kinds" aria-label="The seven kitchens">
+						<li>Hotel</li><li>Lunch restaurant</li><li>Public central kitchen</li><li>À la carte</li><li>Care home</li><li>Café</li><li>Ski resort</li>
+					</ul>
+					<p class="presets"><b>Same shortage. Your rules.</b> In the Kitchen, presets show how the same shortage ranks under different preferences: kitchen default, price first, Finnish required, lowest carbon, most reliable. They preview a ranking and change nothing. Not yet checked on the live app.</p>
+				</div>
+			</div>
+
 			<div class="gov">
 				<section class="oc go" aria-labelledby="g-go">
 					<h3 id="g-go"><span class="ico"><svg class="ic" aria-hidden="true"><use href="#i-go"/></svg></span>Goes through alone</h3>
@@ -436,12 +359,12 @@ h3 { margin: 0; }
 						<li>A cost over a cap, even when the order is split<span class="cite"><code>CAP_EXCEEDED.weekly</code> · tier.ts · eval s5</span></li>
 						<li>A product the kitchen hasn't bought before<span class="cite"><code>new_sku</code> · tier.ts</span></li>
 						<li>An allergen change, decided apart from routine lines<span class="cite"><code>allergen_change</code> · groups.test.ts</span></li>
-						<li>No stock figure from Valio<span class="cite"><code>UNKNOWN_REQUIRED</code> · validate.ts</span></li>
+						<li>No stock figure from Valio: held for one tap, not counted as cover until the supplier confirms<span class="cite"><code>UNKNOWN_REQUIRED</code> · validate.ts</span></li>
 						<li>A delivery on a day the kitchen doesn't receive goods<span class="cite"><code>off_delivery_day</code> · purchasing.test.ts</span></li>
 						<li>A substitute that breaks the kitchen's origin preference<span class="cite"><code>substitute_breaks_preference</code> · validate.ts</span></li>
 						<li>A product under a recall notice<span class="cite"><code>recall</code> · tier.ts</span></li>
 						<li>An outside agent's order<span class="cite"><code>external_agent_needs_approval</code> · tier.ts · eval s5</span></li>
-						<li>A model's caution. A model can add a caution that holds a line, never one that allows it.<span class="cite"><code>CAUTION.model_*</code> · substitutes.ts</span></li>
+						<li>A model's caution. A model can add a caution that holds a line, and no caution can allow one.<span class="cite"><code>CAUTION.model_*</code> · substitutes.ts</span></li>
 					</ul>
 				</section>
 				<section class="oc no" aria-labelledby="g-no">
@@ -451,72 +374,294 @@ h3 { margin: 0; }
 						<li>Over the hard limit, even split across lines<span class="cite"><code>over_hard_limit</code> · ceiling.test.ts</span></li>
 						<li>After the ordering cut-off<span class="cite"><code>cutoff_passed</code> · cutoff.test.ts · eval r5-f9</span></li>
 						<li>A part pack, off Valio's lot step<span class="cite"><code>BELOW_LOT</code> · eval s3</span></li>
-						<li>On a request, a product that breaks a stated requirement, such as lactose-free<span class="cite"><code>requirement_unmet</code> · purchasing.test.ts</span></li>
+						<li>On a request, a product that breaks a stated requirement, such as lactose-free, even as a substitute<span class="cite"><code>requirement_unmet</code> · purchasing.test.ts</span></li>
 					</ul>
 				</section>
 			</div>
 			<div class="appr">
 				<span class="ico"><svg class="ic" aria-hidden="true"><use href="#i-hold"/></svg></span>
-				<p><b>A person approves, on the Kitchen screen, bound to the exact terms.</b> <span>Our agent and outside agents prepare, summarise and link the decision but never grant it: the chat refuses “approve it” and links to the approval in Kitchen, and the core refuses an approval granted by an outside agent. Any later edit voids the approval.</span></p>
+				<p><b>Only a person with a chef session approves, and only the exact terms.</b> <span>Our agent and outside agents prepare, summarise and link the decision. A link only finds the decision; the grant happens on the Kitchen screen or the chat's decision card. The core refuses an approval recorded by an outside agent, and any later edit voids the approval.</span></p>
 			</div>
 			<p class="src">Source: <code>core/mandate/tier.ts</code>, <code>core/mandate/validate.ts</code>, <code>core/state.ts</code>; held by <code>core/state.test.ts</code>, <code>server/store/{ceiling,cutoff,groups,purchasing}.test.ts</code> and evals s3, s4, s5.</p>
 		</section>
 
-		<section class="band" id="states" aria-labelledby="h-states">
-			<h2 id="h-states">The three state machines</h2>
-			<p class="sub">Plans, lines and approvals each move through a few fixed states. Any edit voids the approval, and an order is committed once.</p>
-			<p class="hint">Each diagram scrolls sideways.</p>
-			<div class="sm">
-				<div class="smc"><div class="svgw"><svg viewBox="0 0 540 190" id="smPlan" role="img" aria-label="Plan states: draft, quoted, ready or held, committed"></svg></div><div><h3>Plan</h3><p>Green is the usual path. Any edit sends the plan back to draft and clears its terms, so an earlier approval no longer applies.</p></div></div>
-				<div class="smc"><div class="svgw"><svg viewBox="0 0 540 190" id="smLine" role="img" aria-label="Line states: proposed, eligible, held, rejected, unorderable, committed"></svg></div><div><h3>Line</h3><p>A line inside the mandate is ordered without asking. Any other line waits for the chef with its reasons. A line below Valio's lot step can't be ordered at all.</p></div></div>
-				<div class="smc"><div class="svgw"><svg viewBox="0 0 540 190" id="smAppr" role="img" aria-label="Approval states: pending, granted, denied, invalidated, expired"></svg></div><div><h3>Approval</h3><p>An approval is tied to the plan version, the exact terms, the mandate version and an expiry. If any of them changes, the order is refused.</p></div></div>
-			</div>
-			<div class="smleg"><span><i style="border-color:var(--ok)"></i>usual path</span><span><i style="border-color:var(--auth);border-style:dashed"></i>waits for a person</span><span><i style="border-color:var(--out);border-style:dashed"></i>sends it back</span><span><i style="border-color:var(--out);border-width:2px"></i>final</span></div>
-			<p class="src">Source: <code>core/state.ts</code>, <code>core/contracts/plan.ts</code>; held by <code>core/state.test.ts</code> and <code>server/store/gate.test.ts</code>.</p>
+		<!-- The agent -->
+		<section class="band" id="agent" aria-labelledby="h-agent">
+			<p class="eyebrow">The agent</p>
+			<h2 id="h-agent">The agent prepares the order and leaves the approval to the chef</h2>
+			<p class="lead">It reads what the kitchen asks for, works in a few bounded steps, and stops at a decision the chef must make.</p>
+			<ul class="facts">
+				<li><span class="ico"><svg class="ic" aria-hidden="true"><use href="#i-steps"/></svg></span><b>Six kinds of ask, sorted by rules before any model</b><span class="d">A routine order, the seeded event, a shortage repair, a change to a need, a question about a plan, or something it doesn't do.</span><span class="cite">server/agent/intent.ts</span></li>
+				<li><span class="ico"><svg class="ic" aria-hidden="true"><use href="#i-clock"/></svg></span><b>At most 8 steps</b><span class="d">Each run has a step limit, a deadline and a cancel button.</span><span class="cite">server/agent/loop.ts · runs.ts</span></li>
+				<li><span class="ico"><svg class="ic" aria-hidden="true"><use href="#i-agent"/></svg></span><b>A scripted planner on the live app</b><span class="d">The steps follow a fixed script. A Gemini Flash-Lite planner exists as an opt-in and is off on the live app.</span><span class="cite"><code>AGENT_PLANNER=llm</code> · server/adapters/llm/router.ts</span></li>
+				<li><span class="ico"><svg class="ic" aria-hidden="true"><use href="#i-product"/></svg></span><b>Typed facts about each product</b><span class="d">The planner reads short, typed fields. A supplier's product text is data and can't give it instructions.</span><span class="cite">server/agent/facts.test.ts · adversarial.test.ts</span></li>
+				<li><span class="ico"><svg class="ic" aria-hidden="true"><use href="#i-ask"/></svg></span><b>One clarifying question</b><span class="d">When something it needs is missing, such as the day, it asks once and goes on. Its reply uses only numbers from the task's ledger.</span><span class="cite">server/chat/{question,explain}.ts</span></li>
+				<li class="never"><span class="ico"><svg class="ic" aria-hidden="true"><use href="#i-no"/></svg></span><b>It never approves</b><span class="d">“Approve it” in chat is refused, with a pointer to the decision for the chef.</span><span class="cite">server/chat/understand.ts · evals/chat · dock-approve.e2e.ts</span></li>
+			</ul>
+			<p class="note2"><b>Limits today:</b> in chat the agent plans only the seeded buffet, so a new event goes through the Request page; and a second item in the same message is dropped.</p>
 		</section>
 
-		<section class="band" id="further" aria-labelledby="h-further">
-			<h2 id="h-further">Further reading</h2>
-			<p class="sub">How the code is laid out, for anyone checking the claims above.</p>
-			<div class="fr">
-				<details id="map">
-					<summary><span><b>The system map</b><span>Five zones a call passes through, and the outside services behind ports.</span></span><svg class="ic chev" aria-hidden="true"><use href="#i-chev"/></svg></summary>
-					<div class="in">
-						<ol class="zones">
-							<li><span class="k">Doors</span><b>Five ways in</b><p>Kitchen, chat, the request page, MCP and REST all call the same list of tools.</p><span class="cite">routes/(kitchen) · server/chat · /mcp · /api/tools</span></li>
-							<li><span class="k">Gate</span><b>Who is calling, and may it?</b><p>The caller comes from its key or cookie, never the request body. Outside agents get no approve scope.</p><span class="cite">server/auth · server/tools/serve.ts</span></li>
-							<li class="dashed"><span class="k">Pure core</span><b>The rules, no I/O</b><p>Plain TypeScript decides: ranking, demand, mandate tiers, the terms hash.</p><span class="cite">core/state.ts · core/rank · core/mandate</span></li>
-							<li class="dashed"><span class="k">Locked</span><b>One transaction</b><p>Idempotency, a re-read of the approval, the caps and the write, in Postgres.</p><span class="cite">server/store · pg-race.test.ts</span></li>
-							<li><span class="k">Live</span><b>Every open screen updates</b><p>After the commit, never before it.</p><span class="cite">server/bus · /api/events</span></li>
+		<!-- Flows -->
+		<section class="band" id="flows" aria-labelledby="h-flows">
+			<p class="eyebrow">Five flows</p>
+			<h2 id="h-flows">Five ways an order moves through Mandate</h2>
+			<p class="lead">Each flow is a short list of steps with the code that runs it, and a case recorded from the live app where we have one.</p>
+
+			<div class="tabs">
+				<div class="tablist" role="tablist" aria-label="Flows">
+					<button class="tab" role="tab" id="t-item" aria-controls="p-item" aria-selected="true"><svg class="ic" aria-hidden="true"><use href="#i-product"/></svg>One item</button>
+					<button class="tab" role="tab" id="t-event" aria-controls="p-event" aria-selected="false" tabindex="-1"><svg class="ic" aria-hidden="true"><use href="#i-event"/></svg>Event to menu</button>
+					<button class="tab" role="tab" id="t-rescue" aria-controls="p-rescue" aria-selected="false" tabindex="-1"><svg class="ic" aria-hidden="true"><use href="#i-swap"/></svg>Out of stock</button>
+					<button class="tab" role="tab" id="t-outside" aria-controls="p-outside" aria-selected="false" tabindex="-1"><svg class="ic" aria-hidden="true"><use href="#i-agent"/></svg>Outside agent</button>
+					<button class="tab" role="tab" id="t-approval" aria-controls="p-approval" aria-selected="false" tabindex="-1"><svg class="ic" aria-hidden="true"><use href="#i-hold"/></svg>Approval</button>
+				</div>
+				<div class="panels">
+					<!-- One item -->
+					<section class="panel" id="p-item" role="tabpanel" aria-labelledby="t-item" tabindex="0">
+						<div class="hdr"><h3 class="ph">One item</h3><p>A request in plain words becomes one checked line, ordered alone or held for the chef.</p></div>
+						<ol class="steps">
+							<li><span>The words come in on the Request page or in chat, such as “10 l lactose-free milk for Friday”.<span class="cite">server/request/run.ts · /api/request</span></span></li>
+							<li><span>Sorted as a purchase, an event, or a dish with a count.<span class="cite">server/request/classify.ts</span></span></li>
+							<li><span>Read by rules first, then Gemini Flash-Lite. The reading is checked so no stated word is lost.<span class="cite">server/request/{parse,reading}.ts</span></span></li>
+							<li><span>The date is checked against the cut-off. A late date is named, and the next delivery day is offered.<span class="cite">server/request/dates.ts · evals/check.ts</span></span></li>
+							<li><span>A catalogue search makes a shortlist of up to 5 with reasons, drops products that contradict the request, and asks Valio live for the shortlist's prices and stock.<span class="cite">server/request/{lookup,checks}.ts · core/services/quote.ts</span></span></li>
+							<li><span>The amount becomes packs by printed content. Conflicting content holds the line.<span class="cite">server/request/convert.ts · core/demand/convert.ts</span></span></li>
+							<li><span>A size check against the kitchen's own numbers.<span class="cite">server/request/sanity.ts</span></span></li>
+							<li><span>The mandate decides: ordered alone, or held for approval.<span class="cite">core/services/orders.ts · core/mandate/tier.ts</span></span></li>
 						</ol>
-						<table class="ports">
-							<caption>Ports: called before the lock is taken, each with a fallback</caption>
-							<thead><tr><th scope="col">Port</th><th scope="col">Uses</th><th scope="col">Falls back to</th></tr></thead>
-							<tbody>
-								<tr><th scope="row">LLM</th><td>Gemini reads requests and plans agent steps, and proposes menus; every call sets a token ceiling</td><td class="f">a recorded fixture</td></tr>
-								<tr><th scope="row">Decide</th><td>Gemini Decisions ranks substitutes as one input to the kitchen's ranking; it never approves</td><td class="f">replay, then rules</td></tr>
-								<tr><th scope="row">Catalog</th><td>Valio's catalogue, and live price and availability for quoted products</td><td class="f">the cached figure, with its age</td></tr>
-								<tr><th scope="row">Web</th><td>Exa for cited product facts; Context.dev checks Ruokavirasto's recall list every 5 minutes</td><td class="f">a fixture, under daily caps</td></tr>
-								<tr><th scope="row">Simulator</th><td>Scenario stock for each visitor's sandbox; the order is a local simulated commitment</td><td class="f">the sandbox overlay</td></tr>
-							</tbody>
-						</table>
-					</div>
-				</details>
-				<details id="choices">
-					<summary><span><b>Design choices</b><span>Six rules that keep the agent honest, each in code you can read.</span></span><svg class="ic chev" aria-hidden="true"><use href="#i-chev"/></svg></summary>
-					<div class="in">
-						<div class="pr">
-							<div><b>Pure core, ports at the edge</b><span><code>src/lib/core</code> imports no Svelte, Node built-ins, vendor SDKs or server code. Lint enforces it.</span></div>
-							<div><b>One function changes state</b><span><code>applyOps</code> handles 9 op types. Each op is logged with a sequence number, its caller and the door it came through.</span></div>
-							<div><b>Approval is a hash</b><span><code>termsHash</code> covers the delivery date and the sorted lines. If a price changes after approval, the hash differs and the order is refused.</span></div>
-							<div><b>No lock across a network call</b><span>Valio, Gemini and web calls finish before the transaction starts. The lock covers only the checks and the write.</span></div>
-							<div><b>Every flow has a fixture</b><span>The merge gate runs with <code>LLM_PROVIDER=fixture</code>: type check, lint, unit tests and evals through the real handlers on PGlite.</span></div>
-							<div><b>Fixed words</b><span>“Supplier confirmed” is used only when a receipt backs it. Before that a line is planned, or ordered and awaiting the supplier.</span></div>
+						<div class="side">
+							<div class="ex" data-case="within-mandate" hidden></div>
+							<div class="ex" data-case="lactose-free" hidden></div>
+							<p class="live"><a href="https://app.mandate.kitchen/request">Try it: Request <svg class="ic" aria-hidden="true"><use href="#i-out"/></svg></a></p>
 						</div>
-					</div>
-				</details>
+					</section>
+
+					<!-- Event to menu -->
+					<section class="panel" id="p-event" role="tabpanel" aria-labelledby="t-event" tabindex="0">
+						<div class="hdr"><h3 class="ph">Event to menu</h3><p>An event brief becomes a menu the chef accepts, then needs, then whole packs.</p></div>
+						<ol class="steps">
+							<li><span>A brief in words, such as a Christmas dinner for 50, and questions one at a time as chips: guests, date, diet, budget. Rules read the brief's guests, date and requirements, with no model call; Gemini Flash-Lite reads product requests.<span class="cite">server/menu/brief.ts</span></span></li>
+							<li><span>Gemini 3.8 Flash proposes a menu. Every amount is labelled an estimate; without the model, the team's dish templates stand in.<span class="cite">server/menu/{proposal,rubric}.ts</span></span></li>
+							<li><span>The chef edits amounts and accepts the menu. Nothing is planned before that.<span class="cite">server/menu/flow.ts · MenuReview.svelte</span></span></li>
+							<li><span>Each ingredient becomes a need: guests × amount per guest ÷ yield, with no model.<span class="cite">core/demand/menu.ts · core/services/events.ts</span></span></li>
+							<li><span>Each need is quoted and checked against the mandate; a product that's out goes to the out-of-stock flow.<span class="cite">core/services/{quote,substitutes}.ts</span></span></li>
+							<li><span>Changing the grams per guest recomputes the line in the same call and voids any approval.<span class="cite">core/services/events.ts · edit_line</span></span></li>
+							<li><span>One decision per reason group, then the order and its receipt.<span class="cite">ApprovalPanel.svelte · core/services/orders.ts</span></span></li>
+						</ol>
+						<div class="side">
+							<div class="ex" data-chain hidden></div>
+							<p class="limit">We don't yet claim the right product for every menu dish: each line is shown to the chef for review.</p>
+							<p class="live"><a href="https://app.mandate.kitchen/request">Try it: Request <svg class="ic" aria-hidden="true"><use href="#i-out"/></svg></a><a href="https://app.mandate.kitchen/">The buffet in the Kitchen <svg class="ic" aria-hidden="true"><use href="#i-out"/></svg></a></p>
+						</div>
+					</section>
+
+					<!-- Out of stock -->
+					<section class="panel" id="p-rescue" role="tabpanel" aria-labelledby="t-rescue" tabindex="0">
+						<div class="hdr"><h3 class="ph">Out of stock</h3><p>When Valio is out, the agent finds and sizes substitutes, ranks them by the kitchen's rules, and holds anything new for the chef.</p></div>
+						<ol class="steps">
+							<li><span>A line is quoted out of stock, undeliverable or unknown, each in its own words.<span class="cite">core/services/wording.ts</span></span></li>
+							<li><span>Candidates come from Valio's own substitution rules, then the scenario's hand-checked rescues, then same-category products found by name.<span class="cite">core/services/substitutes.ts · catalog/retrieval.ts</span></span></li>
+							<li><span>Each candidate is sized to the same need.<span class="cite">core/demand/sizing.ts</span></span></li>
+							<li><span>Requirements rule candidates out, each with its reason. Known stock ranks first, then the kitchen's preferences. Gemini Decisions ranks substitutes as one input to the kitchen's ranking; it never approves.<span class="cite">core/rank/rank.ts · server/adapters/decide</span></span></li>
+							<li><span>Making it in house is an option when every ingredient can be ordered.<span class="cite">core/services/substitutes.ts · D8a</span></span></li>
+							<li><span>A new product, an allergen change or a broken preference holds the line for the chef.<span class="cite">RescueCompare.svelte · core/mandate/tier.ts</span></span></li>
+							<li><span>If another kitchen takes the stock, the rest is sized to the next candidate and the approval is voided. <span class="lim">Tested, simulated.</span><span class="cite">core/services/contention.ts</span></span></li>
+							<li><span>Still nothing: options outside the catalogue, for information only. They are never ordered.<span class="cite">server/chat/outside.ts · server/web/lookup.ts</span></span></li>
+						</ol>
+						<div class="side">
+							<div class="ex" data-case="out-of-stock" hidden></div>
+							<p class="live"><a href="https://app.mandate.kitchen/">Try it: Kitchen <svg class="ic" aria-hidden="true"><use href="#i-out"/></svg></a></p>
+						</div>
+					</section>
+
+					<!-- Outside agent -->
+					<section class="panel" id="p-outside" role="tabpanel" aria-labelledby="t-outside" tabindex="0">
+						<div class="hdr"><h3 class="ph">Outside agent</h3><p>Your own agent connects over MCP or REST, uses the same tools through the same checks, and every line it orders waits for the chef.</p></div>
+						<ol class="steps">
+							<li><span>On the Agents page each visitor gets their own key and MCP address, working only in their own sandbox.<span class="cite">routes/agents · /api/demo/judge-key</span></span></li>
+							<li><span>The agent reads its context first: who it is, what it may do, the kitchens, mandates and open plans.<span class="cite">server/agent/get-context.ts</span></span></li>
+							<li><span>It searches, quotes, then places an order or plans an event. An unknown product is refused before any call to Valio.<span class="cite">server/tools/{serve,handlers}.ts</span></span></li>
+							<li><span>Its lines are always held. The result carries a summary, the next action and a link to the decision.<span class="cite">server/tools/present.ts · core/mandate/tier.ts</span></span></li>
+							<li><span>If it tries to approve or change the mandate, it gets 403 and Ops logs the refusal.<span class="cite">server/tools/refusals.ts</span></span></li>
+							<li><span>The chef approves in the Kitchen, and the agent reads the receipt.<span class="cite">server/tasks/outcome.ts</span></span></li>
+						</ol>
+						<div class="side">
+							<div class="ex" data-case="agent-cannot-approve" hidden></div>
+							<p class="note2">Each key is metered: 120 calls, 30 writes and 20 quotes a minute.<span class="cite">server/tools/key-limits.ts</span></p>
+							<p class="live"><a href="https://app.mandate.kitchen/agents">Connect yours: Agents <svg class="ic" aria-hidden="true"><use href="#i-out"/></svg></a></p>
+						</div>
+					</section>
+
+					<!-- Approval -->
+					<section class="panel" id="p-approval" role="tabpanel" aria-labelledby="t-approval" tabindex="0">
+						<div class="hdr"><h3 class="ph">Approval</h3><p>The chef approves exact terms. Any edit voids the approval, and the order is checked again before it's placed.</p></div>
+						<ol class="steps">
+							<li><span>Held lines are grouped by reason, and the chef decides one group at a time, so an allergen change never rides with routine lines.<span class="cite">core/services/orders.ts · groups.test.ts</span></span></li>
+							<li><span>Press and hold to confirm the exact terms, in the Kitchen or on the chat's decision card.<span class="cite">HoldButton.svelte · DecisionCard.svelte</span></span></li>
+							<li><span>The approval is bound to the plan version, the terms, the mandate version and an expiry.<span class="cite">core/hash.ts · core/state.ts</span></span></li>
+							<li><span>Any edit or substitute sends the plan back to draft and voids the approval, and the plan shows what changed. <span class="lim">Tested; in the app's screens, not yet checked on the live app.</span><span class="cite">core/state.ts · eval r6-5</span></span></li>
+							<li><span>The order re-checks everything under a lock: version, terms, mandate, expiry, cut-off, caps. Any mismatch is refused.<span class="cite">core/services/orders.ts · eval s4</span></span></li>
+							<li><span>One receipt, however many times the order is sent.<span class="cite">evals s1, s5 · pg-race.test.ts · smoke-race</span></span></li>
+						</ol>
+						<div class="side">
+							<div class="ex" data-case="one-receipt" hidden></div>
+							<p class="live"><a href="https://app.mandate.kitchen/">Approve and order: Kitchen <svg class="ic" aria-hidden="true"><use href="#i-out"/></svg></a></p>
+						</div>
+					</section>
+				</div>
 			</div>
-			<p class="more">Which partner sits behind each port, and what happens when one is down: <a href="/story#partners">the partners on the story page</a>.</p>
+		</section>
+
+		<!-- Trust -->
+		<section class="band" id="trust" aria-labelledby="h-trust">
+			<p class="eyebrow">Checks behind each claim</p>
+			<h2 id="h-trust">Every claim has a mechanism and a test you can run</h2>
+			<p class="lead">Each row says what we claim, how the code makes it true, and the test that fails if it stops being true.</p>
+			<table class="tbl">
+				<thead><tr><th scope="col">Claim</th><th scope="col">How</th><th scope="col">Test</th></tr></thead>
+				<tbody>
+					<tr><th scope="row">Every caller passes the same checks</th><td data-h="How">One gate: known tool, scope, checked input. The caller comes from its key or cookie.</td><td class="t" data-h="Test">adversarial.test.ts · eval s5 · visitor-gate.e2e.ts</td></tr>
+					<tr><th scope="row">Every change goes through one function and is logged</th><td data-h="How"><code>applyOps</code> over 9 op types, each with a sequence number, who acted and the door it came through.</td><td class="t" data-h="Test">core/state.test.ts</td></tr>
+					<tr><th scope="row">The rules are plain code you can read</th><td data-h="How">The core imports no Svelte, Node, vendor SDK or server code; lint enforces it.</td><td class="t" data-h="Test">eslint rule on <code>src/lib/core</code></td></tr>
+					<tr><th scope="row">A slow API can't block or corrupt an order</th><td data-h="How">Valio, Gemini and web calls finish before the transaction starts.</td><td class="t" data-h="Test">server/store/prepare.test.ts</td></tr>
+					<tr><th scope="row">The same order sent many times gives one receipt</th><td data-h="How">A key per sandbox, caller and tool, with a hash of the request.</td><td class="t" data-h="Test">evals s1, s5 · pg-race.test.ts · smoke-race on the live app</td></tr>
+					<tr><th scope="row">A yes covers the exact price, quantity and date</th><td data-h="How">Terms hash, plan version, mandate version and expiry; the order re-checks them.</td><td class="t" data-h="Test">gate.test.ts · view.test.ts · eval s4</td></tr>
+					<tr><th scope="row">A voided approval shows what changed</th><td data-h="How">The plan keeps the difference from the terms that were approved.</td><td class="t" data-h="Test">eval r6-5</td></tr>
+					<tr><th scope="row">An allergen change never rides with routine lines</th><td data-h="How">One approval per reason group; the rest is re-bound.</td><td class="t" data-h="Test">server/store/groups.test.ts</td></tr>
+					<tr><th scope="row">Unknown supply never counts as cover</th><td data-h="How">Valio's “no quantity” figure is unknown supply, and known stock ranks first.</td><td class="t" data-h="Test">fulfilment.test.ts · pool.test.ts</td></tr>
+					<tr><th scope="row">Every ordered line names what allowed it</th><td data-h="How">The mandate or a named approval. An outside agent's line always needs the approval.</td><td class="t" data-h="Test">server/store/authority.test.ts</td></tr>
+					<tr><th scope="row">A model's caution can only add a hold</th><td data-h="How">Model cautions are reasons that hold a line.</td><td class="t" data-h="Test">core/services/substitutes.ts</td></tr>
+					<tr><th scope="row">Product text can't steer the agent</th><td data-h="How">The planner gets typed, length-bounded facts.</td><td class="t" data-h="Test">facts.test.ts · adversarial.test.ts</td></tr>
+					<tr><th scope="row">The chat never approves</th><td data-h="How">A rules guard refuses “approve it”.</td><td class="t" data-h="Test">evals/chat · dock-approve.e2e.ts</td></tr>
+					<tr><th scope="row">Amounts stay physical</th><td data-h="How">10 l of milk is sized in litres, then in packs.</td><td class="t" data-h="Test">server/store/direct.test.ts</td></tr>
+					<tr><th scope="row">A stated requirement survives</th><td data-h="How">A vegetarian or lactose-free need keeps its requirement through substitutes and edits.</td><td class="t" data-h="Test">vegetarian.test.ts · request/fixes.test.ts</td></tr>
+					<tr><th scope="row">Each visitor's world is their own</th><td data-h="How">A signed cookie per visitor and keys that work only in that sandbox.</td><td class="t" data-h="Test">server/demo/{visitor,judge-key,sandbox}.test.ts</td></tr>
+					<tr><th scope="row">The same words give the same basket</th><td data-h="How">For the cases we test, in English and Finnish, through Request, the agent and REST. Chat reads words with its own model.</td><td class="t" data-h="Test">evals/fidelity · evals/paraphrase</td></tr>
+				</tbody>
+			</table>
+			<p class="more">Each claim checked on the live app, with where it was seen: <a href="/proof">Proof</a>.</p>
+
+			<div class="sm">
+				<h3>The three state machines</h3>
+				<p class="hint">Each diagram scrolls sideways.</p>
+				<div class="smc"><div class="svgw"><svg viewBox="0 0 540 190" id="smPlan" role="img" aria-label="Plan states: draft, quoted, ready or held, committed"></svg></div><div><h4>Plan</h4><p>Green is the usual path. Any edit sends the plan back to draft and clears its terms, so an earlier approval no longer applies.</p></div></div>
+				<div class="smc"><div class="svgw"><svg viewBox="0 0 540 190" id="smLine" role="img" aria-label="Line states: proposed, eligible, held, rejected, unorderable, committed"></svg></div><div><h4>Line</h4><p>A line inside the mandate is ordered without asking. Any other line waits for the chef with its reasons. A line below Valio's lot step can't be ordered at all.</p></div></div>
+				<div class="smc"><div class="svgw"><svg viewBox="0 0 540 190" id="smAppr" role="img" aria-label="Approval states: pending, granted, denied, invalidated, expired"></svg></div><div><h4>Approval</h4><p>An approval is tied to the plan version, the exact terms, the mandate version and an expiry. If any of them changes, the order is refused.</p></div></div>
+				<div class="smleg"><span><i style="border-color:var(--ok)"></i>usual path</span><span><i style="border-color:var(--auth);border-style:dashed"></i>waits for a person</span><span><i style="border-color:var(--out);border-style:dashed"></i>sends it back</span><span><i style="border-color:var(--out);border-width:2px"></i>final</span></div>
+				<p class="src">Source: <code>core/state.ts</code>, <code>core/contracts/plan.ts</code>; held by <code>core/state.test.ts</code> and <code>server/store/gate.test.ts</code>.</p>
+			</div>
+		</section>
+
+		<!-- What Valio sees -->
+		<section class="band" id="ops" aria-labelledby="h-ops">
+			<p class="eyebrow">What Valio sees</p>
+			<h2 id="h-ops">Valio's control room shows every held line, by cause, across kitchens</h2>
+			<p class="lead">Ops reads the same records the kitchens write, so Valio sees why a line is waiting and can open the exact kitchen plan.</p>
+			<div class="cards c3">
+				<div class="card"><div class="hd"><svg class="ic" aria-hidden="true"><use href="#i-hold"/></svg><h3>Problems</h3></div><p>Held lines and recall cases grouped by cause, biggest first, each with what happened.</p><span class="cite">routes/ops/ProblemCard.svelte · core/services/cause.ts</span></div>
+				<div class="card"><div class="hd"><svg class="ic" aria-hidden="true"><use href="#i-order"/></svg><h3>Orders</h3></div><p>Each order in four stages read from the op log: what was asked, what was proposed and why, who signed, what was ordered.</p><span class="cite">routes/ops/OrdersTab.svelte · core/services/stages.ts</span></div>
+				<div class="card"><div class="hd"><svg class="ic" aria-hidden="true"><use href="#i-event"/></svg><h3>Demand</h3></div><p>Per delivery day and product, across kitchens: ordered, signed, still proposed.</p><span class="cite">routes/ops/DemandTab.svelte</span></div>
+				<div class="card"><div class="hd"><svg class="ic" aria-hidden="true"><use href="#i-kitchen"/></svg><h3>Queue and wallboard</h3></div><p>Cases per kitchen, each linking to the exact plan in the Kitchen.</p><span class="cite">routes/ops/{Queue,CaseTicket}.svelte</span></div>
+				<div class="card"><div class="hd"><svg class="ic" aria-hidden="true"><use href="#i-eye"/></svg><h3>Engine room</h3></div><p>With System on: the agent's run, traces, the checks a run passed, the op timeline and the outside services' status.</p><span class="cite">routes/ops/{RunGraph,TraceDrawer,GatePanel,OpTimeline,ServiceStatus}.svelte</span></div>
+				<div class="card"><div class="hd"><svg class="ic" aria-hidden="true"><use href="#i-flask"/></svg><h3>Simulated run</h3></div><p>A scripted run across the demo kitchens, labelled simulated: real products, invented quantities.</p><span class="cite">server/bus/synthetic.ts</span></div>
+			</div>
+			<div class="card oplog">
+				<h3>The op log: 9 kinds of change, nothing else</h3>
+				<p>Every entry has a sequence number, who acted and the door it came through. Open screens update from it after each commit.</p>
+				<ol aria-label="The nine kinds of change">
+					<li>Plan created</li><li>Line edited</li><li>Offer recorded</li><li>Substitute proposed</li><li>Approval recorded</li><li>Order placed</li><li>Incident recorded</li><li>Web finding recorded</li><li>Refusal recorded</li>
+				</ol>
+				<span class="cite">core/contracts/ops.ts · server/bus/{pg,memory,ordered}.ts · /api/events</span>
+			</div>
+			<p class="note2"><b>On main, not yet live:</b> Ops naming the Kitchen page and the agent dock as the doors a change came through, and the typed reason for each line that can't be ordered.</p>
+			<p class="live" style="margin-top:18px"><a href="https://app.mandate.kitchen/ops">Open Ops <svg class="ic" aria-hidden="true"><use href="#i-out"/></svg></a></p>
+		</section>
+
+		<!-- Partners -->
+		<section class="band" id="partners" aria-labelledby="h-partners">
+			<p class="eyebrow">Partners and fallbacks</p>
+			<h2 id="h-partners">Each partner does one job, and each has a fallback</h2>
+			<p class="lead">Every outside service sits behind a port, so a dead API or Wi-Fi drops to a fallback that the screen labels.</p>
+			<table class="tbl">
+				<thead><tr><th scope="col">Partner</th><th scope="col">Job</th><th scope="col">Fallback</th><th scope="col">Status</th></tr></thead>
+				<tbody>
+					<tr><th scope="row">Valio Aimo</th><td data-h="Job">The catalogue of 17,546 products; live price and availability for shortlisted products only, at most 200 per call, availability fetched again after 15 minutes.</td><td data-h="Fallback">The cached offer, labelled with its age; the file catalogue; scenario stock.</td><td><span class="st live">Seen live</span></td></tr>
+					<tr><th scope="row">Gemini 3.5 Flash-Lite</th><td data-h="Job">Reads product requests and chat messages, and writes the chat's reply from the ledger. The agent planner job is opt-in and off on the live app.</td><td data-h="Fallback">The rules parser, the rules classifier, the ledger's own text.</td><td><span class="st live">Seen live</span></td></tr>
+					<tr><th scope="row">Gemini 3.8 Flash</th><td data-h="Job">Proposes a menu from a brief; every amount is an estimate.</td><td data-h="Fallback">The team's dish templates.</td><td><span class="st live">Seen live</span></td></tr>
+					<tr><th scope="row">Gemini Decisions</th><td data-h="Job">Ranks substitutes as one input to the kitchen's ranking; it never approves.</td><td data-h="Fallback">A recorded replay, then rules.</td><td><span class="st test">Tested, one live call</span></td></tr>
+					<tr><th scope="row">Aiven</th><td data-h="Job">Runs the app as one container; Postgres holds every table and pushes live updates to Ops.</td><td data-h="Fallback">PGlite with the same migrations, for tests and offline.</td><td><span class="st live">Seen live</span></td></tr>
+					<tr><th scope="row">Exa</th><td data-h="Job">Cited product facts in the Why drawer: net content, origin, ingredients. Options outside the catalogue.</td><td data-h="Fallback">Recorded responses, under daily caps.</td><td><span class="st live">Seen live, Why drawer</span></td></tr>
+					<tr><th scope="row">Context.dev</th><td data-h="Job">Checks the recall list every 5 minutes and matches each notice against the catalogue. A matching product's line is held.</td><td data-h="Fallback">Recorded notices; a drill, labelled as one.</td><td><span class="st live">Seen live, no real recall matched</span></td></tr>
+					<tr class="dim"><th scope="row">Featherless (Gemma)</th><td data-h="Job">An optional open-model provider in the router. No job uses it.</td><td data-h="Fallback">Not needed.</td><td><span class="st off">Optional, unused</span></td></tr>
+					<tr class="dim"><th scope="row">NVIDIA Nemotron VL on Verda</th><td data-h="Job">Reading a photo of a prep list or delivery note.</td><td data-h="Fallback">The tool stays hidden until it is switched on.</td><td><span class="st wired">Wired, not live</span></td></tr>
+				</tbody>
+			</table>
+			<p class="note2">Every web call goes through a response cache, daily caps per key and per instance, and a breaker. LLM calls log their model, tokens and latency; only some sponsor calls reach the Ops trace drawer so far.<span class="cite">server/external/{call,ledger,breaker}.ts · server/adapters/llm/trace.ts</span></p>
+		</section>
+
+		<!-- Built / simulated / planned -->
+		<section class="band" id="status" aria-labelledby="h-status">
+			<p class="eyebrow">Built, simulated, planned</p>
+			<h2 id="h-status">What is real today, what is simulated, and what is next</h2>
+			<p class="lead">Everything on this page falls in one of three columns, and the app labels the simulated parts on screen.</p>
+			<div class="status">
+				<div class="col">
+					<h3><span class="ico ok"><svg class="ic" aria-hidden="true"><use href="#i-go"/></svg></span>Built</h3>
+					<p>In the code, with how far we've checked it.</p>
+					<h4><span class="st live">Seen on the live app</span></h4>
+					<ul>
+						<li>Approve, order and one receipt in the Kitchen</li>
+						<li>The same order sent 4 times with one key: one receipt</li>
+						<li>An outside agent's approve refused with 403</li>
+						<li>A menu from a brief, then a plan, on Request</li>
+						<li>Chat: a held line and a decision card; “approve it” refused</li>
+						<li>The Why drawer with cited web facts</li>
+						<li>Recall cases in Ops; no real recall has matched an order</li>
+						<li>A late date caught on Request, the next day offered</li>
+					</ul>
+					<h4><span class="st test">Tested, not yet seen live</span></h4>
+					<ul>
+						<li>Approval bound to terms, hard limit, caps when split, lot step, unknown supply never cover, per-line authority, reason groups, cut-off at commit, rescue resize, vegetarian kept</li>
+						<li>An outside agent's stale order refused over MCP</li>
+						<li>Gemini Decisions in the ranking</li>
+						<li>Re-rescue when another kitchen takes the stock</li>
+					</ul>
+					<h4><span class="st wired">Wired, to rehearse before we claim it</span></h4>
+					<ul>
+						<li>Void-on-edit in the app's screens, rank presets and the ranked rescue on the live app</li>
+						<li>Usual orders, from a simulated history, with no week view yet</li>
+						<li>Every sponsor call in the trace drawer: some are there</li>
+						<li>A review step, switched off</li>
+						<li>Reading a photo (Nemotron); Featherless as a provider</li>
+					</ul>
+				</div>
+				<div class="col sim">
+					<h3><span class="ico auth"><svg class="ic" aria-hidden="true"><use href="#i-flask"/></svg></span>Simulated</h3>
+					<p>Stand-ins, each labelled in the app.</p>
+					<ul>
+						<li><b>Every order</b> is a local simulated commitment</li>
+						<li><b>The seven kitchens</b> are fictional</li>
+						<li><b>The scenario:</b> the booking, stock on hand, recipes and the December clock</li>
+						<li><b>Team estimates:</b> the normal week and the mandate amounts</li>
+						<li><b>Simulated events:</b> the salmon contention, shifted cut-offs and the Ops simulated run</li>
+						<li><b>Usual orders</b> come from a simulated history</li>
+					</ul>
+				</div>
+				<div class="col plan">
+					<h3><span class="ico"><svg class="ic" aria-hidden="true"><use href="#i-pin"/></svg></span>Planned</h3>
+					<p>Decided or written down, and not built yet.</p>
+					<ul>
+						<li>New events planned from chat</li>
+						<li>A place picker, a chat-first home and one request page (D15)</li>
+						<li>One evaluator for every hard requirement (D16)</li>
+						<li>Lines bound to their need, with one command key in the core (D18, partly landed)</li>
+						<li>Hybrid retrieval (D19, held): search today matches names</li>
+						<li>Ops numbers per cause</li>
+						<li>The right product for every menu dish</li>
+						<li>Streaming the op log out, margin-aware suggestions, Exa monitors</li>
+					</ul>
+				</div>
+			</div>
 		</section>
 	</main>
 
@@ -530,7 +675,35 @@ h3 { margin: 0; }
 (() => {
 	const NS = 'http://www.w3.org/2000/svg';
 
-	// State machines, drawn with the page's colour tokens so they follow the light and dark schemes.
+	// Flows as tabs. Without this script every panel shows, each under its own heading.
+	const list = document.querySelector('.tablist');
+	if (list) {
+		document.documentElement.classList.add('js');
+		const tabs = [...list.querySelectorAll('[role="tab"]')];
+		const select = (tab, focus) => {
+			for (const t of tabs) {
+				const on = t === tab;
+				t.setAttribute('aria-selected', String(on));
+				t.tabIndex = on ? 0 : -1;
+				document.getElementById(t.getAttribute('aria-controls')).hidden = !on;
+			}
+			if (focus) tab.focus();
+		};
+		tabs.forEach((t, i) => {
+			t.addEventListener('click', () => select(t, false));
+			t.addEventListener('keydown', (e) => {
+				const n = tabs.length;
+				const to = { ArrowRight: (i + 1) % n, ArrowLeft: (i - 1 + n) % n, Home: 0, End: n - 1 }[e.key];
+				if (to == null) return;
+				e.preventDefault();
+				select(tabs[to], true);
+			});
+		});
+		const fromHash = tabs.find((t) => '#' + t.getAttribute('aria-controls') === location.hash);
+		select(fromHash || tabs[0], false);
+	}
+
+	// State machines, drawn with the page's colour tokens.
 	const TONE = {
 		start: ['var(--well)', 'var(--rule-strong)'],
 		happy: ['var(--ok-wash)', 'var(--ok)'],
@@ -573,42 +746,74 @@ h3 { margin: 0; }
 		[['p', 'g', 'chef approves', 'happy'], ['p', 'd', 'chef declines', 'plain', 0, [50, 10]], ['g', 'i', 'any edit', 'back', 0, [-34, 6]], ['g', 'x', 'time runs out', 'plain', 0, [52, 4]]]);
 	ga('text', { x: 300, y: 59, style: 'fill:var(--ok)', 'font-size': 12, 'font-family': 'IBM Plex Sans' }).textContent = '→ these exact terms may be ordered';
 
-	// Recorded examples: /cases.json may carry a `chain` recorded from the app. Without it the sections stand alone.
+	// Recorded cases from /cases.json. Without the file every flow still reads on its own.
 	const ICON = { held: 'i-hold', within: 'i-shield', refused: 'i-no', caught: 'i-clock', ordered: 'i-order' };
-	// The recorder's decision kinds, mapped onto the landing's chip states.
+	const WORD = { held: 'Held', within: 'Goes through', refused: 'Refused', caught: 'Caught', ordered: 'Ordered' };
 	const KIND = { rule: 'within', signoff: 'held', unknown: 'held' };
 	const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
 	const use = (id) => { const s = document.createElementNS(NS, 'svg'); s.setAttribute('class', 'ic'); s.setAttribute('aria-hidden', 'true'); const u = document.createElementNS(NS, 'use'); u.setAttribute('href', '#' + id); s.append(u); return s; };
+	const chip = (state, text) => { const k = ICON[state] ? state : 'within'; const c = el('span', `chip ${k}`); c.append(use(ICON[k]), document.createTextNode(text || WORD[k])); return c; };
+	const day = (iso) => { const d = new Date(iso); return isNaN(d) ? '' : d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'Europe/Helsinki' }); };
+	const stamp = (iso) => { const d = day(iso); return 'Recorded from the app' + (d ? ` on ${d}` : '') + '.'; };
+	const eur = (n) => (typeof n === 'number' ? new Intl.NumberFormat('en-IE', { style: 'currency', currency: 'EUR' }).format(n) : '');
+
+	function renderCase(box, c) {
+		box.replaceChildren(el('p', 'label', 'Recorded case'));
+		if (c.request) box.append(el(c.ask ? 'span' : 'b', c.ask ? 'ask' : null, c.ask ? `“${c.request}”` : c.request));
+		if (Array.isArray(c.steps) && c.steps.length) {
+			const ol = el('ol');
+			for (const s of c.steps) if (s && s.text) ol.append(el('li', null, s.text));
+			box.append(ol);
+		}
+		if (c.outcome) {
+			const row = el('div', 'out');
+			row.append(chip(c.outcome.state, c.outcome.label));
+			const v = eur(c.outcome.eur);
+			if (v) row.append(el('span', 'eur', v));
+			box.append(row);
+		}
+		box.append(el('small', null, stamp(c.recordedAt)));
+		box.hidden = false;
+	}
+
+	function renderChain(box, chain) {
+		box.replaceChildren(el('p', 'label', 'Recorded case: one line from kitchen to order'));
+		const dl = el('dl');
+		for (const s of chain.steps) {
+			if (!s || typeof s.key !== 'string') continue;
+			const row = el('div');
+			row.append(el('dt', null, s.key));
+			const dd = el('dd');
+			if (s.value != null && s.value !== '') dd.append(el('b', null, String(s.value)));
+			if (s.text) dd.append(document.createTextNode(s.text));
+			if (s.decides && s.decides.text) { dd.append(el('br')); dd.append(chip(KIND[s.decides.kind] || s.decides.kind, s.decides.text)); }
+			row.append(dd);
+			dl.append(row);
+		}
+		box.append(dl, el('small', null, stamp(chain.recordedAt)));
+		box.hidden = false;
+	}
+
 	fetch('/cases.json', { cache: 'no-cache' })
 		.then((r) => (r.ok ? r.json() : null))
 		.then((data) => {
-			const chain = data && data.chain;
-			if (!chain || !Array.isArray(chain.steps)) return;
-			const when = new Date(chain.recordedAt);
-			const day = isNaN(when) ? '' : when.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'Europe/Helsinki' });
-			const commit = chain.appCommit ? String(chain.appCommit).slice(0, 7) : '';
-			const stamp = 'Recorded from the app' + (day ? ` on ${day}` : '') + (commit ? `, version ${commit}` : '') + '.';
-			for (const s of chain.steps) {
-				if (!s || typeof s.key !== 'string') continue;
-				const box = document.querySelector(`.ex[data-step="${CSS.escape(s.key)}"]`);
-				if (!box) continue;
-				box.replaceChildren(el('p', 'label', 'Recorded example'));
-				if (s.title) box.append(el('b', null, s.title));
-				if (s.value != null && s.value !== '') box.append(el('span', 'val', String(s.value)));
-				if (s.text) box.append(el('p', null, s.text));
-				if (s.decides && s.decides.text) {
-					const k = KIND[s.decides.kind] || s.decides.kind;
-					const kind = ICON[k] ? k : 'within';
-					const row = el('div', 'dec');
-					const chip = el('span', `chip ${kind}`);
-					chip.append(use(ICON[kind]), document.createTextNode({ held: 'Held', within: 'Goes through', refused: 'Refused', caught: 'Caught', ordered: 'Ordered' }[kind]));
-					row.append(chip, el('span', null, s.decides.text));
-					box.append(row);
+			if (!data) return;
+			const byId = {};
+			for (const c of data.cases || []) if (c && c.id) byId[c.id] = c;
+			for (const box of document.querySelectorAll('.ex[data-case]')) {
+				const c = byId[box.dataset.case];
+				if (c) renderCase(box, c);
+			}
+			const chain = data.chain;
+			if (chain && Array.isArray(chain.steps)) {
+				const box = document.querySelector('.ex[data-chain]');
+				if (box) renderChain(box, chain);
+				const k = chain.steps.find((s) => s && s.key === 'kitchen');
+				const rec = document.querySelector('[data-kitchen-rec]');
+				if (k && rec && k.value && k.text) {
+					rec.replaceChildren(el('b', null, String(k.value)), document.createTextNode(': ' + k.text), el('small', null, stamp(chain.recordedAt)));
+					rec.hidden = false;
 				}
-				box.append(el('small', null, stamp));
-				box.hidden = false;
-				const g = document.querySelector(`.chain [data-g="${CSS.escape(s.key)}"]`);
-				if (g && s.value != null && s.value !== '') { g.textContent = String(s.value); g.classList.add('rec'); }
 			}
 		})
 		.catch(() => {});
