@@ -320,7 +320,7 @@ section.s:last-of-type { padding-bottom: 120px; }
 <!-- 1 · Bring an event or one item -->
 <section class="hero" id="hero" aria-labelledby="h-hero">
 	<div>
-		<h1 id="h-hero">Tell it what you're cooking. <span class="dim">It orders only what you'd sign.</span></h1>
+		<h1 id="h-hero">Tell it what you're cooking. <span class="dim">It orders on its own only inside the limits you set.</span></h1>
 		<p class="lede">It drafts the menu when you need one, finds each product in Valio Aimo's catalogue and orders on its own only within the limits the chef sets. Anything else waits for the chef, with the reason.</p>
 		<div class="ctas">
 			<a class="btn primary" href="https://app.mandate.kitchen/request">Try a request</a>
@@ -390,7 +390,7 @@ section.s:last-of-type { padding-bottom: 120px; }
 <!-- 3 · Ask, plan, decide -->
 <section class="s" id="flow" aria-labelledby="h-flow">
 	<div class="head">
-		<h2 id="h-flow">You ask. It plans. You decide only the exceptions.</h2>
+		<h2 id="h-flow">You ask. It plans. You sign off in a few decisions, not line by line.</h2>
 	</div>
 	<div class="three">
 		<div class="pane">
@@ -400,6 +400,7 @@ section.s:last-of-type { padding-bottom: 120px; }
 			<ol class="steps-run" id="p-steps">
 				<li><b>Understand</b><span>An event brief.</span></li>
 				<li><b>Plan the event</b><span>Drafted the order for Thu 10 Dec: 13 lines, €651.50; 7 wait for your approval.</span></li>
+				<li><b>Find substitutes</b><span>Looked for substitutes for Thu 10 Dec: 14 lines, €852.09; 8 wait for your approval.</span></li>
 				<li><b>Find substitutes</b><span>Looked for substitutes for Thu 10 Dec: 19 lines, €883.55; 13 wait for your approval.</span></li>
 				<li><b>Explain</b><span>Answered from the order's numbers.</span></li>
 			</ol></details>
@@ -701,7 +702,7 @@ function fillPlan(d) {
 		$('p-runsum').textContent = `${pl.steps.length} steps: ` + names.map((x) => x.n + (x.k > 1 ? ' ×' + x.k : '')).join(' → ');
 	}
 	if (Array.isArray(pl.steps)) $('p-steps').innerHTML = pl.steps.map((st) => `<li><b>${H(TOOL[st.tool] || st.tool)}</b><span>${H(st.summary)}</span></li>`).join('');
-	$('p-guard').textContent = pl.modelGuard ? 'The model\'s own reply didn\'t name the open need, so a sentence built from the order\'s numbers was used.' : 'The reply is checked against the order\'s numbers before it is shown.';
+	$('p-guard').textContent = pl.modelGuard ? 'The model\'s own reply didn\'t name the open need, so a sentence built from the order\'s numbers was used.' : 'The reply is checked against the order\'s numbers, or built from them, before it is shown.';
 	const SL = { known: (l) => (l.stated != null ? `Valio states ${l.stated} in stock` : 'Valio states a quantity'), unknown: () => 'Valio doesn\'t state a quantity', confirmed: () => 'Supplier confirmed', awaiting: () => 'Ordered, awaiting supplier', none: () => 'Nothing covers it yet' };
 	if (Array.isArray(pl.lines) && pl.lines.length) {
 		$('plines').innerHTML = pl.lines.slice(0, 3).map((l) => {
