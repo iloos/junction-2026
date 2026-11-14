@@ -3,7 +3,7 @@
 _The claim ledger for the video and the stage. Every sentence in [PITCH.md](PITCH.md) that asserts behaviour has a row here: the evidence, where it was **observed** (a test or eval green on main, or a run on the deployed app), and a verdict. Owner: Track F (session 91). Rewritten when main or prod changes; the PITCH table points here._
 
 **Verdicts:** **say it** (observed on main and on prod) · **say it, tests** (green on main; prod not observed for this claim) · **narrow it** (true only with the stated limit) · **not yet** (don't say it).
-**Last pass:** Sat 14 Nov, main `6f0ca7a`, `pnpm gate` green (check, lint, eval self-tests, build, unit ×~420, eval, eval:agent). Prod = https://widely-many-scorpion.eur-1.aiven.app; `/healthz` ok, db ok, TLS verified. `/healthz` does not report the deployed commit, so a prod row says what was observed there and when, not which sha.
+**Last pass:** Sat 14 Nov, main `6f0ca7a`; prod runs main `ab3a557` (Aiven commit_sha, confirmed by 9c), `pnpm gate` green (check, lint, eval self-tests, build, unit ×~420, eval, eval:agent). Prod = https://widely-many-scorpion.eur-1.aiven.app; `/healthz` ok, db ok, TLS verified. `/healthz` does not report the deployed commit, so a prod row says what was observed there and when, not which sha.
 
 ## Provable now (PITCH table)
 | Claim | Evidence | Observed | Verdict |
@@ -19,9 +19,15 @@ _The claim ledger for the video and the stage. Every sentence in [PITCH.md](PITC
 | Physical amounts, not pack counts | `server/store/direct.test.ts`; eval r5-f10; fidelity `butter-grams-weekday` | main | say it, tests |
 | The same words give the same basket through `/request`, the agent and REST | `evals/fidelity` (5 cases × 3 entries), `evals/paraphrase` (EN/FI, 3 order intents) | main, with known gaps | **narrow it**: say "for the cases we test, in English and Finnish". Open: the agent picks an undeliverable product for "4 kg butter tomorrow" (A3-agent-cutoff, E); a mid-sentence "lactose free" is dropped by the rules parser (P1, B); "vispikermaa" is unknown (P2, B) |
 | Outside agents get the same tools over MCP and REST and can never approve | `SCOPES_BY_ACTOR`; `agent/adversarial.test.ts`; eval s5 | **prod, this pass:** a judge key minted in its own sandbox reads `get_context` (200); `approve` and `set_mandate` → 403 `FORBIDDEN` (needs scope approve / mandate:write); no key → 401 | say it |
-| Every visitor gets their own sandbox; a judge key works only there | `server/demo/{visitor,judge-key,sandbox}.test.ts`; `routes/ops/visitor-gate.e2e.ts` (`pnpm gate --full`, production build on PGlite) | prod: `?ws=mine` gave a fresh `ws-j-…` sandbox and a key for it. The two-browser + MCP journey on prod is **not yet recorded** (open, after 9c's next deploy) | say it, tests; say "on prod" after the recorded run |
+| Every visitor gets their own sandbox; a judge key works only there | `server/demo/{visitor,judge-key,sandbox}.test.ts`; `routes/ops/visitor-gate.e2e.ts` | **prod `ab3a557`, this pass:** the visitor gate passed against prod (see the journey below) | say it |
 | Gemini Decisions scores recipe fit, with replay and rules fallbacks | `server/adapters/decide`; `DECIDE_LIVE=1 pnpm test:live` | live call not re-run this pass | narrow it: "ranks with Gemini Decisions and falls back to rules"; no "recipe-aware" (no labelled fit set has run) |
 | Valio's milk example runs on `/request`, keeping "lactose-free" | `server/request/fixes.test.ts`, `request.test.ts`; fidelity `lactose-free-milk-2l` | main; prod `/request` 200 | say it, tests. Phrase it as typed ("lactose-free milk"); see P1 for other word orders |
+
+## Deployed journey: two browsers + an outside agent (prod `ab3a557`)
+Recorded Sat 14 Nov against https://widely-many-scorpion.eur-1.aiven.app. Trace, screenshots and the MCP log are in `scratch/claims/` (gitignored; the lead copies what the video needs).
+- **Two browsers, REST agent, stranger, forged cookies:** `GATE_URL=<prod> npx playwright test -c scripts/deploy/pw-gate.config.ts --trace on` passed (1/1, 23 s). A plans the buffet, and A's Ops shows its own sandbox (`ws-j-…`): 14 held, 3 can't be ordered, quoted €933.92. B is in a different `ws-j-…` with an empty queue. B can't read A's stream (403), approve A (403) or reset A. An outside agent on A's judge key orders into A's sandbox and current run, can't approve (403), and a tampered key gets 401. A stranger opening A's deep link lands in their own sandbox and can't approve. Forged visitor/room cookies select nothing of A's. Each reset changes only its own sandbox.
+- **MCP:** a fresh visitor's judge key on `/mcp/k/<key>`: `initialize` 200; `tools/list` gives 13 tools, **without `approve` or `set_mandate`**; `get_context` shows `external_agent`, scopes read/plan/order, its own workspace; `place_order` (30 ST `464201`, k-hotel, Fri 11 Dec) gives a **held** plan in that sandbox; `approve` → "Tool approve not found".
+- Not covered by this run: a commit by the outside agent within the mandate, and a stale commit refused over MCP (tests only).
 
 ## Moved since PITCH was written (lead: update "Not yet claimable")
 | Was "not yet" | Now | Evidence | Verdict |
@@ -44,7 +50,7 @@ Each beat is said only after it is seen on the deployed app, with a screenshot i
 | It refuses | a rejected candidate with its reason; Terminal labelled unknown stock | not yet |
 | It's honest | ham → `476768` known-stock candidate; lanttulaatikko made in house; shortfall shown | not yet |
 | Trust you can test | approve → commit → retry → one receipt; an edit voids the approval | race smoke on prod (above); the UI path not yet |
-| The other side | the same held lines in Ops, in the visitor's own workspace | not yet |
+| The other side | the same held lines in Ops, in the visitor's own workspace | prod `ab3a557`: A's Ops in its own sandbox (`scratch/claims/gate-a-planned.png`) |
 | Labels | scenario, local simulated commitment, simulated overlays, team estimate, assumption (the last two were missing at the last review) | not yet |
 
 ## Wording traps
