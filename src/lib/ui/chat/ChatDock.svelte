@@ -11,7 +11,7 @@
 		Send,
 		UtensilsCrossed
 	} from '@lucide/svelte';
-	import { untrack } from 'svelte';
+	import { tick, untrack } from 'svelte';
 	import DecisionCard from '$lib/ui/DecisionCard.svelte';
 	import { decisionsOf } from '$lib/ui/decisions';
 	import { day, money, readableName } from '$lib/ui/format';
@@ -130,6 +130,38 @@
 	 * On opening (and on a kitchen switch): the remembered task's cards as they are now, read from its plans, so an
 	 * approval made on the Kitchen screen meanwhile shows up and an old card never lingers.
 	 */
+	/**
+	 * Focus hand-off: opening moves focus into the composer; Escape closes; closing returns focus to whatever opened
+	 * the dock (a header button, "Ask the agent"), so keyboard and screen-reader users never lose their place.
+	 */
+	let dockEl = $state<HTMLElement | null>(null);
+	let opener: HTMLElement | null = null;
+	let wasOpen = false;
+	$effect(() => {
+		const now = open;
+		if (now === wasOpen) return;
+		wasOpen = now;
+		if (now) {
+			opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+			void tick().then(() => {
+				const fields = dockEl?.querySelectorAll<HTMLElement>(
+					'textarea, input[type="text"], input:not([type])'
+				);
+				fields?.[fields.length - 1]?.focus();
+			});
+		} else if (opener && document.contains(opener)) {
+			opener.focus();
+			opener = null;
+		}
+	});
+	function onDockKey(e: KeyboardEvent) {
+		if (e.key !== 'Escape' || e.defaultPrevented || !open) return;
+		if (!dockEl?.contains(document.activeElement)) return;
+		if (pinned && window.matchMedia('(min-width: 1024px)').matches) return;
+		e.preventDefault();
+		open = false;
+	}
+
 	let loadedFor: string | null = null;
 	$effect(() => {
 		const k = `${kitchenId}:${planId ?? ''}:${openTask ?? ''}`;
@@ -516,6 +548,8 @@
 	<MessageSquare size={16} /> Ask the agent
 </button>
 
+<svelte:window onkeydown={onDockKey} />
+
 <aside
 	class={[
 		'fixed inset-x-0 bottom-[var(--kb,0px)] z-40 flex h-[var(--sheet-h)] flex-col rounded-t-xl border-t border-rule-strong bg-sheet shadow-lg lg:inset-x-auto lg:top-11 lg:right-0 lg:bottom-0 lg:h-auto lg:w-[var(--rail-w)] lg:rounded-none lg:border-t-0 lg:border-l lg:shadow-none',
@@ -523,6 +557,7 @@
 		!pinned && 'lg:shadow-[-12px_0_32px_-16px_oklch(0.2_0.02_255/0.35)]'
 	]}
 	aria-label="Agent chat"
+	bind:this={dockEl}
 	style="--rail-w: {shell?.railWidth ?? 384}px; --sheet-h: {sheetH}; --kb: {keyboard}px"
 >
 	<!-- The rail's left edge: drag it, or use the arrow keys, to make the rail wider or narrower (desktop). -->
