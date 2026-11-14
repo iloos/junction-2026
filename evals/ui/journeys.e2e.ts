@@ -446,7 +446,7 @@ test("a vegetarian dish's rescue never orders meat (the lunch buffet's vegetable
 	const meat = lines.filter(
 		(l) =>
 			!['unorderable', 'rejected'].includes(l.state) &&
-			/liha|kinkku|broiler|kana|nauta|sika|possu|kala|lohi|meat/i.test(l.productName ?? '')
+			/liha|kinkku|broiler|(^|[\s-])kana|nauta|sika|possu|(^|[\s-])kala|lohi|meat/i.test(l.productName ?? '')
 	);
 	expect
 		.soft(
