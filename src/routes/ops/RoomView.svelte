@@ -5,6 +5,7 @@
 	import { fade, fly } from 'svelte/transition';
 	import {
 		firstOrders,
+		isVisitorStore,
 		kindWords,
 		OUTCOME_WORDS,
 		roomOrder,
@@ -247,7 +248,7 @@
 						<span class="meta">
 							{kindWords(k.kind)}{k.city ? `, ${k.city}` : ''}
 							{#if k.copiedFrom}<span class="new">new, rules from {seedName(k.copiedFrom)}</span
-								>{/if}
+								>{:else if isVisitorStore(k)}<span class="new">new store</span>{/if}
 						</span>
 						<span class="count num"
 							>{t ? `${t.n} order${t.n === 1 ? '' : 's'}` : 'Nothing ordered yet'}</span

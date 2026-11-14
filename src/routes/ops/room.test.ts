@@ -83,4 +83,12 @@ describe('room', () => {
 		expect(firstOrders({ a: { n: 1 } }, { a: { n: 2 }, b: { n: 1 } })).toEqual(['b']);
 		expect(firstOrders({}, {})).toEqual([]);
 	});
+
+	it('counts a blank visitor store (no sample to copy) as a store, not a sample', () => {
+		const blank = { ...seeded[0], id: 'k-v-abc123', name: 'Playtest Bistro', kind: 'blank' };
+		const owned = { ...seeded[0], id: 'k-x', name: 'Owned', visitor: true };
+		const { active, samples } = roomOrder([seeded[0], blank, owned], {});
+		expect(active.map((k) => k.id)).toEqual(['k-x', 'k-v-abc123']);
+		expect(samples.map((k) => k.id)).toEqual(['k-hotel']);
+	});
 });
