@@ -5,7 +5,14 @@ import {
 	verifyContextSignature,
 	type ChangeDetected
 } from '$lib/server/web/contextdev';
-import { findingsFor, queueFor, servedPorts, webClients } from '$lib/server/web';
+import {
+	applicationsFor,
+	findingsFor,
+	queueFor,
+	recallTargets,
+	scopeOf,
+	webClients
+} from '$lib/server/web';
 import { fail } from '$lib/server/web/route';
 import { busTrace, drain, enqueueChange } from '$lib/server/web/watch';
 import type { RequestHandler } from './$types';
@@ -19,6 +26,8 @@ import type { RequestHandler } from './$types';
  *   that fails stays queued.
  * - `run.completed`: works the queue and re-reads the list (at most hourly), so a failed read heals on
  *   the monitor's next run and edited notices are re-read and diffed.
+ * Notices are applied to every `WEB_RECALL_WORKSPACES` target's current run; a reset run is caught up
+ * from the stored reads without another paid call.
  */
 export const POST: RequestHandler = async ({ request }) => {
 	const raw = await request.text();
@@ -39,9 +48,9 @@ export const POST: RequestHandler = async ({ request }) => {
 	const queued = isChange ? enqueueChange(event, queue) : [];
 	const receivedAt = new Date().toISOString();
 
-	let ports: Awaited<ReturnType<typeof servedPorts>>;
+	let targets: Awaited<ReturnType<typeof recallTargets>>;
 	try {
-		ports = await servedPorts();
+		targets = await recallTargets(env);
 	} catch (e) {
 		console.error('[web] webhook: store unavailable', e);
 		// Queued work waits for the next delivery; a run.completed without work is simply skipped.
@@ -49,41 +58,58 @@ export const POST: RequestHandler = async ({ request }) => {
 			? json({ accepted: true, queued, receivedAt, deferred: true }, 202)
 			: json({ received: event.event ?? null, deferred: true });
 	}
-	const trace = busTrace(ports.scope, {
-		lane: 'web',
-		...(isChange ? { change: event.data?.change?.id } : {})
-	});
-	trace('step', {
-		source: 'context.dev',
-		model: 'webhook',
-		purpose: event.event ?? 'unknown',
-		signed,
-		...(isChange
-			? { detectedAt: event.data?.change?.detected_at, receivedAt, queued }
-			: { data: event.data ?? null })
-	});
-	const { recalls } = webClients(env, trace);
-	void drain({ ...ports, recalls, findings: findingsFor(env), queue, heal: !isChange })
-		.then((r) =>
-			trace(r.failed.length || r.listError ? 'error' : 'done', {
-				source: 'context.dev',
-				purpose: isChange ? 'recall ingest' : 'recall heal',
-				notices: r.results.length,
-				anomalies: r.results.reduce((n, x) => n + x.recorded.length, 0),
-				updates: r.results.filter((x) => x.update).length,
-				failed: r.failed,
-				...(r.listError ? { listError: r.listError } : {}),
-				stillQueued: r.queued,
-				msSinceWebhook: Date.now() - Date.parse(receivedAt)
-			})
-		)
-		.catch((e) =>
-			trace('error', {
-				source: 'context.dev',
-				purpose: 'recall ingest',
-				error: String(e?.message ?? e)
-			})
-		);
+	const findings = findingsFor(env);
+	const applications = applicationsFor(env);
+	void (async () => {
+		// The notices are read once (first target); every target then gets them applied from the read.
+		for (const [i, w] of targets.entries()) {
+			const scope = scopeOf(w);
+			const trace = busTrace(scope, {
+				lane: 'web',
+				...(isChange ? { change: event.data?.change?.id } : {})
+			});
+			if (i === 0)
+				trace('step', {
+					source: 'context.dev',
+					model: 'webhook',
+					purpose: event.event ?? 'unknown',
+					signed,
+					...(isChange
+						? { detectedAt: event.data?.change?.detected_at, receivedAt, queued }
+						: { data: event.data ?? null })
+				});
+			try {
+				const r = await drain({
+					store: w.ports.store,
+					index: w.index,
+					scope,
+					findings,
+					applications,
+					queue,
+					recalls: webClients(env, trace, w.spendKey).recalls,
+					heal: !isChange && i === 0
+				});
+				trace(r.failed.length || r.listError ? 'error' : 'done', {
+					source: 'context.dev',
+					purpose: isChange ? 'recall ingest' : 'recall heal',
+					notices: r.results.length,
+					anomalies: [...r.results, ...r.applied].reduce((n, x) => n + x.recorded.length, 0),
+					updates: r.results.filter((x) => x.update).length,
+					appliedFromStore: r.applied.length,
+					failed: r.failed,
+					...(r.listError ? { listError: r.listError } : {}),
+					stillQueued: r.queued,
+					msSinceWebhook: Date.now() - Date.parse(receivedAt)
+				});
+			} catch (e) {
+				trace('error', {
+					source: 'context.dev',
+					purpose: 'recall ingest',
+					error: String((e as Error)?.message ?? e)
+				});
+			}
+		}
+	})();
 	return isChange
 		? json({ accepted: true, change: event.data?.change?.id ?? null, queued, receivedAt }, 202)
 		: json({ received: event.event ?? null });

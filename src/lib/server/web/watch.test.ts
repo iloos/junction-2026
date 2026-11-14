@@ -234,7 +234,7 @@ describe('F28 recall wording', () => {
 	});
 	it('a name match is a potential match and never says every pack counts', () => {
 		expect(lineFor(m('name', null))).toMatch(
-			/potential match; verify variant and batch on the pack$/
+			/potential match; verify variant and batch on the pack. To resolve: if the pack is a different product/
 		);
 		expect(lineFor(m('name', 'L1'))).toMatch(/potential match; verify variant and batch.*batch L1/);
 		expect(lineFor(m('name', null))).not.toMatch(/every pack/);

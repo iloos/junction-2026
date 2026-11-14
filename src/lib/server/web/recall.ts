@@ -118,7 +118,7 @@ export const RecallNotice = z.object({
 	/** Set when this is a recorded notice played back on stage, never for a live read. */
 	replayOf: z.string().optional(),
 	/** A presenter drill re-targeted at a catalogue GTIN: its own identity, never the real notice's. */
-	drill: z.object({ gtin: z.string() }).optional()
+	drill: z.object({ gtin: z.string(), workspaceId: z.string() }).optional()
 });
 export type RecallNotice = z.infer<typeof RecallNotice>;
 
@@ -137,9 +137,9 @@ export function noticeKey(url: string): string {
 }
 
 /**
- * Who a notice is. A real notice is its page (`recall:<key>`); a drill lives in its own namespace
- * (`drill:<key>:<gtin>`), so playing one never marks the real notice as seen or collides with its
- * anomalies.
+ * Who a notice is. A real notice is its page (`recall:<key>`); a drill lives in its own namespace,
+ * per workspace (`drill:<workspace>:<key>:<gtin>`), so playing one never marks the real notice as seen,
+ * collides with its anomalies, or shows in another workspace.
  */
 export function noticeIdentity(n: Pick<RecallNotice, 'url' | 'drill'>): {
 	key: string;
@@ -149,7 +149,11 @@ export function noticeIdentity(n: Pick<RecallNotice, 'url' | 'drill'>): {
 } {
 	const key = noticeKey(n.url);
 	return n.drill
-		? { key, id: `drill-${key}-${n.drill.gtin}`, findingId: `drill:${key}:${n.drill.gtin}` }
+		? {
+				key,
+				id: `drill-${key}-${n.drill.gtin}`,
+				findingId: `drill:${n.drill.workspaceId}:${key}:${n.drill.gtin}`
+			}
 		: { key, id: key, findingId: `recall:${key}` };
 }
 

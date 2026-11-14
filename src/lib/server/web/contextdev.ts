@@ -30,6 +30,7 @@ interface ScrapeJson<T> {
 export function createContextDev(call: WebCall): RecallSource & {
 	createMonitor(m: MonitorSpec): Promise<{ id: string; webhookSecret?: string; raw: unknown }>;
 	listMonitors(): Promise<unknown>;
+	setCadence(id: string, everyMinutes: number): Promise<unknown>;
 } {
 	async function scrapeJson<T>(
 		url: string,
@@ -104,6 +105,14 @@ export function createContextDev(call: WebCall): RecallSource & {
 				{ maxAgeMs: 0, purpose: 'create monitor' }
 			);
 			return { id: r.body.id, webhookSecret: r.body.webhook?.secret, raw: r.body };
+		},
+		async setCadence(id, everyMinutes) {
+			const r = await call(
+				`/monitors/${encodeURIComponent(id)}`,
+				{ schedule: { type: 'interval', frequency: everyMinutes, unit: 'minutes' } },
+				{ method: 'PATCH', maxAgeMs: 0, accept: () => false, purpose: 'monitor cadence' }
+			);
+			return r.body;
 		},
 		async listMonitors() {
 			return (await call('/monitors', undefined, { maxAgeMs: 0, purpose: 'list monitors' })).body;

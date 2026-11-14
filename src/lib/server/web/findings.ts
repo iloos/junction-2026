@@ -14,6 +14,11 @@ export interface Finding {
 	title: string;
 	/** URLs the finding rests on. */
 	sources: string[];
+	/**
+	 * Set when the finding belongs to one workspace (a drill, a caller's lookup); absent for a public
+	 * source read (a real recall notice), which every workspace may see.
+	 */
+	workspaceId?: string;
 	/** Seqs of the ops it produced in the run it was recorded in. */
 	ops?: { runId: string; seqs: number[] }[];
 	data: unknown;
@@ -38,9 +43,11 @@ export function createFindings(file?: string, fresh = false) {
 	};
 	return {
 		get: (id: string) => map.get(id),
-		list: (kind?: Finding['kind']) =>
+		/** Newest first; with `workspaceId`, only public findings and that workspace's own. */
+		list: (kind?: Finding['kind'], workspaceId?: string) =>
 			[...map.values()]
 				.filter((f) => !kind || f.kind === kind)
+				.filter((f) => !workspaceId || !f.workspaceId || f.workspaceId === workspaceId)
 				.sort((a, b) => b.at.localeCompare(a.at)),
 		put(f: Finding) {
 			const prev = map.get(f.id);

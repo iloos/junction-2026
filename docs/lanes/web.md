@@ -21,7 +21,19 @@ Live web data strengthens the purchasing core: a Context.dev recall watch turns 
 6. **Foundations index (lead).** Add `web.md` to `docs/foundations/README.md`.
 7. **UI (kitchen/ops lanes).** The anomaly message is long; a recall card could show title, hazard, match tier/confidence and the source link from `provenance.ref`. `GET /api/web/findings` has the structured data.
 
+### Needs, Track D (Sat 14 Nov, after T0)
+8. **Register the web tools (lead, `tools/` + `contracts/tools.ts`).** Handlers are `createWebTools(deps)` in `src/lib/server/web/tools.ts`; production wiring is `webTools(env)` in `src/lib/server/web/index.ts`. Signatures (all return `Result<Out<N>>`, input and output parsed with `plannedToolSchemas[N]`):
+   - `lookup_facts(w: WebExecutionContext, input: unknown)`: read-only, Exa charged to `w.spendKey`.
+   - `find_outside(w: WebExecutionContext, input: unknown)`: read-only, Exa charged to `w.spendKey`.
+   - `check_recall(w: WebExecutionContext, input: unknown)`: no network; reads the notices on file, drills only in `w.ctx.workspaceId`.
+   Build `w` with `webContext(ctx)` (it sets `spendKey = <actor kind>:<key label>`). A cap or rate limit is `PROVIDER_UNAVAILABLE` with `sub: 'rate_limit' | 'daily_cap'` and `detail.retryAfter` (seconds). Map that to HTTP 429 + `Retry-After` in the tool routes, as `resultJson` in `web/route.ts` does. If a JudgeKeys credential id replaces the key label, pass it as `spendKey`.
+9. **Env (lead, `.env.example` + Runtime):** `WEB_CAP_PER_KEY=` (default 40), `WEB_CAP_GLOBAL=` (default 600, per API per UTC day), `WEB_RECALL_WORKSPACES=` (where monitor recalls are applied; default `ws-demo`; add `ws-judges` if judges should see real recalls there).
+10. **`scripts/test-pg.mjs` (lead):** also run `src/lib/server/web/catalog-index.test.ts` (opt-in, read-only against the real catalogue).
+11. **Monitor cadence 10 min (user or lead): approved, not applied.** My call was blocked by the permission classifier. Run it from this worktree (it prints only the schedule, never the key or secret): `MSYS_NO_PATHCONV=1 pnpm tsx --env-file=.env scripts/web/monitor.ts cadence mon_4ee3dd1742d94276b4a05c528c982f6d 10`. The raw call is `PATCH https://api.context.dev/v1/monitors/mon_4ee3dd1742d94276b4a05c528c982f6d` with body `{"schedule":{"type":"interval","frequency":10,"unit":"minutes"}}`. Cost is 144 credits a day for runs, plus our reads (at most one list read an hour on `run.completed` and ≤ 3 notices per change, 5 credits each). Then record the time in `docs/foundations/web.md`.
+12. **UI (C: Why drawer, G: Ops recall card):** `GET /api/web/findings` now returns `{findings, applications, queued}` scoped to the caller's workspace; facts come from `lookup_facts` (read-only), not from `state.enrichments`.
+
 ## Report
+- Sat 14 Nov (Track D, base main da09d47) · done: F20 (notice revision + diff, per workspace/run applications with retry state, durable webhook queue before 202, allSettled, run.completed self-heal, drill namespace per workspace, new-run catch-up from stored reads, resolution path on matched lines), F28 (accept-only 24 h cache, `gtinCited` with `verified` alias, zod Exa output, name-match wording), per-key and global daily caps, 429 cooldown with stale fallback, F19 (`webContext` on every route), the `lookup_facts`/`find_outside`/`check_recall` handlers, F31 catalogIndex pg test; 56 tests + 2 opt-in · stubbed: none · needs: 8–12 (11: the 10-min cadence needs someone with permission to run it) · ready to merge: yes
 - Sat 02:45 · done: spike (GO), recall watch (webhook + list diff + notice extraction + matching + anomalies), presenter replay/drill, Exa facts + outside, fixtures, 21 tests, live monitor created · stubbed: none (fixture adapters replay real recordings) · needs: 1–7 above · ready to merge: yes
 
 ## Handoff (Sat 14 Nov)

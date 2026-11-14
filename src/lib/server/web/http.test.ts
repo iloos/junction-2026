@@ -196,10 +196,10 @@ describe('spend caps', () => {
 	});
 
 	it('limits come from the env with safe defaults', () => {
-		expect(spendLimits({})).toEqual({ perKey: 30, global: 300 });
+		expect(spendLimits({})).toEqual({ perKey: 40, global: 600 });
 		expect(spendLimits({ WEB_CAP_PER_KEY: '5', WEB_CAP_GLOBAL: 'x' })).toEqual({
 			perKey: 5,
-			global: 300
+			global: 600
 		});
 	});
 

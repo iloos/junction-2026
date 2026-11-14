@@ -40,7 +40,7 @@ export interface CallOptions {
 	maxAgeMs?: number;
 	/** Cache the 2xx body only when this holds (e.g. the extraction succeeded). Default: always. */
 	accept?: (body: unknown) => boolean;
-	method?: 'GET' | 'POST';
+	method?: 'GET' | 'POST' | 'PATCH';
 	/** What the call is for, shown in the trace ("recall list", "facts 460002"). */
 	purpose?: string;
 }

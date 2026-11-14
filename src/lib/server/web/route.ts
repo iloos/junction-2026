@@ -1,4 +1,5 @@
 /** Shared plumbing for the /api/web routes: bearer auth, JSON body, errors as `{error}` like the tool routes. */
+import type { Result } from '$lib/core/contracts';
 import type { CallContext } from '$lib/core/ports';
 import { resolveRequest, type Env } from '../auth';
 import { json, unauthorized } from '../tools/http';
@@ -55,4 +56,27 @@ export function providerFail(e: unknown): Response {
 	if (/^unknown product|^give a /.test(msg)) return fail('INVALID_INPUT', msg, 400);
 	console.error('[web]', msg);
 	return fail('PROVIDER_UNAVAILABLE', msg, 503, true);
+}
+
+const STATUS: Record<string, number> = {
+	INVALID_INPUT: 400,
+	NOT_FOUND: 404,
+	FORBIDDEN: 403,
+	PROVIDER_UNAVAILABLE: 503,
+	INTERNAL: 500
+};
+
+/** A tool `Result` as the route's answer; a cap or rate limit is 429 with `Retry-After`. */
+export function resultJson<T>(r: Result<T>): Response {
+	if (r.ok) return json(r.value);
+	const e = r.error;
+	const retryAfter = (e.detail as { retryAfter?: number } | undefined)?.retryAfter;
+	if (e.sub === 'rate_limit' || e.sub === 'daily_cap')
+		return json(
+			{ error: { ...e, code: 'RATE_LIMITED', retryAfter } },
+			429,
+			retryAfter ? { 'retry-after': String(retryAfter) } : {}
+		);
+	if (e.code === 'PROVIDER_UNAVAILABLE') console.error('[web]', e.message);
+	return json({ error: e }, STATUS[e.code] ?? 400);
 }

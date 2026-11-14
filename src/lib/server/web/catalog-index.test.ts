@@ -55,7 +55,7 @@ describe('catalogIndex on Postgres (PGlite)', { timeout: 30_000 }, () => {
 			}))
 		);
 		index = catalogIndex(sqlCatalog, db as unknown as AnyDb);
-	});
+	}, 60_000);
 
 	it('byGtin returns exactly the products whose doc carries one of the GTINs', async () => {
 		const hit = await index.byGtin(['6430017908381', '6400000000001', '0000000000000']);

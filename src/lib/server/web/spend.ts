@@ -4,8 +4,8 @@
  * until the next UTC midnight, which the routes answer as 429 with `Retry-After`.
  *
  * Env (calls per UTC day, per API):
- * - `WEB_CAP_PER_KEY` (default 30): one caller key (`<actor kind>:<key label>`)
- * - `WEB_CAP_GLOBAL` (default 300): everything this instance sends, the monitor included
+ * - `WEB_CAP_PER_KEY` (default 40): one caller key (`<actor kind>:<key label>`)
+ * - `WEB_CAP_GLOBAL` (default 600): everything this instance sends, the monitor included
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
@@ -16,7 +16,11 @@ export interface SpendLimits {
 	global: number;
 }
 
-export const DEFAULT_LIMITS: SpendLimits = { perKey: 30, global: 300 };
+/**
+ * Defaults sized for the 10-minute monitor (144 runs a day are Context.dev's, not ours; our side is at
+ * most a list read an hour plus a few notice reads per change) plus judges' lookups.
+ */
+export const DEFAULT_LIMITS: SpendLimits = { perKey: 40, global: 600 };
 
 export function spendLimits(env: Record<string, string | undefined>): SpendLimits {
 	const n = (v: string | undefined, d: number) => {

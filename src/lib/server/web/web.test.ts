@@ -268,7 +268,7 @@ describe('ingest through the store (PGlite)', { timeout: 30_000 }, () => {
 		const again = await replayRecorded(deps, { drillGtin: product.gtin });
 		expect(again.recorded).toEqual([]);
 		expect(again.alreadyKnown).toBe(1);
-		expect(first.findingId).toBe(`drill:${first.noticeKey}:${product.gtin}`);
+		expect(first.findingId).toBe(`drill:ws-demo:${first.noticeKey}:${product.gtin}`);
 		expect(findings.get(first.findingId)?.ops?.[0].seqs).toEqual([first.recorded[0].seq]);
 		expect(findings.get(`recall:${first.noticeKey}`)).toBeUndefined(); // the real notice is unseen
 	});

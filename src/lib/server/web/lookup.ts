@@ -163,13 +163,15 @@ export interface LookupDeps {
 	findings: Findings;
 	/** With a store and scope, suggestions are written as RecordEnrichment ops in the current run. */
 	store?: Store;
+	/** The caller's workspace: its findings are filed there, not shown to other workspaces. */
+	workspaceId?: string;
 	scope?: { workspaceId: string; runId: string };
 	actor?: Actor;
 	via?: string;
 }
 
 export async function lookupFacts(
-	input: { productId?: string; query?: string },
+	input: { productId?: string; query?: string; question?: string },
 	d: LookupDeps
 ): Promise<FactsResult> {
 	const product = input.productId
@@ -179,8 +181,11 @@ export async function lookupFacts(
 	const name = product?.nameFi ?? input.query ?? '';
 	if (!name.trim()) throw new Error('give a productId or a query');
 	const gtin = product?.gtin;
-	const query = `${name}${gtin ? ` ${gtin}` : ''} ainesosat allergeenit`;
-	const key = product ? `facts:${product.productId}` : `facts:q:${slug(name)}`;
+	const question = input.question?.trim().slice(0, 200);
+	const query = `${name}${gtin ? ` ${gtin}` : ''} ${question || 'ainesosat allergeenit'}`;
+	const key =
+		(product ? `facts:${product.productId}` : `facts:q:${slug(name)}`) +
+		(question ? `:${slug(question)}` : '');
 
 	const r = await d.exa.structured({
 		key,
@@ -274,8 +279,9 @@ export async function lookupFacts(
 				: 'No cited facts found.'
 	};
 	d.findings.put({
-		id: key,
+		id: d.workspaceId ? `${d.workspaceId}:${key}` : key,
 		kind: 'facts',
+		...(d.workspaceId ? { workspaceId: d.workspaceId } : {}),
 		at: new Date().toISOString(),
 		title: `Facts for ${name}`,
 		sources: [...new Set(suggestions.flatMap((s) => s.sources.map((x) => x.url)))],
@@ -388,7 +394,13 @@ const UNITS = new Set([
 
 export async function findOutside(
 	need: string,
-	d: { exa: FactSearch; catalog: Catalog; findings: Findings; context?: string }
+	d: {
+		exa: FactSearch;
+		catalog: Catalog;
+		findings: Findings;
+		context?: string;
+		workspaceId?: string;
+	}
 ) {
 	const key = `outside:${slug(need)}`;
 	const r = await d.exa.structured({
@@ -441,8 +453,9 @@ export async function findOutside(
 				: 'Nothing found.'
 	};
 	d.findings.put({
-		id: key,
+		id: d.workspaceId ? `${d.workspaceId}:${key}` : key,
 		kind: 'outside',
+		...(d.workspaceId ? { workspaceId: d.workspaceId } : {}),
 		at: new Date().toISOString(),
 		title: `Outside options for ${need}`,
 		sources: [...new Set(options.flatMap((o) => o.sources.map((s) => s.url)))],

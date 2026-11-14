@@ -10,7 +10,8 @@ import { publish } from '../bus';
 import type { ChangeDetected, RecallSource } from './contextdev';
 import { recordedNotice, EGG_RECALL_URL } from './fixture';
 import type { Findings } from './findings';
-import { ingestRecall, type IngestDeps, type IngestResult } from './ingest';
+import { createApplications, MAX_APPLY_ATTEMPTS } from './applications';
+import { ingestRecall, type IngestDeps, type IngestResult, type RecallFindingData } from './ingest';
 import type { WorkQueue } from './queue';
 import { noticeIdentity, noticeKey, RECALL_LIST_URL } from './recall';
 
@@ -98,6 +99,8 @@ export function enqueueChange(body: ChangeDetected, queue: WorkQueue): string[] 
 export interface DrainResult {
 	picks: ReadPick[];
 	results: IngestResult[];
+	/** Stored reads applied to this target without a new read (a new run, a retried apply). */
+	applied: IngestResult[];
 	failed: { url: string; error: string }[];
 	listError?: string;
 	/** Work still queued after this pass. */
@@ -160,13 +163,43 @@ async function drainOnce(d: DrainDeps): Promise<DrainResult> {
 			d.queue.failed(id, error, { kind: 'notice', url });
 		}
 	}
+	const applied = await applyKnown(d, new Set(results.map((x) => x.findingId)));
 	return {
 		picks,
 		results,
+		applied,
 		failed,
 		...(listError ? { listError } : {}),
 		queued: d.queue.due().length
 	};
+}
+
+/**
+ * Applies every recent public notice already read to the target run when its latest revision isn't
+ * applied there yet: a reset run or a workspace that joined later gets the recalls without a paid
+ * read, and a failed apply is retried (up to MAX_APPLY_ATTEMPTS). No network.
+ */
+export async function applyKnown(d: DrainDeps | IngestDeps, skip = new Set<string>()) {
+	const apps = d.applications ?? createApplications();
+	const now = (d.now?.() ?? new Date()).getTime();
+	const out: IngestResult[] = [];
+	for (const f of d.findings.list('recall')) {
+		if (f.workspaceId || skip.has(f.id)) continue;
+		const data = f.data as Partial<RecallFindingData> | undefined;
+		if (!data?.notice || !data.revision) continue;
+		const date = data.notice.publishedDate ?? f.at;
+		if (Date.parse(date) < now - NEWS_WINDOW_DAYS * 86_400_000) continue;
+		const a = apps.get(d.scope, f.id);
+		if (a?.appliedRevision === data.revision) continue;
+		if (a?.state === 'failed' && a.revision === data.revision && a.attempts >= MAX_APPLY_ATTEMPTS)
+			continue;
+		try {
+			out.push(await ingestRecall(data.notice, d, { reapply: true }));
+		} catch {
+			// Recorded as a failed application; tried again on the next pass.
+		}
+	}
+	return out;
 }
 
 const errorText = (e: unknown) => String((e as Error)?.message ?? e);
@@ -195,7 +228,7 @@ export async function replayRecorded(
 			? {
 					title: `${base.title} [DRILL: re-targeted at GTIN ${o.drillGtin}]`,
 					url: `${base.url}#drill-${o.drillGtin}`,
-					drill: { gtin: o.drillGtin },
+					drill: { gtin: o.drillGtin, workspaceId: deps.scope.workspaceId },
 					products: [{ ...base.products[0], gtin: o.drillGtin }]
 				}
 			: {})
