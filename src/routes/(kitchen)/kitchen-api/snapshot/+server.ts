@@ -35,5 +35,6 @@ export const GET: RequestHandler = async (event) => {
 			{ status: 404 }
 		);
 	}
-	return json(await snapshot(id, workspaceId, visitor));
+	const kitchen = event.url.searchParams.get('kitchen') ?? undefined;
+	return json(await snapshot(id, workspaceId, visitor, kitchen));
 };

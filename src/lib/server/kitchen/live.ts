@@ -349,9 +349,19 @@ function notStarted(kitchenId: string): NotStarted {
 export function snapshot(
 	sid: string,
 	workspaceId: string,
-	visitor?: VisitorRef
+	visitor?: VisitorRef,
+	/** The kitchen the asking tab shows (OM-3): its snapshot, whatever another tab chose. */
+	kitchenId?: string
 ): Promise<LiveSnapshot> {
-	return serial(workspaceId, () => buildSnapshot(withVisitor(session(sid, workspaceId), visitor)));
+	return serial(workspaceId, () =>
+		buildSnapshot(
+			pinned(
+				withVisitor(session(sid, workspaceId), visitor),
+				'plan',
+				kitchenId ? { kitchenId } : undefined
+			)
+		)
+	);
 }
 
 /**
@@ -721,10 +731,12 @@ export function scenario(
 	/** The plan the screen shows: the command acts on it, not on whatever this browser's session last opened. */
 	planId?: string,
 	/** Who the browser is: owner of the kitchens it makes; presenter rights for the shared room's shortage. */
-	visitor?: VisitorRef
+	visitor?: VisitorRef,
+	/** The kitchen and rules preset the sending tab shows: the command acts for them, not another tab's choice. */
+	pin?: TabPin
 ): Promise<LiveSnapshot | PlanProgress | ShortageSnapshot> {
 	return serial(workspaceId, async () => {
-		const s = withVisitor(session(sid, workspaceId), visitor);
+		const s = pinned(withVisitor(session(sid, workspaceId), visitor), action, pin);
 		// A shortage hits every store in the room: in the shared room only a presenter triggers it (fails closed).
 		if (action === 'shortage' && workspaceId === JUDGES_WORKSPACE && !visitor?.presenter)
 			throw new Error('only the presenter can start a shortage in the shared room');
@@ -740,7 +752,28 @@ export function scenario(
 		return applyScenario(s, action, value);
 	});
 }
-let shortages = 0;
+/** What a tab shows: its kitchen and its rules preset (OM-3, OM-4). */
+export interface TabPin {
+	kitchenId?: string;
+	preset?: string;
+}
+const PRESETS: readonly PresetId[] = ['kitchen', 'price', 'finnish', 'carbon', 'reliable'];
+/** Commands that act for a kitchen and its preset: with a pin they run on a copy, so other tabs keep their own. */
+const PINNABLE = new Set(['start', 'plan', 'rescue', 'apply']);
+
+function pinned(s: Session, action: string, pin: TabPin | undefined): Session {
+	if (!pin || !PINNABLE.has(action)) return s;
+	const kitchenId = pin.kitchenId ?? s.kitchenId;
+	const preset = PRESETS.find((p) => p === pin.preset) ?? s.preset;
+	if (kitchenId === s.kitchenId && preset === s.preset) return s;
+	// Another kitchen than the session's: its own plan, not the one the session last opened.
+	return {
+		...s,
+		kitchenId,
+		preset,
+		...(kitchenId !== s.kitchenId ? { planId: null, contentionRescue: undefined } : {})
+	};
+}
 
 /**
  * Moment 1: Valio runs short of one product (default: the contended palvikinkku) and every kitchen in the workspace
@@ -765,7 +798,8 @@ async function shortage(s: Session, value: unknown): Promise<ShortageReplanned> 
 		label: `simulated: Valio is short, ${left} of ${had} left`
 	});
 	const ctx = agent(s);
-	const shortageId = `sh-${++shortages}`;
+	// Unique across restarts and processes (OM-9): a counter would repeat after a deploy.
+	const shortageId = `sh-${crypto.randomUUID().slice(0, 8)}`;
 	const r = await replanShortage(b.ports, ctx, {
 		productId,
 		had,
