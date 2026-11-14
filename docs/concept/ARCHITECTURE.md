@@ -107,6 +107,14 @@ Decisions (recipe fit in substitute ranking, rubric scores in review) go through
 - Other keys (`server/auth`): `MANDATE_KEY_{CHEF,KITCHEN_AGENT,EXTERNAL_AGENT,APPROVER}`, `MCP_KEYS=label:actor:key[:workspace]`, fixture keys only in dev or with `MANDATE_FIXTURE_KEYS=1`. Keys arrive as `Authorization: Bearer` or in the path `/mcp/k/<key>`.
 - **Approval links locate, never authorise.** `ResultMeta.approvalUrl` opens the exact plan in the Kitchen screen; approving still needs a chef session in that workspace.
 
+## Tenancy: account → establishment → kitchen → basket (ring 6 foundation 1)
+- **Inside a workspace** the shape is: account → establishment(s) → kitchen (one store or site) → basket. A basket belongs to **one kitchen and one delivery day**; there is never one basket across sites. A chain with several sites has one basket per site. Carrying lines to another site is an explicit copy that makes new plans there.
+- **Saved things are per kitchen:** usual orders, rules (mandate), menus, pins. Something shared between kitchens is copied, never linked, so editing one kitchen's rules never changes another's.
+- **The demo sandbox seeds seven kitchens as seven separate customers**, not one chain. The picker says so.
+- **Choosing a kitchen plans nothing.** The establishment picker and the header selector call `join`; a plan exists only after an event, a usual order, a request, the chat or an outside agent asks for one.
+- **Every surface names the kitchen it acts for:** the Kitchen header, the chat dock, Ops filters, and the agent door (`get_context` lists the kitchens a key may act for; each tool call names one).
+- **One shortage, many kitchens.** Valio stock is shared across every kitchen in the workspace. A shortage re-plans each affected kitchen's open plan inside *that kitchen's* mandate, so the same event gives different answers per kitchen.
+
 ## Agents
 - **Agent loop** (`server/agent/`): at most 8 steps, as the routine agent (`kitchen_agent`) with the intersection of its scopes and the starter's, so it never approves or changes the mandate. The planner reads typed, length-bounded facts about tool results, never raw supplier text; the gate (scopes, intent's tool list, kitchen grant, mandate checks) is what stops damage.
 - **Approval stays with a person (D9, D11, D13).** The chef approves in the Kitchen or from the chat dock's DecisionCard: the same exact terms, hold-to-confirm and Kitchen approve command bound to the rendered plan version. The dock's card is a UI control acting as the signed-in chef, never a chat turn, a model output or an agent tool.

@@ -2,6 +2,9 @@
 
 _Lead, Sat 14 Nov 22:30. Replaces the seven-session table in [RESTART](RESTART.md) (read RESTART for the north star, foundations and the full queue; this page says who does what tonight and in what order). Freeze Sun 06:00, submission Sun 10:00. Prod runs a9f06ee; main (8e86190) is ahead and is deployed first._
 
+## Roster (message by name)
+Lead **junc26-52** · S1 Core **junc26-73** · S2 Kitchen **junc26-c6** · S3 Conversation **junc26-a1** · S4 Ops/deploy **junc26-d5** · S5 Evals/story **junc26-fb**. Deploys need the user's OK in S4's own session; the lead never deploys on S4's behalf.
+
 ## How every lane works tonight
 - Start: `Use the lane skill. Your brief is docs/handoff/ring6/SESSIONS.md, section <Sx>; resume details in docs/lanes/<brief>.md.`
 - First 5 min: in your worktree, `git fetch` is not needed (shared object store); bring your branch to main (`git merge --ff-only main` or the rebase named below), `pnpm i --frozen-lockfile`, `pnpm gate --only check,lint`.
