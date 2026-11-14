@@ -100,6 +100,39 @@ export const ScoreBreakdown = z.object({
 });
 export type ScoreBreakdown = z.infer<typeof ScoreBreakdown>;
 
+/**
+ * Server-derived read model for one line (review round 4, triage #4): what the UI may do with it, so clients never
+ * infer it from state + reasons. Computed at read time (it depends on the live approval), never stored.
+ */
+export const LineView = z.object({
+	/** Held for a reason a human may accept: it belongs in the approval. */
+	reviewable: z.boolean(),
+	/** Can be committed now: in the mandate, or covered by a granted approval, and nothing blocks it. */
+	committable: z.boolean(),
+	/** Quantity backed by known stock (sales units; kg for KG-sold products). */
+	confirmedCover: Measure,
+	/** Quantity ordered or to be ordered whose supply is unknown (Terminal), never counted as cover. */
+	unconfirmedCover: Measure,
+	/** Why it cannot go ahead: a rule (forbid) or a missing/untrue fact (gap). */
+	blockedReason: z
+		.object({
+			code: LineReason,
+			effect: z.enum(['forbid', 'gap']),
+			detail: z.enum(['qty', 'price', 'dietary_evidence', 'origin', 'unit', 'stock']).optional()
+		})
+		.optional(),
+	nextAction: z.enum([
+		'none',
+		'approve',
+		'commit',
+		'find_substitute',
+		'wait_for_supplier',
+		'requote',
+		'resolve_rule'
+	])
+});
+export type LineView = z.infer<typeof LineView>;
+
 export const Line = z.object({
 	id: z.string(),
 	needId: z.string().optional(),
@@ -119,6 +152,8 @@ export const Line = z.object({
 	/** Present when this line replaces another product. */
 	substituteFor: ProductId.optional(),
 	score: ScoreBreakdown.optional(),
+	/** Read model, filled on tool outputs (see LineView). */
+	view: LineView.optional(),
 	/** Origin of the line: the event seed, the agent, a chef edit, an external client. */
 	provenance: Provenance
 });

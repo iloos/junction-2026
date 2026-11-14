@@ -4,8 +4,11 @@
  */
 import {
 	err,
+	ok,
 	toolSchemas,
 	type DomainError,
+	type Line,
+	type Plan,
 	type Result,
 	type ToolInput,
 	type ToolName,
@@ -13,7 +16,8 @@ import {
 } from '../contracts';
 import type { CallContext, ToolHandlers } from '../ports';
 import { editLine, explainLine, planEvent, type ServicePorts } from './events';
-import { approve, commitOrder, getPlan, placeOrder } from './orders';
+import { approve, commitOrder, currentApproval, getPlan, placeOrder } from './orders';
+import { lineView, withLineViews } from '../mandate/view';
 import { quote, searchProducts } from './quote';
 import { findSubstitutes } from './substitutes';
 
@@ -52,6 +56,22 @@ function invalid(issues: { path: PropertyKey[]; message: string }[]): {
 	);
 }
 
+/** Fills the line read model on any output that carries a plan (and its chosen/saved lines). */
+async function withViews(ports: ServicePorts, ctx: CallContext, value: unknown): Promise<unknown> {
+	const v = value as { plan?: Plan; chosen?: Line[]; saved?: Line[] };
+	if (!v || typeof v !== 'object' || !v.plan) return value;
+	const state = await ports.store.load(ctx.workspaceId, ctx.runId);
+	const approval = currentApproval(state, v.plan.id);
+	const plan = withLineViews(v.plan, approval);
+	const view = (ls?: Line[]) => ls?.map((l) => ({ ...l, view: lineView(l, plan, approval) }));
+	return {
+		...v,
+		plan,
+		...(v.chosen ? { chosen: view(v.chosen) } : {}),
+		...(v.saved ? { saved: view(v.saved) } : {})
+	};
+}
+
 export function createHandlers(ports: ServicePorts): ToolHandlers {
 	const out = {} as Record<
 		ToolName,
@@ -68,7 +88,8 @@ export function createHandlers(ports: ServicePorts): ToolHandlers {
 			const parsed = schema.input.safeParse(input);
 			if (!parsed.success) return invalid(parsed.error.issues);
 			try {
-				return await impl(ports, ctx, parsed.data as ToolInput<ToolName>);
+				const r = await impl(ports, ctx, parsed.data as ToolInput<ToolName>);
+				return r.ok ? ok(await withViews(ports, ctx, r.value)) : r;
 			} catch (e) {
 				// A throw is a bug on our side, never the caller's: report it as INTERNAL, not a crash.
 				return err('INTERNAL', `${name}: ${e instanceof Error ? e.message : String(e)}`);
