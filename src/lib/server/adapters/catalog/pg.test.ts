@@ -8,6 +8,7 @@ import { offerCache, products } from '../../db/schema';
 import type { AnyDb } from '../../store/drizzle-store';
 import { createPgCatalog, rowsFromCacheFile, type OfferCacheRow } from './pg';
 import { createValioCatalog } from './valio';
+import { assemble, RetrievalIndex, toRetrievalProduct } from './retrieval';
 
 const DIR = join('data', 'valio');
 const HERO = [
@@ -59,12 +60,13 @@ describe.skipIf(!existsSync(join(DIR, 'normalized', 'products.json')))(
 	() => {
 		const file = createValioCatalog({ dir: DIR });
 		let pg: Catalog;
+		let db: AnyDb;
 
 		beforeAll(async () => {
-			const { db } = await createFixtureDb();
-			const n = await seed(db as unknown as AnyDb, file);
+			db = (await createFixtureDb()).db as unknown as AnyDb;
+			const n = await seed(db, file);
 			expect(n).toBeGreaterThan(HERO.length);
-			pg = createPgCatalog(db as unknown as AnyDb, {});
+			pg = createPgCatalog(db, { retrieval: 'id' });
 		}, 60_000);
 
 		it('get returns the same docs', async () => {
@@ -110,6 +112,28 @@ describe.skipIf(!existsSync(join(DIR, 'normalized', 'products.json')))(
 			]);
 			expect(b).toEqual(a);
 			expect(await pg.candidates('479999')).toEqual([]);
+		});
+
+		it('hybrid candidates are the shared retrieval over the same rows, in the same order', async () => {
+			const hy = createPgCatalog(db, { retrieval: 'hybrid' });
+			const cats = new Set(HERO.map((id) => file.products.get(id)?.category));
+			const docs = [...file.products.values()].filter((p) => cats.has(p.category));
+			const byId = new Map(docs.map((p) => [p.productId, p]));
+			const ix = new RetrievalIndex(docs.map(toRetrievalProduct));
+			for (const id of ['463437', '462150', '464201']) {
+				const p = byId.get(id)!;
+				const want = assemble(
+					{ ...toRetrievalProduct(p), valioSubstitutes: p.valioSubstitutes },
+					(x) => byId.has(x),
+					(ex, room) => ix.similar(toRetrievalProduct(p), ex, room),
+					12
+				);
+				const got = await hy.candidates(id, 12);
+				expect(got).toEqual(want);
+				expect(got.length).toBeGreaterThan(0);
+				expect(got.filter((c) => c.fromValioRule)).toEqual(want.filter((c) => c.fromValioRule));
+			}
+			expect(await hy.candidates('479999')).toEqual([]);
 		});
 	}
 );

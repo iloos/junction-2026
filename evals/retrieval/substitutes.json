@@ -1,0 +1,3447 @@
+{
+	"$comment": "Labelled substitute set for retrieval recall@12 (Track B, F18). Each target is treated as out of stock; `acceptable` lists catalogue products a chef would accept for the target's normal use (grade same | close | functional), `nearMisses` look similar but must not be accepted. Availability and price are ignored. Labelled 14 Nov 2026 by LLM agents (Claude Sonnet) from catalogue names under a written rubric, spot-checked by session 1f; not chef-reviewed. Product ids reference the Valio catalogue; names are kept only for readability.",
+	"k": 12,
+	"targets": [
+		{
+			"productId": "462490",
+			"name": "HK Viljaporsaan Juhlakinkku potkalla tuoresuolattu 6-8 kg",
+			"need": "Raw cured whole pork ham (bone-in) to oven-bake as the centrepiece of a Christmas buffet.",
+			"acceptable": [
+				{
+					"productId": "473419",
+					"grade": "same",
+					"note": "raw cured Christmas ham, boneless, different weight/brand"
+				},
+				{
+					"productId": "475162",
+					"grade": "same",
+					"note": "raw cured Christmas ham, boneless, different weight/brand"
+				},
+				{
+					"productId": "463608",
+					"grade": "close",
+					"note": "frozen raw cured Christmas ham, thaw first"
+				},
+				{
+					"productId": "463613",
+					"grade": "close",
+					"note": "frozen raw cured Christmas ham, thaw first"
+				},
+				{
+					"productId": "464199",
+					"grade": "close",
+					"note": "frozen raw ham roll, oven-bake"
+				},
+				{
+					"productId": "462939",
+					"grade": "functional",
+					"note": "fresh unsalted pork leg/shank to cure or bake; needs salting"
+				},
+				{
+					"productId": "462569",
+					"grade": "functional",
+					"note": "fresh unsalted pork leg/shank to cure or bake; needs salting"
+				},
+				{
+					"productId": "462919",
+					"grade": "functional",
+					"note": "ready-cooked sliced Christmas ham for buffet, no baking"
+				},
+				{
+					"productId": "462720",
+					"grade": "functional",
+					"note": "ready-cooked sliced Christmas ham for buffet, no baking"
+				},
+				{
+					"productId": "463507",
+					"grade": "functional",
+					"note": "kassler, bake or serve as buffet pork alternative"
+				},
+				{
+					"productId": "475989",
+					"grade": "functional",
+					"note": "kassler, bake or serve as buffet pork alternative"
+				},
+				{
+					"productId": "470646",
+					"grade": "functional",
+					"note": "kassler, bake or serve as buffet pork alternative"
+				},
+				{
+					"productId": "473151",
+					"grade": "functional",
+					"note": "kassler, bake or serve as buffet pork alternative"
+				}
+			],
+			"nearMisses": [
+				{
+					"productId": "463350",
+					"reason": "raw pork forequarter, not a ham"
+				},
+				{
+					"productId": "463186",
+					"reason": "everyday sliced deli ham, not a roast"
+				},
+				{
+					"productId": "462356",
+					"reason": "cured raw parma ham, different product"
+				},
+				{
+					"productId": "468960",
+					"reason": "shank, cooked \"ylikypsä\", not Christmas ham"
+				},
+				{
+					"productId": "467862",
+					"reason": "pizza ham strips"
+				}
+			]
+		},
+		{
+			"productId": "462150",
+			"name": "LOHIFILEE C-LEIKATTU 10KG",
+			"need": "Fresh skin-on salmon fillet (C trim) as base for in-house cured salmon (graavilohi) at a buffet.",
+			"acceptable": [
+				{
+					"productId": "461814",
+					"grade": "same",
+					"note": "fresh salmon fillet C-trim, other brand/size"
+				},
+				{
+					"productId": "461970",
+					"grade": "same",
+					"note": "fresh salmon fillet C-trim, other brand/size"
+				},
+				{
+					"productId": "469586",
+					"grade": "same",
+					"note": "fresh salmon fillet C-trim, other brand/size"
+				},
+				{
+					"productId": "461885",
+					"grade": "close",
+					"note": "fresh salmon fillet, other trim grade A/B/D/E or scaled; fine for curing"
+				},
+				{
+					"productId": "461903",
+					"grade": "close",
+					"note": "fresh salmon fillet, other trim grade A/B/D/E or scaled; fine for curing"
+				},
+				{
+					"productId": "461915",
+					"grade": "close",
+					"note": "fresh salmon fillet, other trim grade A/B/D/E or scaled; fine for curing"
+				},
+				{
+					"productId": "461980",
+					"grade": "close",
+					"note": "fresh salmon fillet, other trim grade A/B/D/E or scaled; fine for curing"
+				},
+				{
+					"productId": "469702",
+					"grade": "close",
+					"note": "fresh salmon fillet, other trim grade A/B/D/E or scaled; fine for curing"
+				},
+				{
+					"productId": "469678",
+					"grade": "close",
+					"note": "fresh salmon fillet, other trim grade A/B/D/E or scaled; fine for curing"
+				},
+				{
+					"productId": "469635",
+					"grade": "close",
+					"note": "fresh salmon fillet, other trim grade A/B/D/E or scaled; fine for curing"
+				},
+				{
+					"productId": "469763",
+					"grade": "close",
+					"note": "fresh salmon fillet, other trim grade A/B/D/E or scaled; fine for curing"
+				},
+				{
+					"productId": "461916",
+					"grade": "close",
+					"note": "fresh salmon fillet, other trim grade A/B/D/E or scaled; fine for curing"
+				},
+				{
+					"productId": "469659",
+					"grade": "close",
+					"note": "fresh salmon fillet, other trim grade A/B/D/E or scaled; fine for curing"
+				},
+				{
+					"productId": "471555",
+					"grade": "close",
+					"note": "frozen salmon fillet C, thaw before curing"
+				},
+				{
+					"productId": "474066",
+					"grade": "close",
+					"note": "frozen salmon fillet C, thaw before curing"
+				},
+				{
+					"productId": "461952",
+					"grade": "close",
+					"note": "salmon back fillet (loin), fresh, good for curing"
+				},
+				{
+					"productId": "462016",
+					"grade": "functional",
+					"note": "rainbow trout fillet cures like salmon"
+				},
+				{
+					"productId": "461906",
+					"grade": "functional",
+					"note": "rainbow trout fillet cures like salmon"
+				},
+				{
+					"productId": "469675",
+					"grade": "functional",
+					"note": "rainbow trout fillet cures like salmon"
+				},
+				{
+					"productId": "461921",
+					"grade": "functional",
+					"note": "rainbow trout fillet cures like salmon"
+				},
+				{
+					"productId": "461940",
+					"grade": "functional",
+					"note": "rainbow trout fillet cures like salmon"
+				},
+				{
+					"productId": "469721",
+					"grade": "functional",
+					"note": "rainbow trout fillet cures like salmon"
+				},
+				{
+					"productId": "469764",
+					"grade": "functional",
+					"note": "rainbow trout fillet cures like salmon"
+				},
+				{
+					"productId": "462019",
+					"grade": "functional",
+					"note": "trout fillet boneless"
+				},
+				{
+					"productId": "469618",
+					"grade": "close",
+					"note": "sushi-grade salmon fillet B, fresh"
+				},
+				{
+					"productId": "469751",
+					"grade": "close",
+					"note": "sushi-grade salmon fillet B, fresh"
+				}
+			],
+			"nearMisses": [
+				{
+					"productId": "461871",
+					"reason": "salmon strips, cut form"
+				},
+				{
+					"productId": "461884",
+					"reason": "salmon cubes"
+				},
+				{
+					"productId": "469987",
+					"reason": "already cured sliced salmon, ready product"
+				},
+				{
+					"productId": "468308",
+					"reason": "smoked trout fillet"
+				},
+				{
+					"productId": "469672",
+					"reason": "pre-smoked salmon pieces"
+				},
+				{
+					"productId": "461887",
+					"reason": "whole salmon, needs filleting"
+				}
+			]
+		},
+		{
+			"productId": "463876",
+			"name": "AIMO 2,5/1,25KG SINAPPISILLI MSC",
+			"need": "Mustard herring, bulk, cold buffet appetizer.",
+			"acceptable": [
+				{
+					"productId": "472568",
+					"grade": "same",
+					"note": "same herring flavour, other brand"
+				},
+				{
+					"productId": "469704",
+					"grade": "close",
+					"note": "same flavour, small retail pack or herring vs baltic herring"
+				},
+				{
+					"productId": "469692",
+					"grade": "close",
+					"note": "same flavour, small retail pack or herring vs baltic herring"
+				},
+				{
+					"productId": "463795",
+					"grade": "close",
+					"note": "same flavour, small retail pack or herring vs baltic herring"
+				},
+				{
+					"productId": "463808",
+					"grade": "functional",
+					"note": "other buffet herring flavour in bulk bucket"
+				},
+				{
+					"productId": "463785",
+					"grade": "functional",
+					"note": "other buffet herring flavour in bulk bucket"
+				},
+				{
+					"productId": "464861",
+					"grade": "functional",
+					"note": "other buffet herring flavour in bulk bucket"
+				},
+				{
+					"productId": "472599",
+					"grade": "functional",
+					"note": "other buffet herring flavour in bulk bucket"
+				},
+				{
+					"productId": "465664",
+					"grade": "functional",
+					"note": "other buffet herring flavour in bulk bucket"
+				}
+			],
+			"nearMisses": [
+				{
+					"productId": "469756",
+					"reason": "French onion herring, different flavour in small pack"
+				},
+				{
+					"productId": "470312",
+					"reason": "crayfish-marinated herring, different flavour"
+				},
+				{
+					"productId": "462453",
+					"reason": "baltic herring roll, not marinated herring fillet"
+				},
+				{
+					"productId": "470244",
+					"reason": "roe spread"
+				}
+			]
+		},
+		{
+			"productId": "463804",
+			"name": "AIMO 2,5/1,25KG TOMAATTISILLI MSC",
+			"need": "Tomato herring, bulk, cold buffet appetizer.",
+			"acceptable": [
+				{
+					"productId": "470045",
+					"grade": "close",
+					"note": "same flavour, small retail pack or herring vs baltic herring"
+				},
+				{
+					"productId": "470188",
+					"grade": "close",
+					"note": "same flavour, small retail pack or herring vs baltic herring"
+				},
+				{
+					"productId": "463808",
+					"grade": "functional",
+					"note": "other buffet herring flavour in bulk bucket"
+				},
+				{
+					"productId": "463785",
+					"grade": "functional",
+					"note": "other buffet herring flavour in bulk bucket"
+				},
+				{
+					"productId": "464861",
+					"grade": "functional",
+					"note": "other buffet herring flavour in bulk bucket"
+				},
+				{
+					"productId": "472599",
+					"grade": "functional",
+					"note": "other buffet herring flavour in bulk bucket"
+				},
+				{
+					"productId": "465664",
+					"grade": "functional",
+					"note": "other buffet herring flavour in bulk bucket"
+				}
+			],
+			"nearMisses": [
+				{
+					"productId": "469756",
+					"reason": "French onion herring, different flavour in small pack"
+				},
+				{
+					"productId": "470312",
+					"reason": "crayfish-marinated herring, different flavour"
+				},
+				{
+					"productId": "462453",
+					"reason": "baltic herring roll, not marinated herring fillet"
+				},
+				{
+					"productId": "470244",
+					"reason": "roe spread"
+				}
+			]
+		},
+		{
+			"productId": "463928",
+			"name": "AIMO 2,5/1,25KG LASIMESTARINSILLI MSC",
+			"need": "Glassblower herring (lasimestarinsilli), bulk, cold buffet.",
+			"acceptable": [
+				{
+					"productId": "470332",
+					"grade": "same",
+					"note": "same herring flavour, other brand"
+				},
+				{
+					"productId": "470000",
+					"grade": "close",
+					"note": "same flavour, small retail pack or herring vs baltic herring"
+				},
+				{
+					"productId": "470065",
+					"grade": "close",
+					"note": "same flavour, small retail pack or herring vs baltic herring"
+				},
+				{
+					"productId": "463808",
+					"grade": "functional",
+					"note": "other buffet herring flavour in bulk bucket"
+				},
+				{
+					"productId": "463785",
+					"grade": "functional",
+					"note": "other buffet herring flavour in bulk bucket"
+				},
+				{
+					"productId": "464861",
+					"grade": "functional",
+					"note": "other buffet herring flavour in bulk bucket"
+				},
+				{
+					"productId": "472599",
+					"grade": "functional",
+					"note": "other buffet herring flavour in bulk bucket"
+				},
+				{
+					"productId": "465664",
+					"grade": "functional",
+					"note": "other buffet herring flavour in bulk bucket"
+				}
+			],
+			"nearMisses": [
+				{
+					"productId": "469756",
+					"reason": "French onion herring, different flavour in small pack"
+				},
+				{
+					"productId": "470312",
+					"reason": "crayfish-marinated herring, different flavour"
+				},
+				{
+					"productId": "462453",
+					"reason": "baltic herring roll, not marinated herring fillet"
+				},
+				{
+					"productId": "470244",
+					"reason": "roe spread"
+				}
+			]
+		},
+		{
+			"productId": "463860",
+			"name": "Atria Rosolli 2,5kg",
+			"need": "Rosolli (Finnish beetroot-potato-carrot salad) for the Christmas buffet.",
+			"acceptable": [
+				{
+					"productId": "462494",
+					"grade": "same",
+					"note": "ready rosolli, other brand/size"
+				},
+				{
+					"productId": "462491",
+					"grade": "same",
+					"note": "ready rosolli, other brand/size"
+				},
+				{
+					"productId": "465774",
+					"grade": "same",
+					"note": "ready rosolli, other brand/size"
+				},
+				{
+					"productId": "462488",
+					"grade": "same",
+					"note": "ready rosolli, other brand/size"
+				},
+				{
+					"productId": "462729",
+					"grade": "same",
+					"note": "rosolli 300g small pack"
+				},
+				{
+					"productId": "463870",
+					"grade": "close",
+					"note": "beetroot salad (no potato/carrot mix) used as rosolli stand-in"
+				},
+				{
+					"productId": "465535",
+					"grade": "close",
+					"note": "beetroot salad (no potato/carrot mix) used as rosolli stand-in"
+				},
+				{
+					"productId": "460042",
+					"grade": "close",
+					"note": "beetroot salad (no potato/carrot mix) used as rosolli stand-in"
+				},
+				{
+					"productId": "463786",
+					"grade": "close",
+					"note": "beetroot salad 3kg"
+				}
+			],
+			"nearMisses": [
+				{
+					"productId": "463932",
+					"reason": "beetroot terrine, different dish"
+				},
+				{
+					"productId": "463523",
+					"reason": "beetroot wedges raw"
+				},
+				{
+					"productId": "466136",
+					"reason": "beetroot hummus"
+				},
+				{
+					"productId": "461985",
+					"reason": "plain pickled beetroot slices, not a salad"
+				}
+			]
+		},
+		{
+			"productId": "462482",
+			"name": "Saarioinen Lanttulaatikko 700g",
+			"need": "Ready swede casserole (lanttulaatikko) for a Christmas buffet.",
+			"acceptable": [
+				{
+					"productId": "462157",
+					"grade": "same",
+					"note": "same casserole, other brand/size"
+				},
+				{
+					"productId": "462447",
+					"grade": "same",
+					"note": "same casserole, other brand/size"
+				},
+				{
+					"productId": "472119",
+					"grade": "same",
+					"note": "same casserole, other brand/size"
+				},
+				{
+					"productId": "462210",
+					"grade": "close",
+					"note": "same casserole, frozen/raw or lactose-free (target is not lactose-free)"
+				},
+				{
+					"productId": "462835",
+					"grade": "close",
+					"note": "same casserole, frozen/raw or lactose-free (target is not lactose-free)"
+				},
+				{
+					"productId": "471247",
+					"grade": "close",
+					"note": "same casserole, frozen/raw or lactose-free (target is not lactose-free)"
+				},
+				{
+					"productId": "462477",
+					"grade": "functional",
+					"note": "different root casserole on a Christmas buffet"
+				},
+				{
+					"productId": "462498",
+					"grade": "functional",
+					"note": "different root casserole on a Christmas buffet"
+				},
+				{
+					"productId": "473288",
+					"grade": "functional",
+					"note": "different root casserole on a Christmas buffet"
+				}
+			],
+			"nearMisses": [
+				{
+					"productId": "461443",
+					"reason": "frozen swede cubes raw"
+				},
+				{
+					"productId": "461311",
+					"reason": "swede puree, not casserole"
+				},
+				{
+					"productId": "462717",
+					"reason": "swede grated raw"
+				},
+				{
+					"productId": "464916",
+					"reason": "cabbage casserole"
+				}
+			]
+		},
+		{
+			"productId": "461210",
+			"name": "6 x Saarioinen Porkkanalaatikko 400g",
+			"need": "Ready carrot casserole (porkkanalaatikko) for a Christmas buffet.",
+			"acceptable": [
+				{
+					"productId": "462477",
+					"grade": "same",
+					"note": "same casserole, other brand/size"
+				},
+				{
+					"productId": "469114",
+					"grade": "same",
+					"note": "same casserole, other brand/size"
+				},
+				{
+					"productId": "472159",
+					"grade": "same",
+					"note": "same casserole, other brand/size"
+				},
+				{
+					"productId": "475047",
+					"grade": "same",
+					"note": "same casserole, other brand/size"
+				},
+				{
+					"productId": "462767",
+					"grade": "close",
+					"note": "same casserole, frozen/raw or lactose-free (target is not lactose-free)"
+				},
+				{
+					"productId": "463065",
+					"grade": "close",
+					"note": "same casserole, frozen/raw or lactose-free (target is not lactose-free)"
+				},
+				{
+					"productId": "471292",
+					"grade": "close",
+					"note": "same casserole, frozen/raw or lactose-free (target is not lactose-free)"
+				},
+				{
+					"productId": "462482",
+					"grade": "functional",
+					"note": "different root casserole on a Christmas buffet"
+				},
+				{
+					"productId": "462157",
+					"grade": "functional",
+					"note": "different root casserole on a Christmas buffet"
+				},
+				{
+					"productId": "462498",
+					"grade": "functional",
+					"note": "different root casserole on a Christmas buffet"
+				}
+			],
+			"nearMisses": [
+				{
+					"productId": "460264",
+					"reason": "meat-cabbage casserole"
+				},
+				{
+					"productId": "462025",
+					"reason": "liver casserole"
+				},
+				{
+					"productId": "464098",
+					"reason": "beetroot casserole, different dish"
+				},
+				{
+					"productId": "472961",
+					"reason": "butternut-sweet potato casserole"
+				}
+			]
+		},
+		{
+			"productId": "462455",
+			"name": "6 x Saarioinen Perunalaatikko 350g",
+			"need": "Sweetened (imelletty) potato casserole for a Christmas buffet.",
+			"acceptable": [
+				{
+					"productId": "462498",
+					"grade": "same",
+					"note": "same casserole, other brand/size"
+				},
+				{
+					"productId": "462465",
+					"grade": "same",
+					"note": "same casserole, other brand/size"
+				},
+				{
+					"productId": "473288",
+					"grade": "same",
+					"note": "same casserole, other brand/size"
+				},
+				{
+					"productId": "462481",
+					"grade": "close",
+					"note": "same casserole, frozen/raw or lactose-free (target is not lactose-free)"
+				},
+				{
+					"productId": "462977",
+					"grade": "close",
+					"note": "same casserole, frozen/raw or lactose-free (target is not lactose-free)"
+				},
+				{
+					"productId": "471333",
+					"grade": "close",
+					"note": "same casserole, frozen/raw or lactose-free (target is not lactose-free)"
+				},
+				{
+					"productId": "461210",
+					"grade": "functional",
+					"note": "different root casserole on a Christmas buffet"
+				},
+				{
+					"productId": "462482",
+					"grade": "functional",
+					"note": "different root casserole on a Christmas buffet"
+				}
+			],
+			"nearMisses": [
+				{
+					"productId": "461330",
+					"reason": "meat-mashed-potato casserole"
+				},
+				{
+					"productId": "472186",
+					"reason": "vegetable potato casserole, unsweetened"
+				},
+				{
+					"productId": "472947",
+					"reason": "potato-parsnip casserole, different dish"
+				},
+				{
+					"productId": "470674",
+					"reason": "Janssons temptation"
+				}
+			]
+		},
+		{
+			"productId": "473317",
+			"name": "Vaasan Joulutorttu 40x60g",
+			"need": "Frozen prune star tart (joulutorttu) baked/served at Christmas.",
+			"acceptable": [
+				{
+					"productId": "473482",
+					"grade": "same",
+					"note": "frozen prune star tart, other brand"
+				},
+				{
+					"productId": "468013",
+					"grade": "same",
+					"note": "frozen prune star tart, other brand"
+				},
+				{
+					"productId": "470117",
+					"grade": "same",
+					"note": "frozen prune star tart, other brand"
+				},
+				{
+					"productId": "473355",
+					"grade": "close",
+					"note": "raw dough star blank to fill/bake"
+				},
+				{
+					"productId": "464273",
+					"grade": "close",
+					"note": "raw dough star blank to fill/bake"
+				},
+				{
+					"productId": "473252",
+					"grade": "close",
+					"note": "gluten-free joulutorttu/star tart (dietary superset)"
+				},
+				{
+					"productId": "470150",
+					"grade": "close",
+					"note": "gluten-free joulutorttu/star tart (dietary superset)"
+				},
+				{
+					"productId": "474800",
+					"grade": "functional",
+					"note": "star tart with mulled-wine flavour"
+				}
+			],
+			"nearMisses": [
+				{
+					"productId": "473187",
+					"reason": "jam pocket tart, not star"
+				},
+				{
+					"productId": "470054",
+					"reason": "gluten-free tahtitorttu 2pcs retail"
+				},
+				{
+					"productId": "473642",
+					"reason": "retail 3 pc ambient"
+				},
+				{
+					"productId": "471480",
+					"reason": "star bun, sweet bun not tart"
+				},
+				{
+					"productId": "470107",
+					"reason": "pocket tart"
+				}
+			]
+		},
+		{
+			"productId": "475214",
+			"name": "SPL Raaka annosperuna veitsikuorittu 10kg",
+			"need": "Raw knife-peeled potatoes (annosperuna, firm boiling type) for boiling and serving whole in a buffet",
+			"acceptable": [
+				{
+					"productId": "475109",
+					"grade": "same",
+					"note": "same SPL raw peeled annosperuna, 5 kg pack"
+				},
+				{
+					"productId": "460624",
+					"grade": "same",
+					"note": "Maatilan knife-peeled annosperuna 10 kg"
+				},
+				{
+					"productId": "475245",
+					"grade": "same",
+					"note": "SPL peeled all-purpose potato (yleisperuna), boils fine"
+				},
+				{
+					"productId": "475402",
+					"grade": "same",
+					"note": "SPL peeled nappulaperuna (small button potato), boils whole"
+				},
+				{
+					"productId": "460651",
+					"grade": "same",
+					"note": "hand-peeled puikula (fingerling), firm boiling variety"
+				},
+				{
+					"productId": "473841",
+					"grade": "same",
+					"note": "hand-peeled barrel potato (tynnyriperuna), boiling type"
+				},
+				{
+					"productId": "475399",
+					"grade": "close",
+					"note": "peeled muusiperuna (mash variety, floury) boils softer; ok for boiled potatoes with care"
+				},
+				{
+					"productId": "475172",
+					"grade": "close",
+					"note": "SPL peeled muusiperuna 5 kg, floury variety"
+				},
+				{
+					"productId": "460611",
+					"grade": "close",
+					"note": "Maatilan peeled muusiperuna, floury variety"
+				},
+				{
+					"productId": "460652",
+					"grade": "close",
+					"note": "JEPO cooked annosperuna, already boiled, ready to heat"
+				},
+				{
+					"productId": "462902",
+					"grade": "close",
+					"note": "JEPO cooked small potato, ready to heat for buffet"
+				},
+				{
+					"productId": "463538",
+					"grade": "close",
+					"note": "Maatilan cooked Parisian potato balls"
+				},
+				{
+					"productId": "469203",
+					"grade": "close",
+					"note": "JEPO cooked halved potato in skin"
+				},
+				{
+					"productId": "470414",
+					"grade": "close",
+					"note": "cooked in-skin Lapin puikula potato"
+				},
+				{
+					"productId": "471303",
+					"grade": "close",
+					"note": "hand-peeled Rosamunda 5 kg (raw peeled, category 17424)"
+				}
+			],
+			"nearMisses": [
+				{
+					"productId": "460643",
+					"reason": "unpeeled washed Rosamunda, needs peeling"
+				},
+				{
+					"productId": "460549",
+					"reason": "unpeeled baking potato, wrong use"
+				},
+				{
+					"productId": "460585",
+					"reason": "JEPO cooked mash-type potato, not whole boiled potato"
+				},
+				{
+					"productId": "471100",
+					"reason": "seasoned cooked potato"
+				},
+				{
+					"productId": "461203",
+					"reason": "frozen fries, different dish"
+				},
+				{
+					"productId": "460478",
+					"reason": "unpeeled washed potato 1 kg"
+				},
+				{
+					"productId": "462313",
+					"reason": "frozen coated fries"
+				},
+				{
+					"productId": "460163",
+					"reason": "peeled sweet potato (bataatti), different vegetable"
+				}
+			]
+		},
+		{
+			"productId": "466964",
+			"name": "Myllyn Paras Puuroriisi 1kg",
+			"need": "Short/round grain porridge rice for cooking milk rice porridge",
+			"acceptable": [
+				{
+					"productId": "462353",
+					"grade": "same",
+					"note": "Risella Puuroriisi 5 kg"
+				},
+				{
+					"productId": "462319",
+					"grade": "same",
+					"note": "Risella Puuroriisi 1 kg x12"
+				},
+				{
+					"productId": "463599",
+					"grade": "same",
+					"note": "Urtekram organic puuroriisi 500 g"
+				},
+				{
+					"productId": "465140",
+					"grade": "close",
+					"note": "Risella Fulkorn grotris, wholegrain porridge rice, longer cooking"
+				},
+				{
+					"productId": "468026",
+					"grade": "close",
+					"note": "Sunrice round rice 10 kg, short grain works for porridge"
+				},
+				{
+					"productId": "464872",
+					"grade": "functional",
+					"note": "arborio, starchy short grain; porridge rice substitute"
+				},
+				{
+					"productId": "468926",
+					"grade": "functional",
+					"note": "Riso Scotti arborio 5 kg, starchy short grain"
+				},
+				{
+					"productId": "476889",
+					"grade": "functional",
+					"note": "Divella arborio 1 kg"
+				},
+				{
+					"productId": "476015",
+					"grade": "functional",
+					"note": "Carnaroli risotto rice, starchy short grain"
+				},
+				{
+					"productId": "462302",
+					"grade": "functional",
+					"note": "Risella risottoriisi 5 kg"
+				},
+				{
+					"productId": "462308",
+					"grade": "functional",
+					"note": "Risella risottoriisi 1 kg x10"
+				}
+			],
+			"nearMisses": [
+				{
+					"productId": "462041",
+					"reason": "rice flakes, different product"
+				},
+				{
+					"productId": "462346",
+					"reason": "parboiled long grain, will not give porridge texture"
+				},
+				{
+					"productId": "463624",
+					"reason": "basmati long grain"
+				},
+				{
+					"productId": "464579",
+					"reason": "sushi rice, too sticky/different texture"
+				},
+				{
+					"productId": "475279",
+					"reason": "ready oat porridge mix"
+				},
+				{
+					"productId": "464902",
+					"reason": "ready oat portion porridge"
+				},
+				{
+					"productId": "462272",
+					"reason": "rice-grain mix"
+				},
+				{
+					"productId": "463605",
+					"reason": "whole-grain jasmine rice"
+				}
+			]
+		},
+		{
+			"productId": "464201",
+			"name": "Valio kevytmaito 1 l laktoositon UHT",
+			"need": "Lactose-free light milk (1%) for cooking, rice porridge, sauces",
+			"acceptable": [
+				{
+					"productId": "464306",
+					"grade": "same",
+					"note": "Arki Eila 1% lactose-free milk 1 l"
+				},
+				{
+					"productId": "464398",
+					"grade": "same",
+					"note": "Valio Eila kevytmaitojuoma 1 l UHT lactose-free"
+				},
+				{
+					"productId": "465039",
+					"grade": "same",
+					"note": "Valio Eila 1% 1 l lactose-free"
+				},
+				{
+					"productId": "469363",
+					"grade": "same",
+					"note": "Arla 1% UHT lactose-free 1 l"
+				},
+				{
+					"productId": "469330",
+					"grade": "same",
+					"note": "Arla 1 l lactose-free light milk drink ESL"
+				},
+				{
+					"productId": "462921",
+					"grade": "same",
+					"note": "Valio Eila Luomu organic lactose-free light 1 l"
+				},
+				{
+					"productId": "469287",
+					"grade": "same",
+					"note": "Eila lactose-free light 1.75 l"
+				},
+				{
+					"productId": "464198",
+					"grade": "same",
+					"note": "Eila lactose-free light 5 dl"
+				},
+				{
+					"productId": "463779",
+					"grade": "same",
+					"note": "Eila lactose-free light 2.5 dl UHT"
+				},
+				{
+					"productId": "466288",
+					"grade": "same",
+					"note": "Valio kevytmaito 2.5 dl lactose-free UHT"
+				},
+				{
+					"productId": "464440",
+					"grade": "same",
+					"note": "Valio kevytmaito 0.5 l lactose-free UHT (Valio listed sub)"
+				},
+				{
+					"productId": "465149",
+					"grade": "same",
+					"note": "Arla lactose-free light 5 dl x6"
+				},
+				{
+					"productId": "464399",
+					"grade": "same",
+					"note": "Arla lactose-free light 2 dl x14"
+				},
+				{
+					"productId": "463038",
+					"grade": "same",
+					"note": "Eila lactose-free light 10 l novobox"
+				},
+				{
+					"productId": "464179",
+					"grade": "same",
+					"note": "Arla lactose-free light 10 l novobox"
+				},
+				{
+					"productId": "464401",
+					"grade": "close",
+					"note": "lactose-free skim 1 l, lower fat"
+				},
+				{
+					"productId": "476240",
+					"grade": "close",
+					"note": "Eila lactose-free skim 1 l"
+				},
+				{
+					"productId": "469119",
+					"grade": "close",
+					"note": "Eila lactose-free skim 1.75 l"
+				},
+				{
+					"productId": "464119",
+					"grade": "close",
+					"note": "lactose-free skim UHT 1 l"
+				},
+				{
+					"productId": "462775",
+					"grade": "close",
+					"note": "Arla lactose-free skim UHT 1 l"
+				},
+				{
+					"productId": "469386",
+					"grade": "close",
+					"note": "Arla lactose-free skim 1 l x5"
+				},
+				{
+					"productId": "464073",
+					"grade": "close",
+					"note": "Valio lactose-free whole milk UHT 1 l, higher fat"
+				},
+				{
+					"productId": "464768",
+					"grade": "close",
+					"note": "Arla lactose-free whole milk UHT 12x1 l"
+				},
+				{
+					"productId": "463335",
+					"grade": "close",
+					"note": "Eila 3% lactose-free 1 l"
+				}
+			],
+			"nearMisses": [
+				{
+					"productId": "469541",
+					"reason": "Arla light milk UHT but only low-lactose, not lactose-free"
+				},
+				{
+					"productId": "463047",
+					"reason": "low-lactose whole milk, not lactose-free"
+				},
+				{
+					"productId": "464097",
+					"reason": "regular light milk with lactose"
+				},
+				{
+					"productId": "469549",
+					"reason": "regular light milk ESL with lactose"
+				},
+				{
+					"productId": "464237",
+					"reason": "lactose-free coffee milk, different product"
+				},
+				{
+					"productId": "473142",
+					"reason": "vanilla flavoured milk drink"
+				},
+				{
+					"productId": "476957",
+					"reason": "lactose-free AB buttermilk, different product"
+				},
+				{
+					"productId": "469266",
+					"reason": "lactose-free latte coffee drink"
+				}
+			]
+		},
+		{
+			"productId": "464411",
+			"name": "Valio voi 500 g suolaamaton",
+			"need": "Unsalted butter for cooking and baking",
+			"acceptable": [
+				{
+					"productId": "464205",
+					"grade": "same",
+					"note": "Valio unsalted butter 4x5 kg"
+				},
+				{
+					"productId": "464761",
+					"grade": "same",
+					"note": "Eila unsalted lactose-free rolling butter 4x5 kg (superset property)"
+				},
+				{
+					"productId": "463437",
+					"grade": "close",
+					"note": "Eila lactose-free butter 500 g, salting not stated, probably salted"
+				},
+				{
+					"productId": "464076",
+					"grade": "close",
+					"note": "Eila lactose-free butter 4x5 kg, salting not stated"
+				},
+				{
+					"productId": "462421",
+					"grade": "close",
+					"note": "Eila lactose-free butter 200 g"
+				},
+				{
+					"productId": "475797",
+					"grade": "close",
+					"note": "Valio butter 500 g normal salted; salt must be adjusted"
+				},
+				{
+					"productId": "463798",
+					"grade": "close",
+					"note": "Valio butter 200 g normal salted"
+				},
+				{
+					"productId": "476584",
+					"grade": "close",
+					"note": "Valio butter 500 g strongly salted"
+				},
+				{
+					"productId": "476731",
+					"grade": "close",
+					"note": "Valio butter 4x5 kg HYLA low lactose, salted/unspecified"
+				},
+				{
+					"productId": "476821",
+					"grade": "close",
+					"note": "Valio table butter 400 g salted"
+				},
+				{
+					"productId": "463744",
+					"grade": "close",
+					"note": "Arla lactose-free butter reduced salt 500 g"
+				},
+				{
+					"productId": "476815",
+					"grade": "close",
+					"note": "Arla salted low-lactose butter 500 g"
+				},
+				{
+					"productId": "475594",
+					"grade": "close",
+					"note": "Peltola churned butter, salting not stated"
+				},
+				{
+					"productId": "476740",
+					"grade": "close",
+					"note": "Juustoportti churned butter 200 g, salting not stated"
+				},
+				{
+					"productId": "472127",
+					"grade": "functional",
+					"note": "clarified butter, fine for cooking not for doughs needing water content"
+				},
+				{
+					"productId": "475708",
+					"grade": "functional",
+					"note": "Arla lactose-free clarified butter"
+				},
+				{
+					"productId": "461904",
+					"grade": "functional",
+					"note": "lactose-free baking margarine 500 g"
+				},
+				{
+					"productId": "463568",
+					"grade": "functional",
+					"note": "Raisa cake and dough margarine 5 kg"
+				},
+				{
+					"productId": "466799",
+					"grade": "functional",
+					"note": "Keiju catering margarine 1 kg, baking/cooking"
+				}
+			],
+			"nearMisses": [
+				{
+					"productId": "474681",
+					"reason": "browned butter, flavoured/processed"
+				},
+				{
+					"productId": "463435",
+					"reason": "Valio Luomu butter 200 g, salted (not unsalted)"
+				},
+				{
+					"productId": "471792",
+					"reason": "plant-based spread, not butter"
+				},
+				{
+					"productId": "461407",
+					"reason": "flavoured garlic/herb butter"
+				},
+				{
+					"productId": "463233",
+					"reason": "10 g portion salted butter"
+				},
+				{
+					"productId": "463197",
+					"reason": "6 g portion reduced-salt portion"
+				},
+				{
+					"productId": "471280",
+					"reason": "egg and butter spread"
+				},
+				{
+					"productId": "467567",
+					"reason": "coconut fat"
+				}
+			]
+		},
+		{
+			"productId": "463828",
+			"name": "Valio Keittiön ruokakerma 15 % 2 dl UHT laktoositon",
+			"need": "Lactose-free cooking cream 15% for sauces and soups",
+			"acceptable": [
+				{
+					"productId": "464249",
+					"grade": "same",
+					"note": "Valio ruokakerma 15% 1 l UHT lactose-free"
+				},
+				{
+					"productId": "469162",
+					"grade": "same",
+					"note": "Valio Ruoka 15% 1 l lactose-free"
+				},
+				{
+					"productId": "463856",
+					"grade": "same",
+					"note": "Valio Keittio thicker 15% cooking cream 2 dl"
+				},
+				{
+					"productId": "469160",
+					"grade": "same",
+					"note": "Valio Ruoka 15% 10 l novobox"
+				},
+				{
+					"productId": "476880",
+					"grade": "same",
+					"note": "Valio ruokakerma 15% 10 l UHT"
+				},
+				{
+					"productId": "464396",
+					"grade": "same",
+					"note": "Arla cooking cream 15% 10 l lactose-free"
+				},
+				{
+					"productId": "469543",
+					"grade": "same",
+					"note": "Arla Pro cooking cream 15% 12x1 l"
+				},
+				{
+					"productId": "469452",
+					"grade": "same",
+					"note": "Arla Lempi cooking cream 2 dl 15% lactose-free"
+				},
+				{
+					"productId": "463797",
+					"grade": "close",
+					"note": "Arla Pro cooking cream 10%, lower fat"
+				},
+				{
+					"productId": "476863",
+					"grade": "close",
+					"note": "Valio Keittio cooking cream 10% 3.3 dl lactose-free"
+				},
+				{
+					"productId": "463770",
+					"grade": "close",
+					"note": "Valio Keittio light cream 2 dl"
+				},
+				{
+					"productId": "464221",
+					"grade": "close",
+					"note": "Valio kevytkerma 1 l lactose-free"
+				},
+				{
+					"productId": "463379",
+					"grade": "close",
+					"note": "Arla Pro light cream 10% lactose-free"
+				},
+				{
+					"productId": "463975",
+					"grade": "functional",
+					"note": "Arla Pro Ruoka 15% veg-fat blend lactose-free"
+				},
+				{
+					"productId": "462703",
+					"grade": "functional",
+					"note": "Arla Ruoka 15% 10 l milk-based veg-fat blend"
+				},
+				{
+					"productId": "463254",
+					"grade": "functional",
+					"note": "Millac Ruoka 15 veg-fat blend"
+				},
+				{
+					"productId": "467297",
+					"grade": "functional",
+					"note": "Rama Professional lactose-free cooking 15%"
+				},
+				{
+					"productId": "464194",
+					"grade": "functional",
+					"note": "lactose-free whipping cream, can be diluted for sauces"
+				}
+			],
+			"nearMisses": [
+				{
+					"productId": "463825",
+					"reason": "flavoured cooking cream (smoked cheese)"
+				},
+				{
+					"productId": "463830",
+					"reason": "flavoured (three cheeses)"
+				},
+				{
+					"productId": "463850",
+					"reason": "flavoured (three onions)"
+				},
+				{
+					"productId": "464715",
+					"reason": "flavoured lemon pepper"
+				},
+				{
+					"productId": "464223",
+					"reason": "10% cooking cream HYLA low-lactose, not lactose-free"
+				},
+				{
+					"productId": "463263",
+					"reason": "coconut cream"
+				},
+				{
+					"productId": "463218",
+					"reason": "Sure Whip vegetable whipping base"
+				},
+				{
+					"productId": "461548",
+					"reason": "coffee cream 10%, different use"
+				}
+			]
+		},
+		{
+			"productId": "464194",
+			"name": "Valio vispikerma 1 l UHT laktoositon",
+			"need": "Lactose-free whipping cream (35%) for whipping, desserts, rich sauces",
+			"acceptable": [
+				{
+					"productId": "463837",
+					"grade": "same",
+					"note": "Valio Keittio whipping cream 2 dl lactose-free UHT"
+				},
+				{
+					"productId": "469346",
+					"grade": "same",
+					"note": "Arla Pro whipping cream 1 l UHT lactose-free (Valio listed sub)"
+				},
+				{
+					"productId": "467169",
+					"grade": "same",
+					"note": "Arla whipping cream 2 dl UHT lactose-free x14"
+				},
+				{
+					"productId": "463366",
+					"grade": "same",
+					"note": "Valio vispikerma 38% 10 l UHT lactose-free"
+				},
+				{
+					"productId": "465193",
+					"grade": "close",
+					"note": "Valio kuohukerma 1.75 l lactose-free (whipping cream)"
+				},
+				{
+					"productId": "464699",
+					"grade": "close",
+					"note": "Valio organic whipping cream 1 l lactose-free"
+				},
+				{
+					"productId": "464727",
+					"grade": "close",
+					"note": "Arla kuohukerma 1 l ESL lactose-free"
+				},
+				{
+					"productId": "469126",
+					"grade": "close",
+					"note": "Valio kuohukerma 2 dl lactose-free"
+				},
+				{
+					"productId": "461490",
+					"grade": "close",
+					"note": "Valio Keittio kuohukerma 3.3 dl lactose-free"
+				},
+				{
+					"productId": "464490",
+					"grade": "close",
+					"note": "Valio Luomu kuohukerma 2 dl lactose-free"
+				},
+				{
+					"productId": "461273",
+					"grade": "close",
+					"note": "Valio kuohukerma 20 l novobox lactose-free"
+				},
+				{
+					"productId": "464047",
+					"grade": "close",
+					"note": "Arla Lempi organic whipping cream 2 dl, lactose-free brand, not stated in name"
+				},
+				{
+					"productId": "467142",
+					"grade": "functional",
+					"note": "Rama Professional Kuohu 30% lactose-free veg-fat"
+				},
+				{
+					"productId": "463299",
+					"grade": "functional",
+					"note": "Millac Gold Ruoka and Vispi 33 lactose-free veg-fat blend"
+				}
+			],
+			"nearMisses": [
+				{
+					"productId": "463828",
+					"reason": "cooking cream 15%, will not whip"
+				},
+				{
+					"productId": "464249",
+					"reason": "cooking cream 15%"
+				},
+				{
+					"productId": "463442",
+					"reason": "coffee cream 10%"
+				},
+				{
+					"productId": "464221",
+					"reason": "light cream 10%"
+				},
+				{
+					"productId": "462652",
+					"reason": "Elvir whipped cream preparation, sweetened product"
+				},
+				{
+					"productId": "473847",
+					"reason": "sprayed sweetened whipped cream"
+				},
+				{
+					"productId": "469210",
+					"reason": "Valio Keittio kuohukerma 0.5 l (no lactose-free stated)"
+				},
+				{
+					"productId": "463218",
+					"reason": "Sure Whip, vegetable fat base"
+				}
+			]
+		},
+		{
+			"productId": "463883",
+			"name": "Kieku Luomu kananmuna M90 5200g",
+			"need": "Raw shell eggs in bulk for baking and cooking",
+			"acceptable": [
+				{
+					"productId": "472535",
+					"grade": "same",
+					"note": "Kieku Loimaan organic eggs M6"
+				},
+				{
+					"productId": "463982",
+					"grade": "same",
+					"note": "Kieku free-range egg L 180 pcs, size/organic differ"
+				},
+				{
+					"productId": "467464",
+					"grade": "same",
+					"note": "Kieku free-range egg S 90 pcs"
+				},
+				{
+					"productId": "467676",
+					"grade": "same",
+					"note": "Kieku free-range egg M10"
+				},
+				{
+					"productId": "467880",
+					"grade": "same",
+					"note": "Kieku free-range egg L15"
+				},
+				{
+					"productId": "468121",
+					"grade": "same",
+					"note": "Kieku outdoor egg M10"
+				},
+				{
+					"productId": "468445",
+					"grade": "same",
+					"note": "Kieku free-range egg L6 x20"
+				},
+				{
+					"productId": "468520",
+					"grade": "close",
+					"note": "Munax whole-egg mass pasteurised 5 kg, liquid egg"
+				},
+				{
+					"productId": "475201",
+					"grade": "close",
+					"note": "Munax whole-egg mass LL 5 kg"
+				},
+				{
+					"productId": "475357",
+					"grade": "close",
+					"note": "Munax organic whole-egg mass 5 kg"
+				},
+				{
+					"productId": "471847",
+					"grade": "close",
+					"note": "Valio free-range egg mass 5 kg"
+				},
+				{
+					"productId": "468269",
+					"grade": "close",
+					"note": "Munax whole egg 1 kg liquid"
+				}
+			],
+			"nearMisses": [
+				{
+					"productId": "463692",
+					"reason": "quail eggs, different size and use"
+				},
+				{
+					"productId": "464700",
+					"reason": "boiled peeled eggs"
+				},
+				{
+					"productId": "468413",
+					"reason": "Munax boiled peeled eggs"
+				},
+				{
+					"productId": "466032",
+					"reason": "scrambled egg product"
+				},
+				{
+					"productId": "468239",
+					"reason": "egg yolk only"
+				},
+				{
+					"productId": "468153",
+					"reason": "egg white only"
+				},
+				{
+					"productId": "467309",
+					"reason": "egg white powder"
+				},
+				{
+					"productId": "472106",
+					"reason": "fried egg, ready-cooked"
+				}
+			]
+		},
+		{
+			"productId": "470418",
+			"name": "Snellman Kunnon naudan jauheliha 17% 2 kg",
+			"need": "Raw fresh minced beef (17% fat) for patties, sauces, meatballs",
+			"acceptable": [
+				{
+					"productId": "463132",
+					"grade": "same",
+					"note": "Atria beef mince 17% 2 kg"
+				},
+				{
+					"productId": "465506",
+					"grade": "same",
+					"note": "Atria beef mince 17% 6x400 g"
+				},
+				{
+					"productId": "470527",
+					"grade": "same",
+					"note": "Snellman beef mince 10% 2 kg, lower fat"
+				},
+				{
+					"productId": "463104",
+					"grade": "same",
+					"note": "Atria beef mince 10% 2 kg"
+				},
+				{
+					"productId": "465435",
+					"grade": "same",
+					"note": "Atria beef mince 10% 3x700 g"
+				},
+				{
+					"productId": "462197",
+					"grade": "same",
+					"note": "AIMO beef mince 8% 3x ground"
+				},
+				{
+					"productId": "470519",
+					"grade": "same",
+					"note": "Atria ground beef burger mince 20%"
+				},
+				{
+					"productId": "465268",
+					"grade": "same",
+					"note": "Atria Rotukarja burger mince 20% 2 kg"
+				},
+				{
+					"productId": "470659",
+					"grade": "same",
+					"note": "Snellman burger mince 20%"
+				},
+				{
+					"productId": "463918",
+					"grade": "same",
+					"note": "AIMO burger mince 20% 1 kg"
+				},
+				{
+					"productId": "467009",
+					"grade": "same",
+					"note": "HK beef burger mince"
+				},
+				{
+					"productId": "466210",
+					"grade": "close",
+					"note": "HK cooked browned beef mince, precooked"
+				},
+				{
+					"productId": "464297",
+					"grade": "close",
+					"note": "Tamminen organic beef mince 17% frozen 2 kg x4"
+				},
+				{
+					"productId": "463127",
+					"grade": "functional",
+					"note": "HK beef-pork mince 15-17%"
+				},
+				{
+					"productId": "463153",
+					"grade": "functional",
+					"note": "Atria beef-pork mince 15%"
+				},
+				{
+					"productId": "475632",
+					"grade": "functional",
+					"note": "Snellman beef-pork mince 20%"
+				},
+				{
+					"productId": "471289",
+					"grade": "functional",
+					"note": "Atria beef-pork mince under 10%"
+				},
+				{
+					"productId": "471699",
+					"grade": "functional",
+					"note": "AIMO pork-beef mince 15%"
+				},
+				{
+					"productId": "465287",
+					"grade": "functional",
+					"note": "AIMO mince beef/pork 70/30"
+				},
+				{
+					"productId": "470387",
+					"grade": "functional",
+					"note": "Atria pork-beef mince 22%"
+				},
+				{
+					"productId": "462832",
+					"grade": "close",
+					"note": "Atria cooked beef mince 2 kg, precooked"
+				},
+				{
+					"productId": "462894",
+					"grade": "close",
+					"note": "Atria cooked beef mince fibre-free"
+				},
+				{
+					"productId": "462846",
+					"grade": "functional",
+					"note": "HK beef-pork browned mince, cooked"
+				},
+				{
+					"productId": "467883",
+					"grade": "close",
+					"note": "Gorans cooked frozen beef mince 2x2.5 kg"
+				},
+				{
+					"productId": "468873",
+					"grade": "close",
+					"note": "HK roasted beef mince frozen cooked"
+				}
+			],
+			"nearMisses": [
+				{
+					"productId": "461391",
+					"reason": "chicken mince frozen"
+				},
+				{
+					"productId": "465126",
+					"reason": "chicken mince"
+				},
+				{
+					"productId": "461599",
+					"reason": "lamb mince"
+				},
+				{
+					"productId": "463319",
+					"reason": "beef liver mince"
+				},
+				{
+					"productId": "470439",
+					"reason": "formed mince patties, cooked product"
+				},
+				{
+					"productId": "461221",
+					"reason": "formed frozen hamburger patties, not bulk mince"
+				},
+				{
+					"productId": "461994",
+					"reason": "Happy Chef cooked frozen mince, precooked (grade ambiguous)"
+				},
+				{
+					"productId": "474314",
+					"reason": "chicken mince"
+				}
+			]
+		},
+		{
+			"productId": "462209",
+			"name": "Happy Chef 2,5kg (110-130g) Broilerin rintafilee",
+			"need": "Raw frozen chicken breast fillet (110-130 g portions) for pan/oven cooking",
+			"acceptable": [
+				{
+					"productId": "466790",
+					"grade": "same",
+					"note": "Seara frozen raw broiler breast fillet 140g+, brine 1.2%"
+				},
+				{
+					"productId": "475364",
+					"grade": "same",
+					"note": "raw frozen flattened chicken breast fillet 125 g"
+				},
+				{
+					"productId": "462790",
+					"grade": "close",
+					"note": "Happy Chef frozen breast fillet slices, raw"
+				},
+				{
+					"productId": "462281",
+					"grade": "close",
+					"note": "Kariniemen fresh breast fillet 160-185 g unseasoned"
+				},
+				{
+					"productId": "464786",
+					"grade": "close",
+					"note": "Naapurin fresh breast fillet 150 g unseasoned"
+				},
+				{
+					"productId": "466869",
+					"grade": "close",
+					"note": "Naapurin fresh breast fillet 150 g 15 kg"
+				},
+				{
+					"productId": "467238",
+					"grade": "close",
+					"note": "Naapurin fresh breast fillet 15 kg unseasoned"
+				},
+				{
+					"productId": "470746",
+					"grade": "close",
+					"note": "Top Choice fresh breast fillet 130-150 g skinless"
+				},
+				{
+					"productId": "470908",
+					"grade": "close",
+					"note": "Top Choice fresh breast fillet skinless 2.5 kg"
+				},
+				{
+					"productId": "472673",
+					"grade": "close",
+					"note": "Kariniemen fresh breast fillet lightly salted 180 g"
+				},
+				{
+					"productId": "467642",
+					"grade": "close",
+					"note": "Naapurin fresh breast fillet lightly salted 2 kg"
+				},
+				{
+					"productId": "463232",
+					"grade": "close",
+					"note": "Atria fresh chicken fillet lightly salted 150 g"
+				},
+				{
+					"productId": "467443",
+					"grade": "close",
+					"note": "Atria fresh fillet lightly salted 120 g"
+				},
+				{
+					"productId": "468876",
+					"grade": "close",
+					"note": "Atria fresh fillet 160 g"
+				},
+				{
+					"productId": "467588",
+					"grade": "close",
+					"note": "Atria thin fillet 120 g"
+				},
+				{
+					"productId": "462544",
+					"grade": "close",
+					"note": "AT broiler fillet 120 g/pc 15 kg"
+				},
+				{
+					"productId": "462924",
+					"grade": "close",
+					"note": "Kariniemen breast cut lightly salted 220-290 g"
+				},
+				{
+					"productId": "466012",
+					"grade": "close",
+					"note": "Naapurin skin-on breast fillet"
+				},
+				{
+					"productId": "464075",
+					"grade": "close",
+					"note": "Naapurin breast fillet with wing bone"
+				},
+				{
+					"productId": "467303",
+					"grade": "close",
+					"note": "Atria thin fillet 95 g lightly salted"
+				},
+				{
+					"productId": "463248",
+					"grade": "close",
+					"note": "Atria thin fillet 75 g lightly salted"
+				}
+			],
+			"nearMisses": [
+				{
+					"productId": "470784",
+					"reason": "Top Choice grilled cooked breast 110-130 g, precooked"
+				},
+				{
+					"productId": "462166",
+					"reason": "grilled cooked inner fillet"
+				},
+				{
+					"productId": "461587",
+					"reason": "marinated breast fillet"
+				},
+				{
+					"productId": "472861",
+					"reason": "McCain breaded chicken breast fillets"
+				},
+				{
+					"productId": "466110",
+					"reason": "breaded cooked fillet"
+				},
+				{
+					"productId": "470622",
+					"reason": "garlic-parsley seasoned fillet"
+				},
+				{
+					"productId": "462479",
+					"reason": "turkey fillet"
+				},
+				{
+					"productId": "475113",
+					"reason": "corn chicken breast with wing bone"
+				}
+			]
+		},
+		{
+			"productId": "464517",
+			"name": "AIMO MAUSTAMATON JOGURTTI 5KG LAKTON",
+			"need": "Plain lactose-free yoghurt in bulk for dressings, marinades, baking, breakfast",
+			"acceptable": [
+				{
+					"productId": "476743",
+					"grade": "same",
+					"note": "Valio A+ natural yoghurt 5 kg lactose-free"
+				},
+				{
+					"productId": "469542",
+					"grade": "same",
+					"note": "Arla Luonto+ AB natural yoghurt 5 kg lactose-free"
+				},
+				{
+					"productId": "464278",
+					"grade": "same",
+					"note": "Arla Luonto+ AB skim natural yoghurt 5 kg"
+				},
+				{
+					"productId": "470136",
+					"grade": "same",
+					"note": "Valio A+ Luomu skim natural yoghurt 5 kg"
+				},
+				{
+					"productId": "465845",
+					"grade": "same",
+					"note": "Valiojogurtti 1 kg plain lactose-free"
+				},
+				{
+					"productId": "464316",
+					"grade": "same",
+					"note": "Valio Luomu natural yoghurt 1 kg lactose-free"
+				},
+				{
+					"productId": "476824",
+					"grade": "same",
+					"note": "Valio A+ natural yoghurt 1 kg lactose-free"
+				},
+				{
+					"productId": "476812",
+					"grade": "same",
+					"note": "Valio A+ skim natural yoghurt 1 kg"
+				},
+				{
+					"productId": "467194",
+					"grade": "same",
+					"note": "Valio A+ full-fat natural yoghurt 1 kg"
+				},
+				{
+					"productId": "464615",
+					"grade": "close",
+					"note": "Valio A+ Greek natural yoghurt 1 kg, thicker"
+				},
+				{
+					"productId": "466468",
+					"grade": "close",
+					"note": "Valio A+ Greek skim natural yoghurt 1 kg"
+				},
+				{
+					"productId": "464272",
+					"grade": "same",
+					"note": "Valio A+ natural yoghurt 150 g"
+				},
+				{
+					"productId": "462718",
+					"grade": "close",
+					"note": "Valio Turkish yoghurt 2 kg lactose-free, thicker"
+				},
+				{
+					"productId": "469079",
+					"grade": "close",
+					"note": "Valio Turkish cooking yoghurt 6% 5 kg"
+				},
+				{
+					"productId": "464608",
+					"grade": "close",
+					"note": "AIMO Turkish yoghurt 10% 5 kg lactose-free"
+				},
+				{
+					"productId": "463080",
+					"grade": "close",
+					"note": "Arla Pro Turkish yoghurt 10% 1.8 kg"
+				},
+				{
+					"productId": "465352",
+					"grade": "close",
+					"note": "Arla Pro Turkish yoghurt 10% 5 kg"
+				},
+				{
+					"productId": "468846",
+					"grade": "close",
+					"note": "Salakis Turkish yoghurt 10% lactose-free 500 g"
+				},
+				{
+					"productId": "468187",
+					"grade": "close",
+					"note": "Arki Turkish yoghurt 6% 400 g lactose-free"
+				},
+				{
+					"productId": "463128",
+					"grade": "close",
+					"note": "Valio Keittio Turkish yoghurt 400 g lactose-free"
+				},
+				{
+					"productId": "465206",
+					"grade": "close",
+					"note": "Arla Lempi Turkish yoghurt 10% 300 g lactose-free"
+				}
+			],
+			"nearMisses": [
+				{
+					"productId": "463136",
+					"reason": "Salakis Turkish plain yoghurt 5 kg, lactose-free not stated"
+				},
+				{
+					"productId": "460700",
+					"reason": "Salakis plain yoghurt 1 kg, lactose-free not stated"
+				},
+				{
+					"productId": "468306",
+					"reason": "Arki plain yoghurt 1 kg, lactose-free not stated"
+				},
+				{
+					"productId": "464126",
+					"reason": "Valio Luomu Turkish yoghurt, lactose-free not stated"
+				},
+				{
+					"productId": "464120",
+					"reason": "Bulgarian yoghurt, lactose-free not stated"
+				},
+				{
+					"productId": "476578",
+					"reason": "Valio Bulgarian yoghurt, with lactose"
+				},
+				{
+					"productId": "462625",
+					"reason": "viili, different product"
+				},
+				{
+					"productId": "469585",
+					"reason": "Oatly oat yoghurt, plant-based"
+				}
+			]
+		},
+		{
+			"productId": "460195",
+			"name": "SIPULI 10KG SÄKKI SUOMI",
+			"need": "Bulk yellow cooking onions for sauces, soups, frying",
+			"acceptable": [
+				{
+					"productId": "462903",
+					"grade": "same",
+					"note": "yellow onion, different pack/origin"
+				},
+				{
+					"productId": "460351",
+					"grade": "same",
+					"note": "yellow onion, different pack/origin"
+				},
+				{
+					"productId": "462424",
+					"grade": "close",
+					"note": "red onion bulk, milder and colour differs in dishes"
+				},
+				{
+					"productId": "460283",
+					"grade": "close",
+					"note": "red onion bulk, milder and colour differs in dishes"
+				},
+				{
+					"productId": "460202",
+					"grade": "close",
+					"note": "red onion 1 kg bag, small pack"
+				},
+				{
+					"productId": "462411",
+					"grade": "close",
+					"note": "peeled yellow onion, saves prep"
+				},
+				{
+					"productId": "462379",
+					"grade": "close",
+					"note": "peeled yellow onion, saves prep"
+				},
+				{
+					"productId": "462370",
+					"grade": "close",
+					"note": "peeled red onion"
+				},
+				{
+					"productId": "462925",
+					"grade": "close",
+					"note": "peeled red onion"
+				},
+				{
+					"productId": "462705",
+					"grade": "close",
+					"note": "pre-cut onion (diced/rings), saves prep"
+				},
+				{
+					"productId": "462735",
+					"grade": "close",
+					"note": "pre-cut onion (diced/rings), saves prep"
+				},
+				{
+					"productId": "462733",
+					"grade": "close",
+					"note": "pre-cut onion (diced/rings), saves prep"
+				},
+				{
+					"productId": "461230",
+					"grade": "close",
+					"note": "frozen diced onion"
+				},
+				{
+					"productId": "461339",
+					"grade": "close",
+					"note": "frozen diced onion"
+				},
+				{
+					"productId": "463255",
+					"grade": "close",
+					"note": "frozen diced onion"
+				},
+				{
+					"productId": "460210",
+					"grade": "close",
+					"note": "sweet onion, milder, usable for cooking"
+				},
+				{
+					"productId": "460204",
+					"grade": "functional",
+					"note": "shallot, similar cooking role, milder and pricier"
+				}
+			],
+			"nearMisses": [
+				{
+					"productId": "462688",
+					"reason": "red onion rings, garnish cut only"
+				},
+				{
+					"productId": "460212",
+					"reason": "onion bunch (Suomi nippu), not bulk cooking onion"
+				},
+				{
+					"productId": "461438",
+					"reason": "Sipulisuikale ambient 5 kg, processed onion strips"
+				},
+				{
+					"productId": "460261",
+					"reason": "spring onion, different use"
+				},
+				{
+					"productId": "461224",
+					"reason": "battered onion rings, ready product"
+				},
+				{
+					"productId": "465313",
+					"reason": "marinated red onion, ready condiment"
+				},
+				{
+					"productId": "460287",
+					"reason": "small roasting onions, different size and use"
+				},
+				{
+					"productId": "463117",
+					"reason": "frozen silver onions, pickling/garnish"
+				}
+			]
+		},
+		{
+			"productId": "460708",
+			"name": "PORKKANA 10KG/SK SUOMI",
+			"need": "Bulk fresh carrots for cooking, stocks, roasting",
+			"acceptable": [
+				{
+					"productId": "460819",
+					"grade": "same",
+					"note": "fresh washed carrots, different pack/origin"
+				},
+				{
+					"productId": "460811",
+					"grade": "same",
+					"note": "fresh washed carrots, different pack/origin"
+				},
+				{
+					"productId": "460824",
+					"grade": "same",
+					"note": "fresh washed carrots, different pack/origin"
+				},
+				{
+					"productId": "460721",
+					"grade": "same",
+					"note": "fresh washed carrots, different pack/origin"
+				},
+				{
+					"productId": "460073",
+					"grade": "same",
+					"note": "organic carrot, same use"
+				},
+				{
+					"productId": "460738",
+					"grade": "close",
+					"note": "bunch/mini carrot, small quantities, higher price"
+				},
+				{
+					"productId": "460815",
+					"grade": "close",
+					"note": "bunch/mini carrot, small quantities, higher price"
+				},
+				{
+					"productId": "460060",
+					"grade": "close",
+					"note": "coloured carrot, same use, colour differs"
+				},
+				{
+					"productId": "460959",
+					"grade": "close",
+					"note": "coloured carrot, same use, colour differs"
+				},
+				{
+					"productId": "460070",
+					"grade": "close",
+					"note": "coloured carrot, same use, colour differs"
+				},
+				{
+					"productId": "460953",
+					"grade": "close",
+					"note": "coloured carrot, same use, colour differs"
+				},
+				{
+					"productId": "463182",
+					"grade": "close",
+					"note": "coloured carrot, same use, colour differs"
+				},
+				{
+					"productId": "463235",
+					"grade": "close",
+					"note": "coloured carrot, same use, colour differs"
+				},
+				{
+					"productId": "462929",
+					"grade": "close",
+					"note": "peeled carrot, saves prep"
+				},
+				{
+					"productId": "462923",
+					"grade": "close",
+					"note": "peeled carrot, saves prep"
+				},
+				{
+					"productId": "462363",
+					"grade": "close",
+					"note": "peeled carrot, saves prep"
+				},
+				{
+					"productId": "462704",
+					"grade": "close",
+					"note": "pre-cut or grated fresh carrot"
+				},
+				{
+					"productId": "462742",
+					"grade": "close",
+					"note": "pre-cut or grated fresh carrot"
+				},
+				{
+					"productId": "467270",
+					"grade": "close",
+					"note": "pre-cut or grated fresh carrot"
+				},
+				{
+					"productId": "467347",
+					"grade": "close",
+					"note": "pre-cut or grated fresh carrot"
+				},
+				{
+					"productId": "467505",
+					"grade": "close",
+					"note": "pre-cut or grated fresh carrot"
+				},
+				{
+					"productId": "467151",
+					"grade": "close",
+					"note": "pre-cut or grated fresh carrot"
+				},
+				{
+					"productId": "468159",
+					"grade": "close",
+					"note": "pre-cut or grated fresh carrot"
+				},
+				{
+					"productId": "461129",
+					"grade": "close",
+					"note": "frozen carrot (cubes/slices/strips)"
+				},
+				{
+					"productId": "460912",
+					"grade": "close",
+					"note": "frozen carrot (cubes/slices/strips)"
+				},
+				{
+					"productId": "461359",
+					"grade": "close",
+					"note": "frozen carrot (cubes/slices/strips)"
+				},
+				{
+					"productId": "460110",
+					"grade": "functional",
+					"note": "parsnip, root veg in stocks and roasts, taste differs"
+				}
+			],
+			"nearMisses": [
+				{
+					"productId": "460709",
+					"reason": "fresh turmeric root, spice"
+				},
+				{
+					"productId": "461305",
+					"reason": "carrot puree, finished product"
+				},
+				{
+					"productId": "460868",
+					"reason": "carrot patty, ready dish"
+				},
+				{
+					"productId": "461210",
+					"reason": "carrot casserole, ready dish"
+				},
+				{
+					"productId": "463367",
+					"reason": "coleslaw salad, ready mix"
+				},
+				{
+					"productId": "460096",
+					"reason": "frozen carrot puree"
+				},
+				{
+					"productId": "460337",
+					"reason": "carrot juice"
+				},
+				{
+					"productId": "460736",
+					"reason": "keltajuuri (yellow root), different vegetable"
+				}
+			]
+		},
+		{
+			"productId": "460091",
+			"name": "Myllärin Erikoisvehnäjauho 20 kg",
+			"need": "20 kg special wheat flour for baking",
+			"acceptable": [
+				{
+					"productId": "467005",
+					"grade": "same",
+					"note": "fine special wheat flour 20 kg, other brand"
+				},
+				{
+					"productId": "460791",
+					"grade": "same",
+					"note": "special wheat flour, small pack / organic"
+				},
+				{
+					"productId": "461428",
+					"grade": "same",
+					"note": "special wheat flour, small pack / organic"
+				},
+				{
+					"productId": "470430",
+					"grade": "close",
+					"note": "strong wheat flour, higher gluten, bread use"
+				},
+				{
+					"productId": "470169",
+					"grade": "close",
+					"note": "semi-coarse wheat flour, general baking, protein/grind differs slightly"
+				},
+				{
+					"productId": "476451",
+					"grade": "close",
+					"note": "semi-coarse wheat flour, general baking, protein/grind differs slightly"
+				},
+				{
+					"productId": "467080",
+					"grade": "close",
+					"note": "semi-coarse wheat flour, general baking, protein/grind differs slightly"
+				},
+				{
+					"productId": "460856",
+					"grade": "close",
+					"note": "semi-coarse wheat flour, general baking, protein/grind differs slightly"
+				},
+				{
+					"productId": "463010",
+					"grade": "close",
+					"note": "semi-coarse wheat flour, general baking, protein/grind differs slightly"
+				},
+				{
+					"productId": "461554",
+					"grade": "close",
+					"note": "organic wheat flour 20 kg"
+				},
+				{
+					"productId": "461209",
+					"grade": "functional",
+					"note": "coarse wheat flour, bread making, not for fine pastry"
+				},
+				{
+					"productId": "467077",
+					"grade": "functional",
+					"note": "coarse wheat flour, bread making, not for fine pastry"
+				},
+				{
+					"productId": "471009",
+					"grade": "functional",
+					"note": "wheat flour for bread/yeast baking"
+				},
+				{
+					"productId": "470060",
+					"grade": "functional",
+					"note": "wheat flour for bread/yeast baking"
+				}
+			],
+			"nearMisses": [
+				{
+					"productId": "475892",
+					"reason": "cake wheat flour 2 kg, specialised for cakes"
+				},
+				{
+					"productId": "461444",
+					"reason": "durum flour, pasta use"
+				},
+				{
+					"productId": "469448",
+					"reason": "gluten-free pizza flour mix"
+				},
+				{
+					"productId": "461398",
+					"reason": "pizza flour 1 kg, specialised"
+				},
+				{
+					"productId": "466926",
+					"reason": "organic coarse flour, 10x1kg small packs"
+				},
+				{
+					"productId": "461348",
+					"reason": "yeast bread flour 2 kg, bread blend"
+				},
+				{
+					"productId": "467568",
+					"reason": "00 pizza flour, specialised"
+				},
+				{
+					"productId": "460782",
+					"reason": "Vehnasirote, wheat bran-type product, not flour"
+				}
+			]
+		},
+		{
+			"productId": "464093",
+			"name": "Valio Emmental sinileima e300 g viipale",
+			"need": "Sliced Emmental for sandwiches and breakfast",
+			"acceptable": [
+				{
+					"productId": "464252",
+					"grade": "same",
+					"note": "sliced emmental, other brand/pack/fat"
+				},
+				{
+					"productId": "466853",
+					"grade": "same",
+					"note": "sliced emmental, other brand/pack/fat"
+				},
+				{
+					"productId": "467020",
+					"grade": "same",
+					"note": "sliced emmental, other brand/pack/fat"
+				},
+				{
+					"productId": "472759",
+					"grade": "same",
+					"note": "sliced emmental, other brand/pack/fat"
+				},
+				{
+					"productId": "476529",
+					"grade": "same",
+					"note": "sliced emmental, other brand/pack/fat"
+				},
+				{
+					"productId": "465357",
+					"grade": "same",
+					"note": "sliced emmental, other brand/pack/fat"
+				},
+				{
+					"productId": "467659",
+					"grade": "same",
+					"note": "sliced emmental, other brand/pack/fat"
+				},
+				{
+					"productId": "463868",
+					"grade": "functional",
+					"note": "sliced gouda/edam, mild semi-hard sandwich cheese"
+				},
+				{
+					"productId": "462622",
+					"grade": "functional",
+					"note": "sliced gouda/edam, mild semi-hard sandwich cheese"
+				},
+				{
+					"productId": "467045",
+					"grade": "functional",
+					"note": "sliced gouda/edam, mild semi-hard sandwich cheese"
+				},
+				{
+					"productId": "464196",
+					"grade": "functional",
+					"note": "sliced gouda/edam, mild semi-hard sandwich cheese"
+				},
+				{
+					"productId": "463382",
+					"grade": "functional",
+					"note": "sliced gouda/edam, mild semi-hard sandwich cheese"
+				},
+				{
+					"productId": "462616",
+					"grade": "functional",
+					"note": "sliced gouda/edam, mild semi-hard sandwich cheese"
+				},
+				{
+					"productId": "464204",
+					"grade": "functional",
+					"note": "sliced gouda/edam, mild semi-hard sandwich cheese"
+				},
+				{
+					"productId": "476696",
+					"grade": "functional",
+					"note": "sliced gouda/edam, mild semi-hard sandwich cheese"
+				},
+				{
+					"productId": "476721",
+					"grade": "functional",
+					"note": "sliced gouda/edam, mild semi-hard sandwich cheese"
+				},
+				{
+					"productId": "465279",
+					"grade": "functional",
+					"note": "sliced mild semi-hard Finnish cheese"
+				},
+				{
+					"productId": "465293",
+					"grade": "functional",
+					"note": "sliced mild semi-hard Finnish cheese"
+				},
+				{
+					"productId": "462584",
+					"grade": "functional",
+					"note": "sliced mild semi-hard Finnish cheese"
+				},
+				{
+					"productId": "462636",
+					"grade": "functional",
+					"note": "sliced mild semi-hard Finnish cheese"
+				},
+				{
+					"productId": "463904",
+					"grade": "functional",
+					"note": "sliced mild semi-hard Finnish cheese"
+				},
+				{
+					"productId": "467326",
+					"grade": "functional",
+					"note": "sliced mild semi-hard Finnish cheese"
+				},
+				{
+					"productId": "463948",
+					"grade": "functional",
+					"note": "sliced Polar/Arki cheese, sandwich use"
+				},
+				{
+					"productId": "469045",
+					"grade": "functional",
+					"note": "sliced Polar/Arki cheese, sandwich use"
+				},
+				{
+					"productId": "463400",
+					"grade": "functional",
+					"note": "sliced Polar/Arki cheese, sandwich use"
+				},
+				{
+					"productId": "467966",
+					"grade": "functional",
+					"note": "sliced Polar/Arki cheese, sandwich use"
+				},
+				{
+					"productId": "462542",
+					"grade": "functional",
+					"note": "Port Salut-style sliced mild cheese"
+				}
+			],
+			"nearMisses": [
+				{
+					"productId": "464241",
+					"reason": "Emmental grated cheese, different form"
+				},
+				{
+					"productId": "466721",
+					"reason": "processed cheese slices with cheddar"
+				},
+				{
+					"productId": "467235",
+					"reason": "processed emmental-containing slices, not natural cheese"
+				},
+				{
+					"productId": "471065",
+					"reason": "halloumi slices, grilling cheese"
+				},
+				{
+					"productId": "467240",
+					"reason": "pepper jack burger slices, flavoured"
+				},
+				{
+					"productId": "463971",
+					"reason": "cheddar burger slices, stronger"
+				},
+				{
+					"productId": "462613",
+					"reason": "processed lactose-free slices, different type"
+				},
+				{
+					"productId": "464216",
+					"reason": "smoked slices, flavoured"
+				}
+			]
+		},
+		{
+			"productId": "464320",
+			"name": "Oatly iKaffe kaurajuoma 1L",
+			"need": "Barista oat drink that foams and does not split in coffee",
+			"acceptable": [
+				{
+					"productId": "473278",
+					"grade": "same",
+					"note": "barista/coffee oat drink, other brand/pack"
+				},
+				{
+					"productId": "468319",
+					"grade": "same",
+					"note": "barista/coffee oat drink, other brand/pack"
+				},
+				{
+					"productId": "469512",
+					"grade": "same",
+					"note": "barista/coffee oat drink, other brand/pack"
+				},
+				{
+					"productId": "473609",
+					"grade": "same",
+					"note": "barista/coffee oat drink, other brand/pack"
+				},
+				{
+					"productId": "472598",
+					"grade": "same",
+					"note": "barista/coffee oat drink, other brand/pack"
+				},
+				{
+					"productId": "475224",
+					"grade": "same",
+					"note": "barista/coffee oat drink, other brand/pack"
+				},
+				{
+					"productId": "471690",
+					"grade": "same",
+					"note": "barista/coffee oat drink, other brand/pack"
+				},
+				{
+					"productId": "471881",
+					"grade": "same",
+					"note": "barista/coffee oat drink, other brand/pack"
+				},
+				{
+					"productId": "470611",
+					"grade": "same",
+					"note": "barista/coffee oat drink, other brand/pack"
+				},
+				{
+					"productId": "471694",
+					"grade": "same",
+					"note": "barista/coffee oat drink, other brand/pack"
+				},
+				{
+					"productId": "473485",
+					"grade": "same",
+					"note": "barista/coffee oat drink, other brand/pack"
+				},
+				{
+					"productId": "464056",
+					"grade": "functional",
+					"note": "barista plant drink (soy/almond/coconut), foams in coffee, not oat"
+				},
+				{
+					"productId": "465793",
+					"grade": "functional",
+					"note": "barista plant drink (soy/almond/coconut), foams in coffee, not oat"
+				},
+				{
+					"productId": "466016",
+					"grade": "functional",
+					"note": "barista plant drink (soy/almond/coconut), foams in coffee, not oat"
+				}
+			],
+			"nearMisses": [
+				{
+					"productId": "474674",
+					"reason": "iKaffe vanilla flavoured"
+				},
+				{
+					"productId": "471424",
+					"reason": "hazelnut barista, flavoured"
+				},
+				{
+					"productId": "472303",
+					"reason": "vanilla barista, flavoured"
+				},
+				{
+					"productId": "470889",
+					"reason": "regular oat drink, not for coffee"
+				},
+				{
+					"productId": "460825",
+					"reason": "regular organic oat drink"
+				},
+				{
+					"productId": "472372",
+					"reason": "iced coffee ready drink"
+				},
+				{
+					"productId": "460697",
+					"reason": "iMat cooking oat cream"
+				},
+				{
+					"productId": "472270",
+					"reason": "iKaffe 20 ml sample"
+				}
+			]
+		},
+		{
+			"productId": "460027",
+			"name": "TOMAATTI NL/BE/ES 1.LK",
+			"need": "Fresh round tomatoes for slicing in salads",
+			"acceptable": [
+				{
+					"productId": "460065",
+					"grade": "same",
+					"note": "round/vine tomato, other origin/grade"
+				},
+				{
+					"productId": "460159",
+					"grade": "same",
+					"note": "round/vine tomato, other origin/grade"
+				},
+				{
+					"productId": "460054",
+					"grade": "same",
+					"note": "round/vine tomato, other origin/grade"
+				},
+				{
+					"productId": "460066",
+					"grade": "close",
+					"note": "beef/plum/other slicing tomato, usable in salads"
+				},
+				{
+					"productId": "460139",
+					"grade": "close",
+					"note": "beef/plum/other slicing tomato, usable in salads"
+				},
+				{
+					"productId": "460013",
+					"grade": "close",
+					"note": "beef/plum/other slicing tomato, usable in salads"
+				},
+				{
+					"productId": "460164",
+					"grade": "close",
+					"note": "beef/plum/other slicing tomato, usable in salads"
+				},
+				{
+					"productId": "460041",
+					"grade": "close",
+					"note": "beef/plum/other slicing tomato, usable in salads"
+				},
+				{
+					"productId": "460170",
+					"grade": "close",
+					"note": "beef/plum/other slicing tomato, usable in salads"
+				},
+				{
+					"productId": "460172",
+					"grade": "close",
+					"note": "cherry/mini tomato, salad use, different cut"
+				},
+				{
+					"productId": "460154",
+					"grade": "close",
+					"note": "cherry/mini tomato, salad use, different cut"
+				},
+				{
+					"productId": "477015",
+					"grade": "close",
+					"note": "cherry/mini tomato, salad use, different cut"
+				},
+				{
+					"productId": "463399",
+					"grade": "close",
+					"note": "cherry/mini tomato, salad use, different cut"
+				},
+				{
+					"productId": "460838",
+					"grade": "close",
+					"note": "cherry/mini tomato, salad use, different cut"
+				},
+				{
+					"productId": "462545",
+					"grade": "close",
+					"note": "cherry/mini tomato, salad use, different cut"
+				},
+				{
+					"productId": "474919",
+					"grade": "close",
+					"note": "cherry/mini tomato, salad use, different cut"
+				},
+				{
+					"productId": "475269",
+					"grade": "close",
+					"note": "cherry/mini tomato, salad use, different cut"
+				},
+				{
+					"productId": "465239",
+					"grade": "close",
+					"note": "cherry/mini tomato, salad use, different cut"
+				},
+				{
+					"productId": "460103",
+					"grade": "close",
+					"note": "honey tomato, small sweet"
+				}
+			],
+			"nearMisses": [
+				{
+					"productId": "460499",
+					"reason": "dried tomatoes, different product"
+				},
+				{
+					"productId": "460071",
+					"reason": "San Marzano, sauce tomato"
+				},
+				{
+					"productId": "460151",
+					"reason": "San Marzano, sauce tomato"
+				},
+				{
+					"productId": "460004",
+					"reason": "Tom Berry snack punnet"
+				},
+				{
+					"productId": "460085",
+					"reason": "pearl tomato garnish"
+				},
+				{
+					"productId": "467193",
+					"reason": "yellow drop tomato, specialty"
+				},
+				{
+					"productId": "467234",
+					"reason": "cherry vine mix, specialty"
+				},
+				{
+					"productId": "460080",
+					"reason": "yellow plum tomato, specialty"
+				}
+			]
+		},
+		{
+			"productId": "460131",
+			"name": "KURKKU 1LK SUOMI FILMI",
+			"need": "Fresh cucumber for salads and sandwiches",
+			"acceptable": [
+				{
+					"productId": "460155",
+					"grade": "same",
+					"note": "fresh cucumber, other grade/wrap/origin"
+				},
+				{
+					"productId": "460137",
+					"grade": "same",
+					"note": "fresh cucumber, other grade/wrap/origin"
+				},
+				{
+					"productId": "460115",
+					"grade": "same",
+					"note": "fresh cucumber, other grade/wrap/origin"
+				},
+				{
+					"productId": "460109",
+					"grade": "same",
+					"note": "fresh cucumber, other grade/wrap/origin"
+				},
+				{
+					"productId": "460012",
+					"grade": "close",
+					"note": "outdoor cucumber, smaller and seasonal"
+				}
+			],
+			"nearMisses": [
+				{
+					"productId": "460025",
+					"reason": "courgette, cooked veg"
+				},
+				{
+					"productId": "460150",
+					"reason": "courgette"
+				},
+				{
+					"productId": "460074",
+					"reason": "yellow courgette"
+				},
+				{
+					"productId": "461057",
+					"reason": "chayote"
+				},
+				{
+					"productId": "460021",
+					"reason": "spaghetti squash"
+				},
+				{
+					"productId": "460130",
+					"reason": "butternut squash"
+				},
+				{
+					"productId": "460100",
+					"reason": "yellow courgette"
+				},
+				{
+					"productId": "460081",
+					"reason": "organic courgette"
+				}
+			]
+		},
+		{
+			"productId": "474247",
+			"name": "Fresh SalaattiMestari Jäävuorisalaatti leikattu 10 mm 1,0 kg pussi",
+			"need": "Ready-cut iceberg lettuce for salads",
+			"acceptable": [
+				{
+					"productId": "472590",
+					"grade": "same",
+					"note": "cut iceberg/american lettuce"
+				},
+				{
+					"productId": "467149",
+					"grade": "same",
+					"note": "cut iceberg/american lettuce"
+				},
+				{
+					"productId": "467358",
+					"grade": "same",
+					"note": "cut iceberg/american lettuce"
+				},
+				{
+					"productId": "468179",
+					"grade": "same",
+					"note": "cut iceberg/american lettuce"
+				},
+				{
+					"productId": "468185",
+					"grade": "same",
+					"note": "cut iceberg/american lettuce"
+				},
+				{
+					"productId": "474842",
+					"grade": "same",
+					"note": "cut iceberg/american lettuce"
+				},
+				{
+					"productId": "467711",
+					"grade": "close",
+					"note": "iceberg loose leaf/bulk needing cutting"
+				},
+				{
+					"productId": "473807",
+					"grade": "close",
+					"note": "iceberg loose leaf/bulk needing cutting"
+				},
+				{
+					"productId": "460198",
+					"grade": "close",
+					"note": "iceberg loose leaf/bulk needing cutting"
+				},
+				{
+					"productId": "460276",
+					"grade": "close",
+					"note": "whole iceberg head, needs cutting"
+				},
+				{
+					"productId": "460026",
+					"grade": "close",
+					"note": "whole iceberg head, needs cutting"
+				},
+				{
+					"productId": "460314",
+					"grade": "close",
+					"note": "whole iceberg head, needs cutting"
+				},
+				{
+					"productId": "460240",
+					"grade": "close",
+					"note": "whole iceberg head, needs cutting"
+				},
+				{
+					"productId": "471390",
+					"grade": "functional",
+					"note": "cut romaine/iceberg-romaine, crisp salad base"
+				},
+				{
+					"productId": "468068",
+					"grade": "functional",
+					"note": "cut romaine/iceberg-romaine, crisp salad base"
+				},
+				{
+					"productId": "468181",
+					"grade": "functional",
+					"note": "cut romaine/iceberg-romaine, crisp salad base"
+				},
+				{
+					"productId": "473957",
+					"grade": "functional",
+					"note": "cut romaine/iceberg-romaine, crisp salad base"
+				},
+				{
+					"productId": "467228",
+					"grade": "functional",
+					"note": "cut Chinese cabbage, crisp salad base"
+				},
+				{
+					"productId": "473562",
+					"grade": "functional",
+					"note": "cut Chinese cabbage, crisp salad base"
+				}
+			],
+			"nearMisses": [
+				{
+					"productId": "470120",
+					"reason": "iceberg-frisee-red mix, mixed salad"
+				},
+				{
+					"productId": "467258",
+					"reason": "Prinsessasalaatti, mix"
+				},
+				{
+					"productId": "463976",
+					"reason": "iceberg-radicchio-frisee mix"
+				},
+				{
+					"productId": "468299",
+					"reason": "Family mix"
+				},
+				{
+					"productId": "469622",
+					"reason": "red iceberg 100 g potted"
+				},
+				{
+					"productId": "468246",
+					"reason": "baby spinach"
+				},
+				{
+					"productId": "468135",
+					"reason": "rocket"
+				},
+				{
+					"productId": "467202",
+					"reason": "amer-red lettuce mix"
+				}
+			]
+		},
+		{
+			"productId": "460510",
+			"name": "Barilla 5 kg Spagetti pasta",
+			"need": "Dry spaghetti for pasta dishes in bulk",
+			"acceptable": [
+				{
+					"productId": "471278",
+					"grade": "same",
+					"note": "dry spaghetti, other brand/pack"
+				},
+				{
+					"productId": "464819",
+					"grade": "same",
+					"note": "dry spaghetti, other brand/pack"
+				},
+				{
+					"productId": "465236",
+					"grade": "same",
+					"note": "dry spaghetti, other brand/pack"
+				},
+				{
+					"productId": "471575",
+					"grade": "same",
+					"note": "dry spaghetti, other brand/pack"
+				},
+				{
+					"productId": "473329",
+					"grade": "same",
+					"note": "dry spaghetti, other brand/pack"
+				},
+				{
+					"productId": "465339",
+					"grade": "same",
+					"note": "dry spaghetti, other brand/pack"
+				},
+				{
+					"productId": "466188",
+					"grade": "same",
+					"note": "dry spaghetti, other brand/pack"
+				},
+				{
+					"productId": "460528",
+					"grade": "close",
+					"note": "whole-wheat/dark mini spaghetti, shorter, different colour"
+				},
+				{
+					"productId": "462109",
+					"grade": "close",
+					"note": "whole-wheat/dark mini spaghetti, shorter, different colour"
+				},
+				{
+					"productId": "473249",
+					"grade": "close",
+					"note": "linguine, similar long pasta"
+				},
+				{
+					"productId": "468959",
+					"grade": "close",
+					"note": "linguine, similar long pasta"
+				},
+				{
+					"productId": "473934",
+					"grade": "close",
+					"note": "linguine, similar long pasta"
+				},
+				{
+					"productId": "467649",
+					"grade": "close",
+					"note": "bucatini long pasta"
+				},
+				{
+					"productId": "469597",
+					"grade": "close",
+					"note": "bucatini long pasta"
+				},
+				{
+					"productId": "461412",
+					"grade": "functional",
+					"note": "long ribbon pasta (tagliatelle/fettuccine/pappardelle)"
+				},
+				{
+					"productId": "467061",
+					"grade": "functional",
+					"note": "long ribbon pasta (tagliatelle/fettuccine/pappardelle)"
+				},
+				{
+					"productId": "466736",
+					"grade": "functional",
+					"note": "long ribbon pasta (tagliatelle/fettuccine/pappardelle)"
+				}
+			],
+			"nearMisses": [
+				{
+					"productId": "465116",
+					"reason": "gluten-free spaghetti, different diet product"
+				},
+				{
+					"productId": "460293",
+					"reason": "gluten-free organic spaghetti 250g"
+				},
+				{
+					"productId": "471341",
+					"reason": "squid ink spaghetti, flavoured"
+				},
+				{
+					"productId": "469059",
+					"reason": "red lentil spaghetti, different base"
+				},
+				{
+					"productId": "467982",
+					"reason": "egg fettuccine, small pack"
+				},
+				{
+					"productId": "460001",
+					"reason": "elbow macaroni, short"
+				},
+				{
+					"productId": "462920",
+					"reason": "potato gnocchi"
+				},
+				{
+					"productId": "468414",
+					"reason": "somen noodles"
+				}
+			]
+		},
+		{
+			"productId": "461332",
+			"name": "Kulta Katriina Perinteinen hieno jauhatus kahvi RAC 5x1kg",
+			"need": "Bulk ground filter coffee for brewing",
+			"acceptable": [
+				{
+					"productId": "466666",
+					"grade": "same",
+					"note": "fine-ground bulk 5x1 kg coffee"
+				},
+				{
+					"productId": "473397",
+					"grade": "same",
+					"note": "fine-ground bulk 5x1 kg coffee"
+				},
+				{
+					"productId": "475728",
+					"grade": "same",
+					"note": "fine-ground bulk 5x1 kg coffee"
+				},
+				{
+					"productId": "467627",
+					"grade": "close",
+					"note": "5x1 kg bulk coffee, roast/grind varies"
+				},
+				{
+					"productId": "467532",
+					"grade": "close",
+					"note": "5x1 kg bulk coffee, roast/grind varies"
+				},
+				{
+					"productId": "468267",
+					"grade": "close",
+					"note": "5x1 kg bulk coffee, roast/grind varies"
+				},
+				{
+					"productId": "469497",
+					"grade": "close",
+					"note": "fine-ground retail-size coffee, smaller packs"
+				},
+				{
+					"productId": "468618",
+					"grade": "close",
+					"note": "fine-ground retail-size coffee, smaller packs"
+				},
+				{
+					"productId": "468680",
+					"grade": "close",
+					"note": "fine-ground retail-size coffee, smaller packs"
+				},
+				{
+					"productId": "468704",
+					"grade": "close",
+					"note": "fine-ground retail-size coffee, smaller packs"
+				},
+				{
+					"productId": "468661",
+					"grade": "close",
+					"note": "fine-ground retail-size coffee, smaller packs"
+				},
+				{
+					"productId": "475758",
+					"grade": "close",
+					"note": "fine-ground retail-size coffee, smaller packs"
+				},
+				{
+					"productId": "475727",
+					"grade": "close",
+					"note": "fine-ground retail-size coffee, smaller packs"
+				},
+				{
+					"productId": "475732",
+					"grade": "close",
+					"note": "fine-ground retail-size coffee, smaller packs"
+				},
+				{
+					"productId": "468684",
+					"grade": "close",
+					"note": "fine-ground retail-size coffee, smaller packs"
+				},
+				{
+					"productId": "466999",
+					"grade": "close",
+					"note": "filter coffee 500 g packs"
+				},
+				{
+					"productId": "475765",
+					"grade": "close",
+					"note": "filter coffee 500 g packs"
+				},
+				{
+					"productId": "462091",
+					"grade": "close",
+					"note": "filter coffee 500 g packs"
+				},
+				{
+					"productId": "462086",
+					"grade": "close",
+					"note": "filter coffee 500 g packs"
+				},
+				{
+					"productId": "470153",
+					"grade": "close",
+					"note": "filter coffee 500 g packs"
+				},
+				{
+					"productId": "466941",
+					"grade": "close",
+					"note": "filter coffee 500 g packs"
+				},
+				{
+					"productId": "467833",
+					"grade": "close",
+					"note": "filter/medium-grind coffee 300-500 g packs"
+				},
+				{
+					"productId": "467744",
+					"grade": "close",
+					"note": "filter/medium-grind coffee 300-500 g packs"
+				},
+				{
+					"productId": "462143",
+					"grade": "close",
+					"note": "filter/medium-grind coffee 300-500 g packs"
+				},
+				{
+					"productId": "465196",
+					"grade": "close",
+					"note": "filter/medium-grind coffee 300-500 g packs"
+				}
+			],
+			"nearMisses": [
+				{
+					"productId": "461189",
+					"reason": "Espresso Barista whole beans"
+				},
+				{
+					"productId": "468523",
+					"reason": "coffee capsules"
+				},
+				{
+					"productId": "472657",
+					"reason": "decaf"
+				},
+				{
+					"productId": "468425",
+					"reason": "specialty ground"
+				},
+				{
+					"productId": "460617",
+					"reason": "44x100g dark roast Mokka, different profile"
+				},
+				{
+					"productId": "462037",
+					"reason": "pan grind"
+				},
+				{
+					"productId": "467004",
+					"reason": "pan coffee"
+				},
+				{
+					"productId": "468419",
+					"reason": "Kimbo espresso-style 250g"
+				}
+			]
+		}
+	]
+}

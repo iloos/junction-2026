@@ -13,6 +13,13 @@ import { products, offerCache } from '../../db/schema';
 import type { AnyDb } from '../../store/drizzle-store';
 import type { SimOverlay } from '../simulator/overlay';
 import { toOffer } from './normalize';
+import {
+	assemble,
+	RetrievalIndex,
+	retrievalModeFromEnv,
+	toRetrievalProduct,
+	type RetrievalMode
+} from './retrieval';
 
 /* eslint-disable @typescript-eslint/no-explicit-any -- raw Valio JSON stored as jsonb */
 type Raw = any;
@@ -20,6 +27,8 @@ type Raw = any;
 export interface PgCatalogOptions {
 	customer?: string;
 	overlay?: SimOverlay;
+	/** Substitute candidate retrieval (default: CATALOG_RETRIEVAL env, else `id`). */
+	retrieval?: RetrievalMode;
 }
 
 export type OfferCacheRow = typeof offerCache.$inferInsert;
@@ -49,6 +58,21 @@ const escapeLike = (s: string) => s.replace(/[\\%_]/g, (c) => `\\${c}`);
 
 export function createPgCatalog(db: AnyDb, opts: PgCatalogOptions = {}): Catalog {
 	const customer = opts.customer ?? '123';
+	const retrieval = opts.retrieval ?? retrievalModeFromEnv();
+	// The hybrid index needs every food product's name fields once (~17.5k small rows), then lives in memory.
+	let index: Promise<RetrievalIndex> | undefined;
+	const loadIndex = () =>
+		(index ??= (async () => {
+			const rows = await db
+				.select({ doc: products.doc })
+				.from(products)
+				.where(eq(products.isFood, true));
+			const ps = rows.map((r) => toRetrievalProduct(r.doc as Product));
+			return new RetrievalIndex(ps);
+		})().catch((e) => {
+			index = undefined;
+			throw e;
+		}));
 
 	async function docs(ids: ProductId[]): Promise<Map<ProductId, Product>> {
 		const out = new Map<ProductId, Product>();
@@ -150,6 +174,16 @@ export function createPgCatalog(db: AnyDb, opts: PgCatalogOptions = {}): Catalog
 		async candidates(productId, limit = 12) {
 			const p = (await docs([productId])).get(productId);
 			if (!p) return [];
+			if (retrieval === 'hybrid') {
+				const ix = await loadIndex();
+				const ruleDocs = await docs(p.valioSubstitutes);
+				return assemble(
+					{ ...toRetrievalProduct(p), valioSubstitutes: p.valioSubstitutes },
+					(id) => ruleDocs.has(id),
+					(exclude, room) => ix.similar(toRetrievalProduct(p), exclude, room),
+					limit
+				);
+			}
 			const existing = await docs(p.valioSubstitutes);
 			const rules = p.valioSubstitutes
 				.filter((id) => existing.has(id))
