@@ -268,3 +268,5 @@ The Kitchen shows one thing at a time: **the basket for a delivery day** (Tenanc
 **Why:** the user: "Basket" next to the plan button, and By source / By stage, are confusing; it's unclear which one is the actual order.
 
 **Reopen if:** a kitchen with several plans for one day can't tell which plan a line came from.
+
+**D24 addendum (lead, 15 Nov 01:50, after S5's r1 P0):** in the shared room a visitor writes only to a store they own; the seeded room kitchens are read-only for visitors (the presenter keeps full access). The chat in the room acts only for the visitor's own store and never falls back to a seeded kitchen; with no store it says "Join the room as your own store first". Enforced at the core gate, fail closed.
