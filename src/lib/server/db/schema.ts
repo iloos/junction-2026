@@ -209,3 +209,25 @@ export const apiKeys = pgTable('api_keys', {
 	createdAt: ts('created_at').notNull().defaultNow(),
 	revokedAt: ts('revoked_at')
 });
+
+/**
+ * Field-level suggestions about products (web, jobs, LLM), latest per workspace + product + field. Workspace-scoped
+ * catalogue knowledge, so it survives a demo reset; the op log keeps the history. Never read as a verified fact (D6).
+ */
+export const enrichments = pgTable(
+	'enrichments',
+	{
+		workspaceId: text('workspace_id')
+			.notNull()
+			.references(() => workspaces.id),
+		productId: text('product_id').notNull(),
+		field: text('field').notNull(),
+		value: jsonb('value').notNull(),
+		provenance: jsonb('provenance').notNull(),
+		/** Op seq of the RecordEnrichment that set it; an upsert only wins with a higher seq. */
+		seq: bigint('seq', { mode: 'number' }).notNull(),
+		runId: text('run_id').notNull(),
+		updatedAt: ts('updated_at').notNull().defaultNow()
+	},
+	(t) => [primaryKey({ columns: [t.workspaceId, t.productId, t.field] })]
+);

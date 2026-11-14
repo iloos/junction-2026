@@ -19,7 +19,8 @@
 		"db:migrate": "node --env-file=.env scripts/db-migrate.ts",
 		"db:seed": "node --env-file=.env scripts/seed-db.ts",
 		"test:live": "node --env-file=.env node_modules/vitest/vitest.mjs run --project server src/lib/server/adapters/decide/live.test.ts",
-		"eval:agent": "vitest run --project server src/lib/server/agent -t \"suite: agent goal trials|suite: adversarial authority\""
+		"eval:agent": "vitest run --project server src/lib/server/agent -t \"suite: agent goal trials|suite: adversarial authority\"",
+		"test:pg": "node scripts/test-pg.mjs"
 	},
 	"devDependencies": {
 		"@eslint/js": "^10.0.1",
