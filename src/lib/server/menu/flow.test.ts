@@ -215,3 +215,21 @@ describe('chef changes that get a blocked menu to Accept', () => {
 		expect(acc.ok).toBe(true);
 	});
 });
+
+describe('a vegetarian menu keeps its vegetables', () => {
+	it('beetroot, carrot and pickled cucumber resolve in a vegetarian dish (no label needed)', async () => {
+		const env = await createDbPorts();
+		const d = {
+			workspaceId: env.workspaceId,
+			store: memoryMenuStore(),
+			catalog: env.ports.catalog,
+			now: () => new Date('2026-12-07T21:40:00+02:00')
+		};
+		const brief = { ...goldenBrief('christmas'), dietary: ['vegetarian'] };
+		const view = await proposeForBrief(d, { kitchenId: 'k-hotel', brief });
+		const rosolli = view.proposal.dishes.find((x) => /rosolli/i.test(x.name))!;
+		for (const i of rosolli.ingredients) expect(i.unresolved, i.label).toBeUndefined();
+		// No raw flag anywhere a chef reads.
+		expect(JSON.stringify(view)).not.toMatch(/VEGETARIAN/);
+	});
+});

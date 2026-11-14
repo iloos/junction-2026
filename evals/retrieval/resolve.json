@@ -299,6 +299,35 @@
 			"unresolved": true
 		},
 		{
+			"q": "punajuuri",
+			"diet": ["VEGETARIAN"],
+			"accept": "punajuuri",
+			"reject": "hummus|falafel|salaatti"
+		},
+		{
+			"q": "porkkana",
+			"diet": ["VEGETARIAN"],
+			"accept": "porkkana",
+			"reject": "ruutu|piirakka|sämpylä|lettu"
+		},
+		{
+			"q": "tomaatti",
+			"diet": ["VEGETARIAN"],
+			"accept": "tomaatti",
+			"reject": "pesto|nyhtö|kastike"
+		},
+		{
+			"q": "suolakurkku",
+			"diet": ["VEGETARIAN"],
+			"accept": "suolakurkku",
+			"reject": "majonees"
+		},
+		{
+			"q": "salaatti",
+			"diet": ["VEGETARIAN"],
+			"accept": "salaatti"
+		},
+		{
 			"q": "strutsifilee",
 			"unresolved": true
 		},
