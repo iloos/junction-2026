@@ -138,7 +138,8 @@ function originOf(create: OpEnvelope, plan: Plan): Origin {
 	const door = create.via.split(':')[0];
 	if (plan.createdBy.kind === 'external_agent' || door === 'mcp' || door === 'rest')
 		return 'outside_agent';
-	if (create.via.includes('chat') || plan.taskId) return 'chat';
+	// The agent dock (dock#<tab>) and chat are the chef talking to the agent.
+	if (door.startsWith('dock') || create.via.includes('chat') || plan.taskId) return 'chat';
 	if (create.via.includes('request')) return 'request';
 	if (plan.eventId) return 'event';
 	return 'kitchen';

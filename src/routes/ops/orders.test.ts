@@ -46,3 +46,14 @@ describe('an ordered plan as an Orders row', () => {
 		expect(text).not.toMatch(/ws-j-|run-|pl-run|ap-pl|or-[0-9a-f]{6}/);
 	});
 });
+
+describe('the door an op came through', () => {
+	it('names Kitchen tabs and the agent dock, not their tab ids', async () => {
+		const { viaLabel } = await import('./labels');
+		expect(viaLabel('kitchen#t-3f9a')).toBe('Kitchen page');
+		expect(viaLabel('dock#t-3f9a')).toBe('Agent dock');
+		expect(viaLabel('mcp:approve')).toBe('MCP');
+		expect(viaLabel('rest')).toBe('API');
+		expect(viaLabel('kitchen')).toBe('Kitchen');
+	});
+});

@@ -20,7 +20,7 @@
 	import type { OpEnvelope } from '$lib/core/contracts';
 	import { buildCases, coverage, kitchenHref, openDecisions, openLines } from './cases';
 	import { buildProblems, type Problem } from './problems';
-	import { ACTOR, euro, opPlanId, opSummary, SIM_KIND, type Names } from './labels';
+	import { ACTOR, euro, opPlanId, opSummary, SIM_KIND, viaLabel, type Names } from './labels';
 	import { useShell } from '$lib/ui/shell/shell.svelte';
 
 	let { data, form } = $props();
@@ -662,7 +662,7 @@
 									</p>
 									<p class="who">
 										<span class="actor">{ACTOR[env.actor.kind]}</span>
-										<span class="via">{env.via}</span>
+										<span class="via" title={env.via}>{viaLabel(env.via)}</span>
 										{#if data.simulated}<span class="simtag">simulated</span>{/if}
 									</p>
 									{#if e.rejected}<p class="rej">Rejected by the reducer: {e.rejected}</p>{/if}
