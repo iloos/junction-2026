@@ -18,6 +18,7 @@ import type {
 } from '../contracts';
 import { applyOps, emptyState, type WorkspaceState } from '../state';
 import { causeOf, type CauseBy } from './cause';
+import { liveApprovals } from './orders';
 
 export type Origin = 'chat' | 'request' | 'outside_agent' | 'event' | 'usual' | 'menu' | 'kitchen';
 
@@ -399,8 +400,8 @@ function finish(acc: Acc, state: WorkspaceState, names: Map<string, string>): Or
 		orderedCents: ordered.reduce((s, o) => s + o.totalCents, 0),
 		plan,
 		pending:
-			Object.values(state.approvals).find((a) => a.planId === planId && a.state === 'pending') ??
-			null
+			// The current version's pending approval: an older version's, left pending by a same-terms re-quote, is stale.
+			liveApprovals(state, planId).find((a) => a.state === 'pending') ?? null
 	};
 }
 

@@ -29,6 +29,7 @@
 		kitchenHref,
 		openDecisions,
 		openLines,
+		pendingApprovalOf,
 		withApprovals
 	} from './cases';
 	import { buildProblems, type Problem } from './problems';
@@ -268,9 +269,7 @@
 			const anomalies = Object.values(stream.state.anomalies).filter((a) =>
 				mine.some((p) => p.id === a.planId)
 			);
-			const pending = Object.values(stream.state.approvals).filter(
-				(a) => a.state === 'pending' && mine.some((p) => p.id === a.planId)
-			);
+			const pending = mine.flatMap((p) => pendingApprovalOf(stream.state, p.id) ?? []);
 			const external = mine.some((p) => p.createdBy.kind === 'external_agent');
 			return {
 				kitchen: k,

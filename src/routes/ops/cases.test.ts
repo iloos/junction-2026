@@ -4,7 +4,7 @@ import type { WorkspaceState } from '$lib/core/state';
 import { applyOps, emptyState } from '$lib/core/state';
 import { SCENARIO } from '$lib/core/scenario';
 import { SYNTH_PRODUCTS, SYNTH_WORKSPACE, syntheticRun } from '$lib/server/bus/synthetic';
-import { buildCases, coverage, kitchenHref, withApprovals } from './cases';
+import { buildCases, coverage, kitchenHref, pendingApprovalOf, withApprovals } from './cases';
 
 function stateAfter(steps: number) {
 	const ops = syntheticRun({ runId: 'r', startSeq: 1 })
@@ -177,5 +177,21 @@ describe('ops cases', () => {
 		// Pending, or granted on an older version (the plan changed since): still waiting.
 		expect(withApprovals(s(approval('pending', 3))).plans.p1.lines[0].state).toBe('held');
 		expect(withApprovals(s(approval('granted', 2))).plans.p1.lines[0].state).toBe('held');
+	});
+});
+
+describe('pending approval of the current version only (OM-6)', () => {
+	it('ignores an older version’s approval left pending by a same-terms re-quote', () => {
+		const plan = { id: 'p1', version: 4, lines: [] } as unknown as Plan;
+		const ap = (id: string, planVersion: number) =>
+			({ id, planId: 'p1', planVersion, state: 'pending', lineIds: ['a'] }) as unknown as Approval;
+		const s = {
+			...emptyState('ws', 'r'),
+			plans: { p1: plan },
+			approvals: { old: ap('old', 3), cur: ap('cur', 4) }
+		} as WorkspaceState;
+		expect(pendingApprovalOf(s, 'p1')?.id).toBe('cur');
+		const onlyOld = { ...s, approvals: { old: ap('old', 3) } } as WorkspaceState;
+		expect(pendingApprovalOf(onlyOld, 'p1')).toBeUndefined();
 	});
 });

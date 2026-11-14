@@ -71,9 +71,7 @@ async function load(workspaceId: string, kitchenId: string): Promise<Loaded | nu
 				else if (new Date(a.closingTime) < new Date(prev.at)) prev.at = a.closingTime;
 				closeTimes[model] ??= a.closingTime.slice(11, 16);
 			}
-			const approval = Object.values(state.approvals).find(
-				(a) => a.planId === plan.id && a.state === 'pending'
-			);
+			const approval = liveApprovals(state, plan.id).find((a) => a.state === 'pending');
 			if (!approval) continue;
 			const viewed = await withPlanView(ports, plan, state, liveApprovals(state, plan.id));
 			const due = dueOf(viewed, approval) ?? SCENARIO.cutoff;
@@ -182,9 +180,7 @@ export async function planDates(
 		if (!plan) return null;
 		const kitchen = (await ports.store.kitchens(workspaceId)).find((k) => k.id === plan.kitchenId);
 		const kitchenName = kitchen?.name ?? plan.kitchenId;
-		const approval = Object.values(state.approvals).find(
-			(a) => a.planId === plan.id && a.state === 'pending'
-		);
+		const approval = liveApprovals(state, plan.id).find((a) => a.state === 'pending');
 		let decide: PlanDates['decide'] = null;
 		if (approval) {
 			const viewed = await withPlanView(ports, plan, state, liveApprovals(state, plan.id));
