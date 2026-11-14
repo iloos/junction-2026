@@ -822,3 +822,54 @@ journey(
 	},
 	300_000
 );
+
+// ---------- F1 (docs/review/INDEPENDENT-REPO-2026-11-14.md §1): the model must not rewrite the ask ----------
+
+journey('f1', 'The dock keeps the ask: "4 kg lactose-free butter tomorrow"', async (r, page) => {
+	const ASK = '4 kg lactose-free butter tomorrow';
+	await r.step('home', () => home(page));
+	await r.step('ask in the dock', () => say(r, page, ASK));
+	await r.step(
+		'the reply keeps 4 kg and lactose-free',
+		async () => {
+			const reply = r.j.chat.at(-1)?.reply ?? '';
+			if (/\b40\s*kg\b/i.test(reply)) throw new Error('the reply says 40 kg');
+			if (!/lactose|laktoosi/i.test(reply)) throw new Error('the reply drops lactose-free');
+		},
+		{ beat: false }
+	);
+	await r.step(
+		'the plan buys about 4 kg of lactose-free butter',
+		async () => {
+			const dock = await openDock(page);
+			const href = await dock
+				.locator('a[href*="plan="]')
+				.last()
+				.getAttribute('href', { timeout: 30_000 });
+			const planId = href ? new URL(href, BASE).searchParams.get('plan') : null;
+			if (!planId) throw new Error('no plan link: the ask did not reach a plan');
+			const snap = (await (
+				await page.request.get(`${BASE}/kitchen-api/snapshot?plan=${planId}&peek=1`)
+			).json()) as {
+				plan?: {
+					lines?: { productName?: string; qty?: { value: number; unit: string }; state: string }[];
+				};
+			};
+			const lines = (snap.plan?.lines ?? []).filter(
+				(l) => !['rejected', 'superseded'].includes(l.state)
+			);
+			r.note(
+				'lines',
+				lines.map((l) => `${l.productName} × ${l.qty?.value} ${l.qty?.unit} (${l.state})`)
+			);
+			const butter = lines.filter((l) => /voi|butter/i.test(l.productName ?? ''));
+			if (!butter.length) throw new Error('no butter line');
+			const notLf = butter.filter((l) => !/laktoositon|lactose/i.test(l.productName ?? ''));
+			if (notLf.length)
+				throw new Error(`not lactose-free: ${notLf.map((l) => l.productName).join(', ')}`);
+			const kg = butter.find((l) => l.qty?.unit === 'KG')?.qty?.value;
+			if (kg !== undefined && kg > 8) throw new Error(`${kg} kg planned for a 4 kg ask`);
+		},
+		{ beat: false }
+	);
+});
