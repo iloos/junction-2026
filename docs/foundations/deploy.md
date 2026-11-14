@@ -78,6 +78,11 @@ _Checked Sat 14 Nov ~03:00 against the live service; each line says how._
 | Holds at 10× | `ws-stress` (dev) interleaves N synthetic runs at 250 events/s into /ops at 1920×1080: 10× (190 events) 1 long task of 76 ms, 61 fps idle; 50× (950 events, 200 queue rows) 2 long tasks (103 ms total), 20.5 MB heap, 62 fps idle. |
 | No catalogue or model call holds a database lock | `store/prepare.test.ts` fails on any catalogue call made inside a store transaction across the full journey and three concurrent commands; it passes (0). The author's commit (4c553fd) reports 21 such calls on the previous code. |
 
+## Warm up before judging
+A container that has just started, or has sat idle, answers its first request slowly: the first `/healthz` after a deploy took **7.3 s** (container wake + first Postgres connect + TLS), the first `quote` 0.85 s; warm calls are 0.2–0.4 s from Helsinki. Aiven's proxy also redirects to its status page (302/307) for about a minute while a redeploy switches containers. Before judging or recording: open `/`, `/ops` and `/request` once, run one `quote`, and run `EXPECT_DB=ok scripts/deploy/smoke.sh <url>`; don't redeploy in the last half hour.
+
+Measured on 39ef642 (fresh sandbox, Chromium, from Helsinki): page ready 1.9 s; **Plan the event 7.1 s** = `POST /kitchen-api/scenario` 4.7 s + a follow-up `GET /kitchen-api/snapshot` 1.8 s + 0.5 s client; `/request` 1.0–1.7 s (≈0.75 s Gemini parse); `place_order` 0.3–0.4 s.
+
 ## Verda VM (plan B)
 `CPU.4V.16G` at $0.048/h (catalog; €200 balance). Ubuntu 24.04 + Docker, the same image, Caddy in front for HTTPS on `<ip>.sslip.io`. Billed create: needs the user's yes.
 
