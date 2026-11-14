@@ -231,7 +231,8 @@
 									? 'One decision needs you'
 									: `${decisions.length} decisions need you`}</b
 							>
-							· {approvalLines.length} lines · {money(approvalCents)}</span
+							· {approvalLines.length}
+							{approvalLines.length === 1 ? 'line' : 'lines'} · {money(approvalCents)}</span
 						>
 					{/if}
 				</p>

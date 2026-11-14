@@ -16,7 +16,7 @@ import { createServerPorts } from '$lib/server/store/server-ports';
 import { handlers } from '$lib/server/tools/handlers';
 import { serveTool, type Served } from '$lib/server/tools/serve';
 import { rulesFor, type PresetId } from '$lib/kitchen/fixture-plan';
-import type { CommitRecord, FixtureSnapshot } from '$lib/kitchen/fixture-server';
+import type { CommitRecord, FixtureSnapshot, PlanOrigin } from '$lib/kitchen/fixture-server';
 import { buildLiveView, type ProductFacts, type SubstitutesOut } from '$lib/kitchen/live-view';
 import seed from '../../../../fixtures/seeds/christmas-buffet-140.json';
 import { scenarioClock } from '$lib/core/scenario';
@@ -270,16 +270,22 @@ export function focusPlan(
  * Who last changed each line of a plan, from this run's op log: a substitute proposed, a line edited, or an outside
  * agent's order created. Only agent authors are returned; a chef's own edit clears the mark.
  */
-async function agentAuthors(
+async function planHistory(
 	workspaceId: string,
 	runId: string,
 	planId: string
-): Promise<Record<string, 'kitchen_agent' | 'external_agent'>> {
+): Promise<{
+	byAgent: Record<string, 'kitchen_agent' | 'external_agent'>;
+	origin: PlanOrigin | null;
+}> {
 	const last = new Map<string, string>();
+	let origin: PlanOrigin | null = null;
 	try {
 		for (const e of await catchUp(workspaceId, 0, 5000, runId)) {
 			if (e.kind !== 'op') continue;
-			const { op, actor } = e.envelope;
+			const { op, actor, via } = e.envelope;
+			if (op.type === 'CreatePlan' && op.plan.id === planId)
+				origin = originOf(actor.kind, via, op.plan);
 			const ids =
 				op.type === 'ProposeSubstitute' && op.planId === planId
 					? op.lines.map((l) => l.id)
@@ -291,17 +297,40 @@ async function agentAuthors(
 			for (const id of ids) last.set(id, actor.kind);
 		}
 	} catch {
-		return {}; // the marks are a courtesy: a log that can't be read never breaks the screen
+		// The marks and the origin are a courtesy: a log that can't be read never breaks the screen.
+		return { byAgent: {}, origin: null };
 	}
-	return Object.fromEntries(
-		[...last].filter(([, k]) => k === 'kitchen_agent' || k === 'external_agent')
-	) as Record<string, 'kitchen_agent' | 'external_agent'>;
+	return {
+		byAgent: Object.fromEntries(
+			[...last].filter(([, k]) => k === 'kitchen_agent' || k === 'external_agent')
+		) as Record<string, 'kitchen_agent' | 'external_agent'>,
+		origin
+	};
+}
+
+/** Where a plan came from, from its CreatePlan op: the booking, the agent in chat, a request, an outside agent. */
+function originOf(actor: string, via: string, plan: Plan): PlanOrigin {
+	if (plan.eventId) return 'event';
+	if (actor === 'external_agent' || via.startsWith('mcp') || via.startsWith('rest'))
+		return 'outside_agent';
+	if (via.startsWith('request')) return 'request';
+	if (via.startsWith('chat') || via.startsWith('task') || actor === 'kitchen_agent') return 'chat';
+	return 'kitchen';
 }
 
 /** A plan that is not the seeded event (an agent's order, a menu): named by what it buys. */
 function titleOf(plan: Plan): string {
 	const labels = plan.needs.map((n) => n.label);
-	if (!labels.length) return 'Order';
+	// An order of loose lines (an outside agent's place_order): named by what it buys.
+	if (!labels.length) {
+		const bought = plan.lines
+			.filter((l) => l.qty.value > 0)
+			.map((l) => `${l.qty.value} ${l.qty.unit} ${l.productName ?? l.productId}`);
+		if (!bought.length) return 'Order';
+		return bought.length <= 2
+			? bought.join(', ')
+			: `${bought.slice(0, 2).join(', ')} and ${bought.length - 2} more`;
+	}
 	return labels.length <= 3
 		? labels.join(', ')
 		: `${labels.slice(0, 3).join(', ')} and ${labels.length - 3} more`;
@@ -404,7 +433,7 @@ async function buildSnapshot(s: Session): Promise<LiveSnapshot> {
 		})
 	}));
 	const rules = rulesFor(kitchen, s.preset, kitchen.mandate.version);
-	const byAgent = await agentAuthors(ctx.workspaceId, ctx.runId, plan.id);
+	const { byAgent, origin } = await planHistory(ctx.workspaceId, ctx.runId, plan.id);
 	const others = Object.values(ws.plans)
 		.filter((p) => p.kitchenId === kitchen.id && p.id !== plan.id && p.lines.length > 0)
 		.map((p) => ({
@@ -444,6 +473,7 @@ async function buildSnapshot(s: Session): Promise<LiveSnapshot> {
 		preset: s.preset,
 		contention: s.contention,
 		byAgent,
+		origin: origin ?? (plan.eventId ? 'event' : null),
 		shortNames,
 		contentionRescue:
 			s.contentionRescue?.planId === plan.id

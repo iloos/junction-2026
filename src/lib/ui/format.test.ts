@@ -17,6 +17,7 @@ describe('readableName', () => {
 			'Aimo 2,5/1,25kg sinappisilli MSC'
 		);
 		expect(readableName('LOHIFILEE C-LEIKATTU 10KG')).toBe('Lohifilee c-leikattu 10kg');
+		expect(readableName('200 kg PP PUIKULA PERUNA PESTY')).toBe('200 kg PP Puikula peruna pesty');
 		expect(readableName('HK Palvikinkku viipaloitu 1,5 kg')).toBe(
 			'HK Palvikinkku viipaloitu 1,5 kg'
 		);

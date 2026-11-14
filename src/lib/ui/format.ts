@@ -88,12 +88,19 @@ export function readableName(raw: string, short?: string | null): string {
 	const letters = raw.replace(/[^A-Za-zÅÄÖåäö]/g, '');
 	const upper = letters.replace(/[^A-ZÅÄÖ]/g, '').length;
 	if (letters.length < 4 || upper / letters.length < 0.7) return raw;
+	let first = true;
 	return raw
 		.split(/(\s+)/)
-		.map((w, i) => {
-			if (KEEP_UPPER.has(w)) return w;
+		.map((w) => {
+			// Acronyms and short codes stay as written (MSC, UHT, HK, PP); numbers and units are left alone.
+			if (KEEP_UPPER.has(w) || /^[A-ZÅÄÖ]{1,2}$/.test(w)) return w;
 			const lower = w.toLocaleLowerCase('fi');
-			return i === 0 ? lower.charAt(0).toLocaleUpperCase('fi') + lower.slice(1) : lower;
+			// The first word of the name proper (after any quantity) starts with a capital.
+			if (first && /^[A-ZÅÄÖ]{3,}/.test(w)) {
+				first = false;
+				return lower.charAt(0).toLocaleUpperCase('fi') + lower.slice(1);
+			}
+			return /[A-ZÅÄÖ]/.test(w) ? lower : w;
 		})
 		.join('');
 }

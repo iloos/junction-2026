@@ -142,14 +142,29 @@
 	}
 
 	const snap = $derived(k.snap);
+	/** Lines no dish row shows (an order of loose lines), so nothing on the plan is left off the table. */
+	const looseLines = $derived.by(() => {
+		const shown = new Set((k.view?.dishes ?? []).flatMap((d) => d.lineIds));
+		return (k.plan?.lines ?? []).filter((l) => !shown.has(l.id) && l.qty.value > 0);
+	});
+	/** Who made the plan on screen, in words, for a plan that isn't the booking (its CreatePlan op). */
+	const ORIGIN: Record<string, string> = {
+		chat: 'Drafted by the agent in chat',
+		request: 'From a purchase request',
+		outside_agent: 'Prepared by an outside agent',
+		kitchen: 'Planned in the Kitchen'
+	};
+	const originWords = $derived(k.snap?.origin ? (ORIGIN[k.snap.origin] ?? '') : '');
 	/** The table names what it is: the event, its dishes, guests and day (the flow is behind the ⓘ). */
 	const tableTitle = $derived.by(() => {
 		const v = k.view;
 		if (!v) return 'Dishes';
 		const dishes = new Set(v.dishes.map((d) => d.nameFi.split(':')[0])).size;
-		return k.snap?.plan.eventId
-			? `${v.title.split(',')[0]} · ${dishes} dishes · ${v.guests} guests · ${day(v.date)}`
-			: `${v.title} · ${v.dishes.length} ${v.dishes.length === 1 ? 'item' : 'items'}`;
+		if (k.snap?.plan.eventId)
+			return `${v.title.split(',')[0]} · ${dishes} dishes · ${v.guests} guests · ${day(v.date)}`;
+		// Not a booking: what this order buys and when, whoever made it (the header says who).
+		const n = v.dishes.length + looseLines.length;
+		return `${n} ${n === 1 ? 'item' : 'items'} · delivery ${day(k.snap!.plan.deliverBy)}`;
 	});
 	/** A shared demo room: others see what is typed here (the loader says so; null in your own sandbox). */
 	const roomNotice = $derived(
@@ -655,7 +670,7 @@
 		<div class="mt-6 h-64 animate-pulse rounded bg-well"></div>
 	</main>
 {:else}
-	{#snippet lineRow(l: Line, d: DishView, inGroup = false)}
+	{#snippet lineRow(l: Line, d: DishView | null, inGroup = false)}
 		<LineRow
 			line={l}
 			name={names.get(l.productId) ?? l.productId}
@@ -666,7 +681,7 @@
 				? {
 						name: names.get(l.substituteFor) ?? l.substituteFor,
 						because:
-							d.outage === 'undeliverable' ? "Valio can't deliver it" : 'out of stock at Valio'
+							d?.outage === 'undeliverable' ? "Valio can't deliver it" : 'out of stock at Valio'
 					}
 				: undefined}
 			onwhy={() => k.openWhy(l.id)}
@@ -679,10 +694,10 @@
 			<!-- The task: decisions left, by when, cover by certainty; the event as a diff of a normal week -->
 			<section aria-label="This task">
 				<TaskHeader
-					title={view.title}
+					title={isEvent ? view.title : readableName(view.title)}
 					meta={isEvent
 						? `${day(view.date)} · ${view.guests} guests · ${view.serviceStyle} · delivery ${day(plan.deliverBy)}`
-						: `Delivery ${day(plan.deliverBy)}`}
+						: [originWords, `delivery ${day(plan.deliverBy)}`].filter(Boolean).join(' · ')}
 					decisions={decisions.length}
 					due={decisionsDue(plan, approval)}
 					now={k.now}
@@ -695,6 +710,7 @@
 					).length}
 					others={(snap?.others ?? []).map((o) => ({
 						...o,
+						title: readableName(o.title),
 						href: `${resolve('/')}?kitchen=${snap!.kitchen.id}&plan=${o.id}`
 					}))}
 				>
@@ -793,9 +809,10 @@
 							<p
 								class="absolute top-7 left-0 z-20 w-72 rounded-md border border-rule bg-sheet px-3 py-2 text-meta text-ink-2 shadow-md"
 							>
-								Menu → need → order. Change grams per guest and the need, packs, price and mandate
-								recompute. Open a row for how the amount was worked out and every line; Why shows
-								the sources.
+								{#if isEvent}Menu → need → order. Change grams per guest and the need, packs, price
+									and mandate recompute. Open a row for how the amount was worked out and every
+									line; Why shows the sources.{:else}What this order buys, line by line. Open a row
+									for its terms; Why shows where each fact came from and what the mandate says.{/if}
 							</p>
 						</details>
 					</h2>
@@ -863,8 +880,8 @@
 						class="hidden {ROW_COLS} items-center gap-x-3 border-b border-rule bg-well px-4 py-2 text-micro font-medium text-ink-3 lg:grid"
 						aria-hidden="true"
 					>
-						<span>Dish</span>
-						<span>g per guest</span>
+						<span>{isEvent ? 'Dish' : 'Item'}</span>
+						<span>{isEvent ? 'g per guest' : ''}</span>
 						<span class="text-right">Need</span>
 						<span>Product</span>
 						<span class="text-right">€ ex VAT</span>
@@ -1082,10 +1099,17 @@
 							{/if}
 						</div>
 					{/each}
+					{#each looseLines as l (l.id)}
+						<!-- A line with no dish behind it (an outside agent's or a request's order): the line itself is the row. -->
+						<div id="line-{l.id}" class="border-b border-rule px-4 py-2 last:border-b-0">
+							{@render lineRow(l, null)}
+						</div>
+					{/each}
 				</div>
 				<p class="mt-2 text-meta leading-snug text-ink-3">
-					Grams per guest, yields and recipes are team estimates. Prices are Valio catalogue prices
-					ex VAT; "Qty unknown" lines are Terminal items: ordered, but never counted as cover.
+					{#if isEvent}Grams per guest, yields and recipes are team estimates.{/if} Prices are Valio catalogue
+					prices ex VAT; lines where Valio doesn't state a quantity are ordered, but never counted as
+					cover.
 				</p>
 			</section>
 		</div>
