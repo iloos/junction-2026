@@ -1,6 +1,7 @@
 /** Read-only catalogue tools: search the static catalogue, quote live terms for known ids. */
 import { ok, type Result, type ToolInput, type ToolOutput } from '../contracts';
 import type { CallContext, Ports } from '../ports';
+import { defaultDeliverBy } from '../scenario';
 
 /** Helsinki calendar date of the simulator clock (deliverBy default). */
 export function simToday(ports: Ports): string {
@@ -17,12 +18,15 @@ export async function searchProducts(
 	return ok({ products: await ports.catalog.search(input.query, { limit: input.limit }) });
 }
 
-/** Unknown ids are reported in `notFound` and never reach Valio (the catalog checks before calling). */
+/**
+ * Unknown ids are reported in `notFound` and never reach Valio (the catalog checks before calling). Without a
+ * deliverBy the quote is for the scenario delivery, so its dates and cut-offs are December's, never the cache's.
+ */
 export async function quote(
 	ports: Ports,
 	_ctx: CallContext,
 	input: ToolInput<'quote'>
 ): Promise<Result<ToolOutput<'quote'>>> {
 	const ids = [...new Set(input.productIds)];
-	return ok(await ports.catalog.offers(ids, input.deliverBy ?? simToday(ports)));
+	return ok(await ports.catalog.offers(ids, input.deliverBy ?? defaultDeliverBy(simToday(ports))));
 }

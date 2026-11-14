@@ -31,6 +31,7 @@ import {
 	type TierResult
 } from '../mandate/tier';
 import type { CallContext, Ports, Tx } from '../ports';
+import { seedNeedQty, type EventSeed } from '../demand';
 import type { WorkspaceState } from '../state';
 
 const APPROVAL_TTL_MS = 24 * 3600 * 1000;
@@ -52,8 +53,12 @@ async function kitchenOf(ports: Ports, ctx: CallContext, id: string): Promise<Ki
 	return (await ports.store.kitchens(ctx.workspaceId)).find((k) => k.id === id) ?? null;
 }
 
-/** Rounds a requested quantity up to the product's lot step (D6: allowedLotSize is a hard minimum and step). */
+/**
+ * Rounds a requested quantity up to the product's lot step (D6: allowedLotSize is a hard minimum and step).
+ * Zero stays zero: nothing is needed, so nothing is bought (tiering marks the line rejected).
+ */
 export function toLot(qty: number, unit: string, p: Product): DraftLine['qty'] {
+	if (qty <= 0) return { value: 0, unit };
 	const step = p.lotStep;
 	if (step <= 0.01) return { value: qty, unit };
 	const lots = Math.max(1, Math.ceil(qty / step - 1e-9));
@@ -282,7 +287,7 @@ export async function approve(
 }
 
 export async function commitOrder(
-	ports: Ports,
+	ports: Ports & { events?: Record<string, EventSeed> },
 	ctx: CallContext,
 	input: ToolInput<'commit_order'>
 ): Promise<Result<ToolOutput<'commit_order'>>> {
@@ -332,6 +337,7 @@ export async function commitOrder(
 		});
 		const committed = plan.lines.filter((l) => l.state === 'committed');
 		const open = plan.lines.filter((l) => l.state !== 'committed');
+		const seed = plan.eventId ? ports.events?.[plan.eventId] : undefined;
 		const t = tierLines({
 			kitchen,
 			lines: open.map(draftFromLine),
@@ -342,7 +348,9 @@ export async function commitOrder(
 			createdBy: plan.createdBy.kind,
 			orderedBefore: orderedBefore(state, kitchen),
 			recalled: recalledProducts(state),
-			committed
+			committed,
+			// The same yardstick as the quote, so a line held for its quantity stays held here.
+			expectedQty: seed ? seedNeedQty(plan.id, seed) : undefined
 		});
 		const fresh = await termsHash({ deliverBy: plan.deliverBy, lines: t.termsLines });
 		if (fresh !== plan.termsHash) {
@@ -403,6 +411,12 @@ export async function commitOrder(
 		const requoted = new Map(t.lines.map((l) => [l.id, l]));
 		const lines = selected.map((id) => requoted.get(id) ?? byId.get(id)!);
 		for (const l of lines) {
+			if (l.state === 'rejected')
+				return fail(
+					err('INVALID_INPUT', `${l.productId}: quantity is 0, nothing to buy`, {
+						detail: { lineId: l.id }
+					}).error
+				);
 			if (l.state === 'unorderable')
 				return fail(
 					err('FORBIDDEN', `${l.productId} is ruled out: ${l.reasons.join(', ')}`, {

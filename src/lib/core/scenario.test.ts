@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Availability } from './contracts';
-import { onScenario } from './scenario';
+import { SCENARIO, defaultDeliverBy, onScenario } from './scenario';
 
 const cached = (logisticModel: 'Stock' | 'Terminal', closingTime: string | null): Availability => ({
 	kind: 'known',
@@ -45,5 +45,14 @@ describe('onScenario', () => {
 			kind: 'undeliverable'
 		};
 		expect(onScenario(a, '2026-12-10')).toBe(a);
+	});
+});
+
+describe('defaultDeliverBy', () => {
+	it('is the scenario delivery while the story runs, then the first day still orderable', () => {
+		expect(defaultDeliverBy('2026-12-07')).toBe(SCENARIO.delivery);
+		expect(defaultDeliverBy('2026-11-14')).toBe(SCENARIO.delivery);
+		expect(defaultDeliverBy('2026-12-09')).toBe('2026-12-12');
+		expect(defaultDeliverBy('2026-12-30')).toBe('2027-01-02');
 	});
 });

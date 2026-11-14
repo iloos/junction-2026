@@ -59,6 +59,15 @@ function minusDays(date: string, days: number): string {
 }
 
 /**
+ * The delivery date a caller gets when it names none: the scenario's delivery, or, once the clock has moved past
+ * it, the first day whose Terminal cut-off (D-2) is still ahead. Never a date whose ordering already closed.
+ */
+export function defaultDeliverBy(today: string): string {
+	const earliest = minusDays(today, -(LEAD_DAYS.Terminal + 1));
+	return earliest > SCENARIO.delivery ? earliest : SCENARIO.delivery;
+}
+
+/**
  * Cached Valio availability carries the dates of the day it was fetched (November), not the scenario's. Moved
  * onto the delivery date: available on deliverBy, ordering closes LEAD_DAYS before it at Valio's own time of day.
  * The facts (kind, amount, model) stay as Valio gave them, `raw` keeps the original dates, and the provenance says

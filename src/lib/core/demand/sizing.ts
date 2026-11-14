@@ -76,6 +76,7 @@ export function seedEntryFor(
  */
 export function makeInHouseQty(ingredient: Loose, needKg: number): Line['qty'] {
 	const unit: string = ingredient.order?.unit ?? ingredient.salesUnit;
+	if (needKg <= 0) return { value: 0, unit, rounding: 'dish need is 0: nothing to buy' };
 	if (!ingredient.per || !ingredient.pack)
 		return { value: ingredient.order.qty, unit, rounding: ingredient.need };
 	const amount = needKg * ingredient.per;

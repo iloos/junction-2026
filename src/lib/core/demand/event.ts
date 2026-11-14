@@ -127,3 +127,19 @@ function needAmountFor(
 function clean(x: number): number {
 	return Math.round(x * 1e9) / 1e9;
 }
+
+/**
+ * What each event line needs at the seed's own portions, in its sales unit, keyed by plan line id
+ * (`${planId}-${needId}`). The yardstick for "check the quantity": a line far beyond it is a typo, not an order.
+ */
+export function seedNeedQty(
+	planId: string,
+	seed: EventSeed
+): Map<string, { productId: string; value: number }> {
+	return new Map(
+		planEventDemand(seed).lines.map((l) => [
+			`${planId}-${l.needId}`,
+			{ productId: l.productId, value: l.qty.value }
+		])
+	);
+}
