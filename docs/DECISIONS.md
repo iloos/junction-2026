@@ -159,3 +159,18 @@ It ships only if the substitute recall@12 (70% today) and the retrieval evals im
 **Reopen if:** a measured run before the freeze shows a large recall gain cheaply. CLAIMS keeps "never pgvector" until it ships.
 
 **Amendment (user, via 41, same night):** held. If it returns, measure offline first: embed the 17.5k names into a gitignored file, run exact in-memory search, and check the substitute recall@12 and the retrieval evals. Migrate to pgvector only if recall rises with no regression. No Modal: the reranking role is covered by menu-v2's "find then choose" (a batched model pick restricted to the resolver's candidate pool).
+
+### D20 · The agent reads intent into a general shape; no special cases, examples are few-shot, generalisation is measured (user, 14 Nov night)
+**Choice:** the reading step (request, chat, outside agents) maps words onto a small, general intent shape. Code then acts on the shape, never on phrases:
+- **What:** a product, a dish (with portions), a menu or event, a question, or a change to something open.
+- **How much:** exact (qty and unit), a range, "as much as available", "enough for N people/covers", or unknown (ask).
+- **Constraints:** requirements (D16) and preferences, each with where it came from.
+- **When:** a date, "earliest", a range, or unknown.
+
+"All your apples", "everything you've got", "as many as you can" and "kaikki omenat" are all "as much as available". No phrase gets its own branch. The model fills the shape. Deterministic code handles each kind of the shape once, and the reading check (D18) verifies the shape against the words.
+
+Prompts use a few short, varied few-shot examples that teach the shape. They don't mirror eval cases or user reports. Every new behaviour is tested on held-out paraphrases written separately from the prompt's examples, so overfitting shows as a generalisation gap.
+
+**Why:** patching each reported phrase (a word list here, a regex there) passes the reported case and fails its neighbours, and examples copied from tests bias the model toward them. The user asked for the agent to understand intention, with examples as few-shot rather than lookup.
+
+**Reopen if:** a held-out paraphrase eval shows a kind of the shape the model can't fill reliably. Then improve the shape or the model (D12's cascade), not the phrase list.
