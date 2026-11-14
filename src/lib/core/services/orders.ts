@@ -630,6 +630,35 @@ export async function commitOrder(
 			? input.lineIds.every((id) => byId.get(id)?.state === 'committed')
 			: plan.lines.some((l) => l.state === 'committed') &&
 				!plan.lines.some((l) => l.state === 'held' || l.state === 'eligible');
+		// Already ordered: the lines asked for (or, unnamed, every bought line with nothing left open) are all in one
+		// order of this plan on the accepted terms. A retry whose recomputed key differs gets that receipt, not an
+		// error. Split across orders, other terms, or held lines still open: no replay (a new command stays new).
+		if (selected.length === 0 && lost && prefix.length === 0) {
+			const want =
+				input.lineIds ?? plan.lines.filter((l) => l.state === 'committed').map((l) => l.id);
+			const covering = Object.values(state.orders).filter(
+				(o) =>
+					o.planId === plan.id &&
+					o.termsHash === plan.termsHash &&
+					want.every((id) => o.lines.some((x) => x.lineId === id))
+			);
+			const receipt =
+				covering.length === 1
+					? Object.values(state.receipts).find((r) => r.orderId === covering[0].id)
+					: undefined;
+			if (receipt)
+				return {
+					ops: [],
+					value: ok({
+						orderId: covering[0].id,
+						receiptId: receipt.id,
+						totalCents: covering[0].totalCents,
+						committedLineIds: covering[0].lines.map((l) => l.lineId),
+						awaitingSupplier: receipt.awaitingSupplier.map((a) => a.productId),
+						replayed: true
+					})
+				};
+		}
 		if (selected.length === 0 && lost)
 			return fail(
 				err('STALE_VERSION', 'these lines were already committed by another order; reload the plan')

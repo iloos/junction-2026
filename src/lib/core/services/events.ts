@@ -463,8 +463,8 @@ async function prepareEdit(
 		const products = await ports.catalog.get(mine.map((d) => d.productId));
 		// Lines bought for this need follow it; a superseded line stays at 0. Nothing to buy at 0.
 		drafts = drafts.map((d) => {
-			if (d.needId !== before.id || d.extraReasons?.includes('superseded') || d.qty.value === 0)
-				return d;
+			// Only a superseded original stays at 0; an active line at 0 (4 → 0) comes back with the need (R11-05).
+			if (d.needId !== before.id || d.extraReasons?.includes('superseded')) return d;
 			if (amount.value === 0) return { ...d, qty: { ...d.qty, value: 0 } };
 			const p = products.get(d.productId);
 			const qty = p ? sizeDirect(p, amount) : null;

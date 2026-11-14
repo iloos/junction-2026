@@ -55,6 +55,17 @@ async function harness(
 	o: { deliveryDays?: Kitchen['deliveryDays']; origin?: Kitchen['constraints']['origin'] } = {}
 ) {
 	const products = new Map([
+		// Milk sold only by the 5 l case.
+		[
+			'470700',
+			Product.parse({
+				...milk('470700', 'Testi maito 5 x 1 l', false),
+				salesUnit: 'KI',
+				baseUnit: 'KI',
+				packs: [{ unit: 'KI', baseUnits: 1 }],
+				netPerSalesUnit: { value: { value: 5, unit: 'l' }, provenance: prov }
+			})
+		],
 		// A vegetable patty (out, below) and a meatball: the only substitute for a vegetarian dish is meat.
 		[
 			'470600',
@@ -733,5 +744,145 @@ describe('D18: packs and cases make a need too (R11-02)', () => {
 			})
 		);
 		expect(r.chosen.map((l) => l.productId)).toEqual(['470420']); // lactose-free, never 470418
+	});
+});
+
+describe('D18: a line is bound to its need (R11-01, R11-05)', () => {
+	it('250 ml asked is never 250 sales units of a 1 l milk, whatever the entry sent', async () => {
+		const { h } = await harness();
+		const p = must(
+			await h.place_order(ctx('chef'), {
+				kitchenId: 'k-hotel',
+				deliverBy: '2026-12-10',
+				idempotencyKey: 'ml',
+				lines: [
+					{
+						productId: '464201',
+						qty: 250,
+						unit: 'ST',
+						ask: { words: '250 ml maitoa', qty: 250, unit: 'ml' }
+					}
+				]
+			})
+		).plan;
+		expect(p.lines[0].state).toBe('unorderable');
+		expect(p.lines[0].reasons).toContain('exceeds_need');
+	});
+
+	it('an explicit unit nobody recognised holds instead of buying', async () => {
+		const { h } = await harness();
+		const p = must(
+			await h.place_order(ctx('kitchen_agent'), {
+				kitchenId: 'k-hotel',
+				deliverBy: '2026-12-10',
+				idempotencyKey: 'tlk',
+				lines: [
+					{ productId: '464201', qty: 3, unit: 'ST', ask: { qty: 3, unit: { unknown: 'tlk' } } }
+				]
+			})
+		).plan;
+		expect(p.lines[0].state).toBe('held');
+		expect(p.lines[0].reasons).toContain('need_size_unknown');
+	});
+
+	it('4 l → 0 → 4 l restores one active purchase', async () => {
+		const { h } = await harness();
+		const p = must(
+			await h.place_order(ctx('chef'), {
+				kitchenId: 'k-hotel',
+				deliverBy: '2026-12-10',
+				idempotencyKey: 'restore',
+				lines: [{ productId: '464201', qty: 4, unit: 'ST', amount: { value: 4, unit: 'l' } }]
+			})
+		).plan;
+		const set = async (version: number, value: number) =>
+			must(
+				await h.edit_line(ctx('chef'), {
+					planId: p.id,
+					version,
+					needId: p.needs[0].id,
+					patch: { amount: { value, unit: 'l' } }
+				})
+			).plan;
+		const zero = await set(p.version, 0);
+		expect(zero.lines[0].qty.value).toBe(0);
+		const back = await set(zero.version, 4);
+		expect(back.lines[0].qty.value).toBe(4);
+		expect(back.lines[0].state).not.toBe('rejected');
+	});
+});
+
+describe('D18: lot rounding far over the ask holds for a person', () => {
+	it('250 ml as one 5 l case is held (need_rounding_large), not forbidden; 4 l of 1 l packs is not flagged', async () => {
+		const { h } = await harness();
+		const p = must(
+			await h.place_order(ctx('kitchen_agent'), {
+				kitchenId: 'k-hotel',
+				deliverBy: '2026-12-10',
+				idempotencyKey: 'case',
+				lines: [
+					{ productId: '470700', qty: 1, unit: 'KI', amount: { value: 0.25, unit: 'l' } },
+					{ productId: '464201', qty: 4, unit: 'ST', amount: { value: 4, unit: 'l' } }
+				]
+			})
+		).plan;
+		const [caseLine, packs] = p.lines;
+		expect(caseLine.state).toBe('held');
+		expect(caseLine.reasons).toContain('need_rounding_large');
+		expect(caseLine.reasons).not.toContain('exceeds_need');
+		expect(packs.reasons).not.toContain('need_rounding_large');
+	});
+});
+
+describe('a retry of a commit that already went through gets its receipt', () => {
+	it('same lines, another key: the same receipt, replayed, nothing bought twice', async () => {
+		const { h, state } = await harness();
+		const p = must(
+			await h.place_order(ctx(), {
+				kitchenId: 'k-hotel',
+				deliverBy: '2026-12-10',
+				idempotencyKey: 'once',
+				lines: [{ productId: '464201', qty: 4, unit: 'ST', amount: { value: 4, unit: 'l' } }]
+			})
+		).plan;
+		const first = must(
+			await h.commit_order(ctx(), { planId: p.id, version: p.version, idempotencyKey: 'k1' })
+		);
+		const now = must(await h.get_plan(ctx(), { planId: p.id })).plan;
+		const again = must(
+			await h.commit_order(ctx(), {
+				planId: p.id,
+				version: now.version,
+				idempotencyKey: 'k2',
+				lineIds: [p.lines[0].id]
+			})
+		);
+		expect(again).toMatchObject({ receiptId: first.receiptId, replayed: true });
+		expect(Object.keys((await state()).orders)).toHaveLength(1);
+	});
+
+	it('with a held line still open, an unnamed retry is not "already ordered"', async () => {
+		const { h, state } = await harness();
+		const p = must(
+			await h.place_order(ctx(), {
+				kitchenId: 'k-hotel',
+				deliverBy: '2026-12-10',
+				idempotencyKey: 'mixed',
+				lines: [
+					{ productId: '464201', qty: 4, unit: 'ST' },
+					{ productId: '470700', qty: 1, unit: 'KI', amount: { value: 0.25, unit: 'l' } }
+				]
+			})
+		).plan;
+		expect(p.lines[1].state).toBe('held');
+		must(await h.commit_order(ctx(), { planId: p.id, version: p.version, idempotencyKey: 'm1' }));
+		const now = must(await h.get_plan(ctx(), { planId: p.id })).plan;
+		const r = await h.commit_order(ctx(), {
+			planId: p.id,
+			version: now.version,
+			idempotencyKey: 'm2'
+		});
+		expect(r.ok ? r.value.replayed : r.error.code).toBe('FORBIDDEN');
+		expect(Object.keys((await state()).orders)).toHaveLength(1);
 	});
 });

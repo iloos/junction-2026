@@ -434,7 +434,12 @@ export const toolSchemas = {
 			receiptId: z.string(),
 			totalCents: z.int(),
 			committedLineIds: z.array(z.string()),
-			awaitingSupplier: z.array(z.string())
+			awaitingSupplier: z.array(z.string()),
+			/**
+			 * True when nothing new was bought because the lines asked for are already bought by one order of this plan
+			 * on the same accepted terms: that order's receipt is the answer ("already ordered").
+			 */
+			replayed: z.boolean().optional()
 		})
 	},
 	set_mandate: {
