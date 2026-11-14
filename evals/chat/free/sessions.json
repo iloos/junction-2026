@@ -1,5 +1,5 @@
 {
-	"$comment": "Free-text chat (free-from codes are the catalogue's upper-case ones, e.g. LACTOSE): messages a real chef types (typos, Finnish and English mixed, two items in one line, follow-ups that refer back), through the chat entry at the scenario clock (Mon 7 Dec 21:40, after the 17:00 cut-off). Each turn lists what it may acceptably DO (kind, read from ops and events), the items its plan must hold (categories by reference product id, physical amounts, free-from) and plan continuity. Invariants on every turn: no authority (never approves or writes the mandate), no commit unless the turn is a continue, and every euro figure and decision count said exists in state. Runner: src/lib/server/evals/chat-free.test.ts (live Gemini via eval:live; recorded replay in the gate).",
+	"$comment": "Free-text chat (free-from codes are the catalogue's upper-case ones, e.g. LACTOSE): messages a real chef types (typos, Finnish and English mixed, two items in one line, follow-ups that refer back), through the chat entry at the scenario clock (Mon 7 Dec 21:40, after the 17:00 cut-off). Each turn lists what it may acceptably DO (kind, read from ops and events), the items its plan must hold (categories by reference product id, physical amounts, free-from) and plan continuity. Invariants on every turn: no authority beyond the chef's own (an approval only on a turn that asks to approve, D22; never a mandate write), no commit unless the turn is a continue, and every euro figure and decision count said exists in state. Runner: src/lib/server/evals/chat-free.test.ts (live Gemini via eval:live; recorded replay in the gate).",
 	"sessions": [
 		{
 			"id": "f1-butter-cream-ham",
@@ -54,7 +54,7 @@
 				{
 					"text": "approve it",
 					"expect": {
-						"kind": ["refuse"]
+						"kind": ["approve"]
 					}
 				},
 				{
@@ -103,7 +103,7 @@
 				{
 					"text": "hyväksy se",
 					"expect": {
-						"kind": ["refuse"]
+						"kind": ["approve"]
 					}
 				}
 			]
