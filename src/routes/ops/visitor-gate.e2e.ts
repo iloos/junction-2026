@@ -21,16 +21,20 @@ async function room(page: Page, query = ''): Promise<{ ws: string; run: string }
 	return { ws, run };
 }
 
+/** Plan the seeded event in this browser's sandbox, the way the kitchen's first screen does. */
 async function planEvent(page: Page) {
 	await page.goto(`${BASE}/`);
-	const start = page.getByRole('button', { name: 'Plan the event' });
-	await page.locator('#event-h').or(start).first().waitFor({ timeout: 60_000 });
-	if (await start.isVisible()) await start.click();
-	await page.waitForSelector('#event-h', { timeout: 90_000 });
+	const r = await page.request.post(`${BASE}/kitchen-api/scenario`, {
+		data: { action: 'start' },
+		headers: { origin: BASE }
+	});
+	expect(r.ok()).toBe(true);
 }
 
 /** The visible queue count on /ops ("To act on N"). */
 async function queueCount(page: Page): Promise<number> {
+	// Ops opens on Problems; the queue's heading renders on its own tab.
+	await page.getByRole('tab', { name: /Queue/ }).click();
 	const h = page.getByRole('heading', { name: /To act on/ });
 	await h.waitFor({ timeout: 30_000 });
 	return Number(((await h.textContent()) ?? '').match(/(\d+)/)?.[1] ?? 0);

@@ -3,7 +3,7 @@
 ## Dispatch
 
 - **Track:** G: sandboxes, Operations, deploy, Aiven. Session 9c.
-- **Branch / worktree:** `lane/g7` (next: `lane/g8`) in `../junc26-lanes/ops`. Dev port 5176, run with `DATABASE_URL=` blank (dev uses PGlite anyway unless `DEV_USE_REMOTE_DB=1`).
+- **Branch / worktree:** `lane/g9` (g6, g7, g8 are on main) in `../junc26-lanes/ops`. Dev port 5176, run with `DATABASE_URL=` blank (dev uses PGlite anyway unless `DEV_USE_REMOTE_DB=1`).
 - **Owned paths:**
   - `src/lib/server/demo/**`, `src/lib/server/bus/**`, `src/lib/server/db/client.ts`
   - `src/routes/ops/**`, `src/routes/api/events/**`, `src/routes/api/demo/**`, `src/routes/healthz/**`
@@ -21,16 +21,24 @@
   - **RecordRefusal** op: the gate records FORBIDDEN for outside and kitchen agents (REST and MCP, including tools the MCP server doesn't list), one per caller, tool and plan per 60 s; shown as a red story step.
   - M2 (`onCurrentRun` always follows the newest run), R9-09 (bus delivers in order per workspace), R9-10 (NOTIFY limit in bytes; publish failures logged).
   - Words: "Ordered", "Order refused", days not ISO dates.
-- **`lane/g7` @ `3826d12`** (merging): service status (`external/status.ts`, `/healthz` `services[]`, `ServiceStatus` in the Ops header), RecordRefusal caps, ids behind System, and the privacy fix (5,000 sandboxes per process, `roomNotice` on every shared room).
+- **On main (g7, g8):** service status (`external/status.ts`, `/healthz` `services[]`, `ServiceStatus` in the Ops header), RecordRefusal caps, ids behind System, days not ISO dates, privacy (5,000 sandboxes per process, `roomNotice` on every shared room), the outside agent's door from `via` (MCP or API).
+- **`lane/g9`** (pushed, not merged): kitchen calendar feed. `core/calendar.ts` (RFC 5545, Finnish holidays), `/kitchen-api/calendar.ics?kitchen=` (cookie), `/api/calendar/<kitchen>.ics?token=` (read-only `cal_` token from `/api/demo/calendar-link`).
 - **Earlier:** per-visitor signed sandboxes, judge keys, presenter session (`?presenter=1`), stale-run fix, dev DB guard, `/ops/views`, `/healthz` commit.
 
 ## Next, in order
 
-1. Deploy g7 with the lead's next main; check `/healthz` `services` on prod.
-2. **NEEDS from others:** 1f and B render `room.notice` / `workspace.notice` where people type; the lead mounts `ServiceStatus` in the shell for the System layer.
-3. #11 stakes chart (€ waiting by cut-off, from `problems.ts`), #12 gate paths (counted sources only: ops, refusals, idempotency replays), #9 product sheet with 1f.
+1. Lead merges g9; deploy; check `/healthz` `services[]` on prod (91's `evals/ui/services.e2e.ts` asserts Valio live).
+2. ~~Visitor gate on a production build~~: green on g9, after updating it to plan through `/kitchen-api/scenario` and open the Queue tab.
+3. Story wording on a run with grants, denials, commits, edits and a recall (only the seeded run plus a refusal is tested), then #11 stakes chart.
 
-Mocks are in the main checkout at `scratch/ux-mock/ops.html` and `ops-story.png`; screenshots of what shipped in `scratch/ops-wave1/`. Words follow `docs/concept/VOCABULARY.md`. No new dependencies.
+**NEEDS from others:** 1f and B render `room.notice` / `workspace.notice` where people type; 1f mounts the calendar subscribe link (`/api/demo/calendar-link?kitchen=` → `.webcal`); the lead mounts `ServiceStatus` in the shell for the System layer; the race smoke needs `SMOKE_KEY` (the user or the lead runs it).
+
+## Self-review (Ring 4 checkpoint)
+
+- **Solid:** Problems and stories are a pure projection, tested on the captured seeded run. RecordRefusal is tested over MCP (unlisted tool) and REST, with the dedupe window and an unchanged plan version. Bus ordering (R9-09) and byte limit (R9-10) have tests that fail on the old code. Every deploy today smoked green with `SMOKE_UI=1`.
+- **Fragile:** the service status is per process and resets on deploy (every service `idle` until called), and Valio offers served from stored Postgres rows leave no trace. Problems group across kitchens, but the seeded run has one kitchen, so multi-kitchen titles ("for N kitchens") are untested on real data.
+- **Untested:** the race smoke since 3684d29 (no `SMOKE_KEY` in this session); story sentences for granted, denied and voided approvals, commits, edits and recalls on real ops; the calendar in a real calendar app.
+- **One hour before the freeze:** walk prod Ops through approve → order → a recall drill and fix any sentence that reads wrong, and get the race smoke run with the key.
 
 ## Deploy and roll back
 
@@ -55,7 +63,7 @@ Mocks are in the main checkout at `scratch/ux-mock/ops.html` and `ops-story.png`
 
 ## Resume
 
-- **Worktree:** branch `lane/g7` (stacked on g6); `pnpm i`; `.env` and `data/valio/` copied from the main checkout.
+- **Worktree:** branch `lane/g9` (head in `git log -1`; g6–g8 merged); `pnpm i`; `.env` and `data/valio/` copied from the main checkout.
 - **Checks:** `pnpm check && pnpm lint && pnpm test:unit --run`, then `pnpm gate` before handing a SHA.
 - **Production build without Aiven:** `pnpm build && scripts/deploy/serve-fixture.sh` (:4177; the test chef key is in the script). Then `GATE_URL=http://localhost:4177 npx playwright test -c scripts/deploy/pw-gate.config.ts`.
 - **Prod UI checks:** `KITCHEN_URL=<url> npx playwright test -c evals/ui/pw-prod.config.ts`, from the worktree root.

@@ -4,8 +4,7 @@
  */
 import type { Line, OpEnvelope } from '$lib/core/contracts';
 import type { WorkspaceState } from '$lib/core/state';
-import { euro, productName, reasonText, refusalWhat, type Names } from './labels';
-import { day } from '$lib/ui/format';
+import { opSummary, productName, reasonText, type Names } from './labels';
 import { dishPhrase, type Problem } from './problems';
 
 /** Who a step is from, as its chip reads. */
@@ -105,6 +104,11 @@ export function storyOf(
 	const mine = (l: Pick<Line, 'id' | 'productId'>) =>
 		lineIds.has(l.id) || products.has(l.productId);
 	const name = (id: string) => productName(names, id);
+	/** The op's one sentence (labels.ts `opSummary`), as a sentence. */
+	const said = (env: OpEnvelope) => {
+		const t = opSummary(env, names, s.plans);
+		return /[.!?]$/.test(t) ? t : `${t}.`;
+	};
 	const steps: StoryStep[] = [];
 	let hidden = 0;
 	/** Last seen state per plan line, to tell what an offer changed. */
@@ -120,7 +124,7 @@ export function storyOf(
 			if (!op.anomaly.productId || !products.has(op.anomaly.productId)) continue;
 			steps.push({
 				...base,
-				what: op.anomaly.message,
+				what: said(env),
 				then:
 					p.tone === 'quiet'
 						? 'Nothing was held because of it.'
@@ -137,10 +141,7 @@ export function storyOf(
 				const n = op.plan.lines.length;
 				steps.push({
 					...base,
-					what:
-						n === 0
-							? `Started an order for ${day(op.plan.deliverBy)}.`
-							: `Drafted an order of ${plural(n, 'line')} for ${day(op.plan.deliverBy)}.`,
+					what: said(env),
 					then:
 						n === 0 ? 'Lines follow as the menu is worked out.' : 'Next: live terms from Valio.',
 					tone: 'plain'
@@ -193,30 +194,16 @@ export function storyOf(
 				const forMe =
 					lineIds.has(op.forLineId) || op.lines.some((l) => products.has(l.substituteFor ?? ''));
 				if (!forMe) continue;
-				const ranked = op.candidates.length
-					? ` from ${plural(op.candidates.length, 'candidate')}`
-					: '';
-				if (!op.lines.length)
-					steps.push({
-						...base,
-						what: `Agents looked for a substitute${ranked}; none qualifies.`,
-						then: 'Nothing changed: the line still cannot be ordered.',
-						tone: 'bad'
-					});
-				else if (op.kind === 'make_in_house')
-					steps.push({
-						...base,
-						what: `No ready-made substitute qualifies, so agents planned it in house: ${plural(op.lines.length, 'ingredient')}${op.labourNote ? ` (${op.labourNote})` : ''}.`,
-						then: 'Proposed, not ordered: the ingredients are priced next.',
-						tone: 'plain'
-					});
-				else
-					steps.push({
-						...base,
-						what: `Agents ranked substitutes${ranked} by the kitchen's own rules and proposed ${name(op.lines[0].productId)}.`,
-						then: 'Proposed, not ordered: it is priced next.',
-						tone: 'plain'
-					});
+				steps.push({
+					...base,
+					what: said(env),
+					then: !op.lines.length
+						? 'Nothing changed: the line still cannot be ordered.'
+						: op.kind === 'make_in_house'
+							? 'Proposed, not ordered: the ingredients are priced next.'
+							: 'Proposed, not ordered: it is priced next.',
+					tone: op.lines.length ? 'plain' : 'bad'
+				});
 				break;
 			}
 			case 'RecordApproval': {
@@ -260,24 +247,20 @@ export function storyOf(
 			}
 			case 'CommitOrder': {
 				const o = op.outcome;
-				if (o.result === 'failed') {
-					steps.push({
-						...base,
-						what: `An order was refused: ${reasonText(o.error.code).toLowerCase()}.`,
-						then: 'Nothing was ordered and nothing changed.',
-						tone: 'bad'
-					});
-					break;
+				if (o.result === 'committed') {
+					const k = o.order.lines.filter(
+						(l) => lineIds.has(l.lineId) || products.has(l.productId)
+					).length;
+					if (!k) continue;
 				}
-				const k = o.order.lines.filter(
-					(l) => lineIds.has(l.lineId) || products.has(l.productId)
-				).length;
-				if (!k) continue;
 				steps.push({
 					...base,
-					what: `Ordered ${k === 1 ? 'the line' : `${k} of these lines`}, ${euro(o.order.totalCents)} for the whole order.`,
-					then: `Valio confirmed ${o.receipt.confirmed.length} of ${o.order.lines.length} lines.`,
-					tone: 'ok'
+					what: said(env),
+					then:
+						o.result === 'failed'
+							? 'Nothing was ordered and nothing changed.'
+							: 'These lines are ordered, on exactly the approved terms.',
+					tone: o.result === 'failed' ? 'bad' : 'ok'
 				});
 				break;
 			}
@@ -285,7 +268,7 @@ export function storyOf(
 				if (!op.lines.some((x) => lineIds.has(x.lineId))) continue;
 				steps.push({
 					...base,
-					what: `Edited: ${op.summary}.`,
+					what: said(env),
 					then: 'The plan changed, so any approval for it is void.',
 					tone: 'plain'
 				});
@@ -294,7 +277,7 @@ export function storyOf(
 			case 'RecordRefusal':
 				steps.push({
 					...base,
-					what: `${refusalWhat(env.actor.kind, op.tool)}.`,
+					what: said(env),
 					then: `Refused: ${WHY_REFUSED[op.tool] ?? op.message.replace(/\.$/, '')}. Nothing changed.`,
 					tone: 'bad'
 				});

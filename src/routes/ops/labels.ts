@@ -84,7 +84,7 @@ function decisionCount(plan: Plan | undefined, held: Line[]): number {
 }
 
 /**
- * One plain sentence per op for the log and the timeline, in the kitchen's words: held lines are counted as
+ * One plain sentence per op: the one source for the op log, the timeline, each case's story and /agents. in the kitchen's words: held lines are counted as
  * decisions (reason groups), not as raw lines. `plans` (the current plans) lets an approval name its decisions.
  */
 export function opSummary(env: OpEnvelope, names: Names, plans: Record<string, Plan> = {}): string {
@@ -95,7 +95,7 @@ export function opSummary(env: OpEnvelope, names: Names, plans: Record<string, P
 				? `Drafted an order of ${lines(op.plan.lines.length)} for ${day(op.plan.deliverBy)}`
 				: `Started an order for ${day(op.plan.deliverBy)}`;
 		case 'EditLine':
-			return op.summary;
+			return `Edited: ${op.summary}`;
 		case 'RecordOffer': {
 			const held = op.lines.filter((l) => l.state === 'held');
 			const cannot = op.lines.filter((l) => l.state === 'unorderable').length;
@@ -110,11 +110,12 @@ export function opSummary(env: OpEnvelope, names: Names, plans: Record<string, P
 		case 'ProposeSubstitute': {
 			const forLine = op.lines[0]?.substituteFor;
 			const sub = op.lines[0]?.productId;
-			if (op.kind === 'make_in_house' && op.lines.length)
-				return `Planned it in house from ${op.lines.length} ingredient${op.lines.length === 1 ? '' : 's'}${forLine ? ` instead of ${name(names, forLine)}` : ''}`;
-			return sub
-				? `Proposed ${name(names, sub)}${forLine ? ` instead of ${name(names, forLine)}` : ''}`
-				: 'Found no substitute that qualifies';
+			const instead = forLine ? ` instead of ${name(names, forLine)}` : '';
+			const from = op.candidates.length ? ` from ${op.candidates.length} candidates` : '';
+			if (!sub) return `Looked for a substitute${from}; none qualifies`;
+			if (op.kind === 'make_in_house')
+				return `No ready-made substitute qualifies, so planned it in house from ${lines(op.lines.length).replace('line', 'ingredient')}${instead}${op.labourNote ? ` (${op.labourNote})` : ''}`;
+			return `Ranked substitutes${from} by the kitchen's own rules and proposed ${name(names, sub)}${instead}`;
 		}
 		case 'RecordApproval': {
 			const a = op.approval;
@@ -142,7 +143,7 @@ export function opSummary(env: OpEnvelope, names: Names, plans: Record<string, P
 		case 'RecordEnrichment':
 			return `Added ${op.field} for ${name(names, op.productId)} (${op.provenance.source})`;
 		case 'RecordRefusal':
-			return `${refusalWhat(env.actor.kind, op.tool)}. Refused (${op.code}); nothing changed`;
+			return refusalWhat(env.actor.kind, op.tool);
 	}
 }
 

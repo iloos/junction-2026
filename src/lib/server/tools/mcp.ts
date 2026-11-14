@@ -160,14 +160,29 @@ export function createMcpEndpoint(handlers: ToolHandlers, opts: { env: Env; dev:
 		if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
 		const ctx = resolveRequest(request, opts.env, { dev: opts.dev, via: 'mcp', pathKey });
 		if (!ctx) return unauthorized();
-		if (request.method === 'POST') await gateUnlisted(request.clone(), ctx, handlers);
+		// Read and parse a POST body once: the gate and the MCP handler both use the parsed value.
+		let parsedBody: unknown;
+		if (request.method === 'POST') {
+			try {
+				parsedBody = await request.json();
+			} catch {
+				return withCors(
+					Response.json(
+						{ jsonrpc: '2.0', id: null, error: { code: -32700, message: 'Parse error' } },
+						{ status: 400 }
+					)
+				);
+			}
+			await gateUnlisted(parsedBody, ctx, handlers);
+		}
 		const res = await mcp.fetch(request, {
 			authInfo: {
 				token: 'redacted',
 				clientId: ctx.actor.id,
 				scopes: [...ctx.scopes],
 				extra: { ctx }
-			}
+			},
+			...(parsedBody !== undefined ? { parsedBody } : {})
 		});
 		return withCors(res);
 	};
@@ -178,13 +193,7 @@ export function createMcpEndpoint(handlers: ToolHandlers, opts: { env: Env; dev:
  * gate: the server doesn't list it, so the SDK answers "not found". Send it through the gate anyway, so the
  * refusal lands in the op log (refusals.ts) exactly as it would on REST; the client still gets the SDK's reply.
  */
-async function gateUnlisted(request: Request, ctx: CallContext, handlers: ToolHandlers) {
-	let body: unknown;
-	try {
-		body = await request.json();
-	} catch {
-		return;
-	}
+async function gateUnlisted(body: unknown, ctx: CallContext, handlers: ToolHandlers) {
 	for (const m of Array.isArray(body) ? body : [body]) {
 		const msg = m as { method?: unknown; params?: { name?: unknown; arguments?: unknown } };
 		const name = msg?.method === 'tools/call' ? msg.params?.name : undefined;
