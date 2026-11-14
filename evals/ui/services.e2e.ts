@@ -7,7 +7,8 @@ import { expect, test } from '@playwright/test';
  * - configuration: Valio and Gemini keys are set and their breakers closed;
  * - recent process health: `/healthz` saw a successful live Valio call within the window (process-wide, so another
  *   visitor's call can satisfy it: it is never the journey's evidence).
- * When the traces table lands (O), the first claim reads the job, workspace/run and source from it instead.
+ * Where the deploy has O's traces route, the journey sends its own x-request-id and also requires the stored Gemini
+ * call for exactly that request (model, tokens, ok); a deploy without the route notes it and skips that part.
  * Prod only (KITCHEN_URL): the gate's local build has no keys.
  */
 const BASE = process.env.KITCHEN_URL;
@@ -31,9 +32,17 @@ test('Valio and Gemini answer live on the deployed app', async ({ page, request 
 
 	// Gemini: one request parse in this visitor's sandbox, read from the request's own streamed result.
 	let streamed = '';
+	let echoed: string | null = null;
 	page.on('response', async (r) => {
-		if (r.url().includes('/request/run')) streamed += (await r.text().catch(() => '')) + '\n';
+		if (!r.url().includes('/request/run')) return;
+		echoed ??= r.headers()['x-request-id'] ?? null;
+		streamed += (await r.text().catch(() => '')) + '\n';
 	});
+	// This journey's own request id, so its stored model call can be found for exactly this request.
+	const requestId = `f-evals-${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
+	await page.route('**/request/run**', (route) =>
+		route.continue({ headers: { ...route.request().headers(), 'x-request-id': requestId } })
+	);
 	await page.goto(`${BASE}/request`);
 	// A sentence no one has sent before, so no parse cache can answer it: only a live model call shows tokens.
 	const litres = 11 + Math.floor(Math.random() * 80);
@@ -69,6 +78,35 @@ test('Valio and Gemini answer live on the deployed app', async ({ page, request 
 	expect(parser?.kind, `parser: ${JSON.stringify(parser)}`).toBe('gemini');
 	expect(parser?.model, 'a named model').toMatch(/^gemini-/);
 	expect(parser?.tokens?.in ?? 0, 'tokens spent on this request').toBeGreaterThan(0);
+	// The stored trace of that same call (O's traces table), found by this journey's request id.
+	const traces = await page.request.get(
+		`${BASE}/api/ops/traces?requestId=${requestId}&source=gemini`
+	);
+	if (traces.status() === 404)
+		test
+			.info()
+			.annotations.push({ type: 'note', description: 'no /api/ops/traces on this deploy yet' });
+	else {
+		expect(echoed, 'the response echoes this request id').toBe(requestId);
+		const body = (await traces.json()) as {
+			persisted?: boolean;
+			traces?: {
+				model: string | null;
+				tokensIn: number | null;
+				ok: boolean;
+				requestId: string | null;
+			}[];
+		};
+		expect(body.persisted, 'traces are stored').toBe(true);
+		const call = body.traces?.find(
+			(t) =>
+				t.requestId === requestId && t.ok && /^gemini-/.test(t.model ?? '') && (t.tokensIn ?? 0) > 0
+		);
+		expect(
+			call,
+			`a stored Gemini call for ${requestId}: ${JSON.stringify(body.traces?.slice(0, 3))}`
+		).toBeTruthy();
+	}
 	// Valio: quote a random catalogue product nobody quoted lately (stored availability older than 15 min is fetched
 	// live), through this visitor's judge key on REST.
 	const k = await page.request.get(`${BASE}/api/demo/judge-key`);
