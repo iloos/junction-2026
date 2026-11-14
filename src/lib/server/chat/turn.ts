@@ -1,5 +1,5 @@
 import type { Plan, ToolName, ToolOutput } from '$lib/core/contracts';
-import { ClarifyField, type Task, type TaskState } from '$lib/core/contracts/task';
+import { ClarifyField, newTaskId, type Task, type TaskState } from '$lib/core/contracts/task';
 import type { CallContext, Llm, Ports, TaskStore, ToolHandlers } from '$lib/core/ports';
 import { runGoal } from '$lib/server/agent';
 import { classifyGoal } from '$lib/server/agent/classify';
@@ -20,7 +20,7 @@ import { UNITS } from '$lib/server/request/lexicon';
 import { parseRules } from '$lib/server/request/parse';
 import { ledgerSummary, readTask } from '$lib/server/tasks/outcome';
 import { explain } from './explain';
-import { itemWords, understand, type Understanding } from './understand';
+import { understand } from './understand';
 import { project } from '$lib/server/tasks/project';
 import { memoryTaskStore } from '$lib/server/tasks/store';
 import { approvalUrl, presentMeta } from '$lib/server/tools/present';
@@ -83,7 +83,7 @@ function storeOf(ports: ChatDeps['ports']): TaskStore {
 	return s;
 }
 
-const newTaskId = () => `task-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+const freshTaskId = () => newTaskId(Date.now(), Math.random().toString(36).slice(2, 6));
 
 /** A slot value from a chip or typed words; quantities may carry their unit ("4 kg", "500 g"). */
 export function readAnswer(field: ClarifyField, value: unknown): Slots {
@@ -148,7 +148,7 @@ function blankTask(deps: ChatDeps, text: string): Task {
 	return {
 		workspaceId: deps.workspaceId,
 		runId: deps.ctx.runId,
-		id: newTaskId(),
+		id: freshTaskId(),
 		kitchenId: deps.kitchen.id,
 		title: text.slice(0, 200),
 		createdBy: deps.ctx.actor,
@@ -352,15 +352,7 @@ export async function* runChatTurn(
 	} else {
 		// A typed answer to the open question, or words while one is open, fill that field only.
 		let goal = !followUp && understood ? understood.goal : String(task.requirement.goal ?? '');
-		// Several products in one message run as one routine order each, on this task; the split is kept on the
-		// requirement so an answer later re-runs the same items.
-		let goals: string[] =
-			!followUp && expected === null
-				? splitGoals(goal, understood?.understanding, deps.today)
-				: Array.isArray(task.requirement.goals)
-					? (task.requirement.goals as string[])
-					: [goal];
-		if (expected === null && goals.length > 1) task.requirement = { ...task.requirement, goals };
+		let goals = [goal];
 		let slots: Slots = { ...(task.slots as Slots) };
 		const answer =
 			input.answer ??
@@ -461,10 +453,16 @@ export async function* runChatTurn(
 
 	for (const e of stepEvents(task.id, steps)) yield e;
 
-	// Plans this task touched: the first one is primary; reads never add plans of their own.
+	// Plans this task touched: the first one is primary; reads never add plans of their own. An added product ("…too")
+	// is the task's newest purchase, so its plan becomes the one the task is about; the earlier stays on the task.
 	if (planId && !task.plans.some((p) => p.planId === planId)) {
 		const primaryHeld = task.plans.some((p) => p.role === 'primary');
-		if (primaryHeld) task.plans.push({ planId, versionSeen: 0, role: 'touched' });
+		if (addition)
+			task.plans = [
+				{ planId, versionSeen: 0, role: 'primary' as const },
+				...task.plans.map((p) => ({ ...p, role: 'touched' as const }))
+			];
+		else if (primaryHeld) task.plans.push({ planId, versionSeen: 0, role: 'touched' });
 		else task.plans.unshift({ planId, versionSeen: 0, role: 'primary' });
 	}
 
@@ -636,24 +634,6 @@ export async function taskView(taskId: string, deps: ChatDeps): Promise<ChatEven
 		canContinue: p.canContinue
 	});
 	return out;
-}
-
-/**
- * The routine orders one message asks for: one per product with its own amount (the model's items, else the
- * request parser's), sharing a stated date; a single product, or anything else, is the message itself.
- */
-export function splitGoals(goal: string, u: Understanding | undefined, today: string): string[] {
-	if (u?.kind === 'order' && (u.items?.length ?? 0) > 1) {
-		const date = u.items!.find((i) => i.date)?.date;
-		return u.items!.slice(0, 5).map((i) => itemWords({ ...i, date: i.date ?? date }));
-	}
-	if (u && u.kind !== 'order') return [goal];
-	const parsed = parseRules(goal, today);
-	if (parsed.items.length > 1 && parsed.items.every((i) => i.qty !== null && i.unit !== null))
-		return parsed.items
-			.slice(0, 5)
-			.map((i) => `${i.text.trim()}${parsed.deliverByText ? ` ${parsed.deliverByText}` : ''}`);
-	return [goal];
 }
 
 const CANCEL =

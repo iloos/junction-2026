@@ -3,6 +3,8 @@ import { scenarioDate } from '$lib/core/scenario';
 import { trialWorkspace } from '../agent/trial-harness';
 import { FIDELITY_NOW } from '../evals/fidelity';
 import type { Llm } from '$lib/core/ports';
+import { isTaskId } from '$lib/core/contracts/task';
+import { taskForPlan } from '../request/task';
 import { chatTurn, readAnswer, taskView } from './turn';
 import { messyLlm } from './messy-replay';
 
@@ -399,16 +401,48 @@ describe('suite: chat v2 · several products in one message', () => {
 			expect(out.some((e) => e.type === 'clarify')).toBe(false);
 			const taskId = out.at(-1)!.taskId;
 			const task = await w.env.ports.tasks!.get(w.env.workspaceId, taskId);
-			expect(task?.plans).toHaveLength(2);
-			expect(task?.plans.map((p) => p.role)).toEqual(['primary', 'touched']);
+			// One plan with a line per product, for the one delivery day.
+			expect(task?.plans.map((p) => p.role)).toEqual(['primary']);
 			const plans = Object.values((await w.state()).plans);
-			expect(plans.map((p) => p.deliverBy)).toEqual(['2026-12-11', '2026-12-11']);
+			expect(plans.map((p) => p.deliverBy)).toEqual(['2026-12-11']);
+			expect(plans[0].lines).toHaveLength(2);
 			const ledger = out.find((e) => e.type === 'ledger');
 			if (ledger?.type !== 'ledger') throw new Error('no ledger');
 			expect(ledger.ledger.needs.map((n) => n.required)).toEqual([
 				{ value: 10, unit: 'kg' },
 				{ value: 5, unit: 'l' }
 			]);
+		}
+	);
+});
+
+describe('suite: chat turns · tasks opened elsewhere', () => {
+	it(
+		'a task /request opened (t-<planId>) is joined by its id: questions and continue work',
+		{ timeout: 120_000 },
+		async () => {
+			const { w, chef, deps } = await setup();
+			const placed = await w.handlers.place_order(chef, {
+				kitchenId: 'k-hotel',
+				deliverBy: '2026-12-11',
+				idempotencyKey: 'request-task',
+				lines: [{ productId: '464411', qty: 8, unit: 'ST' }]
+			} as never);
+			if (!placed.ok) throw new Error(placed.error.message);
+			const link = await taskForPlan({
+				tasks: w.env.ports.tasks,
+				ctx: chef,
+				now: FIDELITY_NOW,
+				plan: placed.value.plan,
+				title: '4 kg butter',
+				requirement: { goal: '4 kg butter for Friday' }
+			});
+			expect(link.taskId).toMatch(/^t-/);
+			expect(isTaskId(link.taskId)).toBe(true);
+			const out = await chatTurn({ taskId: link.taskId!, text: 'what is still open?' }, deps);
+			expect(out.at(-1)).toMatchObject({ type: 'done', taskId: link.taskId });
+			expect(out.at(-1)?.type === 'done' && out.at(-1)?.state).not.toBe('failed');
+			expect((await taskView(link.taskId!, deps)).at(-1)?.type).toBe('done');
 		}
 	);
 });

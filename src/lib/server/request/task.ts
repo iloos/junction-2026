@@ -5,6 +5,7 @@
  * owner, which recomputes it from get_plan and receipts.
  */
 import { Task, type Plan, type Task as TaskT } from '$lib/core/contracts';
+import { taskIdFor } from '$lib/core/contracts/task';
 import type { CallContext, TaskStore } from '$lib/core/ports';
 
 /** The Kitchen page focused on one plan (the deep link Ops uses). */
@@ -48,7 +49,7 @@ export interface TaskLink {
 export async function taskForPlan(s: TaskSeed): Promise<TaskLink> {
 	const link = { kitchenUrl: kitchenUrl(s.plan) };
 	if (!s.tasks || !s.now) return { taskId: null, ...link };
-	const id = `t-${s.plan.id}`.slice(0, 64);
+	const id = taskIdFor(s.plan.id);
 	const existing = await s.tasks.get(s.ctx.workspaceId, id);
 	if (existing) return { taskId: existing.id, ...link };
 	const at = s.now.toISOString();

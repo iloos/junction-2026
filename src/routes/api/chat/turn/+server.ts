@@ -2,15 +2,16 @@ import { dev } from '$app/environment';
 import { env } from '$env/dynamic/private';
 import { scenarioDate } from '$lib/core/scenario';
 import { ClarifyField } from '$lib/core/contracts/task';
-import { inWorkspace } from '$lib/server/adapters/simulator/overlay';
 import { createLlmRouter } from '$lib/server/adapters/llm/router';
 import { contextFor } from '$lib/server/auth';
 import { runChatTurn } from '$lib/server/chat/turn';
 import { visitorWorkspace } from '$lib/server/demo/visitor';
 import { onCurrentRun } from '$lib/server/demo/reset';
+import { withCallScope } from '$lib/server/scope';
 import { createServerPorts } from '$lib/server/store/server-ports';
 import { serverTasks } from '$lib/server/tasks/server';
-import { realHandlers } from '$lib/server/tools/handlers';
+import { handlers as scopedHandlers } from '$lib/server/tools/handlers';
+import { isTaskId } from '$lib/core/contracts/task';
 import { json } from '$lib/server/tools/http';
 import type { ChatTurnInput } from '$lib/ui/chat/types';
 import type { RequestHandler } from './$types';
@@ -32,8 +33,7 @@ export const POST: RequestHandler = async (event) => {
 		return bad('body is not JSON');
 	}
 	const input: ChatTurnInput = {};
-	if (typeof body.taskId === 'string' && /^task-[\w-]{1,60}$/.test(body.taskId))
-		input.taskId = body.taskId;
+	if (isTaskId(body.taskId)) input.taskId = body.taskId;
 	if (typeof body.planId === 'string' && /^[\w:.-]{1,128}$/.test(body.planId))
 		input.planId = body.planId;
 	if (typeof body.text === 'string') {
@@ -51,11 +51,8 @@ export const POST: RequestHandler = async (event) => {
 
 	const v = await visitorWorkspace(event, env, dev);
 	const ctx = await onCurrentRun(contextFor('chef', 'chef', 'chat', env, v.workspaceId));
-	const [b, handlers, tasks] = await Promise.all([
-		createServerPorts(),
-		realHandlers(),
-		serverTasks()
-	]);
+	const handlers = scopedHandlers;
+	const [b, tasks] = await Promise.all([createServerPorts(), serverTasks()]);
 	const kitchens = await b.ports.store.kitchens(v.workspaceId);
 	const kitchen =
 		kitchens.find((k) => k.id === body.kitchenId) ??
@@ -88,7 +85,7 @@ export const POST: RequestHandler = async (event) => {
 				}
 			};
 			// The turn runs in the workspace's scope (its scenario clock and simulated overlay).
-			void inWorkspace(v.workspaceId, async () => {
+			void withCallScope(ctx, async () => {
 				try {
 					const today = scenarioDate(b.ports.clock.now());
 					for await (const e of runChatTurn(input, {

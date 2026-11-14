@@ -3,6 +3,7 @@ import { env } from '$env/dynamic/private';
 import { resolveRequest } from '$lib/server/auth';
 import { buildRunPrincipal } from '$lib/server/agent/principal';
 import { newAgentRunId, startAgentRun } from '$lib/server/agent/runs';
+import { withCallScope } from '$lib/server/scope';
 import { json, unauthorized } from '$lib/server/tools/http';
 import type { RequestHandler } from './$types';
 
@@ -53,7 +54,10 @@ export const POST: RequestHandler = async ({ request }) => {
 	const enc = new TextEncoder();
 	const early: unknown[] = [];
 	let push: (line: unknown) => void = (line) => early.push(line);
-	const started = startAgentRun({ goal, env, principal, onEvent: (e) => push(e) });
+	// The run starts inside the caller's scope (run loaded, clock, overlay, outside-call caps): the loop inherits it.
+	const started = await withCallScope(ctx, async () =>
+		startAgentRun({ goal, env, principal, onEvent: (e) => push(e) })
+	);
 	if (!started.ok)
 		return json(
 			{
