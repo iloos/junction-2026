@@ -155,7 +155,10 @@ export const toolSchemas = {
 		input: PlanRef.extend({
 			idempotencyKey: z.string().min(1).max(128),
 			/** Default: every eligible line plus every line covered by a granted approval. */
-			lineIds: z.array(z.string()).optional()
+			lineIds: z
+				.array(z.string())
+				.refine((ids) => new Set(ids).size === ids.length, 'lineIds must be unique')
+				.optional()
 		}),
 		output: z.object({
 			orderId: z.string(),

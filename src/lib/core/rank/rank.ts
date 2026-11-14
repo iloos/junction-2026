@@ -6,6 +6,7 @@
  * Ties break on productId. Unknown supply is not excluded here: the mandate holds it (UNKNOWN_REQUIRED).
  */
 import type { Kitchen, LineReason, Offer, Product, ScoreBreakdown } from '../contracts';
+import { blocking, validateLine } from '../mandate/validate';
 
 export interface RankInput {
 	kitchen: Kitchen;
@@ -29,22 +30,22 @@ export interface Ranked {
 const RELIABILITY_FLOOR = 0.7;
 
 /** Hard constraints: availability, lot/quantity, tender list. Every failing reason is collected. */
+/**
+ * Hard exclusions: whatever the shared validator forbids or marks as a fact gap (the same rules tiering and commit
+ * use), plus the reliability floor, a ranking policy. Waivable findings (unknown quantity, tender list, a broken
+ * preference) stay rankable; the mandate holds the chosen line for a human.
+ */
 function exclusions(
 	k: Kitchen,
 	p: Product | undefined,
 	o: Offer | undefined,
 	qty: number
 ): LineReason[] {
-	const out: LineReason[] = [];
-	if (!p || !o) return ['NOT_FOUND'];
-	const a = o.availability;
-	if (a.kind === 'out' || a.kind === 'undeliverable' || a.kind === 'blocked') out.push(a.kind);
-	if (a.kind === 'known' && a.amount !== null && a.amount < qty)
-		out.push(a.amount < p.lotStep ? 'BELOW_LOT' : 'INSUFFICIENT_STOCK');
+	if (!p) return ['NOT_FOUND'];
+	const out = blocking(
+		validateLine(k, p, o, { value: qty, unit: p.salesUnit }, { substitute: true })
+	).map((f) => f.reason);
 	if (p.reliability !== undefined && p.reliability < RELIABILITY_FLOOR) out.push('low_reliability');
-	if (k.constraints.tenderListOnly && !k.constraints.tenderList?.includes(p.productId))
-		out.push('off_tender_list');
-	if (!o.price) out.push('UNKNOWN_REQUIRED');
 	return out;
 }
 

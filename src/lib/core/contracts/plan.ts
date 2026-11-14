@@ -25,6 +25,14 @@ export const PolicyReason = z.enum([
 	'off_tender_list',
 	'allergen_unknown',
 	'allergen_change',
+	/** Declares an allergen the kitchen excludes: forbidden, never approvable. */
+	'allergen_declared',
+	/** May contain an excluded allergen: per the kitchen's traces policy. */
+	'allergen_trace',
+	/** Quantity not in the product's sales unit. */
+	'unit_mismatch',
+	/** No price: a fact gap, never approvable or committable. */
+	'price_missing',
 	'low_reliability',
 	'external_agent_needs_approval',
 	'cutoff_passed'
