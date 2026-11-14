@@ -15,7 +15,7 @@ const euros = (s: string) => Number(s.replace(/[€\s,]/g, ''));
  * Known open defects by BUGS.md id, as `expectFail` in the evals: a listed check that fails is annotated, not red; a
  * listed check that passes is red ("looks fixed: delete it here"), so the list never hides a fix. Empty = all enforced.
  */
-const KNOWN = new Set(['BUG-1', 'BUG-5', 'BUG-6', 'BUG-9']);
+const KNOWN = new Set(['BUG-5', 'BUG-6', 'BUG-9']);
 
 const seen = new Map<string, { pass: boolean; detail: string }[]>();
 function check(id: string, pass: boolean, detail: string) {
