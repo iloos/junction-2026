@@ -14,8 +14,8 @@
 	import { decisionCount, decisionsDue, decisionsOf } from '$lib/ui/decisions';
 	import GramsStepper from '$lib/ui/GramsStepper.svelte';
 	import WhyDrawer from '$lib/ui/WhyDrawer.svelte';
-	import CoverageRuler from '$lib/ui/CoverageRuler.svelte';
-	import CoverageLegend from '$lib/ui/CoverageLegend.svelte';
+	import DishStatus from '$lib/ui/DishStatus.svelte';
+	import { dishGate } from '$lib/ui/coverage';
 	import { whyChain } from '$lib/ui/why-chain';
 	import { day, fixed, money, moneyDelta, num, storyTime } from '$lib/ui/format';
 	import { SCENARIO } from '$lib/core/scenario';
@@ -583,9 +583,6 @@
 						Change grams per guest and the order recomputes: need, lots, price, mandate.
 					</p>
 				</div>
-				{#if coverage.size}
-					<div class="mt-2"><CoverageLegend /></div>
-				{/if}
 				<div class="mt-2 overflow-hidden rounded-lg border border-rule bg-sheet">
 					<div
 						class="hidden grid-cols-[minmax(150px,0.7fr)_minmax(210px,0.9fr)_minmax(0,3fr)] gap-x-4 border-b border-rule bg-well px-4 py-2 text-micro font-medium text-ink-3 lg:grid"
@@ -669,7 +666,7 @@
 									class="px-4 pb-3 lg:grid lg:grid-cols-[minmax(150px,0.7fr)_minmax(210px,0.9fr)_minmax(0,3fr)] lg:gap-x-4"
 								>
 									<div class="lg:col-span-2 lg:col-start-2">
-										<CoverageRuler f={coverage.get(d.needId)!} />
+										<DishStatus f={coverage.get(d.needId)!} gate={dishGate(lines)} />
 									</div>
 								</div>
 							{/if}
@@ -839,6 +836,7 @@
 		dishName={whyDish ? `${whyDish.nameFi} (${whyDish.name})` : ''}
 		steps={k.whySteps}
 		{chain}
+		coverage={whyLine?.needId ? (coverage.get(whyLine.needId) ?? null) : null}
 		onclose={() => k.closeWhy()}
 	/>
 {/if}
