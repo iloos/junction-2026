@@ -34,8 +34,15 @@ const v1: RecallNotice = {
 const v2: RecallNotice = { ...v1, products: [{ ...v1.products[0], batch: '1FI15493, 1FI15500' }] };
 const NOW = new Date('2026-11-14T10:00:00Z');
 
+/** One PGlite for run A across the file; each test works in its own workspace. */
+let shared: ReturnType<typeof createDbPorts> | undefined;
+let n = 0;
+
 async function setup() {
-	const env = await createDbPorts({ runId: 'run-a' });
+	const env = await (shared ??= createDbPorts({ runId: 'run-a' }));
+	const ws = `ws-apply-${++n}`;
+	runA.workspaceId = ws;
+	runB.workspaceId = ws;
 	return {
 		store: env.store,
 		index: idx,
@@ -44,8 +51,8 @@ async function setup() {
 		now: () => NOW
 	};
 }
-const runA = { workspaceId: 'ws-demo', runId: 'run-a' };
-const runB = { workspaceId: 'ws-demo', runId: 'run-b' };
+const runA = { workspaceId: '', runId: 'run-a' };
+const runB = { workspaceId: '', runId: 'run-b' };
 const noReads: RecallSource = {
 	mode: 'fixture',
 	readList: async () => {
@@ -56,7 +63,7 @@ const noReads: RecallSource = {
 	}
 };
 const anomaliesIn = async (store: Store, runId: string) =>
-	Object.values((await store.load('ws-demo', runId)).anomalies);
+	Object.values((await store.load(runA.workspaceId, runId)).anomalies);
 
 describe('F20 applications per workspace and run', { timeout: 30_000 }, () => {
 	it('an amended notice at the same URL is re-read by the watch and recorded as a new version', async () => {

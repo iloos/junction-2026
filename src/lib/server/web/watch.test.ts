@@ -38,7 +38,9 @@ const idx = memoryIndex([product]);
 const egg = recordedNotice(EGG_RECALL_URL)!;
 /** The egg recall re-targeted at a catalogue GTIN (a GTIN hit), as Ruokavirasto first published it. */
 const v1: RecallNotice = { ...egg, products: [{ ...egg.products[0], gtin: product.gtin! }] };
-const store = async (runId: string) => (await createDbPorts({ runId })).store;
+/** One PGlite for the file (the suite's load); each test gets its own workspace instead. */
+let db: ReturnType<typeof createDbPorts> | undefined;
+const store = async (_label: string) => (await (db ??= createDbPorts({ runId: 'run-w' }))).store;
 
 describe('F20 notice identity and revisions', { timeout: 30_000 }, () => {
 	it('the same page read twice is one revision; an added batch is a new one, diffed by item', () => {
@@ -56,7 +58,7 @@ describe('F20 notice identity and revisions', { timeout: 30_000 }, () => {
 			store: s,
 			index: idx,
 			findings: createFindings(undefined, true),
-			scope: { workspaceId: 'ws-demo', runId: 'run-rev' }
+			scope: { workspaceId: 'ws-rev', runId: 'run-w' }
 		};
 		const first = await ingestRecall(v1, deps);
 		expect(first.recorded).toHaveLength(1);
@@ -83,7 +85,7 @@ describe('F20 notice identity and revisions', { timeout: 30_000 }, () => {
 			store: s,
 			index: idx,
 			findings,
-			scope: { workspaceId: 'ws-demo', runId: 'run-drill-ns' }
+			scope: { workspaceId: 'ws-drill-ns', runId: 'run-w' }
 		};
 		const drill = await replayRecorded(deps, { drillGtin: product.gtin });
 		expect(drill.recorded[0].id).toMatch(/^recall-drill-/);
@@ -173,7 +175,7 @@ describe('F20 webhook work is never lost', { timeout: 30_000 }, () => {
 			store: s,
 			index: idx,
 			findings: createFindings(undefined, true),
-			scope: { workspaceId: 'ws-demo', runId: 'run-heal' },
+			scope: { workspaceId: 'ws-heal', runId: 'run-w' },
 			recalls,
 			queue,
 			now: () => new Date('2026-11-14T10:00:00Z')
@@ -214,7 +216,7 @@ describe('F20 webhook work is never lost', { timeout: 30_000 }, () => {
 			store: await store('run-list'),
 			index: idx,
 			findings: createFindings(undefined, true),
-			scope: { workspaceId: 'ws-demo', runId: 'run-list' },
+			scope: { workspaceId: 'ws-list', runId: 'run-w' },
 			recalls,
 			queue
 		});

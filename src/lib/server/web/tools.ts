@@ -66,6 +66,13 @@ function input<N extends WebToolName>(
 				p.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; ')
 			);
 }
+/**
+ * Where an answer came from, for the summary: `live` (a call just now), `cache` (an earlier live
+ * answer), `replay` (a recorded real response, fixture mode).
+ */
+export const sourceLabel = (mode: 'live' | 'fixture', cached: boolean) =>
+	mode === 'fixture' ? '[replay]' : cached ? '[cache]' : '[live]';
+
 const isErr = (x: unknown): x is { ok: false; error: DomainError } =>
 	typeof x === 'object' && x !== null && (x as { ok?: unknown }).ok === false;
 
@@ -102,9 +109,11 @@ export function createWebTools(d: WebToolDeps) {
 					facts,
 					cached: r.cached,
 					meta: {
-						summary: facts.length
-							? `${facts.length} web fact(s) for ${r.productName}, with sources; ${facts.filter((f) => f.gtinCited).length} cite its GTIN. Catalogue facts win.`
-							: `${r.note} (${r.productName})`.slice(0, 400)
+						summary: `${sourceLabel(r.mode, r.cached)} ${
+							facts.length
+								? `${facts.length} web fact(s) for ${r.productName}, each supported by its sources; ${facts.filter((f) => f.gtinCited).length} cite its GTIN. Suggestions for review; catalogue facts win.`
+								: `${r.note} (${r.productName})`
+						}`.slice(0, 400)
 					}
 				});
 			} catch (e) {
@@ -152,12 +161,11 @@ export function createWebTools(d: WebToolDeps) {
 				return checked('find_outside', {
 					options,
 					meta: {
-						summary: options.length
-							? `${options.length} option(s) outside the catalogue for "${i.need}", each with its source. Nothing is ordered.`.slice(
-									0,
-									400
-								)
-							: r.note
+						summary: `${sourceLabel(r.mode, r.cached)} ${
+							options.length
+								? `${options.length} option(s) outside the catalogue for "${i.need}", each with its source, for the chef to review. Nothing is ordered.`
+								: r.note
+						}`.slice(0, 400)
 					}
 				});
 			} catch (e) {

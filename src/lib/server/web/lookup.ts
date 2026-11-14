@@ -273,7 +273,7 @@ export async function lookupFacts(
 		costUsd: r.costUsd,
 		recorded,
 		note: suggestions.length
-			? 'Suggestions from the web with their sources. They stay suggestions until a person confirms them; catalogue facts are never overwritten.'
+			? 'Suggestions from the web with their sources. A source supports a field, never safety or supply; each stays a suggestion for a person to review, and catalogue facts are never overwritten.'
 			: d.exa.mode === 'fixture'
 				? 'No recorded answer for this product in fixture mode.'
 				: 'No cited facts found.'

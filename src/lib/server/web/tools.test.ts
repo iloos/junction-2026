@@ -30,8 +30,11 @@ const ctx = (workspaceId: string): CallContext => ({
 	via: 'test'
 });
 
+/** One PGlite for the file; tests are separated by workspace and fresh findings. */
+let shared: ReturnType<typeof createDbPorts> | undefined;
+
 async function setup(exa: FactSearch = createFixtureFactSearch()) {
-	const env = await createDbPorts({ runId: 'run-tools' });
+	const env = await (shared ??= createDbPorts({ runId: 'run-tools' }));
 	const w = (ws: string): WebExecutionContext => ({
 		ctx: ctx(ws),
 		ports: {

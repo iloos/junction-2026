@@ -67,7 +67,7 @@ export function resolution(m: Pick<RecallMatch, 'tier' | 'recalled'>): string {
 		return 'To resolve: if the pack is a different product or variant, release the line; if it is the same, treat it as recalled and pick a substitute.';
 	return codes
 		? 'To resolve: if the batch and date on your stock differ from the notice, release the line; if they match or you cannot tell, pick a substitute.'
-		: 'To resolve: pick a substitute; release only if the supplier confirms your lot is not affected.';
+		: 'To resolve: pick a substitute; release only on the supplier stating in writing that your lot is not affected (a web source never clears a hold).';
 }
 
 /** "added: X; batch of Y: A → B; removed: Z", for the update message. */
