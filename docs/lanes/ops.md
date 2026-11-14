@@ -28,7 +28,7 @@
 ## Next, in order
 
 1. Lead merges g9; deploy; check `/healthz` `services[]` on prod (91's `evals/ui/services.e2e.ts` asserts Valio live).
-2. Run `visitor-gate.e2e.ts` on a production build: the cap/notice, calendar token and refusal writer all touch sandboxes and it hasn't run since g6.
+2. ~~Visitor gate on a production build~~: green on g9, after updating it to plan through `/kitchen-api/scenario` and open the Queue tab.
 3. Story wording on a run with grants, denials, commits, edits and a recall (only the seeded run plus a refusal is tested), then #11 stakes chart.
 
 **NEEDS from others:** 1f and B render `room.notice` / `workspace.notice` where people type; 1f mounts the calendar subscribe link (`/api/demo/calendar-link?kitchen=` → `.webcal`); the lead mounts `ServiceStatus` in the shell for the System layer; the race smoke needs `SMOKE_KEY` (the user or the lead runs it).
@@ -37,8 +37,8 @@
 
 - **Solid:** Problems and stories are a pure projection, tested on the captured seeded run. RecordRefusal is tested over MCP (unlisted tool) and REST, with the dedupe window and an unchanged plan version. Bus ordering (R9-09) and byte limit (R9-10) have tests that fail on the old code. Every deploy today smoked green with `SMOKE_UI=1`.
 - **Fragile:** the service status is per process and resets on deploy (every service `idle` until called), and Valio offers served from stored Postgres rows leave no trace. Problems group across kitchens, but the seeded run has one kitchen, so multi-kitchen titles ("for N kitchens") are untested on real data.
-- **Untested:** `visitor-gate.e2e.ts` on a production build since g6; the race smoke since 3684d29 (no `SMOKE_KEY` in this session); story sentences for granted, denied and voided approvals, commits, edits and recalls on real ops; the calendar in a real calendar app.
-- **One hour before the freeze:** run the visitor gate on a production build, walk prod Ops through approve → order → a recall drill and fix any sentence that reads wrong, and get the race smoke run with the key.
+- **Untested:** the race smoke since 3684d29 (no `SMOKE_KEY` in this session); story sentences for granted, denied and voided approvals, commits, edits and recalls on real ops; the calendar in a real calendar app.
+- **One hour before the freeze:** walk prod Ops through approve → order → a recall drill and fix any sentence that reads wrong, and get the race smoke run with the key.
 
 ## Deploy and roll back
 
