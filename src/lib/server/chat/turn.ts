@@ -167,10 +167,21 @@ function stepWords(s: StepRecord): string {
 					: s.tool === 'find_substitutes'
 						? 'Looked for substitutes'
 						: 'Drafted the order';
+			// A day the kitchen does not receive deliveries is said in words: that is why it waits for sign-off.
+			const offDay = plan.lines.some(
+				(l) => l.state === 'held' && l.reasons.includes('off_delivery_day')
+			);
+			const weekday = new Date(`${plan.deliverBy}T12:00:00Z`).toLocaleDateString('en-GB', {
+				weekday: 'long',
+				timeZone: 'UTC'
+			});
 			return (
 				`${verb} for ${dayWords(plan.deliverBy)}: ${plural(plan.lines.length, 'line')}` +
 				(plan.totalCents ? `, ${euros(plan.totalCents)}` : '') +
-				(held ? `; ${held} ${held === 1 ? 'waits' : 'wait'} for your approval.` : '.')
+				(held ? `; ${held} ${held === 1 ? 'waits' : 'wait'} for your approval.` : '.') +
+				(offDay
+					? ` This kitchen does not receive deliveries on ${weekday}s, so it needs a sign-off or another day.`
+					: '')
 			);
 		}
 		case 'get_plan':

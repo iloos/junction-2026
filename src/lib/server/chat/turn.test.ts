@@ -478,3 +478,23 @@ describe('suite: chat turns · the plan on screen scopes questions, not new orde
 		}
 	);
 });
+
+describe('suite: chat turns · delivery days', () => {
+	it(
+		'an order for a day the kitchen does not receive says so in words',
+		{ timeout: 120_000 },
+		async () => {
+			const { w, deps } = await setup();
+			// k-lounas receives Monday, Wednesday and Friday.
+			const out = await chatTurn(
+				{ text: 'Order 4 kg butter for Thursday' },
+				{ ...deps, kitchen: { id: 'k-lounas' } }
+			);
+			const drafted = out.find((e) => e.type === 'step' && e.tool === 'place_order');
+			expect(drafted?.type === 'step' && drafted.summary).toMatch(
+				/does not receive deliveries on Thursdays/
+			);
+			void w;
+		}
+	);
+});
