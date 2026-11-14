@@ -11,6 +11,7 @@ import { createDecide } from '$lib/server/adapters/decide';
 import { createGetContext } from '$lib/server/agent/get-context';
 import { createGetOutcome } from '$lib/server/tasks/outcome';
 import { projectedTaskStore } from '$lib/server/tasks/project';
+import { drizzleTaskStore } from '$lib/server/tasks/store';
 import { scopeFor, withExternalScope } from '$lib/server/external/scope';
 
 type AnyHandler = (ctx: CallContext, input: unknown) => Promise<Result<unknown>>;
@@ -97,7 +98,7 @@ export function realHandlers(): Promise<ToolHandlers> {
 			get_outcome: createGetOutcome(
 				{
 					...b.ports,
-					tasks: b.ports.tasks && projectedTaskStore(b.ports.tasks, b.ports, handlers)
+					tasks: projectedTaskStore(drizzleTaskStore(b.db as unknown as AnyDb), b.ports, handlers)
 				},
 				handlers
 			),

@@ -18,7 +18,6 @@ import type { ServicePorts } from '$lib/core/services/events';
 import { SCENARIO, scenarioClock, scenarioDate } from '$lib/core/scenario';
 import { currentRun, currentRunStartedAt, loadCurrentRun } from '../demo/run';
 
-import { drizzleTaskStore } from '$lib/server/tasks/store';
 import { DEMO_WORKSPACE } from '../demo/workspaces';
 export { DEMO_WORKSPACE };
 export const DEMO_RUN = 'run-1';
@@ -115,9 +114,7 @@ export async function createDbPorts(o: DbPortsOptions = {}) {
 		simulator: createSimulator(base.catalog, { today }),
 		events: loadSeedEvents(),
 		// Same database handle as the store: plan_event reads the proposals /request writes.
-		menus: drizzleMenuStore(db as AnyDb),
-		// Raw task rows; readers that report a ledger project it from the plans (server/tasks/project.ts).
-		tasks: drizzleTaskStore(db as AnyDb)
+		menus: drizzleMenuStore(db as AnyDb)
 	};
 	return { ports, store, db, overlay: base.overlay, workspaceId, runId };
 }
