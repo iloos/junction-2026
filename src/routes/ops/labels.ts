@@ -20,6 +20,7 @@ const REASON: Record<string, string> = {
 	qty_implausible: 'Check the quantity',
 	allergen_unknown: 'Allergens not declared',
 	allergen_change: 'Allergen change',
+	'CAUTION.model_constraint': 'Model caution: check a hard constraint',
 	low_reliability: 'Unreliable delivery record',
 	external_agent_needs_approval: 'Ordered by an outside agent',
 	cutoff_passed: 'Cut-off has passed',

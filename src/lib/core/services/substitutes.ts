@@ -44,8 +44,12 @@ const FIT_TOP_N = 3;
 /** With a batching Decide, every survivor up to this many is asked fit, constraint and origin in one call. */
 const BATCH_MAX = 12;
 const FIT_TIMEOUT_MS = 4000;
-/** P(violates) above this, from a calibrated answer, rejects the candidate. A Decide answer never clears a rejection. */
+/**
+ * P(violates) above this, from a calibrated answer, flags the candidate with a caution and holds its line for a
+ * human. A model answer never forbids, rejects or clears anything (D10).
+ */
 const VIOLATES_P = 0.5;
+const MODEL_CAUTION = 'CAUTION.model_constraint' as const;
 
 type RescueCandidate = { productId: string; name: string; origin?: string };
 type RescueAsk = {
@@ -271,14 +275,15 @@ export async function findSubstitutes(
 			name: products.get(r.productId)?.nameFi ?? r.productId,
 			origin: products.get(r.productId)?.origin ?? undefined
 		}));
+	const hardConstraints = [
+		...kitchen.constraints.allergens.freeFrom.map((a) => `free from ${a}`),
+		...kitchen.constraints.labels.map((l) => `label ${l}`)
+	];
 	const judged: Rescue = ports.decide.batch
 		? await rescueDecide(ports, {
 				dish: need?.label ?? line.productId,
 				original: line.productName ?? line.productId,
-				hardConstraints: [
-					...kitchen.constraints.allergens.freeFrom.map((a) => `free from ${a}`),
-					...kitchen.constraints.labels.map((l) => `label ${l}`)
-				],
+				hardConstraints,
 				candidates: asked(BATCH_MAX)
 			})
 		: {
@@ -307,20 +312,31 @@ export async function findSubstitutes(
 				fit
 			})
 		);
-	const vetoed = ranked.filter(
-		(r) => r.rank !== null && (judged.violates.get(r.productId) ?? 0) > VIOLATES_P
+	// A calibrated P(violates) is evidence, not a rule (D10): the candidate stays listed with a caution, sorts after
+	// unflagged candidates of its supply tier, and if it is still chosen its line is held for a human.
+	const flagged = new Set(
+		ranked
+			.filter((r) => r.rank !== null && (judged.violates.get(r.productId) ?? 0) > VIOLATES_P)
+			.map((r) => r.productId)
 	);
-	for (const r of vetoed) {
-		r.rank = null;
-		r.score = undefined;
-		r.rejectedReasons = [
-			`FORBIDDEN.gemini_constraint_p${judged.violates.get(r.productId)!.toFixed(2)}` as const
-		];
-	}
-	if (vetoed.length) {
-		let n = 1;
-		for (const r of ranked.filter((x) => x.rank !== null).sort((a, b) => a.rank! - b.rank!))
-			r.rank = n++;
+	if (flagged.size) {
+		const inRank = ranked.filter((x) => x.rank !== null).sort((a, b) => a.rank! - b.rank!);
+		const tierAt = (r: (typeof inRank)[number]) => inRank.findIndex((x) => x.supply === r.supply);
+		inRank
+			.sort(
+				(a, b) =>
+					tierAt(a) - tierAt(b) ||
+					Number(flagged.has(a.productId)) - Number(flagged.has(b.productId)) ||
+					a.rank! - b.rank!
+			)
+			.forEach((r, i) => (r.rank = i + 1));
+		const known = (id: string) => products.get(id)?.allergens.declared;
+		const constraints = hardConstraints.join(', ') || 'a hard constraint';
+		for (const r of ranked.filter((x) => flagged.has(x.productId))) {
+			r.rejectedReasons = [MODEL_CAUTION];
+			if (r.score?.fit)
+				r.score.fit.provenance.note = `${r.score.fit.provenance.note ?? ''}; Gemini: may break ${constraints} (p ${judged.violates.get(r.productId)!.toFixed(2)}), ${known(r.productId) ? 'catalogue declares no such allergen' : 'catalogue has no record'}, check`;
+		}
 	}
 	if (input.requireOrigin) {
 		for (const r of ranked)
@@ -382,6 +398,7 @@ export async function findSubstitutes(
 				qty: sized.get(best.productId)!,
 				substituteFor: line.productId,
 				strategy: { id: `${line.needId}:sub:${best.productId}`, kind: 'substitute' },
+				...(flagged.has(best.productId) ? { extraReasons: [MODEL_CAUTION] } : {}),
 				provenance: {
 					source: 'valio_static',
 					note: `substitute for ${line.productId}, rank 1 of ${ranked.filter((r) => r.rank).length}`

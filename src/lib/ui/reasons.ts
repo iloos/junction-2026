@@ -43,6 +43,10 @@ const TEXT: Record<string, { short: string; long: string }> = {
 		short: 'Allergens differ',
 		long: 'The allergen set may differ from the planned product. The kitchen never delegates an allergen change.'
 	},
+	'CAUTION.model_constraint': {
+		short: 'Model caution',
+		long: 'Gemini judged this product may break one of your hard constraints, and the catalogue has no record to settle it. A model answer is evidence, not a rule: check the pack, then sign off.'
+	},
 	allergen_change: {
 		short: 'Allergen change',
 		long: 'The allergens change. The kitchen never delegates an allergen change.'

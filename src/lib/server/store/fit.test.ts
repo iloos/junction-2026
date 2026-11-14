@@ -4,6 +4,7 @@ import { SCOPES_BY_ACTOR } from '$lib/core/contracts';
 import type { CallContext, Decide } from '$lib/core/ports';
 import { createHandlers } from '$lib/core/services/handlers';
 import { createDbPorts } from './db-ports';
+import { createDecide } from '../adapters/decide';
 
 const chef: CallContext = {
 	workspaceId: 'ws-demo',
@@ -92,6 +93,7 @@ describe('recipe fit in the substitute ranking', () => {
 });
 
 describe('rescue batch (Decide.batch): fit, constraint check and origin in one call per line', () => {
+	/** Palvikinkku 476768 is flagged when `violatesP` is set; every other candidate is clean. */
 	const batchDecide = (calls: number[], violatesP: number | undefined): Decide => ({
 		yesNo: async () => {
 			throw new Error('unused');
@@ -122,20 +124,88 @@ describe('rescue batch (Decide.batch): fit, constraint check and origin in one c
 		}
 	});
 
-	it('asks once, shows confidence and origin, and a calibrated violation rejects the candidate', async () => {
+	async function rescueAndCommit(decide: Decide) {
+		const env = await createDbPorts();
+		env.overlay.clear();
+		env.ports.decide = decide;
+		const h = createHandlers(env.ports);
+		const { plan } = must(
+			await h.plan_event(chef, { kitchenId: 'k-hotel', eventId: 'event-xmas-140' })
+		);
+		const ham = plan.lines.find((l) => l.productId === '462490')!;
+		const r = must(
+			await h.find_substitutes(chef, {
+				planId: plan.id,
+				version: plan.version,
+				lineId: ham.id,
+				apply: true
+			})
+		);
+		const commit = await h.commit_order(chef, {
+			planId: r.plan.id,
+			version: r.plan.version,
+			idempotencyKey: `fit-${Math.random()}`,
+			lineIds: r.chosen.map((l) => l.id)
+		});
+		return { r, commit };
+	}
+
+	it('asks once; a flagged candidate stays listed with a caution and its line is held for sign-off', async () => {
 		const calls: number[] = [];
-		const r = await rescueHam(batchDecide(calls, 0.97));
+		const { r, commit } = await rescueAndCommit(batchDecide(calls, 0.97));
 		expect(calls).toHaveLength(1);
 		expect(calls[0] % 3).toBe(0);
 		const palvi = r.candidates.find((c) => c.productId === '476768')!;
-		expect(palvi.rank).toBeNull();
-		expect(palvi.rejectedReasons).toEqual(['FORBIDDEN.gemini_constraint_p0.97']);
-		const top = r.candidates.find((c) => c.rank === 1)!;
-		expect(top.score?.fit?.provenance.note).toMatch(/conf 0\.90.*Finnish origin p 0\.93/);
+		// Not rejected: still ranked (it is the only in-stock ham, so still first of its supply tier).
+		expect(palvi.rank).not.toBeNull();
+		expect(palvi.rejectedReasons).toEqual(['CAUTION.model_constraint']);
+		expect(palvi.score?.fit?.provenance.note).toMatch(/Gemini: may break .* \(p 0\.97\).*check/);
+		expect(palvi.score?.fit?.provenance.note).toMatch(/conf 0\.90.*Finnish origin p 0\.93/);
+		// Chosen, so its line is held for a human: never within the mandate.
+		const line = r.chosen.find((l) => l.productId === '476768')!;
+		expect(line.state).toBe('held');
+		expect(line.tier).toBe('sign_off');
+		expect(line.reasons).toContain('CAUTION.model_constraint');
+		const committed = commit.ok ? commit.value.committedLineIds : [];
+		expect(committed).not.toContain(line.id);
 	});
 
-	it('an answer without p (rules) never rejects', async () => {
-		const r = await rescueHam(batchDecide([], undefined));
-		expect(r.candidates.find((c) => c.productId === '476768')!.rank).not.toBeNull();
+	it('an unflagged candidate is unaffected; an answer without p (rules) never flags', async () => {
+		for (const p of [0.02, undefined]) {
+			const { r } = await rescueAndCommit(batchDecide([], p));
+			const palvi = r.candidates.find((c) => c.productId === '476768')!;
+			expect(palvi.rejectedReasons).toEqual([]);
+			const line = r.chosen.find((l) => l.productId === '476768');
+			expect(line?.reasons ?? []).not.toContain('CAUTION.model_constraint');
+		}
+	});
+
+	it('replay of the recorded Lohi-perunalaatikko answer shows the flag, not a rejection', async () => {
+		const env = await createDbPorts();
+		env.overlay.clear();
+		env.ports.decide = createDecide({
+			env: { LLM_PROVIDER: 'fixture' },
+			replayPath: 'src/lib/server/adapters/decide/replay.json'
+		});
+		const h = createHandlers(env.ports);
+		const { plan } = must(
+			await h.plan_event(chef, { kitchenId: 'k-hotel', eventId: 'event-xmas-140' })
+		);
+		const line = plan.lines.find((l) => l.productId === '462455')!;
+		const r = must(
+			await h.find_substitutes(chef, {
+				planId: plan.id,
+				version: plan.version,
+				lineId: line.id,
+				apply: false
+			})
+		);
+		const lohi = r.candidates.find((c) => c.productId === '472048')!;
+		expect(lohi.rank).not.toBeNull();
+		expect(lohi.rejectedReasons).toEqual(['CAUTION.model_constraint']);
+		expect(lohi.score?.fit?.provenance.note).toMatch(/via replay.*p 0\.51/);
+		// Demoted after the unflagged candidates of its supply tier.
+		const ranked = r.candidates.filter((c) => c.rank !== null).sort((a, b) => a.rank! - b.rank!);
+		expect(ranked.at(-1)?.productId).toBe('472048');
 	});
 });
