@@ -17,7 +17,7 @@ const fakeLlm = (replies: string[]): Llm => ({
 	})
 });
 
-describe('routine agent', () => {
+describe('suite: agent loop', () => {
 	it('plans the Christmas buffet offline in ≤8 traced steps without approving or committing', async () => {
 		const events: ServerEvent[] = [];
 		const run = await runRoutineAgent({
@@ -39,6 +39,9 @@ describe('routine agent', () => {
 		const traces = events.filter((e) => e.kind === 'trace');
 		expect(traces.filter((e) => e.step === 'tool')).toHaveLength(run.steps.length);
 		expect(traces.at(-1)).toMatchObject({ step: 'done', workspaceId: 'ws-demo', runId: 'run-1' });
+		// The final trace carries the outcome computed from the plan, not the planner's word.
+		expect(traces.at(-1)?.data.outcome).toMatchObject({ intent: 'seeded_event' });
+		expect(traces[0].data.intent).toMatchObject({ kind: 'seeded_event', kitchenId: 'k-hotel' });
 	});
 
 	it('refuses a model that reaches for a tool outside its scope', async () => {
@@ -71,7 +74,7 @@ describe('routine agent', () => {
 		expect(run.steps).toHaveLength(MAX_STEPS);
 	});
 
-	it('runs on the served handlers (real store + stub fallback)', async () => {
+	it('runs on the served handlers (real store)', async () => {
 		const run = await runRoutineAgent({
 			goal: 'plan the Christmas buffet for 140 at k-hotel',
 			env: { LLM_PROVIDER: 'fixture' }
@@ -80,5 +83,7 @@ describe('routine agent', () => {
 			for (const st of run.steps) console.log(st.n, st.tool, st.ok ? 'ok' : st.error?.code, st.why);
 		if (process.env.AGENT_LOG) console.log(run.summary);
 		expect(run.stopped).toBe('done');
+		expect(run.outcome?.intent).toBe('seeded_event');
+		expect(['awaiting_user', 'partial']).toContain(run.outcome?.status);
 	}, 60000);
 });
