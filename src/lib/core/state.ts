@@ -1,7 +1,7 @@
 import { err, ok, type Result } from './contracts/errors';
 import type { Approval, Anomaly, Order, Plan, Receipt } from './contracts/plan';
 import type { OpEnvelope } from './contracts/ops';
-import type { Provenance } from './contracts/primitives';
+import type { Actor, Provenance } from './contracts/primitives';
 
 /** Everything one workspace run knows. Reduced from the op log; the store also persists it as rows. */
 export interface WorkspaceState {
@@ -18,6 +18,8 @@ export interface WorkspaceState {
 	enrichments: Record<string, Record<string, { value: unknown; provenance: Provenance }>>;
 	/** Failed commit attempts, kept as outcomes (D6). */
 	failedCommits: { planId: string; idempotencyKey: string; code: string; seq: number }[];
+	/** Calls the gate refused (RecordRefusal), in seq order. */
+	refusals: { seq: number; tool: string; code: string; actor: Actor; planId?: string }[];
 }
 
 export function emptyState(workspaceId: string, runId: string): WorkspaceState {
@@ -31,7 +33,8 @@ export function emptyState(workspaceId: string, runId: string): WorkspaceState {
 		receipts: {},
 		anomalies: {},
 		enrichments: {},
-		failedCommits: []
+		failedCommits: [],
+		refusals: []
 	};
 }
 
@@ -316,6 +319,22 @@ export function applyOps(state: WorkspaceState, ops: OpEnvelope[]): Result<Works
 				};
 				break;
 			}
+			case 'RecordRefusal':
+				// A refused call changes nothing but the record of refusals.
+				s = {
+					...s,
+					refusals: [
+						...s.refusals,
+						{
+							seq: env.seq,
+							tool: op.tool,
+							code: op.code,
+							actor: env.actor,
+							...(op.planId ? { planId: op.planId } : {})
+						}
+					]
+				};
+				break;
 		}
 		s = { ...s, seq: env.seq };
 	}

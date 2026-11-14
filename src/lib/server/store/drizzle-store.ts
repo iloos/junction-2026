@@ -104,6 +104,27 @@ export async function loadState(
 			and(
 				eq(schema.ops.workspaceId, workspaceId),
 				eq(schema.ops.runId, runId),
+				eq(schema.ops.type, 'RecordRefusal')
+			)
+		)
+		.orderBy(schema.ops.seq)) {
+		const env = row.envelope as OpEnvelope;
+		if (env.op.type === 'RecordRefusal')
+			s.refusals.push({
+				seq: row.seq,
+				tool: env.op.tool,
+				code: env.op.code,
+				actor: env.actor,
+				...(env.op.planId ? { planId: env.op.planId } : {})
+			});
+	}
+	for (const row of await db
+		.select()
+		.from(schema.ops)
+		.where(
+			and(
+				eq(schema.ops.workspaceId, workspaceId),
+				eq(schema.ops.runId, runId),
 				eq(schema.ops.type, 'RecordAnomaly')
 			)
 		))

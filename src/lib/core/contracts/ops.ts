@@ -101,6 +101,22 @@ export const RecordEnrichment = z.object({
 	provenance: Provenance
 });
 
+/**
+ * A tool call the gate refused (FORBIDDEN): an outside or kitchen agent asked for something its mandate or
+ * scope does not allow. The envelope's actor is the refused caller. Recorded so the refusal is visible in the
+ * op log; it never changes a plan, an approval or an order.
+ */
+export const RecordRefusal = z.object({
+	type: z.literal('RecordRefusal'),
+	tool: z.string(),
+	code: DomainError.shape.code,
+	sub: z.string().optional(),
+	/** The gate's message, as the caller got it. */
+	message: z.string(),
+	planId: z.string().optional(),
+	kitchenId: z.string().optional()
+});
+
 export const Op = z.discriminatedUnion('type', [
 	CreatePlan,
 	EditLine,
@@ -109,7 +125,8 @@ export const Op = z.discriminatedUnion('type', [
 	RecordApproval,
 	CommitOrder,
 	RecordAnomaly,
-	RecordEnrichment
+	RecordEnrichment,
+	RecordRefusal
 ]);
 export type Op = z.infer<typeof Op>;
 export type OpType = Op['type'];
