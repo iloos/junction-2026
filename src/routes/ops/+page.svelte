@@ -466,6 +466,11 @@
 
 			<section class="log" aria-label="Op log" aria-live="polite">
 				<h2>What just happened</h2>
+				{#if stream.refused}
+					<p class="stale sys-only" title={stream.lastRefused ?? ''}>
+						{stream.refused} stale write{stream.refused === 1 ? '' : 's'} refused (another run)
+					</p>
+				{/if}
 				<ol>
 					{#each logAll ? stream.log : stream.log.slice(0, LOG_SHOWN) as e (e.seq)}
 						{#if e.kind === 'sim'}
@@ -1109,5 +1114,10 @@
 		li.fresh {
 			animation: none;
 		}
+	}
+	.stale {
+		margin: 0 20px 8px;
+		color: var(--faint);
+		font-size: 15px;
 	}
 </style>

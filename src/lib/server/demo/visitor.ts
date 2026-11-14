@@ -8,12 +8,14 @@
  * - A link can move the browser between rooms (cookie `mandate_room`): `?ws=ws-judges` (the shared room),
  *   `?ws=mine` (back to your own sandbox), and `?ws=ws-demo` (the stage) for presenters only. Any other value,
  *   including a visitor id, is ignored.
- * - Presenters (dev, DEMO_RESET_OPEN=1, or signed in on /ops) default to the stage.
+ * - A signed-in presenter (or DEMO_RESET_OPEN=1) defaults to the stage. Dev has presenter rights but starts in
+ *   its own sandbox: dev servers share the deployed database, so a dev default of the stage would write into
+ *   prod's stage run.
  * - At most MAX_VISITORS sandboxes are seeded per process; past that, new visitors share ws-judges.
  */
 import type { Cookies } from '@sveltejs/kit';
 import { DEMO_WORKSPACE, JUDGES_WORKSPACE, SYNTH_WORKSPACE } from './workspaces';
-import { isPresenter } from './presenter';
+import { isPresenter, PRESENTER_COOKIE, validPresenterToken } from './presenter';
 import { ensureRunLoaded } from './reset';
 import { newVisitorWorkspace, readVisitor, signVisitor } from './visitor-id';
 
@@ -88,7 +90,9 @@ export async function visitorWorkspace(
 		if (asked) cookies.set(ROOM_COOKIE, asked, cookieOpts);
 	}
 	const room = roomFrom(cookies.get(ROOM_COOKIE), presenter);
-	const chosen = room === 'own' ? own : (room ?? (presenter ? DEMO_WORKSPACE : own));
+	const stageByDefault =
+		env.DEMO_RESET_OPEN === '1' || validPresenterToken(cookies.get(PRESENTER_COOKIE), env);
+	const chosen = room === 'own' ? own : (room ?? (stageByDefault ? DEMO_WORKSPACE : own));
 
 	let workspaceId = chosen;
 	let kind: RoomKind =
