@@ -64,6 +64,8 @@ export class KitchenStore {
 	activity = $state.raw<ActivityItem[]>([]);
 	/** Line ids that changed in the last update, for the row flash. */
 	flash = $state.raw<Set<string>>(new Set());
+	/** The snapshot before the latest change to this plan (the "What changed" strip); cleared by Dismiss. */
+	changeFrom = $state.raw<Snapshot | null>(null);
 	whyLineId = $state<string | null>(null);
 	whySteps = $state.raw<{ text: string; source: string; detail?: string }[]>([]);
 	lastCommit = $state.raw<CommitNote | null>(null);
@@ -364,6 +366,20 @@ export class KitchenStore {
 			this.stale = null;
 			if ('plan' in next) {
 				this.started = true;
+				// What this change did, for the strip: same plan, newer version, nothing ordered by it.
+				const prev = this.snap;
+				const orderedNow =
+					next.plan.lines.filter((l) => l.state === 'committed').length >
+					(prev?.plan.lines.filter((l) => l.state === 'committed').length ?? 0);
+				this.changeFrom =
+					prev &&
+					prev.plan.id === next.plan.id &&
+					next.plan.version > prev.plan.version &&
+					!orderedNow
+						? prev
+						: prev?.plan.id === next.plan.id
+							? this.changeFrom
+							: null;
 				this.snap = next;
 				this.#receiptFrom(next);
 				rendered.view =

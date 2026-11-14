@@ -85,3 +85,33 @@ describe('decision titles say what approving does', () => {
 		for (const d of decisionsOf(plan, approval)) expect(d.title).toMatch(/^Buy \d new products?/);
 	});
 });
+
+describe('one deadline rule', () => {
+	it('is the earliest of the approval expiry and the open line cut-offs', () => {
+		const lines = [
+			{
+				id: 'a',
+				state: 'held',
+				reasons: ['new_sku'],
+				tier: 'propose',
+				offer: { availability: { closingTime: '2026-12-08T13:00:00.000Z' } }
+			},
+			{
+				id: 'b',
+				state: 'committed',
+				reasons: [],
+				tier: 'act',
+				offer: { availability: { closingTime: '2026-12-07T10:00:00.000Z' } }
+			}
+		] as unknown as Line[];
+		const p = { lines, needs: [] } as unknown as Plan;
+		const ap = {
+			id: 'x',
+			state: 'pending',
+			lineIds: ['a', 'b'],
+			expiresAt: '2026-12-08T19:40:00.000Z'
+		} as unknown as Approval;
+		expect(decisionsDue(p, ap)).toBe('2026-12-08T13:00:00.000Z');
+		expect(decisionsOf(p, ap)[0].due).toBe('2026-12-08T13:00:00.000Z');
+	});
+});

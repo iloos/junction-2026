@@ -10,11 +10,23 @@ export interface Caps {
 	hardLimitCents?: number;
 }
 
+const DAY: Record<string, string> = {
+	mon: 'Mon',
+	tue: 'Tue',
+	wed: 'Wed',
+	thu: 'Thu',
+	fri: 'Fri',
+	sat: 'Sat',
+	sun: 'Sun'
+};
+
 export function reasonWords(
 	code: string,
 	line: Line,
 	planTotal: number | null,
-	caps: Caps
+	caps: Caps,
+	/** The kitchen, for reasons about it (its delivery days). */
+	kitchen?: { name: string; deliveryDays?: readonly string[] }
 ): string {
 	const w = (c: number) => money(c, { whole: true });
 	switch (code) {
@@ -30,6 +42,14 @@ export function reasonWords(
 			const tried = unit === undefined ? null : Math.round(unit * line.qty.value);
 			return `${tried === null ? 'This' : money(tried, { whole: true })} is over this kitchen's ${caps.hardLimitCents ? w(caps.hardLimitCents) + ' ' : ''}hard limit: no approval can pass it. Raise the mandate first`;
 		}
+		case 'off_delivery_day':
+			return kitchen?.deliveryDays?.length
+				? `${kitchen.name} takes deliveries on ${kitchen.deliveryDays.map((d) => DAY[d] ?? d).join(', ')}`
+				: "not one of this kitchen's delivery days";
+		case 'requirement_unmet':
+			return "doesn't meet the need's requirement";
+		case 'superseded':
+			return 'replaced by a substitute; not bought';
 		case 'new_sku':
 			return "a product this kitchen hasn't bought before: your mandate says ask first";
 		default:
@@ -42,6 +62,25 @@ export const TIER_WORDS = {
 	propose: { title: 'Proposed', body: 'Needs your approval.' },
 	sign_off: { title: 'Sign-off', body: 'Over the limits you set: needs the named approver.' }
 } as const;
+
+const CAPS = /^(CAP_EXCEEDED|over_hard_limit)/;
+/**
+ * The tier's words for the reasons actually holding the lines: a sign-off for a calendar or requirement hold is not
+ * "over the limits you set".
+ */
+export function tierWords(
+	tier: keyof typeof TIER_WORDS,
+	reasons: readonly string[]
+): { title: string; body: string } {
+	if (tier !== 'sign_off' || reasons.some((r) => CAPS.test(r))) return TIER_WORDS[tier];
+	const why = [...new Set(reasons.filter((r) => r !== 'unknown').map(reasonShort))];
+	return {
+		title: TIER_WORDS.sign_off.title,
+		body: why.length
+			? `Needs the named approver: ${why.join(', ').toLowerCase()}.`
+			: 'Needs the named approver.'
+	};
+}
 
 export const UNIT_WORDS: Record<string, string> = {
 	l: 'l',

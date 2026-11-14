@@ -3,7 +3,7 @@
  * receipt-backed amounts; planned stock is not reserved; unknown supply is never cover; excess is not cover.
  * Pure, so the bar, the Why chain and tests read one definition.
  */
-import type { FulfilmentView, LineView, Measure } from '$lib/core/contracts';
+import type { FulfilmentView, LineView } from '$lib/core/contracts';
 import { money, num } from './format';
 
 export type Bucket =
@@ -59,7 +59,11 @@ export interface Segment {
 	width: number;
 }
 
-const amount = (m: Measure) => `${num(m.value, m.value < 10 ? 2 : 1)} ${m.unit}`;
+const amount = (m: { value: number; unit: string }) =>
+	`${num(m.value, m.value < 10 ? 2 : 1)} ${m.unit}`;
+/** The unit a need's amounts are in: "kg served" on the served basis (purchase × yield), else the need's own. */
+export const needUnit = (f: Pick<FulfilmentView, 'required' | 'basis'>) =>
+	f.basis === 'served' ? `${f.required.unit} served` : f.required.unit;
 
 /** Bar segments: the partition of `required`, then excess past the required mark. */
 export function segments(f: FulfilmentView): { parts: Segment[]; requiredAt: number } {
@@ -85,7 +89,7 @@ export function segments(f: FulfilmentView): { parts: Segment[]; requiredAt: num
 
 /** One sentence a chef can read aloud: what is needed, how it is covered, and what is not. */
 export function coverageSentence(f: FulfilmentView): string {
-	const u = f.required.unit;
+	const u = needUnit(f);
 	const m = (v: number) => amount({ value: v, unit: u });
 	const bits: string[] = [];
 	if (f.supplierConfirmed.value > 0)
@@ -96,7 +100,7 @@ export function coverageSentence(f: FulfilmentView): string {
 	if (f.plannedUnknown.value > 0)
 		bits.push(`${m(f.plannedUnknown.value)} planned with unknown stock`);
 	if (f.unresolved.value > 0) bits.push(`${m(f.unresolved.value)} not covered`);
-	let s = `Need ${amount(f.required)}: ${bits.join(', ') || 'nothing planned'}.`;
+	let s = `Need ${m(f.required.value)}: ${bits.join(', ') || 'nothing planned'}.`;
 	if (f.excess.value > 0) s += ` Packs add ${m(f.excess.value)} over the need.`;
 	return s;
 }
@@ -106,7 +110,7 @@ export function coverageSentence(f: FulfilmentView): string {
  * "5.6 kg on unknown stock · +1.6 kg over".
  */
 export function coverageHeadline(f: FulfilmentView): { text: string; tone: Bucket } {
-	const u = f.required.unit;
+	const u = needUnit(f);
 	const m = (v: number) => amount({ value: v, unit: u });
 	const over = f.excess.value > 0 ? ` · +${m(f.excess.value)} over` : '';
 	if (f.unresolved.value > 0)
@@ -187,7 +191,7 @@ export function dishStatus(
 	f: FulfilmentView,
 	gate: DishGate = null
 ): { tone: DishTone; text: string; detail: string | null } {
-	const u = f.required.unit;
+	const u = needUnit(f);
 	const m = (v: number) => amount({ value: v, unit: u });
 	const part = (v: number) => (v < f.required.value ? `${m(v)} of ${m(f.required.value)}` : null);
 	if (f.unresolved.value > 0)
@@ -220,7 +224,7 @@ export function neededVsBuying(f: FulfilmentView): {
 	buying: string;
 	over: string | null;
 } {
-	const u = f.required.unit;
+	const u = needUnit(f);
 	const bought =
 		f.supplierConfirmed.value +
 		f.awaitingSupplier.value +
@@ -228,8 +232,21 @@ export function neededVsBuying(f: FulfilmentView): {
 		f.plannedUnknown.value +
 		f.excess.value;
 	return {
-		needed: amount(f.required),
+		needed: amount({ value: f.required.value, unit: u }),
 		buying: amount({ value: bought, unit: u }),
 		over: f.excess.value > 0 ? amount({ value: f.excess.value, unit: u }) : null
 	};
+}
+
+/**
+ * Why a line buys more than the need, when a Valio lot step is the reason: "Valio sells 10 kg lots: 11.53 kg needed
+ * → 20 kg". Null for small top-ups and other roundings (pack division, unchanged lots), which stay in the line's detail.
+ */
+export function lotSentence(rounding: string | undefined): string | null {
+	const m = rounding?.match(/^([\d.,]+) (\w+) → (\d+) × ([\d.,]+) \w+ lot = ([\d.,]+) (\w+)$/);
+	if (!m) return null;
+	const [, need, unit, , step, total] = m;
+	// Only when the lot adds a tenth or more over the need; a small top-up stays in the detail.
+	if (Number(total) - Number(need) < Number(need) * 0.1) return null;
+	return `Valio sells ${step} ${unit} lots: ${need} ${unit} needed → ${total} ${unit}`;
 }

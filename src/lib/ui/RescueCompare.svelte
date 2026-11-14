@@ -38,6 +38,20 @@
 	const phoneCards = $derived([...viableCards.slice(0, 4), ...rejectedCards.slice(0, 2)]);
 	const hiddenCards = $derived(rescue.candidates.length - phoneCards.length);
 
+	/**
+	 * Ranking is by supply certainty first, then score (D8): a quantity-unknown candidate can score higher and still
+	 * rank lower. Said only when it happens, so "0.84 below 0.69" doesn't read as a bug.
+	 */
+	const knownFirst = $derived(
+		viableCards.some(
+			(u, i) =>
+				u.kind === 'unknown' &&
+				viableCards
+					.slice(0, i)
+					.some((k) => k.kind !== 'unknown' && (k.score?.total ?? 0) < (u.score?.total ?? 0))
+		)
+	);
+
 	const readyCounts = $derived.by(() => {
 		const c = { out: 0, undeliverable: 0, unknown: 0 };
 		for (const x of rescue.candidates) {
@@ -57,6 +71,12 @@
 
 	{#if rescue.kind === 'product' || rescue.kind === 'none'}
 		<!-- Desktop: the ranking strip; the full table is a detail. Phone: stacked candidate cards. -->
+		{#if knownFirst}
+			<p class="px-4 pt-2 text-meta text-ink-2">
+				<span class="font-medium text-ink">Known stock first.</span> Products whose quantity Valio hasn't
+				said rank below every product with known stock, whatever their score.
+			</p>
+		{/if}
 		<div class="hidden px-2 pt-2 md:block">
 			<RankingStrip candidates={rescue.candidates} />
 		</div>

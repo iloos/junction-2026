@@ -376,6 +376,21 @@ export interface FixtureSnapshot {
 	mandateVersion: number;
 	/** The scenario clock's reading when the snapshot was made (SCENARIO.start + time since the run started). */
 	clock: { nowIso: string; runId: string; workspaceId?: string };
+	/**
+	 * What the kitchen agent did when another kitchen took stock (simulator contention), for the screen's one
+	 * sentence: how many of the product were left, what it kept and what it added, and whether that needs sign-off.
+	 */
+	contentionRescue?: {
+		productName: string;
+		/** Sales units the other kitchen took from Valio's stock. */
+		taken: number;
+		/** What the plan's line had, and how many of the product are left for it. */
+		had: number;
+		left: number;
+		unit: string;
+		added: { name: string; qty: number; unit: string; physical: string | null }[];
+		signOff: boolean;
+	} | null;
 	/** The kitchen's other plans in this sandbox (an agent's order, the event), for the task switcher. */
 	others?: { id: string; title: string; open: number; ordered: number }[];
 }
