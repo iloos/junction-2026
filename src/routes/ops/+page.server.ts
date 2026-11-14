@@ -5,6 +5,7 @@ import { fail } from '@sveltejs/kit';
 import { env } from '$env/dynamic/private';
 import { dev } from '$app/environment';
 import { startAgentRun } from '$lib/server/bus/agent-runs';
+import { presenterOpen as isPresenterOpen } from '$lib/server/demo/presenter';
 import { ensureRunLoaded, resetDemo } from '$lib/server/demo/reset';
 import { currentRunStartedAt } from '$lib/server/demo/run';
 import type { Actions, PageServerLoad } from './$types';
@@ -71,11 +72,8 @@ const agentWorkspace = () => env.MANDATE_WORKSPACE || 'ws-demo';
  */
 const COOLDOWN_MS = 20_000;
 
-/**
- * The key-less presenter buttons (run the agent, reset the stage): on in dev, and on the deployed app only
- * with DEMO_RESET_OPEN=1. In production the presenter uses POST /api/agent/run and /api/demo/reset with a key.
- */
-const presenterOpen = () => dev || env.DEMO_RESET_OPEN === '1';
+/** Key-less presenter buttons follow the shared rule in server/demo/presenter.ts. */
+const presenterOpen = () => isPresenterOpen(env, dev);
 let lastReset = 0;
 let lastStart = 0;
 
