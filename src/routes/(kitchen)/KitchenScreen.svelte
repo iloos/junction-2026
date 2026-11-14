@@ -42,7 +42,7 @@
 	import { reasonShort } from '$lib/ui/reasons';
 	import RescueCompare from '$lib/ui/RescueCompare.svelte';
 	import RulesPanel from './RulesPanel.svelte';
-	import ApprovalPanel from './ApprovalPanel.svelte';
+	import ApprovalPanel, { type Shortfall } from './ApprovalPanel.svelte';
 	import CutoffTimeline from '$lib/ui/viz/CutoffTimeline.svelte';
 
 	import type { ApiMode } from '$lib/kitchen/api';
@@ -342,28 +342,65 @@
 	});
 
 	/** Plain-words list of what the order still does not cover (residuals and unconfirmed supply). */
-	const shortfalls = $derived.by(() => {
-		// The server's coverage partition is the one definition (F12/F15); the dish-level fallback is for plans
-		// without a read model.
-		if (coverage.size) {
-			const out: string[] = [];
-			const label = (id: string) => view?.dishes.find((d) => d.needId === id)?.nameFi ?? id;
-			const m = (v: number, u: string) => `${num(v, v < 10 ? 2 : 1)} ${u}`;
-			for (const f of coverage.values()) {
-				if (f.unresolved.value > 0)
-					out.push(`${label(f.needId)}: ${m(f.unresolved.value, f.unresolved.unit)} not covered`);
-				if (f.plannedUnknown.value > 0)
-					out.push(
-						`${label(f.needId)}: ${m(f.plannedUnknown.value, f.plannedUnknown.unit)} planned, but the supplier states no quantity, so it is not cover`
-					);
-			}
-			return out;
+	/**
+	 * What the order still won't cover, grouped by why, each group one sentence with its items as chips: lines on
+	 * stock Valio doesn't state (and, when they are all one-tap approvals, the tap), then needs nothing covers.
+	 * From the server's coverage partition (F12/F15) and the lines' own supply certainty.
+	 */
+	const shortfalls = $derived.by((): Shortfall[] => {
+		const out: Shortfall[] = [];
+		const lines = (plan?.lines ?? []).filter(
+			(l) =>
+				l.state !== 'committed' &&
+				l.state !== 'rejected' &&
+				l.state !== 'unorderable' &&
+				l.qty.value > 0 &&
+				(l.view?.unknownStockCover.value ?? 0) > 0
+		);
+		if (lines.length) {
+			const pending = new Set(approval?.state === 'pending' ? approval.lineIds : []);
+			const oneTap = lines.every((l) => pending.has(l.id) && l.tier === 'propose');
+			const n = lines.length;
+			out.push({
+				kind: 'unstated',
+				sentence: `${n} ${n === 1 ? 'line' : 'lines'} ${
+					oneTap
+						? 'wait for one tap'
+						: lines.every((l) => l.view?.committable)
+							? n === 1
+								? 'is approved, not ordered yet'
+								: 'are approved, not ordered yet'
+							: 'wait for a decision'
+				}: Valio doesn't state a quantity, so ${n === 1 ? 'it is' : 'they are'} not counted as cover`,
+				items: lines.map((l) => ({
+					id: l.id,
+					name: names.get(l.productId) ?? l.productId,
+					qty: `${num(l.qty.value)} ${l.qty.unit}`
+				})),
+				approve: oneTap ? lines.map((l) => l.id) : undefined
+			});
 		}
-		const out: string[] = [];
-		for (const d of view?.dishes ?? []) {
-			if (d.rescue?.residual) out.push(`${d.nameFi}: ${d.rescue.residual.text}`);
-			else if (d.status === 'shortfall') out.push(`${d.nameFi}: no option qualifies`);
-		}
+		const label = (id: string) => view?.dishes.find((d) => d.needId === id)?.nameFi ?? id;
+		const m = (v: number, u: string) => `${num(v, v < 10 ? 2 : 1)} ${u}`;
+		const missing = [...coverage.values()].filter((f) => f.unresolved.value > 0);
+		if (missing.length)
+			out.push({
+				kind: 'uncovered',
+				sentence: `${missing.length} ${missing.length === 1 ? 'need has' : 'needs have'} nothing covering part of it`,
+				items: missing.map((f) => ({
+					id: f.needId,
+					name: label(f.needId),
+					qty: m(f.unresolved.value, f.unresolved.unit)
+				}))
+			});
+		if (!coverage.size)
+			for (const d of view?.dishes ?? [])
+				if (d.rescue?.residual || d.status === 'shortfall')
+					out.push({
+						kind: 'uncovered',
+						sentence: `${d.nameFi}: ${d.rescue?.residual?.text ?? 'no option qualifies'}`,
+						items: []
+					});
 		return out;
 	});
 

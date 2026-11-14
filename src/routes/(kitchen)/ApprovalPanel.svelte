@@ -1,3 +1,13 @@
+<script module lang="ts">
+	/** One reason the order still won't cover something, with its items and, when it is one tap, the lines to approve. */
+	export interface Shortfall {
+		kind: 'unstated' | 'uncovered';
+		sentence: string;
+		items: { id: string; name: string; qty: string }[];
+		approve?: string[];
+	}
+</script>
+
 <script lang="ts">
 	import { tick } from 'svelte';
 	import { CircleCheck, ShieldAlert, TriangleAlert, Hand } from '@lucide/svelte';
@@ -16,7 +26,7 @@
 		/** Lines whose terms differ from the voided approval the chef saw. */
 		changes: TermChange[];
 		/** What the order still does not cover, in plain words. */
-		shortfalls: string[];
+		shortfalls: Shortfall[];
 		orders: CommitRecord[];
 		lastCommit: CommitNote | null;
 		names: Map<string, string>;
@@ -334,9 +344,32 @@
 			{#if shortfalls.length}
 				<div class="mx-4 mt-2.5 rounded-md bg-well px-3 py-2 text-meta leading-snug text-ink">
 					<p class="font-medium">Still not covered after this order</p>
-					<ul class="mt-0.5 list-disc pl-4 text-ink-2">
-						{#each shortfalls as s (s)}<li>{s}</li>{/each}
-					</ul>
+					{#each shortfalls as g (g.kind + g.sentence)}
+						<!-- One sentence per reason, the items as chips: the same words never repeat per line. -->
+						<p class="mt-1.5 text-ink-2">{g.sentence}</p>
+						{#if g.items.length}
+							<ul class="mt-1 flex flex-wrap gap-1" aria-label={g.sentence}>
+								{#each g.items as it (it.id)}
+									<li
+										class="inline-flex max-w-full items-center gap-1 rounded-full border border-rule-strong bg-sheet px-2 py-0.5"
+										title="{it.name} · {it.qty}"
+									>
+										<span class="max-w-[12rem] truncate text-ink">{it.name}</span>
+										<span class="mono shrink-0 text-ink-3">{it.qty}</span>
+									</li>
+								{/each}
+							</ul>
+						{/if}
+						{#if g.approve?.length}
+							<button
+								type="button"
+								class="mt-1.5 rounded-md border border-propose px-2.5 py-1 font-medium text-propose hover:bg-propose-wash disabled:opacity-50"
+								disabled={busy}
+								onclick={() => onapprove(g.approve!)}
+								>Approve {g.approve.length === 1 ? 'it' : `these ${g.approve.length}`}</button
+							>
+						{/if}
+					{/each}
 				</div>
 			{/if}
 
