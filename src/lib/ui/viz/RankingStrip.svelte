@@ -74,7 +74,8 @@
 					: /rules/.test(`${f.provenance.ref ?? ''} ${f.provenance.note ?? ''}`)
 						? 'rule estimate, model unavailable'
 						: f.provenance.source.replace('_', ' ');
-			return `fit ${f.score}/4 · ${how}`;
+			// Gemini's fit is an expectation over its probabilities (fractional): one decimal is the honest precision.
+			return `fit ${Number.isInteger(f.score) ? f.score : f.score.toFixed(1)}/4 · ${how}`;
 		};
 		const toRow = (c: CandidateView): Row => {
 			let x = 0;
