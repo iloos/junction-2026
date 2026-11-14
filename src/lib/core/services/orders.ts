@@ -258,12 +258,37 @@ export async function placeOrder(
 	});
 }
 
-/** The newest pending or granted approval for a plan. */
+const LIVE_ORDER: Record<string, number> = { pending: 0, granted: 1, denied: 2 };
+const TIER_ORDER = { act: 0, propose: 1, sign_off: 2 } as const;
+const strictest = (tiers: (keyof typeof TIER_ORDER)[]) =>
+	tiers.reduce(
+		(a, b) => (TIER_ORDER[b] > TIER_ORDER[a] ? b : a),
+		'propose' as keyof typeof TIER_ORDER
+	);
+
+/**
+ * The approvals of a plan's current version that still mean something: pending, granted and denied. After a
+ * per-group decision there are several (one per group); before it, at most one.
+ */
+export function liveApprovals(state: WorkspaceState, planId: string): Approval[] {
+	const plan = state.plans[planId];
+	if (!plan) return [];
+	return Object.values(state.approvals)
+		.filter((a) => a.planId === planId && a.planVersion === plan.version && a.state in LIVE_ORDER)
+		.sort((a, b) => LIVE_ORDER[a.state] - LIVE_ORDER[b.state] || (a.id < b.id ? -1 : 1));
+}
+
+/** The approval to show: the pending one if any group still waits, else a granted one (newest version first). */
 export function currentApproval(state: WorkspaceState, planId: string): Approval | null {
 	return (
 		Object.values(state.approvals)
 			.filter((a) => a.planId === planId && (a.state === 'pending' || a.state === 'granted'))
-			.sort((a, b) => b.planVersion - a.planVersion)[0] ?? null
+			.sort(
+				(a, b) =>
+					b.planVersion - a.planVersion ||
+					LIVE_ORDER[a.state] - LIVE_ORDER[b.state] ||
+					(a.id < b.id ? -1 : 1)
+			)[0] ?? null
 	);
 }
 
@@ -300,7 +325,10 @@ export async function approve(
 	ctx: CallContext,
 	input: ToolInput<'approve'>
 ): Promise<Result<ToolOutput<'approve'>>> {
-	const r = await ports.store.transact<Approval['state']>(ctx.workspaceId, async (_tx, state) => {
+	const r = await ports.store.transact<{
+		state: Approval['state'];
+		remainingApprovalId: string | null;
+	}>(ctx.workspaceId, async (_tx, state) => {
 		const a = state.approvals[input.approvalId];
 		if (!a) return { error: err('NOT_FOUND', `approval ${input.approvalId}`).error };
 		const plan = state.plans[a.planId];
@@ -316,14 +344,49 @@ export async function approve(
 				error: err('TERMS_CHANGED', 'the plan changed since this approval was shown').error
 			};
 		const expired = new Date(a.expiresAt).getTime() <= ports.clock.now().getTime();
+		const decided = expired ? 'expired' : input.decision === 'grant' ? 'granted' : 'denied';
+		// One reason group (lineIds): those lines keep this id and take the decision; the rest wait in a new pending
+		// approval on the same version and terms. Deciding every line is the whole approval.
+		const subset = input.lineIds;
+		if (subset?.some((id) => !a.lineIds.includes(id)))
+			return {
+				error: err('INVALID_INPUT', `lineIds must be lines of approval ${a.id}`, {
+					detail: { lineIds: a.lineIds }
+				}).error
+			};
+		const rest = subset && !expired ? a.lineIds.filter((id) => !subset.includes(id)) : [];
 		const next: Approval = {
 			...a,
-			state: expired ? 'expired' : input.decision === 'grant' ? 'granted' : 'denied',
+			...(rest.length ? { lineIds: a.lineIds.filter((id) => subset!.includes(id)) } : {}),
+			state: decided,
 			decidedBy: ctx.actor
 		};
-		return { ops: [pending(ctx, { type: 'RecordApproval', approval: next })], value: next.state };
+		const ops = [pending(ctx, { type: 'RecordApproval', approval: next })];
+		let remainingApprovalId: string | null = null;
+		if (rest.length) {
+			remainingApprovalId = `${a.id}-${await short(rest.join('|'))}`;
+			const held = new Map(plan!.lines.map((l) => [l.id, l]));
+			ops.push(
+				pending(ctx, {
+					type: 'RecordApproval',
+					approval: {
+						...a,
+						id: remainingApprovalId,
+						lineIds: rest,
+						tier: strictest(rest.map((id) => held.get(id)?.tier ?? a.tier)),
+						state: 'pending'
+					}
+				})
+			);
+		}
+		return { ops, value: { state: decided, remainingApprovalId } };
 	});
-	return r.ok ? ok({ state: r.value.value }) : r;
+	return r.ok
+		? ok({
+				state: r.value.value.state,
+				...(input.lineIds ? { remainingApprovalId: r.value.value.remainingApprovalId } : {})
+			})
+		: r;
 }
 
 export async function commitOrder(
@@ -421,8 +484,9 @@ export async function commitOrder(
 		}
 
 		// Which lines, under which authority.
-		const approval = currentApproval(state, plan.id);
-		const granted = approval?.state === 'granted' ? approval : null;
+		// Every granted group of this version covers its own lines (approve{lineIds}); one grant is the usual case.
+		const grants = liveApprovals(state, plan.id).filter((a) => a.state === 'granted');
+		const grantFor = (lineId: string) => grants.find((a) => a.lineIds.includes(lineId));
 		const byId = new Map(plan.lines.map((l) => [l.id, l]));
 		const external =
 			ctx.actor.kind === 'external_agent' || plan.createdBy.kind === 'external_agent';
@@ -435,7 +499,8 @@ export async function commitOrder(
 		// With a granted approval the commit buys what it covers plus the lines inside the mandate, so a plan with
 		// both is bought in one press and no in-mandate line is left behind.
 		const selected = (
-			input.lineIds ?? (granted ? [...new Set([...granted.lineIds, ...actIds])] : actIds)
+			input.lineIds ??
+			(grants.length ? [...new Set([...grants.flatMap((a) => a.lineIds), ...actIds])] : actIds)
 		).filter((id) => byId.get(id)?.state !== 'committed');
 		if (selected.length === 0)
 			return fail(
@@ -490,17 +555,22 @@ export async function commitOrder(
 				return fail(err('CAP_EXCEEDED', 'weekly cap', { sub: 'weekly' }).error);
 			authority = 'mandate';
 		} else {
-			if (!granted || !lines.every((l) => granted.lineIds.includes(l.id) || actAlone(l)))
+			// Each line outside the mandate needs a grant that lists it; a grant never covers a line it did not list.
+			if (!lines.every((l) => grantFor(l.id) || actAlone(l)))
 				return fail(
 					err('FORBIDDEN', 'these lines need a granted approval', { sub: 'approval_required' })
 						.error
 				);
+			const used = [...new Set(lines.map((l) => grantFor(l.id)).filter((a) => a !== undefined))];
 			if (
-				granted.mandateVersion !== kitchen.mandate.version ||
-				new Date(granted.expiresAt) <= ports.clock.now()
+				used.some(
+					(a) =>
+						a.mandateVersion !== kitchen.mandate.version ||
+						new Date(a.expiresAt) <= ports.clock.now()
+				)
 			)
 				return fail(err('TERMS_CHANGED', 'approval expired or the mandate changed').error);
-			authority = { approvalId: granted.id };
+			authority = { approvalId: used[0].id };
 		}
 
 		const offerById = new Map(offers.map((o) => [o.productId, o]));
@@ -546,10 +616,10 @@ export async function commitOrder(
 				lineCents: l.lineCents!,
 				// F8: each line names what allowed it. A line the approval covered names it, even if the mandate
 				// alone would have allowed it; an act-tier line bought alongside names the mandate.
-				authority:
-					authority !== 'mandate' && granted?.lineIds.includes(l.id)
-						? { approvalId: granted.id }
-						: 'mandate'
+				authority: (() => {
+					const a = authority !== 'mandate' ? grantFor(l.id) : undefined;
+					return a ? { approvalId: a.id } : ('mandate' as const);
+				})()
 			})),
 			totalCents,
 			termsHash: plan.termsHash!,

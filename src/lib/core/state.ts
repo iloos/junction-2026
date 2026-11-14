@@ -206,6 +206,9 @@ export function applyOps(state: WorkspaceState, ops: OpEnvelope[]): Result<Works
 				const prev = s.approvals[a.id];
 				if (prev && prev.state !== 'pending' && prev.state !== a.state)
 					return err('STALE_VERSION', `approval ${a.id} is already ${prev.state}`);
+				// A decision may narrow an approval to one group of its lines, never widen it.
+				if (prev && a.lineIds.some((id) => !prev.lineIds.includes(id)))
+					return err('FORBIDDEN', `approval ${a.id} cannot take lines it did not list`);
 				if (a.state === 'granted' && a.decidedBy?.kind === 'external_agent')
 					return err('FORBIDDEN', 'an external agent cannot approve');
 				const plan = s.plans[a.planId];
@@ -215,12 +218,17 @@ export function applyOps(state: WorkspaceState, ops: OpEnvelope[]): Result<Works
 					(plan.version !== a.planVersion || plan.termsHash !== a.termsHash)
 				)
 					return err('TERMS_CHANGED', `approval ${a.id} no longer matches plan ${plan.id}`);
-				// A grant that covers every held line makes the plan ready to commit.
+				// Grants on this version that together cover every held line make the plan ready to commit.
 				const held = plan.lines.filter((l) => l.state === 'held').map((l) => l.id);
+				const covered = new Set(
+					[...Object.values(s.approvals).filter((x) => x.id !== a.id), a]
+						.filter(
+							(x) => x.planId === plan.id && x.state === 'granted' && x.planVersion === plan.version
+						)
+						.flatMap((x) => x.lineIds)
+				);
 				const ready =
-					a.state === 'granted' &&
-					plan.state === 'held' &&
-					held.every((id) => a.lineIds.includes(id));
+					a.state === 'granted' && plan.state === 'held' && held.every((id) => covered.has(id));
 				s = {
 					...s,
 					approvals: { ...s.approvals, [a.id]: a },
