@@ -80,16 +80,14 @@ export class PlanEvents {
 	}
 
 	#url(after: number, poll = false) {
-		const q = new URLSearchParams({ after: String(after) });
-		if (poll) q.set('mode', 'poll');
-		if (this.#workspace) q.set('ws', this.#workspace);
-		return `/api/events?${q}`;
+		const ws = this.#workspace ? `&ws=${encodeURIComponent(this.#workspace)}` : '';
+		return `/api/events?after=${after}${poll ? '&mode=poll' : ''}${ws}`;
 	}
 
 	async #open() {
 		if (this.#es || typeof EventSource === 'undefined') return;
 		const attempt = ++this.#opening;
-		let last = 0;
+		let last: number;
 		try {
 			const r = await fetch(this.#url(0, true), { cache: 'no-store' });
 			last = ((await r.json()) as { last?: number }).last ?? 0;
