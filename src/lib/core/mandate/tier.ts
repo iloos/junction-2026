@@ -8,6 +8,7 @@ import type {
 	Line,
 	LineReason,
 	Need,
+	NeedRequirements,
 	Offer,
 	PlanState,
 	Product,
@@ -15,7 +16,8 @@ import type {
 	Tier
 } from '../contracts';
 import type { TermsLine } from '../hash';
-import { forbidden, hardLimitCents, validateLine } from './validate';
+import { meets } from './meets';
+import { forbidden, hardLimitCents, mergeRequirements, validateLine } from './validate';
 
 export interface DraftLine {
 	id: string;
@@ -36,6 +38,8 @@ const STICKY: ReadonlySet<string> = new Set([
 	'substitute_breaks_preference',
 	'CAUTION.model_constraint',
 	'CAUTION.model_fit',
+	'requirement_relaxed.origin',
+	'requirement_relaxed.labels',
 	/** Kept at 0 through re-quotes until someone sets a quantity again. */
 	'superseded'
 ]);
@@ -77,6 +81,8 @@ export interface TierInput {
 	committed?: Line[];
 	/** The plan's needs: a line is validated against its need's hard requirements. */
 	needs?: readonly Need[];
+	/** Order-scope requirements (Plan.requirements), applied to every line with its need's own. */
+	orderRequirements?: NeedRequirements;
 	/** The plan's delivery date: off the kitchen's receiving days, every line needs a sign-off. */
 	deliverBy?: string;
 }
@@ -100,6 +106,9 @@ export interface TierResult {
 const RANK: Record<Tier, number> = { act: 0, propose: 1, sign_off: 2 };
 const TIER_OF: Partial<Record<string, Tier>> = {
 	off_delivery_day: 'sign_off',
+	requirement_unknown: 'sign_off',
+	'requirement_relaxed.origin': 'sign_off',
+	'requirement_relaxed.labels': 'sign_off',
 	UNKNOWN_REQUIRED: 'propose',
 	INSUFFICIENT_STOCK: 'propose',
 	new_sku: 'propose',
@@ -183,7 +192,13 @@ export function tierLines(input: TierInput): TierResult {
 		const findings = validateLine(kitchen, product, offer, draft.qty, {
 			substitute: Boolean(draft.substituteFor),
 			expectedQty: need?.productId === draft.productId ? need.value : undefined,
-			requirements: input.needs?.find((n) => n.id === draft.needId)?.requirements
+			requirements: mergeRequirements(
+				input.orderRequirements,
+				input.needs?.find((n) => n.id === draft.needId)?.requirements
+			),
+			relaxed: (draft.extraReasons ?? [])
+				.filter((r) => r.startsWith('requirement_relaxed.'))
+				.map((r) => r.slice('requirement_relaxed.'.length) as 'origin' | 'labels')
 		});
 		// The kitchen's calendar is a receiving constraint: another day is an explicit exception a person signs off.
 		if (input.deliverBy && !receivesOn(kitchen, input.deliverBy))
@@ -214,7 +229,7 @@ export function tierLines(input: TierInput): TierResult {
 			reasons.push('low_reliability');
 		if (lineCents !== null && lineCents > m.lineCapCents) reasons.push('CAP_EXCEEDED.line');
 		if (input.recalled?.has(draft.productId)) reasons.push('recall');
-		reasons.push(...(draft.extraReasons ?? []));
+		reasons.push(...(draft.extraReasons ?? []).filter((r) => !reasons.includes(r)));
 		return { draft, offer, reasons, orderable: true, gap, lineCents };
 	});
 
@@ -241,6 +256,18 @@ export function tierLines(input: TierInput): TierResult {
 		if (external) w.reasons.push('external_agent_needs_approval');
 	}
 
+	// Which requirements a line's product misses, with the fact behind each (D16), whenever a reason says so.
+	const unmetOf = (draft: DraftLine, reasons: LineReason[]) => {
+		if (!reasons.some((r) => r === 'requirement_unmet' || r === 'requirement_unknown')) return {};
+		const product = products.get(draft.productId);
+		const need = input.needs?.find((n) => n.id === draft.needId);
+		const req = mergeRequirements(input.orderRequirements, need?.requirements);
+		if (!product || !req) return {};
+		const checks = meets(product, req).checks.map((c) =>
+			need?.requirementsFrom === 'dish' && c.from === 'need' ? { ...c, from: 'dish' as const } : c
+		);
+		return checks.length ? { unmet: checks } : {};
+	};
 	const lines: Line[] = work.map((w) => {
 		const tier = w.orderable
 			? w.gap
@@ -263,6 +290,7 @@ export function tierLines(input: TierInput): TierResult {
 			state,
 			tier,
 			reasons: w.reasons,
+			...unmetOf(w.draft, w.reasons),
 			offer: w.offer,
 			lineCents: w.lineCents,
 			substituteFor: w.draft.substituteFor,
@@ -301,6 +329,15 @@ export function tierLines(input: TierInput): TierResult {
 				unitCents: l.offer!.price!.unitCents,
 				...(l.offer?.availability.kind && l.offer.availability.kind !== 'known'
 					? { supply: l.offer.availability.kind }
+					: {}),
+				// A relaxed rule is part of what the approval agreed to: changing it changes the terms.
+				...(l.reasons.some((r) => r.startsWith('requirement_relaxed.'))
+					? {
+							relaxed: l.reasons
+								.filter((r) => r.startsWith('requirement_relaxed.'))
+								.sort()
+								.join(',')
+						}
 					: {})
 			})),
 		held: approvable.length

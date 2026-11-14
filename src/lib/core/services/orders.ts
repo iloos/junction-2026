@@ -192,10 +192,6 @@ export async function placeOrder(
 	// A physical amount is the demand authority (F10): the server sizes it, and a qty that disagrees is refused.
 	const sized: (SalesQty | null)[] = [];
 	for (const [i, l] of input.lines.entries()) {
-		if (l.requirements && !l.amount)
-			return err('INVALID_INPUT', `lines[${i}]: requirements need an amount to live on`, {
-				detail: { line: i }
-			});
 		if (!l.amount) {
 			sized.push(null);
 			continue;
@@ -218,7 +214,7 @@ export async function placeOrder(
 	}
 	const { offers } = await ports.catalog.offers(ids, input.deliverBy); // outside the lock (D6)
 	const planId = `pl-${ctx.runId}-${await short(`${ctx.actor.id}|${input.idempotencyKey}`)}`;
-	const needs: Need[] = input.lines.flatMap((l, i) =>
+	const needs: Need[] = input.lines.flatMap((l, i): Need[] =>
 		l.amount
 			? [
 					{
@@ -226,11 +222,30 @@ export async function placeOrder(
 						label: `${l.amount.value} ${l.amount.unit} ${products.get(l.productId)!.nameFi}`,
 						kind: 'direct' as const,
 						amount: l.amount,
-						...(l.requirements ? { requirements: l.requirements } : {}),
+						...(l.requirements
+							? { requirements: l.requirements, requirementsFrom: 'request' as const }
+							: {}),
+						...(l.ask ? { ask: l.ask } : {}),
 						provenance: { source: 'user' as const, note: `${ctx.actor.kind} via ${ctx.via}` }
 					}
 				]
-			: []
+			: l.requirements || l.ask
+				? [
+						// D18: packs, cases or sales units with no stated content still make a need, in sales units, so the
+						// ask and its requirements live on through substitutes and edits.
+						{
+							id: `need:sales-${i + 1}`,
+							label: `${l.qty} ${l.unit} ${products.get(l.productId)!.nameFi}`,
+							kind: 'sales' as const,
+							amount: { value: l.qty, unit: 'pcs' as const },
+							ask: l.ask ?? { qty: l.qty, unit: 'sales_unit' as const },
+							...(l.requirements
+								? { requirements: l.requirements, requirementsFrom: 'request' as const }
+								: {}),
+							provenance: { source: 'user' as const, note: `${ctx.actor.kind} via ${ctx.via}` }
+						}
+					]
+				: []
 	);
 
 	return idempotent(ports, ctx, 'place_order', input.idempotencyKey, input, async (tx, state) => {
@@ -241,7 +256,11 @@ export async function placeOrder(
 		});
 		const drafts: DraftLine[] = input.lines.map((l, i) => ({
 			id: `${planId}-l${i + 1}`,
-			...(l.amount ? { needId: `need:direct-${i + 1}` } : {}),
+			...(l.amount
+				? { needId: `need:direct-${i + 1}` }
+				: l.requirements || l.ask
+					? { needId: `need:sales-${i + 1}` }
+					: {}),
 			productId: l.productId,
 			qty: sized[i] ?? toLot(l.qty, l.unit, products.get(l.productId)!),
 			provenance: { source: 'user', note: `${ctx.actor.kind} via ${ctx.via}` }
@@ -258,6 +277,7 @@ export async function placeOrder(
 			orderedBefore: orderedBefore(state, kitchen),
 			recalled: recalledProducts(state),
 			needs,
+			orderRequirements: input.requirements,
 			deliverBy: input.deliverBy
 		});
 		const plan0: Plan = {
@@ -268,6 +288,7 @@ export async function placeOrder(
 			version: 0,
 			state: 'draft',
 			deliverBy: input.deliverBy,
+			...(input.requirements ? { requirements: input.requirements } : {}),
 			needs,
 			lines: [],
 			totalCents: null,
@@ -491,6 +512,7 @@ export async function commitOrder(
 			// The same yardstick as the quote, so a line held for its quantity stays held here.
 			expectedQty: seed ? seedNeedQty(plan.id, seed) : undefined,
 			needs: plan.needs,
+			orderRequirements: plan.requirements,
 			deliverBy: plan.deliverBy
 		});
 		// F9: lines whose cut-off has passed (scenario clock) can't be bought. Named explicitly, the commit is refused by
@@ -518,6 +540,41 @@ export async function commitOrder(
 			prefix = q.ops;
 			plan = q.plan;
 		}
+		// D16: a line whose product breaks a hard requirement is never bought. Named, or with nothing else to buy, the
+		// commit is refused with which requirement and which product fact, so a caller can repair it.
+		const unmet = t.lines.filter(
+			(l) =>
+				l.state !== 'committed' &&
+				l.reasons.includes('requirement_unmet') &&
+				(input.lineIds ? input.lineIds.includes(l.id) : true)
+		);
+		const buyable = t.lines.some(
+			(l) =>
+				(l.state === 'eligible' || l.state === 'held') && !l.reasons.includes('requirement_unmet')
+		);
+		if (unmet.length && (input.lineIds || !buyable))
+			return fail(
+				err(
+					'FORBIDDEN',
+					`${unmet.map((l) => l.productName ?? l.productId).join(', ')} ${unmet.length === 1 ? 'does' : 'do'} not meet ${
+						unmet
+							.flatMap((l) => (l.unmet ?? []).map((c) => c.requirement))
+							.filter((v, i, a) => a.indexOf(v) === i)
+							.join(', ') || 'a hard requirement'
+					}`,
+					{
+						sub: 'requirement_unmet',
+						detail: {
+							lines: unmet.map((l) => ({
+								lineId: l.id,
+								productId: l.productId,
+								unmet: l.unmet ?? []
+							}))
+						}
+					}
+				).error,
+				prefix
+			);
 		const fresh = await termsHash({ deliverBy: plan.deliverBy, lines: t.termsLines });
 		if (fresh !== plan.termsHash) {
 			const q = await quoteOps(ctx, ports, plan, kitchen, t, offers);

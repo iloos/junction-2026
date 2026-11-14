@@ -51,8 +51,40 @@ const milk = (productId: string, nameFi: string, lactoseFree: boolean) =>
 		dataQualityFlags: []
 	});
 
-async function harness(o: { deliveryDays?: Kitchen['deliveryDays'] } = {}) {
+async function harness(
+	o: { deliveryDays?: Kitchen['deliveryDays']; origin?: Kitchen['constraints']['origin'] } = {}
+) {
 	const products = new Map([
+		// A vegetable patty (out, below) and a meatball: the only substitute for a vegetarian dish is meat.
+		[
+			'470600',
+			Product.parse({
+				...milk('470600', 'Testi kasvispyörykkä 5 kg pakaste', false),
+				category: '41753',
+				diet: ['vegetarian'],
+				allergens: { contains: [], mayContain: [], declared: true }
+			})
+		],
+		[
+			'470601',
+			Product.parse({
+				...milk('470601', 'Testi lihapulla 5 kg kypsä pakaste', false),
+				category: '41705',
+				allergens: { contains: [], mayContain: [], declared: true }
+			})
+		],
+		// Two Swedish lactose-free milks: nothing Finnish and lactose-free exists in this catalogue.
+		[
+			'470499',
+			Product.parse({ ...milk('470499', 'Testi svensk mjölk laktoositon 1 l', true), origin: 'se' })
+		],
+		[
+			'470500',
+			Product.parse({
+				...milk('470500', 'Testi svensk lättmjölk laktoositon 1 l', true),
+				origin: 'se'
+			})
+		],
 		['464201', milk('464201', 'Testi kevytmaito laktoositon 1 l', true)],
 		['470418', milk('470418', 'Testi kevytmaito 1 l', false)],
 		['470420', milk('470420', 'Testi rasvaton maito 1 l', true)],
@@ -76,7 +108,7 @@ async function harness(o: { deliveryDays?: Kitchen['deliveryDays'] } = {}) {
 		deliveryDays: o.deliveryDays ?? ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'],
 		weights: { price: 1 },
 		constraints: {
-			origin: [],
+			origin: o.origin ?? [],
 			allergens: { freeFrom: [], unknownCounts: 'reject' },
 			tenderListOnly: false,
 			labels: []
@@ -172,17 +204,19 @@ describe('R7-01: hard requirements reach the need and bind substitutes and commi
 		expect(sub.candidates.find((c) => c.productId === '470418')?.rejectedReasons).toContain(
 			'requirement_unmet'
 		);
-		// A lactose-free candidate is still found.
+		// The need says why nothing qualified; a lactose-free candidate is still found, and the note goes.
+		expect(sub.plan.needs[0].unresolved).toBe('no product meets free from LACTOSE');
 		setCandidates(['470418', '470420']);
 		const ok = must(
 			await h.find_substitutes(ctx(), {
 				planId: p.id,
-				version: p.version,
+				version: sub.plan.version,
 				lineId: p.lines[0].id,
 				apply: true
 			})
 		);
 		expect(ok.chosen.map((l) => l.productId)).toEqual(['470420']);
+		expect(ok.plan.needs[0].unresolved).toBeUndefined();
 	});
 
 	it('the gate refuses a line that breaks its need, whatever edited it in', async () => {
@@ -445,5 +479,259 @@ describe('R7-03: supply that turns unknown after an approval asks again', () => 
 		const now = must(await h.get_plan(ctx('chef'), { planId: p.id }));
 		expect(now.plan.lines[0].offer?.availability.kind).toBe('unknown');
 		expect(now.approval?.state ?? 'none').not.toBe('granted');
+	});
+});
+
+describe('order-scope strict requirements, best try and fallback', () => {
+	const swedish = (
+		h: Awaited<ReturnType<typeof harness>>['h'],
+		key: string,
+		who: ActorKind = 'chef'
+	) =>
+		h.place_order(ctx(who), {
+			kitchenId: 'k-hotel',
+			deliverBy: '2026-12-10',
+			idempotencyKey: key,
+			requirements: { origin: 'fi' },
+			lines: [
+				{
+					productId: '470499',
+					qty: 10,
+					unit: 'ST',
+					amount: { value: 10, unit: 'l' },
+					requirements: { freeFrom: ['LACTOSE'] }
+				}
+			]
+		});
+
+	it("the order requirement binds every line, beside the line's own (they only add up)", async () => {
+		const { h } = await harness();
+		const p = must(await swedish(h, 'scope')).plan;
+		expect(p.requirements).toEqual({ origin: 'fi' });
+		expect(p.lines[0].state).toBe('unorderable');
+		expect(p.lines[0].reasons).toContain('requirement_unmet');
+	});
+
+	it('two origins at once: nothing qualifies', async () => {
+		const { h } = await harness();
+		const p = must(
+			await h.place_order(ctx('chef'), {
+				kitchenId: 'k-hotel',
+				deliverBy: '2026-12-10',
+				idempotencyKey: 'conflict',
+				requirements: { origin: 'fi' },
+				lines: [
+					{
+						productId: '470499',
+						qty: 2,
+						unit: 'ST',
+						amount: { value: 2, unit: 'l' },
+						requirements: { origin: 'se' }
+					}
+				]
+			})
+		).plan;
+		expect(p.lines[0].reasons).toContain('requirement_unmet');
+	});
+
+	it('nothing meets every rule: the need says so, and the nearest product breaking only origin is a best try', async () => {
+		const { h, setCandidates } = await harness();
+		setCandidates(['470500', '470418']);
+		const p = must(await swedish(h, 'besttry')).plan;
+		const r = must(
+			await h.find_substitutes(ctx('chef'), {
+				planId: p.id,
+				version: p.version,
+				lineId: p.lines[0].id,
+				apply: true
+			})
+		);
+		expect(r.chosen).toEqual([]);
+		expect(r.plan.needs[0].unresolved).toBe('no product meets free from LACTOSE, origin FI');
+		const sw = r.candidates.find((c) => c.productId === '470500')!;
+		expect(sw.bestTry).toEqual({ relaxes: 'origin' });
+		// Allergens never relax: Finnish milk with lactose is no best try.
+		expect(r.candidates.find((c) => c.productId === '470418')?.bestTry).toBeUndefined();
+	});
+
+	it('a person accepts the best try: held for sign-off, the relaxed rule in the terms; an agent may not', async () => {
+		const { h } = await harness();
+		const p = must(await swedish(h, 'accept')).plan;
+		const agent = await h.edit_line(ctx('kitchen_agent'), {
+			planId: p.id,
+			version: p.version,
+			lineId: p.lines[0].id,
+			patch: { productId: '470500', relax: 'origin' }
+		});
+		expect(agent.ok ? null : agent.error).toMatchObject({ code: 'FORBIDDEN' });
+		const ok = must(
+			await h.edit_line(ctx('chef'), {
+				planId: p.id,
+				version: p.version,
+				lineId: p.lines[0].id,
+				patch: { productId: '470500', relax: 'origin' }
+			})
+		).plan;
+		expect(ok.lines[0]).toMatchObject({ state: 'held', tier: 'sign_off', productId: '470500' });
+		expect(ok.lines[0].reasons).toContain('requirement_relaxed.origin');
+		expect(ok.lines[0].reasons).not.toContain('requirement_unmet');
+		// Relaxing origin never lets lactose in.
+		const lactose = must(
+			await h.edit_line(ctx('chef'), {
+				planId: p.id,
+				version: ok.version,
+				lineId: p.lines[0].id,
+				patch: { productId: '470418', relax: 'origin' }
+			})
+		).plan;
+		expect(lactose.lines[0].reasons).toContain('requirement_unmet');
+	});
+
+	it('a preferred origin the pick lacks is said in words', async () => {
+		const { h, setCandidates } = await harness({
+			origin: [{ categoryGroup: '10', rule: 'prefer', country: 'fi' }]
+		});
+		setCandidates(['470500']);
+		const p = must(
+			await h.place_order(ctx('chef'), {
+				kitchenId: 'k-hotel',
+				deliverBy: '2026-12-10',
+				idempotencyKey: 'prefer',
+				lines: [{ productId: '464201', qty: 4, unit: 'ST', amount: { value: 4, unit: 'l' } }]
+			})
+		).plan;
+		const r = must(
+			await h.find_substitutes(ctx('chef'), {
+				planId: p.id,
+				version: p.version,
+				lineId: p.lines[0].id
+			})
+		);
+		expect(r.chosen[0]?.productId).toBe('470500');
+		expect(r.fallback).toBe('no Finnish option qualified: picked Swedish');
+	});
+});
+
+describe('D16: a vegetarian dish is never bought as meat', () => {
+	it('only meat substitutes: nothing committable, the need and the candidate say why', async () => {
+		const { h, setCandidates } = await harness();
+		setCandidates(['470601']);
+		const p = must(
+			await h.place_order(ctx('chef'), {
+				kitchenId: 'k-hotel',
+				deliverBy: '2026-12-10',
+				idempotencyKey: 'veg',
+				requirements: { diet: ['vegetarian'] },
+				lines: [{ productId: '470600', qty: 2, unit: 'ST' }]
+			})
+		).plan;
+		// The meatball cannot be edited in either: the gate forbids it.
+		const swapped = must(
+			await h.edit_line(ctx('chef'), {
+				planId: p.id,
+				version: p.version,
+				lineId: p.lines[0].id,
+				patch: { productId: '470601' }
+			})
+		).plan;
+		expect(swapped.lines[0].state).toBe('unorderable');
+		expect(swapped.lines[0].reasons).toContain('requirement_unmet');
+		// Which requirement and which product fact, for the Why drawer and an outside agent alike.
+		expect(swapped.lines[0].unmet).toEqual([
+			expect.objectContaining({
+				requirement: 'diet:vegetarian',
+				from: 'need',
+				verdict: 'no',
+				fact: expect.stringContaining('meat')
+			})
+		]);
+		const refused = await h.commit_order(ctx('chef'), {
+			planId: p.id,
+			version: swapped.version,
+			idempotencyKey: 'veg-commit',
+			lineIds: [swapped.lines[0].id]
+		});
+		expect(refused.ok ? null : refused.error).toMatchObject({
+			code: 'FORBIDDEN',
+			sub: 'requirement_unmet',
+			detail: { lines: [expect.objectContaining({ productId: '470601' })] }
+		});
+		const back = must(
+			await h.edit_line(ctx('chef'), {
+				planId: p.id,
+				version: swapped.version,
+				lineId: p.lines[0].id,
+				patch: { productId: '470600' }
+			})
+		).plan;
+		expect(back.lines[0].reasons).not.toContain('requirement_unmet');
+	});
+
+	it('a substitute search with only meat leaves the vegetarian need unresolved, with the reason', async () => {
+		const { h, setCandidates } = await harness();
+		setCandidates(['470601']);
+		const p = must(
+			await h.place_order(ctx('chef'), {
+				kitchenId: 'k-hotel',
+				deliverBy: '2026-12-10',
+				idempotencyKey: 'veg2',
+				requirements: { diet: ['vegetarian'] },
+				lines: [{ productId: '470418', qty: 2, unit: 'ST', amount: { value: 2, unit: 'l' } }]
+			})
+		).plan;
+		const r = must(
+			await h.find_substitutes(ctx('chef'), {
+				planId: p.id,
+				version: p.version,
+				lineId: p.lines[0].id,
+				apply: true
+			})
+		);
+		expect(r.chosen).toEqual([]);
+		expect(r.candidates.find((c) => c.productId === '470601')?.rejectedReasons).toContain(
+			'requirement_unmet'
+		);
+		expect(r.plan.needs[0].unresolved).toBe('no product meets vegetarian');
+		expect(r.plan.lines.some((l) => l.view?.committable && l.productId === '470601')).toBe(false);
+	});
+});
+
+describe('D18: packs and cases make a need too (R11-02)', () => {
+	it('"4 packs lactose-free milk" keeps the requirement in a sales-unit need, through substitution', async () => {
+		const { h, setCandidates } = await harness();
+		setCandidates(['470418', '470420']);
+		const p = must(
+			await h.place_order(ctx('chef'), {
+				kitchenId: 'k-hotel',
+				deliverBy: '2026-12-10',
+				idempotencyKey: 'packs',
+				lines: [
+					{
+						productId: '464201',
+						qty: 4,
+						unit: 'ST',
+						requirements: { freeFrom: ['LACTOSE'] },
+						ask: { words: '4 packs lactose-free milk', qty: 4, unit: 'pack' }
+					}
+				]
+			})
+		).plan;
+		expect(p.needs[0]).toMatchObject({
+			kind: 'sales',
+			amount: { value: 4, unit: 'pcs' },
+			requirements: { freeFrom: ['LACTOSE'] },
+			ask: { qty: 4, unit: 'pack' }
+		});
+		expect(p.lines[0].needId).toBe(p.needs[0].id);
+		expect(p.view!.fulfilment[0]).toMatchObject({ required: { value: 4 } });
+		const r = must(
+			await h.find_substitutes(ctx('chef'), {
+				planId: p.id,
+				version: p.version,
+				lineId: p.lines[0].id,
+				apply: true
+			})
+		);
+		expect(r.chosen.map((l) => l.productId)).toEqual(['470420']); // lactose-free, never 470418
 	});
 });

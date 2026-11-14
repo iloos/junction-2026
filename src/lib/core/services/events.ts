@@ -10,6 +10,7 @@ import {
 	type Line,
 	type MenuProposal,
 	type Need,
+	type NeedRequirements,
 	type Offer,
 	type Plan,
 	type Product,
@@ -42,6 +43,8 @@ import {
 	orderedBefore,
 	recalledProducts
 } from '../mandate/tier';
+import { requirementsFromDiet } from '../mandate/meets';
+import { mergeRequirements } from '../mandate/validate';
 import type { CallContext, Ports, Tx } from '../ports';
 import type { WorkspaceState } from '../state';
 import { kitchenOf, pending, quoteOps, toLot } from './orders';
@@ -77,6 +80,12 @@ function demandLines(planId: string, seed: EventSeed, overrides: Record<string, 
 				: n;
 		// The editable g/guest and how the need follows from it (kitchen table + Why drawer).
 		const dish = seed.dishes.find((x) => x.dish === n.label);
+		// The dish's diet codes (L, M, G, VEG, VE) bind every product bought for it.
+		const req = mergeRequirements(
+			withNote.requirements,
+			requirementsFromDiet((dish?.dietCodes as string[] | undefined) ?? [])
+		);
+		if (req) Object.assign(withNote, { requirements: req, requirementsFrom: 'dish' });
 		if (dish?.gServed === undefined) return withNote;
 		const g = overrides[n.id] ?? dish.gServed;
 		const y = dish.yield ?? 1;
@@ -159,6 +168,7 @@ export async function requote(
 		committed: plan.lines.filter((l) => l.state === 'committed'),
 		expectedQty: expectedFor(ports, plan, drafts, pre.products),
 		needs: plan.needs,
+		orderRequirements: plan.requirements,
 		deliverBy: plan.deliverBy
 	});
 	return quoteOps(ctx, ports, plan, kitchen, t, pre.offers);
@@ -195,6 +205,8 @@ const conflict = (what: string) => ({
 /** Who a new plan is for beyond the tool input (Ring 2: the procurement task that asked for it). */
 export interface PlanOptions {
 	taskId?: string;
+	/** Order-scope requirements (from the tool input): every need of the plan meets them. */
+	requirements?: NeedRequirements;
 }
 
 export async function planEvent(
@@ -203,6 +215,7 @@ export async function planEvent(
 	input: ToolInput<'plan_event'>,
 	opts: PlanOptions = {}
 ): Promise<Result<ToolOutput<'plan_event'>>> {
+	if (input.requirements) opts = { ...opts, requirements: input.requirements };
 	if (input.proposal) return planProposal(ports, ctx, input.kitchenId, input.proposal, opts);
 	if (input.eventId === undefined)
 		return err('INVALID_INPUT', 'give a seeded eventId or a chef-reviewed menu proposal');
@@ -234,6 +247,7 @@ export async function planEvent(
 			deliverBy,
 			eventId: input.eventId,
 			...(opts.taskId ? { taskId: opts.taskId } : {}),
+			...(opts.requirements ? { requirements: opts.requirements } : {}),
 			needs,
 			lines: [],
 			totalCents: null,
@@ -278,9 +292,19 @@ export async function reviewedProposal(
 function menuLine(
 	planId: string,
 	item: MenuNeed,
-	products: Map<string, Product>
+	products: Map<string, Product>,
+	proposal?: MenuProposal
 ): { need: Need; draft?: DraftLine } {
-	const { need } = item;
+	// The brief's requirements and the dish's claims become hard requirements of the need (R10-03): a reviewed
+	// lactose-free soup is never bought as ordinary milk later, whatever substitutes or edits come.
+	const dish = proposal?.dishes.find((d) => d.id === item.need.source?.dishId);
+	const req = requirementsFromDiet([
+		...(proposal?.brief.dietary ?? []),
+		...(dish?.claimedCompatible ?? [])
+	]);
+	const need: Need = req
+		? { ...item.need, requirements: req, requirementsFrom: 'dish' }
+		: item.need;
 	if (item.unresolved || !item.productId) return { need };
 	const p = products.get(item.productId);
 	if (!p)
@@ -343,7 +367,7 @@ async function planProposal(
 		items.flatMap((i) => (i.productId && !i.unresolved ? [i.productId] : [])),
 		deliverBy
 	);
-	const sized = items.map((i) => menuLine(planId, i, pre.products));
+	const sized = items.map((i) => menuLine(planId, i, pre.products, proposal));
 	const needs = sized.map((x) => x.need);
 	const drafts = sized.flatMap((x) => (x.draft ? [x.draft] : []));
 	const r = await ports.store.transact<Plan>(ctx.workspaceId, async (tx, state) => {
@@ -358,6 +382,7 @@ async function planProposal(
 			deliverBy,
 			source: { proposalId: proposal.id, revision: proposal.revision },
 			...(opts.taskId ? { taskId: opts.taskId } : {}),
+			...(opts.requirements ? { requirements: opts.requirements } : {}),
 			needs,
 			lines: [],
 			totalCents: null,
@@ -479,10 +504,12 @@ async function prepareEdit(
 		const ids = new Set(drafts.filter((d) => d.needId === input.needId).map((d) => d.productId));
 		if (item.productId) ids.add(item.productId);
 		const products = await ports.catalog.get([...ids]);
-		const fresh = menuLine(plan.id, item, products);
-		// Every open line of this need follows the new amount: the bought product and any substitute, sized alike.
+		const fresh = menuLine(plan.id, item, products, proposal.value);
+		// Every open line of this need follows the new amount: the bought product and any substitute, sized alike. A
+		// superseded original stays at 0 (R10-04): only the active strategy is resized.
 		drafts = drafts.map((d) => {
 			if (d.needId !== input.needId) return d;
+			if (d.extraReasons?.includes('superseded')) return d;
 			if (d.id === fresh.draft?.id) return { ...d, qty: fresh.draft.qty };
 			const p = products.get(d.productId);
 			const qty = p ? sizeDirect(p, fresh.need.amount) : null;
@@ -523,7 +550,12 @@ async function prepareEdit(
 			return err('STALE_VERSION', 'a line of a dependent need is already committed');
 		const moved = new Set([input.needId, ...dependents.map((n) => n.id)]);
 		const fresh = new Map(next.drafts.map((d) => [d.id, d]));
-		drafts = drafts.map((d) => (d.needId && moved.has(d.needId) ? (fresh.get(d.id) ?? d) : d));
+		// A superseded original stays superseded (R10-04); everything else of the moved needs takes its fresh size.
+		drafts = drafts.map((d) =>
+			d.needId && moved.has(d.needId) && !d.extraReasons?.includes('superseded')
+				? (fresh.get(d.id) ?? d)
+				: d
+		);
 		// Replacements serving this dish follow the new need: a product substitute by the same yield/pack rules
 		// as when it was ranked, make-in-house ingredients by their amount per kg of dish.
 		const subs = drafts.filter((d) => d.needId === input.needId && d.substituteFor);
@@ -561,6 +593,15 @@ async function prepareEdit(
 		const line = plan.lines.find((l) => l.id === input.lineId);
 		if (!line) return err('NOT_FOUND', `line ${input.lineId}`);
 		if (line.state === 'committed') return err('STALE_VERSION', 'committed lines cannot be edited');
+		// An agent may add strict requirements, never relax one: accepting a best try is a person's call.
+		if (
+			input.patch.relax &&
+			(ctx.actor.kind === 'kitchen_agent' || ctx.actor.kind === 'external_agent')
+		)
+			return err('FORBIDDEN', 'only a person can accept breaking a strict requirement', {
+				sub: 'scope',
+				detail: { relax: input.patch.relax }
+			});
 		const productId = input.patch.productId ?? line.productId;
 		const product = (await ports.catalog.get([productId])).get(productId);
 		if (!product) return err('NOT_FOUND', `product ${productId}`);
@@ -575,10 +616,17 @@ async function prepareEdit(
 							...d,
 							productId,
 							qty,
-							// A quantity set by hand brings a superseded line back.
-							...(qty.value > 0
-								? { extraReasons: d.extraReasons?.filter((r) => r !== 'superseded') }
-								: {})
+							...((): Pick<DraftLine, 'extraReasons'> => {
+								// A quantity set by hand brings a superseded line back; a new product drops an earlier relax; a
+								// relax is a person accepting that one rule breaks for this line (held for sign-off).
+								let extra = d.extraReasons ?? [];
+								if (qty.value > 0) extra = extra.filter((r) => r !== 'superseded');
+								if (productId !== line.productId)
+									extra = extra.filter((r) => !r.startsWith('requirement_relaxed.'));
+								if (input.patch.relax)
+									extra = [...extra, `requirement_relaxed.${input.patch.relax}`];
+								return { extraReasons: [...new Set(extra)] };
+							})()
 						}
 					: d
 			),

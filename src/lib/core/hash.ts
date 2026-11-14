@@ -24,6 +24,8 @@ export interface TermsLine {
 	 * before this field keep their hash; a line whose supply turns unknown after an approval changes the terms.
 	 */
 	supply?: string;
+	/** Rules a person accepted breaking for this line (requirement_relaxed.*); absent when none. */
+	relaxed?: string;
 }
 
 export function termsHash(t: { deliverBy: string; lines: TermsLine[] }): Promise<string> {

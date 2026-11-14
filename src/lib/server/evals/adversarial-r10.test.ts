@@ -31,8 +31,6 @@ import { GET as agentCard } from '../../../routes/.well-known/agent.json/+server
 /** Open defects: id → owner. Delete a line when its case goes red ("looks fixed"). R10-07 and R10-16 were fixed on main
  * before this suite landed: they run as guards. */
 const OPEN: Record<string, string> = {
-	'R10-03': '8d',
-	'R10-04': '8d',
 	'R10-05': '8d',
 	'R10-06': '8d',
 	'R10-08': '8d',
@@ -75,7 +73,9 @@ const ps = ['100001', '100002', '100003'].map((productId, i) =>
 		lotStep: 1,
 		catchWeight: false,
 		netPerSalesUnit: { value: { value: 1, unit: 'l' }, provenance },
-		allergens: { contains: [], mayContain: [], declared: true },
+		// Every milk lists milk (GS1 AM) as Valio's records do; only 100001 claims lactose-free. Without AM a
+		// declared record would be evidence of no milk at all (D16), and 100002 would rightly pass as lactose-free.
+		allergens: { contains: ['AM'], mayContain: [], declared: true },
 		freeFrom: i === 0 ? ['LACTOSE'] : [],
 		diet: [],
 		valioSubstitutes: [],

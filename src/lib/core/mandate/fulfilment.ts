@@ -137,7 +137,8 @@ export function fulfilmentOf(
 
 	for (const l of own.filter((x) => !isRecipe(x))) {
 		const bucket = bucketOf(l, views.get(l.id), facts);
-		const amount = bucket ? amountIn(l, unit, facts) : null;
+		// A sales-unit need (packs or cases, content unknown) counts sales units, not content (D18).
+		const amount = bucket ? (need.kind === 'sales' ? l.qty.value : amountIn(l, unit, facts)) : null;
 		if (!bucket || amount === null || !(amount > 0)) continue;
 		// A receipt confirms what it says: 1 of 10 units confirmed is 1 confirmed and 9 still awaited.
 		const cq = bucket === 'supplierConfirmed' ? facts.confirmedQty?.(l.id) : undefined;

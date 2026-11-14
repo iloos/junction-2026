@@ -1,5 +1,13 @@
 import { z } from 'zod';
-import { ApprovalState, Line, NeedRequirements, Plan, ScoreBreakdown, TermsDiff } from './plan';
+import {
+	ApprovalState,
+	Line,
+	NeedAsk,
+	NeedRequirements,
+	Plan,
+	ScoreBreakdown,
+	TermsDiff
+} from './plan';
 import { Offer, Product, SubstituteKind } from './product';
 import { TaskLedger } from './task';
 import { EventBrief, MenuProposal } from './event';
@@ -57,7 +65,9 @@ const PlanEventInput = z
 	.object({
 		kitchenId: KitchenId,
 		eventId: z.string().optional(),
-		proposal: z.object({ id: z.string(), revision: z.int().nonnegative() }).optional()
+		proposal: z.object({ id: z.string(), revision: z.int().nonnegative() }).optional(),
+		/** Order-scope hard requirements for every need of the plan (they only tighten). */
+		requirements: NeedRequirements.optional()
 	})
 	.refine(
 		(v) => (v.eventId !== undefined) !== (v.proposal !== undefined),
@@ -199,6 +209,8 @@ export const toolSchemas = {
 			kitchenId: KitchenId,
 			deliverBy: IsoDate,
 			idempotencyKey: z.string().min(1).max(128),
+			/** Order-scope hard requirements for every line ("everything Finnish"); they only tighten. */
+			requirements: NeedRequirements.optional(),
 			lines: z
 				.array(
 					z.object({
@@ -213,10 +225,15 @@ export const toolSchemas = {
 						 */
 						amount: Measure.optional(),
 						/**
-						 * Hard requirements of this need ("lactose-free" → freeFrom LACTOSE). Needs `amount`: they are kept on
-						 * the direct need, so a substitute or a later edit can never drop them.
+						 * Hard requirements of this need ("lactose-free" → freeFrom LACTOSE). Kept on the line's need (direct
+						 * with `amount`, else a `sales`-kind need in sales units), so no substitute or edit can drop them.
 						 */
-						requirements: NeedRequirements.optional()
+						requirements: NeedRequirements.optional(),
+						/**
+						 * D18: the ask as stated (words, qty, unit or {unknown: token}). Every line makes a need: without
+						 * `amount` it is a `sales`-kind need for `qty` sales units carrying the ask and the requirements.
+						 */
+						ask: NeedAsk.optional()
 					})
 				)
 				.min(1)
@@ -239,7 +256,12 @@ export const toolSchemas = {
 				 * A need edit in physical terms ("make it 20 l"): sets the need's amount and re-sizes every line serving it.
 				 * Must be in the need's dimension (kg↔l is INVALID_INPUT: no density is assumed); 0 means nothing to buy.
 				 */
-				amount: Measure.optional()
+				amount: Measure.optional(),
+				/**
+				 * A person accepts a best try: this line may break that one requirement (never freeFrom: allergens have no
+				 * best try). Held for sign-off with requirement_relaxed.<rule>; refused for agents, who may only tighten.
+				 */
+				relax: z.enum(['origin', 'labels']).optional()
 			})
 		}),
 		output: out({ plan: Plan })
@@ -252,8 +274,13 @@ export const toolSchemas = {
 			lineId: z.string(),
 			/** Rank under these weights instead of the kitchen's (the "Same shortage. Your rules." beat); not persisted. */
 			weights: z.record(z.string(), z.number().min(0)).optional(),
-			/** Extra origin requirement for this ranking only, e.g. "fi". */
+			/** Extra origin requirement for this ranking only, e.g. "fi" (a case of `requirements`). */
 			requireOrigin: z.string().length(2).optional(),
+			/**
+			 * Extra hard requirements for this ranking, added to the need's own (a union, never weaker). A preview unless
+			 * `apply` is true.
+			 */
+			requirements: NeedRequirements.optional(),
 			/**
 			 * Apply the recommendation to the plan: replaces the dish's current substitute and voids the approval.
 			 * Default: apply when the dish has no substitute yet and no per-call rules are given; otherwise preview.
@@ -282,11 +309,15 @@ export const toolSchemas = {
 					/** How it relates to the planned product (describes only: never changes ranking or tiers). */
 					kind: SubstituteKind.optional(),
 					/** One line from the attribute diff, e.g. "sliced, 1.5 kg packs". */
-					whatChanges: z.string().max(200).optional()
+					whatChanges: z.string().max(200).optional(),
+					/** Nothing meets every strict requirement: this is the nearest product that breaks only this one. */
+					bestTry: z.object({ relaxes: z.enum(['origin', 'labels']) }).optional()
 				})
 			),
 			labourNote: z.string().optional(),
-			residual: Measure.optional()
+			residual: Measure.optional(),
+			/** Why the pick is not what the kitchen prefers, in words ("no Finnish in stock: picked Swedish"). */
+			fallback: z.string().max(200).optional()
 		})
 	},
 	get_plan: {
