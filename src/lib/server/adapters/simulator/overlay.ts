@@ -10,6 +10,8 @@ export interface AvailabilityOverride {
 	/** Sales units available; 0 = out. */
 	amount: number;
 	label: string;
+	/** Who set it ('contention', 'shortage'), so a scenario clears only its own and the screen reads its state here. */
+	tag?: string;
 }
 export interface PriceOverride {
 	productId: string;
@@ -63,6 +65,18 @@ export class SimOverlay {
 	/** Valio returns no price for this product (a fact gap the gate must not paper over). */
 	setPriceMissing(productId: string, label: string) {
 		this.target().noPrice.set(productId, label);
+	}
+	/** The current workspace's availability override for a product, if any (read, not applied). */
+	availabilityOf(productId: string): AvailabilityOverride | undefined {
+		const ws = scope.getStore();
+		return (ws ? this.scoped.get(ws) : this.base)?.availability.get(productId);
+	}
+	/** Remove the current workspace's availability overrides that carry `tag`; others stay. */
+	clearTagged(tag: string) {
+		const ws = scope.getStore();
+		const l = ws ? this.scoped.get(ws) : this.base;
+		if (!l) return;
+		for (const [id, o] of l.availability) if (o.tag === tag) l.availability.delete(id);
 	}
 	/** Clear the current workspace's overrides (or, outside a scope, the base layer). */
 	clear() {
