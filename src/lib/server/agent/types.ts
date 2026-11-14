@@ -2,10 +2,7 @@ import type { Actor, ToolName } from '$lib/core/contracts';
 import type { ParsedItem } from '$lib/server/request/parse';
 import type { ReqUnit } from '$lib/server/request/lexicon';
 
-/**
- * Agent-local types. RunPrincipal and GoalOutcome are candidates for `src/lib/core/contracts`
- * (see docs/lanes/agent2.md, Needs); until then they live here.
- */
+/** Agent types: the run principal, the typed intent, the context bootstrap and the domain outcome. */
 
 /**
  * Who a run acts for, built server-side when the run starts and never taken from a request body.
@@ -33,6 +30,7 @@ export const INTENT_KINDS = [
 	'seeded_event',
 	'shortage_repair',
 	'inspect',
+	'adjust_need',
 	'unsupported'
 ] as const;
 export type IntentKind = (typeof INTENT_KINDS)[number];
@@ -58,6 +56,14 @@ export type Intent =
 	  }
 	| { kind: 'shortage_repair'; planId: string }
 	| { kind: 'inspect'; planId: string }
+	| {
+			/** A requirement changed mid-plan: one dish's grams per guest, resized through edit_line. */
+			kind: 'adjust_need';
+			planId: string;
+			/** The goal's words naming the dish, matched against the plan's needs after get_plan. */
+			dish: string;
+			gramsPerGuest: number;
+	  }
 	| { kind: 'unsupported'; reason: string };
 
 export type PlanPick = 'named' | 'event' | 'kitchen' | 'shortage' | 'only';
@@ -82,6 +88,8 @@ export interface AgentContext {
 	openPlans: { id: string; kitchenId: string; eventId?: string; state: string }[];
 	supportedEvents: { id: string; kitchenId: string; title: string }[];
 	supportedIntents: readonly IntentKind[];
+	/** The kitchen an order without one goes to, when the surface has a default and the run may act for it. */
+	defaultKitchenId?: string;
 	/** Scenario "today" (YYYY-MM-DD) used for default delivery dates. */
 	today: string;
 }
@@ -102,11 +110,14 @@ export interface GoalOutcome {
 	intent: IntentKind;
 	planId: string | null;
 	planVersion: number | null;
-	/** Covered by committed lines. */
+	/**
+	 * Supplier confirmed (D10): receipt-backed per the plan's FulfilmentView. A plan without a view falls back
+	 * to "every active line committed", since a commit writes the receipt.
+	 */
 	confirmedNeeds: NeedRef[];
-	/** Covered by lines that are not committed yet (eligible, held or proposed). */
+	/** Planned, held, or ordered and awaiting the supplier: covered, not yet supplier confirmed. */
 	unconfirmedNeeds: NeedRef[];
-	/** No orderable line covers them. */
+	/** Some required quantity has no line (FulfilmentView `unresolved`), or no orderable line at all. */
 	unresolvedNeeds: NeedRef[];
 	/** Pending approvals waiting for a human. */
 	approvalIds: string[];
@@ -127,5 +138,6 @@ export const TOOLS_BY_INTENT: Record<IntentKind, readonly ToolName[]> = {
 	routine_order: ['search_products', 'quote', 'place_order', 'get_plan', 'commit_order'],
 	shortage_repair: ['get_plan', 'find_substitutes', 'explain_line', 'quote', 'search_products'],
 	inspect: ['get_plan', 'explain_line'],
+	adjust_need: ['get_plan', 'edit_line', 'find_substitutes', 'explain_line'],
 	unsupported: []
 };

@@ -11,6 +11,8 @@ export interface ContextSource {
 	plans(workspaceId: string, runId: string): Promise<Plan[]>;
 	/** Scenario date, YYYY-MM-DD. */
 	today(): string;
+	/** The surface's default kitchen (the /request page's), if it has one. */
+	defaultKitchenId?: string;
 }
 
 /** Events the fixture data can expand. Only seeded events are supported; others are `unsupported`. */
@@ -103,6 +105,10 @@ export async function bootstrapContext(
 		})),
 		supportedEvents: SUPPORTED_EVENTS.filter((e) => allowed(e.kitchenId)),
 		supportedIntents: INTENT_KINDS.filter((k) => k !== 'unsupported'),
+		...(source.defaultKitchenId &&
+		kitchens.some((k) => k.id === source.defaultKitchenId && allowed(k.id))
+			? { defaultKitchenId: source.defaultKitchenId }
+			: {}),
 		today: source.today()
 	};
 }

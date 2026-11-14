@@ -7,11 +7,11 @@ type Approval = ToolOutput<'get_plan'>['approval'];
 const ACTIVE = new Set(['proposed', 'eligible', 'held', 'committed']);
 
 /**
- * GoalOutcome from domain state. Each need (or, for a plan without needs, each line) is confirmed when
- * every active line covering it is committed, unconfirmed when active lines cover it but some are not
- * committed, unresolved when no active line covers it. Precedence of the status:
- * unresolved needs → partial (blocked if nothing else is covered); a pending approval or held line →
- * awaiting_user; everything committed → fulfilled; otherwise partial (eligible lines not committed).
+ * GoalOutcome from domain state. With the plan's FulfilmentView, each need is supplier confirmed only when
+ * receipt-backed, unresolved when any required quantity has no line, and otherwise covered but unconfirmed
+ * (planned, held, or ordered and awaiting the supplier). A plan without a view falls back to line states.
+ * Status: unresolved needs → partial (blocked if nothing else is covered); a pending approval or held line
+ * → awaiting_user; every need supplier confirmed → fulfilled; otherwise partial.
  * `inspect` is fulfilled once the plan was read: it asks a question, not for supply.
  */
 export function computeOutcome(o: {
@@ -51,7 +51,21 @@ export function computeOutcome(o: {
 					lines: plan.lines.filter((x) => x.id === l.id || x.substituteFor === l.productId)
 				}));
 
+	// The plan's FulfilmentView (A2) is the exact partition: only receipt-backed quantity is supplier
+	// confirmed (D10); any unresolved quantity is a residual. Without a view, line states decide.
+	const fulfilment = new Map((plan.view?.fulfilment ?? []).map((f) => [f.needId, f]));
+	let awaitingSupplier = 0;
 	for (const g of groups) {
+		const f = fulfilment.get(g.ref.needId);
+		if (f) {
+			if (f.unresolved.value > 0 || f.status === 'uncovered') base.unresolvedNeeds.push(g.ref);
+			else if (f.status === 'confirmed') base.confirmedNeeds.push(g.ref);
+			else {
+				base.unconfirmedNeeds.push(g.ref);
+				if (f.status === 'awaiting_supplier') awaitingSupplier++;
+			}
+			continue;
+		}
 		const active = g.lines.filter((l) => ACTIVE.has(l.state));
 		if (!active.length) base.unresolvedNeeds.push(g.ref);
 		else if (active.every((l) => l.state === 'committed')) base.confirmedNeeds.push(g.ref);
@@ -99,12 +113,16 @@ export function computeOutcome(o: {
 		return {
 			...base,
 			status: 'partial',
-			nextAction: `${eligible.length} eligible line(s) are within the mandate and not committed yet: commit them.`
+			nextAction: eligible.length
+				? `${eligible.length} eligible line(s) are within the mandate and not committed yet: commit them.`
+				: `${awaitingSupplier || base.unconfirmedNeeds.length} need(s) are ordered, awaiting supplier confirmation.`
 		};
 	return {
 		...base,
 		status: 'fulfilled',
-		nextAction: `Every need of plan ${plan.id} is covered by committed lines.`
+		nextAction: fulfilment.size
+			? `Every need of plan ${plan.id} is supplier confirmed.`
+			: `Every need of plan ${plan.id} is covered by committed lines.`
 	};
 }
 

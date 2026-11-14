@@ -10,7 +10,7 @@ import type { CallContext, Llm, ToolHandlers } from '$lib/core/ports';
 import { traceEvent, type TraceStep } from '$lib/server/adapters/llm/trace';
 import { serveTool, toolsFor } from '$lib/server/tools/serve';
 import { errorFacts, toFacts, type Facts, type PlanFacts } from './facts';
-import type { RoutineFacts } from './routine';
+import { pickRoutine, type RoutineFacts } from './routine';
 import type { AgentContext, GoalOutcome, Intent } from './types';
 
 /**
@@ -101,6 +101,8 @@ export async function runAgent(o: {
 	onEvent?: (e: ServerEvent) => void;
 	maxSteps?: number;
 	deadlineMs?: number;
+	/** Ends the run as `deadline` when it aborts, whatever the clock says (tests; an outer expiry). */
+	deadlineSignal?: AbortSignal;
 	/** "Stop agent": aborting it stops the run. Closing a response stream is not a cancel. */
 	signal?: AbortSignal;
 	intent?: Intent;
@@ -113,6 +115,15 @@ export async function runAgent(o: {
 	finalize?: (r: { steps: StepRecord[]; stopped: StopReason }) => Promise<GoalOutcome | undefined>;
 	/** Extra fields for the first trace step (intent, initiator). */
 	intro?: Record<string, unknown>;
+	/**
+	 * Reviews the planner's summary against the outcome before the `done` event (review module, behind the
+	 * REVIEW flag). Returns the text to keep; it can only reword or withhold, never change the outcome.
+	 */
+	reviewSummary?: (r: {
+		summary: string;
+		outcome: GoalOutcome;
+		steps: StepRecord[];
+	}) => Promise<string>;
 }): Promise<AgentRun> {
 	const maxSteps = Math.min(o.maxSteps ?? MAX_STEPS, MAX_STEPS);
 	const deadline = Date.now() + (o.deadlineMs ?? 60_000);
@@ -124,10 +135,19 @@ export async function runAgent(o: {
 	const history: PlannerStep[] = [];
 
 	// One internal signal for both stops, so the planner can be released the moment either fires.
+	// The deadline is a flag set when the timer fires, not only a clock comparison: a timer may fire a
+	// moment before Date.now() reaches the deadline, and the run must then still read as `deadline`.
 	const ctl = new AbortController();
+	let pastDeadline = false;
+	const expire = () => {
+		pastDeadline = true;
+		ctl.abort();
+	};
 	const stopReason = (): 'cancelled' | 'deadline' | null =>
-		o.signal?.aborted ? 'cancelled' : Date.now() >= deadline ? 'deadline' : null;
-	const timer = setTimeout(() => ctl.abort(), Math.max(0, deadline - Date.now()));
+		o.signal?.aborted ? 'cancelled' : pastDeadline || Date.now() >= deadline ? 'deadline' : null;
+	const timer = setTimeout(expire, Math.max(0, deadline - Date.now()));
+	o.deadlineSignal?.addEventListener('abort', expire, { once: true });
+	if (o.deadlineSignal?.aborted) expire();
 	const onCancel = () => ctl.abort();
 	o.signal?.addEventListener('abort', onCancel, { once: true });
 	if (o.signal?.aborted) ctl.abort();
@@ -138,8 +158,10 @@ export async function runAgent(o: {
 	if (o.context?.currentPlan)
 		planKitchen.set(o.context.currentPlan.id, o.context.currentPlan.kitchenId);
 
-	const finish = async (stopped: StopReason, plannerSummary: string): Promise<AgentRun> => {
+	const finish = async (stopped: StopReason, plannerText: string): Promise<AgentRun> => {
+		let plannerSummary = plannerText;
 		clearTimeout(timer);
+		o.deadlineSignal?.removeEventListener('abort', expire);
 		o.signal?.removeEventListener('abort', onCancel);
 		let outcome: GoalOutcome | undefined;
 		try {
@@ -149,6 +171,14 @@ export async function runAgent(o: {
 				error: `outcome failed: ${String((e as Error)?.message ?? e).slice(0, 200)}`
 			});
 		}
+		if (outcome && plannerSummary && o.reviewSummary)
+			try {
+				plannerSummary = await o.reviewSummary({ summary: plannerSummary, outcome, steps });
+			} catch (e) {
+				emit('error', {
+					error: `review failed: ${String((e as Error)?.message ?? e).slice(0, 200)}`
+				});
+			}
 		const summary = outcome
 			? `${outcome.status}: ${outcome.nextAction}${plannerSummary ? ` Planner: ${plannerSummary}` : ''}`
 			: plannerSummary;
@@ -377,6 +407,44 @@ function planSummary(plan: PlanFacts): string {
 	);
 }
 
+/** Words of a need label, lower-case, for matching a dish named in a goal. */
+const labelWords = (s: string) =>
+	new Set(
+		s
+			.toLowerCase()
+			.split(/[^\p{L}-]+/u)
+			.filter((w) => w.length > 1)
+	);
+
+/**
+ * The plan need a goal names: the one sharing the most words with its label. A tie or no shared word is not
+ * guessed: the reason says which dishes could be meant.
+ */
+export function matchNeed(
+	plan: PlanFacts,
+	dish: string
+):
+	| { id: string; label: string; why?: undefined }
+	| { id?: undefined; label?: undefined; why: string } {
+	const want = [...labelWords(dish)];
+	const scored = plan.needs
+		.map((n) => {
+			const have = labelWords(n.label ?? '');
+			return { n, score: want.filter((w) => have.has(w)).length };
+		})
+		.filter((x) => x.score > 0)
+		.sort((a, b) => b.score - a.score);
+	if (!scored.length) return { why: `no dish in plan ${plan.id} matches "${dish}"` };
+	if (scored.length > 1 && scored[1].score === scored[0].score)
+		return {
+			why: `"${dish}" could be ${scored
+				.filter((x) => x.score === scored[0].score)
+				.map((x) => x.n.label)
+				.join(' or ')}; name the dish`
+		};
+	return { id: scored[0].n.id, label: scored[0].n.label ?? scored[0].n.id };
+}
+
 /**
  * Fixture planner: a deterministic script per intent, driven by what the tools return, so the demo runs
  * offline. It never approves (it cannot). Seeded event: plan_event → a substitute per unorderable line →
@@ -416,6 +484,58 @@ export function scriptedPlanner(): Planner {
 					return { done: true, summary: p ? planSummary(p) : 'no plan came back' };
 				}
 				break;
+			case 'adjust_need': {
+				if (!has('get_plan'))
+					return {
+						tool: 'get_plan',
+						input: { planId: intent.planId },
+						why: `find the need for "${intent.dish}" in the current plan`
+					};
+				if (last && !last.ok)
+					return {
+						done: true,
+						summary:
+							`could not change ${intent.dish}: ${last.error?.code} ${last.error?.message ?? ''}`.trim()
+					};
+				const plan = latestPlan(history);
+				if (!plan) return { done: true, summary: 'no plan came back' };
+				const need = matchNeed(plan, intent.dish);
+				if (!has('edit_line')) {
+					if (!need.id) return { done: true, summary: `not changed: ${need.why}` };
+					return {
+						tool: 'edit_line',
+						input: {
+							planId: plan.id,
+							version: plan.version,
+							needId: need.id,
+							patch: { gramsPerGuest: intent.gramsPerGuest }
+						},
+						why: `${need.label}: ${intent.gramsPerGuest} g per guest, resized from the need`
+					};
+				}
+				// Only the changed need is repaired; other dishes keep their state (and their rescues).
+				const lines = plan.lines.filter((l) => l.needId === need.id);
+				const covered = new Set(plan.lines.map((l) => l.substituteFor).filter(Boolean));
+				const out = lines.find(
+					(l) =>
+						l.state === 'unorderable' &&
+						!covered.has(l.productId) &&
+						!history.some(
+							(h) =>
+								h.tool === 'find_substitutes' && (h.input as { lineId?: string }).lineId === l.id
+						)
+				);
+				if (out && tools.includes('find_substitutes') && history.length < MAX_STEPS - 2)
+					return {
+						tool: 'find_substitutes',
+						input: { planId: plan.id, version: plan.version, lineId: out.id },
+						why: `${out.productId} is unorderable at the new size: find a substitute`
+					};
+				return {
+					done: true,
+					summary: `${need.label} now ${intent.gramsPerGuest} g per guest. ${planSummary(plan)}`
+				};
+			}
 			case 'routine_order': {
 				const key =
 					`routine:${intent.kitchenId}:${intent.query}:${intent.qty}${intent.unit}:${intent.deliverBy}`
@@ -423,9 +543,12 @@ export function scriptedPlanner(): Planner {
 						.slice(0, 120);
 				const searches = history.filter((h) => h.tool === 'search_products');
 				const queries = intent.item.search.length ? intent.item.search : [intent.query];
-				const found = searches
-					.flatMap((h) => (h.ok ? ((h.facts as RoutineFacts | undefined)?.products ?? []) : []))
-					.find((p) => p.salesQty !== null);
+				const found = pickRoutine(
+					intent,
+					searches.flatMap((h) =>
+						h.ok ? ((h.facts as RoutineFacts | undefined)?.products ?? []) : []
+					)
+				);
 				if (!found && searches.length < Math.min(queries.length, 2))
 					return {
 						tool: 'search_products',
@@ -453,7 +576,7 @@ export function scriptedPlanner(): Planner {
 							lines: [
 								{
 									productId: found.productId,
-									qty: found.salesQty,
+									qty: found.salesQty!,
 									unit: found.unit,
 									// The physical need behind the sales units, so a substitute is sized to it.
 									...(intent.unit === 'kg' || intent.unit === 'l' || intent.unit === 'pcs'

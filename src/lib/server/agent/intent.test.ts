@@ -99,6 +99,44 @@ describe('typed intent (finding D)', () => {
 		expect((r as { reason: string }).reason).toMatch(why);
 	});
 
+	it('a changed requirement is adjust_need, even with event words in it', () => {
+		expect(resolveIntent('Raise the cured salmon to 160 g per guest', ctx())).toEqual({
+			kind: 'adjust_need',
+			planId: 'pl-1',
+			dish: 'cured salmon',
+			gramsPerGuest: 160
+		});
+		expect(
+			resolveIntent('set graavilohi in the Christmas buffet to 0.2 kg per guest', ctx())
+		).toMatchObject({ kind: 'adjust_need', gramsPerGuest: 200 });
+		expect(resolveIntent('salmon 5000 g per guest', ctx())).toMatchObject({
+			kind: 'unsupported',
+			clarify: true
+		});
+	});
+
+	it('reads "4 kg butter tomorrow" without an order verb; the kitchen is the only grant or the default', () => {
+		const one = ctx({ kitchens: [{ id: 'k-lounas', name: 'Lounas' }] });
+		expect(resolveIntent('4 kg butter tomorrow', one)).toMatchObject({
+			kind: 'routine_order',
+			kitchenId: 'k-lounas',
+			qty: 4,
+			unit: 'kg',
+			deliverBy: '2026-11-15'
+		});
+		expect(
+			resolveIntent('4 kg butter tomorrow', ctx({ defaultKitchenId: 'k-hotel' }))
+		).toMatchObject({
+			kind: 'routine_order',
+			kitchenId: 'k-hotel'
+		});
+		const r = resolveIntent('4 kg butter tomorrow', ctx());
+		expect(r).toMatchObject({ kind: 'unsupported', clarify: true });
+		expect((r as { reason: string }).reason).toMatch(/Which kitchen/);
+		// A product word alone is not an order.
+		expect(resolveIntent('show me the milk plan', ctx()).kind).toBe('inspect');
+	});
+
 	it('asks which plan when the request does not say and several are open', () => {
 		const two = ctx({
 			currentPlan: null,

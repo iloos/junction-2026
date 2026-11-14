@@ -148,10 +148,7 @@
 				},
 				"sameCategoryAs": "464411"
 			},
-			"expectFail": {
-				"F4-pack": ["agent.physical"]
-			},
-			"notes": "The agent picks Valio butter 200 g (463798), sold only as KI = 20 × 200 g, so 500 g becomes 4 kg (8×) with no overshoot check; /request picks 1 × 500 g (464411)."
+			"notes": "Regression for F4-pack: the agent used to pick Valio butter 200 g (463798), sold only as KI = 20 × 200 g (4 kg for 500 g); it now picks the candidate that overshoots least, like /request (1 × 500 g, 464411)."
 		}
 	]
 }

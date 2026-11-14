@@ -10,7 +10,7 @@ import { serveTool, toolsFor } from './serve';
  * Only tools inside the caller's scopes are registered, so an external agent's `tools/list` has no
  * `approve` or `set_mandate` at all (eval s5). Every call goes through `serveTool`, like REST.
  */
-const TITLES: Record<ToolName, string> = {
+export const TITLES: Record<ToolName, string> = {
 	get_context: 'Start here: context and next actions',
 	search_products: 'Search products',
 	quote: 'Quote live terms',

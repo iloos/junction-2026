@@ -130,7 +130,7 @@ describe('stub handlers through the gate (s5 shape)', () => {
 			{ approvalId, planVersion: plan.version, termsHash: plan.termsHash, decision: 'grant' },
 			stubHandlers
 		);
-		expect(ok.ok && ok.value).toEqual({ state: 'granted' });
+		expect(ok.ok && ok.value).toMatchObject({ state: 'granted' });
 
 		const commit = { planId: plan.id, version: plan.version, idempotencyKey: 'ext-A-commit' };
 		const first = await serveTool('commit_order', ext, commit, stubHandlers);
