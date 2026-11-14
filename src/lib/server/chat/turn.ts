@@ -774,7 +774,7 @@ export async function* runChatTurn(
 		if (card && (asked || !sameDecision)) yield card;
 		const summary = ledgerSummary(ledger, { deliverBy: read.value.plans[0]?.deliverBy });
 		if (asked || !sameLedger || !sameDecision)
-			yield { type: 'ledger', taskId: task.id, ledger, summary };
+			yield { type: 'ledger', taskId: task.id, title: task.title, ledger, summary };
 		let answer = summary;
 		const explainer = deps.models?.explain ?? deps.llm;
 		if (!refusal && explainer && !continued) {
@@ -934,7 +934,7 @@ export async function taskView(taskId: string, deps: ChatDeps): Promise<ChatEven
 	const card = decisionEvent(p.task, read.value);
 	if (card) out.push(card);
 	const summary = ledgerSummary(read.value.ledger, { deliverBy: read.value.plans[0]?.deliverBy });
-	out.push({ type: 'ledger', taskId, ledger: read.value.ledger, summary });
+	out.push({ type: 'ledger', taskId, title: t.title, ledger: read.value.ledger, summary });
 	out.push({
 		type: 'done',
 		taskId,

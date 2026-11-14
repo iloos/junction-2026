@@ -49,7 +49,14 @@ export type ChatEvent =
 			/** Where a chef approves (Kitchen approval panel). Locates, never authorises. */
 			approvalUrl: string;
 	  }
-	| { type: 'ledger'; taskId: string; ledger: TaskLedger; summary: string }
+	| {
+			type: 'ledger';
+			taskId: string;
+			/** The task's title in plain words, for the dock header. */
+			title?: string;
+			ledger: TaskLedger;
+			summary: string;
+	  }
 	| {
 			/** A menu proposed for an event brief: the chef reviews it on /request, then "plan it" plans it. */
 			type: 'menu';
