@@ -23,7 +23,7 @@ _The lead rewrites this at each checkpoint. It is the "now": what works, what's 
 - Waiting on the user: Usual order/How ordering works design (d0's spec; held behind R10), serif on /story+/how, /story link from the app, VALO prices placeholder before public, the history rewrite before public (old secrets + ROADMAP-PREPARATION.md in 8e4dd68), SMOKE_KEY for the race smoke, the Nemotron endpoint name.
 - Rules learned today: stage exact paths only; the main checkout is lead-only; check `git branch --show-current` before merging; dev and test previews with `DATABASE_URL=` blank.
 
-**Sessions:** lead junc26-18 (+ lead agents for request, web, agent) · 8d core · 9c ops/deploy · 1f kitchen UI · 91 evals and gate.
+**Sessions:** lead junc26-fd (was junc26-18) (+ lead agents for request, web, agent) · 8d core · 9c ops/deploy · 1f kitchen UI · 91 evals and gate.
 
 **Traps:**
 - Lane worktrees carry their own `.env` copy; refresh from main after any key change (done Sat ~12:00).
