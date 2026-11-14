@@ -2,10 +2,9 @@
 import { JUDGES_WORKSPACE, type Env } from '$lib/server/auth';
 import type { RequestAnswer } from '$lib/ui/request/types';
 
-/** The same rule as the /ops presenter buttons. Need: one shared presenterOpen() in server/demo. */
-export function presenterOpen(env: Env, dev: boolean): boolean {
-	return dev || env.DEMO_RESET_OPEN === '1';
-}
+import { presenterOpen } from '$lib/server/demo/presenter';
+
+export { presenterOpen };
 
 export interface PageWorkspace {
 	id: string;
