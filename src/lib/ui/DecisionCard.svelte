@@ -33,6 +33,8 @@
 		headless?: boolean;
 		/** Show this decision's lines on the page (scrolled to, marked). */
 		onsee?: () => void;
+		/** The plan's delivery date: the product cards price for it. */
+		deliverBy?: string;
 	}
 	let {
 		decision: d,
@@ -45,7 +47,8 @@
 		readonly = false,
 		compact = false,
 		headless = false,
-		onsee
+		onsee,
+		deliverBy
 	}: Props = $props();
 	/** One rule everywhere: the decision's own due time (decisionsDue over its lines). */
 	const when = $derived(d.due ?? due);
@@ -125,8 +128,10 @@
 				<BillLines
 					max={changedHere ? d.lines.length : 3}
 					label="The lines this approves"
+					{deliverBy}
 					rows={d.lines.map((l) => ({
 						id: l.id,
+						productId: l.productId,
 						name: `${changed?.has(l.id) ? 'Changed: ' : ''}${names.get(l.productId) ?? l.productId}`,
 						qty: qtyWords(l.qty),
 						cents: l.lineCents ?? null

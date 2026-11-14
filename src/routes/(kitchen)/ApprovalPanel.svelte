@@ -3,7 +3,13 @@
 	export interface Shortfall {
 		kind: 'unstated' | 'uncovered';
 		sentence: string;
-		items: { id: string; name: string; qty: string }[];
+		items: {
+			id: string;
+			name: string;
+			qty: string;
+			productId?: string;
+			amount?: { value: number; unit: string };
+		}[];
 		approve?: string[];
 	}
 </script>
@@ -16,6 +22,7 @@
 	import type { CommitRecord } from '$lib/kitchen/fixture-server';
 	import DecisionCard from '$lib/ui/DecisionCard.svelte';
 	import BillLines, { BILL_COLS, type BillRow } from '$lib/ui/BillLines.svelte';
+	import ProductToken from '$lib/ui/ProductToken.svelte';
 	import Receipt from '$lib/ui/Receipt.svelte';
 	import { decisionsDue, decisionsOf } from '$lib/ui/decisions';
 	import { money, num, shortHash, day, storyTime, unitWord, qtyWords } from '$lib/ui/format';
@@ -183,6 +190,7 @@
 	const billOf = (lines: Line[]): BillRow[] =>
 		lines.map((l) => ({
 			id: l.id,
+			productId: l.productId,
 			name: nameOf(l.productId),
 			qty: qtyWords(l.qty),
 			cents: l.lineCents ?? null
@@ -278,6 +286,7 @@
 						{#if open}
 							<div id="rail-dec-{d.key}" class="px-2 pb-2">
 								<DecisionCard
+									deliverBy={plan.deliverBy}
 									decision={d}
 									{names}
 									{due}
@@ -399,6 +408,7 @@
 						{#each decisions as d (d.key)}
 							<li>
 								<DecisionCard
+									deliverBy={plan.deliverBy}
 									decision={d}
 									{names}
 									{due}
@@ -427,7 +437,7 @@
 								</p>
 								<p class="text-micro text-ink-3">{d.why}</p>
 								<div class="mt-1">
-									<BillLines rows={billOf(d.lines)} label={d.reason} />
+									<BillLines rows={billOf(d.lines)} label={d.reason} deliverBy={plan.deliverBy} />
 								</div>
 							</li>
 						{/each}
@@ -440,7 +450,11 @@
 							yet
 						</p>
 						<div class="mt-1">
-							<BillLines rows={billOf(approvedEarlier)} label="Approved by you, not ordered yet" />
+							<BillLines
+								rows={billOf(approvedEarlier)}
+								label="Approved by you, not ordered yet"
+								deliverBy={plan.deliverBy}
+							/>
 						</div>
 					</div>
 				{/if}
@@ -498,8 +512,21 @@
 										class="inline-flex max-w-full items-center gap-1 rounded-full border border-rule-strong bg-sheet px-2 py-0.5"
 										title="{it.name} · {it.qty}"
 									>
-										<span class="max-w-[12rem] truncate text-ink">{it.name}</span>
-										<span class="mono shrink-0 text-ink-3">{it.qty}</span>
+										{#if it.productId}
+											<!-- The product opens its card: pack, price, supply in words, the Valio listing. -->
+											<ProductToken
+												productId={it.productId}
+												name={it.name}
+												qty={it.amount
+													? { amount: it.amount.value, unit: it.amount.unit }
+													: undefined}
+												deliverBy={plan.deliverBy}
+												class="max-w-[16rem]"
+											/>
+										{:else}
+											<span class="max-w-[12rem] truncate text-ink">{it.name}</span>
+											<span class="mono shrink-0 text-ink-3">{it.qty}</span>
+										{/if}
 									</li>
 								{/each}
 							</ul>
