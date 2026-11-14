@@ -32,7 +32,10 @@ export function createGetContext(ports: ServicePorts): GetContextHandler {
 		const grant = ctx.kitchenIds ? new Set(ctx.kitchenIds) : null;
 		const allowed = (id: string) => !grant || grant.has(id);
 		// Kitchens first: the store creates a workspace on its first kitchens read.
-		const kitchens = (await ports.store.kitchens(ctx.workspaceId)).filter((k) => allowed(k.id));
+		// This visitor's own kitchens first (D26); another visitor's store is theirs alone, so it is left out.
+		const kitchens = (await ports.store.kitchens(ctx.workspaceId))
+			.filter((k) => allowed(k.id) && (!k.owner || k.owner === ctx.visitor))
+			.sort((a, b) => Number(!!b.owner) - Number(!!a.owner));
 		const state = await ports.store.load(ctx.workspaceId, ctx.runId);
 		const open = Object.values(state.plans).filter(
 			(p) => allowed(p.kitchenId) && p.state !== 'committed'
@@ -49,6 +52,7 @@ export function createGetContext(ports: ServicePorts): GetContextHandler {
 			kitchens: kitchens.map((k) => ({
 				id: k.id,
 				name: k.name,
+				...(k.owner ? { mine: true } : {}),
 				events: SUPPORTED_EVENTS.filter((e) => e.kitchenId === k.id).map((e) => ({
 					id: e.id,
 					title: e.title

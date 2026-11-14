@@ -35,7 +35,7 @@ import { inWorkspace } from '$lib/server/adapters/simulator/overlay';
 import { rescueContention } from '$lib/core/services/contention';
 import { catchUp, publish } from '$lib/server/bus';
 import { replanShortage } from '$lib/core/services/shortage';
-import { createHash } from 'node:crypto';
+import { visitorKey } from '$lib/server/auth/visitor-key';
 import { JUDGES_WORKSPACE } from '$lib/server/demo/workspaces';
 import type { RoomKind } from '$lib/server/demo/visitor';
 import type { ShortageReplanned } from '$lib/core/contracts';
@@ -70,9 +70,7 @@ export interface VisitorRef {
 	presenter?: boolean;
 }
 
-/** A visitor's owner id: a hash of its own sandbox id, so the sandbox id itself never lands in a kitchen doc. */
-export const visitorKey = (own: string) =>
-	createHash('sha256').update(`visitor:${own}`).digest('hex').slice(0, 24);
+export { visitorKey };
 
 function withVisitor(s: Session, v: VisitorRef | undefined): Session {
 	if (v?.own) s.visitor = visitorKey(v.own);
