@@ -255,7 +255,7 @@ describe('allergen answers (D16: one evaluator, no record is unknown)', () => {
 	);
 
 	it(
-		'says unknown, never free, when there is no allergen record',
+		'never says free without a record: unknown, or no when the product is dairy',
 		{ timeout: 60_000 },
 		async () => {
 			const { ctx, handlers, products } = await milks();
@@ -273,7 +273,9 @@ describe('allergen answers (D16: one evaluator, no record is unknown)', () => {
 				ctx,
 				h
 			);
-			expect(lactose.text).toMatch(/^Unknown/);
+			// A milk is dairy by its name (D16 facets), so with no record it is still not lactose-free: never "free".
+			expect(lactose.text).toMatch(/^No:/);
+			expect(lactose.text).not.toMatch(/^Yes|is free from lactose/);
 			const nuts = await answerQuestion(
 				{ kind: 'product', aspect: 'allergens', query: 'Arla whole milk', allergen: 'nuts' },
 				ctx,
