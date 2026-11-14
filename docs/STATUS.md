@@ -2,6 +2,8 @@
 
 _The lead rewrites this at each checkpoint. It is the "now": what works, what's next, what bites._
 
+**Ring 6 (Sat 22:30):** five lanes S1–S5 plus the lead, merge waves at 00:30, 03:00, 05:00, freeze 06:00: [handoff/ring6/SESSIONS.md](handoff/ring6/SESSIONS.md).
+
 **Updated:** Sat 14 Nov late, end of ring 5 (lead junc26-fd). **All lanes closed for a restart.** Next ring starts from [handoff/ring6/RESTART.md](handoff/ring6/RESTART.md) (sessions, foundations first, queued work, final SHAs). The ring 5 picture and Round 12 routing: [handoff/ring5/SYNTHESIS.md](handoff/ring5/SYNTHESIS.md). Every user steer with owner and state: [handoff/ring4/USER-DIRECTIVES.md](handoff/ring4/USER-DIRECTIVES.md). Latest adversarial review: [review/ROUND12-ADVERSARIAL.md](review/ROUND12-ADVERSARIAL.md). Decisions through D21: [DECISIONS.md](DECISIONS.md).
 
 **Deployed:** https://app.mandate.kitchen (Aiven Runtime `mandate`, Postgres `pg-1dfeeeed`, project `junction26jq`); landing https://mandate.kitchen (Cloudflare Worker, `site/`, served `dfff213`). Prod runs `a9f06ee` (smoke: 13 pass, 13 skipped without SMOKE_KEY, 1 fail: dock-sync "You approved N lines"). Migrations through 0005 (traces) applied. Main is ahead of prod; see RESTART for the last landed SHA and what still needs a deploy. Redeploy: merge to main, gate GREEN, push, the Ops session deploys and runs `scripts/deploy/warm.sh` + `smoke.sh` (procedure in [lanes/ops.md](lanes/ops.md)).
