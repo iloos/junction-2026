@@ -128,19 +128,21 @@ h3 { margin: 0; font: 600 18px/1.25 var(--display); }
 .tab:hover { border-color: var(--accent); color: var(--ink); }
 .tab[aria-selected='true'] { background: var(--accent-wash); border-color: var(--accent); color: var(--ink); }
 .panels { display: grid; gap: 14px; }
-.panel { background: var(--sheet); border: 1px solid var(--rule); border-radius: 16px; padding: 22px 22px 24px; display: grid; gap: 20px; min-width: 0; }
-@media (min-width: 900px) { .panel { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 32px; align-items: start; } }
+.panel { background: var(--sheet); border: 1px solid var(--rule); border-radius: 16px; padding: 22px 22px 24px; display: grid; gap: 20px; min-width: 0; font-family: var(--display); }
 .panel[hidden] { display: none; }
-.panel > .hdr { grid-column: 1 / -1; }
 .panel h3 { font: 600 22px/1.2 var(--display); margin-bottom: 6px; }
 .js .panel h3.ph { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-.panel .hdr p { margin: 0; font-size: 16.5px; line-height: 1.5; color: var(--ink); max-width: 40em; text-wrap: pretty; }
-.steps { list-style: none; margin: 0; padding: 0; counter-reset: s; display: grid; min-width: 0; }
-.steps li { counter-increment: s; display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 0 12px; padding: 9px 0; border-top: 1px dashed var(--rule); font-size: 15px; line-height: 1.45; }
-.steps li:first-child { border-top: 0; }
-.steps li::before { content: counter(s); width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; font: 500 12px/1 var(--mono-f); color: var(--accent-ink); border: 1px solid var(--accent); margin-top: 1px; }
-.steps .lim { color: var(--ink-3); font-size: 13.5px; }
-.side { display: grid; gap: 12px; min-width: 0; }
+.panel .hdr p { margin: 0; font-size: 17px; line-height: 1.5; color: var(--ink); max-width: 44em; text-wrap: pretty; }
+/* The stage strip: three or four stages left to right, stacked on phones. */
+.stages { list-style: none; margin: 0; padding: 0; counter-reset: s; display: grid; gap: 10px; min-width: 0; }
+@media (min-width: 860px) { .stages { grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 12px; } }
+.stages li { counter-increment: s; position: relative; display: grid; align-content: start; gap: 6px; padding: 14px 16px 16px; background: var(--well); border: 1px solid var(--rule); border-radius: 12px; min-width: 0; }
+@media (max-width: 859px) { .stages li { padding: 12px 14px 14px; } }
+.stages b { display: flex; align-items: center; gap: 8px; font: 600 16px/1.25 var(--display); color: var(--ink); }
+.stages b::before { content: counter(s); width: 22px; height: 22px; flex: none; border-radius: 50%; display: grid; place-items: center; font: 600 12px/1 var(--display); color: var(--accent-ink); background: var(--accent-wash); }
+.stages span { font-size: 15px; line-height: 1.5; color: var(--ink); text-wrap: pretty; overflow-wrap: anywhere; }
+.foot { display: grid; gap: 12px; min-width: 0; }
+@media (min-width: 860px) { .foot { grid-template-columns: minmax(0, 1fr) auto; gap: 20px; align-items: end; } }
 .golive { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; }
 .golive a { display: inline-flex; align-items: center; gap: 7px; min-height: 40px; padding: 0 14px; border-radius: 10px; border: 1px solid var(--rule); background: var(--paper); font-size: 14.5px; font-weight: 500; text-decoration: none; color: var(--accent-ink); transition: background 0.12s ease, border-color 0.12s ease; }
 .golive a:hover { border-color: var(--accent); background: var(--accent-wash); }
@@ -148,25 +150,20 @@ h3 { margin: 0; font: 600 18px/1.25 var(--display); }
 .limit { margin: 0; padding: 12px 14px; border: 1px solid color-mix(in oklab, var(--warn) 45%, transparent); background: var(--warn-wash); border-radius: 10px; font-size: 14px; color: var(--ink); }
 
 /* A recorded case from /cases.json */
-.ex { background: var(--well); border: 1px solid var(--rule); border-radius: 12px; padding: 14px 16px; display: grid; gap: 8px; min-width: 0; }
+.ex { background: var(--paper); border: 1px solid var(--rule); border-radius: 12px; padding: 14px 16px; display: grid; gap: 8px; min-width: 0; font-family: var(--display); }
 .ex[hidden] { display: none; }
-.ex .label { margin: 0; color: var(--accent-ink); }
-.ex .ask { font: 500 15.5px/1.45 var(--display); color: var(--ink); overflow-wrap: anywhere; }
+.ex .label { margin: 0; font: 600 13px/1.3 var(--display); color: var(--accent-ink); text-transform: none; letter-spacing: 0; }
+.ex .ask { font: 500 16px/1.45 var(--display); color: var(--ink); overflow-wrap: anywhere; }
+.ex p { margin: 0; }
+.ex .got { font-size: 15px; line-height: 1.5; color: var(--ink); overflow-wrap: anywhere; }
+.ex .why { margin: 0; font-size: 15px; line-height: 1.5; color: var(--ink); overflow-wrap: anywhere; text-wrap: pretty; }
 /* Only the quantity is mono: "10 kg" as a tabular token; product names read in the body face. */
 .tq { display: inline-block; font: 500 0.9em/1.35 var(--mono-f); font-variant-numeric: tabular-nums; color: var(--ink); background: var(--well); border: 1px solid var(--rule); border-radius: 5px; padding: 0 5px; white-space: nowrap; }
 .tp { color: var(--ink); font-weight: 500; }
-.ex ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
-.ex ol li { position: relative; padding-left: 16px; font-size: 14.5px; line-height: 1.45; color: var(--ink-2); overflow-wrap: anywhere; }
-.ex ol li::before { content: ''; position: absolute; left: 2px; top: 9px; width: 5px; height: 5px; border-radius: 50%; background: var(--rule-strong); }
-.ex .out { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; font-size: 14.5px; }
-.ex .eur { font: 500 15px var(--mono-f); color: var(--ink); }
+.ex .out { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; font-size: 15px; }
+.ex .out .mchip { white-space: normal; height: auto; padding: 3px 8px; }
+.ex .eur { font-weight: 600; font-variant-numeric: tabular-nums; color: var(--ink); }
 .ex small { font-size: 12.5px; color: var(--ink-3); }
-.ex dl { margin: 0; display: grid; gap: 8px; }
-.ex dl div { display: grid; grid-template-columns: 86px minmax(0, 1fr); gap: 10px; font-size: 14px; }
-.ex dt { font: 500 12px/1.6 var(--mono-f); color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.04em; }
-.ex dd { margin: 0; color: var(--ink-2); overflow-wrap: anywhere; }
-.ex dd b { display: block; color: var(--ink); font-weight: 500; }
-.ex dd .mchip { margin-top: 4px; white-space: normal; height: auto; padding: 3px 8px; }
 
 /* Tables: trust, partners */
 .tbl { width: 100%; border-collapse: collapse; font-size: 14.5px; }
@@ -409,7 +406,7 @@ h3 { margin: 0; font: 600 18px/1.25 var(--display); }
 		<section class="band" id="flows" aria-labelledby="h-flows">
 			<p class="eyebrow">Five flows</p>
 			<h2 id="h-flows">Five ways an order moves through Mandate</h2>
-			<p class="slead">Each flow is a short list of steps with the code that runs it, and a case recorded from the live app where we have one.</p>
+			<p class="slead">Each flow in four stages, with one case recorded from the live app.</p>
 
 			<div class="tabs">
 				<div class="tablist" role="tablist" aria-label="Flows">
@@ -422,94 +419,76 @@ h3 { margin: 0; font: 600 18px/1.25 var(--display); }
 				<div class="panels">
 					<!-- One item -->
 					<section class="panel" id="p-item" role="tabpanel" aria-labelledby="t-item" tabindex="0">
-						<div class="hdr"><h3 class="ph">One item</h3><p>A request in plain words becomes one checked line, ordered alone or held for the chef.</p></div>
-						<ol class="steps">
-							<li><span>The words come in on the Request page or in chat, such as “10 l lactose-free milk for Friday”.</span></li>
-							<li><span>Sorted as a purchase, an event, or a dish with a count.</span></li>
-							<li><span>Read by rules first, then Gemini Flash-Lite. The reading is checked so no stated word is lost.</span></li>
-							<li><span>The date is checked against the cut-off. A late date is named, and the next delivery day is offered.</span></li>
-							<li><span>A catalogue search makes a shortlist of up to 5 with reasons, drops products that contradict the request, and asks Valio live for the shortlist's prices and stock.</span></li>
-							<li><span>The amount becomes packs by printed content. Conflicting content holds the line.</span></li>
-							<li><span>A size check against the kitchen's own numbers.</span></li>
-							<li><span>The mandate decides: ordered alone, or held for approval.</span></li>
+						<div class="hdr"><h3 class="ph">One item</h3><p>A request in plain words, such as “10 l lactose-free milk for Friday”, becomes one checked line, ordered alone or held for the chef.</p></div>
+						<ol class="stages">
+							<li><b>Read</b><span>Rules read the words first, then Gemini Flash-Lite, and a check makes sure no stated word is lost. A date past the cut-off is named, with the next delivery day.</span></li>
+							<li><b>Find</b><span>A catalogue search shortlists up to 5 products with reasons, drops any that contradict the request, and asks Valio live for their prices and stock.</span></li>
+							<li><b>Size</b><span>The amount becomes packs by printed content and is checked against the kitchen's own numbers. Conflicting content holds the line.</span></li>
+							<li><b>Decide</b><span>The mandate decides: ordered alone, or held for the chef's approval.</span></li>
 						</ol>
-						<div class="side">
-							<div class="ex" data-case="within-mandate" hidden></div>
-							<div class="ex" data-case="lactose-free" hidden></div>
-							<p class="golive"><a href="https://app.mandate.kitchen/request">Try it: Request <svg class="ic" aria-hidden="true"><use href="#i-out"/></svg></a></p>
+						<div class="foot">
+							<div class="ex" data-case="within-mandate" data-reason="1" hidden></div>
+							<p class="golive"><a href="https://app.mandate.kitchen/request">Try it in Request <svg class="ic" aria-hidden="true"><use href="#i-out"/></svg></a></p>
 						</div>
 					</section>
 
 					<!-- Event to menu -->
 					<section class="panel" id="p-event" role="tabpanel" aria-labelledby="t-event" tabindex="0">
-						<div class="hdr"><h3 class="ph">Event to menu</h3><p>An event brief becomes a menu the chef accepts, then needs, then whole packs.</p></div>
-						<ol class="steps">
-							<li><span>A brief in words, such as a Christmas dinner for 50, and questions one at a time as chips: guests, date, diet, budget. Rules read the brief's guests, date and requirements, with no model call; Gemini Flash-Lite reads product requests.</span></li>
-							<li><span>Gemini 3.8 Flash proposes a menu. Every amount is labelled an estimate; without the model, the team's dish templates stand in.</span></li>
-							<li><span>The chef edits amounts and accepts the menu. Nothing is planned before that.</span></li>
-							<li><span>Each ingredient becomes a need: guests × amount per guest ÷ yield, with no model.</span></li>
-							<li><span>Each need is quoted and checked against the mandate; a product that's out goes to the out-of-stock flow.</span></li>
-							<li><span>Changing the grams per guest recomputes the line in the same call and voids any approval.</span></li>
-							<li><span>One decision per reason group, then the order and its receipt.</span></li>
+						<div class="hdr"><h3 class="ph">Event to menu</h3><p>An event brief becomes a menu the chef accepts, then needs, then whole packs. Each line is shown to the chef for review: we don't yet claim the right product for every menu dish.</p></div>
+						<ol class="stages">
+							<li><b>Brief</b><span>Missing guests, date, diet or budget are asked one at a time. Rules read the brief's guests, date and requirements, with no model call; Gemini Flash-Lite reads product requests.</span></li>
+							<li><b>Menu</b><span>Gemini 3.8 Flash proposes dishes with every amount labelled an estimate; without it, the team's dish templates stand in. Nothing is planned until the chef edits and accepts the menu.</span></li>
+							<li><b>Needs</b><span>Each ingredient becomes a need, guests × amount per guest ÷ yield, with no model. Changing the grams per guest recomputes the line and voids any approval.</span></li>
+							<li><b>Order</b><span>Each need is quoted and checked against the mandate, and a product that's out goes to the out-of-stock flow. The chef decides once per reason group, then the order and its receipt.</span></li>
 						</ol>
-						<div class="side">
+						<div class="foot">
 							<div class="ex" data-chain hidden></div>
-							<p class="limit">We don't yet claim the right product for every menu dish: each line is shown to the chef for review.</p>
-							<p class="golive"><a href="https://app.mandate.kitchen/request">Try it: Request <svg class="ic" aria-hidden="true"><use href="#i-out"/></svg></a><a href="https://app.mandate.kitchen/">The buffet in the Kitchen <svg class="ic" aria-hidden="true"><use href="#i-out"/></svg></a></p>
+							<p class="golive"><a href="https://app.mandate.kitchen/request">Try it in Request <svg class="ic" aria-hidden="true"><use href="#i-out"/></svg></a></p>
 						</div>
 					</section>
 
 					<!-- Out of stock -->
 					<section class="panel" id="p-rescue" role="tabpanel" aria-labelledby="t-rescue" tabindex="0">
 						<div class="hdr"><h3 class="ph">Out of stock</h3><p>When Valio is out, the agent finds and sizes substitutes, ranks them by the kitchen's rules, and holds anything new for the chef.</p></div>
-						<ol class="steps">
-							<li><span>A line is quoted out of stock, undeliverable or unknown, each in its own words.</span></li>
-							<li><span>Candidates come from Valio's own substitution rules, then the scenario's hand-checked rescues, then same-category products found by name.</span></li>
-							<li><span>Each candidate is sized to the same need.</span></li>
-							<li><span>Requirements rule candidates out, each with its reason. Known stock ranks first, then the kitchen's preferences. Gemini Decisions scores how well each substitute fits the dish, one input to the code's ranking, and can flag a constraint risk that holds the line. It never approves or allows anything.</span></li>
-							<li><span>Making it in house is an option when every ingredient can be ordered.</span></li>
-							<li><span>A new product, an allergen change or a broken preference holds the line for the chef.</span></li>
-							<li><span>If another kitchen takes the stock, the rest is sized to the next candidate and the approval is voided. <span class="lim">Tested, simulated.</span></span></li>
-							<li><span>Still nothing: options outside the catalogue, for information only. They are never ordered.</span></li>
+						<ol class="stages">
+							<li><b>Spot</b><span>A line quoted out of stock, undeliverable or unknown is named in its own words.</span></li>
+							<li><b>Find</b><span>Candidates come from Valio's substitution rules, then hand-checked rescues, then same-category products, each sized to the same need. Making it in house is an option when every ingredient can be ordered.</span></li>
+							<li><b>Rank</b><span>Requirements rule candidates out with a reason; known stock ranks first, then the kitchen's preferences. Gemini Decisions scores how well each substitute fits the dish, one input to the code's ranking, and can flag a constraint risk that holds the line. It never approves or allows anything.</span></li>
+							<li><b>Hold</b><span>A new product, an allergen change or a broken preference waits for the chef. If another kitchen takes the stock, the rest moves to the next candidate and the approval is voided (tested, simulated). With no candidate left, options outside the catalogue are shown for information and never ordered.</span></li>
 						</ol>
-						<div class="side">
-							<div class="ex" data-case="out-of-stock" hidden></div>
-							<p class="golive"><a href="https://app.mandate.kitchen/">Try it: Kitchen <svg class="ic" aria-hidden="true"><use href="#i-out"/></svg></a></p>
+						<div class="foot">
+							<div class="ex" data-case="out-of-stock" data-reason="2" hidden></div>
+							<p class="golive"><a href="https://app.mandate.kitchen/">Try it in the Kitchen <svg class="ic" aria-hidden="true"><use href="#i-out"/></svg></a></p>
 						</div>
 					</section>
 
 					<!-- Outside agent -->
 					<section class="panel" id="p-outside" role="tabpanel" aria-labelledby="t-outside" tabindex="0">
 						<div class="hdr"><h3 class="ph">Outside agent</h3><p>Your own agent connects over MCP or REST, uses the same tools through the same checks, and every line it orders waits for the chef.</p></div>
-						<ol class="steps">
-							<li><span>On the Agents page each visitor gets their own key and MCP address, working only in their own sandbox.</span></li>
-							<li><span>The agent reads its context first: who it is, what it may do, the kitchens, mandates and open plans.</span></li>
-							<li><span>It searches, quotes, then places an order or plans an event. An unknown product is refused before any call to Valio.</span></li>
-							<li><span>Its lines are always held. The result carries a summary, the next action and a link to the decision.</span></li>
-							<li><span>If it tries to approve or change the mandate, it gets 403 and Ops logs the refusal.</span></li>
-							<li><span>The chef approves in the Kitchen, and the agent reads the receipt.</span></li>
+						<ol class="stages">
+							<li><b>Connect</b><span>Each visitor gets their own key and MCP address on the Agents page, working only in their own sandbox and metered at 120 calls, 30 writes and 20 quotes a minute.</span></li>
+							<li><b>Read</b><span>The agent reads its context first: who it is, what it may do, the kitchens, mandates and open plans.</span></li>
+							<li><b>Order</b><span>It searches, quotes, then orders or plans an event. An unknown product is refused before any call to Valio, and every line it orders is held.</span></li>
+							<li><b>Wait</b><span>Trying to approve or change the mandate gets 403, and Ops logs it. The chef approves in the Kitchen, and the agent reads the receipt.</span></li>
 						</ol>
-						<div class="side">
-							<div class="ex" data-case="agent-cannot-approve" hidden></div>
-							<p class="note2">Each key is metered: 120 calls, 30 writes and 20 quotes a minute.</p>
-							<p class="golive"><a href="https://app.mandate.kitchen/agents">Connect yours: Agents <svg class="ic" aria-hidden="true"><use href="#i-out"/></svg></a></p>
+						<div class="foot">
+							<div class="ex" data-case="agent-cannot-approve" data-reason="1" hidden></div>
+							<p class="golive"><a href="https://app.mandate.kitchen/agents">Try it with your agent <svg class="ic" aria-hidden="true"><use href="#i-out"/></svg></a></p>
 						</div>
 					</section>
 
 					<!-- Approval -->
 					<section class="panel" id="p-approval" role="tabpanel" aria-labelledby="t-approval" tabindex="0">
 						<div class="hdr"><h3 class="ph">Approval</h3><p>The chef approves exact terms. Any edit voids the approval, and the order is checked again before it's placed.</p></div>
-						<ol class="steps">
-							<li><span>Held lines are grouped by reason, and the chef decides one group at a time, so an allergen change never rides with routine lines.</span></li>
-							<li><span>Press and hold to confirm the exact terms, in the Kitchen or on the chat's decision card.</span></li>
-							<li><span>The approval is bound to the plan version, the terms, the mandate version and an expiry.</span></li>
-							<li><span>Any edit or substitute sends the plan back to draft and voids the approval, and the plan shows what changed. <span class="lim">Tested; in the app's screens, not yet checked on the live app.</span></span></li>
-							<li><span>The order re-checks everything under a lock: version, terms, mandate, expiry, cut-off, caps. Any mismatch is refused.</span></li>
-							<li><span>One receipt, however many times the order is sent.</span></li>
+						<ol class="stages">
+							<li><b>Group</b><span>Held lines are grouped by reason and decided one group at a time, so an allergen change never rides with routine lines.</span></li>
+							<li><b>Approve</b><span>The chef presses and holds on the exact terms, in the Kitchen or on the chat's decision card. The approval is bound to the plan version, the terms, the mandate version and an expiry.</span></li>
+							<li><b>Edit</b><span>Any edit or substitute sends the plan back to draft, voids the approval and shows what changed. Tested in the app's screens, not yet checked on the live app.</span></li>
+							<li><b>Order</b><span>Under a lock the order re-checks version, terms, mandate, expiry, cut-off and caps, and refuses any mismatch. However many times it's sent, there is one receipt.</span></li>
 						</ol>
-						<div class="side">
-							<div class="ex" data-case="one-receipt" hidden></div>
-							<p class="golive"><a href="https://app.mandate.kitchen/">Approve and order: Kitchen <svg class="ic" aria-hidden="true"><use href="#i-out"/></svg></a></p>
+						<div class="foot">
+							<div class="ex" data-case="one-receipt" data-reason="0,1" hidden></div>
+							<p class="golive"><a href="https://app.mandate.kitchen/">Try it in the Kitchen <svg class="ic" aria-hidden="true"><use href="#i-out"/></svg></a></p>
 						</div>
 					</section>
 				</div>
@@ -761,57 +740,77 @@ h3 { margin: 0; font: 600 18px/1.25 var(--display); }
 	const stamp = (iso) => { const d = day(iso); return 'Recorded from the app' + (d ? ` on ${d}` : '') + '.'; };
 	const eur = (n) => (typeof n === 'number' ? new Intl.NumberFormat('en-IE', { style: 'currency', currency: 'EUR' }).format(n) : '');
 
+	const rn = (n) => (window.readableName ? readableName(n) : n);
+	const outRow = (state, label, n) => {
+		const row = el('div', 'out');
+		row.append(chip(state, label));
+		const v = eur(n);
+		if (v) row.append(el('span', 'eur', v));
+		return row;
+	};
+
+	// One case, compact: the request, the product it became, the outcome, and the reason in one line.
 	function renderCase(box, c) {
 		box.replaceChildren(el('p', 'label', 'Recorded case'));
-		const rn = (n) => (window.readableName ? readableName(n) : n);
-		const names = (c.steps || []).flatMap((s) => (s && s.parts ? s.parts.map((p) => p.product).filter(Boolean) : []));
-		if (c.ask && c.ask.qty) {
-			const a = el('span', 'ask');
-			a.append('“', el('span', 'tq', c.ask.qty), ' ', c.ask.item, c.ask.rest ? ' ' + c.ask.rest : '', '”');
-			box.append(a);
-		} else if (c.request) box.append(el('b', null, c.request));
-		if (Array.isArray(c.steps) && c.steps.length) {
-			const ol = el('ol');
-			for (const s of c.steps) {
-				if (!s) continue;
-				const li = el('li');
-				if (Array.isArray(s.parts)) {
-					for (const p of s.parts) {
-						if (p.qty) li.append(el('span', 'tq', p.qty), ' ');
-						else if (p.product) li.append(el('span', 'tp', rn(p.product)));
-						else if (p.t) li.append(p.t);
-					}
-				} else if (s.text) li.textContent = window.readableIn ? readableIn(s.text, names) : s.text;
-				ol.append(li);
+		const steps = (Array.isArray(c.steps) ? c.steps : []).filter(Boolean);
+		const names = steps.flatMap((s) => (s.parts ? s.parts.map((p) => p.product).filter(Boolean) : []));
+		const ask = el('p', 'ask');
+		if (c.ask && c.ask.qty) ask.append('“', el('span', 'tq', c.ask.qty), ' ', c.ask.item, c.ask.rest ? ' ' + c.ask.rest : '', '”');
+		else if (c.request) ask.textContent = c.request;
+		box.append(ask);
+		const picked = [...steps].reverse().find((s) => Array.isArray(s.parts) && s.parts.some((p) => p.product));
+		const pack = c.trace && c.trace.pack;
+		if (pack && pack.qty && pack.product && pack.replaces) {
+			// A substitute: what was proposed, in place of the product Valio is out of.
+			box.append(el('p', 'got'));
+			box.lastChild.append('Proposed ', el('span', 'tq', pack.qty), ' ', el('span', 'tp', rn(pack.product)), ' in place of ', el('span', 'tp', rn(pack.replaces)), ', out of stock at Valio.');
+		} else if (picked) {
+			const got = el('p', 'got');
+			for (const p of picked.parts) {
+				if (p.qty) got.append(el('span', 'tq', p.qty), ' ');
+				else if (p.product) got.append(el('span', 'tp', rn(p.product)));
+				else if (p.t) got.append(p.t);
 			}
-			box.append(ol);
+			box.append(got);
 		}
-		if (c.outcome) {
-			const row = el('div', 'out');
-			row.append(chip(c.outcome.state, c.outcome.label));
-			const v = eur(c.outcome.eur);
-			if (v) row.append(el('span', 'eur', v));
-			box.append(row);
-		}
+		if (c.outcome) box.append(outRow(c.outcome.state, c.outcome.label, c.outcome.eur));
+		const idx = (box.dataset.reason || String(steps.length - 1)).split(',').map(Number);
+		const why = idx.map((i) => steps[i]).filter((s) => s && s.text && s !== picked).map((s) => s.text).join(' ');
+		if (why) box.append(el('p', 'why', window.readableIn ? readableIn(why, names) : why));
 		box.append(el('small', null, stamp(c.recordedAt)));
 		box.hidden = false;
 	}
 
+	// The seeded event, compact: the event, one ingredient and the product it became, its decision, and the plan's count.
 	function renderChain(box, chain) {
 		box.replaceChildren(el('p', 'label', 'Recorded case: a seeded event, from need to order line (no menu step)'));
-		const dl = el('dl');
-		for (const s of chain.steps) {
-			if (!s || typeof s.key !== 'string') continue;
-			const row = el('div');
-			row.append(el('dt', null, s.key));
-			const dd = el('dd');
-			if (s.value != null && s.value !== '') dd.append(el('b', null, s.key === 'product' && window.readableName ? readableName(String(s.value)) : String(s.value)));
-			if (s.text) dd.append(document.createTextNode(s.text));
-			if (s.decides && s.decides.text) { dd.append(el('br')); dd.append(chip(KIND[s.decides.kind] || s.decides.kind, s.decides.text)); }
-			row.append(dd);
-			dl.append(row);
+		const at = {};
+		for (const s of chain.steps) if (s && typeof s.key === 'string') at[s.key] = s;
+		const split = (v) => /^([\d.,]+(?:\s?(?:kg|g|l))?)\s+(.+)$/.exec(String(v || ''));
+		if (at.event) {
+			const ask = el('p', 'ask');
+			const m = split(at.event.value);
+			const what = String(at.event.text || '').replace(/\.$/, '');
+			if (m) ask.append(what ? what + ', ' : '', el('span', 'tq', m[1]), ' ' + m[2]);
+			else ask.textContent = [what, at.event.value].filter(Boolean).join(', ');
+			box.append(ask);
 		}
-		box.append(dl, el('small', null, stamp(chain.recordedAt)));
+		if (at.ingredient && at.product) {
+			const got = el('p', 'got');
+			const m = split(at.ingredient.value);
+			const dish = chain.line && chain.line.dish ? ' for ' + String(chain.line.dish).toLowerCase() : '';
+			if (m) got.append(el('span', 'tq', m[1]), ' ' + m[2] + dish + ': ');
+			else got.append(String(at.ingredient.value || '') + dish + ': ');
+			const packs = /(\d+\s+packs?\s+×\s+[\d.,]+\s?(?:kg|g|l))/.exec(String(at.product.text || ''));
+			if (packs) got.append(el('span', 'tq', packs[1]), ' ');
+			got.append(el('span', 'tp', rn(String(at.product.value))));
+			box.append(got);
+			const d = at.product.decides;
+			if (d && d.text) box.append(outRow(KIND[d.kind] || d.kind, d.text, chain.line && chain.line.eur));
+		}
+		const o = at.order && at.order.decides;
+		if (o && o.text) box.append(el('p', 'why', 'The whole menu: ' + o.text + '.'));
+		box.append(el('small', null, stamp(chain.recordedAt)));
 		box.hidden = false;
 	}
 
