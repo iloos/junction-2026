@@ -8,6 +8,7 @@
 	import type { Line } from '$lib/core/contracts';
 
 	import StateChip from './StateChip.svelte';
+	import ProductThumb from './ProductThumb.svelte';
 	import AgentMark from './AgentMark.svelte';
 	import DietMarks from './DietMarks.svelte';
 	import type { Marks } from './diet';
@@ -54,53 +55,58 @@
 		? 'landed'
 		: ''}"
 >
-	<div class="min-w-0">
-		<button
-			type="button"
-			class="flex w-full min-w-0 items-baseline gap-1.5 text-left text-body disabled:cursor-default"
-			aria-expanded={hasDetail ? expanded : undefined}
-			disabled={!hasDetail}
-			onclick={() => (expanded = !expanded)}
-		>
-			{#if replaces}<CornerDownRight
-					size={13}
-					class="shrink-0 translate-y-0.5 text-accent"
-					aria-hidden="true"
-				/>{:else if hasDetail}<ChevronRight
-					size={13}
-					class="shrink-0 translate-y-0.5 text-ink-3 transition-transform {expanded
-						? 'rotate-90'
-						: ''}"
-					aria-hidden="true"
-				/>{/if}
-			<span
-				class="truncate {rejected ? 'text-ink-3 line-through decoration-ink-3/60' : 'text-ink'}"
-				title={name}>{name}</span
-			>{#if diet}<DietMarks marks={diet} />{/if}
-		</button>
-		{#if replaces}
-			<p class="text-meta text-ink-2">
-				Replaces <span class="text-ink">{replaces.name}</span>: {replaces.because}{#if by}
-					&nbsp;· <AgentMark {by} />{/if}
+	<div class="flex min-w-0 items-start gap-2">
+		<ProductThumb productId={l.productId} size={32} />
+		<div class="min-w-0 flex-1">
+			<button
+				type="button"
+				class="flex w-full min-w-0 items-baseline gap-1.5 text-left text-body disabled:cursor-default"
+				aria-expanded={hasDetail ? expanded : undefined}
+				disabled={!hasDetail}
+				onclick={() => (expanded = !expanded)}
+			>
+				{#if replaces}<CornerDownRight
+						size={13}
+						class="shrink-0 translate-y-0.5 text-accent"
+						aria-hidden="true"
+					/>{:else if hasDetail}<ChevronRight
+						size={13}
+						class="shrink-0 translate-y-0.5 text-ink-3 transition-transform {expanded
+							? 'rotate-90'
+							: ''}"
+						aria-hidden="true"
+					/>{/if}
+				<span
+					class="min-w-0 break-words {rejected
+						? 'text-ink-3 line-through decoration-ink-3/60'
+						: 'text-ink'}"
+					title={name}>{name}</span
+				>{#if diet}<DietMarks marks={diet} />{/if}
+			</button>
+			{#if replaces}
+				<p class="text-meta text-ink-2">
+					Replaces <span class="text-ink">{replaces.name}</span>: {replaces.because}{#if by}
+						&nbsp;· <AgentMark {by} />{/if}
+				</p>
+			{:else if by}<p><AgentMark {by} /></p>
+			{/if}
+			<p class="mono text-micro text-ink-3">
+				{#if rejected}<span class="font-sans">{l.productId} · not ordered</span>{:else}<span
+						class="text-ink">{b.buys}</span
+					>{#if b.physical && !expanded}<span class="text-ink-2"> {b.physical}</span>{/if}{/if}
 			</p>
-		{:else if by}<p><AgentMark {by} /></p>
-		{/if}
-		<p class="mono text-micro text-ink-3">
-			{#if rejected}<span class="font-sans">{l.productId} · not ordered</span>{:else}<span
-					class="text-ink">{b.buys}</span
-				>{#if b.physical && !expanded}<span class="text-ink-2"> {b.physical}</span>{/if}{/if}
-		</p>
-		{#if lot && !rejected}<p class="text-meta text-ink-2">{lot}</p>{/if}
-		{#if expanded && hasDetail}
-			<dl class="mono mt-0.5 grid grid-cols-[auto_1fr] gap-x-2 text-micro text-ink-2">
-				{#if b.physical}<dt class="font-sans text-ink-3">Buys</dt>
-					<dd>{b.buys} {b.physical}</dd>{/if}
-				{#if b.unitPrice}<dt class="font-sans text-ink-3">Price</dt>
-					<dd>{b.comparison ? `${b.unitPrice} · ${b.comparison}` : b.unitPrice}</dd>{/if}
-				{#if l.qty.rounding}<dt class="font-sans text-ink-3">Rounding</dt>
-					<dd class="font-sans">{l.qty.rounding}</dd>{/if}
-			</dl>
-		{/if}
+			{#if lot && !rejected}<p class="text-meta text-ink-2">{lot}</p>{/if}
+			{#if expanded && hasDetail}
+				<dl class="mono mt-0.5 grid grid-cols-[auto_1fr] gap-x-2 text-micro text-ink-2">
+					{#if b.physical}<dt class="font-sans text-ink-3">Buys</dt>
+						<dd>{b.buys} {b.physical}</dd>{/if}
+					{#if b.unitPrice}<dt class="font-sans text-ink-3">Price</dt>
+						<dd>{b.comparison ? `${b.unitPrice} · ${b.comparison}` : b.unitPrice}</dd>{/if}
+					{#if l.qty.rounding}<dt class="font-sans text-ink-3">Rounding</dt>
+						<dd class="font-sans">{l.qty.rounding}</dd>{/if}
+				</dl>
+			{/if}
+		</div>
 	</div>
 	<span class="mono text-right text-body {rejected ? 'text-ink-3' : 'text-ink'}">
 		{rejected ? '—' : money(l.lineCents)}

@@ -13,6 +13,17 @@ export type Snapshot = FixtureSnapshot;
  * Before a kitchen has a plan. `event` names its seeded event to plan; null when it has none and its first plan
  * comes from the chat (D15), so the screen offers no "plan the event" step.
  */
+/** A kitchen this browser can open (the snapshot's list): samples and the visitor's own stores (D25/D26). */
+export interface KitchenItem {
+	id: string;
+	name: string;
+	/** Made by this browser's visitor. */
+	mine: boolean;
+	/** Made blank (no sample copied). */
+	blank: boolean;
+	mandateWords: string;
+}
+
 export type MaybeStarted =
 	| Snapshot
 	| {

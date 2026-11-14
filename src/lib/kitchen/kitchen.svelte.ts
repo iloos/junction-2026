@@ -73,6 +73,8 @@ export class KitchenStore {
 	startEvent = $state<StartEvent | null | undefined>(undefined);
 	/** Before the first plan: the kitchen the server would plan for (the pre-plan card reads its mandate). */
 	startKitchen = $state<string | null>(null);
+	/** The kitchens the server lists for this browser, its own first (empty until a live snapshot says). */
+	kitchens = $state.raw<backend.KitchenItem[]>([]);
 	busy = $state(false);
 	/** A g/guest change waiting for the server, per dish: the stepper shows it as pending. */
 	pendingGrams = $state.raw<Record<string, number>>({});
@@ -468,6 +470,8 @@ export class KitchenStore {
 			const next =
 				answer ?? (await backend.snapshot(this.mode, this.focusedPlan ?? undefined, !this.shared));
 			this.stale = null;
+			const listed = (next as { kitchens?: backend.KitchenItem[] }).kitchens;
+			if (listed) this.kitchens = listed;
 			if ('plan' in next) {
 				this.started = true;
 				// What this change did, for the strip: same plan, newer version, nothing ordered by it.

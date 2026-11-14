@@ -8,6 +8,7 @@
 	import { ArrowRight, Bot, CircleAlert, ListFilter, Rows3 } from '@lucide/svelte';
 	import DayPicker from '$lib/ui/DayPicker.svelte';
 	import ProductToken from '$lib/ui/ProductToken.svelte';
+	import ProductThumb from '$lib/ui/ProductThumb.svelte';
 	import {
 		budgetSentence,
 		cannotOrder,
@@ -111,7 +112,13 @@
 
 {#snippet lineRow(l: BasketLine, chip: string | null)}
 	<Row lead={qtyText(tokenQty(l.qty))} value={money(l.lineCents)} class="border-t border-rule/60">
-		<ProductToken productId={l.productId} name={l.productName} wrap />
+		<span class="flex items-start gap-2"
+			><ProductThumb productId={l.productId} /><ProductToken
+				productId={l.productId}
+				name={l.productName}
+				wrap
+			/></span
+		>
 		{#snippet sub()}
 			{#if chip}<span class="mr-1 rounded-full bg-well px-1.5 py-px text-micro text-ink-2"
 					>{chip}</span

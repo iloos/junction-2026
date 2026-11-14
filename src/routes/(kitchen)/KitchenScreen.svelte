@@ -65,6 +65,7 @@
 	import Basket from './Basket.svelte';
 	import NothingPlanned from './NothingPlanned.svelte';
 	import UseElsewhere from '$lib/ui/UseElsewhere.svelte';
+	import ProductThumb from '$lib/ui/ProductThumb.svelte';
 	import { menuTitle, splitNeed, startsDish } from '$lib/kitchen/menu-plan';
 	import {
 		readOwn,
@@ -675,17 +676,30 @@
 	);
 	/** This workspace's own kitchens (D25/D26): listed first in the selector, landed on next time. */
 	const ownKey = $derived(shell?.sandbox?.workspace ?? 'this-browser');
-	// Read from this browser per workspace; reassigned when a kitchen is made.
-	let own = $derived<OwnKitchen[]>(typeof localStorage === 'undefined' ? [] : readOwn(ownKey));
+	// The server's list is the truth (it survives Start over and other devices); this browser's list is the cache
+	// until the first snapshot says, and holds a kitchen just made until the next read.
+	let cached = $derived<OwnKitchen[]>(typeof localStorage === 'undefined' ? [] : readOwn(ownKey));
+	const own = $derived.by<OwnKitchen[]>(() => {
+		const server = k.kitchens.filter((x) => x.mine);
+		if (!k.kitchens.length) return cached;
+		const mine: OwnKitchen[] = server.map((x) => ({
+			kitchenId: x.id,
+			name: x.name,
+			mandateWords: x.mandateWords,
+			copiedFrom: x.blank ? '' : 'sample'
+		}));
+		const extra = cached.filter((c) => !server.some((x) => x.id === c.kitchenId));
+		return [...mine, ...extra];
+	});
 	async function created(kc: CreatedKitchen, description?: string) {
-		own = withOwn(own, {
+		cached = withOwn(cached, {
 			kitchenId: kc.kitchenId,
 			name: kc.name,
 			mandateWords: kc.mandateWords,
 			copiedFrom: kc.copiedFrom,
 			...(description ? { description } : {})
 		});
-		saveOwn(ownKey, own);
+		saveOwn(ownKey, cached);
 		await choose(kc.kitchenId, description);
 	}
 	/** The kitchen whose home shows before its first plan: one of ours, else a sample. */
@@ -1120,7 +1134,7 @@
 			<button
 				type="button"
 				aria-pressed={kitchenView === id}
-				class="h-8 max-w-[60vw] truncate rounded-md px-3 text-body {kitchenView === id
+				class="min-h-8 rounded-md px-3 py-1 text-left text-body {kitchenView === id
 					? 'bg-ink font-medium text-sheet'
 					: 'text-ink-2 hover:bg-well hover:text-ink'}"
 				onclick={() => setView(id)}>{label}</button
@@ -1475,14 +1489,16 @@
 										: ''}"
 								>
 									<div class="min-w-0">
-										<p class="flex min-w-0 items-center gap-1.5 text-body font-medium text-ink">
+										<p
+											class="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5 text-body font-medium text-ink"
+										>
 											<span
 												class="min-w-0 break-words {menuName && nn.dish ? 'pl-3 font-normal' : ''}"
 												>{menuName && nn.dish ? nn.part : d.nameFi}</span
 											>
 											<DietMarks marks={dishMarks(lines)} />
 										</p>
-										<p class="truncate text-meta text-ink-3">
+										<p class="text-meta break-words text-ink-3">
 											<span class="lg:hidden"
 												>{#if r.was}<span class="text-signoff"
 														>{r.cause.replace(/^./, (c) => c.toUpperCase())}</span
@@ -1536,15 +1552,19 @@
 												/>{/if}
 											{#if r.productId}
 												<!-- The product opens its card (pack, price, supply in words, the Valio listing). -->
+												<ProductThumb productId={r.productId} size={32} eager={di < 8} />
 												<ProductToken
 													productId={r.productId}
 													name={r.product}
 													deliverBy={plan?.deliverBy}
+													wrap
 													class="hover:text-accent-ink"
 												/>
 											{:else}
-												<span class="truncate {r.kind === 'none' ? 'text-ink-3' : 'text-ink'}"
-													>{r.product}</span
+												<span
+													class="min-w-0 break-words {r.kind === 'none'
+														? 'text-ink-3'
+														: 'text-ink'}">{r.product}</span
 												>
 											{/if}
 											{#if r.more}<span class="shrink-0 text-meta text-ink-3">+{r.more}</span>{/if}
@@ -1556,7 +1576,7 @@
 										</p>
 										{#if r.was}
 											<!-- Why this isn't the planned product, on the row: what was replaced, the cause, what changes. -->
-											<p class="truncate text-meta text-ink-2" title="{r.was}: {r.cause}">
+											<p class="text-meta break-words text-ink-2">
 												<span class="text-signoff"
 													>{r.cause.replace(/^./, (c) => c.toUpperCase())}</span
 												>{#if r.changes}

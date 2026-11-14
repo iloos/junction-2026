@@ -289,7 +289,7 @@
 									class="shrink-0 text-auth"
 									aria-hidden="true"
 								/>{:else}<Hand size={15} class="shrink-0 text-auth" aria-hidden="true" />{/if}
-							<span class="min-w-0 flex-1 truncate text-meta font-medium text-ink"
+							<span class="min-w-0 flex-1 text-meta font-medium break-words text-ink"
 								>{d.title ?? d.reason}</span
 							>
 							<span class="mono shrink-0 text-meta text-ink">{money(d.totalCents)}</span>
@@ -558,7 +558,7 @@
 												class="max-w-[16rem]"
 											/>
 										{:else}
-											<span class="max-w-[12rem] truncate text-ink">{it.name}</span>
+											<span class="min-w-0 break-words text-ink">{it.name}</span>
 											<span class="mono shrink-0 text-ink-3">{it.qty}</span>
 										{/if}
 									</li>
