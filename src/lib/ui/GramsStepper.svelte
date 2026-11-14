@@ -41,7 +41,7 @@
 			onclick={() => commit(shown - step)}><Minus size={14} /></button
 		>
 		<input
-			class="mono h-full w-11 border-x border-rule bg-transparent text-center text-[13.5px] text-ink outline-none focus:bg-accent-wash disabled:cursor-not-allowed"
+			class="mono h-full w-11 border-x border-rule bg-transparent text-center text-body text-ink outline-none focus:bg-accent-wash disabled:cursor-not-allowed"
 			inputmode="numeric"
 			aria-label="{label}, grams per guest"
 			disabled={locked}
@@ -68,13 +68,13 @@
 		>
 	</div>
 	{#if pending !== undefined}
-		<span class="inline-flex items-center gap-1 text-[11px] text-accent-ink" role="status">
+		<span class="inline-flex items-center gap-1 text-micro text-accent-ink" role="status">
 			<LoaderCircle size={11} class="animate-spin" aria-hidden="true" /> recomputing
 		</span>
 	{:else if edited}
 		<button
 			type="button"
-			class="text-[11px] text-ink-3 underline decoration-dotted underline-offset-2 hover:text-ink disabled:no-underline"
+			class="text-micro text-ink-3 underline decoration-dotted underline-offset-2 hover:text-ink disabled:no-underline"
 			disabled={locked}
 			onclick={() => onchange(original)}>was {original} g</button
 		>

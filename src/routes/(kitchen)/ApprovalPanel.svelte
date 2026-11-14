@@ -148,12 +148,12 @@
 	class="scroll-mt-4 rounded-lg border border-rule bg-sheet"
 >
 	<div class="flex items-baseline justify-between gap-2 px-4 pt-3.5">
-		<h2 id="appr-h" class="text-[14px] font-semibold text-ink">Review the order</h2>
-		<span class="text-[12px] text-ink-3">delivery {day(plan.deliverBy)}</span>
+		<h2 id="appr-h" class="text-body font-semibold text-ink">Review the order</h2>
+		<span class="text-meta text-ink-3">delivery {day(plan.deliverBy)}</span>
 	</div>
 
 	{#if showVoid && lastInvalidated}
-		<div class="mx-4 mt-3 rounded-md bg-signoff-wash px-3 py-2 text-[12.5px] leading-snug text-ink">
+		<div class="mx-4 mt-3 rounded-md bg-signoff-wash px-3 py-2 text-meta leading-snug text-ink">
 			<p class="flex gap-2">
 				<TriangleAlert size={15} class="mt-px shrink-0 text-signoff" aria-hidden="true" />
 				<span>
@@ -195,7 +195,7 @@
 
 	{#if approval}
 		<div class="px-4 pt-3">
-			<p class="flex items-center gap-1.5 text-[13.5px] text-ink">
+			<p class="flex items-center gap-1.5 text-body text-ink">
 				{#if ordered}
 					<CircleCheck size={16} class="text-accent" aria-hidden="true" />
 					<span
@@ -235,16 +235,16 @@
 								: 'border-rule'}"
 						>
 							<div class="flex items-baseline justify-between gap-2">
-								<p class="text-[12.5px] font-medium text-ink">{key}</p>
-								<p class="mono text-[12.5px] text-ink">{money(sum(g.lines))}</p>
+								<p class="text-meta font-medium text-ink">{key}</p>
+								<p class="mono text-meta text-ink">{money(sum(g.lines))}</p>
 							</div>
-							<p class="mt-0.5 text-[11.5px] leading-snug text-ink-2">
+							<p class="mt-0.5 text-micro leading-snug text-ink-2">
 								{g.reasons.map(reasonLong).join(' ')}
 							</p>
 							<ul class="mt-1.5">
 								{#each g.lines as l (l.id)}
 									<li
-										class="flex items-baseline justify-between gap-3 rounded-sm text-[12.5px] {changedIds.has(
+										class="flex items-baseline justify-between gap-3 rounded-sm text-meta {changedIds.has(
 											l.id
 										)
 											? 'bg-signoff-wash'
@@ -259,18 +259,18 @@
 							</ul>
 							<div class="mt-2 space-y-1.5">
 								{#if checked[ck(key)]}
-									<p class="flex items-center justify-between gap-2 text-[12.5px] text-ink">
+									<p class="flex items-center justify-between gap-2 text-meta text-ink">
 										<span class="flex items-center gap-1.5"
 											><CircleCheck size={14} class="text-ok" aria-hidden="true" /> Confirmed by you</span
 										>
 										<button
 											type="button"
-											class="text-[12px] text-ink-3 underline underline-offset-2 hover:text-ink"
+											class="text-meta text-ink-3 underline underline-offset-2 hover:text-ink"
 											onclick={() => (checked = { ...checked, [ck(key)]: false })}>Undo</button
 										>
 									</p>
 								{:else if confirming === key}
-									<p class="text-[12.5px] text-ink">
+									<p class="text-meta text-ink">
 										{oneShot ? 'Approve' : 'Confirm'} exactly these {g.lines.length} lines, {money(
 											sum(g.lines)
 										)}, for delivery {day(plan.deliverBy)}?{grouped.length > 1
@@ -281,13 +281,13 @@
 										<button
 											bind:this={confirmBtn}
 											type="button"
-											class="h-9 flex-1 rounded-md bg-ink px-3 text-[13px] font-medium text-sheet disabled:opacity-50"
+											class="h-9 flex-1 rounded-md bg-ink px-3 text-body font-medium text-sheet disabled:opacity-50"
 											disabled={busy}
 											onclick={() => confirm(g.lines, key)}>Confirm exact terms</button
 										>
 										<button
 											type="button"
-											class="h-9 rounded-md border border-rule-strong px-3 text-[13px] text-ink"
+											class="h-9 rounded-md border border-rule-strong px-3 text-body text-ink"
 											onclick={() => (confirming = null)}>Cancel</button
 										>
 									</div>
@@ -302,7 +302,7 @@
 								{:else}
 									<button
 										type="button"
-										class="flex h-9 w-full items-center justify-center gap-1.5 rounded-md border border-ink/70 text-[13px] font-medium text-ink hover:bg-well disabled:opacity-50"
+										class="flex h-9 w-full items-center justify-center gap-1.5 rounded-md border border-ink/70 text-body font-medium text-ink hover:bg-well disabled:opacity-50"
 										disabled={busy}
 										onclick={() => review(key)}
 										>{oneShot ? 'Approve' : 'Review'}
@@ -314,7 +314,7 @@
 								{#if SUBSET_APPROVE && confirming !== key}
 									<button
 										type="button"
-										class="w-full text-center text-[12px] text-ink-3 hover:text-ink"
+										class="w-full text-center text-meta text-ink-3 hover:text-ink"
 										disabled={busy}
 										onclick={() => ondeny(g.lines.map((l) => l.id))}>Keep these held</button
 									>
@@ -328,13 +328,13 @@
 						{#if allChecked}
 							<button
 								type="button"
-								class="h-10 w-full rounded-md bg-ink px-3 text-[13.5px] font-medium text-sheet disabled:opacity-50"
+								class="h-10 w-full rounded-md bg-ink px-3 text-body font-medium text-sheet disabled:opacity-50"
 								disabled={busy}
 								onclick={approveConfirmed}
 								>Approve the {grouped.length} confirmed decisions · {money(approvalCents)}</button
 							>
 						{:else}
-							<p class="text-[12px] leading-snug text-ink-3">
+							<p class="text-meta leading-snug text-ink-3">
 								Confirm each decision on its own; one approval of these exact terms is sent when all
 								{grouped.length} are confirmed.
 							</p>
@@ -344,7 +344,7 @@
 				{#if !SUBSET_APPROVE}
 					<button
 						type="button"
-						class="mt-1.5 w-full text-center text-[12px] text-ink-3 hover:text-ink"
+						class="mt-1.5 w-full text-center text-meta text-ink-3 hover:text-ink"
 						disabled={busy}
 						onclick={() => ondeny()}>Keep everything held</button
 					>
@@ -353,16 +353,16 @@
 				<ul class="mt-2.5 space-y-3">
 					{#each grouped as [key, g] (key)}
 						<li>
-							<p class="text-[12px] font-medium text-ink">
+							<p class="text-meta font-medium text-ink">
 								{ordered || granted ? 'Approved because' : 'Why it needs you'}: {key.toLowerCase()}
 							</p>
-							<p class="text-[11.5px] leading-snug text-ink-3">
+							<p class="text-micro leading-snug text-ink-3">
 								{g.reasons.map(reasonLong).join(' ')}
 							</p>
 							<ul class="mt-1">
 								{#each g.lines as l (l.id)}
 									<li
-										class="flex items-baseline justify-between gap-3 rounded-sm text-[12.5px] {changedIds.has(
+										class="flex items-baseline justify-between gap-3 rounded-sm text-meta {changedIds.has(
 											l.id
 										)
 											? 'bg-signoff-wash'
@@ -383,13 +383,13 @@
 			{/if}
 			{#if approvedEarlier.length}
 				<div class="mt-2.5 rounded-md border border-ok/30 bg-ok-wash/60 px-3 py-2">
-					<p class="flex items-center gap-1.5 text-[12.5px] font-medium text-ink">
+					<p class="flex items-center gap-1.5 text-meta font-medium text-ink">
 						<CircleCheck size={14} class="text-ok" aria-hidden="true" /> Approved by you, not ordered
 						yet
 					</p>
 					<ul class="mt-1">
 						{#each approvedEarlier as l (l.id)}
-							<li class="flex items-baseline justify-between gap-3 text-[12.5px]">
+							<li class="flex items-baseline justify-between gap-3 text-meta">
 								<span class="min-w-0 truncate text-ink-2">{nameOf(l.productId)}</span>
 								<span class="mono shrink-0 text-ink">{num(l.qty.value)} {l.qty.unit}</span>
 							</li>
@@ -400,7 +400,7 @@
 		</div>
 
 		<dl
-			class="mx-4 mt-3 grid grid-cols-[1fr_auto] gap-x-3 gap-y-1 border-t border-rule pt-2.5 text-[12.5px]"
+			class="mx-4 mt-3 grid grid-cols-[1fr_auto] gap-x-3 gap-y-1 border-t border-rule pt-2.5 text-meta"
 		>
 			<dt class="text-ink-2">These lines</dt>
 			<dd class="mono text-right text-ink">{money(approvalCents)}</dd>
@@ -416,7 +416,7 @@
 			{/if}
 		</dl>
 		{#if shortfalls.length}
-			<div class="mx-4 mt-2.5 rounded-md bg-well px-3 py-2 text-[12px] leading-snug text-ink">
+			<div class="mx-4 mt-2.5 rounded-md bg-well px-3 py-2 text-meta leading-snug text-ink">
 				<p class="font-medium">Still not covered after this order</p>
 				<ul class="mt-0.5 list-disc pl-4 text-ink-2">
 					{#each shortfalls as s (s)}<li>{s}</li>{/each}
@@ -424,7 +424,7 @@
 			</div>
 		{/if}
 
-		<details class="mx-4 mt-3 text-[12px] text-ink-3">
+		<details class="mx-4 mt-3 text-meta text-ink-3">
 			<summary class="cursor-pointer select-none hover:text-ink"
 				>Audit detail: what the approval is bound to</summary
 			>
@@ -442,7 +442,7 @@
 			</dl>
 		</details>
 	{:else if committedN === 0}
-		<p class="px-4 pt-3 text-[13px] text-ink-2">
+		<p class="px-4 pt-3 text-body text-ink-2">
 			Nothing needs you: every open line is within the mandate.
 		</p>
 	{/if}
@@ -451,7 +451,7 @@
 		<button
 			bind:this={commitBtn}
 			type="button"
-			class="flex h-11 w-full items-center justify-between rounded-md bg-accent px-4 text-[14px] font-medium text-sheet hover:bg-accent-ink disabled:cursor-not-allowed disabled:bg-rule-strong disabled:text-ink-2"
+			class="flex h-11 w-full items-center justify-between rounded-md bg-accent px-4 text-body font-medium text-sheet hover:bg-accent-ink disabled:cursor-not-allowed disabled:bg-rule-strong disabled:text-ink-2"
 			disabled={busy || eligible.length === 0}
 			onclick={oncommit}
 		>
@@ -465,15 +465,13 @@
 			<span class="mono">{eligible.length ? money(eligibleCents) : ''}</span>
 		</button>
 		{#if pending && eligible.length}
-			<p class="mt-1.5 text-[12px] leading-snug text-ink-3">
+			<p class="mt-1.5 text-meta leading-snug text-ink-3">
 				Lines within the mandate can go now; held lines wait for your approval.
 			</p>
 		{/if}
 
 		{#if lastCommit}
-			<div
-				class="mt-3 rounded-md border border-accent/30 bg-accent-wash/60 px-3 py-2.5 text-[12.5px]"
-			>
+			<div class="mt-3 rounded-md border border-accent/30 bg-accent-wash/60 px-3 py-2.5 text-meta">
 				<p class="flex items-baseline justify-between gap-2 text-ink">
 					<span class="font-medium">Receipt {lastCommit.receiptId}</span>
 					<span class="mono">{money(lastCommit.totalCents)}</span>
@@ -490,13 +488,13 @@
 				{/if}
 				<button
 					type="button"
-					class="mt-2 inline-flex h-8 items-center gap-1.5 rounded-md border border-accent/40 bg-sheet px-2.5 text-[12.5px] font-medium text-ink hover:bg-well"
+					class="mt-2 inline-flex h-8 items-center gap-1.5 rounded-md border border-accent/40 bg-sheet px-2.5 text-meta font-medium text-ink hover:bg-well"
 					disabled={busy}
 					onclick={onretry}
 				>
 					<RotateCcw size={13} aria-hidden="true" /> Send the same order again
 				</button>
-				<p class="mono mt-1 truncate text-[11px] text-ink-3" title={lastCommit.key}>
+				<p class="mono mt-1 truncate text-micro text-ink-3" title={lastCommit.key}>
 					{lastCommit.orderId} · key {lastCommit.key}
 				</p>
 			</div>

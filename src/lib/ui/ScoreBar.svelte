@@ -42,5 +42,5 @@
 			></span>
 		{/each}
 	</div>
-	<span class="mono w-8 text-right text-[12.5px] text-ink">{score.total.toFixed(2)}</span>
+	<span class="mono w-8 text-right text-meta text-ink">{score.total.toFixed(2)}</span>
 </div>

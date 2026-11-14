@@ -13,7 +13,7 @@
 	const sum = $derived(ORDER.reduce((s, k) => s + (weights[k] ?? 0), 0) || 1);
 </script>
 
-<ul class="flex flex-wrap gap-x-3 gap-y-1 text-[12px] text-ink-2">
+<ul class="flex flex-wrap gap-x-3 gap-y-1 text-meta text-ink-2">
 	{#each ORDER.filter((k) => (weights[k] ?? 0) > 0) as k (k)}
 		<li class="inline-flex items-center gap-1.5">
 			<span class="size-2 rounded-full" style="background: var(--color-c-{k})"></span>

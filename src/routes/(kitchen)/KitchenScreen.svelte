@@ -1,20 +1,12 @@
 <script lang="ts">
 	import { onMount, tick } from 'svelte';
 	import { resolve } from '$app/paths';
-	import {
-		ChevronDown,
-		CornerDownRight,
-		Info,
-		RotateCcw,
-		Play,
-		CloudOff,
-		LoaderCircle
-	} from '@lucide/svelte';
+	import { ChevronDown, CornerDownRight, Info, Play, CloudOff, LoaderCircle } from '@lucide/svelte';
 	import { KitchenStore } from '$lib/kitchen/kitchen.svelte';
 	import { KITCHENS, PRODUCTS } from '$lib/kitchen/catalog';
 	import type { DishView } from '$lib/kitchen/view-model';
 	import type { Line } from '$lib/core/contracts';
-	import LabelBar from '$lib/ui/LabelBar.svelte';
+	import { useShell } from '$lib/ui/shell/shell.svelte';
 	import StateChip from '$lib/ui/StateChip.svelte';
 	import GramsStepper from '$lib/ui/GramsStepper.svelte';
 	import WhyDrawer from '$lib/ui/WhyDrawer.svelte';
@@ -233,6 +225,26 @@
 		return d.lineIds.map((id) => k.lineById.get(id)).filter((l): l is Line => !!l);
 	}
 	const needUnit = (u: string) => (u === 'pcs' ? 'pcs' : u);
+
+	// The shell shows the sandbox (workspace, run, clock, start over) and where the data comes from.
+	const shell = useShell();
+	$effect(() => {
+		if (!shell) return;
+		shell.labels = { source: valioSource, offline: k.mode === 'fixture' };
+		shell.sandbox = snap?.clock
+			? {
+					workspace: snap.clock.workspaceId ?? 'ws-demo',
+					run: snap.clock.runId,
+					clock: storyTime(k.now ?? new Date(SCENARIO.start)),
+					busy: k.busy,
+					onReset: () => k.reset()
+				}
+			: null;
+		return () => {
+			shell.labels = null;
+			shell.sandbox = null;
+		};
+	});
 </script>
 
 <svelte:head>
@@ -243,39 +255,14 @@
 	/>
 </svelte:head>
 
-<LabelBar mode={k.mode} source={valioSource} />
-
 <header class="border-b border-rule bg-sheet">
-	<div class="mx-auto flex max-w-[1440px] flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3 md:px-6">
-		<a
-			href={resolve('/')}
-			class="flex items-center gap-2 text-[16px] font-semibold tracking-[-0.01em] text-ink"
-		>
-			<svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true">
-				<rect
-					x="1.5"
-					y="1.5"
-					width="17"
-					height="17"
-					rx="3"
-					fill="none"
-					stroke="currentColor"
-					stroke-width="1.6"
-				/>
-				<path
-					d="M5.5 14V6.5l4.5 5 4.5-5V14"
-					fill="none"
-					stroke="var(--color-accent)"
-					stroke-width="1.8"
-					stroke-linejoin="round"
-				/>
-			</svg>
-			Mandate
-		</a>
-		<label class="flex items-center gap-2 text-[13px] text-ink-2">
+	<div
+		class="mx-auto flex max-w-[1440px] flex-col gap-x-5 gap-y-2 px-4 py-2.5 sm:flex-row sm:items-center md:px-6"
+	>
+		<label class="flex shrink-0 items-center gap-2 text-body text-ink-2">
 			<span class="sr-only md:not-sr-only">Kitchen</span>
 			<select
-				class="h-8 rounded-md border border-rule-strong bg-sheet px-2 text-[13.5px] font-medium text-ink"
+				class="h-8 rounded-md border border-rule-strong bg-sheet px-2 text-body font-medium text-ink"
 				value={snap?.kitchen.id ?? 'k-hotel'}
 				disabled={k.readOnly || !snap}
 				onchange={(e) => k.setKitchen(e.currentTarget.value)}
@@ -285,45 +272,19 @@
 				{/each}
 			</select>
 		</label>
-		<div class="ml-auto flex items-center gap-4 text-[12.5px] text-ink-2">
-			{#if snap?.clock}
-				<span
-					class="mono rounded-sm bg-well px-1.5 py-0.5 text-[11.5px] text-ink-2"
-					title="Workspace and run this screen reads and writes"
-					>{snap.clock.workspaceId ?? 'ws-demo'} · {snap.clock.runId}</span
-				>
-			{/if}
-			<span
-				><span class="mono text-ink">{storyTime(k.now ?? new Date(SCENARIO.start))}</span> · simulated
-				clock</span
-			>
-			<button
-				type="button"
-				class="inline-flex items-center gap-1 hover:text-ink"
-				disabled={k.busy}
-				onclick={() => k.reset()}
-			>
-				<RotateCcw size={13} aria-hidden="true" />
-				{snap?.clock?.workspaceId && snap.clock.workspaceId !== 'ws-demo'
-					? 'Start over (sandbox)'
-					: 'Reset demo'}
-			</button>
-		</div>
-	</div>
-	{#if snap}
-		<div class="mx-auto max-w-[1440px] px-4 pb-3 md:px-6">
-			<p class="max-w-[95ch] text-[13px] leading-snug text-ink-2">
-				<span class="font-medium text-ink">The mandate, in the chef's words:</span>
+		{#if snap}
+			<p class="max-w-[95ch] min-w-0 text-meta text-ink-2">
+				<span class="font-medium text-ink">Mandate, in the chef's words:</span>
 				“{snap.rules.words}”
 			</p>
-		</div>
-	{/if}
+		{/if}
+	</div>
 </header>
 
 {#if k.stale}
 	<div class="border-b border-signoff/40 bg-signoff-wash" role="status">
 		<div
-			class="mx-auto flex max-w-[1440px] flex-wrap items-center gap-x-4 gap-y-2 px-4 py-2.5 text-[13px] text-ink md:px-6"
+			class="mx-auto flex max-w-[1440px] flex-wrap items-center gap-x-4 gap-y-2 px-4 py-2.5 text-body text-ink md:px-6"
 		>
 			<CloudOff size={16} class="shrink-0 text-signoff" aria-hidden="true" />
 			<p class="min-w-0 flex-1">
@@ -339,12 +300,12 @@
 			</p>
 			<button
 				type="button"
-				class="h-8 rounded-md bg-ink px-3 text-[13px] font-medium text-sheet disabled:opacity-50"
+				class="h-8 rounded-md bg-ink px-3 text-body font-medium text-sheet disabled:opacity-50"
 				disabled={k.busy}
 				onclick={() => k.retry()}>Retry</button
 			>
 			{#if mode === 'live'}
-				<a href={resolve('/offline')} class="text-[12.5px] text-ink-2 underline underline-offset-2"
+				<a href={resolve('/offline')} class="text-meta text-ink-2 underline underline-offset-2"
 					>Open the offline demonstration (a separate basket)</a
 				>
 			{/if}
@@ -355,7 +316,7 @@
 {#if fromOps && snap}
 	<div class="border-b border-propose/30 bg-propose-wash" role="status">
 		<div
-			class="mx-auto flex max-w-[1440px] flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2 text-[13px] text-ink md:px-6"
+			class="mx-auto flex max-w-[1440px] flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2 text-body text-ink md:px-6"
 		>
 			<b class="font-medium">Opened from Operations</b>
 			<span class="text-ink-2"
@@ -384,7 +345,7 @@
 			{/if}
 			<button
 				type="button"
-				class="ml-auto text-[12.5px] text-ink-2 underline underline-offset-2"
+				class="ml-auto text-meta text-ink-2 underline underline-offset-2"
 				onclick={() => ((fromOps = null), (focusNeed = null))}>Dismiss</button
 			>
 		</div>
@@ -393,17 +354,17 @@
 
 {#if k.started === false}
 	<main class="mx-auto max-w-[720px] px-4 py-14 md:px-6">
-		<h1 class="text-[22px] font-semibold tracking-[-0.015em] text-ink">
+		<h1 class="text-title font-semibold tracking-[-0.015em] text-ink">
 			Christmas dinner buffet, 140 guests
 		</h1>
-		<p class="mt-2 max-w-[60ch] text-[14px] leading-relaxed text-ink-2">
+		<p class="mt-2 max-w-[60ch] text-body leading-relaxed text-ink-2">
 			Starting the demo plans the event for this kitchen on the server: menu × guests → needs →
 			Valio lines, then the kitchen agent proposes a rescue for each real outage. Nothing is ordered
 			until you commit.
 		</p>
 		<button
 			type="button"
-			class="mt-5 inline-flex h-11 items-center gap-2 rounded-md bg-accent px-5 text-[14px] font-medium text-sheet hover:bg-accent-ink disabled:opacity-50"
+			class="mt-5 inline-flex h-11 items-center gap-2 rounded-md bg-accent px-5 text-body font-medium text-sheet hover:bg-accent-ink disabled:opacity-50"
 			disabled={k.busy}
 			onclick={() => k.start()}
 		>
@@ -411,17 +372,13 @@
 			{k.busy ? 'Planning…' : 'Plan the event'}
 		</button>
 		{#if k.progress}
-			<p
-				class="mt-4 flex items-center gap-2 text-[13.5px] text-ink-2"
-				role="status"
-				aria-live="polite"
-			>
+			<p class="mt-4 flex items-center gap-2 text-body text-ink-2" role="status" aria-live="polite">
 				<LoaderCircle size={15} class="animate-spin text-accent" aria-hidden="true" />
 				{k.progress}
 			</p>
 		{/if}
 		{#if k.error}
-			<p class="mt-4 text-[13px] text-out" role="alert">{k.error.message}</p>
+			<p class="mt-4 text-body text-out" role="alert">{k.error.message}</p>
 		{/if}
 	</main>
 {:else if !snap || !view || !plan}
@@ -431,16 +388,16 @@
 	</main>
 {:else}
 	<main
-		class="mx-auto grid max-w-[1440px] gap-6 px-4 pt-5 pb-28 md:px-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:pb-10"
+		class="mx-auto grid max-w-[1440px] grid-cols-1 gap-6 px-4 pt-5 pb-28 md:px-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:pb-10"
 	>
 		<div class="min-w-0">
 			<!-- Event as a diff against a normal week -->
 			<section aria-labelledby="event-h">
 				<div class="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1">
-					<h1 id="event-h" class="text-[22px] font-semibold tracking-[-0.015em] text-ink">
+					<h1 id="event-h" class="text-title font-semibold tracking-[-0.015em] text-ink">
 						{view.title}
 					</h1>
-					<p class="text-[13px] text-ink-2">
+					<p class="text-body text-ink-2">
 						{day(view.date)} · {view.guests} guests · {view.serviceStyle} · delivery {day(
 							plan.deliverBy
 						)}
@@ -450,35 +407,35 @@
 					class="mt-3 grid grid-cols-2 overflow-hidden rounded-lg border border-rule bg-sheet md:grid-cols-4"
 				>
 					<div class="border-r border-b border-rule px-4 py-3 md:border-b-0">
-						<p class="text-[12px] text-ink-3">A normal week</p>
-						<p class="mono mt-0.5 text-[17px] text-ink-2">
+						<p class="text-meta text-ink-3">A normal week</p>
+						<p class="mono mt-0.5 text-title text-ink-2">
 							{money(view.normalWeek.cents, { whole: true })}
 						</p>
-						<p class="text-[12px] text-ink-3">{view.normalWeek.lines} lines</p>
+						<p class="text-meta text-ink-3">{view.normalWeek.lines} lines</p>
 					</div>
 					<div class="border-b border-rule px-4 py-3 md:border-r md:border-b-0">
-						<p class="text-[12px] text-ink-3">This week, with the event</p>
-						<p class="mono mt-0.5 text-[17px] font-medium text-ink">
+						<p class="text-meta text-ink-3">This week, with the event</p>
+						<p class="mono mt-0.5 text-title font-medium text-ink">
 							{money(view.thisWeek.cents, { whole: true })}
 						</p>
-						<p class="text-[12px] text-ink-3">{view.thisWeek.lines} lines</p>
+						<p class="text-meta text-ink-3">{view.thisWeek.lines} lines</p>
 					</div>
 					<div class="border-r border-rule px-4 py-3">
-						<p class="text-[12px] text-ink-3">The event adds</p>
-						<p class="mono mt-0.5 text-[17px] font-medium text-accent-ink">
+						<p class="text-meta text-ink-3">The event adds</p>
+						<p class="mono mt-0.5 text-title font-medium text-accent-ink">
 							{moneyDelta(view.thisWeek.cents - view.normalWeek.cents)}
 						</p>
-						<p class="text-[12px] text-ink-3">
+						<p class="text-meta text-ink-3">
 							<span class="mono">{fixed(view.eventKg)}</span> kg of food
 						</p>
 					</div>
 					<div class="px-4 py-3">
-						<p class="text-[12px] text-ink-3">What needs you</p>
-						<p class="mt-0.5 text-[17px] font-medium text-ink">
+						<p class="text-meta text-ink-3">What needs you</p>
+						<p class="mt-0.5 text-title font-medium text-ink">
 							{#if needsYou.pendingLines}<span class="mono">{needsYou.pendingLines}</span> lines need
 								your approval{:else}No approval needed{/if}
 						</p>
-						<p class="text-[12px] text-ink-3">
+						<p class="text-meta text-ink-3">
 							{needsYou.cannot} can't be ordered · {needsYou.unknown} dishes on unknown stock{needsYou.uncovered
 								? ` · ${needsYou.uncovered} not covered`
 								: ''}
@@ -486,7 +443,7 @@
 					</div>
 				</div>
 				{#if weekMeter}
-					<div class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-ink-3">
+					<div class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-meta text-ink-3">
 						<span class="shrink-0">Week budget</span>
 						<div
 							class="relative h-1.5 min-w-[120px] flex-1 overflow-hidden rounded-full bg-well"
@@ -512,7 +469,7 @@
 					</div>
 				{/if}
 				{#if view.planReasons.length}
-					<p class="mt-2 rounded-md bg-signoff-wash px-3 py-2 text-[13px] text-ink">
+					<p class="mt-2 rounded-md bg-signoff-wash px-3 py-2 text-body text-ink">
 						The whole order is held: {view.planReasons.map(reasonShort).join(', ').toLowerCase()}.
 						Every line needs sign-off.
 					</p>
@@ -531,8 +488,8 @@
 			<!-- Dish table -->
 			<section aria-labelledby="dishes-h" class="mt-6">
 				<div class="flex items-baseline justify-between gap-4">
-					<h2 id="dishes-h" class="text-[15px] font-semibold text-ink">Menu → need → order</h2>
-					<p class="hidden text-[12px] text-ink-3 md:block">
+					<h2 id="dishes-h" class="text-heading font-semibold text-ink">Menu → need → order</h2>
+					<p class="hidden text-meta text-ink-3 md:block">
 						Change grams per guest and the order recomputes: need, lots, price, mandate.
 					</p>
 				</div>
@@ -541,7 +498,7 @@
 				{/if}
 				<div class="mt-2 overflow-hidden rounded-lg border border-rule bg-sheet">
 					<div
-						class="hidden grid-cols-[minmax(150px,0.7fr)_minmax(210px,0.9fr)_minmax(0,3fr)] gap-x-4 border-b border-rule bg-well px-4 py-2 text-[11.5px] font-medium text-ink-3 lg:grid"
+						class="hidden grid-cols-[minmax(150px,0.7fr)_minmax(210px,0.9fr)_minmax(0,3fr)] gap-x-4 border-b border-rule bg-well px-4 py-2 text-micro font-medium text-ink-3 lg:grid"
 					>
 						<span>Dish</span>
 						<span>g per guest → need</span>
@@ -564,8 +521,8 @@
 								class="grid grid-cols-[minmax(0,1fr)_auto] gap-x-4 gap-y-2 px-4 py-3 lg:grid-cols-[minmax(150px,0.7fr)_minmax(210px,0.9fr)_minmax(0,3fr)] lg:gap-y-0"
 							>
 								<div class="min-w-0">
-									<p class="text-[14px] leading-tight font-medium text-ink">{d.nameFi}</p>
-									<p class="text-[12.5px] text-ink-3">{d.name}</p>
+									<p class="text-body leading-tight font-medium text-ink">{d.nameFi}</p>
+									<p class="text-meta text-ink-3">{d.name}</p>
 								</div>
 								<div class="col-span-2 flex items-start gap-3 lg:col-span-1">
 									<GramsStepper
@@ -578,7 +535,7 @@
 									/>
 									<div class="min-w-0 pt-1">
 										<p
-											class="text-[13.5px] text-ink {k.flash.has(d.plannedLineId) ||
+											class="text-body text-ink {k.flash.has(d.plannedLineId) ||
 											k.flash.has(d.lineIds[1] ?? '')
 												? 'landed'
 												: ''}"
@@ -590,8 +547,8 @@
 											>
 											{needUnit(d.need.unit)}
 										</p>
-										<p class="text-[11.5px] leading-snug text-ink-3">{d.needFormula}</p>
-										<p class="mt-0.5 text-[11.5px] text-ink-3">
+										<p class="text-micro leading-snug text-ink-3">{d.needFormula}</p>
+										<p class="mt-0.5 text-micro text-ink-3">
 											{#if d.usual}normal week {num(d.usual.qty)} {d.usual.unit}{:else}<span
 													class="rounded-sm bg-well px-1 text-ink-2">event only</span
 												>{/if}
@@ -611,7 +568,7 @@
 												: ''}"
 										>
 											<div class="min-w-0">
-												<p class="flex min-w-0 items-baseline gap-1.5 text-[13px]">
+												<p class="flex min-w-0 items-baseline gap-1.5 text-body">
 													{#if sub}<CornerDownRight
 															size={13}
 															class="shrink-0 translate-y-0.5 text-accent"
@@ -623,7 +580,7 @@
 															: 'text-ink'}">{names.get(l.productId) ?? l.productId}</span
 													>
 												</p>
-												<p class="mono text-[11.5px] leading-snug text-ink-3">
+												<p class="mono text-micro leading-snug text-ink-3">
 													<span class={rejected ? '' : 'text-ink'}>{b.buys}</span>
 													{#if b.physical && !rejected}<span class="text-ink-2">
 															{b.physical}</span
@@ -642,7 +599,7 @@
 												</p>
 											</div>
 											<span
-												class="mono text-right text-[13px] {rejected ? 'text-ink-3' : 'text-ink'}"
+												class="mono text-right text-body {rejected ? 'text-ink-3' : 'text-ink'}"
 											>
 												{rejected ? '—' : money(l.lineCents)}
 											</span>
@@ -679,7 +636,7 @@
 								<div class="px-4 pb-3">
 									<button
 										type="button"
-										class="flex w-full items-center gap-2 text-left text-[12.5px] font-medium text-ink-2 hover:text-ink"
+										class="flex w-full items-center gap-2 text-left text-meta font-medium text-ink-2 hover:text-ink"
 										aria-expanded={!!open[d.id]}
 										onclick={() => (toggled = { ...toggled, [d.id]: !open[d.id] })}
 									>
@@ -709,7 +666,7 @@
 						</div>
 					{/each}
 				</div>
-				<p class="mt-2 text-[12px] leading-snug text-ink-3">
+				<p class="mt-2 text-meta leading-snug text-ink-3">
 					Grams per guest, yields and recipes are team estimates. Prices are Valio catalogue prices
 					ex VAT; "Qty unknown" lines are Terminal items: ordered, but never counted as cover.
 				</p>
@@ -753,11 +710,11 @@
 			/>
 			{#if k.error}
 				{#if k.error.detail?.retryInMs}
-					<p class="rounded-md bg-well px-3 py-2 text-[12.5px] text-ink" role="status">
+					<p class="rounded-md bg-well px-3 py-2 text-meta text-ink" role="status">
 						{k.error.message}
 					</p>
 				{:else}
-					<p class="rounded-md bg-out-wash px-3 py-2 text-[12.5px] text-ink" role="alert">
+					<p class="rounded-md bg-out-wash px-3 py-2 text-meta text-ink" role="alert">
 						<b class="mono font-medium text-out">{k.error.code}</b>
 						{k.error.message}
 					</p>
@@ -765,8 +722,8 @@
 			{/if}
 			{#if k.activity.length}
 				<section aria-labelledby="log-h" class="rounded-lg border border-rule bg-sheet px-4 py-3">
-					<h2 id="log-h" class="text-[13px] font-semibold text-ink">What happened</h2>
-					<ol class="mt-1.5 space-y-1 text-[12.5px] text-ink-2">
+					<h2 id="log-h" class="text-body font-semibold text-ink">What happened</h2>
+					<ol class="mt-1.5 space-y-1 text-meta text-ink-2">
 						{#each k.activity as a (a.id)}
 							<li class="flex gap-2">
 								<span class="mono w-7 shrink-0 text-ink-3">v{a.version}</span>
@@ -788,7 +745,7 @@
 	{#if approval?.state === 'pending' && !approvalInView}
 		<a
 			href="#approval"
-			class="fixed inset-x-3 bottom-3 z-30 flex h-12 items-center justify-between rounded-lg bg-ink px-4 text-[14px] font-medium text-sheet shadow-[0_8px_24px_-8px_oklch(0.2_0.02_255/0.5)] lg:hidden"
+			class="fixed inset-x-3 bottom-3 z-30 flex h-12 items-center justify-between rounded-lg bg-ink px-4 text-body font-medium text-sheet shadow-[0_8px_24px_-8px_oklch(0.2_0.02_255/0.5)] lg:hidden"
 		>
 			<span>{approval.lineIds.length} lines need you</span>
 			<span>Review</span>
