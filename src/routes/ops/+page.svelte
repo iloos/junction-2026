@@ -394,7 +394,9 @@
 
 		<div class="status">
 			<p class="pill" data-status={stream.status}>
-				<i aria-hidden="true"></i>{STATUS[stream.status]}<span class="seq">seq {stream.last}</span>
+				<i aria-hidden="true"></i>{STATUS[stream.status]}<span class="seq sys-only"
+					>seq {stream.last}</span
+				>
 			</p>
 			{#if scenarioNow}
 				<p class="clock"><span>Scenario clock</span>{simTime(scenarioNow)}</p>

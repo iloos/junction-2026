@@ -27,7 +27,7 @@
 		<ol>
 			{#each steps as st (st.seq)}
 				<li data-tone={st.tone}>
-					<span class="tm" title="op {st.seq}">{time(st.at)}</span>
+					<span class="tm">{time(st.at)}</span>
 					<i class="pip" aria-hidden="true"></i>
 					<div class="bd">
 						<span class="chip" data-chip={st.chip}
@@ -36,7 +36,7 @@
 						<p class="what">{st.what}</p>
 						<p class="then">{st.then}</p>
 						<button class="more" onclick={() => ondetail(st.seq)}
-							>Technical detail <span class="seq">op {st.seq}</span></button
+							>Technical detail <span class="seq sys-only">op {st.seq}</span></button
 						>
 					</div>
 				</li>
