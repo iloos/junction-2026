@@ -32,7 +32,14 @@ export class Shell {
 	/** What the agent is scoped to on this page: the kitchen and the plan on screen (Kitchen, Request, Ops). */
 	chat = $state<{ kitchenId?: string; planId?: string }>({});
 	/** A request to show a plan's decisions in place (the dock's decision card on the plan already on screen). */
-	locate = $state<{ planId: string; at: number } | null>(null);
+	locate = $state<{
+		planId: string;
+		at: number;
+		/** One decision to bring into view (Decision.key); the panel when absent. */
+		decision?: string;
+		/** Which part of the page: the decisions (default) or the order panel. */
+		zone?: 'decide' | 'order';
+	} | null>(null);
 }
 
 const KEY = Symbol('shell');

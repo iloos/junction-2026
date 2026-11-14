@@ -16,6 +16,7 @@
 	import GramsStepper from '$lib/ui/GramsStepper.svelte';
 	import WhyDrawer from '$lib/ui/WhyDrawer.svelte';
 	import DishStatus from '$lib/ui/DishStatus.svelte';
+	import AgentMark from '$lib/ui/AgentMark.svelte';
 	import { planDiff } from '$lib/ui/plan-diff';
 	import { dishGate } from '$lib/ui/coverage';
 	import { whyChain } from '$lib/ui/why-chain';
@@ -169,10 +170,19 @@
 		if (!l || l.at === locatedAt || l.planId !== k.snap?.plan.id) return;
 		locatedAt = l.at;
 		untrack(() => {
-			zone = 'decide';
-			void tick().then(() =>
-				document.getElementById('approval')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-			);
+			zone = l.zone ?? 'decide';
+			void tick().then(() => {
+				const card = l.decision
+					? document.querySelector<HTMLElement>(`[data-decision="${CSS.escape(l.decision)}"]`)
+					: null;
+				const target = card ?? document.getElementById(l.zone === 'order' ? 'order' : 'approval');
+				target?.scrollIntoView({ behavior: 'smooth', block: card ? 'center' : 'start' });
+				// The exact card the dock pointed at shows itself once.
+				card?.animate(
+					[{ boxShadow: '0 0 0 4px var(--color-propose)' }, { boxShadow: '0 0 0 0 transparent' }],
+					{ duration: 1600, easing: 'ease-out' }
+				);
+			});
 		});
 	});
 	const view = $derived(k.view);
@@ -588,6 +598,7 @@
 			name={names.get(l.productId) ?? l.productId}
 			approved={approvedIds.has(l.id)}
 			flash={k.flash.has(l.id)}
+			by={inGroup ? undefined : snap?.byAgent?.[l.id]}
 			replaces={l.substituteFor && !inGroup
 				? {
 						name: names.get(l.substituteFor) ?? l.substituteFor,
@@ -752,6 +763,8 @@
 										>{:else if l.before === l.after}<span
 											>stays <span class="mono">{num(l.after)} {l.unit}</span></span
 										>{:else}<span class="mono">{num(l.before)} → {num(l.after)} {l.unit}</span>{/if}
+									{#if l.before !== l.after && snap?.byAgent?.[l.lineId]}
+										· <AgentMark by={snap.byAgent[l.lineId]} />{/if}
 								</li>
 							{/each}
 							{#if changed.lines.length > 4}<li>and {changed.lines.length - 4} more lines</li>{/if}
@@ -848,6 +861,7 @@
 										{#if g.make}
 											<li>
 												<StrategyCard
+													by={g.lines.map((l) => snap?.byAgent?.[l.id]).find(Boolean)}
 													title={d.nameFi}
 													lines={g.lines}
 													replaces={g.lines[0]?.substituteFor

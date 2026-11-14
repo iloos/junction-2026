@@ -8,6 +8,7 @@
 	import { ChefHat } from '@lucide/svelte';
 	import type { Line } from '$lib/core/contracts';
 	import { money } from './format';
+	import AgentMark from './AgentMark.svelte';
 
 	interface Props {
 		/** What is being made, e.g. the dish name. */
@@ -17,8 +18,10 @@
 		row: Snippet<[Line]>;
 		/** The product the whole recipe replaces, said once for the group (not on every ingredient). */
 		replaces?: { name: string; because: string };
+		/** An agent proposed this recipe. */
+		by?: 'kitchen_agent' | 'external_agent';
 	}
-	let { title, lines, row, replaces }: Props = $props();
+	let { title, lines, row, replaces, by }: Props = $props();
 
 	/** An ingredient is ready when it can be bought with a known quantity: not out, not short, not unknown. */
 	const ready = (l: Line) =>
@@ -43,7 +46,8 @@
 	</header>
 	{#if replaces}
 		<p class="mt-0.5 text-meta leading-snug text-ink-2">
-			Replaces <span class="text-ink">{replaces.name}</span>: {replaces.because}
+			Replaces <span class="text-ink">{replaces.name}</span>: {replaces.because}{#if by}
+				· <AgentMark {by} />{/if}
 		</p>
 	{/if}
 	<p class="mt-0.5 text-meta text-ink-2">

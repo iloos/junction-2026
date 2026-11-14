@@ -25,6 +25,7 @@ import { reloadRunNow, resetDemoRun } from '$lib/server/demo/reset';
 import { isSandbox, resetSandbox } from '$lib/server/demo/sandbox';
 import { inWorkspace } from '$lib/server/adapters/simulator/overlay';
 import { rescueContention } from '$lib/core/services/contention';
+import { catchUp } from '$lib/server/bus';
 
 const EVENT_ID = 'event-xmas-140';
 /** The palvikinkku the ham rescue relies on (13 of 15 in stock): the contention preset takes 4 of them. */
@@ -265,6 +266,38 @@ export function focusPlan(
 	});
 }
 
+/**
+ * Who last changed each line of a plan, from this run's op log: a substitute proposed, a line edited, or an outside
+ * agent's order created. Only agent authors are returned; a chef's own edit clears the mark.
+ */
+async function agentAuthors(
+	workspaceId: string,
+	runId: string,
+	planId: string
+): Promise<Record<string, 'kitchen_agent' | 'external_agent'>> {
+	const last = new Map<string, string>();
+	try {
+		for (const e of await catchUp(workspaceId, 0, 5000, runId)) {
+			if (e.kind !== 'op') continue;
+			const { op, actor } = e.envelope;
+			const ids =
+				op.type === 'ProposeSubstitute' && op.planId === planId
+					? op.lines.map((l) => l.id)
+					: op.type === 'EditLine' && op.planId === planId
+						? op.lines.filter((l) => l.line).map((l) => l.lineId)
+						: op.type === 'CreatePlan' && op.plan.id === planId && actor.kind === 'external_agent'
+							? op.plan.lines.map((l) => l.id)
+							: [];
+			for (const id of ids) last.set(id, actor.kind);
+		}
+	} catch {
+		return {}; // the marks are a courtesy: a log that can't be read never breaks the screen
+	}
+	return Object.fromEntries(
+		[...last].filter(([, k]) => k === 'kitchen_agent' || k === 'external_agent')
+	) as Record<string, 'kitchen_agent' | 'external_agent'>;
+}
+
 /** A plan that is not the seeded event (an agent's order, a menu): named by what it buys. */
 function titleOf(plan: Plan): string {
 	const labels = plan.needs.map((n) => n.label);
@@ -369,6 +402,7 @@ async function buildSnapshot(s: Session): Promise<LiveSnapshot> {
 		})
 	}));
 	const rules = rulesFor(kitchen, s.preset, kitchen.mandate.version);
+	const byAgent = await agentAuthors(ctx.workspaceId, ctx.runId, plan.id);
 	const others = Object.values(ws.plans)
 		.filter((p) => p.kitchenId === kitchen.id && p.id !== plan.id && p.lines.length > 0)
 		.map((p) => ({
@@ -407,6 +441,7 @@ async function buildSnapshot(s: Session): Promise<LiveSnapshot> {
 		rules,
 		preset: s.preset,
 		contention: s.contention,
+		byAgent,
 		contentionRescue:
 			s.contentionRescue?.planId === plan.id
 				? {

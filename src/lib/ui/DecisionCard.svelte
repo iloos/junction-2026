@@ -67,6 +67,7 @@
 		? 'border-2 border-auth'
 		: 'border border-auth/45'}"
 	aria-label="Decision: {d.title ?? d.reason}"
+	data-decision={d.key}
 >
 	<header class="flex items-start justify-between gap-3">
 		<p class="flex min-w-0 items-start gap-1.5 text-body font-semibold text-ink">

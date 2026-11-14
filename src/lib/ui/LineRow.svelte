@@ -8,6 +8,7 @@
 	import type { Line } from '$lib/core/contracts';
 
 	import StateChip from './StateChip.svelte';
+	import AgentMark from './AgentMark.svelte';
 	import { lineBasis, lotSentence } from './coverage';
 	import { money } from './format';
 
@@ -20,6 +21,8 @@
 		flash?: boolean;
 		/** For a substitute: the product it replaces and why, in plain words. */
 		replaces?: { name: string; because: string };
+		/** An agent last changed this line (proposed or edited it). */
+		by?: 'kitchen_agent' | 'external_agent';
 		expanded?: boolean;
 		onwhy?: () => void;
 	}
@@ -29,6 +32,7 @@
 		approved = false,
 		flash = false,
 		replaces,
+		by,
 		expanded = $bindable(false),
 		onwhy
 	}: Props = $props();
@@ -71,8 +75,10 @@
 		</button>
 		{#if replaces}
 			<p class="text-meta text-ink-2">
-				Replaces <span class="text-ink">{replaces.name}</span>: {replaces.because}
+				Replaces <span class="text-ink">{replaces.name}</span>: {replaces.because}{#if by}
+					· <AgentMark {by} />{/if}
 			</p>
+		{:else if by}<p><AgentMark {by} /></p>
 		{/if}
 		<p class="mono text-micro text-ink-3">
 			{#if rejected}<span class="font-sans">{l.productId} · not ordered</span>{:else}<span

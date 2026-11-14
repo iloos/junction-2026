@@ -48,10 +48,14 @@
 	 * navigating, which would reload the screen.
 	 */
 	const shell = useShell();
-	function locate(ev: MouseEvent, plan: string) {
+	function locate(
+		ev: MouseEvent,
+		plan: string,
+		at: { decision?: string; zone?: 'decide' | 'order' } = {}
+	) {
 		if (!shell || plan !== planId) return;
 		ev.preventDefault();
-		shell.locate = { planId: plan, at: Date.now() };
+		shell.locate = { planId: plan, at: Date.now(), ...at };
 		// The dock overlays the approval panel on desktop and the page on a phone: close it so the card shows.
 		if (!pinned) open = false;
 	}
@@ -136,6 +140,16 @@
 	const rows = $derived(foldRows(entries));
 	/** Steps so far in the turn that is running, for the indicator ("step 3"). */
 	const stepsThisTurn = $derived(stepsSinceChef(entries));
+	/** The plan the task works on, from its newest ledger or decision. */
+	const taskPlan = $derived.by(() => {
+		for (let j = entries.length - 1; j >= 0; j--) {
+			const x = entries[j];
+			if (x.kind !== 'event') continue;
+			if (x.e.type === 'decision') return x.e.planId;
+			if (x.e.type === 'ledger' && x.e.ledger.needs[0]) return x.e.ledger.needs[0].planId;
+		}
+		return null;
+	});
 	const doneLine = $derived(last?.kind === 'event' && last.e.type === 'done' ? last.e : undefined);
 
 	async function turn(body: ChatTurnInput, said?: string) {
@@ -349,19 +363,28 @@
 					</li>
 				{:else if x.e.type === 'decision'}
 					{@const names = new Map(Object.entries(x.e.names))}
+					{@const here = x.e.planId === planId}
 					<li class="space-y-2">
+						<!-- Each card opens its own decision on the page: the same card, where a chef approves it. -->
 						{#each x.e.decisions as d (d.key)}
-							<DecisionCard decision={d} {names} due={x.e.due} readonly compact />
+							<a
+								class="group block rounded-lg focus-visible:outline-2 focus-visible:outline-propose"
+								href={x.e.approvalUrl}
+								onclick={(ev) =>
+									x.e.type === 'decision' && locate(ev, x.e.planId, { decision: d.key })}
+								aria-label="{here ? 'Show' : 'Open'} this decision on the Kitchen page: {d.title ??
+									d.reason}"
+							>
+								<DecisionCard decision={d} {names} due={x.e.due} readonly compact />
+								<span
+									class="mt-1 inline-flex items-center gap-1 text-meta font-medium text-propose group-hover:underline"
+									>{here ? 'Show on the page' : 'Open in the Kitchen'}
+									<ArrowUpRight size={13} aria-hidden="true" /></span
+								>
+							</a>
 						{/each}
-						<a
-							class="inline-flex items-center gap-1 font-medium text-propose underline"
-							href={x.e.approvalUrl}
-							onclick={(ev) => x.e.type === 'decision' && locate(ev, x.e.planId)}
-							>{x.e.planId === planId ? 'Show the decision' : 'Open the approval in Kitchen'}
-							<ArrowUpRight size={13} /></a
-						>
 						<p class="text-meta text-ink-3">
-							Only a chef approves, in the Kitchen screen. Then continue here.
+							Only a chef approves, on the page. Then continue here.
 						</p>
 					</li>
 				{:else if x.e.type === 'ledger'}
@@ -374,11 +397,21 @@
 						<!-- The agent's answer, worded from the ledger (the line above carries the numbers). -->
 						<li class="text-ink">{x.e.text}</li>
 					{/if}
-					{#if x === last && (x.e.canContinue || x.e.state === 'awaiting_chef')}
+					{#if x === last && x.e.canContinue && taskPlan && taskPlan === planId}
+						<!-- The plan is on the page: its own Order button is the one primary action; the dock points to it. -->
+						<li>
+							<a
+								class="inline-flex items-center gap-1 text-meta font-medium text-accent-ink underline"
+								href="#order"
+								onclick={(ev) => locate(ev, taskPlan!, { zone: 'order' })}
+								>Order it on the page <ArrowUpRight size={13} aria-hidden="true" /></a
+							>
+						</li>
+					{:else if x === last && (x.e.canContinue || x.e.state === 'awaiting_chef')}
 						<li class="flex flex-wrap gap-2">
 							<button
 								type="button"
-								class="rounded-md bg-accent px-3 py-1.5 text-meta font-semibold text-sheet disabled:opacity-50"
+								class="rounded-md border border-accent px-3 py-1.5 text-meta font-semibold text-accent-ink hover:bg-accent-wash disabled:opacity-50"
 								disabled={busy}
 								onclick={() => turn({ continue: true }, 'Continue')}
 							>

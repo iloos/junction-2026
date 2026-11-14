@@ -391,6 +391,11 @@ export interface FixtureSnapshot {
 		added: { name: string; qty: number; unit: string; physical: string | null }[];
 		signOff: boolean;
 	} | null;
+	/**
+	 * Lines an agent last changed (proposed a substitute, edited, or created as an outside agent's order), by line id:
+	 * the page marks them "by the agent" so the agent's work reads in the same place as the chef's.
+	 */
+	byAgent?: Record<string, 'kitchen_agent' | 'external_agent'>;
 	/** The kitchen's other plans in this sandbox (an agent's order, the event), for the task switcher. */
 	others?: { id: string; title: string; open: number; ordered: number }[];
 }
