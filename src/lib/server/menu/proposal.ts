@@ -310,7 +310,13 @@ export interface ProposeDeps {
 	llm?: Llm | null;
 	/** Makes two proposals for the same brief distinct; the same nonce returns the stored one. */
 	nonce?: string;
+	/** Progress for a waiting page: the dishes once written, then products matched so far. */
+	onStep?: (s: ProposeStep) => void;
 }
+
+export type ProposeStep =
+	| { step: 'dishes'; dishes: string[]; source: 'llm' | 'templates' }
+	| { step: 'products'; done: number; total: number };
 
 export interface Proposed {
 	proposal: MenuProposalT;
@@ -364,6 +370,13 @@ export async function proposeMenu(d: ProposeDeps): Promise<Proposed> {
 			menu = fixtureMenu(d.brief);
 		}
 	} else menu = fixtureMenu(d.brief);
+	d.onStep?.({
+		step: 'dishes',
+		dishes: menu.dishes.map((x) => x.name),
+		source: source === 'llm' ? 'llm' : 'templates'
+	});
+	const total = menu.dishes.reduce((n, x) => n + x.ingredients.length, 0);
+	let done = 0;
 
 	const at = d.now.toISOString();
 	// A whole-menu requirement checks every pick; a counted one ("lactose-free:4") is met by some dishes.
@@ -391,6 +404,7 @@ export async function proposeMenu(d: ProposeDeps): Promise<Proposed> {
 		);
 		const ingredients: DishIngredient[] = [];
 		for (const [ii, i] of dish.ingredients.entries()) {
+			d.onStep?.({ step: 'products', done: done++, total });
 			const base = {
 				id: ingIds[ii],
 				label: i.label,

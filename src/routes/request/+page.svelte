@@ -1,9 +1,17 @@
 <script lang="ts">
-	import { ArrowRight, RotateCcw, TriangleAlert, Check, Repeat } from '@lucide/svelte';
+	import {
+		ArrowRight,
+		RotateCcw,
+		TriangleAlert,
+		Check,
+		Repeat,
+		Info,
+		LoaderCircle
+	} from '@lucide/svelte';
 	import { onMount } from 'svelte';
 	import { resolve } from '$app/paths';
 	import type { Plan } from '$lib/core/contracts';
-	import HoldButton from '$lib/ui/HoldButton.svelte';
+
 	import SourceTag from '$lib/ui/SourceTag.svelte';
 	import StateChip from '$lib/ui/StateChip.svelte';
 	import { day, money, num, shortHash, storyTime } from '$lib/ui/format';
@@ -341,8 +349,50 @@
 			menuBusy = false;
 		}
 	}
+	/** Where proposing stands, from the server's progress lines: brief → dishes → products. */
+	let proposing = $state.raw<{
+		dishes: string[] | null;
+		source: 'llm' | 'templates' | null;
+		done: number;
+		total: number;
+	} | null>(null);
 	async function propose() {
-		menu = await menuCall<MenuView>({ action: 'propose', text, kitchenId, briefAnswers, nonce });
+		menuBusy = true;
+		error = null;
+		proposing = { dishes: null, source: null, done: 0, total: 0 };
+		try {
+			const res = await fetch('/request/menu', {
+				method: 'POST',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ action: 'propose', text, kitchenId, briefAnswers, nonce })
+			});
+			if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`);
+			const reader = res.body.pipeThrough(new TextDecoderStream()).getReader();
+			let buf = '';
+			for (;;) {
+				const { value, done } = await reader.read();
+				if (done) break;
+				buf += value;
+				let nl;
+				while ((nl = buf.indexOf('\n')) >= 0) {
+					const line = buf.slice(0, nl).trim();
+					buf = buf.slice(nl + 1);
+					if (!line) continue;
+					const m = JSON.parse(line);
+					if (m.progress?.step === 'dishes')
+						proposing = { ...proposing!, dishes: m.progress.dishes, source: m.progress.source };
+					else if (m.progress?.step === 'products')
+						proposing = { ...proposing!, done: m.progress.done, total: m.progress.total };
+					else if (m.result) menu = m.result as MenuView;
+					else if (m.error) throw new Error(`${m.error.code}: ${m.error.message}`);
+				}
+			}
+		} catch (e) {
+			error = e instanceof Error ? e.message : String(e);
+		} finally {
+			menuBusy = false;
+			proposing = null;
+		}
 	}
 	async function editMenu(changes: MenuChange[]) {
 		if (!menu) return;
@@ -370,6 +420,8 @@
 			id: menu.proposal.id,
 			revision: menu.proposal.revision
 		});
+		// The event is planned: request, lookup, order and approval are all answered by the plan in the Kitchen.
+		if (menuPlan) status = { request: 'done', lookup: 'done', order: 'done', approval: 'done' };
 	}
 
 	/** The chef took the first open delivery date after a cut-off: same words, that date, said in the notes. */
@@ -621,10 +673,10 @@
 					<p class="text-meta text-ink-3">
 						{#if parsed.parser.kind === 'rules'}Parsed by rules: deterministic, no model call.{:else}Parsed
 							by {parsed.parser.model} ·
-							<span class="mono"
-								>{parsed.parser.tokens?.in ?? 0} in / {parsed.parser.tokens?.out ?? 0} out · {parsed
-									.parser.latencyMs} ms</span
-							>; dates from the sim clock.{/if}
+							{#if shell?.system}<span class="mono"
+									>{parsed.parser.tokens?.in ?? 0} in / {parsed.parser.tokens?.out ?? 0} out · {parsed
+										.parser.latencyMs} ms</span
+								>;{/if} dates from the sim clock.{/if}
 						{#if parsed.parser.fallback}<span class="text-signoff">
 								Model path not used: {parsed.parser.fallback}.</span
 							>{/if}
@@ -645,7 +697,7 @@
 							</li>
 						{/each}
 					</ul>
-					<p class="mt-2 text-body text-ink-2">
+					<p class="mt-2 text-body text-ink-2" hidden={!!event}>
 						Deliver by <b class="font-medium text-ink">{day(parsed.deliverBy)}</b>
 						{#if parsed.deliverByText}<span class="text-ink-3">from “{parsed.deliverByText}”</span
 							>{:else}<span class="text-signoff">(no day given)</span>{/if}
@@ -662,15 +714,22 @@
 						</p>
 					{/if}
 					<!-- An event brief has no items: item questions about it would be noise. -->
-					{@const asks = [
-						...parsed.ambiguities,
-						...(event
-							? []
-							: parsed.items.flatMap((i) =>
+					{@const asks = event
+						? []
+						: [
+								...parsed.ambiguities,
+								...parsed.items.flatMap((i) =>
 									i.ambiguities.map((a) => `${i.product ?? i.query}: ${a}`)
-								)),
-						...parsed.notes
-					]}
+								)
+							]}
+					{@const notes = event ? [] : parsed.notes}
+					{#if notes.length}
+						<ul class="mt-2 space-y-0.5 text-body text-ink-2" aria-label="Notes">
+							{#each notes as n (n)}<li class="flex gap-2">
+									<Info size={14} class="mt-0.5 shrink-0 text-ink-3" aria-hidden="true" />{n}
+								</li>{/each}
+						</ul>
+					{/if}
 					{#if asks.length}
 						<ul
 							class="mt-2 space-y-1 rounded-lg border border-signoff/30 bg-signoff-wash px-3 py-2 text-body text-ink"
@@ -723,6 +782,49 @@
 										>{menu ? 'Review the menu below.' : 'Proposing a menu…'}</span
 									>
 								</p>
+								{#if proposing}
+									<ol
+										class="mt-2 space-y-1 text-body"
+										aria-label="Proposing a menu"
+										data-testid="menu-progress"
+									>
+										<li class="flex items-center gap-2 text-ink">
+											<Check size={14} class="text-accent" aria-hidden="true" /> Brief read: {event
+												.draft.guests} guests,
+											{event.draft.date ? day(event.draft.date) : ''}
+										</li>
+										<li
+											class="flex items-center gap-2 {proposing.dishes ? 'text-ink' : 'text-ink-2'}"
+										>
+											{#if proposing.dishes}<Check
+													size={14}
+													class="text-accent"
+													aria-hidden="true"
+												/>
+												{proposing.dishes.length} dishes from {proposing.source === 'llm'
+													? 'the model'
+													: 'the team templates'}:
+												{proposing.dishes.join(', ')}{:else}<LoaderCircle
+													size={14}
+													class="animate-spin text-accent"
+													aria-hidden="true"
+												/>
+												Writing dishes and amounts per guest…{/if}
+										</li>
+										<li
+											class="flex items-center gap-2 {proposing.total ? 'text-ink' : 'text-ink-3'}"
+										>
+											{#if proposing.total}<LoaderCircle
+													size={14}
+													class="animate-spin text-accent"
+													aria-hidden="true"
+												/>
+												Matching ingredients to Valio products: {proposing.done} of {proposing.total}{:else}<span
+													class="inline-block size-3.5"
+												></span> Matching ingredients to Valio products{/if}
+										</li>
+									</ol>
+								{/if}
 							{/if}
 							{#if event.seeded}
 								<a
@@ -1041,8 +1143,10 @@
 								<dd class="num font-semibold">{money(approval.totalCents)}</dd>
 								<dt class="text-ink-3">Plan version</dt>
 								<dd class="mono">v{approval.planVersion}</dd>
-								<dt class="text-ink-3">Terms hash</dt>
-								<dd class="mono" title={approval.termsHash}>{shortHash(approval.termsHash)}…</dd>
+								{#if shell?.system}
+									<dt class="text-ink-3">Terms hash</dt>
+									<dd class="mono" title={approval.termsHash}>{shortHash(approval.termsHash)}…</dd>
+								{/if}
 								<dt class="text-ink-3">Mandate</dt>
 								<dd class="mono">
 									{approval.mandateVersion === null ? '—' : `v${approval.mandateVersion}`}
@@ -1058,11 +1162,14 @@
 						</div>
 						{#if approval.state === 'pending'}
 							<div class="mt-3 grid gap-2 sm:grid-cols-[1fr_auto]">
-								<HoldButton
-									label="Hold to approve {money(approval.totalCents)} as head chef"
+								<button
+									type="button"
 									disabled={busy}
-									onconfirm={() => decide('grant')}
-								/>
+									onclick={() => decide('grant')}
+									class="inline-flex h-11 items-center justify-center gap-2 rounded-md bg-accent px-4 text-body font-medium text-sheet hover:bg-accent-ink disabled:opacity-50"
+									><Check size={16} aria-hidden="true" /> Approve {money(approval.totalCents)} as head
+									chef</button
+								>
 								<button
 									type="button"
 									disabled={busy}

@@ -25,26 +25,50 @@ export const POST: RequestHandler = async (event) => {
 	const { workspaceId } = await visitorWorkspace(event, env, dev);
 	const ref = { workspaceId, id: str('id'), revision: int('revision') };
 
+	// Proposing takes seconds (a model call, then one catalogue match per ingredient): it streams NDJSON lines,
+	// {progress} as the dishes and products come in, then {result} or {error}.
+	if (body.action === 'propose') {
+		const enc = new TextEncoder();
+		const stream = new ReadableStream({
+			async start(controller) {
+				const send = (o: unknown) => controller.enqueue(enc.encode(JSON.stringify(o) + '\n'));
+				try {
+					const r = await inScope(workspaceId, () =>
+						proposeFromRequest({
+							env,
+							workspaceId,
+							kitchenId: str('kitchenId') || 'k-hotel',
+							text: str('text').slice(0, 500),
+							briefAnswers: readBriefAnswers(body.briefAnswers),
+							nonce: str('nonce') || undefined,
+							onStep: (progress) => send({ progress })
+						})
+					);
+					send(r.ok ? { result: r.value } : { error: r.error });
+				} catch (e) {
+					send({
+						error: { code: 'INTERNAL', message: e instanceof Error ? e.message : String(e) }
+					});
+				}
+				controller.close();
+			}
+		});
+		return new Response(stream, {
+			headers: { 'content-type': 'application/x-ndjson', 'cache-control': 'no-store' }
+		});
+	}
+
 	// Every step runs on this workspace's own run and clock.
 	const r = await inScope(workspaceId, async () =>
-		body.action === 'propose'
-			? await proposeFromRequest({
-					env,
-					workspaceId,
-					kitchenId: str('kitchenId') || 'k-hotel',
-					text: str('text').slice(0, 500),
-					briefAnswers: readBriefAnswers(body.briefAnswers),
-					nonce: str('nonce') || undefined
-				})
-			: body.action === 'read'
-				? await readMenuFor(workspaceId, ref.id)
-				: body.action === 'edit'
-					? await editMenuFor({ ...ref, changes: readChanges(body.changes) })
-					: body.action === 'accept'
-						? await acceptMenuAsChef({ env, ...ref })
-						: body.action === 'plan'
-							? await planMenuAsChef({ env, ...ref })
-							: null
+		body.action === 'read'
+			? await readMenuFor(workspaceId, ref.id)
+			: body.action === 'edit'
+				? await editMenuFor({ ...ref, changes: readChanges(body.changes) })
+				: body.action === 'accept'
+					? await acceptMenuAsChef({ env, ...ref })
+					: body.action === 'plan'
+						? await planMenuAsChef({ env, ...ref })
+						: null
 	);
 	if (!r)
 		return json({ error: { code: 'INVALID_INPUT', message: 'unknown action' } }, { status: 400 });

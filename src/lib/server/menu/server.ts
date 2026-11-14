@@ -23,6 +23,7 @@ import {
 	type MenuPlanResult,
 	type MenuView
 } from './flow';
+import type { ProposeStep } from './proposal';
 import { memoryMenuStore } from './store';
 
 /** One process-wide fallback when the ports carry no MenuStore (a catalogue-only fixture). */
@@ -45,6 +46,7 @@ export async function proposeFromRequest(o: {
 	text: string;
 	briefAnswers: BriefAnswer[];
 	nonce?: string;
+	onStep?: (s: ProposeStep) => void;
 }): Promise<Result<MenuView>> {
 	const today = await simToday(o.workspaceId);
 	const brief = toEventBrief(
@@ -61,7 +63,10 @@ export async function proposeFromRequest(o: {
 		llmKind(o.env) === 'fixture' ? null : createLlmRouter(o.env, trace).for('menu.propose');
 	const d = await deps(o.workspaceId);
 	return ok(
-		await proposeForBrief({ ...d, llm }, { kitchenId: o.kitchenId, brief, nonce: o.nonce })
+		await proposeForBrief(
+			{ ...d, llm },
+			{ kitchenId: o.kitchenId, brief, nonce: o.nonce, onStep: o.onStep }
+		)
 	);
 }
 
