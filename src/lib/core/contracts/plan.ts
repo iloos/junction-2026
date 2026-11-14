@@ -47,6 +47,8 @@ export const PolicyReason = z.enum([
 	'cutoff_passed',
 	/** The product does not meet a hard requirement of the need it serves (lactose-free, origin, label): forbidden. */
 	'requirement_unmet',
+	/** No record says whether the product meets a requirement (diet, allergens): held or rejected per unknownCounts. */
+	'requirement_unknown',
 	/** A person accepted the best try: this line breaks the order's origin requirement only. Sign-off, in the terms. */
 	'requirement_relaxed.origin',
 	/** A person accepted the best try: this line lacks a required label only. Sign-off, in the terms. */
@@ -113,7 +115,13 @@ export const NeedRequirements = z.object({
 	 * Diet the product must suit (a dish's VEG / VE code, a request's "vegetarian"): no meat or fish, and for vegan no
 	 * milk or egg either. From the product's diet record, else its allergens, category and name. Never relaxed.
 	 */
-	diet: z.array(z.enum(['vegetarian', 'vegan'])).optional()
+	diet: z.array(z.enum(['vegetarian', 'vegan'])).optional(),
+	/**
+	 * Product families the need must not contain (a dish's M code excludes milk, G gluten cereals; "no pork"). From
+	 * the allergen record, the category groups (core/mandate/categories.ts) and the name. An undeclared record is
+	 * unknown, never ok.
+	 */
+	excludes: z.array(z.enum(['meat', 'fish', 'pork', 'milk', 'glutenCereals'])).optional()
 });
 export type NeedRequirements = z.infer<typeof NeedRequirements>;
 
