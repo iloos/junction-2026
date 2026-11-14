@@ -22,6 +22,12 @@
 | A4 held plan from a brief | `briefs/golden.json` | menu track |
 
 - Review on/off comparison: waits for E's `REVIEW=1`; then the same trials both ways via `eval:live` (pass rate and tokens per arm).
+- Ring 2 chat evals (design, not built; waits for the procurement-task record contract). `evals/chat/*.json`: scripted turns through the real chat entry point, judged on the task record and the op log, never on the model's prose:
+  - **clarification**: a turn missing a fact (kitchen, date, amount) gets exactly one question about that field; an answered field is never asked again; a typed requirement survives every later turn.
+  - **approval handoff**: held lines stop the agent with a pending approval and an approval link; the agent never approves; the human approves out of band.
+  - **continuation**: "go ahead" resumes the same task id and plan (no new plan, no repeated order); a turn after an edit sees the voided approval.
+  - **truthful ledger**: every number and claim in the task's ledger and final message is backed by state (receipts, held lines, FulfilmentView unresolved); "ordered" only with a receipt.
+  - Gate runs the scripted planner; `eval:live` runs the same files with `LIVE_REPEATS`, with REVIEW on and off as two arms (pass rate, tokens, latency per arm).
 
 ## Traps
 - An `expectFail` entry hides any other mistake in the same expectation; probe today's state before writing one.
