@@ -29,7 +29,7 @@ const offer = (productId: string, cents: number, kind: 'known' | 'unknown') =>
 	}) as unknown as Offer;
 
 describe('D8 supply tier', () => {
-	it('ranks confirmed supply above unknown supply, whatever the score', () => {
+	it('ranks known stock above unknown stock, whatever the score', () => {
 		const ids = ['cheap-unknown', 'dear-known'];
 		const ranked = rankCandidates({
 			kitchen,
@@ -41,11 +41,11 @@ describe('D8 supply tier', () => {
 			])
 		});
 		expect(ranked.map((r) => [r.productId, r.rank, r.supply])).toEqual([
-			['dear-known', 1, 'confirmed'],
-			['cheap-unknown', 2, 'unknown']
+			['dear-known', 1, 'known_stock'],
+			['cheap-unknown', 2, 'unknown_stock']
 		]);
 		// The score still says which is cheaper; only the order is lexicographic.
 		expect(ranked[1].score!.total).toBeGreaterThan(ranked[0].score!.total);
-		expect(ranked.map((r) => r.score!.supplyTier)).toEqual(['confirmed', 'unknown']);
+		expect(ranked.map((r) => r.score!.supplyTier)).toEqual(['known_stock', 'unknown_stock']);
 	});
 });

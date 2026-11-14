@@ -238,7 +238,7 @@ export async function findSubstitutes(
 	];
 
 	// The recommendation under these rules. D8: a product whose supply Valio does not confirm loses to the seed's
-	// recipe when every ingredient's supply is confirmed for the amount it needs; it stays listed, ranked and labelled.
+	// recipe when every ingredient is known stock for the amount it needs; it stays listed, ranked and labelled.
 	const top = ranked.filter((r) => r.rank !== null).sort((a, b) => a.rank! - b.rank!)[0];
 	const recipeConfirmed =
 		recipe !== null &&
@@ -248,12 +248,12 @@ export async function findSubstitutes(
 			const a = o?.availability;
 			const qty = makeInHouseQty(g, need!.amount.value).value;
 			return (
-				supplyOf(o) === 'confirmed' &&
+				supplyOf(o) === 'known_stock' &&
 				!recalled.has(g.productId) &&
 				(a?.amount == null || a.amount >= qty)
 			);
 		});
-	const best = top && (top.supply === 'confirmed' || !recipeConfirmed) ? top : undefined;
+	const best = top && (top.supply === 'known_stock' || !recipeConfirmed) ? top : undefined;
 	let kind: 'product' | 'make_in_house' | 'none' = 'product';
 	let labourNote: string | undefined;
 	let drafts: DraftLine[] = [];

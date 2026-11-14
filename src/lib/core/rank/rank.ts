@@ -4,10 +4,10 @@
  * Σ wⱼ·utilityⱼ over price, carbon, Finnish origin, reliability and organic (weights normalised; utilities on fixed
  * 0–1 scales; a missing value scores 0, never favourably) + w_fit·fit/4 when a recipe-fit score exists.
  * Ties break on productId. Unknown supply is not excluded here: the mandate holds it (UNKNOWN_REQUIRED).
- * D8: ranking is lexicographic on supply first. Confirmed supply (Valio states availability) ranks above unknown
- * supply whatever the score, so a candidate that covers nothing confirmed is never recommended over one that does.
+ * D8: ranking is lexicographic on supply first. Known stock (Valio states availability) ranks above unknown stock
+ * whatever the score, so a candidate whose supply nobody knows is never recommended over one whose supply is known.
  */
-import type { Kitchen, LineReason, Offer, Product, ScoreBreakdown } from '../contracts';
+import type { Kitchen, LineReason, Offer, Product, ScoreBreakdown, SupplyTier } from '../contracts';
 import { blocking, validateLine } from '../mandate/validate';
 
 export interface RankInput {
@@ -28,20 +28,20 @@ export interface Ranked {
 	fromValioRule: boolean;
 	rank: number | null;
 	score?: ScoreBreakdown;
-	/** D8 supply tier: Valio confirms availability, or it does not (Terminal, no stock figure). */
+	/** D8 supply tier: Valio states availability (known_stock), or it does not (Terminal, no stock figure). */
 	supply?: Supply;
 	rejectedReasons: LineReason[];
 }
 
 const RELIABILITY_FLOOR = 0.7;
 
-export type Supply = 'confirmed' | 'unknown';
+export type Supply = Extract<SupplyTier, 'known_stock' | 'unknown_stock'>;
 
-/** D8: what Valio says about supply. Unknown never counts as cover, so it never outranks confirmed. */
+/** D8: what Valio says about supply. Unknown never counts as cover, so it never outranks known stock. */
 export function supplyOf(o: Offer | null | undefined): Supply {
-	return o?.availability.kind === 'known' ? 'confirmed' : 'unknown';
+	return o?.availability.kind === 'known' ? 'known_stock' : 'unknown_stock';
 }
-const SUPPLY_ORDER: Record<Supply, number> = { confirmed: 0, unknown: 1 };
+const SUPPLY_ORDER: Record<Supply, number> = { known_stock: 0, unknown_stock: 1 };
 
 /** Hard constraints: availability, lot/quantity, tender list. Every failing reason is collected. */
 /**
