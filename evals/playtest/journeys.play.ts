@@ -1,5 +1,6 @@
 import { expect, type Page } from '@playwright/test';
 import { BASE, journey, isMobile, type Recorder } from './harness';
+import { approveAll as approveAllShared, orderNow } from '../ui/flow';
 
 /**
  * The four north-star moments (docs/handoff/ring6/RESTART.md) and the nine Round 12 journeys
@@ -84,27 +85,9 @@ async function requestPage(page: Page, text: string) {
 }
 
 async function approveAll(page: Page) {
-	let lines = 0;
-	for (let round = 0; round < 6; round++) {
-		const review = page.getByRole('button', { name: /^Review \d+ lines?/ }).first();
-		const confirm = page.getByRole('button', { name: /Confirm exact terms/ }).first();
-		const hold = page.getByRole('button', { name: /Hold to sign off \d+ lines?/ }).first();
-		if (await review.isVisible().catch(() => false)) {
-			lines += Number(((await review.innerText()).match(/(\d+)/) ?? [])[1] ?? 0);
-			await review.click();
-			await confirm.click();
-		} else if (await hold.isVisible().catch(() => false)) {
-			lines += Number(((await hold.innerText()).match(/(\d+) lines?/) ?? [])[1] ?? 0);
-			const b = (await hold.boundingBox())!;
-			await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2);
-			await page.mouse.down();
-			await page.waitForTimeout(4000);
-			await page.mouse.up();
-		} else break;
-		await page.waitForLoadState('networkidle').catch(() => {});
-		await page.waitForTimeout(1000);
-	}
-	if (!lines) throw new Error('no Review / Hold to sign off control found');
+	const lines = await approveAllShared(page);
+	if (!lines)
+		throw new Error('no Accept all / Accept these / Review / Hold to sign off control found');
 	return lines;
 }
 
@@ -759,18 +742,9 @@ journey(
 							// Approve on the page (the dock closed so the Decide rail shows), then order.
 							const close = p.getByRole('button', { name: 'Close chat' });
 							if (await close.isVisible().catch(() => false)) await close.click();
-							const all = p.getByRole('button', { name: /^Accept all/ }).first();
-							if (await all.isVisible().catch(() => false)) await all.click();
-							else await approveAll(p).catch(() => 0);
+							await approveAll(p).catch(() => 0);
 							await p.waitForTimeout(1500);
-							await p
-								.getByRole('button', { name: /^(Order \d+ lines? now|Order the|Place order)/ })
-								.first()
-								.click({ timeout: 20_000 });
-							await p
-								.getByText(/Ordered\s*·\s*\d+\s+lines?/)
-								.first()
-								.waitFor({ timeout: 60_000 });
+							await orderNow(p);
 						},
 						{ beat: false }
 					);

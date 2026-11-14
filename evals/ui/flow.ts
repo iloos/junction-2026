@@ -67,14 +67,31 @@ export async function planBuffet(page: Page) {
 	await page.waitForLoadState('networkidle');
 }
 
-/** Approves every decision as the chef (Review → Confirm, or a held sign-off); returns the lines signed off. */
+/**
+ * Approves every decision as the chef; returns the lines signed off. D29 (S2): the plan's sticky bar "Accept all N"
+ * and the table's group headers "Accept these N"; before D29: Review → Confirm exact terms, or a held sign-off.
+ * Both shapes are handled so the checks hold across the change.
+ */
 export async function approveAll(page: Page): Promise<number> {
 	let lines = 0;
+	const confirm = page.getByRole('button', { name: /Confirm exact terms/ }).first();
+	const confirmIfAsked = async () => {
+		if (await confirm.isVisible({ timeout: 1500 }).catch(() => false)) await confirm.click();
+	};
 	for (let round = 0; round < 6; round++) {
+		const all = page.getByRole('button', { name: /^Accept all \d+/ }).first();
+		const group = page.getByRole('button', { name: /^Accept these \d+/ }).first();
 		const review = page.getByRole('button', { name: /^Review \d+ lines?/ }).first();
-		const confirm = page.getByRole('button', { name: /Confirm exact terms/ }).first();
 		const hold = page.getByRole('button', { name: /Hold to sign off \d+ lines?/ }).first();
-		if (await review.isVisible().catch(() => false)) {
+		if (await all.isVisible().catch(() => false)) {
+			lines += Number(((await all.innerText()).match(/Accept all (\d+)/) ?? [])[1] ?? 0);
+			await all.click();
+			await confirmIfAsked();
+		} else if (await group.isVisible().catch(() => false)) {
+			lines += Number(((await group.innerText()).match(/Accept these (\d+)/) ?? [])[1] ?? 0);
+			await group.click();
+			await confirmIfAsked();
+		} else if (await review.isVisible().catch(() => false)) {
 			lines += Number(((await review.innerText()).match(/(\d+)/) ?? [])[1] ?? 0);
 			await review.click();
 			await confirm.click();
@@ -90,6 +107,22 @@ export async function approveAll(page: Page): Promise<number> {
 		await page.waitForTimeout(1000);
 	}
 	return lines;
+}
+
+/**
+ * Orders what the plan allows now and waits for "Ordered · N lines". D29: the sticky bar's "Order K lines now";
+ * before: "Order N lines now" in the header, "Order the N lines you can now", or "Place order: N lines". Never the
+ * phone's "Order" zone tab (a bare "Order").
+ */
+export async function orderNow(page: Page) {
+	await page
+		.getByRole('button', { name: /^(Order \d+ lines? now|Order the|Place order)/ })
+		.first()
+		.click({ timeout: 30_000 });
+	await page
+		.getByText(/Ordered\s*·\s*\d+\s+lines?/)
+		.first()
+		.waitFor({ timeout: 60_000 });
 }
 
 /** Opens the first line's Why drawer: the line rows sit inside each dish's details, collapsed by default. */
