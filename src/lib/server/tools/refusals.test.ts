@@ -88,16 +88,20 @@ describe('refused agent calls in the op log', () => {
 		expect(r.ok ? 200 : r.status).toBe(403);
 
 		const chef = contextFor('chef', 'chef', 'ui', {}, ws);
+		/** An outside agent whose key lacks the order scope: its commit never reaches the handler. */
+		const noOrder = { ...outside, scopes: outside.scopes.filter((x) => x !== 'order') };
 		const error = { code: 'FORBIDDEN' as const, message: 'no', retryable: false };
 		expect(await recordRefusal(chef, 'approve', {}, error)).toBe(false);
+		// A commit the caller may make is already a failed CommitOrder in the log: not recorded twice.
+		expect(await recordRefusal(outside, 'commit_order', { planId: 'pl-b' }, error)).toBe(false);
 		const now = Date.now();
-		expect(await recordRefusal(outside, 'commit_order', { planId: 'pl-a' }, error, now)).toBe(true);
+		expect(await recordRefusal(noOrder, 'commit_order', { planId: 'pl-a' }, error, now)).toBe(true);
 		expect(
-			await recordRefusal(outside, 'commit_order', { planId: 'pl-a' }, error, now + 1000)
+			await recordRefusal(noOrder, 'commit_order', { planId: 'pl-a' }, error, now + 1000)
 		).toBe(false);
 		expect(
 			await recordRefusal(
-				outside,
+				noOrder,
 				'commit_order',
 				{ planId: 'pl-a' },
 				error,

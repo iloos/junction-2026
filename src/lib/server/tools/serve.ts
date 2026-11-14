@@ -119,7 +119,7 @@ export async function serveTool(
 	const scoped = ctx;
 	const out = await inWorkspace(scoped.workspaceId, () => run(name, scoped, rawInput, handlers));
 	// An agent refused by the gate is a trust event: it goes in the op log (refusals.ts).
-	if (!out.ok && isRecordedRefusal(ctx, out.error))
+	if (!out.ok && isRecordedRefusal(ctx, out.error, name))
 		await recordRefusal(ctx, name, rawInput, out.error);
 	hooks.onCall?.({
 		tool: name,

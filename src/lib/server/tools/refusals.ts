@@ -15,9 +15,15 @@ const lastWritten = (g.__mandateRefusals ??= new Map());
 
 const str = (v: unknown) => (typeof v === 'string' && v ? v : undefined);
 
-/** Whether this refusal is one the op log keeps. */
-export function isRecordedRefusal(ctx: CallContext, error: DomainError): boolean {
-	return error.code === 'FORBIDDEN' && RECORDED_CALLERS.has(ctx.actor.kind);
+/**
+ * Whether this refusal is one the op log keeps as a RecordRefusal. A commit the caller may make but the rules
+ * stopped (an approval missing) is already in the log as a failed CommitOrder, so it isn't recorded twice; a
+ * caller without the order scope never reaches that handler and is recorded here.
+ */
+export function isRecordedRefusal(ctx: CallContext, error: DomainError, tool?: string): boolean {
+	if (error.code !== 'FORBIDDEN' || !RECORDED_CALLERS.has(ctx.actor.kind)) return false;
+	if (tool === 'commit_order' && ctx.scopes.includes('order')) return false;
+	return true;
 }
 
 /**
@@ -31,7 +37,7 @@ export async function recordRefusal(
 	error: DomainError,
 	now = Date.now()
 ): Promise<boolean> {
-	if (!isRecordedRefusal(ctx, error)) return false;
+	if (!isRecordedRefusal(ctx, error, tool)) return false;
 	const i = (input ?? {}) as Record<string, unknown>;
 	const target = str(i.planId) ?? str(i.approvalId) ?? '';
 	const key = [ctx.workspaceId, ctx.runId, ctx.actor.kind, ctx.actor.id, tool, target].join('|');
