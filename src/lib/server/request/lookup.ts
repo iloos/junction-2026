@@ -6,6 +6,7 @@
 import type { NeedRequirements, Offer, Product } from '$lib/core/contracts';
 import { meets } from '$lib/core/mandate/meets';
 import { toLot } from '$lib/core/services/orders';
+import { num } from '$lib/ui/format';
 import { convert, type Conversion } from './convert';
 import { PRODUCTS } from './lexicon';
 import { askOf, clashWith } from './checks';
@@ -35,7 +36,27 @@ export interface Ranked {
 	score: number;
 	reasons: string[];
 	conversion: Conversion | null;
+	/** What the smallest order buys over the ask (2 = twice as much), when both are physical; null when unknown. */
+	overshoot?: number | null;
 }
+
+/** An order more than this many times the ask is held with a question (need_rounding_large), never placed silently. */
+export const ROUNDING_LIMIT = 2;
+
+/** The smallest order's physical amount over the ask (after lot rounding), when both are in kg or l. */
+export function overshoot(
+	item: Pick<ParsedItem, 'qty' | 'unit'>,
+	c: Conversion | null
+): number | null {
+	if (!c?.ok || !c.perSalesUnit || item.qty === null || item.qty <= 0) return null;
+	if (item.unit !== 'kg' && item.unit !== 'l') return null;
+	if (c.perSalesUnit.unit !== item.unit) return null;
+	return (c.salesQty * c.perSalesUnit.value) / item.qty;
+}
+
+/** How well the smallest order fits the ask, lower first: within a quarter is a fit; unknown sits between. */
+const fitRank = (o: number | null | undefined) =>
+	o === null || o === undefined ? 0.5 : o <= 1.25 ? 0 : Math.log2(o);
 
 export interface Rejected {
 	productId: string;
@@ -150,9 +171,19 @@ export function filterHits(
 			reasons.push(`can't convert: ${conversion.reason}`);
 		}
 		if (p.reliability !== undefined) score += p.reliability * 0.5;
-		ranked.push({ product: p, score: +score.toFixed(3), reasons, conversion });
+		const over = overshoot(item, conversion);
+		if (over !== null && over > 1.25)
+			reasons.push(`the smallest order is ${num(over, 1)}× what you asked`);
+		ranked.push({ product: p, score: +score.toFixed(3), reasons, conversion, overshoot: over });
 	}
-	ranked.sort((a, b) => b.score - a.score || (a.product.productId < b.product.productId ? -1 : 1));
+	// The candidate whose smallest order best fits the ask comes first; the scores (and the kitchen's weights) order
+	// the rest.
+	ranked.sort(
+		(a, b) =>
+			fitRank(a.overshoot) - fitRank(b.overshoot) ||
+			b.score - a.score ||
+			(a.product.productId < b.product.productId ? -1 : 1)
+	);
 	return { ranked, rejected };
 }
 

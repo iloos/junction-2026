@@ -15,7 +15,7 @@ import type {
 } from '$lib/core/contracts';
 import { sizeDirect } from '$lib/core/demand/sizing';
 import { addDays } from '$lib/core/scenario';
-import { day, money, num } from '$lib/ui/format';
+import { day, money, num, readableName } from '$lib/ui/format';
 import { canonicalJson, sha256Hex } from '$lib/core/hash';
 import type { CallContext, Clock, Llm, TaskStore, ToolHandlers } from '$lib/core/ports';
 import { taskForPlan } from './task';
@@ -50,6 +50,7 @@ import {
 	cutoffPassed,
 	filterHits,
 	requirementsOf,
+	ROUNDING_LIMIT,
 	SHORTLIST,
 	unpickable,
 	type Ranked
@@ -307,6 +308,19 @@ async function lookupItems(
 				break;
 			}
 		}
+		// The smallest order far over the ask (5 l for 250 ml) holds with a question, unless the chef already took it.
+		let roundingHold: string | null = null;
+		const pickedAt = pick ? views.indexOf(pick) : -1;
+		const over = pickedAt >= 0 ? (short[pickedAt].overshoot ?? null) : null;
+		const accepted = d.answers?.find((a) => a.item === p.item.id)?.acceptRounding === true;
+		if (pick && over !== null && over > ROUNDING_LIMIT && !accepted) {
+			const conv = pick.conversion as { salesQty: number };
+			const a = pick.amount;
+			roundingHold = `The smallest you can order of ${readableName(pick.name)} is ${salesUnitWords(conv.salesQty, pick.salesUnit)}${a ? ` = ${num(a.value, 3)} ${a.unit}` : ''} (${num(over, 1)}× what you asked). Order it, or pick another product?`;
+			pick.picked = false;
+			pick = null;
+			picked.delete(p.item.id);
+		}
 		const chosenAt = pick ? views.indexOf(pick) : -1;
 		const rankNote =
 			chosenAt >= 0
@@ -342,7 +356,30 @@ async function lookupItems(
 		const allClosed =
 			closed.length > 0 &&
 			!short.some((r) => !unpickable(offers.get(r.product.productId), r.conversion, now));
-		if (p.item.qty === null) {
+		if (roundingHold) {
+			question = roundingHold;
+			const options = short
+				.map((r, i) => ({ r, v: views[i] }))
+				.filter(
+					({ r, v }) => r.conversion?.ok && !unpickable(offers.get(v.productId), r.conversion, now)
+				)
+				.slice(0, 4)
+				.map(({ r }) => {
+					const c = r.conversion as { salesQty: number };
+					const amt = orderAmount(r.product, c.salesQty);
+					return {
+						label: `${salesUnitWords(c.salesQty, r.product.salesUnit)}${amt ? ` = ${num(amt.value, 3)} ${amt.unit}` : ''}`,
+						detail: `${readableName(r.product.nameFi)}${r.overshoot ? ` · ${num(r.overshoot, 1)}× what you asked` : ''}`,
+						answer: { item: idx, productId: r.product.productId, acceptRounding: true }
+					};
+				});
+			answer = {
+				kind: 'choice',
+				item: idx,
+				options,
+				alsoQty: { units: unitsFor(short.map((r) => r.product)) }
+			};
+		} else if (p.item.qty === null) {
 			// No exact amount: asked once per kind of the reading's shape (D20).
 			const a = p.item.amount;
 			if (a?.kind === 'max_available') {
@@ -465,6 +502,7 @@ async function lookupItems(
 				v.skipped = valioRules.find((r) => r.to === v.productId)!.reason;
 
 		return {
+			...(roundingHold ? { hold: 'need_rounding_large' as const } : {}),
 			item: p.item,
 			searches: p.searches,
 			shortlist: views,
@@ -930,6 +968,8 @@ export async function runRequest(text: string, d: RequestDeps): Promise<RequestR
 				const u = i.item.unit;
 				if (!p?.conversion?.ok || !p.amount || i.item.qty === null || (u !== 'kg' && u !== 'l'))
 					return [];
+				// The chef took an order far over the ask knowingly: not asked again.
+				if (d.answers?.some((x) => x.item === i.item.id && x.acceptRounding)) return [];
 				return [
 					{
 						item: i.item.id,

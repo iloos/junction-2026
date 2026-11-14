@@ -46,8 +46,8 @@ describe("checkpoint 'request.reading': the reading against the words", () => {
 		expect(req.kind === 'block' && req.reason).toMatch(/lactose-free, but no item carries it/);
 	});
 
-	it('the echo: 250 ml asked → 1 × 1 l passes; 250 × 1 l blocks', async () => {
-		const echo = (salesQty: number) =>
+	it('the echo: within 2× passes; far over the ask is need_rounding_large', async () => {
+		const echo = (salesQty: number, per: number) =>
 			reviewReading('250 ml milk', {
 				items: [],
 				echo: [
@@ -56,13 +56,17 @@ describe("checkpoint 'request.reading': the reading against the words", () => {
 						asked: { value: 0.25, unit: 'l' },
 						salesQty,
 						salesUnit: 'ST',
-						perUnit: { value: 1, unit: 'l' }
+						perUnit: { value: per, unit: 'l' }
 					}
 				]
 			});
-		expect((await echo(1)).kind).toBe('pass');
-		const v = await echo(250);
-		expect(v.kind === 'block' && v.reason).toMatch(/0\.25 l asked → 250 × 1 l = 250 l/);
+		expect((await echo(1, 0.5)).kind).toBe('pass');
+		const one = await echo(1, 1);
+		expect(one.kind === 'block' && one.reason).toMatch(
+			/^need_rounding_large: 0\.25 l asked → 1 l \(4×\)/
+		);
+		const many = await echo(250, 1);
+		expect(many.kind === 'block' && many.reason).toMatch(/250 l \(1,000×\)/);
 	});
 
 	it('a date or a cover count is not an amount; "50 on Friday" is no unit', async () => {

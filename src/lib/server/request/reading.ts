@@ -208,7 +208,12 @@ export const requestEchoCheckpoint: Checkpoint<{ text: string }, Reading, null> 
 		for (const e of output.echo ?? []) {
 			if (!e.perUnit || e.perUnit.unit !== e.asked.unit) continue;
 			const bought = e.salesQty * e.perUnit.value;
-			if (bought - e.asked.value > e.perUnit.value + 1e-9)
+			if (bought > e.asked.value * 2 + 1e-9)
+				out.push({
+					severity: 'block',
+					message: `need_rounding_large: ${num(e.asked.value, 3)} ${e.asked.unit} asked → ${num(bought, 3)} ${e.asked.unit} (${num(bought / e.asked.value, 1)}×). Nothing was placed; pick a smaller pack or confirm it.`
+				});
+			else if (bought - e.asked.value > e.perUnit.value + 1e-9)
 				out.push({
 					severity: 'block',
 					message: `${num(e.asked.value, 3)} ${e.asked.unit} asked → ${num(e.salesQty)} × ${num(e.perUnit.value, 3)} ${e.perUnit.unit} = ${num(bought, 3)} ${e.asked.unit}: more than one pack over. Nothing was placed; check the amount.`
