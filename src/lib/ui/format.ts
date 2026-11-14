@@ -76,3 +76,24 @@ export function humanDates(text: string): string {
 		(_, date: string, time?: string) => (time ? storyTime(`${date}${time}`) : day(date))
 	);
 }
+
+const KEEP_UPPER = new Set(['MSC', 'ASC', 'UHT', 'HK', 'FI', 'EU', 'XL', 'GN', 'BBQ', 'LTO']);
+/**
+ * A catalogue name as people read it: the normalised short name when the catalogue has one, else Valio's ALL-CAPS
+ * name in sentence case ("AIMO 2,5/1,25KG SINAPPISILLI MSC" → "Aimo 2,5/1,25kg sinappisilli MSC"). Mixed-case
+ * names are left as they are.
+ */
+export function readableName(raw: string, short?: string | null): string {
+	if (short) return short;
+	const letters = raw.replace(/[^A-Za-zÅÄÖåäö]/g, '');
+	const upper = letters.replace(/[^A-ZÅÄÖ]/g, '').length;
+	if (letters.length < 4 || upper / letters.length < 0.7) return raw;
+	return raw
+		.split(/(\s+)/)
+		.map((w, i) => {
+			if (KEEP_UPPER.has(w)) return w;
+			const lower = w.toLocaleLowerCase('fi');
+			return i === 0 ? lower.charAt(0).toLocaleUpperCase('fi') + lower.slice(1) : lower;
+		})
+		.join('');
+}
