@@ -1,26 +1,12 @@
 import { json } from '@sveltejs/kit';
 import type { ServerEvent } from '$lib/core/contracts';
-import {
-	catchUp,
-	isMemoryOnly,
-	startStress,
-	STRESS_WORKSPACE,
-	subscribe,
-	SYNTH_WORKSPACE
-} from '$lib/server/bus';
-import { JUDGES_WORKSPACE } from '$lib/server/auth';
+import { catchUp, isMemoryOnly, startStress, STRESS_WORKSPACE, subscribe } from '$lib/server/bus';
 import { currentRun, currentRunStartedAt } from '$lib/server/demo/run';
 import { DEMO_WORKSPACE, ensureRunLoaded } from '$lib/server/demo/reset';
-import { ownWorkspace } from '$lib/server/demo/visitor';
+import { mayRead, ownWorkspace } from '$lib/server/demo/visitor';
 import { env } from '$env/dynamic/private';
 import { dev } from '$app/environment';
 import type { RequestHandler } from './$types';
-
-/**
- * Production serves the public rooms, and a visitor sandbox only to the browser whose signed cookie names it
- * (D9): another visitor's id in the query reads nothing.
- */
-const PUBLIC_WORKSPACES = new Set([DEMO_WORKSPACE, JUDGES_WORKSPACE, SYNTH_WORKSPACE]);
 
 /** Catch-up reads pages of PAGE events until a short page, at most MAX_PAGES (then live takes over). */
 const PAGE = 1000;
@@ -31,8 +17,8 @@ const RUN_CHECK_MS = 3_000;
 
 /**
  * Live op stream (D6): subscribe first, then catch up from `after`, then deliver live, deduplicated by seq.
- * Read-only; without `workspace` it streams the browser's own sandbox (or the stage when it has none).
- * - `GET /api/events?workspace=ws-demo&after=42` → text/event-stream. Each sequenced event has `id: <seq>`,
+ * Read-only; without `ws` it streams the browser's own sandbox (or the stage when it has none).
+ * - `GET /api/events?ws=ws-demo&after=42` → text/event-stream. Each sequenced event has `id: <seq>`,
  *   so EventSource's automatic reconnect resumes from Last-Event-ID.
  * - `…&mode=poll` → JSON `{ events, last }` for clients that fall back to polling.
  */
@@ -41,10 +27,9 @@ const highestSeq = (events: ServerEvent[], from: number) =>
 	events.reduce((m, e) => ('seq' in e ? Math.max(m, e.seq) : m), from);
 
 export const GET: RequestHandler = async ({ url, request, cookies }) => {
-	const own = ownWorkspace(cookies, env);
-	const workspaceId = url.searchParams.get('workspace') || own || DEMO_WORKSPACE;
-	const readable = PUBLIC_WORKSPACES.has(workspaceId) || workspaceId === own;
-	if (!dev && !readable)
+	// Production: the public rooms, and a sandbox only to its own browser (D9).
+	const workspaceId = url.searchParams.get('ws') || ownWorkspace(cookies, env) || DEMO_WORKSPACE;
+	if (!dev && !mayRead(workspaceId, cookies, env))
 		return json(
 			{ error: { code: 'FORBIDDEN', message: 'unknown workspace', retryable: false } },
 			{ status: 403 }

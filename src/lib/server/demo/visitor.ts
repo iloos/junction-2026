@@ -15,6 +15,7 @@ import type { Cookies } from '@sveltejs/kit';
 import { JUDGES_WORKSPACE } from '$lib/server/auth';
 import { isPresenter } from './presenter';
 import { ensureRunLoaded, DEMO_WORKSPACE } from './reset';
+import { SYNTH_WORKSPACE } from '$lib/server/bus';
 import { newVisitorWorkspace, readVisitor, signVisitor } from './visitor-id';
 
 type Env = Record<string, string | undefined>;
@@ -53,6 +54,14 @@ function roomFrom(value: string | null | undefined, presenter: boolean): Room | 
 /** This browser's own sandbox from its signed cookie, without minting one (for read-only checks). */
 export function ownWorkspace(cookies: Cookies, env: Env): string | null {
 	return readVisitor(cookies.get(VISITOR_COOKIE), env);
+}
+
+/** Rooms anyone may watch: the stage, the shared room and the simulated run. */
+const PUBLIC_ROOMS = new Set<string>([DEMO_WORKSPACE, JUDGES_WORKSPACE, SYNTH_WORKSPACE]);
+
+/** Whether this browser may read a workspace's ops and plan views: a public room, or its own sandbox. */
+export function mayRead(workspaceId: string, cookies: Cookies, env: Env): boolean {
+	return PUBLIC_ROOMS.has(workspaceId) || workspaceId === ownWorkspace(cookies, env);
 }
 
 /**

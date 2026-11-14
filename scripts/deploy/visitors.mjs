@@ -64,7 +64,7 @@ await Promise.all(
 			/* reported as an error above */
 		}
 		note('ops', await go('/ops'));
-		note('events', await go(`/api/events?workspace=${ws}&mode=poll`));
+		note('events', await go(`/api/events?ws=${ws}&mode=poll`));
 	})
 );
 loadDone = true;

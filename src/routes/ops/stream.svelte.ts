@@ -88,7 +88,7 @@ export class OpsStream {
 	}
 
 	private url(extra = '') {
-		return `/api/events?workspace=${encodeURIComponent(this.workspaceId)}&after=${this.last}${this.extraQuery}${extra}`;
+		return `/api/events?ws=${encodeURIComponent(this.workspaceId)}&after=${this.last}${this.extraQuery}${extra}`;
 	}
 
 	private openSse(): void {

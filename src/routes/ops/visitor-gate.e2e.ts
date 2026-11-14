@@ -37,7 +37,7 @@ async function queueCount(page: Page): Promise<number> {
 }
 
 const poll = (ctx: BrowserContext, ws: string) =>
-	ctx.request.get(`${BASE}/api/events?workspace=${ws}&mode=poll`);
+	ctx.request.get(`${BASE}/api/events?ws=${ws}&mode=poll`);
 
 test('two browsers, an outside agent and a stranger with a link stay in their own sandboxes', async ({
 	browser

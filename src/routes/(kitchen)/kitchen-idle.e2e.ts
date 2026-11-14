@@ -9,7 +9,7 @@ const BASE = process.env.KITCHEN_URL ?? 'http://localhost:4173';
 async function lastSeq(request: import('@playwright/test').APIRequestContext, ws: string) {
 	let after = 0;
 	for (;;) {
-		const r = await request.get(`${BASE}/api/events?workspace=${ws}&mode=poll&after=${after}`);
+		const r = await request.get(`${BASE}/api/events?ws=${ws}&mode=poll&after=${after}`);
 		const body = (await r.json()) as { events: unknown[]; last: number };
 		if (body.last === after) return after;
 		after = body.last;

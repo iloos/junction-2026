@@ -21,9 +21,7 @@ import { applyExpectFail } from '../../../../evals/check';
 import type { CheckResult } from '../../../../evals/types';
 import { createDbPorts, loadSeedKitchens } from '../store/db-ports';
 
-/** F12-ops: Ops counts a need as covered only from eligible or committed lines, so needs held for the chef read as
- * uncovered (planned 4/13 vs 7/13; rescued 4/13 vs 10/13). Fix: Ops reads plan.view.fulfilment. */
-const EXPECT_FAIL: Record<string, string[]> = { 'F12-ops': ['ops.planned', 'ops.rescued'] };
+const EXPECT_FAIL: Record<string, string[]> = {};
 
 const ctx = (kind: keyof typeof SCOPES_BY_ACTOR, env: { workspaceId: string; runId: string }) =>
 	({
