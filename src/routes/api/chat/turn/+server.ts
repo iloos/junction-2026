@@ -5,6 +5,7 @@ import { createLlmRouter } from '$lib/server/adapters/llm/router';
 import { contextFor } from '$lib/server/auth';
 import { readTurnBody } from '$lib/server/chat/body';
 import { runChatTurn } from '$lib/server/chat/turn';
+import { acceptMenuAsChef } from '$lib/server/menu/server';
 import { visitorWorkspace } from '$lib/server/demo/visitor';
 import { onCurrentRun } from '$lib/server/demo/reset';
 import { withCallScope } from '$lib/server/scope';
@@ -82,7 +83,10 @@ export const POST: RequestHandler = async (event) => {
 						kitchen,
 						today,
 						env,
-						models: modelsFor()
+						models: modelsFor(),
+						// The chef's "plan it" after the menu card is their review of that revision (D13).
+						acceptMenu: (id, revision) =>
+							acceptMenuAsChef({ env, workspaceId: v.workspaceId, id, revision })
 					}))
 						push(e);
 				} catch (e) {
