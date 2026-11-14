@@ -105,4 +105,6 @@ D8 preferred the seed's recipe over a product of unknown supply only when every 
 
 **Why:** today the demo lands on one hard-coded Christmas buffet, and request, chat and Kitchen are three doors to one job. One path from who-you-are, to what-you-need, to the basket is the clean shape the user asked for.
 
-**Reopen if:** the merge isn't green and deployed by Sun 04:00. Then ship the picker plus the chat-first home, and keep /request linked from the chat cards.
+**Staged (user, same night):** stage 1 lands the current request and chat rework as they are (B: date control, edits, dish path, over-limit, personalisation on /request, with `interpretDish` and the pipeline exposed as server functions; E: chat bugs, calling `interpretDish`), plus the establishment picker and joinable kitchens. Stage 2, the merge (cards in chat, the home's three states, /request redirects), starts once B's and E's stage-1 work is on main. Ops and the landing page proceed in parallel.
+
+**Reopen if:** stage 2 isn't green and deployed by Sun 04:00. Then ship the picker plus the chat-first home, and keep /request linked from the chat cards.

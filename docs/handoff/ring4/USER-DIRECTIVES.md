@@ -2,7 +2,7 @@
 
 _Lead-kept. Every steer the user gave since Ring 4, with its owner and state. `[x]` merged, `[~]` in progress, `[ ]` queued, `[p]` pitch only, `[!]` waiting on the user. Update a row when its state changes; add a new row for each new steer._
 
-## The shape (D15, full merge, balanced)
+## The shape (D15, staged: stage 1 lands B's and E's current rework; stage 2 merges)
 | # | Directive | Owner | State |
 |---|---|---|---|
 | S1 | Join as an establishment: pick a seeded kitchen or describe yours (notes stay editable and change no rule) | c3 (picker), 0d (all 7 joinable) | [ ] |
