@@ -37,3 +37,4 @@ History, kept for the record. Nothing here is current: the live docs are [STATUS
 | research/menu-spike.md | Context.dev menu scraping spike (Fri 22:30) | Not used by the app; venue data in research/venues.md |
 | foundations/modal.md | Modal batch/swarm plan | Parked by D7 |
 | foundations/s-pankki.md | S-Pankki brief and dataset | Parked by D7 |
+| STACK-scaffold.md | Fri-night scaffold recipe (Kit 2 via `sv@0.17.1`) | Scaffold done; [STACK.md](../STACK.md) |
