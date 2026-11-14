@@ -18,6 +18,10 @@
 	import StateChip from '$lib/ui/StateChip.svelte';
 	import GramsStepper from '$lib/ui/GramsStepper.svelte';
 	import WhyDrawer from '$lib/ui/WhyDrawer.svelte';
+	import CoverageBar from '$lib/ui/CoverageBar.svelte';
+	import CoverageLegend from '$lib/ui/CoverageLegend.svelte';
+	import { lineBasis } from '$lib/ui/coverage';
+	import { borrowed } from '$lib/kitchen/fixture-view';
 	import { day, fixed, money, moneyDelta, num, storyTime } from '$lib/ui/format';
 	import { SCENARIO } from '$lib/core/scenario';
 	import { reasonShort } from '$lib/ui/reasons';
@@ -165,6 +169,9 @@
 		}
 		return { stock, terminal };
 	});
+
+	/** Server-derived coverage per need (Plan.view.fulfilment); absent on plans without a read model. */
+	const coverage = $derived(new Map((plan?.view?.fulfilment ?? []).map((f) => [f.needId, f])));
 
 	function linesOf(d: DishView): Line[] {
 		return d.lineIds.map((id) => k.lineById.get(id)).filter((l): l is Line => !!l);
@@ -459,6 +466,9 @@
 						Change grams per guest and the order recomputes: need, lots, price, mandate.
 					</p>
 				</div>
+				{#if coverage.size}
+					<div class="mt-2"><CoverageLegend /></div>
+				{/if}
 				<div class="mt-2 overflow-hidden rounded-lg border border-rule bg-sheet">
 					<div
 						class="hidden grid-cols-[minmax(150px,0.7fr)_minmax(210px,0.9fr)_minmax(0,3fr)] gap-x-4 border-b border-rule bg-well px-4 py-2 text-[11.5px] font-medium text-ink-3 lg:grid"
@@ -522,6 +532,7 @@
 									{#each lines as l (l.id)}
 										{@const rejected = l.state === 'rejected' || l.state === 'unorderable'}
 										{@const sub = !!l.substituteFor}
+										{@const b = lineBasis(l.qty, l.view ?? borrowed.get(l.id))}
 										<li
 											class="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3 gap-y-1 rounded-[5px] lg:grid-cols-[minmax(0,1fr)_84px_136px_28px] {k.flash.has(
 												l.id
@@ -543,11 +554,17 @@
 													>
 												</p>
 												<p class="mono text-[11.5px] leading-snug text-ink-3">
-													<span class={rejected ? '' : 'text-ink-2'}
-														>{num(l.qty.value)} {l.qty.unit}</span
-													>
-													{#if l.qty.rounding && !rejected}<span class="font-sans">
-															· {l.qty.rounding}</span
+													<span class={rejected ? '' : 'text-ink'}>{b.buys}</span>
+													{#if b.physical && !rejected}<span class="text-ink-2">
+															{b.physical}</span
+														>{/if}
+													{#if b.unitPrice && !rejected}<span class="block"
+															>{b.comparison
+																? `${b.unitPrice} · ${b.comparison}`
+																: b.unitPrice}</span
+														>{/if}
+													{#if l.qty.rounding && !rejected}<span class="block font-sans"
+															>{l.qty.rounding}</span
 														>{/if}
 													{#if rejected}<span class="font-sans">
 															· {l.productId} · not ordered</span
@@ -579,6 +596,15 @@
 									{/each}
 								</ul>
 							</div>
+							{#if coverage.get(d.needId)}
+								<div
+									class="px-4 pb-3 lg:grid lg:grid-cols-[minmax(150px,0.7fr)_minmax(210px,0.9fr)_minmax(0,3fr)] lg:gap-x-4"
+								>
+									<div class="lg:col-span-2 lg:col-start-2">
+										<CoverageBar f={coverage.get(d.needId)!} />
+									</div>
+								</div>
+							{/if}
 							{#if d.rescue}
 								<div class="px-4 pb-3">
 									<button
