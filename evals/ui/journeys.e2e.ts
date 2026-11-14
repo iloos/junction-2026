@@ -2,7 +2,7 @@ import { expect, test, type APIRequestContext, type Page } from '@playwright/tes
 import { execSync } from 'node:child_process';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { approveAll, BASE, chat, openWhy, planBuffet, request } from './flow';
+import { approveAll, BASE, chat, openWhy, planBuffet, receipt, request } from './flow';
 
 /**
  * The claims journeys: every demo beat and every "say it" row in docs/CLAIMS.md that needs a prod observation, run
@@ -98,13 +98,9 @@ test('lines inside the mandate are ordered alone, before any decision', async ({
 	const n = Number(label.match(/Order the (\d+) lines/)?.[1] ?? 0);
 	expect.soft(n, `the button: "${label}"`).toBeGreaterThan(0);
 	await can.click();
-	await page
-		.getByText(/receipt rc-/)
-		.first()
-		.waitFor({ timeout: 30_000 })
-		.catch(() => undefined);
+	const rc = await receipt(page);
 	await page.waitForTimeout(2000);
-	const after = await record(page, 'b3-after', `button: ${label}`);
+	const after = await record(page, 'b3-after', `button: ${label}; receipt ${rc}`);
 	const snap = (await (await page.request.get(`${BASE}/kitchen-api/snapshot`)).json()) as {
 		plan?: { lines: { productId: string; state: string; tier?: string }[] };
 	};
@@ -128,14 +124,10 @@ test('approve, order, one receipt; Ops shows the same case by cause', async ({ p
 		.getByRole('button', { name: /Place order|Order the \d+ lines/ })
 		.first()
 		.click();
-	await page
-		.getByText(/receipt rc-/)
-		.first()
-		.waitFor({ timeout: 30_000 })
-		.catch(() => undefined);
+	const rc4 = await receipt(page);
 	await page.waitForTimeout(2000);
 	const t = await record(page, 'b4-ordered');
-	expect.soft(t).toMatch(/receipt rc-[a-z0-9]+/);
+	expect.soft(rc4, `a receipt on the page: ${t.slice(0, 200)}`).toMatch(/^rc-[a-z0-9]+$/);
 	await ops.reload();
 	await ops.waitForTimeout(5000);
 	await record(ops, 'b4-ops-after');
