@@ -3,9 +3,11 @@
 //   node scripts/merge-gate.mjs            all steps
 //   node scripts/merge-gate.mjs --from eval   resume at a step after fixing a red one
 //   node scripts/merge-gate.mjs --only lint,eval
+//   node scripts/merge-gate.mjs --full          also the Playwright e2e specs (before a tag)
 // No network: LLM_PROVIDER is forced to fixture so a gate run never spends or flakes on an API.
 // The test steps hold a machine-wide lock: parallel gates in several worktrees starve PGlite of memory.
 import { spawnSync } from 'node:child_process';
+import { randomBytes } from 'node:crypto';
 import { closeSync, openSync, readFileSync, rmSync, writeSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -14,10 +16,32 @@ const STEPS = [
 	{ name: 'check', cmd: ['pnpm', 'check'] },
 	{ name: 'lint', cmd: ['pnpm', 'lint'] },
 	{ name: 'evals:self', cmd: ['node', '--test', 'evals/check.test.ts'] },
+	// check passes on code that still fails to bundle (adapter-node, SSR imports): build it.
+	{ name: 'build', cmd: ['pnpm', 'build'], heavy: true },
 	// PGlite under load times out now and then: a red test:unit is rerun once and reported as flaky if it passes.
 	{ name: 'test:unit', cmd: ['pnpm', 'test:unit', '--run'], retry: 1, heavy: true },
 	{ name: 'eval', cmd: ['pnpm', 'eval'], heavy: true },
-	{ name: 'eval:agent', cmd: ['pnpm', 'eval:agent'], heavy: true }
+	{ name: 'eval:agent', cmd: ['pnpm', 'eval:agent'], heavy: true },
+	// --full only: Playwright builds and previews the app itself (playwright.config.ts). Preview reads the worktree's
+	// .env, so DATABASE_URL is blanked (PGlite, never Aiven) and judge keys get a throwaway secret.
+	{
+		name: 'e2e',
+		cmd: [
+			'pnpm',
+			'exec',
+			'playwright',
+			'install',
+			'chromium',
+			'&&',
+			'pnpm',
+			'exec',
+			'playwright',
+			'test'
+		],
+		heavy: true,
+		full: true,
+		env: { DATABASE_URL: '', JUDGE_KEY_SECRET: randomBytes(32).toString('base64url') }
+	}
 ];
 
 const args = process.argv.slice(2);
@@ -28,6 +52,7 @@ const flag = (k) => {
 const names = STEPS.map((s) => s.name);
 const from = flag('--from');
 const only = flag('--only')?.split(',');
+const full = args.includes('--full');
 for (const n of [from, ...(only ?? [])].filter(Boolean)) {
 	if (!names.includes(n)) {
 		console.error(`merge-gate: unknown step "${n}"; steps are ${names.join(', ')}`);
@@ -35,7 +60,7 @@ for (const n of [from, ...(only ?? [])].filter(Boolean)) {
 	}
 }
 const steps = STEPS.filter((s, i) =>
-	only ? only.includes(s.name) : from ? i >= names.indexOf(from) : true
+	only ? only.includes(s.name) : (full || !s.full) && (from ? i >= names.indexOf(from) : true)
 );
 
 // --- machine-wide lock for the test steps -------------------------------------------------------
@@ -107,7 +132,9 @@ for (const s of steps) {
 	if (s.heavy && !holding) acquireLock();
 	console.log(`\n=== merge-gate: ${s.name} (${s.cmd.join(' ')}) ===`);
 	const t0 = Date.now();
-	const run = () => spawnSync(s.cmd.join(' '), { stdio: 'inherit', shell: true, env }).status === 0;
+	const run = () =>
+		spawnSync(s.cmd.join(' '), { stdio: 'inherit', shell: true, env: { ...env, ...s.env } })
+			.status === 0;
 	let ok = run();
 	let flaky = false;
 	for (let n = 0; !ok && n < (s.retry ?? 0); n++) {
