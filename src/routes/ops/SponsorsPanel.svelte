@@ -26,7 +26,11 @@
 		contextdev: 'Context.dev',
 		featherless: 'Featherless',
 		nemotron: 'Nemotron',
-		tool: 'Our tools'
+		tool: 'Our tools',
+		// The Decide port names its fallback as the source: no model was called for these.
+		rules: 'Decisions',
+		replay: 'Decisions',
+		decisions: 'Decisions'
 	};
 
 	let rows = $state.raw<Summary[]>([]);
@@ -40,7 +44,7 @@
 			);
 			if (!r.ok) throw new Error(String(r.status));
 			const b = (await r.json()) as { sources?: Summary[]; persisted?: boolean };
-			rows = (b.sources ?? []).filter((s) => s.byMode);
+			rows = mergeDecisions((b.sources ?? []).filter((s) => s.byMode));
 			phase = b.persisted === false ? 'failed' : rows.length ? 'ok' : 'none';
 		} catch {
 			phase = 'failed';
@@ -52,6 +56,30 @@
 		return () => clearInterval(t);
 	});
 
+	/** The Decide port's two fallbacks (rules, replay) are one service: one row. */
+	function mergeDecisions(list: Summary[]): Summary[] {
+		const d = list.filter((s) => s.source === 'rules' || s.source === 'replay');
+		if (d.length < 2) return list;
+		const sum = (k: keyof Summary['byMode']) => d.reduce((n, s) => n + s.byMode[k], 0);
+		const merged: Summary = {
+			source: 'decisions',
+			count: d.reduce((n, s) => n + s.count, 0),
+			p50Ms: null,
+			p95Ms: null,
+			errorRate: 0,
+			liveOk: 0,
+			byMode: {
+				live: sum('live'),
+				cache: sum('cache'),
+				replay: d.find((s) => s.source === 'replay')!.count,
+				fixture: 0,
+				none: d.find((s) => s.source === 'rules')!.count
+			}
+		};
+		return [...list.filter((s) => !d.includes(s)), merged].sort((a, b) => b.count - a.count);
+	}
+	/** Latency only means something for calls that went out: live calls and our own tools. */
+	const timed = (s: Summary) => s.source === 'tool' || s.byMode.live > 0;
 	const ms = (v: number | null) =>
 		v == null ? '–' : v < 1000 ? `${v} ms` : `${(v / 1000).toFixed(1)} s`;
 	/** The one sentence per service: who answered. */
@@ -60,6 +88,15 @@
 		const stored = m.cache + m.replay;
 		const parts: string[] = [];
 		if (s.source === 'tool') return { text: `${s.count} tool calls`, tone: 'ok' };
+		if (s.source === 'rules')
+			return { text: `${s.count} decided by rules, no model called`, tone: 'warn' };
+		if (s.source === 'decisions')
+			return {
+				text: `${s.byMode.none} decided by rules, ${s.byMode.replay} from recorded model answers; no model called`,
+				tone: 'warn'
+			};
+		if (s.source === 'replay')
+			return { text: `${s.count} from recorded model answers`, tone: 'warn' };
 		if (s.liveOk) parts.push(`${s.liveOk} answered live`);
 		if (stored) parts.push(`${stored} from stored answers`);
 		if (m.fixture) parts.push(`${m.fixture} from test data`);
@@ -89,7 +126,9 @@
 					<span class="dot {w.tone}" aria-hidden="true"></span>
 					<span class="name">{NAME[s.source] ?? s.source}</span>
 					<span class="text">{w.text}</span>
-					<span class="num" title="median, 95th percentile">{ms(s.p50Ms)} · {ms(s.p95Ms)}</span>
+					<span class="num" title="median, 95th percentile"
+						>{timed(s) ? `${ms(s.p50Ms)} · ${ms(s.p95Ms)}` : ''}</span
+					>
 				</li>
 			{/each}
 		</ul>
@@ -138,6 +177,7 @@
 		font-weight: 600;
 	}
 	.num {
+		white-space: nowrap;
 		font-variant-numeric: tabular-nums;
 		text-align: right;
 		color: var(--muted);
@@ -150,6 +190,10 @@
 	@media (max-width: 480px) {
 		li {
 			grid-template-columns: 8px 1fr auto;
+		}
+		.num {
+			grid-row: 1;
+			grid-column: 3;
 		}
 		.text {
 			grid-column: 2 / -1;
