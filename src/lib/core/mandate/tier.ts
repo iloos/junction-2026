@@ -92,6 +92,22 @@ const tierOf = (r: LineReason): Tier =>
 const maxTier = (rs: LineReason[]): Tier =>
 	rs.map(tierOf).reduce<Tier>((a, b) => (RANK[b] > RANK[a] ? b : a), 'act');
 
+/**
+ * Products this kitchen counts as known for the never-delegate `new_sku` rule: anything it committed in this run plus
+ * its standing-order baseline. Without the baseline a fresh run would treat the normal week's own products as new.
+ */
+export function orderedBefore(
+	state: { orders: Record<string, { kitchenId: string; lines: { productId: string }[] }> },
+	kitchen: Pick<Kitchen, 'id' | 'usualProducts'>
+): Set<string> {
+	return new Set([
+		...(kitchen.usualProducts ?? []),
+		...Object.values(state.orders)
+			.filter((o) => o.kitchenId === kitchen.id)
+			.flatMap((o) => o.lines.map((l) => l.productId))
+	]);
+}
+
 /** Products under a recall notice in this workspace run. */
 export function recalledProducts(state: {
 	anomalies: Record<string, { kind: string; productId?: string }>;

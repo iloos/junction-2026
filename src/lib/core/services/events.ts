@@ -32,6 +32,7 @@ import {
 	isoWeek,
 	tierLines,
 	type DraftLine,
+	orderedBefore,
 	recalledProducts
 } from '../mandate/tier';
 import type { CallContext, Ports, Tx } from '../ports';
@@ -106,13 +107,6 @@ async function kitchenOf(ports: Ports, ctx: CallContext, id: string): Promise<Ki
 	return (await ports.store.kitchens(ctx.workspaceId)).find((k) => k.id === id) ?? null;
 }
 
-const orderedBefore = (state: WorkspaceState, kitchenId: string) =>
-	new Set(
-		Object.values(state.orders)
-			.filter((o) => o.kitchenId === kitchenId)
-			.flatMap((o) => o.lines.map((l) => l.productId))
-	);
-
 /** Catalogue data a quote needs, fetched before the transaction (never inside it: D6, review triage #1). */
 export interface Prefetched {
 	offers: Offer[];
@@ -159,7 +153,7 @@ export async function requote(
 		weekSpentCents: spent,
 		actor: ctx.actor.kind,
 		createdBy: plan.createdBy.kind,
-		orderedBefore: orderedBefore(state, kitchen.id),
+		orderedBefore: orderedBefore(state, kitchen),
 		recalled: recalledProducts(state),
 		committed: plan.lines.filter((l) => l.state === 'committed')
 	});

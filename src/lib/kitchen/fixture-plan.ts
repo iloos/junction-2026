@@ -14,7 +14,7 @@ import type {
 	Tier,
 	Weights
 } from '$lib/core/contracts';
-import { CACHED_AT, CACHE_REF, SEED, product, type ProductFact } from './catalog';
+import { CACHED_AT, CACHE_REF, KITCHENS, SEED, product, type ProductFact } from './catalog';
 
 /**
  * Pure builder: the Christmas buffet seed + a kitchen's rules + the chef's edits → a contract `Plan`
@@ -357,16 +357,28 @@ const DISHES: DishDef[] = [
 	}
 ];
 
-/** A normal week at this hotel for the SKUs the event also uses (team estimate, scenario). */
+/** Usual weekly quantities for the hotel's standing-order products (team estimate, scenario). */
+const USUAL_QTY: Record<string, { qty: number; unit: string }> = {
+	'462150': { qty: 10, unit: 'KG' },
+	'475214': { qty: 3, unit: 'ST' },
+	'464201': { qty: 36, unit: 'ST' },
+	'466964': { qty: 1, unit: 'BAG' }
+};
+
+/**
+ * A normal week at this hotel for the SKUs the event also uses. Which products are usual comes from the kitchen
+ * seed's `usualProducts`, the same baseline the mandate's `new_sku` rule reads, so the view and the rule agree.
+ */
 export const NORMAL_WEEK = {
 	cents: 312_000,
 	lines: 46,
-	usual: {
-		'462150': { qty: 10, unit: 'KG' },
-		'475214': { qty: 3, unit: 'ST' },
-		'464201': { qty: 36, unit: 'ST' },
-		'466964': { qty: 1, unit: 'BAG' }
-	} as Record<string, { qty: number; unit: string }>
+	usual: Object.fromEntries(
+		(KITCHENS.find((k) => k.id === 'k-hotel')?.usualProducts ?? []).map((id) => {
+			const q = USUAL_QTY[id];
+			if (!q) throw new Error(`usual product ${id} has no weekly quantity`);
+			return [id, q];
+		})
+	) as Record<string, { qty: number; unit: string }>
 };
 
 const TART_G = 60;

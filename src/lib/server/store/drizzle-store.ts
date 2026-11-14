@@ -233,7 +233,15 @@ export function createDrizzleStore(
 				await db
 					.insert(schema.kitchens)
 					.values({ workspaceId, id: k.id, mandateVersion: k.mandate.version, doc: k })
-					.onConflictDoNothing();
+					// An existing kitchen keeps its doc (mandate edits included); only a missing standing-order
+					// baseline is filled in from the seed, so workspaces created before it existed get it too.
+					.onConflictDoUpdate({
+						target: [schema.kitchens.workspaceId, schema.kitchens.id],
+						set: {
+							doc: sql`jsonb_set(${schema.kitchens.doc}, '{usualProducts}', excluded.doc -> 'usualProducts')`
+						},
+						setWhere: sql`${schema.kitchens.doc} -> 'usualProducts' is null and excluded.doc -> 'usualProducts' is not null`
+					});
 		},
 
 		async transact(workspaceId, fn) {
