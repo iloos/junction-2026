@@ -4,6 +4,8 @@
  * Thursday, the Christmas buffet on Saturday. Pure: no Svelte, no DOM, no I/O, no reading the wall clock.
  * Terminal (supplier) lead times are not enforced by core, so the demo has one cut-off.
  */
+import type { Availability } from './contracts';
+
 export const SCENARIO = {
 	/** Simulated "now" when a run starts: Monday evening, when the chef usually redoes the order. */
 	start: '2026-12-07T21:40:00+02:00',
@@ -30,4 +32,53 @@ export function scenarioClock(anchorWallMs: number, start: string = SCENARIO.sta
 /** Helsinki calendar date (YYYY-MM-DD) of a scenario instant. */
 export function scenarioDate(d: Date): string {
 	return new Intl.DateTimeFormat('en-CA', { timeZone: SCENARIO.timeZone }).format(d);
+}
+
+/** Days before delivery that Valio's order closes, by logistic model (Stock from the warehouse, Terminal via supplier). */
+export const LEAD_DAYS = { Stock: 1, Terminal: 3 } as const;
+const DEFAULT_CLOSE = '17:00:00';
+
+/** UTC offset of Helsinki on a calendar date, as "+02:00". */
+function helsinkiOffset(date: string): string {
+	const name = new Intl.DateTimeFormat('en-US', {
+		timeZone: SCENARIO.timeZone,
+		timeZoneName: 'longOffset'
+	})
+		.formatToParts(new Date(`${date}T12:00:00Z`))
+		.find((p) => p.type === 'timeZoneName')?.value;
+	return name?.replace('GMT', '') || '+02:00';
+}
+
+function minusDays(date: string, days: number): string {
+	const d = new Date(`${date}T00:00:00Z`);
+	d.setUTCDate(d.getUTCDate() - days);
+	return d.toISOString().slice(0, 10);
+}
+
+/**
+ * Cached Valio availability carries the dates of the day it was fetched (November), not the scenario's. Moved
+ * onto the delivery date: available on deliverBy, ordering closes LEAD_DAYS before it at Valio's own time of day.
+ * The facts (kind, amount, model) stay as Valio gave them, `raw` keeps the original dates, and the provenance says
+ * the dates are the scenario's.
+ */
+export function onScenario(a: Availability, deliverBy: string): Availability {
+	if (!a.availableDate && !a.closingTime) return a;
+	const lead = LEAD_DAYS[a.logisticModel ?? 'Stock'];
+	const day = minusDays(deliverBy, lead);
+	const time = a.closingTime?.slice(11, 19) || DEFAULT_CLOSE;
+	const was = [
+		a.availableDate && `available ${a.availableDate}`,
+		a.closingTime && `cut-off ${a.closingTime}`
+	]
+		.filter(Boolean)
+		.join(', ');
+	return {
+		...a,
+		availableDate: a.availableDate ? deliverBy : null,
+		closingTime: `${day}T${time}${helsinkiOffset(day)}`,
+		provenance: {
+			...a.provenance,
+			note: `scenario dates: D-${lead} cut-off for ${a.logisticModel ?? 'Stock'} (Valio cache had ${was})`
+		}
+	};
 }
