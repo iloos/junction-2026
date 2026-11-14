@@ -1,6 +1,6 @@
 {
 	"$comment": "Labelled substitute set for retrieval recall@12 (Track B, F18). Each target is treated as out of stock; `acceptable` lists catalogue products a chef would accept for the target's normal use (grade same | close | functional), `nearMisses` look similar but must not be accepted. Availability and price are ignored. Labelled 14 Nov 2026 by LLM agents (Claude Sonnet) from catalogue names under a written rubric, spot-checked by session 1f; not chef-reviewed. Product ids reference the Valio catalogue; names are kept only for readability.",
-	"$kindNote": "kind, with 8d's definition (14 Nov): 1 pack (same base, brand, form and temperature; only size or pack differs) · 2 brand (same base, form and temperature, other brand) · 3 form (same base, other form or temperature: frozen, sliced, cooked, smoked, raw, lactose-free…) · 4 functional (a different base that a source endorses for the role; a grader's 'acceptable' here is that endorsement). Same base is decided by the name (brand, sizes, origin and form words removed; a compound shares its head), never by grade. Derived by session 91 from the grade (functional → 4; close → 3 when the base matches by name, else 4; same → 1 when brand and name match, else 2), independently of core's basekey.ts; kind-1 rows hand-checked.",
+	"$kindNote": "kind, with 8d's definition (14 Nov): 1 pack (same base, brand, form and temperature; only size or pack differs) · 2 brand (same base, form and temperature, other brand) · 3 form (same base, other form or temperature: frozen, sliced, cooked, smoked, raw, lactose-free…) · 4 functional (a different base that a source endorses for the role; a grader's 'acceptable' here is that endorsement). Same base is decided by the name (brand, sizes, origin and form words removed; a compound shares its head), never by grade. Derived by session 91 from the grade (functional → 4; close → 3 unless the base itself differs (judged by hand: rosolli → beetroot salad, onion → garlic, spaghetti → bucatini are 4); same → 1 when brand and name match, else 2), independently of core's basekey.ts; kind-1 rows hand-checked.",
 	"k": 12,
 	"targets": [
 		{
@@ -208,7 +208,7 @@
 				{
 					"productId": "461952",
 					"grade": "close",
-					"kind": 4,
+					"kind": 3,
 					"note": "salmon back fillet (loin), fresh, good for curing"
 				},
 				{
@@ -459,13 +459,13 @@
 				{
 					"productId": "470000",
 					"grade": "close",
-					"kind": 4,
+					"kind": 3,
 					"note": "same flavour, small retail pack or herring vs baltic herring"
 				},
 				{
 					"productId": "470065",
 					"grade": "close",
-					"kind": 4,
+					"kind": 3,
 					"note": "same flavour, small retail pack or herring vs baltic herring"
 				},
 				{
@@ -866,7 +866,7 @@
 				{
 					"productId": "464273",
 					"grade": "close",
-					"kind": 4,
+					"kind": 3,
 					"note": "raw dough star blank to fill/bake"
 				},
 				{
@@ -878,7 +878,7 @@
 				{
 					"productId": "470150",
 					"grade": "close",
-					"kind": 4,
+					"kind": 3,
 					"note": "gluten-free joulutorttu/star tart (dietary superset)"
 				},
 				{
@@ -979,31 +979,31 @@
 				{
 					"productId": "462902",
 					"grade": "close",
-					"kind": 4,
+					"kind": 3,
 					"note": "JEPO cooked small potato, ready to heat for buffet"
 				},
 				{
 					"productId": "463538",
 					"grade": "close",
-					"kind": 4,
+					"kind": 3,
 					"note": "Maatilan cooked Parisian potato balls"
 				},
 				{
 					"productId": "469203",
 					"grade": "close",
-					"kind": 4,
+					"kind": 3,
 					"note": "JEPO cooked halved potato in skin"
 				},
 				{
 					"productId": "470414",
 					"grade": "close",
-					"kind": 4,
+					"kind": 3,
 					"note": "cooked in-skin Lapin puikula potato"
 				},
 				{
 					"productId": "471303",
 					"grade": "close",
-					"kind": 4,
+					"kind": 3,
 					"note": "hand-peeled Rosamunda 5 kg (raw peeled, category 17424)"
 				}
 			],
@@ -1068,7 +1068,7 @@
 				{
 					"productId": "465140",
 					"grade": "close",
-					"kind": 4,
+					"kind": 3,
 					"note": "Risella Fulkorn grotris, wholegrain porridge rice, longer cooking"
 				},
 				{
@@ -1247,19 +1247,19 @@
 				{
 					"productId": "464401",
 					"grade": "close",
-					"kind": 4,
+					"kind": 3,
 					"note": "lactose-free skim 1 l, lower fat"
 				},
 				{
 					"productId": "476240",
 					"grade": "close",
-					"kind": 4,
+					"kind": 3,
 					"note": "Eila lactose-free skim 1 l"
 				},
 				{
 					"productId": "469119",
 					"grade": "close",
-					"kind": 4,
+					"kind": 3,
 					"note": "Eila lactose-free skim 1.75 l"
 				},
 				{
@@ -1271,31 +1271,31 @@
 				{
 					"productId": "462775",
 					"grade": "close",
-					"kind": 4,
+					"kind": 3,
 					"note": "Arla lactose-free skim UHT 1 l"
 				},
 				{
 					"productId": "469386",
 					"grade": "close",
-					"kind": 4,
+					"kind": 3,
 					"note": "Arla lactose-free skim 1 l x5"
 				},
 				{
 					"productId": "464073",
 					"grade": "close",
-					"kind": 4,
+					"kind": 3,
 					"note": "Valio lactose-free whole milk UHT 1 l, higher fat"
 				},
 				{
 					"productId": "464768",
 					"grade": "close",
-					"kind": 4,
+					"kind": 3,
 					"note": "Arla lactose-free whole milk UHT 12x1 l"
 				},
 				{
 					"productId": "463335",
 					"grade": "close",
-					"kind": 4,
+					"kind": 3,
 					"note": "Eila 3% lactose-free 1 l"
 				}
 			],
@@ -1354,49 +1354,49 @@
 				{
 					"productId": "463437",
 					"grade": "close",
-					"kind": 4,
+					"kind": 3,
 					"note": "Eila lactose-free butter 500 g, salting not stated, probably salted"
 				},
 				{
 					"productId": "464076",
 					"grade": "close",
-					"kind": 4,
+					"kind": 3,
 					"note": "Eila lactose-free butter 4x5 kg, salting not stated"
 				},
 				{
 					"productId": "462421",
 					"grade": "close",
-					"kind": 4,
+					"kind": 3,
 					"note": "Eila lactose-free butter 200 g"
 				},
 				{
 					"productId": "475797",
 					"grade": "close",
-					"kind": 4,
+					"kind": 3,
 					"note": "Valio butter 500 g normal salted; salt must be adjusted"
 				},
 				{
 					"productId": "463798",
 					"grade": "close",
-					"kind": 4,
+					"kind": 3,
 					"note": "Valio butter 200 g normal salted"
 				},
 				{
 					"productId": "476584",
 					"grade": "close",
-					"kind": 4,
+					"kind": 3,
 					"note": "Valio butter 500 g strongly salted"
 				},
 				{
 					"productId": "476731",
 					"grade": "close",
-					"kind": 4,
+					"kind": 3,
 					"note": "Valio butter 4x5 kg HYLA low lactose, salted/unspecified"
 				},
 				{
 					"productId": "476821",
 					"grade": "close",
-					"kind": 4,
+					"kind": 3,
 					"note": "Valio table butter 400 g salted"
 				},
 				{
@@ -1408,19 +1408,19 @@
 				{
 					"productId": "476815",
 					"grade": "close",
-					"kind": 4,
+					"kind": 3,
 					"note": "Arla salted low-lactose butter 500 g"
 				},
 				{
 					"productId": "475594",
 					"grade": "close",
-					"kind": 4,
+					"kind": 3,
 					"note": "Peltola churned butter, salting not stated"
 				},
 				{
 					"productId": "476740",
 					"grade": "close",
-					"kind": 4,
+					"kind": 3,
 					"note": "Juustoportti churned butter 200 g, salting not stated"
 				},
 				{
@@ -1563,13 +1563,13 @@
 				{
 					"productId": "464221",
 					"grade": "close",
-					"kind": 4,
+					"kind": 3,
 					"note": "Valio kevytkerma 1 l lactose-free"
 				},
 				{
 					"productId": "463379",
 					"grade": "close",
-					"kind": 4,
+					"kind": 3,
 					"note": "Arla Pro light cream 10% lactose-free"
 				},
 				{
@@ -1670,49 +1670,49 @@
 				{
 					"productId": "465193",
 					"grade": "close",
-					"kind": 4,
+					"kind": 3,
 					"note": "Valio kuohukerma 1.75 l lactose-free (whipping cream)"
 				},
 				{
 					"productId": "464699",
 					"grade": "close",
-					"kind": 4,
+					"kind": 3,
 					"note": "Valio organic whipping cream 1 l lactose-free"
 				},
 				{
 					"productId": "464727",
 					"grade": "close",
-					"kind": 4,
+					"kind": 3,
 					"note": "Arla kuohukerma 1 l ESL lactose-free"
 				},
 				{
 					"productId": "469126",
 					"grade": "close",
-					"kind": 4,
+					"kind": 3,
 					"note": "Valio kuohukerma 2 dl lactose-free"
 				},
 				{
 					"productId": "461490",
 					"grade": "close",
-					"kind": 4,
+					"kind": 3,
 					"note": "Valio Keittio kuohukerma 3.3 dl lactose-free"
 				},
 				{
 					"productId": "464490",
 					"grade": "close",
-					"kind": 4,
+					"kind": 3,
 					"note": "Valio Luomu kuohukerma 2 dl lactose-free"
 				},
 				{
 					"productId": "461273",
 					"grade": "close",
-					"kind": 4,
+					"kind": 3,
 					"note": "Valio kuohukerma 20 l novobox lactose-free"
 				},
 				{
 					"productId": "464047",
 					"grade": "close",
-					"kind": 4,
+					"kind": 3,
 					"note": "Arla Lempi organic whipping cream 2 dl, lactose-free brand, not stated in name"
 				},
 				{
@@ -1813,19 +1813,19 @@
 				{
 					"productId": "468520",
 					"grade": "close",
-					"kind": 4,
+					"kind": 3,
 					"note": "Munax whole-egg mass pasteurised 5 kg, liquid egg"
 				},
 				{
 					"productId": "475201",
 					"grade": "close",
-					"kind": 4,
+					"kind": 3,
 					"note": "Munax whole-egg mass LL 5 kg"
 				},
 				{
 					"productId": "475357",
 					"grade": "close",
-					"kind": 4,
+					"kind": 3,
 					"note": "Munax organic whole-egg mass 5 kg"
 				},
 				{
@@ -1837,7 +1837,7 @@
 				{
 					"productId": "468269",
 					"grade": "close",
-					"kind": 4,
+					"kind": 3,
 					"note": "Munax whole egg 1 kg liquid"
 				}
 			],
@@ -2141,25 +2141,25 @@
 				{
 					"productId": "463232",
 					"grade": "close",
-					"kind": 4,
+					"kind": 3,
 					"note": "Atria fresh chicken fillet lightly salted 150 g"
 				},
 				{
 					"productId": "467443",
 					"grade": "close",
-					"kind": 4,
+					"kind": 3,
 					"note": "Atria fresh fillet lightly salted 120 g"
 				},
 				{
 					"productId": "468876",
 					"grade": "close",
-					"kind": 4,
+					"kind": 3,
 					"note": "Atria fresh fillet 160 g"
 				},
 				{
 					"productId": "467588",
 					"grade": "close",
-					"kind": 4,
+					"kind": 3,
 					"note": "Atria thin fillet 120 g"
 				},
 				{
@@ -2171,7 +2171,7 @@
 				{
 					"productId": "462924",
 					"grade": "close",
-					"kind": 4,
+					"kind": 3,
 					"note": "Kariniemen breast cut lightly salted 220-290 g"
 				},
 				{
@@ -2189,13 +2189,13 @@
 				{
 					"productId": "467303",
 					"grade": "close",
-					"kind": 4,
+					"kind": 3,
 					"note": "Atria thin fillet 95 g lightly salted"
 				},
 				{
 					"productId": "463248",
 					"grade": "close",
-					"kind": 4,
+					"kind": 3,
 					"note": "Atria thin fillet 75 g lightly salted"
 				}
 			],
@@ -2475,7 +2475,7 @@
 				{
 					"productId": "462733",
 					"grade": "close",
-					"kind": 4,
+					"kind": 3,
 					"note": "pre-cut onion (diced/rings), saves prep"
 				},
 				{
@@ -3470,43 +3470,43 @@
 				{
 					"productId": "467711",
 					"grade": "close",
-					"kind": 4,
+					"kind": 3,
 					"note": "iceberg loose leaf/bulk needing cutting"
 				},
 				{
 					"productId": "473807",
 					"grade": "close",
-					"kind": 4,
+					"kind": 3,
 					"note": "iceberg loose leaf/bulk needing cutting"
 				},
 				{
 					"productId": "460198",
 					"grade": "close",
-					"kind": 4,
+					"kind": 3,
 					"note": "iceberg loose leaf/bulk needing cutting"
 				},
 				{
 					"productId": "460276",
 					"grade": "close",
-					"kind": 4,
+					"kind": 3,
 					"note": "whole iceberg head, needs cutting"
 				},
 				{
 					"productId": "460026",
 					"grade": "close",
-					"kind": 4,
+					"kind": 3,
 					"note": "whole iceberg head, needs cutting"
 				},
 				{
 					"productId": "460314",
 					"grade": "close",
-					"kind": 4,
+					"kind": 3,
 					"note": "whole iceberg head, needs cutting"
 				},
 				{
 					"productId": "460240",
 					"grade": "close",
-					"kind": 4,
+					"kind": 3,
 					"note": "whole iceberg head, needs cutting"
 				},
 				{
@@ -3661,7 +3661,7 @@
 				{
 					"productId": "467649",
 					"grade": "close",
-					"kind": 3,
+					"kind": 4,
 					"note": "bucatini long pasta"
 				},
 				{
