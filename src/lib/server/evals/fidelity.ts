@@ -6,7 +6,13 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Plan, Product as CatalogProduct } from '$lib/core/contracts';
 import type { CheckResult } from '../../../../evals/types';
+import { scenarioDate } from '$lib/core/scenario';
+import { runGoal } from '../agent';
+import { scriptedPlanner } from '../agent/loop';
+import { trialWorkspace } from '../agent/trial-harness';
 import { contentPerSalesUnit } from '../request/convert';
+import { runRequest } from '../request/run';
+import type { EventView } from '$lib/ui/request/types';
 
 export interface Case {
 	id: string;
@@ -108,4 +114,68 @@ export function checkBasket(
 		});
 	}
 	return out;
+}
+
+/**
+ * Monday morning, before Valio's 17:00 cut-off: "tomorrow" is still orderable, so the entries are compared on intent,
+ * not on a closed cut-off.
+ */
+export const FIDELITY_NOW = new Date('2026-12-07T09:00:00+02:00');
+
+export interface Played {
+	plans: Plan[];
+	error?: string;
+	/** /request: set when the words were read as an event brief. */
+	event?: EventView;
+	/** Receipts written (no read or event intent may write one). */
+	receipts: number;
+}
+
+/**
+ * The chef's words through one entry on a fresh PGlite workspace with the fixture parser or the scripted planner:
+ * `/request` (runRequest, placing) or the agent (runGoal, the principal holds only this kitchen).
+ */
+export async function playText(
+	kitchen: string,
+	text: string,
+	path: 'request' | 'agent',
+	id: string
+): Promise<Played> {
+	const w = await trialWorkspace();
+	w.env.ports.clock = { now: () => FIDELITY_NOW };
+	const today = scenarioDate(w.env.ports.clock.now());
+	const done = async (extra: Partial<Played> = {}): Promise<Played> => {
+		const s = await w.state();
+		return { plans: Object.values(s.plans), receipts: Object.keys(s.orders).length, ...extra };
+	};
+	try {
+		if (path === 'request') {
+			const k = (await w.env.ports.store.kitchens(w.env.workspaceId)).find(
+				(x) => x.id === kitchen
+			)!;
+			const r = await runRequest(text, {
+				handlers: w.handlers,
+				ctx: w.ctx('kitchen_agent'),
+				today,
+				kitchen: k,
+				llm: null,
+				llmKind: 'fixture',
+				place: true
+			});
+			return done({ event: r.event, error: r.message });
+		}
+		const run = await runGoal({
+			goal: text,
+			principal: w.principal({ kitchenIds: [kitchen], id: `fidelity-${id}` }),
+			handlers: w.handlers,
+			planner: scriptedPlanner(),
+			source: { ...w.source, today: () => today }
+		});
+		const out = await done();
+		return out.plans.length
+			? out
+			: { ...out, error: `agent stopped ${run.stopped}: ${run.summary.slice(0, 160)}` };
+	} catch (e) {
+		return done({ error: (e as Error).message.slice(0, 120) });
+	}
 }
