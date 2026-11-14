@@ -15,7 +15,10 @@ import { join } from 'node:path';
 const STEPS = [
 	{ name: 'check', cmd: ['pnpm', 'check'] },
 	{ name: 'lint', cmd: ['pnpm', 'lint'] },
-	{ name: 'evals:self', cmd: ['node', '--test', 'evals/check.test.ts'] },
+	{
+		name: 'evals:self',
+		cmd: ['node', '--test', 'evals/check.test.ts', 'evals/chat/check.test.ts']
+	},
 	// check passes on code that still fails to bundle (adapter-node, SSR imports): build it.
 	{ name: 'build', cmd: ['pnpm', 'build'], heavy: true },
 	// PGlite under load times out now and then: a red test:unit is rerun once and reported as flaky if it passes.

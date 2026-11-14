@@ -1,0 +1,16 @@
+{
+	"id": "c2-approval-handoff-continue",
+	"$comment": "Approval handoff and continuation: a large order holds lines for approval, the agent stops with a link and never approves, the chef approves on the Kitchen screen, then 'go ahead' commits the same plan once; a second 'go ahead' writes no second receipt.",
+	"kitchen": "k-hotel",
+	"steps": [
+		{ "chef": { "text": "Order 60 kg butter for Friday" } },
+		{ "human": "approve" },
+		{ "chef": { "continue": true } },
+		{ "chef": { "continue": true } }
+	],
+	"expect": {
+		"0": { "pending": "decision", "taskState": "awaiting_chef", "receipts": 0 },
+		"2": { "samePlan": true, "receipts": 1, "pending": "none" },
+		"3": { "samePlan": true, "receipts": 1 }
+	}
+}

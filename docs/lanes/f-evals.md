@@ -24,7 +24,7 @@
 | A4 held plan from a brief | `briefs/golden.json` | menu track |
 
 - Review on/off comparison: waits for E's `REVIEW=1`; then the same trials both ways via `eval:live` (pass rate and tokens per arm).
-- Ring 2 chat evals (design, not built; waits for the procurement-task record contract). `evals/chat/*.json`: scripted turns through the real chat entry point, judged on the task record and the op log, never on the model's prose:
+- Ring 2 chat evals: **scaffolded** on T1 (`evals/chat/check.ts` + 8 self-tests in evals:self; trials c1 clarify, c2 approval handoff + continue, c3 edit voids approval; driver `chat.test.ts` skips until E's `src/lib/server/chat/turn.ts` exports `runChatTurn(input, deps)` yielding the turn's NDJSON events with `taskId`). On wiring: probe, then expectFail with owners. `evals/chat/*.json`: scripted turns through the real chat entry point, judged on the task record and the op log, never on the model's prose:
   - **clarification**: a turn missing a fact (kitchen, date, amount) gets exactly one question about that field; an answered field is never asked again; a typed requirement survives every later turn.
   - **approval handoff**: held lines stop the agent with a pending approval and an approval link; the agent never approves; the human approves out of band.
   - **continuation**: "go ahead" resumes the same task id and plan (no new plan, no repeated order); a turn after an edit sees the voided approval.
