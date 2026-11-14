@@ -3,7 +3,7 @@
 	import { resolve } from '$app/paths';
 	import { enhance } from '$app/forms';
 	import type { Plan, PlanView } from '$lib/core/contracts';
-	import { scenarioClock } from '$lib/core/scenario';
+	import { SCENARIO, scenarioClock, scenarioDate } from '$lib/core/scenario';
 	import { OpsStream } from './stream.svelte';
 	import CaseTicket from './CaseTicket.svelte';
 	import OpTimeline from './OpTimeline.svelte';
@@ -14,6 +14,7 @@
 	import ServiceStatus from './ServiceStatus.svelte';
 	import SponsorsPanel from './SponsorsPanel.svelte';
 	import RoomView from './RoomView.svelte';
+	import ForecastTab from './ForecastTab.svelte';
 	import { lastShortage, orderFeed, roomKitchens, storesCreated, storeTotals } from './room';
 	import OrdersTab from './OrdersTab.svelte';
 	import DemandTab from './DemandTab.svelte';
@@ -130,7 +131,8 @@
 	 * Problems (cards and their story, the first screen), queue (work surface), wallboard (one column per kitchen)
 	 * or the engine room (timeline, op log and traces; shown with the System toggle). Remembered.
 	 */
-	type View = 'room' | 'problems' | 'orders' | 'demand' | 'queue' | 'wallboard' | 'engine';
+	type View =
+		'room' | 'problems' | 'orders' | 'demand' | 'forecast' | 'queue' | 'wallboard' | 'engine';
 	const shell = useShell();
 	const system = $derived(!!shell?.system);
 	let chosen = $state<View>('problems');
@@ -142,6 +144,7 @@
 				saved === 'room' ||
 				saved === 'orders' ||
 				saved === 'demand' ||
+				saved === 'forecast' ||
 				saved === 'queue' ||
 				saved === 'wallboard' ||
 				saved === 'engine'
@@ -508,6 +511,9 @@
 			<button role="tab" aria-selected={view === 'demand'} onclick={() => setView('demand')}>
 				Demand
 			</button>
+			<button role="tab" aria-selected={view === 'forecast'} onclick={() => setView('forecast')}>
+				Forecast
+			</button>
 			<button role="tab" aria-selected={view === 'queue'} onclick={() => setView('queue')}>
 				Queue <b>{cases.length}</b>
 			</button>
@@ -573,6 +579,13 @@
 							data.simulated ? null : kitchenHref({ planId, kitchenId }, linkAt)}
 					/>
 				{/key}
+			{:else if view === 'forecast'}
+				<ForecastTab
+					ws={stream.state}
+					kinds={kitchens.map((k) => k.kind)}
+					from={scenarioDate(new Date(SCENARIO.start))}
+					shortage={lastShortage(stream.roomSims)}
+				/>
 			{:else if view === 'demand'}
 				{#key stream.state.runId}
 					<DemandTab ws={data.workspace} version={stream.last} />
