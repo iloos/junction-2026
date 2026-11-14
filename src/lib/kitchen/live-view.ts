@@ -92,7 +92,7 @@ const isOpen = (l: Line) => l.state === 'eligible' || l.state === 'held';
 /** Supply the server cannot confirm (read model), with the reason code as the fallback for older outputs. */
 const hasUnknown = (l: Line) =>
 	l.view
-		? l.view.unconfirmedCover.value > 0 || l.view.blockedReason?.detail === 'qty'
+		? l.view.unknownStockCover.value > 0 || l.view.blockedReason?.detail === 'qty'
 		: l.reasons.includes('UNKNOWN_REQUIRED');
 const isShort = (l: Line) =>
 	l.view ? l.view.blockedReason?.detail === 'stock' : l.reasons.includes('INSUFFICIENT_STOCK');

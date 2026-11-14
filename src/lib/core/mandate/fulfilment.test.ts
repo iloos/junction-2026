@@ -11,8 +11,8 @@ const need: Need = {
 const view = (ok: boolean): LineView => ({
 	reviewable: ok,
 	committable: false,
-	confirmedCover: { value: 0, unit: 'pcs' },
-	unconfirmedCover: { value: 0, unit: 'pcs' },
+	knownStockCover: { value: 0, unit: 'pcs' },
+	unknownStockCover: { value: 0, unit: 'pcs' },
 	nextAction: ok ? 'approve' : 'resolve_rule'
 });
 const line = (id: string, qty: number, o: Partial<Line> = {}): Line =>

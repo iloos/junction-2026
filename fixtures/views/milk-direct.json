@@ -89,11 +89,11 @@
 			"view": {
 				"reviewable": false,
 				"committable": true,
-				"confirmedCover": {
+				"knownStockCover": {
 					"value": 10,
 					"unit": "pcs"
 				},
-				"unconfirmedCover": {
+				"unknownStockCover": {
 					"value": 0,
 					"unit": "pcs"
 				},

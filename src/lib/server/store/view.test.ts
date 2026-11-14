@@ -42,14 +42,14 @@ describe('LineView on tool outputs', () => {
 		expect(at(plan, '463860').view).toMatchObject({
 			reviewable: true,
 			committable: false,
-			unconfirmedCover: { value: 6, unit: 'pcs' },
-			confirmedCover: { value: 0 },
+			unknownStockCover: { value: 6, unit: 'pcs' },
+			knownStockCover: { value: 0 },
 			nextAction: 'approve'
 		});
 		// Salmon is in the hotel's standing-order baseline, so it is not a new product: inside the mandate it needs
 		// no sign-off and goes straight to commit.
 		expect(at(plan, '462150').view).toMatchObject({
-			confirmedCover: { value: 20, unit: 'kg' },
+			knownStockCover: { value: 20, unit: 'kg' },
 			nextAction: 'commit'
 		});
 
@@ -85,11 +85,11 @@ describe('LineView on tool outputs', () => {
 		const done = must(await h.get_plan(chef, { planId: plan.id })).plan;
 		expect(at(done, '463860').view).toMatchObject({
 			nextAction: 'wait_for_supplier',
-			unconfirmedCover: { value: 6 }
+			unknownStockCover: { value: 6 }
 		});
 		expect(at(done, '462150').view).toMatchObject({
 			nextAction: 'none',
-			confirmedCover: { value: 20 }
+			knownStockCover: { value: 20 }
 		});
 	});
 
