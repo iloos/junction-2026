@@ -231,6 +231,10 @@ describe('persisted traces (PGlite)', () => {
 		const valio = sum.find((s) => s.source === 'valio')!;
 		expect(valio).toMatchObject({ count: 5, p50Ms: 300, errorRate: 0.2, cacheHitRate: 0.4 });
 		expect(valio.p95Ms).toBeGreaterThan(400);
+		// Two from the cache, three live of which one failed: two live successes, never five.
+		expect(valio.byMode).toEqual({ live: 3, cache: 2, replay: 0, fixture: 0, none: 0 });
+		expect(valio.liveOk).toBe(2);
+		expect(sum.find((s) => s.source === 'tool')!.byMode.none).toBe(1);
 		expect(sum.find((s) => s.source === 'tool')!.count).toBe(1);
 		expect(await store.list({ source: 'valio', workspaceId: 'ws-a' })).toHaveLength(2);
 		expect(await store.list({ since: new Date(at + 60_000).toISOString() })).toHaveLength(0);

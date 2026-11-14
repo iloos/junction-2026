@@ -12,6 +12,7 @@
 	import ProblemCard from './ProblemCard.svelte';
 	import StoryPanel from './StoryPanel.svelte';
 	import ServiceStatus from './ServiceStatus.svelte';
+	import SponsorsPanel from './SponsorsPanel.svelte';
 	import OrdersTab from './OrdersTab.svelte';
 	import DemandTab from './DemandTab.svelte';
 	import GatePanel from './GatePanel.svelte';
@@ -558,6 +559,7 @@
 								></i>{/if}
 						</button>
 					</div>
+					<SponsorsPanel workspace={data.workspace} />
 					<OpTimeline log={stream.log} {names} plans={stream.state.plans} />
 				</div>
 			{:else}
