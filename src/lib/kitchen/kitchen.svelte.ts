@@ -1,6 +1,6 @@
 /* eslint-disable svelte/prefer-svelte-reactivity -- Maps and Sets here are built fresh and replaced wholesale ($state.raw), never mutated after. */
 import type { Approval, DomainError, Line } from '$lib/core/contracts';
-import { ToolError, Unreachable, call, type ApiMode } from './api';
+import { ToolError, Unreachable, call, rendered, type ApiMode } from './api';
 import type { PresetId } from './view-model';
 import * as backend from './backend';
 import type { Snapshot } from './backend';
@@ -117,10 +117,23 @@ export class KitchenStore {
 		return this.#seen.get(a.id) ?? null;
 	}
 
-	async load() {
+	/**
+	 * First read. With `planId` (an approval link `/?kitchen&plan` from MCP, chat or Ops) the server opens that
+	 * plan with its decisions; if this browser's sandbox has no such plan, the kitchen's own plan shows and the
+	 * error says why.
+	 */
+	async load(planId?: string) {
 		await this.#run(async () => {
-			if (this.mode === 'fixture')
+			if (this.mode === 'fixture') {
 				await call('fixture', 'plan_event', { kitchenId: 'k-hotel', eventId: 'event-xmas-140' });
+				return;
+			}
+			if (!planId) return;
+			try {
+				return await backend.snapshot(this.mode, planId);
+			} catch (e) {
+				this.#fail(e);
+			}
 		});
 	}
 
@@ -321,6 +334,10 @@ export class KitchenStore {
 			if ('plan' in next) {
 				this.started = true;
 				this.snap = next;
+				rendered.view =
+					this.mode === 'live' && next.clock
+						? { runId: next.clock.runId, planId: next.plan.id, version: next.plan.version }
+						: null;
 				this.#remember(next);
 				this.#clockAt(next);
 				this.#flashChanges(before, next.plan.lines);

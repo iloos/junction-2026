@@ -57,7 +57,8 @@
 			v: Number(q.get('v') ?? NaN),
 			need: q.get('need') ?? ''
 		};
-		if (k.snap && k.snap.kitchen.id !== kitchen) await k.setKitchen(kitchen);
+		// The linked plan already brought its kitchen; switch only when the link names a kitchen and no plan.
+		if (!fromOps.plan && k.snap && k.snap.kitchen.id !== kitchen) await k.setKitchen(kitchen);
 		const dish = k.view?.dishes.find((d) => d.needId === fromOps!.need);
 		if (!dish) return;
 		toggled = { ...toggled, [dish.id]: true };
@@ -69,7 +70,9 @@
 	}
 
 	onMount(() => {
-		k.load().then(honourDeepLink);
+		// An approval link names the plan: open it (in this browser's sandbox), not the kitchen's event plan.
+		const linked = new URL(location.href).searchParams.get('plan') ?? undefined;
+		k.load(linked).then(honourDeepLink);
 		const t = setInterval(() => k.tick(), 1000);
 		return () => clearInterval(t);
 	});
@@ -196,6 +199,8 @@
 
 	/** Decisions: the one count the header, the panel and the phone bar share. */
 	const decisions = $derived(plan ? decisionsOf(plan, approval) : []);
+	/** The seeded event plan (normal-week diff, buffet timeline), or a plan opened by link (an order, a menu). */
+	const isEvent = $derived(!!plan?.eventId);
 	const orderable = $derived.by(() => {
 		const ls = (plan?.lines ?? []).filter((l) => l.view?.committable === true);
 		return { lines: ls.length, cents: ls.reduce((a, l) => a + (l.lineCents ?? 0), 0) };
@@ -369,11 +374,11 @@
 		<div
 			class="mx-auto flex max-w-[1440px] flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2 text-body text-ink md:px-6"
 		>
-			<b class="font-medium">Opened from Operations</b>
+			<b class="font-medium">Opened by link</b>
 			<span class="text-ink-2"
-				>{snap.kitchen.name.replace(' (fictional)', '')} · {view?.dishes.find(
-					(d) => d.needId === fromOps!.need
-				)?.nameFi ?? fromOps.need}</span
+				>{snap.kitchen.name.replace(' (fictional)', '')}{fromOps.need
+					? ` · ${view?.dishes.find((d) => d.needId === fromOps!.need)?.nameFi ?? fromOps.need}`
+					: ''}</span
 			>
 			{#if fromOps.ws && snap.clock?.workspaceId && fromOps.ws !== snap.clock.workspaceId}
 				<span class="text-signoff"
@@ -462,9 +467,9 @@
 			<section aria-label="This task">
 				<TaskHeader
 					title={view.title}
-					meta="{day(view.date)} · {view.guests} guests · {view.serviceStyle} · delivery {day(
-						plan.deliverBy
-					)}"
+					meta={isEvent
+						? `${day(view.date)} · ${view.guests} guests · ${view.serviceStyle} · delivery ${day(plan.deliverBy)}`
+						: `Delivery ${day(plan.deliverBy)}`}
 					decisions={decisions.length}
 					due={decisionsDue(plan, approval)}
 					now={k.now}
@@ -484,16 +489,16 @@
 						{/if}
 					{/snippet}
 				</TaskHeader>
-				<p class="mt-2 text-meta text-ink-2">
-					A normal week <span class="mono">{money(view.normalWeek.cents, { whole: true })}</span>
-					({view.normalWeek.lines} lines) → this week
-					<span class="mono text-ink">{money(view.thisWeek.cents, { whole: true })}</span>
-					({view.thisWeek.lines} lines): the event adds
-					<span class="mono text-ink"
-						>{moneyDelta(view.thisWeek.cents - view.normalWeek.cents)}</span
-					>
-					and <span class="mono">{fixed(view.eventKg)}</span> kg of food.
-				</p>
+				{#if isEvent}<p class="mt-2 text-meta text-ink-2">
+						A normal week <span class="mono">{money(view.normalWeek.cents, { whole: true })}</span>
+						({view.normalWeek.lines} lines) → this week
+						<span class="mono text-ink">{money(view.thisWeek.cents, { whole: true })}</span>
+						({view.thisWeek.lines} lines): the event adds
+						<span class="mono text-ink"
+							>{moneyDelta(view.thisWeek.cents - view.normalWeek.cents)}</span
+						>
+						and <span class="mono">{fixed(view.eventKg)}</span> kg of food.
+					</p>{/if}
 				{#if weekMeter}
 					<div class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-meta text-ink-3">
 						<span class="shrink-0">Week budget</span>
@@ -590,17 +595,18 @@
 							>
 								<div class="min-w-0">
 									<p class="text-body leading-tight font-medium text-ink">{d.nameFi}</p>
-									<p class="text-meta text-ink-3">{d.name}</p>
+									{#if d.name !== d.nameFi}<p class="text-meta text-ink-3">{d.name}</p>{/if}
 								</div>
 								<div class="col-span-2 flex items-start gap-3 lg:col-span-1">
-									<GramsStepper
-										value={d.gServed}
-										original={d.gDefault}
-										label={d.nameFi}
-										pending={k.pendingGrams[d.id]}
-										disabled={k.readOnly || !d.editable || !!orderedState}
-										onchange={(g) => k.setGrams(d.id, g)}
-									/>
+									<!-- A direct need (an amount someone asked for) has no grams per guest to step. -->
+									{#if d.gDefault > 0}<GramsStepper
+											value={d.gServed}
+											original={d.gDefault}
+											label={d.nameFi}
+											pending={k.pendingGrams[d.id]}
+											disabled={k.readOnly || !d.editable || !!orderedState}
+											onchange={(g) => k.setGrams(d.id, g)}
+										/>{/if}
 									<div class="min-w-0 pt-1">
 										<p
 											class="text-body text-ink {k.flash.has(d.plannedLineId) ||
@@ -615,8 +621,12 @@
 											>
 											{needUnit(d.need.unit)}
 										</p>
-										<p class="text-micro leading-snug text-ink-3">{d.needFormula}</p>
-										<p class="mt-0.5 text-micro text-ink-3">
+										{#if d.needFormula !== `${d.need.value} ${d.need.unit}`}<p
+												class="text-micro leading-snug text-ink-3"
+											>
+												{d.needFormula}
+											</p>{/if}
+										<p class="mt-0.5 text-micro text-ink-3 {isEvent ? '' : 'hidden'}">
 											{#if d.usual}normal week {num(d.usual.qty)} {d.usual.unit}{:else}<span
 													class="rounded-sm bg-well px-1 text-ink-2">event only</span
 												>{/if}
@@ -726,7 +736,8 @@
 					oncommit={() => k.commit()}
 					onretry={() => k.retryCommit()}
 				/>
-				<div>
+				<!-- The scenario timeline pins the Christmas buffet: only the event plan has it. -->
+				<div class={isEvent ? '' : 'hidden'}>
 					<CutoffTimeline
 						now={k.now}
 						stock={openLines.stock}
@@ -735,7 +746,7 @@
 					/>
 				</div>
 			</div>
-			<div class={active === 'plan' ? '' : 'max-lg:hidden'}>
+			<div class="{active === 'plan' ? '' : 'max-lg:hidden'} {isEvent ? '' : 'hidden'}">
 				<RulesPanel
 					rules={snap.rules}
 					preset={snap.preset}
