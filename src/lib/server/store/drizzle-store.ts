@@ -4,7 +4,7 @@
  * per-workspace sequence numbers under the lock, reduces them with the pure `applyOps`, and persists the changed
  * rows + ops in the same transaction (D6). Any error rolls the whole thing back.
  */
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 import type { PgDatabase } from 'drizzle-orm/pg-core';
 import type { Store, Tx } from '$lib/core/ports';
 import { applyOps, emptyState, type WorkspaceState } from '$lib/core/state';
@@ -21,6 +21,16 @@ export interface TxHandle {
 	runId: string;
 }
 export const txOf = (tx: Tx) => tx as unknown as TxHandle;
+
+/** Under tests the cached state is frozen, so a caller that mutates shared state fails loudly. */
+const FREEZE = Boolean(process.env.VITEST);
+function deepFreeze<T>(o: T): T {
+	if (o && typeof o === 'object' && !Object.isFrozen(o)) {
+		Object.freeze(o);
+		for (const v of Object.values(o)) deepFreeze(v);
+	}
+	return o;
+}
 
 class Rollback extends Error {
 	constructor(readonly error: DomainError) {
@@ -44,20 +54,29 @@ export async function loadState(
 		.from(schema.plans)
 		.where(and(eq(schema.plans.workspaceId, workspaceId), eq(schema.plans.runId, runId)));
 	for (const p of plans) s.plans[p.id] = p.doc as any;
-	const planIds = new Set(Object.keys(s.plans));
-	for (const a of await db
-		.select()
-		.from(schema.approvals)
-		.where(eq(schema.approvals.workspaceId, workspaceId)))
-		if (planIds.has(a.planId)) s.approvals[a.id] = a.doc as any;
-	for (const o of await db
-		.select()
-		.from(schema.orders)
-		.where(eq(schema.orders.workspaceId, workspaceId)))
-		if (planIds.has(o.planId)) {
+	// Approvals and orders of this run's plans only: older runs' rows stay in the workspace after every reset.
+	const planIds = Object.keys(s.plans);
+	if (planIds.length) {
+		for (const a of await db
+			.select()
+			.from(schema.approvals)
+			.where(
+				and(
+					eq(schema.approvals.workspaceId, workspaceId),
+					inArray(schema.approvals.planId, planIds)
+				)
+			))
+			s.approvals[a.id] = a.doc as any;
+		for (const o of await db
+			.select()
+			.from(schema.orders)
+			.where(
+				and(eq(schema.orders.workspaceId, workspaceId), inArray(schema.orders.planId, planIds))
+			)) {
 			s.orders[o.id] = o.doc as any;
 			s.receipts[(o.receipt as any).id] = o.receipt as any;
 		}
+	}
 	const failed = await db
 		.select()
 		.from(schema.ops)
@@ -219,6 +238,32 @@ export function createDrizzleStore(
 	}): Promise<void>;
 } {
 	const now = opts.now ?? (() => new Date());
+	/**
+	 * Loaded state per (workspace, run), valid while the workspace's last_seq is unchanged: every write (ops,
+	 * enrichments, allocated seqs) bumps it under the row lock, and a reset starts a new run id. One process owns
+	 * the database (single container), so a matching seq means the rows are the ones this state was built from.
+	 * Callers never mutate state (applyOps returns a new one); tests freeze it to keep that true.
+	 */
+	const cache = new Map<string, { seq: number; state: WorkspaceState }>();
+	const CACHE_MAX = 256;
+	const keyOf = (ws: string, run: string) => `${ws}|${run}`;
+	const remember = (state: WorkspaceState) => {
+		const k = keyOf(state.workspaceId, state.runId);
+		cache.delete(k);
+		cache.set(k, { seq: state.seq, state: FREEZE ? deepFreeze(state) : state });
+		if (cache.size > CACHE_MAX) cache.delete(cache.keys().next().value!);
+	};
+	async function cachedLoad(d: AnyDb, workspaceId: string, runId: string) {
+		const [ws] = await d
+			.select({ lastSeq: schema.workspaces.lastSeq })
+			.from(schema.workspaces)
+			.where(eq(schema.workspaces.id, workspaceId));
+		const hit = cache.get(keyOf(workspaceId, runId));
+		if (hit && hit.seq === (ws?.lastSeq ?? 0)) return hit.state;
+		const state = await loadState(d, workspaceId, runId);
+		remember(state);
+		return state;
+	}
 	return {
 		async ensure({ workspaceId, runId, kitchens, simStart }) {
 			await db
@@ -250,7 +295,7 @@ export function createDrizzleStore(
 				const out = await db.transaction(async (raw) => {
 					const tdb = raw as unknown as AnyDb;
 					await tdb.execute(sql`select id from workspaces where id = ${workspaceId} for update`);
-					const state = await loadState(tdb, workspaceId, runId);
+					const state = await cachedLoad(tdb, workspaceId, runId);
 					const handle: TxHandle = { db: tdb, workspaceId, runId };
 					const r = await fn(handle as unknown as Tx, state);
 					if ('error' in r) throw new Rollback(r.error);
@@ -263,20 +308,22 @@ export function createDrizzleStore(
 					const next = applyOps(state, envelopes);
 					if (!next.ok) throw new Rollback(next.error);
 					await persist(tdb, state, next.value, envelopes);
-					return { value: r.value, ops: envelopes };
+					return { value: r.value, ops: envelopes, after: next.value };
 				});
+				// Committed: the state after these ops is what the rows now hold.
+				if (out.ops.length) remember(out.after);
 				opts.publish?.(
 					workspaceId,
 					out.ops.map((e) => ({ kind: 'op' as const, seq: e.seq, envelope: e }))
 				);
-				return { ok: true as const, value: out };
+				return { ok: true as const, value: { value: out.value, ops: out.ops } };
 			} catch (e) {
 				if (e instanceof Rollback) return { ok: false as const, error: e.error };
 				throw e;
 			}
 		},
 
-		load: (workspaceId, runId) => loadState(db, workspaceId, runId),
+		load: (workspaceId, runId) => cachedLoad(db, workspaceId, runId),
 
 		async kitchens(workspaceId) {
 			const rows = await db
