@@ -548,7 +548,7 @@ export async function* runChatTurn(
 	/** A menu proposal shown this turn (the event flow). */
 	let menuCard: Extract<ChatEvent, { type: 'menu' }> | null = null;
 	/** What a Continue did: bought something, or found nothing newly authorised. */
-	let continued: 'ordered' | 'nothing' | null = null;
+	let continued: 'ordered' | 'nothing' | 'failed' | null = null;
 	// The decision and numbers as they stood before this turn: a card or ledger line is shown again only when it
 	// changed, or when the chef asks.
 	const before = { decision: task.shown?.decision ?? null, ledger: task.shown?.ledger ?? null };
@@ -618,8 +618,25 @@ export async function* runChatTurn(
 			yield fail(task.id, 'Nothing to continue: this task has no plan yet.', task.state);
 			return;
 		}
-		steps = await continueTask(task, agentCtx, deps.handlers);
-		continued = steps.some((x) => x.tool === 'commit_order' && x.ok) ? 'ordered' : 'nothing';
+		steps = await continueTask(task, agentCtx, deps.handlers, async () => {
+			const now = await store.get(deps.workspaceId, task.id);
+			return now?.state !== 'cancelled';
+		});
+		const commits = steps.filter((x) => x.tool === 'commit_order');
+		continued = commits.some((x) => x.ok)
+			? 'ordered'
+			: commits.some((x) => !x.ok)
+				? 'failed'
+				: 'nothing';
+		if (continued === 'failed') {
+			const e = commits.find((x) => !x.ok)!.error;
+			refusal =
+				e?.code === 'TERMS_CHANGED'
+					? 'Nothing was ordered: prices or terms changed since the plan was quoted, so it was quoted again. Check the new terms (and any decision they need), then Continue to order on them.'
+					: /cancelled/.test(e?.message ?? '')
+						? 'This task was cancelled while I was working, so nothing was ordered.'
+						: `Nothing was ordered: ${e?.message ?? 'the order was refused'}.`;
+		}
 	} else {
 		// A typed answer to the open question, or words while one is open, fill that field only.
 		let goal = !followUp && understood ? understood.goal : String(task.requirement.goal ?? '');
@@ -859,8 +876,16 @@ export async function* runChatTurn(
 				...latest.plans,
 				...task.plans.filter((p) => !latest.plans.some((x) => x.planId === p.planId))
 			];
+			// A cancellation that landed meanwhile stands: the merged task keeps its terminal state.
+			const terminal = latest.state === 'cancelled';
+			if (terminal) task.state = 'cancelled';
 			saved = await store.put(
-				{ ...task, plans, runs: [...latest.runs, ...task.runs.slice(-1)].slice(-20) },
+				{
+					...task,
+					plans,
+					runs: [...latest.runs, ...task.runs.slice(-1)].slice(-20),
+					...(terminal ? { state: 'cancelled' as const, pending: { kind: 'none' as const } } : {})
+				},
 				latest.version
 			);
 		}
@@ -1371,7 +1396,9 @@ function digest(x: string): string {
 async function continueTask(
 	task: Task,
 	ctx: CallContext,
-	handlers: ToolHandlers
+	handlers: ToolHandlers,
+	/** Re-reads the task right before a purchase: false when it was cancelled meanwhile (another tab, another turn). */
+	stillOpen: () => Promise<boolean> = async () => true
 ): Promise<StepRecord[]> {
 	const steps: StepRecord[] = [];
 	const call = async (tool: ToolName, input: unknown, why: string) => {
@@ -1398,16 +1425,35 @@ async function continueTask(
 			.map((l) => l.id)
 			.sort();
 		if (!lineIds.length) continue;
+		// The cancellation fence: a task cancelled while this turn ran buys nothing more.
+		if (!(await stillOpen())) {
+			steps.push({
+				n: steps.length + 1,
+				tool: 'commit_order',
+				input: { planId: plan.id },
+				why: 'the task was cancelled',
+				ok: false,
+				error: {
+					code: 'FORBIDDEN',
+					message: 'the task was cancelled; nothing was ordered',
+					retryable: false
+				},
+				ms: 0,
+				refused: true
+			});
+			break;
+		}
 		await call(
 			'commit_order',
 			{
 				planId: plan.id,
 				version: plan.version,
 				lineIds,
-				idempotencyKey: `task:${task.id}:commit:${plan.id}:${digest(lineIds.join(','))}`.slice(
-					0,
-					128
-				)
+				// One purchase command: task + plan + version + accepted terms + the exact lines. A retry of it replays its
+				// receipt; changed terms or another line set is a new command, never blocked by an earlier failed one.
+				idempotencyKey: `task:${task.id}:commit:${digest(
+					[plan.id, plan.version, plan.termsHash ?? '', lineIds.join(',')].join('|')
+				)}`
 			},
 			`commit the ${lineIds.length} line(s) that may be bought now`
 		);

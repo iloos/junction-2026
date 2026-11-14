@@ -16,6 +16,8 @@ import { memoryTaskStore } from '$lib/server/tasks/store';
 import { scenarioDate } from '$lib/core/scenario';
 import { trialWorkspace } from '../agent/trial-harness';
 import { FIDELITY_NOW } from '../evals/fidelity';
+import { withServerKey } from '../agent/loop';
+import { readTurnBody } from './body';
 import { chatTurn } from './turn';
 
 let fx: Awaited<ReturnType<typeof createFixtureDb>>;
@@ -27,6 +29,8 @@ afterAll(async () => {
 });
 
 let seq = 0;
+/** The supplier's price per unit in cents, changed by a test to move the terms. */
+let price = 100;
 const prov = { source: 'seed' as const };
 const products = ['100001', '100002', '100003'].map((productId, i) =>
 	Product.parse({
@@ -74,7 +78,7 @@ const catalog: Catalog = {
 		offers: ids.map((productId) =>
 			Offer.parse({
 				productId,
-				price: { unitCents: 100, comparison: null, taxRate: 14, validTo: null, provenance: prov },
+				price: { unitCents: price, comparison: null, taxRate: 14, validTo: null, provenance: prov },
 				availability: {
 					kind: 'known',
 					amount: 10000,
@@ -98,6 +102,7 @@ function must<T>(
 
 /** A kitchen where 100001 is a usual product (eligible) and anything new is held for the chef. */
 async function setup(tasks: TaskStore = memoryTaskStore()) {
+	price = 100;
 	const ws = `ws-transitions-${++seq}`;
 	const k = structuredClone(loadSeedKitchens().find((x) => x.id === 'k-hotel')!);
 	k.usualProducts = ['100001'];
@@ -345,5 +350,88 @@ describe('suite: chat transitions · separate requests', () => {
 		const b = await chatTurn({ text: 'Order 4 kg butter for Friday' }, deps);
 		expect(a.at(-1)!.taskId).not.toBe(b.at(-1)!.taskId);
 		expect(Object.keys((await w.state()).plans)).toHaveLength(2);
+	});
+});
+
+describe('suite: chat transitions (round 10)', () => {
+	it('R10-01: after a terms change, Continue orders once on the new terms; a retry replays that receipt', async () => {
+		const s = await setup();
+		const p = await s.place(['100001']);
+		const t = await s.task([p]);
+		price = 200;
+		const first = await chatTurn({ taskId: t.id, continue: true }, s.deps);
+		expect(first.some((e) => e.type === 'step' && e.tool === 'commit_order' && !e.ok)).toBe(true);
+		expect(first.at(-1)).toMatchObject({ text: expect.stringMatching(/terms changed/) });
+		expect(Object.values((await s.state()).orders)).toHaveLength(0);
+		const view = must(await s.h.get_plan(s.ctx('chef'), { planId: p.id }));
+		if (view.approval?.state === 'pending') await s.grant(p.id);
+		const second = await chatTurn({ taskId: t.id, continue: true }, s.deps);
+		expect(second.some((e) => e.type === 'step' && e.tool === 'commit_order' && e.ok)).toBe(true);
+		expect(Object.values((await s.state()).orders)).toHaveLength(1);
+		await chatTurn({ taskId: t.id, continue: true }, s.deps);
+		expect(Object.values((await s.state()).orders)).toHaveLength(1);
+	});
+
+	it('R10-02: a cancellation accepted while a Continue waits stops its purchase and stands', async () => {
+		const s = await setup();
+		const p = await s.place(['100001']);
+		const t = await s.task([p]);
+		let entered!: () => void;
+		const atRead = new Promise<void>((r) => (entered = r));
+		let release!: () => void;
+		const hold = new Promise<void>((r) => (release = r));
+		let first = true;
+		const h = {
+			...s.h,
+			get_plan: async (...args: Parameters<typeof s.h.get_plan>) => {
+				if (first) {
+					first = false;
+					entered();
+					await hold;
+				}
+				return s.h.get_plan(...args);
+			}
+		};
+		const running = chatTurn({ taskId: t.id, continue: true }, { ...s.deps, handlers: h });
+		await atRead;
+		const cancel = await chatTurn({ taskId: t.id, text: 'cancel that' }, s.deps);
+		expect(cancel.at(-1)).toMatchObject({ state: 'cancelled' });
+		release();
+		const out = await running;
+		expect(Object.values((await s.state()).orders)).toHaveLength(0);
+		expect((await s.tasks.get(s.ws, t.id))!.state).toBe('cancelled');
+		expect(out.at(-1)).toMatchObject({ text: expect.stringMatching(/cancelled/) });
+	});
+
+	it('R10-10: the agent loop gives different line subsets of one version different commands', async () => {
+		const s = await setup();
+		const p = await s.place(['100001', '100003']);
+		await s.grant(p.id);
+		const command = (lineId: string) =>
+			withServerKey(
+				'commit_order',
+				{ planId: p.id, version: p.version, lineIds: [lineId] },
+				undefined,
+				'continue',
+				'same-task'
+			) as { planId: string; version: number; lineIds: string[]; idempotencyKey: string };
+		const a = command(p.lines[0].id);
+		const b = command(p.lines[1].id);
+		expect(a.idempotencyKey).not.toBe(b.idempotencyKey);
+		must(await s.h.commit_order(s.ctx('kitchen_agent'), a));
+		const now = must(await s.h.get_plan(s.ctx('chef'), { planId: p.id })).plan;
+		const next = await s.h.commit_order(s.ctx('kitchen_agent'), { ...b, version: now.version });
+		expect(next.ok).toBe(true);
+	});
+
+	it('R10-12: the chat envelope refuses null, a bad task id and two actions at once', () => {
+		expect(readTurnBody(null)).toMatchObject({ ok: false });
+		expect(readTurnBody([])).toMatchObject({ ok: false });
+		expect(readTurnBody({ taskId: '../x', text: 'hi' })).toMatchObject({
+			ok: false,
+			reason: expect.stringMatching(/taskId/)
+		});
+		expect(readTurnBody({ text: 'hi', continue: true })).toMatchObject({ ok: false });
+		expect(readTurnBody({ taskId: 't-pl-run-1-abc', text: 'hi' })).toMatchObject({ ok: true });
 	});
 });
