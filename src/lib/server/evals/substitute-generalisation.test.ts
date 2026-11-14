@@ -125,7 +125,7 @@ describe.skipIf(!RUN)('suite: substitute generalisation', () => {
 					idempotencyKey: `gen-${++n}`,
 					lines: [{ productId: a.productId, qty: a.lotStep || 1, unit: a.salesUnit }]
 				});
-				if (!placed.ok) return { error: placed.error.code } as const;
+				if (!placed.ok) return { candidates: [] as any[], error: placed.error.code as string };
 				const plan = placed.value.plan;
 				const r = await h.find_substitutes(ctx, {
 					planId: plan.id,
@@ -133,8 +133,8 @@ describe.skipIf(!RUN)('suite: substitute generalisation', () => {
 					lineId: plan.lines[0].id
 				});
 				return r.ok
-					? ({ candidates: r.value.candidates as any[] } as const)
-					: ({ error: r.error.code } as const);
+					? { candidates: r.value.candidates as any[], error: undefined as string | undefined }
+					: { candidates: [] as any[], error: r.error.code as string };
 			};
 
 			// 1. Leave-one-out on Valio's rules.
@@ -156,7 +156,7 @@ describe.skipIf(!RUN)('suite: substitute generalisation', () => {
 					target = a.productId;
 					pool = got.map((c) => ({ productId: c.productId, fromValioRule: c.fromValioRule }));
 					const r = await rank(a);
-					const c = 'candidates' in r ? r.candidates.find((x) => x.productId === b) : undefined;
+					const c = r.candidates.find((x) => x.productId === b);
 					loo.push({
 						a: a.productId,
 						aName: a.nameFi,
@@ -171,7 +171,7 @@ describe.skipIf(!RUN)('suite: substitute generalisation', () => {
 								? (c.rejectedReasons ?? c.state ?? [])
 								: null
 							: 'not retrieved',
-						error: 'error' in r ? r.error : undefined
+						error: r.error
 					});
 				}
 			pool = null;
@@ -196,7 +196,7 @@ describe.skipIf(!RUN)('suite: substitute generalisation', () => {
 				target = a.productId;
 				const retrieved = await inner.candidates(a.productId, K);
 				const r = await rank(a);
-				const ranked = 'candidates' in r ? r.candidates.filter((c) => c.rank !== null) : [];
+				const ranked = r.candidates.filter((c) => c.rank !== null);
 				coverage.push({
 					a: a.productId,
 					aName: a.nameFi,
@@ -205,12 +205,8 @@ describe.skipIf(!RUN)('suite: substitute generalisation', () => {
 					ranked: ranked.length,
 					sameBase: ranked.filter((c) => sameBase(a, products.get(c.productId)!)).length,
 					top: ranked.slice(0, 3).map((c) => products.get(c.productId)?.nameFi),
-					reasons: [
-						...new Set(
-							('candidates' in r ? r.candidates : []).flatMap((c: any) => c.rejectedReasons ?? [])
-						)
-					],
-					error: 'error' in r ? r.error : undefined
+					reasons: [...new Set(r.candidates.flatMap((c: any) => c.rejectedReasons ?? []))],
+					error: r.error
 				});
 			}
 
