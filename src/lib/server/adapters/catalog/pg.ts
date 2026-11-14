@@ -13,6 +13,7 @@ import { products, offerCache } from '../../db/schema';
 import type { AnyDb } from '../../store/drizzle-store';
 import type { SimOverlay } from '../simulator/overlay';
 import { toOffer } from './normalize';
+import type { ValioEndpoint, ValioLive } from './valio-live';
 import {
 	assemble,
 	RetrievalIndex,
@@ -35,7 +36,19 @@ export interface PgCatalogOptions {
 	retrieval?: RetrievalMode;
 	/** Free-text search (default: CATALOG_SEARCH env, else substring `id`). */
 	search?: RetrievalMode;
+	/**
+	 * Cache-through to Valio's API. Without it offers come from the seeded `offer_cache` only (the fixture). With it,
+	 * a product with no price, or availability older than `availabilityTtlMs`, is fetched, stored and labelled
+	 * `valio_live` with the time Valio answered.
+	 */
+	live?: ValioLive;
+	/** Availability older than this is fetched again (default 15 min). Prices are fetched once per product. */
+	availabilityTtlMs?: number;
+	/** Wall clock for TTLs (tests); the scenario clock is not used here: freshness is about real fetch times. */
+	now?: () => number;
 }
+
+export const AVAILABILITY_TTL_MS = 15 * 60_000;
 
 export type OfferCacheRow = typeof offerCache.$inferInsert;
 
@@ -186,19 +199,75 @@ export function createPgCatalog(db: AnyDb, opts: PgCatalogOptions = {}): Catalog
 								)
 							)
 							.orderBy(offerCache.endpoint, offerCache.productId, desc(offerCache.fetchedAt));
-			const price = new Map<string, { body: Raw; at: string }>();
-			const availability = new Map<string, { body: Raw; at: string }>();
+			type Hit = { body: Raw; at: string; live?: boolean };
+			const price = new Map<string, Hit>();
+			const availability = new Map<string, Hit>();
 			for (const r of cached)
 				(r.endpoint === 'price' ? price : availability).set(r.productId, {
 					body: r.body,
 					at: iso(r.fetchedAt)
 				});
+			if (opts.live) {
+				const ttl = opts.availabilityTtlMs ?? AVAILABILITY_TTL_MS;
+				const t = (opts.now ?? Date.now)();
+				const unique = [...new Set(known)];
+				await Promise.all([
+					fetchThrough(
+						opts.live,
+						'price',
+						unique.filter((id) => !price.has(id)),
+						price
+					),
+					fetchThrough(
+						opts.live,
+						'availability',
+						unique.filter((id) => {
+							const a = availability.get(id);
+							return !a || t - new Date(a.at).getTime() > ttl;
+						}),
+						availability
+					)
+				]);
+			}
+			async function fetchThrough(
+				live: ValioLive,
+				ep: ValioEndpoint,
+				ids: string[],
+				into: Map<string, Hit>
+			) {
+				const date = deliverBy ?? SCENARIO.delivery;
+				const got = await live.fetch(ep, ids, date);
+				if (got.length === 0) return;
+				await db
+					.insert(offerCache)
+					.values(
+						got.map((g) => ({
+							endpoint: ep,
+							customer,
+							requestedDate: date,
+							productId: g.productId,
+							body: g.body,
+							fetchedAt: g.at
+						}))
+					)
+					.onConflictDoUpdate({
+						target: [
+							offerCache.endpoint,
+							offerCache.customer,
+							offerCache.requestedDate,
+							offerCache.productId
+						],
+						set: { body: sql`excluded.body`, fetchedAt: sql`excluded.fetched_at` }
+					});
+				for (const g of got) into.set(g.productId, { body: g.body, at: g.at, live: true });
+			}
 			const offers: Offer[] = known.map((id) => {
 				const p = price.get(id);
 				const a = availability.get(id);
 				const newest = [p, a].filter(Boolean).sort((x, y) => (x!.at < y!.at ? 1 : -1))[0];
+				// Live when this call fetched it; otherwise the stored answer, with when Valio gave it.
 				const offer = toOffer(id, p?.body, a?.body, {
-					source: 'valio_cache',
+					source: p?.live || a?.live ? 'valio_live' : 'valio_cache',
 					at: newest?.at,
 					ref: `customer ${customer}`
 				});
