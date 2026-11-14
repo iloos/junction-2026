@@ -5,10 +5,10 @@
  *
  * Env (calls per UTC day, per API):
  * - `WEB_CAP_PER_KEY` (default 40): one caller key (`<actor kind>:<key label>`)
- * - `WEB_CAP_GLOBAL` (default 600): everything this instance sends, the monitor included
+ * - `WEB_CAP_GLOBAL` (default 1000): everything this instance sends, the monitor included
  */
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname } from 'node:path';
+import { readJson, writeJson } from './persist';
+import { err, type DomainError } from '$lib/core/contracts';
 import type { WebApi } from './http';
 
 export interface SpendLimits {
@@ -17,10 +17,12 @@ export interface SpendLimits {
 }
 
 /**
- * Defaults sized for the 10-minute monitor (144 runs a day are Context.dev's, not ours; our side is at
- * most a list read an hour plus a few notice reads per change) plus judges' lookups.
+ * Defaults sized for the 5-minute monitor (288 runs a day, run by Context.dev, not counted here) plus
+ * judges. Our own calls per change are one fresh list read and at most 3 notice reads; `run.completed`
+ * reads the list at most hourly. Even a monitor that flags a change on every run (~300 list reads a day)
+ * leaves room for judges under the global cap, and a cap only refuses that API until UTC midnight.
  */
-export const DEFAULT_LIMITS: SpendLimits = { perKey: 40, global: 600 };
+export const DEFAULT_LIMITS: SpendLimits = { perKey: 40, global: 1000 };
 
 export function spendLimits(env: Record<string, string | undefined>): SpendLimits {
 	const n = (v: string | undefined, d: number) => {
@@ -48,6 +50,22 @@ export class WebLimitError extends Error {
 	}
 }
 
+/**
+ * A web failure as a domain error: a cap or rate limit is PROVIDER_UNAVAILABLE with sub `rate_limit` |
+ * `daily_cap` and `detail.retryAfter` (seconds), which every surface answers as 429; an unknown product
+ * is NOT_FOUND; anything else from a provider is PROVIDER_UNAVAILABLE (retryable).
+ */
+export function webError(e: unknown): { ok: false; error: DomainError } {
+	if (e instanceof WebLimitError)
+		return err('PROVIDER_UNAVAILABLE', e.message, {
+			sub: e.reason === 'rate-limit' ? 'rate_limit' : 'daily_cap',
+			detail: { api: e.api, retryAfter: e.retryAfterS }
+		});
+	const msg = e instanceof Error ? e.message : String(e);
+	if (/^unknown product/.test(msg)) return err('NOT_FOUND', msg);
+	return err('PROVIDER_UNAVAILABLE', msg);
+}
+
 /** Called before every network call; throws `WebLimitError` instead of spending. */
 export interface SpendGuard {
 	charge(api: WebApi): void;
@@ -65,27 +83,13 @@ const toMidnightS = (now: Date) => {
 };
 
 export function createSpendLedger(file?: string, clock: () => Date = () => new Date()) {
-	let state: Day = { day: utcDay(clock()), counts: {} };
-	if (file && existsSync(file)) {
-		try {
-			state = JSON.parse(readFileSync(file, 'utf8')) as Day;
-		} catch {
-			// A corrupt ledger starts the day at zero.
-		}
-	}
+	// A lost ledger starts the day at zero.
+	let state = readJson<Day>(file, { day: utcDay(clock()), counts: {} });
 	const roll = () => {
 		const d = utcDay(clock());
 		if (state.day !== d) state = { day: d, counts: {} };
 	};
-	const flush = () => {
-		if (!file) return;
-		try {
-			mkdirSync(dirname(file), { recursive: true });
-			writeFileSync(file, JSON.stringify(state));
-		} catch {
-			// Counting in memory is enough to protect this instance.
-		}
-	};
+	const flush = () => writeJson(file, state);
 	return {
 		/** A guard for one caller; `key` null = an internal caller (the monitor), bound by the global cap only. */
 		guard(key: string | null, limits: SpendLimits): SpendGuard {

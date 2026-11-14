@@ -3,7 +3,8 @@ import type { Result } from '$lib/core/contracts';
 import type { CallContext } from '$lib/core/ports';
 import { resolveRequest, type Env } from '../auth';
 import { json, unauthorized } from '../tools/http';
-import { WebLimitError } from './spend';
+import { HTTP_STATUS, isWebLimit, retryAfterOf } from '../tools/serve';
+import { webError } from './spend';
 
 export function authed(
 	request: Request,
@@ -33,50 +34,16 @@ export function fail(code: string, message: string, status: number, retryable = 
 }
 
 /**
- * A cap or the provider's rate limit is 429 RATE_LIMITED with `Retry-After` (the UI waits, a click
- * doesn't become a 503); other provider errors are 503 PROVIDER_UNAVAILABLE (retryable); input errors 400.
+ * A tool `Result` as the route's answer, with the same statuses as `/api/tools/<name>`: a daily cap or a
+ * provider rate limit is 429 with `Retry-After` (the UI waits; repeated clicks never become a 503 storm).
  */
-export function providerFail(e: unknown): Response {
-	if (e instanceof WebLimitError) {
-		return json(
-			{
-				error: {
-					code: 'RATE_LIMITED',
-					message: e.message,
-					retryable: true,
-					retryAfter: e.retryAfterS,
-					reason: e.reason
-				}
-			},
-			429,
-			{ 'retry-after': String(e.retryAfterS) }
-		);
-	}
-	const msg = e instanceof Error ? e.message : String(e);
-	if (/^unknown product|^give a /.test(msg)) return fail('INVALID_INPUT', msg, 400);
-	console.error('[web]', msg);
-	return fail('PROVIDER_UNAVAILABLE', msg, 503, true);
-}
-
-const STATUS: Record<string, number> = {
-	INVALID_INPUT: 400,
-	NOT_FOUND: 404,
-	FORBIDDEN: 403,
-	PROVIDER_UNAVAILABLE: 503,
-	INTERNAL: 500
-};
-
-/** A tool `Result` as the route's answer; a cap or rate limit is 429 with `Retry-After`. */
 export function resultJson<T>(r: Result<T>): Response {
 	if (r.ok) return json(r.value);
-	const e = r.error;
-	const retryAfter = (e.detail as { retryAfter?: number } | undefined)?.retryAfter;
-	if (e.sub === 'rate_limit' || e.sub === 'daily_cap')
-		return json(
-			{ error: { ...e, code: 'RATE_LIMITED', retryAfter } },
-			429,
-			retryAfter ? { 'retry-after': String(retryAfter) } : {}
-		);
-	if (e.code === 'PROVIDER_UNAVAILABLE') console.error('[web]', e.message);
-	return json({ error: e }, STATUS[e.code] ?? 400);
+	const status = isWebLimit(r.error) ? 429 : HTTP_STATUS[r.error.code];
+	if (status === 503) console.error('[web]', r.error.message);
+	const wait = status === 429 ? retryAfterOf(r.error) : undefined;
+	return json({ error: r.error }, status, wait ? { 'retry-after': String(wait) } : {});
 }
+
+/** A thrown provider or input error, answered like a tool error. */
+export const providerFail = (e: unknown): Response => resultJson(webError(e));

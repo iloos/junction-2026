@@ -304,16 +304,14 @@ describe('watching the list', () => {
 });
 
 describe('Exa lookups (recorded answers)', { timeout: 30_000 }, () => {
-	it('facts for 460002 come back as GTIN-verified suggestions with quotes, and are recorded as enrichments', async () => {
+	it('facts for 460002 come back as suggestions citing its GTIN, with quotes', async () => {
 		const env = await createDbPorts({ runId: 'run-facts' });
 		const r = await lookupFacts(
 			{ productId: '460002' },
 			{
 				exa: createFixtureFactSearch(),
 				catalog: env.ports.catalog,
-				findings: createFindings(),
-				store: env.store,
-				scope: { ...scope, runId: 'run-facts' }
+				findings: createFindings(undefined, true)
 			}
 		);
 		expect(r.catalogue.allergens).toBeNull(); // Valio has no allergen record for it
@@ -322,7 +320,6 @@ describe('Exa lookups (recorded answers)', { timeout: 30_000 }, () => {
 		expect(ing.sources[0].gtinCited).toBe(true);
 		expect(ing.sources[0].url).toContain('6416796729140');
 		expect(ing.sources[0].quote).toMatch(/Ainesosat/);
-		expect(r.recorded.length).toBe(r.suggestions.length);
 	});
 	it('joulutorttu: sourced options with ingredients mapped to catalogue products', async () => {
 		const env = await createDbPorts({ runId: 'run-outside' });

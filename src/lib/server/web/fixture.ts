@@ -1,5 +1,5 @@
 /**
- * Fixture adapters: real Context.dev and Exa responses recorded in the spike (fixtures/*.json), served
+ * Fixture adapters: real Context.dev and Exa responses recorded from the live APIs (fixtures/*.json), served
  * through the same interfaces as the live adapters. Offline demo and tests run on these.
  */
 import { RecallListItem, RecallNotice, noticeKey } from './recall';

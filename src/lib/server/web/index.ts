@@ -101,17 +101,6 @@ export function webClients(
 	return { recalls, exa };
 }
 
-export function contextDevAdmin(env: Env) {
-	if (!env.CONTEXT_DEV_API_KEY) throw new Error('CONTEXT_DEV_API_KEY is not set');
-	return createContextDev(
-		createWebHttp({
-			api: 'context.dev',
-			apiKey: env.CONTEXT_DEV_API_KEY,
-			cacheDir: join(cacheDir(env), 'context-dev')
-		})
-	);
-}
-
 export const findingsFor = (env: Env) => createFindings(join(cacheDir(env), 'findings.json'));
 export const queueFor = (env: Env) => createWorkQueue(join(cacheDir(env), 'recall-queue.json'));
 export const applicationsFor = (env: Env) =>
@@ -161,7 +150,7 @@ export function webTools(env: Env) {
 export type WebRun = WebExecutionContext & { index: CatalogIndex };
 
 /**
- * F19: what a web route or web tool runs under: the caller's own workspace and run (from its key), the
+ * What a web route or web tool runs under: the caller's own workspace and run (from its key), the
  * process's ports (the store is workspace-scoped per call), and the key its spend counts against. Web
  * code never falls back to the default workspace.
  */

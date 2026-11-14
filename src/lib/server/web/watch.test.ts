@@ -150,7 +150,7 @@ describe('F20 webhook work is never lost', { timeout: 30_000 }, () => {
 		const file = join(mkdtempSync(join(tmpdir(), 'webq-')), 'q.json');
 		const q = createWorkQueue(file, true);
 		expect(enqueueChange(change(), q)).toEqual(['list']);
-		expect(readFileSync(file, 'utf8')).toContain('"kind": "list"');
+		expect(readFileSync(file, 'utf8')).toContain('"kind":"list"');
 		expect(createWorkQueue(file, true).has('list')).toBe(true);
 		const direct = 'https://www.ruokavirasto.fi/x/takaisinvedot-2023-/new/';
 		expect(enqueueChange(change([direct, 'https://elsewhere.fi/']), q)).toEqual([
