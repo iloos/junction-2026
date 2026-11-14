@@ -25,7 +25,7 @@ const task = (over: Partial<TaskView> = {}): TaskView => ({
 });
 const obs = (over: Partial<Observed> = {}): Observed => ({
 	step: { chef: { text: '4 kg butter' } },
-	events: [],
+	events: [{ type: 'done', text: 'Drafted 4 kg butter.' }],
 	task: task(),
 	plans: [{ id: 'p1', approval: null, needs: [need('n1')] }],
 	receipts: [],
@@ -50,6 +50,17 @@ test('clarification: one question, never a held field again', () => {
 	const again = obs({ events: [{ type: 'clarify', field: 'date' }] });
 	assert.deepEqual(failed(checkStep(1, again, prev)), ['1.neverReask']);
 	assert.deepEqual(failed(checkStep(1, again, null, { asks: 'qty' })), ['1.asks']);
+});
+
+test('a turn ends with something to read, in our words', () => {
+	const steps = obs({ events: [{ type: 'step', summary: 'Found 0 matching products.' }] });
+	assert.deepEqual(failed(checkStep(0, steps, null)), ['0.saysSomething']);
+	const hidden = obs({
+		events: [{ type: 'done', state: 'awaiting_clarification', text: 'Which day?' }]
+	});
+	assert.deepEqual(failed(checkStep(0, hidden, null)), ['0.saysSomething']);
+	const ids = obs({ events: [{ type: 'done', text: 'Read pl-run-abc-123 for 2026-12-10.' }] });
+	assert.deepEqual(failed(checkStep(0, ids, null)), ['0.noRawIds']);
 });
 
 test('the typed requirement survives later turns', () => {

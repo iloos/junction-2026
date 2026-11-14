@@ -170,7 +170,12 @@ describe('typed intent (finding D)', () => {
 			kind: 'unsupported',
 			clarify: expect.objectContaining({ field: expect.any(String) })
 		});
-		expect((r as { reason: string }).reason).toMatch(/Which plan\? .*pl-1.*pl-2/);
+		// Asked in words; the ids are only the answers' values.
+		expect((r as { reason: string }).reason).toMatch(/^Which plan/);
+		expect((r as { reason: string }).reason).not.toMatch(/pl-/);
+		expect(
+			(r as { clarify: { options: { value: string }[] } }).clarify.options.map((o) => o.value)
+		).toEqual(['pl-1', 'pl-2']);
 	});
 
 	it('needs a current plan to repair or inspect', () => {

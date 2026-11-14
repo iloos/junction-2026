@@ -6,7 +6,7 @@ import type { CheckResult } from '../types.ts';
 
 /** One line of the /api/chat/turn NDJSON stream, as far as the checks read it. */
 export interface ChatEvent {
-	type: 'step' | 'clarify' | 'decision' | 'ledger' | 'done';
+	type: 'step' | 'clarify' | 'decision' | 'ledger' | 'done' | 'menu';
 	field?: string;
 	approvalId?: string;
 	approvalUrl?: string;
@@ -119,6 +119,27 @@ export function checkStep(
 		const held = Object.keys(prev?.task?.slots ?? {});
 		const again = asked.filter((f) => held.includes(f));
 		add('neverReask', again.length === 0, again.length ? `asked again: ${again}` : 'ok');
+		// Every turn ends with something to read and act on: a question, a card, or words (never steps alone).
+		const spoke = o.events.some(
+			(e) =>
+				['clarify', 'decision', 'menu'].includes(e.type) ||
+				(e.type === 'done' &&
+					e.state !== 'awaiting_clarification' &&
+					typeof e.text === 'string' &&
+					e.text.trim() !== '')
+		);
+		add('saysSomething', spoke, spoke ? 'ok' : 'the turn ended without a message');
+		// Our words only: no plan ids or date codes in what the chef reads.
+		const shown = o.events
+			.flatMap((e) => [
+				e.type === 'done' || e.type === 'step' ? String(e.text ?? e.summary ?? '') : '',
+				e.type === 'clarify'
+					? `${String(e.question ?? '')} ${((e.options as { label: string }[] | undefined) ?? []).map((x) => x.label).join(' ')}`
+					: ''
+			])
+			.join(' ');
+		const raw = shown.match(/\bpl-run-[\w-]+|\bws-j-[\w-]+|\b20\d\d-\d\d-\d\d\b/);
+		add('noRawIds', !raw, raw ? `shows ${raw[0]}` : 'ok');
 	}
 	// Typed requirement survives every later turn.
 	const before = prev?.task?.requirement ?? {};

@@ -1,5 +1,6 @@
 import type { Kitchen, Plan } from '$lib/core/contracts';
 import buffet from '../../../../fixtures/seeds/christmas-buffet-140.json';
+import { planName } from './plan-name';
 import { INTENT_KINDS, type AgentContext, type PlanPick, type RunPrincipal } from './types';
 
 /**
@@ -113,6 +114,7 @@ export async function bootstrapContext(
 			: null,
 		openPlans: open.slice(-10).map((p) => ({
 			id: p.id,
+			name: planName(p, SUPPORTED_EVENTS),
 			kitchenId: p.kitchenId,
 			...(p.eventId ? { eventId: p.eventId } : {}),
 			state: p.state

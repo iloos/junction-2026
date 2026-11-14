@@ -111,7 +111,8 @@ export interface AgentContext {
 		pickedBy: PlanPick;
 	} | null;
 	/** Open (uncommitted) plans in the run's kitchens, at most 10. */
-	openPlans: { id: string; kitchenId: string; eventId?: string; state: string }[];
+	/** `name` is how a chef knows the plan (the event and its day, or what the order buys); never its id. */
+	openPlans: { id: string; name?: string; kitchenId: string; eventId?: string; state: string }[];
 	supportedEvents: { id: string; kitchenId: string; title: string }[];
 	supportedIntents: readonly IntentKind[];
 	/** The kitchen an order without one goes to, when the surface has a default and the run may act for it. */
