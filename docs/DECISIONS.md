@@ -181,3 +181,17 @@ An affirmative reply ("great lets do it", "ok") counts as the chef's act only wh
 **Why:** the user's chat test showed "great lets do it" acting on another task's plan. The chef typing in their own dock is the person D13 requires, so a named offer plus a yes is consent; an unnamed or stale one is not.
 
 **Reopen if:** a trial shows a bare yes buying something the previous turn didn't name, or the menu accepted differs from the revision the card showed.
+
+### D23 · One conversation, two views: the dock is the door, the Kitchen is the workbench (lead, 14 Nov 23:00)
+Every ask enters one conversation, whatever its form (words, an order, an event, a menu, a photo): the chat dock on any page, or `/request`, which becomes that same conversation full-width (same transcript, same cards; `/request?text=` still prefills). The work shows as cards in the transcript as it happens: reading → dishes → products → bill. The result lands in the Kitchen as the basket for that kitchen and delivery day, with a ledger line saying what the agent did. Every line is managed with one row and one set of actions (approve this line, hold, swap with compare, change amount, remove, why), identical in a dock card and on the page, both calling the same tool. A reading never dead-ends on "nothing matched": it proposes its likeliest interpretation as one tap, and a product search returns labelled near-misses (best try) unless the ask is a hard requirement (allergens and the chef's hard rules stay strict).
+
+**Why:** the user: /request feels jarring and rule-based, only perfect matches; the chat and the page should be one flow from ingestion to approving and managing items.
+
+**Reopen if:** a chat-only journey and a page-only journey on the same ask end with different baskets, or a best-try near-miss is ordered without its label.
+
+### D24 · Room mode: everyone in the room runs their own store, Ops watches them all (lead, 14 Nov 23:00)
+A QR or link puts a visitor in the shared room (`ws-judges`) as **their own store**: a name and a kitchen type make a new kitchen copied from the nearest seeded profile (its own mandate, usual order and history, copied not linked, per ARCHITECTURE Tenancy), owned by that browser. They order by chat or on the page. Ops on the big screen shows the room: orders arriving live, demand per delivery day, and a presenter shortage that re-plans every store inside its own rules. The shared stock makes contention real. Each visitor's own sandbox stays the default; the room is opt-in and says that others can see it (`roomNotice`).
+
+**Why:** the user: an IRL demo where others sign on as their own store and we see the orders come in on Ops. It shows the machinery a cart can't: many kitchens, one stock, one gate.
+
+**Reopen if:** room load breaks the provider caps or one visitor can act on another's store.
