@@ -635,6 +635,15 @@
 		<p class="-mt-2 mb-4 text-body text-ink-2" role="status">{sandboxNote}</p>
 	{/if}
 
+	{#if data.workspace.notice}
+		<p
+			class="mb-2 flex items-center gap-2 rounded-md border border-signoff/40 bg-signoff-wash px-3 py-2 text-body text-ink"
+			role="note"
+			data-testid="room-notice"
+		>
+			<Info size={15} class="shrink-0 text-signoff" aria-hidden="true" />{data.workspace.notice}
+		</p>
+	{/if}
 	<form
 		class="rounded-xl border border-rule-strong bg-sheet p-2 shadow-[0_1px_0_oklch(0.9_0.01_85)] focus-within:border-accent/60"
 		onsubmit={(e) => {
