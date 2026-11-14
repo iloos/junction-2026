@@ -25,42 +25,8 @@ export interface ProposeMenuDeps {
 	llm?: (ctx: CallContext) => Llm | null;
 }
 
-/**
- * `revise_menu` input. Local until the contract lands (Needs: toolSchemas.revise_menu); the same shape moves to
- * core/contracts. An agent may change amounts and products and add or remove ingredients and dishes; keeping a
- * shortfall open (keepOpen) stays the chef's.
- */
-export const ReviseMenuInput = z.object({
-	kitchenId: z.string().min(1),
-	proposalId: z.string().min(1).max(64),
-	revision: z.int().nonnegative(),
-	changes: z
-		.array(
-			z.discriminatedUnion('kind', [
-				z.object({
-					kind: z.literal('amount'),
-					ingredientId: z.string(),
-					amountPerCover: z.number()
-				}),
-				z.object({ kind: z.literal('pin'), ingredientId: z.string(), productId: z.string() }),
-				z.object({ kind: z.literal('unresolve'), ingredientId: z.string() }),
-				z.object({ kind: z.literal('removeIngredient'), ingredientId: z.string() }),
-				z.object({ kind: z.literal('removeDish'), dishId: z.string() }),
-				z.object({
-					kind: z.literal('addIngredient'),
-					dishId: z.string(),
-					label: z.string().min(1).max(120),
-					query: z.string().min(1).max(120),
-					amountPerCover: z.number().positive().max(2000),
-					unit: z.enum(['g', 'ml', 'pcs'])
-				})
-			])
-		)
-		.min(1)
-		.max(30),
-	/** The caller's words for why; kept on the revision as theirs, never an instruction or a grant. */
-	reasoning: z.string().max(300).optional()
-});
+/** `revise_menu` input: the registry's (core/contracts toolSchemas.revise_menu). keepOpen stays the chef's. */
+export const ReviseMenuInput = toolSchemas.revise_menu.input;
 
 export interface ReviseMenuDeps {
 	ports: { menus?: MenuStore; catalog: Pick<Catalog, 'resolve' | 'get'>; clock: Clock };

@@ -38,7 +38,7 @@ export function menuReviewUrl(p: { id: string; revision: number }): string {
  * proposal's review link. Places to go, never authority (D17).
  */
 export function withLinks(tool: ToolName, value: { meta?: ResultMeta }): void {
-	if (tool !== 'propose_menu') return;
+	if (tool !== 'propose_menu' && tool !== 'revise_menu') return;
 	const p = (value as { proposal?: { id?: unknown; revision?: unknown } }).proposal;
 	if (typeof p?.id !== 'string' || typeof p.revision !== 'number') return;
 	value.meta = {
