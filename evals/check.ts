@@ -42,6 +42,7 @@ function matchLine(key: string, want: Obj, lines: LineView[]): CheckResult {
 			p.push(`needKg ${l.needKg} ≠ ${want.needKg}`);
 		for (const r of (want.reasons as string[] | undefined) ?? [])
 			if (!l.reasons.includes(r)) p.push(`missing reason ${r} (has ${show(l.reasons)})`);
+		if (want.notState !== undefined && l.state === want.notState) p.push(`state is ${l.state}`);
 		for (const r of (want.notReasons as string[] | undefined) ?? [])
 			if (l.reasons.includes(r)) p.push(`has reason ${r}`);
 		if (want.historyStates && !subsequence(want.historyStates as string[], l.historyStates ?? []))
@@ -177,12 +178,19 @@ const CHECKERS: Record<string, Checker> = {
 			const a = end.attempts.find((x) => x.step === w.step);
 			if (!a) return fail(key, 'no attempt at that step');
 			const p: string[] = [];
-			for (const f of ['action', 'result', 'error', 'retryable', 'applied'] as const)
+			for (const f of ['action', 'result', 'error', 'retryable', 'applied', 'kind'] as const)
 				if (w[f] !== undefined && w[f] !== a[f]) p.push(`${f} ${show(a[f])} ≠ ${show(w[f])}`);
 			for (const id of (w.chosen as string[] | undefined) ?? [])
 				if (!a.chosen?.includes(id)) p.push(`chosen ${show(a.chosen)} lacks ${id}`);
 			for (const id of (w.notChosen as string[] | undefined) ?? [])
 				if (a.chosen?.includes(id)) p.push(`chosen ${show(a.chosen)} has ${id}`);
+			if (w.closingNotBefore !== undefined) {
+				const min = new Date(String(w.closingNotBefore)).getTime();
+				const early = (a.closingTimes ?? []).filter((t) => new Date(t).getTime() < min);
+				if (!a.closingTimes?.length) p.push('no closing times');
+				if (early.length)
+					p.push(`cut-offs before ${w.closingNotBefore}: ${show(early.slice(0, 3))}`);
+			}
 			return p.length ? fail(key, p.join('; ')) : ok(key);
 		}),
 
@@ -197,6 +205,63 @@ const CHECKERS: Record<string, Checker> = {
 		for (const id of w.covers ?? []) if (!a.productIds.includes(id)) p.push(`lacks ${id}`);
 		for (const id of w.excludes ?? []) if (a.productIds.includes(id)) p.push(`binds ${id}`);
 		return [p.length ? fail('approval', p.join('; ')) : ok('approval')];
+	},
+
+	orderLines: (want, end) =>
+		(want as Obj[]).map((w) => {
+			const key = `orderLines[${w.productId}]`;
+			const l = (end.orderLines ?? []).find((x) => x.productId === w.productId);
+			if (!l) return fail(key, 'not ordered');
+			return w.authority === undefined || l.authority === w.authority
+				? ok(key)
+				: fail(key, `authority ${l.authority} ≠ ${w.authority}`);
+		}),
+
+	/** Exact multiset of quantities for a product across its lines (two dishes sharing a SKU). */
+	qtys: (want, end) =>
+		(want as { productId: string; qty: number[] }[]).map((w) => {
+			const key = `qtys[${w.productId}]`;
+			const have = end.lines
+				.filter((l) => l.productId === w.productId && l.state !== 'rejected')
+				.map((l) => l.qty ?? NaN)
+				.sort((a, b) => a - b);
+			const exp = [...w.qty].sort((a, b) => a - b);
+			return show(have) === show(exp) ? ok(key) : fail(key, `${show(have)} ≠ ${show(exp)}`);
+		}),
+
+	fulfilment: (want, end) =>
+		(want as Obj[]).map((w) => {
+			const key = `fulfilment[${w.label}]`;
+			const f = (end.fulfilment ?? []).find((x) => x.label === w.label);
+			if (!f) return fail(key, end.fulfilment ? 'no such need' : 'no fulfilment view');
+			const p: string[] = [];
+			const statuses = w.status === undefined ? [] : ([] as unknown[]).concat(w.status);
+			if (statuses.length && !statuses.includes(f.status)) p.push(`status ${f.status}`);
+			if (w.unresolvedMin !== undefined && f.unresolved < Number(w.unresolvedMin))
+				p.push(`unresolved ${f.unresolved} < ${w.unresolvedMin}`);
+			if (w.partition && Math.abs(f.partitionSum - f.required) > 1e-6)
+				p.push(`buckets sum ${f.partitionSum} ≠ required ${f.required}`);
+			if (w.confirmedMax !== undefined && f.supplierConfirmed > Number(w.confirmedMax))
+				p.push(`supplierConfirmed ${f.supplierConfirmed} > ${w.confirmedMax}`);
+			return p.length ? fail(key, p.join('; ')) : ok(key);
+		}),
+
+	lastVoided: (want, end) => {
+		const w = want as { includes?: { productId: string; change: string }[]; excludes?: string[] };
+		const diff = end.lastVoided;
+		if (!diff) return [fail('lastVoided', 'no voided-approval diff')];
+		return [
+			...(w.includes ?? []).map((x) =>
+				diff.some((d) => d.productId === x.productId && d.change === x.change)
+					? ok(`lastVoided+${x.productId}`)
+					: fail(`lastVoided+${x.productId}`, `no ${x.change} in ${show(diff)}`)
+			),
+			...(w.excludes ?? []).map((id) =>
+				diff.some((d) => d.productId === id)
+					? fail(`lastVoided-${id}`, 'listed as changed')
+					: ok(`lastVoided-${id}`)
+			)
+		];
 	},
 
 	previousRunKept: (want, end) => {

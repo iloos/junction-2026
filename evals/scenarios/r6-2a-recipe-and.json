@@ -1,0 +1,51 @@
+{
+	"id": "r6-2a-recipe-and",
+	"title": "Tarts made in house need pastry AND filling: with the filling missing, the tart need is not fulfilled, whatever the pastry line covers",
+	"stories": [],
+	"edgeCases": [],
+	"seeds": {
+		"kitchen": "k-hotel",
+		"event": "event-xmas-140"
+	},
+	"clock": "2026-12-07T21:40:00+02:00",
+	"overrides": {
+		"availability": [
+			{
+				"productId": "461378",
+				"amount": 0,
+				"label": "simulated: prune filling out"
+			}
+		],
+		"price": []
+	},
+	"steps": [
+		{
+			"actor": "chef",
+			"action": "plan_event",
+			"input": {
+				"eventId": "event-xmas-140"
+			}
+		},
+		{
+			"actor": "chef",
+			"action": "find_substitutes",
+			"input": {
+				"productId": "473317"
+			}
+		}
+	],
+	"expect": {
+		"fulfilment": [
+			{
+				"label": "Joulutorttu (prune star tart)",
+				"status": ["partial", "uncovered"],
+				"unresolvedMin": 0.001,
+				"partition": true
+			}
+		]
+	},
+	"expectFail": {
+		"R6-fulfilment": ["fulfilment"]
+	},
+	"notes": "R6 §3 (A2): required recipe components are AND; supported portions are bounded by the scarcest ingredient. The filling (461378) is simulated out from the start; whether the rescue then proposes the recipe or nothing, the tarts must stay visibly unresolved."
+}

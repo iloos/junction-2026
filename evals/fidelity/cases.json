@@ -1,0 +1,157 @@
+{
+	"$comment": "Cross-entry intent fidelity: the same words through /request (runRequest, fixture parser), the agent (runGoal, scripted planner) and a REST place_order with the lines a person would type must give the same basket. The agent needs an order verb and a kitchen in its goal, so it gets `agentText`: the same request in its phrasing. Expectations are properties (date, physical amount, constraint, category), never the first search hit. Runner: src/lib/server/evals/fidelity.test.ts. Today = scenario start, Mon 7 Dec 2026.",
+	"cases": [
+		{
+			"id": "butter-4kg-tomorrow",
+			"kitchen": "k-hotel",
+			"text": "4 kg butter tomorrow",
+			"agentText": "Order 4 kg butter for k-hotel tomorrow",
+			"rest": {
+				"deliverBy": "2026-12-08",
+				"lines": [
+					{
+						"productId": "464411",
+						"qty": 8,
+						"unit": "ST",
+						"amount": {
+							"value": 4,
+							"unit": "kg"
+						}
+					}
+				]
+			},
+			"expect": {
+				"deliverBy": "2026-12-08",
+				"physical": {
+					"unit": "kg",
+					"min": 4,
+					"max": 5
+				},
+				"sameCategoryAs": "464411"
+			}
+		},
+		{
+			"id": "lactose-free-milk-2l",
+			"kitchen": "k-hotel",
+			"text": "2 l lactose-free milk by Thursday",
+			"agentText": "Order 2 l lactose-free milk for k-hotel by Thursday",
+			"rest": {
+				"deliverBy": "2026-12-10",
+				"lines": [
+					{
+						"productId": "464201",
+						"qty": 2,
+						"unit": "ST",
+						"amount": {
+							"value": 2,
+							"unit": "l"
+						}
+					}
+				]
+			},
+			"expect": {
+				"deliverBy": "2026-12-10",
+				"physical": {
+					"unit": "l",
+					"min": 2,
+					"max": 3
+				},
+				"freeFrom": "LACTOSE",
+				"sameCategoryAs": "464201"
+			}
+		},
+		{
+			"id": "lactose-free-butter-4kg",
+			"kitchen": "k-hotel",
+			"text": "4 kg lactose-free butter tomorrow",
+			"agentText": "Order 4 kg lactose-free butter for k-hotel tomorrow",
+			"rest": {
+				"deliverBy": "2026-12-08",
+				"lines": [
+					{
+						"productId": "463437",
+						"qty": 8,
+						"unit": "ST",
+						"amount": {
+							"value": 4,
+							"unit": "kg"
+						}
+					}
+				]
+			},
+			"expect": {
+				"deliverBy": "2026-12-08",
+				"physical": {
+					"unit": "kg",
+					"min": 4,
+					"max": 5
+				},
+				"sameCategoryAs": "463437",
+				"freeFrom": "LACTOSE"
+			}
+		},
+		{
+			"id": "cream-constraint-last",
+			"kitchen": "k-hotel",
+			"text": "10 l whipping cream for Friday, lactose free",
+			"agentText": "Order 10 l whipping cream for k-hotel for Friday, lactose free",
+			"rest": {
+				"deliverBy": "2026-12-11",
+				"lines": [
+					{
+						"productId": "464194",
+						"qty": 10,
+						"unit": "ST",
+						"amount": {
+							"value": 10,
+							"unit": "l"
+						}
+					}
+				]
+			},
+			"expect": {
+				"deliverBy": "2026-12-11",
+				"physical": {
+					"unit": "l",
+					"min": 10,
+					"max": 11
+				},
+				"sameCategoryAs": "464194",
+				"freeFrom": "LACTOSE"
+			}
+		},
+		{
+			"id": "butter-grams-weekday",
+			"kitchen": "k-hotel",
+			"text": "500 g butter by Wednesday",
+			"agentText": "Order 500 g butter for k-hotel by Wednesday",
+			"rest": {
+				"deliverBy": "2026-12-09",
+				"lines": [
+					{
+						"productId": "464411",
+						"qty": 1,
+						"unit": "ST",
+						"amount": {
+							"value": 0.5,
+							"unit": "kg"
+						}
+					}
+				]
+			},
+			"expect": {
+				"deliverBy": "2026-12-09",
+				"physical": {
+					"unit": "kg",
+					"min": 0.5,
+					"max": 1
+				},
+				"sameCategoryAs": "464411"
+			},
+			"expectFail": {
+				"F4-pack": ["agent.physical"]
+			},
+			"notes": "The agent picks Valio butter 200 g (463798), sold only as KI = 20 × 200 g, so 500 g becomes 4 kg (8×) with no overshoot check; /request picks 1 × 500 g (464411)."
+		}
+	]
+}

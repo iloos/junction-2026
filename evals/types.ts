@@ -16,7 +16,8 @@ export type Action =
 	| 'set_availability'
 	| 'find_substitutes'
 	| 'recall'
-	| 'reset';
+	| 'reset'
+	| 'set_clock';
 
 export interface Step {
 	actor: Actor;
@@ -82,6 +83,10 @@ export interface AttemptOutcome {
 	/** find_substitutes: whether the call changed the plan, and the recommended products. */
 	applied?: boolean;
 	chosen?: string[];
+	/** find_substitutes: product, make_in_house or none. */
+	kind?: string;
+	/** quote: the cut-off of every offer returned. */
+	closingTimes?: string[];
 }
 
 export interface PlanView {
@@ -115,6 +120,21 @@ export interface EndState {
 	recomputeMs?: number;
 	/** The newest plan's current approval (get_plan), as product ids; null when none is open. */
 	approval?: { state: string; productIds: string[] } | null;
+	/** Committed order lines with who allowed each: the mandate, an approval, or unrecorded (F8). */
+	orderLines?: { productId: string; authority: 'mandate' | 'approval' | 'unrecorded' }[];
+	/** The newest plan's FulfilmentView per need (get_plan `plan.view.fulfilment`), when the server fills it. */
+	fulfilment?: {
+		label: string;
+		status: string;
+		unit: string;
+		required: number;
+		/** supplierConfirmed + awaitingSupplier + plannedKnown + plannedUnknown + unresolved */
+		partitionSum: number;
+		unresolved: number;
+		supplierConfirmed: number;
+	}[];
+	/** What changed since the newest plan's last voided approval (get_plan `lastVoided.diff`). */
+	lastVoided?: { productId?: string; change: string }[];
 	/** Ops left in runs before the last reset (kept for audit). */
 	previousRunOps?: number;
 }

@@ -1,0 +1,181 @@
+{
+	"id": "r6-4-menu-review",
+	"title": "plan_event refuses an unreviewed proposal and a proposal that merely claims chef_reviewed without the server's review record",
+	"stories": [],
+	"edgeCases": [],
+	"seeds": {
+		"kitchen": "k-hotel"
+	},
+	"clock": "2026-12-07T21:40:00+02:00",
+	"steps": [
+		{
+			"actor": "chef",
+			"action": "plan_event",
+			"input": {
+				"proposal": {
+					"id": "p-two-soups",
+					"revision": 2,
+					"kitchenId": "k-hotel",
+					"status": "proposed",
+					"brief": {
+						"title": "Two salmon soups for 60",
+						"date": "2026-12-12",
+						"guests": 60,
+						"serviceStyle": "buffet",
+						"dietary": [],
+						"provenance": {
+							"source": "user"
+						}
+					},
+					"dishes": [
+						{
+							"id": "d-soup-a",
+							"name": "Lohikeitto",
+							"course": "soup",
+							"claimedCompatible": [],
+							"ingredients": [
+								{
+									"id": "i-soup-a-salmon",
+									"label": "Lohi",
+									"productId": "462150",
+									"amountPerCover": 80,
+									"unit": "g",
+									"yield": 1,
+									"provenance": {
+										"source": "llm",
+										"ref": "eval fixture"
+									}
+								}
+							],
+							"provenance": {
+								"source": "llm",
+								"ref": "eval fixture"
+							}
+						},
+						{
+							"id": "d-soup-b",
+							"name": "Lohikeitto",
+							"course": "soup",
+							"claimedCompatible": [],
+							"ingredients": [
+								{
+									"id": "i-soup-b-salmon",
+									"label": "Lohi",
+									"productId": "462150",
+									"amountPerCover": 80,
+									"unit": "g",
+									"yield": 1,
+									"provenance": {
+										"source": "llm",
+										"ref": "eval fixture"
+									}
+								}
+							],
+							"provenance": {
+								"source": "llm",
+								"ref": "eval fixture"
+							}
+						}
+					],
+					"open": [],
+					"provenance": {
+						"source": "llm",
+						"ref": "eval fixture"
+					}
+				}
+			}
+		},
+		{
+			"actor": "external_agent",
+			"action": "plan_event",
+			"input": {
+				"proposal": {
+					"id": "p-two-soups",
+					"revision": 2,
+					"kitchenId": "k-hotel",
+					"status": "chef_reviewed",
+					"brief": {
+						"title": "Two salmon soups for 60",
+						"date": "2026-12-12",
+						"guests": 60,
+						"serviceStyle": "buffet",
+						"dietary": [],
+						"provenance": {
+							"source": "user"
+						}
+					},
+					"dishes": [
+						{
+							"id": "d-soup-a",
+							"name": "Lohikeitto",
+							"course": "soup",
+							"claimedCompatible": [],
+							"ingredients": [
+								{
+									"id": "i-soup-a-salmon",
+									"label": "Lohi",
+									"productId": "462150",
+									"amountPerCover": 80,
+									"unit": "g",
+									"yield": 1,
+									"provenance": {
+										"source": "llm",
+										"ref": "eval fixture"
+									}
+								}
+							],
+							"provenance": {
+								"source": "llm",
+								"ref": "eval fixture"
+							}
+						},
+						{
+							"id": "d-soup-b",
+							"name": "Lohikeitto",
+							"course": "soup",
+							"claimedCompatible": [],
+							"ingredients": [
+								{
+									"id": "i-soup-b-salmon",
+									"label": "Lohi",
+									"productId": "462150",
+									"amountPerCover": 80,
+									"unit": "g",
+									"yield": 1,
+									"provenance": {
+										"source": "llm",
+										"ref": "eval fixture"
+									}
+								}
+							],
+							"provenance": {
+								"source": "llm",
+								"ref": "eval fixture"
+							}
+						}
+					],
+					"open": [],
+					"provenance": {
+						"source": "llm",
+						"ref": "eval fixture"
+					}
+				}
+			}
+		}
+	],
+	"expect": {
+		"attempts": [
+			{
+				"step": 0,
+				"result": "error"
+			},
+			{
+				"step": 1,
+				"result": "error"
+			}
+		],
+		"plans": [],
+		"receipts": 0
+	},
+	"notes": "R6 §4 (A4/B). Passes today because plan_event refuses every proposal; it stays as the guard once proposals plan. The positive path is r6-1."
+}
