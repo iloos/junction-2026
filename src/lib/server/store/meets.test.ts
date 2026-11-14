@@ -23,8 +23,8 @@ describe.skipIf(!existsSync(join(DIR, 'valio_aimo_junction26_product_data.json')
 			expect(meat.verdict).toBe('no');
 			expect(meat.failing[0].why).toContain('meat');
 			// Feta-vegetable patty, prepared, no tag: unknown for VEG alone (with L its feta's milk makes it a no).
-		expect(meets(p('467290'), requirementsFromDiet(['VEG'])).verdict).toBe('unknown');
-		expect(meets(p('467290'), VEG).verdict).toBe('no');
+			expect(meets(p('467290'), requirementsFromDiet(['VEG'])).verdict).toBe('unknown');
+			expect(meets(p('467290'), VEG).verdict).toBe('no');
 		});
 
 		it('M excludes milk; L passes a lactose-free milk and a vegan salad, fails ordinary milk', () => {
