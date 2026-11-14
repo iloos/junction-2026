@@ -230,3 +230,38 @@ describe('R9-06: the receiving calendar holds at the gate', () => {
 		expect(p.lines[0].reasons).not.toContain('off_delivery_day');
 	});
 });
+
+describe('R7-02: a substitute replaces the purchase, it is not bought beside it', () => {
+	it('one 10 l need buys 10 l: the original goes to 0, superseded, in the same change', async () => {
+		const { h } = await harness();
+		const p = must(
+			await h.place_order(ctx(), {
+				kitchenId: 'k-hotel',
+				deliverBy: '2026-12-10',
+				idempotencyKey: 'replace',
+				lines: [{ productId: '464201', qty: 10, unit: 'ST', amount: { value: 10, unit: 'l' } }]
+			})
+		).plan;
+		const r = must(
+			await h.find_substitutes(ctx(), {
+				planId: p.id,
+				version: p.version,
+				lineId: p.lines[0].id,
+				apply: true
+			})
+		);
+		const original = r.plan.lines.find((l) => l.id === p.lines[0].id)!;
+		expect(original.qty.value).toBe(0);
+		expect(original.reasons).toContain('superseded');
+		const bought = must(
+			await h.commit_order(ctx(), {
+				planId: p.id,
+				version: r.plan.version,
+				idempotencyKey: 'replace-commit'
+			})
+		);
+		expect(bought.committedLineIds).toEqual([r.chosen[0].id]);
+		const f = must(await h.get_plan(ctx(), { planId: p.id })).plan.view!.fulfilment[0];
+		expect(f.excess.value).toBe(0);
+	});
+});

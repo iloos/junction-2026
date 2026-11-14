@@ -186,6 +186,8 @@ export interface RescueOptions {
 	exclude?: string[];
 	/** Why this rescue ran, added to the new line's provenance. */
 	note?: string;
+	/** An explicit split: the original line stays bought beside the substitute (already cut to what is left). */
+	keepOriginal?: boolean;
 }
 
 export async function findSubstitutes(
@@ -470,9 +472,21 @@ export async function findSubstitutes(
 	// Prepare outside the transaction: the open lines after the swap, and their catalogue data.
 	const old = new Set(saved.map((l) => l.id));
 	const proposedLines = drafts.map(proposedOf);
+	// R7-02: the substitute replaces the original's purchase in the same transaction, so one need is never bought
+	// twice. The original stays on the plan at 0, marked superseded; an original nothing could buy is left as it is.
+	const supersede =
+		!opts.keepOriginal &&
+		line.qty.value > 0 &&
+		(line.state === 'eligible' || line.state === 'held' || line.state === 'proposed');
 	const openAfter = [...plan0.lines.filter((l) => !old.has(l.id)), ...proposedLines]
 		.filter((l) => l.state !== 'committed')
-		.map<DraftLine>((l) => drafts.find((d) => d.id === l.id) ?? draftFromLine(l));
+		.map<DraftLine>(
+			(l) =>
+				drafts.find((d) => d.id === l.id) ??
+				(supersede && l.id === line.id
+					? { ...draftFromLine(l), qty: { ...l.qty, value: 0 }, extraReasons: ['superseded'] }
+					: draftFromLine(l))
+		);
 	const fetched = await prefetch(
 		ports,
 		openAfter.map((d) => d.productId),

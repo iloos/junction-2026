@@ -168,7 +168,7 @@ export function tierLines(input: TierInput): TierResult {
 			return {
 				draft,
 				offer,
-				reasons: [],
+				reasons: (draft.extraReasons ?? []).filter((r) => r === 'superseded'),
 				orderable: false,
 				gap: false,
 				lineCents: null,

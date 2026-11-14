@@ -108,7 +108,13 @@ export async function rescueContention(
 			ports,
 			ctx,
 			{ planId: plan0.id, version, lineId: target.id, apply: true },
-			{ keep, coveredServedKg: covered, exclude: [input.productId], note: input.note }
+			{
+				keep,
+				coveredServedKg: covered,
+				exclude: [input.productId],
+				note: input.note,
+				keepOriginal: !original && kept > 0
+			}
 		);
 		if (!r.ok) return r;
 
