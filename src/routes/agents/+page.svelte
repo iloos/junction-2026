@@ -212,9 +212,8 @@
 	<section class="mb-8" aria-labelledby="start">
 		<h2 id="start" class="font-semibold">What your agent reads first</h2>
 		<p class="mt-1 text-sm text-ink-2">The server’s MCP instructions, sent on initialize:</p>
-		<blockquote class="mt-2 border-l-2 border-accent pl-3 text-sm text-ink-2">
-			{data.instructions}
-		</blockquote>
+		<pre
+			class="mt-2 border-l-2 border-accent pl-3 font-sans text-sm whitespace-pre-wrap text-ink-2">{data.instructions}</pre>
 	</section>
 
 	<section class="mb-8" aria-labelledby="tools">
@@ -226,14 +225,15 @@
 						<code class="font-mono text-sm font-semibold">{t.name}</code>
 						<span class="text-sm text-ink-3">{t.title} · scope {t.scope}</span>
 					</div>
-					<p class="mt-0.5 text-sm text-ink-2">{t.description}</p>
+					<!-- Tool descriptions name other tools: developer text, shown as such. -->
+					<pre class="mt-0.5 font-sans text-sm whitespace-pre-wrap text-ink-2">{t.description}</pre>
 				</li>
 			{/each}
 		</ul>
 		<p class="mt-2 flex items-start gap-2 text-sm text-ink-2">
 			<ShieldCheck size={16} class="mt-0.5 shrink-0 text-ok" />
-			Not in your list: {data.withheld.map((w) => `${w.name} (${w.scope})`).join(', ')}. Those are
-			the chef’s.
+			Your agent can read, plan and order in your sandbox; it can never approve or change the mandate.
+			Those stay with the chef.
 		</p>
 		{#if data.tools.some((t) => (t.name as string) === 'read_image')}
 			<p class="mt-2 text-sm text-ink-2" data-testid="read-image-note">
@@ -286,7 +286,7 @@
 			{#each transcript as [call, result], i (i)}
 				<li class="rounded border border-rule bg-sheet px-3 py-2">
 					<code class="font-mono break-words">{call}</code>
-					<p class="text-ink-2">→ {result}</p>
+					<pre class="font-sans whitespace-pre-wrap text-ink-2">→ {result}</pre>
 				</li>
 			{/each}
 		</ol>
