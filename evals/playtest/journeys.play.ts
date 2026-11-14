@@ -73,7 +73,33 @@ async function say(r: Recorder, page: Page, text: string) {
 
 async function requestPage(page: Page, text: string) {
 	await page.goto(`${BASE}/request`);
-	await page.locator('#req').fill(text);
+	const form = page.locator('#req');
+	const composer = page.locator('#chat-text');
+	await form.or(composer).first().waitFor({ timeout: 30_000 });
+	if (!(await form.isVisible().catch(() => false))) {
+		// From wave K (D23 UI) /request is the conversation, full width: the same composer as the dock.
+		const before = await page
+			.locator('main')
+			.innerText()
+			.catch(() => '');
+		await composer.fill(text);
+		await page.getByRole('button', { name: 'Send' }).first().click();
+		await page.waitForTimeout(1500);
+		await page
+			.getByText(/^Workingb.*…$/)
+			.first()
+			.waitFor({ state: 'detached', timeout: 180_000 })
+			.catch(() => undefined);
+		const after = await page
+			.locator('main')
+			.innerText()
+			.catch(() => '');
+		if (after.length <= before.length + text.length)
+			throw new Error('the conversation gave no answer');
+		await page.waitForTimeout(1500);
+		return;
+	}
+	await form.fill(text);
 	await page.getByRole('button', { name: /Find and price/ }).click();
 	await page
 		.getByText(

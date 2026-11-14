@@ -143,13 +143,28 @@ export async function openWhy(page: Page) {
 export async function request(page: Page, text: string, kitchen?: string) {
 	await page.goto(`${BASE}/request`);
 	if (kitchen) await page.locator('select').first().selectOption({ label: kitchen });
-	await page.locator('#req').fill(text);
-	await page.getByRole('button', { name: /Find and price/ }).click();
-	await page
-		.getByText(/Prepared by the kitchen agent|Nothing was ordered|Event brief|nothing quoted/)
-		.first()
-		.waitFor({ timeout: 60_000 })
-		.catch(() => undefined);
+	// /request is either the step page (#req + "Find and price") or, from wave K (D23 UI), the full-width conversation.
+	const form = page.locator('#req');
+	const composer = page.locator('#chat-text');
+	await form.or(composer).first().waitFor({ timeout: 30_000 });
+	if (await form.isVisible().catch(() => false)) {
+		await form.fill(text);
+		await page.getByRole('button', { name: /Find and price/ }).click();
+		await page
+			.getByText(/Prepared by the kitchen agent|Nothing was ordered|Event brief|nothing quoted/)
+			.first()
+			.waitFor({ timeout: 60_000 })
+			.catch(() => undefined);
+	} else {
+		await composer.fill(text);
+		await page.getByRole('button', { name: 'Send' }).first().click();
+		await page.waitForTimeout(1500);
+		await page
+			.getByText(/^Workingb.*…$/)
+			.first()
+			.waitFor({ state: 'detached', timeout: 180_000 })
+			.catch(() => undefined);
+	}
 	await page.waitForTimeout(1500);
 }
 
