@@ -10,6 +10,7 @@
 	import StateChip from './StateChip.svelte';
 	import ProductThumb from './ProductThumb.svelte';
 	import SwapPanel from './SwapPanel.svelte';
+	import HoldButton from './HoldButton.svelte';
 	import { Repeat } from '@lucide/svelte';
 	import AgentMark from './AgentMark.svelte';
 	import DietMarks from './DietMarks.svelte';
@@ -34,6 +35,18 @@
 		onwhy?: () => void;
 		/** Offer "Swap" (D28): the plan on screen, and what to do after a pick (re-read). */
 		swap?: { planId: string; version: number; deliverBy?: string; onchanged: () => void };
+		/** Open the compare panel (Swap pressed on the collapsed dish row). */
+		swapOpen?: boolean;
+		/** This line's own decision (D23): Accept / Reject, or a sign-off one by one. */
+		decide?: {
+			state: 'pending' | 'granted' | 'denied';
+			signOff: boolean;
+			/** What rejecting costs, in one line ("Graavilohi loses cover"). */
+			cost: string;
+			busy?: boolean;
+			onaccept: () => void;
+			onreject: () => void;
+		};
 	}
 	let {
 		line: l,
@@ -45,9 +58,14 @@
 		diet,
 		expanded = $bindable(false),
 		onwhy,
-		swap
+		swap,
+		decide,
+		swapOpen = false
 	}: Props = $props();
 	let swapping = $state(false);
+	$effect(() => {
+		if (swapOpen) swapping = true;
+	});
 
 	const rejected = $derived(l.state === 'rejected' || l.state === 'unorderable');
 	const b = $derived(lineBasis(l.qty, l.view));
@@ -97,11 +115,25 @@
 			{:else if by}<p><AgentMark {by} /></p>
 			{/if}
 			<p class="mono text-micro text-ink-3">
-				{#if rejected}<span class="font-sans">{l.productId} · not ordered</span>{:else}<span
-						class="text-ink">{b.buys}</span
-					>{#if b.physical && !expanded}<span class="text-ink-2"> {b.physical}</span>{/if}{/if}
+				{#if rejected}<span class="font-sans"
+						><span class="sys-only mono">{l.productId} · </span>Not ordered</span
+					>{:else}<span class="text-ink">{b.buys}</span>{#if b.physical && !expanded}<span
+							class="text-ink-2"
+						>
+							{b.physical}</span
+						>{/if}{/if}
 			</p>
 			{#if lot && !rejected}<p class="text-meta text-ink-2">{lot}</p>{/if}
+			{#if decide?.state === 'denied'}
+				<p class="text-meta text-out">Not ordered: {decide.cost}</p>
+			{:else if decide?.state === 'pending' && decide.signOff}
+				<div class="mt-1.5 max-w-72">
+					<p class="mb-1 text-meta text-signoff">
+						Needs your sign-off on its own. If rejected: {decide.cost}.
+					</p>
+					<HoldButton label="Hold to sign off" disabled={decide.busy} onconfirm={decide.onaccept} />
+				</div>
+			{/if}
 			{#if expanded && hasDetail}
 				<dl class="mono mt-0.5 grid grid-cols-[auto_1fr] gap-x-2 text-micro text-ink-2">
 					{#if b.physical}<dt class="font-sans text-ink-3">Buys</dt>
@@ -117,8 +149,27 @@
 	<span class="mono text-right text-body {rejected ? 'text-ink-3' : 'text-ink'}">
 		{rejected ? '—' : money(l.lineCents)}
 	</span>
-	<span class="col-span-2 flex items-center justify-between gap-2 sm:col-span-1 sm:justify-end">
+	<span class="col-span-2 flex flex-wrap items-center gap-2 sm:col-span-1 sm:justify-end">
 		<StateChip state={l.state} tier={l.tier} reasons={l.reasons} {approved} view={l.view} />
+		{#if decide?.state === 'pending' && !decide.signOff}
+			<span class="inline-flex shrink-0 gap-1.5">
+				<button
+					type="button"
+					class="inline-flex h-8 items-center rounded-md border border-accent px-3 text-meta font-medium text-accent-ink hover:bg-accent-wash disabled:opacity-50"
+					disabled={decide.busy}
+					onclick={decide.onaccept}>Accept</button
+				>
+				<button
+					type="button"
+					class="inline-flex h-8 items-center rounded-md border border-rule-strong px-3 text-meta text-ink hover:border-out disabled:opacity-50"
+					disabled={decide.busy}
+					title="Not ordered: {decide.cost}"
+					onclick={decide.onreject}>Reject</button
+				>
+			</span>
+		{:else if decide?.state === 'denied'}
+			<span class="shrink-0 text-meta text-ink-2">Rejected</span>
+		{/if}
 		{#if swap && !rejected && l.state !== 'committed'}
 			<button
 				type="button"

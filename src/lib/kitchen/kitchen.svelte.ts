@@ -356,6 +356,43 @@ export class KitchenStore {
 		return ok;
 	}
 
+	/**
+	 * Decide lines on their own approval (per-line Accept/Reject, D23): each group goes to the approval that lists it,
+	 * bound to that approval's version and terms. Returns whether every group went through.
+	 */
+	async decideLines(
+		groups: {
+			approval: { id: string; planVersion: number; termsHash: string };
+			lineIds: string[];
+		}[],
+		decision: 'grant' | 'deny'
+	) {
+		if (this.readOnly || !groups.length) return false;
+		// False unless every group went through: a refused call throws, and #run reports it.
+		let ok = false;
+		await this.#run(async () => {
+			let all = true;
+			for (const g of groups) {
+				const out = await this.#call('approve', {
+					approvalId: g.approval.id,
+					planVersion: g.approval.planVersion,
+					termsHash: g.approval.termsHash,
+					decision,
+					lineIds: g.lineIds
+				});
+				all &&= decision === 'grant' ? out.state === 'granted' : out.state === 'denied';
+			}
+			ok = all;
+			const n = groups.reduce((t, g) => t + g.lineIds.length, 0);
+			this.#log(
+				'approval',
+				`${decision === 'grant' ? 'Accepted' : 'Rejected'}: ${n} ${n === 1 ? 'line' : 'lines'}`,
+				groups.map((g) => g.approval.id).join(', ')
+			);
+		});
+		return ok;
+	}
+
 	async commit() {
 		if (!this.plan || this.readOnly) return;
 		const key = `commit-${this.plan.id}-v${this.plan.version}`;
