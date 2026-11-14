@@ -27,8 +27,6 @@ const OPEN: Record<string, string> = {
 	'R11-06a': '9c',
 	'R11-06b': '9c',
 	'R11-07a': '1f + 9c',
-	'R11-08': 'da',
-	'R11-09': '8d',
 	'R11-10': '8d',
 	'R11-15': 'B + 8d'
 };
@@ -355,7 +353,10 @@ describe('suite: adversarial (round 11: recovery and read models)', () => {
 				})
 			);
 		try {
-			await rpc('tools/list');
+			// The key works (the list has tools) and read_image is not on it, so a refused call is not an auth failure.
+			const listed = await (await rpc('tools/list')).text();
+			expect(listed, 'tools/list answered with tools').toMatch(/"tools"\s*:\s*\[\s*\{/);
+			expect(listed, 'read_image is not listed').not.toMatch(/"name"\s*:\s*"read_image"/);
 			await rpc('tools/call', {
 				name: 'read_image',
 				arguments: { imageBase64: 'iVBORw0KGgoAAAAA', mimeType: 'image/png' }

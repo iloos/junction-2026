@@ -33,8 +33,7 @@ import { GET as agentCard } from '../../../routes/.well-known/agent.json/+server
 const OPEN: Record<string, string> = {
 	'R10-05': '8d',
 	'R10-06': '8d',
-	'R10-08': '8d',
-	'R10-15': 'da'
+	'R10-08': '8d'
 };
 function probe(id: string, title: string, fn: () => Promise<void> | void, timeout = 120_000) {
 	const owner = OPEN[id];
@@ -584,7 +583,8 @@ describe('suite: adversarial (round 10)', () => {
 				h as any
 			);
 			expect(answer.text).not.toContain('Valio semi-skimmed milk');
-			expect(answer.text).toMatch(/Sweden|\?/);
+			// The Arla's own origin, or a question that names the choice: never just any "?".
+			expect(answer.text, answer.text).toMatch(/Sweden|Which .*\?/);
 		}
 	);
 
