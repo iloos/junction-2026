@@ -259,3 +259,23 @@ export const menuProposals = pgTable(
 		index('menu_proposals_latest').on(t.workspaceId, t.id, t.revision.desc())
 	]
 );
+
+/** Procurement tasks (Ring 2): one row per task, the document versioned for compare-and-set writes. */
+export const agentTasks = pgTable(
+	'agent_tasks',
+	{
+		workspaceId: text('workspace_id')
+			.notNull()
+			.references(() => workspaces.id),
+		id: text('id').notNull(),
+		kitchenId: text('kitchen_id').notNull(),
+		state: text('state').notNull(),
+		version: integer('version').notNull(),
+		doc: jsonb('doc').notNull(),
+		updatedAt: ts('updated_at').notNull().defaultNow()
+	},
+	(t) => [
+		primaryKey({ columns: [t.workspaceId, t.id] }),
+		index('agent_tasks_open').on(t.workspaceId, t.kitchenId, t.state)
+	]
+);

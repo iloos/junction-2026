@@ -277,6 +277,8 @@ export const Plan = z.object({
 	state: PlanState,
 	deliverBy: IsoDate,
 	eventId: z.string().optional(),
+	/** The procurement task this plan serves, when it was created for one. */
+	taskId: z.string().optional(),
 	/** The chef-reviewed menu proposal revision this plan was built from. */
 	source: z.object({ proposalId: z.string(), revision: z.int().nonnegative() }).optional(),
 	needs: z.array(Need),

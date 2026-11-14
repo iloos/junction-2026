@@ -7,6 +7,7 @@ import type {
 	DomainError,
 	Kitchen,
 	MenuProposal,
+	Task,
 	Offer,
 	OpEnvelope,
 	PendingOp,
@@ -90,10 +91,23 @@ export interface Decide {
 		context: string;
 		max: number;
 	}): Promise<Decision<number>>;
+	/**
+	 * Many questions in one call (Gemini Decisions answers ~120 in one request). Ids are the caller's; answers come
+	 * back keyed by id. A fixture/replay/rules fallback answers per question. Optional until the adapter has it.
+	 */
+	batch?(qs: DecideQuestion[]): Promise<Record<string, Decision<boolean | string | number>>>;
 }
+export type DecideQuestion =
+	| { id: string; kind: 'yes_no'; question: string; context: string }
+	| { id: string; kind: 'choice'; question: string; options: readonly string[]; context: string }
+	| { id: string; kind: 'score'; question: string; rubric: string; context: string; max: number };
 export interface Decision<T> {
 	value: T;
 	confidence: number;
+	/** Calibrated probability of "yes" for a yes/no question. Shown, never used to grant anything. */
+	p?: number;
+	/** Probability per option for a choice or score question. */
+	probabilities?: Record<string, number>;
 	source: 'gemini' | 'replay' | 'rules';
 	model?: string;
 	latencyMs: number;
@@ -180,6 +194,18 @@ export interface CallContext {
 }
 
 /**
+ * Procurement tasks (agent lane owns the adapter on table `agent_tasks`). Writes are compare-and-set on `version`.
+ */
+export interface TaskStore {
+	get(workspaceId: string, id: string): Promise<Task | null>;
+	list(
+		workspaceId: string,
+		opts?: { kitchenId?: string; open?: boolean; limit?: number }
+	): Promise<Task[]>;
+	put(task: Task, expectedVersion: number | null): Promise<Result<Task>>;
+}
+
+/**
  * Menu proposals (Track B owns the adapter, `src/lib/server/menu/**`): stored per workspace and revision before any
  * recoverable URL is returned. `review` records who accepted which revision (digest = termsHash-style hash of the
  * canonical proposal); plan_event reads only reviewed revisions.
@@ -243,4 +269,6 @@ export interface Ports {
 	ops: Ops;
 	/** Menu proposals (Track B); plan_event{proposal} reads reviewed revisions from it. Absent = menus unsupported. */
 	menus?: MenuStore;
+	/** Procurement tasks (Ring 2). Absent = tasks unsupported. */
+	tasks?: TaskStore;
 }
