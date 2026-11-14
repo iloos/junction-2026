@@ -14,6 +14,8 @@
 	import ServiceStatus from './ServiceStatus.svelte';
 	import OrdersTab from './OrdersTab.svelte';
 	import DemandTab from './DemandTab.svelte';
+	import GatePanel from './GatePanel.svelte';
+	import { gatePaths } from './gate';
 	import { storyOf } from './story';
 	import type { OpEnvelope } from '$lib/core/contracts';
 	import { buildCases, coverage, kitchenHref, openDecisions, openLines } from './cases';
@@ -513,8 +515,8 @@
 						</p>
 					{/each}
 				</section>
-				{#if selected}
-					<div class="story-col">
+				<div class="story-col">
+					{#if selected}
 						<StoryPanel
 							title={selected.title}
 							steps={story.steps}
@@ -522,8 +524,9 @@
 							time={clockTime}
 							ondetail={showOp}
 						/>
-					</div>
-				{/if}
+					{/if}
+					<GatePanel g={gatePaths(stream.state)} />
+				</div>
 			{:else if view === 'orders'}
 				<OrdersTab
 					ws={data.workspace}
