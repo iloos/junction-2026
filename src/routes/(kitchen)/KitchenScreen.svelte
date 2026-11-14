@@ -149,6 +149,7 @@
 	}
 
 	const snap = $derived(k.snap);
+	let mandateOpen = $state(false);
 	/** Lines no dish row shows (an order of loose lines), so nothing on the plan is left off the table. */
 	const looseLines = $derived.by(() => {
 		const shown = new Set((k.view?.dishes ?? []).flatMap((d) => d.lineIds));
@@ -669,10 +670,18 @@
 			</p>
 		{/if}
 		{#if snap}
-			<p class="max-w-[95ch] min-w-0 text-meta text-ink-2">
+			<!-- One line on a phone, with "more"; the whole quote from sm. -->
+			<p
+				class="max-w-[95ch] min-w-0 text-meta text-ink-2 {mandateOpen ? '' : 'max-sm:line-clamp-1'}"
+			>
 				<span class="font-medium text-ink">Mandate, in the chef's words:</span>
 				“{snap.rules.words}”
 			</p>
+			{#if !mandateOpen}<button
+					type="button"
+					class="-mt-1.5 self-start text-meta text-ink-2 underline underline-offset-2 sm:hidden"
+					onclick={() => (mandateOpen = true)}>more</button
+				>{/if}
 			<span class="sm:ml-auto"><CalendarSubscribe kitchenId={snap.kitchen.id} /></span>
 		{/if}
 	</div>
@@ -892,6 +901,8 @@
 					cannot={needsYou.cannot}
 					{orderable}
 					ordered={orderedState}
+					onorder={() => k.commit()}
+					busy={k.busy}
 					openLines={(plan?.lines ?? []).filter(
 						(l) => !['committed', 'rejected', 'unorderable'].includes(l.state) && l.qty.value > 0
 					).length}

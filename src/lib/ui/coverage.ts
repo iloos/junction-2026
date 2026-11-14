@@ -266,7 +266,7 @@ export function dishChipWord(tone: DishTone, rescued = false): string {
 			return 'Needs sign-off';
 		case 'unknown':
 			// Never reads as covered: a rescue on stock Valio doesn't state is still unstated stock.
-			return rescued ? 'Rescued · stock unstated' : 'Stock unstated';
+			return rescued ? "Rescued · Valio hasn't said" : "Valio hasn't said";
 		case 'missing':
 			return 'Not covered';
 	}

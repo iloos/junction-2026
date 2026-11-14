@@ -180,7 +180,7 @@ test('lines inside the mandate are ordered alone, before any decision', async ({
 	note('b3-committed', committed);
 	expect.soft(committed.length, 'committed = the button count').toBe(n);
 	expect.soft(after, 'decisions still wait for the chef').toMatch(/decision/i);
-	expect.soft(before).toMatch(/can be ordered now/);
+	expect.soft(before, 'the header offers what can go now').toMatch(/Order \d+ lines? now/);
 });
 
 test('approve, order, one receipt; Ops shows the same case by cause', async ({ page, context }) => {

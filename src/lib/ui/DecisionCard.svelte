@@ -50,7 +50,7 @@
 	/** One line of consequence; the reasons in full and the lines are behind Details. */
 	const held = $derived.by(() => {
 		const dishes = new Set(d.lines.map((l) => l.needId).filter(Boolean)).size;
-		return `If held: ${n} ${noun} not ordered${dishes ? `, ${dishes} ${dishes === 1 ? 'dish loses' : 'dishes lose'} cover` : ''}.`;
+		return `If you say no: ${n} ${noun} not ordered${dishes ? `, ${dishes} ${dishes === 1 ? 'dish loses' : 'dishes lose'} cover` : ''}.`;
 	});
 	let confirming = $state(false);
 	let confirmBtn = $state<HTMLButtonElement | null>(null);

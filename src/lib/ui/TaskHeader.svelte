@@ -31,6 +31,9 @@
 		/** Lines not ordered and still orderable or decidable (a partial order keeps them open). */
 		openLines?: number;
 		action?: Snippet;
+		/** Order what can go now (the page's own commit): the header's "can be ordered now" is the action itself. */
+		onorder?: () => void;
+		busy?: boolean;
 		/** The kitchen's other plans in this sandbox, each with a link that opens it here. */
 		others?: { id: string; title: string; open: number; ordered: number; href: string }[];
 	}
@@ -46,10 +49,14 @@
 		ordered = null,
 		openLines = 0,
 		action,
+		onorder,
+		busy = false,
 		others = []
 	}: Props = $props();
 
 	const t = $derived(needTally(coverage));
+	/** The deadline in one short phrase for a phone: "Tue 15:00". */
+	const shortDue = $derived(storyTime(due).replace(/\s\d{1,2}\s\w{3},/, ''));
 	const left = $derived.by(() => {
 		if (!now) return '';
 		const ms = new Date(due).getTime() - now.getTime();
@@ -121,20 +128,38 @@
 					<span class="mono text-ink">{money(ordered.cents)}</span>. Editing is locked.
 				</p>
 			{:else}
-				<p class="text-display font-semibold tracking-[-0.015em] text-ink">
+				<p class="text-title font-semibold tracking-[-0.015em] text-ink sm:text-display">
 					{decisionCount(decisions)}
 					{#if decisions > 0}<span class="text-ink-2">before</span>
-						<span class="mono whitespace-nowrap">{storyTime(due)}</span>{/if}
+						<!-- One line on a phone ("Tue 15:00"); the full date in the big mono from sm. -->
+						<span class="mono whitespace-nowrap sm:hidden">{shortDue}</span><span
+							class="mono hidden whitespace-nowrap sm:inline">{storyTime(due)}</span
+						>{/if}
 				</p>
 				<p class="mt-1 text-body text-ink-2">
 					{#if decisions > 0}{left ? `Due ${left}. ` : ''}Each decision is approved on its own.{:else}Nothing
 						needs you: every open line is within the mandate.{/if}
-					{#if orderable?.lines}
+					{#if orderable?.lines && !onorder}
 						<span class="text-ink"
 							><span class="mono">{orderable.lines}</span> lines,
 							<span class="mono">{money(orderable.cents)}</span> can be ordered now.</span
 						>{/if}
 				</p>
+				{#if orderable?.lines && onorder}
+					<!-- What can go now is the action, up here where it is seen; primary only when nothing needs the chef. -->
+					<button
+						type="button"
+						class="mt-2.5 inline-flex h-10 items-center gap-2 rounded-md px-4 text-body font-medium disabled:opacity-50 {decisions >
+						0
+							? 'border border-accent text-accent-ink hover:bg-accent-wash'
+							: 'bg-accent text-sheet hover:bg-accent-ink'}"
+						disabled={busy}
+						onclick={onorder}
+						>Order {orderable.lines}
+						{orderable.lines === 1 ? 'line' : 'lines'} now ·
+						<span class="mono">{money(orderable.cents)}</span></button
+					>
+				{/if}
 			{/if}
 		</div>
 		{#if action}<div class="shrink-0">{@render action()}</div>{/if}
