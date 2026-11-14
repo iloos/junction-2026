@@ -197,8 +197,11 @@ export function callTool(
 		if (name === 'approve' && ws0.approvals[i.approvalId ?? '']?.planId !== plan.id)
 			return deny("that approval is not for this session's plan");
 		const via = tab ? `${surface}#${tab}` : surface;
+		// Every surface acts as this browser's visitor, so the kitchens it made take its approve, commit and edits.
 		const ctx =
-			via === 'kitchen' ? chef(s) : contextFor('chef', 'kitchen-ui', via, env, s.workspaceId);
+			via === 'kitchen'
+				? chef(s)
+				: asVisitor(contextFor('chef', 'kitchen-ui', via, env, s.workspaceId), s);
 		return serveTool(name, ctx, input, handlers);
 	});
 }
@@ -686,10 +689,12 @@ async function applyRules(s: Session) {
 	const kitchens = await b.ports.store.kitchens(chef(s).workspaceId);
 	const kitchen = kitchens.find((k) => k.id === s.kitchenId) ?? kitchens[0];
 	// A dish already ordered keeps what was ordered: its rescue is not re-picked (the screen says so up front).
-	const ordered = (id: string) =>
-		plan0.lines.some((l) => l.substituteFor === id && l.state === 'committed');
+	const ordered = (o: (typeof plan0.lines)[number]) =>
+		plan0.lines.some(
+			(l) => l.substituteFor === o.productId && l.needId === o.needId && l.state === 'committed'
+		);
 	const outages = plan0.lines.filter(
-		(l) => l.state === 'unorderable' && !l.substituteFor && !ordered(l.id)
+		(l) => l.state === 'unorderable' && !l.substituteFor && !ordered(l)
 	);
 	for (const line of outages) {
 		const plan = (await findPlan(s))!;
