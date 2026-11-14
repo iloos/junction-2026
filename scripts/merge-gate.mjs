@@ -4,6 +4,7 @@
 //   node scripts/merge-gate.mjs --from eval   resume at a step after fixing a red one
 //   node scripts/merge-gate.mjs --only lint,eval
 //   node scripts/merge-gate.mjs --full          also the Playwright e2e specs (before a tag)
+// Outside the main checkout only --only runs (or --full, as an emergency escape): the lead's main gate is the full one.
 // No network: LLM_PROVIDER is forced to fixture so a gate run never spends or flakes on an API.
 // The test steps hold a machine-wide lock: parallel gates in several worktrees starve PGlite of memory.
 import { execFileSync, spawnSync } from 'node:child_process';
@@ -105,6 +106,16 @@ const isMain = (() => {
 		return false;
 	}
 })();
+// Gate rule (DISPATCH, Sat 19:00): the lead's main gate is the only full gate. A lane runs `--only check,lint` plus
+// the tests for its own paths; `--full` is the deliberate escape for an emergency.
+if (!isMain && !only && !full) {
+	console.error(
+		"merge-gate: lanes run --only check,lint plus targeted tests; the lead's main gate is the full one.\n" +
+			'  pnpm gate --only check,lint\n' +
+			'  (an emergency full run from a lane: pnpm gate --full)'
+	);
+	process.exit(2);
+}
 const mainWaiting = () => {
 	try {
 		const pid = Number(readFileSync(PRIORITY, 'utf-8'));

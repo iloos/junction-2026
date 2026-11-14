@@ -12,7 +12,7 @@ import { allOrderStages, orderStages } from '$lib/core/services/stages';
 import { createFixtureDb } from '$lib/server/db/pglite';
 import { drizzleOpsReader } from '$lib/server/bus';
 import { orderedSender } from '$lib/server/bus/ordered';
-import { commitKey } from '$lib/server/request';
+import { commitKey, committableLines } from '$lib/server/request';
 import { runRequest } from '$lib/server/request/run';
 import { preferenceOrder } from '$lib/server/request/rank-by';
 import { createMcpEndpoint } from '$lib/server/tools/mcp';
@@ -29,9 +29,7 @@ const OPEN: Record<string, string> = {
 	'R11-07a': '1f + 9c',
 	'R11-08': 'da',
 	'R11-09': '8d',
-	'R11-10': '8d',
-	'R11-11': '9c',
-	'R11-12': '9c'
+	'R11-10': '8d'
 };
 const probe = prober(it, OPEN);
 
@@ -120,21 +118,26 @@ describe('suite: adversarial (round 11: purchasing intent)', () => {
 				};
 			};
 			const p = await s.place('request-mixed', ['100001', '100002']);
-			const idsFor = (plan: any, productId: string) =>
-				plan.lines.filter((l: any) => l.productId === productId).map((l: any) => l.id);
-			const input = {
-				planId: p.id,
-				version: p.version,
-				idempotencyKey: await commitKey(p.id, p.version, null, idsFor(p, '100001'))
+			// Commit exactly as Request's commitRequest does: the plan's committable lines now, keyed with its terms.
+			const requestCommit = async () => {
+				const before = must(await s.h.get_plan(s.ctx('chef'), { planId: p.id }));
+				const lineIds = committableLines(before.plan, before.approval);
+				if (!lineIds.length) return;
+				await s.h.commit_order(s.ctx('chef'), {
+					planId: p.id,
+					version: before.plan.version,
+					idempotencyKey: await commitKey(
+						p.id,
+						before.plan.version,
+						before.plan.termsHash ?? null,
+						lineIds
+					),
+					lineIds
+				});
 			};
-			must(await s.h.commit_order(s.ctx('chef'), input));
+			await requestCommit();
 			await s.grant(p.id);
-			const now = must(await s.h.get_plan(s.ctx('chef'), { planId: p.id })).plan;
-			await s.h.commit_order(s.ctx('chef'), {
-				...input,
-				version: now.version,
-				idempotencyKey: await commitKey(p.id, now.version, null, idsFor(now, '100002'))
-			});
+			await requestCommit();
 			const bought = (await s.orders()).flatMap((o) => o.lines.map((l: any) => l.productId));
 			expect(bought.sort()).toEqual(['100001', '100002']);
 		}
@@ -386,7 +389,9 @@ describe('suite: adversarial (round 11: recovery and read models)', () => {
 		expect(p.lines[0].reasons).toContain('requirement_unmet');
 		const ops = await drizzleOpsReader(s.b.db as any)(s.ws, 0, 1000, 'run-1');
 		const stages: any = orderStages(p.id, ops);
-		const said = JSON.stringify(stages?.proposed?.changes ?? []);
+		const changes = stages?.proposed?.changes ?? [];
+		const said = JSON.stringify(changes);
+		expect(changes.length, 'Ops describes the refused line').toBeGreaterThan(0);
 		expect(said).not.toMatch(/out of stock/i);
 	});
 
