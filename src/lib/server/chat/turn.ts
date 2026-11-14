@@ -21,6 +21,11 @@ import { parseRules } from '$lib/server/request/parse';
 import { dayWords, ledgerSummary, readTask } from '$lib/server/tasks/outcome';
 import { explain } from './explain';
 import { understand } from './understand';
+import { applyBriefAnswers, draftBrief, nextQuestion, toEventBrief } from '$lib/server/menu/brief';
+import type { BriefAnswer, BriefField } from '$lib/ui/request/types';
+import { eventMatches, SUPPORTED_EVENTS } from '$lib/server/agent/context';
+import { coursesIn, guestsIn } from '$lib/server/request/classify';
+import type { MenuProposal } from '$lib/core/contracts';
 import { project } from '$lib/server/tasks/project';
 import { memoryTaskStore } from '$lib/server/tasks/store';
 import { approvalUrl } from '$lib/server/tools/present';
@@ -193,6 +198,10 @@ function stepWords(s: StepRecord): string {
 		}
 		case 'explain_line':
 			return 'Explained a line.';
+		case 'propose_menu': {
+			const dishes = ((v.proposal as { dishes?: unknown[] } | undefined)?.dishes ?? []).length;
+			return `Proposed a menu: ${plural(dishes, 'dish', 'dishes')}.`;
+		}
 		default:
 			return 'Done.';
 	}
@@ -254,9 +263,10 @@ function blankTask(deps: ChatDeps, text: string): Task {
 }
 
 export async function* runChatTurn(
-	input: ChatTurnInput,
+	turnInput: ChatTurnInput,
 	deps: ChatDeps
 ): AsyncGenerator<ChatEvent, void, undefined> {
+	let input = turnInput;
 	const store = storeOf(deps.ports);
 	const fail = (taskId: string, text: string, state: TaskState = 'failed'): ChatEvent => ({
 		type: 'done',
@@ -265,6 +275,28 @@ export async function* runChatTurn(
 		text,
 		canContinue: false
 	});
+	// The answer to "What would you like to do?": a question reads, the other two say what to type.
+	if (input.answer?.field === 'intent') {
+		const v = String(input.answer.value);
+		if (v === 'check')
+			input = { ...input, answer: undefined, text: 'What still needs my decision?' };
+		else {
+			yield {
+				type: 'done',
+				taskId: input.taskId ?? '',
+				state: 'open',
+				text:
+					v === 'event'
+						? 'Describe the event: guests, the day and anything to avoid, for example "Dinner for 40 on Saturday, 4 courses, vegetarian:6".'
+						: 'Tell me what and how much, for example "4 kg lactose-free butter for Friday".',
+				canContinue: false
+			};
+			return;
+		}
+	}
+	// "Go ahead", "plan it", "jatka" on a task is Continue (for an event task: plan the reviewed menu).
+	if ((input.taskId || input.planId) && input.text && GO_AHEAD.test(input.text.trim()))
+		input = { ...input, text: undefined, continue: true };
 	const kinds = [input.text !== undefined, input.answer !== undefined, input.continue === true];
 	if (kinds.filter(Boolean).length !== 1) {
 		yield fail(input.taskId ?? '', 'Send one of text, answer or continue.');
@@ -302,7 +334,7 @@ export async function* runChatTurn(
 			task = {
 				...blankTask(deps, text),
 				kitchenId: plan.kitchenId,
-				title: `Plan ${plan.id}`,
+				title: `Order for ${dayWords(plan.deliverBy)}`,
 				requirement: { planId: plan.id },
 				plans: [{ planId: plan.id, versionSeen: plan.version, role: 'primary' }]
 			};
@@ -415,6 +447,11 @@ export async function* runChatTurn(
 		);
 		return;
 	}
+	// A new task is titled by what it asks for, in our words ("4 kg lactose-free butter Wednesday").
+	if (expected === null && understood && !input.planId) {
+		const g = understood.goal.trim();
+		task.title = (g[0]?.toUpperCase() ?? '') + g.slice(1, 200);
+	}
 	/** The task existed before this turn's words (a follow-up), rather than being started by them. */
 	const followUp = expected !== null || (!!input.planId && !newRequest);
 	/** A question, an authority request or small talk while a clarify is open is its own goal, not the answer. */
@@ -434,6 +471,33 @@ export async function* runChatTurn(
 				(understood.source === 'gemini' ? `via Gemini · ${understood.ms} ms` : 'read by rules') +
 				(understood.guard ? ` · ${understood.guard}` : '')
 		};
+	// Words that ask for nothing we can do ("??"): one short question with three answers, never a plan dump.
+	if (
+		words &&
+		!answering &&
+		(u?.kind === 'other' || (!u && reading?.kind === 'other') || !/[\p{L}\d]/u.test(words)) &&
+		task.pending.kind !== 'clarify'
+	) {
+		yield {
+			type: 'clarify',
+			taskId: expected !== null ? task.id : '',
+			field: 'intent',
+			question: 'What would you like to do?',
+			options: [
+				{ label: 'Order something', value: 'order' },
+				{ label: 'Plan an event', value: 'event' },
+				{ label: "Check what's open", value: 'check' }
+			]
+		};
+		yield {
+			type: 'done',
+			taskId: expected !== null ? task.id : '',
+			state: task.state,
+			text: 'What would you like to do?',
+			canContinue: false
+		};
+		return;
+	}
 	if (u?.kind === 'smalltalk' && !followUp) {
 		yield {
 			type: 'done',
@@ -461,6 +525,24 @@ export async function* runChatTurn(
 	let refusal: string | null = null;
 	let planId: string | undefined = primary;
 	let run: AgentRun | null = null;
+	/** A menu proposal shown this turn (the event flow). */
+	let menuCard: Extract<ChatEvent, { type: 'menu' }> | null = null;
+	/** What a Continue did: bought something, or found nothing newly authorised. */
+	let continued: 'ordered' | 'nothing' | null = null;
+	// The decision and numbers as they stood before this turn: a card or ledger line is shown again only when it
+	// changed, or when the chef asks.
+	const before = { decision: task.shown?.decision ?? null, ledger: task.shown?.ledger ?? null };
+	const asked = u?.kind === 'read';
+	// An event brief ("7-course meal for 3") is the chat's own flow: ask what the brief lacks, propose a menu, and plan
+	// it once a chef has reviewed it. The seeded buffet keeps the agent's own plan_event path.
+	const eventFlow =
+		task.requirement.kind === 'event' ||
+		(!followUp &&
+			!!words &&
+			(u?.kind === 'event' || reading?.kind === 'event') &&
+			!isSeededEvent(words));
+	if (eventFlow && task.requirement.kind !== 'event')
+		task.requirement = { ...task.requirement, kind: 'event' };
 
 	// The task is saved before anything is bought, so an effect never exists without the task that asked for it, and a
 	// concurrent turn on the same task loses here, before it acts.
@@ -480,7 +562,14 @@ export async function* runChatTurn(
 		expected = reserved.value.version;
 	}
 
-	if (resize && held) {
+	if (eventFlow) {
+		const r = await eventTurn(task, input, words, agentCtx, deps);
+		steps = r.steps;
+		clarify = r.clarify;
+		refusal = r.say;
+		menuCard = r.menu;
+		if (r.planId) planId = r.planId;
+	} else if (resize && held) {
 		const mismatch: Mismatch = {};
 		steps = await resizeLine(held, resize, mismatch, agentCtx, deps.handlers);
 		if (mismatch.ask && mismatch.at)
@@ -510,6 +599,7 @@ export async function* runChatTurn(
 			return;
 		}
 		steps = await continueTask(task, agentCtx, deps.handlers);
+		continued = steps.some((x) => x.tool === 'commit_order' && x.ok) ? 'ordered' : 'nothing';
 	} else {
 		// A typed answer to the open question, or words while one is open, fill that field only.
 		let goal = !followUp && understood ? understood.goal : String(task.requirement.goal ?? '');
@@ -670,12 +760,24 @@ export async function* runChatTurn(
 		canContinue = p.canContinue;
 		const ledger = read.value.ledger;
 		const card = decisionEvent(task, read.value);
-		if (card) yield card;
+		const sameDecision =
+			task.pending.kind === 'decision' &&
+			before.decision === `${task.pending.approvalId}:${task.pending.planVersion}`;
+		const ledgerSig = `${ledger.decisionsLeft}:${ledger.receiptIds.join()}:${JSON.stringify(ledger.needs.map((n) => [n.needId, n.plannedKnown.value, n.supplierConfirmed.value, n.unresolved.value]))}`;
+		const sameLedger = before.ledger === ledgerSig;
+		task.shown = {
+			...(task.pending.kind === 'decision'
+				? { decision: `${task.pending.approvalId}:${task.pending.planVersion}` }
+				: {}),
+			ledger: ledgerSig
+		};
+		if (card && (asked || !sameDecision)) yield card;
 		const summary = ledgerSummary(ledger, { deliverBy: read.value.plans[0]?.deliverBy });
-		yield { type: 'ledger', taskId: task.id, ledger, summary };
+		if (asked || !sameLedger || !sameDecision)
+			yield { type: 'ledger', taskId: task.id, ledger, summary };
 		let answer = summary;
 		const explainer = deps.models?.explain ?? deps.llm;
-		if (!refusal && explainer) {
+		if (!refusal && explainer && !continued) {
 			// Gemini words the answer from the ledger; a claim the ledger doesn't back falls back to the template.
 			const ex = await explain(
 				words ?? (input.continue ? 'What happened with my order?' : 'Where does this stand?'),
@@ -700,6 +802,16 @@ export async function* runChatTurn(
 			};
 		}
 		text = refusal ? `${refusal} ${summary}` : answer;
+		if (continued === 'ordered') text = orderedWords(read.value.plans, ledger.decisionsLeft);
+		if (continued === 'nothing')
+			text = ledger.decisionsLeft
+				? `Nothing new to order: ${ledger.decisionsLeft} ${ledger.decisionsLeft === 1 ? 'decision is' : 'decisions are'} still waiting for you.`
+				: 'Nothing new to order.';
+	} else if (menuCard) {
+		yield menuCard;
+		task.pending = { kind: 'none' };
+		task.state = 'awaiting_chef';
+		text = refusal ?? '';
 	} else {
 		text = refusal ?? run?.outcome?.nextAction ?? 'Nothing was done.';
 		// A side question while this task waits for an answer leaves that question open.
@@ -735,7 +847,14 @@ export async function* runChatTurn(
 		);
 		return;
 	}
-	yield { type: 'done', taskId: task.id, state: task.state, text: text.slice(0, 600), canContinue };
+	yield {
+		type: 'done',
+		taskId: task.id,
+		title: task.title,
+		state: task.state,
+		text: (await scrub(text, deps)).slice(0, 600),
+		canContinue
+	};
 }
 
 type TaskRead =
@@ -919,6 +1038,260 @@ async function resizeLine(
 		if (d.needUnit) mismatch.ask = true;
 	}
 	return steps;
+}
+
+/** The seeded Christmas buffet: its own words, with its guest count or none, and no courses asked for. */
+function isSeededEvent(words: string): boolean {
+	return SUPPORTED_EVENTS.some((e) => {
+		if (!eventMatches(words, e.title, e.id)) return false;
+		const guests = guestsIn(words);
+		return (guests === null || guests === 140) && coursesIn(words) === null;
+	});
+}
+
+const BRIEF_FIELDS: readonly BriefField[] = [
+	'guests',
+	'date',
+	'serviceStyle',
+	'courses',
+	'dietary',
+	'budget'
+];
+
+/** The brief's answered fields from the task's slots, as /request's brief answers. */
+function briefAnswers(task: Task): BriefAnswer[] {
+	const slots = task.slots as Record<string, unknown>;
+	return BRIEF_FIELDS.filter((f) => slots[f] !== undefined).map((f) => ({
+		id: `brief.${f}` as const,
+		value: slots[f] as BriefAnswer['value']
+	}));
+}
+
+/** A chip's value (JSON) or typed words, as the brief field's value. */
+function briefValue(field: BriefField, raw: unknown): BriefAnswer['value'] | null {
+	if (typeof raw === 'string') {
+		try {
+			const v = JSON.parse(raw) as unknown;
+			if (typeof v === 'number' || typeof v === 'string' || Array.isArray(v))
+				return v as BriefAnswer['value'];
+		} catch {
+			/* typed words */
+		}
+		const t = raw.trim();
+		if (!t) return null;
+		if (field === 'guests' || field === 'courses' || field === 'budget') {
+			const n = Number(t.replace(/[^\d.,]/g, '').replace(',', '.'));
+			return Number.isFinite(n) && n >= 0 ? n : null;
+		}
+		if (field === 'dietary') return /^(none|no|ei)$/i.test(t) ? [] : t.split(/\s*,\s*/);
+		return t;
+	}
+	if (typeof raw === 'number' || Array.isArray(raw)) return raw as BriefAnswer['value'];
+	return null;
+}
+
+/** Words that mean Continue on a task in hand. */
+const GO_AHEAD =
+	/^(ok(ay)?[,!.]?\s+|yes[,!.]?\s+|kyllä[,!.]?\s+)?(go ahead|continue|proceed|order it|do it|plan it|plan the menu|jatka|tilaa se|suunnittele)[.!]?$/i;
+
+/** "Plan it", "go ahead", "suunnittele": plan the reviewed menu. */
+const PLAN_IT = /\b(plan( it| the menu)?|go ahead|order it|let'?s go|suunnittele|tee se|tilaa)\b/i;
+
+/**
+ * One turn of the event flow. Fills the brief from answers (one question at a time, /request's own questions and
+ * chips), proposes a menu once the brief is complete (propose_menu, stored as the task's proposal), and plans the
+ * menu a chef has reviewed when asked (plan_event{proposal}). The model never reviews a menu; the chef does on /request.
+ */
+async function eventTurn(
+	task: Task,
+	input: ChatTurnInput,
+	words: string | undefined,
+	ctx: CallContext,
+	deps: ChatDeps
+): Promise<{
+	steps: StepRecord[];
+	clarify: Extract<Task['pending'], { kind: 'clarify' }> | null;
+	say: string | null;
+	menu: Extract<ChatEvent, { type: 'menu' }> | null;
+	planId?: string;
+}> {
+	const steps: StepRecord[] = [];
+	const call = async (tool: ToolName, inp: unknown, why: string) => {
+		const t0 = performance.now();
+		const r = await serveTool(tool, ctx, inp, deps.handlers);
+		steps.push({
+			n: steps.length + 1,
+			tool,
+			input: inp,
+			why,
+			ok: r.ok,
+			...(r.ok ? { value: r.value } : { error: r.error }),
+			ms: Math.round(performance.now() - t0)
+		});
+		return r;
+	};
+	const goal = String(task.requirement.goal ?? '');
+	const slots = task.slots as Record<string, unknown>;
+
+	// An answer to the open brief question, as a chip or typed.
+	const open = task.pending.kind === 'clarify' ? task.pending.field : null;
+	const field = (input.answer?.field ?? (words ? open : null)) as BriefField | null;
+	if (field && BRIEF_FIELDS.includes(field)) {
+		const v = briefValue(field, input.answer ? input.answer.value : words);
+		if (v !== null) slots[field] = v;
+	}
+	task.slots = slots as Task['slots'];
+
+	// A menu already proposed: plan it when asked, else say where it is reviewed.
+	if (task.proposal) {
+		if (input.continue || (words && PLAN_IT.test(words))) {
+			const r = await call(
+				'plan_event',
+				{ kitchenId: task.kitchenId, proposal: task.proposal },
+				'plan the reviewed menu'
+			);
+			if (r.ok)
+				return {
+					steps,
+					clarify: null,
+					say: null,
+					menu: null,
+					planId: (r.value as ToolOutput<'plan_event'>).plan.id
+				};
+			return {
+				steps,
+				clarify: null,
+				menu: null,
+				say: /review/i.test(r.error.message)
+					? 'The menu needs your review first: open it, accept it, then say "plan it".'
+					: `Not planned: ${r.error.message}`
+			};
+		}
+		return {
+			steps,
+			clarify: null,
+			menu: null,
+			say: 'Review the menu (link above); once you accept it, say "plan it" and I will plan the order.'
+		};
+	}
+
+	const draft = applyBriefAnswers(draftBrief(goal, deps.today), briefAnswers(task), deps.today);
+	const q = nextQuestion(draft, deps.today);
+	if (q) {
+		const options = q.chips.slice(0, 6).map((c) => ({
+			label: c.label.slice(0, 80),
+			value: JSON.stringify(c.answer.value).slice(0, 200)
+		}));
+		return {
+			steps,
+			clarify: {
+				kind: 'clarify',
+				field: q.field as ClarifyField,
+				question: q.text.slice(0, 300),
+				options
+			},
+			say: null,
+			menu: null
+		};
+	}
+	const brief = toEventBrief(draft, goal);
+	if (!brief)
+		return {
+			steps,
+			clarify: null,
+			menu: null,
+			say: 'I could not read the brief; describe the event again.'
+		};
+	const r = await call(
+		'propose_menu',
+		{ kitchenId: task.kitchenId, brief },
+		'propose a menu for the brief'
+	);
+	if (!r.ok) return { steps, clarify: null, menu: null, say: `No menu yet: ${r.error.message}` };
+	const proposal = (r.value as { proposal: MenuProposal }).proposal;
+	task.proposal = { id: proposal.id, revision: proposal.revision };
+	task.title = brief.title.slice(0, 200);
+	const unresolved = proposal.dishes
+		.flatMap((x) => x.ingredients)
+		.filter((i) => i.unresolved !== undefined).length;
+	const menu: Extract<ChatEvent, { type: 'menu' }> = {
+		type: 'menu',
+		taskId: task.id,
+		proposalId: proposal.id,
+		revision: proposal.revision,
+		title: brief.title,
+		guests: brief.guests,
+		date: brief.date,
+		dishes: proposal.dishes.map((x) => ({
+			name: x.name,
+			...(x.course ? { course: x.course } : {})
+		})),
+		...(brief.budgetCents ? { budgetCents: brief.budgetCents } : {}),
+		unresolved,
+		reviewed: proposal.status !== 'proposed',
+		reviewUrl: `/request?menu=${encodeURIComponent(proposal.id)}&rev=${proposal.revision}`
+	};
+	return {
+		steps,
+		clarify: null,
+		menu,
+		say:
+			`A menu for ${brief.guests} guests on ${dayWords(brief.date)}: ${proposal.dishes.length} dishes` +
+			(unresolved ? `, ${unresolved} ingredients without a product yet` : '') +
+			'. Amounts are estimates. Review it, then say "plan it".'
+	};
+}
+
+/**
+ * What a Continue bought, per dish in plain words ("Ordered: cured salmon 9.8 kg, rice porridge (rice 1.68 kg, milk
+ * 10.5 l)."), then what still waits ("Waiting on your decision: 14 lines in 2 decisions.").
+ */
+export function orderedWords(plans: Plan[], decisionsLeft: number): string {
+	const amount = (l: Plan['lines'][number]) => {
+		const p = l.view?.physical;
+		return p ? `${Math.round(p.value * 100) / 100} ${p.unit}` : `${l.qty.value} ${l.qty.unit}`;
+	};
+	const plain = (label: string) =>
+		(label.match(/\(([^)]+)\)/)?.[1] ?? label.split(' · ')[0]).trim();
+	const short = (name: string | undefined, id: string) =>
+		(name ?? id).split(/\s+/).slice(0, 3).join(' ').toLowerCase();
+	const parts: string[] = [];
+	let held = 0;
+	for (const plan of plans) {
+		held += plan.lines.filter((l) => l.state === 'held').length;
+		for (const need of plan.needs) {
+			const bought = plan.lines.filter((l) => l.needId === need.id && l.state === 'committed');
+			if (!bought.length) continue;
+			parts.push(
+				!need.dish && bought.length === 1
+					? `${short(bought[0].productName, bought[0].productId)} ${amount(bought[0])}`
+					: bought.length === 1
+						? `${plain(need.label)} ${amount(bought[0])}`
+						: `${plain(need.label)} (${bought.map((l) => `${short(l.productName, l.productId)} ${amount(l)}`).join(', ')})`
+			);
+		}
+		const loose = plan.lines.filter((l) => !l.needId && l.state === 'committed');
+		for (const l of loose) parts.push(`${short(l.productName, l.productId)} ${amount(l)}`);
+	}
+	const ordered = parts.length
+		? `Ordered: ${parts.slice(0, 12).join(', ')}${parts.length > 12 ? ', …' : ''}.`
+		: '';
+	const waiting = decisionsLeft
+		? ` Waiting on your decision: ${held} ${held === 1 ? 'line' : 'lines'} in ${decisionsLeft} ${decisionsLeft === 1 ? 'decision' : 'decisions'}.`
+		: '';
+	return (ordered + waiting).trim() || 'Nothing was ordered.';
+}
+
+/** Our words without ids: plan, task and approval ids read as "the order", kitchen ids as the kitchen's name. */
+async function scrub(text: string, deps: ChatDeps): Promise<string> {
+	let out = text
+		.replace(/\b[Pp]lan (pl-run|pl)-[\w-]+( v\d+)?( \(k-[a-z]+\))?/g, 'the order')
+		.replace(/\b(pl-run|task|ap|rc)-[\w-]+( v\d+)?/g, 'the order');
+	if (/\bk-[a-z]+\b/.test(out)) {
+		const kitchens = await deps.ports.store.kitchens(deps.workspaceId);
+		for (const k of kitchens) out = out.replaceAll(k.id, k.name);
+	}
+	return out;
 }
 
 /** Collects a turn's lines (tests, callers without streaming). */

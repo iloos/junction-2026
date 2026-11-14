@@ -277,9 +277,7 @@ export function resolveIntent(goalRaw: string, c: AgentContext, slots: Slots = {
 	const goal = goalRaw.trim();
 	const kitchens = c.kitchens.map((k) => k.id);
 	const supported =
-		'I can plan a seeded event (' +
-		(c.supportedEvents.map((e) => `${e.title} at ${e.kitchenId}`).join(', ') || 'none seeded') +
-		'), repair shortages in the current plan, change a dish ("cured salmon to 160 g per guest"), place a routine order ("order 4 l maito for k-lounas tomorrow"), or show the current plan.';
+		'I can order products ("4 kg butter for Friday"), plan an event menu, change a dish ("cured salmon to 160 g per guest"), find substitutes for what is short, or tell you what is still open.';
 
 	if (!goal) return { kind: 'unsupported', reason: `No goal given. ${supported}` };
 
@@ -347,9 +345,8 @@ export function resolveIntent(goalRaw: string, c: AgentContext, slots: Slots = {
 			return {
 				kind: 'unsupported',
 				reason:
-					`This is an event brief (${brief}), not the seeded event${event ? ` for ${seededGuests ?? 'its'} guests` : ''}. ` +
-					'A menu has to be proposed and reviewed by a chef first: use New request to get a menu proposal. ' +
-					'No seeded event matches this request; I will not substitute another event.',
+					`This is an event brief (${brief}). A menu has to be proposed and reviewed by a chef before anything is ordered: ` +
+					'describe it in the chat or use New request to get a menu proposal; I will not reuse another event.',
 				brief: { occasion: cls.event.occasion, guests, courses: cls.event.courses }
 			};
 		}

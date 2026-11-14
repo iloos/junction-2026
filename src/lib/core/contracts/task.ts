@@ -34,7 +34,12 @@ export const ClarifyField = z.enum([
 	'guests',
 	'product',
 	'dietary',
-	'budget'
+	'budget',
+	/** An event brief's service style and course count (chat asks them like /request does). */
+	'serviceStyle',
+	'courses',
+	/** What the chef wants to do at all, when the words don't say. */
+	'intent'
 ]);
 export type ClarifyField = z.infer<typeof ClarifyField>;
 
@@ -127,7 +132,12 @@ export const Task = z.object({
 		.max(20),
 	pending: TaskPending,
 	state: TaskState,
-	ledger: TaskLedger.optional()
+	ledger: TaskLedger.optional(),
+	/**
+	 * What the chat last showed for this task (the decision's approval and plan version, the ledger's numbers), so a card
+	 * or a ledger line is shown again only when it changed. Presentation memory, never a fact about the purchase.
+	 */
+	shown: z.object({ decision: z.string().optional(), ledger: z.string().optional() }).optional()
 });
 export type Task = z.infer<typeof Task>;
 

@@ -51,8 +51,27 @@ export type ChatEvent =
 	  }
 	| { type: 'ledger'; taskId: string; ledger: TaskLedger; summary: string }
 	| {
+			/** A menu proposed for an event brief: the chef reviews it on /request, then "plan it" plans it. */
+			type: 'menu';
+			taskId: string;
+			proposalId: string;
+			revision: number;
+			title: string;
+			guests: number;
+			date: string;
+			dishes: { name: string; course?: string }[];
+			/** The brief's food budget, when one was given (the menu aims at it). */
+			budgetCents?: number;
+			/** Ingredients that have no catalogue product yet: shown as gaps, never guessed. */
+			unresolved: number;
+			reviewed: boolean;
+			reviewUrl: string;
+	  }
+	| {
 			type: 'done';
 			taskId: string;
+			/** The task's title for the dock header ("Christmas dinner for 50", "Order for Wed 9 Dec"). */
+			title?: string;
 			state: TaskState;
 			/** The outcome in our words, backed by the ledger. */
 			text: string;
