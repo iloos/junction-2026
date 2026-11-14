@@ -89,7 +89,8 @@ async function play(t: Trial, turn: ChatTurn): Promise<Observed[]> {
 		step: ChatStep,
 		stepIndex: number,
 		events: ChatEvent[],
-		opsBefore: number
+		opsBefore: number,
+		human?: { ok: boolean; detail: string }
 	) {
 		const task = await getTask();
 		const s = await w.state();
@@ -110,6 +111,7 @@ async function play(t: Trial, turn: ChatTurn): Promise<Observed[]> {
 		observed.push({
 			step,
 			stepIndex,
+			human,
 			events,
 			task: (task as unknown as TaskView) ?? null,
 			plans,
@@ -154,28 +156,39 @@ async function play(t: Trial, turn: ChatTurn): Promise<Observed[]> {
 			}
 			continue;
 		}
+		// A human act on another screen; one that fails is reported, never skipped silently.
+		let human = { ok: false, detail: 'no primary plan to act on' };
 		if (primary && step.human === 'approve') {
 			const v = await w.handlers.get_plan(chef, { planId: primary });
 			const a = v.ok ? v.value.approval : null;
-			if (a)
-				await w.handlers.approve(chef, {
-					approvalId: a.id,
-					planVersion: a.planVersion,
-					termsHash: a.termsHash,
-					decision: 'grant'
-				});
+			const r = a
+				? await w.handlers.approve(chef, {
+						approvalId: a.id,
+						planVersion: a.planVersion,
+						termsHash: a.termsHash,
+						decision: 'grant'
+					})
+				: null;
+			human = r?.ok
+				? { ok: true, detail: 'approved' }
+				: { ok: false, detail: r ? r.error.code : 'no approval' };
 		} else if (primary && step.human === 'edit') {
 			const plan = (await w.state()).plans[primary];
 			const line = plan?.lines.find((l) => !step.lineId || l.id === step.lineId);
-			if (plan && line)
-				await w.handlers.edit_line(chef, {
-					planId: plan.id,
-					version: plan.version,
-					lineId: line.id,
-					patch: { qty: { value: step.qty ?? line.qty.value + 1, unit: line.qty.unit } }
-				} as never);
+			const r =
+				plan && line
+					? await w.handlers.edit_line(chef, {
+							planId: plan.id,
+							version: plan.version,
+							lineId: line.id,
+							patch: { qty: step.qty ?? line.qty.value + 1 }
+						})
+					: null;
+			human = r?.ok
+				? { ok: true, detail: `qty of ${line!.id}` }
+				: { ok: false, detail: r ? r.error.code : 'no line' };
 		}
-		await observe(step, n, [], opsBefore);
+		await observe(step, n, [], opsBefore, human);
 	}
 	return observed;
 }

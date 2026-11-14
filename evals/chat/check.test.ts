@@ -170,3 +170,23 @@ test('late: every turn of a step counts; asking the date or naming the cut-off w
 	});
 	assert.deepEqual(failed(checkTrial([said], { 0: { late } })), []);
 });
+
+test('samePlan: no plan is the same plan only while a clarification is pending; a failed human act is reported', () => {
+	const none = task({ plans: [] });
+	const asking = obs({
+		task: task({ plans: [], pending: { kind: 'clarify', field: 'date' } }),
+		plans: []
+	});
+	assert.deepEqual(
+		failed(checkStep(1, obs({ task: none, plans: [] }), asking, { samePlan: true })),
+		[]
+	);
+	const idle = obs({ task: none, plans: [] });
+	assert.deepEqual(failed(checkStep(1, obs({ task: none, plans: [] }), idle, { samePlan: true })), [
+		'1.samePlan'
+	]);
+	const dropped = obs({ task: none, plans: [] });
+	assert.deepEqual(failed(checkStep(1, dropped, obs(), { samePlan: true })), ['1.samePlan']);
+	const bad = obs({ step: { human: 'edit' }, human: { ok: false, detail: 'INVALID_INPUT' } });
+	assert.deepEqual(failed(checkStep(1, bad, obs())), ['1.humanAct']);
+});
