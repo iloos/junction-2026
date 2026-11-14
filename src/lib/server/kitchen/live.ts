@@ -305,7 +305,18 @@ export interface NotStarted {
 	event: { id: string; title: string; date: string; guests: number; serviceStyle: string } | null;
 }
 
-export type LiveSnapshot = FixtureSnapshot | NotStarted;
+/** A kitchen this browser can open: the workspace's samples and the stores visitors made (D24/D25). */
+export interface KitchenItem {
+	id: string;
+	name: string;
+	/** Made by this browser's visitor. */
+	mine: boolean;
+	/** Made blank (no sample copied). */
+	blank: boolean;
+	mandateWords: string;
+}
+
+export type LiveSnapshot = (FixtureSnapshot | NotStarted) & { kitchens?: KitchenItem[] };
 /** The snapshot after a shortage, with what each kitchen did about it. */
 export type ShortageSnapshot = LiveSnapshot & { shortage: ShortageReplanned };
 
@@ -326,8 +337,12 @@ function notStarted(kitchenId: string): NotStarted {
 	};
 }
 
-export function snapshot(sid: string, workspaceId: string): Promise<LiveSnapshot> {
-	return serial(workspaceId, () => buildSnapshot(session(sid, workspaceId)));
+export function snapshot(
+	sid: string,
+	workspaceId: string,
+	visitor?: VisitorRef
+): Promise<LiveSnapshot> {
+	return serial(workspaceId, () => buildSnapshot(withVisitor(session(sid, workspaceId), visitor)));
 }
 
 /**
@@ -339,10 +354,11 @@ export function focusPlan(
 	workspaceId: string,
 	planId: string,
 	/** Read that plan without making it this browser's remembered plan (the dock's own view of another plan). */
-	peek = false
+	peek = false,
+	visitor?: VisitorRef
 ): Promise<LiveSnapshot | null> {
 	return serial(workspaceId, async () => {
-		const remembered = session(sid, workspaceId);
+		const remembered = withVisitor(session(sid, workspaceId), visitor);
 		const s = peek ? { ...remembered } : remembered;
 		const b = await createServerPorts();
 		const find = async () => {
@@ -447,7 +463,26 @@ function titleOf(plan: Plan): string {
 		: `${labels.slice(0, 3).join(', ')} and ${labels.length - 3} more`;
 }
 
+/** The snapshot plus the workspace's kitchens, this visitor's own first; others' stores are left out. */
 async function buildSnapshot(s: Session): Promise<LiveSnapshot> {
+	const [body, all] = await Promise.all([
+		snapshotBody(s),
+		createServerPorts().then((b) => b.ports.store.kitchens(s.workspaceId))
+	]);
+	const kitchens = all
+		.filter((k) => !k.owner || k.owner === s.visitor)
+		.map((k) => ({
+			id: k.id,
+			name: k.name,
+			mine: !!k.owner && k.owner === s.visitor,
+			blank: k.kind === 'blank',
+			mandateWords: k.mandate.words
+		}))
+		.sort((a, b) => Number(b.mine) - Number(a.mine));
+	return { ...body, kitchens };
+}
+
+async function snapshotBody(s: Session): Promise<FixtureSnapshot | NotStarted> {
 	const ctx = chef(s);
 	const planned = await findPlan(s);
 	if (!planned) return notStarted(s.kitchenId);
