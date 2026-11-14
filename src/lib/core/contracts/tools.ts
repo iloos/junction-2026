@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { ApprovalState, Line, NeedRequirements, Plan, ScoreBreakdown, TermsDiff } from './plan';
-import { Offer, Product } from './product';
+import { Offer, Product, SubstituteKind } from './product';
 import { TaskLedger } from './task';
 import { EventBrief, MenuProposal } from './event';
 import { IsoDate, KitchenId, Measure, ProductId, Provenance, SalesQty } from './primitives';
@@ -253,7 +253,11 @@ export const toolSchemas = {
 					rejectedReasons: z.array(z.string()),
 					/** A model caution in words (CAUTION.* in rejectedReasons): evidence for a human, never a rejection. */
 					caution: z.string().max(400).optional(),
-					fromValioRule: z.boolean()
+					fromValioRule: z.boolean(),
+					/** How it relates to the planned product (describes only: never changes ranking or tiers). */
+					kind: SubstituteKind.optional(),
+					/** One line from the attribute diff, e.g. "sliced, 1.5 kg packs". */
+					whatChanges: z.string().max(200).optional()
 				})
 			),
 			labourNote: z.string().optional(),

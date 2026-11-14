@@ -22,6 +22,39 @@ export const PackLevel = z.object({ unit: UnitCode, baseUnits: z.number().positi
  * Normalised catalogue product (docs/foundations/valio-data.md §6). One row per productId.
  * Static truth for search and ranking; live price and availability live in `Offer`.
  */
+/**
+ * What a product is, apart from who makes it and how it is packed: the base (head noun phrase of the Finnish name
+ * once brand, sizes and form words are taken out), its form words (viipaloitu, savustettu, pakaste, laktoositon…),
+ * brand, temperature class and net content. Substitute kinds compare these. `baseSource: 'unknown'` when the name
+ * leaves nothing to compare: then the kind is "unknown", never guessed.
+ */
+export const BaseKey = z.object({
+	base: z.string().nullable(),
+	form: z.array(z.string()),
+	brand: z.string().optional(),
+	temperatureClass: TemperatureClass,
+	netQty: z.object({ value: z.number().positive(), unit: z.enum(['kg', 'l', 'pcs']) }).optional(),
+	baseSource: z.enum(['parsed', 'llm', 'unknown'])
+});
+export type BaseKey = z.infer<typeof BaseKey>;
+
+/** How a substitute relates to the planned product, best first (research/substitutes.md ladder). */
+export const SubstituteKind = z.enum([
+	/** Same base, brand and form: another pack or size. */
+	'pack',
+	/** Same base and form, another brand. */
+	'brand',
+	/** Same base, another form or temperature: labour or yield changes. */
+	'form',
+	/** A different product a source names for this role (Valio's substitute rule, the event seed). */
+	'functional',
+	/** A different product nothing names for this role. */
+	'different',
+	/** One side's base is unknown: not compared. */
+	'unknown'
+]);
+export type SubstituteKind = z.infer<typeof SubstituteKind>;
+
 export const Product = z.object({
 	productId: ProductId,
 	gtin: z.string().optional(),
@@ -57,6 +90,8 @@ export const Product = z.object({
 		z.object({ value: z.number().positive(), unit: z.literal('l') })
 	).optional(),
 	co2PerKg: Derived(z.number().nonnegative()).optional(),
+	/** Parsed from the name at normalise time (provenance `parsed`); computed on the fly when absent. */
+	baseKey: BaseKey.optional(),
 	/** 0–1 from Valio's reliability file; absent = unknown, never invented. */
 	reliability: z.number().min(0).max(1).optional(),
 	allergens: z.object({

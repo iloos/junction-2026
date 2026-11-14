@@ -14,6 +14,7 @@
  */
 import type { Line, Plan } from '../contracts';
 import { earliestDelivery, LEAD_DAYS, SCENARIO } from '../scenario';
+import { dueOf } from './due';
 import { lateOnly } from './view';
 
 export type NextActionKind =
@@ -73,10 +74,8 @@ export function nextActionFor(plan: Plan, now: Date): NextAction {
 	const actNow = live.filter(
 		(l) => l.view?.nextAction === 'approve' || l.view?.nextAction === 'commit'
 	);
-	const deadline = actNow
-		.map((l) => l.offer?.availability.closingTime)
-		.filter((c): c is string => Boolean(c) && new Date(c!).getTime() > now.getTime())
-		.sort((a, b) => new Date(a).getTime() - new Date(b).getTime())[0];
+	// The same due time the card, the calendar and Ops show, over the lines to approve or commit.
+	const deadline = actNow.length ? (dueOf(plan, null, actNow, now) ?? undefined) : undefined;
 	const before = deadline ? ` before ${timeText(deadline)}` : '';
 	const withDeadline = (a: Omit<NextAction, 'deadline'>): NextAction =>
 		deadline ? { ...a, deadline } : a;
