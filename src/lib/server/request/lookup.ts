@@ -149,13 +149,3 @@ export function unpickable(offer: Offer | undefined, conversion: Conversion | nu
 		return `only ${offer.availability.amount} ${conversion.salesUnit} available`;
 	return null;
 }
-
-export function availabilityText(offer: Offer): string {
-	const a = offer.availability;
-	if (a.kind === 'known')
-		return a.amount === null
-			? `unlimited${a.logisticModel ? `, ${a.logisticModel}` : ''}`
-			: `${a.amount} available${a.logisticModel ? `, ${a.logisticModel}` : ''}`;
-	if (a.kind === 'unknown') return 'quantity unknown (Terminal)';
-	return a.kind;
-}

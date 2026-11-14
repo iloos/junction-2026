@@ -3,9 +3,9 @@
  * the configured Llm (traced to the ops bus), and the three in-process actors the /request page
  * uses. Keys never reach the browser: the page acts through these contexts server-side.
  *
- * Which workspace the key-less page acts in is decided here, never by the request: the stage run
- * (ws-demo) only when presenter actions are open (dev, or DEMO_RESET_OPEN=1, as on /ops); every
- * other visitor gets the judges' sandbox, where the whole flow, approvals included, is safe to try.
+ * Which workspace the key-less page acts in is decided by `visitorWorkspace` (server/demo/visitor),
+ * never by the request: the visitor's own sandbox, a shared room, or the stage run for the presenter.
+ * Callers without a workspace (tests, scripts) act in the judges' shared room.
  */
 import type { Kitchen } from '$lib/core/contracts';
 import type { CallContext } from '$lib/core/ports';
@@ -23,7 +23,7 @@ import type {
 	RequestEvent,
 	RequestResult
 } from '$lib/ui/request/types';
-import { helsinkiDate } from './dates';
+import { scenarioDate } from '$lib/core/scenario';
 import { approvalView, callTool, runRequest } from './run';
 import type { ParsedRequest } from './parse';
 
@@ -58,7 +58,7 @@ export async function simNow(): Promise<string> {
 }
 
 export async function simToday(): Promise<string> {
-	return helsinkiDate((await ports()).ports.clock.now());
+	return scenarioDate((await ports()).ports.clock.now());
 }
 
 export async function kitchens(ctx: CallContext): Promise<Kitchen[]> {

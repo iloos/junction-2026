@@ -164,12 +164,13 @@ export function constraintsIn(text: string): ConstraintKey[] {
 	return out;
 }
 
-const slug = (s: string) =>
+/** Lower-case words joined by "-", at most `max` characters: the stable part of an id. */
+export const slug = (s: string, max = 40) =>
 	s
 		.toLowerCase()
 		.replace(/[^\p{L}\d]+/gu, '-')
-		.replace(/^-+|-+$/g, '')
-		.slice(0, 40) || 'item';
+		.slice(0, max)
+		.replace(/^-+|-+$/g, '') || 'item';
 
 /** The id an item gets from what it asks for (not its quantity, which an answer may change). */
 export function baseId(

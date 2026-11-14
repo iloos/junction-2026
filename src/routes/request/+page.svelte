@@ -332,7 +332,7 @@
 		nonce = newNonce();
 	}
 
-	/** The judges' sandbox only: a fresh run with the seed kitchens; the old run stays for audit. */
+	/** Sandboxes only (own or shared room): a fresh run with the seed kitchens; the old run stays for audit. */
 	let sandboxNote = $state<string | null>(null);
 	async function resetSandbox() {
 		busy = true;
@@ -355,12 +355,12 @@
 	}
 
 	const sim = $derived(day(data.today));
-	/** A cut-off before the scenario's now is a cached date from another clock: not shown as a deadline. */
+	/** Offers are dated on the scenario clock, so a cut-off before its now has passed. */
 	const cutoffText = (iso: string | null) =>
 		!iso
 			? ''
 			: Date.parse(iso) < Date.parse(data.now)
-				? ' · cut-off: cached date, predates the sim clock'
+				? ` · cut-off passed (${expires(iso)})`
 				: ` · cut-off ${expires(iso)}`;
 	const qtyText = (q: number | null, u: string | null) =>
 		q === null ? '? ' : `${num(q, 3)} ${u ? (UNIT_WORDS[u] ?? u) : ''}`;

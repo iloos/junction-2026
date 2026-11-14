@@ -69,11 +69,6 @@ function dayMonth(text: string, d: number, m: number, y: number | null, today: s
 	return realDate(iso) ? { text, iso } : { text, iso, invalid: `"${text}" is not a real date` };
 }
 
-/** Helsinki calendar date (YYYY-MM-DD) of an instant. */
-export function helsinkiDate(at: Date): string {
-	return new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Helsinki' }).format(at);
-}
-
 export function addDays(iso: string, n: number): string {
 	const d = new Date(`${iso}T12:00:00Z`);
 	d.setUTCDate(d.getUTCDate() + n);
