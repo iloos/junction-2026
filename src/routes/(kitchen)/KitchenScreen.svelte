@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, tick } from 'svelte';
 	import { resolve } from '$app/paths';
 	import { ChevronDown, CornerDownRight, Info, RotateCcw, Play, CloudOff } from '@lucide/svelte';
 	import { KitchenStore } from '$lib/kitchen/kitchen.svelte';
@@ -22,8 +22,35 @@
 	// One store, one mode, for the life of the page: live never turns into the fixture basket.
 	// svelte-ignore state_referenced_locally
 	const k = new KitchenStore(mode);
+	/**
+	 * Deep link from Operations: /?kitchen=<id>&plan=<planId>&v=<version>&need=<needId>. Client-side focus only:
+	 * switch kitchen through the normal command, then scroll to the need, open its rescue and highlight it.
+	 */
+	let fromOps = $state<{ kitchen: string; plan: string; v: number; need: string } | null>(null);
+	let focusNeed = $state<string | null>(null);
+	async function honourDeepLink() {
+		const q = new URL(location.href).searchParams;
+		const kitchen = q.get('kitchen');
+		if (!kitchen) return;
+		fromOps = {
+			kitchen,
+			plan: q.get('plan') ?? '',
+			v: Number(q.get('v') ?? NaN),
+			need: q.get('need') ?? ''
+		};
+		if (k.snap && k.snap.kitchen.id !== kitchen) await k.setKitchen(kitchen);
+		const dish = k.view?.dishes.find((d) => d.needId === fromOps!.need);
+		if (!dish) return;
+		toggled = { ...toggled, [dish.id]: true };
+		focusNeed = dish.needId;
+		await tick();
+		document
+			.getElementById(`need-${dish.id}`)
+			?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+	}
+
 	onMount(() => {
-		k.load();
+		k.load().then(honourDeepLink);
 		const t = setInterval(() => k.tick(), 1000);
 		return () => clearInterval(t);
 	});
@@ -232,6 +259,34 @@
 	</div>
 {/if}
 
+{#if fromOps && snap}
+	<div class="border-b border-propose/30 bg-propose-wash" role="status">
+		<div
+			class="mx-auto flex max-w-[1440px] flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2 text-[13px] text-ink md:px-6"
+		>
+			<b class="font-medium">Opened from Operations</b>
+			<span class="text-ink-2"
+				>{snap.kitchen.name.replace(' (fictional)', '')} · need {fromOps.need}</span
+			>
+			{#if fromOps.plan && fromOps.plan !== snap.plan.id}
+				<span class="text-signoff"
+					>The link points to another plan ({fromOps.plan}); showing this kitchen's current plan.</span
+				>
+			{:else if Number.isFinite(fromOps.v) && fromOps.v !== snap.plan.version}
+				<span class="text-signoff"
+					>Operations saw v{fromOps.v}; the plan is now v{snap.plan.version}. Check what changed
+					before acting.</span
+				>
+			{/if}
+			<button
+				type="button"
+				class="ml-auto text-[12.5px] text-ink-2 underline underline-offset-2"
+				onclick={() => ((fromOps = null), (focusNeed = null))}>Dismiss</button
+			>
+		</div>
+	</div>
+{/if}
+
 {#if k.started === false}
 	<main class="mx-auto max-w-[720px] px-4 py-14 md:px-6">
 		<h1 class="text-[22px] font-semibold tracking-[-0.015em] text-ink">
@@ -367,7 +422,12 @@
 					</div>
 					{#each view.dishes as d (d.id)}
 						{@const lines = linesOf(d)}
-						<div class="border-b border-rule last:border-b-0">
+						<div
+							id="need-{d.id}"
+							class="scroll-mt-4 border-b border-rule last:border-b-0 {focusNeed === d.needId
+								? 'bg-propose-wash/40 ring-2 ring-propose/50 ring-inset'
+								: ''}"
+						>
 							<div
 								class="grid grid-cols-[minmax(0,1fr)_auto] gap-x-4 gap-y-2 px-4 py-3 lg:grid-cols-[minmax(150px,0.7fr)_minmax(210px,0.9fr)_minmax(0,3fr)] lg:gap-y-0"
 							>
