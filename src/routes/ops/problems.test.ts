@@ -76,7 +76,8 @@ describe('problems on the seeded run', () => {
 
 	it('glosses dish names in English', () => {
 		expect(dishName('Joulukinkku (Christmas ham)')).toBe('Christmas ham');
-		expect(dishName('Riisipuuro (rice porridge): rice')).toBe('Rice porridge');
+		expect(dishName('Riisipuuro (rice porridge): rice')).toBe('Rice porridge: rice');
+		expect(dishName('Graavilohi (cured salmon), cured in-house')).toBe('Cured salmon');
 		expect(dishName('Kalakeitto')).toBe('Kalakeitto');
 	});
 });
