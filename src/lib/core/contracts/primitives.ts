@@ -6,6 +6,12 @@ export type ProductId = z.infer<typeof ProductId>;
 
 export const WorkspaceId = z.string().min(1);
 export type WorkspaceId = z.infer<typeof WorkspaceId>;
+/**
+ * A public visitor's own sandbox workspace: `ws-j-` + an unguessable id from the visitor cookie. The SSE and
+ * reset routes accept this pattern (plus named shared rooms), never an arbitrary workspace id.
+ */
+export const VisitorWorkspaceId = z.string().regex(/^ws-j-[a-z0-9]{16,32}$/);
+export type VisitorWorkspaceId = z.infer<typeof VisitorWorkspaceId>;
 /** A simulation or demo run inside a workspace; scenarios and resets get a fresh one. */
 export const RunId = z.string().min(1);
 export type RunId = z.infer<typeof RunId>;

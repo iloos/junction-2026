@@ -2,7 +2,10 @@
 
 The only plan. Markers: `[x]` done · `[~]` in progress · `[ ]` todo · `[!]` blocked/risk. Edit only your own lines; the lead owns the structure.
 
-## Now: rings (D4). This section supersedes the phases below where they differ
+## Now: Ring 1 fan-out (Sat 14 Nov from ~08:30)
+**Authoritative assignment: [handoff/SYNTHESIS.md §8 Dispatch](handoff/SYNTHESIS.md).** Tracks: T0 contracts (lead) [x] · A core 8d [~] · G visitor/ops/deploy 9c [~] · B request (lead agent) + retrieval 1f [~] · C kitchen visuals (after A2 fixtures) [ ] · D web (lead agent) [~] · E agent door (lead agent) [~] · F evals 91 [~] (merge gate [x]). The ring list below is history.
+
+## Rings (D4), history
 - [x] Concept, research, foundations, Valio probe, outside reviews, platform drafts (Fri night)
 - [x] **Contracts commit** (lead): ARCHITECTURE.md, types, Drizzle schema, ports + fixtures, tool registry, eval format, lane-setup (`bb8c78e`, review fixes `a3a97b2`)
 - [~] **Lanes**: core-db (slices 1–3 merged, slice 4 next) · agent [x] · kitchen [x] fixture, live flip next · ops [x] · deploy [~] Runtime building · jobs [ ]

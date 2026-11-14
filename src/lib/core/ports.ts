@@ -167,6 +167,32 @@ export interface CallContext {
 }
 
 /**
+ * What a web route or web tool runs under (F19): the caller's context, the ports of *that* workspace, and the key its
+ * spend is counted against. Web code never falls back to the default workspace's ports.
+ */
+export interface WebExecutionContext {
+	ctx: CallContext;
+	ports: Pick<Ports, 'clock' | 'catalog' | 'store' | 'web'>;
+	/** Daily Exa/Context.dev spend is counted per this key (the credential id) and globally. */
+	spendKey: string;
+}
+
+/**
+ * Judge keys and visitor sessions (Track G owns the one implementation; E and the routes consume it).
+ * Format, stateless HMAC: `jk_<wsId>.<expiresEpochS>.<base64url HMAC-SHA256(JUDGE_KEY_SECRET, "jk|" + wsId + "|" + exp)>`,
+ * verified in constant time. A key binds a visitor workspace, the external judge's scopes (read, plan, order: never
+ * approve) and an expiry (the event's end); it resolves to that workspace's *current* run, so a reset keeps the key
+ * working on the fresh run. The visitor cookie is signed the same way (`vs|` prefix): an unguessable id alone is
+ * not authorisation. An approval URL only locates a plan; approving still needs a chef session for that workspace.
+ * Disabled, with a clear error, when JUDGE_KEY_SECRET is unset.
+ */
+export interface JudgeKeys {
+	mint(visitorWorkspaceId: string, expiresAt: Date): string | null;
+	/** The visitor workspace the key is bound to, or null for an invalid or expired key. */
+	verify(key: string, now: Date): string | null;
+}
+
+/**
  * The seam between lanes: core-db implements one handler per tool (services), agent serves them as
  * MCP + REST + OpenAPI and uses them in the agent loop, kitchen/ops call them over REST.
  * Handlers check `ctx.scopes` against the tool's scope before doing anything.

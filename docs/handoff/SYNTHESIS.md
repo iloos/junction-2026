@@ -1,6 +1,6 @@
 # SYNTHESIS, Sat 14 Nov ~06:15, main `231e926`
 
-_Lead-owned. Drafted from all 13 reviews, edited and adopted by the lead. Rulings in §3 are the lead's; the track plan in §5 is pending the user's re-scope before fan-out. Sessions reply once (agree, or a specific objection or missing item)._
+_Lead-owned. Adopted. **§8 Dispatch is the authoritative assignment** (user re-scoped 14 Nov ~08:00; amended by docs/review/FANOUT-READINESS-2026-11-14.md). §5 is the original proposal; where they differ, §8 wins._
 
 Sources: internal checkpoint reviews `docs/handoff/review-{lead,8d-core,9c-ops,kitchen,request,agent,web,1f-surfaces}.md`; outside `docs/review/ROUND5-{CONTEXT-AND-API,DATAFLOW-AND-CORRECTNESS,DOMAIN-AND-PERSISTENCE,SURFACES-AND-READMODELS,WEB-AND-PROVENANCE}.md` (short tags below: lead, 8d, 9c, kit, req, agt, web, 1f; R5-ctx, R5-flow, R5-dom, R5-surf, R5-web). Code spot-checked on main; "confirmed" = the cited code still reads that way, "unverified" = reported from a run or probe I did not repeat. STATUS.md is from 02:05 and PITCH.md predates rounds 4–5: both are stale.
 
@@ -135,3 +135,24 @@ Every owner agreed with the rulings. Additions below amend the findings and done
 - F17 add: inline answers are keyed by item index; a model re-split misattaches answers. Fix before menu work.
 - F1: change "Your own sandbox" copy (/request:342) to "shared sandbox" until G lands.
 - B must state /request ranking ignores k.weights; ruling 1's find_substitutes route replaces the hand-set scores.
+
+## 8. Dispatch (authoritative from T0)
+**Base:** T0 contracts commit (SHA in each lane's go message). Old task lists in lane briefs are history; unassigned proposals there (composer, embedding batch, standalone approval page, extra Ops cases) are inactive. Every active brief starts with a Dispatch block: track, base SHA, owned paths, first deliverable, dependencies, acceptance command. Merge gate for all: `node scripts/merge-gate.mjs` (F), plus browser evidence for UI.
+
+**T0 contents** (lead): `Order.lines[].authority` (old orders read the order-level field); `plan_event{eventId} | {proposal: MenuProposal(chef_reviewed)}` with `EventBrief`, `DishTemplate`, `DishIngredient` (stable ids, `amountPerCover` + unit, yield optional = assumption, exactly one of productId/query/unresolved, `claimedCompatible` is a claim, not evidence); `Need.kind` + `place_order` line `amount` (direct physical need); `FulfilmentView` as an exact partition (supplierConfirmed, awaitingSupplier, plannedKnown, plannedUnknown, unresolved, excess, allocations); `PlanView{asOf, mandateVersion, validUntil}`; `LineView.physical/unitPrice/comparisonPrice`; `SupplyTier` (D8); `approve{lineIds}` split semantics (documented on the schema); `TermsDiff` + `get_plan.lastVoided`; `ResultMeta` on every output; `WebExecutionContext`; `JudgeKeys` + `VisitorWorkspaceId` (D9); planned tools `get_context`, `lookup_facts` (read-only), `find_outside`, `check_recall` in `contracts/tools-next.ts`, moved into the registry by the lead in the merge that lands each handler.
+
+**Track A split into mergeable increments** (8d): **A1** supply tier (F5, lanttulaatikko → make_in_house on prod), zero demand (F11), quote date default + `expectedQty` (F22, with F9's re-dating test), per-line authority (F8). **A2** direct-need sizing (F10) + `FulfilmentView` computation: **publish fixture JSON for FulfilmentView and LineView.physical first** (`fixtures/views/`), so C and E build against it. **A3** cut-off at commit and temporal validity on the scenario clock (F9, F29). **A4** deterministic planning from a `MenuProposal` (B owns interpretation and the proposal; A owns demand → plan). Plus `approve{lineIds}` with a 3-group test (grant/deny/commit/edit; no grant covers an unseen line), and the voided-approval diff. If subset approval slips, C ships the UI fallback: confirm each reason group, then one grant of the combined terms, worded as one decision.
+
+**Ownership at the seams (exceptions recorded):**
+| Boundary | Owner |
+|---|---|
+| Catalogue `search`/`candidates` | B-retrieval (1f). A owns `offers` and scenario stock. Same files: 1f edits only those methods; A merges first if both touch a file |
+| Contracts, tool registry and schema wiring | lead. E owns serving/presentation (`tools/mcp.ts`, `serve.ts`, OpenAPI text, MCP instructions); D supplies web handlers |
+| Visitor resolver, cookie signing, judge-key mint/verify | G (9c), incl. the named edits in `kitchen/live.ts`, `request/workspace.ts`, `ops/+page.server.ts`. E consumes `JudgeKeys`, never mints its own |
+| Exact-plan locator `?ws&run&plan` | G specifies; Request owns its loader/recovery; Kitchen owns event-plan rendering; approval is in the Kitchen screen (no standalone page this weekend) |
+| Web evidence UI | D exposes typed evidence + fixtures; C mounts it in the Why drawer, G the recall card in Ops |
+| Evals | domain tests stay with implementations; F owns cross-path scenarios, the harness and the merge gate; existing agent trials stay with E |
+
+**Waves:** *Now*: B parser/constraint fixes, E unit/date guard + context, D cache/schema/drill, G resolver, F regression cases, A1. *Integration 1*: A1 + G + E discovery → two browsers + an MCP client complete the milk flow, each in its own workspace; Ops opens the exact plan. *Integration 2*: A2/A3 + C coverage/Why + E outcomes → physical quantities and confirmed/unknown supply agree on every surface. *Integration 3*: B menu + A4 + D evidence UI → one arbitrary dinner reaches an editable, explained, safely held plan with every unresolved requirement visible. *Video checkpoint 22:00*: green deployable tag; sponsor claims decided from observed journeys.
+
+**Web acceptance additions (D):** a source version/digest per notice (same URL amended → new version), applications scoped to workspace/run/target with retry state; tests: amended notice at the same URL, a new run, drill then real notice. A precautionary hold shows its evidence and a resolution path.

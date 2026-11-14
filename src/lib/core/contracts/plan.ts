@@ -8,10 +8,13 @@ import {
 	IsoDateTime,
 	KitchenId,
 	Measure,
+	MeasureUnit,
 	ProductId,
 	Provenance,
 	SalesQty,
-	Scope
+	Scope,
+	UnitCode,
+	WeightBasis
 } from './primitives';
 
 /** Mandate tiers: act alone, propose (chef can one-tap), sign-off (named authority). */
@@ -80,6 +83,12 @@ export type ApprovalState = z.infer<typeof ApprovalState>;
 export const Need = z.object({
 	id: z.string(),
 	label: z.string(),
+	/**
+	 * `dish`: a served amount per guest (seeded or proposed menu). `direct`: a physical amount someone asked for
+	 * ("1 l lactose-free milk"); substitutes are sized to `amount`, not to the original product's sales units.
+	 * Absent on plans stored before this field existed: read as `dish` when `dish` is set, else `direct`.
+	 */
+	kind: z.enum(['dish', 'direct']).optional(),
 	/** Demand after factors: demand + target stock − usable stock − confirmed inbound (D6). */
 	amount: Measure,
 	/** For event dishes: what the chef edits and how the need was derived (the Why drawer and the kitchen table read this). */
@@ -97,9 +106,18 @@ export const Need = z.object({
 });
 export type Need = z.infer<typeof Need>;
 
+/**
+ * How sure the supply behind a candidate is (D8). Ranking is lexicographic on this tier first, then on the weighted
+ * score: `confirmed` stock and `make_in_house` from confirmed ingredients beat `unknown` (Terminal, 999999) and
+ * `none`. Unknown candidates stay visible and labelled; they are never recommended over confirmed ones.
+ */
+export const SupplyTier = z.enum(['confirmed', 'make_in_house', 'unknown', 'none']);
+export type SupplyTier = z.infer<typeof SupplyTier>;
+
 /** One ranked candidate's score breakdown (D6 ranking). Missing values never score favourably. */
 export const ScoreBreakdown = z.object({
 	total: z.number(),
+	supplyTier: SupplyTier.optional(),
 	components: z.record(z.string(), z.object({ utility: z.number(), weight: z.number() })),
 	fit: z.object({ score: z.number().min(0).max(4), provenance: Provenance }).optional(),
 	excludedBy: z.array(z.string()).optional()
@@ -119,6 +137,14 @@ export const LineView = z.object({
 	confirmedCover: Measure,
 	/** Quantity ordered or to be ordered whose supply is unknown (Terminal), never counted as cover. */
 	unconfirmedCover: Measure,
+	/** What the line's sales quantity is physically (13 ST of ham ≈ 26 kg net), when the pack content is known. */
+	physical: Measure.optional(),
+	/** Price per sales unit, as Valio sells it (€/ST, €/KI, €/KG). */
+	unitPrice: z.object({ cents: Cents, per: UnitCode }).optional(),
+	/** Price per physical unit for comparison across pack sizes, with the weight basis it uses. */
+	comparisonPrice: z
+		.object({ cents: Cents, per: MeasureUnit, basis: WeightBasis.optional() })
+		.optional(),
 	/** Why it cannot go ahead: a rule (forbid) or a missing/untrue fact (gap). */
 	blockedReason: z
 		.object({
@@ -165,6 +191,60 @@ export const Line = z.object({
 });
 export type Line = z.infer<typeof Line>;
 
+/**
+ * Server-derived coverage of one need (review round 5, F12): the one definition of "covered" that Kitchen, Ops,
+ * Request and the agent's outcome all read. An exact partition of `required`, in the need's unit:
+ *
+ *   required = supplierConfirmed + awaitingSupplier + plannedKnown + plannedUnknown + unresolved
+ *
+ * - supplierConfirmed: committed, and the receipt confirmed it. The only amount an outcome may call fulfilled.
+ * - awaitingSupplier: committed Terminal (unknown-quantity) lines: ordered, not confirmed.
+ * - plannedKnown: uncommitted lines against known stock (eligible or held). Not reserved: stock can still move.
+ * - plannedUnknown: uncommitted lines whose supply is unknown.
+ * - unresolved: what nothing covers.
+ * Lines allocate to the need in that order of certainty, each line once, up to `required`; what lines buy beyond it is
+ * `excess` (lot rounding, overshoot), never counted as cover. Retries and partial receipts can't double-count because
+ * allocation reads the plan's lines and the receipts once, by line id.
+ */
+export const FulfilmentView = z.object({
+	needId: z.string(),
+	label: z.string(),
+	required: Measure,
+	supplierConfirmed: Measure,
+	awaitingSupplier: Measure,
+	plannedKnown: Measure,
+	plannedUnknown: Measure,
+	unresolved: Measure,
+	excess: Measure,
+	status: z.enum(['confirmed', 'awaiting_supplier', 'planned', 'partial', 'uncovered']),
+	/** Allocations behind the numbers, so the Why chain can show which line covers what. */
+	allocations: z.array(
+		z.object({
+			lineId: z.string(),
+			amount: Measure,
+			bucket: z.enum([
+				'supplierConfirmed',
+				'awaitingSupplier',
+				'plannedKnown',
+				'plannedUnknown',
+				'excess'
+			])
+		})
+	)
+});
+export type FulfilmentView = z.infer<typeof FulfilmentView>;
+
+/** Plan-level read model, computed at read time against the clock (F29). Never stored. */
+export const PlanView = z.object({
+	/** Scenario-clock time the view was computed at; `committable` on lines is true only as of this instant. */
+	asOf: IsoDateTime,
+	mandateVersion: z.int().nonnegative(),
+	/** Earliest of the live approval's expiry and the quoted offers' cut-off, if any. */
+	validUntil: IsoDateTime.optional(),
+	fulfilment: z.array(FulfilmentView)
+});
+export type PlanView = z.infer<typeof PlanView>;
+
 export const Plan = z.object({
 	...Scope.shape,
 	id: z.string(),
@@ -180,9 +260,31 @@ export const Plan = z.object({
 	/** sha-256 over the canonical serialisation of the quoted lines (see core/hash.ts). */
 	termsHash: z.string().nullable(),
 	createdBy: Actor,
-	idempotencyKey: z.string().optional()
+	idempotencyKey: z.string().optional(),
+	/** Read model, filled on tool outputs (see PlanView). */
+	view: PlanView.optional()
 });
 export type Plan = z.infer<typeof Plan>;
+
+/**
+ * What changed between the terms an approval was bound to and the plan now (shown when an approval is voided).
+ * Computed from the op log; `before`/`after` are display strings in our own words.
+ */
+export const TermsDiff = z.array(
+	z.object({
+		lineId: z.string(),
+		productId: ProductId.optional(),
+		productName: z.string().optional(),
+		change: z.enum(['added', 'removed', 'qty', 'product', 'price', 'state', 'need']),
+		before: z.string().optional(),
+		after: z.string().optional()
+	})
+);
+export type TermsDiff = z.infer<typeof TermsDiff>;
+
+/** Who allowed one order line: the mandate (act tier, nobody had to look) or a named approval. */
+export const LineAuthority = z.union([z.literal('mandate'), z.object({ approvalId: z.string() })]);
+export type LineAuthority = z.infer<typeof LineAuthority>;
 
 export const Approval = z.object({
 	...Scope.shape,
@@ -216,7 +318,12 @@ export const Order = z.object({
 			productId: ProductId,
 			qty: SalesQty,
 			unitCents: Cents,
-			lineCents: Cents
+			lineCents: Cents,
+			/**
+			 * Per-line authority (F8): a mixed commit names, for each line, whether the mandate or an approval allowed
+			 * it. Absent only on orders stored before this field existed; read those as the order-level `authority`.
+			 */
+			authority: LineAuthority.optional()
 		})
 	),
 	totalCents: Cents,
@@ -225,8 +332,11 @@ export const Order = z.object({
 	committedBy: Actor,
 	committedAt: IsoDateTime,
 	idempotencyKey: z.string(),
-	/** Which tier allowed it: `act` = within the mandate, otherwise the approval id. */
-	authority: z.union([z.literal('mandate'), z.object({ approvalId: z.string() })])
+	/**
+	 * Order-level summary: `mandate` only when every line is mandate-authorised, otherwise the approval that covered
+	 * the held lines. The per-line `authority` is the audit record.
+	 */
+	authority: LineAuthority
 });
 export type Order = z.infer<typeof Order>;
 

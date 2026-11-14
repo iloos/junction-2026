@@ -170,6 +170,11 @@ export async function planEvent(
 	ctx: CallContext,
 	input: ToolInput<'plan_event'>
 ): Promise<Result<ToolOutput<'plan_event'>>> {
+	if (input.eventId === undefined)
+		return err(
+			'INVALID_INPUT',
+			'planning from a brief is not available yet; give a seeded eventId'
+		);
 	const seed = ports.events?.[input.eventId];
 	if (!seed) return err('NOT_FOUND', `event ${input.eventId}`);
 	const kitchen = await kitchenOf(ports, ctx, input.kitchenId);
