@@ -224,14 +224,16 @@ describe('unit conversion', () => {
 		expect(c.ok).toBe(false);
 		expect(!c.ok && c.reason).toMatch(/net weight says 80 kg/);
 	});
-	it('uses net weight to choose between two readings', () => {
+	it('reads "4x5 kg" with a KI of 4 as a 5 kg unit, even when Valio net weight is the case', () => {
 		const p = product({
 			productId: '464076',
 			nameFi: 'Valio Eila® voi 4x5 kg laktoositon',
 			packs: [{ unit: 'KI', baseUnits: 4 }],
 			netPerSalesUnit: { value: { value: 20, unit: 'kg' }, provenance: { source: 'valio_static' } }
 		});
-		expect(contentPerSalesUnit(p, 'kg')).toMatchObject({ value: 20 });
+		const c = contentPerSalesUnit(p, 'kg');
+		expect(c).toMatchObject({ value: 5, source: 'name' });
+		expect('text' in c && c.text).toContain('net weight (20 kg) is the whole case');
 	});
 	it('cases convert through the pack hierarchy', () => {
 		const p = product({

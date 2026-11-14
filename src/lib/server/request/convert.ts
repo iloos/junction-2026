@@ -101,6 +101,32 @@ export function contentPerSalesUnit(p: Product, dim: Dim): Content | { error: st
 		const lead = leadingTimes(p.nameFi);
 		// Possible readings of the name as content per sales unit.
 		const readings: { value: number; why: string }[] = [];
+		const ki = p.packs.find((x) => x.unit === 'KI');
+		if (
+			m.times !== null &&
+			ki &&
+			ki.baseUnits === m.times &&
+			m.times > 1 &&
+			perSales !== null &&
+			perSales !== m.times
+		) {
+			// "4x5 kg" with a KI of 4: the name describes the case, so one ${p.baseUnit} is 5 kg.
+			const value = +(m.value * perSales).toFixed(6);
+			const why = `KI = ${m.times} × ${fmt(m.value)} ${dim}, so one ${p.salesUnit} = ${fmt(value)} ${dim}`;
+			const close = (a: number, b: number) => Math.abs(a - b) / b <= 0.1;
+			if (net === null || close(net, value))
+				return { value, unit: dim, source: 'name', text: `${why} (from the name)` };
+			if (close(net, m.value * m.times))
+				return {
+					value,
+					unit: dim,
+					source: 'name',
+					text: `${why}; Valio's net weight (${fmt(net)} ${dim}) is the whole case`
+				};
+			return {
+				error: `the name says ${fmt(value)} ${dim} per ${p.salesUnit} but Valio's net weight says ${fmt(net)} ${dim}`
+			};
+		}
 		if (m.times !== null) {
 			if (perSales !== null && perSales === m.times && perSales !== 1)
 				readings.push({
@@ -175,12 +201,6 @@ function bestContent(p: Product): Content | null {
 	return all.find((c) => c.source !== 'net') ?? all[0] ?? null;
 }
 
-/** "40 kg" / "20 l" for a number of sales units, when the content is known. */
-function totalContent(p: Product, salesQty: number): string | null {
-	const c = bestContent(p);
-	return c ? `${fmt(salesQty * c.value)} ${c.unit}` : null;
-}
-
 const small = (v: number, dim: Dim) =>
 	dim === 'kg' && v < 1
 		? `${fmt(v * 1000)} g`
@@ -188,19 +208,66 @@ const small = (v: number, dim: Dim) =>
 			? `${fmt(v * 10)} dl`
 			: `${fmt(v)} ${dim}`;
 
-/** What one case (KI) holds, e.g. "20 × 200 g = 4 kg", or null when Valio's data doesn't say. */
-export function caseDescription(p: Product): string | null {
+/**
+ * N cases of a product, worked out once: how many sales units, what one case holds and what the
+ * order comes to. The answer card's headline and the conversion line both read from this.
+ */
+export interface CaseBreakdown {
+	cases: number;
+	salesQty: number;
+	salesUnit: string;
+	salesPerCase: number;
+	exact: boolean;
+	/** Base units in one case and what each holds; null when the content is unknown. */
+	perCase: { count: number; each: string; total: string } | null;
+	/** What the whole order holds, e.g. "20 kg". */
+	orderTotal: string | null;
+}
+
+export function caseBreakdown(p: Product, cases: number): CaseBreakdown | { error: string } {
+	const su = p.salesUnit;
 	const ki = p.packs.find((x) => x.unit === 'KI');
 	const perSales = baseUnitsPerSales(p);
-	if (!ki || !perSales) return null;
-	const salesPerCase = p.salesUnit === 'KI' ? 1 : ki.baseUnits / perSales;
+	if (su !== 'KI' && (!ki || !perSales))
+		return { error: `this product has no case (KI) size; give the quantity in ${su}` };
+	const salesPerCase = su === 'KI' ? 1 : ki!.baseUnits / perSales!;
+	const raw = cases * salesPerCase;
+	const salesQty = Math.ceil(raw - 1e-9);
 	const c = bestContent(p);
-	if (!c) return null;
-	const total = c.value * salesPerCase;
-	const per = total / ki.baseUnits;
-	return ki.baseUnits > 1
-		? `${fmt(ki.baseUnits)} × ${small(per, c.unit)} = ${small(total, c.unit)}`
-		: `${small(total, c.unit)} per case`;
+	const count = ki?.baseUnits ?? null;
+	const caseTotal = c ? c.value * salesPerCase : null;
+	return {
+		cases,
+		salesQty,
+		salesUnit: su,
+		salesPerCase,
+		exact: Math.abs(salesQty - raw) < 1e-6,
+		perCase:
+			c && caseTotal !== null && count
+				? {
+						count,
+						each: small(caseTotal / count, c.unit),
+						total: small(caseTotal, c.unit)
+					}
+				: null,
+		orderTotal: c ? small(c.value * salesQty, c.unit) : null
+	};
+}
+
+/** "2 × (20 × 500 g) = 20 kg": the headline of a case answer card. */
+export function caseHeadline(b: CaseBreakdown): string {
+	if (!b.perCase) return `${fmt(b.cases)} cases, size not stated`;
+	const one = b.perCase.count > 1 ? `${fmt(b.perCase.count)} × ${b.perCase.each}` : b.perCase.total;
+	return `${fmt(b.cases)} × (${one}) = ${b.orderTotal}`;
+}
+
+/** What one case (KI) holds, e.g. "20 × 200 g = 4 kg". */
+export function caseDescription(p: Product): string | null {
+	const b = caseBreakdown(p, 1);
+	if ('error' in b || !b.perCase) return null;
+	return b.perCase.count > 1
+		? `${fmt(b.perCase.count)} × ${b.perCase.each} = ${b.perCase.total}`
+		: `${b.perCase.total} per case`;
 }
 
 /** "(= 100 KI)" when the product has a case level and the quantity fills whole cases. */
@@ -229,40 +296,23 @@ export function convert(qty: number, unit: ReqUnit, p: Product): Conversion {
 		};
 
 	if (unit === 'case') {
-		const caseWarn = (salesQty: number) => {
-			const held = totalContent(p, salesQty);
-			warnings.push(
-				held
-					? `case sizes differ between products: this order is ${held}`
-					: `case sizes differ between products, and this one does not state its content`
-			);
-			return held ? ` (= ${held})` : '';
-		};
-		if (su === 'KI')
-			return {
-				ok: true,
-				salesQty: qty,
-				salesUnit: su,
-				explain: `${fmt(qty)} cases = ${fmt(qty)} KI${caseWarn(qty)}`,
-				exact: true,
-				perSalesUnit: null,
-				warnings
-			};
-		const ki = p.packs.find((x) => x.unit === 'KI');
-		const perSales = baseUnitsPerSales(p);
-		if (!ki || !perSales)
-			return {
-				ok: false,
-				reason: `this product has no case (KI) size; give the quantity in ${su}`
-			};
-		const raw = (qty * ki.baseUnits) / perSales;
-		const salesQty = Math.ceil(raw - 1e-9);
+		const b = caseBreakdown(p, qty);
+		if ('error' in b) return { ok: false, reason: b.error };
+		warnings.push(
+			b.orderTotal
+				? `case sizes differ between products: this order is ${b.orderTotal}`
+				: 'case sizes differ between products, and this one does not state its content'
+		);
+		const explain =
+			su === 'KI'
+				? `${fmt(qty)} cases = ${fmt(b.salesQty)} KI`
+				: `${fmt(qty)} KI × ${fmt(b.salesPerCase)} ${su} per KI = ${fmt(b.salesQty)} ${su}`;
 		return {
 			ok: true,
-			salesQty,
+			salesQty: b.salesQty,
 			salesUnit: su,
-			explain: `${fmt(qty)} KI × ${fmt(ki.baseUnits / perSales)} ${su} per KI = ${fmt(salesQty)} ${su}${caseWarn(salesQty)}`,
-			exact: salesQty === +raw.toFixed(6),
+			explain: explain + (b.orderTotal ? ` (= ${b.orderTotal})` : ''),
+			exact: b.exact,
 			perSalesUnit: null,
 			warnings
 		};
@@ -319,4 +369,10 @@ export function convert(qty: number, unit: ReqUnit, p: Product): Conversion {
 		caseNote(p, salesQty);
 	if (c.source === 'net') warnings.push(`content from Valio's net weight, not the name`);
 	return { ok: true, salesQty, salesUnit: su, explain, exact, perSalesUnit: c, warnings };
+}
+
+/** What `salesQty` sales units hold in total (kg or l), when the product states it. */
+export function orderAmount(p: Product, salesQty: number): { value: number; unit: Dim } | null {
+	const c = bestContent(p);
+	return c ? { value: +(c.value * salesQty).toFixed(6), unit: c.unit } : null;
 }

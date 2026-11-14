@@ -1,9 +1,9 @@
 /** Where the key-less /request page acts, and the inline answers it accepts. No I/O. */
 import { JUDGES_WORKSPACE, type Env } from '$lib/server/auth';
+import { presenterOpen } from '$lib/server/demo/presenter';
 import type { RequestAnswer } from '$lib/ui/request/types';
 
-import { presenterOpen } from '$lib/server/demo/presenter';
-
+/** Re-exported for callers that import the request module's helpers. */
 export { presenterOpen };
 
 export interface PageWorkspace {

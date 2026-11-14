@@ -82,7 +82,7 @@ describe('case orders ask instead of picking', () => {
 		expect(opts.length).toBeGreaterThanOrEqual(2);
 		for (const o of opts) expect(o.label).toMatch(/×|per case/);
 
-		const chosen = opts.find((o) => o.label.endsWith('= 10 kg')) ?? opts[0];
+		const chosen = opts.find((o) => o.label.endsWith('= 20 kg')) ?? opts[0];
 		const r2 = await runRequest('2 cases of butter tomorrow', {
 			handlers: h,
 			ctx,

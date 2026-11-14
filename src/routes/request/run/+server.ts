@@ -71,6 +71,7 @@ export const POST: RequestHandler = async ({ request }) => {
 					kitchenId: str('kitchenId') || undefined,
 					nonce: str('nonce') || undefined,
 					answers: readAnswers(body.answers),
+					confirmLarge: body.confirmLarge === true,
 					workspaceId,
 					env,
 					onEvent: send
