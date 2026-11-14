@@ -22,13 +22,16 @@
 	let {
 		onchoose,
 		oncreated,
-		kitchens = ALL_KITCHENS
+		kitchens = ALL_KITCHENS,
+		room = false
 	}: {
 		/** A sample kitchen was picked. */
 		onchoose: (kitchenId: string, notes?: string) => void;
 		/** Your own kitchen was made (and is in this workspace, ready to join). */
 		oncreated?: (k: CreatedKitchen, description?: string) => void;
 		kitchens?: Kitchen[];
+		/** The shared room (D24): everyone names their own store; the samples are not offered. */
+		room?: boolean;
 	} = $props();
 
 	const cards = $derived(kitchens.map(establishmentCard));
@@ -80,7 +83,15 @@
 	data-testid="establishment-picker"
 	class="mx-auto w-full max-w-5xl px-4 py-6 sm:py-10"
 >
-	<h1 class="text-display font-semibold text-ink">Who are you cooking for?</h1>
+	<h1 class="text-display font-semibold text-ink">
+		{room ? 'Join the room as your own store' : 'Who are you cooking for?'}
+	</h1>
+	{#if room}
+		<p class="mt-1 max-w-2xl text-body text-ink-2">
+			Everyone here runs their own store on the same Valio stock. Name yours, then order by chat or
+			on the page; the big screen shows every order as it comes in.
+		</p>
+	{/if}
 
 	<form
 		onsubmit={create}
@@ -88,14 +99,16 @@
 		aria-labelledby="own-h"
 	>
 		<div>
-			<h2 id="own-h" class="text-heading font-semibold text-ink">Your own kitchen</h2>
+			<h2 id="own-h" class="text-heading font-semibold text-ink">
+				{room ? 'Your store' : 'Your own kitchen'}
+			</h2>
 			<p class="mt-0.5 text-meta text-ink-2">
 				Name it and start ordering. Your agent starts with safe default rules (it asks before new
 				products and never changes an allergen) and learns your usual order as you go.
 			</p>
 		</div>
 		<label class="flex flex-col gap-1 text-meta font-medium text-ink">
-			Kitchen name
+			{room ? 'Store name' : 'Kitchen name'}
 			<input
 				bind:value={name}
 				maxlength="60"
@@ -122,58 +135,60 @@
 				class="inline-flex h-10 items-center gap-1.5 rounded-md bg-accent px-4 text-body font-medium text-sheet hover:bg-accent-ink disabled:opacity-40"
 			>
 				{#if busy}<LoaderCircle size={14} class="animate-spin" aria-hidden="true" />{/if}
-				Start my kitchen<ArrowRight size={14} aria-hidden="true" />
+				{room ? 'Start my store' : 'Start my kitchen'}<ArrowRight size={14} aria-hidden="true" />
 			</button>
 			{#if error}<p class="text-meta text-ink-2" role="alert">{error}</p>{/if}
 		</div>
 	</form>
 
-	<h2 class="mt-10 text-heading font-semibold text-ink">Or try a sample kitchen</h2>
-	<p class="mt-0.5 max-w-2xl text-meta text-ink-2">
-		Sample profiles with simulated order history: each has its own delivery days, preferences and
-		the rules its agent keeps.
-	</p>
+	{#if !room}
+		<h2 class="mt-10 text-heading font-semibold text-ink">Or try a sample kitchen</h2>
+		<p class="mt-0.5 max-w-2xl text-meta text-ink-2">
+			Sample profiles with simulated order history: each has its own delivery days, preferences and
+			the rules its agent keeps.
+		</p>
 
-	<ul class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-		{#each cards as c (c.id)}
-			<li>
-				<button
-					type="button"
-					data-kitchen-id={c.id}
-					aria-labelledby="est-{c.id}-name"
-					aria-describedby="est-{c.id}-desc"
-					disabled={chosen}
-					onclick={() => choose(c.id)}
-					class="group flex h-full w-full flex-col gap-2 rounded-lg border border-rule-strong bg-sheet p-4 text-left transition-colors hover:border-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:opacity-60"
-				>
-					<span class="flex items-baseline justify-between gap-2">
-						<span class="text-meta text-ink-3">{c.type} · {c.city}</span>
-						<ArrowRight
-							size={14}
-							class="shrink-0 text-ink-3 group-hover:text-accent"
-							aria-hidden="true"
-						/>
-					</span>
-					<span id="est-{c.id}-name" class="text-heading font-semibold text-ink">{c.name}</span>
-					<span id="est-{c.id}-desc" class="flex flex-col gap-2">
-						<span class="text-meta text-ink-2">{c.rhythm}</span>
-						<span class="text-meta text-ink-2">
-							<span class="text-ink-3">Ranks by:</span>
-							{c.prefers}
+		<ul class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+			{#each cards as c (c.id)}
+				<li>
+					<button
+						type="button"
+						data-kitchen-id={c.id}
+						aria-labelledby="est-{c.id}-name"
+						aria-describedby="est-{c.id}-desc"
+						disabled={chosen}
+						onclick={() => choose(c.id)}
+						class="group flex h-full w-full flex-col gap-2 rounded-lg border border-rule-strong bg-sheet p-4 text-left transition-colors hover:border-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:opacity-60"
+					>
+						<span class="flex items-baseline justify-between gap-2">
+							<span class="text-meta text-ink-3">{c.type} · {c.city}</span>
+							<ArrowRight
+								size={14}
+								class="shrink-0 text-ink-3 group-hover:text-accent"
+								aria-hidden="true"
+							/>
 						</span>
-						<span class="mt-auto flex flex-wrap gap-1.5 pt-1">
-							{#each c.rules as r (r.label)}
-								{@const Icon = ICONS[r.key]}
-								<span
-									class="inline-flex items-center gap-1 rounded-full border border-rule px-2 py-0.5 text-micro text-ink-2"
-								>
-									<Icon size={11} aria-hidden="true" />{r.label}
-								</span>
-							{/each}
+						<span id="est-{c.id}-name" class="text-heading font-semibold text-ink">{c.name}</span>
+						<span id="est-{c.id}-desc" class="flex flex-col gap-2">
+							<span class="text-meta text-ink-2">{c.rhythm}</span>
+							<span class="text-meta text-ink-2">
+								<span class="text-ink-3">Ranks by:</span>
+								{c.prefers}
+							</span>
+							<span class="mt-auto flex flex-wrap gap-1.5 pt-1">
+								{#each c.rules as r (r.label)}
+									{@const Icon = ICONS[r.key]}
+									<span
+										class="inline-flex items-center gap-1 rounded-full border border-rule px-2 py-0.5 text-micro text-ink-2"
+									>
+										<Icon size={11} aria-hidden="true" />{r.label}
+									</span>
+								{/each}
+							</span>
 						</span>
-					</span>
-				</button>
-			</li>
-		{/each}
-	</ul>
+					</button>
+				</li>
+			{/each}
+		</ul>
+	{/if}
 </section>

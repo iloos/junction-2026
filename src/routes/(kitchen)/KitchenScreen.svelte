@@ -669,13 +669,12 @@
 	});
 	const needsJoin = $derived(
 		mode === 'live' &&
-			joinedAs === null &&
-			k.started === false &&
 			// A visitor who already has a kitchen of their own (made here, on another tab or device, or by their agent)
 			// is never asked again: the server's list says so (D26).
 			!k.kitchens.some((x) => x.mine) &&
-			!roomNotice &&
-			!page.url.searchParams.get('plan')
+			!page.url.searchParams.get('plan') &&
+			// In the shared room everyone runs their own store (D24): name it first. In your own sandbox, choose once.
+			(roomNotice ? k.kitchens.length > 0 : joinedAs === null && k.started === false)
 	);
 	/** This workspace's own kitchens (D25/D26): listed first in the selector, landed on next time. */
 	const ownKey = $derived(shell?.sandbox?.workspace ?? 'this-browser');
@@ -1050,7 +1049,7 @@
 	</main>
 {:else if needsJoin}
 	<main class="pb-10">
-		<EstablishmentPicker onchoose={choose} oncreated={created} />
+		<EstablishmentPicker onchoose={choose} oncreated={created} room={!!roomNotice} />
 		{#if k.error}
 			<p class="mx-auto max-w-5xl px-4 text-body text-out" role="alert">{errorWords(k.error)}</p>
 		{/if}
