@@ -65,6 +65,11 @@ export class KitchenStore {
 	whyLineId = $state<string | null>(null);
 	whySteps = $state.raw<{ text: string; source: string; detail?: string }[]>([]);
 	lastCommit = $state.raw<CommitNote | null>(null);
+	/**
+	 * The plan this page opened by link: every read names it, so the server never has to remember it (a later
+	 * request may reach another server process whose session has not seen the link).
+	 */
+	focusedPlan: string | null = null;
 	/** Scenario "now" (Helsinki story time), ticking. */
 	now = $state.raw<Date | null>(null);
 	/** Plan version when this screen first saw the run: older voided approvals are history, not news. */
@@ -130,7 +135,9 @@ export class KitchenStore {
 			}
 			if (!planId) return;
 			try {
-				return await backend.snapshot(this.mode, planId);
+				const s = await backend.snapshot(this.mode, planId);
+				this.focusedPlan = planId;
+				return s;
 			} catch (e) {
 				this.#fail(e);
 			}
@@ -206,6 +213,7 @@ export class KitchenStore {
 		if (this.readOnly) return;
 		await this.#run(async () => {
 			const answer = await backend.setKitchen(this.mode, kitchenId);
+			this.focusedPlan = null;
 			this.lastCommit = null;
 			this.#log('rules', `Kitchen: ${kitchenId}`);
 			return answer;
@@ -229,6 +237,7 @@ export class KitchenStore {
 	async reset() {
 		await this.#run(async () => {
 			const answer = await backend.reset(this.mode);
+			this.focusedPlan = null;
 			this.lastCommit = null;
 			this.activity = [];
 			this.#seen.clear();
@@ -253,7 +262,7 @@ export class KitchenStore {
 			ok = out.state === 'granted' || (decision === 'deny' && out.state === 'denied');
 			// The grant must be visible before the panel moves on: re-read if the store still says pending.
 			for (let i = 0; ok && i < 3; i++) {
-				const s = await backend.snapshot(this.mode);
+				const s = await backend.snapshot(this.mode, this.focusedPlan ?? undefined);
 				if (!('plan' in s) || s.approval?.id !== a.id || s.approval.state !== 'pending') break;
 				await new Promise((r) => setTimeout(r, 250));
 			}
@@ -329,7 +338,7 @@ export class KitchenStore {
 			this.#fail(e);
 		}
 		try {
-			const next = answer ?? (await backend.snapshot(this.mode));
+			const next = answer ?? (await backend.snapshot(this.mode, this.focusedPlan ?? undefined));
 			this.stale = null;
 			if ('plan' in next) {
 				this.started = true;

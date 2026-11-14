@@ -110,6 +110,17 @@ export function callTool(
 		});
 		if (!ALLOWED.has(name)) return deny(`the kitchen screen does not send ${name}`);
 		const s = session(sid, workspaceId);
+		// The page names the plan it shows; adopt it if this workspace has it, so a command never depends on this
+		// process having seen the link that opened the plan.
+		if (view && view.planId !== s.planId) {
+			const ctx = chef(s);
+			const b = await createServerPorts();
+			const named = (await b.ports.store.load(ctx.workspaceId, ctx.runId)).plans[view.planId];
+			if (named) {
+				s.planId = named.id;
+				s.kitchenId = named.kitchenId;
+			}
+		}
 		const plan = await findPlan(s);
 		const i = (input ?? {}) as { planId?: string; approvalId?: string };
 		if (!plan) return deny('start the demo first');
