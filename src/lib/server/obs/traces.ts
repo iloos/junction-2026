@@ -5,8 +5,9 @@
  * on a flush at most every PRUNE_EVERY_MS.
  */
 import { randomUUID } from 'node:crypto';
+import { scopedWorkspace } from '../adapters/simulator/overlay';
 import { currentScope } from '../external/scope';
-import { currentRequest } from './context';
+import { currentRequest, type RequestContext } from './context';
 import { errMsg, log } from './log';
 import { capJson, scrubString } from './redact';
 import { createTraceStore, type TraceRow, type TraceStore } from './trace-store';
@@ -64,7 +65,8 @@ export function toTraceRow(
 		id: `tr-${randomUUID()}`,
 		at: at.toISOString(),
 		requestId: req?.requestId ?? null,
-		workspaceId: str(data.workspaceId) ?? scope?.workspaceId ?? req?.workspaceId ?? null,
+		workspaceId:
+			str(data.workspaceId) ?? scope?.workspaceId ?? req?.workspaceId ?? scopedWorkspace() ?? null,
 		runId: str(data.runId) ?? scope?.runId ?? req?.runId ?? null,
 		actorKind: actor?.kind ?? null,
 		actorId: actorId ?? null,
@@ -143,8 +145,30 @@ export function recordTrace(step: string, data: Record<string, unknown>): void {
 	}
 }
 
+/**
+ * The request each queued row was recorded in. A model call can run before anything has named the request's
+ * workspace (a /request parse runs before its first tool call), so the row takes the workspace, run, actor and via
+ * the request knows by the time it is written.
+ */
+const requestOf = new WeakMap<TraceRow, RequestContext>();
+
+function bindLate(row: TraceRow): TraceRow {
+	const req = requestOf.get(row);
+	if (!req) return row;
+	return {
+		...row,
+		workspaceId: row.workspaceId ?? req.workspaceId ?? null,
+		runId: row.runId ?? req.runId ?? null,
+		actorKind: row.actorKind ?? req.actor?.kind ?? null,
+		actorId: row.actorId ?? req.actor?.id ?? null,
+		via: row.via ?? req.via ?? null
+	};
+}
+
 export function enqueue(row: TraceRow): void {
 	const s = state();
+	const req = currentRequest();
+	if (req) requestOf.set(row, req);
 	s.queue.push(row);
 	if (s.queue.length > MAX_QUEUE) {
 		const over = s.queue.length - MAX_QUEUE;
@@ -174,7 +198,7 @@ export function flushTraces(now: () => Date = () => new Date()): Promise<void> {
 		while (s.queue.length) {
 			const batch = s.queue.splice(0, BATCH);
 			try {
-				await store.insert(batch);
+				await store.insert(batch.map(bindLate));
 				if (s.failing) log.info('trace.store_recovered', { dropped: s.dropped });
 				s.failing = false;
 			} catch (e) {
