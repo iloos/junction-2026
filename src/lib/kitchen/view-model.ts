@@ -2,6 +2,7 @@
  * The kitchen screen's view model: the shapes both the live builder (live-view.ts) and the offline stand-in
  * (fixture-plan.ts) produce, the rule presets, and the hotel's normal week. Nothing here plans or prices.
  */
+import type { SubstituteKind } from '$lib/core/contracts';
 import type {
 	AvailabilityKind,
 	Kitchen,
@@ -129,6 +130,10 @@ export interface CandidateView {
 	verdict: string;
 	reliability?: number;
 	co2PerKg?: number;
+	/** What kind of swap it is (find_substitutes): another pack, brand or form, a swap in the dish, a different product. */
+	subKind?: SubstituteKind;
+	/** One line of what changes for the kitchen, e.g. "sliced, not brined, 1.5 kg packs". */
+	whatChanges?: string;
 	/** Reliability and carbon in words where they say something, and the labels the product has. */
 	facts?: { words: string[]; labels: string[] };
 }
