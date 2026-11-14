@@ -35,6 +35,8 @@
 		onwhy?: () => void;
 		/** Offer "Swap" (D28): the plan on screen, and what to do after a pick (re-read). */
 		swap?: { planId: string; version: number; deliverBy?: string; onchanged: () => void };
+		/** Change this line's amount in its sales units (edit_line); absent when it can't change. */
+		onqty?: (qty: number) => void;
 		/** Open the compare panel (Swap pressed on the collapsed dish row). */
 		swapOpen?: boolean;
 		/** This line's own decision (D23): Accept / Reject, or a sign-off one by one. */
@@ -60,7 +62,8 @@
 		onwhy,
 		swap,
 		decide,
-		swapOpen = false
+		swapOpen = false,
+		onqty
 	}: Props = $props();
 	let swapping = $state(false);
 	$effect(() => {
@@ -113,6 +116,28 @@
 						&nbsp;· <AgentMark {by} />{/if}
 				</p>
 			{:else if by}<p><AgentMark {by} /></p>
+			{/if}
+			{#if onqty && !rejected && l.state !== 'committed'}
+				<div
+					class="mt-1 inline-flex items-center gap-1 text-meta"
+					role="group"
+					aria-label="Amount of {name}"
+				>
+					<button
+						type="button"
+						class="grid size-7 place-items-center rounded-md border border-rule-strong text-ink-2 hover:text-ink disabled:opacity-40"
+						aria-label="One less"
+						disabled={l.qty.value <= 0}
+						onclick={() => onqty(Math.max(0, l.qty.value - 1))}>−</button
+					>
+					<span class="mono min-w-10 text-center text-ink tabular-nums">{l.qty.value}</span>
+					<button
+						type="button"
+						class="grid size-7 place-items-center rounded-md border border-rule-strong text-ink-2 hover:text-ink"
+						aria-label="One more"
+						onclick={() => onqty(l.qty.value + 1)}>+</button
+					>
+				</div>
 			{/if}
 			<p class="mono text-micro text-ink-3">
 				{#if rejected}<span class="font-sans"

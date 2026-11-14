@@ -54,10 +54,14 @@
 		rail?: boolean;
 		/** The chef is typing or a turn is running: the rail shows only its summary line. */
 		folded?: boolean;
+		/** Open the folded decisions (the chef asked to see them). */
+		onunfold?: () => void;
 		/** Mark these lines on the page (null clears); `scroll` brings the first into view. */
 		onmark?: (lineIds: string[] | null, scroll: boolean) => void;
 		/** The scenario's now: decisions past their cut-off can't be approved, and say so. */
 		now?: Date | null;
+		/** The one bulk action (D23): every pending line that may be accepted together; sign-offs stay one by one. */
+		acceptAll?: { count: number; cents: number; signOff: number; onaccept: () => void };
 	}
 	let {
 		plan,
@@ -76,8 +80,10 @@
 		part,
 		rail = false,
 		folded = false,
+		onunfold,
 		onmark,
-		now = null
+		now = null,
+		acceptAll
 	}: Props = $props();
 
 	const byId = $derived(new Map(plan.lines.map((l) => [l.id, l])));
@@ -241,21 +247,54 @@
 	}
 </script>
 
+{#snippet bulk(pad: string)}
+	{#if acceptAll && (acceptAll.count || acceptAll.signOff)}
+		<div class="flex flex-wrap items-center gap-x-3 gap-y-1.5 {pad}">
+			<p class="min-w-0 flex-1 text-meta text-ink-2">
+				{acceptAll.count + acceptAll.signOff}
+				{acceptAll.count + acceptAll.signOff === 1
+					? 'line waits'
+					: 'lines wait'}{#if acceptAll.signOff}<span class="text-signoff"
+						>&nbsp;· {acceptAll.signOff} by sign-off, one by one</span
+					>{/if}
+			</p>
+			{#if acceptAll.count}
+				<button
+					type="button"
+					class="inline-flex h-8 items-center rounded-md bg-accent px-3 text-meta font-medium whitespace-nowrap text-sheet hover:bg-accent-ink disabled:opacity-50"
+					disabled={busy}
+					onclick={acceptAll.onaccept}
+					>Accept all {acceptAll.count} ·
+					<span class="mono ml-1">{money(acceptAll.cents)}</span></button
+				>
+			{/if}
+		</div>
+	{/if}
+{/snippet}
+
 {#if part === 'decide' && rail}
 	<section
 		id="approval"
 		aria-labelledby="appr-h"
 		class="scroll-mt-4 rounded-lg border border-rule bg-sheet"
 	>
-		<!-- One line that always shows; the decisions open below it, one at a time. -->
+		<!-- One line that always shows; the decisions open below it, one at a time. Folded, it opens them. -->
 		<div class="flex items-baseline gap-2 px-3 py-2">
 			<h2 id="appr-h" class="text-body font-semibold text-ink">Decide</h2>
+			{#if folded && onunfold}
+				<button
+					type="button"
+					class="order-last shrink-0 text-meta font-medium text-propose underline underline-offset-2"
+					onclick={onunfold}>Show</button
+				>
+			{/if}
 			<p class="min-w-0 flex-1 truncate text-meta text-ink-2">
 				{decisions.length === 1 ? 'One decision' : `${decisions.length} decisions`}{shortDue
 					? ' before '
 					: ''}{#if shortDue}<span class="mono text-ink">{shortDue}</span>{/if}
 			</p>
 		</div>
+		{#if !folded}{@render bulk('border-t border-rule px-3 py-2')}{/if}
 		{#if showVoid && !folded}
 			<p class="flex gap-1.5 border-t border-rule bg-signoff-wash px-3 py-1.5 text-meta text-ink">
 				<TriangleAlert size={14} class="mt-0.5 shrink-0 text-signoff" aria-hidden="true" />
@@ -341,6 +380,7 @@
 			<h2 id="appr-h" class="text-heading font-semibold text-ink">Decide</h2>
 			<span class="text-meta text-ink-3">delivery {day(plan.deliverBy)}</span>
 		</div>
+		{@render bulk('mx-4 mt-2.5 rounded-md bg-well/60 px-3 py-2')}
 
 		{#if showVoid && lastInvalidated}
 			<div class="mx-4 mt-3 rounded-md bg-signoff-wash px-3 py-2 text-meta leading-snug text-ink">

@@ -366,10 +366,11 @@
 	let visible = $state<number | null>(null);
 	let composing = $state(false);
 	let unfoldTimer: ReturnType<typeof setTimeout> | undefined;
-	// Typing or a running turn folds the rail's decisions to one line, so the conversation keeps the room.
+	// Typing (focus with text in the box) or a running turn folds the rail's decisions to one line, so the
+	// conversation keeps the room. Focus alone never does: after "plan it" the decisions must be reachable at once.
 	$effect(() => {
 		if (!shell) return;
-		shell.railFolded = composing || busy;
+		shell.railFolded = (composing && text.trim().length > 0) || busy;
 		return () => {
 			if (shell) shell.railFolded = false;
 		};

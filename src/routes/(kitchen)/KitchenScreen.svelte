@@ -68,6 +68,8 @@
 	import UseElsewhere from '$lib/ui/UseElsewhere.svelte';
 	import ProductThumb from '$lib/ui/ProductThumb.svelte';
 	import { acceptAll, lineDecisions } from '$lib/kitchen/line-decisions';
+	import type { ShortageNotice } from '$lib/ui/ledger';
+	import { prefetchThumbs } from '$lib/ui/thumbs';
 	import { menuTitle, splitNeed, startsDish } from '$lib/kitchen/menu-plan';
 	import {
 		readOwn,
@@ -250,6 +252,24 @@
 						? 'agent'
 						: 'outside';
 			void k.refreshFrom(by, describeOps(mine));
+		});
+	});
+	// Every row, the Decide panel and the swap panel read one photo cache, filled in one batch when the plan arrives.
+	$effect(() => {
+		const ids = snap?.plan.lines.map((l) => l.productId);
+		if (ids?.length && k.mode === 'live') prefetchThumbs(ids);
+	});
+	// Moment 1: a shortage re-planned this kitchen elsewhere (Ops' presenter, another tab). The plan re-reads, What
+	// changed says why in words, and the changed rows flash; a kitchen the shortage left alone stays quiet.
+	$effect(() => {
+		if (!shell || k.mode !== 'live') return;
+		return shell.events.notices((n) => {
+			if (n.event.kind !== 'shortage.replanned') return;
+			const d = n.event.detail as ShortageNotice;
+			const mine = d?.kitchens?.find((x) => x.kitchenId === (snap?.kitchen.id ?? k.startKitchen));
+			if (!mine || mine.outcome === 'unaffected') return;
+			const what = `Valio ran short of ${readableName(d.productName)} (${d.had} → ${d.left} ${unitWord(d.unit, d.left)})`;
+			void k.refreshFrom('outside', `${what}. ${mine.why || mine.allowedBy}`);
 		});
 	});
 	const CHANGE_BY = {
@@ -1159,6 +1179,9 @@
 					}
 				: undefined}
 			swapOpen={swapAsk === l.id}
+			onqty={k.readOnly || l.strategy?.kind === 'make_in_house'
+				? undefined
+				: (q) => void k.setLineQty(l.id, q)}
 			swap={k.mode === 'live' && plan && !k.readOnly
 				? {
 						planId: plan.id,
@@ -2074,6 +2097,13 @@
 		<ApprovalPanel
 			{rail}
 			folded={rail && !!shell?.railFolded}
+			onunfold={() => shell && (shell.railFolded = false)}
+			acceptAll={{
+				count: all.count,
+				cents: all.cents,
+				signOff: all.signOff,
+				onaccept: () => void k.decideLines([...all.byApproval.values()], 'grant')
+			}}
 			onmark={markLines}
 			now={k.now}
 			part="decide"
