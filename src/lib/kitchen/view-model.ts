@@ -13,7 +13,7 @@ import type {
 } from '$lib/core/contracts';
 import { KITCHENS } from './catalog';
 
-export type PresetId = 'kitchen' | 'price' | 'finnish';
+export type PresetId = 'kitchen' | 'price' | 'finnish' | 'carbon' | 'reliable';
 
 export interface Rules {
 	preset: PresetId;
@@ -34,7 +34,15 @@ export interface Rules {
 export const PRESETS: Record<PresetId, { label: string; hint: string }> = {
 	kitchen: { label: 'Kitchen default', hint: "The hotel's own weights: reliability first" },
 	price: { label: 'Price first', hint: 'Cheapest that does the job; no origin preference' },
-	finnish: { label: 'Finnish required', hint: 'Meat, fish and milk must be Finnish' }
+	finnish: { label: 'Finnish required', hint: 'Meat, fish and milk must be Finnish' },
+	carbon: {
+		label: 'Lowest carbon',
+		hint: 'Ranks lower CO₂e per kg first; your mandate and who decides stay the same'
+	},
+	reliable: {
+		label: 'Most reliable',
+		hint: "Ranks Valio's delivery reliability first; your mandate and who decides stay the same"
+	}
 };
 
 export function rulesFor(kitchen: Kitchen, preset: PresetId, mandateVersion = 1): Rules {
@@ -63,6 +71,17 @@ export function rulesFor(kitchen: Kitchen, preset: PresetId, mandateVersion = 1)
 			weights: { price: 0.7, reliability: 0.3, finnish: 0, carbon: 0, organic: 0 },
 			originPrefer: [],
 			neverDelegate: base.neverDelegate.filter((n) => n !== 'substitute_breaks_preference')
+		};
+	// Weights only: a ranking preference never changes a line's tier or who must decide it.
+	if (preset === 'carbon')
+		return {
+			...base,
+			weights: { carbon: 0.6, price: 0.2, reliability: 0.2, finnish: 0, organic: 0 }
+		};
+	if (preset === 'reliable')
+		return {
+			...base,
+			weights: { reliability: 0.7, price: 0.2, carbon: 0.1, finnish: 0, organic: 0 }
 		};
 	if (preset === 'finnish')
 		return {
@@ -110,6 +129,8 @@ export interface CandidateView {
 	verdict: string;
 	reliability?: number;
 	co2PerKg?: number;
+	/** Reliability and carbon in words where they say something, and the labels the product has. */
+	facts?: { words: string[]; labels: string[] };
 }
 
 export interface MakeIngredient {
@@ -142,6 +163,9 @@ export interface PurchaseText {
 	productId: string;
 	name: string;
 	qtyText: string;
+	/** For the preview's "what changes": the line's price and the product's carbon, when known. */
+	lineCents?: number | null;
+	co2PerKg?: number;
 }
 
 export interface RescueView {

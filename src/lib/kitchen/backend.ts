@@ -12,12 +12,19 @@ export type Snapshot = FixtureSnapshot;
 export type MaybeStarted = Snapshot | { started: false; kitchenId: string };
 
 /** The current snapshot; with `planId`, opens that plan (an approval link) instead of the kitchen's event plan. */
-export async function snapshot(mode: ApiMode, planId?: string): Promise<MaybeStarted> {
+export async function snapshot(
+	mode: ApiMode,
+	planId?: string,
+	/** Read the plan without making it the browser's remembered plan (the dock's own state). */
+	peek = false
+): Promise<MaybeStarted> {
 	if (mode === 'fixture') return fx.snapshot();
 	let res: Response;
 	try {
 		res = await fetch(
-			planId ? `/kitchen-api/snapshot?plan=${encodeURIComponent(planId)}` : '/kitchen-api/snapshot'
+			planId
+				? `/kitchen-api/snapshot?plan=${encodeURIComponent(planId)}${peek ? '&peek=1' : ''}`
+				: '/kitchen-api/snapshot'
 		);
 	} catch (e) {
 		throw new Unreachable({
@@ -40,8 +47,9 @@ export async function snapshot(mode: ApiMode, planId?: string): Promise<MaybeSta
 	});
 }
 
-const scenario = (action: string, value?: unknown) =>
-	livePost<MaybeStarted>('/kitchen-api/scenario', { action, value });
+/** `plan`: the plan the screen shows, so the command acts on it whatever another screen opened since. */
+const scenario = (action: string, value?: unknown, plan?: string | null) =>
+	livePost<MaybeStarted>('/kitchen-api/scenario', { action, value, ...(plan ? { plan } : {}) });
 
 /**
  * Each live command answers with the new snapshot, so the caller uses it instead of a second GET.
@@ -66,8 +74,12 @@ export function rescueStep(): Promise<MaybeStarted> {
 	return scenario('rescue');
 }
 
-export async function setPreset(mode: ApiMode, preset: PresetId): Promise<Answer> {
-	if (mode === 'live') return scenario('preset', preset);
+export async function setPreset(
+	mode: ApiMode,
+	preset: PresetId,
+	plan?: string | null
+): Promise<Answer> {
+	if (mode === 'live') return scenario('preset', preset, plan);
 	await fx.setPreset(preset);
 	return null;
 }
@@ -78,8 +90,12 @@ export async function setKitchen(mode: ApiMode, kitchenId: string): Promise<Answ
 	return null;
 }
 
-export async function setContention(mode: ApiMode, on: boolean): Promise<Answer> {
-	if (mode === 'live') return scenario('contention', on);
+export async function setContention(
+	mode: ApiMode,
+	on: boolean,
+	plan?: string | null
+): Promise<Answer> {
+	if (mode === 'live') return scenario('contention', on, plan);
 	await fx.setContention(on);
 	return null;
 }
@@ -91,6 +107,6 @@ export async function reset(mode: ApiMode): Promise<Answer> {
 }
 
 /** Live: make the order follow the previewed rules (replace substitutes, re-quote, void the approval). */
-export async function applyRules(mode: ApiMode): Promise<Answer> {
-	return mode === 'live' ? scenario('apply') : null;
+export async function applyRules(mode: ApiMode, plan?: string | null): Promise<Answer> {
+	return mode === 'live' ? scenario('apply', undefined, plan) : null;
 }

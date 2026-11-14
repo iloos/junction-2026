@@ -9,9 +9,20 @@
 		/** A requested value the server hasn't confirmed yet: shown, not editable. */
 		pending?: number;
 		disabled?: boolean;
+		/** A one-line table row: shorter, no "was" line under it (the row's detail says what it was). */
+		compact?: boolean;
 		onchange: (v: number) => void;
 	}
-	let { value, original, step = 5, label, pending, disabled = false, onchange }: Props = $props();
+	let {
+		value,
+		original,
+		step = 5,
+		label,
+		pending,
+		disabled = false,
+		compact = false,
+		onchange
+	}: Props = $props();
 	const shown = $derived(pending ?? value);
 	const locked = $derived(disabled || pending !== undefined);
 	let draft = $derived(String(shown));
@@ -30,7 +41,9 @@
 	{#if disabled && pending === undefined}
 		<!-- Locked (ordered, or not editable here): no controls to press, so it can't be mistaken for one. -->
 		<p
-			class="inline-flex h-9 items-center gap-1.5 rounded-md border border-dashed border-rule-strong bg-well px-2.5 text-ink-2"
+			class="inline-flex {compact
+				? 'h-8'
+				: 'h-9'} items-center gap-1.5 rounded-md border border-dashed border-rule-strong bg-well px-2.5 text-ink-2"
 			aria-label="{label}: {shown} grams per guest, locked"
 		>
 			<Lock size={13} aria-hidden="true" />
@@ -39,20 +52,24 @@
 		</p>
 	{:else}
 		<div
-			class="inline-flex h-9 items-center rounded-md border bg-sheet {edited
+			class="inline-flex {compact ? 'h-8' : 'h-9'} items-center rounded-md border bg-sheet {edited
 				? 'border-accent/60'
 				: 'border-rule-strong'} {locked ? 'opacity-70' : ''}"
 			aria-busy={pending !== undefined}
 		>
 			<button
 				type="button"
-				class="grid h-full w-9 place-items-center rounded-l-md text-ink-2 hover:bg-well hover:text-ink disabled:cursor-not-allowed disabled:hover:bg-transparent"
+				class="grid h-full {compact
+					? 'w-7'
+					: 'w-9'} place-items-center rounded-l-md text-ink-2 hover:bg-well hover:text-ink disabled:cursor-not-allowed disabled:hover:bg-transparent"
 				aria-label="Less {label}"
 				disabled={locked}
 				onclick={() => commit(shown - step)}><Minus size={14} /></button
 			>
 			<input
-				class="mono h-full w-11 border-x border-rule bg-transparent text-center text-body text-ink outline-none focus:bg-accent-wash disabled:cursor-not-allowed"
+				class="mono h-full {compact
+					? 'w-10'
+					: 'w-11'} border-x border-rule bg-transparent text-center text-body text-ink outline-none focus:bg-accent-wash disabled:cursor-not-allowed"
 				inputmode="numeric"
 				aria-label="{label}, grams per guest"
 				disabled={locked}
@@ -72,14 +89,18 @@
 			/>
 			<button
 				type="button"
-				class="grid h-full w-9 place-items-center rounded-r-md text-ink-2 hover:bg-well hover:text-ink disabled:cursor-not-allowed disabled:hover:bg-transparent"
+				class="grid h-full {compact
+					? 'w-7'
+					: 'w-9'} place-items-center rounded-r-md text-ink-2 hover:bg-well hover:text-ink disabled:cursor-not-allowed disabled:hover:bg-transparent"
 				aria-label="More {label}"
 				disabled={locked}
 				onclick={() => commit(shown + step)}><Plus size={14} /></button
 			>
 		</div>
 	{/if}
-	{#if pending !== undefined}
+	{#if compact}
+		<!-- The row stays one line: the pending state shows as the locked control; "was" is in the detail. -->
+	{:else if pending !== undefined}
 		<span class="inline-flex items-center gap-1 text-micro text-accent-ink" role="status">
 			<LoaderCircle size={11} class="animate-spin" aria-hidden="true" /> recomputing
 		</span>

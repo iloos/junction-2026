@@ -5,7 +5,7 @@
 	 * Approving one decision never approves another. Rendered by the kitchen panel, the phone sheet and the chat dock.
 	 */
 	import { tick } from 'svelte';
-	import { ArrowRight, Clock3, Hand, ShieldAlert } from '@lucide/svelte';
+	import { ArrowRight, ChevronDown, Clock3, Hand, ShieldAlert } from '@lucide/svelte';
 
 	import HoldButton from './HoldButton.svelte';
 	import type { Decision } from './decisions';
@@ -43,11 +43,17 @@
 	/** One rule everywhere: the decision's own due time (decisionsDue over its lines). */
 	const when = $derived(d.due ?? due);
 
-	const SHOW = 4;
-	let all = $state(false);
+	/** The lines whose terms changed since the chef saw them open the details by themselves. */
+	const changedHere = $derived(d.lineIds.some((id) => changed?.has(id)));
+	let opened = $state<boolean | null>(null);
+	const details = $derived(opened ?? changedHere);
+	/** One line of consequence; the reasons in full and the lines are behind Details. */
+	const held = $derived.by(() => {
+		const dishes = new Set(d.lines.map((l) => l.needId).filter(Boolean)).size;
+		return `If held: ${n} ${noun} not ordered${dishes ? `, ${dishes} ${dishes === 1 ? 'dish loses' : 'dishes lose'} cover` : ''}.`;
+	});
 	let confirming = $state(false);
 	let confirmBtn = $state<HTMLButtonElement | null>(null);
-	const shown = $derived(all ? d.lines : d.lines.slice(0, SHOW));
 	const n = $derived(d.lines.length);
 	const noun = $derived(n === 1 ? 'line' : 'lines');
 
@@ -90,34 +96,39 @@
 			{d.lineIds.length === 1 ? 'line' : 'lines'}
 		</p>
 	{:else}
-		<p class="mt-1 text-meta text-ink-2">
-			{#if d.title}<span class="font-medium text-ink">{d.reason}.</span>{/if}
-			{d.why}
+		<p class="mt-0.5 text-meta text-ink-2">
+			{d.reason} · <span class="mono">{n}</span>
+			{noun}
 		</p>
-
-		<ul class="mt-2 border-t border-rule pt-1.5">
-			{#each shown as l (l.id)}
-				<li
-					class="flex items-baseline justify-between gap-3 py-0.5 text-meta {changed?.has(l.id)
-						? 'bg-signoff-wash'
-						: ''}"
-				>
-					<span class="min-w-0 truncate text-ink" title={names.get(l.productId) ?? l.productId}
-						>{names.get(l.productId) ?? l.productId}</span
+		<p class="mt-1.5 text-meta text-ink">{held}</p>
+		<button
+			type="button"
+			class="mt-1 inline-flex items-center gap-1 text-meta text-ink-2 hover:text-ink"
+			aria-expanded={details}
+			onclick={() => (opened = !details)}
+			><ChevronDown
+				size={13}
+				class="transition-transform {details ? '' : '-rotate-90'}"
+				aria-hidden="true"
+			/>Details{changedHere ? ' · terms changed' : ''}</button
+		>
+		{#if details}
+			<p class="mt-1 text-meta text-ink-2">{d.why}</p>
+			<ul class="mt-1.5 border-t border-rule pt-1.5">
+				{#each d.lines as l (l.id)}
+					<li
+						class="flex items-baseline justify-between gap-3 py-0.5 text-meta {changed?.has(l.id)
+							? 'bg-signoff-wash'
+							: ''}"
 					>
-					<span class="mono shrink-0 text-ink-2">{num(l.qty.value)} {l.qty.unit}</span>
-				</li>
-			{/each}
-		</ul>
-		{#if n > SHOW}
-			<button
-				type="button"
-				class="text-meta text-ink-3 underline underline-offset-2 hover:text-ink"
-				onclick={() => (all = !all)}>{all ? 'Show fewer' : `Show all ${n} lines`}</button
-			>
+						<span class="min-w-0 truncate text-ink" title={names.get(l.productId) ?? l.productId}
+							>{names.get(l.productId) ?? l.productId}</span
+						>
+						<span class="mono shrink-0 text-ink-2">{num(l.qty.value)} {l.qty.unit}</span>
+					</li>
+				{/each}
+			</ul>
 		{/if}
-
-		<p class="mt-2 text-meta text-ink-2">{d.consequence}</p>
 	{/if}
 	{#if when}
 		<p class="mt-1 flex items-center gap-1.5 text-meta text-ink-2">

@@ -7,12 +7,13 @@
 		CircleX,
 		MessageSquare,
 		Plus,
-		Send
+		Send,
+		UtensilsCrossed
 	} from '@lucide/svelte';
 	import { untrack } from 'svelte';
 	import DecisionCard from '$lib/ui/DecisionCard.svelte';
 	import { decisionsOf } from '$lib/ui/decisions';
-	import { money } from '$lib/ui/format';
+	import { day, money, readableName } from '$lib/ui/format';
 	import { KitchenStore } from '$lib/kitchen/kitchen.svelte';
 	import Receipt from '$lib/ui/Receipt.svelte';
 	import type { ChatEvent, ChatTurnInput } from './types';
@@ -21,9 +22,10 @@
 
 	/**
 	 * The chat dock: a right-hand column on desktop, a bottom sheet on a phone, scoped to one procurement task. It
-	 * sends turns to POST /api/chat/turn and renders the NDJSON lines as they come: steps with our own summaries
-	 * linking to the plan, a question with chip answers, a decision card that links to the Kitchen approval panel
-	 * (there is no approve button here, by design) and the outcome line from the task ledger.
+	 * sends turns to POST /api/chat/turn and renders the NDJSON lines as they come: steps folded into one line,
+	 * questions with chip answers, a menu card, decision cards and the outcome line from the task ledger. The agent
+	 * never approves: on the plan the page shows, a decision card links to the page's own card; on another plan the
+	 * chef approves here with the page's card and Kitchen command, as the chef, never through a chat turn (D13).
 	 */
 	interface Props {
 		kitchenId?: string;
@@ -179,7 +181,12 @@
 	const ownSnap = $derived(own?.snap && own.snap.plan.id === actPlan ? own.snap : null);
 	const liveDecisions = $derived(ownSnap ? decisionsOf(ownSnap.plan, ownSnap.approval) : []);
 	const ownNames = $derived(
-		new Map((ownSnap?.plan.lines ?? []).map((l) => [l.productId, l.productName ?? l.productId]))
+		new Map(
+			(ownSnap?.plan.lines ?? []).map((l) => [
+				l.productId,
+				readableName(l.productName ?? l.productId)
+			])
+		)
 	);
 	const approvedOpen = $derived(
 		(ownSnap?.plan.lines ?? []).filter(
@@ -424,8 +431,48 @@
 							<p class="mt-1 text-meta text-ink-3">Type the answer below.</p>
 						{/if}
 					</li>
+				{:else if x.e.type === 'menu'}
+					<!-- A proposed menu: what it is, and the one way on (review it); nothing here approves or orders. -->
+					<li class="rounded-lg border border-rule bg-sheet px-3 py-2.5" aria-label="Menu proposal">
+						<p class="flex items-start gap-1.5 font-medium text-ink">
+							<UtensilsCrossed size={15} class="mt-0.5 shrink-0 text-accent" aria-hidden="true" />
+							{x.e.title}
+						</p>
+						<p class="mt-0.5 text-meta text-ink-2">
+							{x.e.guests} guests · {day(x.e.date)}{x.e.budgetCents
+								? ` · aims at ${money(x.e.budgetCents, { whole: true })}`
+								: ''}
+						</p>
+						<ul class="mt-1.5 space-y-0.5 text-meta text-ink">
+							{#each x.e.dishes.slice(0, 4) as dish, j (j)}
+								<li class="truncate">{dish.name}</li>
+							{/each}
+							{#if x.e.dishes.length > 4}
+								<li class="text-ink-3">and {x.e.dishes.length - 4} more</li>
+							{/if}
+						</ul>
+						{#if x.e.unresolved > 0}
+							<p class="mt-1 text-meta text-signoff">
+								{x.e.unresolved}
+								{x.e.unresolved === 1 ? 'ingredient has' : 'ingredients have'} no product yet
+							</p>
+						{/if}
+						{#if x.e.reviewed}
+							<p class="mt-2 inline-flex items-center gap-1 text-meta font-medium text-ok">
+								<CircleCheck size={13} aria-hidden="true" /> Reviewed
+							</p>
+						{:else}
+							<a
+								class="mt-2 inline-flex items-center gap-1 rounded-md border border-accent px-3 py-1.5 text-meta font-semibold text-accent-ink hover:bg-accent-wash"
+								href={x.e.reviewUrl}
+								>Review the menu <ArrowUpRight size={13} aria-hidden="true" /></a
+							>
+						{/if}
+					</li>
 				{:else if x.e.type === 'decision'}
-					{@const names = new Map(Object.entries(x.e.names))}
+					{@const names = new Map(
+						Object.entries(x.e.names).map(([id, n]) => [id, readableName(n)])
+					)}
 					{@const here = x.e.planId === planId}
 					{#if x === lastDecision && !here && ownSnap}
 						<!-- D13: the chef decides here, with the page's own card and command. -->
@@ -521,7 +568,7 @@
 								>Order it on the page <ArrowUpRight size={13} aria-hidden="true" /></a
 							>
 						</li>
-					{:else if x === last && !actedHere && (x.e.canContinue || x.e.state === 'awaiting_chef')}
+					{:else if x === last && !actedHere && x.e.canContinue}
 						<li class="flex flex-wrap gap-2">
 							<button
 								type="button"
@@ -529,9 +576,9 @@
 								disabled={busy}
 								onclick={() => turn({ continue: true }, 'Continue')}
 							>
-								{x.e.canContinue
-									? 'Continue: submit what may be ordered'
-									: 'I’ve decided: continue'}
+								{x.e.state === 'awaiting_chef'
+									? 'I’ve decided: continue'
+									: 'Continue: submit what may be ordered'}
 							</button>
 						</li>
 					{/if}

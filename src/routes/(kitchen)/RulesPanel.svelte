@@ -2,7 +2,7 @@
 	import { Eye } from '@lucide/svelte';
 	import { PRESETS, type PresetId, type PurchaseText, type Rules } from '$lib/kitchen/view-model';
 	import ScoreLegend from '$lib/ui/ScoreLegend.svelte';
-	import { money } from '$lib/ui/format';
+	import { money, moneyDelta, num, readableName } from '$lib/ui/format';
 
 	interface Preview {
 		dish: string;
@@ -31,7 +31,25 @@
 		].join(' · ') || 'No origin rules'
 	);
 	const list = (xs: PurchaseText[]) =>
-		xs.length ? xs.map((x) => `${x.name} · ${x.qtyText}`).join(', ') : 'nothing';
+		xs.length ? xs.map((x) => `${readableName(x.name)} · ${x.qtyText}`).join(', ') : 'nothing';
+	/**
+	 * What a swap changes, from the two picks' own numbers: carbon per kg and the line's price. Nothing is said for
+	 * a number either side lacks.
+	 */
+	function delta(saved: PurchaseText[], picked: PurchaseText[]): string {
+		const sum = (xs: PurchaseText[], k: 'lineCents') =>
+			xs.every((x) => x[k] != null) ? xs.reduce((t, x) => t + (x[k] ?? 0), 0) : null;
+		const co2 = (xs: PurchaseText[]) => (xs.length === 1 ? xs[0].co2PerKg : undefined);
+		const bits: string[] = [];
+		const a = co2(saved);
+		const b = co2(picked);
+		if (a !== undefined && b !== undefined && Math.abs(b - a) >= 0.05)
+			bits.push(`${b < a ? '−' : '+'}${num(Math.abs(b - a), 1)} kg CO₂e/kg`);
+		const ca = sum(saved, 'lineCents');
+		const cb = sum(picked, 'lineCents');
+		if (ca !== null && cb !== null && ca !== cb) bits.push(moneyDelta(cb - ca));
+		return bits.join(', ');
+	}
 </script>
 
 <section aria-labelledby="rules-h" class="rounded-lg border border-rule bg-sheet">
@@ -91,6 +109,9 @@
 						<span class="font-medium text-ink">{p.dish}:</span>
 						<span class="text-ink-2">order has {list(p.saved)}</span>
 						<span class="block text-propose">these rules pick {list(p.recommended)}</span>
+						{#if delta(p.saved, p.recommended)}<span class="mono block text-ink-2"
+								>{delta(p.saved, p.recommended)}</span
+							>{/if}
 					</li>
 				{/each}
 			</ul>

@@ -48,6 +48,7 @@
 		UNIT_WORDS
 	} from '$lib/ui/request/words';
 	import { availText } from '$lib/kitchen/live-view';
+	import { readableName } from '$lib/ui/format';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
@@ -1098,7 +1099,8 @@
 											<li class="grid grid-cols-[1.25rem_1fr] gap-x-1.5">
 												<span class="num text-ink-3">{ci + 1}.</span>
 												<span>
-													<span class={c.picked ? 'font-medium text-accent-ink' : ''}>{c.name}</span
+													<span class={c.picked ? 'font-medium text-accent-ink' : ''}
+														>{readableName(c.name)}</span
 													>
 													<span class="mono text-micro text-ink-3"
 														>{c.productId} · score {c.score}</span
@@ -1152,7 +1154,7 @@
 								<div class="flex flex-wrap items-start justify-between gap-x-3 gap-y-1">
 									<div class="min-w-0">
 										<p class="text-heading font-medium">
-											{l.productName ?? names.get(l.productId) ?? l.productId}
+											{readableName(l.productName ?? names.get(l.productId) ?? l.productId)}
 										</p>
 										<p class="num text-body text-ink-2">
 											{quantityWords(l.qty.value, l.qty.unit, l.view?.physical)} × {money(

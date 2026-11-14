@@ -42,3 +42,45 @@ test('the chef approves and orders from the dock, never through a chat turn', as
 	await expect(here.getByText(/Ordered\s*·\s*\d+\s+lines?/)).toBeVisible({ timeout: 30_000 });
 	expect(posts.slice(before)).toContain('/kitchen-api/tool/commit_order');
 });
+
+test('a dock approval on another plan never switches the plan the Kitchen page shows', async ({
+	page
+}) => {
+	test.setTimeout(180_000);
+	await page.goto(`${BASE}/`);
+	const start = page.getByRole('button', { name: 'Plan the event' });
+	await page.locator('#task-h').or(start).first().waitFor({ timeout: 60_000 });
+	if (await start.isVisible()) await start.click();
+	const title = page.locator('#task-h');
+	await expect(title).toContainText('Christmas', { timeout: 120_000 });
+
+	const dock = page.locator('aside[aria-label="Agent chat"]');
+	await expect(async () => {
+		await page.getByRole('button', { name: 'Ask the agent' }).click();
+		await expect(dock).toBeVisible({ timeout: 1000 });
+	}).toPass({ timeout: 30_000 });
+	await dock.getByRole('button', { name: 'New task' }).click();
+	await dock.locator('textarea').fill('4 kg lactose-free butter for Thursday');
+	await dock.locator('textarea').press('Enter');
+	const here = dock.getByLabel('Decide here');
+	await here.waitFor({ timeout: 60_000 });
+	await here
+		.getByRole('button', { name: /^Review \d+ lines?/ })
+		.first()
+		.click();
+	await here.getByRole('button', { name: 'Confirm exact terms' }).click();
+	await here.getByRole('button', { name: /^Order the approved lines/ }).click();
+	await expect(here.getByText(/Ordered\s*·\s*\d+\s+lines?/)).toBeVisible({ timeout: 30_000 });
+
+	// A reload straight after the dock's order still opens the buffet (the dock never moves the remembered plan);
+	// then the page's own next command and a fresh read still act on, and show, the buffet.
+	await page.reload();
+	await expect(title).toContainText('Christmas', { timeout: 60_000 });
+	if (await dock.isVisible()) await dock.getByRole('button', { name: 'Close chat' }).click();
+	await page.getByRole('button', { name: /^Show details: Graavilohi/ }).click();
+	await page.getByRole('button', { name: 'More Graavilohi' }).last().click();
+	await page.waitForTimeout(3000);
+	await expect(title).toContainText('Christmas');
+	await page.reload();
+	await expect(title).toContainText('Christmas', { timeout: 60_000 });
+});

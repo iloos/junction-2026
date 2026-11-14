@@ -47,7 +47,7 @@
 	{#if replaces}
 		<p class="mt-0.5 text-meta leading-snug text-ink-2">
 			Replaces <span class="text-ink">{replaces.name}</span>: {replaces.because}{#if by}
-				· <AgentMark {by} />{/if}
+				&nbsp;· <AgentMark {by} />{/if}
 		</p>
 	{/if}
 	<p class="mt-0.5 text-meta text-ink-2">

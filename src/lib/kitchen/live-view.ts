@@ -30,6 +30,10 @@ export interface ProductFacts {
 	origin?: string;
 	reliability?: number;
 	co2PerKg?: number;
+	/** The carbon figure is an estimate (category average, model), not the product's own. */
+	co2Estimated?: boolean;
+	/** Catalogue labels (EU organic, MSC, Hirvenmerkki…). */
+	labels?: string[];
 	salesUnit: string;
 	offer?: Offer;
 }
@@ -113,11 +117,56 @@ function verdict(c: CandidateView): string {
 	return 'Known stock for the whole need · within your mandate';
 }
 
+/**
+ * What a candidate's reliability, carbon and labels say, only where they carry information: reliability in words
+ * (nothing at Valio's default 1.00 or when unknown), carbon against the product it replaces when it differs by a
+ * tenth or more (marked when it is a product-group average), and the labels it has. The raw numbers stay for the System layer.
+ */
+export function candidateFacts(
+	f: ProductFacts | undefined,
+	original: ProductFacts | undefined
+): { words: string[]; labels: string[] } {
+	const words: string[] = [];
+	const r = f?.reliability;
+	if (r !== undefined && r < 0.995) {
+		const late = Math.round(1 / Math.max(0.01, 1 - r));
+		words.push(r >= 0.95 ? 'reliable deliveries' : `late about 1 in ${late}`);
+	}
+	const a = f?.co2PerKg;
+	const b = original?.co2PerKg;
+	// A difference under a tenth says nothing; averages compare product groups, not products, and say so.
+	if (a !== undefined && b !== undefined && b > 0) {
+		const d = (a - b) / b;
+		const avg = f?.co2Estimated || original?.co2Estimated ? ' (group average)' : '';
+		if (d <= -0.1) words.push(`lower CO₂e than the original${avg}`);
+		else if (d >= 0.1) words.push(`higher CO₂e than the original${avg}`);
+	}
+	const labels: string[] = [];
+	if (f?.origin === 'FI') labels.push('Finnish');
+	for (const l of f?.labels ?? []) {
+		const u = l.toUpperCase();
+		const word = /ORGANIC|LUOMU/.test(u)
+			? 'Organic'
+			: /\bMSC\b/.test(u)
+				? 'MSC'
+				: /\bASC\b/.test(u)
+					? 'ASC'
+					: /HIRVEN|HYVAA_SUOMESTA|HYVÄÄ/.test(u)
+						? 'Hyvää Suomesta'
+						: /SYDAN|SYDÄN|HEART/.test(u)
+							? 'Heart symbol'
+							: null;
+		if (word && !labels.includes(word)) labels.push(word);
+	}
+	return { words, labels };
+}
+
 function candidateViews(
 	out: SubstitutesOut,
 	chosenLine: Line | undefined,
 	facts: Record<string, ProductFacts>,
-	previewRanking: boolean
+	previewRanking: boolean,
+	original?: ProductFacts
 ): CandidateView[] {
 	return out.candidates.map((c) => {
 		const f = facts[c.productId];
@@ -157,7 +206,8 @@ function candidateViews(
 			recommended,
 			verdict: '',
 			reliability: f?.reliability,
-			co2PerKg: f?.co2PerKg
+			co2PerKg: f?.co2PerKg,
+			facts: candidateFacts(f, original)
 		};
 		view.verdict = verdict(view);
 		return view;
@@ -167,7 +217,9 @@ function candidateViews(
 const purchase = (l: Line, facts: Record<string, ProductFacts>): PurchaseText => ({
 	productId: l.productId,
 	name: l.productName ?? facts[l.productId]?.name ?? l.productId,
-	qtyText: `${l.qty.value} ${l.qty.unit}`
+	qtyText: `${l.qty.value} ${l.qty.unit}`,
+	lineCents: l.lineCents,
+	co2PerKg: facts[l.productId]?.co2PerKg
 });
 
 /** What the rules recommend vs what the order holds; they differ by product or quantity. */
@@ -286,7 +338,13 @@ export function buildLiveView(input: LiveInput): EventView {
 				forLineId: planned!.id,
 				kind,
 				needServed: served,
-				candidates: candidateViews(out, productSub, facts, input.previewRanking),
+				candidates: candidateViews(
+					out,
+					productSub,
+					facts,
+					input.previewRanking,
+					facts[planned!.productId]
+				),
 				preview: previewOf(out, facts),
 				make:
 					kind === 'make_in_house'

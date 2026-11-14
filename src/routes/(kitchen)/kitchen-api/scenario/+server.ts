@@ -10,9 +10,15 @@ import type { RequestHandler } from './$types';
 export const POST: RequestHandler = async (event) => {
 	const { request, cookies } = event;
 	const { workspaceId } = await visitorWorkspace(event, env, dev);
-	const body = (await request.json().catch(() => ({}))) as { action?: string; value?: unknown };
+	const body = (await request.json().catch(() => ({}))) as {
+		action?: string;
+		value?: unknown;
+		plan?: string;
+	};
 	try {
-		return json(await scenario(sid(cookies), workspaceId, body.action ?? '', body.value));
+		return json(
+			await scenario(sid(cookies), workspaceId, body.action ?? '', body.value, body.plan)
+		);
 	} catch (e) {
 		if (e instanceof Cooldown)
 			return json(

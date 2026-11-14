@@ -16,7 +16,7 @@ import { createServerPorts } from '$lib/server/store/server-ports';
 import { handlers } from '$lib/server/tools/handlers';
 import { serveTool, type Served } from '$lib/server/tools/serve';
 import { rulesFor, type PresetId } from '$lib/kitchen/fixture-plan';
-import type { CommitRecord, FixtureSnapshot } from '$lib/kitchen/fixture-server';
+import type { CommitRecord, FixtureSnapshot, PlanOrigin } from '$lib/kitchen/fixture-server';
 import { buildLiveView, type ProductFacts, type SubstitutesOut } from '$lib/kitchen/live-view';
 import seed from '../../../../fixtures/seeds/christmas-buffet-140.json';
 import { scenarioClock } from '$lib/core/scenario';
@@ -113,17 +113,16 @@ export function callTool(
 			error: { code: 'FORBIDDEN', message, retryable: false }
 		});
 		if (!ALLOWED.has(name)) return deny(`the kitchen screen does not send ${name}`);
-		const s = session(sid, workspaceId);
-		// The page names the plan it shows; adopt it if this workspace has it, so a command never depends on this
-		// process having seen the link that opened the plan.
+		const remembered = session(sid, workspaceId);
+		// The screen names the plan it shows; the command acts on that plan if this workspace has it, so it never
+		// depends on this process having seen the link. A copy: one screen's command (the dock's) never moves the
+		// plan another screen on this browser (the Kitchen page) reads by default.
+		let s = remembered;
+		const b0 = await createServerPorts();
+		const ws0 = await b0.ports.store.load(chef(s).workspaceId, chef(s).runId);
 		if (view && view.planId !== s.planId) {
-			const ctx = chef(s);
-			const b = await createServerPorts();
-			const named = (await b.ports.store.load(ctx.workspaceId, ctx.runId)).plans[view.planId];
-			if (named) {
-				s.planId = named.id;
-				s.kitchenId = named.kitchenId;
-			}
+			const named = ws0.plans[view.planId];
+			if (named) s = { ...remembered, planId: named.id, kitchenId: named.kitchenId };
 		}
 		const plan = await findPlan(s);
 		const i = (input ?? {}) as { planId?: string; approvalId?: string };
@@ -144,7 +143,8 @@ export function callTool(
 			);
 		if (i.planId !== undefined && i.planId !== plan.id)
 			return deny("that plan is not this session's kitchen plan");
-		if (name === 'approve' && !(i.approvalId ?? '').includes(plan.id))
+		// The approval must exist and belong to the plan on screen: an exact check, not a match on its id's text.
+		if (name === 'approve' && ws0.approvals[i.approvalId ?? '']?.planId !== plan.id)
 			return deny("that approval is not for this session's plan");
 		return serveTool(name, chef(s), input, handlers);
 	});
@@ -243,10 +243,13 @@ export function snapshot(sid: string, workspaceId: string): Promise<LiveSnapshot
 export function focusPlan(
 	sid: string,
 	workspaceId: string,
-	planId: string
+	planId: string,
+	/** Read that plan without making it this browser's remembered plan (the dock's own view of another plan). */
+	peek = false
 ): Promise<LiveSnapshot | null> {
 	return serial(workspaceId, async () => {
-		const s = session(sid, workspaceId);
+		const remembered = session(sid, workspaceId);
+		const s = peek ? { ...remembered } : remembered;
 		const b = await createServerPorts();
 		const find = async () => {
 			const ctx = chef(s);
@@ -270,16 +273,22 @@ export function focusPlan(
  * Who last changed each line of a plan, from this run's op log: a substitute proposed, a line edited, or an outside
  * agent's order created. Only agent authors are returned; a chef's own edit clears the mark.
  */
-async function agentAuthors(
+async function planHistory(
 	workspaceId: string,
 	runId: string,
 	planId: string
-): Promise<Record<string, 'kitchen_agent' | 'external_agent'>> {
+): Promise<{
+	byAgent: Record<string, 'kitchen_agent' | 'external_agent'>;
+	origin: PlanOrigin | null;
+}> {
 	const last = new Map<string, string>();
+	let origin: PlanOrigin | null = null;
 	try {
 		for (const e of await catchUp(workspaceId, 0, 5000, runId)) {
 			if (e.kind !== 'op') continue;
-			const { op, actor } = e.envelope;
+			const { op, actor, via } = e.envelope;
+			if (op.type === 'CreatePlan' && op.plan.id === planId)
+				origin = originOf(actor.kind, via, op.plan);
 			const ids =
 				op.type === 'ProposeSubstitute' && op.planId === planId
 					? op.lines.map((l) => l.id)
@@ -291,17 +300,40 @@ async function agentAuthors(
 			for (const id of ids) last.set(id, actor.kind);
 		}
 	} catch {
-		return {}; // the marks are a courtesy: a log that can't be read never breaks the screen
+		// The marks and the origin are a courtesy: a log that can't be read never breaks the screen.
+		return { byAgent: {}, origin: null };
 	}
-	return Object.fromEntries(
-		[...last].filter(([, k]) => k === 'kitchen_agent' || k === 'external_agent')
-	) as Record<string, 'kitchen_agent' | 'external_agent'>;
+	return {
+		byAgent: Object.fromEntries(
+			[...last].filter(([, k]) => k === 'kitchen_agent' || k === 'external_agent')
+		) as Record<string, 'kitchen_agent' | 'external_agent'>,
+		origin
+	};
+}
+
+/** Where a plan came from, from its CreatePlan op: the booking, the agent in chat, a request, an outside agent. */
+function originOf(actor: string, via: string, plan: Plan): PlanOrigin {
+	if (plan.eventId) return 'event';
+	if (actor === 'external_agent' || via.startsWith('mcp') || via.startsWith('rest'))
+		return 'outside_agent';
+	if (via.startsWith('request')) return 'request';
+	if (via.startsWith('chat') || via.startsWith('task') || actor === 'kitchen_agent') return 'chat';
+	return 'kitchen';
 }
 
 /** A plan that is not the seeded event (an agent's order, a menu): named by what it buys. */
 function titleOf(plan: Plan): string {
 	const labels = plan.needs.map((n) => n.label);
-	if (!labels.length) return 'Order';
+	// An order of loose lines (an outside agent's place_order): named by what it buys.
+	if (!labels.length) {
+		const bought = plan.lines
+			.filter((l) => l.qty.value > 0)
+			.map((l) => `${l.qty.value} ${l.qty.unit} ${l.productName ?? l.productId}`);
+		if (!bought.length) return 'Order';
+		return bought.length <= 2
+			? bought.join(', ')
+			: `${bought.slice(0, 2).join(', ')} and ${bought.length - 2} more`;
+	}
 	return labels.length <= 3
 		? labels.join(', ')
 		: `${labels.slice(0, 3).join(', ')} and ${labels.length - 3} more`;
@@ -346,6 +378,8 @@ async function buildSnapshot(s: Session): Promise<LiveSnapshot> {
 		b.ports.catalog.get(ids),
 		b.ports.catalog.offers(ids, plan.deliverBy)
 	]);
+	const shortNames: Record<string, string> = {};
+	for (const [id, p] of products) if (p.nameShort?.value) shortNames[id] = p.nameShort.value;
 	const facts: Record<string, ProductFacts> = {};
 	for (const id of ids) {
 		const p = products.get(id);
@@ -355,6 +389,12 @@ async function buildSnapshot(s: Session): Promise<LiveSnapshot> {
 			origin: p.origin,
 			reliability: p.reliability,
 			co2PerKg: p.co2PerKg?.value,
+			// Valio's figure is a product-group average; anything else (category estimate, model) is an estimate too.
+			co2Estimated: p.co2PerKg
+				? p.co2PerKg.provenance.source !== 'valio_static' ||
+					/average/i.test(p.co2PerKg.provenance.note ?? '')
+				: undefined,
+			labels: p.labels,
 			salesUnit: p.salesUnit,
 			offer: offers.find((o) => o.productId === id)
 		};
@@ -402,7 +442,7 @@ async function buildSnapshot(s: Session): Promise<LiveSnapshot> {
 		})
 	}));
 	const rules = rulesFor(kitchen, s.preset, kitchen.mandate.version);
-	const byAgent = await agentAuthors(ctx.workspaceId, ctx.runId, plan.id);
+	const { byAgent, origin } = await planHistory(ctx.workspaceId, ctx.runId, plan.id);
 	const others = Object.values(ws.plans)
 		.filter((p) => p.kitchenId === kitchen.id && p.id !== plan.id && p.lines.length > 0)
 		.map((p) => ({
@@ -442,6 +482,8 @@ async function buildSnapshot(s: Session): Promise<LiveSnapshot> {
 		preset: s.preset,
 		contention: s.contention,
 		byAgent,
+		origin: origin ?? (plan.eventId ? 'event' : null),
+		shortNames,
 		contentionRescue:
 			s.contentionRescue?.planId === plan.id
 				? {
@@ -513,10 +555,26 @@ export function scenario(
 	sid: string,
 	workspaceId: string,
 	action: string,
-	value: unknown
+	value: unknown,
+	/** The plan the screen shows: the command acts on it, not on whatever this browser's session last opened. */
+	planId?: string
 ): Promise<LiveSnapshot | PlanProgress> {
-	return serial(workspaceId, () => applyScenario(session(sid, workspaceId), action, value));
+	return serial(workspaceId, async () => {
+		const s = session(sid, workspaceId);
+		if (planId && ON_PLAN.has(action)) {
+			const b = await createServerPorts();
+			const ctx = chef(s);
+			const plan = (await b.ports.store.load(ctx.workspaceId, ctx.runId)).plans[planId];
+			if (plan) {
+				s.kitchenId = plan.kitchenId;
+				s.planId = plan.id;
+			}
+		}
+		return applyScenario(s, action, value);
+	});
 }
+/** Commands about the plan on screen; starting, switching kitchen and resetting choose their own plan. */
+const ON_PLAN = new Set(['preset', 'apply', 'contention']);
 
 async function applyScenario(
 	s: Session,
@@ -540,7 +598,11 @@ async function applyScenario(
 		await ensurePlan(s);
 	} else if (
 		action === 'preset' &&
-		(value === 'kitchen' || value === 'price' || value === 'finnish')
+		(value === 'kitchen' ||
+			value === 'price' ||
+			value === 'finnish' ||
+			value === 'carbon' ||
+			value === 'reliable')
 	)
 		s.preset = value;
 	else if (action === 'apply') await applyRules(s);
