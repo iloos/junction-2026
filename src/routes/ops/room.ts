@@ -218,5 +218,7 @@ export function shortageSentence(s: ShortageReplanned): string {
 		c.unaffected && `${c.unaffected} not affected`
 	].filter(Boolean);
 	const stores = s.kitchens.length;
-	return `${s.productName}: ${s.had} → ${s.left} ${s.unit} left. ${stores} store${stores === 1 ? '' : 's'} re-planned: ${parts.join(', ') || 'no changes'}.`;
+	// A sales-unit code (KI, PS) is not a word: show the counts alone.
+	const unit = /^[A-Z]{1,3}$/.test(s.unit) ? '' : ` ${s.unit}`;
+	return `${s.productName}: ${s.had} → ${s.left}${unit} left. ${stores} store${stores === 1 ? '' : 's'} re-planned: ${parts.join(', ') || 'no changes'}.`;
 }

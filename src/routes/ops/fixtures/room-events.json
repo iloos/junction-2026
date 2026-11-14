@@ -28,7 +28,7 @@
 				"name": "Hilltop Care",
 				"kind": "care_home_kitchen",
 				"city": "Vantaa",
-				"copiedFrom": "k-care",
+				"copiedFrom": "k-carehome",
 				"mandateWords": "Soft diets first; never swap an allergen-free line.",
 				"weeklyCapCents": 90000,
 				"createdAt": "2026-12-07T21:42:00.000Z"
