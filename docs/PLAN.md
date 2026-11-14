@@ -10,6 +10,7 @@ The only plan. Markers: `[x]` done · `[~]` in progress · `[ ]` todo · `[!]` b
 - [ ] **Ring 0 tracks** (review 01:55, docs/reviews/2026-11-14-0155.md): R0-a rank + make_in_house · R0-b kitchen live flip · R0-c Request (Valio's NL order flow) · R0-d demo hygiene (scenario clock, reset run, deployed smoke) · R0-e Postgres double-commit race test · R0-f agent run route + trace drawer · R0-g external agent on stage (MCP client)
 - [ ] **Ring 0 deployed** by Sat ~08:00–10:00: Christmas buffet for 140 (ham 462490 and lanttulaatikko 462482 really out), event as a diff, rescue with a visibly rejected substitute, mandate + exact-term approval + idempotent commit, external agent through the same gate, why drawer (PRODUCT.md, 8 stories)
 - [ ] Ring 1 (Operations, Context.dev change, Exa discovery) · Ring 2 (Lab/evals, Modal jobs, Gemma/Verda) · Ring 3 (Personal for S-Pankki, Nemotron documents)
+- [ ] **Showcase if time: "estimate any kitchen"** (GROWTH.md): discovery map/list over 3,560 venues with readiness, one venue's sourced estimate, owner context upgrades it; purchasing stays on the verified kitchens
 - [ ] Rough video Sat 22:00 · feature freeze Sun 06:00 · drafts → FINAL by 09:30
 
 ## Later roadmap (not a priority now; keep the seams in the contracts)

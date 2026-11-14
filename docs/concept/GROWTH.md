@@ -32,5 +32,12 @@ External identity mappings (OSM id, chain menu URL, Valio customer number) attac
 | 3–5 site pilot | Explicit buyer/site identities, versioned policies and documents, per-plan transactions, receiving/short-delivery loop, data-steward review queue |
 | Regions → Finland | Readiness admission per site, buyer-specific agreements, isolated quotas, cross-instance run/config consistency, Finnish/Swedish search aliases, remote delivery calendars, operator queue with ownership/SLA |
 
+## Showcase if time: "estimate any kitchen" (user, Sat ~03:20)
+What Aimo would receive: a system that can catalogue and **estimate** any food-service venue in Finland from public signals, and gets better when the owner submits real context.
+- **Estimate pipeline (all suggestions with sources):** Venue (OSM) → segment and size (seats, opening hours, type) → menu discovered (Exa) and extracted (Context.dev, later Nemotron for photos) → dishes → portion/ingredient mapping (Gemini, flagged estimate) → weekly demand estimate by category → likely Valio SKUs and a shadow basket → readiness level.
+- **Owner context upgrades it:** a submitted menu, covers, delivery days or a past invoice replaces an estimate field by field (provenance `user`), raising readiness; nothing becomes orderable until a buyer account and mandate exist.
+- **Demo shape:** a discovery map/list over the 3,560 venues with both denominators, readiness chips and one venue's estimate drill-down; purchasing stays on the three verified demo kitchens.
+- **Seams it needs (keep them open now):** Venue/KitchenSite split, per-field provenance and `DataReadiness`, durable enrichment records and job lifecycle (web lane + Modal), estimates never feeding the mandate.
+
 ## Seams already in the code
 `workspaceId` + `runId` + server-derived `actor` on every record and op; scoped tools with one gate; versioned approvals bound to terms; op log with provenance; ports for catalog, web and jobs; `api_keys` table (hashed, scoped) ready for per-resource grants.
