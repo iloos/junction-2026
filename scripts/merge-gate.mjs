@@ -6,11 +6,11 @@
 //   node scripts/merge-gate.mjs --full          also the Playwright e2e specs (before a tag)
 // No network: LLM_PROVIDER is forced to fixture so a gate run never spends or flakes on an API.
 // The test steps hold a machine-wide lock: parallel gates in several worktrees starve PGlite of memory.
-import { spawnSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
-import { closeSync, openSync, readFileSync, rmSync, writeSync } from 'node:fs';
+import { closeSync, openSync, readFileSync, rmSync, writeFileSync, writeSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 
 const STEPS = [
 	{ name: 'check', cmd: ['pnpm', 'check'] },
@@ -88,9 +88,37 @@ const readLock = () => {
 };
 const sleep = (ms) => Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
 
+// The main checkout's gate decides merges: while it waits, lane gates let it take the lock next.
+const PRIORITY = join(tmpdir(), 'junc26-merge-gate.priority');
+const isMain = (() => {
+	try {
+		const r = (a) => execFileSync('git', ['rev-parse', a], { encoding: 'utf-8' }).trim();
+		return resolve(r('--git-dir')) === resolve(r('--git-common-dir'));
+	} catch {
+		return false;
+	}
+})();
+const mainWaiting = () => {
+	try {
+		const pid = Number(readFileSync(PRIORITY, 'utf-8'));
+		return pid !== process.pid && alive(pid);
+	} catch {
+		return false;
+	}
+};
+
 function acquireLock() {
 	let announced = 0;
+	if (isMain) writeFileSync(PRIORITY, String(process.pid));
 	for (;;) {
+		if (!isMain && mainWaiting()) {
+			if (Date.now() - announced > 60_000) {
+				console.log('merge-gate: main checkout is waiting for the gate lock; letting it go first');
+				announced = Date.now();
+			}
+			sleep(2000);
+			continue;
+		}
 		try {
 			const fd = openSync(LOCK, 'wx');
 			writeSync(
@@ -99,6 +127,7 @@ function acquireLock() {
 			);
 			closeSync(fd);
 			holding = true;
+			if (isMain) rmSync(PRIORITY, { force: true });
 			return;
 		} catch (e) {
 			if (e.code !== 'EEXIST') throw e;
@@ -119,6 +148,11 @@ function acquireLock() {
 }
 function releaseLock() {
 	if (holding && readLock()?.pid === process.pid) rmSync(LOCK, { force: true });
+	try {
+		if (Number(readFileSync(PRIORITY, 'utf-8')) === process.pid) rmSync(PRIORITY, { force: true });
+	} catch {
+		// no priority claim
+	}
 	holding = false;
 }
 process.on('exit', releaseLock);
