@@ -486,9 +486,7 @@ async function recordChain() {
 	return {
 		recordedAt: new Date().toISOString(),
 		line: { dish: dishName, ingredient, product: line.productName, eur: eur(line.lineCents), dishes, per },
-		// No "can be ordered now" figure: the eligible set still holds a vegetarian dish's meat substitute on prod
-		// (BUGS, 8d), and the strip would vouch for it unnamed. Bring it back once that check is green.
-		counts: { waiting: held.length, unknownQuantity: unknown.length },
+		counts: { canOrderNow: eligible.length, waiting: held.length, unknownQuantity: unknown.length },
 		steps: [
 			{
 				key: 'kitchen',
@@ -539,7 +537,7 @@ async function recordChain() {
 				text: 'Ordered on one receipt.',
 				decides: {
 					kind: 'signoff',
-					text: `${held.length} lines wait for the chef · ${unknown.length} of them because Valio doesn't state a quantity`
+					text: `${eligible.length} lines can be ordered now · ${held.length} wait for the chef · ${unknown.length} of them because Valio doesn't state a quantity`
 				}
 			}
 		]
