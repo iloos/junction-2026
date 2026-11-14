@@ -474,9 +474,11 @@ export async function findSubstitutes(
 	const proposedLines = drafts.map(proposedOf);
 	// R7-02: the substitute replaces the original's purchase in the same transaction, so one need is never bought
 	// twice. The original stays on the plan at 0, marked superseded; an original nothing could buy is left as it is.
+	// A recalled original keeps its recall record: its view already takes it out of the approval and the order.
 	const supersede =
 		!opts.keepOriginal &&
 		line.qty.value > 0 &&
+		!line.reasons.includes('recall') &&
 		(line.state === 'eligible' || line.state === 'held' || line.state === 'proposed');
 	const openAfter = [...plan0.lines.filter((l) => !old.has(l.id)), ...proposedLines]
 		.filter((l) => l.state !== 'committed')

@@ -132,6 +132,8 @@ export async function createDbPorts(o: DbPortsOptions = {}) {
 	const live = o.followCurrentRun ?? false;
 	const store = createDrizzleStore(db, {
 		runOf: live ? (ws) => currentRun(ws) : () => runId,
+		// Live: the newest run in the database is current; reading it also updates this process's view.
+		...(live ? { currentRunUnderLock: (d: AnyDb, ws: string) => loadCurrentRun(d, ws) } : {}),
 		now: () => base.clock.now(),
 		publish: o.publish ?? (() => {})
 	});
