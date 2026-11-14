@@ -1,4 +1,11 @@
-import { err, ok, type Plan, type Result, type ResultMeta } from '$lib/core/contracts';
+import {
+	err,
+	ok,
+	type Approval,
+	type Plan,
+	type Result,
+	type ResultMeta
+} from '$lib/core/contracts';
 import type { TaskLedger } from '$lib/core/contracts/task';
 import type { CallContext, Ports, ToolHandlers } from '$lib/core/ports';
 import { computeLedger, ledgerTotals } from './ledger';
@@ -38,6 +45,17 @@ export async function ledgerFor(
 	handlers: Pick<ToolHandlers, 'get_plan'>,
 	planIds: string[]
 ): Promise<Result<TaskLedger>> {
+	const r = await readTask(ctx, ports, handlers, planIds);
+	return r.ok ? ok(r.value.ledger) : r;
+}
+
+/** The task's plans as get_plan returns them, the workspace's approvals for them, and the ledger over both. */
+export async function readTask(
+	ctx: CallContext,
+	ports: Pick<Ports, 'store' | 'clock'>,
+	handlers: Pick<ToolHandlers, 'get_plan'>,
+	planIds: string[]
+): Promise<Result<{ ledger: TaskLedger; plans: Plan[]; approvals: Approval[] }>> {
 	const plans: Plan[] = [];
 	for (const planId of planIds) {
 		const r = await handlers.get_plan(ctx, { planId });
@@ -47,21 +65,25 @@ export async function ledgerFor(
 		plans.push(r.value.plan);
 	}
 	const state = await ports.store.load(ctx.workspaceId, ctx.runId);
-	return ok(
-		computeLedger({
+	const ids = new Set(planIds);
+	const approvals = Object.values(state.approvals).filter((a) => ids.has(a.planId));
+	return ok({
+		plans,
+		approvals,
+		ledger: computeLedger({
 			plans,
 			orders: Object.values(state.orders),
 			receipts: Object.values(state.receipts),
-			approvals: Object.values(state.approvals),
+			approvals,
 			asOf: ports.clock.now().toISOString()
 		})
-	);
+	});
 }
 
 const fmt = (n: number) => (Math.round(n * 100) / 100).toLocaleString('en-IE');
 
 /**
- * One line from the ledger's numbers, D10 words: "ordered" only with a receipt, "supplier confirmed" only for a
+ * One line from the ledger's numbers, D10 words: "ordered" only with a receipt (never as a negation either), "supplier confirmed" only for a
  * receipt-backed quantity.
  */
 export function ledgerSummary(l: TaskLedger): string {
@@ -73,14 +95,14 @@ export function ledgerSummary(l: TaskLedger): string {
 		if (t.supplierConfirmed > 0)
 			parts.push(`${fmt(t.supplierConfirmed)}${unit} supplier confirmed`);
 		if (t.awaitingSupplier > 0) parts.push(`${fmt(t.awaitingSupplier)}${unit} awaiting supplier`);
-		if (t.planned > 0) parts.push(`${fmt(t.planned)}${unit} planned, not ordered`);
+		if (t.planned > 0) parts.push(`${fmt(t.planned)}${unit} planned, not yet submitted`);
 		if (t.unresolved > 0) parts.push(`${fmt(t.unresolved)}${unit} unresolved`);
 	}
 	if (l.receiptIds.length)
 		parts.push(
 			`ordered for €${(l.committedCents / 100).toFixed(2)} (${l.receiptIds.length} receipt${l.receiptIds.length === 1 ? '' : 's'})`
 		);
-	else parts.push('nothing ordered yet');
+	else parts.push('no order placed yet');
 	if (l.decisionsLeft) parts.push(`${l.decisionsLeft} decision(s) for a chef`);
 	return `${parts.join('; ')}. ${l.nextAction}`.slice(0, 400);
 }

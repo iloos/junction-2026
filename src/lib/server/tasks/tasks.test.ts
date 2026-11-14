@@ -99,7 +99,7 @@ describe('get_outcome: the ledger from FulfilmentView, receipts and approvals', 
 		if (!b.ok) throw new Error('outcome');
 		expect(b.value.ledger.receiptIds).toEqual([]);
 		expect(b.value.ledger.decisionsLeft).toBeGreaterThan(0);
-		expect(b.value.meta?.summary).toMatch(/nothing ordered yet/);
+		expect(b.value.meta?.summary).toMatch(/no order placed yet/);
 		expect(b.value.meta?.summary).not.toMatch(/supplier confirmed/);
 
 		expect((await getOutcome(chef, { planId: 'nope' })).ok).toBe(false);

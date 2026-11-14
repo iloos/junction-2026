@@ -13,7 +13,7 @@ import { llmPlanner, runAgent, scriptedPlanner, type AgentRun, type Planner } fr
 import { computeOutcome, unsupportedOutcome } from './outcome';
 import { buildRunPrincipal, principalContext, PRESENTER } from './principal';
 import { outcomeReviewer } from './review';
-import { TOOLS_BY_INTENT, type RunPrincipal } from './types';
+import { TOOLS_BY_INTENT, type RunPrincipal, type Slots } from './types';
 import { reviewEnabled, ReviewBudget, type ReviewDeps } from '$lib/server/review';
 
 export { runAgent, scriptedPlanner, llmPlanner, MAX_STEPS, type AgentRun } from './loop';
@@ -36,11 +36,15 @@ export async function runGoal(o: {
 	maxSteps?: number;
 	/** Review the planner's summary against the outcome (REVIEW flag); `llm` rewrites once on revise. */
 	review?: { deps: ReviewDeps; llm?: Llm };
+	/** Answered clarifications (a chat task's slots); each fills only its own field. */
+	slots?: Slots;
+	/** The plan a task is about; beats anything the words suggest. */
+	planId?: string;
 }): Promise<AgentRun> {
 	const p = o.principal;
 	const ctx = principalContext(p);
-	const context = await bootstrapContext(o.source, p, o.goal);
-	const intent = resolveIntent(o.goal, context);
+	const context = await bootstrapContext(o.source, p, o.goal, o.planId);
+	const intent = resolveIntent(o.goal, context, o.slots);
 	const intro = { intent, initiatedBy: p.initiatedBy, agentRun: p.agentRunId };
 	const left = Date.parse(p.expiresAt) - Date.now();
 	const deadlineMs = Math.max(0, Math.min(o.deadlineMs ?? 60_000, left));
