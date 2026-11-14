@@ -130,9 +130,7 @@ describe('dish status sentence (one per FulfilmentView partition)', () => {
 		dishStatus(v, g).text;
 	it('maps each weakest link to its sentence', () => {
 		expect(text(f({ supplierConfirmed: kg(10) }))).toBe('Ordered · supplier confirmed');
-		expect(text(f({ awaitingSupplier: kg(10) }))).toBe(
-			"Ordered · Valio hasn't confirmed the amount"
-		);
+		expect(text(f({ awaitingSupplier: kg(10) }))).toBe('Ordered · awaiting supplier confirmation');
 		expect(text(f({ plannedKnown: kg(10) }))).toBe('Covered · in stock');
 		expect(text(f({ plannedKnown: kg(10) }), 'propose')).toBe('Covered if you approve');
 		expect(text(f({ plannedKnown: kg(10) }), 'sign_off')).toBe('Covered if you sign off');
@@ -142,7 +140,7 @@ describe('dish status sentence (one per FulfilmentView partition)', () => {
 		const only = dishStatus(f({ plannedUnknown: kg(10) }), 'propose');
 		expect(only).toEqual({
 			tone: 'unknown',
-			text: "Valio hasn't said how many it has",
+			text: "Valio's data has no stock count; the supplier confirms the amount when you order",
 			detail: null
 		});
 		const mixed = dishStatus(f({ plannedKnown: kg(6), plannedUnknown: kg(4) }), 'sign_off');

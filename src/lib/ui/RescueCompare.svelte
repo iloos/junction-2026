@@ -82,8 +82,8 @@
 		<!-- Desktop: the ranking strip; the full table is a detail. Phone: stacked candidate cards. -->
 		{#if knownFirst}
 			<p class="px-4 pt-2 text-meta text-ink-2">
-				<span class="font-medium text-ink">Known stock first.</span> Products whose quantity Valio hasn't
-				said rank below every product with known stock, whatever their score.
+				<span class="font-medium text-ink">Known stock first.</span> Products with no stock info rank
+				below every product with known stock, whatever their score.
 			</p>
 		{/if}
 		<!-- In words first: what kind of swap, what changes, can it be had. The weighted scores are behind every column. -->

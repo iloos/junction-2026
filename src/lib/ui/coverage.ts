@@ -185,7 +185,7 @@ export type DishTone =
 
 /**
  * A dish in one sentence a chef reads in five seconds, led by its weakest link (D10 words): "covered" only for
- * known stock or receipts, unknown stock is "Valio hasn't said how many it has", excess is never cover.
+ * known stock or receipts, unknown stock is "no stock info", excess is never cover.
  */
 export function dishStatus(
 	f: FulfilmentView,
@@ -203,7 +203,7 @@ export function dishStatus(
 	if (f.plannedUnknown.value > 0)
 		return {
 			tone: 'unknown',
-			text: "Valio hasn't said how many it has",
+			text: "Valio's data has no stock count; the supplier confirms the amount when you order",
 			detail: part(f.plannedUnknown.value)
 		};
 	if (f.plannedKnown.value > 0) {
@@ -214,7 +214,7 @@ export function dishStatus(
 		return { tone: 'covered', text: 'Covered · in stock', detail: null };
 	}
 	if (f.awaitingSupplier.value > 0)
-		return { tone: 'awaiting', text: "Ordered · Valio hasn't confirmed the amount", detail: null };
+		return { tone: 'awaiting', text: 'Ordered · awaiting supplier confirmation', detail: null };
 	return { tone: 'confirmed', text: 'Ordered · supplier confirmed', detail: null };
 }
 
@@ -266,7 +266,7 @@ export function dishChipWord(tone: DishTone, rescued = false): string {
 			return 'Needs sign-off';
 		case 'unknown':
 			// Never reads as covered: a rescue on stock Valio doesn't state is still unstated stock.
-			return rescued ? "Rescued · Valio hasn't said" : "Valio hasn't said";
+			return rescued ? 'Rescued · no stock info' : 'No stock info';
 		case 'missing':
 			return 'Not covered';
 	}

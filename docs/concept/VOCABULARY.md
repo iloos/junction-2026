@@ -85,3 +85,7 @@ Titles and intros say the concrete thing, in plain words. Avoid the patterns tha
 - "X implies Y" / "A is B" parallels, rhetorical triplets, and lines that end on a clever reversal.
 
 Prefer a title that names what the section shows ("The kitchen's limits, checked on every order") and an intro that states one fact with its number ("Four requests from the app; three stopped before buying, each for a stated reason").
+
+## Name the data, say it once (user, Sat 14 Nov late)
+- Name what the data says, not what a party "said": **no stock info** (Valio's data has no stock count), **awaiting supplier confirmation** (ordered, no receipt amount yet). Never "Valio hasn't said".
+- A chip and its detail never repeat each other: the chip names the state in two or three words; the detail adds the one fact or consequence the chip can't hold.
