@@ -265,3 +265,90 @@ describe('R7-02: a substitute replaces the purchase, it is not bought beside it'
 		expect(f.excess.value).toBe(0);
 	});
 });
+
+describe('R9-03: an amount edit changes the need, in its own dimension', () => {
+	const fourLitres = async (h: Awaited<ReturnType<typeof harness>>['h']) =>
+		must(
+			await h.place_order(ctx(), {
+				kitchenId: 'k-hotel',
+				deliverBy: '2026-12-10',
+				idempotencyKey: 'four',
+				lines: [{ productId: '464201', qty: 4, unit: 'ST', amount: { value: 4, unit: 'l' } }]
+			})
+		).plan;
+
+	it('"make it 20 kg" on a 4 l need is refused with the unit to use', async () => {
+		const { h } = await harness();
+		const p = await fourLitres(h);
+		const r = await h.edit_line(ctx('chef'), {
+			planId: p.id,
+			version: p.version,
+			needId: p.needs[0].id,
+			patch: { amount: { value: 20, unit: 'kg' } }
+		});
+		expect(r.ok ? null : r.error).toMatchObject({
+			code: 'INVALID_INPUT',
+			detail: { needUnit: 'l', given: 'kg' }
+		});
+	});
+
+	it('4 l → 20 l moves the need and the purchase together', async () => {
+		const { h } = await harness();
+		const p = await fourLitres(h);
+		const r = must(
+			await h.edit_line(ctx('chef'), {
+				planId: p.id,
+				version: p.version,
+				needId: p.needs[0].id,
+				patch: { amount: { value: 20, unit: 'l' } }
+			})
+		).plan;
+		expect(r.needs[0].amount).toMatchObject({ value: 20, unit: 'l' });
+		expect(r.lines[0].qty).toMatchObject({ value: 20, unit: 'ST' });
+		const f = r.view!.fulfilment[0];
+		expect(f.required.value).toBe(20);
+		expect(f.excess.value).toBe(0);
+	});
+
+	it('0 means nothing to buy, not one sales unit', async () => {
+		const { h } = await harness();
+		const p = await fourLitres(h);
+		const r = must(
+			await h.edit_line(ctx('chef'), {
+				planId: p.id,
+				version: p.version,
+				needId: p.needs[0].id,
+				patch: { amount: { value: 0, unit: 'l' } }
+			})
+		).plan;
+		expect(r.lines[0].qty.value).toBe(0);
+	});
+});
+
+describe('R7-04: a dish edit carries its dependency closure', () => {
+	it('doubling the rice porridge doubles its milk too', async () => {
+		const b = await createDbPorts();
+		b.overlay.clear();
+		const h = createHandlers(b.ports);
+		const p = must(
+			await h.plan_event(ctx('chef'), { kitchenId: 'k-hotel', eventId: 'event-xmas-140' })
+		).plan;
+		const rice = p.needs.find((n) => /rice porridge.*rice/i.test(n.label))!;
+		const milkNeed = p.needs.find((n) => /rice porridge.*milk/i.test(n.label))!;
+		const milkLine = p.lines.find((l) => l.needId === milkNeed.id)!;
+		const r = must(
+			await h.edit_line(ctx('chef'), {
+				planId: p.id,
+				version: p.version,
+				needId: rice.id,
+				patch: { gramsPerGuest: 2 * rice.dish!.gServed }
+			})
+		).plan;
+		const next = (id: string) => r.needs.find((n) => n.id === id)!;
+		expect(next(rice.id).amount.value).toBeCloseTo(2 * rice.amount.value);
+		expect(next(milkNeed.id).amount.value).toBeCloseTo(2 * milkNeed.amount.value);
+		expect(r.lines.find((l) => l.needId === milkNeed.id)!.qty.value).toBeGreaterThan(
+			milkLine.qty.value
+		);
+	});
+});

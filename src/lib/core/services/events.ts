@@ -374,6 +374,8 @@ interface PreparedEdit {
 	kitchen: Kitchen;
 	drafts: DraftLine[];
 	need?: Need;
+	/** Needs that follow the edited one (rice porridge's milk follows its rice): each gets its own EditLine. */
+	dependents?: Need[];
 	changed: string[];
 	summary: string;
 }
@@ -396,6 +398,52 @@ async function prepareEdit(
 	if (!kitchen) return err('NOT_FOUND', `kitchen ${plan.kitchenId}`);
 	let drafts = plan.lines.filter((l) => l.state !== 'committed').map(draftFromLine);
 
+	if (input.needId && input.patch.amount) {
+		// R9-03: an amount amendment changes the need itself and re-sizes its lines; never a purchase-only edit.
+		const before = plan.needs.find((n) => n.id === input.needId);
+		if (!before) return err('NOT_FOUND', `need ${input.needId}`);
+		const amount = input.patch.amount;
+		if (before.dish)
+			return err('INVALID_INPUT', `${before.label} is a dish: change its g/guest, not its amount`, {
+				detail: { needId: before.id, field: 'gramsPerGuest' }
+			});
+		if (amount.unit !== before.amount.unit)
+			return err(
+				'INVALID_INPUT',
+				`${before.label} is measured in ${before.amount.unit}; ${amount.value} ${amount.unit} can't be converted without a density. Say it in ${before.amount.unit}.`,
+				{ detail: { needId: before.id, needUnit: before.amount.unit, given: amount.unit } }
+			);
+		if (plan.lines.some((l) => l.needId === before.id && l.state === 'committed'))
+			return err('STALE_VERSION', 'a line of this need is already committed');
+		const mine = drafts.filter((d) => d.needId === before.id);
+		const products = await ports.catalog.get(mine.map((d) => d.productId));
+		// Lines bought for this need follow it; a superseded line stays at 0. Nothing to buy at 0.
+		drafts = drafts.map((d) => {
+			if (d.needId !== before.id || d.extraReasons?.includes('superseded') || d.qty.value === 0)
+				return d;
+			if (amount.value === 0) return { ...d, qty: { ...d.qty, value: 0 } };
+			const p = products.get(d.productId);
+			const qty = p ? sizeDirect(p, amount) : null;
+			return qty ? { ...d, qty } : d;
+		});
+		const need: Need = {
+			...before,
+			amount: { ...before.amount, value: amount.value },
+			label: before.label.replace(
+				`${before.amount.value} ${before.amount.unit}`,
+				`${amount.value} ${amount.unit}`
+			),
+			provenance: { source: 'user', note: `${ctx.actor.kind} via ${ctx.via}: amount amended` }
+		};
+		return ok({
+			plan,
+			kitchen,
+			drafts,
+			need,
+			changed: mine.map((d) => d.id),
+			summary: `${before.label}: ${before.amount.value} → ${amount.value} ${amount.unit}`
+		});
+	}
 	if (input.needId && input.patch.gramsPerGuest !== undefined && plan.source) {
 		const before = plan.needs.find((n) => n.id === input.needId);
 		if (!before) return err('NOT_FOUND', `need ${input.needId}`);
@@ -443,8 +491,20 @@ async function prepareEdit(
 		const overrides = { ...overridesOf(plan), [input.needId]: input.patch.gramsPerGuest };
 		const next = demandLines(plan.id, seed, overrides);
 		const need = next.needs.find((n) => n.id === input.needId);
+		// R7-04: the dish's dependency closure. A cooked dish's ingredients share one amount (rice porridge: rice and
+		// milk per kg cooked), so every need whose amount the recomputation moved follows, with its lines.
+		const dependents = next.needs.filter((n) => {
+			if (n.id === input.needId) return false;
+			const was = plan.needs.find((x) => x.id === n.id);
+			return was !== undefined && Math.abs(was.amount.value - n.amount.value) > 1e-9;
+		});
+		if (
+			dependents.some((n) => plan.lines.some((l) => l.needId === n.id && l.state === 'committed'))
+		)
+			return err('STALE_VERSION', 'a line of a dependent need is already committed');
+		const moved = new Set([input.needId, ...dependents.map((n) => n.id)]);
 		const fresh = new Map(next.drafts.map((d) => [d.id, d]));
-		drafts = drafts.map((d) => (d.needId === input.needId ? (fresh.get(d.id) ?? d) : d));
+		drafts = drafts.map((d) => (d.needId && moved.has(d.needId) ? (fresh.get(d.id) ?? d) : d));
 		// Replacements serving this dish follow the new need: a product substitute by the same yield/pack rules
 		// as when it was ranked, make-in-house ingredients by their amount per kg of dish.
 		const subs = drafts.filter((d) => d.needId === input.needId && d.substituteFor);
@@ -473,7 +533,8 @@ async function prepareEdit(
 			kitchen,
 			drafts,
 			need,
-			changed: drafts.filter((d) => d.needId === input.needId).map((d) => d.id),
+			dependents,
+			changed: drafts.filter((d) => d.needId && moved.has(d.needId)).map((d) => d.id),
 			summary: `${before.label}: g/guest ${dish?.gServed ?? '?'} → ${input.patch.gramsPerGuest}`
 		});
 	}
@@ -489,7 +550,19 @@ async function prepareEdit(
 		return ok({
 			plan,
 			kitchen,
-			drafts: drafts.map((d) => (d.id === line.id ? { ...d, productId, qty } : d)),
+			drafts: drafts.map((d) =>
+				d.id === line.id
+					? {
+							...d,
+							productId,
+							qty,
+							// A quantity set by hand brings a superseded line back.
+							...(qty.value > 0
+								? { extraReasons: d.extraReasons?.filter((r) => r !== 'superseded') }
+								: {})
+						}
+					: d
+			),
 			changed: [line.id],
 			summary: `${line.productId} ${line.qty.value} ${line.qty.unit} → ${productId} ${qty.value} ${qty.unit}`
 		});
@@ -504,7 +577,7 @@ export async function editLine(
 ): Promise<Result<ToolOutput<'edit_line'>>> {
 	const prepared = await prepareEdit(ports, ctx, input);
 	if (!prepared.ok) return prepared;
-	const { plan, kitchen, drafts, need, changed, summary } = prepared.value;
+	const { plan, kitchen, drafts, need, dependents = [], changed, summary } = prepared.value;
 	const pre = await prefetch(
 		ports,
 		drafts.map((d) => d.productId),
@@ -521,26 +594,41 @@ export async function editLine(
 			offer: null,
 			lineCents: null
 		});
-		const edit = pending(ctx, {
-			type: 'EditLine',
-			planId: plan.id,
-			baseVersion: plan.version,
-			need,
-			lines: changed.map((id) => ({
-				lineId: id,
-				line: proposed(drafts.find((d) => d.id === id)!)
-			})),
-			summary
-		});
+		const linesOf = (ids: string[]) =>
+			ids.map((id) => ({ lineId: id, line: proposed(drafts.find((d) => d.id === id)!) }));
+		const depIds = new Set(dependents.map((n) => n.id));
+		const isDep = (id: string) => depIds.has(drafts.find((d) => d.id === id)?.needId ?? '');
+		// One EditLine for the edited need, then one per dependent need, each with its own lines.
+		const ops = [
+			pending(ctx, {
+				type: 'EditLine',
+				planId: plan.id,
+				baseVersion: plan.version,
+				need,
+				lines: linesOf(changed.filter((id) => !isDep(id))),
+				summary
+			}),
+			...dependents.map((n, i) =>
+				pending(ctx, {
+					type: 'EditLine',
+					planId: plan.id,
+					baseVersion: plan.version + 1 + i,
+					need: n,
+					lines: linesOf(changed.filter((id) => drafts.find((d) => d.id === id)?.needId === n.id)),
+					summary: `${n.label} follows: ${n.amount.value} ${n.amount.unit}`
+				})
+			)
+		];
+		const after = [...(need ? [need] : []), ...dependents];
 		const edited: Plan = {
 			...plan,
-			version: plan.version + 1,
+			version: plan.version + ops.length,
 			state: 'draft',
 			termsHash: null,
-			needs: need ? plan.needs.map((n) => (n.id === need.id ? need : n)) : plan.needs
+			needs: plan.needs.map((n) => after.find((x) => x.id === n.id) ?? n)
 		};
 		const q = await requote(ports, ctx, tx, state, edited, kitchen, drafts, pre);
-		return { ops: [edit, ...q.ops], value: q.plan };
+		return { ops: [...ops, ...q.ops], value: q.plan };
 	});
 	return r.ok ? ok({ plan: r.value.value }) : r;
 }

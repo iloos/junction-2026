@@ -34,7 +34,9 @@ export interface DraftLine {
 const STICKY: ReadonlySet<string> = new Set([
 	'allergen_change',
 	'substitute_breaks_preference',
-	'CAUTION.model_constraint'
+	'CAUTION.model_constraint',
+	/** Kept at 0 through re-quotes until someone sets a quantity again. */
+	'superseded'
 ]);
 
 /** A stored line back to a draft for re-quoting, keeping its sticky reasons. */
