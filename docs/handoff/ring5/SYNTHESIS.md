@@ -34,7 +34,25 @@ _Lead, Sat 14 Nov late. Inputs: every lane's checkpoint (docs/lanes/*.md: core-d
   - the "Valio suggests" contract (K7);
   - a glance at da's substitutes.ts rebase.
 - **Conversation (B + E + 41, to merge into one session):**
+  - **TOP, from the user's chat test on prod 4752d00 (an event menu through the dock).** The questions and chips worked well (guests, day, service, courses, diet, budget). Then it broke:
+    1. **"Working · step 1…" means nothing.** Narrate what it is doing ("Writing a gluten-free 3-course menu for 20, about 15 s"), and show steps as they happen; a single 18 s step with no progress is poor affordance.
+    2. **No menu card.** "Review it, then say 'plan it'" appears, but the transcript shows no menu to review. Render the MenuReview card (dishes, ingredients, products, open items) in the chat, with its review link working.
+    3. **The wrong plan's decision.** The reply "great lets do it" got the "Buy 3 new products €410.32" decision card from the user's earlier /request milk/juice/cream order, not the menu. The dock's plan scope leaked across tasks. An affirmative reply to an offered next action ("plan it") must take that action (D20 reply rule), on this task's menu.
+    4. **"Show on the page" doesn't work**, and "Only a chef approves, on the page" contradicts D13 (the chef approves in the dock).
+    5. **The old fallback is back:** "I did not recognise this request" (agent/intent.ts:363) appears after the ledger, and the ledger text repeats twice. Remove the fallback per E's earlier invariant (never contradict an understood reading) and dedupe the closing.
+    Acceptance: a chat-only journey (event, then menu card, then "plan it", then the plan in the basket with decisions in the dock, then approve in the dock, then order) as an e2e on prod, plus a trial for "great lets do it" after a proposed menu.
   - **First, from the user's prod test:** "i want a no meat meal but it should be very filling and nutritious. i also want to use a peach in the dinner" was answered on /request with "reads as a question, ask in the chat". It is the D20 `menu` kind: route it to brief → menu (requirement vegetarian, include peach, guidance "filling, nutritious") from both doors. Collapse the 8 warnings into one sentence; debug lines ("the model read ?, the rules 1 sales") go behind System.
+  - **The request page is text-heavy (user).** The Lookup step becomes one line per item: qty token, product (ProductToken), packs, total, supply chip, plus one "why" chip ("semi-skimmed: your usual"). Expanding it shows a compact comparison table instead of prose: candidates as rows; columns for price per l/kg, total for the ask, supply, origin, carbon, and why picked or not; sortable. This is the matrix view the user asked for earlier. "Not needed: an earlier match was picked" goes. Filtered-out items collapse to one line ("33 not milk: chocolate, cocoa drinks, powders…"). Formulas like "50 l ÷ 5 l per KI = 10 KI" only with System.
+  - **Whole-page text pass (user: "other parts of this page and some components… the text can be formatted better").** On /request (Request, Order and Approval steps, warnings, the over-limit and dish cards) and in shared components (DecisionCard, the Order summary, the rail), apply one typographic system:
+    - a short headline per block, then a single line of facts as tokens (qty · product · price · supply), then details on demand;
+    - no paragraphs inside steps, numbers in tabular columns, one warning style;
+    - ids, formulas and model or rule internals only with System.
+    Model it on the Kitchen's bill (the Order summary and line list): the same layout, structure and qty/item formatting everywhere a product appears. One line component:
+    - a qty token (mono chip, "10 × 5 l"), then the readable name (ProductToken), the unit price, the line total right-aligned, and one state chip;
+    - grouped under short headings with a subtotal;
+    - shared by /request, the rail's Decide lists, the Basket, the usual order and the dock cards.
+    Run impeccable's critique and polish on /request and the Kitchen before and after, with screenshots at 1440 and 390.
+  - **Choice quality:** prefer the plain variant unless one is named (unsweetened orange juice over "sokeroitu"), and say why a variant was picked (lactose-free cream).
   - **D15 stage 2:** chat calls the request pipeline for order readings. Today "50 eggs" differs between chat and /request.
   - RequestFlow cards in the transcript, and /request redirecting into chat.
   - The menu-v2 contract (A) and wiring (B), with pins persisted through MenuStore.
