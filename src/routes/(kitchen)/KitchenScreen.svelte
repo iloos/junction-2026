@@ -28,6 +28,7 @@
 	import WhyDrawer from '$lib/ui/WhyDrawer.svelte';
 	import DishStatus from '$lib/ui/DishStatus.svelte';
 	import DishChip from '$lib/ui/DishChip.svelte';
+	import CalendarSubscribe from '$lib/ui/CalendarSubscribe.svelte';
 	import AgentMark from '$lib/ui/AgentMark.svelte';
 	import { planDiff } from '$lib/ui/plan-diff';
 	import { dishGate } from '$lib/ui/coverage';
@@ -518,6 +519,7 @@
 				<span class="font-medium text-ink">Mandate, in the chef's words:</span>
 				“{snap.rules.words}”
 			</p>
+			<span class="sm:ml-auto"><CalendarSubscribe kitchenId={snap.kitchen.id} /></span>
 		{/if}
 	</div>
 </header>
