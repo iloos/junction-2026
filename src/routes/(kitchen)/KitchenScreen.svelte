@@ -2,9 +2,9 @@
 	import { onMount, tick, untrack } from 'svelte';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
-	import { ChevronDown, Play, CloudOff, LoaderCircle } from '@lucide/svelte';
+	import { ChevronDown, Play, CloudOff, LoaderCircle, CircleX } from '@lucide/svelte';
 	import { KitchenStore } from '$lib/kitchen/kitchen.svelte';
-	import { KITCHENS, PRODUCTS } from '$lib/kitchen/catalog';
+	import { KITCHENS, PRODUCTS, SEED } from '$lib/kitchen/catalog';
 	import type { DishView } from '$lib/kitchen/view-model';
 	import type { Line } from '$lib/core/contracts';
 	import { useShell } from '$lib/ui/shell/shell.svelte';
@@ -14,8 +14,8 @@
 	import { decisionCount, decisionsDue, decisionsOf } from '$lib/ui/decisions';
 	import GramsStepper from '$lib/ui/GramsStepper.svelte';
 	import WhyDrawer from '$lib/ui/WhyDrawer.svelte';
-	import CoverageRuler from '$lib/ui/CoverageRuler.svelte';
-	import CoverageLegend from '$lib/ui/CoverageLegend.svelte';
+	import DishStatus from '$lib/ui/DishStatus.svelte';
+	import { dishGate } from '$lib/ui/coverage';
 	import { whyChain } from '$lib/ui/why-chain';
 	import { day, fixed, money, moneyDelta, num, storyTime } from '$lib/ui/format';
 	import { SCENARIO } from '$lib/core/scenario';
@@ -118,6 +118,31 @@
 	}
 
 	const snap = $derived(k.snap);
+	/** The booking's menu by dish name (a dish with two needs, rice and milk, is one dish). */
+	const preMenu = [...new Set(SEED.dishes.map((d) => d.dish.split(' (')[0]))];
+	/** The booking's products Valio could not supply at the last catalogue check (seed), for the pre-plan card. */
+	const preOutages = SEED.dishes
+		.filter((d) => d.availability?.kind === 'out' || d.availability?.kind === 'undeliverable')
+		.map((d) => ({
+			dish: d.dish.split(' (')[0],
+			productId: d.productId,
+			productName: d.productName,
+			kind: d.availability!.kind
+		}));
+
+	// The dock asked to show this plan's decisions: Decide zone on a phone, then the approval panel in view.
+	let locatedAt = 0;
+	$effect(() => {
+		const l = shell?.locate;
+		if (!l || l.at === locatedAt || l.planId !== k.snap?.plan.id) return;
+		locatedAt = l.at;
+		untrack(() => {
+			zone = 'decide';
+			void tick().then(() =>
+				document.getElementById('approval')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+			);
+		});
+	});
 	const view = $derived(k.view);
 	const plan = $derived(k.plan);
 	const approval = $derived(snap?.approval ?? null);
@@ -426,14 +451,58 @@
 {/if}
 
 {#if k.started === false}
-	<main class="mx-auto max-w-[720px] px-4 py-14 md:px-6">
-		<h1 class="text-title font-semibold tracking-[-0.015em] text-ink">
-			Christmas dinner buffet, 140 guests
-		</h1>
-		<p class="mt-2 max-w-[60ch] text-body leading-relaxed text-ink-2">
-			Starting the demo plans the event for this kitchen on the server: menu × guests → needs →
-			Valio lines, then the kitchen agent proposes a rescue for each real outage. Nothing is ordered
-			until you commit.
+	{@const kit = KITCHENS.find((x) => x.id === k.startKitchen) ?? KITCHENS[0]}
+	<main class="mx-auto max-w-[760px] px-4 py-10 md:px-6 md:py-14">
+		<p class="text-meta text-ink-3">
+			{kit.name.replace(' (fictional)', '')} · a booking to buy for
+		</p>
+		<h1 class="mt-1 text-title font-semibold tracking-[-0.015em] text-ink">{SEED.title}</h1>
+		<p class="mt-1 text-body text-ink-2">
+			{day(SEED.date)} · {SEED.guests.estimate} guests · {SEED.serviceStyle} · {preMenu.length}
+			dishes
+		</p>
+		<ul class="mt-3 flex flex-wrap gap-1.5" aria-label="Menu">
+			{#each preMenu as d (d)}
+				<li class="rounded-full bg-well px-2 py-0.5 text-meta text-ink-2">{d}</li>
+			{/each}
+		</ul>
+
+		<section
+			class="mt-6 rounded-lg border border-rule bg-sheet px-4 py-3.5"
+			aria-labelledby="out-h"
+		>
+			<h2 id="out-h" class="text-heading font-semibold text-ink">
+				{preOutages.length} of these Valio can't supply as listed
+			</h2>
+			<ul class="mt-2 space-y-1.5">
+				{#each preOutages as o (o.productId)}
+					<li class="flex items-start gap-2 text-body text-ink">
+						<CircleX size={16} class="mt-0.5 shrink-0 text-sup-missing" aria-hidden="true" />
+						<span
+							><span class="font-medium">{o.dish}</span>: {o.productName}
+							<span class="mono text-meta text-ink-3">{o.productId}</span>
+							<span class="text-ink-2"
+								>· {o.kind === 'out' ? 'out of stock' : "Valio can't deliver it"}</span
+							></span
+						>
+					</li>
+				{/each}
+			</ul>
+			<p class="mt-2 text-meta text-ink-3">
+				From Valio's catalogue at the last check; planning asks Valio again for every product.
+			</p>
+		</section>
+
+		<blockquote class="mt-4 border-l-2 border-accent pl-3 text-body text-ink">
+			“{kit.mandate.words}”
+			<footer class="mt-1 text-meta text-ink-3">
+				The chef's mandate: what the agent may do alone.
+			</footer>
+		</blockquote>
+
+		<p class="mt-5 max-w-[62ch] text-body leading-relaxed text-ink-2">
+			Planning turns menu × guests into Valio lines, and the agent proposes a rescue for each
+			product above, within the mandate. Nothing is ordered until you approve.
 		</p>
 		<button
 			type="button"
@@ -494,6 +563,10 @@
 					cannot={needsYou.cannot}
 					{orderable}
 					ordered={orderedState}
+					others={(snap?.others ?? []).map((o) => ({
+						...o,
+						href: `${resolve('/')}?kitchen=${snap!.kitchen.id}&plan=${o.id}`
+					}))}
 				>
 					{#snippet action()}
 						{#if decisions.length && active !== 'decide'}
@@ -583,9 +656,6 @@
 						Change grams per guest and the order recomputes: need, lots, price, mandate.
 					</p>
 				</div>
-				{#if coverage.size}
-					<div class="mt-2"><CoverageLegend /></div>
-				{/if}
 				<div class="mt-2 overflow-hidden rounded-lg border border-rule bg-sheet">
 					<div
 						class="hidden grid-cols-[minmax(150px,0.7fr)_minmax(210px,0.9fr)_minmax(0,3fr)] gap-x-4 border-b border-rule bg-well px-4 py-2 text-micro font-medium text-ink-3 lg:grid"
@@ -669,7 +739,7 @@
 									class="px-4 pb-3 lg:grid lg:grid-cols-[minmax(150px,0.7fr)_minmax(210px,0.9fr)_minmax(0,3fr)] lg:gap-x-4"
 								>
 									<div class="lg:col-span-2 lg:col-start-2">
-										<CoverageRuler f={coverage.get(d.needId)!} />
+										<DishStatus f={coverage.get(d.needId)!} gate={dishGate(lines)} />
 									</div>
 								</div>
 							{/if}
@@ -839,6 +909,7 @@
 		dishName={whyDish ? `${whyDish.nameFi} (${whyDish.name})` : ''}
 		steps={k.whySteps}
 		{chain}
+		coverage={whyLine?.needId ? (coverage.get(whyLine.needId) ?? null) : null}
 		onclose={() => k.closeWhy()}
 	/>
 {/if}

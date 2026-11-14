@@ -53,6 +53,8 @@ export class KitchenStore {
 	snap = $state.raw<Snapshot | null>(null);
 	/** Live: false until the chef starts the demo (planning is an explicit command, never a side effect of viewing). */
 	started = $state<boolean | null>(null);
+	/** Before the first plan: the kitchen the server would plan for (the pre-plan card reads its mandate). */
+	startKitchen = $state<string | null>(null);
 	busy = $state(false);
 	/** A g/guest change waiting for the server, per dish: the stepper shows it as pending. */
 	pendingGrams = $state.raw<Record<string, number>>({});
@@ -353,6 +355,7 @@ export class KitchenStore {
 				this.#flashChanges(before, next.plan.lines);
 			} else {
 				this.started = false;
+				this.startKitchen = next.kitchenId;
 				this.snap = null;
 			}
 		} catch (e) {

@@ -358,7 +358,18 @@ async function buildSnapshot(s: Session): Promise<LiveSnapshot> {
 		})
 	}));
 	const rules = rulesFor(kitchen, s.preset, kitchen.mandate.version);
+	const others = Object.values(ws.plans)
+		.filter((p) => p.kitchenId === kitchen.id && p.id !== plan.id && p.lines.length > 0)
+		.map((p) => ({
+			id: p.id,
+			title: p.eventId === EVENT_ID ? seed.title : titleOf(p),
+			open: p.lines.filter((l) => !['committed', 'rejected', 'unorderable'].includes(l.state))
+				.length,
+			ordered: p.lines.filter((l) => l.state === 'committed').length
+		}))
+		.slice(-6);
 	return {
+		others,
 		plan,
 		view: buildLiveView({
 			plan,

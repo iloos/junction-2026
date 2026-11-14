@@ -3,6 +3,9 @@ import type { FulfilmentView } from '$lib/core/contracts';
 import {
 	coverageHeadline,
 	coverageSentence,
+	dishGate,
+	dishStatus,
+	neededVsBuying,
 	lineBasis,
 	needStatus,
 	needTally,
@@ -118,5 +121,57 @@ describe('need tally', () => {
 		);
 		expect(needStatus(f({ plannedKnown: kg(4), awaitingSupplier: kg(6) }))).toBe('plannedKnown');
 		expect(needStatus(f({ supplierConfirmed: kg(10) }))).toBe('supplierConfirmed');
+	});
+});
+
+describe('dish status sentence (one per FulfilmentView partition)', () => {
+	const text = (v: FulfilmentView, g: Parameters<typeof dishStatus>[1] = null) =>
+		dishStatus(v, g).text;
+	it('maps each weakest link to its sentence', () => {
+		expect(text(f({ supplierConfirmed: kg(10) }))).toBe('Ordered · supplier confirmed');
+		expect(text(f({ awaitingSupplier: kg(10) }))).toBe(
+			"Ordered · Valio hasn't confirmed the amount"
+		);
+		expect(text(f({ plannedKnown: kg(10) }))).toBe('Covered · in stock');
+		expect(text(f({ plannedKnown: kg(10) }), 'propose')).toBe('Covered if you approve');
+		expect(text(f({ plannedKnown: kg(10) }), 'sign_off')).toBe('Covered if you sign off');
+		expect(text(f({ unresolved: kg(10) }))).toBe('10 kg not covered');
+	});
+	it('never calls unknown stock covered, even next to known stock or a pending approval', () => {
+		const only = dishStatus(f({ plannedUnknown: kg(10) }), 'propose');
+		expect(only).toEqual({
+			tone: 'unknown',
+			text: "Valio hasn't said how many it has",
+			detail: null
+		});
+		const mixed = dishStatus(f({ plannedKnown: kg(6), plannedUnknown: kg(4) }), 'sign_off');
+		expect(mixed.text).not.toMatch(/covered/i);
+		expect(mixed.detail).toBe('4 kg of 10 kg');
+	});
+	it('does not count excess as cover', () => {
+		expect(text(f({ unresolved: kg(10), excess: kg(5) }))).toBe('10 kg not covered');
+		expect(dishStatus(f({ plannedKnown: kg(10), excess: kg(2) })).tone).toBe('covered');
+		expect(text(f({ unresolved: kg(3), plannedKnown: kg(7), excess: kg(2) }))).toBe(
+			'3 kg not covered'
+		);
+	});
+	it('takes the strongest authority still owed on open lines', () => {
+		const l = (tier: string, state = 'held', committable = false) => ({
+			state,
+			tier,
+			view: { committable }
+		});
+		expect(dishGate([l('act', 'eligible', true)])).toBe(null);
+		expect(dishGate([l('propose'), l('act')])).toBe('propose');
+		expect(dishGate([l('propose'), l('sign_off')])).toBe('sign_off');
+		expect(dishGate([l('sign_off', 'held', true)])).toBe(null);
+		expect(dishGate([l('sign_off', 'committed')])).toBe(null);
+	});
+	it('shows needed against buying with the pack excess', () => {
+		expect(neededVsBuying(f({ plannedKnown: kg(10), excess: kg(1.5) }))).toEqual({
+			needed: '10 kg',
+			buying: '11.5 kg',
+			over: '1.5 kg'
+		});
 	});
 });

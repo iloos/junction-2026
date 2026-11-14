@@ -160,3 +160,76 @@ export function needTally(fs: readonly FulfilmentView[]): Record<NeedStatus, num
 	for (const f of fs) t[needStatus(f)]++;
 	return t;
 }
+
+/** What a human still has to do before the dish's open lines can be ordered: the strongest authority any one needs. */
+export type DishGate = 'propose' | 'sign_off' | null;
+export function dishGate(
+	lines: readonly { state: string; tier?: string; view?: { committable?: boolean } | null }[]
+): DishGate {
+	let gate: DishGate = null;
+	for (const l of lines) {
+		if (l.state === 'committed' || l.state === 'rejected' || l.state === 'unorderable') continue;
+		if (l.view?.committable) continue;
+		if (l.tier === 'sign_off') return 'sign_off';
+		if (l.tier === 'propose') gate = 'propose';
+	}
+	return gate;
+}
+
+export type DishTone =
+	'confirmed' | 'covered' | 'awaiting' | 'approve' | 'signoff' | 'unknown' | 'missing';
+
+/**
+ * A dish in one sentence a chef reads in five seconds, led by its weakest link (D10 words): "covered" only for
+ * known stock or receipts, unknown stock is "Valio hasn't said how many it has", excess is never cover.
+ */
+export function dishStatus(
+	f: FulfilmentView,
+	gate: DishGate = null
+): { tone: DishTone; text: string; detail: string | null } {
+	const u = f.required.unit;
+	const m = (v: number) => amount({ value: v, unit: u });
+	const part = (v: number) => (v < f.required.value ? `${m(v)} of ${m(f.required.value)}` : null);
+	if (f.unresolved.value > 0)
+		return {
+			tone: 'missing',
+			text: `${m(f.unresolved.value)} not covered`,
+			detail: `Need ${m(f.required.value)}; nothing in the plan covers the rest.`
+		};
+	if (f.plannedUnknown.value > 0)
+		return {
+			tone: 'unknown',
+			text: "Valio hasn't said how many it has",
+			detail: part(f.plannedUnknown.value)
+		};
+	if (f.plannedKnown.value > 0) {
+		if (gate === 'sign_off')
+			return { tone: 'signoff', text: 'Covered if you sign off', detail: null };
+		if (gate === 'propose')
+			return { tone: 'approve', text: 'Covered if you approve', detail: null };
+		return { tone: 'covered', text: 'Covered · in stock', detail: null };
+	}
+	if (f.awaitingSupplier.value > 0)
+		return { tone: 'awaiting', text: "Ordered · Valio hasn't confirmed the amount", detail: null };
+	return { tone: 'confirmed', text: 'Ordered · supplier confirmed', detail: null };
+}
+
+/** The need against what the plan buys for it, in the need's unit: covered amounts plus what packs add over. */
+export function neededVsBuying(f: FulfilmentView): {
+	needed: string;
+	buying: string;
+	over: string | null;
+} {
+	const u = f.required.unit;
+	const bought =
+		f.supplierConfirmed.value +
+		f.awaitingSupplier.value +
+		f.plannedKnown.value +
+		f.plannedUnknown.value +
+		f.excess.value;
+	return {
+		needed: amount(f.required),
+		buying: amount({ value: bought, unit: u }),
+		over: f.excess.value > 0 ? amount({ value: f.excess.value, unit: u }) : null
+	};
+}

@@ -376,6 +376,8 @@ export interface FixtureSnapshot {
 	mandateVersion: number;
 	/** The scenario clock's reading when the snapshot was made (SCENARIO.start + time since the run started). */
 	clock: { nowIso: string; runId: string; workspaceId?: string };
+	/** The kitchen's other plans in this sandbox (an agent's order, the event), for the task switcher. */
+	others?: { id: string; title: string; open: number; ordered: number }[];
 }
 
 /** The fixture's run starts when the module loads (or on reset), like a server run. */

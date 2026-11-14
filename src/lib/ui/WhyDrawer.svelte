@@ -1,7 +1,9 @@
 <script lang="ts">
 	import { Dialog } from 'bits-ui';
 	import { X } from '@lucide/svelte';
-	import type { Line } from '$lib/core/contracts';
+	import type { FulfilmentView, Line } from '$lib/core/contracts';
+	import CoverageRuler from './CoverageRuler.svelte';
+	import { neededVsBuying } from './coverage';
 	import SourceTag from './SourceTag.svelte';
 	import StateChip from './StateChip.svelte';
 	import { money, num } from './format';
@@ -30,9 +32,20 @@
 		steps: Step[];
 		/** The worked calculation, dish to rule (built from the plan's own numbers). */
 		chain?: WhyChain | null;
+		/** The dish's need: needed against what the plan buys for it (the ruler lives here, not on the row). */
+		coverage?: FulfilmentView | null;
 		onclose: () => void;
 	}
-	let { open, line, productName, dishName, steps, chain = null, onclose }: Props = $props();
+	let {
+		open,
+		line,
+		productName,
+		dishName,
+		steps,
+		chain = null,
+		coverage = null,
+		onclose
+	}: Props = $props();
 
 	// Web evidence (Exa via the kitchen helper): loaded when the drawer opens on a line; none offline.
 	const offline = $derived(page.url.pathname.startsWith('/offline'));
@@ -88,7 +101,9 @@
 							>
 								{productName}
 							</Dialog.Title>
-							<p class="mono mt-1 text-meta text-ink-3">{line.productId} · {line.id}</p>
+							<p class="mono mt-1 text-meta text-ink-3">
+								{line.productId}<span class="sys-only"> · {line.id}</span>
+							</p>
 						</div>
 						<Dialog.Close
 							class="grid size-8 shrink-0 place-items-center rounded-md text-ink-2 hover:bg-well hover:text-ink"
@@ -110,6 +125,18 @@
 					>Ordered reasoning steps with their sources</Dialog.Description
 				>
 				<div class="flex-1 overflow-y-auto">
+					{#if coverage}
+						{@const nb = neededVsBuying(coverage)}
+						<section class="border-b border-rule px-5 py-4" aria-labelledby="cover-h">
+							<h3 id="cover-h" class="text-body font-semibold text-ink">Needed against buying</h3>
+							<p class="mt-1 text-body text-ink-2">
+								Needed <span class="mono text-ink">{nb.needed}</span> · buying
+								<span class="mono text-ink">{nb.buying}</span>{#if nb.over}
+									<span class="text-ink-3">&nbsp;({nb.over} over, from pack sizes)</span>{/if}
+							</p>
+							<div class="mt-2"><CoverageRuler f={coverage} /></div>
+						</section>
+					{/if}
 					{#if chain}
 						<section class="border-b border-rule px-5 py-4" aria-labelledby="chain-h">
 							<h3 id="chain-h" class="text-body font-semibold text-ink">

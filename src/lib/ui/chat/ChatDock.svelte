@@ -12,6 +12,7 @@
 	import DecisionCard from '$lib/ui/DecisionCard.svelte';
 	import Receipt from '$lib/ui/Receipt.svelte';
 	import type { ChatEvent, ChatTurnInput } from './types';
+	import { useShell } from '$lib/ui/shell/shell.svelte';
 
 	/**
 	 * The chat dock: a right-hand column on desktop, a bottom sheet on a phone, scoped to one procurement task. It
@@ -40,6 +41,19 @@
 		taskId: openTask,
 		launcher = true
 	}: Props = $props();
+
+	/**
+	 * The decision's plan is the one on screen: show its decisions in place (the page scrolls to them) instead of
+	 * navigating, which would reload the screen.
+	 */
+	const shell = useShell();
+	function locate(ev: MouseEvent, plan: string) {
+		if (!shell || plan !== planId) return;
+		ev.preventDefault();
+		shell.locate = { planId: plan, at: Date.now() };
+		// The dock overlays the approval panel on desktop and the page on a phone: close it so the card shows.
+		if (!pinned) open = false;
+	}
 
 	type Entry = { kind: 'chef'; text: string } | { kind: 'event'; e: ChatEvent };
 	/** The dock's task is remembered per kitchen for this browser tab. */
@@ -310,7 +324,10 @@
 					{/each}
 					<a
 						class="inline-flex items-center gap-1 font-medium text-propose underline"
-						href={x.e.approvalUrl}>Open the approval in Kitchen <ArrowUpRight size={13} /></a
+						href={x.e.approvalUrl}
+						onclick={(ev) => x.e.type === 'decision' && locate(ev, x.e.planId)}
+						>{x.e.planId === planId ? 'Show the decision' : 'Open the approval in Kitchen'}
+						<ArrowUpRight size={13} /></a
 					>
 					<p class="text-meta text-ink-3">
 						Only a chef approves, in the Kitchen screen. Then continue here.
