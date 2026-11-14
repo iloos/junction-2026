@@ -8,7 +8,7 @@ import { expect, test } from '@playwright/test';
  * makes the call it then asserts on.
  */
 const BASE = process.env.KITCHEN_URL;
-const WINDOW_S = 600;
+const WINDOW_S = 60;
 
 interface Svc {
 	service: 'valio' | 'gemini' | 'exa' | 'contextdev';
@@ -26,7 +26,7 @@ test('Valio and Gemini answer live on the deployed app', async ({ page, request 
 	const before = (await (await request.get(`${BASE}/healthz`)).json()) as { services?: Svc[] };
 	test.skip(!before.services, '/healthz has no services[] on this deploy');
 
-	// One request that parses (Gemini) and quotes (Valio) in this visitor's sandbox.
+	// Gemini: one request parse in this visitor's sandbox.
 	await page.goto(`${BASE}/request`);
 	await page.locator('#req').fill('10 l lactose-free milk for Friday');
 	await page.getByRole('button', { name: /Find and price/ }).click();
@@ -34,6 +34,30 @@ test('Valio and Gemini answer live on the deployed app', async ({ page, request 
 		.getByText(/1 quote for|nothing quoted/)
 		.first()
 		.waitFor({ timeout: 60_000 });
+	// Valio: quote a random catalogue product nobody quoted lately (stored availability older than 15 min is fetched
+	// live), through this visitor's judge key on REST.
+	const k = await page.request.get(`${BASE}/api/demo/judge-key`);
+	test.skip(k.status() !== 200, `judge keys off here (${k.status()})`);
+	const auth = { authorization: `Bearer ${((await k.json()) as { key: string }).key}` };
+	const words = ['juusto', 'kastike', 'mehu', 'leipä', 'keitto', 'pakaste', 'mauste', 'jogurtti'];
+	const query = words[Math.floor(Math.random() * words.length)];
+	const found = (await (
+		await request.post(`${BASE}/api/tools/search_products`, {
+			headers: auth,
+			data: { query, limit: 50 }
+		})
+	).json()) as {
+		products?: { productId: string }[];
+		value?: { products?: { productId: string }[] };
+	};
+	const ids = (found.products ?? found.value?.products ?? []).map((p) => p.productId);
+	expect(ids.length, `search "${query}" found products`).toBeGreaterThan(0);
+	const pick = ids[Math.floor(Math.random() * ids.length)];
+	const quoted = await request.post(`${BASE}/api/tools/quote`, {
+		headers: auth,
+		data: { productIds: [pick], deliverBy: '2026-12-11' }
+	});
+	expect(quoted.status(), `quote ${pick}`).toBe(200);
 
 	const h = (await (await request.get(`${BASE}/healthz`)).json()) as {
 		commit: string;
