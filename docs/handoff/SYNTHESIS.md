@@ -92,3 +92,46 @@ Order: T0 → (A, G, E-discovery, D-scoping start in parallel) → B after A lan
 
 ## 6. Not this weekend
 Merging the two pipelines; per-plan transactions and multi-instance state; paged catch-up beyond a test (F27 if time); ATP reservations with expiry (F23 only if A finishes early); full SourceDocument/Revision/Application model (minimal drill namespace only); durable enrichment job lifecycle; retiring offline fixture logic (label `/offline` instead); "estimate any kitchen" showcase and venue map; embeddings over 17.5k products without a cap; second/third Context.dev endpoints; labelled fit set (so no "recipe-aware" claim); Modal, Gemma, Nemotron, MCP App, learned memory, AfterQuery/S-Pankki/Verda.
+
+## 7. Replies (step 2), folded in
+Every owner agreed with the rulings. Additions below amend the findings and done-when of their tracks; T0 must also decide **runtime judge keys** (lead lean: HMAC of the visitor workspace id, stateless; owner G) and add a **before→after diff for a voided approval** (core, after T0).
+
+### 9c (Track G: agree)
+- One resolver visitorWorkspace(event) in demo/ replacing kitchen/live.ts:62, request/workspace.ts pageWorkspace, ops/+page.server.ts:49 (needs edit rights on the first two at fan-out).
+- Bound per-visitor costs: MemoryBus ring eviction, currentRun per ws, cooldown per ws, lazy seed write per visitor; done-when 30 fresh visitors keep pool max 3 and memory bounded.
+- /api/events allowlist → pattern ws-j-<id>, read only own cookie ws + named shared rooms; unguessable ids.
+- E needs a runtime-minted judge key bound to ws-j-<id> (DB row or HMAC of the ws id): decide in T0. Lead lean: HMAC (stateless).
+- F12 Ops coverage consumes A's FulfilmentView (soft dep); takes F27 cursor fix into G.
+- Fact: F26 cancel 500 was seen in prod logs (verified); clock bug from code.
+### 1f (Track B retrieval + SURFACES + F30: agree)
+- B done-when: hand-labelled set of 20–40 outage lines with acceptable substitutes; swap retrieval only if recall@12 beats today's id order.
+- Candidate fixture agreed with 8d before either merges (F5 test depends on pool); retrieval behind a flag until A lands.
+- F15 observed (Playwright on prod ~03:55), not unverified.
+- F30: 8/10 held are event staples; "last season" list from committed history fixes most (M, after B).
+- §6: images parked until Valio mentors answer on packshots; chain script in 1f scratchpad (in handoff).
+- F13 source: SURFACES §4 "Decision". Ruling 6 endorsed.
+### agent (Track E: agree)
+- E also depends on A: computeOutcome reads FulfilmentView (awaiting ≠ confirmed, residuals count) and reports every plan a run touched (agent part of F12).
+- Per-visitor judge key = runtime-issued key stored server-side (auth change, not a page): owner + DB key table vs HMAC to decide in T0.
+- T0 summary/nextAction/approvalUrl must be our own text, never supplier strings (planner sees them truncated).
+- E order: F25 seams + F4 → get_context + MCP instructions → /agents → llm.for(job) → requirements intent (waits on B).
+### kitchen (Track C: agree)
+- G's visitor resolver must replace kitchenWorkspace() (live.ts:65) too.
+- F14 partly kitchen: live-view coverValue = line.qty.value treats ST as kg; needs FulfilmentView or line physical basis.
+- New: voided-approval diff is client-only (#seen): core should return before→after for a voided approval (or from the op log). S after T0.
+- F13: prefers core approve{lineIds}; UI per-group confirm as fallback.
+### 8d (Track A: agree)
+- F9 compares against ports.clock.now() (scenario clock), tests before/at/after on that clock.
+- F9 depends on onScenario: F22 quote default and F9 land together, with a test that every offers path is re-dated.
+- F5 done-when: "lanttulaatikko → make_in_house on prod", not only in the test (pg vs file catalogue may disagree on 462157).
+- A ≈ 10–12 h: F5, F8, F11, F22 first (~4 h, demo-visible), then F9, F10, FulfilmentView, F29. Track F (evals) needs its own session.
+- Nit: F8 path is src/lib/core/services/orders.ts.
+### web (Track D: agree)
+- F20, F28, spend cap don't need T0: start now; only F19 scoping waits.
+- F31 catalogIndex pg test moves into D.
+- Add monitor cadence to D: 10 min ≈ 144 credits/day, the change that allows a near-real-time claim.
+- F21 "Find on the web" reads state.enrichments: keep web.* shape {value, verified, sources} stable when F28 renames verified → gtinCited.
+### request (Track B UI/menu: agree)
+- F17 add: inline answers are keyed by item index; a model re-split misattaches answers. Fix before menu work.
+- F1: change "Your own sandbox" copy (/request:342) to "shared sandbox" until G lands.
+- B must state /request ranking ignores k.weights; ruling 1's find_substitutes route replaces the hand-set scores.
