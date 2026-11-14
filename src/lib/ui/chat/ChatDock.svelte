@@ -225,7 +225,7 @@
 	);
 	$effect(() => {
 		if (!shell || !taskId) return;
-		return shell.events.subscribe((ops) => void outside(ops));
+		return shell.events.subscribe((b) => void outside(b.ops, b.resync));
 	});
 	/** The newest event of a type, to append only what changed. */
 	const lastOfType = (t: string) =>
@@ -244,12 +244,13 @@
 						: JSON.stringify(x);
 		return key(prev) === key(e);
 	};
-	async function outside(ops: OpEnvelope[]) {
+	async function outside(ops: OpEnvelope[], resync = false) {
 		const mine = ops.filter((o) => {
 			const p = planOf(o.op);
 			return p !== null && taskPlans.has(p) && !fromChat(o);
 		});
-		if (!mine.length || busy) return;
+		// Nothing of this task's, but the stream reopened or the run changed: re-read quietly, no line.
+		if ((!mine.length && !resync) || busy) return;
 		const id = taskId;
 		const line = describeOps(mine);
 		void own?.retry();
@@ -267,6 +268,36 @@
 				add.push({ kind: 'event', e, at: Date.now() });
 		if (add.length) entries = [...entries, ...add];
 	}
+
+	/**
+	 * The phone sheet has a definite height, so the decisions and the history each scroll inside their share and
+	 * the composer stays in reach: three quarters of the screen, never taller than what is visible, and lifted
+	 * above the on-screen keyboard (the visual viewport says how much it covers). While typing, the decisions fold
+	 * away so the history and the composer keep the room.
+	 */
+	let keyboard = $state(0);
+	let visible = $state<number | null>(null);
+	let composing = $state(false);
+	const sheetH = $derived(
+		visible === null
+			? 'min(75dvh, calc(100dvh - 3rem))'
+			: `${Math.round(Math.min(visible * 0.75 + (keyboard ? visible * 0.25 : 0), visible - 48))}px`
+	);
+	$effect(() => {
+		const vv = typeof window === 'undefined' ? null : window.visualViewport;
+		if (!vv) return;
+		const fit = () => {
+			keyboard = Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop));
+			visible = vv.height;
+		};
+		fit();
+		vv.addEventListener('resize', fit);
+		vv.addEventListener('scroll', fit);
+		return () => {
+			vv.removeEventListener('resize', fit);
+			vv.removeEventListener('scroll', fit);
+		};
+	});
 
 	/** Drag the rail's left edge: the width follows the pointer, kept within the rail's limits. */
 	function startResize(e: PointerEvent) {
@@ -410,12 +441,12 @@
 
 <aside
 	class={[
-		'fixed inset-x-0 bottom-0 z-40 flex max-h-[75dvh] flex-col rounded-t-xl border-t border-rule-strong bg-sheet shadow-lg lg:inset-x-auto lg:top-11 lg:right-0 lg:bottom-0 lg:max-h-none lg:w-[var(--rail-w)] lg:rounded-none lg:border-t-0 lg:border-l lg:shadow-none',
+		'fixed inset-x-0 bottom-[var(--kb,0px)] z-40 flex h-[var(--sheet-h)] flex-col rounded-t-xl border-t border-rule-strong bg-sheet shadow-lg lg:inset-x-auto lg:top-11 lg:right-0 lg:bottom-0 lg:h-auto lg:w-[var(--rail-w)] lg:rounded-none lg:border-t-0 lg:border-l lg:shadow-none',
 		!open && (pinned ? 'max-lg:hidden' : 'hidden'),
 		!pinned && 'lg:shadow-[-12px_0_32px_-16px_oklch(0.2_0.02_255/0.35)]'
 	]}
 	aria-label="Agent chat"
-	style="--rail-w: {shell?.railWidth ?? 384}px"
+	style="--rail-w: {shell?.railWidth ?? 384}px; --sheet-h: {sheetH}; --kb: {keyboard}px"
 >
 	<!-- The rail's left edge: drag it, or use the arrow keys, to make the rail wider or narrower (desktop). -->
 	<!-- A focusable separator is the WAI-ARIA window splitter: interactive by design. -->
@@ -466,14 +497,16 @@
 		<!-- The page's own decisions, once, at the top of the rail: the same cards and command as the page. -->
 		<!-- The panel inside is the "Decide" region (its heading names it); this is only its scroll box. -->
 		<div
-			class="max-h-[55%] shrink-0 overflow-y-auto border-b border-rule bg-paper px-3 py-3 max-lg:max-h-[45%]"
+			class="max-h-[55%] shrink-0 overflow-y-auto overscroll-contain border-b border-rule bg-paper px-3 py-3 max-lg:max-h-[45%] {composing
+				? 'max-lg:hidden'
+				: ''}"
 		>
 			{@render shell.railHeader()}
 		</div>
 	{/if}
 	<ol
 		bind:this={list}
-		class="flex-1 space-y-3 overflow-y-auto px-4 py-3 text-body"
+		class="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-4 py-3 text-body"
 		aria-live="polite"
 	>
 		{#if !entries.length}
@@ -730,7 +763,12 @@
 			{notice}
 		</p>
 	{/if}
-	<form class="flex items-end gap-2 border-t border-rule p-3" onsubmit={submit}>
+	<form
+		class="flex shrink-0 items-end gap-2 border-t border-rule p-3"
+		onsubmit={submit}
+		onfocusin={() => (composing = true)}
+		onfocusout={() => (composing = false)}
+	>
 		<label class="sr-only" for="chat-text">Message the agent</label>
 		<textarea
 			id="chat-text"

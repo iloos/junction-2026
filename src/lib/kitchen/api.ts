@@ -24,6 +24,15 @@ export const rendered: { view: RenderedView | null } = {
 
 export type RenderedView = { runId: string; planId: string; version: number };
 
+/**
+ * This browser tab, on every Kitchen command, so its ops read `kitchen#<tab>` (or `dock#<tab>`): a screen tells its
+ * own commands from another tab's (R11-07).
+ */
+export const TAB =
+	typeof crypto !== 'undefined' && 'randomUUID' in crypto
+		? crypto.randomUUID().replace(/-/g, '').slice(0, 10)
+		: Math.random().toString(36).slice(2, 12);
+
 export async function livePost<T>(
 	path: string,
 	body: unknown,
@@ -35,6 +44,7 @@ export async function livePost<T>(
 	let res: Response;
 	const headers: Record<string, string> = { 'content-type': 'application/json' };
 	if (surface) headers['x-kitchen-surface'] = surface;
+	if (path.startsWith('/kitchen-api/')) headers['x-kitchen-tab'] = TAB;
 	if (path.startsWith('/kitchen-api/tool/') && view)
 		headers['x-kitchen-view'] = JSON.stringify(view);
 	try {

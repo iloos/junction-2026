@@ -99,3 +99,67 @@ test('approving in the dock takes the decision off the page and says where', asy
 	await expect(kitchen.getByText(/by you in the agent dock/i)).toBeVisible({ timeout: 20_000 });
 	await ctx.close();
 });
+
+test('two Kitchen tabs: a change in one shows in the other, named as another tab', async ({
+	browser
+}) => {
+	test.setTimeout(240_000);
+	const ctx = await browser.newContext();
+	const a = await ctx.newPage();
+	await planBuffet(a);
+	const b = await ctx.newPage();
+	await b.goto(`${BASE}/`);
+	await expect(b.locator('#task-h')).toContainText('Christmas', { timeout: 120_000 });
+	await b.waitForTimeout(1500); // b's stream is open
+
+	// Tab A changes the salmon's grams; tab B re-reads and says the change came from another tab.
+	await a.getByRole('button', { name: /^Show details: Graavilohi/ }).click();
+	await a.getByRole('button', { name: 'More Graavilohi' }).last().click();
+	await expect(b.getByText(/by you in another tab/i).first()).toBeVisible({ timeout: 20_000 });
+	await ctx.close();
+});
+
+test('a reset in another tab brings this tab back to the start, without a reload', async ({
+	browser
+}) => {
+	test.setTimeout(240_000);
+	const ctx = await browser.newContext();
+	const a = await ctx.newPage();
+	await planBuffet(a);
+	const b = await ctx.newPage();
+	await b.goto(`${BASE}/`);
+	await expect(b.locator('#task-h')).toContainText('Christmas', { timeout: 120_000 });
+	await b.waitForTimeout(1500);
+
+	// Start over in tab B (the sandbox menu); tab A follows the new run on its own.
+	await b.getByRole('button', { name: /^Sandbox/ }).click();
+	await b.getByRole('button', { name: /Reset demo|Start over/ }).click();
+	await expect(a.getByRole('button', { name: 'Plan the event' })).toBeVisible({ timeout: 30_000 });
+	await ctx.close();
+});
+
+test('in a shared room the stream follows that room, not the own sandbox', async ({ browser }) => {
+	test.setTimeout(240_000);
+	const ctx = await browser.newContext();
+	const a = await ctx.newPage();
+	await a.goto(`${BASE}/?ws=ws-judges`);
+	const start = a.getByRole('button', { name: 'Plan the event' });
+	await a.locator('#task-h').or(start).first().waitFor({ timeout: 60_000 });
+	if (await start.isVisible()) await start.click();
+	await expect(a.locator('#task-h')).toBeVisible({ timeout: 120_000 });
+	const b = await ctx.newPage();
+	await b.goto(`${BASE}/?ws=ws-judges`);
+	await expect(b.locator('#task-h')).toBeVisible({ timeout: 120_000 });
+	await b.waitForTimeout(1500);
+
+	await a
+		.getByRole('button', { name: /^Show details:/ })
+		.nth(1)
+		.click();
+	await a
+		.getByRole('button', { name: /^More / })
+		.last()
+		.click();
+	await expect(b.getByText(/by you in another tab/i).first()).toBeVisible({ timeout: 20_000 });
+	await ctx.close();
+});

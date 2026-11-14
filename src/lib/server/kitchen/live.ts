@@ -106,7 +106,9 @@ export function callTool(
 	input: unknown,
 	view: RenderedView | null,
 	/** Where the chef acted: the Kitchen page or the agent dock (D13); recorded as the ops' `via`. */
-	surface: 'kitchen' | 'dock' = 'kitchen'
+	surface: 'kitchen' | 'dock' = 'kitchen',
+	/** The browser tab that sent it: the ops read `<surface>#<tab>`, so a screen knows its own commands. */
+	tab?: string
 ): Promise<Served> {
 	return serial(workspaceId, async () => {
 		const deny = (message: string): Served => ({
@@ -148,8 +150,9 @@ export function callTool(
 		// The approval must exist and belong to the plan on screen: an exact check, not a match on its id's text.
 		if (name === 'approve' && ws0.approvals[i.approvalId ?? '']?.planId !== plan.id)
 			return deny("that approval is not for this session's plan");
+		const via = tab ? `${surface}#${tab}` : surface;
 		const ctx =
-			surface === 'dock' ? contextFor('chef', 'kitchen-ui', 'dock', env, s.workspaceId) : chef(s);
+			via === 'kitchen' ? chef(s) : contextFor('chef', 'kitchen-ui', via, env, s.workspaceId);
 		return serveTool(name, ctx, input, handlers);
 	});
 }

@@ -28,6 +28,7 @@ export const POST: RequestHandler = async (event) => {
 	const input = await request.json().catch(() => ({}));
 	const view = renderedView(request.headers.get('x-kitchen-view'));
 	const surface = request.headers.get('x-kitchen-surface') === 'dock' ? 'dock' : 'kitchen';
-	const r = await callTool(sid(cookies), workspaceId, params.name, input, view, surface);
+	const tab = request.headers.get('x-kitchen-tab')?.match(/^[a-z0-9]{1,12}$/)?.[0];
+	const r = await callTool(sid(cookies), workspaceId, params.name, input, view, surface, tab);
 	return r.ok ? json(r.value) : json({ error: r.error }, { status: r.status });
 };
