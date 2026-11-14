@@ -1,0 +1,41 @@
+{
+	"id": "r5-f5-supply-tier",
+	"title": "Lanttulaatikko is out: the rescue must never recommend a Terminal product of unknown quantity (462157, 462569) over a confirmed option; with only unknown supply in the catalogue it makes the casserole in house",
+	"stories": ["★3"],
+	"edgeCases": [],
+	"seeds": {
+		"kitchen": "k-hotel",
+		"event": "event-xmas-140"
+	},
+	"clock": "2026-12-07T21:40:00+02:00",
+	"steps": [
+		{
+			"actor": "chef",
+			"action": "plan_event",
+			"input": {
+				"eventId": "event-xmas-140"
+			}
+		},
+		{
+			"actor": "chef",
+			"action": "find_substitutes",
+			"input": {
+				"productId": "462482"
+			}
+		}
+	],
+	"expect": {
+		"attempts": [
+			{
+				"step": 1,
+				"result": "ok",
+				"kind": "make_in_house",
+				"notChosen": ["462157", "462569"]
+			}
+		]
+	},
+	"expectFail": {
+		"F5": ["attempts[1]"]
+	},
+	"notes": "F5 / D8 supply tier: confirmed and make_in_house rank before unknown. SYNTHESIS done-when: lanttulaatikko → make_in_house. When F5 lands, s4 (which still expects 462157 held as UNKNOWN_REQUIRED) must change in the same merge."
+}

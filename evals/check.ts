@@ -42,6 +42,7 @@ function matchLine(key: string, want: Obj, lines: LineView[]): CheckResult {
 			p.push(`needKg ${l.needKg} ≠ ${want.needKg}`);
 		for (const r of (want.reasons as string[] | undefined) ?? [])
 			if (!l.reasons.includes(r)) p.push(`missing reason ${r} (has ${show(l.reasons)})`);
+		if (want.notState !== undefined && l.state === want.notState) p.push(`state is ${l.state}`);
 		for (const r of (want.notReasons as string[] | undefined) ?? [])
 			if (l.reasons.includes(r)) p.push(`has reason ${r}`);
 		if (want.historyStates && !subsequence(want.historyStates as string[], l.historyStates ?? []))
@@ -177,12 +178,19 @@ const CHECKERS: Record<string, Checker> = {
 			const a = end.attempts.find((x) => x.step === w.step);
 			if (!a) return fail(key, 'no attempt at that step');
 			const p: string[] = [];
-			for (const f of ['action', 'result', 'error', 'retryable', 'applied'] as const)
+			for (const f of ['action', 'result', 'error', 'retryable', 'applied', 'kind'] as const)
 				if (w[f] !== undefined && w[f] !== a[f]) p.push(`${f} ${show(a[f])} ≠ ${show(w[f])}`);
 			for (const id of (w.chosen as string[] | undefined) ?? [])
 				if (!a.chosen?.includes(id)) p.push(`chosen ${show(a.chosen)} lacks ${id}`);
 			for (const id of (w.notChosen as string[] | undefined) ?? [])
 				if (a.chosen?.includes(id)) p.push(`chosen ${show(a.chosen)} has ${id}`);
+			if (w.closingNotBefore !== undefined) {
+				const min = new Date(String(w.closingNotBefore)).getTime();
+				const early = (a.closingTimes ?? []).filter((t) => new Date(t).getTime() < min);
+				if (!a.closingTimes?.length) p.push('no closing times');
+				if (early.length)
+					p.push(`cut-offs before ${w.closingNotBefore}: ${show(early.slice(0, 3))}`);
+			}
 			return p.length ? fail(key, p.join('; ')) : ok(key);
 		}),
 
@@ -198,6 +206,16 @@ const CHECKERS: Record<string, Checker> = {
 		for (const id of w.excludes ?? []) if (a.productIds.includes(id)) p.push(`binds ${id}`);
 		return [p.length ? fail('approval', p.join('; ')) : ok('approval')];
 	},
+
+	orderLines: (want, end) =>
+		(want as Obj[]).map((w) => {
+			const key = `orderLines[${w.productId}]`;
+			const l = (end.orderLines ?? []).find((x) => x.productId === w.productId);
+			if (!l) return fail(key, 'not ordered');
+			return w.authority === undefined || l.authority === w.authority
+				? ok(key)
+				: fail(key, `authority ${l.authority} ≠ ${w.authority}`);
+		}),
 
 	previousRunKept: (want, end) => {
 		const kept = (end.previousRunOps ?? 0) > 0;

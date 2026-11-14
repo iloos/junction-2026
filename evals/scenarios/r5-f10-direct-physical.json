@@ -1,0 +1,84 @@
+{
+	"id": "r5-f10-direct-physical",
+	"title": "1 l of lactose-free milk is asked for; the 1 l carton is out; the substitute is the 0.5 l carton, so the plan buys 2, not 1",
+	"stories": ["★1", "★3"],
+	"edgeCases": [],
+	"seeds": {
+		"kitchen": "k-hotel"
+	},
+	"clock": "2026-12-07T21:40:00+02:00",
+	"overrides": {
+		"availability": [
+			{
+				"productId": "464201",
+				"amount": 0,
+				"label": "simulated: 1 l carton out"
+			},
+			{
+				"productId": "464440",
+				"amount": 200,
+				"label": "simulated: 0.5 l carton in stock (no cached offer)"
+			}
+		],
+		"price": [
+			{
+				"productId": "464440",
+				"priceCents": 95,
+				"label": "simulated price"
+			}
+		]
+	},
+	"steps": [
+		{
+			"actor": "chef",
+			"action": "place_order",
+			"input": {
+				"deliverBy": "2026-12-10",
+				"idempotencyKey": "milk-1l",
+				"lines": [
+					{
+						"productId": "464201",
+						"qty": 1,
+						"unit": "ST",
+						"amount": {
+							"value": 1,
+							"unit": "l"
+						}
+					}
+				]
+			}
+		},
+		{
+			"actor": "chef",
+			"action": "find_substitutes",
+			"input": {
+				"productId": "464201"
+			}
+		}
+	],
+	"expect": {
+		"lines": [
+			{
+				"productId": "464201",
+				"state": "unorderable"
+			},
+			{
+				"productId": "464440",
+				"qty": 2,
+				"unit": "ST",
+				"substituteFor": "464201"
+			}
+		],
+		"attempts": [
+			{
+				"step": 1,
+				"result": "ok",
+				"chosen": ["464440"]
+			}
+		]
+	},
+	"expectFail": {
+		"F10": ["lines[464440]"]
+	},
+	"notes": "F10 (R5 journey 1): Valio's own substitute rule 464201 → 464440 (lactose-free semi-skimmed 1 l → 0.5 l). The review's repro bought 1 × 0.5 l with no residual."
+}

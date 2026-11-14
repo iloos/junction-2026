@@ -139,8 +139,15 @@ export async function playScenario(s: Scenario): Promise<EndState> {
 				record(i, step, await h.search_products(c, { query: inp.query, limit: 10 }));
 				break;
 			case 'quote': {
-				const r = await h.quote(c, { productIds: inp.productIds });
-				record(i, step, r);
+				const r = await h.quote(c, {
+					productIds: inp.productIds,
+					...(inp.deliverBy ? { deliverBy: inp.deliverBy } : {})
+				});
+				record(i, step, r, {
+					closingTimes: r.ok
+						? r.value.offers.flatMap((o) => o.availability.closingTime ?? [])
+						: undefined
+				});
 				if (r.ok)
 					for (const id of r.value.notFound)
 						attempts.push({
@@ -203,7 +210,11 @@ export async function playScenario(s: Scenario): Promise<EndState> {
 				record(i, step, r, {
 					productId: inp.productId,
 					...(r.ok
-						? { applied: r.value.applied, chosen: r.value.chosen.map((l) => l.productId) }
+						? {
+								applied: r.value.applied,
+								chosen: r.value.chosen.map((l) => l.productId),
+								kind: r.value.kind
+							}
 						: {})
 				});
 				break;
@@ -259,6 +270,12 @@ export async function playScenario(s: Scenario): Promise<EndState> {
 			case 'recall':
 				await recall(inp.productId);
 				break;
+			case 'set_clock': {
+				// Move the simulator clock (handlers read ports.clock on every call).
+				const t = new Date(inp.at);
+				ports.clock = { now: () => t };
+				break;
+			}
 			case 'reset': {
 				// A fresh run on the same database and workspace; the old run's ops stay for audit.
 				runs++;
@@ -473,6 +490,16 @@ export async function playScenario(s: Scenario): Promise<EndState> {
 		wording: AVAILABILITY_WORDING,
 		recomputeMs,
 		approval,
+		orderLines: Object.values(final.orders).flatMap((o) =>
+			o.lines.map((l) => ({
+				productId: l.productId,
+				authority: !l.authority
+					? ('unrecorded' as const)
+					: l.authority === 'mandate'
+						? ('mandate' as const)
+						: ('approval' as const)
+			}))
+		),
 		previousRunOps
 	};
 }

@@ -16,7 +16,8 @@ export type Action =
 	| 'set_availability'
 	| 'find_substitutes'
 	| 'recall'
-	| 'reset';
+	| 'reset'
+	| 'set_clock';
 
 export interface Step {
 	actor: Actor;
@@ -82,6 +83,10 @@ export interface AttemptOutcome {
 	/** find_substitutes: whether the call changed the plan, and the recommended products. */
 	applied?: boolean;
 	chosen?: string[];
+	/** find_substitutes: product, make_in_house or none. */
+	kind?: string;
+	/** quote: the cut-off of every offer returned. */
+	closingTimes?: string[];
 }
 
 export interface PlanView {
@@ -115,6 +120,8 @@ export interface EndState {
 	recomputeMs?: number;
 	/** The newest plan's current approval (get_plan), as product ids; null when none is open. */
 	approval?: { state: string; productIds: string[] } | null;
+	/** Committed order lines with who allowed each: the mandate, an approval, or unrecorded (F8). */
+	orderLines?: { productId: string; authority: 'mandate' | 'approval' | 'unrecorded' }[];
 	/** Ops left in runs before the last reset (kept for audit). */
 	previousRunOps?: number;
 }

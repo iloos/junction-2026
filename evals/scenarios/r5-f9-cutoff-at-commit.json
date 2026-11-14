@@ -1,0 +1,64 @@
+{
+	"id": "r5-f9-cutoff-at-commit",
+	"title": "Approved Monday night; the commit comes Tue 8 Dec 16:00, after the Terminal cut-off (15:00) but before the Stock one (Wed 17:00): Terminal lines are refused with cutoff_passed, Stock lines still commit",
+	"stories": ["★5"],
+	"edgeCases": [],
+	"seeds": {
+		"kitchen": "k-hotel",
+		"event": "event-xmas-140"
+	},
+	"clock": "2026-12-07T21:40:00+02:00",
+	"steps": [
+		{
+			"actor": "chef",
+			"action": "plan_event",
+			"input": {
+				"eventId": "event-xmas-140"
+			}
+		},
+		{
+			"actor": "approver",
+			"action": "approve",
+			"input": {
+				"ref": "plan:event-xmas-140"
+			}
+		},
+		{
+			"actor": "system",
+			"action": "set_clock",
+			"input": {
+				"at": "2026-12-08T16:00:00+02:00"
+			}
+		},
+		{
+			"actor": "chef",
+			"action": "commit",
+			"input": {
+				"ref": "plan:event-xmas-140",
+				"idempotencyKey": "xmas-late"
+			}
+		}
+	],
+	"expect": {
+		"lines": [
+			{
+				"productId": "463860",
+				"notState": "committed",
+				"reasons": ["cutoff_passed"]
+			},
+			{
+				"productId": "461210",
+				"notState": "committed",
+				"reasons": ["cutoff_passed"]
+			},
+			{
+				"productId": "464201",
+				"state": "committed"
+			}
+		]
+	},
+	"expectFail": {
+		"F9": ["lines[463860]", "lines[461210]"]
+	},
+	"notes": "F9: cut-off is shown but only approval expiry is enforced at commit. Compare against ports.clock (scenario clock). Whether the commit is partial or refused whole is A's call; this asserts only that no Terminal line commits after its cut-off."
+}
