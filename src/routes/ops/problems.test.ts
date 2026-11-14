@@ -3,7 +3,7 @@ import type { OpEnvelope } from '$lib/core/contracts';
 import { applyOps, emptyState } from '$lib/core/state';
 import seeded from './fixtures/seeded-ops.ndjson?raw';
 import { buildProblems, dishName } from './problems';
-import { storyOf } from './story';
+import { doorOf, storyOf } from './story';
 
 /** The seeded Christmas run of a fresh visitor, as the op stream delivered it (bulky payloads trimmed). */
 const ops = seeded
@@ -142,11 +142,18 @@ describe('the story of a problem', () => {
 		expect(story.at(-1)).toMatchObject({
 			seq: refusal.seq,
 			chip: 'outside',
+			door: 'MCP',
 			tone: 'bad',
 			what: "An outside agent tried to approve on the chef's behalf."
 		});
 		expect(story.at(-1)!.then).toBe(
 			'Refused: only the chef or a named approver can approve. Nothing changed.'
 		);
+	});
+
+	it('names the door an outside agent came through from its via', () => {
+		expect(doorOf('mcp')).toBe('MCP');
+		expect(doorOf('rest')).toBe('API');
+		expect(doorOf('kitchen')).toBeUndefined();
 	});
 });
