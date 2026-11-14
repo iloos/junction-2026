@@ -122,7 +122,11 @@ export const toolSchemas = {
 					planVersion: z.int(),
 					termsHash: z.string(),
 					lineIds: z.array(z.string()),
-					tier: z.enum(['act', 'propose', 'sign_off'])
+					tier: z.enum(['act', 'propose', 'sign_off']),
+					mandateVersion: z.int().optional(),
+					expiresAt: z.string().optional(),
+					requestedBy: z.object({ kind: z.string(), id: z.string() }).optional(),
+					decidedBy: z.object({ kind: z.string(), id: z.string() }).optional()
 				})
 				.nullable()
 		})
