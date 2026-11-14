@@ -21,7 +21,7 @@ import { buildLiveView, type ProductFacts, type SubstitutesOut } from '$lib/kitc
 import seed from '../../../../fixtures/seeds/christmas-buffet-140.json';
 import { scenarioClock } from '$lib/core/scenario';
 import { currentRun, currentRunStartedAt } from '$lib/server/demo/run';
-import { resetDemoRun } from '$lib/server/demo/reset';
+import { reloadRunNow, resetDemoRun } from '$lib/server/demo/reset';
 import { isSandbox, resetSandbox } from '$lib/server/demo/sandbox';
 import { inWorkspace } from '$lib/server/adapters/simulator/overlay';
 
@@ -243,10 +243,18 @@ export function focusPlan(
 ): Promise<LiveSnapshot | null> {
 	return serial(workspaceId, async () => {
 		const s = session(sid, workspaceId);
-		const ctx = chef(s);
 		const b = await createServerPorts();
-		const ws = await b.ports.store.load(ctx.workspaceId, ctx.runId);
-		const plan = ws.plans[planId];
+		const find = async () => {
+			const ctx = chef(s);
+			return (await b.ports.store.load(ctx.workspaceId, ctx.runId)).plans[planId];
+		};
+		// A link can name a plan written on a run this process hasn't caught up with yet (a new sandbox, another
+		// instance): re-read the current run once before saying the plan isn't here.
+		let plan = await find();
+		if (!plan) {
+			await reloadRunNow(workspaceId);
+			plan = await find();
+		}
 		if (!plan) return null;
 		s.kitchenId = plan.kitchenId;
 		s.planId = plan.id;

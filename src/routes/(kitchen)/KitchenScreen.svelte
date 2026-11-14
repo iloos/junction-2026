@@ -2,6 +2,7 @@
 	import { onMount, tick, untrack } from 'svelte';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
+	import { goto } from '$app/navigation';
 	import { ChevronDown, Play, CloudOff, LoaderCircle, CircleX } from '@lucide/svelte';
 	import { KitchenStore } from '$lib/kitchen/kitchen.svelte';
 	import { KITCHENS, PRODUCTS, SEED } from '$lib/kitchen/catalog';
@@ -81,6 +82,14 @@
 		linkedSeen = linked;
 		untrack(() => void k.load(linked).then(honourDeepLink));
 	});
+
+	/** Leave a link that didn't resolve: drop it from the address and open the kitchen's own plan. */
+	async function openOwn() {
+		await goto(resolve('/'), { replaceState: true });
+		k.linkMissing = null;
+		linkedSeen = null;
+		await k.load();
+	}
 
 	onMount(() => {
 		if (!new URL(location.href).searchParams.get('plan')) k.load().then(honourDeepLink);
@@ -450,7 +459,28 @@
 	</div>
 {/if}
 
-{#if k.started === false}
+{#if k.started !== true && (k.opening || k.linkMissing)}
+	<!-- An approval link never lands on the start screen: wait for its plan, or say plainly it isn't here. -->
+	<main class="mx-auto max-w-[720px] px-4 py-14 md:px-6" aria-busy={!!k.opening}>
+		{#if k.opening}
+			<p class="flex items-center gap-2 text-body text-ink-2" role="status">
+				<LoaderCircle size={15} class="animate-spin text-accent" aria-hidden="true" />
+				Opening the linked plan…
+			</p>
+		{:else}
+			<h1 class="text-title font-semibold text-ink">This link's plan isn't in your sandbox</h1>
+			<p class="mt-2 max-w-[60ch] text-body leading-relaxed text-ink-2">
+				The link names a plan this browser's sandbox doesn't have. It may belong to another sandbox,
+				or the sandbox was started over since the link was made.
+			</p>
+			<button
+				type="button"
+				class="mt-5 inline-flex h-11 items-center rounded-md border border-rule-strong px-4 text-body font-medium text-ink hover:bg-well"
+				onclick={openOwn}>Open this kitchen's plan</button
+			>
+		{/if}
+	</main>
+{:else if k.started === false}
 	{@const kit = KITCHENS.find((x) => x.id === k.startKitchen) ?? KITCHENS[0]}
 	<main class="mx-auto max-w-[760px] px-4 py-10 md:px-6 md:py-14">
 		<p class="text-meta text-ink-3">

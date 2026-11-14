@@ -136,15 +136,35 @@ export class KitchenStore {
 				return;
 			}
 			if (!planId) return;
+			this.opening = planId;
+			this.linkMissing = null;
 			try {
-				const s = await backend.snapshot(this.mode, planId);
-				this.focusedPlan = planId;
-				return s;
+				// A just-written plan can take a moment to reach this server's view of the sandbox: ask again
+				// briefly before saying the link's plan isn't here.
+				for (let i = 0; ; i++) {
+					try {
+						const s = await backend.snapshot(this.mode, planId);
+						this.focusedPlan = planId;
+						return s;
+					} catch (e) {
+						const missing = e instanceof ToolError && e.error.code === 'NOT_FOUND';
+						if (!missing || i >= 5) throw e;
+						await new Promise((r) => setTimeout(r, 400 * (i + 1)));
+					}
+				}
 			} catch (e) {
-				this.#fail(e);
+				if (e instanceof ToolError && e.error.code === 'NOT_FOUND') this.linkMissing = planId;
+				else this.#fail(e);
+			} finally {
+				this.opening = null;
 			}
 		});
 	}
+
+	/** An approval link is being opened: the screen waits for that plan instead of showing the start screen. */
+	opening = $state<string | null>(null);
+	/** The link's plan is not in this browser's sandbox (after retrying): said plainly, never a start screen. */
+	linkMissing = $state<string | null>(null);
 
 	/** What the start screen shows while planning: the step under way, with real counts once known. */
 	progress = $state<string | null>(null);
