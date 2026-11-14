@@ -199,6 +199,20 @@ export class KitchenStore {
 		await this.#run(async () => {});
 	}
 
+	/** Who made the latest change shown in What changed, when it wasn't this screen. */
+	changeBy = $state<'dock' | 'agent' | 'outside' | null>(null);
+	#by: 'dock' | 'agent' | 'outside' | null = null;
+	/** The plan changed elsewhere (the dock, the agent, an outside agent): re-read it and say who changed it. */
+	/** What was done to this plan elsewhere, in one line (an approval, an order), until dismissed. */
+	outsideNote = $state<{ by: 'dock' | 'agent' | 'outside'; text: string } | null>(null);
+	async refreshFrom(by: 'dock' | 'agent' | 'outside', text?: string | null) {
+		if (text) this.outsideNote = { by, text };
+		if (this.busy) return;
+		this.#by = by;
+		await this.retry();
+		this.#by = null;
+	}
+
 	async setGrams(dishId: string, grams: number) {
 		const dish = this.view?.dishes.find((d) => d.id === dishId);
 		if (!dish || !this.plan || grams === dish.gServed || this.readOnly) return;
@@ -361,7 +375,7 @@ export class KitchenStore {
 	 */
 	rendered: RenderedView | null = null;
 	#call<N extends ToolName>(name: N, input: ToolInput<N>): Promise<ToolOutput<N>> {
-		return call(this.mode, name, input, this.rendered);
+		return call(this.mode, name, input, this.rendered, this.shared ? undefined : 'dock');
 	}
 
 	/** Runs a command, then shows the snapshot it answered with, or reads one when it answered nothing. */
@@ -386,15 +400,11 @@ export class KitchenStore {
 				const orderedNow =
 					next.plan.lines.filter((l) => l.state === 'committed').length >
 					(prev?.plan.lines.filter((l) => l.state === 'committed').length ?? 0);
+				const newChange =
+					prev && prev.plan.id === next.plan.id && next.plan.version > prev.plan.version;
 				this.changeFrom =
-					prev &&
-					prev.plan.id === next.plan.id &&
-					next.plan.version > prev.plan.version &&
-					!orderedNow
-						? prev
-						: prev?.plan.id === next.plan.id
-							? this.changeFrom
-							: null;
+					newChange && !orderedNow ? prev : prev?.plan.id === next.plan.id ? this.changeFrom : null;
+				if (newChange) this.changeBy = this.#by;
 				this.snap = next;
 				// Pin the plan on screen: every later read and command names it, so another screen on this browser
 				// (the dock's own state) moving the server session can never switch what this one shows.

@@ -4,6 +4,7 @@
  */
 import { getContext, setContext } from 'svelte';
 import type { KitchenStore } from '$lib/kitchen/kitchen.svelte';
+import { PlanEvents } from './plan-events.svelte';
 
 export interface SandboxInfo {
 	/** Visitor workspace id (D9), e.g. ws-j-…; `ws-demo` is the shared presenter sandbox. */
@@ -32,6 +33,8 @@ export class Shell {
 	chatOpen = $state(false);
 	/** What the agent is scoped to on this page: the kitchen and the plan on screen (Kitchen, Request, Ops). */
 	chat = $state<{ kitchenId?: string; planId?: string }>({});
+	/** One event stream for the page and the dock: what one does, the other shows (opened on first use). */
+	events = new PlanEvents();
 	/** The Kitchen screen's own state while it is open: the dock defers to it for the plan on screen. */
 	kitchen = $state.raw<KitchenStore | null>(null);
 	/** A request to show a plan's decisions in place (the dock's decision card on the plan already on screen). */

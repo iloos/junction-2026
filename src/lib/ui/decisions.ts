@@ -6,6 +6,7 @@
  */
 import type { Approval, Line, Plan } from '$lib/core/contracts';
 import { SCENARIO } from '$lib/core/scenario';
+import { dueOf } from '$lib/core/mandate/due';
 import { reasonLong, reasonShort } from './reasons';
 
 export interface Decision {
@@ -139,15 +140,8 @@ export function decisionsDue(
 	approval?: Approval | null,
 	lines?: readonly Line[]
 ): string {
-	const ids = new Set(approval?.lineIds ?? []);
-	const covered = lines ?? plan?.lines.filter((l) => ids.has(l.id)) ?? [];
-	const times = [
-		approval?.expiresAt,
-		plan?.view?.validUntil,
-		...covered.filter((l) => l.state !== 'committed').map((l) => l.offer?.availability.closingTime)
-	].filter((t): t is string => !!t);
-	if (!times.length) return SCENARIO.cutoff;
-	return times.reduce((a, b) => (new Date(b).getTime() < new Date(a).getTime() ? b : a));
+	// One due rule everywhere (core/mandate/due.ts); the scenario's cut-off only when nothing binds.
+	return dueOf(plan, approval, lines) ?? SCENARIO.cutoff;
 }
 
 /** "2 decisions" / "1 decision" / "No decisions". */

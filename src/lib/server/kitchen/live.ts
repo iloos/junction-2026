@@ -26,6 +26,7 @@ import { isSandbox, resetSandbox } from '$lib/server/demo/sandbox';
 import { inWorkspace } from '$lib/server/adapters/simulator/overlay';
 import { rescueContention } from '$lib/core/services/contention';
 import { catchUp } from '$lib/server/bus';
+import type { DietFacts } from '$lib/ui/diet';
 
 const EVENT_ID = 'event-xmas-140';
 /** The palvikinkku the ham rescue relies on (13 of 15 in stock): the contention preset takes 4 of them. */
@@ -104,7 +105,9 @@ export function callTool(
 	workspaceId: string,
 	name: string,
 	input: unknown,
-	view: RenderedView | null
+	view: RenderedView | null,
+	/** Where the chef acted: the Kitchen page or the agent dock (D13); recorded as the ops' `via`. */
+	surface: 'kitchen' | 'dock' = 'kitchen'
 ): Promise<Served> {
 	return serial(workspaceId, async () => {
 		const deny = (message: string): Served => ({
@@ -146,7 +149,9 @@ export function callTool(
 		// The approval must exist and belong to the plan on screen: an exact check, not a match on its id's text.
 		if (name === 'approve' && ws0.approvals[i.approvalId ?? '']?.planId !== plan.id)
 			return deny("that approval is not for this session's plan");
-		return serveTool(name, chef(s), input, handlers);
+		const ctx =
+			surface === 'dock' ? contextFor('chef', 'kitchen-ui', 'dock', env, s.workspaceId) : chef(s);
+		return serveTool(name, ctx, input, handlers);
 	});
 }
 
@@ -378,6 +383,14 @@ async function buildSnapshot(s: Session): Promise<LiveSnapshot> {
 		b.ports.catalog.get(ids),
 		b.ports.catalog.offers(ids, plan.deliverBy)
 	]);
+	const diet: Record<string, DietFacts> = {};
+	for (const [id, p] of products)
+		diet[id] = {
+			nameFi: p.nameFi,
+			allergens: p.allergens,
+			freeFrom: p.freeFrom,
+			diet: p.diet
+		};
 	const shortNames: Record<string, string> = {};
 	for (const [id, p] of products) if (p.nameShort?.value) shortNames[id] = p.nameShort.value;
 	const facts: Record<string, ProductFacts> = {};
@@ -482,6 +495,7 @@ async function buildSnapshot(s: Session): Promise<LiveSnapshot> {
 		preset: s.preset,
 		contention: s.contention,
 		byAgent,
+		diet,
 		origin: origin ?? (plan.eventId ? 'event' : null),
 		shortNames,
 		contentionRescue:

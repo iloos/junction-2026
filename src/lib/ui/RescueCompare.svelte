@@ -13,6 +13,15 @@
 	}
 	let { rescue, grams, onfit }: Props = $props();
 
+	/** The kind of swap, in the kitchen's words (substitutes v2). */
+	const KIND: Record<string, string> = {
+		pack: 'Same product, other pack',
+		brand: 'Other brand',
+		form: 'Other form',
+		functional: 'Swap in the dish',
+		different: 'Different product',
+		unknown: 'Kind not known'
+	};
 	const maxScore = $derived(
 		Math.max(0.5, ...rescue.candidates.map((c) => (c.rejected.length ? 0 : (c.score?.total ?? 0))))
 	);
@@ -77,10 +86,8 @@
 				said rank below every product with known stock, whatever their score.
 			</p>
 		{/if}
-		<div class="hidden px-2 pt-2 md:block">
-			<RankingStrip candidates={rescue.candidates} />
-		</div>
-		<ol class="space-y-2 px-3 py-3 md:hidden">
+		<!-- In words first: what kind of swap, what changes, can it be had. The weighted scores are behind every column. -->
+		<ol class="grid gap-2 px-3 py-3 md:grid-cols-2">
 			{#each phoneCards as c (c.productId)}
 				{@const rej = c.rejected.length > 0}
 				<li
@@ -94,12 +101,15 @@
 						<p class="min-w-0 text-body leading-snug font-medium {rej ? 'text-ink-2' : 'text-ink'}">
 							<span class="mono mr-1 text-ink-3">{c.rank ?? '–'}</span>{readableName(c.name)}
 						</p>
-						{#if c.score && !rej}<span class="mono shrink-0 text-body text-ink"
-								>{c.score.total.toFixed(2)}</span
+						{#if c.subKind}<span
+								class="shrink-0 rounded-full border border-rule-strong px-2 py-0.5 text-micro font-medium text-ink-2"
+								>{KIND[c.subKind]}</span
 							>{/if}
 					</div>
-					<p class="mono mt-0.5 text-micro text-ink-3">
-						{c.productId} · {c.origin ? c.origin.toUpperCase() : 'origin ?'}
+					{#if c.whatChanges}<p class="mt-0.5 text-meta text-ink">{c.whatChanges}</p>{/if}
+					<p class="sys-only mono mt-0.5 text-micro text-ink-3">
+						{c.productId} · {c.origin ? c.origin.toUpperCase() : 'origin ?'}{#if c.score && !rej}
+							· score {c.score.total.toFixed(2)}{/if}
 					</p>
 					<dl class="mt-1.5 grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 text-meta">
 						<dt class="text-ink-3">Availability</dt>
@@ -138,6 +148,9 @@
 			<summary class="cursor-pointer px-4 py-2 text-meta text-ink-2 select-none hover:text-ink"
 				>All {rescue.candidates.length} candidates, every column</summary
 			>
+			<div class="hidden px-2 pt-2 md:block">
+				<RankingStrip candidates={rescue.candidates} />
+			</div>
 			<div class="overflow-x-auto">
 				<table class="w-full min-w-[720px] text-body">
 					<thead>

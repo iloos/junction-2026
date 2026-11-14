@@ -93,7 +93,8 @@ function normaliseAvailability(a: RawAvailability | undefined): ProductFact['ava
 	if (!a) return { kind: 'unknown', amount: null, logistic: null, raw: 'not fetched' };
 	const logistic = (a.logisticModel as 'Stock' | 'Terminal' | null | undefined) ?? null;
 	const raw = `${a.kind}${a.amount !== undefined ? ` ${a.amount}` : ''}${logistic ? ` · ${logistic}` : ''}`;
-	if (a.kind === 'unlimited') return { kind: 'known', amount: null, logistic, raw };
+	// Valio: "unlimited" (≥999999) means availability unknown, any quantity orderable; never known stock.
+	if (a.kind === 'unlimited') return { kind: 'unknown', amount: null, logistic, raw };
 	if (a.kind === 'unknown' || a.amount === SENTINEL_UNKNOWN || logistic === 'Terminal')
 		return { kind: 'unknown', amount: null, logistic, raw };
 	if (a.kind === 'known')

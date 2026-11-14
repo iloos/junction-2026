@@ -28,10 +28,13 @@ export async function livePost<T>(
 	path: string,
 	body: unknown,
 	/** The view of the screen sending it (each Kitchen state keeps its own); the page's when absent. */
-	view: RenderedView | null = rendered.view
+	view: RenderedView | null = rendered.view,
+	/** The agent dock's own Kitchen state says so, so its ops read "in the agent dock" on the page. */
+	surface?: 'dock'
 ): Promise<T> {
 	let res: Response;
 	const headers: Record<string, string> = { 'content-type': 'application/json' };
+	if (surface) headers['x-kitchen-surface'] = surface;
 	if (path.startsWith('/kitchen-api/tool/') && view)
 		headers['x-kitchen-view'] = JSON.stringify(view);
 	try {
@@ -59,13 +62,15 @@ export function call<N extends ToolName>(
 	mode: ApiMode,
 	name: N,
 	input: ToolInput<N>,
-	view?: RenderedView | null
+	view?: RenderedView | null,
+	surface?: 'dock'
 ): Promise<ToolOutput<N>> {
 	return mode === 'live'
 		? livePost<ToolOutput<N>>(
 				`/kitchen-api/tool/${name}`,
 				input,
-				view === undefined ? rendered.view : view
+				view === undefined ? rendered.view : view,
+				surface
 			)
 		: fixtureCall(name, input);
 }

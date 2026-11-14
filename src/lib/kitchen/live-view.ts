@@ -207,7 +207,9 @@ function candidateViews(
 			verdict: '',
 			reliability: f?.reliability,
 			co2PerKg: f?.co2PerKg,
-			facts: candidateFacts(f, original)
+			facts: candidateFacts(f, original),
+			subKind: c.kind,
+			whatChanges: c.whatChanges
 		};
 		view.verdict = verdict(view);
 		return view;

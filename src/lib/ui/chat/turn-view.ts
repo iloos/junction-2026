@@ -6,10 +6,14 @@
 import type { TaskLedger } from '$lib/core/contracts/task';
 import { money } from '$lib/ui/format';
 import type { ChatEvent } from './types';
+import type { OpEnvelope } from '$lib/core/contracts';
 
 /** `at`: when it arrived in this tab (ms), for the turn's duration; absent on a restored task. */
 export type Entry =
-	{ kind: 'chef'; text: string; at?: number } | { kind: 'event'; e: ChatEvent; at?: number };
+	| { kind: 'chef'; text: string; at?: number }
+	| { kind: 'event'; e: ChatEvent; at?: number }
+	/** What happened outside the chat (the chef on the Kitchen page, an order), in one plain line: no model call. */
+	| { kind: 'system'; text: string; at?: number };
 export type StepEvent = Extract<ChatEvent, { type: 'step' }>;
 export type Row =
 	| { kind: 'steps'; steps: StepEvent[]; ms: number | null; i: number }
@@ -47,7 +51,7 @@ export function stepsSinceChef(entries: readonly Entry[]): number {
 	for (let j = entries.length - 1; j >= 0; j--) {
 		const x = entries[j];
 		if (x.kind === 'chef') break;
-		if (x.e.type === 'step') n++;
+		if (x.kind === 'event' && x.e.type === 'step') n++;
 	}
 	return n;
 }
@@ -68,3 +72,44 @@ export function outcomeLine(l: TaskLedger): string {
 	const s = parts.join(' · ');
 	return s[0].toUpperCase() + s.slice(1);
 }
+
+/**
+ * What happened outside the chat to the task's plans, in one plain line (no model call): an approval granted or
+ * kept held on the Kitchen page or in the dock, an approval voided by a change, an order and its receipt. Null when
+ * nothing in the burst is worth a line.
+ */
+export function describeOps(ops: readonly OpEnvelope[]): string | null {
+	const parts: string[] = [];
+	const approvals = new Map<
+		string,
+		Extract<OpEnvelope['op'], { type: 'RecordApproval' }>['approval']
+	>();
+	let edited = false;
+	for (const { op } of ops) {
+		if (op.type === 'RecordApproval') approvals.set(op.approval.id, op.approval);
+		if (op.type === 'EditLine' || op.type === 'ProposeSubstitute') edited = true;
+	}
+	for (const a of approvals.values()) {
+		const n = a.lineIds.length;
+		const lines = `${n} ${n === 1 ? 'line' : 'lines'}`;
+		if (a.state === 'granted') parts.push(`You approved ${lines}.`);
+		else if (a.state === 'denied')
+			parts.push(`You kept ${lines} held: nothing more to order there.`);
+		else if (a.state === 'invalidated' || a.state === 'expired')
+			parts.push('The plan changed: the earlier approval no longer applies.');
+	}
+	for (const { op } of ops) {
+		if (op.type !== 'CommitOrder') continue;
+		if (op.outcome.result === 'committed') {
+			const aw = op.outcome.receipt.awaitingSupplier.length;
+			parts.push(
+				`Ordered: receipt ${op.outcome.receipt.id}${aw ? ` (${aw} awaiting the supplier)` : ''}.`
+			);
+		} else parts.push(`The order didn't go through: ${op.outcome.error.message}`);
+	}
+	if (!parts.length && edited) parts.push('The plan changed in the Kitchen.');
+	return parts.length ? [...new Set(parts)].join(' ') : null;
+}
+
+/** Ops a chat turn wrote itself: its own outcome line already says what they did. */
+export const fromChat = (o: OpEnvelope) => /^(chat|task)\b/.test(o.via);

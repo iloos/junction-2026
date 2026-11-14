@@ -7,6 +7,7 @@
 		CircleX,
 		MessageSquare,
 		Plus,
+		RefreshCw,
 		Send,
 		UtensilsCrossed
 	} from '@lucide/svelte';
@@ -17,7 +18,17 @@
 	import { KitchenStore } from '$lib/kitchen/kitchen.svelte';
 	import Receipt from '$lib/ui/Receipt.svelte';
 	import type { ChatEvent, ChatTurnInput } from './types';
-	import { foldRows, outcomeLine, stepsSinceChef, workedLine, type Entry } from './turn-view';
+	import {
+		describeOps,
+		foldRows,
+		fromChat,
+		outcomeLine,
+		stepsSinceChef,
+		workedLine,
+		type Entry
+	} from './turn-view';
+	import { planOf } from '$lib/ui/shell/plan-events.svelte';
+	import type { OpEnvelope } from '$lib/core/contracts';
 	import { useShell } from '$lib/ui/shell/shell.svelte';
 
 	/**
@@ -193,6 +204,69 @@
 			(l) => l.state !== 'committed' && l.view?.committable === true
 		)
 	);
+
+	/**
+	 * The page and the dock stay in step: when the task's plans change outside this chat (the chef approves or keeps
+	 * lines held on the Kitchen page, an order lands, a change voids an approval), the dock says so in one plain
+	 * line and re-reads the task, so its cards, outcome line and Continue are current. No chat turn, no model call.
+	 */
+	const taskPlans = $derived(
+		new Set(
+			entries.flatMap((x) =>
+				x.kind !== 'event'
+					? []
+					: x.e.type === 'decision'
+						? [x.e.planId]
+						: x.e.type === 'ledger'
+							? x.e.ledger.needs.map((n) => n.planId)
+							: []
+			)
+		)
+	);
+	$effect(() => {
+		if (!shell || !taskId) return;
+		return shell.events.subscribe((ops) => void outside(ops));
+	});
+	/** The newest event of a type, to append only what changed. */
+	const lastOfType = (t: string) =>
+		entries.findLast((x) => x.kind === 'event' && x.e.type === t) as
+			Extract<Entry, { kind: 'event' }> | undefined;
+	const sameAs = (e: ChatEvent) => {
+		const prev = lastOfType(e.type)?.e;
+		if (!prev) return false;
+		const key = (x: ChatEvent) =>
+			x.type === 'decision'
+				? `${x.approvalId}|${x.decisions.map((d) => d.key).join(',')}`
+				: x.type === 'ledger'
+					? `${x.summary}|${x.ledger.decisionsLeft}|${x.ledger.receiptIds.length}`
+					: x.type === 'done'
+						? `${x.state}|${x.canContinue}|${x.text}`
+						: JSON.stringify(x);
+		return key(prev) === key(e);
+	};
+	async function outside(ops: OpEnvelope[]) {
+		const mine = ops.filter((o) => {
+			const p = planOf(o.op);
+			return p !== null && taskPlans.has(p) && !fromChat(o);
+		});
+		if (!mine.length || busy) return;
+		const id = taskId;
+		const line = describeOps(mine);
+		void own?.retry();
+		let fresh: ChatEvent[] = [];
+		try {
+			const r = await fetch(`/api/chat/task?id=${encodeURIComponent(id ?? '')}`);
+			if (r.ok) fresh = ((await r.json()) as { events: ChatEvent[] }).events;
+		} catch {
+			/* offline: the line still says what happened */
+		}
+		if (taskId !== id) return;
+		const add: Entry[] = line ? [{ kind: 'system', text: line, at: Date.now() }] : [];
+		for (const e of fresh)
+			if ((e.type === 'decision' || e.type === 'ledger' || e.type === 'done') && !sameAs(e))
+				add.push({ kind: 'event', e, at: Date.now() });
+		if (add.length) entries = [...entries, ...add];
+	}
 
 	/** The plan the task works on, from its newest ledger or decision. */
 	const taskPlan = $derived.by(() => {
@@ -409,6 +483,12 @@
 				{@const i = r.i}
 				{#if x.kind === 'chef'}
 					<li class="ml-8 rounded-lg bg-well px-3 py-2 text-ink">{x.text}</li>
+				{:else if x.kind === 'system'}
+					<!-- Something that happened on the page or the supplier, not a chat turn. -->
+					<li class="flex items-start gap-1.5 text-meta text-ink-2" role="status">
+						<RefreshCw size={13} class="mt-0.5 shrink-0 text-accent" aria-hidden="true" />
+						<span>{x.text}</span>
+					</li>
 				{:else if x.e.type === 'clarify'}
 					{@const active = pendingClarify === x}
 					<li class="rounded-lg border border-rule bg-paper px-3 py-2">

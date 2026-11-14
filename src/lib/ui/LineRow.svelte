@@ -9,6 +9,8 @@
 
 	import StateChip from './StateChip.svelte';
 	import AgentMark from './AgentMark.svelte';
+	import DietMarks from './DietMarks.svelte';
+	import type { Marks } from './diet';
 	import { lineBasis, lotSentence } from './coverage';
 	import { money } from './format';
 
@@ -21,6 +23,8 @@
 		flash?: boolean;
 		/** For a substitute: the product it replaces and why, in plain words. */
 		replaces?: { name: string; because: string };
+		/** The product's diet and allergen marks (G, L, M…). */
+		diet?: Marks;
 		/** An agent last changed this line (proposed or edited it). */
 		by?: 'kitchen_agent' | 'external_agent';
 		expanded?: boolean;
@@ -33,6 +37,7 @@
 		flash = false,
 		replaces,
 		by,
+		diet,
 		expanded = $bindable(false),
 		onwhy
 	}: Props = $props();
@@ -71,7 +76,7 @@
 			<span
 				class="truncate {rejected ? 'text-ink-3 line-through decoration-ink-3/60' : 'text-ink'}"
 				title={name}>{name}</span
-			>
+			>{#if diet}<DietMarks marks={diet} />{/if}
 		</button>
 		{#if replaces}
 			<p class="text-meta text-ink-2">

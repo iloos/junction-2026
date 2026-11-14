@@ -28,9 +28,13 @@
 	import WhyDrawer from '$lib/ui/WhyDrawer.svelte';
 	import DishStatus from '$lib/ui/DishStatus.svelte';
 	import DishChip from '$lib/ui/DishChip.svelte';
+	import DietMarks from '$lib/ui/DietMarks.svelte';
+	import { CODES, CODE_WORDS, marksOf, marksTitle, rollUp } from '$lib/ui/diet';
 	import CalendarSubscribe from '$lib/ui/CalendarSubscribe.svelte';
 	import AgentMark from '$lib/ui/AgentMark.svelte';
 	import { planDiff } from '$lib/ui/plan-diff';
+	import { planOf } from '$lib/ui/shell/plan-events.svelte';
+	import { describeOps } from '$lib/ui/chat/turn-view';
 	import { dishGate } from '$lib/ui/coverage';
 	import { whyChain } from '$lib/ui/why-chain';
 	import { day, fixed, money, moneyDelta, num, readableName, storyTime } from '$lib/ui/format';
@@ -148,6 +152,35 @@
 		const shown = new Set((k.view?.dishes ?? []).flatMap((d) => d.lineIds));
 		return (k.plan?.lines ?? []).filter((l) => !shown.has(l.id) && l.qty.value > 0);
 	});
+	// The page and the dock stay in step: a change to this plan made elsewhere (the dock, a chat turn, an outside
+	// agent) re-reads it once per burst, and What changed says who made it. The page's own commands re-read anyway.
+	$effect(() => {
+		if (!shell || k.mode !== 'live') return;
+		return shell.events.subscribe((ops) => {
+			const here = k.plan?.id;
+			const mine = ops.filter((o) => here && planOf(o.op) === here && !/^kitchen\b/.test(o.via));
+			if (!mine.length) return;
+			const by = mine.some((o) => /^dock\b/.test(o.via))
+				? 'dock'
+				: mine.some((o) => /^(chat|task)\b/.test(o.via))
+					? 'agent'
+					: 'outside';
+			void k.refreshFrom(by, describeOps(mine));
+		});
+	});
+	const CHANGE_BY = {
+		dock: 'by you in the agent dock',
+		agent: 'by the agent in chat',
+		outside: 'by an outside agent'
+	} as const;
+
+	/** Diet marks from each product's own record (lib/ui/diet): the line, its dish, the whole order. */
+	const lineMarks = (l: Line) => marksOf(k.snap?.diet?.[l.productId]);
+	const liveLines = (ls: readonly Line[]) =>
+		ls.filter((l) => l.state !== 'rejected' && l.state !== 'unorderable' && l.qty.value > 0);
+	const dishMarks = (ls: Line[]) => rollUp(liveLines(ls).map(lineMarks));
+	const orderMarks = $derived(rollUp(liveLines(k.plan?.lines ?? []).map(lineMarks)));
+
 	/** Who made the plan on screen, in words, for a plan that isn't the booking (its CreatePlan op). */
 	const ORIGIN: Record<string, string> = {
 		chat: 'Drafted by the agent in chat',
@@ -681,6 +714,7 @@
 			approved={approvedIds.has(l.id)}
 			flash={k.flash.has(l.id)}
 			by={inGroup ? undefined : snap?.byAgent?.[l.id]}
+			diet={lineMarks(l)}
 			replaces={l.substituteFor && !inGroup
 				? {
 						name: names.get(l.substituteFor) ?? l.substituteFor,
@@ -830,6 +864,22 @@
 						<span>{contended}</span>
 					</p>
 				{/if}
+				{#if k.outsideNote}
+					<p
+						class="mt-2 flex items-start gap-2 rounded-lg border border-accent/40 bg-accent-wash/50 px-4 py-2 text-body text-ink"
+						role="status"
+					>
+						<span class="min-w-0 flex-1"
+							><span class="font-medium">{CHANGE_BY[k.outsideNote.by].replace(/^by/, 'By')}:</span>
+							{k.outsideNote.text}</span
+						>
+						<button
+							type="button"
+							class="shrink-0 text-meta text-ink-2 underline underline-offset-2 hover:text-ink"
+							onclick={() => (k.outsideNote = null)}>Dismiss</button
+						>
+					</p>
+				{/if}
 				{#if changed}
 					<section
 						class="mt-2 rounded-lg border border-accent/40 bg-accent-wash/50 px-4 py-2.5"
@@ -837,7 +887,9 @@
 					>
 						<div class="flex items-baseline justify-between gap-3">
 							<p class="text-body font-semibold text-ink">
-								What changed
+								What changed{#if k.changeBy}<span class="font-normal text-ink-2">
+										· {CHANGE_BY[k.changeBy]}</span
+									>{/if}
 								<span class="mono text-meta font-normal text-ink-3"
 									>v{changed.from} → v{changed.to}</span
 								>
@@ -913,7 +965,10 @@
 									: ''}"
 							>
 								<div class="min-w-0">
-									<p class="truncate text-body font-medium text-ink">{d.nameFi}</p>
+									<p class="flex min-w-0 items-center gap-1.5 text-body font-medium text-ink">
+										<span class="truncate">{d.nameFi}</span>
+										<DietMarks marks={dishMarks(lines)} />
+									</p>
 									<p class="truncate text-meta text-ink-3">
 										<span class="lg:hidden">{r.product}</span><span class="max-lg:hidden"
 											>{d.name !== d.nameFi ? d.name : ''}</span
@@ -1110,6 +1165,17 @@
 						</div>
 					{/each}
 				</div>
+				{#if k.snap?.diet}
+					<p class="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-meta text-ink-2">
+						<span class="font-medium text-ink">This order:</span>
+						<DietMarks marks={orderMarks} />
+						<span>{marksTitle(orderMarks)}</span>
+					</p>
+					<p class="mt-1 text-meta text-ink-3" aria-label="Diet marks legend">
+						{CODES.map((c) => `${c} ${CODE_WORDS[c]}`).join(' · ')} · ? no allergen record (allergens
+						unknown, never read as free from)
+					</p>
+				{/if}
 				<p class="mt-2 text-meta leading-snug text-ink-3">
 					{#if isEvent}Grams per guest, yields and recipes are team estimates.{/if} Prices are Valio catalogue
 					prices ex VAT; lines where Valio doesn't state a quantity are ordered, but never counted as
