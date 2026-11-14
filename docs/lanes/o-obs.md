@@ -35,3 +35,4 @@ Scoped like `/api/events`: production reads a public room or the browser's own s
 ## Report
 
 - 2026-11-14 · traces table + batched writer + retention, request id via ALS + header, JSON logger with redaction (OpenSearch-friendly lines), /api/ops/traces + summary, 13 unit tests · fixture LLM calls without a router aren't traced (as before) · lead: db:migrate on Aiven · gate: check,lint GREEN + targeted tests (obs, hooks, tools, external, bus, store, adapters) · ready to merge yes
+- 2026-11-14 · fixed: model/outside-call rows stored with a null workspace (the /request parse runs before any tool names it), so workspace-scoped Ops reads missed them; rows now take the request's workspace at write time, plus the overlay workspace · test: one /request run → gemini + tool rows, same requestId and workspace · ready to merge yes

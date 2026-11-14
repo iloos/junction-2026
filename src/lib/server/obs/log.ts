@@ -4,6 +4,7 @@
  * `redact`, so no secret, prompt or request body reaches the line. A dev server (and the tests) print a short
  * readable line instead; LOG_FORMAT=json|pretty and LOG_LEVEL=debug|info|warn|error override.
  */
+import { scopedWorkspace } from '../adapters/simulator/overlay';
 import { currentScope } from '../external/scope';
 import { currentRequest } from './context';
 import { redact } from './redact';
@@ -123,7 +124,8 @@ export function entry(level: Level, event: string, fields: Record<string, unknow
 		level,
 		requestId: req?.requestId,
 		...clean,
-		workspaceId: (clean.workspaceId as string) ?? scope?.workspaceId ?? req?.workspaceId,
+		workspaceId:
+			(clean.workspaceId as string) ?? scope?.workspaceId ?? req?.workspaceId ?? scopedWorkspace(),
 		runId: (clean.runId as string) ?? scope?.runId ?? req?.runId,
 		route: (clean.route as string) ?? req?.route,
 		event
