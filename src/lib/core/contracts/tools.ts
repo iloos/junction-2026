@@ -243,7 +243,7 @@ export const toolSchemas = {
 	plan_event: {
 		scope: 'plan',
 		description:
-			'Expand an event (menu × covers) into a plan with needs, lines, rounding and anomalies. Give a seeded eventId, or a chef-reviewed menu proposal (its estimates stay labelled as estimates).',
+			'Expand an event (menu × guests) into a plan with needs, lines, rounding and anomalies. Give a seeded eventId, or a chef-reviewed menu proposal (its estimates stay labelled as estimates).',
 		input: PlanEventInput,
 		output: out({ plan: Plan })
 	},

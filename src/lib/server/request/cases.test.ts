@@ -104,7 +104,7 @@ describe('size check before placing', () => {
 		};
 		const w = sanityWarnings([{ item: { query: 'orange juice' }, pick } as never], k);
 		expect(w[0]).toMatch(
-			/^1,000,000 l of orange juice is 2,631.6 l per daily cover .*380 covers a day.*263.2× the 10 l per cover/
+			/^1,000,000 l of orange juice is 2,631.6 l per meal a day .*380 meals a day.*263.2× the 10 l per meal/
 		);
 		expect(w[1]).toMatch(/^€2,700,000 is over this kitchen's €8,000 hard limit/);
 		expect(w[2]).toMatch(/^€2,700,000 is 675× your €4,000 weekly limit$/);
@@ -132,7 +132,7 @@ describe('size check before placing', () => {
 		const big = await runRequest('1,000,000 l lactose-free milk by Monday', deps);
 		expect(big.order).toBeNull();
 		expect(big.needsConfirm).toBe(true);
-		expect(big.lookup!.sanity.join(' ')).toMatch(/per daily cover/);
+		expect(big.lookup!.sanity.join(' ')).toMatch(/per meal a day/);
 		expect(big.lookup!.sanity.join(' ')).toMatch(/× your €4,000 weekly limit/);
 
 		const placed = await runRequest('1,000,000 l lactose-free milk by Monday', {

@@ -84,7 +84,7 @@ describe('calendarDays', () => {
 	it('marks festivities on their weekdays, estimates as such', () => {
 		const fri = at('2026-12-11').marks.find((m) => m.label === 'Pikkujoulu weekends');
 		expect(fri).toMatchObject({ kind: 'festivity', estimate: true });
-		expect(fri?.detail).toBe('+10% bistro covers (team estimate)');
+		expect(fri?.detail).toBe('+10% bistro guests (team estimate)');
 		expect(at('2026-12-10').marks.some((m) => m.label === 'Pikkujoulu weekends')).toBe(false);
 		expect(at('2026-12-21').marks.find((m) => m.kind === 'festivity')?.detail).toBe('no meals');
 	});

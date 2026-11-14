@@ -1,7 +1,7 @@
 {
 	"$comment": "Friday dinner at an independent à la carte restaurant: the salmon main most guests order, its sauce and potatoes, and butter for the bread. A light event (fewer dishes than the three demo kitchens'). need = guests × share × gServed ÷ yield, rounded up to the pack or lot. Every number is a team estimate until a chef checks it. Prices and availability are quoted live by the app. Product ids reference the Valio catalogue; no Valio rows are copied here.",
 	"id": "event-alacarte-fri-120",
-	"title": "Friday dinner, 120 covers",
+	"title": "Friday dinner, 120 guests",
 	"kitchenId": "k-alacarte",
 	"date": "2026-12-18",
 	"guests": {

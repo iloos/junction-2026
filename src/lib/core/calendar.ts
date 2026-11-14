@@ -361,9 +361,9 @@ export const helsinkiDate = (iso: string) =>
 	new Intl.DateTimeFormat('en-CA', { timeZone: TZ }).format(new Date(iso));
 
 const APPLIES: Record<string, string> = {
-	breakfastCovers: 'breakfast covers',
-	lunchCovers: 'lunch covers',
-	bistroCovers: 'bistro covers',
+	breakfastCovers: 'breakfasts',
+	lunchCovers: 'lunches',
+	bistroCovers: 'bistro guests',
 	mealsPerDay: 'meals'
 };
 
