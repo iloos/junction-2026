@@ -373,14 +373,15 @@ function renderChain(data) {
 	const plan = steps.find((s) => s.decides?.kind === 'signoff');
 	if (plan) {
 		// "5 lines can be ordered now · 4 wait for the chef · 2 of them because …": one item per part, each with its icon.
-		const kinds = ['rule', 'signoff', 'unknown'];
+		// Each part names its kind by its words, so the strip still reads right if a part is left out.
+		const kindOf = (part) => (/state a quantity/.test(part) ? 'unknown' : /can be ordered|ordered now/.test(part) ? 'rule' : 'signoff');
 		plan.decides.text.split(' · ').forEach((part, k) => {
-			const li = el('li', kinds[k] ?? 'signoff');
+			const li = el('li', kindOf(part));
 			const m = part.match(/^(\d+)(.*)$/);
 			const span = el('span');
 			if (m) span.append(el('b', null, m[1]), document.createTextNode(m[2]));
 			else span.textContent = part;
-			li.append(icon(kinds[k] ?? 'signoff'), span);
+			li.append(icon(kindOf(part)), span);
 			tally.append(li);
 		});
 	} else tally.remove();

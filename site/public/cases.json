@@ -12,7 +12,6 @@
 			"per": "100 g"
 		},
 		"counts": {
-			"canOrderNow": 5,
 			"waiting": 4,
 			"unknownQuantity": 4
 		},
@@ -62,7 +61,7 @@
 				"text": "Ordered on one receipt.",
 				"decides": {
 					"kind": "signoff",
-					"text": "5 lines can be ordered now · 4 wait for the chef · 4 of them because Valio doesn't state a quantity"
+					"text": "4 lines wait for the chef · 4 of them because Valio doesn't state a quantity"
 				}
 			}
 		],
