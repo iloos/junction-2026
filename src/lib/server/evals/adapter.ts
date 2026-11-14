@@ -80,6 +80,20 @@ export async function playScenario(s: Scenario): Promise<EndState> {
 	const planKeys = new Map<string, string>(); // scenario key (idempotency key / event) → plan id
 	let recomputeMs: number | undefined;
 	const load = () => ports.store.load(env.workspaceId, env.runId);
+	/**
+	 * A scenario's inline proposal goes through the real menu store: its revisions are stored as proposed (earlier
+	 * numbers as copies, since revisions are dense), and only a `review` in the fixture becomes a review, recorded
+	 * through `menus.review` by that reviewer. A fixture that merely says chef_reviewed is not reviewed.
+	 */
+	const storeProposal = async (p: any) => {
+		if (!ports.menus) return;
+		// eslint-disable-next-line @typescript-eslint/no-unused-vars
+		const { review, status, ...terms } = p;
+		for (let rev = 0; rev <= p.revision; rev++)
+			await ports.menus.put(env.workspaceId, { ...terms, revision: rev, status: 'proposed' });
+		if (review)
+			await ports.menus.review(env.workspaceId, p.id, p.revision, review.by, new Date(review.at));
+	};
 	const recall = async (productId: string) => {
 		const r = await ports.store.transact(env.workspaceId, async () => ({
 			ops: [
@@ -168,9 +182,12 @@ export async function playScenario(s: Scenario): Promise<EndState> {
 				break;
 			}
 			case 'plan_event': {
+				if (inp.proposal) await storeProposal(inp.proposal);
 				const r = await h.plan_event(
 					c,
-					inp.proposal ? { kitchenId, proposal: inp.proposal } : { kitchenId, eventId: inp.eventId }
+					inp.proposal
+						? { kitchenId, proposal: { id: inp.proposal.id, revision: inp.proposal.revision } }
+						: { kitchenId, eventId: inp.eventId }
 				);
 				record(i, step, r);
 				if (r.ok) planKeys.set(inp.eventId ?? inp.proposal.id, r.value.plan.id);

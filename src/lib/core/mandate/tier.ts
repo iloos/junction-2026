@@ -23,6 +23,8 @@ export interface DraftLine {
 	qty: SalesQty;
 	provenance: Line['provenance'];
 	substituteFor?: string;
+	/** The fulfilment strategy the line belongs to (buy, substitute, make in house). */
+	strategy?: Line['strategy'];
 	/** Reasons the caller adds (e.g. allergen_change for a make-in-house recipe). */
 	extraReasons?: LineReason[];
 }
@@ -40,6 +42,7 @@ export function draftFromLine(l: Line): DraftLine {
 		qty: l.qty,
 		provenance: l.provenance,
 		substituteFor: l.substituteFor,
+		...(l.strategy ? { strategy: l.strategy } : {}),
 		...(extraReasons.length ? { extraReasons } : {})
 	};
 }
@@ -237,6 +240,7 @@ export function tierLines(input: TierInput): TierResult {
 			offer: w.offer,
 			lineCents: w.lineCents,
 			substituteFor: w.draft.substituteFor,
+			...(w.draft.strategy ? { strategy: w.draft.strategy } : {}),
 			provenance: w.draft.provenance
 		};
 	});

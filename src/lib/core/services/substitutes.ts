@@ -272,6 +272,7 @@ export async function findSubstitutes(
 				productId: best.productId,
 				qty: sized.get(best.productId)!,
 				substituteFor: line.productId,
+				strategy: { id: `${line.needId}:sub:${best.productId}`, kind: 'substitute' },
 				provenance: {
 					source: 'valio_static',
 					note: `substitute for ${line.productId}, rank 1 of ${ranked.filter((r) => r.rank).length}`
@@ -288,6 +289,7 @@ export async function findSubstitutes(
 			productId: g.productId,
 			qty: makeInHouseQty(g, need.amount.value),
 			substituteFor: line.productId,
+			strategy: { id: `${line.needId}:mih`, kind: 'make_in_house' },
 			extraReasons: extra,
 			provenance: {
 				source: 'team_estimate',

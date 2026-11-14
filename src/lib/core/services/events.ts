@@ -8,6 +8,7 @@ import {
 	ok,
 	type Kitchen,
 	type Line,
+	type MenuProposal,
 	type Need,
 	type Offer,
 	type Plan,
@@ -20,12 +21,17 @@ import { sha256Hex } from '../hash';
 import { SCENARIO, addDays } from '../scenario';
 import {
 	makeInHouseQty,
+	menuDemand,
+	menuDigest,
+	menuOverrides,
 	planEventDemand,
 	rescueFor,
 	seedEntryFor,
 	seedNeedQty,
+	sizeDirect,
 	sizeFor,
-	type EventSeed
+	type EventSeed,
+	type MenuNeed
 } from '../demand';
 import {
 	draftFromLine,
@@ -143,15 +149,32 @@ export async function requote(
 		orderedBefore: orderedBefore(state, kitchen),
 		recalled: recalledProducts(state),
 		committed: plan.lines.filter((l) => l.state === 'committed'),
-		expectedQty: expectedFor(ports, plan)
+		expectedQty: expectedFor(ports, plan, drafts, pre.products)
 	});
 	return quoteOps(ctx, ports, plan, kitchen, t, pre.offers);
 }
 
-/** The seed's per-line need for an event plan (none for a direct order). */
-export function expectedFor(ports: ServicePorts, plan: Plan) {
+/**
+ * What each line serving a dish needs, by line id: the seed's per-line need for a seeded event, the need's amount
+ * sized to the line's product for a menu plan (none for a direct order). Beyond 20× it a quantity is a gap.
+ */
+export function expectedFor(
+	ports: ServicePorts,
+	plan: Plan,
+	drafts: readonly DraftLine[] = [],
+	products?: Map<string, Product>
+) {
 	const seed = plan.eventId ? ports.events?.[plan.eventId] : undefined;
-	return seed ? seedNeedQty(plan.id, seed) : undefined;
+	if (seed) return seedNeedQty(plan.id, seed);
+	if (!plan.source || !products) return undefined;
+	const out = new Map<string, { productId: string; value: number }>();
+	for (const d of drafts) {
+		const need = plan.needs.find((n) => n.id === d.needId);
+		const p = products.get(d.productId);
+		const qty = need?.source && p ? sizeDirect(p, need.amount) : null;
+		if (qty) out.set(d.id, { productId: d.productId, value: qty.value });
+	}
+	return out;
 }
 
 const conflict = (what: string) => ({
@@ -159,16 +182,20 @@ const conflict = (what: string) => ({
 		.error
 });
 
+/** Who a new plan is for beyond the tool input (Ring 2: the procurement task that asked for it). */
+export interface PlanOptions {
+	taskId?: string;
+}
+
 export async function planEvent(
 	ports: ServicePorts,
 	ctx: CallContext,
-	input: ToolInput<'plan_event'>
+	input: ToolInput<'plan_event'>,
+	opts: PlanOptions = {}
 ): Promise<Result<ToolOutput<'plan_event'>>> {
+	if (input.proposal) return planProposal(ports, ctx, input.kitchenId, input.proposal, opts);
 	if (input.eventId === undefined)
-		return err(
-			'INVALID_INPUT',
-			'planning from a brief is not available yet; give a seeded eventId'
-		);
+		return err('INVALID_INPUT', 'give a seeded eventId or a chef-reviewed menu proposal');
 	const seed = ports.events?.[input.eventId];
 	if (!seed) return err('NOT_FOUND', `event ${input.eventId}`);
 	const kitchen = await kitchenOf(ports, ctx, input.kitchenId);
@@ -196,6 +223,131 @@ export async function planEvent(
 			state: 'draft',
 			deliverBy,
 			eventId: input.eventId,
+			...(opts.taskId ? { taskId: opts.taskId } : {}),
+			needs,
+			lines: [],
+			totalCents: null,
+			termsHash: null,
+			createdBy: ctx.actor
+		};
+		const q = await requote(ports, ctx, tx, state, plan0, kitchen, drafts, pre);
+		return { ops: [pending(ctx, { type: 'CreatePlan', plan: plan0 }), ...q.ops], value: q.plan };
+	});
+	return r.ok ? ok({ plan: r.value.value }) : r;
+}
+
+/**
+ * The stored revision, only when the server's review record covers exactly it: status chef_reviewed, a review, and
+ * the review's digest equal to the revision's terms now. A client can't establish a review by sending a status.
+ */
+export async function reviewedProposal(
+	ports: ServicePorts,
+	ctx: CallContext,
+	ref: { id: string; revision: number }
+): Promise<Result<MenuProposal>> {
+	if (!ports.menus)
+		return err('PROVIDER_UNAVAILABLE', 'menu proposals are not available on this server');
+	const p = await ports.menus.get(ctx.workspaceId, ref.id, ref.revision);
+	if (!p) return err('NOT_FOUND', `menu ${ref.id} revision ${ref.revision}`);
+	if (p.status !== 'chef_reviewed' || !p.review || p.review.digest !== (await menuDigest(p)))
+		return err(
+			'FORBIDDEN',
+			`menu ${ref.id} revision ${ref.revision} has no chef review on record: a chef reviews it before it is planned`,
+			{
+				sub: 'review_required',
+				detail: { proposalId: ref.id, revision: ref.revision, status: p.status }
+			}
+		);
+	return ok(p);
+}
+
+/**
+ * A menu need as a plan need and, when its product is known and can be sized, the line that buys it: the need's
+ * physical amount in the product's sales units, rounded up to whole lots. A need that can't be sized keeps a reason.
+ */
+function menuLine(
+	planId: string,
+	item: MenuNeed,
+	products: Map<string, Product>
+): { need: Need; draft?: DraftLine } {
+	const { need } = item;
+	if (item.unresolved || !item.productId) return { need };
+	const p = products.get(item.productId);
+	if (!p)
+		return { need: { ...need, unresolved: `product ${item.productId} is not in the catalogue` } };
+	const qty = sizeDirect(p, need.amount);
+	if (!qty)
+		return {
+			need: {
+				...need,
+				unresolved: `${p.nameFi}: content per ${p.salesUnit} in ${need.amount.unit} is unknown; set a quantity or pick another product`
+			}
+		};
+	return {
+		need,
+		draft: {
+			id: `${planId}-${need.id}`,
+			needId: need.id,
+			productId: item.productId,
+			qty,
+			strategy: { id: `${need.id}:buy`, kind: 'buy' },
+			provenance: {
+				source: need.provenance.source,
+				ref: need.provenance.ref,
+				note: need.dish?.formula
+			}
+		}
+	};
+}
+
+/**
+ * plan_event{proposal}: a chef-reviewed menu revision → one need per dish ingredient (lineage on Need.source) → a
+ * line sized to each pinned product → quote + tier, as one plan. Deterministic: no model, no retrieval. One plan per
+ * (kitchen, proposal revision); planning it again is a read.
+ */
+async function planProposal(
+	ports: ServicePorts,
+	ctx: CallContext,
+	kitchenId: string,
+	ref: { id: string; revision: number },
+	opts: PlanOptions
+): Promise<Result<ToolOutput<'plan_event'>>> {
+	const reviewed = await reviewedProposal(ports, ctx, ref);
+	if (!reviewed.ok) return reviewed;
+	const proposal = reviewed.value;
+	if (proposal.kitchenId !== kitchenId)
+		return err(
+			'INVALID_INPUT',
+			`menu ${ref.id} is for kitchen ${proposal.kitchenId}, not ${kitchenId}`
+		);
+	const kitchen = await kitchenOf(ports, ctx, kitchenId);
+	if (!kitchen) return err('NOT_FOUND', `kitchen ${kitchenId}`);
+	const planId = `pl-${ctx.runId}-${(await sha256Hex(`menu|${kitchen.id}|${ref.id}|${ref.revision}`)).slice(0, 12)}`;
+	const existing = (await ports.store.load(ctx.workspaceId, ctx.runId)).plans[planId];
+	if (existing) return ok({ plan: existing });
+
+	const items = menuDemand(proposal);
+	const deliverBy = deliverByFor(proposal.brief.date);
+	const pre = await prefetch(
+		ports,
+		items.flatMap((i) => (i.productId && !i.unresolved ? [i.productId] : [])),
+		deliverBy
+	);
+	const sized = items.map((i) => menuLine(planId, i, pre.products));
+	const needs = sized.map((x) => x.need);
+	const drafts = sized.flatMap((x) => (x.draft ? [x.draft] : []));
+	const r = await ports.store.transact<Plan>(ctx.workspaceId, async (tx, state) => {
+		if (state.plans[planId]) return { ops: [], value: state.plans[planId] };
+		const plan0: Plan = {
+			workspaceId: ctx.workspaceId,
+			runId: ctx.runId,
+			id: planId,
+			kitchenId: kitchen.id,
+			version: 0,
+			state: 'draft',
+			deliverBy,
+			source: { proposalId: proposal.id, revision: proposal.revision },
+			...(opts.taskId ? { taskId: opts.taskId } : {}),
 			needs,
 			lines: [],
 			totalCents: null,
@@ -235,6 +387,43 @@ async function prepareEdit(
 	if (!kitchen) return err('NOT_FOUND', `kitchen ${plan.kitchenId}`);
 	let drafts = plan.lines.filter((l) => l.state !== 'committed').map(draftFromLine);
 
+	if (input.needId && input.patch.gramsPerGuest !== undefined && plan.source) {
+		const before = plan.needs.find((n) => n.id === input.needId);
+		if (!before) return err('NOT_FOUND', `need ${input.needId}`);
+		if (plan.lines.some((l) => l.needId === input.needId && l.state === 'committed'))
+			return err('STALE_VERSION', 'a line of this need is already committed');
+		const proposal = await reviewedProposal(ports, ctx, {
+			id: plan.source.proposalId,
+			revision: plan.source.revision
+		});
+		if (!proposal.ok) return proposal;
+		const overrides = { ...menuOverrides(plan.needs), [input.needId]: input.patch.gramsPerGuest };
+		const item = menuDemand(proposal.value, overrides).find((i) => i.need.id === input.needId);
+		if (!item) return err('NOT_FOUND', `need ${input.needId} in menu ${plan.source.proposalId}`);
+		const ids = new Set(drafts.filter((d) => d.needId === input.needId).map((d) => d.productId));
+		if (item.productId) ids.add(item.productId);
+		const products = await ports.catalog.get([...ids]);
+		const fresh = menuLine(plan.id, item, products);
+		// Every open line of this need follows the new amount: the bought product and any substitute, sized alike.
+		drafts = drafts.map((d) => {
+			if (d.needId !== input.needId) return d;
+			if (d.id === fresh.draft?.id) return { ...d, qty: fresh.draft.qty };
+			const p = products.get(d.productId);
+			const qty = p ? sizeDirect(p, fresh.need.amount) : null;
+			return qty ? { ...d, qty } : d;
+		});
+		const unit = proposal.value.dishes
+			.flatMap((x) => x.ingredients)
+			.find((g) => g.id === before.source?.ingredientId)?.unit;
+		return ok({
+			plan,
+			kitchen,
+			drafts,
+			need: fresh.need,
+			changed: drafts.filter((d) => d.needId === input.needId).map((d) => d.id),
+			summary: `${before.label}: ${before.dish?.gServed ?? '?'} → ${input.patch.gramsPerGuest} ${unit ?? 'g'}/guest`
+		});
+	}
 	if (input.needId && input.patch.gramsPerGuest !== undefined) {
 		const seed = plan.eventId ? ports.events?.[plan.eventId] : undefined;
 		if (!seed) return err('INVALID_INPUT', 'this plan has no event to recompute');
@@ -374,6 +563,9 @@ export async function explainLine(
 			steps.push({ text: `× ${seed.guests.estimate} guests`, source: 'seed' });
 			if (dish?.yield && dish.yield !== 1)
 				steps.push({ text: `÷ yield ${dish.yield}`, source: 'team_estimate' });
+		} else if (need.source && need.dish) {
+			// A menu need: the chef-reviewed amount per cover (an estimate unless the chef changed it) × guests ÷ yield.
+			steps.push({ text: need.dish.formula, source: need.provenance.source });
 		}
 		steps.push({
 			text: `need ${need.amount.value} ${need.amount.unit}${need.amount.basis ? ` (${need.amount.basis})` : ''}`,
