@@ -17,6 +17,7 @@
 	} from '@lucide/svelte';
 	import { KitchenStore } from '$lib/kitchen/kitchen.svelte';
 	import { KITCHENS, PRODUCTS, SEED } from '$lib/kitchen/catalog';
+	import { eventFor, type EventSeedFile } from '$lib/kitchen/events';
 	import type { DishView } from '$lib/kitchen/view-model';
 	import type { Line } from '$lib/core/contracts';
 	import { useShell } from '$lib/ui/shell/shell.svelte';
@@ -189,13 +190,17 @@
 		kitchen: 'Planned in the Kitchen'
 	};
 	const originWords = $derived(k.snap?.origin ? (ORIGIN[k.snap.origin] ?? '') : '');
+	const weekday = (iso: string) =>
+		new Intl.DateTimeFormat('en-GB', { weekday: 'long', timeZone: 'UTC' }).format(
+			new Date(`${iso}T12:00:00Z`)
+		);
 	/** The table names what it is: the event, its dishes, guests and day (the flow is behind the ⓘ). */
 	const tableTitle = $derived.by(() => {
 		const v = k.view;
 		if (!v) return 'Dishes';
 		const dishes = new Set(v.dishes.map((d) => d.nameFi.split(':')[0])).size;
 		if (k.snap?.plan.eventId)
-			return `${v.title.split(',')[0]} · ${dishes} dishes · ${v.guests} guests · ${day(v.date)}`;
+			return `${v.title.split(',')[0]} · ${dishes} dishes · ${num(v.guests)} guests · ${day(v.date)}`;
 		// Not a booking: what this order buys and when, whoever made it (the header says who).
 		const n = v.dishes.length + looseLines.length;
 		return `${n} ${n === 1 ? 'item' : 'items'} · delivery ${day(k.snap!.plan.deliverBy)}`;
@@ -244,17 +249,44 @@
 			added ? ` and added ${added}` : ''
 		}${c.signOff ? '; that part needs your sign-off' : ''}. Nothing is ordered.`;
 	});
+	/** The event this kitchen would plan (its own seed, keyed by kitchen), for the screen before the first plan. */
+	type SeedDish = EventSeedFile['dishes'][number] & {
+		productName?: string;
+		availability?: { kind?: string };
+	};
+	/** The kitchen's own seed (menu and outages), when this browser has it. */
+	const preSeed = $derived(eventFor(k.startKitchen ?? 'k-hotel'));
+	/**
+	 * What the screen says before the first plan: the server's event for this kitchen when it names one, else the
+	 * kitchen's seed. Null: the kitchen has no event, and its first plan comes from the chat.
+	 */
+	const preEvent = $derived.by(() => {
+		if (k.startEvent === null) return null;
+		const e = k.startEvent;
+		const seed = preSeed ?? (k.startEvent === undefined ? (SEED as EventSeedFile) : undefined);
+		return {
+			title: e?.title ?? seed?.title ?? '',
+			date: e?.date ?? seed?.date ?? '',
+			guests: e?.guests ?? seed?.guests.estimate ?? 0,
+			serviceStyle: e?.serviceStyle ?? seed?.serviceStyle ?? '',
+			dishes: (seed?.dishes ?? []) as SeedDish[]
+		};
+	});
 	/** The booking's menu by dish name (a dish with two needs, rice and milk, is one dish). */
-	const preMenu = [...new Set(SEED.dishes.map((d) => d.dish.split(' (')[0]))];
+	const preMenu = $derived([
+		...new Set((preEvent?.dishes ?? []).map((d) => d.dish.split(' (')[0]))
+	]);
 	/** The booking's products Valio could not supply at the last catalogue check (seed), for the pre-plan card. */
-	const preOutages = SEED.dishes
-		.filter((d) => d.availability?.kind === 'out' || d.availability?.kind === 'undeliverable')
-		.map((d) => ({
-			dish: d.dish.split(' (')[0],
-			productId: d.productId,
-			productName: d.productName,
-			kind: d.availability!.kind
-		}));
+	const preOutages = $derived(
+		(preEvent?.dishes ?? [])
+			.filter((d) => d.availability?.kind === 'out' || d.availability?.kind === 'undeliverable')
+			.map((d) => ({
+				dish: d.dish.split(' (')[0],
+				productId: d.productId,
+				productName: d.productName ?? d.productId,
+				kind: d.availability!.kind
+			}))
+	);
 
 	// The dock asked to show this plan's decisions: Decide zone on a phone, then the approval panel in view.
 	let locatedAt = 0;
@@ -696,66 +728,94 @@
 {:else if k.started === false}
 	{@const kit = KITCHENS.find((x) => x.id === k.startKitchen) ?? KITCHENS[0]}
 	<main class="mx-auto max-w-[760px] px-4 py-10 md:px-6 md:py-14">
-		<p class="text-meta text-ink-3">
-			{kit.name.replace(' (fictional)', '')} · a booking to buy for
-		</p>
-		<h1 class="mt-1 text-title font-semibold tracking-[-0.015em] text-ink">{SEED.title}</h1>
-		<p class="mt-1 text-body text-ink-2">
-			{day(SEED.date)} · {SEED.guests.estimate} guests · {SEED.serviceStyle} · {preMenu.length}
-			dishes
-		</p>
-		<ul class="mt-3 flex flex-wrap gap-1.5" aria-label="Menu">
-			{#each preMenu as d (d)}
-				<li class="rounded-full bg-well px-2 py-0.5 text-meta text-ink-2">{d}</li>
-			{/each}
-		</ul>
-
-		<section
-			class="mt-6 rounded-lg border border-rule bg-sheet px-4 py-3.5"
-			aria-labelledby="out-h"
-		>
-			<h2 id="out-h" class="text-heading font-semibold text-ink">
-				{preOutages.length} of these Valio can't supply as listed
-			</h2>
-			<ul class="mt-2 space-y-1.5">
-				{#each preOutages as o (o.productId)}
-					<li class="flex items-start gap-2 text-body text-ink">
-						<CircleX size={16} class="mt-0.5 shrink-0 text-sup-missing" aria-hidden="true" />
-						<span
-							><span class="font-medium">{o.dish}</span>: {o.productName}
-							<span class="mono text-meta text-ink-3">{o.productId}</span>
-							<span class="text-ink-2"
-								>· {o.kind === 'out' ? 'out of stock' : "Valio can't deliver it"}</span
-							></span
-						>
-					</li>
+		{#if !preEvent}
+			<!-- A kitchen without a booked event: its first plan comes from what the chef asks for. -->
+			<p class="text-meta text-ink-3">{kit.name.replace(' (fictional)', '')}</p>
+			<h1 class="mt-1 text-title font-semibold tracking-[-0.015em] text-ink">
+				Nothing planned yet
+			</h1>
+			<p class="mt-2 max-w-[60ch] text-body leading-relaxed text-ink-2">
+				This kitchen has no booked event. Its first plan comes from the chat: say what you need and
+				for when, and the agent drafts it within your mandate.
+			</p>
+			<blockquote class="mt-4 border-l-2 border-accent pl-3 text-body text-ink">
+				“{kit.mandate.words}”
+				<footer class="mt-1 text-meta text-ink-3">
+					The chef's mandate: what the agent may do alone.
+				</footer>
+			</blockquote>
+			<button
+				type="button"
+				class="mt-5 inline-flex h-11 items-center gap-2 rounded-md bg-accent px-5 text-body font-medium text-sheet hover:bg-accent-ink"
+				onclick={() => shell && (shell.chatOpen = true)}
+			>
+				<Bot size={16} aria-hidden="true" /> Ask the agent
+			</button>
+		{:else}
+			<p class="text-meta text-ink-3">
+				{kit.name.replace(' (fictional)', '')} · a booking to buy for
+			</p>
+			<h1 class="mt-1 text-title font-semibold tracking-[-0.015em] text-ink">{preEvent.title}</h1>
+			<p class="mt-1 text-body text-ink-2">
+				{day(preEvent.date)} · {num(preEvent.guests)} guests · {preEvent.serviceStyle}{preMenu.length
+					? ` · ${preMenu.length} dishes`
+					: ''}
+			</p>
+			<ul class="mt-3 flex flex-wrap gap-1.5" aria-label="Menu">
+				{#each preMenu as d (d)}
+					<li class="rounded-full bg-well px-2 py-0.5 text-meta text-ink-2">{d}</li>
 				{/each}
 			</ul>
-			<p class="mt-2 text-meta text-ink-3">
-				From Valio's catalogue at the last check; planning asks Valio again for every product.
+
+			{#if preOutages.length}
+				<section
+					class="mt-6 rounded-lg border border-rule bg-sheet px-4 py-3.5"
+					aria-labelledby="out-h"
+				>
+					<h2 id="out-h" class="text-heading font-semibold text-ink">
+						{preOutages.length} of these Valio can't supply as listed
+					</h2>
+					<ul class="mt-2 space-y-1.5">
+						{#each preOutages as o (o.productId)}
+							<li class="flex items-start gap-2 text-body text-ink">
+								<CircleX size={16} class="mt-0.5 shrink-0 text-sup-missing" aria-hidden="true" />
+								<span
+									><span class="font-medium">{o.dish}</span>: {o.productName}
+									<span class="mono text-meta text-ink-3">{o.productId}</span>
+									<span class="text-ink-2"
+										>· {o.kind === 'out' ? 'out of stock' : "Valio can't deliver it"}</span
+									></span
+								>
+							</li>
+						{/each}
+					</ul>
+					<p class="mt-2 text-meta text-ink-3">
+						From Valio's catalogue at the last check; planning asks Valio again for every product.
+					</p>
+				</section>
+			{/if}
+
+			<blockquote class="mt-4 border-l-2 border-accent pl-3 text-body text-ink">
+				“{kit.mandate.words}”
+				<footer class="mt-1 text-meta text-ink-3">
+					The chef's mandate: what the agent may do alone.
+				</footer>
+			</blockquote>
+
+			<p class="mt-5 max-w-[62ch] text-body leading-relaxed text-ink-2">
+				Planning turns menu × guests into Valio lines, and the agent proposes a rescue for each
+				product above, within the mandate. Nothing is ordered until you approve.
 			</p>
-		</section>
-
-		<blockquote class="mt-4 border-l-2 border-accent pl-3 text-body text-ink">
-			“{kit.mandate.words}”
-			<footer class="mt-1 text-meta text-ink-3">
-				The chef's mandate: what the agent may do alone.
-			</footer>
-		</blockquote>
-
-		<p class="mt-5 max-w-[62ch] text-body leading-relaxed text-ink-2">
-			Planning turns menu × guests into Valio lines, and the agent proposes a rescue for each
-			product above, within the mandate. Nothing is ordered until you approve.
-		</p>
-		<button
-			type="button"
-			class="mt-5 inline-flex h-11 items-center gap-2 rounded-md bg-accent px-5 text-body font-medium text-sheet hover:bg-accent-ink disabled:opacity-50"
-			disabled={k.busy}
-			onclick={() => k.start()}
-		>
-			<Play size={16} aria-hidden="true" />
-			{k.busy ? 'Planning…' : 'Plan the event'}
-		</button>
+			<button
+				type="button"
+				class="mt-5 inline-flex h-11 items-center gap-2 rounded-md bg-accent px-5 text-body font-medium text-sheet hover:bg-accent-ink disabled:opacity-50"
+				disabled={k.busy}
+				onclick={() => k.start()}
+			>
+				<Play size={16} aria-hidden="true" />
+				{k.busy ? 'Planning…' : 'Plan the event'}
+			</button>
+		{/if}
 		{#if k.progress}
 			<p class="mt-4 flex items-center gap-2 text-body text-ink-2" role="status" aria-live="polite">
 				<LoaderCircle size={15} class="animate-spin text-accent" aria-hidden="true" />
@@ -801,7 +861,7 @@
 				<TaskHeader
 					title={isEvent ? view.title : readableName(view.title)}
 					meta={isEvent
-						? `${day(view.date)} · ${view.guests} guests · ${view.serviceStyle} · delivery ${day(plan.deliverBy)}`
+						? `${day(view.date)} · ${num(view.guests)} guests · ${view.serviceStyle} · delivery ${day(plan.deliverBy)}`
 						: [originWords, `delivery ${day(plan.deliverBy)}`].filter(Boolean).join(' · ')}
 					decisions={decisions.length}
 					due={decisionsDue(plan, approval)}
@@ -831,11 +891,16 @@
 					{/snippet}
 				</TaskHeader>
 				{#if isEvent}<p class="mt-2 text-meta text-ink-2">
-						The event adds
-						<span class="mono text-ink"
-							>{moneyDelta(view.thisWeek.cents - view.normalWeek.cents)}</span
-						>
-						and <span class="mono text-ink">{fixed(view.eventKg)}</span> kg of food to a normal week
+						{#if view.thisWeek.cents - view.normalWeek.cents > 0}
+							The event adds
+							<span class="mono text-ink"
+								>{moneyDelta(view.thisWeek.cents - view.normalWeek.cents)}</span
+							>
+							and <span class="mono text-ink">{fixed(view.eventKg)}</span> kg of food to a normal week
+						{:else}
+							<!-- A regular service, not an extra: it is part of the normal week, so it adds nothing to it. -->
+							An ordinary {weekday(view.date)}: inside the normal week
+						{/if}
 						<span class="text-ink-3"
 							>(team estimate: <span class="mono"
 								>{money(view.normalWeek.cents, { whole: true })}</span

@@ -464,6 +464,7 @@
 
 	{#if shell?.railHeader}
 		<!-- The page's own decisions, once, at the top of the rail: the same cards and command as the page. -->
+		<!-- The panel inside is the "Decide" region (its heading names it); this is only its scroll box. -->
 		<div
 			class="max-h-[55%] shrink-0 overflow-y-auto border-b border-rule bg-paper px-3 py-3 max-lg:max-h-[45%]"
 		>
