@@ -112,7 +112,7 @@ export const POST: RequestHandler = async ({ request }) => {
 					queue,
 					recalls: webClients(env, trace, w.spendKey).recalls,
 					...(pg
-						? { claim: () => pg.claimQueue(owner, 10), release: () => pg.releaseQueue(owner) }
+						? { claim: () => pg.claimWork(owner, 10), release: () => pg.releaseQueue(owner) }
 						: {}),
 					heal: !isChange && i === 0
 				});

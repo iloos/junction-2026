@@ -176,6 +176,28 @@ describe('durable web state writes', () => {
 		expect(rows.get('notice')?.value).toBe(2);
 	});
 
+	it('retries only the failed row after a partially successful batch', async () => {
+		const { sink } = memorySink();
+		const calls: string[] = [];
+		let unavailable = true;
+		attachStateSink({
+			...sink,
+			async upsert(slot, id, doc) {
+				calls.push(id);
+				if (id === 'failed' && unavailable) throw new Error('offline');
+				await sink.upsert(slot, id, doc);
+			}
+		});
+		const q = queue();
+		q.map.set('saved', { id: 'saved', value: 1 });
+		q.map.set('failed', { id: 'failed', value: 1 });
+		q.flush();
+		await expect(stateWrites()).rejects.toThrow();
+		unavailable = false;
+		await retryStateWrites();
+		expect(calls).toEqual(['saved', 'failed', 'failed']);
+	});
+
 	it('does not hide an unresolved slot failure behind a different successful slot', async () => {
 		const { sink } = memorySink();
 		let unavailable = true;

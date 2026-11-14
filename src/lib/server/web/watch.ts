@@ -12,7 +12,8 @@ import { recordedNotice, EGG_RECALL_URL } from './fixture';
 import type { Findings } from './findings';
 import { createApplications, MAX_APPLY_ATTEMPTS } from './applications';
 import { ingestRecall, type IngestDeps, type IngestResult, type RecallFindingData } from './ingest';
-import type { WorkItem, WorkQueue } from './queue';
+import { MAX_ATTEMPTS, type WorkItem, type WorkQueue } from './queue';
+import { stateWrites } from './persist';
 import { noticeIdentity, noticeKey } from './recall';
 
 /** At most this many notices are read per pass (credits, and the stage). */
@@ -113,10 +114,10 @@ export type DrainDeps = IngestDeps & {
 	/** `run.completed`: re-read the list (cached up to an hour) even with nothing queued. */
 	heal?: boolean;
 	/**
-	 * Shared queue (Postgres): claims the due item ids this instance may work on; items another instance holds
-	 * are skipped. `release` drops this pass's leases. Without it every due item is this process's.
+	 * Shared queue (Postgres): claims current documents, including items this worker has never seen. ID-only
+	 * callers remain supported; notice ids contain their URL. `release` follows durable disposition of the work.
 	 */
-	claim?: () => Promise<string[]>;
+	claim?: () => Promise<(WorkItem | string)[]>;
 	release?: () => Promise<void>;
 };
 
@@ -134,13 +135,26 @@ export function drain(d: DrainDeps): Promise<DrainResult> {
 
 async function drainOnce(d: DrainDeps): Promise<DrainResult> {
 	if (!d.claim) return drainClaimed(d, d.queue.due());
-	const mine = new Set(await d.claim());
+	const local = new Map(d.queue.all().map((w) => [w.id, w]));
+	const work = (await d.claim()).flatMap((item): WorkItem[] => {
+		if (typeof item !== 'string') return [item];
+		const existing = local.get(item);
+		if (existing) return [existing];
+		const base = { id: item, at: (d.now?.() ?? new Date()).toISOString(), attempts: 0 };
+		if (item === 'list') return [{ ...base, kind: 'list' }];
+		return item.startsWith('notice:')
+			? [{ ...base, kind: 'notice', url: item.slice('notice:'.length) }]
+			: [];
+	});
+	d.queue.adopt(work);
 	try {
 		return await drainClaimed(
 			d,
-			d.queue.due().filter((w) => mine.has(w.id))
+			work.filter((w) => w.attempts < MAX_ATTEMPTS)
 		);
 	} finally {
+		// If persistence fails, leave the lease to expire rather than hand out unrecorded work immediately.
+		await stateWrites();
 		await d.release?.().catch(() => {});
 	}
 }
@@ -155,7 +169,7 @@ async function drainClaimed(d: DrainDeps, due: WorkItem[]): Promise<DrainResult>
 			candidates = (
 				await d.recalls.readList({ maxAgeMs: listQueued ? 0 : HEAL_LIST_MAX_AGE_MS })
 			).flatMap((r) => (r.url && isNoticeUrl(r.url) ? [{ url: r.url, date: r.date }] : []));
-			d.queue.done('list');
+			if (listQueued) d.queue.done('list');
 		} catch (e) {
 			listError = errorText(e);
 			if (listQueued) d.queue.failed('list', listError);

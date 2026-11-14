@@ -30,6 +30,7 @@ const errors = (g.__webWriteErrors ??= new Map<WebSlot, unknown>());
 const touched = (g.__webTouched ??= new Map<WebSlot, Set<string>>());
 const flushers = (g.__webFlushers ??= new Map<WebSlot, () => void>());
 
+/** Tests replacing/detaching a sink must first await stateWrites (including a rejected barrier). */
 export function attachStateSink(sink: StateSink | null) {
 	g.__webSink = sink;
 	if (!sink) {
