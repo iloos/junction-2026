@@ -2,9 +2,9 @@
 
 _The lead rewrites this at each checkpoint. It is the "now": what works, what's next, what bites._
 
-**Updated:** Sat 14 Nov ~14:30 (lead). **Convergence checkpoint:** lanes landed, repo cleaned, docs restructured. Live assignment: [DISPATCH.md](DISPATCH.md). Vocabulary: [concept/VOCABULARY.md](concept/VOCABULARY.md) (D10). History: [archive/](archive/README.md).
+**Updated:** Sat 14 Nov ~15:00 (lead). **Convergence checkpoint:** lanes landed, repo cleaned, docs restructured. Live assignment: [DISPATCH.md](DISPATCH.md). Vocabulary: [concept/VOCABULARY.md](concept/VOCABULARY.md) (D10). History: [archive/](archive/README.md).
 
-**Deployed:** https://widely-many-scorpion.eur-1.aiven.app (Aiven Runtime `mandate`, Aiven Postgres, TLS verified, Gemini live). Redeploy: merge to main → 9c redeploys → `scripts/deploy/warm.sh` + `scripts/deploy/smoke.sh` (with `SMOKE_KEY`: post-deploy race check, one receipt per key on Postgres). No redeploy in the last 30 min before judging.
+**Deployed:** https://widely-many-scorpion.eur-1.aiven.app (Aiven Runtime `mandate` startup-100-2048, Postgres startup-4 on AWS Frankfurt with PgBouncer, TLS verified, Gemini live). Prod runs main `ab3a557` (contains `ring1-clean`); migration 0003 applied. 10 concurrent visitors planning the event: p50 3.6 s (p95 4.0), alone 0.6 s, 0 errors. Staging: `mandate-staging` https://ideally-expert-wolf.eur-1.aiven.app builds the `staging` branch (fixture model, shared DB). ~$0.24/h. Redeploy: merge to main → 9c redeploys → `scripts/deploy/warm.sh` + `scripts/deploy/smoke.sh` (with `SMOKE_KEY`: post-deploy race check, one receipt per key on Postgres). No redeploy in the last 30 min before judging.
 
 **Works end to end (main, gate green):**
 - Kitchen: Christmas buffet for 140 with real outages; rescues ranked supply-tier first (lanttulaatikko → make in house from known-stock ingredients); unit bases (13 ST ≈ 19.5 kg, €/ST and €/kg); coverage ruler per dish from FulfilmentView (supplier confirmed / awaiting supplier / planned known / planned unknown / unresolved, excess separate); worked Why chain; one decision per reason group; an edit voids the approval and shows what changed.
