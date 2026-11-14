@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>How Mandate works</title>
-<meta name="description" content="The system map behind Mandate: one list of tools for every caller, the checks each call passes, a pure TypeScript core, and outside services behind ports with fallbacks.">
+<meta name="description" content="When the agent may act alone, the three state machines and the system map behind Mandate: one list of tools for every caller, a pure TypeScript core, one locked transaction, and outside services behind ports with fallbacks.">
 <meta property="og:title" content="How Mandate works">
-<meta property="og:description" content="Every caller goes through one list of tools and the same checks. Only one function changes state.">
+<meta property="og:description" content="Every caller goes through one list of tools and the same checks. Only a person approves, and only one function changes state.">
 <meta property="og:url" content="https://mandate.kitchen/how">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23176b70'/%3E%3Cpath d='M8 23V10l8 8 8-8v13' fill='none' stroke='%23fff' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -46,126 +46,58 @@ h1{font:400 clamp(40px,5vw,68px)/1.04 var(--serif);max-width:20ch}
 h2{font:400 clamp(30px,3.4vw,38px)/1.1 var(--serif);margin:88px 0 10px}
 .take{font-size:18px;line-height:1.5;color:var(--ink);max-width:62ch;margin-top:14px}
 .lede{color:var(--ink2);font-size:15px;max-width:68ch;margin-top:10px}
-.note{font:12px var(--mono);color:var(--ink3);margin-top:10px}
+.note{font:12px var(--mono);color:var(--ink3);margin-top:10px;overflow-wrap:anywhere}
+.ic{width:24px;height:24px;flex:none;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 
-/* map controls */
-.bar{display:flex;gap:10px 14px;margin:30px 0 14px;flex-wrap:wrap;align-items:center}
-.seg{display:flex;flex-wrap:wrap;border:1px solid var(--line2);border-radius:18px;padding:3px;gap:2px}
-.seg button{padding:5px 12px;border-radius:999px;font-size:13px;color:var(--ink2)}
-.seg button:hover{color:var(--ink)}
-.seg button.on{background:var(--ink);color:var(--bg)}
-.bar .lab{font:12px var(--mono);color:var(--ink3)}
-.bar .sp{flex:1}
-.read{color:var(--ink2);font-size:14.5px;margin:0 0 12px;max-width:90ch}
+/* when the agent may act alone */
+.gov{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:26px;align-items:start}
+.oc{background:var(--p);border:1px solid var(--b);border-radius:14px;padding:18px 20px 8px}
+.oc.go{--c:var(--ok);--b:#24533f}.oc.hold{--c:var(--amber);--b:#6b4f1e}.oc.no{--c:var(--red);--b:#5a2a22}
+.oc h3{display:flex;gap:10px;align-items:center;font:400 27px/1.1 var(--serif)}
+.oc h3 .ic{color:var(--c)}
+.oc .when{color:var(--ink2);font-size:14px;margin:6px 0 12px}
+.oc ul{list-style:none;border-top:1px solid var(--line)}
+.oc li{padding:9px 0;border-bottom:1px solid var(--line);font-size:14px;line-height:1.45}
+.oc li:last-child{border-bottom:0}
+.oc li small{display:block;font:12px/1.5 var(--mono);color:var(--ink3);margin-top:2px}
+.oc li small code{font-size:12px;color:var(--ink3)}
+.oc .tail{color:var(--ink2);font-size:13px;padding:10px 0 12px;border-top:1px solid var(--line)}
+.appr{display:flex;gap:14px;align-items:flex-start;margin-top:12px;background:var(--p);border:1px solid var(--line);border-radius:14px;padding:18px 20px}
+.appr .ic{color:var(--teal);margin-top:2px}
+.appr p{font-size:15.5px;max-width:92ch}
+.appr p span{color:var(--ink2)}
 
-.map{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:16px}
-.stage{background:var(--p);border:1px solid var(--line);border-radius:16px;position:relative;overflow-x:auto;overflow-y:hidden}
-#sys{width:100%;min-width:900px;display:block}
-.hint{display:none;font:12px var(--mono);color:var(--ink3);margin:0 0 8px}
-
-#sys .n rect{fill:var(--p2);stroke:var(--line2);transition:stroke .25s,fill .25s}
-#sys .n{cursor:pointer;transition:opacity .25s}
-#sys .n text{font:500 13.5px var(--sans);fill:var(--ink);pointer-events:none}
-#sys .n .s{font:400 13px var(--sans);fill:#a3aeab}
-#sys .n.dim{opacity:.28}
-#sys .rg rect{fill:none;stroke:var(--line2);stroke-width:1.2}
-#sys .rg.srv rect{fill:#0e1214;stroke:#2a3236}
-#sys .rg.lock rect{fill:rgba(232,169,60,.05);stroke:#e8a93c;stroke-dasharray:6 5}
-#sys .rg.core rect{fill:rgba(43,179,166,.06);stroke:#2bb3a6;stroke-dasharray:6 5}
-#sys .rg.pg rect{fill:#10171a;stroke:#2f4a52}
-#sys .rl{font:12.5px var(--mono);fill:#9aa5a2;letter-spacing:.04em}
-#sys .rg.lock .rl{fill:#e8a93c}#sys .rg.core .rl{fill:#5fd0c4}#sys .rg.pg .rl{fill:#8fb8c4}
-#sys .rg{transition:opacity .25s}#sys .rg.dim{opacity:.3}
-#sys .n.door rect{fill:#161c1f}
-#sys .n.reg rect{fill:#14211f;stroke:#2bb3a6}
-#sys .corechips rect{fill:#13201e;stroke:#2f5f59}
-#sys .corechips .cc{font:500 12.5px var(--mono);fill:#bfe8e2}
-#sys .sock rect{fill:#151a1d}
-#sys .sock .plug{fill:#2f383c;stroke:none}
-#sys .sock .ad{stroke:none}
-#sys .sock .ad-p{fill:#2a2216}#sys .sock .ad-o{fill:#1b2430}#sys .sock .ad-f,#sys .sock .ad-n{fill:#1a2023}
-#sys .sock text.at{font:400 12.5px var(--sans)}
-#sys .sock .at-p{fill:#f0c477}#sys .sock .at-o{fill:#a9c6ff}#sys .sock .at-f{fill:#a3aeab}#sys .sock .at-n{fill:#a3aeab;font-style:italic}
-#sys .pgt rect{fill:#162126;stroke:#2f4a52}
-#sys .pgt .th{font:500 12.5px var(--sans);fill:#8fb8c4}
-#sys .pgt .tt{font:400 12.5px var(--mono);fill:#d6e6ea}
-#sys .e{stroke:#56636a;fill:none;stroke-width:1.3;transition:opacity .25s}
-#sys .e.dash{stroke-dasharray:5 4;stroke:#7a6a4c}
-#sys .e.dot{stroke-dasharray:2 4;stroke:#2bb3a6}
-#sys .e.data{stroke:#3f8f88}
-#sys .e.loop{stroke:#2bb3a6;stroke-width:1.6}
-#sys .el{font:12.5px var(--sans);fill:#9aa5a2}
-#sys .loopl{fill:#5fd0c4}
-#sys .e.dim,#sys .el.dim{opacity:.12}
-#sys .n.hot rect{stroke:#2bb3a6;stroke-width:2}
-#sys .n.bad rect{stroke:#ef6b59}
-#sys.tracing .n{opacity:.35}#sys.tracing .n.seen{opacity:1}#sys.tracing .e{opacity:.25}#sys.tracing .rg{opacity:.6}
-#sys .trail{fill:none;stroke:#2bb3a6;stroke-width:2.2;opacity:.85}
-#sys .trail.bad{stroke:#ef6b59}
-#sys .pkt{fill:#eef1ef;stroke:#2bb3a6;stroke-width:3}
-#sys .pkt.bad{stroke:#ef6b59}
-
-.side{background:var(--p);border:1px solid var(--line);border-radius:16px;padding:20px;position:sticky;top:72px;align-self:start;min-height:420px}
-.side .t{font:400 28px/1.1 var(--serif)}
-.side .k{font:12px var(--mono);color:var(--teal);margin:4px 0 14px}
-.side p{color:var(--ink2);font-size:13.5px;margin-bottom:12px}
-.side dl{display:grid;grid-template-columns:76px minmax(0,1fr);gap:6px 10px;font-size:12.5px;border-top:1px solid var(--line);padding-top:12px}
-.side dt{color:var(--ink3);font-family:var(--mono);font-size:12px}
-.side dd{min-width:0;overflow-wrap:anywhere}
-.side dd code{font-size:12px}
-.ctl{display:flex;gap:6px;margin:-4px 0 12px}
-.ctl button{border:1px solid var(--line2);border-radius:8px;padding:5px 12px;font-size:13px}
-.ctl button:hover{border-color:var(--ink3)}
-.insp{list-style:none;max-height:520px;overflow:auto;border-top:1px solid var(--line);padding-top:8px;position:relative}
-.insp li{padding:6px 0;border-bottom:1px solid var(--line)}
-.insp .st{font:12.5px var(--mono);color:var(--ink3)}
-.insp li.now .st{color:var(--teal)}
-.insp li.bad .st{color:var(--red)}
-.insp pre{font:12.5px/1.5 var(--mono);color:var(--ink);background:#0c1012;border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin:8px 0 6px;white-space:pre-wrap;overflow-wrap:anywhere}
-.insp li.bad pre{border-color:#5a2a22}
-.insp p{font-size:13px;color:var(--ink2);margin:0}
-.illus{display:inline-block;font:11.5px var(--mono);color:var(--amber);border:1px solid #5a4520;border-radius:999px;padding:1px 9px;margin:0 0 12px}
-
-/* who may do what */
-.who{margin-top:24px;border:1px solid var(--line);border-radius:14px;overflow:hidden;max-width:980px}
-.who .r{display:grid;grid-template-columns:minmax(0,1.3fr) repeat(4,minmax(0,1fr));border-top:1px solid var(--line)}
-.who .r:first-child{border-top:0;background:rgba(255,255,255,.02)}
-.who .r>*{padding:12px 14px;font-size:13.5px}
-.who .h{font:12px var(--mono);color:var(--ink3);text-transform:uppercase;letter-spacing:.05em}
-.who b{font-weight:500}
-.who small{display:block;color:var(--ink3);font-size:12.5px}
-.who .y{color:var(--ok)}.who .x{color:var(--red)}
-
-/* partners */
-.pt{display:grid;grid-template-columns:290px minmax(0,1fr);gap:16px;margin-top:28px;align-items:start}
-.pt-list{display:flex;flex-direction:column;gap:6px}
-.pt-tab{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;text-align:left;padding:12px 16px;border:1px solid var(--line);border-radius:12px;color:var(--ink2);transition:border-color .2s,background .2s}
-.pt-tab b{font:400 24px/1.1 var(--serif);color:var(--ink);display:block}
-.pt-tab small{font:12.5px var(--sans);color:var(--ink3)}
-.pt-tab .tag{font:12px var(--mono);padding:2px 8px;border-radius:999px;border:1px solid #24533f;color:var(--ok);white-space:nowrap}
-.pt-tab:hover{border-color:var(--line2)}
-.pt-tab[aria-selected="true"]{border-color:var(--teal);background:#122220}
-.pt-panel{border:1px solid var(--line);border-radius:16px;background:var(--p);padding:22px 24px;min-height:440px;min-width:0}
-.pt-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px 16px;flex-wrap:wrap}
-.pt-head h3{font:400 34px/1.05 var(--serif)}
-.pt-head .role{font:12px var(--mono);color:var(--teal)}
-.pt-strip{display:flex;gap:4px;margin:16px 0 18px;flex-wrap:wrap}
-.pt-strip span{flex:1;min-width:70px;text-align:center;font:12px var(--mono);padding:7px 4px;border-radius:7px;border:1px solid var(--line);color:var(--ink3)}
-.pt-strip span.on{border-color:var(--teal);color:var(--ink);background:#143029}
-.pt-cols{display:grid;grid-template-columns:1fr 1fr;gap:20px}
-.pt-cols h4{font:500 12px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--ink3);margin-bottom:6px}
-.pt-cols p{font-size:14px;color:var(--ink2);line-height:1.6}
-.pt-cols b{color:var(--ink);font-weight:500}
-.pt-ex{margin-top:16px;border:1px solid var(--line);border-radius:12px;overflow:hidden}
-.pt-ex .pt-bar{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;font:12px var(--mono);color:var(--ink3);padding:8px 14px;border-bottom:1px solid var(--line);background:rgba(255,255,255,.02)}
-.pt-ex .pt-bar .n{color:var(--amber)}
-.pt-ex .pt-bar .n.seen{color:var(--ok)}
-.pt-ex pre{margin:0;padding:12px 14px;font:12.5px/1.6 var(--mono);color:var(--ink);white-space:pre-wrap;overflow-wrap:anywhere}
-.pt-ex pre i{font-style:normal;color:var(--ink3)}
-.pt-ex pre em{font-style:normal;color:var(--ok)}
-.pt-ex pre u{text-decoration:none;color:var(--amber)}
-.pt-foot{display:flex;gap:8px 20px;flex-wrap:wrap;margin-top:14px;font:12px var(--mono);color:var(--ink3)}
-.pt-foot b{color:var(--ink2);font-weight:500}
+/* system map */
+.flow{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:30px;margin-top:28px}
+.z{position:relative;text-align:left;background:var(--p);border:1px solid var(--line);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:8px;transition:border-color .2s,background .2s}
+.z:hover{border-color:var(--ink3)}
+.z[aria-pressed="true"]{border-color:var(--teal);background:#122220}
+.z:not(:last-child)::after{content:"";position:absolute;right:-24px;top:50%;width:18px;height:18px;margin-top:-9px;background:no-repeat center/18px url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2386908d' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12h14M13 6l6 6-6 6'/%3E%3C/svg%3E")}
+.z .k{font:500 12px var(--mono);letter-spacing:.06em;color:var(--teal);text-transform:uppercase}
+.z.core{border-style:dashed;border-color:#2f5f59}
+.z.tx{border-style:dashed;border-color:#6b4f1e}.z.tx .k{color:var(--amber)}
+.z.core[aria-pressed="true"],.z.tx[aria-pressed="true"]{border-color:var(--teal)}
+.z b{font:400 23px/1.12 var(--serif)}
+.z p{font-size:13.5px;color:var(--ink2)}
+.chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:auto;padding-top:4px}
+.chips span{font:12px var(--mono);padding:2px 8px;border-radius:6px;background:var(--p2);border:1px solid var(--line2);color:var(--ink)}
+.ports-h{display:flex;flex-wrap:wrap;gap:4px 14px;align-items:baseline;margin:22px 0 10px}
+.ports-h span{font:500 12px var(--mono);letter-spacing:.06em;color:var(--ink3);text-transform:uppercase}
+.ports-h p{font-size:13.5px;color:var(--ink2)}
+.ports{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}
+.pc{text-align:left;background:var(--p);border:1px solid var(--line);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:3px;transition:border-color .2s,background .2s}
+.pc:hover{border-color:var(--ink3)}
+.pc[aria-pressed="true"]{border-color:var(--teal);background:#122220}
+.pc b{font-weight:500;font-size:14px}
+.pc .a{font-size:13px;color:var(--ink)}
+.pc .f{font-size:12.5px;color:var(--ink3)}
+.det{margin-top:14px;background:var(--p);border:1px solid var(--line);border-radius:14px;padding:18px 22px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px 32px}
+.det .t{font:400 26px/1.1 var(--serif);grid-column:1/-1}
+.det p{color:var(--ink2);font-size:14px}
+.det dl{display:grid;grid-template-columns:72px minmax(0,1fr);gap:6px 10px;font-size:12.5px;align-content:start}
+.det dt{color:var(--ink3);font-family:var(--mono);font-size:12px}
+.det dd{min-width:0;overflow-wrap:anywhere}
+.det dd code{font-size:12px}
 
 /* state machines */
 .sm{display:grid;grid-template-columns:1fr;gap:12px;margin-top:24px}
@@ -176,6 +108,7 @@ h2{font:400 clamp(30px,3.4vw,38px)/1.1 var(--serif);margin:88px 0 10px}
 .smc p{font-size:14px;color:var(--ink2);max-width:46ch}
 .smleg{display:flex;gap:10px 22px;flex-wrap:wrap;margin-top:12px;font-size:13px;color:var(--ink2)}
 .smleg i{display:inline-block;width:22px;height:12px;border:1.5px solid;border-radius:6px;margin-right:8px;vertical-align:-1px}
+.hint{display:none;font:12px var(--mono);color:var(--ink3);margin:8px 0 0}
 
 /* one line trail */
 .trail{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));margin-top:24px}
@@ -192,22 +125,25 @@ h2{font:400 clamp(30px,3.4vw,38px)/1.1 var(--serif);margin:88px 0 10px}
 .pr div{background:var(--bg);padding:22px}
 .pr b{display:block;font:400 22px var(--serif);margin-bottom:6px}
 .pr span{color:var(--ink2);font-size:13.5px}
+.more{margin-top:28px;font-size:14.5px;color:var(--ink2)}
+.more a{color:var(--ink)}
 
 footer{border-top:1px solid var(--line);margin-top:24px}
 footer .in{max-width:1360px;margin:0 auto;padding:22px 28px 40px;display:flex;flex-wrap:wrap;gap:10px 24px;justify-content:space-between;font-size:13px;color:var(--ink3)}
 footer a{color:var(--ink2)}
 
 @media(max-width:1100px){
-  .map{grid-template-columns:1fr}
-  .side{position:static;min-height:0}
+  .gov{grid-template-columns:1fr 1fr}.oc.no{grid-column:1/-1}
+  .flow{grid-template-columns:1fr;gap:26px;max-width:560px}
+  .z:not(:last-child)::after{right:auto;left:50%;top:auto;bottom:-23px;margin:0 0 0 -9px;transform:rotate(90deg)}
+  .ports{grid-template-columns:repeat(3,minmax(0,1fr))}
   .trail{grid-template-columns:1fr 1fr}.tc{margin:0 0 10px}.tc::after{display:none}
   .smc{grid-template-columns:1fr;gap:12px}.smc .svgw svg{min-width:520px}
   .pr{grid-template-columns:1fr 1fr}
 }
 @media(max-width:900px){
-  .pt{grid-template-columns:1fr}.pt-list{flex-direction:row;overflow-x:auto;padding-bottom:4px}.pt-tab{min-width:170px}
-  .pt-cols{grid-template-columns:1fr}.pt-panel{padding:16px;min-height:0}.pt-head h3{font-size:28px}
   .hint{display:block}
+  .det{grid-template-columns:1fr}
 }
 @media(max-width:640px){
   .top .in{flex-wrap:wrap;height:auto;padding:10px 16px 6px;gap:6px 12px}
@@ -215,12 +151,10 @@ footer a{color:var(--ink2)}
   .wrap{padding:36px 16px 60px}
   footer .in{padding:20px 16px 36px}
   .take{font-size:16.5px}
+  .gov{grid-template-columns:1fr}
+  .ports{grid-template-columns:1fr 1fr}
+  .det{padding:16px}
   .trail,.pr{grid-template-columns:1fr}
-  .who .r{grid-template-columns:minmax(0,1.4fr) repeat(4,minmax(0,1fr))}
-  .who .r>*{padding:10px 8px;font-size:12.5px}
-  .who .h{font-size:11.5px;letter-spacing:0}
-  .who small{display:none}
-  .bar .sp{display:none}
 }
 @media(prefers-reduced-motion:reduce){
   *{transition:none!important;animation:none!important;scroll-behavior:auto!important}
@@ -228,6 +162,12 @@ footer a{color:var(--ink2)}
 </style>
 </head>
 <body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-go" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.7 2.7L16 9.8"/></symbol>
+  <symbol id="i-hold" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M10 9v6M14 9v6"/></symbol>
+  <symbol id="i-no" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M5.6 5.6l12.8 12.8"/></symbol>
+  <symbol id="i-person" viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c.8-3.6 3.6-5.5 7-5.5s6.2 1.9 7 5.5"/></symbol>
+</svg>
 <header class="top"><div class="in">
   <a class="brand" href="/"><i>M</i>Mandate</a>
   <nav aria-label="Site"><a href="/story">Story</a><a href="/how" aria-current="page">How it works</a><a href="/proof">Proof</a></nav>
@@ -238,38 +178,57 @@ footer a{color:var(--ink2)}
   <div class="kicker">How it works</div>
   <h1>How Mandate is built</h1>
   <p class="take">Every caller, whether the chef's screen, the in-app agent or your own agent, goes through one list of tools and the same checks, and only one function changes state.</p>
-  <p class="lede">The purchasing rules live in plain TypeScript with no I/O. Outside services sit behind ports, each with a fallback, so the demo keeps working when one is down. This map follows the code on the main branch.</p>
+  <p class="lede">The purchasing rules live in plain TypeScript with no I/O. Outside services sit behind ports, each with a fallback, so the demo keeps working when one is down. This page follows the code on the main branch.</p>
 
-  <h2 id="map">The system map</h2>
-  <p class="take">A call enters through a door, passes the same checks, is decided by the pure core and written to Postgres in one locked transaction, and the change goes back to every open screen.</p>
-  <div class="bar">
-    <div class="seg" id="lensSeg" role="group" aria-label="Highlight"><button class="on" data-l="all">Everything</button><button data-l="sp">Partners</button><button data-l="safe">Safety checks</button><button data-l="data">Data</button></div>
-    <span class="sp"></span>
-    <span class="lab">trace a call (illustrative):</span>
-    <div class="seg" id="traceSeg" role="group" aria-label="Trace a call"><button data-t="commit">Chef places an order</button><button data-t="ext">Outside agent tries to approve</button><button data-t="sub">Agent finds a substitute</button></div>
+  <h2 id="rules">When the agent may act alone</h2>
+  <p class="take">Every quoted line gets one of three outcomes. The same checks run for every caller, and a person decides everything the mandate doesn't allow.</p>
+  <div class="gov">
+    <section class="oc go" aria-labelledby="g-go">
+      <h3 id="g-go"><svg class="ic" aria-hidden="true"><use href="#i-go"/></svg>Goes through alone</h3>
+      <p class="when">Only when every check passes:</p>
+      <ul>
+        <li>Within the mandate's per-line, per-order and weekly caps<small><code>CAP_EXCEEDED</code> · tier.ts · eval s5</small></li>
+        <li>A product this kitchen already buys<small><code>new_sku</code> · tier.ts</small></li>
+        <li>No allergen change<small><code>allergen_change</code> · tier.ts · groups.test.ts</small></li>
+        <li>Valio states enough stock<small><code>UNKNOWN_REQUIRED</code> · validate.ts</small></li>
+        <li>A day the kitchen receives goods<small><code>off_delivery_day</code> · purchasing.test.ts</small></li>
+        <li>The exact terms (price, quantity, date) unchanged since the quote<small><code>TERMS_CHANGED</code> · state.ts · eval s4</small></li>
+        <li>Before the ordering cut-off<small><code>cutoff_passed</code> · cutoff.test.ts</small></li>
+        <li>Whole packs of Valio's lot step<small><code>BELOW_LOT</code> · eval s3</small></li>
+      </ul>
+      <p class="tail">and nothing in the next column applies.</p>
+    </section>
+    <section class="oc hold" aria-labelledby="g-hold">
+      <h3 id="g-hold"><svg class="ic" aria-hidden="true"><use href="#i-hold"/></svg>Held for a person</h3>
+      <p class="when">The line waits, with its reason on screen, when it has:</p>
+      <ul>
+        <li>A cost over a cap, even when the order is split<small><code>CAP_EXCEEDED.weekly</code> · tier.ts · eval s5</small></li>
+        <li>A product the kitchen hasn't bought before<small><code>new_sku</code> · tier.ts</small></li>
+        <li>An allergen change, decided apart from routine lines<small><code>allergen_change</code> · groups.test.ts</small></li>
+        <li>No stock figure from Valio<small><code>UNKNOWN_REQUIRED</code> · validate.ts</small></li>
+        <li>A delivery on a day the kitchen doesn't receive goods<small><code>off_delivery_day</code> · purchasing.test.ts</small></li>
+        <li>A substitute that breaks the kitchen's origin preference<small><code>substitute_breaks_preference</code> · validate.ts</small></li>
+        <li>A product under a recall notice<small><code>recall</code> · tier.ts</small></li>
+        <li>An outside agent's order<small><code>external_agent_needs_approval</code> · tier.ts · eval s5</small></li>
+        <li>A model's caution. A model can add a caution that holds a line, never one that allows it.<small><code>CAUTION.model_*</code> · substitutes.ts</small></li>
+      </ul>
+    </section>
+    <section class="oc no" aria-labelledby="g-no">
+      <h3 id="g-no"><svg class="ic" aria-hidden="true"><use href="#i-no"/></svg>Refused</h3>
+      <p class="when">No approval passes it:</p>
+      <ul>
+        <li>Over the hard limit, even split across lines<small><code>over_hard_limit</code> · ceiling.test.ts</small></li>
+        <li>After the ordering cut-off<small><code>cutoff_passed</code> · cutoff.test.ts · eval r5-f9</small></li>
+        <li>A part pack, off Valio's lot step<small><code>BELOW_LOT</code> · eval s3</small></li>
+        <li>A product that breaks a stated requirement, such as lactose-free<small><code>requirement_unmet</code> · purchasing.test.ts</small></li>
+      </ul>
+    </section>
   </div>
-  <p class="read">Read it left to right. Click any box to see what it does, where it lives and which test holds it.</p>
-  <p class="hint">The map scrolls sideways.</p>
-  <div class="map">
-    <div class="stage"><svg id="sys" viewBox="0 0 1124 694" role="img" aria-label="System map: doors, tool registry, command handler, pure core, ports with fallbacks, Postgres tables and the live event loop"></svg></div>
-    <aside class="side" id="side" aria-live="polite"></aside>
+  <div class="appr">
+    <svg class="ic" aria-hidden="true"><use href="#i-person"/></svg>
+    <p><b>A person approves, on the Kitchen screen, bound to the exact terms.</b> <span>Our agent and outside agents prepare, summarise and link the decision but never grant it: the chat refuses “approve it” and links to the approval in Kitchen, and the core refuses an approval granted by an outside agent. Any later edit voids the approval.</span></p>
   </div>
-
-  <h2 id="who">Who may do what</h2>
-  <p class="take">Only the chef can approve. Agents, ours or yours, can read, plan and order inside the mandate, and a refused call is written to the log.</p>
-  <p class="lede">The caller's identity comes from its key or the signed visitor cookie, never from the request body. The scopes per caller are one table in the code: an outside agent has no approve scope. Behind that, the core refuses an approval granted by an outside agent and needs a chef's grant before it commits an outside agent's order.</p>
-  <div class="who" role="table" aria-label="Scopes per caller">
-    <div class="r" role="row"><span class="h" role="columnheader">Caller</span><span class="h" role="columnheader">Read</span><span class="h" role="columnheader">Plan</span><span class="h" role="columnheader">Order</span><span class="h" role="columnheader">Approve</span></div>
-    <div class="r" role="row"><span role="cell"><b>Chef</b><small>Kitchen screen</small></span><span class="y" role="cell">yes</span><span class="y" role="cell">yes</span><span class="y" role="cell">yes</span><span class="y" role="cell">yes</span></div>
-    <div class="r" role="row"><span role="cell"><b>Our agent</b><small>chat dock, agent runs</small></span><span class="y" role="cell">yes</span><span class="y" role="cell">yes</span><span class="y" role="cell">yes</span><span class="x" role="cell">never</span></div>
-    <div class="r" role="row"><span role="cell"><b>Your agent</b><small>MCP or REST, judge key</small></span><span class="y" role="cell">yes</span><span class="y" role="cell">yes</span><span class="y" role="cell">yes</span><span class="x" role="cell">never</span></div>
-  </div>
-  <p class="note">Source: <code>SCOPES_BY_ACTOR</code> in <code>core/contracts/tools.ts</code>; held by <code>agent/adversarial.test.ts</code> and eval s5. Seen on the deployed app: a judge key's approve call returns 403.</p>
-
-  <h2 id="partners">What each partner does</h2>
-  <p class="take">Each outside service is behind a port with a fallback, and none of them can approve or change the mandate.</p>
-  <p class="lede">Pick one to see which step it serves, an example call and what happens when it is down.</p>
-  <div data-partners></div>
+  <p class="note">Source: <code>core/mandate/tier.ts</code>, <code>core/mandate/validate.ts</code>, <code>core/state.ts</code>; held by <code>core/state.test.ts</code>, <code>server/store/{ceiling,cutoff,groups,purchasing}.test.ts</code> and evals s3, s4, s5.</p>
 
   <h2 id="states">The three state machines</h2>
   <p class="take">Plans, lines and approvals each move through a few fixed states; any edit voids the approval, and an order is committed once.</p>
@@ -281,6 +240,27 @@ footer a{color:var(--ink2)}
   </div>
   <div class="smleg"><span><i style="border-color:#3fbf8a"></i>usual path</span><span><i style="border-color:#e8a93c"></i>waits for a person</span><span><i style="border-color:#ef6b59;border-style:dashed"></i>sends it back</span><span><i style="border-color:#ef6b59;outline:1px solid rgba(239,107,89,.4);outline-offset:2px"></i>final</span></div>
   <p class="note">Source: <code>core/state.ts</code>, <code>core/contracts/plan.ts</code>; held by <code>core/state.test.ts</code> and <code>server/store/gate.test.ts</code>.</p>
+
+  <h2 id="map">The system map</h2>
+  <p class="take">A call enters through a door, passes one gate, is decided by the pure core and written in one locked transaction, and every open screen sees the change.</p>
+  <p class="lede">Click any box to see where it lives and which test holds it.</p>
+  <div class="flow" role="group" aria-label="System map, left to right">
+    <button class="z" data-k="doors" aria-pressed="true"><span class="k">1 · Doors</span><b>Five ways in</b><p>The chef, our agent and your agent all call the same tools.</p><span class="chips"><span>Kitchen</span><span>Chat</span><span>Request page</span><span>MCP</span><span>REST</span></span></button>
+    <button class="z" data-k="gate" aria-pressed="false"><span class="k">2 · Gate</span><b>Who is calling, and may it?</b><p>The caller comes from its key or cookie, never the request body.</p><span class="chips"><span>caller</span><span>scope check</span><span>schema</span></span></button>
+    <button class="z core" data-k="core" aria-pressed="false"><span class="k">3 · Pure core</span><b>The rules, no I/O</b><p>Plain TypeScript decides; it never calls out.</p><span class="chips"><span>rank</span><span>mandate tiers</span><span>terms hash</span><span>state machines</span></span></button>
+    <button class="z tx" data-k="tx" aria-pressed="false"><span class="k">4 · Locked</span><b>One transaction in Postgres</b><p>The workspace is locked for the checks and the write only.</p><span class="chips"><span>idempotency</span><span>re-read</span><span>caps</span><span>applyOps</span></span></button>
+    <button class="z" data-k="screens" aria-pressed="false"><span class="k">5 · Live</span><b>Every open screen updates</b><p>After the commit, never before it.</p><span class="chips"><span>event bus</span><span>Kitchen</span><span>Ops</span><span>chat</span></span></button>
+  </div>
+  <div class="ports-h"><span>Ports</span><p>Outside services, called before the lock is taken, each with a fallback.</p></div>
+  <div class="ports" role="group" aria-label="Ports and their fallbacks">
+    <button class="pc" data-k="pllm" aria-pressed="false"><b>LLM</b><span class="a">Gemini Flash-Lite</span><span class="f">↳ fixture</span></button>
+    <button class="pc" data-k="pdec" aria-pressed="false"><b>Decide</b><span class="a">Gemini Decisions</span><span class="f">↳ replay, then rules</span></button>
+    <button class="pc" data-k="pcat" aria-pressed="false"><b>Catalog</b><span class="a">Valio, live</span><span class="f">↳ cached with its age</span></button>
+    <button class="pc" data-k="pweb" aria-pressed="false"><b>Web</b><span class="a">Exa, Context.dev</span><span class="f">↳ fixture, daily caps</span></button>
+    <button class="pc" data-k="psim" aria-pressed="false"><b>Simulator</b><span class="a">scenario stock</span><span class="f">↳ sandbox overlay</span></button>
+  </div>
+  <div class="det" id="det" aria-live="polite"></div>
+  <p class="more">Which partner sits behind each port, and what happens when it is down: <a href="/story#partners">the partners on the story page</a>.</p>
 
   <h2 id="trail">One order line through the system</h2>
   <p class="take">Each step of an order line names where its value came from, from the need to the receipt.</p>
@@ -313,190 +293,27 @@ footer a{color:var(--ink2)}
 
 <script>
 (()=>{
-const RM=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const NS='http://www.w3.org/2000/svg';
 const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-const NS='http://www.w3.org/2000/svg',S=document.getElementById('sys');
-const el=(t,a,p=S)=>{const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);p.appendChild(e);return e};
-const defs=el('defs',{});
-[['ar','#6b777c'],['arT','#2bb3a6']].forEach(([i,c])=>{const m=el('marker',{id:i,viewBox:'0 0 10 10',refX:9,refY:5,markerWidth:6,markerHeight:6,orient:'auto-start-reverse'},defs);el('path',{d:'M0 0L10 5L0 10z',fill:c},m)});
-const regG=el('g',{}),edgeG=el('g',{}),nodeG=el('g',{}),trailG=el('g',{}),pktG=el('g',{});
-const G={},EDGES=[];
-function region(x,y,w,h,label,cls,tags=[]){const g=el('g',{class:'rg '+cls},regG);el('rect',{x,y,width:w,height:h,rx:14},g);const t=el('text',{x:x+14,y:y+20,class:'rl'},g);t.textContent=label;g.dataset.tags=tags.join(' ');return g}
-function clickable(g,id){g.setAttribute('tabindex','0');g.setAttribute('role','button');g.setAttribute('aria-label',G[id].title);g.onclick=()=>{stop();show(id)};g.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();stop();show(id)}}}
-function box(id,x,y,w,h,title,sub,o={}){const g=el('g',{class:'n '+(o.cls||'')},nodeG);g.dataset.id=id;
- el('rect',{x,y,width:w,height:h,rx:9},g);
- const t=el('text',{x:x+12,y:sub?y+h/2-4:y+h/2+5},g);t.textContent=title;
- if(sub){const s=el('text',{x:x+12,y:y+h/2+14,class:'s'},g);s.textContent=sub}
- G[id]={g,cx:x+w/2,cy:y+h/2,title,sub,tags:o.tags||[],info:o.info||{}};clickable(g,id);return g}
-function edge(d,o={}){const p=el('path',{d,class:'e '+(o.cls||''),'marker-end':o.noArrow?'':`url(#${o.m||'ar'})`},edgeG);p.dataset.tags=(o.tags||[]).join(' ');EDGES.push(p);
- if(o.label){const t=el('text',{x:o.lx,y:o.ly,class:'el','text-anchor':o.anchor||'start'},edgeG);t.textContent=o.label;t.dataset.tags=(o.tags||[]).join(' ');EDGES.push(t)}return p}
-function label(x,y,txt,cls='el',anchor='start'){const t=el('text',{x,y,class:cls,'text-anchor':anchor},edgeG);t.textContent=txt;return t}
 
-// regions
-region(200,22,912,640,'SERVER · one Node container on Aiven','srv');
-region(628,46,474,90,'store.transact · the workspace is locked','lock',['safe']);
-region(740,220,192,122,'PURE CORE · no I/O','core',['safe']);
-region(282,494,818,150,'POSTGRES · Aiven in production, PGlite in tests','pg',['data']);
-el('text',{x:34,y:40,class:'rl'},regG).textContent='DOORS';
-el('text',{x:282,y:58,class:'rl'},regG).textContent='HANDLER · same steps for every tool';
-el('text',{x:282,y:352,class:'rl'},regG).textContent='PORTS · a real adapter, then a fallback';
-
-// doors
-const D=[
- ['kitchen','Kitchen screen','chef · approves',56,{d:'The chef reads the plan, changes grams per guest and approves decisions. The page acts on the server through the same tool handlers every other caller uses.',f:'src/routes/(kitchen) · server/kitchen',t:'evals/ui/kitchen-order.e2e.ts'}],
- ['request','Request page','words → order',108,{d:'Valio’s flow: a request in plain words is parsed (rules first, then Gemini), looked up and turned into a held or ordered plan. An event brief becomes a proposed menu the chef accepts.',f:'src/routes/request · server/request · server/menu',t:'request.test.ts · fixes.test.ts · evals/fidelity'}],
- ['chat','Chat dock','in-app agent',160,{d:'A chat turn runs our agent on the server for the chef’s task. It can read, plan and order inside the mandate. It cannot approve.',f:'server/chat · /api/chat/turn',t:'evals/chat · turn.test.ts'}],
- ['ops','Valio Ops','reads · live',212,{d:'Valio’s control room for the visitor’s sandbox. It reads held lines grouped by cause, recall cases and refused agent calls, and receives live events.',f:'src/routes/ops',t:'visitor-gate.e2e.ts · cases.test.ts'}],
- ['mcp','Your agent','MCP · judge key',290,{d:'Any outside agent, such as Claude. A judge key from /agents is bound to one visitor sandbox and allows read, plan and order. The tool list it sees has no approve and no set_mandate.',f:'/mcp/k/[key] · server/tools/mcp.ts · demo/judge-key.ts',t:'mcp.test.ts · judge-key.test.ts · adversarial.test.ts'}],
- ['rest','REST client','OpenAPI',342,{d:'The same tools over plain HTTP at /api/tools/[name], described by /api/openapi.json.',f:'/api/tools/[name] · server/tools/openapi.ts',t:'openapi.test.ts · evals/fidelity'}]];
-D.forEach(([id,t,s,y,info])=>box(id,34,y,150,46,t,s,{info,cls:'door'}));
-
-// registry
-(()=>{const g=el('g',{class:'n reg'},nodeG);g.dataset.id='reg';el('rect',{x:214,y:56,width:48,height:332,rx:10},g);
- const t=el('text',{x:0,y:0,transform:'translate(243 222) rotate(-90)','text-anchor':'middle'},g);t.textContent='Tool registry · 17 tools';
- G.reg={g,cx:238,cy:222,title:'Tool registry',sub:'17 tools · zod schemas',tags:['safe'],info:{d:'One list of 17 tools with zod schemas. MCP, REST, OpenAPI and the agent loop all read it, and MCP lists only the tools inside the caller’s scopes. Every result carries a one-line summary and the next action, written by us from typed fields, never from supplier or web text.',f:'core/contracts/tools.ts',t:'serve.test.ts · openapi.test.ts'}};clickable(g,'reg')})();
-D.forEach(([id,,,y])=>edge(`M184 ${y+23} L212 ${y+23}`));
-
-// handler pipeline
-const P=[
- ['ctx','Who is calling','CallContext',282,100,{d:'The caller comes from the bearer key, the judge key in the MCP path, the signed visitor cookie or the in-process actor. The request body never sets it. SCOPES_BY_ACTOR gives its scopes.',f:'server/auth · demo/visitor.ts',t:'auth.test.ts · visitor.test.ts'},['safe']],
- ['val','Check, validate','scope + schema',392,112,{d:'serveTool checks the tool exists and the caller has its scope, then validates the input against the zod schema. An unknown product id fails with NOT_FOUND before any Valio call. A refused agent call is written to the op log.',f:'server/tools/serve.ts · refusals.ts',t:'serve.test.ts · refusals.test.ts'},['safe']],
- ['prep','Prepare','no lock held',514,104,{d:'Offers, model decisions and web lookups run here, before any lock is taken, so a slow outside call never holds the database.',f:'server/tools/handlers.ts · core/services',t:'prepare.test.ts'},[]],
- ['idem','Idempotency','key + hash',640,100,{d:'Keyed by workspace, caller, tool and key, plus a hash of the request. The same request gets the stored result. The same key with another payload gets DUPLICATE.',f:'core/services/orders.ts · server/store',t:'eval s1, s5 · pg-race.test.ts'},['safe']],
- ['rr','Re-read','version, hash',750,104,{d:'Inside the lock: re-read the plan, compare its version and terms hash with the approval, and check the mandate version, the approval’s expiry and the ordering cut-off on the scenario clock.',f:'server/store · core/state.ts',t:'gate.test.ts · cutoff.test.ts · eval s4'},['safe']],
- ['caps','Caps, budget','row lock',864,100,{d:'Locks the kitchen-week budget row and checks the mandate’s caps and the hard limit no approval can pass. On commit the simulator consumes stock.',f:'server/store · core/mandate',t:'ceiling.test.ts · eval s5'},['safe']],
- ['apply','applyOps','then persist',974,118,{d:'Computes the ops, runs applyOps, then writes the rows, the ops and the next sequence number in the same transaction.',f:'core/state.ts · server/store',t:'core/state.test.ts'},['safe']]];
-P.forEach(([id,t,s,x,w,info,tags],i)=>{box(id,x,68,w,56,t,s,{info,tags});if(i)edge(`M${P[i-1][3]+P[i-1][4]} 96 L${x-2} 96`)});
-edge('M262 96 L280 96');
-box('pub',974,156,118,46,'Publish','after commit',{info:{d:'After the commit, ops and trace events are published. A rolled-back write publishes nothing.',f:'server/bus',t:'bus.test.ts'},tags:['data']});
-edge('M1033 124 L1033 154');
-
-// middle band
-box('agent',282,236,138,84,'Agent loop','≤ 8 steps',{info:{d:'Runs agent runs and chat turns as kitchen_agent, with the starter’s scopes cut down to read, plan and order. Gemini 3.5 Flash-Lite plans the next tool (a scripted planner is the fallback) and the loop calls it through the registry, at most 8 steps. The outcome is computed from plan state.',f:'server/agent · server/chat',t:'evals/agent · adversarial.test.ts'}});
-edge('M262 262 L280 262');
-edge('M282 300 L264 300');
-label(290,336,'calls tools like any caller');
-const C=[['applyOps',750,248,86],['rank',842,248,80],['demand',750,276,86],['terms hash',842,276,80],['tiers',750,304,86],['fulfilment',842,304,80]];
-(()=>{const g=el('g',{class:'n corechips'},nodeG);g.dataset.id='core';C.forEach(([t,x,y,w])=>{el('rect',{x,y,width:w,height:22,rx:6},g);const tx=el('text',{x:x+w/2,y:y+15,'text-anchor':'middle',class:'cc'},g);tx.textContent=t});
- G.core={g,cx:836,cy:286,title:'Pure core',sub:'src/lib/core',tags:['safe'],info:{d:'Plain TypeScript with no I/O: applyOps and the state machines, ranking, demand sizing, mandate tiers, need fulfilment and the terms hash. Lint blocks Svelte, Node built-ins, vendor SDKs and server code here.',f:'core/state.ts · core/rank · core/demand · core/mandate · core/hash.ts',t:'state.test.ts · rank.test.ts · fulfilment.test.ts'}};clickable(g,'core')})();
-edge('M836 136 L836 218',{cls:'dot',label:'calls pure functions',lx:844,ly:186,noArrow:true,tags:['safe']});
-box('bus',952,234,140,74,'Event bus','NOTIFY → SSE',{info:{d:'Postgres LISTEN/NOTIFY in production, an in-memory bus with PGlite. Screens subscribe to /api/events, catch up from their last sequence number and drop duplicates.',f:'server/bus · /api/events',t:'bus.test.ts · catchup.test.ts'},tags:['data']});
-edge('M1033 202 L1033 232');
-label(452,236,'outside the lock');
-
-// ports
-const SK=[
- ['pllm','LLM',282,[['Gemini Flash-Lite','p'],['Featherless (opt.)','f'],['fixture','f']],'Gemini',{d:'One routing table picks the model per job. gemini-3.5-flash-lite parses requests, plans agent steps and reads chat messages; gemini-3.8-flash proposes menus. Every call sets a token ceiling and counts against daily caps per sandbox. With LLM_PROVIDER=fixture nothing leaves the server.',f:'server/adapters/llm (router.ts)',t:'router.test.ts · eval:live'}],
- ['pcat','Catalog',416,[['Valio, live','p'],['cached + age','f'],['catalogue file','f']],'Valio Aimo',{d:'Product facts come from Valio’s catalogue of 17,546 products. Price and availability come from Valio’s API for the products being quoted (up to 200 per call), cached with their age; availability older than 15 minutes is fetched again. Substitute candidates: Valio’s own rules, then name matching.',f:'server/adapters/catalog',t:'valio.test.ts · retrieval evals'}],
- ['pdec','Decide',550,[['Gemini Decisions','p'],['recorded replay','f'],['rules','f']],'Gemini',{d:'gemini-decision-1 scores how well each top substitute fits the dish, 0 to 4, as one input to the kitchen’s ranking. A likely rule violation adds a caution and holds the line for the chef. It never approves anything.',f:'server/adapters/decide',t:'decide.test.ts · DECIDE_LIVE=1 pnpm test:live'}],
- ['pweb','Web',684,[['Exa, Context.dev','p'],['fixture','f'],['daily caps','n']],'Exa · Context.dev',{d:'Exa finds cited product facts for the Why drawer and agent tools. A Context.dev monitor watches Ruokavirasto’s recall list every 5 minutes. Web facts are stored next to the catalogue and never overwrite it. Per-key and global daily caps.',f:'server/web',t:'evidence.test.ts · watch.test.ts · tools.test.ts'}],
- ['psim','Simulator',818,[['scenario stock','o'],['sandbox overlay','f']],'ours',{d:'Scenario stock for each visitor sandbox. At commit it consumes lots, or returns “awaiting supplier” for lines whose quantity Valio doesn’t state. The order is a local simulated commitment.',f:'server/adapters/simulator',t:'overlay.test.ts'}],
- ['pdb','Store',952,[['Aiven Postgres','p'],['PGlite','f']],'Aiven',{d:'Drizzle over Aiven Postgres in production, PGlite with the same migrations in tests and the offline demo.',f:'server/db · server/store',t:'pnpm test:pg'}]];
-SK.forEach(([id,name,x,rows,partner,info])=>{const g=el('g',{class:'n sock'},nodeG);g.dataset.id=id;const y=362,w=128,h=24+rows.length*24+8;
- el('rect',{x,y,width:w,height:h,rx:9},g);el('rect',{x:x+w/2-14,y:y-4,width:28,height:8,rx:3,class:'plug'},g);
- const t=el('text',{x:x+12,y:y+18},g);t.textContent=name;
- rows.forEach(([r,k],i)=>{const ry=y+26+i*24;el('rect',{x:x+6,y:ry,width:w-12,height:20,rx:5,class:'ad ad-'+k},g);const tx=el('text',{x:x+12,y:ry+14,class:'at at-'+k},g);tx.textContent=(k==='f'?'↳ ':'')+r});
- G[id]={g,cx:x+w/2,cy:y+h/2,title:name+' port',sub:partner,tags:['sp',id==='pdb'?'data':''],info};clickable(g,id)});
-[480,614,748].forEach(x=>edge(`M566 124 C 566 220, ${x} 260, ${x} 356`,{cls:'dash',tags:['sp']}));
-edge('M351 320 L351 356',{cls:'dash',tags:['sp']});
-edge('M914 124 C 914 170, 942 190, 942 220 L942 350 C 942 356, 930 358, 900 358',{cls:'dash'});
-edge('M1092 96 L1104 96 L1104 356 L1060 356',{tags:['data'],m:'arT',cls:'data'});
-label(1100,330,'rows, ops, seq','el','end');
-edge('M1016 444 L1016 492',{tags:['data'],m:'arT',cls:'data'});
-
-// Postgres tables
-const TB=[['State',292,['plans','approvals','orders','budgets','idempotency','ops']],['Catalogue and stock',492,['products','offer_cache','sim_stock','kitchens']],['Agents, runs, keys',692,['agent_tasks','runs','menu_proposals','workspaces','api_keys']],['Web',892,['enrichments','web_cache','web_spend','web_queue','web_findings']]];
-(()=>{const g=el('g',{class:'n pgt'},nodeG);g.dataset.id='pg';TB.forEach(([h,x,ts])=>{const tt=el('text',{x,y:536,class:'th'},g);tt.textContent=h;
-  let row=0,col=0;ts.forEach(t=>{const wide=t.length>11;if(wide&&col){row++;col=0}const x0=x+col*96,y0=546+row*28,w=wide?188:90;el('rect',{x:x0,y:y0,width:w,height:22,rx:5},g);const tx=el('text',{x:x0+8,y:y0+15,class:'tt'},g);tx.textContent=t;if(wide){row++;col=0}else{col++;if(col>1){col=0;row++}}})});
- G.pg={g,cx:690,cy:600,title:'Postgres',sub:'one schema, Drizzle migrations',tags:['data'],info:{d:'Every state change is a row in ops with a sequence number, next to the rows it changed. orders is unique per plan and idempotency key. budgets has one locked row per kitchen-week. Web state lives here too, so a redeploy loses nothing.',f:'server/db/schema.ts · drizzle/*.sql',t:'pnpm test:pg · smoke-race after each deploy'}};clickable(g,'pg')})();
-
-// live events back to the screens
-edge('M1092 271 L1116 271 L1116 684 L16 684 L16 79 L32 79',{cls:'loop',m:'arT',tags:['data']});
-edge('M16 183 L32 183',{cls:'loop',m:'arT',tags:['data']});
-edge('M16 235 L32 235',{cls:'loop',m:'arT',tags:['data']});
-label(560,677,'live events back to every open screen: Postgres NOTIFY → SSE /api/events','el loopl','middle');
-
-// side panel
-const side=document.getElementById('side');
-function idle(){side.innerHTML=`<div class="t">Click any box</div><div class="k">or trace a call above</div><p>Each box is a module on the main branch. The panel says what it does, where it lives and which test holds it.</p><p>The dashed amber region is the database lock. Everything left of it runs without holding the lock, including every call to an outside service.</p>`}
-function show(id){const n=G[id],i=n.info||{};Object.values(G).forEach(x=>x.g.classList.toggle('hot',x===n));
- side.innerHTML=`<div class="t">${esc(n.title)}</div><div class="k">${esc(n.sub||'')}</div><p>${esc(i.d||'')}</p><dl>${i.f?`<dt>lives in</dt><dd><code>${esc(i.f)}</code></dd>`:''}${i.t?`<dt>held by</dt><dd><code>${esc(i.t)}</code></dd>`:''}</dl>`}
-idle();
-
-// lenses
-document.querySelectorAll('#lensSeg button').forEach(b=>b.onclick=()=>{stop();document.querySelectorAll('#lensSeg button').forEach(x=>x.classList.toggle('on',x===b));const l=b.dataset.l;
- Object.values(G).forEach(n=>n.g.classList.toggle('dim',l!=='all'&&!n.tags.includes(l)));
- EDGES.forEach(e=>e.classList.toggle('dim',l!=='all'&&!(e.dataset.tags||'').split(' ').includes(l)));
- document.querySelectorAll('#sys .rg').forEach(r=>r.classList.toggle('dim',l!=='all'&&!(r.dataset.tags||'').split(' ').includes(l)&&!r.classList.contains('srv')))});
-
-// traces: [node, step name, packet, note, refused?]
-const T={
- commit:{name:'Chef places an order',stops:[
-  ['kitchen','Kitchen screen','POST /kitchen-api/tool/commit_order\nsigned visitor cookie\n{ plan, 4 lines, idempotency key }','The chef pressed Place order.'],
-  ['reg','Tool registry','tool: commit_order\nscope needed: order','The same registry the agent and MCP use.'],
-  ['ctx','Who is calling','CallContext {\n  actor: chef,\n  scopes: read, plan, order, approve, …,\n  workspace: this visitor’s sandbox }','Taken from the signed cookie, never from the body.'],
-  ['val','Check, validate','scope order ✓ · schema ✓ · 4 known lines','Bad input stops here.'],
-  ['prep','Prepare','quote 4 lines → Catalog port','Outside calls happen before the lock.'],
-  ['pcat','Catalog port','Valio API, cache-through\n3 cached · 1 live','Only the products being quoted are looked up.'],
-  ['idem','Idempotency','key + request hash → not seen before','A retry with this key would return the stored receipt.'],
-  ['rr','Re-read, compare','plan version and terms hash = approval ✓\nmandate version ✓ · approval not expired ✓\ncut-off not passed ✓','If the price had changed, this returns TERMS_CHANGED.'],
-  ['caps','Caps, budget','budget row for this kitchen and week locked\nwithin the weekly cap ✓ · under the hard limit ✓\nsimulator consumes 4 lots','Caps apply to the lines the mandate allows alone.'],
-  ['apply','applyOps','commit the order: 4 lines,\neach naming what allowed it\n(the mandate or the chef’s approval)','The only function that changes state.'],
-  ['pdb','Store port','insert order and receipt\nplan version + 1 · ops appended','One transaction. orders is unique per plan and key.'],
-  ['pub','Publish','new ops → bus','Only after the commit succeeded.'],
-  ['bus','Event bus','NOTIFY this sandbox · next sequence number','Screens catch up from their last sequence number.'],
-  ['kitchen','Back to the screens','Kitchen: the receipt card\nOps: the same order and total','The same event reaches every open screen.']]},
- ext:{name:'Outside agent tries to approve',stops:[
-  ['rest','REST client','POST /api/tools/approve\nAuthorization: Bearer (judge key)','A judge key minted on /agents. Over MCP, approve is not even listed for this key.'],
-  ['reg','Tool registry','tool: approve\nscope needed: approve','The tool exists in the registry like any other.'],
-  ['ctx','Who is calling','CallContext {\n  actor: external_agent,\n  scopes: read, plan, order,\n  workspace: the key’s sandbox }','The key decides the actor.'],
-  ['val','Refused','403 FORBIDDEN\nexternal_agent may not call approve\nnothing read · nothing written','Stopped before any handler runs.',1],
-  ['core','Second check','applyOps refuses an approval\ngranted by an outside agent','If a scope ever slipped, the core would still refuse.',1],
-  ['pdb','Store port','refusal written to the op log','At most one per caller, tool and plan a minute, so a looping key can’t flood the log.'],
-  ['bus','Event bus','NOTIFY this sandbox',''],
-  ['ops','Valio Ops','“An outside agent tried to approve. Refused.”','Ops sees the attempt as it happens.']]},
- sub:{name:'Agent finds a substitute',stops:[
-  ['chat','Chat dock','“The salmon is out too.”','The chef types in the chat dock.'],
-  ['agent','Agent loop','step 1 of at most 8','The loop runs on the server.'],
-  ['pllm','LLM port','Gemini 3.5 Flash-Lite\n→ find_substitutes { need: graavilohi }\ntoken ceiling 600','The planner picks a tool; the gate decides what it may do.'],
-  ['reg','Tool registry','tool: find_substitutes · scope: plan','The agent calls tools like any caller.'],
-  ['ctx','Who is calling','CallContext { actor: kitchen_agent,\n  scopes: read, plan, order }','It can plan and order. It cannot approve.'],
-  ['prep','Prepare','candidates: Valio’s rules, then name matching\nquote the survivors · some cached, some live','Still no lock held.'],
-  ['pdec','Decide port','gemini-decision-1: fit per candidate, 0–4\nrainbow trout as salmon: 3 of 4','A fit score is one input to the ranking.'],
-  ['core','Pure core: rank','known stock first, then the kitchen’s weights:\nreliability, price, Finnish origin, carbon, fit','The kitchen’s own weights decide the order.'],
-  ['rr','Re-read, compare','plan version still current ✓','Another edit in between would fail here.'],
-  ['apply','applyOps','substitute proposed → line waits for the chef\nreason: new product\nearlier approval voided, a new one pending','A new product needs the chef.'],
-  ['pdb','Store port','plan version + 1 · ops appended',''],
-  ['bus','Event bus','NOTIFY this sandbox',''],
-  ['chat','Back to the screens','Kitchen: the salmon row changes\nChat: “1 line replaced · 1 decision for you · nothing ordered”','The outcome is computed from plan state.']]}};
-let timer=null,cur=null,step=0,playing=false,raf=0;
-const pkt=el('circle',{r:7,class:'pkt',cx:-20,cy:-20},pktG);
-function stop(){clearTimeout(timer);cancelAnimationFrame(raf);playing=false;cur=null;trailG.innerHTML='';pkt.setAttribute('cx',-20);S.classList.remove('tracing');Object.values(G).forEach(n=>n.g.classList.remove('hot','bad','seen'));document.querySelectorAll('#traceSeg button').forEach(x=>x.classList.remove('on'))}
-function start(key){stop();cur=T[key];cur.key=key;step=0;playing=!RM;document.querySelector(`#traceSeg button[data-t="${key}"]`).classList.add('on');S.classList.add('tracing');go()}
-function go(){clearTimeout(timer);if(!cur)return;
- const s=cur.stops[step],prev=step?cur.stops[step-1]:null;const n=G[s[0]];
- if(prev){const p=G[prev[0]];const mx=(p.cx+n.cx)/2,my=(p.cy+n.cy)/2-30;const d=`M${p.cx} ${p.cy} Q${mx} ${my} ${n.cx} ${n.cy}`;
-  const path=el('path',{d,class:'trail'+(s[4]?' bad':'')},trailG);
-  if(RM){pkt.setAttribute('cx',n.cx);pkt.setAttribute('cy',n.cy)}
-  else{const L=path.getTotalLength();const t0=performance.now(),dur=900;cancelAnimationFrame(raf);
-   (function anim(t){const u=Math.min(1,(t-t0)/dur),e=u<.5?2*u*u:1-Math.pow(-2*u+2,2)/2;const pt=path.getPointAtLength(e*L);pkt.setAttribute('cx',pt.x);pkt.setAttribute('cy',pt.y);if(u<1)raf=requestAnimationFrame(anim)})(t0)}
- }else{pkt.setAttribute('cx',n.cx);pkt.setAttribute('cy',n.cy)}
- pkt.classList.toggle('bad',!!s[4]);
- Object.values(G).forEach(x=>x.g.classList.remove('hot'));n.g.classList.add('hot','seen');if(s[4])n.g.classList.add('bad');
- if(cur.key==='commit'&&step===cur.stops.length-1)G.ops.g.classList.add('hot','seen');
- if(step>=cur.stops.length-1)playing=false;
- render();
- if(playing)timer=setTimeout(()=>{step++;go()},2000)}
-function render(){if(!cur)return;const k=cur.stops;
- side.innerHTML=`<div class="t">${esc(cur.name)}</div><div class="k">packet inspector · stop ${step+1} of ${k.length}</div>
- <span class="illus">illustrative trace · example values</span>
- <div class="ctl"><button id="tb" aria-label="Previous stop">◀</button><button id="tp">${playing?'Pause':(step>=k.length-1?'Replay':'Play')}</button><button id="tn" aria-label="Next stop">▶</button></div>
- <ol class="insp">${k.map((s,i)=>i>step?'':`<li class="${i===step?'now':''} ${s[4]?'bad':''}"><span class="st">${String(i+1).padStart(2,'0')} · ${esc(s[1])}</span>${i===step?`<pre>${esc(s[2])}</pre>${s[3]?`<p>${esc(s[3])}</p>`:''}`:''}</li>`).join('')}</ol>`;
- side.querySelector('#tp').onclick=()=>{if(step>=k.length-1&&!playing)return start(cur.key);playing=!playing;if(playing)timer=setTimeout(()=>{step++;go()},300);else{clearTimeout(timer);render()}};
- side.querySelector('#tn').onclick=()=>{if(step<k.length-1){playing=false;step++;go()}};
- side.querySelector('#tb').onclick=()=>{if(step>0){playing=false;clearTimeout(timer);cancelAnimationFrame(raf);trailG.lastChild&&trailG.lastChild.remove();step--;const n=G[k[step][0]];pkt.setAttribute('cx',n.cx);pkt.setAttribute('cy',n.cy);Object.values(G).forEach(x=>x.g.classList.remove('hot'));n.g.classList.add('hot');render()}};
- const ol=side.querySelector('.insp'),li=ol.querySelector('li.now');if(li)ol.scrollTop=li.offsetTop-ol.clientHeight/2}
-document.querySelectorAll('#traceSeg button').forEach(b=>b.onclick=()=>start(b.dataset.t));
+// system map: one detail panel for the zones and ports
+const INFO={
+ doors:{t:'Doors',d:'The Kitchen screen is where the chef reads the plan and approves. The chat dock runs our agent for the chef’s task. The request page turns plain words, or an event brief, into a plan. Outside agents use MCP with a judge key bound to one visitor sandbox, or the same tools over REST described by OpenAPI. Valio’s Ops room reads the same sandbox live.',f:'src/routes/(kitchen) · server/chat · src/routes/request · /mcp/k/[key] · /api/tools/[name]',h:'kitchen-order.e2e.ts · evals/chat · evals/fidelity · mcp.test.ts · openapi.test.ts'},
+ gate:{t:'Gate',d:'One list of 17 tools with zod schemas; MCP, REST, OpenAPI and the agent loop all read it. The caller comes from the bearer key, the judge key in the MCP path, the signed visitor cookie or the in-process actor. SCOPES_BY_ACTOR gives its scopes: an outside agent has no approve scope, and MCP lists only the tools inside the caller’s scopes. A refused agent call is written to the op log.',f:'core/contracts/tools.ts · server/auth · server/tools/serve.ts',h:'serve.test.ts · auth.test.ts · refusals.test.ts · adversarial.test.ts'},
+ core:{t:'Pure core',d:'Plain TypeScript with no I/O: applyOps and the state machines, ranking, demand sizing, mandate tiers, need fulfilment and the terms hash. Lint blocks Svelte, Node built-ins, vendor SDKs and server code here.',f:'core/state.ts · core/rank · core/demand · core/mandate · core/hash.ts',h:'state.test.ts · rank.test.ts · fulfilment.test.ts'},
+ tx:{t:'One locked transaction',d:'Inside the lock: the idempotency key and request hash (the same request gets the stored result), a re-read of the plan version and terms hash against the approval, the mandate version, the approval’s expiry and the cut-off, then the caps and the locked kitchen-week budget row. applyOps computes the change and the rows, the ops and the next sequence number are written together. Aiven Postgres in production, PGlite with the same migrations in tests.',f:'server/store · core/state.ts · server/db/schema.ts',h:'evals s1, s4, s5 · gate.test.ts · ceiling.test.ts · pg-race.test.ts'},
+ screens:{t:'Every open screen',d:'After the commit, the new ops are published; a rolled-back write publishes nothing. Postgres LISTEN/NOTIFY in production, an in-memory bus with PGlite. Screens subscribe to /api/events, catch up from their last sequence number and drop duplicates.',f:'server/bus · /api/events',h:'bus.test.ts · catchup.test.ts'},
+ pllm:{t:'LLM port',d:'One routing table picks the model per job. gemini-3.5-flash-lite parses requests, plans agent steps and reads chat messages; gemini-3.8-flash proposes menus. Every call sets a token ceiling and counts against daily caps per sandbox. With LLM_PROVIDER=fixture nothing leaves the server.',f:'server/adapters/llm (router.ts)',h:'router.test.ts · eval:live'},
+ pdec:{t:'Decide port',d:'gemini-decision-1 scores how well each top substitute fits the dish, 0 to 4, as one input to the kitchen’s ranking. A likely rule violation adds a caution and holds the line for the chef. It never approves anything.',f:'server/adapters/decide',h:'decide.test.ts · DECIDE_LIVE=1 pnpm test:live'},
+ pcat:{t:'Catalog port',d:'Product facts come from Valio’s catalogue of 17,546 products. Price and availability come from Valio’s API for the products being quoted (up to 200 per call), cached with their age; availability older than 15 minutes is fetched again. Substitute candidates: Valio’s own rules, then name matching.',f:'server/adapters/catalog',h:'valio.test.ts · retrieval evals'},
+ pweb:{t:'Web port',d:'Exa finds cited product facts for the Why drawer and agent tools. A Context.dev monitor checks Ruokavirasto’s recall list every 5 minutes. Web facts are stored next to the catalogue and never overwrite it. Per-key and global daily caps.',f:'server/web',h:'evidence.test.ts · watch.test.ts · tools.test.ts'},
+ psim:{t:'Simulator port',d:'Scenario stock for each visitor sandbox. At commit it consumes lots, or returns “awaiting supplier” for lines whose quantity Valio doesn’t state. The order is a local simulated commitment.',f:'server/adapters/simulator',h:'overlay.test.ts'}};
+const det=document.getElementById('det'),btns=[...document.querySelectorAll('.z,.pc')];
+function show(k,scroll){const i=INFO[k];btns.forEach(b=>b.setAttribute('aria-pressed',b.dataset.k===k));
+ det.innerHTML=`<div class="t">${esc(i.t)}</div><p>${esc(i.d)}</p><dl><dt>lives in</dt><dd><code>${esc(i.f)}</code></dd><dt>held by</dt><dd><code>${esc(i.h)}</code></dd></dl>`;
+ if(scroll&&matchMedia('(max-width:1100px)').matches)det.scrollIntoView({block:'nearest',behavior:'smooth'})}
+btns.forEach(b=>b.onclick=()=>show(b.dataset.k,true));
+show('doors');
 
 // state machines
 function smDraw(id,nodes,edges){
@@ -525,47 +342,6 @@ smDraw('smLine',[['p','proposed',60,55,'start'],['e','eligible',245,55,'happy'],
 smDraw('smAppr',[['p','pending',60,55,'start'],['g','granted',245,55,'happy'],['d','denied',60,150,'end-bad'],['i','invalidated',245,150,'end-bad'],['x','expired',430,150,'end-bad']],
  [['p','g','chef approves','happy'],['p','d','chef declines','plain',0,[50,10]],['g','i','any edit','back',0,[-34,6]],['g','x','time runs out','plain',0,[52,4]]]);
 (()=>{const s=document.getElementById('smAppr');const t=document.createElementNS(NS,'text');t.setAttribute('x',300);t.setAttribute('y',59);t.setAttribute('fill','#7fd6ad');t.setAttribute('font-size',12);t.setAttribute('font-family','IBM Plex Sans');t.textContent='→ these exact terms may be ordered';s.appendChild(t)})();
-
-// partners
-const STAGES=['Parse','Authorise','Lookup','Enrich','Decide','Commit','Notify','Watch'];
-const PT=[
- {name:'Valio Aimo',role:'Catalog port',sub:'catalogue, price, availability',stages:['Lookup'],
-  how:'Every product, pack and lot rule comes from Valio’s catalogue of 17,546 products. Price and availability come from Valio’s API <b>for the products being quoted</b>, cache-through, each labelled live or cached with its age.',
-  why:'The agent can only promise what the wholesaler states. Known stock ranks first. When Valio doesn’t state a quantity, the line is <b>never counted as cover</b>, and an order for it reads “ordered, awaiting supplier”.',
-  ex:{t:'quote for one line',n:'illustrative values',b:'<i>→</i> quote({ ids: ["476768"] })\n<i>←</i> HK Palvikinkku viipaloitu 1,5 kg\n   <em>Valio states a quantity</em> · known-stock candidate\n   <i>Valio API · cached, with its age</i>'},
-  fb:'cached offer, labelled with its age; the static catalogue',proof:'Why drawer shows “Valio cached” on the deployed app'},
- {name:'Gemini',role:'LLM and Decide ports',sub:'Flash-Lite, 3.8 Flash, Decisions',stages:['Parse','Decide'],
-  how:'<b>gemini-3.5-flash-lite</b> turns a buyer’s words into a structured request, plans agent steps and reads chat messages. <b>gemini-3.8-flash</b> proposes event menus. <b>gemini-decision-1</b> scores how well a substitute fits the dish, one input to the kitchen’s own ranking.',
-  why:'Requirements like “lactose-free” are kept through the parse, so the basket matches the request. A model caution <b>holds a line for the chef</b>. Model output is JSON checked by rules, and no model can approve anything.',
-  ex:{t:'parse, then fit',n:'illustrative values',b:'<i>→</i> "1,000 L lactose-free milk by Monday"\n<i>←</i> { amount: 1000 L, <em>lactose-free: required</em>, by: Monday }\n\n<i>→</i> fit(trout fillet, as salmon in graavilohi)\n<i>←</i> <em>fit 3 of 4</em> · ranked first · new product → <u>waits for the chef</u>'},
-  fb:'rules parser and scripted planner; Decide falls back to recorded replay, then rules',proof:'token ceiling per job · daily caps per sandbox'},
- {name:'Aiven',role:'Store port and Runtime',sub:'Postgres, one container',stages:['Commit','Notify'],
-  how:'The app runs as one container on Aiven. Postgres holds plans, approvals, orders, the op log and idempotency keys. Each commit runs <b>under a row lock</b> on the kitchen-week budget, and NOTIFY pushes every change to the open screens.',
-  why:'Postgres enforces one order per plan and key. Retries, double clicks and racing agents end with <b>one receipt</b>.',
-  ex:{t:'race check after each deploy',n:'seen on the deployed app',seen:1,b:'<i>→</i> commit_order × 4 in parallel, same key\n<i>←</i> <em>1 receipt</em>\n<i>→</i> 3 different keys, same plan\n<i>←</i> <em>1 receipt</em> · the other 2 refused STALE_VERSION'},
-  fb:'PGlite with the same migrations',proof:'pg-race.test.ts · smoke-race.mjs on each deploy'},
- {name:'Exa',role:'Web port',sub:'cited product facts',stages:['Enrich'],
-  how:'When the catalogue lacks a fact, the Why drawer shows <b>“From the web”</b>: net content, origin and ingredients, each with its source. Agents get the same through <b>lookup_facts</b>, and <b>find_outside</b> lists options outside Valio for an unresolved need.',
-  why:'A web fact is stored next to the catalogue entry and <b>never replaces it</b>. Outside options are never ordered.',
-  ex:{t:'Why drawer on the ham',n:'illustrative values',b:'<i>→</i> evidence for HK Viljaporsaan juhlakinkku\n<i>←</i> origin, net content, ingredients\n   <em>each cited by GTIN</em> · source: the manufacturer’s site\n   <i>stored as a finding · catalogue unchanged</i>'},
-  fb:'fixture; per-key and global daily caps',proof:'evidence.test.ts · seen in the deployed Why drawer'},
- {name:'Context.dev',role:'Web port',sub:'recall monitor',stages:['Watch'],
-  how:'A monitor checks <b>Ruokavirasto’s recall list every 5 minutes</b> and calls our webhook. Each new notice becomes an Ops case, matched against the catalogue by GTIN, then by name.',
-  why:'A notice that matches a product holds the affected lines for the chef and keeps the product out of substitutes. A notice with no match says so and holds nothing.',
-  ex:{t:'one notice',n:'illustrative values',b:'<i>→</i> new notice on the recall list\n<i>←</i> check_recall: <u>no catalogue product matches</u>\n   Ops case: “Nothing held.”'},
-  fb:'fixture',proof:'watch.test.ts · recall.test.ts · recall cases in the deployed Ops'}];
-document.querySelectorAll('[data-partners]').forEach(root=>{
- root.classList.add('pt');
- root.innerHTML=`<div class="pt-list" role="tablist" aria-label="Partners">${PT.map((p,i)=>`<button class="pt-tab" role="tab" data-i="${i}" aria-selected="${i===0}" tabindex="${i===0?0:-1}"><span><b>${p.name}</b><small>${p.sub}</small></span><span class="tag">live</span></button>`).join('')}</div><div class="pt-panel" role="tabpanel" aria-live="polite"></div>`;
- const panel=root.querySelector('.pt-panel'),tabs=[...root.querySelectorAll('.pt-tab')];
- function sel(i){const p=PT[i];tabs.forEach((t,j)=>{t.setAttribute('aria-selected',j===i);t.tabIndex=j===i?0:-1});
-  panel.innerHTML=`<div class="pt-head"><h3>${p.name}</h3><span class="role">${p.role}</span></div>
-  <div class="pt-strip" aria-label="Where it sits in a call">${STAGES.map(s=>`<span class="${p.stages.includes(s)?'on':''}">${s}</span>`).join('')}</div>
-  <div class="pt-cols"><div><h4>How we use it</h4><p>${p.how}</p></div><div><h4>Why it matters</h4><p>${p.why}</p></div></div>
-  <div class="pt-ex"><div class="pt-bar"><span>Example · ${p.ex.t}</span><span class="n ${p.ex.seen?'seen':''}">${p.ex.n}</span></div><pre>${p.ex.b}</pre></div>
-  <div class="pt-foot"><span>if it fails: <b>${p.fb}</b></span><span>evidence: <b>${p.proof}</b></span></div>`}
- tabs.forEach(t=>{t.onclick=()=>sel(+t.dataset.i);t.onkeydown=e=>{const d={ArrowDown:1,ArrowRight:1,ArrowUp:-1,ArrowLeft:-1}[e.key];if(!d)return;e.preventDefault();const n=(+t.dataset.i+d+PT.length)%PT.length;tabs[n].focus();sel(n)}});
- sel(0)});
 })();
 </script>
 </body>

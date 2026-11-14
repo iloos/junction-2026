@@ -314,7 +314,6 @@ const CASES = [
 			need(keys.size === 1, 'commits used different keys');
 			need(receipts.size === 1, `${receipts.size} receipts`);
 			const c = ok[0].json.commit;
-			const awaiting = c.awaitingSupplier.length;
 			return {
 				request: `${text}, then the order sent ${ok.length} times at once`,
 				steps: [
