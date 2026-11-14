@@ -95,6 +95,14 @@
 		}
 	}
 
+	/** The newest line stays in view as a turn streams in. */
+	let list = $state<HTMLOListElement | null>(null);
+	$effect(() => {
+		void entries.length;
+		void busy;
+		list?.scrollTo({ top: list.scrollHeight });
+	});
+
 	const last = $derived(entries.findLast((x) => x.kind === 'event'));
 	const pendingClarify = $derived(
 		last?.kind === 'event' && last.e.type === 'done' && last.e.state === 'awaiting_clarification'
@@ -235,7 +243,11 @@
 		>
 	</header>
 
-	<ol class="flex-1 space-y-3 overflow-y-auto px-4 py-3 text-body" aria-live="polite">
+	<ol
+		bind:this={list}
+		class="flex-1 space-y-3 overflow-y-auto px-4 py-3 text-body"
+		aria-live="polite"
+	>
 		{#if !entries.length}
 			<li class="text-ink-3">
 				Try “4 kg lactose-free butter for Wednesday” or “what needs my approval?”. Answers to the
@@ -305,9 +317,14 @@
 				<li class="border-l-2 border-accent pl-3 text-ink">
 					<span class="num">{x.e.summary}</span>
 				</li>
-			{:else if x.e.type === 'done' && x === last && x.e.state !== 'awaiting_clarification'}
-				<li class="flex flex-wrap gap-2">
-					{#if x.e.canContinue || x.e.state === 'awaiting_chef'}
+			{:else if x.e.type === 'done' && x.e.state !== 'awaiting_clarification'}
+				{@const ledgerLine = entries[i - 1]}
+				{#if !(ledgerLine?.kind === 'event' && ledgerLine.e.type === 'ledger' && ledgerLine.e.summary === x.e.text)}
+					<!-- The agent's answer, worded from the ledger (the line above carries the numbers). -->
+					<li class="text-ink">{x.e.text}</li>
+				{/if}
+				{#if x === last && (x.e.canContinue || x.e.state === 'awaiting_chef')}
+					<li class="flex flex-wrap gap-2">
 						<button
 							type="button"
 							class="rounded-md bg-accent px-3 py-1.5 text-meta font-semibold text-sheet disabled:opacity-50"
@@ -316,8 +333,8 @@
 						>
 							{x.e.canContinue ? 'Continue: submit what may be ordered' : 'I’ve decided: continue'}
 						</button>
-					{/if}
-				</li>
+					</li>
+				{/if}
 			{/if}
 		{/each}
 		{#if busy}<li class="text-ink-3">Working…</li>{/if}
