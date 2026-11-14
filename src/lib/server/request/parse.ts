@@ -50,6 +50,9 @@ export interface ParsedRequest {
 	deliverBySource: 'request' | 'default';
 	/** The chef chose this date on the page (date control or a cut-off answer), over the words' one. */
 	deliverByChosen?: boolean;
+	/** A dish with a count: how it was read, both ways to serve it, and which one the items are. */
+	dish?: import('./dish').DishInterpretation;
+	dishChoice?: 'ready' | 'raw';
 	notes: string[];
 	/** Request-level questions (date, disagreements); item questions live on the item. */
 	ambiguities: string[];
@@ -438,6 +441,8 @@ Return only JSON: {"items":[{"query":string,"qty":number|null,"unit":"l"|"kg"|"p
 - constraints from: lactose_free, organic, finnish, gluten_free.
 - searchFi: 1-3 Finnish catalogue words for the product, base form (maito, peruna, voi, kerma, laktoositon).
 - variant: a named product variant (e.g. "whole", "skimmed", "unsalted") or null.
+- A dish with a count and no unit ("10000 bolognese pasta", "200 portions of lasagne") is portions to serve, not packs: one item, query the dish name, qty the count, unit "sales"; the server prices the dish itself.
+- A ratio of one ingredient ("half beef, the other half mixed", "half only cow and other half half") describes that ingredient's composition: never a separate item, never an ambiguity.
 - Never invent a quantity, product or date. Put anything unclear in ambiguities.`;
 
 function constraintKey(s: string): ConstraintKey | null {
