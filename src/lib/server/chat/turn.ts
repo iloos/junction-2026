@@ -18,6 +18,7 @@ import type { Slots } from '$lib/server/agent/types';
 import type { Env } from '$lib/server/auth';
 import { UNITS } from '$lib/server/request/lexicon';
 import { parseRules } from '$lib/server/request/parse';
+import { readingOf, reviewReading } from '$lib/server/request/reading';
 import { dayWords, ledgerSummary, readTask } from '$lib/server/tasks/outcome';
 import { explain } from './explain';
 import { answerInChat } from './question';
@@ -781,6 +782,22 @@ async function* turnLines(
 				!!words &&
 				(u?.kind === 'event' || reading?.kind === 'event') &&
 				!isSeededEvent(words)));
+	// An order's reading is judged against the chef's words, as /request judges it: a block (a unit we can't order
+	// in, a number read wrong) is the question to the chef, asked before anything is searched.
+	let readingBlock: string | null = null;
+	if (
+		!eventFlow &&
+		!dishAsk &&
+		words &&
+		!answering &&
+		!input.answer &&
+		!resize &&
+		!addition &&
+		(u?.kind === 'order' || (!u && reading?.kind === 'order'))
+	) {
+		const v = await reviewReading(words, readingOf(parseRules(withoutKitchen(words), deps.today)));
+		if (v.kind === 'block') readingBlock = v.reason;
+	}
 	if (eventFlow && task.requirement.kind !== 'event')
 		task.requirement = { ...task.requirement, kind: 'event' };
 
@@ -802,7 +819,10 @@ async function* turnLines(
 		expected = reserved.value.version;
 	}
 
-	if (dishAsk) {
+	if (readingBlock) {
+		steps = [];
+		refusal = readingBlock;
+	} else if (dishAsk) {
 		steps = [];
 		const n = dishAsk.portions.toLocaleString('en-US');
 		clarify = {
