@@ -43,6 +43,8 @@ export interface CommitRecord {
 	receipt: Receipt;
 	lines: Line[];
 	at: string;
+	/** The idempotency key the order was placed with: a retry resends it and gets the same receipt. */
+	key?: string;
 }
 
 interface State {
@@ -324,7 +326,13 @@ const handlers: { [N in ToolName]?: Handler<N> } = {
 			awaitingSupplier: unknown.map((l) => l.id)
 		};
 		for (const l of committable) s.committed[l.id] = { ...l, state: 'committed' };
-		s.orders.set(input.idempotencyKey, { output, receipt, lines: committable, at: DEMO_CLOCK });
+		s.orders.set(input.idempotencyKey, {
+			output,
+			receipt,
+			lines: committable,
+			at: DEMO_CLOCK,
+			key: input.idempotencyKey
+		});
 		await rebuild(true, `committed ${orderId}`);
 		return output;
 	},

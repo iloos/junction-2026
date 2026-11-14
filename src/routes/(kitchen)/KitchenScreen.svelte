@@ -216,11 +216,15 @@
 	/** Once every orderable line is ordered, the header becomes the order's state. */
 	const orderedState = $derived.by(() => {
 		const done = (plan?.lines ?? []).filter((l) => l.state === 'committed');
-		if (!done.length || orderable.lines > 0 || !k.lastCommit) return null;
+		const orders = snap?.orders ?? [];
+		if (!done.length || orderable.lines > 0 || !orders.length) return null;
+		// Every order on the plan (in-mandate lines may have gone first, approved ones later), from the receipts.
+		const lines = orders.reduce((a, o) => a + o.output.committedLineIds.length, 0);
+		const awaiting = orders.reduce((a, o) => a + o.output.awaitingSupplier.length, 0);
 		return {
-			confirmed: k.lastCommit.lines - k.lastCommit.awaiting,
-			awaiting: k.lastCommit.awaiting,
-			cents: done.reduce((a, l) => a + (l.lineCents ?? 0), 0)
+			confirmed: lines - awaiting,
+			awaiting,
+			cents: orders.reduce((a, o) => a + o.output.totalCents, 0)
 		};
 	});
 

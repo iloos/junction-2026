@@ -333,7 +333,8 @@ async function buildSnapshot(s: Session): Promise<LiveSnapshot> {
 				},
 				receipt,
 				lines: plan.lines.filter((l) => o.lines.some((x) => x.lineId === l.id)),
-				at: o.committedAt
+				at: o.committedAt,
+				key: o.idempotencyKey
 			};
 		});
 	const week = isoWeek(plan.deliverBy);

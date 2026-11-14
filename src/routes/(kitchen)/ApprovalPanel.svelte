@@ -69,12 +69,22 @@
 	/** One decision per reason group (lib/ui/decisions): the same count the task header and phone bar show. */
 	const decisions = $derived(decisionsOf(plan, approval));
 	const due = $derived(decisionsDue(plan, approval));
-	/** After the order: why the approved lines needed a human, grouped the same way. */
-	const decided = $derived(
-		approval && !pending
-			? decisionsOf(plan, { ...approval, state: 'pending' })
-			: ([] as ReturnType<typeof decisionsOf>)
-	);
+	/**
+	 * After deciding: every line a human approved (ordered or not yet), grouped by why it needed them. Read from
+	 * the lines, not the latest approval, so groups approved one at a time all show.
+	 */
+	const decided = $derived.by(() => {
+		if (!approval || pending) return [] as ReturnType<typeof decisionsOf>;
+		const ids = plan.lines
+			.filter(
+				(l) =>
+					l.tier !== undefined &&
+					l.tier !== 'act' &&
+					(l.state === 'committed' || l.view?.committable === true)
+			)
+			.map((l) => l.id);
+		return decisionsOf(plan, { ...approval, lineIds: ids, state: 'pending' });
+	});
 	/**
 	 * Lines a human already approved in an earlier group decision and that are not ordered yet: committable but not
 	 * within the mandate. Read from the line's view.
@@ -89,12 +99,6 @@
 				l.view?.committable === true
 		)
 	);
-	/** In the mandate on its own: committable at the agent's own tier, not because a human approved it. */
-	const withinCents = $derived(
-		plan.lines
-			.filter((l) => l.view?.committable === true && l.tier === 'act')
-			.reduce((s, l) => s + (l.lineCents ?? 0), 0)
-	);
 
 	let commitBtn = $state<HTMLButtonElement | null>(null);
 	async function approve(lineIds: string[]) {
@@ -104,6 +108,32 @@
 		return ok;
 	}
 	const nameOf = (id: string) => names.get(id) ?? id;
+
+	/**
+	 * The plan's money as a partition that adds up: every priced, orderable line sits in exactly one row, by what
+	 * happened to it (ordered, awaiting a decision, approved, within the mandate, held for another reason).
+	 */
+	const split = $derived.by(() => {
+		const pendingIds = new Set(pending ? (approval?.lineIds ?? []) : []);
+		const sums = { ordered: 0, decide: 0, approved: 0, within: 0, held: 0 };
+		for (const l of plan.lines) {
+			if (l.state === 'rejected' || l.state === 'unorderable') continue;
+			const c = l.lineCents ?? 0;
+			if (l.state === 'committed') sums.ordered += c;
+			else if (pendingIds.has(l.id)) sums.decide += c;
+			else if (l.view?.committable && l.tier !== 'act') sums.approved += c;
+			else if (l.view?.committable) sums.within += c;
+			else sums.held += c;
+		}
+		const rows = [
+			{ label: 'Ordered', cents: sums.ordered },
+			{ label: 'Needs your decision', cents: sums.decide },
+			{ label: 'Approved, not ordered yet', cents: sums.approved },
+			{ label: 'Within your mandate, can go now', cents: sums.within },
+			{ label: 'Held: cannot be ordered as is', cents: sums.held }
+		].filter((r) => r.cents > 0);
+		return { rows, total: Object.values(sums).reduce((a, b) => a + b, 0) };
+	});
 </script>
 
 {#if part === 'decide'}
@@ -165,9 +195,10 @@
 					{#if ordered}
 						<CircleCheck size={16} class="text-accent" aria-hidden="true" />
 						<span
-							><b class="font-medium">Ordered</b> · {approvalLines.length} approved lines{lastCommit
+							><b class="font-medium">Ordered</b> · {committedN} lines on {orders.length}
+							{orders.length === 1 ? 'order' : 'orders'}{lastCommit
 								? `, receipt ${lastCommit.receiptId}`
-								: ''}. Supplier confirmation is on the receipt below.</span
+								: ''}. Supplier confirmation is on the receipt.</span
 						>
 					{:else if granted}
 						<CircleCheck size={16} class="text-ok" aria-hidden="true" />
@@ -232,7 +263,7 @@
 						{/each}
 					</ul>
 				{/if}
-				{#if approvedEarlier.length}
+				{#if pending && approvedEarlier.length}
 					<div class="mt-2.5 rounded-md border border-ok/30 bg-ok-wash/60 px-3 py-2">
 						<p class="flex items-center gap-1.5 text-meta font-medium text-ink">
 							<CircleCheck size={14} class="text-ok" aria-hidden="true" /> Approved by you, not ordered
@@ -266,23 +297,24 @@
 			<h2 id="order-h" class="text-heading font-semibold text-ink">Order</h2>
 			<span class="text-meta text-ink-3">delivery {day(plan.deliverBy)}</span>
 		</div>
+		<dl
+			class="mx-4 mt-3 grid grid-cols-[1fr_auto] gap-x-3 gap-y-1 border-t border-rule pt-2.5 text-meta"
+			aria-label="Where the plan's money stands"
+		>
+			{#each split.rows as r (r.label)}
+				<dt class="text-ink-2">{r.label}</dt>
+				<dd class="mono text-right text-ink">{money(r.cents)}</dd>
+			{/each}
+			<dt class="font-medium text-ink">Plan total, ex VAT</dt>
+			<dd class="mono text-right font-medium text-ink">{money(split.total)}</dd>
+			<dt class="text-ink-2">Delivery</dt>
+			<dd class="text-right text-ink">{day(plan.deliverBy)}</dd>
+			{#if approval && pending}
+				<dt class="text-ink-2">Approval valid until</dt>
+				<dd class="text-right text-ink">{storyTime(approval.expiresAt)}</dd>
+			{/if}
+		</dl>
 		{#if approval}
-			<dl
-				class="mx-4 mt-3 grid grid-cols-[1fr_auto] gap-x-3 gap-y-1 border-t border-rule pt-2.5 text-meta"
-			>
-				<dt class="text-ink-2">These lines</dt>
-				<dd class="mono text-right text-ink">{money(approvalCents)}</dd>
-				<dt class="text-ink-2">Within your mandate already</dt>
-				<dd class="mono text-right text-ink">{money(withinCents)}</dd>
-				<dt class="font-medium text-ink">Order total, ex VAT</dt>
-				<dd class="mono text-right font-medium text-ink">{money(plan.totalCents)}</dd>
-				<dt class="text-ink-2">Delivery</dt>
-				<dd class="text-right text-ink">{day(plan.deliverBy)}</dd>
-				{#if !ordered}
-					<dt class="text-ink-2">Approval valid until</dt>
-					<dd class="text-right text-ink">{storyTime(approval.expiresAt)}</dd>
-				{/if}
-			</dl>
 			{#if shortfalls.length}
 				<div class="mx-4 mt-2.5 rounded-md bg-well px-3 py-2 text-meta leading-snug text-ink">
 					<p class="font-medium">Still not covered after this order</p>
@@ -340,7 +372,12 @@
 
 			{#if lastCommit}
 				<div class={eligible.length || !committedN ? 'mt-3' : ''}>
-					<Receipt receipt={lastCommit} orders={orders.length} {busy} {onretry} />
+					<Receipt
+						receipt={lastCommit}
+						orders={orders.length}
+						{busy}
+						onretry={lastCommit.key ? onretry : undefined}
+					/>
 				</div>
 			{/if}
 		</div>
