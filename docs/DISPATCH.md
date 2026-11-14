@@ -36,5 +36,11 @@ One session or lead agent per track, in its own worktree and branch, editing onl
 4. Wave 2 only after 1–2 are deployed and checked.
 5. Last stretch before 06:00: fixes, video, rehearsal; tag; no redeploy in the last 30 minutes.
 
+## Booth notes, Sat late (behind the R10 fixes, before the freeze)
+- **1f · Diet and allergen marks.** Finnish menu codes (G, L, VL, M, VEG, VE) per line, rolled up to the dish and the order, with the EU allergens on hover and one legend. Built from `Product.allergens`, `freeFrom` and `diet`. When `allergens.declared` is false, the mark reads "no allergen record" and never "free from". At 390 px the marks stay on one line.
+- **8d · Options with one labelled suggestion.** A decision offers the chef's pick (by preference) and up to two alternatives. One of them may be "Valio suggests": a higher-tier or better-value product with a stated reason (Finnish, organic, a cheaper price per kg in a bigger pack). That slot never leaves the mandate or a hard requirement, and is never the default. "I don't mind" means the agent picks by preference. We have no margin data, so nothing claims profit optimisation. 1f renders it on the decision card; the comparison table lives inside "Compare".
+- **Free session · Profiles P4, P5, P6 and P8** from [horeca-profiles](research/horeca-profiles.md) §2, seeded in `fixtures/seeds/kitchens.json` with their weights and hard rules, so "same shortage, different answer" shows across kitchen types. The evals must stay green.
+- **Pitch only:** recurring / usual orders (d0's held design, waiting on the user's history policy); cards with images (after the vision endpoint).
+
 ## Held
 SetMandate op (after the hackathon; don't claim mandate history) · Kitchen layout restructure (B's deltas only) · new dependencies · forecast/demand tabs and the product sheet until Wave 2.
