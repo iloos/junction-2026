@@ -17,6 +17,15 @@ const EVENT_WORDS =
 	/\b(wedding|häät|birthday|synttär\w*|party|juhla\w*|conference|seminar|banquet|gala|event|tapahtuma\w*|catering|buffet|dinner|lunch for)\b/i;
 const INSPECT = /\b(show|status|state|inspect|check|explain|summar\w*|näytä|tilanne|why|what)\b/i;
 const ORDER = /\b(order|reorder|buy|tilaa|tilaus)\b/i;
+/** "160 g per guest", "0.2 kg/cover", "160 g / hlö". */
+const PER_GUEST =
+	/(\d+(?:[.,]\d+)?)\s*(g|grams?|kg)\s*(?:per|\/|a|each)\s*(guest|cover|person|head|hlö|henkilö\w*|vieras\w*)/i;
+const ADJUST_STOP = new Set(
+	'raise increase lower reduce cut change set make bump up down the a an of for to from at in on per please each dish need it we our make serve serving portion portions instead now nosta laske muuta'.split(
+		' '
+	)
+);
+
 /** Largest physical quantity a routine order may ask for; above it the chef uses the request page. */
 const MAX_QTY = 100_000;
 
@@ -119,6 +128,24 @@ export function resolveIntent(goalRaw: string, c: AgentContext): Resolved {
 			kind: 'unsupported',
 			reason: `${named} is not a kitchen this run may act for (${kitchens.join(', ') || 'none'}).`
 		};
+
+	// A changed requirement on an existing plan, before any event wording can read it as a new plan.
+	const perGuest = goal.match(PER_GUEST);
+	if (perGuest) {
+		const grams = Number(perGuest[1].replace(',', '.')) * (/^kg/i.test(perGuest[2]) ? 1000 : 1);
+		if (!(grams > 0 && grams <= 2000))
+			return ask('Grams per guest must be above 0 and at most 2,000.');
+		const dish = goal
+			.replace(PER_GUEST, ' ')
+			.replace(KITCHEN, ' ')
+			.toLowerCase()
+			.split(/[^\p{L}-]+/u)
+			.filter((w) => w.length > 1 && !ADJUST_STOP.has(w))
+			.join(' ');
+		if (!dish) return ask('Which dish should change?');
+		if (!c.currentPlan) return noPlan(c, 'There is no plan to change; plan the event first.');
+		return { kind: 'adjust_need', planId: c.currentPlan.id, dish, gramsPerGuest: grams };
+	}
 
 	const event = c.supportedEvents.find((e) => eventMatches(goal, e.title, e.id));
 	if (event) {

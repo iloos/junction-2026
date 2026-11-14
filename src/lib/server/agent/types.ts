@@ -33,6 +33,7 @@ export const INTENT_KINDS = [
 	'seeded_event',
 	'shortage_repair',
 	'inspect',
+	'adjust_need',
 	'unsupported'
 ] as const;
 export type IntentKind = (typeof INTENT_KINDS)[number];
@@ -58,6 +59,14 @@ export type Intent =
 	  }
 	| { kind: 'shortage_repair'; planId: string }
 	| { kind: 'inspect'; planId: string }
+	| {
+			/** A requirement changed mid-plan: one dish's grams per guest, resized through edit_line. */
+			kind: 'adjust_need';
+			planId: string;
+			/** The goal's words naming the dish, matched against the plan's needs after get_plan. */
+			dish: string;
+			gramsPerGuest: number;
+	  }
 	| { kind: 'unsupported'; reason: string };
 
 export type PlanPick = 'named' | 'event' | 'kitchen' | 'shortage' | 'only';
@@ -127,5 +136,6 @@ export const TOOLS_BY_INTENT: Record<IntentKind, readonly ToolName[]> = {
 	routine_order: ['search_products', 'quote', 'place_order', 'get_plan', 'commit_order'],
 	shortage_repair: ['get_plan', 'find_substitutes', 'explain_line', 'quote', 'search_products'],
 	inspect: ['get_plan', 'explain_line'],
+	adjust_need: ['get_plan', 'edit_line', 'find_substitutes', 'explain_line'],
 	unsupported: []
 };

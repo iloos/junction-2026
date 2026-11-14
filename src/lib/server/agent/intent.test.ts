@@ -99,6 +99,22 @@ describe('typed intent (finding D)', () => {
 		expect((r as { reason: string }).reason).toMatch(why);
 	});
 
+	it('a changed requirement is adjust_need, even with event words in it', () => {
+		expect(resolveIntent('Raise the cured salmon to 160 g per guest', ctx())).toEqual({
+			kind: 'adjust_need',
+			planId: 'pl-1',
+			dish: 'cured salmon',
+			gramsPerGuest: 160
+		});
+		expect(
+			resolveIntent('set graavilohi in the Christmas buffet to 0.2 kg per guest', ctx())
+		).toMatchObject({ kind: 'adjust_need', gramsPerGuest: 200 });
+		expect(resolveIntent('salmon 5000 g per guest', ctx())).toMatchObject({
+			kind: 'unsupported',
+			clarify: true
+		});
+	});
+
 	it('asks which plan when the request does not say and several are open', () => {
 		const two = ctx({
 			currentPlan: null,
