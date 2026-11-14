@@ -1,0 +1,480 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>How Mandate Works</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0b0d0e; --p:#121618; --p2:#171c1f; --line:#242b2f; --line2:#323b40;
+  --ink:#eef1ef; --ink2:#a9b2af; --ink3:#86908d;
+  --ok:#3fbf8a; --teal:#2bb3a6; --amber:#e8a93c; --red:#ef6b59; --vio:#b39cff; --blue:#82adff;
+  --sans:'IBM Plex Sans',system-ui,sans-serif; --mono:'IBM Plex Mono',ui-monospace,monospace; --serif:'Instrument Serif',Georgia,serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font:14px/1.55 var(--sans);-webkit-font-smoothing:antialiased}
+a{color:inherit}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+.top{height:56px;display:flex;align-items:center;justify-content:space-between;padding:0 28px;border-bottom:1px solid var(--line)}
+.brand{font-weight:600;display:flex;gap:8px;align-items:center}.brand i{width:18px;height:18px;border:1.5px solid;border-radius:4px;display:grid;place-items:center;font:normal 10px var(--sans)}
+.top nav{display:flex;gap:20px;font-size:13px;color:var(--ink2)}.top nav a{text-decoration:none}
+.wrap{max-width:1280px;margin:0 auto;padding:56px 28px 80px}
+.kicker{font:500 12px var(--mono);letter-spacing:.08em;color:var(--teal);text-transform:uppercase;margin-bottom:14px}
+h1{font:400 clamp(40px,5vw,68px)/1.04 var(--serif);max-width:20ch}
+h1 em{color:var(--ink2)}
+h2{font:400 36px/1.1 var(--serif);margin:72px 0 8px}
+.lede{color:var(--ink2);font-size:17px;max-width:62ch;margin-top:16px}
+.bar{display:flex;gap:8px;margin:32px 0 14px;flex-wrap:wrap;align-items:center}
+.seg{display:flex;border:1px solid var(--line2);border-radius:999px;padding:3px}
+.seg button{padding:5px 12px;border-radius:999px;font-size:13px;color:var(--ink2)}
+.seg button.on{background:var(--ink);color:var(--bg)}
+.go{padding:7px 16px;border-radius:999px;background:var(--teal);color:#06110f;font-weight:600;font-size:13px}
+.map{display:grid;grid-template-columns:1fr 340px;gap:16px}
+.stage{background:var(--p);border:1px solid var(--line);border-radius:16px;position:relative;overflow:hidden}
+#sys{width:100%;display:block}
+.n rect{fill:var(--p2);stroke:var(--line2);transition:stroke .25s,fill .25s,opacity .25s}
+.n text{fill:var(--ink);font:500 12.5px var(--sans);pointer-events:none}
+.n .s{fill:var(--ink3);font:12px var(--mono)}
+.n{cursor:pointer;transition:opacity .25s}
+.n.hot rect{stroke:var(--teal);fill:#14231f}
+.n.sp rect{stroke:var(--amber)}
+.n.dim{opacity:.28}
+.e{stroke:var(--line2);fill:none;stroke-width:1.2;transition:opacity .25s}
+.e.dim{opacity:.15}.e.hot{stroke:var(--teal);stroke-width:2}
+.band{font:12px var(--mono);fill:var(--ink3);letter-spacing:.06em}
+.side{background:var(--p);border:1px solid var(--line);border-radius:16px;padding:20px;position:sticky;top:16px;align-self:start;min-height:420px}
+.side .t{font:400 28px/1.1 var(--serif)}
+.side .k{font:12px var(--mono);color:var(--teal);margin:4px 0 14px}
+.side p{color:var(--ink2);font-size:13.5px;margin-bottom:12px}
+.side dl{display:grid;grid-template-columns:90px 1fr;gap:6px 10px;font-size:12.5px;border-top:1px solid var(--line);padding-top:12px}
+.side dt{color:var(--ink3);font-family:var(--mono);font-size:12px}
+.side dd code{font:12px var(--mono);color:var(--ink)}
+.log{margin-top:14px;font:12px var(--mono);color:var(--ink2);border-top:1px solid var(--line);padding-top:12px;max-height:240px;overflow:auto}
+.log div{padding:2px 0}.log b{color:var(--teal);font-weight:500}
+/* sponsors */
+.sgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-top:24px}
+.sc{background:var(--p);border:1px solid var(--line);border-radius:14px;padding:18px}
+.sc .nm{font:400 26px var(--serif)}
+.sc .port{font:12px var(--mono);color:var(--amber);margin:2px 0 10px}
+.sc p{font-size:13px;color:var(--ink2)}
+.sc .fb{margin-top:12px;font:12px var(--mono);color:var(--ink3);border-top:1px solid var(--line);padding-top:10px}
+.sc .fb b{color:var(--ink2);font-weight:500}
+/* system map v3 */
+.read{color:var(--ink2);font-size:14.5px;margin:0 0 12px;max-width:90ch}
+.map.wide{width:min(1500px,calc(100vw - 48px));margin-left:50%;transform:translateX(-50%);grid-template-columns:1fr 330px}
+#sys .rg rect{fill:none;stroke:var(--line2);stroke-width:1.2}
+#sys .rg.srv rect{fill:#0e1214;stroke:#2a3236}
+#sys .rg.lock rect{fill:rgba(232,169,60,.05);stroke:#e8a93c;stroke-dasharray:6 5}
+#sys .rg.core rect{fill:rgba(43,179,166,.06);stroke:#2bb3a6;stroke-dasharray:6 5}
+#sys .rg.pg rect{fill:#10171a;stroke:#2f4a52}
+#sys .rl{font:12.5px var(--mono);fill:#9aa5a2;letter-spacing:.04em}
+#sys .rg.lock .rl{fill:#e8a93c}#sys .rg.core .rl{fill:#5fd0c4}#sys .rg.pg .rl{fill:#8fb8c4}
+#sys .rg.dim{opacity:.3}
+#sys .n text{font:500 13.5px var(--sans);fill:var(--ink)}
+#sys .n .s{font:400 13px var(--sans);fill:#a3aeab}
+#sys .n.door rect{fill:#161c1f}
+#sys .n.reg rect{fill:#14211f;stroke:#2bb3a6}
+#sys .corechips rect{fill:#13201e;stroke:#2f5f59}
+#sys .corechips .cc{font:500 12.5px var(--mono);fill:#bfe8e2}
+#sys .sock rect{fill:#151a1d}
+#sys .sock .plug{fill:#2f383c;stroke:none}
+#sys .sock .ad{stroke:none}
+#sys .sock .ad-p{fill:#2a2216}#sys .sock .ad-o{fill:#1b2430}#sys .sock .ad-f,#sys .sock .ad-n{fill:#1a2023}
+#sys .sock text.at{font:400 12.5px var(--sans)}
+#sys .sock .at-p{fill:#f0c477}#sys .sock .at-o{fill:#a9c6ff}#sys .sock .at-f{fill:#a3aeab}#sys .sock .at-n{fill:#a3aeab;font-style:italic}
+#sys .pgt rect{fill:#162126;stroke:#2f4a52}
+#sys .pgt .th{font:500 12.5px var(--sans);fill:#8fb8c4}
+#sys .pgt .tt{font:400 12.5px var(--mono);fill:#d6e6ea}
+#sys .e{stroke:#56636a;fill:none;stroke-width:1.3}
+#sys .e.dash{stroke-dasharray:5 4;stroke:#7a6a4c}
+#sys .e.dot{stroke-dasharray:2 4;stroke:#2bb3a6}
+#sys .e.data{stroke:#3f8f88}
+#sys .e.loop{stroke:#2bb3a6;stroke-width:1.6;stroke-dasharray:1 0}
+#sys .el{font:12.5px var(--sans);fill:#9aa5a2}
+#sys .loopl{fill:#5fd0c4}
+#sys .e.dim,#sys .el.dim{opacity:.12}
+#sys .n.hot rect{stroke:#2bb3a6;stroke-width:2}
+#sys .n.bad rect{stroke:#ef6b59}
+#sys.tracing .n{opacity:.35}#sys.tracing .n.seen{opacity:1}#sys.tracing .e{opacity:.25}#sys.tracing .rg{opacity:.6}
+#sys .trail{fill:none;stroke:#2bb3a6;stroke-width:2.2;opacity:.85}
+#sys .trail.bad{stroke:#ef6b59}
+#sys .pkt{fill:#eef1ef;stroke:#2bb3a6;stroke-width:3}
+#sys .pkt.bad{stroke:#ef6b59}
+.side code{font:12px var(--mono);color:var(--ink)}
+.ctl{display:flex;gap:6px;margin:-4px 0 12px}
+.ctl button{border:1px solid var(--line2);border-radius:8px;padding:5px 12px;font-size:13px}
+.insp{list-style:none;max-height:520px;overflow:auto;border-top:1px solid var(--line);padding-top:8px}
+.insp li{padding:6px 0;border-bottom:1px solid var(--line)}
+.insp .st{font:12.5px var(--mono);color:var(--ink3)}
+.insp li.now .st{color:var(--teal)}
+.insp li.bad .st{color:var(--red)}
+.insp pre{font:12.5px/1.5 var(--mono);color:var(--ink);background:#0c1012;border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin:8px 0 6px;white-space:pre-wrap}
+.insp li.bad pre{border-color:#5a2a22}
+.insp p{font-size:13px;color:var(--ink2);margin:0}
+@media(max-width:1000px){.map.wide{grid-template-columns:1fr;width:auto;margin-left:0;transform:none}}
+/* state machines */
+.sm{display:grid;grid-template-columns:1fr;gap:12px;margin-top:24px}
+.smc{background:var(--p);border:1px solid var(--line);border-radius:14px;padding:18px 22px;display:grid;grid-template-columns:minmax(0,600px) 1fr;gap:32px;align-items:center}
+.smc h3{font:400 26px var(--serif);margin-bottom:6px}
+.smc svg{width:100%}
+.st rect{fill:var(--p2);stroke:var(--line2)}.st text{fill:var(--ink);font:12px var(--mono)}
+.smc p{font-size:14px;color:var(--ink2);max-width:46ch}
+.smleg{display:flex;gap:22px;flex-wrap:wrap;margin-top:12px;font-size:13px;color:var(--ink2)}.smleg i{display:inline-block;width:22px;height:12px;border:1.5px solid;border-radius:6px;margin-right:8px;vertical-align:-1px}
+.trail{display:grid;grid-template-columns:repeat(7,1fr);gap:0;margin-top:24px;position:relative}
+.tc{position:relative;background:var(--p);border:1px solid var(--line);border-radius:12px;padding:14px;margin-right:14px}
+.tc:not(:last-child)::after{content:"";position:absolute;right:-15px;top:50%;width:14px;height:1.5px;background:var(--line2)}
+.tc .k{font:500 12px var(--mono);color:var(--teal);letter-spacing:.06em}
+.tc b{display:block;font-weight:500;margin:6px 0 4px}
+.tc p{font-size:13px;color:var(--ink2);margin:0 0 8px}
+.tc small{font:12px var(--mono);color:var(--ink3)}
+.tc.hold{border-color:#6b4f1e}.tc.hold .k{color:var(--amber)}.tc.ok{border-color:#24533f}.tc.ok .k{color:var(--ok)}
+/* principles */
+.pr{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:14px;overflow:hidden;margin-top:24px}
+.pr div{background:var(--bg);padding:22px}
+.pr b{display:block;font:400 22px var(--serif);margin-bottom:6px}
+.pr span{color:var(--ink2);font-size:13.5px}
+.pt{display:grid;grid-template-columns:290px 1fr;gap:16px;margin-top:32px;align-items:start}
+.pt-list{display:flex;flex-direction:column;gap:6px}
+.pt-tab{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;text-align:left;padding:12px 16px;border:1px solid var(--line);border-radius:12px;background:transparent;color:var(--ink2);cursor:pointer;transition:border-color .2s,background .2s;font:inherit}
+.pt-tab b{font:400 24px/1.1 var(--serif);color:var(--ink);display:block}
+.pt-tab small{font:12.5px var(--sans);color:var(--ink3)}
+.pt-tab .tag{font:12px var(--mono);padding:2px 8px;border-radius:999px;border:1px solid var(--line2);color:var(--ink3);white-space:nowrap}
+.pt-tab .tag.live{color:var(--ok);border-color:#24533f}
+.pt-tab:hover{border-color:var(--line2)}
+.pt-tab[aria-selected="true"]{border-color:var(--teal);background:#122220}
+.pt-panel{border:1px solid var(--line);border-radius:16px;background:var(--panel,var(--p));padding:22px 24px;min-height:440px}
+.pt-head{display:flex;justify-content:space-between;align-items:baseline;gap:16px;flex-wrap:wrap}
+.pt-head h3{font:400 34px/1.05 var(--serif)}
+.pt-head .role{font:12px var(--mono);color:var(--teal)}
+.pt-strip{display:flex;gap:4px;margin:16px 0 18px;flex-wrap:wrap}
+.pt-strip span{flex:1;min-width:70px;text-align:center;font:12px var(--mono);padding:7px 4px;border-radius:7px;border:1px solid var(--line);color:var(--ink3);transition:all .25s}
+.pt-strip span.on{border-color:var(--teal);color:var(--ink);background:#143029}
+.pt-cols{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.pt-cols h4{font:500 12px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--ink3);margin-bottom:6px}
+.pt-cols p{font-size:14px;color:var(--ink2);line-height:1.6}
+.pt-cols b{color:var(--ink);font-weight:500}
+.pt-ex{margin-top:16px;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.pt-ex .pt-bar{display:flex;justify-content:space-between;gap:10px;font:12px var(--mono);color:var(--ink3);padding:8px 14px;border-bottom:1px solid var(--line);background:rgba(255,255,255,.02)}
+.pt-ex pre{margin:0;padding:12px 14px;font:12.5px/1.6 var(--mono);color:var(--ink);white-space:pre-wrap}
+.pt-ex pre i{font-style:normal;color:var(--ink3)}
+.pt-ex pre em{font-style:normal;color:var(--ok)}
+.pt-ex pre u{text-decoration:none;color:var(--amber)}
+.pt-foot{display:flex;gap:20px;flex-wrap:wrap;margin-top:14px;font:12px var(--mono);color:var(--ink3)}
+.pt-foot b{color:var(--ink2);font-weight:500}
+@media(max-width:900px){.pt{grid-template-columns:1fr}.pt-list{flex-direction:row;overflow-x:auto;padding-bottom:4px}.pt-tab{min-width:170px}.pt-cols{grid-template-columns:1fr}.pt-panel{padding:16px;min-height:0}.pt-head h3{font-size:28px}}
+
+.mock{position:fixed;left:50%;bottom:10px;transform:translateX(-50%);font:12px var(--mono);color:var(--ink3);background:var(--p);border:1px solid var(--line);padding:4px 12px;border-radius:999px}
+@media(max-width:1000px){.smc{overflow-x:auto}.smc svg{min-width:520px}.map,.sm,.pr,.smc{grid-template-columns:1fr}.trail{grid-template-columns:1fr 1fr}.tc{margin:0 0 10px}.tc::after{display:none}}
+.pl{text-decoration:underline;text-decoration-color:var(--line2);text-underline-offset:3px}
+</style>
+</head>
+<body>
+<header class="top"><div class="brand"><i>M</i>Mandate</div><nav><a href="landing.html">Story</a><a href="kitchen.html">Kitchen</a><a href="ops.html">Operations</a><a href="#" style="color:var(--ink)">How it works</a></nav></header>
+<div class="wrap">
+  <h1>How Mandate is built</h1>
+  <p class="lede">This map follows the code on main. Every caller, person or agent, goes through one list of tools and the same handler steps. The rules live in plain TypeScript with no I/O. Outside services sit behind ports, each with a fallback.</p>
+
+  <div class="bar">
+    <div class="seg" id="lensSeg"><button class="on" data-l="all">Everything</button><button data-l="sp">Partners</button><button data-l="safe">Safety checks</button><button data-l="data">Data</button></div>
+    <span style="flex:1"></span>
+    <span style="font:12px var(--mono);color:var(--ink3)">trace a call:</span>
+    <div class="seg" id="traceSeg"><button data-t="commit">Chef places an order</button><button data-t="mcp">Outside agent tries to approve</button><button data-t="sub">Agent finds a substitute</button></div>
+  </div>
+  <p class="read">Read it left to right: a door calls a tool, the handler checks and prepares it, the core decides, Postgres records it, and the change goes back to every open screen.</p>
+  <div class="map wide">
+    <div class="stage"><svg id="sys" viewBox="0 0 1124 694" role="img" aria-label="System map"></svg></div>
+    <aside class="side" id="side"></aside>
+  </div>
+
+  <h2>What each partner does</h2>
+  <p class="lede">Each partner is behind a port. Pick one to see which step it serves, an example call, and what happens when it is down.</p>
+  <div data-partners></div>
+
+  <h2>The three state machines</h2>
+  <p class="lede">Plans, lines and approvals each move through a few fixed states. An edit voids the approval, and an order is committed once.</p>
+  <div class="sm">
+    <div class="smc"><svg viewBox="0 0 540 190" id="smPlan" role="img" aria-label="Plan states"></svg><div><h3>Plan</h3><p>Green is the usual path. Any edit sends the plan back to draft and clears the terms hash, so an earlier approval no longer applies.</p></div></div>
+    <div class="smc"><svg viewBox="0 0 540 190" id="smLine" role="img" aria-label="Line states"></svg><div><h3>Line</h3><p>A line inside the mandate is ordered without asking. Any other line is held for a person with its reasons. Stock Valio has not stated is never counted as cover.</p></div></div>
+    <div class="smc"><svg viewBox="0 0 540 190" id="smAppr" role="img" aria-label="Approval states"></svg><div><h3>Approval</h3><p>An approval is tied to the plan version, the terms hash, the mandate version and an expiry. If any of them changes, the commit is refused.</p></div></div>
+  </div>
+  <div class="smleg"><span><i style="border-color:#3fbf8a"></i>happy path</span><span><i style="border-color:#e8a93c"></i>waits for a person</span><span><i style="border-color:#ef6b59;border-style:dashed"></i>sends it back</span><span><i style="border-color:#ef6b59;outline:1px solid rgba(239,107,89,.4);outline-offset:2px"></i>final</span></div>
+
+  <h2>One order line through the system</h2>
+  <p class="lede">The ham line in Hotel Rautatientori's Christmas plan, from the need to the receipt, once the chef approves. Each step names where its value came from. Values are illustrative.</p>
+  <div class="trail">
+    <div class="tc"><span class="k">NEED</span><b>Joulukinkku</b><p>140 guests × 120 g = 16.8 kg</p><small>chef edit · kitchen screen</small></div>
+    <div class="tc"><span class="k">OFFER</span><b><span class="pl" data-product="476768">476768</span> · €15.43</b><p>Valio states 15 packs; 6 kitchens want 31</p><small>Valio API · cached 4 min</small></div>
+    <div class="tc"><span class="k">RANK</span><b>#1 of 4</b><p>known stock first, then your weights</p><small>pure core · rules v3</small></div>
+    <div class="tc hold"><span class="k">DECISION</span><b>held for you</b><p>new product · Gemini fit .91</p><small>mandate: ask before new products</small></div>
+    <div class="tc"><span class="k">APPROVAL</span><b>granted by the chef</b><p>terms hash c21e… · plan v8 · mandate v3</p><small>before the cut-off, Tue 15:00</small></div>
+    <div class="tc"><span class="k">OPS</span><b>#1281 → #1291</b><p>ProposeSubstitute · RecordApproval · CommitOrder</p><small>op log · Aiven Postgres</small></div>
+    <div class="tc ok"><span class="k">RECEIPT</span><b>r-7f2 · 12 ST</b><p>same key again → same receipt</p><small>idempotency key k-91c…</small></div>
+  </div>
+
+  <h2>Design choices</h2>
+  <div class="pr">
+    <div><b>Pure core, ports at the edge</b><span>src/lib/core has no Svelte, no DOM, no SDK. Lint enforces it.</span></div>
+    <div><b>One function changes state</b><span>applyOps handles 8 op types. Each op is versioned and logged with its actor and door.</span></div>
+    <div><b>Approval is a hash</b><span>termsHash(deliverBy + sorted lines). If a price changes after approval, the hash differs and the commit is refused.</span></div>
+    <div><b>Never hold a lock across a model</b><span>Valio and Gemini calls finish before the transaction starts. The lock covers only the write.</span></div>
+    <div><b>Every flow has a fixture</b><span>The merge gate runs with LLM_PROVIDER=fixture: about 420 tests and evals through the real handlers.</span></div>
+    <div><b>Fixed wording</b><span>The UI says “supplier confirmed” only when a receipt backs it. Tests check the wording against VOCABULARY.md.</span></div>
+  </div>
+</div>
+<div class="mock">MOCKUP · try the trace buttons</div>
+<script>
+const NS='http://www.w3.org/2000/svg',S=document.getElementById('sys');
+const el=(t,a,p=S)=>{const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);p.appendChild(e);return e};
+const defs=el('defs',{});
+[['ar','#6b777c'],['arT','#2bb3a6'],['arA','#e8a93c']].forEach(([i,c])=>{const m=el('marker',{id:i,viewBox:'0 0 10 10',refX:9,refY:5,markerWidth:6,markerHeight:6,orient:'auto-start-reverse'},defs);el('path',{d:'M0 0L10 5L0 10z',fill:c},m)});
+const regG=el('g',{}),edgeG=el('g',{}),nodeG=el('g',{}),trailG=el('g',{}),pktG=el('g',{});
+const G={},EDGES=[];
+function region(x,y,w,h,label,cls,tags=[]){const g=el('g',{class:'rg '+cls},regG);el('rect',{x,y,width:w,height:h,rx:14},g);const t=el('text',{x:x+14,y:y+20,class:'rl'},g);t.textContent=label;g.dataset.tags=tags.join(' ');return g}
+function box(id,x,y,w,h,title,sub,o={}){const g=el('g',{class:'n '+(o.cls||'')},nodeG);g.dataset.id=id;
+ el('rect',{x,y,width:w,height:h,rx:o.rx??9},g);
+ const t=el('text',{x:x+12,y:sub?y+h/2-4:y+h/2+5},g);t.textContent=title;
+ if(sub){const s=el('text',{x:x+12,y:y+h/2+14,class:'s'},g);s.textContent=sub}
+ G[id]={g,cx:x+w/2,cy:y+h/2,title,sub,tags:o.tags||[],info:o.info||{}};g.onclick=()=>{stop();show(id)};return g}
+function edge(d,o={}){const p=el('path',{d,class:'e '+(o.cls||''),'marker-end':o.noArrow?'':`url(#${o.m||'ar'})`},edgeG);p.dataset.tags=(o.tags||[]).join(' ');EDGES.push(p);
+ if(o.label){const t=el('text',{x:o.lx,y:o.ly,class:'el','text-anchor':o.anchor||'start'},edgeG);t.textContent=o.label;t.dataset.tags=(o.tags||[]).join(' ');EDGES.push(t)}return p}
+
+// ---------- regions
+region(200,22,912,640,'SERVER · one Node container on Aiven Runtime','srv');
+region(726,46,374,90,'store.transact · the workspace is locked','lock',['safe']);
+region(740,220,192,122,'PURE CORE · no I/O','core',['safe']);
+region(282,494,818,150,'POSTGRES · Aiven in production, PGlite in tests','pg',['data']);
+el('text',{x:34,y:40,class:'rl'},regG).textContent='DOORS';
+el('text',{x:282,y:58,class:'rl'},regG).textContent='COMMAND HANDLER · the same steps for every tool';
+el('text',{x:282,y:352,class:'rl'},regG).textContent='PORTS · a real adapter, then a fallback';
+
+// ---------- doors
+const D=[['kitchen','Kitchen screen','chef · approves',60],['chat','Chat dock','in-app agent',122],['ops','Valio Ops','watches · live',184],['mcp','Your Claude','MCP · judge key',270],['rest','REST client','OpenAPI',332]];
+const DI={
+ kitchen:{d:'The chef reads the plan, changes grams per guest and approves decisions. It calls the same tool handlers as every other caller.',f:'src/routes/(kitchen)',t:'kitchen-idle.e2e.ts'},
+ chat:{d:'A chat turn runs the agent loop on the server. The agent may read, plan and order. It cannot approve.',f:'server/chat · server/agent',t:'evals/agent'},
+ ops:{d:"Valio's control room. It reads cases and receives live events. It changes nothing.",f:'src/routes/ops',t:'visitor-gate.e2e.ts'},
+ mcp:{d:'Any outside agent. A judge key is bound to one sandbox and allows read, plan and order. It never allows approve.',f:'server/tools (MCP) · demo/judge-key.ts',t:'adversarial.test.ts'},
+ rest:{d:'The same tools over plain HTTP, described by /api/openapi.json.',f:'/api/tools/<name>',t:'surfaces eval'}};
+D.forEach(([id,t,s,y])=>box(id,34,y,150,50,t,s,{info:DI[id],cls:'door'}));
+
+// ---------- registry (vertical bar)
+(()=>{const g=el('g',{class:'n reg'},nodeG);g.dataset.id='reg';el('rect',{x:214,y:56,width:48,height:326,rx:10},g);
+ const t=el('text',{x:0,y:0,transform:'translate(243 219) rotate(-90)','text-anchor':'middle'},g);t.textContent='Tool registry · 15 tools';
+ G.reg={g,cx:238,cy:219,title:'Tool registry',sub:'15 tools · zod schemas',tags:['safe'],info:{d:'One list of 15 tools with zod schemas. MCP, REST, OpenAPI and the agent loop all read it. Every result carries a summary and the next action, written by us.',f:'core/contracts/tools.ts',t:'tools tests · surfaces eval'}};g.onclick=()=>{stop();show('reg')}})();
+D.forEach(([id,,,y])=>edge(`M184 ${y+25} L212 ${y+25}`));
+
+// ---------- pipeline
+const P=[['ctx','Who is calling','CallContext',282,104,{d:'The caller comes from the bearer key, the visitor cookie or the in-process actor. The request body never sets it. SCOPES_BY_ACTOR gives its scopes.',f:'server/auth · demo/visitor.ts',t:'adversarial.test.ts'}],
+ ['val','Validate','zod schema',394,96,{d:"Input is checked against the tool's schema. An unknown product id fails with NOT_FOUND before any Valio call.",f:'core/contracts/tools.ts',t:'tools tests'}],
+ ['idem','Idempotency','key + hash',498,96,{d:'Keyed by workspace, caller, tool and key, plus a hash of the request. The same request gets the stored result. The same key with another payload gets DUPLICATE.',f:'server/store',t:'eval s1, s5'}],
+ ['prep','Prepare','no lock held',602,114,{d:'Offers, model decisions and web lookups run here, before any lock is taken, so a slow network call never holds the database.',f:'server/tools handlers',t:'pg-race.test.ts'}],
+ ['rr','Re-read','version, hash',736,112,{d:'Inside the lock: re-read the plan, compare its version and terms hash with the approval, and check the mandate version and expiry on the scenario clock.',f:'server/store',t:'gate.test.ts · eval s4'}],
+ ['caps','Caps, budget','row lock',856,104,{d:'Locks the kitchen-week budget row and checks the caps and the hard ceiling. On commit the simulator consumes stock.',f:'server/store',t:'ceiling.test.ts · eval s5'}],
+ ['apply','applyOps','then persist',968,120,{d:'Computes the ops, runs applyOps, then writes rows, ops and the next seq in the same transaction.',f:'core/state.ts · server/store',t:'state.test.ts'}]];
+P.forEach(([id,t,s,x,w,info],i)=>{box(id,x,68,w,56,t,s,{info,tags:['ctx','idem','rr','caps','apply','val'].includes(id)?['safe']:[]});
+ if(i)edge(`M${P[i-1][3]+P[i-1][4]} 96 L${x-2} 96`)});
+edge('M262 96 L280 96');
+box('pub',968,156,120,46,'Publish','after commit',{info:{d:'After the commit, ops, simulator events and traces are published. A rolled-back write publishes nothing.',f:'server/bus',t:'bus.test.ts'},tags:['data']});
+edge('M1028 124 L1028 154');
+
+// ---------- middle band
+box('agent',282,236,138,84,'Agent loop','≤ 8 steps',{info:{d:'Runs a chat turn. Gemini Flash-Lite picks the next tool, the loop calls it through the registry, at most 8 steps. The outcome line is computed from plan state.',f:'server/agent · server/chat',t:'evals/agent'}});
+edge('M262 262 L280 262');
+edge('M282 300 L264 300',{});
+el('text',{x:290,y:336,class:'el'},edgeG).textContent='calls tools like any caller';
+// core chips
+const C=[['applyOps',750,248,86],['rank',842,248,80],['demand',750,276,86],['terms hash',842,276,80],['tiers',750,304,86],['fulfilment',842,304,80]];
+(()=>{const g=el('g',{class:'n corechips'},nodeG);g.dataset.id='core';C.forEach(([t,x,y,w])=>{el('rect',{x,y,width:w,height:22,rx:6},g);const tx=el('text',{x:x+w/2,y:y+15,'text-anchor':'middle',class:'cc'},g);tx.textContent=t});
+ G.core={g,cx:836,cy:286,title:'Pure core',sub:'src/lib/core',tags:['safe'],info:{d:'Plain TypeScript with no I/O: applyOps and the state machines, ranking, demand sizing, mandate tiers and the terms hash. Lint blocks Svelte, Node built-ins and vendor SDKs here.',f:'src/lib/core',t:'~420 unit tests'}};g.onclick=()=>{stop();show('core')}})();
+edge('M836 136 L836 218',{cls:'dot',label:'calls pure functions',lx:844,ly:186,noArrow:true,tags:['safe']});
+box('bus',952,234,140,74,'Event bus','NOTIFY → SSE',{info:{d:'Postgres NOTIFY in production, an in-memory bus with PGlite. Screens subscribe, catch up from their last seq and drop duplicates by seq.',f:'server/bus · /api/events',t:'catchup.test.ts'},tags:['data']});
+edge('M1028 202 L1028 232');
+el('text',{x:452,y:236,class:'el'},edgeG).textContent='outside the lock';
+
+// ---------- ports (sockets)
+const SK=[['pllm','LLM',282,[['Gemini Flash-Lite','p'],['Featherless','f'],['fixture','f']],'Gemini',{d:'Parses requests and plans agent turns. Every call sets max_tokens and is traced with model, tokens and latency.',f:'adapters/llm',t:'eval:live'}],
+ ['pcat','Catalog',416,[['Valio, live','p'],['cached + age','f'],['file catalogue','f']],'Valio Aimo',{d:'Product facts from the 17.5k catalogue with hybrid retrieval. Price and availability come live from Valio only for lines in a real order, cached with their age.',f:'adapters/catalog',t:'retrieval evals'}],
+ ['pdec','Decide',550,[['Gemini Decisions','p'],['recorded replay','f'],['rules','f']],'Gemini',{d:'Scores how well a substitute fits the dish, 0 to 4. A caution holds the line for a person. It never forbids or approves.',f:'adapters/decide',t:'DECIDE_LIVE=1 pnpm test:live'}],
+ ['pweb','Web',684,[['Exa, Context.dev','p'],['fixture','f'],['daily caps','n']],'Exa · Context.dev',{d:'Cited facts and outside options from Exa, recall notices from a Context.dev monitor. Results are suggestions and never overwrite catalogue facts.',f:'server/web',t:'web tests'}],
+ ['psim','Simulator',818,[['scenario stock','o'],['per-run overlay','f']],'ours',{d:'Scenario stock per run. At commit it consumes lots, or returns unconfirmed for supplier-delivered lines.',f:'adapters/simulator',t:'overlay.test.ts'}],
+ ['pdb','Store',952,[['Aiven Postgres','p'],['PGlite','f']],'Aiven',{d:'Drizzle over Aiven Postgres with PgBouncer in production, PGlite with the same migrations in tests and the offline demo.',f:'server/db · server/store',t:'pnpm test:pg'}]];
+SK.forEach(([id,name,x,rows,partner,info])=>{const g=el('g',{class:'n sock'},nodeG);g.dataset.id=id;const y=362,w=128,h=24+rows.length*24+8;
+ el('rect',{x,y,width:w,height:h,rx:9},g);el('rect',{x:x+w/2-14,y:y-4,width:28,height:8,rx:3,class:'plug'},g);
+ const t=el('text',{x:x+12,y:y+18},g);t.textContent=name;
+ rows.forEach(([r,k],i)=>{const ry=y+26+i*24;el('rect',{x:x+6,y:ry,width:w-12,height:20,rx:5,class:'ad ad-'+k},g);const tx=el('text',{x:x+12,y:ry+14,class:'at at-'+k},g);tx.textContent=(k==='f'?'↳ ':'')+r});
+ G[id]={g,cx:x+w/2,cy:y+h/2,title:name+' port',sub:partner,tags:['sp',id==='pdb'?'data':''],info};g.onclick=()=>{stop();show(id)}});
+// prepare → ports (outside the lock)
+[['pcat',480],['pdec',614],['pweb',716]].forEach(([id,x])=>edge(`M659 124 C 659 220, ${x} 260, ${x} 356`,{cls:'dash',tags:['sp']}));
+edge('M351 320 L351 356',{cls:'dash',tags:['sp']});
+edge('M910 124 C 910 170, 942 190, 942 220 L942 350 C 942 356, 930 358, 900 358',{cls:'dash'});
+// persist path along the right edge
+edge('M1088 96 L1104 96 L1104 356 L1060 356',{tags:['data'],m:'arT',cls:'data'});
+el('text',{x:1100,y:330,class:'el','text-anchor':'end'},edgeG).textContent='rows, ops, seq';
+edge('M1016 458 L1016 492',{tags:['data'],m:'arT',cls:'data'});
+
+// ---------- Postgres tables
+const TB=[['State',292,['plans','approvals','orders','budgets','idempotency','ops']],['Catalogue and stock',492,['products + embedding','offer_cache','sim_stock','kitchens']],['Agents and menus',692,['agent_tasks','menu_proposals','runs','workspaces']],['Web',892,['enrichments','web_cache','web_spend','web_findings']]];
+(()=>{const g=el('g',{class:'n pgt'},nodeG);g.dataset.id='pg';TB.forEach(([h,x,ts])=>{const tt=el('text',{x,y:536,class:'th'},g);tt.textContent=h;
+  let row=0,col=0;ts.forEach(t=>{const wide=t.length>11;if(wide&&col){row++;col=0}const x0=x+col*96,y0=546+row*28,w=wide?188:90;el('rect',{x:x0,y:y0,width:w,height:22,rx:5},g);const tx=el('text',{x:x0+8,y:y0+15,class:'tt'},g);tx.textContent=t;if(wide){row++;col=0}else{col++;if(col>1){col=0;row++}}})});
+ G.pg={g,cx:690,cy:600,title:'Postgres',sub:'one schema, Drizzle migrations',tags:['data'],info:{d:'Every state change is a row in ops with a seq, next to the rows it changed. orders is unique per plan and idempotency key. budgets has one locked row per kitchen-week.',f:'server/db/schema.ts · drizzle/*.sql',t:'pnpm test:pg · smoke-race'}};g.onclick=()=>{stop();show('pg')}})();
+
+// ---------- the loop: bus → SSE → open screens
+edge('M1092 271 L1116 271 L1116 684 L16 684 L16 85 L32 85',{cls:'loop',m:'arT',tags:['data']});
+edge('M16 147 L32 147',{cls:'loop',m:'arT',tags:['data']});
+edge('M16 209 L32 209',{cls:'loop',m:'arT',tags:['data']});
+el('text',{x:560,y:677,class:'el loopl','text-anchor':'middle'},edgeG).textContent='live events back to every open screen: Postgres NOTIFY → SSE /api/events';
+
+// ---------- side panel
+const side=document.getElementById('side');
+function idle(){side.innerHTML=`<div class="t">Click any box</div><div class="k">or trace a call above</div><p>Each box is a module on <code>main</code>. The panel says what it does, where it lives and which test holds it.</p><p>The dashed amber region is the database lock. Everything left of it runs without holding the lock, including every call to an outside service.</p>`}
+function show(id){const n=G[id],i=n.info||{};Object.values(G).forEach(x=>x.g.classList.toggle('hot',x===n));
+ side.innerHTML=`<div class="t">${n.title}</div><div class="k">${n.sub||''}</div><p>${i.d||''}</p><dl>${i.f?`<dt>lives in</dt><dd><code>${i.f}</code></dd>`:''}${i.t?`<dt>held by</dt><dd><code>${i.t}</code></dd>`:''}</dl>`}
+idle();
+
+// ---------- lenses
+document.querySelectorAll('#lensSeg button').forEach(b=>b.onclick=()=>{stop();document.querySelectorAll('#lensSeg button').forEach(x=>x.classList.toggle('on',x===b));const l=b.dataset.l;
+ Object.values(G).forEach(n=>n.g.classList.toggle('dim',l!=='all'&&!n.tags.includes(l)));
+ EDGES.forEach(e=>e.classList.toggle('dim',l!=='all'&&!(e.dataset.tags||'').split(' ').includes(l)));
+ document.querySelectorAll('.rg').forEach(r=>r.classList.toggle('dim',l!=='all'&&!(r.dataset.tags||'').split(' ').includes(l)&&!r.classList.contains('srv')))});
+
+// ---------- traces with a packet inspector
+const T={
+ commit:{name:'Chef places an order',stops:[
+  ['kitchen','Kitchen screen','POST /kitchen-api/tool/commit_order\ncookie: mandate_visitor=ws-j-0e74…\n{ planId: "p-xmas", lineIds: [4 lines], key: "k-91c…" }','The chef pressed Place order.'],
+  ['reg','Tool registry','tool: commit_order\nscope needed: order','Same registry the agent and MCP use.'],
+  ['ctx','Who is calling','CallContext {\n  actor: "chef",\n  scopes: [read, plan, order, approve, …],\n  workspace: "ws-j-0e74", run: "run-mwg1n8" }','Taken from the signed cookie, never from the body.'],
+  ['val','Validate','zod ✓ · 4 known line ids','Bad input stops here.'],
+  ['idem','Idempotency','key k-91c… + request hash 3be0…\n→ not seen before','A retry with this key would return the stored receipt.'],
+  ['prep','Prepare','quote × 4 → Catalog port\n← offers at 22:11:04 (Valio, 58 ms)','Network calls happen before the lock.'],
+  ['pcat','Catalog port','Valio API, cache-through\n3 cached · 1 live','Only lines in this order are looked up.'],
+  ['rr','Re-read, compare','plan v8 · terms hash c21e… = approval ✓\nmandate v3 ✓ · approval not expired ✓','If the price had changed, this returns TERMS_CHANGED.'],
+  ['caps','Caps, budget','budget row k-hotel / 2026-W50 locked\n€934 + €319.78 ≤ €4,000 ✓\nsimulator.consume → 4 lots','Caps apply to lines the mandate allows alone.'],
+  ['apply','applyOps','ops: [ CommitOrder { order o-7f2,\n  lines: 4, authority: mandate | approval a-19 } ]','The only function that changes state.'],
+  ['pdb','Store port','INSERT orders, receipt r-7f2\nUPDATE plans → v9\nINSERT ops seq 1,285','One transaction. orders is unique per plan + key.'],
+  ['pub','Publish','op seq 1,285 → bus','Only after the commit succeeded.'],
+  ['bus','Event bus','NOTIFY ws-j-0e74 · seq 1,285','Screens catch up from their last seq.'],
+  ['kitchen','Back to the screens','SSE → Kitchen: receipt card\nSSE → Ops: case closed','The same event reaches every open screen.']]},
+ mcp:{name:'Outside agent tries to approve',stops:[
+  ['mcp','Your Claude','POST /mcp/k/jk_ws-j-0e74.1763…\ntools/call approve { approvalId: "a-19" }','A judge key from the Agents page.'],
+  ['reg','Tool registry','tool: approve\nscope needed: approve','The tool exists on MCP like any other.'],
+  ['ctx','Who is calling','CallContext {\n  actor: "external_agent",\n  scopes: [read, plan, order],\n  workspace: "ws-j-0e74" }','The key decides the actor.'],
+  ['ctx','Refused','403 FORBIDDEN · approve is not in scopes\nnothing read · nothing written','Stopped at the first step.',1],
+  ['core','Second check','applyOps refuses RecordApproval\nfrom an external actor (state.ts)','If a scope ever slipped, the core would still refuse.',1],
+  ['bus','Event bus','trace event: refused · door "mcp"','The refusal is recorded as a trace event.'],
+  ['ops','Valio Ops','"An outside agent tried to approve for a chef. Refused."','Ops sees the attempt in the case story.']]},
+ sub:{name:'Agent finds a substitute',stops:[
+  ['chat','Chat dock','"The salmon is out too."','The chef types in the chat dock.'],
+  ['agent','Agent loop','step 1 of at most 8','The loop runs on the server.'],
+  ['pllm','LLM port','Gemini Flash-Lite\n→ find_substitutes { need: "graavilohi" }\n312 tokens · max_tokens 4,000','Every model call is traced.'],
+  ['reg','Tool registry','tool: find_substitutes · scope: plan','The agent calls tools like any caller.'],
+  ['ctx','Who is calling','CallContext { actor: "kitchen_agent",\n  scopes: [read, plan, order] }','It can plan and order. It cannot approve.'],
+  ['prep','Prepare','retrieval: 17.5k → 38 → 9 eligible\nquote × 9 · 6 cached, 3 live','Still no lock held.'],
+  ['pdec','Decide port','Gemini Decisions: fit × 4\nrainbow trout .88 · 410 ms','A fit score is one input to the ranking.'],
+  ['core','Pure core: rank','known stock first, then weights\nreliability 35 · price 25 · Finnish 20 · carbon 20','The kitchen\'s own weights decide the order.'],
+  ['rr','Re-read, compare','plan v7 still current ✓','Another edit in between would fail here.'],
+  ['apply','applyOps','ProposeSubstitute → line held\n{ tier: propose, reason: new product }\napproval → invalidated, new one pending','A new product waits for the chef.'],
+  ['pdb','Store port','UPDATE plans → v8 · ops seq 1,281–1,283',''],
+  ['bus','Event bus','NOTIFY · seq 1,283',''],
+  ['chat','Back to the screens','Kitchen: the salmon row changes\nChat: "1 line replaced · 1 decision added · nothing ordered"','The outcome line is computed from plan state.']]}};
+let timer=null,cur=null,step=0,playing=false;
+const pkt=el('circle',{r:7,class:'pkt',cx:-20,cy:-20},pktG);
+function stop(){clearTimeout(timer);playing=false;cur=null;trailG.innerHTML='';pkt.setAttribute('cx',-20);S.classList.remove('tracing');Object.values(G).forEach(n=>n.g.classList.remove('hot','bad','seen'));document.querySelectorAll('#traceSeg button').forEach(x=>x.classList.remove('on'))}
+function start(key,btn){stop();cur=T[key];step=0;playing=true;btn.classList.add('on');S.classList.add('tracing');render();go()}
+function go(){clearTimeout(timer);if(!playing||!cur)return;
+ const s=cur.stops[step],prev=step?cur.stops[step-1]:null;const n=G[s[0]];
+ if(prev){const p=G[prev[0]];const mx=(p.cx+n.cx)/2,my=(p.cy+n.cy)/2-30;const d=`M${p.cx} ${p.cy} Q${mx} ${my} ${n.cx} ${n.cy}`;
+  const path=el('path',{d,class:'trail'+(s[4]?' bad':'')},trailG);const L=path.getTotalLength();const t0=performance.now(),dur=900;
+  (function anim(t){const u=Math.min(1,(t-t0)/dur),e=u<.5?2*u*u:1-Math.pow(-2*u+2,2)/2;const pt=path.getPointAtLength(e*L);pkt.setAttribute('cx',pt.x);pkt.setAttribute('cy',pt.y);if(u<1)requestAnimationFrame(anim)})(t0);
+ }else{pkt.setAttribute('cx',n.cx);pkt.setAttribute('cy',n.cy)}
+ pkt.classList.toggle('bad',!!s[4]);
+ Object.values(G).forEach(x=>x.g.classList.remove('hot'));n.g.classList.add('hot','seen');if(s[4])n.g.classList.add('bad');
+ if(cur===T.commit&&step===cur.stops.length-1)G.ops.g.classList.add('hot','seen');
+ render();
+ if(step<cur.stops.length-1)timer=setTimeout(()=>{step++;go()},2000);else playing=false;render()}
+function render(){if(!cur)return;const k=cur.stops;
+ side.innerHTML=`<div class="t">${cur.name}</div><div class="k">packet inspector · stop ${step+1} of ${k.length}</div>
+ <div class="ctl"><button id="tb" aria-label="Back">◀</button><button id="tp">${playing?'Pause':'Play'}</button><button id="tn" aria-label="Next">▶</button></div>
+ <ol class="insp">${k.map((s,i)=>i>step?'':`<li class="${i===step?'now':''} ${s[4]?'bad':''}"><span class="st">${String(i+1).padStart(2,'0')} · ${s[1]}</span>${i===step?`<pre>${s[2]}</pre>${s[3]?`<p>${s[3]}</p>`:''}`:''}</li>`).join('')}</ol>`;
+ side.querySelector('#tp').onclick=()=>{playing=!playing;if(playing){if(step>=k.length-1)return start(Object.keys(T).find(x=>T[x]===cur),document.querySelector('#traceSeg button.on'));go()}else{clearTimeout(timer);render()}};
+ side.querySelector('#tn').onclick=()=>{if(step<k.length-1){playing=false;clearTimeout(timer);step++;go()}};
+ side.querySelector('#tb').onclick=()=>{if(step>0){playing=false;clearTimeout(timer);trailG.lastChild&&trailG.lastChild.remove();step--;const n=G[k[step][0]];pkt.setAttribute('cx',n.cx);pkt.setAttribute('cy',n.cy);Object.values(G).forEach(x=>x.g.classList.remove('hot'));n.g.classList.add('hot');render()}};
+ const li=side.querySelector('.insp li.now');li&&li.scrollIntoView({block:'nearest'})}
+document.querySelectorAll('#traceSeg button').forEach(b=>b.onclick=()=>start(b.dataset.t,b));
+
+// state machines: nodes [id,label,x,y,kind] kind: start|happy|hold|end-ok|end-bad|plain ; edges [from,to,label,kind,bend] kind: happy|plain|back
+function smDraw(id,nodes,edges){
+ const s=document.getElementById(id);s.innerHTML='';
+ const g=(t,a,p=s)=>{const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);p.appendChild(e);return e};
+ const defs=g('defs',{});
+ [['ah','#5c676c'],['ahg','#3fbf8a'],['ahr','#ef6b59']].forEach(([i,c])=>{const m=g('marker',{id:id+i,viewBox:'0 0 10 10',refX:9,refY:5,markerWidth:7,markerHeight:7,orient:'auto-start-reverse'},defs);g('path',{d:'M0 0L10 5L0 10z',fill:c},m)});
+ const C={start:['#171c1f','#5c676c','#eef1ef'],happy:['#13261f','#3fbf8a','#eef1ef'],hold:['#2a2114','#e8a93c','#eef1ef'],'end-ok':['#13261f','#3fbf8a','#eef1ef'],'end-bad':['#2a1714','#ef6b59','#eef1ef'],plain:['#171c1f','#3a454a','#eef1ef']};
+ const N={};nodes.forEach(([k,l,x,y,kind])=>{const w=l.length*7.6+26,h=28;N[k]={x,y,w,h}});
+ const clip=(a,b)=>{const dx=b.x-a.x,dy=b.y-a.y;const sx=dx?(a.w/2)/Math.abs(dx):Infinity,sy=dy?(a.h/2)/Math.abs(dy):Infinity;const t=Math.min(sx,sy);return{x:a.x+dx*t,y:a.y+dy*t}};
+ const eg=g('g',{});
+ edges.forEach(([f,t,label,kind='plain',bend=0,lo=[0,0]])=>{const A=N[f],B=N[t];const p1=clip(A,B),p2=clip(B,A);
+  const col=kind==='happy'?'#3fbf8a':kind==='back'?'#ef6b59':'#5c676c';
+  const mx=(p1.x+p2.x)/2,my=(p1.y+p2.y)/2;const nx=-(p2.y-p1.y),ny=p2.x-p1.x,len=Math.hypot(nx,ny)||1;const cx=mx+nx/len*bend,cy=my+ny/len*bend;
+  g('path',{d:`M${p1.x} ${p1.y} Q${cx} ${cy} ${p2.x} ${p2.y}`,fill:'none',stroke:col,'stroke-width':kind==='happy'?2:1.4,'stroke-dasharray':kind==='back'?'5 4':'', 'marker-end':`url(#${id}${kind==='happy'?'ahg':kind==='back'?'ahr':'ah'})`},eg);
+  if(label){const lx=(mx+cx)/2+(bend?0:0),ly=(my+cy)/2;const tx=g('text',{x:(bend?cx:mx)+lo[0],y:(bend?cy:my)-6+lo[1],'text-anchor':'middle',fill:kind==='back'?'#ef8a7c':kind==='happy'?'#7fd6ad':'#a9b2af','font-size':12,'font-family':'IBM Plex Sans'},eg);tx.textContent=label}
+ });
+ nodes.forEach(([k,l,x,y,kind])=>{const n=N[k],[bg,st,ink]=C[kind];
+  g('rect',{x:x-n.w/2,y:y-n.h/2,width:n.w,height:n.h,rx:14,fill:bg,stroke:st,'stroke-width':kind.startsWith('end')?2:1.2});
+  if(kind.startsWith('end'))g('rect',{x:x-n.w/2-3,y:y-n.h/2-3,width:n.w+6,height:n.h+6,rx:17,fill:'none',stroke:st,'stroke-opacity':.4});
+  const t=g('text',{x,y:y+4,'text-anchor':'middle',fill:ink,'font-size':12.5,'font-family':'IBM Plex Mono'});t.textContent=l});
+}
+smDraw('smPlan',[['d','draft',45,55,'start'],['q','quoted',190,55,'happy'],['r','ready',335,55,'happy'],['c','committed',475,55,'end-ok'],['h','held',335,150,'hold']],
+ [['d','q','priced','happy'],['q','r','no holds','happy'],['r','c','ordered','happy'],['q','h','some need you','plain',0,[-46,6]],['h','c','chef approves','plain',0,[48,8]],['h','d','any edit','back',-70]]);
+smDraw('smLine',[['p','proposed',60,55,'start'],['e','eligible',245,55,'happy'],['c','committed',430,55,'end-ok'],['h','held',245,150,'hold'],['x','rejected',60,150,'end-bad']],
+ [['p','e','within mandate','happy'],['e','c','ordered','happy'],['p','h','needs you','plain',0,[40,6]],['h','c','chef approves','plain',0,[48,8]],['p','x','refused','plain',0,[34,10]]]);
+smDraw('smAppr',[['p','pending',60,55,'start'],['g','granted',245,55,'happy'],['d','denied',60,150,'end-bad'],['i','invalidated',245,150,'end-bad'],['x','expired',430,150,'end-bad']],
+ [['p','g','chef approves','happy'],['p','d','chef declines','plain',0,[50,10]],['g','i','any edit','back',0,[-34,6]],['g','x','time runs out','plain',0,[52,4]]]);
+(()=>{const s=document.getElementById('smAppr');const t=document.createElementNS(NS,'text');t.setAttribute('x',300);t.setAttribute('y',59);t.setAttribute('fill','#7fd6ad');t.setAttribute('font-size',12);t.setAttribute('font-family','IBM Plex Sans');t.textContent='→ these exact terms may be ordered';s.appendChild(t)})();
+
+(()=>{
+const STAGES=['Parse','Authorise','Lookup','Enrich','Decide','Commit','Notify','Watch'];
+const P=[
+ {name:'Valio Aimo',role:'Catalog port',sub:'catalogue, price, availability',tag:'live on prod',live:1,stages:['Lookup'],
+  how:"Every product, pack and lot rule comes from Valio's catalogue (17.5k items). Price and availability are fetched <b>only for lines in a real order</b>, cache-through, never as a bulk sweep, as Valio asked.",
+  why:"The agent can only promise what the wholesaler states. Known stock ranks first; a supplier-delivered line with no stated quantity is <b>never counted as covered</b>.",
+  ex:{t:'quote for one line in the Christmas plan',n:'illustrative values',b:'<i>→</i> quote({ ids: ["476768"] })\n<i>←</i> HK Palvikinkku viipaloitu 1,5 kg\n   <em>known stock 15 ST</em> · €15.43 per ST · 1 ST = 1.5 kg\n   <i>Valio API · cached 4 min · 41 ms</i>'},
+  fb:'cached offer, labelled with its age',proof:'prod lookups 28–113 ms'},
+ {name:'Gemini',role:'LLM + Decide ports',sub:'flash-lite, gemini-decision',tag:'live on prod',live:1,stages:['Parse','Decide'],
+  how:"<b>Flash-lite</b> turns a buyer's words into a structured request and plans agent turns. <b>gemini-decision</b> scores how well a substitute fits the dish, one input to the kitchen's own ranking.",
+  why:'Requirements like "lactose-free" are kept through the parse, so the basket matches the request. A model caution <b>holds a line for a person</b>. The model cannot forbid or approve anything.',
+  ex:{t:'parse, then fit',n:'illustrative values',b:'<i>→</i> "1,000 L lactose-free milk by Monday"\n<i>←</i> { amount: 1000 L, <em>lactose-free: required</em>, by: Mon }\n\n<i>→</i> fit(trout fillet, as salmon in graavilohi)\n<i>←</i> <em>fit .88</em> · ranked 1st · new product → <u>held for the chef</u>'},
+  fb:'recorded replay, then rules',proof:'max_tokens on every call · every call traced'},
+ {name:'Aiven',role:'Store port + Runtime',sub:'Postgres, one container',tag:'live on prod',live:1,stages:['Commit','Notify'],
+  how:'Postgres holds plans, approvals, orders, the op log and idempotency keys. Each commit runs <b>under a row lock</b> on the kitchen-week budget; NOTIFY pushes every change to the open screens.',
+  why:'Postgres enforces one order per plan and key, under a row lock. Retries, double clicks and racing agents end with <b>one receipt</b>.',
+  ex:{t:'race check after each deploy',n:'observed on prod',b:'<i>→</i> commit_order × 4 in parallel, same key\n<i>←</i> <em>1 order · 1 receipt</em> · the other 3 get the same receipt\n<i>→</i> 3 different keys, same plan\n<i>←</i> <em>1 receipt</em>'},
+  fb:'PGlite with the same migrations',proof:'10 visitors p50 3.6 s · 0 errors'},
+ {name:'Exa',role:'Web port',sub:'lookup_facts, find_outside',tag:'tools wired · no UI yet',live:0,stages:['Enrich'],
+  how:'When a catalogue fact is missing (manufacturer, origin, an ingredient), <b>lookup_facts</b> searches the web and returns it <b>with its source</b>. <b>find_outside</b> lists options outside Valio for an unresolved need.',
+  why:'A missing fact comes back with its source. It is stored next to the catalogue entry and <b>never replaces it</b>. Outside options are never ordered.',
+  ex:{t:'lookup_facts over MCP or REST',n:'illustrative values',b:'<i>→</i> lookup_facts({ productId: "462482", field: "origin" })\n<i>←</i> origin: Finland\n   <em>source: manufacturer product page</em> · fetched 22:04\n   <i>stored as a suggestion · catalogue unchanged</i>'},
+  fb:'fixture · daily cap → 429 Retry-After',proof:'per-key and global daily caps'},
+ {name:'Context.dev',role:'Web port',sub:'recall monitor',tag:'monitor wired · drill only',live:0,stages:['Watch'],
+  how:'A monitor watches recall notice pages <b>every 5 minutes</b>. <b>check_recall</b> matches a notice to a product by GTIN, then by name.',
+  why:'A matching recall holds the affected lines in the plan for a person to check. A name match without a GTIN match is labelled as such.',
+  ex:{t:'recall drill',n:'labelled drill, not a real recall',b:'<i>→</i> notice: "Atria Rosolli 2,5 kg"\n<i>←</i> check_recall: <u>name match · no GTIN match</u>\n   2 lines held for a person · <i>labelled drill</i>'},
+  fb:'drill, labelled',proof:'monitor every 5 min'},
+];
+document.querySelectorAll('[data-partners]').forEach(root=>{
+ root.classList.add('pt');
+ root.innerHTML=`<div class="pt-list" role="tablist" aria-label="Partners">${P.map((p,i)=>`<button class="pt-tab" role="tab" data-i="${i}" aria-selected="${i===0}"><span><b>${p.name}</b><small>${p.sub}</small></span><span class="tag ${p.live?'live':''}">${p.live?'live':'wired'}</span></button>`).join('')}</div><div class="pt-panel" role="tabpanel" aria-live="polite"></div>`;
+ const panel=root.querySelector('.pt-panel'),tabs=[...root.querySelectorAll('.pt-tab')];
+ function show(i){const p=P[i];tabs.forEach((t,j)=>t.setAttribute('aria-selected',j===i));
+  panel.innerHTML=`<div class="pt-head"><h3>${p.name}</h3><span class="role">${p.role} · ${p.tag}</span></div>
+  <div class="pt-strip" aria-label="Where it sits in each call">${STAGES.map(s=>`<span class="${p.stages.includes(s)?'on':''}">${s}</span>`).join('')}</div>
+  <div class="pt-cols"><div><h3>How we use it</h3><p>${p.how}</p></div><div><h3>Why it matters</h3><p>${p.why}</p></div></div>
+  <div class="pt-ex"><div class="pt-bar"><span>Example · ${p.ex.t}</span><span>${p.ex.n}</span></div><pre>${p.ex.b}</pre></div>
+  <div class="pt-foot"><span>if it fails: <b>${p.fb}</b></span><span>evidence: <b>${p.proof}</b></span></div>`}
+ tabs.forEach(t=>{t.onclick=()=>show(+t.dataset.i);t.onkeydown=e=>{const d={ArrowDown:1,ArrowRight:1,ArrowUp:-1,ArrowLeft:-1}[e.key];if(!d)return;e.preventDefault();e.stopPropagation();const n=(+t.dataset.i+d+P.length)%P.length;tabs[n].focus();show(n)}});
+ show(0)});
+})();
+
+</script>
+<script src="shared/scenario.js"></script><script src="shared/shell.js" data-page="architecture"></script>
+</body>
+</html>

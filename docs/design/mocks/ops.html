@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mandate Operations</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Instrument+Serif&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0a0c0d; --p:#111517; --p2:#161b1e; --line:#232a2e; --line2:#30393e;
+  --ink:#eef1ef; --ink2:#a9b2af; --ink3:#86908d;
+  --ok:#3fbf8a; --teal:#2bb3a6; --amber:#e8a93c; --red:#ef6b59; --blue:#82adff; --vio:#b39cff;
+  --sans:'IBM Plex Sans',system-ui,sans-serif; --mono:'IBM Plex Mono',ui-monospace,monospace; --serif:'Instrument Serif',Georgia,serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font:13px/1.45 var(--sans);-webkit-font-smoothing:antialiased;min-height:100vh}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+.top{height:50px;display:flex;align-items:center;gap:18px;padding:0 18px;border-bottom:1px solid var(--line)}
+.brand{font-weight:600;display:flex;gap:8px;align-items:center}.brand i{width:18px;height:18px;border:1.5px solid;border-radius:4px;display:grid;place-items:center;font:normal 10px var(--sans)}
+.tabs{display:flex;gap:2px}.tabs a{padding:6px 10px;border-radius:6px;color:var(--ink2);text-decoration:none}.tabs a.on{background:var(--p2);color:var(--ink);font-weight:500}
+
+
+.live{color:var(--ok)}.live::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--ok);margin-right:6px}
+.scope{display:flex;gap:4px;padding:10px 18px;border-bottom:1px solid var(--line);align-items:center}
+.scope button{padding:4px 10px;border-radius:999px;color:var(--ink2);border:1px solid transparent}
+.scope button.on{border-color:var(--line2);color:var(--ink)}
+.scope .r{margin-left:auto;font:12px var(--mono);color:var(--ink3)}
+[data-product]{text-decoration:underline dotted var(--ink3);text-underline-offset:3px}[data-product]:hover{color:var(--ink)}
+.grid{display:grid;grid-template-columns:1fr 340px;gap:14px;padding:14px 18px 40px}
+.panel{background:var(--p);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.ph{display:flex;justify-content:space-between;align-items:baseline;padding:12px 14px;border-bottom:1px solid var(--line)}
+.ph h2{font-size:13px;font-weight:600}.ph span{font:12px var(--mono);color:var(--ink3)}
+.kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;padding:14px 18px 0}
+.kpi{background:var(--p);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.kpi .n{font:400 34px/1 var(--serif)}
+.kpi .l{color:var(--ink2);font-size:12px;margin-top:6px}
+.kpi .d{font:12px var(--mono);color:var(--ink3);margin-top:2px}
+.kpi.amber .n{color:var(--amber)}.kpi.red .n{color:var(--red)}.kpi.ok .n{color:var(--ok)}
+/* cases */
+.case{padding:12px 14px;border-bottom:1px solid var(--line);cursor:pointer}
+.case:hover{background:var(--p2)}
+.case .t{display:flex;justify-content:space-between;gap:8px;font-weight:500}
+.case .t span{font:12px var(--mono);color:var(--amber);white-space:nowrap}
+.case .w{color:var(--ink2);font-size:12px;margin:3px 0 8px}
+.case .k{display:flex;gap:4px;align-items:center;font:12px var(--mono);color:var(--ink3)}
+.case .k i{width:10px;height:10px;border-radius:2px;background:var(--line2)}
+.case .k i.h{background:var(--amber)}.case .k i.b{background:var(--red)}.case .k i.f{background:var(--ok)}
+.case .bar{height:4px;background:var(--line);border-radius:2px;margin-top:8px;overflow:hidden}
+.case .bar i{display:block;height:100%;background:var(--amber)}
+/* lanes */
+#lanes{width:100%;height:270px;display:block}
+.lane-l{font:12px var(--mono);fill:var(--ink3)}
+.wf{padding:14px}
+.wf .head{display:flex;justify-content:space-between;margin-bottom:12px}
+.wf .head b{font-weight:500}.wf .head span{font:12px var(--mono);color:var(--ink3)}
+.ph2{display:grid;grid-template-columns:200px 1fr 110px;gap:10px;align-items:center;padding:4px 0;font-size:12.5px}
+.ph2 .nm{color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ph2 .nm b{color:var(--ink);font-weight:500}
+.ph2 .tr{position:relative;height:14px;background:var(--p2);border-radius:3px}
+.ph2 .tr i{position:absolute;top:2px;bottom:2px;border-radius:2px;background:var(--teal)}
+.ph2 .ad{font:12px var(--mono);text-align:right}
+.ad.live{color:var(--ok)}.ad.cache{color:var(--blue)}.ad.replay{color:var(--amber)}.ad.core{color:var(--ink3)}
+.ad.live::before{display:none}
+.diff{margin-top:12px;border-top:1px solid var(--line);padding-top:12px;display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:12.5px}
+.diff div{background:var(--p2);border-radius:8px;padding:10px}
+.diff h5{font:500 12px var(--mono);color:var(--ink3);margin-bottom:6px}
+.diff .minus{color:var(--red)}.diff .plus{color:var(--ok)}
+/* right */
+.spons .s{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:10px 14px;border-bottom:1px solid var(--line)}
+.spons .s b{font-weight:500}
+.spons .s .m{font:12px var(--mono);color:var(--ink2);text-align:right}
+.spons .s .sub{grid-column:1/-1;font:12px var(--mono);color:var(--ink3)}
+.spons .s .cap{grid-column:1/-1;height:4px;background:var(--line);border-radius:2px;overflow:hidden;margin-top:4px}
+.spons .s .cap i{display:block;height:100%;background:var(--teal)}
+.ops{max-height:330px;overflow:auto;font:12px var(--mono)}
+.op{display:grid;grid-template-columns:44px 1fr auto;gap:8px;padding:6px 14px;border-bottom:1px solid var(--line);align-items:baseline}
+.op .q{color:var(--ink3)}
+.op .w{color:var(--ink)}
+.op .v{color:var(--ink3)}
+.op.new{animation:fl 1.6s ease}
+@keyframes fl{from{background:#1d2b29}to{background:transparent}}
+.via{padding:1px 6px;border-radius:4px;font-size:12px}
+.via.ui{background:#1b2a3d;color:var(--blue)}.via.mcp{background:#2a2140;color:var(--vio)}.via.agent{background:#16302b;color:var(--teal)}.via.job{background:#2b2618;color:var(--amber)}
+.ref{padding:10px 14px;border-bottom:1px solid var(--line);font-size:12.5px}
+.ref code{font:12px var(--mono);color:var(--red)}
+.ref span{display:block;color:var(--ink3);font:12px var(--mono);margin-top:2px}
+.col{display:flex;flex-direction:column;gap:14px}
+.hero{padding:26px 18px 6px;max-width:1100px}
+.hero h1{font:400 34px/1.15 var(--serif)}.hero h1 em{color:var(--amber);font-style:normal}
+.hero p{color:var(--ink2);font-size:15px;margin-top:6px}
+.tower{display:grid;grid-template-columns:1fr 360px;gap:14px;padding:14px 18px}
+.cases2{display:flex;flex-direction:column;gap:12px}
+.cs{background:var(--p);border:1px solid var(--line);border-radius:14px;padding:16px 18px;cursor:pointer}
+.cs.hot{border-color:#5a2a22;background:linear-gradient(90deg,#1a1311,var(--p) 40%)}
+.cs-h{display:flex;align-items:center;gap:10px;font-size:16px}.cs-h b{font-weight:500;flex:1}
+.dot{width:9px;height:9px;border-radius:50%}.dot.r{background:var(--red)}.dot.a{background:var(--amber)}
+.due{font:12px var(--mono);color:var(--amber)}
+.cs p{color:var(--ink2);font-size:14px;margin:6px 0 10px 19px}.cs p b{color:var(--ink);font-weight:500}
+.did{margin:0 0 12px 19px;font-size:13px;color:var(--ink2);border-left:2px solid var(--teal);padding-left:10px}.did span{color:var(--teal);font-weight:500;margin-right:4px}
+.cs-a{display:flex;gap:8px;align-items:center;margin-left:19px}.cs-a .money{flex:1;font:13px var(--mono);color:var(--ink)}
+.cs-a button{height:32px;padding:0 14px;border-radius:8px;border:1px solid var(--line2);font-size:13px}
+.cs-a button.p{background:var(--ink);color:var(--bg);border-color:var(--ink);font-weight:500}
+.today .tl{padding:10px 14px;border-bottom:1px solid var(--line);font-size:13.5px;color:var(--ink2)}.today .tl b{color:var(--ink);font:400 22px var(--serif);margin-right:4px}
+.today .tl span{display:block;font-size:12px;color:var(--ink3);margin-top:2px}
+.machine-h{padding:28px 18px 0;max-width:900px}.machine-h h2{font:400 26px var(--serif)}.machine-h p{color:var(--ink2);margin-top:4px}
+#stake text{font:12px var(--mono);fill:var(--ink3)}
+.kpis{display:none}
+.vars{padding:6px 14px 10px}.vr{display:grid;grid-template-columns:320px 1fr 56px;gap:4px 14px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line)}.vr:last-child{border:0}
+.vt{font-size:13.5px;color:var(--ink2)}.vt b{color:var(--ink);font-weight:500}.vb{height:8px;background:var(--p2);border-radius:4px;overflow:hidden}.vb i{display:block;height:100%;min-width:3px}
+.vr>span{font:13px var(--mono);text-align:right}.vp{grid-column:1/-1;font:12px var(--mono);color:var(--ink3)}.vp em{font-style:normal;color:var(--ink2)}
+.story-wrap{display:grid;grid-template-columns:1fr 340px;gap:14px;padding:22px 18px 60px}
+.st-h h2{font:400 28px var(--serif)}.st-h p{color:var(--ink2);margin:4px 0 14px;font-size:14px}
+#steps{list-style:none;position:relative;background:var(--p);border:1px solid var(--line);border-radius:14px;padding:10px 18px}
+.step{display:grid;grid-template-columns:52px 18px 1fr;gap:12px;padding:14px 0;position:relative}
+.step+.step{border-top:1px solid var(--line)}
+.tm{font:13px var(--mono);color:var(--ink3);padding-top:4px}
+.pip{width:11px;height:11px;border-radius:50%;background:var(--line2);margin-top:7px;box-shadow:0 0 0 3px var(--p)}
+.step.ok .pip{background:var(--ok)}.step.warn .pip{background:var(--amber)}.step.bad .pip{background:var(--red)}
+.actor{font:12px var(--mono);padding:2px 8px;border-radius:999px;border:1px solid var(--line2);color:var(--ink2)}
+.a-valio{color:#9cc3ff;border-color:#2c4266}.a-agent{color:#6fd6c9;border-color:#1f4a45}.a-chef{color:#eef1ef;border-color:#55605c}.a-mcp{color:#c9b8ff;border-color:#3e3366}.a-job{color:#f0c47a;border-color:#5a4520}.a-rule{color:#a9b2af}.a-ops{color:#f0c47a;border-color:#5a4520}
+.what{font-size:15px;margin-top:8px;line-height:1.5}.cons{color:var(--ink2);font-size:14px;margin-top:2px;line-height:1.5}
+.step.bad .cons{color:#f2a194}.step.ok .cons{color:#7fd8ad}.step.warn .cons{color:#f0c47a}
+.more{margin-top:8px;font-size:12.5px;color:var(--ink2);border-bottom:1px dotted var(--ink3)}
+.more:hover{color:var(--ink)}
+.det{display:none;margin-top:10px;background:var(--p2);border:1px solid var(--line);border-radius:10px;padding:12px 14px;font-size:13px;color:var(--ink2)}
+.step.open .det{display:block}.det p{margin-bottom:8px}.det code{display:block;font:12px var(--mono);color:var(--ink3);margin-top:8px}
+.wfx{display:flex;flex-direction:column;gap:5px}.wr{display:grid;grid-template-columns:280px 1fr 64px;gap:10px;align-items:center;font-size:12.5px}
+.wn b{color:var(--ink);font-weight:500}.wt{position:relative;height:10px;background:var(--bg);border-radius:3px}.wt i{position:absolute;top:1px;bottom:1px;border-radius:2px;background:var(--teal)}
+.wt i.core{background:#6b7672}.wt i.bad{background:var(--red)}.wd{font:12px var(--mono);text-align:right;color:var(--ink2)}
+.cs.sel{outline:1.5px solid var(--ink2);outline-offset:2px}
+.cs{transition:outline-color .2s}
+.side2{padding-top:66px}
+.side2 .vr{grid-template-columns:150px 1fr 48px}
+.side2 .spons .s{grid-template-columns:1fr auto;padding:9px 14px}
+.room{display:block;font-size:13px;color:var(--ink2);text-decoration:none;border-bottom:1px dotted var(--ink3);align-self:flex-start;margin:4px 2px}
+.room:hover{color:var(--ink)}
+.mock{position:fixed;left:50%;bottom:10px;transform:translateX(-50%);font:12px var(--mono);color:var(--ink3);background:var(--p);border:1px solid var(--line);padding:4px 12px;border-radius:999px}
+</style>
+</head>
+<body>
+<div class="scope">
+  <button class="on">Every kitchen</button><button>Your sandbox</button><button>Shared room</button><button>Stage</button>
+  <span class="r"><span class="live">live</span> · 12 kitchens · 3 agents connected (1 outside) · 30 sandboxes</span>
+</div>
+
+<div class="hero">
+  <h1 id="hero"></h1>
+  <p>The agents settled 96% of today's lines on their own. These are the rest, grouped by cause, biggest risk first.</p>
+</div>
+<div class="tower">
+  <div class="cases2" id="cases"></div>
+  <div class="col">
+    <div class="panel"><div class="ph"><h2>What is at stake, by when</h2><span>next 72 h</span></div><svg id="stake" viewBox="0 0 320 170"></svg></div>
+    <div class="panel today">
+      <div class="ph"><h2>Today, in plain numbers</h2></div>
+      <div class="tl"><b>41</b> orders placed, <b>0</b> duplicates</div>
+      <div class="tl"><b>96%</b> of lines settled by the agents alone</div>
+      <div class="tl"><b>17</b> attempts refused by the rules <span>9 over a spending cap · 6 after the price changed · 2 outside agents trying to approve</span></div>
+      <div class="tl"><b>1</b> outside agent connected, working in its own sandbox</div>
+    </div>
+  </div>
+</div>
+<div class="story-wrap">
+  <section class="story">
+    <div class="st-h"><h2 id="stTitle">What happened to the ham case</h2><p>Each step in order: who did it, and what it changed. Pick another problem above to see its story. Click a step for the technical detail.</p></div>
+    <ol id="steps"></ol>
+  </section>
+  <aside class="col side2">
+    <div class="panel">
+      <div class="ph"><h2>How calls went through the rules today</h2><span>2,914</span></div>
+      <div class="vars">
+        <div class="vr"><div class="vt"><b>Straight through</b></div><div class="vb"><i style="width:91%;background:var(--ok)"></i></div><span>91%</span></div>
+        <div class="vr"><div class="vt"><b>Held for a person</b></div><div class="vb"><i style="width:6%;background:var(--amber)"></i></div><span>6%</span></div>
+        <div class="vr"><div class="vt"><b>Same request again</b></div><div class="vb"><i style="width:2.4%;background:var(--blue)"></i></div><span>2.4%</span></div>
+        <div class="vr"><div class="vt"><b>Refused by a rule</b></div><div class="vb"><i style="width:.6%;background:var(--red)"></i></div><span>0.6%</span></div>
+      </div>
+    </div>
+    <div class="panel spons">
+      <div class="ph"><h2>Outside services today</h2></div>
+      <div class="s"><b>Valio Aimo API</b><span class="m">412 calls · 64 ms</span></div>
+      <div class="s"><b>Gemini</b><span class="m">150 calls · 410 ms</span></div>
+      <div class="s"><b>Exa</b><span class="m">23 of 200 a day</span></div>
+      <div class="s"><b>Context.dev</b><span class="m">every 5 min</span></div>
+      <div class="s"><b>Aiven Postgres</b><span class="m">2,914 tx · 9 ms</span></div>
+    </div>
+    <a class="room" href="live.html">Open the engine room: every call, live →</a>
+  </aside>
+</div>
+<div class="mock">MOCKUP · illustrative scenario · click a product name for its sheet</div>
+
+<script src="shared/scenario.js"></script>
+<script>
+const ACT={valio:['Valio data','a-valio'],agent:['Kitchen agents','a-agent'],chef:['Chef','a-chef'],mcp:['Outside agent · MCP','a-mcp'],job:['Monitor job','a-job'],rule:['The rules','a-rule'],ops:['Valio ops','a-ops']};
+const W=(rows,total)=>`<div class="wfx">${rows.map(([n,d,s,du,k])=>`<div class="wr"><span class="wn"><b>${n}</b> · ${d}</span><span class="wt"><i style="left:${s/total*100}%;width:${Math.max(.8,du/total*100)}%" class="${k}"></i></span><span class="wd">${du<1?du.toFixed(1):Math.round(du)} ms</span></div>`).join('')}</div>`;
+const STORIES={
+ ham:{title:'What happened to the ham case',steps:[
+  ['22:02','valio',"Valio's stock said whole ham 462490 is out.","6 kitchens' Christmas plans lost their ham.",'bad',`<p>Seen on a price check for one order line, never a bulk sweep.</p>${W([['valio.offers','462490 · live',0,58,'live'],['compare','availability: out',58,1,'core']],60)}<code>op 1,241 RecordOffer · availability out · ops 1,241–1,246</code>`],
+  ['22:03','agent',"Agents found substitutes and ranked them by each kitchen's own rules.",'HK Palvikinkku came first for all 6: Finnish and in stock.','',`${W([['authorise','kitchen agent may plan',0,.3,'core'],['valio.offers','4 candidates',.3,64,'live'],['gemini-decision','recipe fit ×4',66,410,'live'],['rank','stock first, then weights',476,3,'core']],480)}<code>find_substitutes ×6 · trace t-91c2</code>`],
+  ['22:03','rule','Together <span data-product="476768">Palvikinkku</span> was wanted for 31 packs; Valio states 15.','16 packs short. Each kitchen\'s next choice is Mattila Saunapalvikinkku, in stock.','warn',`<p>Contention is settled when orders commit, not when plans are drafted. Stock Valio hasn't stated is never counted.</p><code>sim contention.detected 476768 · allocation.decided</code>`],
+  ['22:04','rule',"For 4 kitchens, Mattila is a product they have bought before.",'Ordered within their mandate, nobody asked: 5 packs.','ok',`<code>commit_order ×4 · authority: mandate · receipts r-41a … r-41d</code>`],
+  ['22:04','rule','The other 2 kitchens are Christmas buffets that want 26 packs, and both products are new to them.','Held for their chef. This is the €401 at risk.','warn',`<code>RecordApproval(pending) · bound to plan v8 + terms hash c21e… + mandate v3</code>`],
+  ['22:09','mcp',"An outside agent tried to approve on a chef's behalf.",'Refused: only a chef can approve. Nothing changed.','bad',`${W([['authorise','outside agent may read · plan · order',0,.3,'core'],['approve','permission missing → refused',.3,.1,'bad']],.5)}<code>403 FORBIDDEN · judge key jk_ws-j-0e74… · logged with door "mcp"</code>`],
+  ['22:11','agent',"One kitchen's agent retried its Mattila order after a dropped connection.",'It got the same receipt back. No second order.','ok',`${W([['authorise','kitchen agent may order',0,.3,'core'],['idempotency','key k-41c… seen before',.3,1,'core'],['replay','stored receipt returned',1.3,.4,'core']],2)}<code>commit_order · same key + same request → receipt r-41c · nothing written</code>`],
+  ['now','ops',"The 2 chefs have not answered yet.",'Cut-off in 16 h. If Valio stocks 16 more packs, both buffets can stay on Palvikinkku.','warn','<p>Stocking up is Valio\'s call. It changes no kitchen\'s plan.</p>'],
+ ]},
+ lantt:{title:'What happened to the lanttulaatikko case',steps:[
+  ['21:40','valio','Valio said <span data-product="462482">Saarioinen lanttulaatikko 462482</span> is out.',"4 kitchens' buffets lost the casserole.",'bad','<code>op RecordOffer · availability out</code>'],
+  ['21:41','agent','No ready-made substitute was in stock, so agents proposed making it in house.','5 ingredients, all in stock.','',`${W([['find_substitutes','no product in stock',0,70,'live'],['make in house','recipe → 5 lines',70,4,'core']],75)}`],
+  ['21:41','rule','Making it in house adds milk, egg and gluten.','Every kitchen must sign off itself: an allergen change is never delegated.','warn','<code>tier sign-off · reason: allergen change · never-delegate</code>'],
+  ['21:55','chef','2 chefs signed off.','Their ingredients were ordered.','ok','<code>approve ×2 · commit_order ×2</code>'],
+  ['now','ops','2 kitchens have not answered.','€188 at risk, cut-off in 16 h.','warn',''],
+ ]},
+ rosolli:{title:'What happened to the recall drill',steps:[
+  ['20:10','job','The recall monitor found a notice naming <span data-product="462157">Atria Rosolli</span>.',"It matched the product's name, not its barcode.",'warn','<p>Context.dev checks watched recall pages every 5 minutes. This one is a labelled drill.</p><code>check_recall · match: name · GTIN: none</code>'],
+  ['20:10','rule','A name-only match is not proof.',"2 kitchens' Rosolli lines were held, not cancelled.",'warn','<code>RecordAnomaly · lines held</code>'],
+  ['now','ops','Someone at Valio needs to check the notice.','€156 held, 2 days to cut-off.','warn',''],
+ ]},
+};
+let cur='ham';
+function render(){const st=STORIES[cur];document.getElementById('stTitle').textContent=st.title;
+ const ol=document.getElementById('steps');ol.innerHTML='';
+ st.steps.forEach(([t,a,what,cons,tone,detail])=>{const li=document.createElement('li');li.className='step '+tone;
+  li.innerHTML=`<span class="tm">${t}</span><span class="pip"></span><div class="bd"><span class="actor ${ACT[a][1]}">${ACT[a][0]}</span><p class="what">${what}</p><p class="cons">→ ${cons}</p>${detail?`<button class="more">Technical detail</button><div class="det">${detail}</div>`:''}</div>`;
+  const m=li.querySelector('.more');if(m)m.onclick=()=>{li.classList.toggle('open');m.textContent=li.classList.contains('open')?'Hide detail':'Technical detail'};
+  ol.appendChild(li)})}
+const SC=window.SCENARIO;
+document.getElementById('hero').innerHTML=`${SC.cases.length} problems touch ${SC.kitchensInRun} kitchens. <em>${SC.waitingTotal}</em> of orders wait on a decision before ${SC.cutoff.replace(/ \d+ Dec/,'')}.`;
+document.getElementById('cases').innerHTML=SC.cases.map(c=>{const p=SC.products[c.product];return `<div class="cs" id="case-${c.id}" data-c="${c.id}">
+  <div class="cs-h"><span class="dot ${c.tone==='red'?'r':'a'}"></span><b>${c.title}</b><span class="due">cut-off in ${c.due}</span></div>
+  <p>${c.line.replace(p.name,`<span data-product="${c.product}">${p.name}</span>`).replace(c.product,`<span data-product="${c.product}">${c.product}</span>`)}</p>
+  <div class="did"><span>Done so far:</span>${c.did}</div>
+  <div class="cs-a"><span class="money">${c.atRisk} at risk</span>${c.actions.map((t,i)=>`<button class="${i===c.actions.length-1&&c.actions.length>1?'p':''}">${t}</button>`).join('')}</div></div>`}).join('');
+function pick(id,scroll){if(!STORIES[id])return;cur=id;document.querySelectorAll('.cs').forEach(x=>x.classList.toggle('sel',x.dataset.c===id));render();if(scroll)document.querySelector('.story').scrollIntoView({behavior:'smooth',block:'start'})}
+document.querySelectorAll('.cs').forEach(c=>c.addEventListener('click',e=>{if(e.target.closest('button,[data-product]'))return;pick(c.dataset.c,true)}));
+pick(STORIES[location.hash.slice(1)]?location.hash.slice(1):'ham',!!STORIES[location.hash.slice(1)]);
+addEventListener('hashchange',()=>pick(location.hash.slice(1),true));
+
+(()=>{const S=document.getElementById('stake'),NS='http://www.w3.org/2000/svg';const e=(t,a)=>{const x=document.createElementNS(NS,t);for(const k in a)x.setAttribute(k,a[k]);S.appendChild(x);return x};
+ const X=h=>20+h/72*285,Y=v=>140-v/480*110;
+ e('line',{x1:20,x2:305,y1:140,y2:140,stroke:'#30393e'});[0,24,48,72].forEach(h=>{e('text',{x:X(h),y:160,'text-anchor':'middle'}).textContent=h?'+'+h+' h':'now'});
+ e('line',{x1:X(16),x2:X(16),y1:20,y2:140,stroke:'#e8a93c','stroke-dasharray':'3 3'});e('text',{x:X(16)+4,y:16}).textContent='cut-off Tue 15:00';
+ [[16,401,'ham','#ef6b59',16,'start',0],[16,188,'lanttulaatikko','#e8a93c',10,'middle',24],[48,156,'recall drill','#e8a93c',9,'middle',-16]].forEach(([h,v,l,c,r,an,dy])=>{e('circle',{cx:X(h),cy:Y(v),r,fill:c,'fill-opacity':.35,stroke:c});const t=e('text',{x:an==='middle'?X(h):X(h)+r+6,y:Y(v)+4+dy,'text-anchor':an});t.textContent=l+' €'+v;t.style.fill='#eef1ef'});
+})();
+</script>
+<script src="shared/shell.js" data-page="ops"></script>
+</body>
+</html>

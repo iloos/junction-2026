@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>How Mandate Works</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0b0d0e; --p:#121618; --p2:#171c1f; --line:#242b2f; --line2:#323b40;
+  --ink:#eef1ef; --ink2:#a9b2af; --ink3:#86908d;
+  --ok:#3fbf8a; --teal:#2bb3a6; --amber:#e8a93c; --red:#ef6b59; --vio:#b39cff; --blue:#82adff;
+  --sans:'IBM Plex Sans',system-ui,sans-serif; --mono:'IBM Plex Mono',ui-monospace,monospace; --serif:'Instrument Serif',Georgia,serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font:14px/1.55 var(--sans);-webkit-font-smoothing:antialiased}
+a{color:inherit}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+.top{height:56px;display:flex;align-items:center;justify-content:space-between;padding:0 28px;border-bottom:1px solid var(--line)}
+.brand{font-weight:600;display:flex;gap:8px;align-items:center}.brand i{width:18px;height:18px;border:1.5px solid;border-radius:4px;display:grid;place-items:center;font:normal 10px var(--sans)}
+.top nav{display:flex;gap:20px;font-size:13px;color:var(--ink2)}.top nav a{text-decoration:none}
+.wrap{max-width:1280px;margin:0 auto;padding:56px 28px 80px}
+.kicker{font:500 12px var(--mono);letter-spacing:.08em;color:var(--teal);text-transform:uppercase;margin-bottom:14px}
+h1{font:400 clamp(40px,5vw,68px)/1.04 var(--serif);max-width:20ch}
+h1 em{color:var(--ink2)}
+h2{font:400 36px/1.1 var(--serif);margin:72px 0 8px}
+.lede{color:var(--ink2);font-size:17px;max-width:62ch;margin-top:16px}
+.bar{display:flex;gap:8px;margin:32px 0 14px;flex-wrap:wrap;align-items:center}
+.seg{display:flex;border:1px solid var(--line2);border-radius:999px;padding:3px}
+.seg button{padding:5px 12px;border-radius:999px;font-size:13px;color:var(--ink2)}
+.seg button.on{background:var(--ink);color:var(--bg)}
+.go{padding:7px 16px;border-radius:999px;background:var(--teal);color:#06110f;font-weight:600;font-size:13px}
+.map{display:grid;grid-template-columns:1fr 340px;gap:16px}
+.stage{background:var(--p);border:1px solid var(--line);border-radius:16px;position:relative;overflow:hidden}
+#sys{width:100%;display:block}
+.n rect{fill:var(--p2);stroke:var(--line2);transition:stroke .25s,fill .25s,opacity .25s}
+.n text{fill:var(--ink);font:500 12.5px var(--sans);pointer-events:none}
+.n .s{fill:var(--ink3);font:12px var(--mono)}
+.n{cursor:pointer;transition:opacity .25s}
+.n.hot rect{stroke:var(--teal);fill:#14231f}
+.n.sp rect{stroke:var(--amber)}
+.n.dim{opacity:.28}
+.e{stroke:var(--line2);fill:none;stroke-width:1.2;transition:opacity .25s}
+.e.dim{opacity:.15}.e.hot{stroke:var(--teal);stroke-width:2}
+.band{font:12px var(--mono);fill:var(--ink3);letter-spacing:.06em}
+.side{background:var(--p);border:1px solid var(--line);border-radius:16px;padding:20px;position:sticky;top:16px;align-self:start;min-height:420px}
+.side .t{font:400 28px/1.1 var(--serif)}
+.side .k{font:12px var(--mono);color:var(--teal);margin:4px 0 14px}
+.side p{color:var(--ink2);font-size:13.5px;margin-bottom:12px}
+.side dl{display:grid;grid-template-columns:90px 1fr;gap:6px 10px;font-size:12.5px;border-top:1px solid var(--line);padding-top:12px}
+.side dt{color:var(--ink3);font-family:var(--mono);font-size:12px}
+.side dd code{font:12px var(--mono);color:var(--ink)}
+.log{margin-top:14px;font:12px var(--mono);color:var(--ink2);border-top:1px solid var(--line);padding-top:12px;max-height:240px;overflow:auto}
+.log div{padding:2px 0}.log b{color:var(--teal);font-weight:500}
+/* sponsors */
+.sgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-top:24px}
+.sc{background:var(--p);border:1px solid var(--line);border-radius:14px;padding:18px}
+.sc .nm{font:400 26px var(--serif)}
+.sc .port{font:12px var(--mono);color:var(--amber);margin:2px 0 10px}
+.sc p{font-size:13px;color:var(--ink2)}
+.sc .fb{margin-top:12px;font:12px var(--mono);color:var(--ink3);border-top:1px solid var(--line);padding-top:10px}
+.sc .fb b{color:var(--ink2);font-weight:500}
+/* state machines */
+.sm{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:24px}
+.smc{background:var(--p);border:1px solid var(--line);border-radius:14px;padding:18px}
+.smc h4{font:500 13px var(--sans);margin-bottom:12px}
+.smc svg{width:100%}
+.st rect{fill:var(--p2);stroke:var(--line2)}.st text{fill:var(--ink);font:12px var(--mono)}
+.smc p{font-size:12.5px;color:var(--ink2);margin-top:10px}
+/* principles */
+.pr{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:14px;overflow:hidden;margin-top:24px}
+.pr div{background:var(--bg);padding:22px}
+.pr b{display:block;font:400 22px var(--serif);margin-bottom:6px}
+.pr span{color:var(--ink2);font-size:13.5px}
+.mock{position:fixed;left:50%;bottom:10px;transform:translateX(-50%);font:12px var(--mono);color:var(--ink3);background:var(--p);border:1px solid var(--line);padding:4px 12px;border-radius:999px}
+@media(max-width:1000px){.map,.sgrid,.sm,.pr{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header class="top"><div class="brand"><i>M</i>Mandate</div><nav><a href="landing.html">Story</a><a href="kitchen.html">Kitchen</a><a href="ops.html">Operations</a><a href="#" style="color:var(--ink)">How it works</a></nav></header>
+<div class="wrap">
+  <div class="kicker">Architecture</div>
+  <h1>Many doors, <em>one gate,</em> one record.</h1>
+  <p class="lede">Every screen, every agent and every API call goes through the same tool registry and command handler. The core is pure TypeScript. Every outside service sits behind a port with a real adapter and a fallback, so the demo survives a dead API, and you can see which one answered.</p>
+
+  <div class="bar">
+    <div class="seg" id="lensSeg"><button class="on" data-l="all">Everything</button><button data-l="sp">Partners</button><button data-l="safe">Safety checks</button></div>
+    <span style="flex:1"></span>
+    <span style="font:12px var(--mono);color:var(--ink3)">trace a call:</span>
+    <div class="seg" id="traceSeg"><button data-t="commit">Chef places order</button><button data-t="mcp">Your Claude tries to approve</button><button data-t="sub">Agent finds a substitute</button></div>
+  </div>
+  <div class="map">
+    <div class="stage"><svg id="sys" viewBox="0 0 900 640"></svg></div>
+    <aside class="side" id="side">
+      <div class="t">Pick anything</div>
+      <div class="k">click a box · or trace a call</div>
+      <p>Each box is a real module on <code style="font:12px var(--mono)">main</code>. The panel says what it does, the file it lives in, and the test that holds it.</p>
+      <div class="log" id="log"></div>
+    </aside>
+  </div>
+
+  <h2>What each partner does</h2>
+  <p class="lede">Every partner sits behind a port. When it is down the system says so and falls back, and the trace names who answered.</p>
+  <div class="sgrid">
+    <div class="sc"><div class="nm">Valio Aimo</div><div class="port">Catalog port</div><p>17.5k products, pack and lot rules, price and availability. Cache-through: only the lines in a real order are looked up.</p><div class="fb">fallback <b>cached offer, labelled with its age</b></div></div>
+    <div class="sc"><div class="nm">Gemini</div><div class="port">Decide + LLM ports</div><p>gemini-decision scores recipe fit in ranking; a caution holds a line, never forbids. Flash-lite parses requests and plans agent turns.</p><div class="fb">fallback <b>recorded replay → rules</b></div></div>
+    <div class="sc"><div class="nm">Aiven</div><div class="port">Store port + runtime</div><p>Postgres with row locks, NOTIFY fan-out and idempotency keys. The app runs as one container on Aiven Runtime.</p><div class="fb">fallback <b>PGlite, same migrations</b></div></div>
+    <div class="sc"><div class="nm">Exa</div><div class="port">Web port</div><p>lookup_facts and find_outside: cited facts and outside options. Suggestions never overwrite a catalogue fact.</p><div class="fb">fallback <b>fixture · daily cap 429</b></div></div>
+    <div class="sc"><div class="nm">Context.dev</div><div class="port">Web port · monitor</div><p>Watches recall pages every 5 minutes and matches notices to products by GTIN or name.</p><div class="fb">fallback <b>drill, labelled</b></div></div>
+  </div>
+
+  <h2>State you can trust</h2>
+  <p class="lede">Three small state machines carry the whole product. An edit always voids the approval. A commit happens once.</p>
+  <div class="sm">
+    <div class="smc"><h4>Plan</h4><svg viewBox="0 0 300 120" id="smPlan"></svg><p>Any edit returns it to draft and clears the terms hash.</p></div>
+    <div class="smc"><h4>Line</h4><svg viewBox="0 0 300 120" id="smLine"></svg><p>Held lines carry a tier and reasons; unknown stock is never cover.</p></div>
+    <div class="smc"><h4>Approval</h4><svg viewBox="0 0 300 120" id="smAppr"></svg><p>Bound to plan version + terms hash + mandate version + expiry.</p></div>
+  </div>
+
+  <h2>Design choices</h2>
+  <div class="pr">
+    <div><b>Pure core, ports at the edge</b><span>src/lib/core has no Svelte, no DOM, no SDK. Lint enforces it.</span></div>
+    <div><b>One function changes state</b><span>applyOps: 8 op types, versioned, every op logged with actor and door.</span></div>
+    <div><b>Approval is a hash</b><span>termsHash(deliverBy + sorted lines). A changed price can't ride an old yes.</span></div>
+    <div><b>Never hold a lock across a model</b><span>Valio and Gemini run before the transaction; the lock covers only the write.</span></div>
+    <div><b>Every flow has a fixture</b><span>LLM_PROVIDER=fixture in the gate; ~420 tests and evals through the real handlers.</span></div>
+    <div><b>Words are a contract</b><span>“Supplier confirmed” only with a receipt. VOCABULARY.md is enforced in tests.</span></div>
+  </div>
+</div>
+<div class="mock">MOCKUP · try the trace buttons</div>
+<script>
+const NS='http://www.w3.org/2000/svg',S=document.getElementById('sys');
+const el=(t,a,p=S)=>{const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);p.appendChild(e);return e};
+// nodes: id, label, sub, x, y, w, tags, info
+const N=[
+ ['kitchen','Kitchen screen','human · chef',30,60,150,[],{d:'The chef reads the plan, edits g/guest and approves decisions. Acts through the same tool handlers as everyone else.',f:'src/routes/(kitchen)',t:'kitchen-idle.e2e.ts'}],
+ ['chat','In-app agent','≤ 8 steps',200,60,150,[],{d:'The kitchen agent: reads get_context, plans, proposes. Scopes read · plan · order. Never approves.',f:'server/agent',t:'evals/agent'}],
+ ['mcp','Your Claude · MCP','judge key',370,60,160,[],{d:'Any outside agent. A judge key works only in its own sandbox and cannot approve.',f:'server/tools · judge-key.ts',t:'adversarial.test.ts'}],
+ ['rest','REST · OpenAPI','/api/tools',550,60,150,[],{d:'The same registry as MCP, as plain HTTP with an OpenAPI document.',f:'/api/openapi.json',t:'surfaces eval'}],
+ ['ops','Valio Ops','reads · SSE',720,60,150,[],{d:'Valio\'s control room: cases by cause, traces, refusals. Read only.',f:'src/routes/ops',t:'visitor-gate.e2e.ts'}],
+ ['reg','Tool registry','15 tools · zod schemas',300,170,300,['safe'],{d:'One registry feeds MCP, REST, OpenAPI and the agent loop. Every tool result carries our own summary and next action.',f:'core/contracts/tools.ts',t:'tools.test.ts'}],
+ ['auth','Authorise','scopes',60,270,150,['safe'],{d:'The actor comes from the key or session, never from the body. SCOPES_BY_ACTOR decides what each may do.',f:'server/auth',t:'adversarial.test.ts'}],
+ ['idem','Idempotency','key + hash',230,270,150,['safe'],{d:'Same key, same request → the same result. Same key, other payload → DUPLICATE.',f:'server/demo · store',t:'eval s1, s5'}],
+ ['prep','Prepare outside lock','Valio · Gemini',400,270,170,[],{d:'Valio offers and Gemini decisions run before the transaction, so no lock waits on a network call.',f:'server/tools handlers',t:'pg-race.test.ts'}],
+ ['tx','store.transact','lock · budget',590,270,170,['safe'],{d:'Re-reads the plan, compares versions and terms, locks the kitchen-week budget row, then writes.',f:'server/store',t:'ceiling.test.ts · cutoff.test.ts'}],
+ ['core','applyOps · pure core','8 op types · versioned',230,380,220,['safe'],{d:'The only function that changes state. Refuses an external approval, invalidates approvals on edit, commits once.',f:'core/state.ts',t:'state.test.ts'}],
+ ['rank','Rank + demand','supply tier → weights',470,380,180,[],{d:'Lexicographic: known stock first, then hard constraints, then the kitchen\'s weighted score plus model fit.',f:'core/rank/rank.ts',t:'pool.test.ts'}],
+ ['bus','Event bus','NOTIFY · SSE',670,380,170,[],{d:'After commit, ops, simulator events and traces go out over Postgres NOTIFY to every open screen.',f:'server/bus',t:'bus tests'}],
+ ['pcat','Catalog port','',30,500,150,['sp'],{d:'Valio Aimo API, cache-through, plus hybrid retrieval over 17.5k products. Fallback: the cached offer, labelled with its age.',f:'adapters/catalog',t:'retrieval evals'}],
+ ['pdec','Decide port','',200,500,150,['sp'],{d:'Gemini Decisions scores recipe fit 0–4. Fallback: recorded replay, then rules.',f:'adapters/decide',t:'DECIDE_LIVE=1 pnpm test:live'}],
+ ['pllm','LLM port','',370,500,150,['sp'],{d:'Gemini Flash-Lite parses requests and plans turns. max_tokens on every call; every call traced.',f:'adapters/llm',t:'eval:live'}],
+ ['pweb','Web port','',540,500,150,['sp'],{d:'Exa for cited facts and outside options; Context.dev for recall monitoring. Daily caps, 429 with Retry-After.',f:'server/web',t:'web tests'}],
+ ['pdb','Store port','',710,500,160,['sp'],{d:'Drizzle over Aiven Postgres in prod, PGlite with the same migrations in tests.',f:'server/db',t:'pnpm test:pg'}],
+];
+const sponsorOf={pcat:'Valio Aimo',pdec:'Gemini',pllm:'Gemini',pweb:'Exa · Context.dev',pdb:'Aiven'};
+const E=[['kitchen','reg'],['chat','reg'],['mcp','reg'],['rest','reg'],['ops','bus'],['reg','auth'],['auth','idem'],['idem','prep'],['prep','tx'],['tx','core'],['prep','rank'],['core','bus'],['prep','pcat'],['rank','pdec'],['chat','pllm'],['prep','pweb'],['tx','pdb']];
+el('text',{x:30,y:40,class:'band'}).textContent='DOORS';
+el('text',{x:30,y:158,class:'band'}).textContent='ONE GATE';
+el('text',{x:30,y:258,class:'band'}).textContent='COMMAND HANDLER';
+el('text',{x:30,y:370,class:'band'}).textContent='PURE CORE';
+el('text',{x:30,y:488,class:'band'}).textContent='PORTS → PARTNERS';
+const pos={};N.forEach(n=>pos[n[0]]=n);
+const eg=el('g',{}),ng=el('g',{});
+const edges=E.map(([a,b])=>{const A=pos[a],B=pos[b];const x1=A[3]+A[5]/2,y1=A[4]+52,x2=B[3]+B[5]/2,y2=B[4];
+ const p=el('path',{class:'e',d:`M${x1} ${y1} C ${x1} ${(y1+y2)/2}, ${x2} ${(y1+y2)/2}, ${x2} ${y2}`},eg);p.dataset.a=a;p.dataset.b=b;return p});
+const nodes=N.map(([id,l,s,x,y,w,tags,info])=>{const g=el('g',{class:'n'+(tags.includes('sp')?' sp':'')},ng);g.dataset.id=id;
+ el('rect',{x,y,width:w,height:52,rx:10},g);el('text',{x:x+14,y:y+22},g).textContent=l;el('text',{x:x+14,y:y+40,class:'s'},g).textContent=s||sponsorOf[id];
+ g.onclick=()=>show(id);return g});
+function show(id){const n=pos[id],i=n[7];document.getElementById('side').innerHTML=`<div class="t">${n[1]}</div><div class="k">${n[2]||sponsorOf[id]}</div><p>${i.d}</p><dl><dt>lives in</dt><dd><code>${i.f}</code></dd><dt>held by</dt><dd><code>${i.t}</code></dd>${sponsorOf[id]?`<dt>partner</dt><dd>${sponsorOf[id]}</dd>`:''}</dl><div class="log" id="log"></div>`;
+ nodes.forEach(g=>g.classList.toggle('hot',g.dataset.id===id))}
+document.querySelectorAll('#lensSeg button').forEach(b=>b.onclick=()=>{document.querySelectorAll('#lensSeg button').forEach(x=>x.classList.toggle('on',x===b));const l=b.dataset.l;
+ nodes.forEach(g=>{const tags=pos[g.dataset.id][6];g.classList.toggle('dim',l!=='all'&&!tags.includes(l))});edges.forEach(e=>e.classList.toggle('dim',l!=='all'))});
+// traces
+const T={
+ commit:{path:['kitchen','reg','auth','idem','prep','pcat','tx','pdb','core','bus','ops'],log:['commit_order · chef session · ws-j-0e74','authorise: chef holds order ✓','idempotency: key k-91c… new','prepare: valio.offers ×4 · 58 ms · live','transact: lock ws · budget row €934/€4,000 ✓','terms hash c21e… = approval ✓ · mandate v3 ✓','applyOps: CommitOrder · seq 1,285','receipt r-7f2 · 4 lines · €319.78','NOTIFY → Ops, Kitchen, 2 tabs','retry same key → same receipt r-7f2']},
+ mcp:{path:['mcp','reg','auth','core'],log:['approve · judge key jk_ws-j-0e74…','authorise: external_agent holds read · plan · order','approve scope missing → FORBIDDEN 403','applyOps never reached: nothing changed','tool result: summary + approvalUrl for the chef','Ops: refusal logged with door "mcp"'],bad:true},
+ sub:{path:['chat','pllm','reg','auth','prep','pcat','rank','pdec','tx','core','bus'],log:['agent turn: "the salmon is out too"','flash-lite: intent → find_substitutes · 312 tok','authorise: kitchen_agent holds plan ✓','retrieval: 17.5k → 38 → 9 eligible','valio.offers ×9 · 71 ms · 6 cache / 3 live','rank: known stock first, weights r35 p25 f20 c20','gemini-decision fit ×4 · 410 ms · trout .88','applyOps: ProposeSubstitute → held (new product)','approval invalidated → pending · v8']},
+};
+let timer;
+document.querySelectorAll('#traceSeg button').forEach(b=>b.onclick=()=>{document.querySelectorAll('#traceSeg button').forEach(x=>x.classList.toggle('on',x===b));run(T[b.dataset.t],b.textContent)});
+function run(tr,name){clearInterval(timer);show(tr.path[0]);document.getElementById('side').querySelector('.t').textContent=name;
+ const log=document.getElementById('log');log.innerHTML='';nodes.forEach(g=>g.classList.add('dim'));edges.forEach(e=>{e.classList.add('dim');e.classList.remove('hot')});
+ let i=0;timer=setInterval(()=>{if(i<tr.path.length){const id=tr.path[i];const g=nodes.find(g=>g.dataset.id===id);g.classList.remove('dim');g.classList.add('hot');
+   if(i>0)edges.forEach(e=>{if((e.dataset.a===tr.path[i-1]&&e.dataset.b===id)||(e.dataset.b===tr.path[i-1]&&e.dataset.a===id)){e.classList.remove('dim');e.classList.add('hot');if(tr.bad&&id==='core')e.style.stroke='var(--red)'}})}
+  if(i<tr.log.length){const d=document.createElement('div');d.innerHTML=`<b>${String(i+1).padStart(2,'0')}</b> ${tr.log[i]}`;if(tr.bad&&/FORBIDDEN/.test(tr.log[i]))d.style.color='var(--red)';log.appendChild(d)}
+  i++;if(i>Math.max(tr.path.length,tr.log.length))clearInterval(timer)},520)}
+// state machines
+function sm(id,states,arrows){const s=document.getElementById(id);const g=(t,a)=>{const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);s.appendChild(e);return e};
+ const P={};states.forEach(([n,x,y,c])=>{P[n]=[x,y];const w=n.length*7.4+16;g('rect',{x:x-w/2,y:y-12,width:w,height:24,rx:12,fill:'#171c1f',stroke:c||'#323b40'});const t=g('text',{x,y:y+4,'text-anchor':'middle',fill:'#eef1ef','font-size':11,'font-family':'IBM Plex Mono'});t.textContent=n});
+ arrows.forEach(([a,b,dash])=>{const[x1,y1]=P[a],[x2,y2]=P[b];g('line',{x1:x1+(x2-x1)*.28,y1:y1+(y2-y1)*.4,x2:x2-(x2-x1)*.28,y2:y2-(y2-y1)*.4,stroke:dash?'#ef6b59':'#5c676c','stroke-dasharray':dash?'3 3':'', 'marker-end':''})})}
+sm('smPlan',[['draft',40,30],['quoted',120,30],['ready',210,20,'#3fbf8a'],['held',210,60,'#e8a93c'],['committed',250,100,'#3fbf8a']],[['draft','quoted'],['quoted','ready'],['quoted','held'],['ready','committed'],['held','committed'],['held','draft',1]]);
+sm('smLine',[['proposed',50,30],['eligible',160,20,'#3fbf8a'],['held',160,60,'#e8a93c'],['rejected',60,100,'#ef6b59'],['committed',250,100,'#3fbf8a']],[['proposed','eligible'],['proposed','held'],['proposed','rejected'],['eligible','committed'],['held','committed']]);
+sm('smAppr',[['pending',50,40],['granted',170,20,'#3fbf8a'],['denied',170,60,'#ef6b59'],['invalidated',90,100,'#ef6b59'],['expired',230,100]],[['pending','granted'],['pending','denied'],['granted','invalidated',1],['granted','expired']]);
+</script>
+</body>
+</html>

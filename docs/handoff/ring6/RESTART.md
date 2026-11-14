@@ -27,7 +27,7 @@ The user's read: the app now feels like a cart with a chat box. The machinery th
 - **Motion shows the work:** a plan that re-plans animates the changed lines; the agent's steps appear as they happen; numbers count. Depth on demand: every number opens its why.
 - **Acceptance:** a first-time visitor understands within five seconds that an agent is running the kitchen's purchasing under rules, and sees it act within thirty.
 
-A short product-and-narrative session (design + pitch) writes this up as the target screens before Foundations 3 and the UI pass, so the polish serves the story.
+The user, in retrospect: the Kitchen mock A ([docs/design/mocks/kitchen-a.html](../../design/mocks/kitchen-a.html)) reads cleaner than the live Kitchen, though it isn't complete. Start the target screens from A's structure and calm, then add what the live app has that A lacks (per-line control, rules, the rail, the full order flow). A short product-and-narrative session (design + pitch) writes this up as the target screens before Foundations 3 and the UI pass, so the polish serves the story.
 
 ## A self-testing judge harness (user, Sat late): Claude playtests and reviews, so we iterate on feedback
 The adversarial rounds (R9–R12) and the user's own screenshots are the best feedback we have, but each is a manual, multi-hour event. Make it a loop any session can run.

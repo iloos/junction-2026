@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mandate Demand Flow</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/d3-sankey@0.12.3/dist/d3-sankey.min.js"></script>
+<style>
+:root{
+  --bg:#f6f5f1; --paper:#fff; --line:#e4e2db; --line2:#d3d0c6; --fill:#efede7;
+  --ink:#171a19; --ink2:#5a615e; --ink3:#6f7672;
+  --teal:#0b7268; --ok:#17734b; --amber:#8f5a00; --amberbg:#f6e7c8; --red:#b0381f; --redbg:#f7ddd6;
+  --k1:#2f5bd3; --k2:#0b7268; --k3:#7a4bc0;
+  --sans:'IBM Plex Sans',system-ui,sans-serif; --mono:'IBM Plex Mono',ui-monospace,monospace; --serif:'Instrument Serif',Georgia,serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font:14px/1.5 var(--sans);-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+a{color:inherit}
+.top{height:52px;display:flex;align-items:center;gap:18px;padding:0 20px;border-bottom:1px solid var(--line);background:var(--paper)}
+.brand{font-weight:600;display:flex;gap:8px;align-items:center}.brand i{width:18px;height:18px;border:1.5px solid;border-radius:4px;display:grid;place-items:center;font:normal 10px var(--sans)}
+.tabs{display:flex;gap:2px}.tabs a{padding:6px 10px;border-radius:6px;color:var(--ink2);text-decoration:none}.tabs a.on{background:var(--fill);color:var(--ink);font-weight:500}
+.wrap{padding:22px 24px 60px;max-width:1500px;margin:0 auto}
+.head{display:flex;justify-content:space-between;align-items:flex-end;gap:24px;margin-bottom:16px}
+h1{font:400 34px/1.1 var(--serif)}
+.say{font-size:16px;color:var(--ink2);margin-top:6px;max-width:80ch}
+.say b{color:var(--ink);font-weight:500}.say .r{color:var(--red)}.say .a{color:var(--amber)}
+.units{display:flex;border:1px solid var(--line2);border-radius:999px;padding:3px;background:var(--paper)}
+.units button{padding:4px 12px;border-radius:999px;font-size:13px;color:var(--ink2)}
+.units button.on{background:var(--ink);color:#fff}
+/* timeline */
+.time{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:12px 16px 6px;margin-bottom:14px}
+.time .th{display:flex;justify-content:space-between;font-size:13px;color:var(--ink2);margin-bottom:4px}
+.time .th b{color:var(--ink);font-weight:500}
+#time{width:100%;height:120px;display:block}
+#time text{font:12px var(--mono);fill:var(--ink3)}
+.selection{fill:var(--teal);fill-opacity:.08;stroke:var(--teal)}
+/* main */
+.main{display:grid;grid-template-columns:1fr 340px;gap:14px}
+.board{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:12px 8px 8px;position:relative}
+.cols{display:grid;grid-template-columns:repeat(5,1fr);padding:0 8px 6px;border-bottom:1px solid var(--line);margin-bottom:4px}
+.cols div{font-size:12.5px;color:var(--ink2)}
+.cols b{display:block;color:var(--ink);font-weight:600;font-size:13px}
+.cols span{display:inline-block;margin-top:3px;font-size:12px;border:1px dashed var(--line2);border-radius:999px;padding:1px 8px;color:var(--ink2)}
+#flow{width:100%;display:block}
+.node rect{stroke:none}
+.node text{font:12.5px var(--sans);fill:var(--ink);paint-order:stroke;stroke:#fff;stroke-width:4px;stroke-linejoin:round}
+.node .sub{font:12px var(--mono);fill:var(--ink3)}
+.link{fill:none;stroke-opacity:.32;transition:stroke-opacity .2s}
+.dimmed .link{stroke-opacity:.05}.dimmed .link.on{stroke-opacity:.5}
+.dimmed .node{opacity:.25}.dimmed .node.on{opacity:1}
+.pin{font:12px var(--mono)}
+/* side */
+.side{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:18px;align-self:start;position:sticky;top:12px}
+.side .k{font:12px var(--mono);color:var(--ink3);margin-bottom:4px}
+.side h2{font:400 26px/1.15 var(--serif);margin-bottom:8px}
+.side p{color:var(--ink2);margin-bottom:12px}
+.side p b{color:var(--ink);font-weight:500}
+.gauge{margin:6px 0 14px}
+.gauge .row{display:grid;grid-template-columns:76px 1fr 64px;gap:8px;align-items:center;font-size:12.5px;color:var(--ink2);margin-bottom:5px}
+.gauge .bar{height:10px;background:var(--fill);border-radius:5px;overflow:hidden;position:relative}
+.gauge .bar i{position:absolute;top:0;bottom:0;left:0;border-radius:5px}
+.gauge .n{font:12.5px var(--mono);color:var(--ink);text-align:right}
+.who{border-top:1px solid var(--line);padding-top:10px}
+.who div{display:flex;justify-content:space-between;padding:4px 0;font-size:13px}
+.who div span:last-child{font-family:var(--mono)}
+.act{margin-top:14px;display:flex;gap:8px}
+.act button{flex:1;height:36px;border-radius:9px;border:1px solid var(--line2);font-weight:500;font-size:13px}
+.act button.p{background:var(--ink);color:#fff;border-color:var(--ink)}
+.leg{display:flex;gap:16px;flex-wrap:wrap;font-size:12.5px;color:var(--ink2);padding:8px 10px 2px}
+.leg b{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:-1px}
+.mock{position:fixed;left:50%;bottom:10px;transform:translateX(-50%);font:12px var(--mono);color:var(--ink2);background:var(--paper);border:1px solid var(--line);padding:4px 12px;border-radius:999px}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand"><i>M</i>Mandate</div>
+  <nav class="tabs"><a href="kitchen.html">Kitchen</a><a class="on" href="#">Demand</a><a href="ops.html">Operations</a><a href="engine.html">Forecast</a><a href="architecture.html">How it works</a></nav>
+</header>
+<div class="wrap">
+  <div class="head">
+    <div>
+      <h1>Where this week's food comes from</h1>
+      <div class="say" id="say"></div>
+    </div>
+    <div class="units" id="units"><button class="on" data-u="eur">€</button><button data-u="lines">order lines</button></div>
+  </div>
+
+  <div class="time">
+    <div class="th"><span><b>Demand by delivery day</b> · drag to choose the window</span><span>standing orders repeat on delivery days · the Christmas buffet lands Thu 10</span></div>
+    <svg id="time"></svg>
+  </div>
+
+  <div class="main">
+    <div class="board" id="board">
+      <div class="cols">
+        <div><b>Kitchens</b><span>chat: “plan my week”</span></div>
+        <div><b>Menus</b><span>chat: “buffet for 140”</span></div>
+        <div><b>Dishes</b><span>chat: “ham 120 g/guest”</span></div>
+        <div><b>Products</b><span>request: “1,000 L milk”</span></div>
+        <div><b>Valio stock</b><span>what Valio has said</span></div>
+      </div>
+      <svg id="flow"></svg>
+      <div class="leg"><span><b style="background:var(--k1)"></b>Hotel Rautatientori</span><span><b style="background:var(--k2)"></b>Lounas Ruoholahti</span><span><b style="background:var(--k3)"></b>Espoo Central Kitchen</span><span style="margin-left:auto"><b style="background:var(--ok)"></b>enough stock</span><span><b style="background:var(--amber)"></b>Valio hasn't said</span><span><b style="background:var(--red)"></b>short</span></div>
+    </div>
+    <aside class="side" id="side"></aside>
+  </div>
+</div>
+<div class="mock">MOCKUP · drag the timeline · click any box · dashed chips show where a chat or request lands</div>
+
+<script>
+// ---- model: kitchens → menus → dishes → products, each menu active on some days
+const DAYS=d3.range(14).map(i=>new Date(2026,11,7+i));
+const dl=d=>d.toLocaleDateString('en-GB',{weekday:'short',day:'numeric'});
+const K={hotel:{name:'Hotel Rautatientori',c:'--k1',days:[1,2,3,4,5,6]},lounas:{name:'Lounas Ruoholahti',c:'--k2',days:[1,3,5]},central:{name:'Espoo Central Kitchen',c:'--k3',days:[1,2,3,4,5]}};
+const MENUS=[
+ {id:'m-break',k:'hotel',name:'Breakfast buffet',kind:'standing',dishes:[['Puuro',{milk:38,oats:6}],['Munakokkeli',{egg:22,cream:9}],['Leipäpöytä',{butter:14,cheese:18}]]},
+ {id:'m-xmas',k:'hotel',name:'Christmas buffet · 140',kind:'event',on:[3],dishes:[['Joulukinkku',{ham:185}],['Graavilohi',{salmon:282}],['Lanttulaatikko',{cream:3,egg:12,swede:14}],['Rosolli',{rosolli:78}]]},
+ {id:'m-lunch',k:'lounas',name:'Lunch · cycle week 3',kind:'standing',dishes:[['Lohikeitto',{salmon:96,cream:22,potato:9}],['Makaronilaatikko',{milk:18,egg:8}]]},
+ {id:'m-school',k:'central',name:'School lunch · cycle week 2',kind:'standing',dishes:[['Kalakeitto',{salmon:64,milk:20,potato:12}],['Puuro',{milk:70,oats:11}],['Kinkkukiusaus',{ham:52,cream:18,potato:10}]]},
+];
+const P={milk:{name:'Valio laktoositon maito 1 l',st:'ok',stock:'900 l stated'},oats:{name:'Myllyn Paras kaurahiutale',st:'ok',stock:'in stock'},egg:{name:'Kieku kananmuna 4320 g',st:'ok',stock:'in stock'},cream:{name:'Valio ruokakerma 15 %',st:'ok',stock:'in stock'},butter:{name:'Valio voi 500 g',st:'ok',stock:'in stock'},cheese:{name:'Oltermanni 17 %',st:'ok',stock:'in stock'},
+ ham:{name:'HK Palvikinkku 1,5 kg',st:'short',stock:'15 packs',want:'31 packs'},salmon:{name:'Lohifilee C-leikattu 10 kg',st:'ok',stock:'40 kg stated'},swede:{name:'Lantut Britannia',st:'ok',stock:'in stock'},rosolli:{name:'Atria Rosolli 2,5 kg',st:'unk',stock:'not stated'},potato:{name:'SPL annosperuna 10 kg',st:'ok',stock:'in stock'}};
+const stCol={ok:'--ok',unk:'--amber',short:'--red'};
+const css=v=>getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+function active(m,d){const day=DAYS[d].getDay();if(m.kind==='event')return m.on.includes(d);return K[m.k].days.includes(day)}
+// per-day totals per kitchen
+const perDay=DAYS.map((_,d)=>{const o={d};Object.keys(K).forEach(k=>o[k]=0);MENUS.forEach(m=>{if(!active(m,d))return;m.dishes.forEach(([,ing])=>Object.values(ing).forEach(v=>o[m.k]+=v))});return o});
+let win=[1,4],unit='eur',focus=null;
+
+// ---- timeline with brush
+const T=d3.select('#time');const TW=T.node().clientWidth,TH=120,TM={l:6,r:6,t:6,b:22};
+T.attr('viewBox',`0 0 ${TW} ${TH}`);
+const tx=d3.scaleBand(d3.range(14),[TM.l,TW-TM.r]).padding(.18);
+const ty=d3.scaleLinear([0,d3.max(perDay,o=>o.hotel+o.lounas+o.central)],[TH-TM.b,TM.t]);
+const stack=d3.stack().keys(['central','lounas','hotel'])(perDay);
+T.append('g').selectAll('g').data(stack).join('g').attr('fill',s=>css(K[s.key].c)).attr('fill-opacity',.8)
+ .selectAll('rect').data(s=>s).join('rect').attr('x',(d,i)=>tx(i)).attr('width',tx.bandwidth()).attr('y',d=>ty(d[1])).attr('height',d=>ty(d[0])-ty(d[1])).attr('rx',2);
+T.append('g').selectAll('text').data(DAYS).join('text').attr('x',(d,i)=>tx(i)+tx.bandwidth()/2).attr('y',TH-6).attr('text-anchor','middle').text(dl);
+T.append('text').attr('x',tx(3)+tx.bandwidth()/2).attr('y',ty(perDay[3].hotel+perDay[3].lounas+perDay[3].central)-6).attr('text-anchor','middle').style('fill','var(--ink)').text('🎄 buffet');
+const brush=d3.brushX().extent([[TM.l,TM.t],[TW-TM.r,TH-TM.b]]).on('end',ev=>{if(!ev.selection||!ev.sourceEvent)return;const [a,b]=ev.selection;const s=d3.range(14).filter(i=>tx(i)+tx.bandwidth()>a&&tx(i)<b);if(!s.length)return;win=[s[0],s[s.length-1]];T.select('.brush').transition().call(brush.move,[tx(win[0])-3,tx(win[1])+tx.bandwidth()+3]);draw()});
+T.append('g').attr('class','brush').call(brush).call(brush.move,[tx(win[0])-3,tx(win[1])+tx.bandwidth()+3]);
+
+// ---- sankey
+function graph(){
+ const nodes=new Map(),links=[];const N=(id,o)=>{if(!nodes.has(id))nodes.set(id,{id,...o});return id};
+ const L=(s,t,v,k)=>{const f=links.find(l=>l.source===s&&l.target===t);if(f)f.value+=v;else links.push({source:s,target:t,value:v,k})};
+ for(let d=win[0];d<=win[1];d++)MENUS.forEach(m=>{if(!active(m,d))return;
+  const kn=N('k:'+m.k,{lvl:0,name:K[m.k].name,k:m.k});const mn=N('m:'+m.id,{lvl:1,name:m.name,k:m.k,kind:m.kind});
+  m.dishes.forEach(([dn,ing])=>{const dnid=N('d:'+m.id+dn,{lvl:2,name:dn,k:m.k});let tot=0;
+   Object.entries(ing).forEach(([p,v])=>{const val=unit==='eur'?v:1;tot+=val;const pn=N('p:'+p,{lvl:3,name:P[p].name,p,st:P[p].st});L(dnid,pn,val,m.k);
+    const sn=N('s:'+P[p].st,{lvl:4,name:{ok:'Enough stock',unk:"Valio hasn't said",short:'Short'}[P[p].st],st:P[p].st});L(pn,sn,val,m.k)});
+   L(mn,dnid,tot,m.k);L(kn,mn,tot,m.k)})});
+ return{nodes:[...nodes.values()],links}}
+const F=d3.select('#flow');
+function draw(){
+ const W=F.node().clientWidth,H=640;F.attr('viewBox',`0 0 ${W} ${H}`).attr('height',H);F.selectAll('*').remove();
+ const g=graph();
+ const sk=d3.sankey().nodeId(d=>d.id).nodeAlign(n=>n.lvl).nodeWidth(10).nodePadding(14).extent([[8,8],[W-150,H-8]]).nodeSort((a,b)=>(a.k||'').localeCompare(b.k||'')||b.value-a.value);
+ const {nodes,links}=sk({nodes:g.nodes.map(d=>({...d})),links:g.links.map(d=>({...d}))});
+ const root=F.append('g');
+ root.append('g').selectAll('path').data(links).join('path').attr('class','link').attr('d',d3.sankeyLinkHorizontal())
+  .attr('stroke',l=>css(l.target.lvl===4?stCol[l.target.st]:K[l.k].c)).attr('stroke-width',l=>Math.max(1,l.width));
+ const nd=root.append('g').selectAll('g').data(nodes).join('g').attr('class','node').style('cursor','pointer').on('click',(e,n)=>{focus=n.id;side(n,links);hl(n)});
+ nd.append('rect').attr('x',n=>n.x0).attr('y',n=>n.y0).attr('width',n=>n.x1-n.x0).attr('height',n=>Math.max(2,n.y1-n.y0)).attr('rx',2)
+  .attr('fill',n=>css(n.st?stCol[n.st]:K[n.k].c));
+ nd.append('text').attr('x',n=>n.x1+6).attr('y',n=>(n.y0+n.y1)/2).attr('dy','.35em').text(n=>trunc(n.name,n.lvl===3?26:22)).style('font-weight',n=>n.lvl===0||n.lvl===4?600:400);
+ nd.filter(n=>n.lvl===4||n.st==='short'||n.kind==='event').append('text').attr('class','sub').attr('x',n=>n.x1+6).attr('y',n=>(n.y0+n.y1)/2+15).text(n=>n.lvl===4?fmt(n.value):n.st==='short'?'31 wanted · 15 in stock':'event · one day');
+ F.node().__links=links;F.node().__nodes=nodes;
+ say(nodes);
+ const f=focus&&nodes.find(n=>n.id===focus);if(f){side(f,links);hl(f)}else{side(nodes.find(n=>n.id==='p:ham')||nodes[0],links);}
+}
+const trunc=(s,n)=>s.length>n?s.slice(0,n-1)+'…':s;
+const fmt=v=>unit==='eur'?'€'+Math.round(v).toLocaleString('en'):v+' lines';
+function hl(n){const links=F.node().__links;const on=new Set([n.id]);const lk=new Set();
+ const up=x=>links.filter(l=>l.target.id===x).forEach(l=>{lk.add(l);if(!on.has(l.source.id)){on.add(l.source.id);up(l.source.id)}});
+ const dn=x=>links.filter(l=>l.source.id===x).forEach(l=>{lk.add(l);if(!on.has(l.target.id)){on.add(l.target.id);dn(l.target.id)}});
+ up(n.id);dn(n.id);
+ F.classed('dimmed',true);F.selectAll('.link').classed('on',l=>lk.has(l));F.selectAll('.node').classed('on',d=>on.has(d.id))}
+F.on('dblclick',()=>{focus=null;F.classed('dimmed',false)});
+function say(nodes){const tot=d3.sum(nodes.filter(n=>n.lvl===0),n=>n.value);const short=nodes.find(n=>n.id==='s:short'),unk=nodes.find(n=>n.id==='s:unk');
+ document.getElementById('say').innerHTML=`${dl(DAYS[win[0]])}–${dl(DAYS[win[1]])}: <b>3 kitchens</b> need <b>${fmt(tot)}</b> from Valio. `+
+ (short?`<span class="r"><b class="r">${fmt(short.value)}</b> depends on ham Valio doesn't have enough of.</span> `:'<b>Everything has stock.</b> ')+(unk?`<span class="a">${fmt(unk.value)} depends on stock Valio hasn't stated.</span>`:'')}
+function side(n,links){const s=document.getElementById('side');
+ const kin=links.filter(l=>l.target.id===n.id);const byK=d3.rollups(kin,v=>d3.sum(v,l=>l.value),l=>l.k);
+ if(n.lvl===3){const p=P[n.p];
+  s.innerHTML=`<div class="k">PRODUCT · ${n.id.slice(2)}</div><h2>${p.name}</h2>`+
+  (p.st==='short'?`<p><b>${byK.length} kitchen${byK.length>1?'s':''}</b> want it in this window. Together they want <b>${p.want}</b>; Valio has <b>${p.stock}</b>.</p><div class="gauge"><div class="row"><span>wanted</span><div class="bar"><i style="width:100%;background:var(--red)"></i></div><span class="n">31</span></div><div class="row"><span>Valio has</span><div class="bar"><i style="width:48%;background:var(--ok)"></i></div><span class="n">15</span></div></div><p>Whoever commits first gets it. The others are moved to their next choice, <b>Mattila Saunapalvikinkku</b>, and asked.</p>`
+  :p.st==='unk'?`<p>Supplier-delivered. <b>Valio hasn't said how many it has</b>, so it never counts as covered until the supplier confirms.</p>`
+  :`<p>Valio has stated <b>${p.stock}</b>. Enough for everyone in this window.</p>`)+
+  `<div class="who">${byK.map(([k,v])=>`<div><span>${K[k].name}</span><span>${fmt(v)}</span></div>`).join('')}</div>`+
+  (p.st==='short'?`<div class="act"><button>Who commits first?</button><button class="p">Open the 2 held plans</button></div>`:'');
+ }else if(n.lvl===0){s.innerHTML=`<div class="k">KITCHEN</div><h2>${n.name}</h2><p>Needs <b>${fmt(n.value)}</b> in this window, from ${links.filter(l=>l.source.id===n.id).length} menu${links.filter(l=>l.source.id===n.id).length>1?'s':''}. Delivery days: ${K[n.k].days.map(d=>['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d]).join(' ')}.</p><p>A chat that says <b>“plan the week”</b> lands here: the agent expands every menu below it.</p><div class="act"><button class="p">Open kitchen</button></div>`}
+ else if(n.lvl===1){s.innerHTML=`<div class="k">MENU · ${n.kind==='event'?'EVENT':'STANDING ORDER'}</div><h2>${n.name}</h2><p>${n.kind==='event'?'A one-day event on top of the normal week. <b>“Christmas buffet for 140”</b> lands here.':'Repeats on every delivery day. This is the regular order the kitchen confirms, not types.'}</p><p>Worth <b>${fmt(n.value)}</b> in this window.</p>`}
+ else if(n.lvl===2){s.innerHTML=`<div class="k">DISH</div><h2>${n.name}</h2><p>Guests × grams per guest → kg → packs. <b>“Ham 120 g per guest”</b> lands here and re-sizes only this dish.</p><p>Worth <b>${fmt(n.value)}</b> in this window.</p>`}
+ else{s.innerHTML=`<div class="k">VALIO STOCK</div><h2>${n.name}</h2><p><b>${fmt(n.value)}</b> of this window's demand.</p><p>${n.st==='ok'?'Valio has stated enough.':n.st==='unk'?'Supplier-delivered lines with no stated quantity. Never counted as covered.':'More is wanted than Valio has. Kitchens that lose out are re-ranked and asked.'}</p>`}
+}
+document.querySelectorAll('#units button').forEach(b=>b.onclick=()=>{document.querySelectorAll('#units button').forEach(x=>x.classList.toggle('on',x===b));unit=b.dataset.u;draw()});
+addEventListener('resize',draw);
+draw();
+</script>
+</body>
+</html>

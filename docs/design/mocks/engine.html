@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mandate Forecast</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Instrument+Serif&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<script src="shared/scenario.js"></script>
+<style>
+:root{
+  --bg:#0a0c0d; --p:#111517; --p2:#161b1e; --line:#232a2e; --line2:#30393e;
+  --ink:#eef1ef; --ink2:#a9b2af; --ink3:#86908d;
+  --ok:#3fbf8a; --teal:#2bb3a6; --amber:#e8a93c; --red:#ef6b59; --blue:#82adff; --vio:#b39cff;
+  --l-ord:#3fbf8a; --l-plan:#82adff; --l-set:#2bb3a6; --l-form:#2bb3a6;
+  --sans:'IBM Plex Sans',system-ui,sans-serif; --mono:'IBM Plex Mono',ui-monospace,monospace; --serif:'Instrument Serif',Georgia,serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font:13.5px/1.5 var(--sans);-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+.ctrl{display:flex;align-items:center;gap:14px;padding:10px 18px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.play{width:34px;height:34px;border-radius:50%;background:var(--ink);color:var(--bg);display:grid;place-items:center;font-size:12px}
+.asof{font-size:14px;color:var(--ink2)}.asof b{font:500 15px var(--mono);color:var(--ink)}
+#scrub{width:280px;accent-color:var(--teal)}
+.simlabel{margin-left:auto;font:12px var(--mono);color:var(--amber);border:1px solid #4a3a1a;border-radius:999px;padding:3px 10px}
+.wrap{padding:22px 18px 70px;max-width:1440px;margin:0 auto}
+h1{font:400 34px/1.15 var(--serif)}
+.ans{font-size:17px;margin-top:8px;max-width:95ch;color:var(--ink)}
+.ans b{font-weight:500}.ans .r{color:var(--red)}.ans .a{color:var(--amber)}.ans .g{color:var(--ok)}
+.sub{color:var(--ink2);margin-top:6px;max-width:100ch}
+.panel{background:var(--p);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-top:16px}
+.ph{display:flex;justify-content:space-between;align-items:baseline;padding:12px 16px;border-bottom:1px solid var(--line);gap:12px;flex-wrap:wrap}
+.ph h2{font-size:14px;font-weight:600}.ph span{font-size:12.5px;color:var(--ink2)}
+.legend{display:flex;gap:16px;flex-wrap:wrap;font-size:12.5px;color:var(--ink2)}
+.legend i{display:inline-block;width:14px;height:10px;border-radius:2px;margin-right:6px;vertical-align:-1px}
+.rows .hd,.rows .rw{display:grid;grid-template-columns:250px 300px 210px 1fr;gap:18px;align-items:center;padding:10px 16px}
+.rows .hd{font-size:12px;color:var(--ink3);border-bottom:1px solid var(--line);padding-top:8px;padding-bottom:8px}
+.rows .rw{border-bottom:1px solid var(--line);cursor:pointer}
+.rows .rw:hover{background:var(--p2)}.rows .rw.on{background:#14201e;box-shadow:inset 3px 0 0 var(--teal)}
+.rw .nm b{font-weight:500;display:block}.rw .nm span{font-size:12px;color:var(--ink3)}
+.rw .nm .pl{font-size:12px;color:var(--ink2);border-bottom:1px dotted var(--ink3)}
+.rw .odds{font-size:14px}.rw .odds b{font:500 15px var(--mono)}
+.odds.r b{color:var(--red)}.odds.a b{color:var(--amber)}.odds.g b{color:var(--ok)}.odds.u b{color:var(--ink2)}
+.rw .odds span{display:block;font-size:12px;color:var(--ink3)}
+.strip{display:flex;gap:3px}
+.strip div{flex:1;height:22px;border-radius:3px;position:relative}
+.strip div.none{background:repeating-linear-gradient(135deg,#3a3320 0 3px,transparent 3px 6px);border:1px solid #4a3a1a}
+.strip div.past{opacity:.35}
+.dates{display:flex;gap:3px;font:12px var(--mono);color:var(--ink3)}.dates span{flex:1;text-align:center}
+.drill{display:grid;grid-template-columns:1fr 360px;gap:0}
+.drill .chart{padding:12px 8px 12px 16px;border-right:1px solid var(--line)}
+svg text{font-family:var(--mono);font-size:12px;fill:var(--ink3)}
+.axis path,.axis line{stroke:var(--line2)}
+.who{padding:14px 16px}
+.who h3{font:400 24px/1.15 var(--serif);margin-bottom:4px}
+.who .s{color:var(--ink2);margin-bottom:10px}
+.who table{width:100%;border-collapse:collapse;font-size:13px}
+.who td{padding:7px 0;border-bottom:1px solid var(--line);vertical-align:top}
+.who td.n{text-align:right;font-family:var(--mono)}
+.who td small{display:block;font-size:12px;color:var(--ink3)}
+.chip{font:12px var(--mono);border-radius:4px;padding:1px 6px;white-space:nowrap}
+.chip.ord{background:#16302b;color:var(--ok)}.chip.plan{background:#1b2a3d;color:var(--blue)}.chip.set{background:#12302d;color:var(--teal)}.chip.form{border:1px dashed var(--teal);color:var(--teal)}
+.how{padding:14px 16px;display:grid;grid-template-columns:repeat(4,1fr);gap:18px}
+.how div{font-size:13px;color:var(--ink2)}.how b{display:block;color:var(--ink);font-weight:500;margin-bottom:4px}
+.how code{font:12.5px var(--mono);color:var(--ink);display:block;margin-top:4px;background:var(--p2);border-radius:6px;padding:6px 8px}
+.tip{position:fixed;pointer-events:none;background:var(--p2);border:1px solid var(--line2);border-radius:8px;padding:8px 10px;font-size:12.5px;display:none;z-index:9;max-width:280px}
+.mock{position:fixed;left:50%;bottom:10px;transform:translateX(-50%);font:12px var(--mono);color:var(--ink3);background:var(--p);border:1px solid var(--line);padding:4px 12px;border-radius:999px;z-index:30}
+@media(max-width:1100px){.rows .hd,.rows .rw{grid-template-columns:200px 1fr 170px}.rows .hd>:nth-child(4),.rows .rw>:nth-child(4){display:none}.drill{grid-template-columns:1fr}.how{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<header class="top"></header>
+<div class="ctrl">
+  <button class="play" id="play" aria-label="Play the fortnight">▶</button>
+  <span class="asof">As of <b id="asof"></b></span>
+  <input id="scrub" type="range" min="0" max="12" step="1" value="0" aria-label="As of date">
+  <span class="simlabel">SIMULATED · stock and future orders are scenario values</span>
+</div>
+<div class="wrap">
+  <h1>Will Valio's stock last the next two weeks?</h1>
+  <p class="ans" id="ans"></p>
+  <p class="sub">Each product's demand is added up over every kitchen: what is already ordered, what is planned (open plans and events such as the Christmas buffets), and what each kitchen's usual order says it will probably order. The more settled a kitchen's pattern, the more weight and the less doubt its part carries.</p>
+
+  <div class="panel rows">
+    <div class="ph"><h2>Products, most likely to run short first</h2>
+      <div class="legend"><span><i style="background:var(--l-ord)"></i>ordered</span><span><i style="background:var(--l-plan)"></i>planned</span><span><i style="background:var(--l-set)"></i>usual, settled</span><span><i style="background:transparent;border:1px dashed var(--teal)"></i>usual, still forming</span><span><i style="background:var(--ink);width:3px"></i>Valio's stock</span></div></div>
+    <div class="hd"><span>Product</span><span>Riskiest delivery: what is wanted against stock</span><span>Chance of running short</span><span>Each day, Mon 7 → Sat 19 (redder = likelier short)</span></div>
+    <div id="rows"></div>
+  </div>
+
+  <div class="panel">
+    <div class="ph"><h2 id="dTitle"></h2><span>click a day to see which kitchens are behind it</span></div>
+    <div class="drill"><div class="chart"><svg id="chart"></svg></div><div class="who" id="who"></div></div>
+  </div>
+
+  <div class="panel">
+    <div class="ph"><h2>How the chance is worked out</h2><span>a normal approximation · concept, not built</span></div>
+    <div class="how">
+      <div><b>One kitchen's usual part</b>From its usual order: how often the item comes back (p), its usual amount (μ) and how settled the pattern is (s).<code>expected = p × μ<br>spread grows with √weeks ahead ÷ s</code></div>
+      <div><b>Planned and ordered parts</b>Open plans and events count in full, with a small spread for later edits. Ordered lines are certain.<code>ordered: spread 0<br>planned: spread 5%</code></div>
+      <div><b>All kitchens together</b>Means add up. Spreads add up as squares, so many small doubts make a narrow band.<code>mean = Σ parts<br>spread² = Σ spread²</code></div>
+      <div><b>Chance of running short</b>Everything wanted up to that day, against Valio's stock plus what arrives by then.<code>P(short) = 1 − Φ((stock − mean) ÷ spread)</code></div>
+    </div>
+  </div>
+</div>
+<div class="tip" id="tip"></div>
+<div class="mock">MOCKUP · illustrative scenario · click a product, then a day · drag "As of" to move time</div>
+
+<script>
+const S=window.SCENARIO;
+// ---------- calendar ----------
+const DAYS=d3.range(13).map(i=>new Date(2026,11,7+i)); // Mon 7 .. Sat 19
+const dl=d=>d.toLocaleDateString('en-GB',{weekday:'short',day:'numeric'});
+const isDelivery=i=>DAYS[i].getDay()!==0; // Mon–Sat
+// ---------- kitchens and their usual patterns ----------
+const K=['Hotel Rautatientori','Hotel Kamppi','Lounas Kallio','Hotel Espoo','Bistro Punavuori','Kantina Otaniemi','Lounas Ruoholahti','Espoo Central Kitchen','Koulu Vallila','Sairaala Meilahti','Hotel Tapiola','Kahvila Töölö'];
+const rnd=d3.randomLcg(23);
+// product: stock stated at Mon 7, supply arrivals {dayIndex: qty}, share of kitchens with it in their usual order
+const P=[
+ {id:'476768',name:S.products['476768'].name,unit:'packs',stock:15,supply:{4:10},usual:{per:0.15,mu:[1,3],sd:.4}},
+ {id:'cream',name:'Valio ruokakerma 15 % 1 l',unit:'l',stock:320,supply:{4:260,9:260},usual:{per:.75,mu:[4,12],sd:2.2}},
+ {id:'salmon',name:'Lohifilee C-leikattu 10 kg',unit:'kg',stock:80,supply:{2:40,5:40,9:40},usual:{per:.4,mu:[3,8],sd:2.5}},
+ {id:'egg',name:'Kieku kananmuna 4,3 kg',unit:'packs',stock:70,supply:{2:30,9:30},usual:{per:.8,mu:[1,3],sd:.5}},
+ {id:'459000',name:S.products['459000'].name,unit:'l',stock:900,supply:{1:600,4:600,8:600,11:600},usual:{per:1,mu:[15,60],sd:5}},
+ {id:'462157',name:S.products['462157'].name,unit:'packs',stock:null,supply:{},usual:{per:.2,mu:[2,4],sd:1}},
+];
+P.forEach(p=>{p.kp=K.map((k,ki)=>{if(rnd()>p.usual.per&&p.id!=='459000')return null;
+  const mu=p.usual.mu[0]+rnd()*(p.usual.mu[1]-p.usual.mu[0]);const s=+(0.35+rnd()*0.6).toFixed(2);
+  const days=ki%3===0?[1,3,5]:ki%3===1?[2,4]:[1,2,3,4,5];
+  return{k,ki,days,mu:Math.round(mu*10)/10,sd:p.usual.sd*(1.3-s),p:+(0.6+s*0.38).toFixed(2),s}}).filter(Boolean)});
+// open plans, events and receipts: [productId, dayIndex, kitchen, qty, layer, note]
+const FIXED=[
+ ['476768',3,'Hotel Rautatientori',12,'plan','Christmas buffet · held: new product'],['476768',3,'Hotel Kamppi',14,'plan','Christmas buffet · held: new product'],
+ ['476768',3,'Lounas Kallio',2,'plan','open plan'],['476768',3,'Hotel Espoo',1,'plan','open plan'],['476768',3,'Bistro Punavuori',1,'plan','open plan'],['476768',3,'Kantina Otaniemi',1,'plan','open plan'],
+ ['salmon',3,'Hotel Rautatientori',20,'plan','Christmas buffet: graavilohi'],['salmon',1,'Lounas Ruoholahti',12,'ord','receipt r-41c'],
+ ['cream',3,'Hotel Rautatientori',18,'plan','Christmas buffet'],['cream',4,'Hotel Kamppi',16,'plan','Christmas party'],['cream',1,'Espoo Central Kitchen',30,'ord','receipt r-3a0'],
+ ['459000',1,'Espoo Central Kitchen',140,'ord','receipt r-3a0'],['459000',3,'Hotel Rautatientori',40,'plan','Christmas buffet'],
+ ['egg',3,'Hotel Rautatientori',6,'plan','Christmas buffet'],
+ ['462157',2,'Hotel Rautatientori',6,'plan','Christmas buffet · held by the recall drill'],['462157',3,'Hotel Kamppi',5,'plan','Christmas party · held by the recall drill'],
+];
+// ---------- maths ----------
+const erf=x=>{const t=1/(1+.3275911*Math.abs(x));const y=1-(((((1.061405429*t-1.453152027)*t)+1.421413741)*t-.284496736)*t+.254829592)*t*Math.exp(-x*x);return x>=0?y:-y};
+const Phi=z=>.5*(1+erf(z/Math.SQRT2));
+let asOf=0;
+function parts(p,d){
+ const out=[];if(!isDelivery(d))return out;
+ FIXED.filter(f=>f[0]===p.id&&f[1]===d).forEach(f=>{let layer=f[4];if(d<=asOf+1&&layer==='plan')layer='ord';
+  out.push({k:f[2],q:f[3],mean:f[3],sd:layer==='ord'?0:f[3]*.05,layer,note:layer==='ord'&&f[4]==='plan'?'ordered':f[5]})});
+ const wk=Math.max(1,(d-asOf)/7);
+ p.kp.forEach(c=>{if(!c.days.includes(DAYS[d].getDay()))return;if(FIXED.some(f=>f[0]===p.id&&f[1]===d&&f[2]===c.k))return;
+  if(d<=asOf+1){out.push({k:c.k,q:c.mu,mean:c.mu,sd:0,layer:'ord',note:'ordered from the usual order',s:c.s});return}
+  const mean=c.p*c.mu, sd=Math.sqrt(Math.max(0,c.p*(c.sd*c.sd+c.mu*c.mu)-mean*mean)+Math.pow(c.sd*Math.sqrt(wk)/c.s,2)*.25);
+  out.push({k:c.k,q:c.mu,mean,sd,layer:c.s>=.6?'set':'form',note:`usual order · comes back ${Math.round(c.p*100)}% · settled ${Math.round(c.s*100)}%`,s:c.s})});
+ return out}
+function day(p,d){const ps=parts(p,d);const by={ord:0,plan:0,set:0,form:0};ps.forEach(x=>by[x.layer]+=x.mean);return{ps,by,mean:d3.sum(ps,x=>x.mean),v:d3.sum(ps,x=>x.sd*x.sd)}}
+function series(p){let cm=0,cv=0,sup=p.stock??0;return DAYS.map((_,d)=>{const x=day(p,d);cm+=x.mean;cv+=x.v;sup+=(p.supply[d]||0);
+  const left=sup-cm, sd=Math.sqrt(cv);const pr=p.stock==null?null:(sd<1e-6?(left<0?1:0):1-Phi(left/sd));
+  const r={d,...x,cm,sd,avail:sup,left,pr};if(p.stock!=null&&left<0)cm=sup;return r})}
+// ---------- rows ----------
+const col=pr=>pr==null?null:d3.interpolateRgb('#16231f','#ef6b59')(Math.min(1,pr*1.1));
+const pct=pr=>pr>.99?'over 99%':pr<.01?'under 1%':Math.round(pr*100)+'%';
+const isSku=id=>/^\d{6}$/.test(id);
+let sel=P[0].id, selDay=null;
+function render(){
+ P.forEach(p=>{p.ser=series(p);const fut=p.ser.filter(x=>x.d>asOf&&isDelivery(x.d));
+  p.first=p.stock==null?fut.reduce((a,b)=>b.mean>a.mean?b:a,fut[0]):(fut.find(x=>x.pr>=.2)||fut.reduce((a,b)=>b.pr>a.pr?b:a,fut[0]));
+  p.risk=p.stock==null?-1:p.first.pr});
+ const ord=[...P].sort((a,b)=>(b.risk===-1?.5:b.risk)-(a.risk===-1?.5:a.risk));
+ const rows=document.getElementById('rows');rows.innerHTML='';
+ ord.forEach(p=>{const f=p.first;const el=document.createElement('div');el.className='rw'+(p.id===sel?' on':'');
+  const prevUse=f.cm-f.mean, availForDay=f.avail-prevUse;
+  const max=Math.max(f.mean+2*Math.sqrt(f.v),availForDay,1)*1.08;const X=v=>v/max*100;
+  const bar=p.stock==null?`<div style="height:16px;border-radius:3px;background:repeating-linear-gradient(135deg,#4a3a1a 0 3px,transparent 3px 6px);border:1px solid #6a5222"></div><div style="font-size:12px;color:var(--ink3);margin-top:3px">${dl(DAYS[f.d])}: ${Math.round(f.mean)} ${p.unit} wanted · Valio hasn't said how many it has</div>`
+   :`<div style="position:relative;height:16px;background:var(--p2);border-radius:3px;display:flex">${['ord','plan','set','form'].map(l=>`<i style="display:block;height:100%;width:${X(f.by[l])}%;background:${l==='form'?'transparent':`var(--l-${l})`};${l==='form'?'border:1px dashed var(--teal);box-sizing:border-box':''}"></i>`).join('')}<b style="position:absolute;left:${Math.min(100,X(Math.max(0,availForDay)))}%;top:-4px;bottom:-4px;width:2px;background:var(--ink)"></b></div><div style="font-size:12px;color:var(--ink3);margin-top:3px">${dl(DAYS[f.d])}: about ${Math.round(f.mean)} ${p.unit} wanted, ${Math.max(0,Math.round(availForDay))} in stock</div>`;
+  const cls=p.stock==null?'u':f.pr>=.5?'r':f.pr>=.15?'a':'g';
+  const odds=p.stock==null?`<div class="odds u"><b>can't be judged</b><span>no stated quantity, never counted as covered</span></div>`
+   :`<div class="odds ${cls}"><b>${pct(f.pr)}</b> chance short on ${dl(DAYS[f.d])}<span>${f.pr>=.5?`about ${Math.max(1,Math.round(-f.left))} ${p.unit} short`:f.pr>=.15?'worth watching':'should last'}</span></div>`;
+  const strip=`<div class="strip">${p.ser.map(x=>`<div class="${p.stock==null&&isDelivery(x.d)?'none':''}${x.d<=asOf?' past':''}" style="${!isDelivery(x.d)?'background:transparent':p.stock==null?'':`background:${col(x.pr)}`}" title="${dl(DAYS[x.d])}${p.stock==null||!isDelivery(x.d)?'':': '+pct(x.pr)}"></div>`).join('')}</div>`;
+  el.innerHTML=`<div class="nm"><b>${p.name}</b><span>${p.kp.length} kitchens have it in their usual order · ${isSku(p.id)?`<span class="pl" data-product="${p.id}">${p.id} · product sheet</span>`:'scenario product'}</span></div><div>${bar}</div>${odds}<div>${strip}</div>`;
+  el.onclick=e=>{if(e.target.closest('[data-product]'))return;sel=p.id;selDay=null;render()};rows.appendChild(el)});
+ const dts=document.createElement('div');dts.className='rw';dts.style.cursor='default';dts.style.borderBottom='0';dts.innerHTML='<span></span><span></span><span></span><div class="dates">'+DAYS.map(d=>`<span>${d.getDate()}</span>`).join('')+'</div>';rows.appendChild(dts);
+ drill();say();
+ document.getElementById('asof').textContent=DAYS[asOf].toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'})+(asOf===0?', 22:11':', 08:00');
+}
+function say(){
+ const ham=P[0], hs=ham.first;const risky=P.filter(p=>p.stock!=null&&p.id!=='476768'&&p.first.pr>=.15).sort((a,b)=>b.first.pr-a.first.pr);
+ const short=n=>n.replace(/ \d.*$/,'').split(' ').slice(0,3).join(' ');
+ document.getElementById('ans').innerHTML=(hs.pr>=.5?`<span class="r"><b>Ham runs short on ${dl(DAYS[hs.d])}</b></span> (${pct(hs.pr)} chance): ${S.products['476768'].wanted} packs wanted, ${S.products['476768'].stock} stated. `:`Ham now looks covered. `)+
+  risky.map(p=>`<span class="a"><b>${short(p.name)}</b> could run short on ${dl(DAYS[p.first.d])} (${pct(p.first.pr)} chance).</span> `).join('')+
+  `<span class="g">Everything else should last.</span> Rosolli can't be judged: Valio states no quantity.`}
+// ---------- drill ----------
+const tip=d3.select('#tip');
+function drill(){
+ const p=P.find(x=>x.id===sel);const ser=p.ser;if(selDay==null)selDay=p.first.d;
+ document.getElementById('dTitle').textContent=`${p.name}: wanted each delivery day, and stock left`;
+ const svg=d3.select('#chart');svg.selectAll('*').remove();const W=svg.node().parentNode.clientWidth-24,H=340,m={l:48,r:12,t:20,b:28},h1=150,gap=30;
+ svg.attr('viewBox',`0 0 ${W} ${H}`).attr('width',W).attr('height',H);
+ const x=d3.scaleBand(d3.range(DAYS.length),[m.l,W-m.r]).padding(.22);const cx=d=>x(d)+x.bandwidth()/2;
+ if(p.stock!=null){
+  const yl=d3.scaleLinear([Math.min(0,d3.min(ser,s=>s.left-2*s.sd)),d3.max(ser,s=>s.left+2*s.sd)*1.08],[m.t+h1,m.t]);
+  svg.append('text').attr('x',m.l).attr('y',m.t-6).style('fill','var(--ink2)').text('stock left after each day: expected, with its likely range (a shortfall moves those kitchens to their next choice)');
+  svg.append('rect').attr('x',m.l).attr('width',W-m.l-m.r).attr('y',yl(0)).attr('height',Math.max(0,m.t+h1-yl(0))).attr('fill','rgba(239,107,89,.10)');
+  svg.append('line').attr('x1',m.l).attr('x2',W-m.r).attr('y1',yl(0)).attr('y2',yl(0)).attr('stroke','var(--red)').attr('stroke-dasharray','3 3');
+  svg.append('path').datum(ser).attr('d',d3.area().x(s=>cx(s.d)).y0(s=>yl(s.left-2*s.sd)).y1(s=>yl(s.left+2*s.sd)).curve(d3.curveStepAfter)).attr('fill','rgba(43,179,166,.18)');
+  svg.append('path').datum(ser).attr('d',d3.line().x(s=>cx(s.d)).y(s=>yl(s.left)).curve(d3.curveStepAfter)).attr('fill','none').attr('stroke','var(--ink)').attr('stroke-width',1.6);
+  ser.forEach(s=>{if(p.supply[s.d])svg.append('text').attr('x',cx(s.d)).attr('y',yl(s.left)-10).attr('text-anchor','middle').style('fill','var(--ok)').text('+'+p.supply[s.d]+' arrives')});
+  svg.append('g').attr('class','axis').attr('transform',`translate(${m.l},0)`).call(d3.axisLeft(yl).ticks(4));
+ }else{svg.append('defs').html('<pattern id="hz" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="3" height="8" fill="#3a3320"/></pattern>');
+  svg.append('rect').attr('x',m.l).attr('y',m.t).attr('width',W-m.l-m.r).attr('height',h1).attr('fill','url(#hz)');
+  svg.append('text').attr('x',W/2).attr('y',m.t+h1/2).attr('text-anchor','middle').style('fill','var(--amber)').style('font-size','13px').text("Valio hasn't said how many it has: no stock line and no chance figure")}
+ const y0=m.t+h1+gap,h2=H-y0-m.b;
+ const ymax=d3.max(ser,s=>s.mean+2*Math.sqrt(s.v))||1;const yd=d3.scaleLinear([0,ymax*1.1],[y0+h2,y0]);
+ svg.append('text').attr('x',m.l).attr('y',y0-8).style('fill','var(--ink2)').text('wanted that day, by how sure we are');
+ ser.forEach(s=>{if(!isDelivery(s.d))return;let acc=0;const g=svg.append('g').style('cursor','pointer').on('click',()=>{selDay=s.d;drill()})
+   .on('mousemove',e=>tip.style('display','block').style('left',e.clientX+14+'px').style('top',e.clientY+10+'px').html(`<b>${dl(DAYS[s.d])}</b>: about ${Math.round(s.mean)} ${p.unit}${p.stock!=null?`<br>chance short by then: ${pct(s.pr)}`:''}`)).on('mouseleave',()=>tip.style('display','none'));
+  g.append('rect').attr('x',x(s.d)-3).attr('width',x.bandwidth()+6).attr('y',y0-4).attr('height',h2+8).attr('fill',s.d===selDay?'rgba(255,255,255,.06)':'transparent').attr('rx',4);
+  ['ord','plan','set','form'].forEach(l=>{const v=s.by[l];if(!v)return;const r=g.append('rect').attr('x',x(s.d)).attr('width',x.bandwidth()).attr('y',yd(acc+v)).attr('height',yd(acc)-yd(acc+v));
+   if(l==='form')r.attr('fill','transparent').attr('stroke','var(--teal)').attr('stroke-dasharray','3 2');else r.attr('fill',`var(--l-${l})`).attr('opacity',l==='set'?.75:.9);acc+=v});
+  const sd=Math.sqrt(s.v);if(sd>.01)g.append('line').attr('x1',cx(s.d)).attr('x2',cx(s.d)).attr('y1',yd(Math.max(0,s.mean-2*sd))).attr('y2',yd(s.mean+2*sd)).attr('stroke','var(--ink2)')});
+ svg.append('g').attr('class','axis').attr('transform',`translate(${m.l},0)`).call(d3.axisLeft(yd).ticks(3));
+ svg.append('g').attr('class','axis').attr('transform',`translate(0,${y0+h2})`).call(d3.axisBottom(x).tickFormat(i=>dl(DAYS[i])));
+ svg.append('line').attr('x1',x(asOf)+x.bandwidth()+4).attr('x2',x(asOf)+x.bandwidth()+4).attr('y1',m.t).attr('y2',y0+h2).attr('stroke','var(--amber)').attr('stroke-dasharray','2 3');
+ svg.append('text').attr('x',x(asOf)+x.bandwidth()+8).attr('y',y0+12).style('fill','var(--amber)').text('now');
+ const s=ser[selDay];const ps=[...s.ps].sort((a,b)=>b.mean-a.mean);const lab={ord:'ordered',plan:'planned',set:'usual, settled',form:'usual, forming'};
+ document.getElementById('who').innerHTML=`<h3>${dl(DAYS[selDay])}</h3><p class="s">About <b style="color:var(--ink)">${Math.round(s.mean)} ${p.unit}</b> wanted by ${ps.length} kitchens${p.stock!=null?`; ${pct(s.pr)} chance Valio runs short by then`:''}.</p>
+  <table>${ps.map(x=>`<tr><td>${x.k}<small>${x.note}</small></td><td><span class="chip ${x.layer}">${lab[x.layer]}</span></td><td class="n">${x.layer==='ord'||x.layer==='plan'?Math.round(x.q):'~'+(Math.round(x.mean*10)/10)}</td></tr>`).join('')||'<tr><td>No deliveries this day.</td></tr>'}</table>`;
+}
+// ---------- time ----------
+const scrub=document.getElementById('scrub');scrub.oninput=()=>{asOf=+scrub.value;selDay=null;render()};
+let timer=null;document.getElementById('play').onclick=function(){if(timer){clearInterval(timer);timer=null;this.textContent='▶';return}
+ if(asOf>=12)asOf=0;this.textContent='❚❚';timer=setInterval(()=>{asOf++;scrub.value=asOf;selDay=null;render();if(asOf>=12){clearInterval(timer);timer=null;document.getElementById('play').textContent='↺'}},1400)};
+{const h=location.hash.slice(1);if(P.some(p=>p.id===h))sel=h;}
+addEventListener('hashchange',()=>{const h=location.hash.slice(1);if(P.some(p=>p.id===h)){sel=h;selDay=null;render()}});
+addEventListener('resize',()=>drill());
+render();
+</script>
+<script src="shared/shell.js" data-page="engine"></script>
+</body>
+</html>

@@ -1,0 +1,327 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Usual Order</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Instrument+Serif&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<style>
+:root{
+  --bg:#f6f5f1; --paper:#fff; --line:#e4e2db; --line2:#d3d0c6; --fill:#efede7;
+  --ink:#171a19; --ink2:#5a615e; --ink3:#6f7672;
+  --teal:#0b7268; --ok:#17734b; --amber:#8f5a00; --red:#b0381f; --blue:#2f5bd3; --vio:#6a3fb8;
+  --sans:'IBM Plex Sans',system-ui,sans-serif; --mono:'IBM Plex Mono',ui-monospace,monospace; --serif:'Instrument Serif',Georgia,serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font:14px/1.5 var(--sans);-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+.top{height:52px;display:flex;align-items:center;gap:18px;padding:0 20px;border-bottom:1px solid var(--line);background:var(--paper)}
+.brand{font-weight:600;display:flex;gap:8px;align-items:center}.brand i{width:18px;height:18px;border:1.5px solid;border-radius:4px;display:grid;place-items:center;font:normal 10px var(--sans)}
+.tabs{display:flex;gap:2px}.tabs a{padding:6px 10px;border-radius:6px;color:var(--ink2);text-decoration:none}.tabs a.on{background:var(--fill);color:var(--ink);font-weight:500}
+.wrap{max-width:1440px;margin:0 auto;padding:24px 24px 70px}
+h1{font:400 34px/1.15 var(--serif)}
+.say{font-size:16px;color:var(--ink2);margin-top:6px;max-width:92ch}
+.say b{color:var(--ink);font-weight:500}
+.ctl{display:flex;gap:10px;align-items:center;margin:18px 0 12px;flex-wrap:wrap}
+.seg{display:flex;border:1px solid var(--line2);border-radius:999px;padding:3px;background:var(--paper)}
+.seg button{padding:4px 12px;border-radius:999px;font-size:13px;color:var(--ink2)}
+.seg button.on{background:var(--ink);color:#fff}
+.ctl .lbl{font-size:13px;color:var(--ink2)}
+.grid{display:grid;grid-template-columns:1fr 360px;gap:14px}
+.panel{background:var(--paper);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.ph{display:flex;justify-content:space-between;align-items:baseline;padding:12px 16px;border-bottom:1px solid var(--line);gap:12px}
+.ph h2{font-size:14px;font-weight:600}.ph span{font-size:12.5px;color:var(--ink2)}
+svg text{font-family:var(--sans);font-size:12px;fill:var(--ink2)}
+svg .mono{font-family:var(--mono)}
+.leg{display:flex;gap:18px;flex-wrap:wrap;padding:10px 16px 14px;font-size:12.5px;color:var(--ink2);border-top:1px solid var(--line)}
+.leg i{display:inline-block;width:22px;height:12px;border-radius:3px;margin-right:6px;vertical-align:-2px}
+.side{padding:16px 18px}
+.side .k{font:12px var(--mono);color:var(--ink3)}
+.side h3{font:400 26px/1.15 var(--serif);margin:2px 0 8px}
+.side p{color:var(--ink2);margin-bottom:10px}.side p b{color:var(--ink);font-weight:500}
+.math{background:var(--fill);border-radius:10px;padding:12px 14px;font:12.5px/1.7 var(--mono);color:var(--ink);margin:10px 0}
+.math .c{color:var(--ink3)}
+.meter{display:grid;grid-template-columns:110px 1fr 46px;gap:8px;align-items:center;font-size:12.5px;color:var(--ink2);margin:6px 0}
+.meter div{height:8px;background:var(--fill);border-radius:4px;overflow:hidden}.meter i{display:block;height:100%;background:var(--teal)}
+.meter b{font:12.5px var(--mono);color:var(--ink);text-align:right;font-weight:400}
+.tier{display:inline-block;font-size:12.5px;border:1px solid;border-radius:999px;padding:2px 10px;margin-top:4px}
+.tier.act{color:var(--ok)}.tier.propose{color:var(--amber)}
+.changes{padding:6px 16px 14px}
+.ch{display:grid;grid-template-columns:70px 1fr;gap:10px;padding:9px 0;border-bottom:1px solid var(--line);font-size:13.5px}
+.ch:last-child{border:0}.ch span{font:12.5px var(--mono);color:var(--ink3)}.ch b{font-weight:500}
+.ch p{color:var(--ink2);font-size:13px}
+.concept{display:inline-block;font:12px var(--mono);color:var(--ink2);border:1px solid var(--line2);border-radius:999px;padding:2px 10px;margin-bottom:10px}
+.mem{margin-top:18px;background:var(--paper);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.mem-h{display:flex;justify-content:space-between;gap:24px;padding:16px 18px 10px;align-items:flex-start}
+.mem-h h2{font:400 26px/1.15 var(--serif)}
+.mem-h p{color:var(--ink2);margin-top:6px;max-width:92ch}
+.mem-h .concept{white-space:nowrap}
+.mem-f{display:flex;gap:6px;padding:0 18px 12px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.mem-f button{font-size:13px;border:1px solid var(--line2);border-radius:999px;padding:3px 12px;color:var(--ink2);background:var(--paper)}
+.mem-f button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.fact{display:grid;grid-template-columns:118px 1fr 220px 120px 210px;gap:16px;align-items:start;padding:13px 18px;border-bottom:1px solid var(--line)}
+.fact:last-child{border-bottom:0}
+.fact .kind{font:12px var(--mono);border-radius:6px;padding:2px 8px;justify-self:start}
+.kind.usual{background:#e3f1ee;color:var(--teal)}.kind.correction{background:#e9eefb;color:var(--blue)}.kind.preference{background:#f0eafa;color:var(--vio)}.kind.rejection{background:#f8e4df;color:var(--red)}
+.fact .txt b{font-weight:500}.fact .txt span{display:block;font-size:12.5px;color:var(--ink2);margin-top:2px}
+.fact .ev{font:12px var(--mono);color:var(--ink2);line-height:1.6}
+.fact .conf{font-size:12.5px;color:var(--ink2)}.fact .conf div{height:6px;background:var(--fill);border-radius:3px;margin-top:5px;overflow:hidden}.fact .conf i{display:block;height:100%;background:var(--teal)}
+.fact .act button{font-size:13px;border:1px solid var(--line2);border-radius:8px;padding:5px 10px;background:var(--paper);text-align:left}
+.fact .act button.p{background:var(--ink);color:#fff;border-color:var(--ink)}
+.fact .act small{display:block;font-size:12px;color:var(--ink3);margin-top:4px}
+.confirm-bg{position:fixed;inset:0;background:rgba(0,0,0,.3);z-index:70;display:none}
+.confirm{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);width:min(520px,92vw);background:var(--paper);border-radius:14px;border:1px solid var(--line);padding:20px 22px;z-index:71;display:none;box-shadow:0 20px 50px rgba(0,0,0,.18)}
+.confirm h3{font:400 24px/1.2 var(--serif);margin-bottom:8px}
+.confirm p{color:var(--ink2);margin-bottom:10px}.confirm p b{color:var(--ink);font-weight:500}
+.confirm .diff{font:12.5px/1.7 var(--mono);background:var(--fill);border-radius:8px;padding:10px 12px;margin-bottom:12px}
+.confirm .diff .add{color:var(--ok)}
+.confirm .row{display:flex;gap:8px;justify-content:flex-end}
+.confirm button{height:36px;padding:0 14px;border-radius:9px;border:1px solid var(--line2);font-weight:500;background:var(--paper)}
+.confirm button.p{background:var(--ink);color:#fff;border-color:var(--ink)}
+@media(max-width:1100px){.fact{grid-template-columns:1fr 1fr}.fact .txt{grid-column:1/-1}}
+.mock{position:fixed;left:50%;bottom:10px;transform:translateX(-50%);font:12px var(--mono);color:var(--ink2);background:var(--paper);border:1px solid var(--line);padding:4px 12px;border-radius:999px}
+.pl{text-decoration:underline;text-decoration-color:var(--line2);text-underline-offset:3px}.foldnote{font-size:13px;background:var(--fill);border-radius:8px;padding:8px 10px}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand"><i>M</i>Mandate</div>
+  <nav class="tabs"><a href="kitchen.html">Kitchen</a><a class="on" href="#">Rhythm</a><a href="flow.html">Demand</a><a href="ops.html">Operations</a><a href="engine.html">Forecast</a><a href="journey.html">Request to order</a></nav>
+</header>
+<div class="wrap">
+  <div class="concept">Concept · not built · 16 weeks of made-up orders</div>
+  <h1>Hotel Rautatientori's usual order</h1>
+  <div class="say" id="say"></div>
+
+  <div class="ctl">
+    <span class="lbl">Line up weeks by</span>
+    <div class="seg" id="fold"><button class="on" data-f="cal">calendar</button><button data-f="cyc">menu cycle (5 weeks)</button></div>
+    <span class="lbl" style="margin-left:14px">Show</span>
+    <div class="seg" id="view"><button class="on" data-v="ridge">rhythm</button><button data-v="heat">grid</button></div>
+  </div>
+
+  <div class="grid">
+    <div class="col" style="display:flex;flex-direction:column;gap:14px">
+      <div class="panel">
+        <div class="ph"><h2>Each item, week by week</h2><span>solid: it comes back at a steady amount · faint: new or changing · click a row</span></div>
+        <svg id="ridge"></svg>
+        <div class="leg">
+          <span><i style="background:var(--teal)"></i>settled: the usual order</span>
+          <span><i style="background:#9fc9c3"></i>forming</span>
+          <span><i style="background:transparent;border:1.5px dashed var(--amber)"></i>new, no history yet</span>
+          <span>▲▼ amount outside its usual range</span>
+          <span style="margin-left:auto">weeks 17–24: projected · fades as confidence drops · % = confidence 8 weeks out</span>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="ph"><h2>How much of the order is settled</h2><span>share of each week's € that is settled · dashed lines: the pattern changed</span></div>
+        <svg id="index"></svg>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div class="panel side" id="side"></div>
+      <div class="panel">
+        <div class="ph"><h2>What changed</h2><span>detected from the orders</span></div>
+        <div class="changes" id="changes"></div>
+      </div>
+    </div>
+  </div>
+
+  <section class="mem" aria-labelledby="memh">
+    <div class="mem-h">
+      <div><h2 id="memh">What Mandate remembers about Hotel Rautatientori</h2>
+      <p>Each fact is read from the op log: the chef's edits, approvals, refusals and what was ordered. Facts help the agent plan and ask better questions. They never give it permission to order: only the chef's mandate does that, and only the chef changes it.</p></div>
+      <span class="concept">Concept · not built</span>
+    </div>
+    <div class="mem-f" id="memf">
+      <button class="on" data-k="all">All 7</button><button data-k="usual">Usual items</button><button data-k="correction">Corrections</button><button data-k="preference">Preferences</button><button data-k="rejection">Turned down</button>
+    </div>
+    <div class="mem-list" id="memlist"></div>
+  </section>
+</div>
+<div class="confirm-bg" id="cbg"></div>
+<div class="confirm" id="confirm" role="dialog" aria-labelledby="ch" aria-modal="true"></div>
+<div class="mock">MOCKUP · made-up orders · click a row · try “menu cycle”</div>
+
+<script>
+// ---------- synthetic history: 16 weeks past + 4 projected ----------
+const W=16, F=8, LAM=0.9; // decay per week
+const wk=i=>`w${i+1}`;
+const rnd=d3.randomLcg(11), N=(m,s)=>m+s*(rnd()+rnd()+rnd()-1.5)*1.15;
+const P=[
+ {id:'milk',pid:'459000',name:'Valio laktoositon maito 1 l',unit:'l',eur:1.09,gen:t=>N(120,5)},
+ {id:'butter',name:'Valio voi 500 g',unit:'kg',eur:9.8,gen:t=>N(6,.3)},
+ {id:'egg',name:'Kieku kananmuna 4,3 kg',unit:'pack',eur:11.9,gen:t=>N(5+t*.06,.4)},
+ {id:'potato',name:'SPL annosperuna 10 kg',unit:'pack',eur:7.9,gen:t=>N(4,1.6)},
+ {id:'cream',name:'Valio ruokakerma 15 %',unit:'l',eur:2.6,gen:t=>t<8?N(10,.8):N(21,1.2)},
+ {id:'salmon',name:'Lohifilee C-leikattu 10 kg',unit:'kg',eur:14.1,gen:t=>t%5===2?N(20,1):(t%5===0?N(8,1):0)},
+ {id:'oat',name:'Oddlygood kaurajuoma 1 l',unit:'l',eur:1.9,gen:t=>t<9?0:N(12,1)},
+ {id:'ham',pid:'476768',name:'HK Palvikinkku 1,5 kg',unit:'pack',eur:15.4,gen:t=>t===14?12:(t===13?2:0)},
+ {id:'rosolli',pid:'462157',name:'Atria Rosolli 2,5 kg',unit:'pack',eur:13,gen:t=>t>=12&&t<=14?N(4,1):0},
+];
+P.forEach(p=>{p.q=d3.range(W).map(t=>Math.max(0,Math.round(p.gen(t)*10)/10))});
+
+// ---------- the maths ----------
+// presence: Beta posterior with exponential decay;  steadiness: 1/(1+CV) from EW mean/var;  evidence: 1-e^(-n_eff/3)
+function stats(q){
+ const out=[];let a=0,b=0,m=0,v=0,wsum=0,n=0;
+ for(let t=0;t<q.length;t++){
+  a*=LAM;b*=LAM;n*=LAM;
+  const x=q[t];
+  // expected before seeing x
+  const exp=m, sd=Math.sqrt(Math.max(v,0)), pPrev=(1+a)/(2+a+b);
+  const dev= x>0&&n>1.5&&sd>0 ? (x-exp)/Math.max(sd,exp*.08) : 0;
+  if(x>0){a+=1;n+=1;const w=1;// EW mean/var (West's)
+    const al=1-LAM*0.85;const d=x-m;m=m===0?x:m+al*d;v=m===x?0:(1-al)*(v+al*d*d)}
+  else b+=1;
+  const p=(1+a)/(2+a+b), cv=m>0?Math.sqrt(Math.max(v,0))/m:1, steady=1/(1+cv*1.2), evid=1-Math.exp(-n/2.5);
+  out.push({t,x,p,steady,evid,lock:x>0||p>.5?p*steady*evid:p*steady*evid*.6,exp,sd,dev,isNew:x>0&&n<1.5&&t>1,pPrev});
+ }
+ return out}
+P.forEach(p=>{p.s=stats(p.q);p.last=p.s[W-1]});
+const CYC=5;
+function foldLock(q){let num=0,den=0;
+ for(let c=0;c<CYC;c++){const xs=q.filter((_,t)=>t%CYC===c),n=xs.length,on=xs.filter(x=>x>0);const pres=on.length;if(!pres)continue;
+  const agree=pres===1?0:(Math.max(pres,n-pres)/n-.5)*2; // 1 = ordered every time this cycle week comes round; a single order is a one-off
+  let steady=1;if(pres>1){const m=d3.mean(on),sd=d3.deviation(on)||0;steady=1/(1+(sd/m)*1.2)}
+  const evid=1-Math.exp(-n/1.5),w=pres/n;num+=w*agree*steady*evid;den+=w}
+ return den?num/den:0}
+P.forEach(p=>{p.fold=foldLock(p.q)});
+const Lof=p=>fold==='cyc'?p.fold:p.last.lock;
+// projection: settled pattern continues; cycles repeat
+function makeProj(){P.forEach(p=>{p.proj=d3.range(F).map(k=>{const t=W+k;const base=p.id==='salmon'?(t%5===2?20:t%5===0?8:0):p.id==='ham'||p.id==='rosolli'?0:p.last.exp;const L=Lof(p),conf=L*Math.exp(-(k+1)*Math.pow(1-L,2)*1.4),band=2*Math.max(p.last.sd,base*.05)*Math.sqrt(k+1)/Math.max(L,.2);return{t,x:Math.round(base*10)/10,lock:L,conf,lo:Math.max(0,base-band),hi:base+band}})})}
+// order-level: € share settled; weighted Jaccard drift; CUSUM
+const eurW=d3.range(W).map(t=>d3.sum(P,p=>p.q[t]*p.eur));
+const settled=d3.range(W).map(t=>d3.sum(P,p=>p.q[t]*p.eur*p.s[t].lock)/eurW[t]);
+const drift=d3.range(W).map(t=>{if(t<3)return 0;let mn=0,mx=0;P.forEach(p=>{const s0=p.s[t-1];if(s0.lock<.5)return;const a=s0.exp*p.eur,b=p.q[t]*p.eur;mn+=Math.min(a,b);mx+=Math.max(a,b)});return mx?1-mn/mx:0});
+let cus=0;const k=.06,h=.12;const flags=[];drift.forEach((d,t)=>{cus=Math.max(0,cus+d-k);if(cus>h){flags.push(t);cus=0}});
+
+// ---------- render ----------
+let fold='cal',view='ridge',sel='cream';makeProj();
+const R=d3.select('#ridge');
+function cols(){ // column order: calendar or folded by 5-week cycle position
+ const all=d3.range(W+F);
+ if(fold==='cal')return all.map(t=>({t,x:t,label:t<W?wk(t):wk(t)+'*'}));
+ return all.map(t=>({t,x:(t%5)*4.2+Math.floor(t/5)*.95,label:`c${t%5+1}`}));
+}
+function draw(){
+ const width=R.node().parentNode.clientWidth, rowH=view==='ridge'?54:30, top=34, left=230, right=20;
+ const height=top+P.length*rowH+16;R.attr('viewBox',`0 0 ${width} ${height}`).attr('width',width).attr('height',height);R.selectAll('*').remove();
+ const C=cols();const xmax=d3.max(C,c=>c.x);const X=v=>left+(v/xmax)*(width-left-right-56);
+ // header
+ if(fold==='cal'){C.forEach(c=>{if(c.t%2===0||c.t>=W)R.append('text').attr('class','mono').attr('x',X(c.x)).attr('y',18).attr('text-anchor','middle').text(c.t<W?`w${c.t+1}`:`w${c.t+1}`).style('fill',c.t>=W?'var(--ink3)':'var(--ink2)')});
+  R.append('rect').attr('x',X(W-.5)).attr('y',24).attr('width',X(W+F-.5)-X(W-.5)+10).attr('height',height-28).attr('fill','var(--fill)').attr('opacity',.6);
+  R.append('text').attr('x',X(W+1.5)).attr('y',height-4).attr('text-anchor','middle').style('font-size','12px').text('projected');
+  R.append('line').attr('x1',X(13.5)).attr('x2',X(13.5)).attr('y1',24).attr('y2',height-12).attr('stroke','var(--red)').attr('stroke-dasharray','2 3').attr('opacity',.6);
+  R.append('text').attr('x',X(13.5)+4).attr('y',34).style('fill','var(--red)').text('Christmas');
+ }else{d3.range(5).forEach(i=>R.append('text').attr('class','mono').attr('x',X(i*4.2+1.4)).attr('y',18).attr('text-anchor','middle').text(`cycle week ${i+1}`))}
+ P.forEach((p,i)=>{
+  const y0=top+i*rowH, base=y0+rowH-8, g=R.append('g').style('cursor','pointer').on('click',()=>{sel=p.id;draw();side()});
+  g.append('rect').attr('x',0).attr('y',y0).attr('width',width).attr('height',rowH).attr('fill',sel===p.id?'#eef6f4':'transparent');
+  g.append('text').attr('x',14).attr('y',base-rowH/2+10).text(p.name.length>30?p.name.slice(0,29)+'…':p.name).style('fill','var(--ink)').style('font-weight',sel===p.id?600:400);
+  const L=Lof(p);g.append('text').attr('x',14).attr('y',base-rowH/2+25).attr('class','mono').text(`settled ${Math.round(L*100)}%`).style('fill',L>.6?'var(--teal)':L>.3?'var(--ink3)':'var(--amber)');
+  const all=[...p.s.map(d=>({t:d.t,x:d.x,lock:d.lock,dev:d.dev,isNew:d.isNew})),...p.proj.map(d=>({...d,proj:1}))];
+  const qmax=d3.max(all,d=>d.x)||1;
+  if(view==='ridge'){
+   const Y=v=>base-(v/qmax)*(rowH-14);
+   if(fold==='cal'){
+    // filled ridge segments, opacity = lock-in at that week
+    all.forEach((d,j)=>{if(j===0)return;const a=all[j-1];const col=d3.interpolateRgb('#cfe5e1','#0b7268')(d.lock);
+     g.append('path').attr('d',`M${X(a.t)},${base}L${X(a.t)},${Y(a.x)}L${X(d.t)},${Y(d.x)}L${X(d.t)},${base}Z`).attr('fill',col).attr('opacity',d.proj?Math.max(.04,d.conf*.9):1)});
+    const pj=p.proj.filter(d=>d.x>0);if(pj.length){const bandPts=[{t:W-1,lo:all[W-1].x,hi:all[W-1].x},...pj];
+     g.append('path').attr('d',d3.area().x(d=>X(d.t)).y0(d=>Y(Math.min(qmax,d.lo))).y1(d=>Y(Math.min(qmax,d.hi))).curve(d3.curveMonotoneX)(bandPts)).attr('fill','none').attr('stroke','var(--teal)').attr('stroke-opacity',.4).attr('stroke-dasharray','2 3');
+     const c8=pj[pj.length-1].conf;g.append('text').attr('class','mono').attr('x',X(W+F-1)+8).attr('y',base-4).style('font-size','12px').style('fill',c8>.5?'var(--teal)':'var(--ink3)').text(`${Math.round(c8*100)}%`)}
+    g.append('path').attr('d',d3.line().x(d=>X(d.t)).y(d=>Y(d.x)).curve(d3.curveLinear)(all.filter(d=>!d.proj))).attr('fill','none').attr('stroke','var(--ink)').attr('stroke-width',1);
+    g.append('path').attr('d',d3.line().x(d=>X(d.t)).y(d=>Y(d.x))(all.slice(W-1))).attr('fill','none').attr('stroke','var(--ink3)').attr('stroke-dasharray','3 3');
+   }else{
+    // folded: overlay cycles as thin lines, later cycles darker
+    d3.range(Math.ceil((W+F)/5)).forEach(c=>{const seg=all.filter(d=>Math.floor(d.t/5)===c);if(!seg.length)return;
+     g.append('path').attr('d',d3.line().x(d=>X((d.t%5)*4.2+1.4)).y(d=>Y(d.x)).curve(d3.curveMonotoneX)(seg)).attr('fill','none').attr('stroke',d3.interpolateRgb('#bcd9d4','#0b7268')(c/3)).attr('stroke-width',1.6).attr('opacity',seg[0].proj?.5:1)})}
+  }else{
+   all.forEach(d=>{const xx=fold==='cal'?X(d.t):X((d.t%5)*4.2+Math.floor(d.t/5)*.95);if(!d.x)return;
+    g.append('rect').attr('x',xx-9).attr('y',y0+5).attr('width',18).attr('height',rowH-10).attr('rx',3).attr('fill',d3.interpolateRgb('#d8ebe8','#0b7268')(d.lock)).attr('opacity',d.proj?.4:.25+.75*Math.min(1,d.x/qmax))})}
+  // markers: new and deviations
+  p.s.forEach(d=>{const xx=fold==='cal'?X(d.t):X((d.t%5)*4.2+(view==='ridge'?1.4:Math.floor(d.t/5)*.95));
+   if(d.isNew&&d.x>0)g.append('rect').attr('x',xx-7).attr('y',y0+6).attr('width',14).attr('height',rowH-14).attr('rx',3).attr('fill','none').attr('stroke','var(--amber)').attr('stroke-width',1.5).attr('stroke-dasharray','3 2');
+   if(Math.abs(d.dev)>2.2&&!d.isNew)g.append('text').attr('x',xx).attr('y',y0+14).attr('text-anchor','middle').style('fill',d.dev>0?'var(--red)':'var(--blue)').style('font-size','12px').text(d.dev>0?'▲':'▼')});
+  g.append('line').attr('x1',0).attr('x2',width).attr('y1',y0+rowH).attr('y2',y0+rowH).attr('stroke','var(--line)')});
+}
+// predictability index
+function drawIndex(){
+ const S=d3.select('#index');const width=S.node().parentNode.clientWidth,height=170,l=50,r=20,t=16,b=28;S.attr('viewBox',`0 0 ${width} ${height}`).attr('width',width).attr('height',height);
+ const X=d3.scaleLinear([0,W-1],[l,width-r]),Y=d3.scaleLinear([0,1],[height-b,t]);
+ S.append('g').attr('transform',`translate(0,${height-b})`).call(d3.axisBottom(X).ticks(W).tickFormat(i=>`w${i+1}`)).call(g=>g.select('.domain').attr('stroke','var(--line2)')).call(g=>g.selectAll('line').attr('stroke','var(--line2)'));
+ S.append('g').attr('transform',`translate(${l},0)`).call(d3.axisLeft(Y).ticks(4).tickFormat(d3.format('.0%'))).call(g=>g.select('.domain').remove()).call(g=>g.selectAll('line').attr('stroke','var(--line2)'));
+ S.append('path').datum(settled).attr('d',d3.area().x((d,i)=>X(i)).y0(Y(0)).y1(d=>Y(d)).curve(d3.curveMonotoneX)).attr('fill','#d8ebe8');
+ S.append('path').datum(settled).attr('d',d3.line().x((d,i)=>X(i)).y(d=>Y(d)).curve(d3.curveMonotoneX)).attr('fill','none').attr('stroke','var(--teal)').attr('stroke-width',2);
+ flags.splice(0,flags.length,...flags.filter((f,i)=>i===0||f-flags[i-1]>2));flags.forEach(f=>{S.append('line').attr('x1',X(f)).attr('x2',X(f)).attr('y1',t).attr('y2',height-b).attr('stroke','var(--amber)').attr('stroke-dasharray','3 3');S.append('text').attr('x',X(f)+4).attr('y',t+10).style('fill','var(--amber)').text(`change detected · w${f+1}`)});
+}
+function side(){
+ const p=P.find(x=>x.id===sel),d=p.last;const present=p.q.filter(x=>x>0).length;const L=Lof(p);
+ const tier=L>.6?'act':'propose';
+ const why={milk:'Ordered every week at about the same amount. This is the core of the standing order.',butter:'Steady every week.',egg:'Every week, creeping up slowly. The expected amount follows it.',potato:'Every week, but the amount jumps around, so it settles more slowly.',cream:'The amount doubled in week 9 when the menu changed. It is settling again at the new level.',salmon:'Ordered in weeks 1 and 3 of each 5-week menu cycle. By calendar week it looks irregular; lined up by cycle week it is as settled as milk.',oat:'New from week 10. Each repeat adds evidence, so it is forming into the usual order.',ham:'A Christmas one-off. It should never become part of the usual order.',rosolli:'Seasonal: three weeks in December only.'}[p.id];
+ document.getElementById('side').innerHTML=`<div class="k">ITEM</div><h3>${p.pid?`<span class="pl" data-product="${p.pid}">${p.name}</span>`:p.name}</h3><p>${why}</p>
+ <div class="meter"><span>comes back</span><div><i style="width:${d.p*100}%"></i></div><b>${Math.round(d.p*100)}%</b></div>
+ <div class="meter"><span>steady amount</span><div><i style="width:${d.steady*100}%"></i></div><b>${Math.round(d.steady*100)}%</b></div>
+ <div class="meter"><span>enough history</span><div><i style="width:${d.evid*100}%"></i></div><b>${Math.round(d.evid*100)}%</b></div>
+ ${fold==='cyc'?`<p class="foldnote">Lined up by cycle week: <b>${Math.round(p.fold*100)}%</b> settled (by calendar week: ${Math.round(p.last.lock*100)}%). Each of the 5 cycle weeks is scored on its own, then averaged by how often the item is ordered in it.</p>`:''}<div class="meter"><span><b style="font-family:var(--sans);font-weight:600">settled</b></span><div><i style="width:${L*100}%;background:var(--ink)"></i></div><b>${Math.round(L*100)}%</b></div>
+ <div class="math"><span class="c">// how sure, per item, each week (older weeks count ×${LAM})</span><br>comes back = (1 + times ordered) / (2 + weeks seen)<br>steady = 1 / (1 + spread ÷ usual amount)<br>history = 1 − e<sup>−weeks/2.5</sup><br>settled = comes back × steady × history<br><span class="c">// ordered ${present} of ${W} weeks · usual ${d.exp.toFixed(1)} ${p.unit}</span></div>
+ <p>Projected next week: <b>${p.proj[0].x?p.proj[0].x+' '+p.unit:'not ordered'}</b>${p.proj[0].x?` (±${Math.round((p.proj[0].hi-p.proj[0].x)*10)/10})`:''}. Confidence ${Math.round(p.proj[0].conf*100)}% next week, ${Math.round(p.proj[F-1].conf*100)}% in ${F} weeks.</p><div class="math"><span class="c">// the more settled, the further and surer it projects</span><br>band(k) = ±2 × spread × √k ÷ settled<br>confidence(k) = settled × e<sup>−1.4k × (1 − settled)²</sup></div>
+ <p>With this kitchen's mandate: <span class="tier ${tier}">${tier==='act'?'part of the usual order: the agent may order it alone':'outside the usual order: the agent asks first'}</span></p>`;
+}
+function changes(){
+ const items=[
+  {w:'w9',h:'Cream doubled',p:'Menu cycle changed. Cream moved from about 10 l to 21 l a week and is settling at the new level.'},
+  {w:'w10',h:'Oat drink is new',p:'First order of Oddlygood kaurajuoma. Held for the chef the first time; now forming into the usual order.'},
+  {w:'w14–15',h:'Christmas one-offs',p:'Ham and rosolli appear for the buffet. They do not count toward the usual order.'},
+  {w:'every 5 wks',h:'Salmon follows the menu cycle',p:'Irregular by calendar week, regular by cycle week. Line weeks up by cycle and its score rises to match.'},
+ ];
+ document.getElementById('changes').innerHTML=items.map(c=>`<div class="ch"><span>${c.w}</span><div><b>${c.h}</b><p>${c.p}</p></div></div>`).join('');
+ const usual=P.filter(p=>p.last.lock>.6);const eurU=d3.sum(usual,p=>p.last.exp*p.eur);
+ document.getElementById('say').innerHTML=`<b>${Math.round(settled[W-1]*100)}%</b> of this week's order by value is settled: the same items at steady amounts. <b>${usual.length} of ${P.length}</b> items are the usual order (about <b>€${Math.round(eurU)}</b> a week) the agent may place alone. Cream changed with the menu in week 9, oat drink is new since week 10, and ham and rosolli were Christmas one-offs.`;
+}
+document.querySelectorAll('#fold button').forEach(b=>b.onclick=()=>{document.querySelectorAll('#fold button').forEach(x=>x.classList.toggle('on',x===b));fold=b.dataset.f;makeProj();draw();side()});
+document.querySelectorAll('#view button').forEach(b=>b.onclick=()=>{document.querySelectorAll('#view button').forEach(x=>x.classList.toggle('on',x===b));view=b.dataset.v;draw()});
+addEventListener('resize',()=>{draw();drawIndex()});
+draw();drawIndex();side();changes();
+
+// ---------- what Mandate remembers (derived from the op log; concept) ----------
+const FACTS=[
+ {k:'usual',t:'Valio laktoositon maito 1 l comes back every week',d:'About 120 l a week, ordered 16 of 16 weeks, never edited. It is not in your standing order yet.',ev:'ops #212, #388, #561 … 16 orders · 24 Aug → 7 Dec',c:.92,a:'suggest',p:'459000'},
+ {k:'usual',t:'Oat drink is forming into the usual order',d:'Oddlygood kaurajuoma 1 l: 6 of 7 weeks since 19 Oct. The first order was held as a new product and you approved it.',ev:'op #1022 approval · 6 orders since',c:.58,a:'suggest'},
+ {k:'correction',t:'Ham at 120 g per guest for buffets',d:'You changed it from 135 g on 7 Dec. The agent now plans buffet ham at 120 g.',ev:'op #1288 EditLine · 7 Dec 22:09',c:.8,a:'none',p:'476768'},
+ {k:'correction',t:'Cream doubled when the winter menu started',d:'From about 10 l to 21 l a week since 26 Oct. The agent plans with the new amount.',ev:'detected · w9 · 7 orders since',c:.71,a:'none'},
+ {k:'preference',t:'Finnish ham first',d:'For ham you chose the Finnish candidate both times it was offered, over a cheaper German one.',ev:'ops #1102, #1290 · 2 choices',c:.55,a:'none',p:'476768'},
+ {k:'rejection',t:'You turned down Mattila Saunapalvikinkku for buffets',d:'Offered as the ham replacement on 7 Dec; you declined it. The agent won\u2019t offer it again for buffets unless nothing else is in stock.',ev:'op #1291 approval denied · 7 Dec 22:10',c:.75,a:'none'},
+ {k:'preference',t:'A labour note on every make-in-house decision',d:'You asked for the labour and oven note before signing off lanttulaatikko. The agent now adds it to every make-in-house decision.',ev:'op #1293 · chat 7 Dec 22:12',c:.5,a:'none',p:'462482'},
+];
+const KL={usual:'usual item',correction:'correction',preference:'preference',rejection:'turned down'};
+let memK='all';
+function mem(){
+ const list=document.getElementById('memlist');
+ list.innerHTML=FACTS.filter(f=>memK==='all'||f.k===memK).map((f,i)=>`<div class="fact"><span class="kind ${f.k}">${KL[f.k]}</span>
+  <div class="txt"><b ${f.p?`data-product="${f.p}" style="cursor:pointer;border-bottom:1px dotted var(--ink3)"`:''}>${f.t}</b><span>${f.d}</span></div>
+  <div class="ev">${f.ev}</div>
+  <div class="conf">${Math.round(f.c*100)}% sure<div><i style="width:${f.c*100}%"></i></div></div>
+  <div class="act">${f.a==='suggest'?`<button class="p" data-i="${FACTS.indexOf(f)}">Suggest for the standing order</button><small>you confirm; it changes the mandate</small>`:`<button disabled style="opacity:.6">Forget this</button><small>used for planning only</small>`}</div></div>`).join('');
+ list.querySelectorAll('button[data-i]').forEach(b=>b.onclick=()=>ask(FACTS[+b.dataset.i]));
+}
+function ask(f){
+ const c=document.getElementById('confirm'),bg=document.getElementById('cbg');
+ c.innerHTML=`<h3 id="ch">Add to the standing order?</h3>
+  <p>${f.t}. If you confirm, the agent may order it on its own each week, inside your caps. This changes your mandate.</p>
+  <div class="diff">set_mandate · Hotel Rautatientori<br>mandate v3 → v4<br><span class="add">+ usual product: ${f.t.replace(/ comes back.*| is forming.*/,'')}</span><br>caps unchanged: €800 a line · €1,000 an order · €4,000 a week</div>
+  <p><b>Only you can confirm this.</b> The agent can suggest it; outside agents and Valio cannot change your mandate.</p>
+  <div class="row"><button id="cn">Not now</button><button class="p" id="cy">Confirm as chef</button></div>`;
+ c.style.display=bg.style.display='block';
+ const close=()=>{c.style.display=bg.style.display='none'};
+ document.getElementById('cn').onclick=close;bg.onclick=close;
+ document.getElementById('cy').onclick=()=>{c.innerHTML='<h3>Mandate v4 saved</h3><p>Recorded as op #1302 by the chef. Approvals bound to mandate v3 are void and will be asked again.</p><div class="row"><button class="p" id="cok">Done</button></div>';document.getElementById('cok').onclick=close};
+}
+document.querySelectorAll('#memf button').forEach(b=>b.onclick=()=>{document.querySelectorAll('#memf button').forEach(x=>x.classList.toggle('on',x===b));memK=b.dataset.k;mem()});
+mem();
+</script>
+<script src="shared/scenario.js"></script><script src="shared/shell.js" data-page="rhythm"></script>
+</body>
+</html>

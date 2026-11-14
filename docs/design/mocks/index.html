@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Mandate Mockups</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Instrument+Serif&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0a0c0d;--p:#111517;--p2:#161b1e;--line:#232a2e;--line2:#30393e;--ink:#eef1ef;--ink2:#a9b2af;--ink3:#86908d;--ok:#3fbf8a;--teal:#2bb3a6;--amber:#e8a93c;--red:#ef6b59}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font:15px/1.55 'IBM Plex Sans',system-ui,sans-serif;padding:56px 7vw 72px}
+h1{font:400 52px/1.05 'Instrument Serif',Georgia,serif}
+.lede{color:var(--ink2);max-width:72ch;margin:12px 0 6px}
+.rules{display:flex;gap:28px;flex-wrap:wrap;margin:18px 0 40px;font-size:13.5px;color:var(--ink2)}
+.rules div{border-left:2px solid var(--line2);padding-left:12px;max-width:52ch}
+.rules b{color:var(--ink);font-weight:500}
+h2{font:400 30px 'Instrument Serif',Georgia,serif;margin:30px 0 4px}
+.who{color:var(--ink2);font-size:14px;margin-bottom:14px}
+.g{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
+.c{display:block;background:var(--p);border:1px solid var(--line);border-radius:14px;padding:18px 20px;text-decoration:none;color:inherit;position:relative}
+.c:hover{border-color:var(--teal)}
+.c b{font:400 26px 'Instrument Serif',Georgia,serif;display:block;margin-bottom:4px}
+.c p{color:var(--ink2);font-size:14px}
+.c .th{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:0}
+.c .th.light{background:#f6f5f1}.c .th.dark{background:#30393e;border:1px solid #586267}
+.tag{position:absolute;right:16px;top:18px;font:12px 'IBM Plex Mono',monospace;border:1px solid currentColor;border-radius:999px;padding:1px 8px}
+.tag.built{color:var(--ok)}.tag.part{color:var(--amber)}.tag.concept{color:var(--ink2)}
+.alt{display:inline-block;margin-top:10px;font-size:13px;color:var(--teal);text-decoration:underline;text-underline-offset:3px}
+.old{margin-top:44px;color:var(--ink2);font-size:13.5px}
+.old a{color:var(--ink2)}
+</style></head><body>
+<h1>Mandate · the mockup set</h1>
+<p class="lede">Eleven pages for three audiences. Each answers one question first, explains it on one click, and shows the machinery only when asked. Throwaway HTML for direction, not product code.</p>
+<div class="rules">
+  <div><b>Light pages are for working and reading</b> (the chef's pages, the request walkthrough). <b>Dark pages are for watching and presenting</b> (Valio's room, the story, the architecture).</div>
+  <div><b>One scenario everywhere:</b> Hotel Rautatientori, Mon 7 Dec 22:11, cut-off Tue 15:00, delivery Thu 10. The ham shortage has the same numbers on every page. Click a product name to open its sheet.</div>
+</div>
+
+<h2>Kitchen</h2>
+<p class="who">The chef: what needs me, and what has the agent done?</p>
+<div class="g">
+  <a class="c" href="kitchen-b.html"><span class="tag part">partly built</span><b><span class="th light"></span>Today</b><p>The Christmas plan with two decisions before the cut-off, and the agent in a composer docked under it.</p><span class="alt" onclick="event.preventDefault();location.href='kitchen-a.html'">Or compare: conversation first →</span></a>
+  <a class="c" href="rhythm.html"><span class="tag concept">concept</span><b><span class="th light"></span>Usual order</b><p>Which items come back every week at a steady amount, how far ahead that can be projected, and what changed.</p></a>
+</div>
+
+<h2>Valio</h2>
+<p class="who">Valio's team: which problems need us, where demand comes from, and will stock hold?</p>
+<div class="g">
+  <a class="c" href="ops.html"><span class="tag part">partly built</span><b><span class="th dark"></span>Operations</b><p>Problems grouped by cause, biggest risk first, each with what the agents already did and the story of what happened.</p></a>
+  <a class="c" href="flow.html"><span class="tag concept">concept</span><b><span class="th dark"></span>Demand</b><p>Kitchens, menus, dishes and products down to Valio's stock, for a delivery window you choose.</p></a>
+  <a class="c" href="flow-scale.html"><span class="tag concept">concept</span><b><span class="th dark"></span>Demand at scale</b><p>The same view for 2,400 kitchens: top items plus “other”, with shortages never hidden in “other”.</p></a>
+  <a class="c" href="engine.html"><span class="tag concept">concept</span><b><span class="th dark"></span>Forecast</b><p>Which products run short in the next two weeks, riskiest first, on a simulated clock you can play.</p></a>
+  <a class="c" href="live.html"><span class="tag part">partly built</span><b><span class="th dark"></span>Engine room</b><p>Every call by door, traces, the op log and refusals. For engineers; reached from the shell's ⚙.</p></a>
+</div>
+
+<h2>How it works</h2>
+<p class="who">A judge or a new reader: why trust it, and how is it built?</p>
+<div class="g">
+  <a class="c" href="landing.html"><span class="tag part">partly built</span><b><span class="th dark"></span>Story</b><p>Nine slides for the pitch: the problem, the chef's limits, the shared checks, the partners and the proof.</p></a>
+  <a class="c" href="journey.html"><span class="tag built">built</span><b><span class="th light"></span>Request to order</b><p>Four requests enter one chain at different steps; the real object at each step, and what is built or planned.</p></a>
+  <a class="c" href="architecture.html"><span class="tag built">built</span><b><span class="th dark"></span>Architecture</b><p>The server, the locked region, the pure core, ports with fallbacks, the tables, and three calls traced end to end.</p></a>
+</div>
+<p class="lede" style="margin-top:16px;font-size:13px">Tags describe the system the page shows, not the page: “built” means the shown behaviour is on main; the pages themselves are all mockups.</p>
+
+<p class="old">Earlier versions: <a href="landing-v1.html">story v1</a> · <a href="landing-v2.html">story v2</a> · <a href="kitchen.html">kitchen (three columns)</a> · <a href="flow-v1.html">demand v1</a> · <a href="ops-v1.html">operations v1</a> · <a href="architecture-v1.html">architecture v1</a> · <a href="architecture-v2.html">architecture v2</a></p>
+</body></html>

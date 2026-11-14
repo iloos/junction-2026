@@ -1,0 +1,394 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mandate</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0b0d0e; --bg2:#111416; --panel:#15191b; --line:#23292c; --line2:#2f373b;
+  --ink:#eef1ef; --ink2:#a7b0ad; --ink3:#8a9491;
+  --ok:#3fbf8a; --teal:#2bb3a6; --amber:#e8a93c; --red:#e2604f; --blue:#7aa7ff;
+  --serif:'Instrument Serif', Georgia, serif; --sans:'IBM Plex Sans', system-ui, sans-serif; --mono:'IBM Plex Mono', ui-monospace, monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-snap-type:y mandatory;scroll-behavior:smooth}
+body{background:var(--bg);color:var(--ink);font:15px/1.55 var(--sans);-webkit-font-smoothing:antialiased;overflow-x:hidden}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+a{color:inherit}
+/* chrome */
+.top{position:fixed;inset:0 0 auto 0;height:56px;display:flex;align-items:center;justify-content:space-between;padding:0 28px;z-index:20;background:linear-gradient(var(--bg),transparent)}
+.brand{display:flex;gap:10px;align-items:center;font-weight:600;letter-spacing:.01em}
+.brand i{width:18px;height:18px;border:1.5px solid var(--ink);border-radius:4px;display:grid;place-items:center;font-style:normal;font-size:10px}
+.top nav{display:flex;gap:22px;font-size:13px;color:var(--ink2)}
+.top nav a{text-decoration:none}.top nav a:hover{color:var(--ink)}
+.btn{display:inline-flex;align-items:center;gap:8px;height:40px;padding:0 18px;border-radius:999px;font:500 14px var(--sans);text-decoration:none;border:1px solid var(--line2);color:var(--ink);background:transparent;cursor:pointer}
+.btn.primary{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.btn:hover{border-color:var(--ink2)}
+.dots{position:fixed;right:22px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:10px;z-index:20}
+.dots a{width:7px;height:7px;border-radius:50%;background:var(--line2);display:block}
+.dots a.on{background:var(--ink);height:20px;border-radius:4px}
+.counter{position:fixed;left:28px;bottom:22px;font:12px var(--mono);color:var(--ink3);z-index:20}
+/* slides */
+section{min-height:100vh;scroll-snap-align:start;padding:96px 8vw 72px;display:flex;flex-direction:column;justify-content:center;position:relative}
+.kicker{font:500 12px var(--mono);letter-spacing:.08em;color:var(--teal);text-transform:uppercase;margin-bottom:22px}
+h1,h2{font-family:var(--serif);font-weight:400;letter-spacing:-.01em;line-height:1.02}
+h1{font-size:clamp(48px,7.4vw,112px)}
+h2{font-size:clamp(38px,4.8vw,72px);max-width:16ch}
+h1 em,h2 em{font-style:italic;color:var(--ink2)}
+.lede{font-size:clamp(16px,1.35vw,20px);color:var(--ink2);max-width:46ch;margin-top:24px}
+.reveal{opacity:0;transform:translateY(18px);transition:opacity .8s ease,transform .8s ease}
+.in .reveal{opacity:1;transform:none}
+.in .reveal.d1{transition-delay:.12s}.in .reveal.d2{transition-delay:.24s}.in .reveal.d3{transition-delay:.36s}.in .reveal.d4{transition-delay:.48s}
+
+/* hero */
+#hero{display:grid;grid-template-columns:1.05fr 1fr;gap:5vw;align-items:center}
+#hero .ctas{display:flex;gap:12px;margin-top:36px}
+.gatebox{position:relative;height:min(64vh,560px);border:1px solid var(--line);border-radius:18px;background:radial-gradient(120% 80% at 50% 0%,#152022 0%,var(--bg2) 60%);overflow:hidden}
+.gatebox canvas{position:absolute;inset:0;width:100%;height:100%}
+.gatebox .legend{position:absolute;left:18px;bottom:16px;display:flex;gap:16px;font:12px var(--mono);color:var(--ink3)}
+.gatebox .legend b{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:0}
+.gatebox .tick{position:absolute;right:18px;top:16px;font:12px var(--mono);color:var(--ink3);text-align:right;line-height:1.7}
+.gatebox .tick span{color:var(--ink)}
+
+/* problem */
+.bigrow{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:14px;overflow:hidden;margin-top:56px}
+.bigrow>div{background:var(--bg);padding:26px 24px}
+.bigrow .n{font:400 44px var(--serif)}
+.bigrow .l{color:var(--ink2);font-size:13px;margin-top:6px}
+.bigrow .n.red{color:var(--red)}.bigrow .n.amber{color:var(--amber)}
+.clock{margin-top:28px;height:64px;position:relative;border-top:1px solid var(--line)}
+.clock .m{position:absolute;top:0;height:100%;border-left:1px dashed var(--line2);font:12px var(--mono);color:var(--ink3);padding:8px 0 0 8px}
+.clock .m.now{border-left:2px solid var(--red);color:var(--red)}
+.clock .m.cut{border-left:2px solid var(--amber);color:var(--amber)}
+
+/* flow */
+.three{display:grid;grid-template-columns:1fr 1fr 1fr;gap:18px;margin-top:52px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px;position:relative}
+.card h4{font:500 12px var(--mono);color:var(--ink3);letter-spacing:.06em;text-transform:uppercase;margin-bottom:14px;display:flex;justify-content:space-between}
+.msg{background:#1c2225;border-radius:12px 12px 12px 4px;padding:12px 14px;font-size:14px;margin-bottom:10px}
+.msg.me{background:#24302f;border-radius:12px 12px 4px 12px;margin-left:24px}
+.outcome{font:12px var(--mono);color:var(--teal);border-top:1px solid var(--line);padding-top:10px;margin-top:6px}
+.line{display:grid;grid-template-columns:1fr auto;gap:4px 10px;padding:10px 0;border-bottom:1px solid var(--line);font-size:13.5px}
+.line:last-child{border:0}
+.line s{color:var(--ink3)}
+.line .q{font:12px var(--mono);color:var(--ink2)}
+.ruler{grid-column:1/-1;height:6px;border-radius:3px;background:var(--line);overflow:hidden;display:flex}
+.ruler i{display:block;height:100%}
+.solid{background:var(--teal)}.hatch{background:repeating-linear-gradient(135deg,var(--amber) 0 3px,transparent 3px 6px)}.conf{background:var(--ok)}
+.chip{font:12px var(--mono);padding:2px 8px;border-radius:999px;border:1px solid currentColor;white-space:nowrap}
+.chip.amber{color:var(--amber)}.chip.ok{color:var(--ok)}.chip.red{color:var(--red)}.chip.dim{color:var(--ink3)}
+.decision{border:1px solid var(--amber);border-radius:12px;padding:14px;margin-top:4px}
+.decision .t{display:flex;justify-content:space-between;font-weight:500}
+.decision p{color:var(--ink2);font-size:13px;margin:6px 0 12px}
+.hold{height:38px;border-radius:999px;background:var(--ink);color:var(--bg);display:grid;place-items:center;font-weight:500;font-size:13.5px;position:relative;overflow:hidden}
+.hold::before{content:"";position:absolute;inset:0;background:var(--amber);transform:scaleX(0);transform-origin:left;animation:hold 3.2s ease-in-out infinite;opacity:.9}
+.hold span{position:relative}
+@keyframes hold{0%,20%{transform:scaleX(0)}70%,100%{transform:scaleX(1)}}
+
+/* mandate */
+.mandate{display:grid;grid-template-columns:1fr 64px 1fr;gap:0;align-items:center;margin-top:56px}
+.words{font:400 clamp(22px,2.2vw,32px)/1.35 var(--serif)}
+.words mark{background:none;color:var(--ink);border-bottom:2px solid var(--c);padding-bottom:1px;transition:background .3s}
+.words mark.hot{background:color-mix(in oklab,var(--c) 22%,transparent)}
+.arrow{color:var(--ink3);text-align:center;font-size:28px}
+.rules{display:flex;flex-direction:column;gap:10px}
+.rule{display:grid;grid-template-columns:10px 1fr auto;gap:12px;align-items:center;padding:14px 16px;border:1px solid var(--line);border-radius:12px;background:var(--panel);font-size:14px;transition:border-color .3s}
+.rule i{width:10px;height:10px;border-radius:2px;background:var(--c)}
+.rule code{font:12px var(--mono);color:var(--ink2)}
+.rule.hot{border-color:var(--c)}
+
+/* gate */
+#gate .stage{margin-top:40px;border:1px solid var(--line);border-radius:18px;background:var(--bg2);position:relative}
+#gate svg{width:100%;height:auto;display:block}
+.node rect{fill:var(--panel);stroke:var(--line2)}
+.node text{fill:var(--ink);font:500 13px var(--sans)}
+.node .sub{fill:var(--ink3);font:12px var(--mono)}
+.wire{stroke:var(--line2);fill:none;stroke-width:1.2}
+.pulse{fill:var(--teal)}
+
+/* certainty */
+.cert{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-top:52px}
+.cert .sw{height:84px;border-radius:10px;margin-bottom:12px}
+.cert b{font-weight:500;display:block}
+.cert span{color:var(--ink2);font-size:13px}
+
+/* sponsors */
+.spons{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:48px}
+.sp{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:22px;position:relative;overflow:hidden}
+.sp .name{font:400 30px var(--serif)}
+.sp .role{font:12px var(--mono);color:var(--teal);margin:2px 0 14px}
+.sp p{color:var(--ink2);font-size:13.5px}
+.sp .metric{margin-top:16px;display:flex;gap:18px;font:12px var(--mono);color:var(--ink3)}
+.sp .metric span{color:var(--ink)}
+.sp.main{grid-row:span 2;background:linear-gradient(160deg,#16201f,var(--panel) 60%)}
+.sp.main .name{font-size:44px}
+.sp .live{position:absolute;right:18px;top:20px;font:12px var(--mono);color:var(--ok)}
+.sp .live::before{content:"";display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--ok);margin-right:6px;animation:blink 1.6s infinite}
+@keyframes blink{50%{opacity:.25}}
+
+/* proof */
+.proof{margin-top:44px;border-top:1px solid var(--line)}
+.pr{display:grid;grid-template-columns:1.3fr 1fr auto;gap:24px;padding:16px 0;border-bottom:1px solid var(--line);align-items:baseline}
+.pr .c{font:400 22px var(--serif)}
+.pr .e{font:12px var(--mono);color:var(--ink2)}
+.stats{display:flex;gap:56px;margin-top:40px}
+.stats div{font:400 52px var(--serif)}.stats span{display:block;font:12px var(--mono);color:var(--ink3)}
+
+/* close */
+#close{align-items:flex-start}
+.key{margin-top:36px;display:flex;gap:0;border:1px solid var(--line2);border-radius:12px;overflow:hidden;font:13px var(--mono)}
+.key span{padding:14px 18px;color:var(--ink2)}
+.key b{padding:14px 18px;background:var(--panel);border-left:1px solid var(--line2);font-weight:500;cursor:pointer}
+.foot{position:absolute;bottom:28px;left:8vw;right:8vw;display:flex;justify-content:space-between;font:12px var(--mono);color:var(--ink3)}
+.mocknote{position:fixed;left:50%;transform:translateX(-50%);bottom:16px;font:12px var(--mono);color:var(--ink3);background:var(--panel);border:1px solid var(--line);padding:5px 12px;border-radius:999px;z-index:30}
+@media (max-width:900px){
+  #hero,.three,.mandate,.spons,.cert,.bigrow{grid-template-columns:1fr}
+  .arrow{transform:rotate(90deg)} .dots,.top nav{display:none} section{padding:88px 16px 64px}
+  .sp.main{grid-row:auto} .stats{flex-wrap:wrap;gap:28px}
+}
+@media (prefers-reduced-motion:reduce){.reveal{transition:none}.hold::before{animation:none}}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand"><i>M</i>Mandate</div>
+  <nav><a href="#flow">How it works</a><a href="#gate">The gate</a><a href="#partners">Partners</a><a href="architecture.html">Architecture</a><a href="#proof">Proof</a></nav>
+  <a class="btn" href="kitchen.html">Open the kitchen →</a>
+</header>
+<nav class="dots" id="dots"></nav>
+<div class="counter mono" id="counter">01 / 09</div>
+<div class="mocknote">MOCKUP · copy to be checked against CLAIMS.md · ← → or scroll</div>
+
+<!-- 1 HERO -->
+<section id="hero">
+  <div>
+    <div class="kicker reveal">Valio Aimo · Trusted Trade Agents</div>
+    <h1 class="reveal d1">An agent that knows what it <em>may not</em> promise.</h1>
+    <p class="lede reveal d2">Mandate plans a kitchen's purchasing from its menu, repairs it when products run out, and orders only inside the limits the chef wrote in plain words. Everything else waits for one informed decision.</p>
+    <div class="ctas reveal d3">
+      <a class="btn primary" href="kitchen.html">See the Christmas buffet</a>
+      <a class="btn" href="#close">Connect your own agent</a>
+    </div>
+  </div>
+  <div class="gatebox reveal d2">
+    <canvas id="gatecv"></canvas>
+    <div class="tick mono">lines through the gate <span id="tN">0</span><br>within mandate <span id="tA" style="color:var(--ok)">0</span> · held <span id="tH" style="color:var(--amber)">0</span> · refused <span id="tR" style="color:var(--red)">0</span><br>receipts per order <span>1</span></div>
+    <div class="legend"><span><b style="background:var(--ok)"></b>ordered within mandate</span><span><b style="background:var(--amber)"></b>held for you</span><span><b style="background:var(--red)"></b>refused, with reason</span></div>
+  </div>
+</section>
+
+<!-- 2 PROBLEM -->
+<section id="problem">
+  <div class="kicker reveal">The Friday that never goes to plan</div>
+  <h2 class="reveal d1">140 guests on Saturday. The ham and the swede casserole are <em>out.</em></h2>
+  <div class="bigrow reveal d2">
+    <div><div class="n">140</div><div class="l">guests, Christmas buffet, Hotel Rautatientori</div></div>
+    <div><div class="n red">2</div><div class="l">products out of stock in Valio's own data</div></div>
+    <div><div class="n amber">16 h</div><div class="l">until the order cut-off, Tue 15:00</div></div>
+    <div><div class="n">€934</div><div class="l">what the event adds to a normal €3,120 week</div></div>
+  </div>
+  <div class="clock reveal d3">
+    <div class="m now" style="left:2%">now · Mon 22:11</div>
+    <div class="m cut" style="left:22%">order cut-off · Tue 15:00</div>
+    <div class="m" style="left:48%">delivery · Thu 10 Dec</div>
+    <div class="m" style="left:88%">buffet · Sat 12 Dec</div>
+  </div>
+  <p class="lede reveal d4">Today a chef reworks the order by hand in the webshop. A chatbot can suggest a ham. The hard part is what it is allowed to buy, at what price, and what it must still ask.</p>
+</section>
+
+<!-- 3 FLOW -->
+<section id="flow">
+  <div class="kicker reveal">Ask → plan → decide</div>
+  <h2 class="reveal d1">You talk to it. It edits the plan. You decide <em>only the exceptions.</em></h2>
+  <div class="three">
+    <div class="card reveal d2">
+      <h4>1 · The ask <span>chat</span></h4>
+      <div class="msg me">Christmas buffet for 140 on the 12th. The usual menu, but the ham is out. Keep it Finnish if you can.</div>
+      <div class="msg">Planned 14 dishes from your menu. Ham → HK Palvikinkku (known stock, Finnish). Lanttulaatikko made in house from 5 ingredients.</div>
+      <div class="outcome">↳ 60 lines planned · 2 decisions for you · nothing ordered</div>
+    </div>
+    <div class="card reveal d3">
+      <h4>2 · The plan <span>ledger</span></h4>
+      <div class="line"><div><s>HK Viljaporsaan juhlakinkku</s><br>HK Palvikinkku viipaloitu 1,5 kg</div><div class="q">13 ST<br>€200.59</div><div class="ruler"><i class="solid" style="width:96%"></i></div></div>
+      <div class="line"><div>Rosolli · Atria 2,5 kg</div><div class="q">6 ST<br>€78.18</div><div class="ruler"><i class="hatch" style="width:88%"></i></div></div>
+      <div class="line"><div>Graavilohi · cured in house</div><div class="q">20 KG<br>€282.20</div><div class="ruler"><i class="conf" style="width:60%"></i><i class="solid" style="width:40%"></i></div></div>
+      <div class="outcome">↳ each bar: how certain the supply is, not just how much</div>
+    </div>
+    <div class="card reveal d4">
+      <h4>3 · The decision <span>you</span></h4>
+      <div class="decision">
+        <div class="t"><span>Make lanttulaatikko in house</span><span class="mono">€31.46</span></div>
+        <p>5 new ingredients · allergen change: <b style="color:var(--ink)">+ milk, + egg, + gluten</b>. Declining leaves 5.6 kg of 140 servings uncovered.</p>
+        <div class="hold"><span>Hold to sign off</span></div>
+      </div>
+      <div class="outcome">↳ approval bound to these exact terms; any edit voids it</div>
+    </div>
+  </div>
+</section>
+
+<!-- 4 MANDATE -->
+<section id="mandate">
+  <div class="kicker reveal">The mandate</div>
+  <h2 class="reveal d1">The chef's words become rules <em>no approval can bend.</em></h2>
+  <div class="mandate">
+    <p class="words reveal d2" id="words">“Order alone up to <mark style="--c:var(--teal)" data-r="0">€800 a line and €1,000 an order, €4,000 a week</mark>. <mark style="--c:var(--amber)" data-r="1">Ask me before any new product</mark> or <mark style="--c:var(--amber)" data-r="2">any substitute I haven't seen</mark>. <mark style="--c:var(--red)" data-r="3">Never change an allergen.</mark>”</p>
+    <div class="arrow reveal d3">→</div>
+    <div class="rules reveal d3">
+      <div class="rule" style="--c:var(--teal)" data-r="0"><i></i>Caps, split orders included<code>CAP_EXCEEDED.weekly</code></div>
+      <div class="rule" style="--c:var(--amber)" data-r="1"><i></i>New product → held for you<code>tier: propose</code></div>
+      <div class="rule" style="--c:var(--amber)" data-r="2"><i></i>Unseen substitute → held for you<code>tier: propose</code></div>
+      <div class="rule" style="--c:var(--red)" data-r="3"><i></i>Allergen change → sign-off, never delegated<code>tier: sign-off</code></div>
+    </div>
+  </div>
+</section>
+
+<!-- 5 GATE -->
+<section id="gate">
+  <div class="kicker reveal">One gate, every door</div>
+  <h2 class="reveal d1">The kitchen screen, your Claude and Valio's ops all go through <em>the same gate.</em></h2>
+  <div class="stage reveal d2">
+    <svg id="gatesvg" viewBox="0 0 1200 380"></svg>
+  </div>
+  <p class="lede reveal d3">Every state change goes through one function. Approval is a hash of the exact terms. A retry returns the same receipt. An outside agent can plan in your sandbox, and it cannot approve.</p>
+</section>
+
+<!-- 6 CERTAINTY -->
+<section id="certainty">
+  <div class="kicker reveal">Honest about supply</div>
+  <h2 class="reveal d1">“Planned” is not “covered”. <em>We draw the difference.</em></h2>
+  <div class="cert">
+    <div class="reveal d1"><div class="sw conf"></div><b>Supplier confirmed</b><span>backed by a receipt</span></div>
+    <div class="reveal d2"><div class="sw" style="background:repeating-linear-gradient(135deg,var(--ok) 0 4px,transparent 4px 8px)"></div><b>Ordered, awaiting supplier</b><span>committed, not yet confirmed</span></div>
+    <div class="reveal d2"><div class="sw solid"></div><b>Planned, known stock</b><span>Valio states a quantity; not reserved</span></div>
+    <div class="reveal d3"><div class="sw hatch"></div><b>Planned, unknown stock</b><span>never counted as cover</span></div>
+    <div class="reveal d4"><div class="sw" style="border:1.5px dashed var(--red)"></div><b>Not covered</b><span>said out loud, never hidden</span></div>
+  </div>
+  <p class="lede reveal d4">Solid means observed, hatched means not yet true, outline means missing. It reads in greyscale.</p>
+</section>
+
+<!-- 7 PARTNERS -->
+<section id="partners">
+  <div class="kicker reveal">What each partner does in the machine</div>
+  <h2 class="reveal d1">Every sponsor has a job you can <em>watch it do.</em></h2>
+  <div class="spons">
+    <div class="sp main reveal d1"><span class="live">live</span><div class="name">Valio Aimo</div><div class="role">catalogue · price · availability</div><p>17.5k products with pack and lot rules. Only the lines in an actual order are looked up, cache-through, never a bulk sweep. Two real outages drive the story.</p><div class="metric">lookup <span>28–113 ms</span> products <span>17.5k</span></div></div>
+    <div class="sp reveal d2"><span class="live">live</span><div class="name">Gemini</div><div class="role">flash-lite parses · decisions rank fit</div><p>Reads the request, keeps “lactose-free”. Scores recipe fit; a caution holds a line for you, never forbids.</p></div>
+    <div class="sp reveal d2"><span class="live">live</span><div class="name">Aiven</div><div class="role">Postgres + Runtime</div><p>One container, one database. The race test: same key ×4 → one receipt, on prod.</p><div class="metric">p50 <span>3.6 s</span> at 10 visitors</div></div>
+    <div class="sp reveal d3"><div class="name">Exa</div><div class="role">facts with sources</div><p>Fills missing manufacturer facts as cited suggestions. Never overwrites the catalogue.</p></div>
+    <div class="sp reveal d3"><span class="live">every 5 min</span><div class="name">Context.dev</div><div class="role">recall monitor</div><p>Watches recall pages and flags affected lines in every kitchen's plan.</p></div>
+  </div>
+</section>
+
+<!-- 8 PROOF -->
+<section id="proof">
+  <div class="kicker reveal">Claims you can check</div>
+  <h2 class="reveal d1">We only say <em>what a test proves.</em></h2>
+  <div class="proof reveal d2">
+    <div class="pr"><div class="c">Approval is bound to the exact terms</div><div class="e">gate.test.ts · eval s4 → TERMS_CHANGED</div><span class="chip ok">passing</span></div>
+    <div class="pr"><div class="c">No double orders, even racing</div><div class="e">pg-race.test.ts on Aiven · smoke after each deploy</div><span class="chip ok">passing</span></div>
+    <div class="pr"><div class="c">Unknown supply never counts as cover</div><div class="e">fulfilment.test.ts · pool.test.ts</div><span class="chip ok">passing</span></div>
+    <div class="pr"><div class="c">An outside agent can never approve</div><div class="e">adversarial.test.ts · prod: approve → 403</div><span class="chip ok">passing</span></div>
+  </div>
+  <div class="stats reveal d3"><div>~420<span>server tests</span></div><div>30<span>concurrent visitors, 0 errors</span></div><div>1<span>receipt per order, always</span></div></div>
+</section>
+
+<!-- 9 CLOSE -->
+<section id="close">
+  <div class="kicker reveal">Your turn</div>
+  <h2 class="reveal d1">Point your own agent at it. <em>Try to make it overspend.</em></h2>
+  <p class="lede reveal d2">You get a key for your own sandbox. Your agent can read, plan and propose over MCP. It cannot approve.</p>
+  <div class="key reveal d3"><span>https://…aiven.app/mcp/k/jk_ws7f3…</span><b>Copy</b><b>Get my key</b></div>
+  <div style="display:flex;gap:12px;margin-top:20px" class="reveal d4"><a class="btn primary" href="kitchen.html">Open the kitchen</a><a class="btn" href="architecture.html">How it's built</a></div>
+  <div class="foot"><span>Junction 2026 · MIT</span><span>Valio data is challenge mock data · orders are local simulated commitments</span></div>
+</section>
+
+<script>
+// slide nav
+const secs=[...document.querySelectorAll('section')], dots=document.getElementById('dots'), ctr=document.getElementById('counter');
+secs.forEach((s,i)=>{const a=document.createElement('a');a.href='#'+s.id;dots.appendChild(a)});
+const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');const i=secs.indexOf(e.target);[...dots.children].forEach((d,j)=>d.classList.toggle('on',i===j));ctr.textContent=String(i+1).padStart(2,'0')+' / '+String(secs.length).padStart(2,'0')}}),{threshold:.45});
+secs.forEach(s=>io.observe(s));
+addEventListener('keydown',e=>{const i=[...dots.children].findIndex(d=>d.classList.contains('on'));if(['ArrowRight','ArrowDown','PageDown',' '].includes(e.key)){e.preventDefault();secs[Math.min(i+1,secs.length-1)].scrollIntoView()}if(['ArrowLeft','ArrowUp','PageUp'].includes(e.key)){e.preventDefault();secs[Math.max(i-1,0)].scrollIntoView()}});
+
+// mandate highlight cycle
+const marks=[...document.querySelectorAll('#words mark')],rules=[...document.querySelectorAll('.rule')];let mi=0;
+setInterval(()=>{marks.forEach(m=>m.classList.toggle('hot',+m.dataset.r===mi));rules.forEach(r=>r.classList.toggle('hot',+r.dataset.r===mi));mi=(mi+1)%4},1600);
+[...marks,...rules].forEach(el=>el.addEventListener('mouseenter',()=>{mi=+el.dataset.r}));
+
+// hero gate canvas: lines flow from doors through checks into receipt / held / refused
+(()=>{
+ const cv=document.getElementById('gatecv'),cx=cv.getContext('2d');let W,H,dpr=devicePixelRatio||1;
+ function rs(){W=cv.clientWidth;H=cv.clientHeight;cv.width=W*dpr;cv.height=H*dpr;cx.setTransform(dpr,0,0,dpr,0,0)}rs();addEventListener('resize',rs);
+ const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+ const C={ok:css('--ok'),am:css('--amber'),red:css('--red'),line:css('--line2'),ink3:css('--ink3'),ink:css('--ink')};
+ const checks=['mandate','caps','terms hash','cut-off','certainty'];
+ const doors=['Kitchen','Chat','Your agent','Ops'];
+ const names=['HK Palvikinkku 1,5 kg','Atria Rosolli 2,5 kg','Lohifilee 10 kg','Lantt Britannia','Valio ruokakerma','Myllyn Paras 300 g','Kieku kananmuna','SPL peruna 10 kg','Valio kevytmaito 1 l','Bonne luumusose'];
+ let parts=[],t=0,n=0,a=0,h=0,r=0;
+ function spawn(){const fate=Math.random();const f=fate<.62?'ok':fate<.9?'held':'ref';const failAt=f==='ok'?99:f==='held'?2+Math.floor(Math.random()*3):Math.floor(Math.random()*2)+1;
+  parts.push({d:Math.floor(Math.random()*4),x:0,f,failAt,name:names[Math.floor(Math.random()*names.length)],y0:0,done:false,sp:.0032+Math.random()*.0012})}
+ function geo(){const L=W*.2,R=W*.78,gx0=W*.28,gx1=W*.68;return{L,R,gx0,gx1,cy:H*.5}}
+ function draw(){
+  t++;if(t%34===0)spawn();
+  cx.clearRect(0,0,W,H);const g=geo();
+  // doors
+  cx.font='12px IBM Plex Mono';cx.textBaseline='middle';
+  doors.forEach((d,i)=>{const y=H*(.2+i*.18);cx.fillStyle=C.ink3;cx.textAlign='left';cx.fillText(d,16,y);
+   cx.strokeStyle=C.line;cx.beginPath();cx.moveTo(g.L-4,y);cx.bezierCurveTo(g.L+50,y,g.gx0-60,g.cy,g.gx0,g.cy);cx.stroke()});
+  // gate column
+  cx.strokeStyle=C.line;cx.beginPath();cx.moveTo(g.gx0,g.cy);cx.lineTo(g.gx1,g.cy);cx.stroke();
+  checks.forEach((c,i)=>{const x=g.gx0+(g.gx1-g.gx0)*(i+.5)/checks.length;cx.strokeStyle=C.line;cx.beginPath();cx.moveTo(x,g.cy-38);cx.lineTo(x,g.cy+38);cx.stroke();
+   cx.fillStyle=C.ink3;cx.textAlign='center';cx.fillText(c,x,i%2?g.cy+54:g.cy-52)});
+  // outlets
+  const outs={ok:[g.R,H*.3,'receipt',C.ok],held:[g.R,H*.55,'held',C.am],ref:[g.R,H*.8,'refused',C.red]};
+  Object.values(outs).forEach(([x,y,l,c])=>{cx.strokeStyle=C.line;cx.beginPath();cx.moveTo(g.gx1,g.cy);cx.bezierCurveTo(g.gx1+40,g.cy,x-60,y,x,y);cx.stroke();cx.fillStyle=c;cx.textAlign='left';cx.fillText(l,x+10,y)});
+  // particles
+  parts.forEach(p=>{
+   p.x+=p.sp;let x,y;const dy=H*(.2+p.d*.18);
+   const pos=(u)=>{ // u 0..1 path param
+     if(u<.3){const s=u/.3;const bx=(1-s)**3*(g.L-4)+3*(1-s)**2*s*(g.L+50)+3*(1-s)*s*s*(g.gx0-60)+s**3*g.gx0;const by=(1-s)**3*dy+3*(1-s)**2*s*dy+3*(1-s)*s*s*g.cy+s**3*g.cy;return[bx,by]}
+     if(u<.7){return[g.gx0+(g.gx1-g.gx0)*(u-.3)/.4,g.cy]}
+     const [ox,oy]=outs[p.f];const s=(u-.7)/.3;return[(1-s)**3*g.gx1+3*(1-s)**2*s*(g.gx1+40)+3*(1-s)*s*s*(ox-60)+s**3*ox,(1-s)**3*g.cy+3*(1-s)**2*s*g.cy+3*(1-s)*s*s*oy+s**3*oy]};
+   // stop at failing check for refused ones: they veer down after their check
+   [x,y]=pos(Math.min(p.x,1));
+   const checkU=.3+.4*(p.failAt+.5)/checks.length;
+   let col=C.ink;if(p.x>checkU){col=p.f==='ok'?C.ok:p.f==='held'?C.am:C.red}
+   if(p.f!=='ok'&&p.x>checkU&&p.x<.7){ // flash mark at the check
+     const cxp=g.gx0+(g.gx1-g.gx0)*(p.failAt+.5)/checks.length;cx.strokeStyle=col;cx.globalAlpha=Math.max(0,1-(p.x-checkU)*12);cx.beginPath();cx.arc(cxp,g.cy,10,0,7);cx.stroke();cx.globalAlpha=1}
+   cx.fillStyle=col;cx.beginPath();cx.arc(x,y,3.2,0,7);cx.fill();
+   if(Math.abs(p.x-.5)<.04){cx.fillStyle=C.ink3;cx.textAlign='center';cx.fillText(p.name,x,g.cy+86)}
+   if(p.x>=1&&!p.done){p.done=true;n++;if(p.f==='ok')a++;else if(p.f==='held')h++;else r++;tN.textContent=n;tA.textContent=a;tH.textContent=h;tR.textContent=r}
+  });
+  parts=parts.filter(p=>p.x<1.05);
+  requestAnimationFrame(draw)}
+ if(!matchMedia('(prefers-reduced-motion: reduce)').matches)draw();else{spawn();draw()}
+})();
+
+// gate diagram svg: doors → serveTool → applyOps → store, with retry collapsing to one receipt
+(()=>{
+ const s=document.getElementById('gatesvg'),NS='http://www.w3.org/2000/svg';
+ const el=(t,a,p=s)=>{const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);p.appendChild(e);return e};
+ const doors=[['Kitchen screen','human · approves'],['Chat','agent turn'],['Your Claude · MCP','judge key · no approve'],['REST / OpenAPI','same tools'],['Valio Ops','reads cases']];
+ const mid=[['serveTool','one gate · scopes per actor',470,150],['applyOps','one state change',730,150]];
+ doors.forEach(([a,b],i)=>{const y=30+i*68;const g=el('g',{class:'node'});el('rect',{x:30,y,width:210,height:50,rx:10},g);el('text',{x:46,y:y+22},g).textContent=a;el('text',{x:46,y:y+39,class:'sub'},g).textContent=b;
+  el('path',{class:'wire',id:'w'+i,d:`M240 ${y+25} C 340 ${y+25}, 360 190, 450 190`})});
+ mid.forEach(([a,b,x,y])=>{const g=el('g',{class:'node'});el('rect',{x,y,width:200,height:80,rx:12,style:'stroke:var(--teal)'},g);el('text',{x:x+18,y:y+34},g).textContent=a;el('text',{x:x+18,y:y+56,class:'sub'},g).textContent=b});
+ el('path',{class:'wire',d:'M670 190 L730 190',id:'wm'});
+ [['Receipt','one per idempotency key',990,70,'var(--ok)'],['Held decision','approval = hash(terms)',990,165,'var(--amber)'],['Refused','CAP_EXCEEDED · TERMS_CHANGED',990,260,'var(--red)']].forEach(([a,b,x,y,c],i)=>{
+  const g=el('g',{class:'node'});el('rect',{x,y,width:190,height:56,rx:10,style:`stroke:${c}`},g);el('text',{x:x+16,y:y+24},g).textContent=a;el('text',{x:x+16,y:y+42,class:'sub'},g).textContent=b;
+  el('path',{class:'wire',id:'o'+i,d:`M930 190 C 960 190, 960 ${y+28}, 990 ${y+28}`})});
+ const ret=el('text',{x:1085,y:56,class:'sub',style:'fill:var(--ok);font:12px IBM Plex Mono','text-anchor':'middle'});
+ let rc=0;
+ function fire(){const i=Math.floor(Math.random()*5),o=Math.random()<.6?0:Math.random()<.7?1:2;
+  const c=el('circle',{r:4,class:'pulse',style:o?`fill:${o===1?'var(--amber)':'var(--red)'}`:''});
+  const paths=['w'+i,'wm','o'+o].map(id=>document.getElementById(id));let k=0,u=0;
+  (function step(){const p=paths[k],L=p.getTotalLength();u+=6/L;if(u>=1){u=0;k++;if(k>=paths.length){c.remove();if(o===0){rc++;ret.textContent=rc%3===0?'retry ×3 → same receipt':''}return}}
+   const pt=paths[k].getPointAtLength(u*paths[k].getTotalLength());c.setAttribute('cx',pt.x);c.setAttribute('cy',pt.y);requestAnimationFrame(step)})()}
+ setInterval(fire,700);
+})();
+</script>
+</body>
+</html>

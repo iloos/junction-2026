@@ -1,0 +1,319 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Request to Order</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Instrument+Serif&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f6f5f1; --paper:#fff; --line:#e4e2db; --line2:#d3d0c6; --fill:#efede7;
+  --ink:#171a19; --ink2:#5a615e; --ink3:#6f7672;
+  --teal:#0b7268; --tealbg:#e3f1ee; --ok:#17734b; --amber:#8f5a00; --amberbg:#f8ecd2; --red:#b0381f; --redbg:#f8e1db; --blue:#2f5bd3;
+  --sans:'IBM Plex Sans',system-ui,sans-serif; --mono:'IBM Plex Mono',ui-monospace,monospace; --serif:'Instrument Serif',Georgia,serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font:14px/1.55 var(--sans);-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+a{color:inherit}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.top{height:52px;display:flex;align-items:center;gap:18px;padding:0 20px;border-bottom:1px solid var(--line);background:var(--paper)}
+.brand{font-weight:600;display:flex;gap:8px;align-items:center}.brand i{width:18px;height:18px;border:1.5px solid;border-radius:4px;display:grid;place-items:center;font:normal 10px var(--sans)}
+.tabs{display:flex;gap:2px}.tabs a{padding:6px 10px;border-radius:6px;color:var(--ink2);text-decoration:none}.tabs a.on{background:var(--fill);color:var(--ink);font-weight:500}
+.wrap{max-width:1240px;margin:0 auto;padding:32px 24px 80px}
+h1{font:400 40px/1.1 var(--serif)}
+.lede{color:var(--ink2);font-size:16px;max-width:70ch;margin-top:8px}
+h2{font:400 28px/1.15 var(--serif);margin:56px 0 6px}
+.sub{color:var(--ink2);max-width:72ch}
+/* picker */
+.pick{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:24px;position:sticky;top:0;z-index:5;background:var(--bg);padding:12px 0}
+.ex{text-align:left;background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:12px 14px;transition:border-color .2s}
+.ex:hover{border-color:var(--line2)}
+.ex.on{border-color:var(--ink);box-shadow:0 0 0 1px var(--ink)}
+.ex q{display:block;font-size:14.5px;quotes:"“" "”"}
+.ex span{display:block;font-size:12.5px;color:var(--ink2);margin-top:6px}
+.ex span b{color:var(--teal);font-weight:500}
+/* rail */
+.rail{margin-top:8px;border-left:2px solid var(--line);margin-left:14px}
+.st{position:relative;display:grid;grid-template-columns:250px 1fr;gap:20px;padding:14px 0 14px 26px;transition:opacity .25s}
+.st::before{content:"";position:absolute;left:-8px;top:20px;width:14px;height:14px;border-radius:50%;background:var(--paper);border:2px solid var(--line2)}
+.st.lit::before{background:var(--teal);border-color:var(--teal)}
+.st.entry::before{background:var(--ink);border-color:var(--ink);box-shadow:0 0 0 4px var(--tealbg)}
+.st.skip{opacity:.5;padding:5px 0 5px 26px}.st.skip .lab code,.st.skip .lab br,.st.skip .badge{display:none}.st.skip .lab b{display:inline;font-weight:500;font-size:14px;margin-left:6px}.st.skip::before{top:9px;width:10px;height:10px;left:-6px}.st.skip .skipnote{padding-top:0}
+.st.hl{background:linear-gradient(90deg,var(--tealbg),transparent 70%);border-radius:0 10px 10px 0}
+.lab .n{font:12px var(--mono);color:var(--ink3)}
+.lab b{display:block;font-weight:600;font-size:15px}
+.lab code{font:12px var(--mono);color:var(--ink2)}
+.badge{display:inline-block;font:12px var(--mono);border-radius:999px;padding:1px 8px;margin-top:6px;border:1px solid}
+.badge.b{color:var(--ok);border-color:#b9dcc9}.badge.p{color:var(--amber);border-color:#e6cf9c}.badge.n{color:var(--ink3);border-color:var(--line2)}
+.art{min-height:20px}
+.skipnote{font-size:13px;color:var(--ink3);padding-top:4px}
+.card{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:14px 16px;max-width:720px}
+.card .h{display:flex;justify-content:space-between;gap:12px;font-size:12px;color:var(--ink3);font-family:var(--mono);margin-bottom:8px}
+.card p{color:var(--ink2);font-size:13.5px}
+.card p b{color:var(--ink);font-weight:500}
+.kv{display:grid;grid-template-columns:150px 1fr;gap:4px 14px;font-size:13.5px}
+.kv span:nth-child(odd){color:var(--ink3)}
+.kv span:nth-child(even){font-family:var(--mono);font-size:13px}
+.req{font:400 22px/1.3 var(--serif)}
+.q{margin-top:10px;padding-top:10px;border-top:1px dashed var(--line)}
+.q:first-child{margin-top:0;padding-top:0;border:0}
+.q .t{font-weight:500}
+.q .w{font-size:12.5px;color:var(--ink3)}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.chip{font-size:13px;border:1px solid var(--line2);border-radius:999px;padding:3px 11px;background:var(--bg)}
+.chip:hover{border-color:var(--ink2)}
+.chip.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.ans{font-size:13px;color:var(--ok);margin-top:4px}
+.known{font-size:13px;color:var(--ink2)}
+.known b{color:var(--ink);font-weight:500}
+table{border-collapse:collapse;width:100%;font-size:13px}
+td,th{text-align:left;padding:5px 8px 5px 0;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-weight:500;color:var(--ink3);font-size:12px}
+td.m{font-family:var(--mono);font-size:12.5px;white-space:nowrap}
+.pill{font:12px var(--mono);border-radius:6px;padding:1px 7px;white-space:nowrap}
+.pill.k{background:var(--tealbg);color:var(--teal)}.pill.u{background:var(--amberbg);color:var(--amber)}.pill.o{background:var(--redbg);color:var(--red)}.pill.g{background:var(--fill);color:var(--ink2)}
+.formula{font:13.5px var(--mono);background:var(--fill);border-radius:8px;padding:8px 10px;margin:4px 0 8px;display:inline-block}
+.and{border-left:2px solid var(--line2);padding-left:10px;margin-top:6px}
+/* entity map */
+.emap{background:var(--paper);border:1px solid var(--line);border-radius:14px;margin-top:18px;padding:10px;overflow-x:auto}
+#er{display:block;min-width:1100px;width:100%}
+.ent rect{fill:var(--paper);stroke:var(--line2);stroke-width:1.2;transition:all .2s}
+.ent text{font:500 13px var(--sans);fill:var(--ink)}
+.ent .f{font:12px var(--mono);fill:var(--ink3);font-weight:400}
+.ent{cursor:pointer}
+.ent.on rect{stroke:var(--teal);stroke-width:2;fill:var(--tealbg)}
+.er-e{stroke:var(--line2);fill:none;stroke-width:1.2}
+.er-e.on{stroke:var(--teal);stroke-width:2}
+.er-l{font:12px var(--mono);fill:var(--ink3)}
+.band{font:12px var(--mono);fill:var(--ink3);letter-spacing:.04em}
+.ehint{font-size:13px;color:var(--ink2);padding:6px 6px 2px;min-height:28px}
+.ehint b{color:var(--ink);font-weight:500}
+/* time */
+.time{background:var(--paper);border:1px solid var(--line);border-radius:14px;margin-top:18px;padding:18px}
+#tl{display:block;width:100%}
+#tl text{font:12px var(--mono);fill:var(--ink3)}
+.tlinks{display:flex;gap:18px;margin-top:10px;font-size:13.5px}
+.mock{position:fixed;left:50%;bottom:10px;transform:translateX(-50%);font:12px var(--mono);color:var(--ink2);background:var(--paper);border:1px solid var(--line);padding:4px 12px;border-radius:999px;z-index:9}
+@media(max-width:900px){.pick{grid-template-columns:1fr 1fr;position:static}.st{grid-template-columns:1fr;gap:8px}}
+.pl{text-decoration:underline;text-decoration-color:var(--line2);text-underline-offset:3px}.pl:hover{text-decoration-color:var(--ink)}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand"><i>M</i>Mandate</div>
+  <nav class="tabs"><a href="kitchen.html">Kitchen</a><a href="flow.html">Demand</a><a href="ops.html">Operations</a><a href="engine.html">Forecast</a><a class="on" href="#">Request to order</a><a href="architecture.html">How it works</a></nav>
+</header>
+<div class="wrap">
+  <h1>From a request to an order</h1>
+  <p class="lede">A chef can start with a vague idea, a known menu, one dish or one product. Each request enters the same chain at a different step. Pick one to follow it; the steps it skips are greyed.</p>
+
+  <div class="pick" id="pick"></div>
+  <div class="rail" id="rail"></div>
+
+  <h2>What the system stores</h2>
+  <p class="sub">Each box is a record type in the code. Point at one to see which steps above create or change it.</p>
+  <div class="emap"><svg id="er" viewBox="0 0 1180 400"></svg><div class="ehint" id="ehint">Point at a box.</div></div>
+
+  <h2>The same kitchen over time</h2>
+  <p class="sub">A plan belongs to one delivery date. Each date has its own cut-off, and stock Valio states is drawn down by every kitchen ordering before it.</p>
+  <div class="time">
+    <svg id="tl" viewBox="0 0 1180 200"></svg>
+    <div class="tlinks"><a href="engine.html">Will stock hold over the fortnight? → Forecast</a><a href="flow.html">Which kitchens draw on which products → Demand</a></div>
+  </div>
+</div>
+<div class="mock">MOCKUP · example values are illustrative · status per step from STATUS.md, Sat 14 Nov</div>
+
+<script>
+// ---------- stages (built status per STATUS.md / PITCH.md, Sat 14 Nov) ----------
+const STAGES=[
+ {id:'req',name:'The request',ent:'request text',st:'b',stTxt:'built · /request, chat, MCP'},
+ {id:'cls',name:'What kind of request',ent:'classify → event | products',st:'b',stTxt:'built · rules, no model'},
+ {id:'brief',name:'Questions back to the chef',ent:'EventBrief',st:'b',stTxt:'built · one question at a time'},
+ {id:'menu',name:'A menu to review',ent:'MenuProposal · proposed → chef_reviewed',st:'b',stTxt:'built · Gemini + rubric, templates as fallback'},
+ {id:'dish',name:'Dishes',ent:'DishTemplate',st:'b',stTxt:'built'},
+ {id:'ing',name:'Ingredients',ent:'DishIngredient · productId | query | unresolved',st:'b',stTxt:'built · resolve quality still open'},
+ {id:'need',name:'How much is needed',ent:'Need · per delivery date',st:'b',stTxt:'built'},
+ {id:'res',name:'What Valio can supply',ent:'Offer → rank → strategy',st:'b',stTxt:'built · live cache-through'},
+ {id:'line',name:'Packs to buy',ent:'Line · SalesQty',st:'b',stTxt:'built'},
+ {id:'tier',name:'Does it need the chef?',ent:'Mandate → Tier: act | propose | sign-off',st:'b',stTxt:'built'},
+ {id:'appr',name:'The chef decides',ent:'Approval · terms hash',st:'b',stTxt:'built · whole set granted at once'},
+ {id:'order',name:'Order and receipt',ent:'Order · Receipt',st:'b',stTxt:'built · local simulated commitment'},
+ {id:'time',name:'Over time',ent:'delivery date · cut-off · standing order',st:'p',stTxt:'cut-offs built · repeat orders planned'},
+];
+// ---------- examples ----------
+const EX=[
+ {id:'vague',q:'Christmas dinner for 50 on 20 December',enters:'brief',where:'Enters at <b>questions back</b>: the words give guests and a date but no menu.'},
+ {id:'menu',q:'Our usual Christmas buffet for 140',enters:'dish',where:'Enters at <b>dishes</b>: the kitchen already has this menu.'},
+ {id:'dish',q:'Make the ham 120 g per guest',enters:'need',where:'Enters at <b>how much is needed</b> for one dish.'},
+ {id:'milk',q:'1,000 L lactose-free milk by Monday',enters:'need',where:'Enters at <b>how much is needed</b> as a direct amount. Valio\'s own example.'},
+];
+const order=STAGES.map(s=>s.id);
+// which stages each example passes through
+const PATH={
+ vague:['req','cls','brief','menu','dish','ing','need','res','line','tier','appr','order','time'],
+ menu:['req','cls','dish','ing','need','res','line','tier','appr','order','time'],
+ dish:['req','need','line','tier','appr','order'],
+ milk:['req','cls','need','res','line','tier','appr','order','time'],
+};
+const SKIP={
+ vague:{},
+ menu:{brief:'Skipped: the kitchen\'s own buffet already answers these.',menu:'Skipped: the menu exists; nothing new to review.'},
+ dish:{cls:'Skipped: an edit to an open plan.',brief:'Skipped.',menu:'Skipped.',dish:'Skipped: the dish is already in the plan.',ing:'Skipped: same ingredient, new amount.',res:'Skipped: same product. A new quantity is re-quoted at commit.',time:'Skipped: only this delivery changes.'},
+ milk:{brief:'Skipped: a product and an amount need no event questions.',menu:'Skipped.',dish:'Skipped: no dish, a direct amount.',ing:'Skipped: the product is named.'},
+};
+// ---------- artifact cards ----------
+const ill='<span>illustrative</span>';
+const A={
+ vague:{
+  req:()=>`<div class="card"><div class="h"><span>request text · from /request or chat</span>${ill}</div><div class="req">“Christmas dinner for 50 on 20 December”</div></div>`,
+  cls:()=>`<div class="card"><div class="h"><span>classify</span><span>no model call</span></div><div class="kv"><span>kind</span><span>event</span><span>occasion</span><span>"christmas dinner"</span><span>guests</span><span>50</span><span>date</span><span>2026-12-20</span><span>product search</span><span>none: an event names no product</span></div></div>`,
+  brief:briefCard,
+  menu:()=>`<div class="card"><div class="h"><span>MenuProposal · revision 2 · chef_reviewed</span>${ill}</div><p>Gemini drafts a menu from the brief; a rubric checks it keeps every requirement. Each chef edit is a new revision. Planning starts only after the chef accepts one.</p><table style="margin-top:8px"><tr><th>course</th><th>dish</th><th>note</th></tr><tr><td>starter</td><td>Graavilohi, rye bread</td><td></td></tr><tr><td>starter</td><td>Rosolli</td><td></td></tr><tr><td>main</td><td>Joulukinkku, mustard</td><td></td></tr><tr><td>side</td><td>Lanttulaatikko</td><td class="m">lactose-free swap</td></tr><tr><td>dessert</td><td>Riisipuuro</td><td class="m">lactose-free milk</td></tr></table><p style="margin-top:8px">Open question kept: <b>“6 vegetarians: no main proposed yet.”</b> A dropped requirement makes the proposal invalid.</p></div>`,
+  dish:()=>dishCard(50),
+  ing:ingCard,
+  need:()=>needCard(50,135),
+  res:resCard,
+  line:()=>lineCard(50),
+  tier:tierCard,
+  appr:apprCard,
+  order:()=>orderCard('€412.30','9 lines'),
+  time:timeCard,
+ },
+ menu:{
+  req:()=>`<div class="card"><div class="h"><span>request text</span>${ill}</div><div class="req">“Our usual Christmas buffet for 140”</div></div>`,
+  cls:()=>`<div class="card"><div class="h"><span>classify</span><span>no model call</span></div><div class="kv"><span>kind</span><span>event</span><span>matches</span><span>seeded event "Christmas buffet, 140"</span><span>next</span><span>plan_event from the kitchen's own menu</span></div></div>`,
+  dish:()=>dishCard(140),
+  ing:ingCard,
+  need:()=>needCard(140,135),
+  res:resCard,
+  line:()=>lineCard(140),
+  tier:tierCard,
+  appr:apprCard,
+  order:()=>orderCard('€319.78','4 lines now, 10 held'),
+  time:timeCard,
+ },
+ dish:{
+  req:()=>`<div class="card"><div class="h"><span>chat, while the buffet plan is open</span>${ill}</div><div class="req">“Make the ham 120 g per guest”</div><p style="margin-top:6px">The chat knows the selection: dish <b>Joulukinkku</b> in plan v7.</p></div>`,
+  need:()=>`<div class="card"><div class="h"><span>edit_line · needId joulukinkku · gramsPerGuest 120</span><span>one op: EditLine</span></div><div class="formula">140 guests × 120 g = 16.8 kg (was 18.9 kg at 135 g)</div><p>Only this need is recomputed. The other 13 dishes keep their lines.</p></div>`,
+  line:()=>`<div class="card"><div class="h"><span>Line · <span class="pl" data-product="476768">HK Palvikinkku 476768</span></span>${ill}</div><table><tr><th></th><th>before</th><th>after</th></tr><tr><td>packs (1,5 kg)</td><td class="m">13</td><td class="m">12</td></tr><tr><td>buying</td><td class="m">19.5 kg</td><td class="m">18.0 kg</td></tr><tr><td>price</td><td class="m">€200.59</td><td class="m">€185.16</td></tr></table></div>`,
+  tier:()=>`<div class="card"><div class="h"><span>tier</span></div><p>Still a <b>new product</b> for this kitchen, so still <b>propose</b>: it waits for the chef.</p></div>`,
+  appr:()=>`<div class="card"><div class="h"><span>Approval · plan v8</span></div><p>The earlier approval was bound to v7's terms hash. The edit changed the terms, so it is <b>invalidated</b> and a new one is <b>pending</b> for v8. The chef sees what changed: 13 → 12 packs, −€15.43.</p></div>`,
+  order:()=>`<div class="card"><div class="h"><span>commit</span></div><p>Nothing is ordered until the chef approves v8. Committing with the old approval returns <b>TERMS_CHANGED</b>.</p></div>`,
+ },
+ milk:{
+  req:()=>`<div class="card"><div class="h"><span>request text · Valio's example</span>${ill}</div><div class="req">“I need 1,000 litres of lactose-free milk by Monday”</div></div>`,
+  cls:()=>`<div class="card"><div class="h"><span>classify + parse</span><span>Gemini flash-lite, rules first</span></div><div class="kv"><span>kind</span><span>products</span><span>item</span><span>milk · requirement: lactose-free</span><span>amount</span><span>1,000 L (physical, not packs)</span><span>by</span><span>Mon 14 Dec</span></div><p style="margin-top:6px">“Lactose-free” is a stated requirement. If the model's parse drops it, the parse is rejected.</p></div>`,
+  need:()=>`<div class="card"><div class="h"><span>Need · direct amount</span>${ill}</div><div class="formula">1,000 L ÷ 1 L per pack = 1,000 packs</div><p>Sized from the product's printed content, so 1,000 L stays 1,000 L whatever the pack size.</p></div>`,
+  res:()=>`<div class="card"><div class="h"><span>Offer · quote, cache-through</span>${ill}</div><table><tr><th>product</th><th>availability</th><th>price</th></tr><tr><td><span class="pl" data-product="459000">Valio laktoositon maito 1 l</span></td><td><span class="pill k">known stock 900</span></td><td class="m">€1.09</td></tr><tr><td>Valio Eila laktoositon 1 l</td><td><span class="pill k">known stock 400</span></td><td class="m">€1.21</td></tr></table><p style="margin-top:6px">No single product covers 1,000. The cheapest has 900. The other 100 come from the second product, and both lines are shown.</p></div>`,
+  line:()=>`<div class="card"><div class="h"><span>Lines</span>${ill}</div><table><tr><th>product</th><th>packs</th><th>total</th></tr><tr><td>laktoositon maito 1 l</td><td class="m">900</td><td class="m">€981.00</td></tr><tr><td>Eila 1 l</td><td class="m">100</td><td class="m">€121.00</td></tr></table></div>`,
+  tier:()=>`<div class="card"><div class="h"><span>Mandate check</span></div><p>Order total <b>€1,102</b> is over the <b>€1,000 per order</b> cap, so it goes to <b>sign-off</b>. The agent cannot split it to slip under the cap: caps count split orders too.</p></div>`,
+  appr:()=>apprCard('plan v1','Fri 11 Dec 15:00 (the cut-off)'),
+  order:()=>orderCard('€1,102.00','2 lines'),
+  time:()=>`<div class="card"><div class="h"><span>delivery date</span></div><p>Delivery Mon 14 Dec, cut-off Fri 11 Dec 15:00. Asked after the cut-off, the agent names the cut-off and offers the earliest date it can still make.</p></div>`,
+ }
+};
+function dishCard(g){return `<div class="card"><div class="h"><span>DishTemplate × 5</span>${ill}</div><table><tr><th>dish</th><th>per guest</th><th>yield</th></tr><tr><td>Joulukinkku</td><td class="m">135 g</td><td class="m">1.00</td></tr><tr><td>Graavilohi</td><td class="m">70 g</td><td class="m">0.85</td></tr><tr><td>Rosolli</td><td class="m">90 g</td><td class="m">1.00</td></tr><tr><td>Lanttulaatikko</td><td class="m">40 g</td><td class="m">1.00</td></tr><tr><td>Riisipuuro</td><td class="m">100 g rice, 75 ml milk</td><td class="m">1.00</td></tr></table><p style="margin-top:6px">Grams per guest and yields are team estimates, labelled as such.</p></div>`}
+function ingCard(){return `<div class="card"><div class="h"><span>DishIngredient · exactly one of three</span>${ill}</div><table><tr><th>ingredient</th><th>how it is known</th></tr><tr><td>whole ham</td><td><span class="pill k">productId 462490</span> pinned</td></tr><tr><td>beetroot salad</td><td><span class="pill g">query "rosolli"</span> retrieval finds Atria Rosolli 2,5 kg</td></tr><tr><td>rye bread</td><td><span class="pill u">unresolved</span> shown to the chef, never guessed</td></tr></table></div>`}
+function needCard(g,gpg){const kg=(g*gpg/1000).toFixed(1);return `<div class="card"><div class="h"><span>Need · joulukinkku · delivery Thu 10 Dec</span>${ill}</div><div class="formula">${g} guests × ${gpg} g ÷ yield 1.00 = ${kg} kg</div><p>Plus target stock, minus stock on hand and confirmed deliveries. Calendar factors scale covers, e.g. a pre-Christmas week ×1.15 for this kitchen.</p></div>`}
+function resCard(){return `<div class="card"><div class="h"><span>Offer → rank · ham</span>${ill}</div><p>The pinned ham is <span class="pill o">out</span>. Candidates rank by supply first, then the kitchen's weights.</p><table style="margin-top:6px"><tr><th>#</th><th>candidate</th><th>supply</th><th>score</th></tr><tr><td>1</td><td><span class="pl" data-product="476768">HK Palvikinkku 1,5 kg</span> · FI</td><td><span class="pill k">known stock 15</span></td><td class="m">.91</td></tr><tr><td>2</td><td>Mattila Saunapalvikinkku · DE</td><td><span class="pill k">known stock</span></td><td class="m">.69</td></tr><tr><td>3</td><td>HK Joulun juhlakinkku</td><td><span class="pill u">supplier-delivered, qty unknown</span></td><td class="m">.84</td></tr></table><p style="margin-top:6px">#3 scores higher than #2 but ranks below it, because unknown stock never outranks known stock.</p><p style="margin-top:6px">Five other kitchens want the same 15 packs for Thu 10: 31 wanted in all. Whoever commits first gets them; <a href="ops.html#ham">Operations shows the shortage</a>.</p><div class="and"><p><b><span class="pl" data-product="462482">Lanttulaatikko</span></b> (462482) is out with no good substitute, so the strategy becomes <b>make in house</b>: 5 ingredients, all of them needed (AND).</p></div></div>`}
+function lineCard(g){const p=g===140?13:5;return `<div class="card"><div class="h"><span>Line · <span class="pl" data-product="476768">HK Palvikinkku 476768</span></span>${ill}</div><div class="kv"><span>need</span><span>${(g*0.135).toFixed(1)} kg</span><span>pack</span><span>1,5 kg (ST), sold whole</span><span>packs</span><span>${p} ST = ${(p*1.5).toFixed(1)} kg</span><span>spare</span><span>${(p*1.5-g*0.135).toFixed(1)} kg</span><span>price</span><span>€15.43 / ST</span></div></div>`}
+function tierCard(){return `<div class="card"><div class="h"><span>Mandate v3 → tier per line</span>${ill}</div><table><tr><th>line</th><th>tier</th><th>why</th></tr><tr><td>Lohifilee</td><td><span class="pill k">act</span></td><td>usual product, under caps</td></tr><tr><td>HK Palvikinkku</td><td><span class="pill u">propose</span></td><td>new product for this kitchen</td></tr><tr><td>Lanttulaatikko ingredients</td><td><span class="pill o">sign-off</span></td><td>adds milk, egg, gluten; never delegated</td></tr></table><p style="margin-top:6px">Held lines are grouped by reason, so the chef makes one decision per reason.</p></div>`}
+function apprCard(v='plan v8',exp='Tue 8 Dec 15:00'){return `<div class="card"><div class="h"><span>Approval · pending → granted</span>${ill}</div><div class="kv"><span>bound to</span><span>${v} · mandate v3</span><span>terms hash</span><span>c21e…  (date + sorted lines)</span><span>expires</span><span>${exp}</span></div><p style="margin-top:6px">Any later edit changes the hash and voids it. Outside agents can ask for approval but never grant it.</p></div>`}
+function orderCard(t,l){return `<div class="card"><div class="h"><span>Order + Receipt</span>${ill}</div><div class="kv"><span>committed</span><span>${l} · ${t}</span><span>authority</span><span>each line names the mandate or the approval</span><span>idempotency</span><span>same key again → the same receipt</span><span>supply</span><span>known stock lines: ordered, awaiting supplier</span></div></div>`}
+function timeCard(){return `<div class="card"><div class="h"><span>planned · not built</span></div><p>The kitchen's standing order would repeat on each delivery day from its menu cycle; this request would sit on top of one date. The parts exist (delivery days, menu cycles, calendar factors); the projection over dates is not built.</p></div>`}
+// interactive brief
+let briefState={};
+const BQ=[
+ {id:'serviceStyle',t:'How is it served?',w:'Buffet sizes by dish; plated sizes by course.',c:['Buffet','Plated','Family style']},
+ {id:'courses',t:'How many courses?',w:'Only asked for plated or family style.',c:['3','4','5'],only:s=>s.serviceStyle&&s.serviceStyle!=='Buffet'},
+ {id:'dietary',t:'Any diets to plan for?',w:'Each one is kept through every menu revision.',c:['Lactose-free','6 vegetarians','Gluten-free','None']},
+ {id:'budget',t:'A food budget?',w:'Advisory. The mandate\'s caps still decide.',c:['€1,000','€1,500','No budget']},
+];
+function briefCard(){
+ let h=`<div class="card"><div class="h"><span>EventBrief · one question at a time</span><span>no model call</span></div><div class="known">From the words: <b>50 guests</b>, <b>20 Dec 2026</b>. Still missing:</div>`;
+ let open=null;
+ for(const q of BQ){if(q.only&&!q.only(briefState))continue;
+  if(briefState[q.id]==null){if(open)break;open=q}
+  h+=`<div class="q"><div class="t">${q.t}</div><div class="w">${q.w}</div><div class="chips">${q.c.map(c=>`<button class="chip ${[].concat(briefState[q.id]||[]).includes(c)?'on':''}" data-q="${q.id}" data-v="${c}">${c}</button>`).join('')}</div>${briefState[q.id]!=null?`<div class="ans">answered: ${[].concat(briefState[q.id]).join(', ')}</div>`:''}</div>`;
+  if(q===open)break}
+ if(!open)h+=`<div class="q"><div class="t" style="color:var(--ok)">Brief complete</div><div class="kv" style="margin-top:6px"><span>title</span><span>Christmas dinner</span><span>date · guests</span><span>2026-12-20 · 50</span><span>serviceStyle</span><span>${(briefState.serviceStyle||'').toLowerCase()}</span><span>dietary</span><span>[${[].concat(briefState.dietary||[]).filter(x=>x!=='None').map(x=>'"'+x.toLowerCase()+'"').join(', ')}]</span><span>budget</span><span>${briefState.budget}</span></div></div>`;
+ return h+'</div>'}
+// ---------- render ----------
+let cur='vague';
+const pick=document.getElementById('pick'),rail=document.getElementById('rail');
+EX.forEach(e=>{const b=document.createElement('button');b.className='ex';b.dataset.id=e.id;b.innerHTML=`<q>${e.q}</q><span>${e.where}</span>`;b.onclick=()=>{cur=e.id;render()};pick.appendChild(b)});
+function render(){
+ [...pick.children].forEach(b=>b.classList.toggle('on',b.dataset.id===cur));
+ const path=PATH[cur],ex=EX.find(e=>e.id===cur);
+ rail.innerHTML=STAGES.map((s,i)=>{const lit=path.includes(s.id);const entry=s.id===ex.enters;
+  const art=lit?(A[cur][s.id]?A[cur][s.id]():''):`<div class="skipnote">${(SKIP[cur]||{})[s.id]||'Skipped.'}</div>`;
+  return `<div class="st ${lit?'lit':'skip'} ${entry?'entry':''}" data-s="${s.id}"><div class="lab"><span class="n">${String(i+1).padStart(2,'0')}${entry?' · enters here':''}</span><b>${s.name}</b><code>${s.ent}</code><br><span class="badge ${s.st}">${s.stTxt}</span></div><div class="art">${art}</div></div>`}).join('');
+ rail.querySelectorAll('.chip').forEach(c=>c.onclick=()=>{const q=c.dataset.q,v=c.dataset.v;
+  if(q==='dietary'){let a=[].concat(briefState.dietary||[]);if(v==='None')a=['None'];else{a=a.filter(x=>x!=='None');a=a.includes(v)?a.filter(x=>x!==v):[...a,v]}briefState.dietary=a.length?a:null}
+  else briefState[q]=v;
+  const y=scrollY;render();scrollTo(0,y)});
+}
+render();
+
+// ---------- entity map ----------
+const ER=document.getElementById('er'),NS='http://www.w3.org/2000/svg';
+const mk=(t,a,p=ER)=>{const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);p.appendChild(e);return e};
+const W=172,H=48;
+const E={
+ Kitchen:[16,60,'delivery days, weights',['req','time']],
+ Mandate:[16,170,'caps, never-delegate',['tier','appr']],
+ EventBrief:[214,60,'date, guests, diets',['brief']],
+ MenuProposal:[214,170,'revision, review',['menu']],
+ Dish:[214,280,'g/guest, yield',['dish','ing']],
+ Product:[412,60,'pack, lot, allergens',['ing','res']],
+ Offer:[412,170,'price, stock at time T',['res']],
+ Need:[412,280,'guests × g ÷ yield',['need']],
+ Plan:[610,170,'version, delivery',['need','line','time']],
+ Line:[610,280,'packs, tier, reasons',['line','tier','res']],
+ Approval:[808,170,'terms hash, expiry',['appr']],
+ Order:[808,280,'lines + authority',['order']],
+ Receipt:[996,280,'one per key',['order']],
+ Op:[996,60,'seq, actor, door',['need','res','line','appr','order']],
+};
+const R=[['Kitchen','Mandate','has'],['Kitchen','EventBrief','asks'],['EventBrief','MenuProposal','drafts'],['MenuProposal','Dish','lists'],['Dish','Product','uses'],['Dish','Need','sizes'],['Product','Offer','quoted as'],['Need','Plan','belongs to'],['Plan','Line','has'],['Offer','Line','prices'],['Need','Line','covered by'],['Mandate','Approval','checked by'],['Plan','Approval','bound to'],['Line','Order','in'],['Approval','Order','authorises'],['Order','Receipt','gives'],['Plan','Op','changed by']];
+[['WHO',16],['ASKING',214],['SUPPLY',412],['THE PLAN',610],['DECIDING',808],['RECORD',996]].forEach(([t,x])=>mk('text',{x,y:34,class:'band'}).textContent=t);
+const cen=n=>[E[n][0]+W/2,E[n][1]+H/2];
+const edges=R.map(([a,b,l])=>{const [x1,y1]=cen(a),[x2,y2]=cen(b);let d;
+ if(Math.abs(y1-y2)<2)d=`M${E[a][0]+W} ${y1} L${E[b][0]} ${y2}`;else if(Math.abs(x1-x2)<2)d=`M${x1} ${y1<y2?E[a][1]+H:E[a][1]} L${x2} ${y1<y2?E[b][1]:E[b][1]+H}`;
+ else{const sx=x1<x2?E[a][0]+W:E[a][0],ex=x1<x2?E[b][0]:E[b][0]+W;d=`M${sx} ${y1} C ${(sx+ex)/2} ${y1}, ${(sx+ex)/2} ${y2}, ${ex} ${y2}`}
+ const p=mk('path',{class:'er-e',d});p.dataset.a=a;p.dataset.b=b;return p});
+const ents=Object.entries(E).map(([n,[x,y,f]])=>{const g=mk('g',{class:'ent'});g.dataset.n=n;mk('rect',{x,y,width:W,height:H,rx:8},g);mk('text',{x:x+12,y:y+19},g).textContent=n;mk('text',{x:x+12,y:y+36,class:'f'},g).textContent=f;return g});
+const hint=document.getElementById('ehint');
+const sName=id=>STAGES.find(s=>s.id===id).name.toLowerCase();
+ents.forEach(g=>{const n=g.dataset.n;
+ g.addEventListener('mouseenter',()=>{const st=E[n][3];ents.forEach(o=>o.classList.toggle('on',o===g));edges.forEach(e=>e.classList.toggle('on',e.dataset.a===n||e.dataset.b===n));
+  document.querySelectorAll('.st').forEach(s=>s.classList.toggle('hl',st.includes(s.dataset.s)));
+  hint.innerHTML=`<b>${n}</b> is created or changed at: ${st.map(sName).join(' · ')}.`});
+ g.addEventListener('mouseleave',()=>{ents.forEach(o=>o.classList.remove('on'));edges.forEach(e=>e.classList.remove('on'));document.querySelectorAll('.st').forEach(s=>s.classList.remove('hl'))})});
+
+// ---------- over time ----------
+(()=>{const S=document.getElementById('tl');const m=(t,a)=>{const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);S.appendChild(e);return e};
+ const days=['Mon 7','Tue 8','Wed 9','Thu 10','Fri 11','Sat 12','Sun 13','Mon 14','Tue 15','Wed 16','Thu 17'];
+ const X=i=>140+i*95;
+ m('line',{x1:140,x2:X(10)+40,y1:40,y2:40,stroke:'#d3d0c6'});
+ days.forEach((d,i)=>{m('text',{x:X(i),y:28,'text-anchor':'middle'}).textContent=d});
+ // delivery dates: Tue, Thu, Sat ... with cutoffs day before 15:00
+ const del=[1,3,5,8,10];
+ m('text',{x:0,y:76}).textContent='standing order';
+ m('text',{x:0,y:116}).textContent='Christmas buffet';
+ m('text',{x:0,y:156}).textContent='ham stock (Valio)';
+ del.forEach(i=>{m('line',{x1:X(i-1)+30,x2:X(i-1)+30,y1:40,y2:170,stroke:'#8f5a00','stroke-dasharray':'2 3','stroke-opacity':.6});
+  m('rect',{x:X(i)-28,y:62,width:56,height:22,rx:5,fill:'#efede7',stroke:'#d3d0c6','stroke-dasharray':'4 3'});m('text',{x:X(i),y:77,'text-anchor':'middle'}).textContent='planned'});
+ m('rect',{x:X(3)-40,y:100,width:80,height:24,rx:5,fill:'#e3f1ee',stroke:'#0b7268'});const t=m('text',{x:X(3),y:116,'text-anchor':'middle'});t.textContent='plan v8';t.style.fill='#0b7268';
+ m('text',{x:X(2)+34,y:136}).textContent='cut-off Tue 15:00';
+ const pts=[[0,15],[1.6,15],[1.6,9],[2.6,9],[2.6,0],[4.5,0],[4.5,10],[10.4,10]];
+ m('path',{d:'M'+pts.map(([d,v])=>`${X(d)} ${172-v*1.6}`).join(' L'),fill:'none',stroke:'#0b7268','stroke-width':2});
+ const tt=m('text',{x:X(2.7)+6,y:186});tt.textContent='0 left: later kitchens re-ranked';tt.style.fill='#b0381f';
+ m('text',{x:X(4.5)+8,y:150}).textContent='+10 arrive Fri';
+ m('text',{x:X(10)+44,y:44}).textContent='';
+})();
+</script>
+<script src="shared/scenario.js"></script><script src="shared/shell.js" data-page="journey"></script>
+</body>
+</html>

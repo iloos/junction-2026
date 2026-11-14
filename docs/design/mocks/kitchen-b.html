@@ -1,0 +1,367 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mandate Kitchen</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Instrument+Serif&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f6f5f1; --paper:#fff; --line:#e4e2db; --line2:#d3d0c6; --fill:#efede7;
+  --ink:#171a19; --ink2:#535a57; --ink3:#626966;
+  --teal:#0b7268; --ok:#17734b; --amber:#8f5a00; --amberbg:#fbf1de; --red:#b0381f; --blue:#2f5bd3; --lens:#5a3bc0;
+  --sans:'IBM Plex Sans',system-ui,sans-serif; --mono:'IBM Plex Mono',ui-monospace,monospace; --serif:'Instrument Serif',Georgia,serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font:14px/1.5 var(--sans);-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.page{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:24px;max-width:1280px;margin:0 auto;padding:22px 24px 0}
+.main{min-width:0;display:flex;flex-direction:column}
+/* task header */
+.task h1{font:400 34px/1.1 var(--serif)}
+.task .sub{color:var(--ink2);margin-top:4px}
+.task .sum{display:flex;flex-wrap:wrap;gap:6px 22px;margin:14px 0 18px;font-size:15px;color:var(--ink2)}
+.task .sum b{color:var(--ink);font-weight:600}
+.task .sum .due b{color:var(--amber)}
+.lensbtn{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line2);border-radius:999px;padding:4px 12px;font-size:12.5px;color:var(--ink2);background:var(--paper)}
+.lensbtn .sw{width:26px;height:15px;border-radius:999px;background:var(--line2);position:relative;transition:.2s}
+.lensbtn .sw::after{content:"";position:absolute;left:2px;top:2px;width:11px;height:11px;border-radius:50%;background:#fff;transition:.2s}
+body.lens .lensbtn{border-color:var(--lens);color:var(--lens)} body.lens .lensbtn .sw{background:var(--lens)} body.lens .lensbtn .sw::after{left:13px}
+.toprow{display:flex;justify-content:space-between;align-items:flex-start;gap:16px}
+/* what changed */
+.changed{display:none;border:1px solid #b9d8d3;background:#eef6f4;border-radius:12px;padding:12px 14px;margin-bottom:16px}
+.changed.on{display:block;animation:land .35s ease}
+.changed .h{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px}
+.changed h2{font-size:14px;font-weight:600}
+.changed .h button{font-size:12.5px;color:var(--ink2);text-decoration:underline}
+.changed ul{list-style:none;display:flex;flex-direction:column;gap:4px;font-size:13.5px;color:var(--ink2)}
+.changed li b{color:var(--ink);font-weight:500}
+.changed s{color:var(--ink3)}
+/* section heads */
+.sect{display:flex;justify-content:space-between;align-items:baseline;margin:6px 0 8px}
+.sect h2{font-size:14px;font-weight:600}
+.sect span{font-size:12.5px;color:var(--ink2)}
+/* decisions */
+.decs{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:22px;align-items:start}
+.dc{background:var(--paper);border:1px solid var(--line2);border-radius:12px;padding:14px;display:flex;flex-direction:column;transition:background 1.2s}
+.dc.sign{border-color:var(--amber)}
+.dc.done{border-color:var(--ok);background:#f2f8f4}
+.dc.flash{background:#e6f4f1}
+.dc .t{display:flex;justify-content:space-between;gap:10px;font-weight:600}
+.dc .t .mono{font-weight:500}
+.dc .why{font-size:13px;color:var(--ink2);margin:6px 0 10px}
+.dc .why b{color:var(--ink);font-weight:500}
+.dc .kv{display:grid;grid-template-columns:1fr auto;gap:3px 10px;font-size:12.5px;color:var(--ink2);margin-bottom:12px}
+.dc .kv span:nth-child(even){font-family:var(--mono);color:var(--ink);text-align:right}
+.dc .lines{display:none;font-size:13px;border-top:1px solid var(--line);margin:-4px 0 12px;padding-top:6px}
+.dc.open .lines{display:block}
+.dc .lines div{display:flex;justify-content:space-between;padding:3px 0;color:var(--ink2)}
+.dc .lines div span:last-child{font-family:var(--mono);color:var(--ink)}
+.dc .acts{display:flex;gap:8px;margin-top:auto}
+.b2{flex:1;height:36px;border-radius:9px;border:1px solid var(--line2);font-weight:500;font-size:13.5px;background:var(--paper)}
+.b2.p{background:var(--ink);color:#fff;border-color:var(--ink)}
+.hold{position:relative;overflow:hidden;background:var(--ink);color:#fff;border-color:var(--ink);user-select:none}
+.hold i{position:absolute;inset:0;background:var(--amber);transform:scaleX(0);transform-origin:left}
+.hold span{position:relative}
+.dc .state{font-size:13px;color:var(--ok);font-weight:500}
+/* dishes */
+.rows{background:var(--paper);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-bottom:20px}
+.row{border-bottom:1px solid var(--line);transition:background 1.4s}
+.row:last-child{border-bottom:0}
+.row.flash{background:#e3f2ee}
+.rh{display:grid;grid-template-columns:150px minmax(0,1fr) 96px 92px;gap:4px 16px;align-items:center;padding:11px 14px;cursor:pointer}
+.rh:hover{background:#fbfaf7}
+.dish b{font-weight:500;display:block}.dish span{font-size:12.5px;color:var(--ink2)}
+.prod{min-width:0}
+.prod .n{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.prod .n .q{font-family:var(--mono);color:var(--ink2);font-size:13px}
+.prod s{display:block;color:var(--ink3);font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cov{margin-top:3px;font-size:13px;color:var(--ink2)}
+.cov i{font-style:normal;display:inline-grid;place-items:center;width:16px;height:16px;border-radius:50%;color:#fff;font-size:11px;font-weight:600;margin-right:6px;vertical-align:-3px}
+.cov b{font-weight:500}
+.cov.ok i{background:var(--ok)}.cov.ok b{color:var(--ok)}
+.cov.ask i{background:var(--teal)}.cov.ask b{color:var(--teal)}
+.cov.maybe i{background:var(--amber)}.cov.maybe b{color:var(--amber)}
+.cov.no i{background:var(--red)}.cov.no b{color:var(--red)}
+.gpg{text-align:right;font:13px var(--mono);color:var(--ink)}
+.gpg small{display:block;font:12px var(--sans);color:var(--ink3)}
+.price{text-align:right;font:13px var(--mono)}
+.price small{display:block;font:12px var(--sans);color:var(--ink3)}
+.trace{display:none;flex-wrap:wrap;gap:6px;padding:0 14px 10px 180px}
+body.lens .trace{display:flex}
+.tc{font:12px var(--mono);color:var(--lens);background:#f1ecfd;border-radius:6px;padding:1px 7px}
+.rwhy{display:none;padding:4px 14px 16px 180px}
+.row.open .rwhy{display:block}
+.chain{display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-size:13px}
+.chain span{background:var(--fill);border-radius:6px;padding:3px 8px}
+.chain small{display:block;font:12px var(--mono);color:var(--ink3)}
+.chain em{color:var(--ink3);font-style:normal}
+.nb{margin-top:10px;display:flex;flex-direction:column;gap:4px;max-width:520px}
+.nbr{display:grid;grid-template-columns:64px 1fr 180px;gap:10px;align-items:center;font-size:13px;color:var(--ink2)}
+.nbr div{height:8px;background:var(--fill);border-radius:4px;overflow:hidden}.nbr i{display:block;height:100%}
+.nbr b{font:13px var(--mono);color:var(--ink);font-weight:400}
+.cands{margin-top:12px;font-size:13px}
+.cands h3{font-size:13px;font-weight:600;margin-bottom:4px}
+.cand{display:grid;grid-template-columns:20px 1fr auto;gap:10px;align-items:center;padding:6px 0;border-top:1px dashed var(--line)}
+.cand .w{color:var(--ink2)}
+.cand.x{color:var(--ink3)}
+.cand button{font-size:12.5px;border:1px solid var(--line2);border-radius:7px;padding:3px 9px;background:var(--paper)}
+.cand .chosen{font-size:12.5px;color:var(--ok);font-weight:500}
+.cand .rej{font-size:12.5px;color:var(--red)}
+/* right rail */
+.rail{position:sticky;top:70px;align-self:start;display:flex;flex-direction:column;gap:12px}
+.card{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:16px}
+.card h2{font-size:13px;font-weight:600;margin-bottom:8px}
+.card .big{font:400 30px/1 var(--serif);margin:2px 0 4px}
+.card p{font-size:13px;color:var(--ink2)}
+.kv2{display:grid;grid-template-columns:1fr auto;gap:4px 10px;font-size:13px;color:var(--ink2);margin:10px 0 12px}
+.kv2 span:nth-child(even){font-family:var(--mono);color:var(--ink);text-align:right}
+.place{width:100%;height:44px;border-radius:10px;background:var(--teal);color:#fff;font-weight:600;display:flex;justify-content:space-between;align-items:center;padding:0 16px}
+.mand{font-size:13px;color:var(--ink2)}
+.mand b{color:var(--ink);font-weight:500}
+/* composer dock */
+.dock{position:sticky;bottom:0;margin-top:auto;padding:12px 0 14px;background:linear-gradient(to top,var(--bg) 78%,rgba(246,245,241,0))}
+.dockin{background:var(--paper);border:1px solid var(--line2);border-radius:14px;box-shadow:0 6px 24px rgba(23,26,25,.08);overflow:hidden}
+.thread{display:none;max-height:min(52vh,520px);overflow:auto;padding:14px 16px;border-bottom:1px solid var(--line);flex-direction:column;gap:12px}
+.dock.open .thread{display:flex}
+.bar{display:flex;align-items:center;gap:10px;padding:10px 12px}
+.bar input{flex:1;border:0;font:inherit;font-size:14px;outline:none;background:transparent;color:var(--ink);min-width:0}
+.bar input::placeholder{color:var(--ink3)}
+.bar .ctx{font-size:12px;border:1px solid var(--line2);border-radius:999px;padding:2px 9px;color:var(--ink2);white-space:nowrap}
+.bar .tog{font-size:12.5px;color:var(--ink2);white-space:nowrap;text-decoration:underline}
+.bar .go{height:32px;padding:0 12px;border-radius:8px;background:var(--ink);color:#fff;font-size:13px;font-weight:500;white-space:nowrap}
+.sugg{display:flex;gap:6px;padding:0 12px 10px;flex-wrap:wrap}
+.sugg button{font-size:12.5px;border:1px solid var(--line);border-radius:999px;padding:3px 10px;background:var(--bg);color:var(--ink2)}
+/* chat events */
+.m{max-width:88%}
+.m.me{align-self:flex-end;background:var(--ink);color:#fff;padding:9px 13px;border-radius:14px 14px 4px 14px}
+.m.ag{align-self:flex-start}
+.m.ag p{margin-bottom:6px}
+.ev-step{border:1px solid var(--line);border-radius:10px;font-size:13px;color:var(--ink2);overflow:hidden;max-width:520px}
+.ev-step summary{list-style:none;padding:7px 11px;cursor:pointer;display:flex;justify-content:space-between;gap:12px}
+.ev-step summary::-webkit-details-marker{display:none}
+.ev-step summary .live::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--teal);margin-right:7px;animation:bl 1s infinite}
+@keyframes bl{50%{opacity:.25}}
+.ev-step ol{list-style:none;border-top:1px solid var(--line);padding:6px 11px 8px}
+.ev-step li{display:grid;grid-template-columns:16px 1fr auto;gap:6px;padding:2px 0;font-size:13px}
+.ev-step li i{font-style:normal;color:var(--ok)}
+.ev-step li .t{font:12px var(--mono);color:var(--ink3)}
+.ev-clar{border:1px solid var(--teal);border-radius:12px;padding:12px 14px;max-width:560px;background:#f5faf9}
+.ev-clar p{font-weight:500;margin-bottom:8px}
+.ev-clar .opts{display:flex;flex-wrap:wrap;gap:6px}
+.ev-clar .opts button{border:1px solid var(--line2);border-radius:999px;padding:5px 12px;font-size:13px;background:var(--paper)}
+.ev-clar .opts button:hover{border-color:var(--teal)}
+.ev-clar .opts button.picked{background:var(--teal);color:#fff;border-color:var(--teal)}
+.ev-clar .opts button:disabled:not(.picked){opacity:.45}
+.ev-dec{border:1px solid var(--line2);border-radius:10px;padding:10px 12px;display:flex;justify-content:space-between;align-items:center;gap:12px;max-width:520px;background:#fbfaf7}
+.ev-dec b{font-weight:500;display:block}
+.ev-dec span{font-size:12.5px;color:var(--ink2)}
+.ev-dec button{font-size:12.5px;border:1px solid var(--line2);border-radius:7px;padding:4px 10px;white-space:nowrap;background:var(--paper)}
+.ev-led{font:12.5px var(--mono);background:var(--fill);border-radius:8px;padding:7px 10px;color:var(--ink);max-width:560px}
+.ev-led em{font-style:normal;color:var(--amber)}
+.ev-done{font:12px var(--mono);color:var(--ink3)}
+@keyframes land{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+.new{animation:land .3s ease}
+.mock{position:fixed;right:16px;bottom:10px;font:12px var(--mono);color:var(--ink2);background:var(--paper);border:1px solid var(--line);padding:4px 12px;border-radius:999px;z-index:5}
+@media(max-width:1000px){.page{grid-template-columns:1fr;padding:16px 16px 0}.rail{position:static}.rail .mand{display:none}.bar .ctx{display:none}.lensbtn{white-space:nowrap}.decs{grid-template-columns:1fr}.rh{grid-template-columns:minmax(0,1fr) 84px;}.rh .dish{grid-column:1/-1}.rh .gpg{display:none}.trace,.rwhy{padding-left:14px}.mock{display:none}.nbr{grid-template-columns:56px 1fr 130px}}
+</style>
+</head>
+<body>
+<header class="top"></header>
+<div class="page">
+  <div class="main">
+    <div class="toprow task">
+      <div>
+        <h1>Christmas buffet, 140 guests</h1>
+        <div class="sub">Hotel Rautatientori · Sat 12 Dec · delivery Thu 10 Dec · order by Tue 8 Dec 15:00</div>
+      </div>
+      <button class="lensbtn" id="lens"><span class="sw"></span>System lens</button>
+    </div>
+    <div class="task"><div class="sum" id="sum"></div></div>
+
+    <section class="changed" id="changed" aria-live="polite">
+      <div class="h"><h2>What changed in the last turn</h2><button id="dismiss">Dismiss</button></div>
+      <ul id="changedList"></ul>
+    </section>
+
+    <div class="sect"><h2>Needs you</h2><span>each decision is approved on its own, for these exact lines and prices</span></div>
+    <div class="decs" id="decs"></div>
+
+    <div class="sect"><h2>Menu and order</h2><span>click a dish to see why · <span id="cntcov"></span></span></div>
+    <div class="rows" id="rows"></div>
+
+    <div class="dock" id="dock">
+      <div class="dockin">
+        <div class="thread" id="thread"></div>
+        <div class="bar">
+          <span class="ctx">plan v8</span>
+          <input id="inp" placeholder="Ask or tell your agent, e.g. “the salmon is out too”" aria-label="Message your agent">
+          <button class="tog" id="tog">Show conversation</button>
+          <button class="go" id="send">Send</button>
+        </div>
+        <div class="sugg"><button id="replay">▶ Replay: “The salmon is out too”</button><button>What if 160 guests?</button><button>Price first this time</button></div>
+      </div>
+    </div>
+  </div>
+
+  <aside class="rail">
+    <div class="card">
+      <h2>Can be ordered now</h2>
+      <div class="big mono" id="orderNow">€319.78</div>
+      <p id="orderNowSub">4 lines inside your mandate</p>
+      <div class="kv2"><span>Waiting on you</span><span id="held">€614.14</span><span>Week so far</span><span id="week">€934 of €4,000</span><span>Delivery</span><span>Thu 10 Dec</span></div>
+      <button class="place" id="place"><span id="placeL">Place order · 4 lines</span><span class="mono" id="placeA">€319.78</span></button>
+      <p style="margin-top:8px">Lines waiting on you are not sent. Sending twice returns the same receipt.</p>
+    </div>
+    <div class="card mand">
+      <h2>Your agent may</h2>
+      <p>Order alone up to <b>€800 a line, €1,000 an order, €4,000 a week</b>. It asks before any new product and never changes an allergen.</p>
+    </div>
+  </aside>
+</div>
+<div class="mock">MOCKUP · try Replay, a dish row, System lens</div>
+
+<script>
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+// ---------- plan state ----------
+const st={decisions:2,orderNow:319.78,orderLines:4,held:614.14,ver:8};
+const C={ok:['ok','✓','Covered'],ask:['ask','✓','Covered if you approve'],sign:['ask','✓','Covered if you sign off'],maybe:['maybe','?','Not sure'],no:['no','✕','Not covered']};
+const ROWS=[
+ {id:'ham',dish:'Joulukinkku',en:'Christmas ham',g:120,pid:'476768',was:'HK Viljaporsaan juhlakinkku · out at Valio',prod:'HK Palvikinkku viipaloitu 1,5 kg',q:'× 12',price:'€185.16',unit:'€10.29/kg',cov:'ask',covT:'in stock at Valio, 15 left',trace:['valio.quote 476768 · live · 41 ms','rank #1 of 4 · weights r35 p25 f20 c20','gemini-decision fit .91','op ProposeSubstitute v7'],why:'ham'},
+ {id:'lohi',dish:'Graavilohi',en:'Cured salmon, in house',g:70,prod:'Lohifilee C-leikattu 10 kg',q:'× 2',price:'€282.20',unit:'€14.11/kg',cov:'ok',covT:'your usual product, in stock',trace:['valio.quote · cache 4 min · 2 ms','usual product · standing order']},
+ {id:'sina',dish:'Sinappisilli',en:'Mustard herring',g:17,prod:'AIMO Sinappisilli MSC 2,5/1,25 kg',q:'× 2',price:'€49.32',unit:'€19.73/kg',cov:'ask',covT:'new product for this kitchen, in stock',trace:['valio.quote · live · 37 ms']},
+ {id:'toma',dish:'Tomaattisilli',en:'Tomato herring',g:17,prod:'AIMO Tomaattisilli MSC 2,5/1,25 kg',q:'× 2',price:'€49.32',unit:'€19.73/kg',cov:'ask',covT:'new product for this kitchen, in stock',trace:['valio.quote · live · 36 ms']},
+ {id:'lasi',dish:'Lasimestarinsilli',en:'Glassblower’s herring',g:17,prod:'AIMO Lasimestarinsilli MSC 2,5/1,25 kg',q:'× 2',price:'€46.78',unit:'€18.71/kg',cov:'ask',covT:'new product for this kitchen, in stock',trace:['valio.quote · live · 39 ms']},
+ {id:'rosolli',dish:'Rosolli',en:'Beetroot salad',g:90,pid:'462157',prod:'Atria Rosolli 2,5 kg',q:'× 6',price:'€78.18',unit:'€5.21/kg',cov:'maybe',covT:'supplier-delivered, Valio hasn’t said how many it has',trace:['valio.quote · Terminal · qty unknown','never counted as cover']},
+ {id:'lantt',dish:'Lanttulaatikko',en:'Swede casserole',g:40,pid:'462482',was:'Saarioinen Lanttulaatikko 700 g · out at Valio',prod:'Make in house · 5 ingredients',q:'',price:'€31.46',unit:'5 lines',cov:'sign',covT:'all 5 ingredients in stock; adds milk, egg, gluten',trace:['strategy make_in_house','gemini-decision caution → hold']},
+ {id:'pork',dish:'Porkkanalaatikko',en:'Carrot casserole',g:40,prod:'Saarioinen Porkkanalaatikko 400 g',q:'× 6',price:'€56.01',unit:'€23.34/kg',cov:'maybe',covT:'supplier-delivered, Valio hasn’t said how many it has',trace:['valio.quote · Terminal · qty unknown']},
+ {id:'imel',dish:'Imelletty perunalaatikko',en:'Sweet potato casserole',g:40,prod:'Saarioinen Perunalaatikko 350 g',q:'× 6',price:'€52.11',unit:'€24.81/kg',cov:'maybe',covT:'supplier-delivered, Valio hasn’t said how many it has',trace:['valio.quote · Terminal · qty unknown']},
+ {id:'peruna',dish:'Keitetyt perunat',en:'Boiled potatoes',g:125,prod:'SPL Raaka annosperuna 10 kg',q:'× 2',price:'€15.82',unit:'€0.79/kg',cov:'ok',covT:'in stock',trace:['valio.quote · cache · 1 ms']},
+ {id:'riisi',dish:'Riisipuuro',en:'Rice porridge: rice',g:100,prod:'Myllyn Paras Puuroriisi 1 kg',q:'× 2',price:'€4.60',unit:'€2.30/kg',cov:'ok',covT:'in stock',trace:['valio.quote · cache · 1 ms']},
+ {id:'maito',dish:'Riisipuuro',en:'Rice porridge: milk',g:'75 ml',prod:'Valio kevytmaito laktoositon 1 l',q:'× 11',price:'€17.16',unit:'€1.56/l',cov:'ok',covT:'in stock',trace:['valio.quote · cache · 1 ms']},
+ {id:'tortu',dish:'Joulutorttu',en:'Prune star tart',g:60,was:'Vaasan Joulutorttu 40×60 g · Valio can’t deliver',prod:'Make in house · 2 ingredients',q:'',price:'€50.37',unit:'2 lines',cov:'sign',covT:'both ingredients in stock',trace:['strategy make_in_house']},
+];
+const DECS=[
+ {id:'d1',title:'7 new products',amt:'€532.31',kind:'new',why:'Your mandate says to ask before a new product. <b>No allergen changes.</b>',decline:'5 dishes not covered',due:'Tue 15:00',lines:[['HK Palvikinkku viipaloitu 1,5 kg × 12','€185.16'],['AIMO Sinappisilli × 2','€49.32'],['AIMO Tomaattisilli × 2','€49.32'],['AIMO Lasimestarinsilli × 2','€46.78'],['Atria Rosolli 2,5 kg × 6','€78.18'],['Saarioinen Porkkanalaatikko × 6','€56.01'],['Saarioinen Perunalaatikko × 6','€52.11']]},
+ {id:'d2',title:'Make 2 dishes in house',amt:'€81.83',kind:'sign',why:'Lanttulaatikko and joulutorttu are out. Making the casserole adds <b>milk, egg and gluten</b>. Your kitchen never hands allergen changes to the agent.',decline:'11.2 kg of 2 dishes not covered',due:'Tue 15:00',labour:'not checked',lines:[['Lantut Britannia 5.95 kg','€13.98'],['Valio ruokakerma 15 % × 1','€2.63'],['Myllyn Paras korppujauho × 1','€1.03'],['Kieku kananmuna 4,3 kg × 1','€11.87'],['Dansukker siirappi × 1','€1.95'],['Myllyn Paras lehtitaikina 500 g × 13','€36.27'],['Bonne luumusose 1 l × 3','€14.10']]},
+];
+const eur=v=>'€'+v.toFixed(2);
+function renderSum(){
+ const covered=ROWS.filter(r=>['ok','ask','sign'].includes(r.cov)).length, sure=ROWS.filter(r=>r.cov==='maybe').length, no=ROWS.filter(r=>r.cov==='no').length;
+ document.getElementById('sum').innerHTML=`<span class="due"><b>${st.decisions} decisions</b> before Tue 15:00</span><span><b>${eur(st.orderNow)}</b> can be ordered now</span><span><b>${covered} of ${ROWS.length}</b> dishes covered</span>${sure?`<span><b>${sure}</b> not sure</span>`:''}${no?`<span><b style="color:var(--red)">${no}</b> not covered</span>`:''}`;
+ document.getElementById('cntcov').textContent=`${covered} of ${ROWS.length} covered`;
+ document.getElementById('orderNow').textContent=eur(st.orderNow);
+ document.getElementById('orderNowSub').textContent=`${st.orderLines} line${st.orderLines>1?'s':''} inside your mandate`;
+ document.getElementById('placeL').textContent=`Place order · ${st.orderLines} line${st.orderLines>1?'s':''}`;
+ document.getElementById('placeA').textContent=eur(st.orderNow);
+ document.getElementById('held').textContent=eur(st.held);
+}
+function rowHTML(r){
+ const [cls,ic,word]=C[r.cov];
+ const nameAttr=r.pid?` data-product="${r.pid}"`:'';
+ return `<div class="rh" data-row="${r.id}"><div class="dish"><b>${r.dish}</b><span>${r.en}</span></div>
+  <div class="prod">${r.was?`<s${r.pid==='462482'?' data-product="462482"':''}>${r.was}</s>`:''}<div class="n"><span${nameAttr}>${r.prod}</span> <span class="q">${r.q}</span></div><div class="cov ${cls}"><i>${ic}</i><b>${word}</b> · ${r.covT}</div></div>
+  <div class="gpg">${r.g}${typeof r.g==='number'?' g':''}<small>per guest</small></div>
+  <div class="price">${r.price}<small>${r.unit}</small></div></div>
+  <div class="trace">${r.trace.map(t=>`<span class="tc">${t}</span>`).join('')}</div>
+  <div class="rwhy">${whyHTML(r)}</div>`;
+}
+function whyHTML(r){
+ if(r.why==='ham')return `<div class="chain"><span>140 guests</span><em>×</em><span>120 g<small>your edit</small></span><em>=</em><span>16.8 kg needed</span><em>→</em><span>1,5 kg packs<small>Valio sells whole packs</small></span><em>=</em><span>12 packs · 18.0 kg</span></div>
+  <div class="nb"><div class="nbr"><span>needed</span><div><i style="width:93.3%;background:var(--ink2)"></i></div><b>16.8 kg</b></div><div class="nbr"><span>buying</span><div><i style="width:100%;background:var(--teal)"></i></div><b>18.0 kg · 1.2 kg spare</b></div></div>
+  <div class="cands"><h3>Other choices, ranked by your rules (known stock first)</h3>
+   <div class="cand"><b>1</b><span>HK Palvikinkku viipaloitu 1,5 kg · FI · 15 in stock</span><span class="chosen">chosen</span></div>
+   <div class="cand"><b>2</b><span>Mattila Saunapalvikinkku · DE · in stock <span class="w">· cheaper, not Finnish</span></span><button>Use this</button></div>
+   <div class="cand x"><b>3</b><span>HK Joulun juhlakinkku · Valio hasn’t said how many · never counted as covered</span><button>Use this</button></div>
+   <div class="cand x"><b>–</b><span>Vataja Maalaiskinkku · only 13 packs, you need 12 more for other dishes</span><span class="rej">ruled out</span></div></div>`;
+ const g=typeof r.g==='number'?`${r.g} g`:r.g;
+ return `<div class="chain"><span>140 guests</span><em>×</em><span>${g}<small>per guest</small></span><em>→</em><span>${r.prod}<small>${r.unit}</small></span><em>=</em><span>${r.q||r.unit} · ${r.price}</span></div><p style="margin-top:8px;font-size:13px;color:var(--ink2)">${C[r.cov][2]}: ${r.covT}.</p>`;
+}
+function renderRows(){
+ document.getElementById('rows').innerHTML=ROWS.map(r=>`<div class="row" id="row-${r.id}">${rowHTML(r)}</div>`).join('');
+}
+function renderDecs(){
+ document.getElementById('decs').innerHTML=DECS.map(d=>{
+  if(d.state==='done')return `<div class="dc done" id="dec-${d.id}"><div class="t"><span>${d.title}</span><span class="mono">${d.amt}</span></div><p class="why">${d.doneText}</p><span class="state">✓ ${d.kind==='sign'?'Signed off':'Approved'} by you · not ordered yet</span></div>`;
+  return `<div class="dc ${d.kind==='sign'?'sign':''}" id="dec-${d.id}"><div class="t"><span>${d.title}</span><span class="mono">${d.amt}</span></div><p class="why">${d.why}</p>
+  <div class="kv"><span>If you say no</span><span>${d.decline}</span><span>Decide before</span><span>${d.due}</span>${d.labour?`<span>Labour, equipment</span><span>${d.labour}</span>`:''}</div>
+  <div class="lines">${d.lines.map(([a,b])=>`<div><span>${a}</span><span>${b}</span></div>`).join('')}</div>
+  <div class="acts"><button class="b2" data-rev="${d.id}">Review ${d.lines.length} lines</button>${d.kind==='sign'?`<button class="b2 hold" data-hold="${d.id}"><i></i><span>Hold to sign off</span></button>`:`<button class="b2 p" data-ok="${d.id}">Approve</button>`}</div></div>`}).join('');
+}
+function grant(id){const d=DECS.find(x=>x.id===id);d.state='done';const v=parseFloat(d.amt.replace('€',''));
+ d.doneText=d.kind==='sign'?'You signed off making both dishes in house with these exact ingredients.':'You approved these 7 lines at these prices. Any later edit cancels this.';
+ st.decisions--;st.orderNow+=v;st.held-=v;st.orderLines+=d.lines.length;renderDecs();renderSum();document.getElementById('dec-'+id).classList.add('flash');setTimeout(()=>document.getElementById('dec-'+id)?.classList.remove('flash'),1200)}
+document.addEventListener('click',e=>{
+ const rv=e.target.closest('[data-rev]');if(rv){const c=document.getElementById('dec-'+rv.dataset.rev);c.classList.toggle('open');rv.textContent=c.classList.contains('open')?'Hide lines':`Review ${DECS.find(d=>d.id===rv.dataset.rev).lines.length} lines`;return}
+ const ok=e.target.closest('[data-ok]');if(ok){grant(ok.dataset.ok);return}
+ const rh=e.target.closest('.rh');if(rh&&!e.target.closest('[data-product]')){rh.parentNode.classList.toggle('open')}
+});
+// hold to sign off
+document.addEventListener('pointerdown',e=>{const b=e.target.closest('[data-hold]');if(!b)return;const bar=b.querySelector('i');let t0=performance.now(),raf;
+ const up=()=>{cancelAnimationFrame(raf);bar.style.transform='scaleX(0)';removeEventListener('pointerup',up);b.removeEventListener('pointerleave',up)};
+ addEventListener('pointerup',up);b.addEventListener('pointerleave',up);
+ (function f(t){const k=Math.min(1,(t-t0)/1400);bar.style.transform=`scaleX(${k})`;if(k>=1){up();grant(b.dataset.hold);return}raf=requestAnimationFrame(f)})(t0)});
+document.getElementById('lens').onclick=()=>document.body.classList.toggle('lens');
+document.getElementById('dismiss').onclick=()=>document.getElementById('changed').classList.remove('on');
+// ---------- chat events ----------
+const dock=document.getElementById('dock'),thread=document.getElementById('thread'),tog=document.getElementById('tog');
+function openDock(o=true){dock.classList.toggle('open',o);tog.textContent=o?'Hide conversation':'Show conversation';if(o)thread.scrollTop=1e6}
+tog.onclick=()=>openDock(!dock.classList.contains('open'));
+function add(html,cls){const d=document.createElement('div');d.className='new '+(cls||'');d.innerHTML=html;thread.appendChild(d);thread.scrollTop=1e6;return d}
+const Ev={
+ user:t=>add(t,'m me'),
+ text:t=>add(`<p>${t}</p>`,'m ag'),
+ step:()=>{const d=add(`<details class="ev-step"><summary><span class="live">Working…</span><span class="mono" style="font-size:12px">show</span></summary><ol></ol></details>`,'m ag');return{
+   push(name,meta){d.querySelector('ol').insertAdjacentHTML('beforeend',`<li class="new"><i>✓</i><span>${name}</span><span class="t">${meta}</span></li>`);const n=d.querySelectorAll('li').length;d.querySelector('summary span').textContent=`Working… ${n} step${n>1?'s':''}`;thread.scrollTop=1e6},
+   end(s){const n=d.querySelectorAll('li').length;const sp=d.querySelector('summary span');sp.className='';sp.textContent=`Worked ${n} step${n>1?'s':''} · ${s}`}}},
+ clarify:(q,opts)=>new Promise(res=>{const d=add(`<div class="ev-clar"><p>${q}</p><div class="opts">${opts.map((o,i)=>`<button data-i="${i}">${o}</button>`).join('')}</div></div>`,'m ag');
+   d.querySelectorAll('button').forEach(b=>b.onclick=()=>{d.querySelectorAll('button').forEach(x=>x.disabled=true);b.classList.add('picked');res(+b.dataset.i)})}),
+ decision:(title,sub,target)=>{const d=add(`<div class="ev-dec"><div><b>${title}</b><span>${sub}</span></div><button>Open decision ↑</button></div>`,'m ag');d.querySelector('button').onclick=()=>{const el=document.getElementById(target);el.scrollIntoView({behavior:'smooth',block:'center'});el.classList.add('flash');setTimeout(()=>el.classList.remove('flash'),1400)}},
+ ledger:t=>add(`<div class="ev-led">${t}</div>`,'m ag'),
+ done:t=>add(`<div class="ev-done">done · ${t}</div>`,'m ag'),
+};
+// history
+Ev.user('Christmas buffet for 140 on Sat 12 Dec. Usual buffet menu. Keep it Finnish where you can.');
+(()=>{const s=Ev.step();[['get_context','12 ms'],['plan_event · 13 dishes','88 ms'],['quote × 40 lines','Valio · 64 ms'],['find_substitutes × 2','rank · 3 ms'],['fit check × 4','Gemini · 410 ms']].forEach(x=>s.push(...x));s.end('2.1 s')})();
+Ev.text('Planned 13 dishes for delivery Thu 10 Dec. Whole ham and lanttulaatikko are out at Valio, so I found replacements. 7 new products and 2 home-made dishes wait for you.');
+Ev.ledger('40 lines planned · <em>2 decisions for you</em> · nothing ordered');
+Ev.user('Make the ham 120 g per guest, people eat less ham at a buffet.');
+Ev.ledger('1 line changed (13 → 12 packs) · 1 decision updated · −€15.43 · nothing ordered');
+// change strip
+function showChanged(items){document.getElementById('changedList').innerHTML=items.map(i=>`<li>${i}</li>`).join('');const c=document.getElementById('changed');c.classList.remove('on');void c.offsetWidth;c.classList.add('on')}
+function flashRow(id){const r=document.getElementById('row-'+id);r.classList.add('flash');r.scrollIntoView({behavior:'smooth',block:'center'});setTimeout(()=>r.classList.remove('flash'),1600)}
+let busy=false;
+async function replay(text){
+ if(busy)return;busy=true;openDock(true);
+ Ev.user(text||'The salmon is out too, Valio just said so.');await sleep(700);
+ const s=Ev.step();await sleep(500);s.push('get_plan · v8','14 ms');await sleep(650);s.push('quote Lohifilee C-leikattu','Valio · live · 58 ms');await sleep(700);s.push('find_substitutes · graavilohi','rank · rules v3 · 3 ms');await sleep(800);s.push('fit check × 3','Gemini · 410 ms');s.end('2.0 s');
+ await sleep(500);Ev.text('Valio confirms Lohifilee C-leikattu is out for Thu 10. Graavilohi needs 9.8 kg of fish.');await sleep(400);
+ const pick=await Ev.clarify('Trout or make it a herring dish?',['Trout · Kirjolohifilee, Finnish, in stock','Herring instead · add to your herring dishes','Keep salmon and wait']);
+ Ev.user(['Trout.','Make it herring.','Keep salmon, I’ll wait.'][pick]);await sleep(600);
+ const s2=Ev.step();await sleep(400);s2.push(pick===2?'no change':'edit_line · graavilohi','applyOps · v8 → v9');await sleep(500);s2.end('0.4 s');
+ const lohi=ROWS.find(r=>r.id==='lohi');const before=`${lohi.prod} ${lohi.q} (${lohi.price}, inside your mandate)`;
+ if(pick===0){Object.assign(lohi,{was:'Lohifilee C-leikattu 10 kg · out at Valio',prod:'Kirjolohifilee 5 kg',q:'× 2',price:'€249.90',unit:'€24.99/kg',cov:'ask',covT:'new product for this kitchen, in stock',trace:['valio.quote · live · 52 ms','rank #1 of 3 · gemini fit .88','op ProposeSubstitute v9']});
+  st.decisions++;st.orderNow-=282.20;st.orderLines--;st.held+=249.90;
+  DECS.unshift({id:'d3',title:'Trout for graavilohi',amt:'€249.90',kind:'new',why:'Kirjolohifilee is a new product for this kitchen. <b>Same allergens as salmon.</b> Carbon is about the same.',decline:'Graavilohi not covered',due:'Tue 15:00',lines:[['Kirjolohifilee 5 kg × 2','€249.90']]});
+  await sleep(300);Ev.decision('Trout for graavilohi · €249.90','new product · decide before Tue 15:00','dec-d3');
+  Ev.ledger('1 line changed · <em>1 decision added</em> · nothing ordered');
+  showChanged([`<b>Graavilohi:</b> <s>${before}</s> → Kirjolohifilee 5 kg × 2 (€249.90, waits for you)`,`<b>Decisions:</b> 2 → 3`,`<b>Can be ordered now:</b> €319.78 → €37.58`]);
+ }else if(pick===1){Object.assign(lohi,{was:'Lohifilee C-leikattu 10 kg · out at Valio',prod:'More herring · +2 Lasimestarinsilli',q:'× 2',price:'€46.78',unit:'added to an open decision',cov:'ask',covT:'in stock, added to the 7-product decision'});
+  st.orderNow-=282.20;st.orderLines--;st.held+=46.78;const d1=DECS.find(d=>d.id==='d1');d1.lines.push(['AIMO Lasimestarinsilli × 2 more','€46.78']);d1.amt='€579.09';d1.title='8 new products';
+  Ev.decision('8 new products · €579.09','decision updated · decide before Tue 15:00','dec-d1');Ev.ledger('1 line changed · <em>1 decision updated</em> · nothing ordered');
+  showChanged([`<b>Graavilohi:</b> <s>${before}</s> → 2 more packs of glassblower’s herring`,`<b>New-product decision:</b> 7 → 8 lines, €579.09`,`<b>Can be ordered now:</b> €319.78 → €37.58`]);
+ }else{Object.assign(lohi,{was:'',prod:'Lohifilee C-leikattu 10 kg',q:'× 2',cov:'no',covT:'out at Valio for Thu 10, nothing ordered'});st.orderNow-=282.20;st.orderLines--;
+  Ev.ledger('nothing changed · 1 dish not covered · nothing ordered');showChanged([`<b>Graavilohi:</b> kept on salmon; not covered until Valio restocks`,`<b>Can be ordered now:</b> €319.78 → €37.58`]);}
+ st.ver=9;document.querySelector('.bar .ctx').textContent='plan v9';
+ renderRows();renderDecs();renderSum();flashRow('lohi');Ev.done('3.4 s · plan v9');busy=false;
+}
+document.getElementById('replay').onclick=()=>replay();
+document.getElementById('send').onclick=()=>{const v=document.getElementById('inp').value.trim();document.getElementById('inp').value='';replay(v||undefined)};
+document.getElementById('inp').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('send').click()});
+renderRows();renderDecs();renderSum();
+</script>
+<script src="shared/scenario.js"></script>
+<script src="shared/shell.js" data-page="kitchen-b"></script>
+</body>
+</html>

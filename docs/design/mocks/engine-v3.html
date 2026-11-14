@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mandate Engine</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Instrument+Serif&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<script src="shared/scenario.js"></script>
+<style>
+:root{
+  --bg:#0a0c0d; --p:#111517; --p2:#161b1e; --line:#232a2e; --line2:#30393e;
+  --ink:#eef1ef; --ink2:#a9b2af; --ink3:#86908d;
+  --ok:#3fbf8a; --teal:#2bb3a6; --amber:#e8a93c; --red:#ef6b59; --blue:#82adff; --vio:#b39cff;
+  --sans:'IBM Plex Sans',system-ui,sans-serif; --mono:'IBM Plex Mono',ui-monospace,monospace; --serif:'Instrument Serif',Georgia,serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font:13px/1.45 var(--sans);-webkit-font-smoothing:antialiased}
+button,select{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+.top{height:50px;display:flex;align-items:center;gap:18px;padding:0 18px;border-bottom:1px solid var(--line)}
+.brand{font-weight:600;display:flex;gap:8px;align-items:center}.brand i{width:18px;height:18px;border:1.5px solid;border-radius:4px;display:grid;place-items:center;font:normal 10px var(--sans)}
+.tabs{display:flex;gap:2px}.tabs a{padding:6px 10px;border-radius:6px;color:var(--ink2);text-decoration:none}.tabs a.on{background:var(--p2);color:var(--ink);font-weight:500}
+.simlabel{margin-left:auto;font:12px var(--mono);color:var(--amber);border:1px solid #4a3a1a;border-radius:999px;padding:3px 10px}
+.ctrl{display:flex;align-items:center;gap:14px;padding:12px 18px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.clock{font:400 30px var(--serif);min-width:250px}
+.clock small{font:12px var(--mono);color:var(--ink3);margin-left:8px}
+.play{width:36px;height:36px;border-radius:50%;background:var(--ink);color:var(--bg);display:grid;place-items:center;font-size:13px}
+.seg{display:flex;border:1px solid var(--line2);border-radius:999px;padding:3px}
+.seg button{padding:4px 11px;border-radius:999px;font-size:12.5px;color:var(--ink2)}
+.seg button.on{background:var(--p2);color:var(--ink)}
+.ctrl .r{margin-left:auto;display:flex;gap:16px;font:12px var(--mono);color:var(--ink3)}
+.ctrl .r b{color:var(--ink);font-weight:500}
+.grid{display:grid;grid-template-columns:1fr 330px;gap:14px;padding:14px 18px 40px}
+.panel{background:var(--p);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.ph{display:flex;justify-content:space-between;align-items:baseline;padding:12px 14px;border-bottom:1px solid var(--line);gap:12px}
+.ph h2{font-size:13px;font-weight:600}.ph span{font:12px var(--mono);color:var(--ink3)}
+.col{display:flex;flex-direction:column;gap:14px;min-width:0}
+svg text{font-family:var(--mono);font-size:11px;fill:var(--ink3)}
+.axis path,.axis line{stroke:var(--line2)}
+.prodpick{display:flex;gap:6px}
+.prodpick button{font-size:12px;border:1px solid var(--line2);border-radius:999px;padding:3px 10px;color:var(--ink2)}
+.prodpick button.on{border-color:var(--teal);color:var(--ink)}
+.feed{max-height:600px;overflow:auto}
+.ev{padding:9px 14px;border-bottom:1px solid var(--line);font-size:12.5px;animation:in .5s ease}
+@keyframes in{from{background:#1b2624}to{background:transparent}}
+.ev .k{font:12px var(--mono)}
+.ev .k.atp{color:var(--teal)}.ev .k.con{color:var(--red)}.ev .k.alloc{color:var(--amber)}.ev .k.sup{color:var(--ok)}.ev .k.cut{color:var(--vio)}.ev .k.ord{color:var(--blue)}
+.ev .t{font:12px var(--mono);color:var(--ink3);float:right}
+.ev p{color:var(--ink2);margin-top:2px}
+.legend{display:flex;gap:14px;flex-wrap:wrap;padding:8px 14px 12px;font:12px var(--mono);color:var(--ink3)}
+.legend b{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+.tip{position:fixed;pointer-events:none;background:var(--p2);border:1px solid var(--line2);border-radius:8px;padding:8px 10px;font-size:12px;display:none;z-index:9;max-width:260px}
+.tip b{font-weight:500}
+.fhero{padding:22px 18px 0;max-width:1000px}.fhero h1{font:400 32px/1.15 var(--serif)}.fhero h1 em{color:var(--red);font-style:normal}.fhero p{color:var(--ink2);margin-top:6px;font-size:14px}.fhero .ans{color:var(--ink);font-size:17px}.fhero .ans b{color:var(--red);font-weight:500}.fhero .ans i{font-style:normal;color:var(--amber)}
+.rk .sheet{font-size:12px;color:var(--ink2);border-bottom:1px dotted var(--ink3);margin-left:8px;cursor:pointer}.rk .sheet:hover{color:var(--ink)}
+.rk{display:grid;grid-template-columns:220px 1fr 170px 120px;gap:14px;align-items:center;padding:10px 14px;border-bottom:1px solid var(--line);cursor:pointer}
+.rk:hover{background:var(--p2)}.rk.on{background:#14201e;box-shadow:inset 3px 0 0 var(--teal)}
+.rk b{font-weight:500}.rk .st{font:12px var(--mono)}.rk .st.r{color:var(--red)}.rk .st.ok{color:var(--ok)}.rk .st.a{color:var(--amber)}.rk .k{font-size:12px;color:var(--ink3)}
+.mock{position:fixed;left:50%;bottom:10px;transform:translateX(-50%);font:12px var(--mono);color:var(--ink3);background:var(--p);border:1px solid var(--line);padding:4px 12px;border-radius:999px}
+</style>
+</head>
+<body>
+<div class="ctrl">
+  <button class="play" id="play">▶</button>
+  <div class="clock" id="clock">Mon 7 Dec 06:00<small>day 1 of 14</small></div>
+  <div class="seg" id="speed"><button data-s="1">1×</button><button class="on" data-s="6">6 h/s</button><button data-s="24">1 day/s</button></div>
+  <div class="seg" id="scen"><button class="on">Christmas fortnight · 12 kitchens</button><button>Normal fortnight</button><button>Stress · 500 kitchens</button></div>
+  <div class="r"><span class="simlabel" style="margin:0">SIMULATED · Valio stock overlay · scenario clock</span><span>orders <b id="cOrd">0</b></span><span>contentions <b id="cCon" style="color:var(--red)">0</b></span><span>re-ranked <b id="cRe" style="color:var(--amber)">0</b></span><span>supply in <b id="cSup" style="color:var(--ok)">0</b></span></div>
+</div>
+<div class="fhero"><h1>Will Valio's stock last the next two weeks?</h1><p class="ans" id="ans"></p><p>Each line starts from what Valio has stated and goes down with every kitchen's standing orders and events. Rosolli is delivered by its supplier and Valio states no quantity, so it is never counted as covered. Pick a product to see which kitchens used it up, or press play to run the fortnight.</p></div>
+<div class="grid">
+  <div class="col">
+    <div class="panel"><div class="ph"><h2>Products, riskiest first</h2><span>pick one to see which kitchens used it up</span></div><div id="risk"></div></div>
+    <div class="panel">
+      <div class="ph"><h2 id="detT">Who used it up</h2><span>the product picked above</span><div class="prodpick" id="pick" style="display:none"></div></div>
+      <svg id="atp"></svg>
+      <div class="legend"><span><b style="background:var(--teal)"></b>known stock (ATP)</span><span><b style="background:var(--red)"></b>demand beyond stock → re-ranked</span><span><b style="background:var(--ok)"></b>supply arrives</span><span><b style="background:var(--vio)"></b>order cut-off</span><span><b style="background:repeating-linear-gradient(45deg,#e8a93c 0 2px,#2a2416 2px 5px)"></b>Valio hasn't said how many</span><span>dots: a kitchen's order, size = quantity</span></div>
+    </div>
+    <div class="panel">
+      <div class="ph"><h2>Orders by kitchen over time</h2><span>standing orders repeat · events stand out · ◆ held for a person</span></div>
+      <svg id="lanes"></svg>
+    </div>
+    <div class="panel">
+      <div class="ph"><h2>Demand against stated stock, by product group and day</h2><span>where Valio could stock up ahead</span></div>
+      <svg id="heat"></svg>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="ph"><h2>Simulator events</h2><span>SSE · kind: sim</span></div>
+    <div class="feed" id="feed"></div>
+  </div>
+</div>
+<div class="tip" id="tip"></div>
+<div class="mock">MOCKUP · simulated fortnight · press ▶ · hover dots · pick a product</div>
+
+<script>
+const DAYS=14, start=new Date('2026-12-07T06:00:00');
+const kitchens=['Hotel Rautatientori','Hotel Kamppi','Lounas Kallio','Kahvila Töölö','Ravintola Pasila','Koulu Vallila','Hotel Espoo','Kantina Otaniemi','Bistro Punavuori','Sairaala Meilahti','Hotel Tapiola','Lounas Itäkeskus'];
+const products=[{id:'476768',name:'HK Palvikinkku 1,5 kg',stock:15,unit:'ST'},{id:'462880',name:'Lohifilee 10 kg',stock:40,unit:'KG'},{id:'459000',name:'Valio laktoositon maito 1 l',stock:900,unit:'L'}];
+const color=d3.scaleOrdinal(kitchens,['#82adff','#2bb3a6','#b39cff','#e8a93c','#7fd1c7','#f2c879','#9fb7ff','#c9b8ff','#5fd0a0','#ff9b8a','#a5e1d9','#d4c18a']);
+// generate: standing orders (weekly cadence per kitchen, delivery days Tue/Thu), events, supply, cutoffs
+const rnd=d3.randomLcg(7);const R=()=>rnd();
+let orders=[];
+kitchens.forEach((k,ki)=>{const cad=ki%3===0?[1,3]:ki%3===1?[2]:[0,2,4];
+ for(let w=0;w<2;w++)cad.forEach(d=>{const day=w*7+d+R()*.3;products.forEach((p,pi)=>{if(R()<.55)orders.push({k,ki,day,pid:pi,qty:Math.max(1,Math.round(p.stock*(.04+R()*.06))),kind:'standing',held:R()<.08})})})});
+// events: Christmas buffets hit ham hard
+[[0,3.30,8],[1,3.40,6],[6,3.50,7],[10,3.45,5],[4,11.5,6]].forEach(([ki,day,q])=>orders.push({k:kitchens[ki],ki,day,pid:0,qty:q,kind:'event',held:R()<.5}));
+orders.push({k:kitchens[3],ki:3,day:9.3,pid:2,qty:300,kind:'event',held:true});
+// a supplier-delivered product: Valio states no quantity, so it is never drawn as stock
+products.push({id:'462157',name:'Atria Rosolli 2,5 kg',stock:null,unit:'ST',unknown:true});
+{const r2=d3.randomLcg(11);kitchens.forEach((k,ki)=>{if(ki%2)return;[1,3,8,10].forEach(d=>{if(r2()<.6)orders.push({k,ki,day:d+r2()*.3,pid:3,qty:2+Math.round(r2()*4),kind:'standing',held:false})})});
+ [[0,4.4,6],[6,5.2,5]].forEach(([ki,day,q])=>orders.push({k:kitchens[ki],ki,day,pid:3,qty:q,kind:'event',held:true}));}
+orders.sort((a,b)=>a.day-b.day);
+const supply=[{pid:0,day:4.2,qty:10},{pid:0,day:10.2,qty:12},{pid:1,day:2.1,qty:30},{pid:1,day:9.1,qty:30},{pid:2,day:1,qty:600},{pid:2,day:4,qty:600},{pid:2,day:8,qty:600},{pid:2,day:11,qty:600}];
+const cutoffs=[1.38,3.38,8.38,10.38];
+let cur=0;
+// ATP series per product
+function series(pi){if(products[pi].unknown)return[];let s=products[pi].stock,pts=[{day:0,v:s}];const evs=[...orders.filter(o=>o.pid===pi).map(o=>({day:o.day,d:-o.qty,o})),...supply.filter(x=>x.pid===pi).map(x=>({day:x.day,d:x.qty,sup:1}))].sort((a,b)=>a.day-b.day);
+ evs.forEach(e=>{pts.push({day:e.day,v:s});const want=s+e.d;const short=want<0?-want:0;s=Math.max(0,want);pts.push({day:e.day,v:s,e,short})});pts.push({day:DAYS,v:s});return pts}
+// layout
+const atp=d3.select('#atp'),lanes=d3.select('#lanes'),heat=d3.select('#heat');
+let W=document.querySelector('#atp').parentNode.clientWidth;
+const M={l:150,r:20};
+const x=d3.scaleLinear([0,DAYS],[M.l,W-M.r]);
+atp.attr('viewBox',`0 0 ${W} 260`).attr('width',W).attr('height',260);
+lanes.attr('viewBox',`0 0 ${W} ${kitchens.length*22+40}`).attr('width',W).attr('height',kitchens.length*22+40);
+const tip=d3.select('#tip');
+function tipOn(ev,h){tip.style('display','block').style('left',ev.clientX+14+'px').style('top',ev.clientY+10+'px').html(h)}
+function tipOff(){tip.style('display','none')}
+const dayLabel=d=>{const t=new Date(start.getTime()+d*864e5);return t.toLocaleDateString('en-GB',{weekday:'short',day:'numeric'})};
+let pidSel=0;
+function drawAtp(){
+ atp.selectAll('*').remove();const p=products[pidSel];
+ if(p.unknown){drawUnknown(p);return}
+ const pts=series(pidSel);
+ const lo=0,hi=d3.max(pts,d=>d.v)*1.1;
+ const y=d3.scaleLinear([lo,hi],[220,20]);
+ atp.append('g').attr('class','axis').attr('transform','translate(0,220)').call(d3.axisBottom(x).ticks(DAYS).tickFormat(dayLabel));
+ atp.append('g').attr('class','axis').attr('transform',`translate(${M.l},0)`).call(d3.axisLeft(y).ticks(5));
+ atp.append('text').attr('x',14).attr('y',30).style('fill','var(--ink)').style('font-size','12px').text(p.name);
+ atp.append('text').attr('x',14).attr('y',46).text(`${p.id} · ${p.unit}`);
+ // below-zero shading
+ atp.append('line').attr('x1',M.l).attr('x2',W-M.r).attr('y1',y(0)).attr('y2',y(0)).attr('stroke','var(--line2)');
+ cutoffs.forEach(c=>{atp.append('line').attr('x1',x(c)).attr('x2',x(c)).attr('y1',20).attr('y2',220).attr('stroke','var(--vio)').attr('stroke-opacity',.5).attr('stroke-dasharray','2 4')});
+ const vis=pts.filter(d=>d.day<=cur);
+ atp.append('path').datum(vis).attr('fill','rgba(43,179,166,.08)').attr('d',d3.area().x(d=>x(d.day)).y0(y(0)).y1(d=>y(Math.max(0,d.v))));
+ atp.append('path').datum(vis).attr('fill','none').attr('stroke','var(--teal)').attr('stroke-width',1.8).attr('d',d3.line().x(d=>x(d.day)).y(d=>y(d.v)));
+ atp.append('path').datum(pts.filter(d=>d.day>=cur)).attr('fill','none').attr('stroke','var(--line2)').attr('stroke-dasharray','2 3').attr('d',d3.line().x(d=>x(d.day)).y(d=>y(d.v)));
+ vis.filter(d=>d.e).forEach(d=>{const e=d.e;if(e.sup){atp.append('path').attr('d',d3.symbol(d3.symbolTriangle,60)()).attr('transform',`translate(${x(d.day)},${y(d.v)+10})`).attr('fill','var(--ok)')}
+  else{const o=e.o;atp.append('circle').attr('cx',x(d.day)).attr('cy',y(d.v)).attr('r',3+Math.sqrt(o.qty/p.stock)*14).attr('fill',color(o.k)).attr('fill-opacity',.75).attr('stroke',d.short?'var(--red)':'none').attr('stroke-width',2)
+   .on('mousemove',ev=>tipOn(ev,`<b>${o.k}</b><br>${o.kind==='event'?'event order':'standing order'} · ${o.qty} ${p.unit}<br>${dayLabel(o.day)} · stock after: ${d.v}${d.short?`<br><span style="color:var(--red)">${d.short} ${p.unit} beyond known stock → re-ranked to the next candidate, never counted as cover</span>`:''}`)).on('mouseleave',tipOff)}});
+ vis.filter(d=>d.short).forEach(d=>atp.append('rect').attr('x',x(d.day)-2).attr('width',4).attr('y',y(0)-Math.min(60,d.short*4)).attr('height',Math.min(60,d.short*4)).attr('fill','var(--red)').attr('opacity',.8));
+ atp.append('line').attr('x1',x(cur)).attr('x2',x(cur)).attr('y1',14).attr('y2',224).attr('stroke','var(--ink)');
+}
+function drawUnknown(p){
+ const defs=atp.append('defs');const pat=defs.append('pattern').attr('id','hatch').attr('width',8).attr('height',8).attr('patternUnits','userSpaceOnUse').attr('patternTransform','rotate(45)');
+ pat.append('rect').attr('width',8).attr('height',8).attr('fill','#2a2416');pat.append('line').attr('x1',0).attr('y1',0).attr('x2',0).attr('y2',8).attr('stroke','#e8a93c').attr('stroke-opacity',.45).attr('stroke-width',3);
+ atp.append('g').attr('class','axis').attr('transform','translate(0,220)').call(d3.axisBottom(x).ticks(DAYS).tickFormat(dayLabel));
+ atp.append('text').attr('x',14).attr('y',30).style('fill','var(--ink)').style('font-size','12px').text(p.name);
+ atp.append('text').attr('x',14).attr('y',46).text('supplier-delivered');
+ atp.append('rect').attr('x',M.l).attr('y',40).attr('width',W-M.l-M.r).attr('height',140).attr('rx',6).attr('fill','url(#hatch)');
+ const msg=atp.append('g').attr('transform',`translate(${M.l+16},68)`);
+ msg.append('rect').attr('x',-12).attr('y',-20).attr('width',640).attr('height',50).attr('rx',8).attr('fill','#111517').attr('fill-opacity',.92);
+ msg.append('text').attr('y',0).style('fill','var(--ink)').style('font-size','13px').style('font-family','var(--sans)').text("Valio hasn't said how many it has, so there is no stock line to draw.");
+ msg.append('text').attr('y',20).style('fill','var(--ink2)').style('font-size','12.5px').style('font-family','var(--sans)').text('Orders below are placed and awaiting the supplier. They never count as covered.');
+ cutoffs.forEach(c=>atp.append('line').attr('x1',x(c)).attr('x2',x(c)).attr('y1',40).attr('y2',180).attr('stroke','var(--vio)').attr('stroke-opacity',.5).attr('stroke-dasharray','2 4'));
+ let cum=0;orders.filter(o=>o.pid===pidSel&&o.day<=cur).forEach(o=>{cum+=o.qty;atp.append('circle').attr('cx',x(o.day)).attr('cy',150).attr('r',3+Math.sqrt(o.qty)*2.4).attr('fill',color(o.k)).attr('fill-opacity',.85).attr('stroke',o.held?'var(--amber)':'none').attr('stroke-width',2)
+  .on('mousemove',ev=>tipOn(ev,`<b>${o.k}</b><br>${o.qty} ${p.unit} · awaiting supplier${o.held?'<br>held for a person':''}`)).on('mouseleave',tipOff)});
+ atp.append('text').attr('x',W-M.r-8).attr('y',200).attr('text-anchor','end').style('fill','var(--amber)').text(`${cum} ${p.unit} ordered so far · 0 confirmed`);
+ atp.append('line').attr('x1',x(cur)).attr('x2',x(cur)).attr('y1',14).attr('y2',224).attr('stroke','var(--ink)');
+}
+function drawLanes(){
+ lanes.selectAll('*').remove();
+ kitchens.forEach((k,i)=>{const yy=20+i*22;lanes.append('text').attr('x',14).attr('y',yy+4).text(k);lanes.append('line').attr('x1',M.l).attr('x2',W-M.r).attr('y1',yy).attr('y2',yy).attr('stroke','var(--line)')});
+ cutoffs.forEach(c=>lanes.append('line').attr('x1',x(c)).attr('x2',x(c)).attr('y1',8).attr('y2',kitchens.length*22+14).attr('stroke','var(--vio)').attr('stroke-opacity',.35).attr('stroke-dasharray','2 4'));
+ orders.filter(o=>o.day<=cur).forEach(o=>{const yy=20+o.ki*22;const xx=x(o.day);
+  const g=lanes.append('g').on('mousemove',ev=>tipOn(ev,`<b>${o.k}</b><br>${products[o.pid].name} · ${o.qty} ${products[o.pid].unit}<br>${o.kind}${o.held?' · held for a person':' · within mandate'}`)).on('mouseleave',tipOff);
+  if(o.held)g.append('path').attr('d',d3.symbol(d3.symbolDiamond,o.kind==='event'?120:50)()).attr('transform',`translate(${xx},${yy})`).attr('fill','none').attr('stroke','var(--amber)').attr('stroke-width',1.5);
+  else if(o.kind==='event')g.append('rect').attr('x',xx-7).attr('y',yy-6).attr('width',14).attr('height',12).attr('rx',3).attr('fill',color(o.k));
+  else g.append('rect').attr('x',xx-1.5).attr('y',yy-6).attr('width',3).attr('height',12).attr('fill',color(o.k)).attr('opacity',o.pid===pidSel?1:.35)});
+ lanes.append('line').attr('x1',x(cur)).attr('x2',x(cur)).attr('y1',6).attr('y2',kitchens.length*22+16).attr('stroke','var(--ink)');
+ lanes.append('g').attr('class','axis').attr('transform',`translate(0,${kitchens.length*22+18})`).call(d3.axisBottom(x).ticks(DAYS).tickFormat(dayLabel));
+}
+const groups=['Meat · ham','Fish','Dairy','Vegetables','Bakery','Ready meals'];
+const hv=groups.map((g,gi)=>d3.range(DAYS).map(d=>Math.max(0,Math.min(1.6,(gi===0&&d>=3&&d<=5?1.4:gi===2?.7:.4)+(R()-.5)*.5+(d%7===4?.25:0)))));
+function drawHeat(){
+ heat.selectAll('*').remove();const h=groups.length*24+30;heat.attr('viewBox',`0 0 ${W} ${h}`).attr('width',W).attr('height',h);
+ const cw=(W-M.l-M.r)/DAYS;const c=d3.scaleSequential(d3.interpolateRgb('#12201e','#2bb3a6')).domain([0,1]);
+ groups.forEach((g,gi)=>{heat.append('text').attr('x',14).attr('y',22+gi*24+4).text(g);
+  hv[gi].forEach((v,d)=>{if(d>cur)return;heat.append('rect').attr('x',M.l+d*cw+1).attr('y',12+gi*24).attr('width',cw-2).attr('height',20).attr('rx',3).attr('fill',v>1?'#5a2620':c(v)).attr('stroke',v>1?'var(--red)':'none')
+   .on('mousemove',ev=>tipOn(ev,`<b>${g}</b> · ${dayLabel(d)}<br>demand ${(v*100).toFixed(0)}% of known stock${v>1?'<br><span style="color:var(--red)">short: kitchens will be re-ranked</span>':''}`)).on('mouseleave',tipOff)})});
+}
+
+const rank=r=>r.first?r.first.day:r.p.unknown?50:99;
+function drawRisk(){const box=document.getElementById('risk');box.innerHTML='';
+ const rows=products.map((p,i)=>{const pts=series(i);const first=pts.find(d=>d.short);const minV=pts.length?d3.min(pts,d=>d.v):0;const ordered=d3.sum(orders.filter(o=>o.pid===i),o=>o.qty);return{p,i,pts,first,minV,ordered,ks:new Set(orders.filter(o=>o.pid===i).map(o=>o.k)).size}}).sort((a,b)=>rank(a)-rank(b));
+ rows.forEach(r=>{const el=document.createElement('div');el.className='rk'+(r.i===pidSel?' on':'');
+  const w=420,h=34,sx=d3.scaleLinear([0,DAYS],[2,w-2]);
+  if(r.p.unknown){el.innerHTML=`<div><b>${r.p.name}</b>${window.SCENARIO&&SCENARIO.products[r.p.id]?`<span class="sheet" data-product="${r.p.id}">product sheet</span>`:''}<div class="k">supplier-delivered · ${r.ks} kitchens order it</div></div><svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" style="width:100%;height:34px"><defs><pattern id="hs" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="6" height="6" fill="#2a2416"/><line x1="0" y1="0" x2="0" y2="6" stroke="#e8a93c" stroke-opacity=".5" stroke-width="2"/></pattern></defs><rect x="2" y="6" width="${w-4}" height="22" rx="3" fill="url(#hs)"/><line x1="${sx(cur)}" x2="${sx(cur)}" y1="0" y2="${h}" stroke="#eef1ef" stroke-opacity=".5"/></svg><span class="st a">Valio hasn't said</span><span class="k">${r.ordered} ${r.p.unit} ordered · 0 confirmed</span>`;
+   el.onclick=e=>{if(e.target.closest('[data-product]'))return;pidSel=r.i;d3.selectAll('#pick button').classed('on',(d,j)=>j===r.i);draw()};box.appendChild(el);return}
+  const sy=d3.scaleLinear([0,d3.max(r.pts,d=>d.v)||1],[h-3,3]);
+  const line=d3.line().x(d=>sx(d.day)).y(d=>sy(d.v)).curve(d3.curveStepAfter)(r.pts);
+  el.innerHTML=`<div><b>${r.p.name}</b>${window.SCENARIO&&SCENARIO.products[r.p.id]?`<span class="sheet" data-product="${r.p.id}">product sheet</span>`:''}<div class="k">${r.p.id} · ${r.ks} kitchens order it</div></div><svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" style="width:100%;height:34px"><path d="${line}" fill="none" stroke="${r.first?'#ef6b59':'#2bb3a6'}" stroke-width="1.5"/>${r.first?`<line x1="${sx(r.first.day)}" x2="${sx(r.first.day)}" y1="0" y2="${h}" stroke="#ef6b59" stroke-dasharray="2 2"/>`:''}<line x1="${sx(cur)}" x2="${sx(cur)}" y1="0" y2="${h}" stroke="#eef1ef" stroke-opacity=".5"/></svg>`+
+  (()=>{const sp=window.SCENARIO&&SCENARIO.products[r.p.id];if(r.first&&sp&&sp.wanted>sp.stock)return `<span class="st r">short for the ${SCENARIO.delivery} delivery</span><span class="k">${sp.wanted-sp.stock} packs short · ${SCENARIO.cases[0].atRisk} at risk</span>`;return `<span class="st ${r.first?'r':'ok'}">${r.first?'short from '+dayLabel(r.first.day):'lasts all 14 days'}</span><span class="k">${r.first?r.first.short+' '+r.p.unit+' moved to another product':'lowest '+Math.round(r.minV)+' '+r.p.unit}</span>`})();
+  el.onclick=e=>{if(e.target.closest('[data-product]'))return;pidSel=r.i;d3.selectAll('#pick button').classed('on',(d,j)=>j===r.i);draw()};box.appendChild(el)})}
+function draw(){document.getElementById('detT').textContent=products[pidSel].name+': which kitchens used it up';drawRisk();drawAtp();drawLanes();drawHeat()}
+// picker
+const pick=d3.select('#pick');products.forEach((p,i)=>pick.append('button').datum(i).attr('class',i===0?'on':'').text(p.name).on('click',function(){pidSel=i;pick.selectAll('button').classed('on',false);d3.select(this).classed('on',true);draw()}));
+// feed + clock
+const feed=document.getElementById('feed');let fired=new Set(),cO=0,cC=0,cR=0,cS=0;
+function ev(k,cls,t,txt){const d=document.createElement('div');d.className='ev';d.innerHTML=`<span class="t">${t}</span><span class="k ${cls}">${k}</span><p>${txt}</p>`;feed.prepend(d);while(feed.children.length>60)feed.lastChild.remove()}
+const fmt=d=>{const t=new Date(start.getTime()+d*864e5);return t.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'})+' '+t.toTimeString().slice(0,5)};
+function tickEvents(){
+ const stock=products.map(p=>p.stock);
+ orders.forEach((o,i)=>{if(o.day>cur)return;if(products[o.pid].unknown){if(fired.has('o'+i))return;fired.add('o'+i);cO++;ev('order placed','ord',fmt(o.day),`${o.k} · ${products[o.pid].name} × ${o.qty} · awaiting supplier, not counted as cover`);return}stock[o.pid]-=o.qty;if(fired.has('o'+i))return;fired.add('o'+i);cO++;
+  ev(o.held?'order held':'commit_order','ord',fmt(o.day),`${o.k} · ${products[o.pid].name} × ${o.qty}${o.held?' · waits for a person':''}`);
+  ev('atp.changed','atp',fmt(o.day),`${products[o.pid].name}: ${Math.max(0,stock[o.pid]+o.qty)} → ${Math.max(0,stock[o.pid])}`);
+  if(stock[o.pid]<0){const sh=-stock[o.pid];stock[o.pid]=0;cC++;cR+=2;ev('contention.detected','con',fmt(o.day),`${products[o.pid].name}: demand exceeds known stock by ${sh}`);ev('allocation.decided','alloc',fmt(o.day),`first committed wins · 2 kitchens re-ranked to their next candidate`)}});
+ supply.forEach((s,i)=>{if(s.day<=cur){stock[s.pid]+=s.qty;if(!fired.has('s'+i)){fired.add('s'+i);cS++;ev('supply.arrived','sup',fmt(s.day),`${products[s.pid].name} +${s.qty}`)}}});
+ cutoffs.forEach((c,i)=>{if(c<=cur&&!fired.has('c'+i)){fired.add('c'+i);ev('cutoff.closed','cut',fmt(c),`delivery ${dayLabel(c+2)}: open plans past cut-off get the earliest next date`)}});
+ cOrd.textContent=cO;cCon.textContent=cC;cRe.textContent=cR;cSup.textContent=cS;
+}
+let playing=false,speed=6,last=0;
+document.getElementById('play').onclick=function(){playing=!playing;this.textContent=playing?'❚❚':'▶';if(cur>=DAYS){cur=0;fired.clear();feed.innerHTML='';cO=cC=cR=cS=0}last=performance.now();if(playing)requestAnimationFrame(loop)};
+document.querySelectorAll('#speed button').forEach(b=>b.onclick=()=>{document.querySelectorAll('#speed button').forEach(x=>x.classList.toggle('on',x===b));speed=+b.dataset.s});
+function setClock(){const ct=new Date(start.getTime()+cur*864e5);document.getElementById('clock').innerHTML=`${ct.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'})} ${ct.toTimeString().slice(0,5)}<small>day ${Math.floor(cur)+1} of ${DAYS}</small>`}
+function loop(t){if(!playing)return;const dt=(t-last)/1000;last=t;cur=Math.min(DAYS,cur+dt*speed/24);setClock();
+ tickEvents();draw();if(cur>=DAYS){playing=false;document.getElementById('play').textContent='↺'}else requestAnimationFrame(loop)}
+// scrub by clicking the ATP chart
+document.getElementById('atp').addEventListener('click',e=>{const r=e.currentTarget.getBoundingClientRect();cur=Math.max(0,Math.min(DAYS,x.invert((e.clientX-r.left)*W/r.width)));fired.clear();feed.innerHTML='';cO=cC=cR=cS=0;setClock();tickEvents();draw()});
+{const sp=SCENARIO.products['476768'];document.getElementById('ans').innerHTML=`Only ham runs short: <b>${sp.wanted-sp.stock} packs of HK Palvikinkku for the ${SCENARIO.delivery} delivery</b>. <i>Rosolli can't be judged</i>, because Valio states no quantity. Everything else lasts.`}
+{const h=location.hash.slice(1);const i=products.findIndex(p=>p.id===h);if(i>=0)pidSel=i;}
+addEventListener('hashchange',()=>{const i=products.findIndex(p=>p.id===location.hash.slice(1));if(i>=0){pidSel=i;draw()}});
+cur=4.8;setClock();tickEvents();draw();
+</script>
+<script src="shared/shell.js" data-page="engine"></script>
+</body>
+</html>

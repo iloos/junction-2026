@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mandate Engine Room</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Instrument+Serif&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0a0c0d; --p:#111517; --p2:#161b1e; --line:#232a2e; --line2:#30393e;
+  --ink:#eef1ef; --ink2:#a9b2af; --ink3:#86908d;
+  --ok:#3fbf8a; --teal:#2bb3a6; --amber:#e8a93c; --red:#ef6b59; --blue:#82adff; --vio:#b39cff;
+  --sans:'IBM Plex Sans',system-ui,sans-serif; --mono:'IBM Plex Mono',ui-monospace,monospace; --serif:'Instrument Serif',Georgia,serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font:13px/1.45 var(--sans);-webkit-font-smoothing:antialiased;min-height:100vh}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+.top{height:50px;display:flex;align-items:center;gap:18px;padding:0 18px;border-bottom:1px solid var(--line)}
+.brand{font-weight:600;display:flex;gap:8px;align-items:center}.brand i{width:18px;height:18px;border:1.5px solid;border-radius:4px;display:grid;place-items:center;font:normal 10px var(--sans)}
+.tabs{display:flex;gap:2px}.tabs a{padding:6px 10px;border-radius:6px;color:var(--ink2);text-decoration:none}.tabs a.on{background:var(--p2);color:var(--ink);font-weight:500}
+
+
+.live{color:var(--ok)}.live::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--ok);margin-right:6px}
+.scope{display:flex;gap:4px;padding:10px 18px;border-bottom:1px solid var(--line);align-items:center}
+.scope button{padding:4px 10px;border-radius:999px;color:var(--ink2);border:1px solid transparent}
+.scope button.on{border-color:var(--line2);color:var(--ink)}
+.scope .r{display:flex;gap:16px;margin-left:auto;font:12px var(--mono);color:var(--ink3)}
+.grid{display:grid;grid-template-columns:1fr 340px;gap:14px;padding:14px 18px 40px}
+.panel{background:var(--p);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.ph{display:flex;justify-content:space-between;align-items:baseline;padding:12px 14px;border-bottom:1px solid var(--line)}
+.ph h2{font-size:13px;font-weight:600}.ph span{font:12px var(--mono);color:var(--ink3)}
+.kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;padding:14px 18px 0}
+.kpi{background:var(--p);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.kpi .n{font:400 34px/1 var(--serif)}
+.kpi .l{color:var(--ink2);font-size:12px;margin-top:6px}
+.kpi .d{font:12px var(--mono);color:var(--ink3);margin-top:2px}
+.kpi.amber .n{color:var(--amber)}.kpi.red .n{color:var(--red)}.kpi.ok .n{color:var(--ok)}
+/* cases */
+.case{padding:12px 14px;border-bottom:1px solid var(--line);cursor:pointer}
+.case:hover{background:var(--p2)}
+.case .t{display:flex;justify-content:space-between;gap:8px;font-weight:500}
+.case .t span{font:12px var(--mono);color:var(--amber);white-space:nowrap}
+.case .w{color:var(--ink2);font-size:12px;margin:3px 0 8px}
+.case .k{display:flex;gap:4px;align-items:center;font:12px var(--mono);color:var(--ink3)}
+.case .k i{width:10px;height:10px;border-radius:2px;background:var(--line2)}
+.case .k i.h{background:var(--amber)}.case .k i.b{background:var(--red)}.case .k i.f{background:var(--ok)}
+.case .bar{height:4px;background:var(--line);border-radius:2px;margin-top:8px;overflow:hidden}
+.case .bar i{display:block;height:100%;background:var(--amber)}
+/* lanes */
+#lanes{width:100%;height:270px;display:block}
+.lane-l{font:12px var(--mono);fill:var(--ink3)}
+.wf{padding:14px}
+.wf .head{display:flex;justify-content:space-between;margin-bottom:12px}
+.wf .head b{font-weight:500}.wf .head span{font:12px var(--mono);color:var(--ink3)}
+.ph2{display:grid;grid-template-columns:200px 1fr 110px;gap:10px;align-items:center;padding:4px 0;font-size:12.5px}
+.ph2 .nm{color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ph2 .nm b{color:var(--ink);font-weight:500}
+.ph2 .tr{position:relative;height:14px;background:var(--p2);border-radius:3px}
+.ph2 .tr i{position:absolute;top:2px;bottom:2px;border-radius:2px;background:var(--teal)}
+.ph2 .ad{font:12px var(--mono);text-align:right}
+.ad.live{color:var(--ok)}.ad.cache{color:var(--blue)}.ad.replay{color:var(--amber)}.ad.core{color:var(--ink3)}
+.ad.live::before{display:none}
+.diff{margin-top:12px;border-top:1px solid var(--line);padding-top:12px;display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:12.5px}
+.diff div{background:var(--p2);border-radius:8px;padding:10px}
+.diff h5{font:500 12px var(--mono);color:var(--ink3);margin-bottom:6px}
+.diff .minus{color:var(--red)}.diff .plus{color:var(--ok)}
+/* right */
+.spons .s{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:10px 14px;border-bottom:1px solid var(--line)}
+.spons .s b{font-weight:500}
+.spons .s .m{font:12px var(--mono);color:var(--ink2);text-align:right}
+.spons .s .sub{grid-column:1/-1;font:12px var(--mono);color:var(--ink3)}
+.spons .s .cap{grid-column:1/-1;height:4px;background:var(--line);border-radius:2px;overflow:hidden;margin-top:4px}
+.spons .s .cap i{display:block;height:100%;background:var(--teal)}
+.ops{max-height:330px;overflow:auto;font:12px var(--mono)}
+.op{display:grid;grid-template-columns:44px 1fr auto;gap:8px;padding:6px 14px;border-bottom:1px solid var(--line);align-items:baseline}
+.op .q{color:var(--ink3)}
+.op .w{color:var(--ink)}
+.op .v{color:var(--ink3)}
+.op.new{animation:fl 1.6s ease}
+@keyframes fl{from{background:#1d2b29}to{background:transparent}}
+.via{padding:1px 6px;border-radius:4px;font-size:12px}
+.via.ui{background:#1b2a3d;color:var(--blue)}.via.mcp{background:#2a2140;color:var(--vio)}.via.agent{background:#16302b;color:var(--teal)}.via.job{background:#2b2618;color:var(--amber)}
+.ref{padding:10px 14px;border-bottom:1px solid var(--line);font-size:12.5px}
+.ref code{font:12px var(--mono);color:var(--red)}
+.ref span{display:block;color:var(--ink3);font:12px var(--mono);margin-top:2px}
+.col{display:flex;flex-direction:column;gap:14px}
+.hero{padding:26px 18px 6px;max-width:1100px}
+.hero h1{font:400 34px/1.15 var(--serif)}.hero h1 em{color:var(--amber);font-style:normal}
+.hero p{color:var(--ink2);font-size:15px;margin-top:6px}
+.tower{display:grid;grid-template-columns:1fr 360px;gap:14px;padding:14px 18px}
+.cases2{display:flex;flex-direction:column;gap:12px}
+.cs{background:var(--p);border:1px solid var(--line);border-radius:14px;padding:16px 18px;cursor:pointer}
+.cs.hot{border-color:#5a2a22;background:linear-gradient(90deg,#1a1311,var(--p) 40%)}
+.cs-h{display:flex;align-items:center;gap:10px;font-size:16px}.cs-h b{font-weight:500;flex:1}
+.dot{width:9px;height:9px;border-radius:50%}.dot.r{background:var(--red)}.dot.a{background:var(--amber)}
+.due{font:12px var(--mono);color:var(--amber)}
+.cs p{color:var(--ink2);font-size:14px;margin:6px 0 10px 19px}.cs p b{color:var(--ink);font-weight:500}
+.did{margin:0 0 12px 19px;font-size:13px;color:var(--ink2);border-left:2px solid var(--teal);padding-left:10px}.did span{color:var(--teal);font-weight:500;margin-right:4px}
+.cs-a{display:flex;gap:8px;align-items:center;margin-left:19px}.cs-a .money{flex:1;font:13px var(--mono);color:var(--ink)}
+.cs-a button{height:32px;padding:0 14px;border-radius:8px;border:1px solid var(--line2);font-size:13px}
+.cs-a button.p{background:var(--ink);color:var(--bg);border-color:var(--ink);font-weight:500}
+.today .tl{padding:10px 14px;border-bottom:1px solid var(--line);font-size:13.5px;color:var(--ink2)}.today .tl b{color:var(--ink);font:400 22px var(--serif);margin-right:4px}
+.today .tl span{display:block;font-size:12px;color:var(--ink3);margin-top:2px}
+.machine-h{padding:24px 18px 0;max-width:900px}.machine-h h1{font:400 32px var(--serif)}.machine-h a{color:var(--ink)}.machine-h p{color:var(--ink2);margin-top:4px}
+#stake text{font:12px var(--mono);fill:var(--ink3)}
+.kpis{display:none}
+.vars{padding:6px 14px 10px}.vr{display:grid;grid-template-columns:320px 1fr 56px;gap:4px 14px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line)}.vr:last-child{border:0}
+.vt{font-size:13.5px;color:var(--ink2)}.vt b{color:var(--ink);font-weight:500}.vb{height:8px;background:var(--p2);border-radius:4px;overflow:hidden}.vb i{display:block;height:100%;min-width:3px}
+.vr>span{font:13px var(--mono);text-align:right}.vp{grid-column:1/-1;font:12px var(--mono);color:var(--ink3)}.vp em{font-style:normal;color:var(--ink2)}
+.mock{position:fixed;left:50%;bottom:10px;transform:translateX(-50%);font:12px var(--mono);color:var(--ink3);background:var(--p);border:1px solid var(--line);padding:4px 12px;border-radius:999px}
+</style>
+</head>
+<body>
+<div class="scope">
+  <button class="on">Every kitchen</button><button>Your sandbox</button><button>Shared room</button><button>Stage</button>
+  <span class="r sysr"><span class="live">live · SSE</span><span>seq <b id="seq">1,284</b></span><span>Aiven PG · Frankfurt · <b>9 ms</b> commit p50</span><span>build <b>ab3a557</b></span><span>12 kitchens · 3 agents (1 outside)</span></span>
+</div>
+
+<div class="machine-h"><h1>Engine room</h1><p>Every call through the rules, live. This page is for engineers; what it means for kitchens and Valio is in <a href="ops.html">Operations</a>.</p></div>
+<div class="grid">
+  <!-- CENTER: doors swimlane + trace -->
+  <div class="col">
+    <div class="panel">
+      <div class="ph"><h2>How calls went through the rules today</h2><span>2,914 calls · the common paths</span></div>
+      <div class="vars">
+        <div class="vr"><div class="vt"><b>Straight through</b> · checked, applied, done</div><div class="vb"><i style="width:91%;background:var(--ok)"></i></div><span>91%</span><div class="vp">authorise → idempotency → Valio lookup → lock → apply → notify</div></div>
+        <div class="vr"><div class="vt"><b>Held for a person</b> · outside the kitchen's mandate</div><div class="vb"><i style="width:6%;background:var(--amber)"></i></div><span>6%</span><div class="vp">… → rank → Gemini fit → apply → <em>approval pending</em></div></div>
+        <div class="vr"><div class="vt"><b>Same request again</b> · answered from the first result</div><div class="vb"><i style="width:2.4%;background:var(--blue)"></i></div><span>2.4%</span><div class="vp">authorise → idempotency → <em>same receipt returned</em></div></div>
+        <div class="vr"><div class="vt"><b>Refused</b> · a rule said no</div><div class="vb"><i style="width:.6%;background:var(--red)"></i></div><span>0.6%</span><div class="vp">cap exceeded 9 · price changed after approval 6 · outside agent tried to approve 2</div></div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="ph"><h2>Every call in the last 5 minutes, by where it came from</h2><span>last 5 min · click a dot to trace it</span></div>
+      <svg id="lanes"></svg>
+    </div>
+    <div class="panel wf" id="wf"></div>
+  </div>
+
+  <!-- RIGHT: sponsors + ops + refusals -->
+  <div class="col">
+    <div class="panel spons">
+      <div class="ph"><h2>Outside calls</h2><span>real adapters · today</span></div>
+      <div class="s"><b>Valio Aimo API</b><span class="m">412 calls</span><span class="sub">p50 64 ms · cache hit 78% · only lines in a real order</span></div>
+      <div class="s"><b>Gemini decision</b><span class="m">96 calls</span><span class="sub">p50 410 ms · 118k tok · replay 0 · rules fallback 2</span></div>
+      <div class="s"><b>Gemini flash-lite</b><span class="m">54 calls</span><span class="sub">parse + planner · 61k tok · max 4,000/call</span><div class="cap"><i style="width:18%"></i></div></div>
+      <div class="s"><b>Exa</b><span class="m">23 / 200</span><span class="sub">lookup_facts · daily web budget</span><div class="cap"><i style="width:11.5%"></i></div></div>
+      <div class="s"><b>Context.dev</b><span class="m">every 5 min</span><span class="sub">recall monitor · last run 22:10 · 0 GTIN hits</span></div>
+      <div class="s"><b>Aiven Postgres</b><span class="m">2,914 tx</span><span class="sub">NOTIFY fan-out · PgBouncer · 0 lock waits &gt; 50 ms</span></div>
+    </div>
+    <div class="panel">
+      <div class="ph"><h2>Op log</h2><span>the record, not a chat</span></div>
+      <div class="ops" id="ops"></div>
+    </div>
+    <div class="panel">
+      <div class="ph"><h2>Refused, with reason</h2><span>the gate working</span></div>
+      <div class="ref"><code>FORBIDDEN approve</code> external agent tried to approve<span>ws-j-0e74 · via mcp · claude · 22:09</span></div>
+      <div class="ref"><code>TERMS_CHANGED</code> price moved €6.21 → €6.43 after approval<span>k-hotel · via ui · 21:58</span></div>
+      <div class="ref"><code>CAP_EXCEEDED.weekly</code> split second order over €4,000<span>k-lounas · via agent · 21:40</span></div>
+    </div>
+  </div>
+</div>
+<div class="mock">MOCKUP · numbers illustrative · click dots in the lanes</div>
+
+<script>
+// swimlane of tool calls per door
+const svg=document.getElementById('lanes'),NS='http://www.w3.org/2000/svg';
+const lanes=[['Kitchen UI','ui','var(--blue)'],['In-app agent','agent','var(--teal)'],['MCP · outside agents','mcp','var(--vio)'],['REST','rest','var(--ink2)'],['Jobs · monitors','job','var(--amber)']];
+const tools={ui:['get_plan','edit_line','approve','commit_order'],agent:['get_context','plan_event','find_substitutes','quote','edit_line'],mcp:['get_context','quote','place_order','approve','get_plan'],rest:['quote','get_plan'],job:['check_recall','lookup_facts']};
+const el=(t,a,p=svg)=>{const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);p.appendChild(e);return e};
+let W=svg.clientWidth,H=270,L=150;
+svg.setAttribute('viewBox',`0 0 ${W} ${H}`);
+lanes.forEach(([n],i)=>{const y=24+i*48;el('line',{x1:L,x2:W-12,y1:y+12,y2:y+12,stroke:'#232a2e'});el('text',{x:14,y:y+16,class:'lane-l'}).textContent=n});
+const dots=el('g',{});let calls=[];
+function mk(age){const li=Math.random()<.35?1:Math.random()<.5?0:Math.random()<.6?2:Math.random()<.5?3:4;const v=lanes[li][1];const tl=tools[v];const tool=tl[Math.floor(Math.random()*tl.length)];
+ let out='ok';if(v==='mcp'&&tool==='approve')out='refused';else if(Math.random()<.06)out='refused';else if(['plan_event','find_substitutes','place_order'].includes(tool)&&Math.random()<.4)out='held';
+ return{li,v,tool,out,age,ms:Math.round(tool==='find_substitutes'?380+Math.random()*200:tool==='quote'?40+Math.random()*60:8+Math.random()*30)}}
+for(let i=0;i<70;i++)calls.push(mk(Math.random()*300));
+function render(){dots.innerHTML='';calls.forEach(c=>{const x=W-12-(c.age/300)*(W-12-L);const y=36+c.li*48+(c.out==='refused'?0:0);
+ const col=c.out==='ok'?lanes[c.li][2]:c.out==='held'?'var(--amber)':'var(--red)';
+ const d=el(c.out==='refused'?'rect':'circle',c.out==='refused'?{x:x-4,y:y-4,width:8,height:8,fill:'none',stroke:col,'stroke-width':1.6,transform:`rotate(45 ${x} ${y})`}:{cx:x,cy:y,r:Math.max(3,Math.min(8,c.ms/60)),fill:col,'fill-opacity':.85},dots);
+ d.style.cursor='pointer';d.onclick=()=>trace(c)})}
+render();
+setInterval(()=>{calls.forEach(c=>c.age+=1);calls=calls.filter(c=>c.age<300);if(Math.random()<.7){const c=mk(0);calls.push(c);pushOp(c)}render()},1000);
+
+// trace waterfall
+function trace(c){
+ const ext=c.v==='mcp';const ph=[['authorise',`scopes ${ext?'read · plan · order':'chef: all six'}`,0,.3,'core'],['idempotency','run-scoped key, request hash',.3,1.1,'core'],];
+ if(['quote','place_order','find_substitutes','plan_event'].includes(c.tool))ph.push(['valio.offers','4 candidates · cache-through',1.2,64,'live']);
+ if(['find_substitutes','plan_event'].includes(c.tool))ph.push(['gemini-decision','recipe fit ×4 · p=.91',66,410,'live'],['rank','supply tier → weights',476,3,'core']);
+ if(c.out==='refused'&&ext)ph.push(['applyOps','external approval refused → FORBIDDEN',2,.2,'core']);
+ else ph.push(['store.transact','lock ws · budget row',c.ms*.8,9,'live'],['applyOps',c.out==='held'?'3 ops · 1 held':'2 ops',c.ms*.8+9,.4,'core'],['NOTIFY','→ 4 subscribers',c.ms*.8+9.5,1,'live']);
+ const T=Math.max(...ph.map(p=>p[2]+p[3]));
+ const w=document.getElementById('wf');
+ w.innerHTML=`<div class="head"><b>${c.tool} · via ${c.v} · ${c.out==='refused'?'<span style="color:var(--red)">refused</span>':c.out==='held'?'<span style="color:var(--amber)">held for a person</span>':'<span style="color:var(--ok)">applied</span>'}</b><span>trace t-${Math.random().toString(36).slice(2,8)} · ${T.toFixed(0)} ms · ${ext?'judge key jk_ws-j-0e74… (no approve)':'Hotel Rautatientori · chef session'}</span></div>`+
+ ph.map(([n,d,s,du,a])=>`<div class="ph2"><div class="nm"><b>${n}</b> · ${d}</div><div class="tr"><i style="left:${s/T*100}%;width:${Math.max(.6,du/T*100)}%;${a==='core'?'background:var(--line2)':''}"></i></div><div class="ad ${a}">${a==='core'?'pure core':a==='live'?'real adapter':a} · ${du<1?du.toFixed(1):Math.round(du)} ms</div></div>`).join('')+
+ (c.out!=='refused'?`<div class="diff"><div><h5>PLAN v7</h5><span class="minus">− HK Viljaporsaan juhlakinkku × 13 · out at Valio</span><br>approval granted · hash 9f3a…</div><div><h5>PLAN v8 · ops 1,281–1,283</h5><span class="plus">+ Mattila Saunapalvikinkku × 13 · held: new product</span><br>approval invalidated → pending · hash c21e…</div></div>`:`<div class="diff"><div style="grid-column:1/-1"><h5>WHY REFUSED</h5>approve needs the <b>approve</b> scope. External agents hold read · plan · order. The plan is unchanged; the chef sees the request in their decisions.</div></div>`);
+}
+trace(calls.find(c=>c.tool==='find_substitutes')||calls[0]);
+
+// op log
+const opsEl=document.getElementById('ops');let seq=1284;
+const opT={get_plan:null,edit_line:'EditLine',approve:'RecordApproval',commit_order:'CommitOrder',plan_event:'CreatePlan',find_substitutes:'ProposeSubstitute',quote:'RecordOffer',place_order:'CreatePlan',check_recall:'RecordAnomaly',lookup_facts:null,get_context:null};
+const kit=['Hotel Rautatientori','Lounasravintola Kallio','Kahvila Töölö','Hotel Kamppi'];
+function pushOp(c,quiet){const t=opT[c.tool];if(!t||c.out==='refused')return;seq++;document.getElementById('seq').textContent=seq.toLocaleString('en');
+ const d=document.createElement('div');d.className='op'+(quiet?'':' new');d.innerHTML=`<span class="q">${seq}</span><span class="w">${t}<br><span class="v">${kit[Math.floor(Math.random()*kit.length)]}</span></span><span class="via ${c.v==='rest'?'ui':c.v}">${c.v}</span>`;opsEl.prepend(d);while(opsEl.children.length>40)opsEl.lastChild.remove()}
+for(let i=0;i<14;i++)pushOp(mk(0),true);
+
+
+</script>
+<script src="shared/scenario.js"></script>
+<script src="shared/shell.js" data-page="live"></script>
+</body>
+</html>

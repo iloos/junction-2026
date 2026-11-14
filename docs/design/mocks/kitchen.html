@@ -1,0 +1,335 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mandate Kitchen</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f6f5f1; --paper:#fff; --line:#e4e2db; --line2:#d3d0c6; --fill:#efede7;
+  --ink:#171a19; --ink2:#5a615e; --ink3:#6f7672;
+  --teal:#0b7268; --ok:#17734b; --amber:#8f5a00; --red:#b0381f; --blue:#2f5bd3; --lens:#5a3bc0;
+  --sans:'IBM Plex Sans',system-ui,sans-serif; --mono:'IBM Plex Mono',ui-monospace,monospace; --serif:'Instrument Serif',Georgia,serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font:13.5px/1.5 var(--sans);-webkit-font-smoothing:antialiased;height:100vh;display:flex;flex-direction:column;overflow:hidden}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+/* top */
+.top{height:52px;display:flex;align-items:center;gap:18px;padding:0 18px;border-bottom:1px solid var(--line);background:var(--paper);flex:none}
+.brand{font-weight:600;display:flex;gap:8px;align-items:center}.brand i{width:18px;height:18px;border:1.5px solid;border-radius:4px;display:grid;place-items:center;font:normal 10px var(--sans)}
+.tabs{display:flex;gap:2px}.tabs a{padding:6px 10px;border-radius:6px;color:var(--ink2);text-decoration:none}.tabs a.on{background:var(--fill);color:var(--ink);font-weight:500}
+.mandate{flex:1;display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--ink2);min-width:0}
+.mandate .pill{border:1px solid var(--line2);border-radius:999px;padding:3px 10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mandate b{color:var(--ink);font-weight:500}
+.lensbtn{display:flex;align-items:center;gap:8px;border:1px solid var(--line2);border-radius:999px;padding:5px 12px;font-size:12.5px}
+.lensbtn .sw{width:28px;height:16px;border-radius:999px;background:var(--line2);position:relative;transition:.2s}
+.lensbtn .sw::after{content:"";position:absolute;left:2px;top:2px;width:12px;height:12px;border-radius:50%;background:#fff;transition:.2s}
+body.lens .lensbtn{border-color:var(--lens);color:var(--lens)} body.lens .lensbtn .sw{background:var(--lens)} body.lens .lensbtn .sw::after{left:14px}
+.clock{font:12px var(--mono);color:var(--ink2)}
+/* layout */
+.main{flex:1;display:grid;grid-template-columns:360px 1fr 340px;min-height:0}
+.col{min-height:0;overflow:auto}
+/* chat */
+.chat{border-right:1px solid var(--line);background:var(--paper);display:flex;flex-direction:column}
+.chat .head{padding:14px 16px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}
+.chat .head b{font-weight:600}.chat .head span{font-size:12px;color:var(--ink2)}
+.thread{flex:1;overflow:auto;padding:16px;display:flex;flex-direction:column;gap:14px}
+.m{max-width:92%}
+.m.me{align-self:flex-end;background:var(--ink);color:#fff;padding:10px 13px;border-radius:14px 14px 4px 14px}
+.m.ag{align-self:flex-start}
+.m.ag p{margin-bottom:8px}
+.worked{border:1px solid var(--line);border-radius:10px;font-size:12.5px;color:var(--ink2);margin:6px 0 10px;overflow:hidden}
+.worked summary{list-style:none;padding:8px 11px;cursor:pointer;display:flex;justify-content:space-between}
+.worked summary::-webkit-details-marker{display:none}
+.worked ol{list-style:none;border-top:1px solid var(--line);padding:6px 11px 8px}
+.worked li{display:grid;grid-template-columns:16px 1fr auto;gap:6px;padding:3px 0;font-size:12px}
+.worked li i{font-style:normal;color:var(--ok)}
+.worked li .t{font:12px var(--mono);color:var(--ink3)}
+.outcome{font:12px var(--mono);background:var(--fill);border-radius:8px;padding:8px 10px;color:var(--ink)}
+.outcome em{font-style:normal;color:var(--amber)}
+.mini{border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-top:8px;font-size:12.5px;display:flex;justify-content:space-between;align-items:center;gap:10px;background:#fbfaf7}
+.mini .k{color:var(--ink2);font-size:12px}
+.composer{border-top:1px solid var(--line);padding:12px}
+.composer .ctx{display:flex;gap:6px;margin-bottom:8px}
+.composer .ctx span{font-size:12px;border:1px solid var(--line2);border-radius:999px;padding:2px 9px;color:var(--ink2)}
+.composer .box{border:1px solid var(--line2);border-radius:12px;padding:10px 12px;color:var(--ink3);display:flex;justify-content:space-between;align-items:center;background:var(--paper)}
+.composer .box kbd{font:12px var(--mono);border:1px solid var(--line2);border-radius:5px;padding:1px 6px}
+.sugg{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.sugg button{font-size:12px;border:1px solid var(--line);border-radius:999px;padding:3px 10px;background:var(--bg)}
+/* canvas */
+.canvas{padding:22px 28px 60px}
+.task h1{font:400 34px/1.1 var(--serif);letter-spacing:-.01em}
+.task .sub{color:var(--ink2);margin-top:4px}
+.summary{display:flex;align-items:baseline;gap:22px;margin:18px 0 10px;flex-wrap:wrap}
+.summary .big{font:500 20px var(--sans)}
+.summary .big b{color:var(--amber);font-weight:600}
+.summary .s{color:var(--ink2)}
+.summary .s b{color:var(--ink);font-weight:500}
+.cover{margin:6px 0 4px;height:14px;border-radius:4px;display:flex;overflow:hidden;background:var(--fill)}
+.cover i{display:block;height:100%}
+.covsum{font-size:13.5px;color:var(--ink2);margin:14px 0 6px}.covsum b{font-weight:500}
+.cover{margin-bottom:22px!important}
+.leg{display:flex;gap:16px;font-size:12px;color:var(--ink2);margin-bottom:22px;flex-wrap:wrap}
+.leg b{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+.conf{background:var(--ok)}.await{background:repeating-linear-gradient(135deg,var(--ok) 0 3px,#cfe7da 3px 6px)}.known{background:var(--teal)}.unk{background:repeating-linear-gradient(135deg,var(--amber) 0 3px,#f3e2c1 3px 6px)}.none{background:transparent;outline:1.5px dashed var(--red);outline-offset:-1.5px}
+.sect{display:flex;justify-content:space-between;align-items:baseline;margin:6px 0 8px}
+.sect h3{font-size:13px;font-weight:600}
+.sect span{font-size:12px;color:var(--ink2)}
+.rows{background:var(--paper);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.row{display:grid;grid-template-columns:150px 1fr 100px 112px;gap:4px 16px;align-items:center;padding:11px 14px;border-bottom:1px solid var(--line);cursor:pointer;position:relative;transition:background 1.2s}
+.row:last-child{border-bottom:0}
+.row:hover{background:#fbfaf7}
+.row .dish b{font-weight:500;display:block}.row .dish span{font-size:12px;color:var(--ink2)}
+.step{display:flex;align-items:center;border:1px solid var(--line2);border-radius:8px;height:28px;font:12.5px var(--mono)}
+.step button{width:24px;height:100%;color:var(--ink2)}.step span{flex:1;text-align:center}
+.prod{min-width:0}.prod .n{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.prod s{color:var(--ink3);font-size:12px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.prod .r{height:5px;border-radius:3px;background:var(--fill);display:flex;overflow:hidden;margin-top:6px}
+.prod .r i{display:block;height:100%}
+.price{text-align:right;font:12.5px var(--mono)}.price span{display:block;color:var(--ink3);font-size:12px}
+.st{justify-self:end;font-size:12px;border-radius:999px;padding:2px 9px;border:1px solid;white-space:nowrap}
+.st.ok{color:var(--ok)}.st.ask{color:var(--amber)}.st.sign{color:var(--amber);background:#fbf1de}.st.out{color:var(--red)}
+.cov{display:block;margin-top:4px;font-size:12.5px;color:var(--ink2)}
+.cov i{font-style:normal;width:16px;height:16px;border-radius:50%;display:inline-grid;place-items:center;font-size:11px;font-weight:600;color:#fff;vertical-align:-3px;margin-right:6px}
+.cov.ok i{background:var(--ok)}.cov.maybe i{background:var(--amber)}.cov.short i{background:var(--red)}
+.cov.ok b{color:var(--ok)}.cov.maybe b{color:var(--amber)}.cov.short b{color:var(--red)}
+.cov b{font-weight:500}
+.gpg{display:flex;flex-direction:column;gap:2px}.gpg small{font-size:12px;color:var(--ink3);text-align:center}
+.row .dish{grid-column:1;grid-row:1/3}.row .prod{grid-column:2;grid-row:1/3}.row .gpg{grid-column:3;grid-row:1/3}.row .price{grid-column:4;grid-row:1}.row .st{grid-column:4;grid-row:2}.row .trace{grid-row:3}.row .why{grid-row:4}
+.row.flash{background:#e6f4f1}
+.row .trace{grid-column:1/-1;display:none;gap:6px;flex-wrap:wrap;margin-top:-2px}
+body.lens .row .trace{display:flex}
+.tc{font:12px var(--mono);color:var(--lens);background:#f1ecfd;border-radius:6px;padding:1px 7px}
+.tc b{font-weight:500;color:#3b2a80}
+.why{grid-column:1/-1;display:none;margin-top:4px;border-left:2px solid var(--teal);padding:4px 0 4px 14px}
+.row.open .why{display:block}
+.chain{display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-size:12.5px}
+.chain span{background:var(--fill);border-radius:6px;padding:3px 8px}
+.chain span small{display:block;font:12px var(--mono);color:var(--ink3)}
+.chain em{color:var(--ink3);font-style:normal}
+.nb{margin-top:10px;display:flex;flex-direction:column;gap:4px;max-width:520px}.nbr{display:grid;grid-template-columns:64px 1fr 170px;gap:10px;align-items:center;font-size:12.5px;color:var(--ink2)}.nbr div{height:8px;background:var(--fill);border-radius:4px;overflow:hidden}.nbr i{display:block;height:100%;border-radius:4px}.nbr b{font:12.5px var(--mono);color:var(--ink);font-weight:400}
+.cands{margin-top:10px;font-size:12.5px}
+.cand{display:grid;grid-template-columns:18px 1fr 180px 70px;gap:10px;align-items:center;padding:5px 0;border-top:1px dashed var(--line)}
+.cand .bar{height:6px;border-radius:3px;display:flex;overflow:hidden;background:var(--fill)}
+.cand .bar i{height:100%}
+.cand.x{color:var(--ink3)}.cand.x .bar{opacity:.35}
+.cand button{font-size:12px;border:1px solid var(--line2);border-radius:6px;padding:2px 6px}
+.lensbar{display:none;margin:0 0 18px;border:1px solid #ddd2fb;background:#f8f5ff;border-radius:12px;padding:12px 14px}
+body.lens .lensbar{display:block}
+.lensbar h4{font:500 12px var(--mono);color:var(--lens);margin-bottom:8px}
+.run{display:flex;align-items:center;gap:0;font:12px var(--mono);overflow:auto}
+.run .s{border:1px solid #ddd2fb;background:#fff;border-radius:8px;padding:5px 9px;white-space:nowrap}
+.run .s b{display:block;font-weight:500;color:#3b2a80}
+.run .s.sp{border-color:var(--lens)}
+.run .a{width:18px;height:1px;background:#c9bbf5;flex:none}
+/* decisions */
+.dec{border-left:1px solid var(--line);background:var(--paper);display:flex;flex-direction:column}
+.dec .head{padding:14px 16px;border-bottom:1px solid var(--line)}
+.dec .head b{font-weight:600}.dec .head div{font-size:12px;color:var(--ink2)}
+.cards{padding:14px;display:flex;flex-direction:column;gap:12px;flex:1;overflow:auto}
+.dc{border:1px solid var(--line2);border-radius:12px;padding:13px}
+.dc.sign{border-color:var(--amber)}
+.dc .t{display:flex;justify-content:space-between;font-weight:500}
+.dc .why2{font-size:12.5px;color:var(--ink2);margin:6px 0 10px}
+.dc .why2 b{color:var(--ink);font-weight:500}
+.dc .kv{display:grid;grid-template-columns:1fr auto;gap:2px 10px;font-size:12px;color:var(--ink2);margin-bottom:10px}
+.dc .kv span:nth-child(even){font-family:var(--mono);color:var(--ink);text-align:right}
+.dc .acts{display:flex;gap:8px}
+.b2{flex:1;height:34px;border-radius:9px;border:1px solid var(--line2);font-weight:500}
+.b2.p{background:var(--ink);color:#fff;border-color:var(--ink)}
+.b2.h{background:var(--ink);color:#fff;position:relative;overflow:hidden}
+.b2.h::before{content:"";position:absolute;inset:0;background:var(--amber);transform:scaleX(0);transform-origin:left;transition:transform 1.4s linear}
+.b2.h:active::before{transform:scaleX(1)}.b2.h span{position:relative}
+.foot{border-top:1px solid var(--line);padding:14px}
+.foot .kv{display:grid;grid-template-columns:1fr auto;font-size:12.5px;color:var(--ink2);gap:3px;margin-bottom:10px}
+.foot .kv span:nth-child(even){font-family:var(--mono);color:var(--ink)}
+.place{width:100%;height:42px;border-radius:10px;background:var(--teal);color:#fff;font-weight:600;display:flex;justify-content:space-between;align-items:center;padding:0 16px}
+.note{font-size:12px;color:var(--ink3);margin-top:8px}
+.mock{position:fixed;left:50%;bottom:10px;transform:translateX(-50%);font:12px var(--mono);color:var(--ink2);background:var(--paper);border:1px solid var(--line);padding:4px 12px;border-radius:999px}
+@keyframes land{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.m.new{animation:land .35s ease}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand"><i>M</i>Mandate</div>
+  <nav class="tabs"><a class="on" href="#">Kitchen</a><a href="ops.html">Operations</a><a href="#">Agents</a><a href="architecture.html">How it works</a></nav>
+  <div class="mandate"><span class="pill">Acts alone up to <b>€800 a line · €1,000 an order · €4,000 a week</b> · asks before new products · <b>never changes an allergen</b></span></div>
+  <button class="lensbtn" id="lens"><span class="sw"></span>System lens</button>
+  <span class="clock">Mon 7 Dec, 22:11 · scenario</span>
+</header>
+
+<div class="main">
+  <!-- CHAT -->
+  <aside class="col chat">
+    <div class="head"><b>Your agent</b><span>plans and proposes · never approves</span></div>
+    <div class="thread" id="thread">
+      <div class="m me">Christmas buffet for 140 on Sat 12 Dec. Usual buffet menu. Keep it Finnish where you can.</div>
+      <div class="m ag">
+        <p>I planned 14 dishes from your buffet menu for delivery Thu 10 Dec. Two products are out at Valio, so I repaired them.</p>
+        <details class="worked"><summary><span>Worked 7 steps · 2.1 s</span><span>show</span></summary>
+          <ol>
+            <li><i>✓</i>Read your menu and the booking<span class="t">get_context</span></li>
+            <li><i>✓</i>Sized 140 guests × g/guest ÷ yield<span class="t">plan_event</span></li>
+            <li><i>✓</i>Looked up 60 lines at Valio<span class="t">64 ms · cache-through</span></li>
+            <li><i>✓</i>Found 2 outages: ham, lanttulaatikko<span class="t">valio.offers</span></li>
+            <li><i>✓</i>Ranked 4 ham candidates by your weights<span class="t">rank · rules</span></li>
+            <li><i>✓</i>Checked recipe fit<span class="t">gemini-decision · 410 ms</span></li>
+            <li><i>✓</i>Grouped what needs you by reason<span class="t">groups</span></li>
+          </ol></details>
+        <div class="outcome">60 lines planned · <em>2 decisions for you</em> · 4 lines can go now · nothing ordered</div>
+        <div class="mini"><div><div>Ham → HK Palvikinkku 1,5 kg</div><div class="k">known stock, Finnish · 13 ST · €200.59</div></div><button class="st ask" data-open="ham">Why</button></div>
+      </div>
+      <div class="m me">Make the ham 120 g per guest, people eat less ham at a buffet.</div>
+      <div class="m ag">
+        <p>Done. The ham drops from 18.9 kg to 16.8 kg, so 12 packs instead of 13. Your approval for that line is void because the terms changed.</p>
+        <div class="outcome">1 line changed · 1 decision updated · −€15.43 · nothing ordered</div>
+      </div>
+    </div>
+    <div class="composer">
+      <div class="ctx"><span>about: Joulukinkku</span><span>plan v8</span></div>
+      <div class="box">Ask or tell your agent…<kbd>/</kbd></div>
+      <div class="sugg"><button id="replay">▶ Replay: “the salmon is out too”</button><button>What if 160 guests?</button><button>Price first</button></div>
+    </div>
+  </aside>
+
+  <!-- CANVAS -->
+  <main class="col canvas">
+    <div class="task">
+      <h1>Christmas buffet, 140 guests</h1>
+      <div class="sub">Hotel Rautatientori · Sat 12 Dec · delivery Thu 10 Dec · cut-off Tue 8 Dec 15:00</div>
+    </div>
+    <div class="summary">
+      <div class="big"><b>2 decisions</b> before Tue 15:00</div>
+      <div class="s"><b>€319.78</b> can be ordered now</div>
+            <div class="s">event adds <b>€934</b> · <b>103.6 kg</b> to a normal week</div>
+    </div>
+    <div class="covsum"><b style="color:var(--ok)">11 of 14 dishes covered</b> from stock Valio has stated · <b style="color:var(--amber)">3 not sure</b>: Valio hasn't said how many it has</div>
+<div class="cover"><i class="known" style="width:79%"></i><i class="unk" style="width:21%"></i></div>
+
+    <div class="lensbar">
+      <h4>LAST AGENT RUN · run-mwg1n8 · 2.1 s · trace drawer →</h4>
+      <div class="run">
+        <div class="s">get_context<b>12 ms</b></div><div class="a"></div>
+        <div class="s">plan_event<b>88 ms</b></div><div class="a"></div>
+        <div class="s sp">Valio offers ×60<b>64 ms · 51 cache / 9 live</b></div><div class="a"></div>
+        <div class="s">rank ×2<b>3 ms · rules v3</b></div><div class="a"></div>
+        <div class="s sp">Gemini decision ×4<b>410 ms · 1.2k tok</b></div><div class="a"></div>
+        <div class="s">applyOps<b>14 ops · v7→v8</b></div><div class="a"></div>
+        <div class="s sp">Aiven Postgres<b>commit 9 ms</b></div>
+      </div>
+    </div>
+
+    <div class="sect"><h3>Menu → need → order</h3><span>click a dish for its why · change g/guest and it re-plans</span></div>
+    <div class="rows" id="rows">
+      <div class="row" data-id="ham">
+        <div class="dish"><b>Joulukinkku</b><span>Christmas ham</span></div>
+        <div class="gpg"><div class="step"><button>−</button><span>120</span><button>+</button></div><small>g per guest</small></div>
+        <div class="prod"><s>HK Viljaporsaan juhlakinkku · out at Valio</s><div class="n">HK Palvikinkku viipaloitu 1,5 kg <span class="mono" style="color:var(--ink3)">× 12</span></div><div class="cov ok"><i>✓</i><b>Covered</b> · in stock at Valio (15 left)</div></div>
+        <div class="price">€185.16<span>€10.29/kg</span></div>
+        <span class="st ask">needs you</span>
+        <div class="trace"><span class="tc">valio.offers <b>476768</b> · 41 ms · live</span><span class="tc">rank <b>#1 of 4</b> · weights r35 p25 f20 c20</span><span class="tc">gemini-decision <b>fit .91</b></span><span class="tc">op <b>replace_line</b> v8</span></div>
+        <div class="why">
+          <div class="chain"><span>140 guests</span><em>×</em><span>120 g<small>your edit</small></span><em>=</em><span>16.8 kg needed</span><em>→</em><span>1,5 kg packs<small>Valio sells whole packs</small></span><em>=</em><span>12 packs · 18.0 kg</span></div>
+          <div class="nb"><div class="nbr"><span>needed</span><div><i style="width:93.3%;background:var(--ink2)"></i></div><b>16.8 kg</b></div><div class="nbr"><span>buying</span><div><i style="width:100%;background:var(--teal)"></i></div><b>18.0 kg · 1.2 kg spare</b></div></div>
+          <div class="cands">
+            <div class="cand"><b>1</b><span>HK Palvikinkku viipaloitu 1,5 kg · FI · 15 in stock</span><div class="bar"><i class="known" style="width:62%"></i><i style="width:24%;background:var(--blue)"></i><i style="width:8%;background:var(--ok)"></i></div><button>chosen</button></div>
+            <div class="cand"><b>2</b><span>Mattila Bros. Aito Saunapalvikinkku · DE</span><div class="bar"><i class="known" style="width:48%"></i><i style="width:20%;background:var(--blue)"></i></div><button>use this</button></div>
+            <div class="cand x"><b>3</b><span>HK Joulun juhlakinkku · quantity unknown, not cover</span><div class="bar"><i class="unk" style="width:70%"></i></div><button>use this</button></div>
+            <div class="cand x"><b>–</b><span>Vataja Maalaiskinkku · too little stock (13 ST)</span><div class="bar"><i style="width:30%;background:var(--line2)"></i></div><span class="st out">rejected</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="row" data-id="lohi">
+        <div class="dish"><b>Graavilohi</b><span>Cured salmon, in house</span></div>
+        <div class="gpg"><div class="step"><button>−</button><span>70</span><button>+</button></div><small>g per guest</small></div>
+        <div class="prod"><div class="n">Lohifilee C-leikattu 10 kg <span class="mono" style="color:var(--ink3)">× 2</span></div><div class="cov ok"><i>✓</i><b>Covered</b> · your usual product, in stock</div></div>
+        <div class="price">€282.20<span>€14.11/kg</span></div>
+        <span class="st ok">within mandate</span>
+        <div class="trace"><span class="tc">valio.offers <b>cache 4 min</b> · 2 ms</span><span class="tc">usual product · standing order</span></div>
+      </div>
+      <div class="row" data-id="rosolli">
+        <div class="dish"><b>Rosolli</b><span>Beetroot salad</span></div>
+        <div class="gpg"><div class="step"><button>−</button><span>90</span><button>+</button></div><small>g per guest</small></div>
+        <div class="prod"><div class="n">Atria Rosolli 2,5 kg <span class="mono" style="color:var(--ink3)">× 6</span></div><div class="cov maybe"><i>?</i><b>Not sure</b> · Valio hasn't said how many it has</div></div>
+        <div class="price">€78.18<span>€5.21/kg</span></div>
+        <span class="st ask">needs you</span>
+        <div class="trace"><span class="tc">valio.offers <b>Terminal</b> · qty unknown</span><span class="tc">never counted as cover</span></div>
+      </div>
+      <div class="row" data-id="lantt">
+        <div class="dish"><b>Lanttulaatikko</b><span>Swede casserole</span></div>
+        <div class="gpg"><div class="step"><button>−</button><span>40</span><button>+</button></div><small>g per guest</small></div>
+        <div class="prod"><s>Saarioinen Lanttulaatikko 700 g · out at Valio</s><div class="n">Make in house · 5 ingredients <span class="mono" style="color:var(--ink3)">AND</span></div><div class="cov ok"><i>✓</i><b>Covered if you approve</b> · all 5 ingredients in stock</div></div>
+        <div class="price">€31.46<span>5 lines</span></div>
+        <span class="st sign">sign-off</span>
+        <div class="trace"><span class="tc">strategy <b>make_in_house</b></span><span class="tc">allergens <b>+milk +egg +gluten</b></span><span class="tc">gemini-decision <b>caution</b> → hold</span></div>
+      </div>
+      <div class="row" data-id="peruna">
+        <div class="dish"><b>Keitetyt perunat</b><span>Boiled potatoes</span></div>
+        <div class="gpg"><div class="step"><button>−</button><span>125</span><button>+</button></div><small>g per guest</small></div>
+        <div class="prod"><div class="n">SPL Raaka annosperuna 10 kg <span class="mono" style="color:var(--ink3)">× 2</span></div><div class="cov ok"><i>✓</i><b>Covered</b> · in stock</div></div>
+        <div class="price">€15.82<span>€0.79/kg</span></div>
+        <span class="st ok">within mandate</span>
+        <div class="trace"><span class="tc">valio.offers <b>cache</b> · 1 ms</span></div>
+      </div>
+      <div class="row" data-id="tortu">
+        <div class="dish"><b>Joulutorttu</b><span>Prune star tart</span></div>
+        <div class="gpg"><div class="step"><button>−</button><span>60</span><button>+</button></div><small>g per guest</small></div>
+        <div class="prod"><s>Vaasan Joulutorttu 40×60 g · Valio can't deliver</s><div class="n">Make in house · 2 ingredients <span class="mono" style="color:var(--ink3)">AND</span></div><div class="cov ok"><i>✓</i><b>Covered if you approve</b> · both ingredients in stock</div></div>
+        <div class="price">€50.37<span>2 lines</span></div>
+        <span class="st sign">sign-off</span>
+        <div class="trace"><span class="tc">strategy <b>make_in_house</b></span></div>
+      </div>
+      <div class="row" style="color:var(--ink2);cursor:default"><div style="grid-column:1/-1;font-size:12.5px">+ 8 more dishes, all within mandate · <u>show</u></div></div>
+    </div>
+  </main>
+
+  <!-- DECISIONS -->
+  <aside class="col dec">
+    <div class="head"><b>2 decisions need you</b><div>each one is approved on its own · bound to exact terms</div></div>
+    <div class="cards">
+      <div class="dc">
+        <div class="t"><span>7 new products</span><span class="mono">€532.31</span></div>
+        <div class="why2">Your mandate says to ask before a new product. <b>No allergen change.</b></div>
+        <div class="kv"><span>If you decline</span><span>4 dishes short</span><span>Decide before</span><span>Tue 15:00</span></div>
+        <div class="acts"><button class="b2">Review 7</button><button class="b2 p">Approve</button></div>
+      </div>
+      <div class="dc sign">
+        <div class="t"><span>Make 2 dishes in house</span><span class="mono">€81.83</span></div>
+        <div class="why2">Lanttulaatikko and joulutorttu are out. Making them adds <b>milk, egg, gluten</b> to the casserole. Your kitchen never delegates an allergen change.</div>
+        <div class="kv"><span>Labour, equipment</span><span>not checked</span><span>If you decline</span><span>11.2 kg uncovered</span></div>
+        <div class="acts"><button class="b2 h"><span>Hold to sign off</span></button></div>
+      </div>
+    </div>
+    <div class="foot">
+      <div class="kv"><span>Within your mandate</span><span>€319.78</span><span>Held for you</span><span>€614.14</span><span>Week budget</span><span>€934 of €4,000</span></div>
+      <button class="place"><span>Place order · 4 lines</span><span class="mono">€319.78</span></button>
+      <div class="note">Held lines wait for your decision. A retry returns the same receipt.</div>
+    </div>
+  </aside>
+</div>
+<div class="mock">MOCKUP · try: System lens · click a dish · Replay</div>
+
+<script>
+document.getElementById('lens').onclick=()=>document.body.classList.toggle('lens');
+document.querySelectorAll('.row[data-id]').forEach(r=>r.addEventListener('click',e=>{if(e.target.closest('button'))return;r.classList.toggle('open')}));
+document.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>{const r=document.querySelector(`.row[data-id=${b.dataset.open}]`);r.classList.add('open');r.scrollIntoView({behavior:'smooth',block:'center'})});
+document.getElementById('replay').onclick=()=>{
+  const th=document.getElementById('thread');
+  const add=(h,c)=>{const d=document.createElement('div');d.className='m new '+c;d.innerHTML=h;th.appendChild(d);th.scrollTop=1e6};
+  add('The salmon is out too, Valio just said so.','me');
+  setTimeout(()=>add('<p>Checking…</p><div class="outcome" style="background:#f1ecfd;color:var(--lens)">valio.offers 462xxx → live · 58 ms</div>','ag'),500);
+  setTimeout(()=>{
+    th.lastChild.innerHTML='<p>Salmon is out. Your best fit is rainbow trout, Finnish, known stock. Carbon is the same (4.9), so this is not a carbon win. It is a new product, so it waits for you.</p><div class="outcome">1 line replaced · <em>1 decision added</em> · nothing ordered</div>';
+    const r=document.querySelector('.row[data-id=lohi]');
+    r.querySelector('.prod').innerHTML='<s>Lohifilee C-leikattu 10 kg · out at Valio</s><div class="n">Kirjolohifilee 5 kg <span class="mono" style="color:var(--ink3)">× 3</span></div><div class="cov ok"><i>✓</i><b>Covered</b> · in stock at Valio, new product for you</div>';
+    r.querySelector('.st').className='st ask';r.querySelector('.st').textContent='needs you';
+    r.querySelector('.price').innerHTML='€249.90<span>€16.66/kg</span>';
+    r.classList.add('flash');r.scrollIntoView({behavior:'smooth',block:'center'});setTimeout(()=>r.classList.remove('flash'),1400);
+    document.querySelector('.summary .big').innerHTML='<b>3 decisions</b> before Tue 15:00';
+  },1600);
+};
+</script>
+</body>
+</html>

@@ -1,0 +1,328 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mandate Demand at Scale</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/d3-sankey@0.12.3/dist/d3-sankey.min.js"></script>
+<style>
+:root{
+  --bg:#0a0c0d; --paper:#111517; --p:#111517; --p2:#161b1e; --line:#232a2e; --line2:#30393e; --fill:#161b1e;
+  --ink:#eef1ef; --ink2:#a9b2af; --ink3:#86908d; --teal:#2bb3a6;
+  --ok:#3fbf8a; --amber:#e8a93c; --red:#ef6b59; --flow:#56656a;
+  --s1:#7aa2ff; --s2:#4cc3e0; --s3:#b39cff; --s4:#e08cc8; --s5:#9aa8bd; --s6:#d4a373;
+  --sans:'IBM Plex Sans',system-ui,sans-serif; --mono:'IBM Plex Mono',ui-monospace,monospace; --serif:'Instrument Serif',Georgia,serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font:14px/1.5 var(--sans);-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+a{color:inherit}
+.top{height:52px;display:flex;align-items:center;gap:18px;padding:0 20px;border-bottom:1px solid var(--line);background:var(--paper)}
+.brand{font-weight:600;display:flex;gap:8px;align-items:center}.brand i{width:18px;height:18px;border:1.5px solid;border-radius:4px;display:grid;place-items:center;font:normal 10px var(--sans)}
+.tabs{display:flex;gap:2px}.tabs a{padding:6px 10px;border-radius:6px;color:var(--ink2);text-decoration:none}.tabs a.on{background:var(--fill);color:var(--ink);font-weight:500}
+.wrap{padding:22px 24px 70px;max-width:1520px;margin:0 auto}
+.head{display:flex;justify-content:space-between;align-items:flex-end;gap:24px;margin-bottom:16px}
+h1{font:400 34px/1.1 var(--serif)}
+.say{font-size:16px;color:var(--ink2);margin-top:6px;max-width:86ch;line-height:1.5}
+.say b{color:var(--ink);font-weight:500}.say .r{color:var(--red)}.say .a{color:var(--amber)}
+.ctl{display:flex;gap:10px;align-items:center}
+.ctl small{font-size:12px;color:var(--ink2)}
+.seg{display:flex;border:1px solid var(--line2);border-radius:999px;padding:3px;background:var(--paper)}
+.seg button{padding:4px 12px;border-radius:999px;font-size:13px;color:var(--ink2)}
+.seg button.on{background:var(--ink);color:var(--bg)}
+.time{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:12px 16px 6px;margin-bottom:14px}
+.time .th{display:flex;justify-content:space-between;font-size:13px;color:var(--ink2);margin-bottom:4px}
+.time .th b{color:var(--ink);font-weight:500}
+#time{width:100%;height:110px;display:block}
+#time text{font:12px var(--mono);fill:var(--ink3)}
+.selection{fill:#2bb3a6;fill-opacity:.1;stroke:#2bb3a6}
+.main{display:grid;grid-template-columns:1fr 350px;gap:14px}
+.board{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:12px 10px 8px;position:relative;min-width:0}
+.crumbs{display:flex;align-items:center;gap:6px;padding:0 6px 10px;font-size:13.5px;color:var(--ink2);flex-wrap:wrap}
+.crumbs button{color:var(--ink2);text-decoration:underline;text-underline-offset:3px}
+.crumbs b{color:var(--ink);font-weight:600}
+.crumbs .hint{margin-left:auto;font-size:12px;color:var(--ink3)}
+.cols{position:relative;height:40px;border-bottom:1px solid var(--line);margin-bottom:6px}
+.cols>div{position:absolute;top:0;white-space:nowrap;font-size:12.5px;color:var(--ink2)}
+.cols b{display:block;color:var(--ink);font-weight:600;font-size:13px}
+#flow{width:100%;display:block}
+.link{fill:none;stroke-opacity:.45;transition:stroke-opacity .2s}
+.dimmed .link{stroke-opacity:.06}.dimmed .link.on{stroke-opacity:.6}
+.dimmed .node{opacity:.28}.dimmed .node.on{opacity:1}
+.node text{font:12.5px var(--sans);fill:var(--ink);paint-order:stroke;stroke:#111517;stroke-opacity:.9;stroke-width:3px;stroke-linejoin:round}
+.node .sub{font:12px var(--mono);fill:var(--ink2)}
+.node .tiny{display:none}.node:hover .tiny{display:block}
+.node.drill{cursor:zoom-in}.node{cursor:pointer}
+.leg{display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px;color:var(--ink2);padding:8px 8px 2px;border-top:1px solid var(--line);margin-top:6px}
+.leg b{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:-1px}
+.side{display:flex;flex-direction:column;gap:14px;align-self:start;position:sticky;top:12px}
+.card{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:18px}
+.card .k{font:12px var(--mono);color:var(--ink3);margin-bottom:4px;letter-spacing:.02em}
+.card h2{font:400 26px/1.15 var(--serif);margin-bottom:8px}
+.card h3{font-size:13px;font-weight:600;margin-bottom:8px}
+.card p{color:var(--ink2);margin-bottom:10px}
+.card p b{color:var(--ink);font-weight:500}
+.list div{display:grid;grid-template-columns:1fr auto;gap:10px;padding:5px 0;border-top:1px solid var(--line);font-size:13px}
+.list div span:last-child{font-family:var(--mono)}
+.risk{cursor:pointer}
+.risk div{grid-template-columns:1fr auto auto;align-items:center}
+.risk div:hover{background:var(--bg)}
+.chip{font:12px var(--mono);padding:1px 7px;border-radius:999px;border:1px solid currentColor;white-space:nowrap}
+.chip.short{color:var(--red)}.chip.unk{color:var(--amber)}
+.risk .nm{min-width:0}.risk .nm small{display:block;color:var(--ink3);font-size:12px}
+.act{margin-top:12px;display:flex;gap:8px}
+.act button{flex:1;height:36px;border-radius:9px;border:1px solid var(--line2);font-weight:500;font-size:13px}
+.act button.p{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.risk .nm[data-product]{text-decoration:underline dotted var(--ink3);text-underline-offset:3px}
+.mock{position:fixed;left:50%;bottom:10px;transform:translateX(-50%);font:12px var(--mono);color:var(--ink2);background:var(--paper);border:1px solid var(--line);padding:4px 12px;border-radius:999px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="head">
+    <div>
+      <h1>What every kitchen needs from Valio, and what is short</h1>
+      <div class="say" id="say"></div>
+    </div>
+    <div class="ctl"><a href="flow.html" style="font-size:13px;color:var(--ink2);margin-right:8px">← The 3 scenario kitchens</a><small>kitchens</small><div class="seg" id="scale"><button data-n="3">3</button><button data-n="120">120</button><button class="on" data-n="2400">2,400</button></div></div>
+  </div>
+
+  <div class="time">
+    <div class="th"><span><b>Demand by delivery day</b> · drag to choose the window</span><span>schools close at weekends · Christmas parties peak Thu–Sat</span></div>
+    <svg id="time"></svg>
+  </div>
+
+  <div class="main">
+    <div class="board">
+      <div class="crumbs" id="crumbs"></div>
+      <div class="cols" id="cols">
+        <div><b id="c0">Kitchen segments</b>who orders</div>
+        <div><b>How it was asked</b>menu, event or direct</div>
+        <div><b>Dish types</b>what is cooked</div>
+        <div><b id="c3">Product groups</b>what Valio sells</div>
+        <div><b>Valio stock</b>what Valio has said</div>
+      </div>
+      <svg id="flow"></svg>
+      <div class="leg" id="leg"></div>
+    </div>
+    <aside class="side">
+      <div class="card" id="detail"></div>
+      <div class="card"><h3>Products at risk in this window</h3><div class="list risk" id="risk"></div></div>
+    </aside>
+  </div>
+</div>
+<div class="mock">MOCKUP · numbers illustrative · click a segment or product group to drill · drag the timeline</div>
+
+<script>
+// ---------- synthetic but plausible model (seeded) ----------
+const rnd=d3.randomLcg(42);const R=()=>rnd();
+const DAYS=d3.range(14).map(i=>new Date(2026,11,7+i));
+const dl=d=>d.toLocaleDateString('en-GB',{weekday:'short',day:'numeric'});
+const SEG=[
+ {id:'hotel',name:'Hotels',n:180,per:1400,c:'--s1',days:[0,1,2,3,4,5,6],ev:.14,unit:'hotels'},
+ {id:'lunch',name:'Lunch restaurants',n:720,per:420,c:'--s2',days:[1,2,3,4,5],ev:.08,unit:'restaurants'},
+ {id:'school',name:'Schools',n:900,per:380,c:'--s3',days:[1,2,3,4,5],ev:0,unit:'schools'},
+ {id:'care',name:'Hospitals & care',n:260,per:900,c:'--s4',days:[0,1,2,3,4,5,6],ev:.02,unit:'units'},
+ {id:'cafe',name:'Cafés',n:240,per:160,c:'--s5',days:[1,2,3,4,5,6],ev:.06,unit:'cafés'},
+ {id:'central',name:'Central kitchens',n:100,per:3200,c:'--s6',days:[1,2,3,4,5],ev:.01,unit:'central kitchens'},
+];
+const THREE=[{seg:'hotel',name:'Hotel Rautatientori'},{seg:'lunch',name:'Lounas Ruoholahti'},{seg:'central',name:'Espoo Central Kitchen'}];
+const MT=[{id:'standing',name:'Standing menu'},{id:'event',name:'Events'},{id:'direct',name:'Direct requests'}];
+const GROUPS=['Milk','Cream','Butter & fats','Cheese','Yoghurt & quark','Eggs','Pork','Ham & cold cuts','Beef','Poultry','Minced meat','Salmon & trout','White fish','Frozen fish','Potatoes','Root vegetables','Fresh vegetables','Frozen vegetables','Fruit & berries','Flour & baking','Oats & grains','Rice & pasta','Bread','Pastry','Oils','Spices','Sauces & condiments','Stocks & bases','Ready meals','Casseroles','Desserts & ice cream','Coffee & tea','Juices','Plant-based drinks','Plant proteins','Canned goods','Sugar','Nuts & seeds','Pickles & herring','Christmas specials'];
+const DC=[
+ {id:'soup',name:'Soups',g:{'Salmon & trout':3,'White fish':2,'Potatoes':3,'Root vegetables':2,'Cream':2,'Milk':1,'Stocks & bases':1,'Spices':.3}},
+ {id:'meat',name:'Meat mains',g:{'Pork':3,'Beef':3,'Minced meat':3,'Poultry':3,'Potatoes':2,'Sauces & condiments':1,'Cream':1}},
+ {id:'fish',name:'Fish mains',g:{'Salmon & trout':4,'White fish':3,'Frozen fish':2,'Potatoes':2,'Butter & fats':1}},
+ {id:'veg',name:'Vegetarian mains',g:{'Plant proteins':3,'Fresh vegetables':3,'Frozen vegetables':2,'Rice & pasta':2,'Cheese':1,'Canned goods':1}},
+ {id:'break',name:'Breakfast & porridge',g:{'Oats & grains':3,'Milk':4,'Eggs':2,'Bread':3,'Butter & fats':2,'Cheese':2,'Yoghurt & quark':2,'Ham & cold cuts':1,'Coffee & tea':2,'Juices':1,'Fruit & berries':1}},
+ {id:'salad',name:'Salads & sides',g:{'Fresh vegetables':4,'Root vegetables':2,'Oils':1,'Pickles & herring':1,'Cheese':1}},
+ {id:'bake',name:'Bakery & desserts',g:{'Flour & baking':3,'Sugar':1,'Butter & fats':2,'Pastry':3,'Desserts & ice cream':3,'Fruit & berries':1,'Nuts & seeds':.5}},
+ {id:'xmas',name:'Christmas table',g:{'Ham & cold cuts':5,'Casseroles':3,'Pickles & herring':2,'Salmon & trout':2,'Christmas specials':3,'Root vegetables':1}},
+ {id:'ready',name:'Ready-made',g:{'Ready meals':4,'Casseroles':2,'Sauces & condiments':1}},
+ {id:'direct',name:'No dish · ordered directly',g:{'Milk':5,'Cream':2,'Eggs':1,'Coffee & tea':2,'Bread':1,'Juices':1,'Plant-based drinks':1}},
+];
+// dish-type mix per segment and menu type
+function dcMix(seg,mt){
+ if(mt==='direct')return{direct:1};
+ if(mt==='event')return{xmas:5,fish:1,salad:1,bake:2};
+ const base={soup:2,meat:3,fish:2,veg:2,break:1,salad:1.5,bake:1,ready:.5};
+ if(seg==='hotel')Object.assign(base,{break:4,salad:2,bake:2});
+ if(seg==='school')Object.assign(base,{veg:3,ready:.2,bake:.3,break:.5});
+ if(seg==='care')Object.assign(base,{soup:3,break:2.5,ready:1.5});
+ if(seg==='cafe')Object.assign(base,{bake:5,break:3,meat:.5,fish:.3,soup:1});
+ if(seg==='central')Object.assign(base,{ready:1.5,veg:2.5});
+ return base}
+const norm=o=>{const t=d3.sum(Object.values(o));const r={};for(const k in o)r[k]=o[k]/t;return r};
+// products: ~15 per group, Zipf shares; status mostly ok
+const BRF=[[/Milk|Cream|Butter|Cheese|Yoghurt|Plant-based/,['Valio','Arla','Oddlygood']],[/Pork|Ham|Beef|Poultry|Minced/,['Atria','HK','Snellman','Kariniemen']],[/Salmon|fish|herring/i,['Apetit','Kalaneuvos','Felix']],[/vegetables|Potatoes|Fruit/,['Kotimaista','Apetit','SPL']],[/Flour|Oats|Bread|Pastry|Sugar/,['Fazer','Myllyn Paras','Vaasan','Dansukker']],[/Casseroles|Ready|Christmas|Desserts/,['Saarioinen','Atria','Valio']],[/.*/,['Pirkka Pro','Meira','Dava','Felix']]];
+const brandsFor=g=>BRF.find(([re])=>re.test(g))[1];
+const NOUN={'Butter & fats':'voi','Yoghurt & quark':'rahka','Ham & cold cuts':'kinkku','Minced meat':'jauheliha','Salmon & trout':'lohifilee','White fish':'seitifilee','Frozen fish':'kalapuikko','Root vegetables':'porkkana','Fresh vegetables':'kurkku','Frozen vegetables':'herne-maissi','Fruit & berries':'mustikka','Flour & baking':'vehnäjauho','Oats & grains':'kaurahiutale','Rice & pasta':'makaroni','Sauces & condiments':'kastike','Stocks & bases':'liemi','Ready meals':'lihapullat','Desserts & ice cream':'jäätelö','Coffee & tea':'kahvi','Plant-based drinks':'kaurajuoma','Plant proteins':'härkis','Canned goods':'tomaattimurska','Nuts & seeds':'auringonkukansiemen','Pickles & herring':'silli','Christmas specials':'joulutorttu','Milk':'maito','Cream':'kerma','Cheese':'juusto','Eggs':'kananmuna','Pork':'porsaanfile','Beef':'naudanpaisti','Poultry':'broilerinfile','Potatoes':'peruna','Bread':'ruisleipä','Pastry':'pulla','Oils':'rypsiöljy','Spices':'mustapippuri','Casseroles':'perunalaatikko','Juices':'appelsiinitäysmehu','Sugar':'sokeri'};
+const SIZES=['1 kg','2,5 kg','5 kg','10 kg','1 l','500 g','3 kg','400 g','6 × 1 l','20 kg'];
+const PROD={};let pid=461000;
+GROUPS.forEach(g=>{const n=12+Math.floor(R()*6);const w=d3.range(n).map(i=>1/Math.pow(i+1,1.1));const t=d3.sum(w);
+ PROD[g]=d3.range(n).map(i=>{let st=R()<.08?'unk':'ok';
+  if(['Fresh vegetables','Fruit & berries','Christmas specials'].includes(g)&&R()<.15)st='unk';
+  return{id:String(pid++),name:`${brandsFor(g)[Math.floor(R()*brandsFor(g).length)]} ${NOUN[g]||g.toLowerCase()} ${(sz=>sz[Math.floor(R()*sz.length)])(/Milk|Cream|Juices|drinks|Oils/.test(g)?['1 l','6 × 1 l','2 l','10 l']:['1 kg','2,5 kg','5 kg','10 kg','500 g','400 g','3 kg'])}`,share:w[i]/t,st}})});
+// the shortages the story is about
+Object.assign(PROD['Ham & cold cuts'][0],{name:'HK Palvikinkku viipaloitu 1,5 kg',id:'476768',st:'short'});
+Object.assign(PROD['Ham & cold cuts'][2],{name:'HK Viljaporsaan juhlakinkku',id:'462490',st:'short'});
+Object.assign(PROD['Casseroles'][0],{name:'Saarioinen Lanttulaatikko 700 g',id:'462482',st:'short'});
+Object.assign(PROD['Christmas specials'][1],{name:'Vaasan Joulutorttu 40 × 60 g',id:'473317',st:'short'});
+Object.assign(PROD['Salmon & trout'][3],{name:'Lohifilee C-leikattu 10 kg',st:'short'});
+Object.assign(PROD['Pickles & herring'][0],{name:'Atria Rosolli 2,5 kg',st:'unk'});
+Object.assign(PROD['Milk'][0],{name:'Valio laktoositon maito 1 l'});
+const CITIES=['Helsinki','Espoo','Vantaa','Tampere','Turku','Oulu','Jyväskylä','Lahti','Kuopio','Pori','Joensuu','Vaasa','Seinäjoki','Rovaniemi','Hämeenlinna'];
+function kitchensOf(seg,count){const s=SEG.find(x=>x.id===seg);const w=d3.range(count).map(i=>1/Math.pow(i+1,.55));const t=d3.sum(w);
+ const label={hotel:'Hotel',lunch:'Lounas',school:'Koulu',care:'Hoivakoti',cafe:'Kahvila',central:'Keskuskeittiö'}[seg];
+ return d3.range(count).map(i=>({name:`${label} ${CITIES[i%CITIES.length]}${i>=CITIES.length?' '+(Math.floor(i/CITIES.length)+1):''}`,share:w[i]/t}))}
+
+// ---------- state ----------
+let N=2400,win=[1,4],drillSeg=null,drillGroup=null,focus=null;
+const scaleK=()=>N/2400;
+function segCount(s){if(N===3)return THREE.filter(t=>t.seg===s.id).length;return Math.max(1,Math.round(s.n*scaleK()))}
+function segActive(s){return N!==3||THREE.some(t=>t.seg===s.id)}
+function dayValue(s,d){const wd=DAYS[d].getDay();if(!s.days.includes(wd))return{standing:0,event:0,direct:0};
+ const tot=segCount(s)*s.per*(1+.06*Math.sin(d*1.7+s.n));const xmas=[3,4,5].includes(d)?1:[10,11].includes(d)?.5:0;
+ const ev=s.ev*xmas*2.2;return{standing:tot*(1-.08),event:tot*ev,direct:tot*.08}}
+const css=v=>getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const fmt=v=>v>=1e6?'€'+(v/1e6).toFixed(2)+'M':v>=1e4?'€'+Math.round(v/1e3)+'k':v>=1e3?'€'+(v/1e3).toFixed(1)+'k':'€'+Math.round(v);
+
+// ---------- build the flow for the window + drill ----------
+function build(){
+ const rows=[]; // fine-grained: col0 key, mt, dc, groupOrProduct key, status, value
+ SEG.filter(segActive).forEach(s=>{
+  if(drillSeg&&drillSeg!==s.id)return;
+  let vals={standing:0,event:0,direct:0};
+  for(let d=win[0];d<=win[1];d++){const v=dayValue(s,d);for(const k in vals)vals[k]+=v[k]}
+  // col0 entities: segment, or its kitchens when drilled, or the 3 named kitchens
+  let ents;
+  if(N===3)ents=THREE.filter(t=>t.seg===s.id).map(t=>({key:'k:'+t.name,name:t.name,share:1,seg:s.id}));
+  else if(drillSeg)ents=kitchensOf(s.id,segCount(s)).map(k=>({key:'k:'+k.name,name:k.name,share:k.share,seg:s.id}));
+  else ents=[{key:'s:'+s.id,name:s.name,share:1,seg:s.id,count:segCount(s)}];
+  MT.forEach(mt=>{const mv=vals[mt.id];if(mv<=0)return;const mix=norm(dcMix(s.id,mt.id));
+   for(const dc in mix){const D=DC.find(x=>x.id===dc);const gm=norm(D.g);
+    for(const g in gm){if(drillGroup&&drillGroup!==g)continue;const v=mv*mix[dc]*gm[g];
+     PROD[g].forEach(p=>{const pv=v*p.share;if(pv<=0)return;
+      ents.forEach(e=>rows.push({c0:e.key,c0name:e.name,seg:e.seg,mt:mt.id,dc,g,p,v:pv*e.share}))})}}})});
+ return rows}
+
+function topN(rows,keyFn,nameFn,n,otherName,pin){const tot=d3.rollups(rows,v=>d3.sum(v,r=>r.v),keyFn).sort((a,b)=>b[1]-a[1]);
+ const pinned=pin?tot.filter(d=>pin(d[0])).map(d=>d[0]):[];const keep=new Set([...pinned,...tot.filter(d=>!pinned.includes(d[0])).slice(0,Math.max(0,n-pinned.length)).map(d=>d[0])]);const other=tot.length-keep.size;
+ return{map:r=>keep.has(keyFn(r))?keyFn(r):'__other',name:k=>k==='__other'?`${otherName} (${other})`:nameFn(k),other,count:tot.length}}
+
+function graph(rows){
+ const c0=topN(rows,r=>r.c0,k=>rows.find(r=>r.c0===k).c0name,drillSeg?10:8,'Other kitchens');
+ const c2=topN(rows,r=>r.dc,k=>DC.find(x=>x.id===k).name,8,'Other dish types');
+ const c3=drillGroup?topN(rows,r=>r.p.id,k=>rows.find(r=>r.p.id===k).p.name,10,'Other products',k=>rows.find(r=>r.p.id===k).p.st!=='ok'):topN(rows,r=>r.g,k=>k,11,'Other groups',g=>PROD[g].some(p=>p.st==='short'));
+ const stOf=r=>r.p.st;
+ const nodes=new Map(),links=new Map();
+ const N_=(id,o)=>{if(!nodes.has(id))nodes.set(id,{id,...o})};
+ const L=(s,t,v,seg)=>{const k=s+'|'+t+(seg?'|'+seg:'');const l=links.get(k);if(l)l.value+=v;else links.set(k,{source:s,target:t,value:v,seg})};
+ rows.forEach(r=>{
+  const a='0:'+c0.map(r),b='1:'+r.mt,c='2:'+c2.map(r),d='3:'+c3.map(r),e='4:'+stOf(r);
+  N_(a,{lvl:0,name:c0.name(c0.map(r)),seg:c0.map(r)==='__other'?null:r.seg,raw:c0.map(r)});
+  N_(b,{lvl:1,name:MT.find(m=>m.id===r.mt).name,raw:r.mt});
+  N_(c,{lvl:2,name:c2.name(c2.map(r)),raw:c2.map(r)});
+  N_(d,{lvl:3,name:c3.name(c3.map(r)),raw:c3.map(r),st:drillGroup&&c3.map(r)!=='__other'?r.p.st:null});
+  N_(e,{lvl:4,name:{ok:'Enough stock',unk:"Valio hasn't said",short:'Short'}[stOf(r)],st:stOf(r)});
+  L(a,b,r.v,r.seg);L(b,c,r.v);L(c,d,r.v);L(d,e,r.v)});
+ return{nodes:[...nodes.values()],links:[...links.values()],meta:{c0,c2,c3}}}
+
+// ---------- timeline ----------
+const T=d3.select('#time');
+function drawTime(){
+ T.selectAll('*').remove();const TW=T.node().clientWidth,TH=110,TM={l:6,r:6,t:8,b:22};T.attr('viewBox',`0 0 ${TW} ${TH}`);
+ const per=DAYS.map((_,d)=>{const o={d};SEG.forEach(s=>{const v=segActive(s)&&(!drillSeg||drillSeg===s.id)?dayValue(s,d):{standing:0,event:0,direct:0};o[s.id]=v.standing+v.event+v.direct});return o});
+ const tx=d3.scaleBand(d3.range(14),[TM.l,TW-TM.r]).padding(.18);
+ const ty=d3.scaleLinear([0,d3.max(per,o=>d3.sum(SEG,s=>o[s.id]))||1],[TH-TM.b,TM.t]);
+ const st=d3.stack().keys(SEG.map(s=>s.id))(per);
+ T.append('g').selectAll('g').data(st).join('g').attr('fill',s=>css(SEG.find(x=>x.id===s.key).c)).attr('fill-opacity',.85)
+  .selectAll('rect').data(s=>s).join('rect').attr('x',(d,i)=>tx(i)).attr('width',tx.bandwidth()).attr('y',d=>ty(d[1])).attr('height',d=>Math.max(0,ty(d[0])-ty(d[1])));
+ T.append('g').selectAll('text').data(DAYS).join('text').attr('x',(d,i)=>tx(i)+tx.bandwidth()/2).attr('y',TH-6).attr('text-anchor','middle').text(dl);
+ const brush=d3.brushX().extent([[TM.l,TM.t],[TW-TM.r,TH-TM.b]]).on('end',ev=>{if(!ev.selection||!ev.sourceEvent)return;const [a,b]=ev.selection;const s=d3.range(14).filter(i=>tx(i)+tx.bandwidth()>a&&tx(i)<b);if(!s.length)return;win=[s[0],s[s.length-1]];render()});
+ T.append('g').attr('class','brush').call(brush).call(brush.move,[tx(win[0])-3,tx(win[1])+tx.bandwidth()+3]);
+}
+
+// ---------- flow ----------
+const F=d3.select('#flow');const stCol={ok:'--ok',unk:'--amber',short:'--red'};
+let cur=null;
+function drawFlow(){
+ const rows=build();const g=graph(rows);cur={rows,g};
+ const W=F.node().clientWidth,H=600;F.attr('viewBox',`0 0 ${W} ${H}`).attr('height',H);F.selectAll('*').remove();F.classed('dimmed',false);
+ const sk=d3.sankey().nodeId(d=>d.id).nodeAlign(n=>n.lvl).nodeWidth(12).nodePadding(12).extent([[6,6],[W-170,H-6]])
+  .nodeSort((a,b)=>(a.raw==='__other')-(b.raw==='__other')||b.value-a.value).linkSort(null);
+ const {nodes,links}=sk({nodes:g.nodes.map(d=>({...d})),links:g.links.map(d=>({...d}))});
+ const colorOf=n=>n.lvl===0?(n.seg?css(SEG.find(s=>s.id===n.seg).c):css('--flow')):n.st?css(stCol[n.st]):css('--flow');
+ const defs=F.append('defs');
+ links.forEach((l,i)=>{l.gid='g'+i;const gr=defs.append('linearGradient').attr('id',l.gid).attr('gradientUnits','userSpaceOnUse').attr('x1',l.source.x1).attr('x2',l.target.x0);
+  const c1=l.source.lvl===0?colorOf(l.source):l.source.lvl===3&&l.source.st?colorOf(l.source):css('--flow');
+  const c2=l.target.lvl===4||l.target.st?colorOf(l.target):l.source.lvl===0?css('--flow'):css('--flow');
+  gr.append('stop').attr('offset','0%').attr('stop-color',c1);gr.append('stop').attr('offset','100%').attr('stop-color',c2)});
+ F.append('g').selectAll('path').data(links).join('path').attr('class','link').attr('d',d3.sankeyLinkHorizontal())
+  .attr('stroke',l=>`url(#${l.gid})`).attr('stroke-width',l=>Math.max(1,l.width)).style('stroke-opacity',l=>l.source.lvl===2?.2:null).append('title').text(l=>`${l.source.name} → ${l.target.name}: ${fmt(l.value)}`);
+ const nd=F.append('g').selectAll('g').data(nodes).join('g').attr('class',n=>'node'+(canDrill(n)?' drill':''))
+  .on('click',(e,n)=>{if(canDrill(n)){if(n.lvl===0)drillSeg=n.seg;else drillGroup=n.raw;focus=null;render();return}focus=n.id;detail(n);hl(n)});
+ nd.append('title').text(n=>`${n.name} · ${fmt(n.value)}${canDrill(n)?' · click to open':''}`);
+ nd.append('rect').attr('x',n=>n.x0).attr('y',n=>n.y0).attr('width',n=>n.x1-n.x0).attr('height',n=>Math.max(3,n.y1-n.y0)).attr('rx',3).attr('fill',colorOf);
+ const tiny=n=>n.y1-n.y0<9&&n.lvl!==4;
+ nd.append('text').attr('class',n=>tiny(n)?'tiny':null).attr('x',n=>n.x1+7).attr('y',n=>(n.y0+n.y1)/2-(n.y1-n.y0>=26?7:0)).attr('dy','.35em')
+  .text(n=>{const nm=n.name.length>30?n.name.slice(0,29)+'…':n.name;const sh=n.lvl===3&&!drillGroup&&PROD[n.raw]?PROD[n.raw].filter(p=>p.st==='short').length:0;const tag=sh?` · ${sh} short`:'';return (n.y1-n.y0<26?nm+' · '+fmt(n.value):nm)+tag}).style('font-weight',n=>n.lvl===0||n.lvl===4?600:400);
+ nd.filter(n=>n.y1-n.y0>=26).append('text').attr('class','sub').attr('x',n=>n.x1+7).attr('y',n=>(n.y0+n.y1)/2+11)
+  .text(n=>fmt(n.value)+(n.lvl===0&&n.seg&&!drillSeg&&N!==3?` · ${segCount(SEG.find(s=>s.id===n.seg)).toLocaleString('en')} ${SEG.find(s=>s.id===n.seg).unit}`:''));
+ // headers over the real columns
+ const off=F.node().getBoundingClientRect().left-document.getElementById('cols').getBoundingClientRect().left;
+ const colX=d3.rollup(nodes,v=>d3.min(v,n=>n.x0),n=>n.lvl);
+ document.querySelectorAll('#cols>div').forEach((d,i)=>{if(colX.has(i))d.style.left=(colX.get(i)+off)+'px'});
+ document.getElementById('c0').textContent=N===3?'Kitchens':drillSeg?SEG.find(s=>s.id===drillSeg).name:'Kitchen segments';
+ document.getElementById('c3').textContent=drillGroup?drillGroup:'Product groups';
+ F.node().__links=links;cur.nodes=nodes;cur.links=links;
+ say(nodes,g);risk(rows);
+ const f=focus&&nodes.find(n=>n.id===focus);detail(f||nodes.find(n=>n.id==='4:short')||nodes[0]);if(f)hl(f);
+}
+const canDrill=n=>(n.lvl===0&&n.seg&&!drillSeg&&N!==3)||(n.lvl===3&&!drillGroup&&n.raw!=='__other');
+function hl(n){const links=cur.links;const on=new Set([n.id]);const lk=new Set();
+ const up=x=>links.filter(l=>l.target.id===x).forEach(l=>{lk.add(l);if(!on.has(l.source.id)){on.add(l.source.id);up(l.source.id)}});
+ const dn=x=>links.filter(l=>l.source.id===x).forEach(l=>{lk.add(l);if(!on.has(l.target.id)){on.add(l.target.id);dn(l.target.id)}});
+ up(n.id);dn(n.id);F.classed('dimmed',true);F.selectAll('.link').classed('on',l=>lk.has(l));F.selectAll('.node').classed('on',d=>on.has(d.id))}
+F.on('dblclick',()=>{focus=null;F.classed('dimmed',false)});
+
+function kitchensLabel(){if(drillSeg){const s=SEG.find(x=>x.id===drillSeg);return `${segCount(s).toLocaleString('en')} ${s.unit}`}return N===3?'3 kitchens':`${N.toLocaleString('en')} kitchens`}
+function say(nodes){const tot=d3.sum(nodes.filter(n=>n.lvl===0),n=>n.value);const sh=nodes.find(n=>n.id==='4:short'),un=nodes.find(n=>n.id==='4:unk');
+ document.getElementById('say').innerHTML=`${dl(DAYS[win[0]])}–${dl(DAYS[win[1]])}: <b>${kitchensLabel()}</b>${drillGroup?` buy <b>${fmt(tot)}</b> of ${drillGroup.toLowerCase()}`:` need <b>${fmt(tot)}</b> from Valio`}. `+
+  (sh?`<span class="r"><b class="r">${fmt(sh.value)}</b> depends on products Valio is short of.</span> `:'<b>Nothing is short.</b> ')+(un?`<span class="a">${fmt(un.value)} depends on stock Valio hasn't stated.</span>`:'')}
+
+function crumbs(){const c=document.getElementById('crumbs');let h=`<button data-c="root">All ${N===3?'3':N.toLocaleString('en')} kitchens</button>`;
+ if(drillSeg)h+=` › <button data-c="seg">${SEG.find(s=>s.id===drillSeg).name}</button>`;
+ if(drillGroup)h+=` › <button data-c="grp">${drillGroup}</button>`;
+ const parts=c.innerHTML;c.innerHTML=h.replace(/<button data-c="(\w+)">([^<]*)<\/button>$/,'<b>$2</b>')+`<span class="hint">${drillSeg||drillGroup?'click a crumb to go back':'click a segment or a product group to open it'}</span>`;
+ c.querySelectorAll('button').forEach(b=>b.onclick=()=>{if(b.dataset.c==='root'){drillSeg=null;drillGroup=null}if(b.dataset.c==='seg')drillGroup=null;focus=null;render()})}
+
+function detail(n){const el=document.getElementById('detail');if(!n){el.innerHTML='';return}
+ const rows=cur.rows;const by=(fn,f)=>d3.rollups(rows.filter(f),v=>d3.sum(v,r=>r.v),fn).sort((a,b)=>b[1]-a[1]).slice(0,5);
+ const list=arr=>`<div class="list">${arr.map(([k,v])=>`<div><span>${k}</span><span>${fmt(v)}</span></div>`).join('')}</div>`;
+ if(n.lvl===4){const top=by(r=>r.p.name,r=>r.p.st===n.st);
+  el.innerHTML=`<div class="k">VALIO STOCK</div><h2>${n.name}</h2><p><b>${fmt(n.value)}</b> of this window's demand.</p><p>${n.st==='ok'?'Valio has stated enough for everyone who ordered.':n.st==='unk'?'Supplier-delivered products with no stated quantity. They never count as covered until the supplier confirms.':'More is wanted than Valio has. Whoever commits first gets it; the agents move the others to their next choice and ask.'}</p><h3>Biggest products</h3>${list(top)}`}
+ else if(n.lvl===0){const s=n.seg&&SEG.find(x=>x.id===n.seg);const top=by(r=>DC.find(d=>d.id===r.dc).name,r=>n.raw==='__other'||r.c0===n.raw||r.seg===n.raw&&!drillSeg);
+  el.innerHTML=`<div class="k">${drillSeg||N===3?'KITCHEN':'SEGMENT'}</div><h2>${n.name}</h2><p>Needs <b>${fmt(n.value)}</b> in this window${s&&!drillSeg&&N!==3?` across <b>${segCount(s).toLocaleString('en')} ${s.unit}</b>`:''}.</p><p>A chat that says <b>“plan the week”</b> lands on a kitchen here: its agent expands every menu below it.</p><h3>What it cooks</h3>${list(top)}${canDrill(n)?`<div class="act"><button class="p" id="go">Open the ${segCount(s).toLocaleString('en')} ${s.unit}</button></div>`:''}`}
+ else if(n.lvl===1){el.innerHTML=`<div class="k">HOW IT WAS ASKED</div><h2>${n.name}</h2><p><b>${fmt(n.value)}</b> in this window.</p><p>${n.raw==='standing'?'The regular order from each kitchen\'s cycle menu. Kitchens confirm it; they don\'t type it.':n.raw==='event'?'One-off events on top of the normal week, like a Christmas buffet for 140. “Buffet for 140” lands here.':'Requests for a product, not a dish, like Valio\'s own example: 1,000 L of lactose-free milk by Monday. These skip the dish step.'}</p>`}
+ else if(n.lvl===2){const top=by(r=>r.g,r=>n.raw==='__other'||r.dc===n.raw);el.innerHTML=`<div class="k">DISH TYPE</div><h2>${n.name}</h2><p><b>${fmt(n.value)}</b> in this window. Guests × grams per guest → kg → packs. “Ham 120 g per guest” lands on a dish here.</p><h3>Main product groups</h3>${list(top)}`}
+ else{const isP=!!drillGroup;const top=isP?by(r=>r.c0name,r=>r.p.id===n.raw):by(r=>r.p.name,r=>r.g===n.raw);
+  el.innerHTML=`<div class="k">${isP?'PRODUCT':'PRODUCT GROUP'}</div><h2>${n.name}</h2><p><b>${fmt(n.value)}</b> in this window${isP&&n.st?`, and Valio ${n.st==='ok'?'has stated enough':n.st==='unk'?"hasn't said how many it has":'is short'}`:''}.</p><h3>${isP?'Who buys it most':'Biggest products'}</h3>${list(top)}${canDrill(n)?`<div class="act"><button class="p" id="go">Open ${n.name.toLowerCase()}</button></div>`:''}`}
+ const go=document.getElementById('go');if(go)go.onclick=()=>{if(n.lvl===0)drillSeg=n.seg;else drillGroup=n.raw;focus=null;render()};
+}
+function risk(rows){const at=d3.rollups(rows.filter(r=>r.p.st!=='ok'),v=>({v:d3.sum(v,r=>r.v),k:new Set(v.map(r=>r.c0)).size,p:v[0].p,g:v[0].g}),r=>r.p.id).map(d=>d[1]).sort((a,b)=>(b.p.st==='short')-(a.p.st==='short')||b.v-a.v).slice(0,7);
+ const el=document.getElementById('risk');
+ el.innerHTML=at.map(a=>`<div data-g="${a.g}"><span class="nm"${window.SCENARIO&&SCENARIO.products[a.p.id]?` data-product="${a.p.id}"`:''}>${a.p.name}<small>${a.g}${drillSeg||N===3?` · ${a.k} kitchen${a.k>1?'s':''}`:''}</small></span><span class="chip ${a.p.st}">${a.p.st==='short'?'short':'not stated'}</span><span>${fmt(a.v)}</span></div>`).join('')||'<p>Nothing at risk in this window.</p>';
+ el.querySelectorAll('[data-g]').forEach(r=>r.onclick=e=>{if(e.target.closest('[data-product]'))return;drillGroup=r.dataset.g;focus=null;render()})}
+function legend(){document.getElementById('leg').innerHTML=SEG.filter(segActive).map(s=>`<span><b style="background:var(${s.c})"></b>${s.name}</span>`).join('')+`<span style="margin-left:auto"><b style="background:var(--ok)"></b>enough stock</span><span><b style="background:var(--amber)"></b>Valio hasn't said</span><span><b style="background:var(--red)"></b>short</span>`}
+function render(){crumbs();legend();drawTime();drawFlow()}
+document.querySelectorAll('#scale button').forEach(b=>b.onclick=()=>{document.querySelectorAll('#scale button').forEach(x=>x.classList.toggle('on',x===b));N=+b.dataset.n;drillSeg=null;drillGroup=null;focus=null;render()});
+addEventListener('resize',()=>{drawTime();drawFlow()});
+render();
+</script>
+<script src="shared/scenario.js"></script>
+<script src="shared/shell.js" data-page="flow-scale"></script>
+</body>
+</html>
