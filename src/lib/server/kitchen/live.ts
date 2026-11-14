@@ -24,10 +24,11 @@ import { currentRun, currentRunStartedAt } from '$lib/server/demo/run';
 import { reloadRunNow, resetDemoRun } from '$lib/server/demo/reset';
 import { isSandbox, resetSandbox } from '$lib/server/demo/sandbox';
 import { inWorkspace } from '$lib/server/adapters/simulator/overlay';
+import { rescueContention } from '$lib/core/services/contention';
 
 const EVENT_ID = 'event-xmas-140';
 /** The palvikinkku the ham rescue relies on (13 of 15 in stock): the contention preset takes 4 of them. */
-const CONTENDED = { productId: '476768', left: 11 };
+const CONTENDED = { productId: '476768', left: 11, taken: 4 };
 
 export interface Session {
 	/** The browser's room from demo/visitor.ts: its own sandbox, a shared one, or the stage. */
@@ -40,6 +41,8 @@ export interface Session {
 	 * event plan until the chef switches kitchen or starts over.
 	 */
 	planId: string | null;
+	/** The agent's last contention rescue on the plan on screen (see FixtureSnapshot.contentionRescue). */
+	contentionRescue?: FixtureSnapshot['contentionRescue'] & { planId: string };
 }
 
 /** What the page was rendered from; every command must still match it (a stale tab gets STALE_VERSION). */
@@ -404,6 +407,18 @@ async function buildSnapshot(s: Session): Promise<LiveSnapshot> {
 		rules,
 		preset: s.preset,
 		contention: s.contention,
+		contentionRescue:
+			s.contentionRescue?.planId === plan.id
+				? {
+						productName: s.contentionRescue.productName,
+						taken: s.contentionRescue.taken,
+						had: s.contentionRescue.had,
+						left: s.contentionRescue.left,
+						unit: s.contentionRescue.unit,
+						added: s.contentionRescue.added,
+						signOff: s.contentionRescue.signOff
+					}
+				: null,
 		mandateVersion: kitchen.mandate.version,
 		clock: {
 			nowIso: scenarioClock(currentRunStartedAt(ctx.workspaceId)).at(Date.now()).toISOString(),
@@ -519,9 +534,42 @@ async function applyScenario(
 			b.overlay.setAvailability({
 				productId: CONTENDED.productId,
 				amount: CONTENDED.left,
-				label: `simulated: another kitchen took 4 × ${CONTENDED.productId}`
+				label: `simulated: another kitchen took ${CONTENDED.taken} × ${CONTENDED.productId}`
 			});
-		await requote(s);
+		s.contentionRescue = undefined;
+		if (s.contention) {
+			// The kitchen agent repairs every live plan counting on the product: keeps what is left, sizes the next
+			// candidate to the rest, voids any approval it touches. Nothing is ordered; a person still decides.
+			const r = await inWorkspace(s.workspaceId, () =>
+				rescueContention(b.ports, agent(s), {
+					productId: CONTENDED.productId,
+					note: `another kitchen took ${CONTENDED.taken} × ${CONTENDED.productId}`,
+					ref: 'sim:contention'
+				})
+			);
+			if (!r.ok) throw new Error(`contention rescue: ${r.error.code} ${r.error.message}`);
+			const onScreen = await findPlan(s);
+			const mine = r.value.rescued.find((x) => x.planId === onScreen?.id);
+			if (mine) {
+				const was = mine.plan.lines.find((l) => l.id === mine.lineId);
+				const added = mine.chosen.filter((l) => l.productId !== CONTENDED.productId);
+				s.contentionRescue = {
+					planId: mine.planId,
+					productName: was?.productName ?? CONTENDED.productId,
+					taken: CONTENDED.taken,
+					had: mine.had,
+					left: mine.left,
+					unit: was?.qty.unit ?? 'ST',
+					added: added.map((l) => ({
+						name: l.productName ?? l.productId,
+						qty: l.qty.value,
+						unit: l.qty.unit,
+						physical: l.view?.physical ? `${l.view.physical.value} ${l.view.physical.unit}` : null
+					})),
+					signOff: added.some((l) => l.tier === 'sign_off')
+				};
+			}
+		} else await requote(s);
 	} else if (action === 'reset') {
 		// A fresh run server-side: no plan, orders or spend; the old run stays in the op log. Sandboxes go
 		// through the self-service reset (cooldown per sandbox); the stage only reaches here for a presenter.

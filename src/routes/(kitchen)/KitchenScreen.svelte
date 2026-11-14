@@ -3,7 +3,7 @@
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
-	import { ChevronDown, Play, CloudOff, LoaderCircle, CircleX } from '@lucide/svelte';
+	import { Bot, ChevronDown, Play, CloudOff, LoaderCircle, CircleX } from '@lucide/svelte';
 	import { KitchenStore } from '$lib/kitchen/kitchen.svelte';
 	import { KITCHENS, PRODUCTS, SEED } from '$lib/kitchen/catalog';
 	import type { DishView } from '$lib/kitchen/view-model';
@@ -135,6 +135,21 @@
 			: null
 	);
 	const amt = (v: number) => fixed(v, v < 10 ? 2 : 1);
+	/** A dish whose rescue the contention split: its ranked summary predates the split, so it isn't repeated. */
+	const contendedIn = (d: DishView) =>
+		!!k.snap?.contentionRescue &&
+		linesOf(d).some((l) => l.productName === k.snap!.contentionRescue!.productName);
+	/** What the agent did when another kitchen took stock, in one sentence from the server's record of it. */
+	const contended = $derived.by(() => {
+		const c = k.snap?.contentionRescue;
+		if (!c) return null;
+		const added = c.added
+			.map((a) => `${a.physical ?? `${num(a.qty)} ${a.unit.toLowerCase()}`} of ${a.name}`)
+			.join(' and ');
+		return `Another kitchen took ${c.taken} × ${c.productName}: ${c.left} are left of the ${c.had} the plan needed. I kept ${c.left}${
+			added ? ` and added ${added}` : ''
+		}${c.signOff ? '; that part needs your sign-off' : ''}. Nothing is ordered.`;
+	});
 	/** The booking's menu by dish name (a dish with two needs, rice and milk, is one dish). */
 	const preMenu = [...new Set(SEED.dishes.map((d) => d.dish.split(' (')[0]))];
 	/** The booking's products Valio could not supply at the last catalogue check (seed), for the pre-plan card. */
@@ -694,6 +709,15 @@
 						Change grams per guest and the order recomputes: need, lots, price, mandate.
 					</p>
 				</div>
+				{#if contended}
+					<p
+						class="mt-2 flex items-start gap-2 rounded-lg border border-signoff/50 bg-signoff-wash px-4 py-2.5 text-body text-ink"
+						role="status"
+					>
+						<Bot size={16} class="mt-0.5 shrink-0 text-signoff" aria-hidden="true" />
+						<span>{contended}</span>
+					</p>
+				{/if}
 				{#if changed}
 					<section
 						class="mt-2 rounded-lg border border-accent/40 bg-accent-wash/50 px-4 py-2.5"
@@ -852,7 +876,9 @@
 													? 'Out of stock at Valio.'
 													: "Valio can't deliver it."}</span
 											>
-											{d.rescue.summary}
+											{contendedIn(d)
+												? 'Another kitchen took some of the rescue; the agent split it (above).'
+												: d.rescue.summary}
 										</p>{/if}
 									<button
 										type="button"
