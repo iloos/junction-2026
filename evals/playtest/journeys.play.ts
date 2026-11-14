@@ -182,8 +182,13 @@ journey(
 			const dock = await openDock(page);
 			for (let i = 0; i < 3; i++) {
 				const chip = dock.getByRole('button', { name: /^(Sat|Saturday|Fri|Friday)\b/ }).last();
-				if (!(await chip.isVisible().catch(() => false))) break;
-				await chip.click();
+				// Answered chips stay on screen, disabled: only an open question has an enabled one.
+				if (
+					!(await chip.isVisible().catch(() => false)) ||
+					!(await chip.isEnabled().catch(() => false))
+				)
+					break;
+				await chip.click({ timeout: 5_000 });
 				await page.waitForTimeout(1500);
 				await page
 					.getByText(/^Working( · step \d+)?…/)
