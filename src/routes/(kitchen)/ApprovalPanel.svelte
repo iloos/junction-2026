@@ -54,6 +54,8 @@
 		rail?: boolean;
 		/** The chef is typing or a turn is running: the rail shows only its summary line. */
 		folded?: boolean;
+		/** Open the folded decisions (the chef asked to see them). */
+		onunfold?: () => void;
 		/** Mark these lines on the page (null clears); `scroll` brings the first into view. */
 		onmark?: (lineIds: string[] | null, scroll: boolean) => void;
 		/** The scenario's now: decisions past their cut-off can't be approved, and say so. */
@@ -76,6 +78,7 @@
 		part,
 		rail = false,
 		folded = false,
+		onunfold,
 		onmark,
 		now = null
 	}: Props = $props();
@@ -247,9 +250,16 @@
 		aria-labelledby="appr-h"
 		class="scroll-mt-4 rounded-lg border border-rule bg-sheet"
 	>
-		<!-- One line that always shows; the decisions open below it, one at a time. -->
+		<!-- One line that always shows; the decisions open below it, one at a time. Folded, it opens them. -->
 		<div class="flex items-baseline gap-2 px-3 py-2">
 			<h2 id="appr-h" class="text-body font-semibold text-ink">Decide</h2>
+			{#if folded && onunfold}
+				<button
+					type="button"
+					class="order-last shrink-0 text-meta font-medium text-propose underline underline-offset-2"
+					onclick={onunfold}>Show</button
+				>
+			{/if}
 			<p class="min-w-0 flex-1 truncate text-meta text-ink-2">
 				{decisions.length === 1 ? 'One decision' : `${decisions.length} decisions`}{shortDue
 					? ' before '

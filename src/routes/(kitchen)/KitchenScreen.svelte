@@ -2074,6 +2074,7 @@
 		<ApprovalPanel
 			{rail}
 			folded={rail && !!shell?.railFolded}
+			onunfold={() => shell && (shell.railFolded = false)}
 			onmark={markLines}
 			now={k.now}
 			part="decide"
