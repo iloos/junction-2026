@@ -642,3 +642,22 @@ describe('R11-01: units as typed; an unknown explicit unit asks, never buys sale
 		expect(oz.message).toMatch(/can't order in oz\. How much/);
 	});
 });
+
+describe('R11-02: packs and cases keep their hard requirements', () => {
+	it('"4 packs lactose-free milk" makes a need that requires lactose-free', async () => {
+		const { h, ctx, kitchen } = await setup();
+		const r = await runRequest('4 packs lactose-free milk Thursday', {
+			handlers: h,
+			ctx,
+			today: '2026-12-07',
+			kitchen,
+			now: new Date('2026-12-07T09:00:00+02:00'),
+			nonce: 'packs-req'
+		});
+		const plan = r.order!.plan;
+		expect(plan.lines[0].qty.value).toBe(4);
+		expect(plan.needs).toHaveLength(1);
+		expect(plan.needs[0].requirements?.freeFrom).toEqual(['LACTOSE']);
+		expect(plan.lines[0].needId).toBe(plan.needs[0].id);
+	});
+});

@@ -570,11 +570,19 @@ export function orderLine(
 		unit: i.pick!.salesUnit
 	};
 	const { qty, unit } = i.item;
-	if (qty === null || (unit !== 'kg' && unit !== 'l' && unit !== 'pcs')) return base;
-	const amount: Measure = { value: qty, unit };
-	const sized = sizeDirect(product, amount);
 	const requirements = requirementsOf(i.item.constraints);
-	return sized
+	// A physical ask (kg, l, pcs) is the need's amount as typed. Packs and cases become one through what the picked
+	// product states one sales unit holds (never invented): the need then carries the requirements too.
+	const amount: Measure | null =
+		qty === null
+			? null
+			: unit === 'kg' || unit === 'l' || unit === 'pcs'
+				? { value: qty, unit }
+				: i.pick!.amount
+					? { value: i.pick!.amount.value, unit: i.pick!.amount.unit }
+					: null;
+	const sized = amount ? sizeDirect(product, amount) : null;
+	return amount && sized
 		? {
 				...base,
 				qty: sized.value,
