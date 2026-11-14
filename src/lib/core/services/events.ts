@@ -49,6 +49,7 @@ const pending = (ctx: CallContext, op: PendingOp['op']): PendingOp => ({
 	runId: ctx.runId,
 	actor: ctx.actor,
 	via: ctx.via,
+	...(ctx.initiatedBy ? { initiatedBy: ctx.initiatedBy } : {}),
 	op
 });
 

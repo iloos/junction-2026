@@ -25,6 +25,7 @@ import {
 	makeInHouseQty,
 	rescueFor,
 	seedEntryFor,
+	sizeDirect,
 	sizeFor,
 	type PoolEntry,
 	type SeedDish
@@ -158,7 +159,12 @@ export async function findSubstitutes(
 	const unsized: string[] = [];
 	for (const [id, e] of pool) {
 		const p = products.get(id);
-		const s = p ? sizeFor(p, e, servedKg, line) : null;
+		// A direct need ("1 l milk") is sized to its physical amount (F10): 1 l → 2 × 0.5 l, never 1 × 0.5 l.
+		const s = !p
+			? null
+			: need?.kind === 'direct'
+				? ((q) => (q ? { qty: q } : null))(sizeDirect(p, need.amount))
+				: sizeFor(p, e, servedKg, line);
 		if (s) sized.set(id, s.qty);
 		else unsized.push(id);
 	}
@@ -331,6 +337,7 @@ export async function findSubstitutes(
 				runId: ctx.runId,
 				actor: ctx.actor,
 				via: ctx.via,
+				...(ctx.initiatedBy ? { initiatedBy: ctx.initiatedBy } : {}),
 				op
 			});
 			const ops: PendingOp[] = [];

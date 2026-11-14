@@ -103,4 +103,38 @@ describe('zero demand', () => {
 		expect(makeInHouseQty({ order: { qty: 3, unit: 'ST' } }, 0).value).toBe(0);
 		expect(makeInHouseQty({ per: 0.5, pack: 1, salesUnit: 'ST' }, 0.1).value).toBe(1);
 	});
+
+	it('make-in-house tarts at 0 g buy no pastry and no filling, rescued before or after the edit', async () => {
+		const tartsAtZero = async (rescueFirst: boolean) => {
+			let plan = must(
+				await h.plan_event(chef, { kitchenId: 'k-hotel', eventId: 'event-xmas-140' })
+			).plan;
+			const tart = lineOf(plan, '473317')!;
+			const rescue = async () =>
+				(plan = must(
+					await h.find_substitutes(chef, {
+						planId: plan.id,
+						version: plan.version,
+						lineId: tart.id
+					})
+				).plan);
+			const zero = async () =>
+				(plan = must(
+					await h.edit_line(chef, {
+						planId: plan.id,
+						version: plan.version,
+						needId: tart.needId!,
+						patch: { gramsPerGuest: 0 }
+					})
+				).plan);
+			if (rescueFirst) await rescue().then(zero);
+			else await zero().then(rescue);
+			return plan.lines.filter((l) => l.needId === tart.needId);
+		};
+		for (const rescueFirst of [true, false]) {
+			const lines = await tartsAtZero(rescueFirst);
+			expect(lines.map((l) => l.productId).sort()).toEqual(['460373', '461378', '473317']);
+			for (const l of lines) expect(l).toMatchObject({ state: 'rejected', qty: { value: 0 } });
+		}
+	});
 });
