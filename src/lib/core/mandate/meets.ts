@@ -121,10 +121,26 @@ function freeFromTerm(p: Product, x: string): TermResult {
 	if (named(p, x)) return ok('freeFrom', text, `the name says ${NAME_CLAIMS[x]}`);
 	if ((x === 'LACTOSE' || x === 'MILK') && p.diet.includes('vegan'))
 		return ok('freeFrom', text, 'diet record: vegan (no milk)');
+	if ((x === 'LACTOSE' || x === 'MILK') && dairyLike(p))
+		return no('freeFrom', text, `a dairy product (category or name) with no free-from ${x} claim`);
+	if (x === 'GLUTEN' && glutenLike(p))
+		return no('freeFrom', text, 'a gluten grain in the name, with no gluten-free claim');
 	const codes = CODES[x];
 	if (!codes) return no('freeFrom', text, `no free-from ${x} claim`);
 	return byAllergens(p, 'freeFrom', text, codes);
 }
+
+/**
+ * Dairy and gluten grains by what the product is, whatever its allergen list says (a declared but empty record must not
+ * make ordinary milk lactose-free). A vegan diet record overrides: plant drinks and cheeses use the same words.
+ */
+const DAIRY_WORD =
+	/maito|kerma|juusto|jogurtti|rahka|viili|piimä|smetana|kefir|\bvoi\b|voita\b|maitojauhe|herajauhe/;
+const GLUTEN_WORD = /vehnä|ruis|rukii|ohra|speltti|durum|manna|bulgur|couscous|seitan|kaura/;
+const dairyLike = (p: Product) =>
+	!p.diet.includes('vegan') &&
+	(inCategoryGroup(p.category, 'milk') || DAIRY_WORD.test(p.nameFi.toLowerCase()));
+const glutenLike = (p: Product) => GLUTEN_WORD.test(p.nameFi.toLowerCase());
 
 const meatLike = (p: Product) =>
 	inCategoryGroup(p.category, 'meat') || MEAT_WORD.test(p.nameFi.toLowerCase());
@@ -148,11 +164,13 @@ function excludesTerm(
 	const text = x === 'gluten_cereals' ? 'no gluten cereals' : `no ${x}`;
 	switch (x) {
 		case 'milk':
-			if (inCategoryGroup(p.category, 'milk')) return no('excludes', text, 'a milk product');
+			if (dairyLike(p)) return no('excludes', text, 'a dairy product (category or name)');
 			if (p.diet.includes('vegan')) return ok('excludes', text, 'diet record: vegan (no milk)');
 			return byAllergens(p, 'excludes', text, CODES.MILK);
 		case 'gluten_cereals':
-			if (p.freeFrom.includes('GLUTEN')) return ok('excludes', text, 'claims gluten-free');
+			if (p.freeFrom.includes('GLUTEN') || named(p, 'GLUTEN'))
+				return ok('excludes', text, 'claims gluten-free');
+			if (glutenLike(p)) return no('excludes', text, 'a gluten grain in the name');
 			return byAllergens(p, 'excludes', text, CODES.GLUTEN);
 		case 'meat':
 			if (meatLike(p)) return no('excludes', text, 'a meat product (category or name)');

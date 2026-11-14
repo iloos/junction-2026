@@ -47,5 +47,29 @@ describe.skipIf(!existsSync(join(DIR, 'valio_aimo_junction26_product_data.json')
 		it('counted scopes and VL add nothing', () => {
 			expect(requirementsFromDiet(['vegetarian:6', 'VL'])).toBeUndefined();
 		});
+
+		it('a dairy or gluten-grain product with a declared but empty allergen list is still not free of it', () => {
+			const empty = { contains: [], mayContain: [], declared: true };
+			const milk = {
+				...p('464201'),
+				nameFi: 'Testi kevytmaito 1 l',
+				allergens: empty,
+				freeFrom: []
+			} as Product;
+			expect(meets(milk, { freeFrom: ['LACTOSE'] }).verdict).toBe('no');
+			expect(meets(milk, { excludes: ['milk'] }).verdict).toBe('no');
+			// A lactose-free milk is lactose-free, but never milk-free.
+			expect(meets(p('464201'), { freeFrom: ['LACTOSE'] }).verdict).toBe('ok');
+			expect(meets(p('464201'), { freeFrom: ['MILK'] }).verdict).toBe('no');
+			const bread = {
+				...p('464201'),
+				nameFi: 'Testi ruisleipä 500 g',
+				category: '11000',
+				allergens: empty,
+				freeFrom: []
+			} as Product;
+			expect(meets(bread, { freeFrom: ['GLUTEN'] }).verdict).toBe('no');
+			expect(meets(bread, { excludes: ['gluten_cereals'] }).verdict).toBe('no');
+		});
 	}
 );
