@@ -1,5 +1,5 @@
 import type { Plan, ToolOutput } from '$lib/core/contracts';
-import { nextActionFor } from './next-action';
+import { nextFor } from './next';
 import type { Clarify, GoalOutcome, IntentKind, NeedRef } from './types';
 
 type Approval = ToolOutput<'get_plan'>['approval'];
@@ -75,7 +75,7 @@ export function computeOutcome(o: {
 	const covered = base.confirmedNeeds.length + base.unconfirmedNeeds.length;
 	const waits = held.length > 0 || base.approvalIds.length > 0;
 	// The words come from the one next-action rule; the status from the partition above.
-	const next = nextActionFor(plan, { approvalPending: base.approvalIds.length > 0 }).text;
+	const next = nextFor(plan).text;
 
 	if (o.intent === 'inspect')
 		return {

@@ -1,74 +1,74 @@
 {
-	"cabe62ce5ccc0a02949b8cb8afe37f9cd6303e544537dd479cf50564de51e1d2": {
+	"3d93ad55f1ab7ccc667b113c5cff8504224afb9b19913ec2522b346d13117b5c": {
 		"text": "{\n  \"kind\": \"order\",\n  \"items\": [\n    {\n      \"product\": \"butter\",\n      \"amount\": 4,\n      \"unit\": \"kg\",\n      \"date\": \"tomorrow\",\n      \"constraints\": [\n        \"lactose_free\"\n      ]\n    }\n  ]\n}",
 		"model": "gemini-3.5-flash-lite",
 		"tokens": {
-			"in": 457,
+			"in": 464,
 			"out": 75
 		}
 	},
-	"31e6186f220bd2000d756c0cc3d697308447c3f5fe7db5143255f8ccd09c405c": {
-		"text": "{\n  \"kind\": \"order\",\n  \"items\": [\n    {\n      \"product\": \"laktoositonta maitoa\",\n      \"amount\": 2,\n      \"unit\": \"l\",\n      \"date\": \"Thursday\",\n      \"constraints\": [\n        \"lactose_free\"\n      ]\n    }\n  ]\n}",
+	"f064ba496390e528ee9e0e4e8ed75f5521f874e388cb2ca116867139ac2881ac": {
+		"text": "{\n  \"kind\": \"order\",\n  \"items\": [\n    {\n      \"product\": \"maito\",\n      \"amount\": 2,\n      \"unit\": \"l\",\n      \"date\": \"Thursday\",\n      \"constraints\": [\n        \"lactose_free\"\n      ]\n    }\n  ]\n}",
 		"model": "gemini-3.5-flash-lite",
 		"tokens": {
-			"in": 456,
-			"out": 80
+			"in": 463,
+			"out": 76
 		}
 	},
-	"4223e67f4db4e4c846546bf84e8f58fb862794c7d6267d43cba43f8d11c65d8c": {
-		"text": "{\n  \"kind\": \"order\",\n  \"items\": [\n    {\n      \"product\": \"vispikermaa\",\n      \"amount\": 10,\n      \"unit\": \"l\",\n      \"date\": \"Friday\"\n    }\n  ]\n}",
+	"b57ad758ba70332671791235aec6fe1e5a9ffdb3849f13b8a338ea1f425a435f": {
+		"text": "{\n  \"kind\": \"order\",\n  \"items\": [\n    {\n      \"product\": \"vispikerma\",\n      \"amount\": 10,\n      \"unit\": \"l\",\n      \"date\": \"Friday\"\n    }\n  ]\n}",
 		"model": "gemini-3.5-flash-lite",
 		"tokens": {
-			"in": 459,
+			"in": 466,
 			"out": 62
 		}
 	},
-	"9ac4c331559a7e5ac3a6c21d10b6061f699b7fd37f6b597894080b4789fb51f6": {
-		"text": "{\n  \"kind\": \"read\",\n  \"question\": \"What is still waiting on me?\"\n}",
-		"model": "gemini-3.5-flash-lite",
-		"tokens": {
-			"in": 448,
-			"out": 24
-		}
-	},
-	"7970e7cf0456734f95775658510bae4387b6b7821ad29ec5b959ac088d8e7f1f": {
-		"text": "{\n  \"kind\": \"read\",\n  \"question\": \"mitä pitää vielä hyväksyä?\"\n}",
-		"model": "gemini-3.5-flash-lite",
-		"tokens": {
-			"in": 452,
-			"out": 27
-		}
-	},
-	"5f901b4a74dacce86c1d986a422da326366d0022b96ab459220d06d0e3823fa3": {
-		"text": "{\n  \"kind\": \"smalltalk\"\n}",
-		"model": "gemini-3.5-flash-lite",
-		"tokens": {
-			"in": 449,
-			"out": 12
-		}
-	},
-	"27d46d4bfa5d49c363cb497bcc787f9899a6a92ce159b7c937057eb4587e0d57": {
-		"text": "{\"kind\": \"event\"}",
+	"247084441f94623f8286691451080489a0762379b9b810730b20697b88725508": {
+		"text": "{\"kind\":\"read\",\"question\":\"What is still waiting on me?\"}",
 		"model": "gemini-3.5-flash-lite",
 		"tokens": {
 			"in": 455,
-			"out": 6
+			"out": 15
 		}
 	},
-	"e8cb01ae121a1177298765c70d9199c2c95ba4935a05743d5a8f5590d9fd523b": {
-		"text": "{\n  \"kind\": \"read\",\n  \"question\": \"Is there any lactose-free cream available for Friday?\",\n  \"items\": [\n    {\n      \"product\": \"lactose free cream\",\n      \"date\": \"Friday\",\n      \"constraints\": [\n        \"lactose_free\"\n      ]\n    }\n  ]\n}",
+	"cddbe6a2100531becd0007271d3264ea6fb312bc1df4b2eba8f585cc50bb9d0c": {
+		"text": "{\"kind\":\"read\",\"question\":\"Mitä pitää vielä hyväksyä?\"}",
 		"model": "gemini-3.5-flash-lite",
 		"tokens": {
-			"in": 451,
-			"out": 79
+			"in": 459,
+			"out": 18
 		}
 	},
-	"c3c3109cf4cfce2faffdddf6238ca006445a1cdc4f9f767c85dbde89e733af48": {
-		"text": "{\n  \"kind\": \"repair\"\n}",
+	"0d8782ae85d032c6a204181bb26469a8c0c64e0d7f80fb0f39820c46345837d7": {
+		"text": "{\n  \"kind\": \"smalltalk\"\n}",
 		"model": "gemini-3.5-flash-lite",
 		"tokens": {
-			"in": 452,
-			"out": 11
+			"in": 456,
+			"out": 12
+		}
+	},
+	"9532009f02af6ce2a0f29f0e0df7595430a2b24472e12c5251b9cd0a68628d21": {
+		"text": "{\n  \"kind\": \"event\",\n  \"items\": [],\n  \"planRef\": \"christmas party\"\n}",
+		"model": "gemini-3.5-flash-lite",
+		"tokens": {
+			"in": 462,
+			"out": 27
+		}
+	},
+	"031dc46126442a82d6c9aee59b9450fe3904f23530ded3c28bee01946464da29": {
+		"text": "{\n  \"kind\": \"read\",\n  \"question\": \"Is there any lactose-free cream available on Friday?\"\n}",
+		"model": "gemini-3.5-flash-lite",
+		"tokens": {
+			"in": 458,
+			"out": 28
+		}
+	},
+	"2dd952ed1784266dcc168443dfb06b98511816faf582a8e0925fdde5d6e83c5c": {
+		"text": "{\"kind\":\"repair\"}",
+		"model": "gemini-3.5-flash-lite",
+		"tokens": {
+			"in": 459,
+			"out": 5
 		}
 	}
 }

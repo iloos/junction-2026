@@ -3,7 +3,7 @@ import { orderAmount } from '$lib/server/request/convert';
 import { filterHits } from '$lib/server/request/lookup';
 import { baseId, type ParsedItem } from '$lib/server/request/parse';
 import { shortText } from './facts';
-import type { Intent } from './types';
+import type { Intent, RoutineLine } from './types';
 
 type RoutineIntent = Extract<Intent, { kind: 'routine_order' }>;
 
@@ -12,6 +12,8 @@ export const ROUTINE_SHORTLIST = 8;
 
 export interface RoutineCandidate {
 	productId: string;
+	/** The request page's ranking score for this product and item (filterHits). */
+	score?: number;
 	name?: string;
 	/** The product's sales unit, the unit `place_order` takes. */
 	unit: string;
@@ -25,7 +27,18 @@ export interface RoutineCandidate {
 	conversion: string;
 }
 
+/** Every product a routine order asks for, the first one first. */
+export function routineLines(i: RoutineIntent): RoutineLine[] {
+	return [{ query: i.query, qty: i.qty, unit: i.unit, item: i.item }, ...(i.more ?? [])];
+}
+
+/** The catalogue words to search for one product: the parser's search words, else the chef's own. */
+export const routineQueries = (l: RoutineLine): string[] =>
+	l.item.search.length ? l.item.search : [l.query];
+
 export interface RoutineFacts {
+	/** Which product of the order the search was for (index into routineLines). */
+	item?: number;
 	/** Ranked like the request page ranks: lexicon category and name first, then fit. */
 	products: RoutineCandidate[];
 	/** Search hits ranked out (wrong category, a constraint not met), counted. */
@@ -35,7 +48,7 @@ export interface RoutineFacts {
 }
 
 /** The request parser's item for a routine intent, so ranking and conversion are the request page's own. */
-export function routineItem(i: RoutineIntent): ParsedItem {
+export function routineItem(i: RoutineLine): ParsedItem {
 	const item = {
 		text: i.query,
 		query: i.query,
@@ -55,11 +68,12 @@ export function routineItem(i: RoutineIntent): ParsedItem {
  * (`convert` from the request parser). A product whose content is unknown keeps `salesQty: null` and the
  * reason, so nothing downstream falls back to "N sales units".
  */
-export function routineCandidates(intent: RoutineIntent, hits: Product[]): RoutineFacts {
+export function routineCandidates(intent: RoutineLine, hits: Product[]): RoutineFacts {
 	const { ranked, rejected } = filterHits(routineItem(intent), hits);
 	const out: RoutineFacts = {
 		products: ranked.slice(0, ROUTINE_SHORTLIST).map((r) => ({
 			productId: r.product.productId,
+			score: r.score,
 			name: shortText(r.product.nameShort?.value ?? r.product.nameFi),
 			unit: r.product.salesUnit,
 			lotStep: r.product.lotStep,
@@ -88,7 +102,7 @@ export function routineCandidates(intent: RoutineIntent, hits: Product[]): Routi
  * comparable, keep the ranking's order.
  */
 export function pickRoutine(
-	intent: Pick<RoutineIntent, 'qty' | 'unit'>,
+	intent: Pick<RoutineLine, 'qty' | 'unit'>,
 	candidates: RoutineCandidate[]
 ): RoutineCandidate | null {
 	const ok = candidates.filter((c) => c.salesQty !== null);
@@ -108,6 +122,8 @@ export interface OfferFacts {
 	unitCents?: number;
 	availability?: string;
 	logisticModel?: string;
+	/** Sales units in stock, when Valio says (known availability). */
+	amount?: number;
 	availableDate?: string;
 	closingTime?: string;
 }

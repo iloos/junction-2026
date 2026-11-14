@@ -10,9 +10,16 @@ import type { CallContext, Llm, ToolHandlers } from '$lib/core/ports';
 import { traceEvent, type TraceStep } from '$lib/server/adapters/llm/trace';
 import { serveTool, toolsFor } from '$lib/server/tools/serve';
 import { errorFacts, toFacts, type Facts, type PlanFacts } from './facts';
-import { nextActionFor } from './next-action';
-import { orderable, pickRoutine, type OfferFacts, type RoutineFacts } from './routine';
-import type { AgentContext, GoalOutcome, Intent } from './types';
+import {
+	orderable,
+	routineLines,
+	routineQueries,
+	type OfferFacts,
+	type RoutineCandidate,
+	type RoutineFacts
+} from './routine';
+import { SHORTLIST } from '$lib/server/request/lookup';
+import type { AgentContext, GoalOutcome, Intent, RoutineLine } from './types';
 
 /**
  * The routine agent loop: a planner picks the next tool call, the call goes through the same
@@ -112,6 +119,8 @@ export async function runAgent(o: {
 	allowedTools?: readonly ToolName[];
 	/** Kitchen grant: tool calls naming another kitchen (directly or through a plan) are refused. */
 	kitchenIds?: readonly string[];
+	/** The request this run serves (a task id; else the agent run): scopes its server-owned order keys. */
+	keyScope?: string;
 	/** Called once after the loop to compute the outcome from domain state. */
 	finalize?: (r: { steps: StepRecord[]; stopped: StopReason }) => Promise<GoalOutcome | undefined>;
 	/** Extra fields for the first trace step (intent, initiator). */
@@ -215,6 +224,8 @@ export async function runAgent(o: {
 		if (why) return finish(why, stoppedSummary(why));
 		if ('done' in action) return finish('done', action.summary);
 
+		// Idempotency keys are the server's, whatever a planner (a model) sent: no double order rests on its keys.
+		action.input = withServerKey(action.tool, action.input, o.intent, o.goal, o.keyScope);
 		emit('step', { n, tool: action.tool, why: action.why, input: action.input });
 		const t0 = performance.now();
 		const refusal = await refuse(action, tools, o.kitchenIds, planKitchen, o.ctx, o.handlers);
@@ -233,7 +244,7 @@ export async function runAgent(o: {
 			...(refusal ? { refused: true } : {})
 		};
 		steps.push(rec);
-		const facts = rec.ok ? toFacts(rec.tool, rec.value, o.intent) : undefined;
+		const facts = rec.ok ? toFacts(rec.tool, rec.value, o.intent, rec.input) : undefined;
 		const plan = facts?.plan as PlanFacts | undefined;
 		if (plan?.id) planKitchen.set(plan.id, plan.kitchenId);
 		history.push({
@@ -256,6 +267,49 @@ export async function runAgent(o: {
 		});
 	}
 	return finish('max_steps', `stopped after ${maxSteps} steps`);
+}
+
+/** FNV-1a, hex: a short stable digest for keys (not a security hash). */
+function digest(s: string): string {
+	let h = 0x811c9dc5;
+	for (let i = 0; i < s.length; i++) {
+		h ^= s.charCodeAt(i);
+		h = Math.imul(h, 0x01000193);
+	}
+	return (h >>> 0).toString(16).padStart(8, '0');
+}
+
+/**
+ * The server's idempotency key for an order-writing call, replacing any the planner sent. place_order: one per
+ * resolved intent (kitchen, date, the products and amounts asked for) within its request scope (a task, else an
+ * agent run), so a retry of the same request never opens a second plan however a model words its lines, while two
+ * separate requests with the same words stay two orders. commit_order: one per plan version, so a plan is bought at most once per
+ * version.
+ */
+export function withServerKey(
+	tool: ToolName,
+	input: unknown,
+	intent: Intent | undefined,
+	goal: string,
+	/** What makes this request its own (its task, else its agent run): two requests never share an order. */
+	scope?: string
+): unknown {
+	if (tool !== 'place_order' && tool !== 'commit_order') return input;
+	const i = (input ?? {}) as Record<string, unknown>;
+	if (tool === 'commit_order')
+		return { ...i, idempotencyKey: `agent:commit:${String(i.planId)}:v${String(i.version)}` };
+	const what =
+		intent?.kind === 'routine_order'
+			? {
+					kitchenId: intent.kitchenId,
+					deliverBy: intent.deliverBy,
+					lines: routineLines(intent).map((l) => [l.query, l.qty, l.unit, l.item.constraints])
+				}
+			: { intent: intent?.kind ?? 'none', goal: goal.trim().toLowerCase() };
+	return {
+		...i,
+		idempotencyKey: `agent:place:${scope ? `${digest(scope)}:` : ''}${digest(JSON.stringify(what))}`
+	};
 }
 
 /** Wraps every handler so it refuses to start once the run is stopped. */
@@ -409,7 +463,7 @@ function planSummary(plan: PlanFacts): string {
 	return (
 		`Plan ${plan.id} v${plan.version}: ${plan.lines.length} lines, total €${((plan.totalCents ?? 0) / 100).toFixed(2)}. ` +
 		`${held.length} held for the chef (${[...new Set(held.flatMap((l) => l.reasons))].join(', ') || 'none'}); ` +
-		`${unorderable.length} unorderable with no replacement chosen yet. Next: ${nextActionFor(plan).text}`
+		`${unorderable.length} unorderable with no replacement chosen yet.`
 	);
 }
 
@@ -544,29 +598,48 @@ export function scriptedPlanner(): Planner {
 				};
 			}
 			case 'routine_order': {
+				const lines = routineLines(intent);
 				const key =
-					`routine:${intent.kitchenId}:${intent.query}:${intent.qty}${intent.unit}:${intent.deliverBy}`
-						.replace(/[^\w:.-]/g, '_')
+					`routine:${intent.kitchenId}:${lines.map((l) => `${l.query}:${l.qty}${l.unit}`).join('+')}:${intent.deliverBy}`
+						.replace(/[^\w:.+-]/g, '_')
 						.slice(0, 120);
-				const searches = history.filter((h) => h.tool === 'search_products');
-				const queries = intent.item.search.length ? intent.item.search : [intent.query];
-				const candidates = searches.flatMap((h) =>
-					h.ok ? ((h.facts as RoutineFacts | undefined)?.products ?? []) : []
+				// Each product's searches, matched by the words searched for.
+				const searchesFor = (l: RoutineLine) =>
+					history.filter(
+						(h) =>
+							h.tool === 'search_products' &&
+							routineQueries(l).includes(String((h.input as { query?: unknown }).query))
+					);
+				// /request's own choice, so the same words give the same basket on every door: every search word of a
+				// product searched, the hits ranked together (filterHits' score, then id), the top SHORTLIST quoted, and
+				// the first that can be bought (priced, deliverable, enough stock, cut-off ahead) picked in rank order.
+				const candidatesFor = (l: RoutineLine) => {
+					const seen = new Set<string>();
+					return searchesFor(l)
+						.flatMap((h) => (h.ok ? ((h.facts as RoutineFacts | undefined)?.products ?? []) : []))
+						.filter((c) => !seen.has(c.productId) && seen.add(c.productId))
+						.sort((x, y) => (y.score ?? 0) - (x.score ?? 0) || (x.productId < y.productId ? -1 : 1))
+						.slice(0, SHORTLIST);
+				};
+				for (const l of lines) {
+					const done = searchesFor(l).length;
+					if (done < Math.min(routineQueries(l).length, 2))
+						return {
+							tool: 'search_products',
+							input: { query: routineQueries(l)[done], limit: 50 },
+							why: `find "${l.query}" in the catalogue`
+						};
+				}
+				const found: (RoutineCandidate | null)[] = lines.map(
+					(l) => candidatesFor(l).find((c) => c.salesQty !== null) ?? null
 				);
-				let found = pickRoutine(intent, candidates);
-				if (!found && searches.length < Math.min(queries.length, 2))
-					return {
-						tool: 'search_products',
-						input: { query: queries[searches.length], limit: 50 },
-						why: `find "${intent.query}" in the catalogue`
-					};
-				// Quote the convertible candidates once and order one that can still arrive by the date.
-				if (found && !has('place_order') && tools.includes('quote')) {
+				const closedFor = new Set<number>();
+				if (found.some(Boolean) && !has('place_order') && tools.includes('quote')) {
 					const quoted = history.find((h) => h.tool === 'quote' && h.ok);
 					if (!has('quote')) {
 						const ids = [
-							...new Set(candidates.filter((c) => c.salesQty !== null).map((c) => c.productId))
-						].slice(0, 8);
+							...new Set(lines.flatMap((l) => candidatesFor(l).map((c) => c.productId)))
+						];
 						return {
 							tool: 'quote',
 							input: { productIds: ids, deliverBy: intent.deliverBy },
@@ -580,23 +653,33 @@ export function scriptedPlanner(): Planner {
 									[]) as OfferFacts[]
 							).map((o) => [o.productId, o])
 						);
-						const open = candidates.filter((c) =>
-							orderable(offers.get(c.productId), intent.deliverBy, context?.now)
-						);
-						found = pickRoutine(intent, open) ?? found;
-						// Every candidate's ordering for that day has closed: a date problem, said as one.
 						const closed = (o: OfferFacts | undefined) =>
 							!!(
 								context?.now &&
 								o?.closingTime &&
 								Date.parse(o.closingTime) <= Date.parse(context.now)
 							);
-						const quotedIds = candidates.filter((c) => offers.has(c.productId));
-						if (
-							!open.length &&
-							quotedIds.length &&
-							quotedIds.every((c) => closed(offers.get(c.productId)))
-						)
+						for (const [i, l] of lines.entries()) {
+							const cands = candidatesFor(l);
+							found[i] =
+								cands.find((c) => {
+									const o = offers.get(c.productId);
+									return (
+										c.salesQty !== null &&
+										orderable(o, intent.deliverBy, context?.now) &&
+										!(o?.availability === 'known' && o.amount != null && o.amount < c.salesQty)
+									);
+								}) ?? null;
+							// Nothing open for that day among the quoted: a date problem for this product.
+							const quotedIds = cands.filter((c) => offers.has(c.productId));
+							if (
+								!found[i] &&
+								quotedIds.length &&
+								quotedIds.every((c) => closed(offers.get(c.productId)))
+							)
+								closedFor.add(i);
+						}
+						if (closedFor.size === lines.length)
 							return {
 								done: true,
 								summary: `not ordered: the cut-off for delivery on ${intent.deliverBy} has passed for every matching product; pick a later delivery date.`
@@ -604,15 +687,17 @@ export function scriptedPlanner(): Planner {
 					}
 				}
 				if (!has('place_order')) {
-					if (!found) {
-						const first = searches
-							.flatMap((h) => (h.facts as RoutineFacts | undefined)?.products ?? [])
-							.at(0);
+					const placed = lines
+						.map((l, i) => ({ l, f: closedFor.has(i) ? null : found[i] }))
+						.filter((x): x is { l: RoutineLine; f: RoutineCandidate } => !!x.f);
+					if (!placed.length) {
+						const l = lines[0];
+						const first = candidatesFor(l).at(0);
 						return {
 							done: true,
 							summary: first
-								? `not ordered: ${intent.qty} ${intent.unit} of ${intent.query} can't be put in sales units (${first.productId}: ${first.conversion})`
-								: `not ordered: no catalogue product matches "${intent.query}"`
+								? `not ordered: ${l.qty} ${l.unit} of ${l.query} can't be put in sales units (${first.productId}: ${first.conversion})`
+								: `not ordered: no catalogue product matches "${l.query}"`
 						};
 					}
 					return {
@@ -621,19 +706,27 @@ export function scriptedPlanner(): Planner {
 							kitchenId: intent.kitchenId,
 							deliverBy: intent.deliverBy,
 							idempotencyKey: key,
-							lines: [
-								{
-									productId: found.productId,
-									qty: found.salesQty!,
-									unit: found.unit,
-									// The physical need behind the sales units, so a substitute is sized to it.
-									...(intent.unit === 'kg' || intent.unit === 'l' || intent.unit === 'pcs'
-										? { amount: { value: intent.qty, unit: intent.unit } }
-										: {})
-								}
-							]
+							lines: placed.map(({ l, f }) => ({
+								productId: f.productId,
+								qty: f.salesQty!,
+								unit: f.unit,
+								// The physical need behind the sales units, so a substitute is sized to it.
+								...(l.unit === 'kg' || l.unit === 'l' || l.unit === 'pcs'
+									? { amount: { value: l.qty, unit: l.unit } }
+									: {})
+							}))
 						},
-						why: `${intent.qty} ${intent.unit} ${intent.query}: ${found.conversion}`
+						why:
+							placed
+								.map(({ l, f }) => `${l.qty} ${l.unit} ${l.query}: ${f.conversion}`)
+								.join('; ') +
+							// A product nothing can be bought for is said, never dropped in silence.
+							(placed.length < lines.length
+								? `; not ordered: ${lines
+										.filter((l) => !placed.some((x) => x.l === l))
+										.map((l) => `${l.qty} ${l.unit} ${l.query}`)
+										.join(', ')} (no product can be bought as asked; say which one)`
+								: '')
 					};
 				}
 				if (last && !last.ok && last.tool === 'place_order')

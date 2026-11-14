@@ -14,8 +14,24 @@ const plan = (lines: { id: string; state: string; productId?: string; substitute
 		version: 3,
 		state: 'quoted',
 		totalCents: 12345,
+		deliverBy: '2026-12-10',
 		needs: [],
-		lines: lines.map((l) => ({ productId: l.id, productName: INJECTION, ...l }))
+		// Line views as get_plan fills them: core's next-action rule reads them.
+		lines: lines.map((l) => ({
+			productId: l.id,
+			productName: INJECTION,
+			qty: { value: 1, unit: 'ST' },
+			reasons: [],
+			view: {
+				// A replaced line has nothing left to do (its substitute carries the need).
+				nextAction: lines.some((x) => x.substituteFor === l.id)
+					? 'none'
+					: ({ held: 'approve', unorderable: 'find_substitute', eligible: 'commit' }[l.state] ??
+						'none'),
+				committable: l.state === 'eligible'
+			},
+			...l
+		}))
 	}) as unknown as Plan;
 
 beforeEach(() => resetStub());

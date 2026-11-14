@@ -149,3 +149,15 @@ export const ExternalCallTrace = z.object({
 	error: z.string().max(300).optional()
 });
 export type ExternalCallTrace = z.infer<typeof ExternalCallTrace>;
+
+/**
+ * Task ids: `task-<time><rand>` for a task the chat starts, `t-<planId>` for the one /request opens on a plan. Every
+ * route that takes a task id accepts both through this one pattern.
+ */
+export const TASK_ID_RE = /^(task-[\w-]{1,60}|t-[\w:.-]{1,62})$/;
+export const isTaskId = (s: unknown): s is string => typeof s === 'string' && TASK_ID_RE.test(s);
+/** The task /request opens for a plan: one per plan, so the same plan finds the same task. */
+export const taskIdFor = (planId: string): string => `t-${planId}`.slice(0, 64);
+/** A new task's id; `rand` is the caller's random suffix (core reads no clock or randomness). */
+export const newTaskId = (nowMs: number, rand: string): string =>
+	`task-${nowMs.toString(36)}${rand}`.slice(0, 64);

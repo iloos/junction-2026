@@ -1,9 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import type { Plan } from '$lib/core/contracts';
 import { classifyGoal } from './classify';
 import { SUPPORTED_EVENTS } from './context';
 import { resolveIntent } from './intent';
-import { nextActionFor } from './next-action';
 import type { AgentContext } from './types';
 
 const TODAY = '2026-11-14';
@@ -123,38 +121,6 @@ describe('typed clarify and slots (review §ranked 3)', () => {
 	});
 });
 
-describe('one nextActionFor(plan) (review §ranked 4)', () => {
-	const plan = (states: string[], extra: Partial<Plan> = {}) =>
-		({
-			id: 'pl',
-			version: 2,
-			lines: states.map((state, i) => ({ id: `l${i}`, productId: `p${i}`, state })),
-			...extra
-		}) as unknown as Plan;
-	it('unorderable → substitute; eligible → commit; held → chef; ordered → wait or done', () => {
-		expect(nextActionFor(plan(['unorderable', 'eligible'])).tool).toBe('find_substitutes');
-		const c = nextActionFor(plan(['eligible', 'held']));
-		expect(c).toMatchObject({ kind: 'commit', tool: 'commit_order' });
-		expect(c.text).toMatch(/held line waits for a chef/);
-		expect(nextActionFor(plan(['held']))).toMatchObject({ kind: 'chef', needsChef: true });
-		expect(nextActionFor(plan(['committed']), { approvalPending: true }).kind).toBe('chef');
-		expect(nextActionFor(plan(['committed'])).kind).toBe('done');
-	});
-	it('a passed cut-off is a date problem, never a substitute search', () => {
-		const p = plan(['unorderable'], { deliverBy: '2026-12-08' } as Partial<Plan>);
-		(p.lines[0] as unknown as { reasons: string[] }).reasons = ['cutoff_passed'];
-		const n = nextActionFor(p);
-		expect(n.kind).toBe('change_date');
-		expect(n.tool).toBeUndefined();
-		expect(n.text).toMatch(/cut-off .* has passed/);
-	});
-	it('an eligible line past its cut-off is not offered for commit', () => {
-		const p = plan(['eligible']);
-		(p.lines[0] as unknown as { view: unknown }).view = { committable: false };
-		expect(nextActionFor(p).kind).not.toBe('commit');
-	});
-});
-
 describe('a delivery date past its cut-off is asked about, never shifted', () => {
 	it('Monday 21:40: tomorrow has closed, Wednesday is offered first', () => {
 		const late = ctx({ today: '2026-12-07', now: '2026-12-07T21:40:00+02:00' });
@@ -185,4 +151,13 @@ describe('Finnish authority imperatives are refused, Finnish questions read', ()
 		['mitä pitää vielä hyväksyä?', 'read'],
 		['voitko tilata 4 kg voita huomiseksi?', 'order']
 	])('%s → %s', (text, kind) => expect(classifyGoal(text, TODAY).kind).toBe(kind));
+});
+
+describe('date chips start at the first day still open', () => {
+	it('Monday 21:40, no date given: the first chip is Wed 9 Dec, never tomorrow', () => {
+		const late = ctx({ today: '2026-12-07', now: '2026-12-07T21:40:00+02:00' });
+		const r = resolveIntent('4 kg butter for k-hotel', late);
+		expect(r.clarify?.field).toBe('date');
+		expect(r.clarify?.options[0].value).toBe('2026-12-09');
+	});
 });

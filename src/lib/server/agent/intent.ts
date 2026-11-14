@@ -6,7 +6,7 @@ import type { ReqUnit } from '$lib/server/request/lexicon';
 import { parseRules } from '$lib/server/request/parse';
 import { classifyGoal, perGuestIn } from './classify';
 import { eventMatches, KITCHEN_RE as KITCHEN } from './context';
-import type { AgentContext, Clarify, Intent, Slots } from './types';
+import type { AgentContext, Clarify, Intent, RoutineLine, Slots } from './types';
 
 /**
  * Deterministic intent resolver: free-text goal (+ answered slots) → one supported intent, or `unsupported` with a
@@ -104,6 +104,10 @@ export function cutoffPassed(deliverBy: string, closes: string, earliest: string
 	return `The cut-off for ${dayLabel(deliverBy)} has passed (${at} ${on}); earliest is ${dayLabel(earliest)}. Which day should it arrive?`;
 }
 
+/** Date chips from the first day still open for ordering (the scenario clock's cut-offs), never one already closed. */
+const openDates = (c: AgentContext) =>
+	dateOptions(c.today, c.now ? earliestOpen(c.today, c.now) : undefined);
+
 /** No plan picked: either none is open, or the request does not say which of several. */
 function noPlan(c: AgentContext, none: string): Resolved {
 	// No plan open at all: nothing to pick, so say so rather than ask an unanswerable question.
@@ -156,13 +160,36 @@ function routineOrder(
 		);
 	// An answered `product` slot names one item (an option is that item's own words, amount included).
 	const slot = slots.product ? parseRules(String(slots.product), c.today).items[0] : undefined;
-	if (items.length > 1 && !slot)
+	// Several products, each with its own amount in a stated unit: one order, one line each (up to four).
+	const complete = (i: (typeof items)[number]) =>
+		i.qty !== null &&
+		i.qty > 0 &&
+		i.qty <= MAX_QTY &&
+		!!i.unit &&
+		UNITS.includes(i.unit) &&
+		!i.ambiguities.some((a) => a.startsWith('no unit given')) &&
+		(!!i.product || i.search.length > 0);
+	const several = items.length > 1 && items.length <= 4 && !slot && items.every(complete);
+	const more: RoutineLine[] = several
+		? items.slice(1).map((i) => ({
+				query: (i.query || 'it').slice(0, 60),
+				qty: i.qty!,
+				unit: i.unit!,
+				item: {
+					product: i.product,
+					search: i.search,
+					constraints: i.constraints,
+					variant: i.variant
+				}
+			}))
+		: [];
+	if (items.length > 1 && !slot && !several)
 		return ask(
 			'product',
 			`One product per routine order; I read ${items.length} (${items.map((i) => i.query || i.text).join(', ')}). Which one first?`,
 			items.map((i) => ({ label: i.text.trim(), value: i.text.trim() }))
 		);
-	let item = items.length > 1 || !items[0] ? slot : items[0];
+	let item = several ? items[0] : items.length > 1 || !items[0] ? slot : items[0];
 	if (slot && item && item !== slot)
 		item = { ...item, product: slot.product, search: slot.search, query: slot.query };
 	if (!item || (!item.product && !item.search.length))
@@ -195,17 +222,17 @@ function routineOrder(
 	let deliverByText = parsed.deliverByText;
 	if (slots.date !== undefined) {
 		const d = slotDate(String(slots.date), c.today);
-		if (!d) return ask('date', `When should ${what} arrive?`, dateOptions(c.today));
+		if (!d) return ask('date', `When should ${what} arrive?`, openDates(c));
 		deliverBy = d.iso;
 		deliverByText = d.text;
 	} else if (parsed.deliverBySource === 'default' || !parsed.deliverByText)
 		return ask(
 			'date',
 			`When should ${what} arrive? Say "tomorrow", a weekday or a date (YYYY-MM-DD); I will not pick one.`,
-			dateOptions(c.today)
+			openDates(c)
 		);
 	if (!deliverByText || deliverBy < c.today)
-		return ask('date', `"${deliverByText}" (${deliverBy}) is in the past.`, dateOptions(c.today));
+		return ask('date', `"${deliverByText}" (${deliverBy}) is in the past.`, openDates(c));
 	// Ordering for that day may already have closed: say so and offer the first day still open, never shift it.
 	if (c.now) {
 		const closes = stockCutoff(deliverBy);
@@ -238,7 +265,8 @@ function routineOrder(
 		},
 		deliverBy,
 		deliverByText,
-		notes
+		notes,
+		...(more.length ? { more } : {})
 	};
 }
 

@@ -1,21 +1,22 @@
 import type { Approval, Plan } from '$lib/core/contracts';
 import type { Task, TaskLedger, TaskState } from '$lib/core/contracts/task';
 import type { CallContext, Ports, TaskStore, ToolHandlers } from '$lib/core/ports';
-import { nextActionFor } from '$lib/server/agent/next-action';
+import { nextFor } from '$lib/server/agent/next';
 import { pendingDecision } from './ledger';
 import { readTask } from './outcome';
 
 /**
- * A task's derived fields (ledger, pending decision, state) from its plans as they are now. A human acting on another
- * screen (approving, editing) changes the plan, not the task row, so these are recomputed whenever a task is read or
- * written; only the requirement, slots, an open question and the run history are stored facts.
+ * A task's derived fields (ledger, pending decision, state) from every plan it holds, as they are now. A human acting
+ * on another screen (approving, editing) changes a plan, not the task row, so these are recomputed whenever a task is
+ * read or written; only the requirement, slots, an open question and the run history are stored facts. No plan's
+ * state hides another's: the task is done only when every plan is, it awaits the chef while any plan has a pending
+ * decision, and Continue is offered while any plan has a line that may be bought now.
  */
 export function project(
 	task: Task,
 	read: { ledger: TaskLedger; plans: Plan[]; approvals: Approval[] }
 ): { task: Task; canContinue: boolean } {
 	const { ledger, plans, approvals } = read;
-	const plan = plans[0];
 	const t: Task = {
 		...task,
 		plans: task.plans.map((p) => ({
@@ -25,24 +26,27 @@ export function project(
 		ledger
 	};
 	if (t.pending.kind === 'clarify') return { task: t, canContinue: false };
-	t.pending = pendingDecision(plan, approvals);
-	const next = nextActionFor(plan, { approvalPending: t.pending.kind === 'decision' });
-	const granted = approvals.some(
-		(a) =>
-			a.state === 'granted' &&
-			a.planVersion === plan.version &&
-			a.lineIds.some((id) => plan.lines.find((l) => l.id === id)?.state !== 'committed')
+	// The first plan (task order) with a pending decision is the one the card shows.
+	const decision = plans
+		.map((p) => pendingDecision(p, approvals))
+		.find((d) => d.kind === 'decision');
+	t.pending = decision ?? { kind: 'none' };
+	const nexts = plans.map((p) => nextFor(p));
+	const canContinue = plans.some((p) =>
+		p.lines.some((l) => l.state !== 'committed' && l.view?.committable === true)
 	);
 	const state: TaskState =
-		t.pending.kind === 'decision'
+		t.pending.kind === 'decision' || nexts.some((n) => n.action === 'approve')
 			? 'awaiting_chef'
-			: next.kind === 'await_supplier'
-				? 'awaiting_supplier'
-				: next.kind === 'done' && ledger.receiptIds.length
-					? 'done'
-					: 'open';
+			: canContinue || nexts.some((n) => n.action !== 'done' && n.action !== 'wait_for_supplier')
+				? 'open'
+				: nexts.some((n) => n.action === 'wait_for_supplier')
+					? 'awaiting_supplier'
+					: plans.length && ledger.receiptIds.length
+						? 'done'
+						: 'open';
 	if (!['cancelled', 'failed'].includes(t.state)) t.state = state;
-	return { task: t, canContinue: next.kind === 'commit' || granted };
+	return { task: t, canContinue };
 }
 
 /**
@@ -73,7 +77,17 @@ export function projectedTaskStore(
 	};
 	return {
 		get: async (ws, id) => fresh(await inner.get(ws, id)),
-		list: (ws, o) => inner.list(ws, o),
+		// The list projects the same way, then filters on the projected state, so a list and a detail never disagree.
+		list: async (ws, o = {}) => {
+			const rows = await inner.list(ws, { ...o, open: undefined });
+			const done = new Set(['done', 'cancelled', 'failed']);
+			const out: Task[] = [];
+			for (const t of rows) {
+				const f = (await fresh(t))!;
+				if (o.open === undefined || o.open !== done.has(f.state)) out.push(f);
+			}
+			return out;
+		},
 		put: (task, expected) => inner.put(task, expected)
 	};
 }

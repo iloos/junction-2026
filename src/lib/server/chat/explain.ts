@@ -1,6 +1,8 @@
 import type { Llm } from '$lib/core/ports';
 import type { TaskLedger } from '$lib/core/contracts/task';
+import { outcomeTextCheckpoint } from '$lib/server/review/outcome';
 import { ledgerTotals } from '$lib/server/tasks/ledger';
+import { dayWords } from '$lib/server/tasks/outcome';
 
 /**
  * The chat's reply about a task, written by Gemini (job `explain`) from the ledger's facts and checked before it is
@@ -21,10 +23,11 @@ const SYSTEM =
 	'You answer a chef about one purchasing task, in at most three short sentences, in the language of the question ' +
 	'(English or Finnish). Use only the facts given: never add a number, product or state that is not in them. ' +
 	'Say "ordered" only if receipts is non-empty; say "supplier confirmed" only for supplierConfirmed amounts above zero; ' +
-	'held lines are "waiting for your approval in the Kitchen screen". Never offer to approve. Reply with the text only.';
+	'held lines are "waiting for your approval in the Kitchen screen"; decisionsLeft is how many decisions wait. ' +
+	'Name the delivery day when given. Never write ids. Never offer to approve. Reply with the text only.';
 
 /** The facts the model may use, small and typed. */
-export function factsOf(l: TaskLedger) {
+export function factsOf(l: TaskLedger, deliverBy?: string) {
 	const t = ledgerTotals(l);
 	return {
 		needs: l.needs.slice(0, 12).map((n) => ({
@@ -41,14 +44,18 @@ export function factsOf(l: TaskLedger) {
 		receipts: l.receiptIds.length,
 		decisionsLeft: l.decisionsLeft,
 		nextAction: l.nextAction,
-		asOf: l.asOf
+		...(deliverBy ? { deliveryDay: dayWords(deliverBy) } : {})
 	};
 }
 
 const NUM = /(?<![\p{L}\d.,])\d+(?:[.,]\d+)?(?![\p{L}\d])/gu;
 const ORDERED = /\b(ordered|tilattu|tilattiin|tilasin|tilannut)\b/i;
-const CONFIRMED =
-	/\b(supplier[- ]confirmed|confirmed by the supplier|toimittaja vahvisti|vahvistettu)\b/i;
+/** Any "confirmed" or "delivered" claim: the ledger backs it only with a receipt-confirmed amount. */
+const CONFIRMED = /\b(confirmed|delivered|vahvist\p{L}*|toimitettu|toimitettiin)\b/iu;
+const NOT_CONFIRMED =
+	/\b(not|no|never|un|awaiting|until|before)\s+(yet\s+)?(supplier[- ])?(confirmed|delivered)|\bei (ole )?(vielä )?(vahvistettu|toimitettu)/iu;
+const NOTHING_WAITS =
+	/\b(no|none|nothing|not any|zero|ei (ole )?(yhtään|mitään))\b[^.]{0,40}(held|wait|approv|decision|odot|hyväks|päätö)/iu;
 const APPROVED = /\b(approved|hyväksytty|hyväksyin)\b/i;
 
 /** Numbers the facts contain, as the strings a reply may write them. */
@@ -60,18 +67,18 @@ function allowedNumbers(f: ReturnType<typeof factsOf>): Set<number> {
 	};
 	for (const n of f.needs)
 		[n.required, n.supplierConfirmed, n.awaitingSupplier, n.planned, n.unresolved].forEach(add);
-	const t = f.totals;
-	[t.required, t.supplierConfirmed, t.awaitingSupplier, t.planned, t.unresolved].forEach(add);
+	for (const t of Object.values(f.totals))
+		[t.required, t.supplierConfirmed, t.awaitingSupplier, t.planned, t.unresolved].forEach(add);
 	[f.committedEuros, f.receipts, f.decisionsLeft, f.needs.length].forEach(add);
 	// Numbers inside the labels and the next-action sentence are facts too.
-	for (const s of [f.nextAction, ...f.needs.map((n) => n.label)])
+	for (const s of [f.nextAction, f.deliveryDay ?? '', ...f.needs.map((n) => n.label)])
 		for (const m of s.matchAll(NUM)) add(Number(m[0].replace(',', '.')));
 	return out;
 }
 
 /** Whether a reply says only what the facts back. Returns the first unbacked claim, or null. */
-export function unbacked(text: string, l: TaskLedger): string | null {
-	const f = factsOf(l);
+export function unbacked(text: string, l: TaskLedger, deliverBy?: string): string | null {
+	const f = factsOf(l, deliverBy);
 	const ok = allowedNumbers(f);
 	for (const m of text.matchAll(NUM)) {
 		const v = Math.round(Number(m[0].replace(',', '.')) * 100) / 100;
@@ -83,18 +90,38 @@ export function unbacked(text: string, l: TaskLedger): string | null {
 		f.receipts === 0
 	)
 		return '"ordered" without a receipt';
-	if (CONFIRMED.test(text) && f.totals.supplierConfirmed <= 0)
-		return '"supplier confirmed" without a confirmed amount';
+	const confirmed = Object.values(f.totals).some((t) => t.supplierConfirmed > 0);
+	if (CONFIRMED.test(text) && !NOT_CONFIRMED.test(text) && !confirmed)
+		return '"confirmed" or "delivered" without a confirmed amount';
+	// "Nothing waits for you" while decisions wait contradicts the cards beside it.
+	if (f.decisionsLeft > 0 && NOTHING_WAITS.test(text))
+		return 'says nothing waits while decisions are left';
 	if (APPROVED.test(text) && !/\bnot (yet )?approved\b/i.test(text) && f.decisionsLeft > 0)
 		return '"approved" with decisions left';
-	return null;
+	// The outcome review's deterministic checks too: one set of claim rules for every agent text.
+	const needs = l.needs;
+	const findings = outcomeTextCheckpoint.check({
+		input: { goal: '' },
+		output: text,
+		facts: {
+			status:
+				needs.length && needs.every((n) => n.supplierConfirmed.value >= n.required.value)
+					? 'fulfilled'
+					: 'partial',
+			unresolvedNeeds: needs.filter((n) => n.unresolved.value > 0).length,
+			committedLines: f.receipts,
+			approvalsGranted: f.decisionsLeft > 0 ? 0 : 1,
+			supplierConfirmedLines: needs.filter((n) => n.supplierConfirmed.value > 0).length
+		}
+	});
+	return findings[0]?.message.slice(0, 160) ?? null;
 }
 
 export async function explain(
 	question: string,
 	ledger: TaskLedger,
 	fallback: string,
-	o: { llm?: Llm | null; signal?: AbortSignal }
+	o: { llm?: Llm | null; signal?: AbortSignal; deliverBy?: string }
 ): Promise<Explained> {
 	const t0 = performance.now();
 	const ms = () => Math.round(performance.now() - t0);
@@ -102,13 +129,16 @@ export async function explain(
 	try {
 		const res = await o.llm.generate({
 			system: SYSTEM,
-			prompt: JSON.stringify({ question: question.slice(0, 300), facts: factsOf(ledger) }),
+			prompt: JSON.stringify({
+				question: question.slice(0, 300),
+				facts: factsOf(ledger, o.deliverBy)
+			}),
 			maxTokens: 300,
 			signal: o.signal
 		});
 		const text = res.text.trim();
 		if (res.model === 'fixture' || !text) return { text: fallback, source: 'template', ms: ms() };
-		const bad = unbacked(text, ledger);
+		const bad = unbacked(text, ledger, o.deliverBy);
 		if (bad)
 			return { text: fallback, source: 'template', model: res.model, ms: ms(), rejected: bad };
 		return { text: text.slice(0, 600), source: 'gemini', model: res.model, ms: ms() };

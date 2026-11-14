@@ -1,6 +1,6 @@
 import type { Approval, Order, Plan, Receipt } from '$lib/core/contracts';
 import type { TaskLedger, TaskLedgerNeed, TaskPending } from '$lib/core/contracts/task';
-import { nextActionFor } from '$lib/server/agent/next-action';
+import { nextFor } from '$lib/server/agent/next';
 import { approvalUrl } from '$lib/server/tools/present';
 import { decisionsOf } from '$lib/ui/decisions';
 
@@ -74,11 +74,10 @@ export function computeLedger(i: LedgerInput): TaskLedger {
 		const plan = i.plans.find((p) => p.id === a.planId)!;
 		return n + Math.max(1, decisionGroups(plan, a).length);
 	}, 0);
-	const primary = i.plans[0];
-	const nextAction = primary
-		? nextActionFor(primary, {
-				approvalPending: pending.some((a) => a.planId === primary.id)
-			}).text
+	// The next action of the first plan that still has one: a finished plan never speaks for an open one.
+	const nexts = i.plans.map((p) => nextFor(p, new Date(i.asOf)));
+	const nextAction = nexts.length
+		? (nexts.find((n) => n.action !== 'done') ?? nexts[0]).text
 		: 'Nothing is planned yet.';
 	const validUntil = i.plans
 		.map((p) => p.view?.validUntil)
@@ -95,16 +94,31 @@ export function computeLedger(i: LedgerInput): TaskLedger {
 	};
 }
 
-/** Totals over a ledger's needs that share a unit, for one-line summaries ("4 kg planned, 0 supplier confirmed"). */
-export function ledgerTotals(l: TaskLedger) {
-	const sum = (k: keyof Omit<TaskLedgerNeed, 'needId' | 'planId' | 'label'>) =>
-		l.needs.reduce((s, n) => s + n[k].value, 0);
-	return {
-		required: sum('required'),
-		supplierConfirmed: sum('supplierConfirmed'),
-		awaitingSupplier: sum('awaitingSupplier'),
-		planned: sum('plannedKnown') + sum('plannedUnknown'),
-		unresolved: sum('unresolved'),
-		units: [...new Set(l.needs.map((n) => n.required.unit))]
-	};
+/** Totals over a ledger's needs per unit (kg and l never add up), for one-line summaries and the claim check. */
+export function ledgerTotals(l: TaskLedger): Record<
+	string,
+	{
+		required: number;
+		supplierConfirmed: number;
+		awaitingSupplier: number;
+		planned: number;
+		unresolved: number;
+	}
+> {
+	const out: ReturnType<typeof ledgerTotals> = {};
+	for (const n of l.needs) {
+		const t = (out[n.required.unit] ??= {
+			required: 0,
+			supplierConfirmed: 0,
+			awaitingSupplier: 0,
+			planned: 0,
+			unresolved: 0
+		});
+		t.required += n.required.value;
+		t.supplierConfirmed += n.supplierConfirmed.value;
+		t.awaitingSupplier += n.awaitingSupplier.value;
+		t.planned += n.plannedKnown.value + n.plannedUnknown.value;
+		t.unresolved += n.unresolved.value;
+	}
+	return out;
 }

@@ -83,6 +83,26 @@ describe('the rules guard around the model', () => {
 		expect(u.understanding.kind).toBe('read');
 		expect(u.guard).toMatch(/stays a read/);
 	});
+	it('a dish change never becomes an order, a stated order never becomes small talk', async () => {
+		const adjust = await understand('Raise the cured salmon to 160 g per guest', {
+			today: set.today,
+			llm: model(['{"kind":"order","items":[{"product":"cured salmon","amount":160,"unit":"g"}]}'])
+				.llm
+		});
+		expect(adjust).toMatchObject({
+			understanding: { kind: 'adjust' },
+			source: 'rules',
+			goal: 'Raise the cured salmon to 160 g per guest'
+		});
+		expect(adjust.guard).toMatch(/dish change/);
+		const order = await understand('4 kg butter for tomorrow', {
+			today: set.today,
+			llm: model(['{"kind":"smalltalk"}']).llm
+		});
+		expect(order).toMatchObject({ understanding: { kind: 'order' }, source: 'rules' });
+		expect(order.guard).toMatch(/stays an order/);
+	});
+
 	it('a stated amount the model drops is kept: the chef words run', async () => {
 		const m = model(['{"kind":"order","items":[{"product":"butter","date":"tomorrow"}]}']);
 		const u = await understand('4 kg butter tomorrow', { today: set.today, llm: m.llm });
@@ -128,8 +148,19 @@ describe('grounded answers: the claim check', () => {
 		).toBeNull();
 		expect(unbacked('I ordered 60 kg of butter.', ledger())).toMatch(/ordered/);
 		expect(unbacked('75 kg are planned.', ledger())).toMatch(/number 75/);
-		expect(unbacked('60 kg is supplier confirmed.', ledger())).toMatch(/supplier confirmed/);
-		expect(unbacked('Nothing is ordered yet, so it is not ordered.', ledger())).toBeNull();
+		expect(unbacked('60 kg is supplier confirmed.', ledger())).toMatch(/confirmed/);
+		expect(unbacked('The butter is not ordered yet.', ledger())).toBeNull();
+		// One claim checker: "confirmed" and "delivered" need a receipt-confirmed amount; kg and l never add up.
+		expect(unbacked('Your butter is confirmed.', ledger())).toMatch(/confirmed/);
+		expect(unbacked('The butter was delivered.', ledger())).toMatch(/confirmed|delivered/);
+		expect(unbacked('The butter is not confirmed yet.', ledger())).toBeNull();
+		const mixed = ledger({
+			needs: [
+				...ledger().needs,
+				{ ...ledger().needs[0], needId: 'n2', label: 'cream', required: { value: 2, unit: 'l' } }
+			]
+		});
+		expect(unbacked('62 needed in all.', mixed)).toMatch(/number 62/);
 	});
 	it('uses the model text when it passes, the template when it does not', async () => {
 		const good = await explain('what is left?', ledger(), 'TEMPLATE', {

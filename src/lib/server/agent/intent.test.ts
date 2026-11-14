@@ -91,7 +91,6 @@ describe('typed intent (finding D)', () => {
 		['order 4 kg butter for k-lounas', /arrive/],
 		['order 4 kg butter for k-lounas by 2026-11-01', /past/],
 		['order kerma for k-lounas tomorrow', /How much/],
-		['order 2 kg butter and 3 l milk for k-lounas tomorrow', /One product/],
 		['order 0 kg butter for k-lounas tomorrow', /above 0/]
 	])('refuses what it cannot honour, with the reason: %s', (goal, why) => {
 		const r = resolveIntent(goal, ctx());
@@ -100,6 +99,21 @@ describe('typed intent (finding D)', () => {
 			clarify: expect.objectContaining({ field: expect.any(String) })
 		});
 		expect((r as { reason: string }).reason).toMatch(why);
+	});
+
+	it('several products with their own amounts are one routine order, one line each', () => {
+		expect(
+			resolveIntent('order 2 kg butter and 3 l milk for k-lounas tomorrow', ctx())
+		).toMatchObject({
+			kind: 'routine_order',
+			qty: 2,
+			unit: 'kg',
+			more: [{ qty: 3, unit: 'l', item: { product: 'milk' } }]
+		});
+		// An item without its own amount is still asked about.
+		expect(resolveIntent('order 2 kg butter and milk for k-lounas tomorrow', ctx()).kind).toBe(
+			'unsupported'
+		);
 	});
 
 	it('a changed requirement is adjust_need, even with event words in it', () => {

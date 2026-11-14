@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { scenarioDate } from '$lib/core/scenario';
 import { trialWorkspace } from '../agent/trial-harness';
-import { FIDELITY_NOW } from '../evals/fidelity';
+import { FIDELITY_NOW, playText } from '../evals/fidelity';
 import type { Llm } from '$lib/core/ports';
+import { isTaskId } from '$lib/core/contracts/task';
+import { taskForPlan } from '../request/task';
 import { chatTurn, readAnswer, taskView } from './turn';
 import { messyLlm } from './messy-replay';
 
@@ -342,14 +344,14 @@ describe('suite: chat v2 · understanding, grounded answers, model planning with
 			const steps = out.filter((e) => e.type === 'step');
 			expect(steps[0]).toMatchObject({
 				tool: 'understand',
-				summary: expect.stringMatching(/via Gemini/)
+				detail: expect.stringMatching(/via Gemini/)
 			});
 			expect(steps.map((s) => s.type === 'step' && s.tool)).toContain('place_order');
 			const ledger = out.find((e) => e.type === 'ledger');
 			if (ledger?.type !== 'ledger') throw new Error('no ledger');
 			expect(ledger.ledger.needs[0].required).toEqual({ value: 4, unit: 'kg' });
 			const ex = steps.find((s) => s.type === 'step' && s.tool === 'explain');
-			expect(ex?.type === 'step' && ex.summary).toMatch(/via Gemini · \d+ ms|template/);
+			expect(ex?.type === 'step' && ex.detail).toMatch(/via Gemini · \d+ ms|template/);
 		}
 	);
 
@@ -370,7 +372,7 @@ describe('suite: chat v2 · understanding, grounded answers, model planning with
 			const done = out.at(-1);
 			expect(done?.type === 'done' && done.text).toMatch(/no order placed yet/);
 			const ex = out.find((e) => e.type === 'step' && e.tool === 'explain');
-			expect(ex?.type === 'step' && ex.summary).toMatch(/model reply not used/);
+			expect(ex?.type === 'step' && ex.detail).toMatch(/model reply not used/);
 		}
 	);
 
@@ -399,16 +401,115 @@ describe('suite: chat v2 · several products in one message', () => {
 			expect(out.some((e) => e.type === 'clarify')).toBe(false);
 			const taskId = out.at(-1)!.taskId;
 			const task = await w.env.ports.tasks!.get(w.env.workspaceId, taskId);
-			expect(task?.plans).toHaveLength(2);
-			expect(task?.plans.map((p) => p.role)).toEqual(['primary', 'touched']);
+			// One plan for the one delivery day; milk has no product /request would pick either, so it is said, not
+			// dropped and not guessed.
+			expect(task?.plans.map((p) => p.role)).toEqual(['primary']);
 			const plans = Object.values((await w.state()).plans);
-			expect(plans.map((p) => p.deliverBy)).toEqual(['2026-12-11', '2026-12-11']);
+			expect(plans.map((p) => p.deliverBy)).toEqual(['2026-12-11']);
+			expect(out.at(-1)).toMatchObject({ text: expect.stringMatching(/Not ordered: 5 l milk/) });
 			const ledger = out.find((e) => e.type === 'ledger');
 			if (ledger?.type !== 'ledger') throw new Error('no ledger');
-			expect(ledger.ledger.needs.map((n) => n.required)).toEqual([
-				{ value: 10, unit: 'kg' },
-				{ value: 5, unit: 'l' }
-			]);
+			expect(ledger.ledger.needs.map((n) => n.required)).toEqual([{ value: 10, unit: 'kg' }]);
 		}
 	);
+});
+
+describe('suite: chat turns · tasks opened elsewhere', () => {
+	it(
+		'a task /request opened (t-<planId>) is joined by its id: questions and continue work',
+		{ timeout: 120_000 },
+		async () => {
+			const { w, chef, deps } = await setup();
+			const placed = await w.handlers.place_order(chef, {
+				kitchenId: 'k-hotel',
+				deliverBy: '2026-12-11',
+				idempotencyKey: 'request-task',
+				lines: [{ productId: '464411', qty: 8, unit: 'ST' }]
+			} as never);
+			if (!placed.ok) throw new Error(placed.error.message);
+			const link = await taskForPlan({
+				tasks: w.env.ports.tasks,
+				ctx: chef,
+				now: FIDELITY_NOW,
+				plan: placed.value.plan,
+				title: '4 kg butter',
+				requirement: { goal: '4 kg butter for Friday' }
+			});
+			expect(link.taskId).toMatch(/^t-/);
+			expect(isTaskId(link.taskId)).toBe(true);
+			const out = await chatTurn({ taskId: link.taskId!, text: 'what is still open?' }, deps);
+			expect(out.at(-1)).toMatchObject({ type: 'done', taskId: link.taskId });
+			const last = out.at(-1);
+			expect(last?.type === 'done' ? last.state : 'none').not.toBe('failed');
+			expect((await taskView(link.taskId!, deps)).at(-1)?.type).toBe('done');
+		}
+	);
+});
+
+describe('suite: chat turns · the plan on screen scopes questions, not new orders', () => {
+	it(
+		'an order typed with the buffet plan on screen starts its own task; a question joins the plan',
+		{ timeout: 120_000 },
+		async () => {
+			const { w, chef, deps } = await setup();
+			const planned = await w.handlers.plan_event(chef, {
+				kitchenId: 'k-hotel',
+				eventId: 'event-xmas-140'
+			});
+			if (!planned.ok) throw new Error(planned.error.message);
+			const buffet = planned.value.plan.id;
+			const q = await chatTurn({ planId: buffet, text: 'What needs my decision?' }, deps);
+			const buffetTask = q.at(-1)!.taskId;
+			const order = await chatTurn(
+				{ planId: buffet, text: 'Order 4 kg butter for Wednesday' },
+				deps
+			);
+			const orderTask = order.at(-1)!.taskId;
+			expect(orderTask).not.toBe(buffetTask);
+			const t = await w.env.ports.tasks!.get(w.env.workspaceId, orderTask);
+			expect(t?.plans.map((p) => p.planId)).not.toContain(buffet);
+			const ledger = order.find((e) => e.type === 'ledger');
+			if (ledger?.type !== 'ledger') throw new Error('no ledger');
+			expect(ledger.ledger.needs.map((n) => n.required)).toEqual([{ value: 4, unit: 'kg' }]);
+			const bt = await w.env.ports.tasks!.get(w.env.workspaceId, buffetTask);
+			expect(bt?.plans.map((p) => p.planId)).toEqual([buffet]);
+		}
+	);
+});
+
+describe('suite: chat turns · delivery days', () => {
+	it(
+		'an order for a day the kitchen does not receive says so in words',
+		{ timeout: 120_000 },
+		async () => {
+			const { w, deps } = await setup();
+			// k-lounas receives Monday, Wednesday and Friday.
+			const out = await chatTurn(
+				{ text: 'Order 4 kg butter for Thursday' },
+				{ ...deps, kitchen: { id: 'k-lounas' } }
+			);
+			const drafted = out.find((e) => e.type === 'step' && e.tool === 'place_order');
+			expect(drafted?.type === 'step' && drafted.summary).toMatch(
+				/does not receive deliveries on Thursdays/
+			);
+			void w;
+		}
+	);
+});
+
+describe('suite: chat turns · same words, same basket', () => {
+	for (const text of [
+		'10 l lactose-free milk for Friday',
+		'4 kg butter for Friday',
+		'2 l whipping cream for Friday'
+	])
+		it(`"${text}" buys what /request buys`, { timeout: 120_000 }, async () => {
+			const req = await playText('k-hotel', text, 'request', `same-${text}`);
+			const { w, deps } = await setup();
+			await chatTurn({ text }, deps);
+			const chat = Object.values((await w.state()).plans);
+			const basket = (ps: typeof chat) =>
+				ps.flatMap((p) => p.lines.map((l) => `${l.productId}×${l.qty.value}`)).sort();
+			expect(basket(chat)).toEqual(basket(req.plans));
+		});
 });

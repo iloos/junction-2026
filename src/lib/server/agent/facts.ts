@@ -1,5 +1,5 @@
 import type { DomainError, Product, ToolName } from '$lib/core/contracts';
-import { routineCandidates } from './routine';
+import { routineCandidates, routineLines, routineQueries } from './routine';
 import type { Intent } from './types';
 
 /**
@@ -34,6 +34,12 @@ function code(v: unknown, max = 64): string | undefined {
 	return String(v)
 		.replace(/[^\w.:-]/g, '')
 		.slice(0, max);
+}
+/** A timestamp as UTC ISO (offsets kept by converting, never by stripping the sign). */
+function isoTime(v: unknown): string | undefined {
+	if (typeof v !== 'string') return undefined;
+	const t = Date.parse(v);
+	return Number.isNaN(t) ? undefined : new Date(t).toISOString();
 }
 function num(v: unknown): number | undefined {
 	return typeof v === 'number' && Number.isFinite(v) ? v : undefined;
@@ -124,16 +130,27 @@ export type Facts = Obj;
  * For a routine order, search results are ranked against the request and carry how many sales units
  * the asked quantity is for each product (the request parser's conversion), or why it can't be said.
  */
-export function toFacts(tool: ToolName, value: unknown, intent?: Intent): Facts {
+export function toFacts(tool: ToolName, value: unknown, intent?: Intent, input?: unknown): Facts {
 	const v = obj(value);
 	const cut: Cut = {};
 	switch (tool) {
 		case 'search_products':
-			if (intent?.kind === 'routine_order')
-				return routineCandidates(
-					intent,
-					(Array.isArray(v.products) ? v.products : []) as Product[]
+			if (intent?.kind === 'routine_order') {
+				// Ranked against the product of the order this search was for (matched by its query words).
+				const lines = routineLines(intent);
+				const q = String(obj(input).query ?? '');
+				const i = Math.max(
+					0,
+					lines.findIndex((l) => routineQueries(l).includes(q))
 				);
+				return {
+					...routineCandidates(
+						lines[i],
+						(Array.isArray(v.products) ? v.products : []) as Product[]
+					),
+					item: i
+				};
+			}
 			return marked(
 				{
 					products: cap(v.products, 'products', cut, 10).map((x) => {
@@ -160,8 +177,9 @@ export function toFacts(tool: ToolName, value: unknown, intent?: Intent): Facts 
 							unitCents: num(obj(o.price).unitCents),
 							availability: code(a.kind, 16),
 							logisticModel: code(a.logisticModel, 16),
+							amount: num(a.amount),
 							availableDate: code(a.availableDate, 10),
-							closingTime: code(a.closingTime, 40)
+							closingTime: isoTime(a.closingTime)
 						};
 					}),
 					notFound: cap(v.notFound, 'notFound', cut).map((x) => code(x))

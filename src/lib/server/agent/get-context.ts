@@ -1,10 +1,13 @@
 import type { z } from 'zod';
 import { ok, type Plan, type ResultMeta, type Result } from '$lib/core/contracts';
 import { toolSchemas } from '$lib/core/contracts';
-import type { CallContext, Ports } from '$lib/core/ports';
+import type { CallContext } from '$lib/core/ports';
+import type { ServicePorts } from '$lib/core/services/events';
+import { liveApprovals } from '$lib/core/services/orders';
+import { withPlanView } from '$lib/core/services/views';
 import { SCENARIO } from '$lib/core/scenario';
 import { SUPPORTED_EVENTS } from './context';
-import { nextActionFor } from './next-action';
+import { nextFor } from './next';
 
 export type GetContextOutput = z.infer<(typeof toolSchemas)['get_context']['output']>;
 export type GetContextHandler = (
@@ -12,15 +15,15 @@ export type GetContextHandler = (
 	input: unknown
 ) => Promise<Result<GetContextOutput>>;
 
-/** What to do next with an open plan: the one `nextActionFor` rule, in its own words. */
-export const planNextAction = (p: Plan): string => nextActionFor(p).text;
+/** What to do next with an open plan: core's one `nextActionFor` rule, in its own words. */
+export const planNextAction = (p: Plan, now?: Date): string => nextFor(p, now).text;
 
 /**
  * `get_context`: the first call of a fresh client. Who the caller is, its scopes, the kitchens it may act
  * for with their seeded events, the scenario date and cut-off, and its open plans with a next action.
  * Read-only; kitchens outside `ctx.kitchenIds` are left out.
  */
-export function createGetContext(ports: Pick<Ports, 'store' | 'clock'>): GetContextHandler {
+export function createGetContext(ports: ServicePorts): GetContextHandler {
 	return async (ctx) => {
 		const grant = ctx.kitchenIds ? new Set(ctx.kitchenIds) : null;
 		const allowed = (id: string) => !grant || grant.has(id);
@@ -47,12 +50,18 @@ export function createGetContext(ports: Pick<Ports, 'store' | 'clock'>): GetCont
 					title: e.title
 				}))
 			})),
-			openPlans: open.map((p) => ({
-				planId: p.id,
-				version: p.version,
-				state: p.state,
-				nextAction: planNextAction(p)
-			}))
+			// Read with their views (as get_plan returns them), so core's rule sees each line's state as of now.
+			openPlans: await Promise.all(
+				open.map(async (p) => ({
+					planId: p.id,
+					version: p.version,
+					state: p.state,
+					nextAction: planNextAction(
+						await withPlanView(ports, p, state, liveApprovals(state, p.id)),
+						ports.clock.now()
+					)
+				}))
+			)
 		};
 		value.meta = contextMeta(value);
 		return ok(value);

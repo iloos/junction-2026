@@ -1,4 +1,4 @@
-import type { Plan, ServerEvent, ToolOutput } from '$lib/core/contracts';
+import type { Plan, ServerEvent, ToolName, ToolOutput } from '$lib/core/contracts';
 import type { Llm, ToolHandlers } from '$lib/core/ports';
 import { createDecide } from '$lib/server/adapters/decide';
 import { createLlmRouter } from '$lib/server/adapters/llm/router';
@@ -40,6 +40,10 @@ export async function runGoal(o: {
 	slots?: Slots;
 	/** The plan a task is about; beats anything the words suggest. */
 	planId?: string;
+	/** The request this run serves (a chat task id); a run without one is its own request. */
+	keyScope?: string;
+	/** Tools this run may not use, on top of the intent's list (a chat turn leaves commit_order to Continue). */
+	withhold?: readonly ToolName[];
 }): Promise<AgentRun> {
 	const p = o.principal;
 	const ctx = principalContext(p);
@@ -73,8 +77,11 @@ export async function runGoal(o: {
 		maxSteps: o.maxSteps,
 		intent,
 		context,
-		allowedTools: TOOLS_BY_INTENT[intent.kind].filter((t) => toolsFor(ctx).includes(t)),
+		allowedTools: TOOLS_BY_INTENT[intent.kind].filter(
+			(t) => toolsFor(ctx).includes(t) && !o.withhold?.includes(t)
+		),
 		kitchenIds: p.kitchenIds,
+		keyScope: o.keyScope ?? p.agentRunId,
 		intro,
 		...(o.review
 			? {

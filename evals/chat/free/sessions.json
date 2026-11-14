@@ -63,11 +63,7 @@
 						"kind": ["cancel", "clarify"]
 					}
 				}
-			],
-			"expectFail": {
-				"CHAT-add-item": ["1.items[0]"]
-			},
-			"$expectFailNote": "CHAT-add-item (E): 'and 2 l of whipping cream too' after the butter order adds no cream line; the plan keeps only the butter (live Gemini, chat v2 70c30e2)."
+			]
 		},
 		{
 			"id": "f2-finnish-two-items",
@@ -112,9 +108,9 @@
 				}
 			],
 			"expectFail": {
-				"CHAT-two-items": ["0.items[1]"]
+				"CHAT-milk-like-request": ["0.items[1]"]
 			},
-			"$expectFailNote": "CHAT-two-items (E): 'tarvitaan 10 kg perunoita ja 5 l maitoa perjantaiksi' plans the potatoes (460078) but drops the milk: the second item in one line is lost (live Gemini, chat v2 70c30e2)."
+			"$expectFailNote": "CHAT-milk-like-request (91 to judge): chat now picks exactly as /request does (same words, same basket). For '5 l maitoa' at Friday /request asks which milk ('milk still needs an answer') and buys nothing, so the chat orders the potatoes and says 'Not ordered: 5 l milk … say which one' instead of guessing a milk."
 		},
 		{
 			"id": "f3-mixed-late",
@@ -184,7 +180,11 @@
 						"kind": ["continue", "answer", "refuse"]
 					}
 				}
-			]
+			],
+			"expectFail": {
+				"CHAT-salmon-category": ["0.items[0]", "1.items[0]"]
+			},
+			"$expectFailNote": "CHAT-salmon-category (91 to judge): the chat now orders routine products through the script's basket, which picks 462150 'LOHIFILEE C-LEIKATTU 10KG' (category 18706, the orderable salmon fillet for Friday) where the check wants category 18701 (461814/461915, unpriced or unknown supply). Widen the category or keep this."
 		}
 	]
 }

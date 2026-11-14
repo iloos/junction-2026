@@ -45,7 +45,7 @@ describe('get_context (F6)', () => {
 			const r = await handler(w.ctx('chef'), {});
 			if (!r.ok) throw new Error('get_context failed');
 			expect(r.value.openPlans).toHaveLength(1);
-			expect(r.value.openPlans[0].nextAction).toMatch(/held|find_substitutes|commit_order/);
+			expect(r.value.openPlans[0].nextAction).toMatch(/approval|substitute|ordered now/);
 			expect(r.value.meta?.nextAction?.tool).toBe('get_plan');
 			const granted = await handler({ ...w.ctx('chef'), kitchenIds: ['k-lounas'] }, {});
 			if (!granted.ok) throw new Error('get_context failed');

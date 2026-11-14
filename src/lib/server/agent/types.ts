@@ -36,6 +36,14 @@ export const INTENT_KINDS = [
 ] as const;
 export type IntentKind = (typeof INTENT_KINDS)[number];
 
+/** One product of a routine order: what was asked for, in a physical amount, as the request parser read it. */
+export interface RoutineLine {
+	query: string;
+	qty: number;
+	unit: ReqUnit;
+	item: Pick<ParsedItem, 'product' | 'search' | 'constraints' | 'variant'>;
+}
+
 /** A typed, supported reading of the goal, resolved deterministically before any model call. */
 export type Intent =
 	| { kind: 'seeded_event'; kitchenId: string; eventId: string }
@@ -54,6 +62,8 @@ export type Intent =
 			deliverByText: string;
 			/** Readings the chef should see (a weekday read as next week, a Sunday delivery). */
 			notes: string[];
+			/** Further products asked for in the same words ("10 kg potatoes and 5 l milk"): one plan, one line each. */
+			more?: RoutineLine[];
 	  }
 	| { kind: 'shortage_repair'; planId: string }
 	| { kind: 'inspect'; planId: string }
