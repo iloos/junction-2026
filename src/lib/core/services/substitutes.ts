@@ -393,7 +393,7 @@ export async function findSubstitutes(
 	];
 
 	// The recommendation under these rules. D8: a product whose supply Valio does not confirm loses to the seed's
-	// recipe when every ingredient is known stock for the amount it needs; it stays listed, ranked and labelled.
+	// recipe when every ingredient can be ordered for the amount it needs; it stays listed, ranked and labelled.
 	const top = ranked.filter((r) => r.rank !== null).sort((a, b) => a.rank! - b.rank!)[0];
 	const recipeKnownStock =
 		recipe !== null &&
@@ -408,7 +408,24 @@ export async function findSubstitutes(
 				(a?.amount == null || a.amount >= qty)
 			);
 		});
-	const best = top && (top.supply === 'known_stock' || !recipeKnownStock) ? top : undefined;
+	// D8 amendment: Valio confirmed ≥999999 means orderable in any quantity, availability unknown. A recipe whose
+	// ingredients are all orderable (known, or that unknown; none out, blocked or undeliverable) still beats a
+	// product no better than unknown supply. A known-stock product still beats any recipe.
+	const ingredientOffers = ((recipe?.ingredients ?? []) as Loose[]).map((g) =>
+		offers.find((x) => x.productId === g.productId)
+	);
+	const recipeOrderable =
+		recipe !== null &&
+		recipeIds.length > 0 &&
+		((recipe.ingredients ?? []) as Loose[]).every((g, i) => {
+			const k = ingredientOffers[i]?.availability.kind;
+			return (k === 'known' || k === 'unknown') && !recalled.has(g.productId);
+		});
+	const unstated = ingredientOffers.filter((o) => o?.availability.kind !== 'known').length;
+	const best =
+		top && (top.supply === 'known_stock' || !(recipeKnownStock || recipeOrderable))
+			? top
+			: undefined;
 	let kind: 'product' | 'make_in_house' | 'none' = 'product';
 	let labourNote: string | undefined;
 	let drafts: DraftLine[] = [];
@@ -438,7 +455,15 @@ export async function findSubstitutes(
 		];
 	else if (recipe && need) {
 		kind = 'make_in_house';
-		labourNote = rescue.chosen.recipe?.labour;
+		labourNote =
+			[
+				rescue.chosen.recipe?.labour,
+				unstated
+					? `Valio doesn't state stock for ${unstated} of ${ingredientOffers.length} ingredients`
+					: undefined
+			]
+				.filter(Boolean)
+				.join(' · ') || undefined;
 		const extra: LineReason[] = ['allergen_change'];
 		drafts = (rescue.chosen.ingredients as Loose[]).map((g) => ({
 			id: `${line.id}-mih-${g.productId}`,

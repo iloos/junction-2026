@@ -67,10 +67,18 @@ describe('substitute pool for a seeded dish', () => {
 		for (const w of [undefined, PRICE_FIRST]) {
 			const r = await substitutesFor('462482', w);
 			expect(r.kind).toBe('make_in_house');
+			// D8 amendment: 4 of 5 ingredients are Valio ≥999999 (orderable, stock unknown); it still beats the product.
+			expect(r.labourNote).toContain("Valio doesn't state stock for 4 of 5 ingredients");
 			const terminal = r.candidates.find((c) => c.productId === '462157');
 			expect(terminal?.rank).not.toBeNull(); // still visible and rankable
 			expect(r.chosen.map((l) => l.productId)).not.toContain('462157');
 		}
+	});
+
+	it('D8: an ingredient that is out means no recipe; the product is recommended', async () => {
+		env.overlay.setAvailability({ productId: '460879', amount: 0, label: 'simulated: swede out' });
+		const r = await substitutesFor('462482');
+		expect(r.kind).toBe('product');
 	});
 
 	it('D8: the ham keeps its confirmed Stock replacement first', async () => {
