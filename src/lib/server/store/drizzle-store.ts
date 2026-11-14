@@ -240,8 +240,8 @@ export function createDrizzleStore(
 	const now = opts.now ?? (() => new Date());
 	/**
 	 * Loaded state per (workspace, run), valid while the workspace's last_seq is unchanged: every write (ops,
-	 * enrichments, allocated seqs) bumps it under the row lock, and a reset starts a new run id. One process owns
-	 * the database (single container), so a matching seq means the rows are the ones this state was built from.
+	 * enrichments, allocated seqs) bumps it under the row lock, whichever process writes (a dev server on the same
+	 * database too), and a reset starts a new run id, so an unchanged seq means unchanged rows.
 	 * Callers never mutate state (applyOps returns a new one); tests freeze it to keep that true.
 	 */
 	const cache = new Map<string, { seq: number; state: WorkspaceState }>();
