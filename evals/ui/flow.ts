@@ -83,3 +83,20 @@ export async function chat(page: Page, text: string) {
 		.catch(() => undefined);
 	await page.waitForTimeout(1500);
 }
+
+/**
+ * Wait for the order's receipt and return its id. The Kitchen shows a card labelled "Receipt" that reads "Ordered",
+ * with the id in a System-only span (hidden, still in its text); older builds showed "receipt rc-…" as visible text.
+ */
+export async function receipt(page: Page): Promise<string | null> {
+	const card = page.getByLabel('Receipt', { exact: true });
+	await card
+		.or(page.getByText(/receipt rc-/))
+		.first()
+		.waitFor({ timeout: 30_000 })
+		.catch(() => undefined);
+	const text = (await card.count())
+		? await card.first().textContent()
+		: await page.locator('body').innerText();
+	return text?.match(/receipt (rc-[a-z0-9]+)/)?.[1] ?? null;
+}
