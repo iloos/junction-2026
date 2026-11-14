@@ -21,10 +21,13 @@ type Env = Record<string, string | undefined>;
 /** A listing already known: prewarmed for the demo, else kept by a live lookup. Never a call. */
 export function knownListing(env: Env, productId: string): ProductListing | null | undefined {
 	const r = recordedListing(productId);
-	if (r !== undefined) return r;
+	if (r?.imageUrl) return r;
+	// A live lookup (the brand's site, a retailer) can find what the recording didn't: a kept page wins over a
+	// recorded "none".
 	const kept = findingsFor(env).get(`listing:${productId}`)?.data as
 		{ listing?: ProductListing | null } | undefined;
-	return kept ? (kept.listing ?? null) : undefined;
+	if (kept?.listing) return kept.listing;
+	return r !== undefined ? r : kept ? null : undefined;
 }
 
 /** Every known listing with a photo, by product id. */
@@ -161,7 +164,9 @@ export async function warmPhotos(
 	let n = 0;
 	for (const p of products) {
 		if (n >= max || warmed.size >= WARM_CAP) break;
-		if (warmed.has(p.productId) || recordedListing(p.productId) !== undefined) continue;
+		// The recording has a photo: nothing to warm. A recorded "none" predates the brand and retailer search, so it
+		// is looked up again (and the brand logo fetched when that finds nothing).
+		if (warmed.has(p.productId) || recordedListing(p.productId)?.imageUrl) continue;
 		warmed.add(p.productId);
 		n += 1;
 		const listing = await find(p).catch(() => null);
