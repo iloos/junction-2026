@@ -10,7 +10,7 @@
 
 <script lang="ts">
 	import { tick } from 'svelte';
-	import { CircleCheck, ShieldAlert, TriangleAlert, Hand } from '@lucide/svelte';
+	import { ChevronDown, CircleCheck, ShieldAlert, TriangleAlert, Hand } from '@lucide/svelte';
 	import type { Approval, Line, Plan } from '$lib/core/contracts';
 	import type { CommitNote, TermChange } from '$lib/kitchen/kitchen.svelte';
 	import type { CommitRecord } from '$lib/kitchen/fixture-server';
@@ -38,6 +38,15 @@
 		onretry: () => void;
 		/** Decide: the decisions. Order: totals, what is still not covered, place order, receipt. */
 		part: 'decide' | 'order';
+		/**
+		 * The agent rail's form: one line per decision, opened one at a time in place, so the conversation keeps the
+		 * room. The full cards stay on the page when the agent is closed.
+		 */
+		rail?: boolean;
+		/** The chef is typing or a turn is running: the rail shows only its summary line. */
+		folded?: boolean;
+		/** Mark these lines on the page (null clears); `scroll` brings the first into view. */
+		onmark?: (lineIds: string[] | null, scroll: boolean) => void;
 	}
 	let {
 		plan,
@@ -53,7 +62,10 @@
 		ondeny,
 		oncommit,
 		onretry,
-		part
+		part,
+		rail = false,
+		folded = false,
+		onmark
 	}: Props = $props();
 
 	const byId = $derived(new Map(plan.lines.map((l) => [l.id, l])));
@@ -125,10 +137,46 @@
 
 	let commitBtn = $state<HTMLButtonElement | null>(null);
 	async function approve(lineIds: string[]) {
+		const was = decisions.find((d) => d.lineIds.join() === lineIds.join());
 		const ok = await onapprove(lineIds);
 		await tick();
+		if (ok && was) {
+			result = `Approved ${was.title ?? was.reason} · ${was.lineIds.length} ${was.lineIds.length === 1 ? 'line' : 'lines'} · ${money(was.totalCents)}`;
+			if (openKey === was.key) openKey = null;
+		}
 		if (ok && decisions.length === 0) commitBtn?.focus();
 		return ok;
+	}
+
+	/** Rail: the one open decision, the one under the pointer or focus, and the last thing approved here. */
+	let openKey = $state<string | null>(null);
+	let hoverKey = $state<string | null>(null);
+	let result = $state<string | null>(null);
+	/** The deadline in one short phrase: "Tue 15:00". */
+	const shortDue = $derived(due ? storyTime(due).replace(/\s\d{1,2}\s\w{3},/, '') : null);
+	// What the chef is looking at in the rail is marked on the page; nothing open or hovered clears it.
+	$effect(() => {
+		if (!rail || !onmark) return;
+		const key = hoverKey ?? openKey;
+		const d = key ? decisions.find((x) => x.key === key) : null;
+		onmark(d ? d.lineIds : null, false);
+	});
+	$effect(() => {
+		if (!rail || !onmark) return;
+		return () => onmark(null, false);
+	});
+	/** On the page (no rail to hold it open), "See the lines" marks them for a few seconds. */
+	let seeTimer: ReturnType<typeof setTimeout> | undefined;
+	function seeBriefly(ids: string[]) {
+		onmark?.(ids, true);
+		clearTimeout(seeTimer);
+		seeTimer = setTimeout(() => onmark?.(null, false), 4000);
+	}
+	function toggle(key: string) {
+		openKey = openKey === key ? null : key;
+		result = null;
+		const d = openKey ? decisions.find((x) => x.key === openKey) : null;
+		if (d) onmark?.(d.lineIds, true);
 	}
 	const nameOf = (id: string) => names.get(id) ?? id;
 
@@ -159,7 +207,95 @@
 	});
 </script>
 
-{#if part === 'decide'}
+{#if part === 'decide' && rail}
+	<section
+		id="approval"
+		aria-labelledby="appr-h"
+		class="scroll-mt-4 rounded-lg border border-rule bg-sheet"
+	>
+		<!-- One line that always shows; the decisions open below it, one at a time. -->
+		<div class="flex items-baseline gap-2 px-3 py-2">
+			<h2 id="appr-h" class="text-body font-semibold text-ink">Decide</h2>
+			<p class="min-w-0 flex-1 truncate text-meta text-ink-2">
+				{decisions.length === 1 ? 'One decision' : `${decisions.length} decisions`}{shortDue
+					? ' before '
+					: ''}{#if shortDue}<span class="mono text-ink">{shortDue}</span>{/if}
+			</p>
+		</div>
+		{#if showVoid && !folded}
+			<p class="flex gap-1.5 border-t border-rule bg-signoff-wash px-3 py-1.5 text-meta text-ink">
+				<TriangleAlert size={14} class="mt-0.5 shrink-0 text-signoff" aria-hidden="true" />
+				<span
+					><b class="font-medium">Your earlier approval no longer applies</b>: the terms changed.</span
+				>
+			</p>
+		{/if}
+		{#if !folded}
+			<ul class="border-t border-rule">
+				{#each decisions as d (d.key)}
+					{@const open = openKey === d.key}
+					<li
+						class="border-b border-rule last:border-b-0"
+						onpointerenter={() => (hoverKey = d.key)}
+						onpointerleave={() => (hoverKey = null)}
+						onfocusin={() => (hoverKey = d.key)}
+						onfocusout={() => (hoverKey = null)}
+					>
+						<button
+							type="button"
+							class="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-well {open
+								? 'bg-well/60'
+								: ''}"
+							aria-expanded={open}
+							aria-controls="rail-dec-{d.key}"
+							onclick={() => toggle(d.key)}
+						>
+							{#if d.signOff}<ShieldAlert
+									size={15}
+									class="shrink-0 text-auth"
+									aria-hidden="true"
+								/>{:else}<Hand size={15} class="shrink-0 text-auth" aria-hidden="true" />{/if}
+							<span class="min-w-0 flex-1 truncate text-meta font-medium text-ink"
+								>{d.title ?? d.reason}</span
+							>
+							<span class="mono shrink-0 text-meta text-ink">{money(d.totalCents)}</span>
+							<span class="shrink-0 text-meta text-accent-ink">{open ? 'Close' : 'Review'}</span>
+							<ChevronDown
+								size={14}
+								class="shrink-0 text-ink-3 transition-transform {open ? '' : '-rotate-90'}"
+								aria-hidden="true"
+							/>
+						</button>
+						{#if open}
+							<div id="rail-dec-{d.key}" class="px-2 pb-2">
+								<DecisionCard
+									decision={d}
+									{names}
+									{due}
+									{busy}
+									headless
+									changed={changedIds}
+									onapprove={approve}
+									onkeep={(ids) => ondeny(ids)}
+									onsee={() => onmark?.(d.lineIds, true)}
+								/>
+							</div>
+						{/if}
+					</li>
+				{/each}
+			</ul>
+			{#if result}
+				<p
+					class="landed flex items-center gap-1.5 border-t border-rule px-3 py-1.5 text-meta text-ink"
+					role="status"
+				>
+					<CircleCheck size={14} class="shrink-0 text-ok" aria-hidden="true" />
+					<span class="min-w-0 truncate">{result}</span>
+				</p>
+			{/if}
+		{/if}
+	</section>
+{:else if part === 'decide'}
 	<section
 		id="approval"
 		aria-labelledby="appr-h"
@@ -259,6 +395,7 @@
 									changed={changedIds}
 									onapprove={approve}
 									onkeep={(ids) => ondeny(ids)}
+									onsee={onmark ? () => seeBriefly(d.lineIds) : undefined}
 								/>
 							</li>
 						{/each}

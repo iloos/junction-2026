@@ -13,6 +13,7 @@
 		CloudOff,
 		LoaderCircle,
 		CircleX,
+		CircleCheck,
 		Info
 	} from '@lucide/svelte';
 	import { KitchenStore } from '$lib/kitchen/kitchen.svelte';
@@ -588,11 +589,34 @@
 	 * and command), once, instead of beside the plan as well.
 	 */
 	const inRail = $derived(!!shell?.chatOpen && decisions.length > 0);
+
+	/**
+	 * The lines of the decision the chef is looking at (opened, hovered or focused in the rail, or "See the lines"):
+	 * their rows get an accent band and the rest dim a little. Opening scrolls the first one into view.
+	 */
+	let marked = $state.raw<Set<string> | null>(null);
+	function markLines(ids: string[] | null, scroll: boolean) {
+		marked = ids?.length ? new Set(ids) : null;
+		if (!scroll || !ids?.length) return;
+		const dish = view?.dishes.find((d) => d.lineIds.some((id) => ids.includes(id)));
+		if (dish)
+			document
+				.getElementById(`need-${dish.id}`)
+				?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+	}
+	/** Rows just approved say so for a moment, whatever their coverage chip says next. */
+	let approvedNow = $state.raw<Set<string>>(new Set());
+	let approvedTimer: ReturnType<typeof setTimeout> | undefined;
+	function showApproved(ids: string[]) {
+		approvedNow = new Set(ids);
+		clearTimeout(approvedTimer);
+		approvedTimer = setTimeout(() => (approvedNow = new Set()), 2600);
+	}
 	$effect(() => {
 		if (!shell) return;
-		shell.railHeader = inRail && k.plan && k.snap ? decidePanel : null;
+		shell.railHeader = inRail && k.plan && k.snap ? railDecide : null;
 		return () => {
-			if (shell.railHeader === decidePanel) shell.railHeader = null;
+			if (shell.railHeader === railDecide) shell.railHeader = null;
 		};
 	});
 
@@ -1115,17 +1139,25 @@
 						{@const r = rowOf(d, lines)}
 						{@const isOpen = !!expanded[d.id]}
 						{@const lockedDish = lines.some((l) => l.state === 'committed')}
+						{@const isMarked = !!marked && d.lineIds.some((id) => marked!.has(id))}
+						{@const justApproved = d.lineIds.some((id) => approvedNow.has(id))}
 						<div
 							id="need-{d.id}"
-							class="scroll-mt-4 border-b border-rule last:border-b-0 {focusNeed === d.needId
+							data-marked={isMarked || undefined}
+							class="scroll-mt-4 border-b border-rule transition-[opacity,background-color] duration-200 last:border-b-0 {focusNeed ===
+							d.needId
 								? 'bg-propose-wash/40 ring-2 ring-propose/50 ring-inset'
-								: ''}"
+								: isMarked
+									? 'bg-accent-wash/70 shadow-[inset_3px_0_0_var(--color-accent)]'
+									: marked
+										? 'opacity-55'
+										: ''}"
 						>
 							<!-- One line per dish: everything else is in the detail below (expand) or in Why. -->
 							<div
-								class="grid min-h-16 grid-cols-[minmax(0,1fr)_auto_28px] items-center gap-x-3 px-4 py-2 lg:min-h-14 {ROW_COLS} {k.flash.has(
-									d.plannedLineId
-								) || k.flash.has(d.lineIds[1] ?? '')
+								class="grid min-h-16 grid-cols-[minmax(0,1fr)_auto_28px] items-center gap-x-3 px-4 py-2 lg:min-h-14 {ROW_COLS} {d.lineIds.some(
+									(id) => k.flash.has(id)
+								)
 									? 'landed'
 									: ''}"
 							>
@@ -1199,7 +1231,17 @@
 								<div class="flex flex-col items-end gap-1 lg:contents">
 									<p class="mono text-right text-body text-ink">{r.cents ? money(r.cents) : '—'}</p>
 									<div class="min-w-0">
-										{#if f}<DishChip {f} gate={dishGate(lines)} rescued={r.kind !== 'buy'} />{/if}
+										{#if justApproved}
+											<!-- For a moment after the chef approves, the row says so; then its coverage again. -->
+											<span
+												class="inline-flex items-center gap-1 rounded-full bg-ok-wash px-2 py-0.5 text-meta font-medium text-ink"
+												><CircleCheck size={13} class="text-ok" aria-hidden="true" /> Approved</span
+											>
+										{:else if f}<DishChip
+												{f}
+												gate={dishGate(lines)}
+												rescued={r.kind !== 'buy'}
+											/>{/if}
 									</div>
 								</div>
 								<button
@@ -1484,9 +1526,16 @@
 {/if}
 
 <!-- The Decide panel: beside the plan, or at the top of the agent rail while the agent is open (one place). -->
-{#snippet decidePanel()}
+{#snippet railDecide()}
+	{@render decidePanel(true)}
+{/snippet}
+
+{#snippet decidePanel(rail = false)}
 	{#if plan && snap}
 		<ApprovalPanel
+			{rail}
+			folded={rail && !!shell?.railFolded}
+			onmark={markLines}
 			part="decide"
 			{plan}
 			{approval}
@@ -1500,7 +1549,11 @@
 			lastCommit={k.lastCommit}
 			{names}
 			busy={k.busy}
-			onapprove={(ids) => k.approve('grant', ids)}
+			onapprove={async (ids) => {
+				const ok = await k.approve('grant', ids);
+				if (ok && ids) showApproved(ids);
+				return ok;
+			}}
 			ondeny={(ids) => k.approve('deny', ids)}
 			oncommit={() => k.commit()}
 			onretry={() => k.retryCommit()}
