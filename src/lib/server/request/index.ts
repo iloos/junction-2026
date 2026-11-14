@@ -9,8 +9,10 @@
  */
 import type { Kitchen } from '$lib/core/contracts';
 import type { CallContext } from '$lib/core/ports';
-import { createLlm } from '$lib/server/adapters/llm';
-import { traceEvent } from '$lib/server/adapters/llm/trace';
+import { createDecide } from '$lib/server/adapters/decide';
+import { createLlmRouter } from '$lib/server/adapters/llm/router';
+import { traceEvent, type Trace } from '$lib/server/adapters/llm/trace';
+import { reviewEnabled, ReviewBudget, type ReviewDeps } from '$lib/server/review';
 import { contextFor, JUDGES_WORKSPACE, type Env } from '$lib/server/auth';
 import { publish } from '$lib/server/bus';
 import { createServerPorts } from '$lib/server/store/server-ports';
@@ -91,16 +93,22 @@ export async function submitRequest(o: {
 	const kitchen = all.find((k) => k.id === (o.kitchenId || DEFAULT_KITCHEN));
 	if (!kitchen) throw new Error(`unknown kitchen ${o.kitchenId}`);
 	const kind = llmKind(o.env);
-	const llm =
-		kind === 'fixture'
-			? null
-			: createLlm(
-					o.env,
-					(step, data) =>
-						void publish(ctx.workspaceId, [
-							traceEvent(ctx, step, { actor: ctx.actor.id, purpose: 'request.parse', ...data })
-						])
-				);
+	const trace: Trace = (step, data) =>
+		void publish(ctx.workspaceId, [
+			traceEvent(ctx, step, { actor: ctx.actor.id, purpose: 'request.parse', ...data })
+		]);
+	const llm = kind === 'fixture' ? null : createLlmRouter(o.env, trace).for('request.parse');
+	// Shipped dark: REVIEW=1 reviews the parse (model scoring only when Decide is live).
+	const review: ReviewDeps | undefined = reviewEnabled(o.env)
+		? {
+				decide: createDecide({
+					env: o.env,
+					replayPath: 'src/lib/server/adapters/decide/replay.json'
+				}),
+				trace,
+				budget: new ReviewBudget(2)
+			}
+		: undefined;
 	return runRequest(o.text, {
 		handlers,
 		ctx,
@@ -113,7 +121,8 @@ export async function submitRequest(o: {
 		answers: o.answers,
 		briefAnswers: o.briefAnswers,
 		confirmLarge: o.confirmLarge,
-		onEvent: o.onEvent
+		onEvent: o.onEvent,
+		review
 	});
 }
 

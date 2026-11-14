@@ -336,3 +336,68 @@ describe('F17: parser defects', () => {
 		expect(r.message).toMatch(/Nothing placed yet: cream still needs an answer/);
 	}, 60_000);
 });
+
+describe('parse review (REVIEW=1)', () => {
+	const milk = {
+		query: 'lactose-free milk',
+		qty: 1000,
+		unit: 'l',
+		constraints: ['lactose_free'],
+		searchFi: ['maito']
+	};
+	const butter = { query: 'butter', qty: 5, unit: 'kg', constraints: [], searchFi: ['voi'] };
+
+	it('a parse that drops a product is redone once with the critique', async () => {
+		const { h, ctx, kitchen } = await setup();
+		const prompts: string[] = [];
+		const outs = [{ items: [milk] }, { items: [milk, butter] }];
+		const llm: Llm = {
+			generate: async (req) => {
+				prompts.push(req.prompt);
+				return {
+					text: JSON.stringify(outs[prompts.length - 1]),
+					model: 'gemini-test',
+					tokens: { in: 1, out: 1 },
+					latencyMs: 1
+				};
+			}
+		};
+		const r = await runRequest('1,000 L lactose-free milk and 5 kg butter by Monday', {
+			handlers: h,
+			ctx,
+			today: TODAY,
+			kitchen,
+			place: false,
+			llm,
+			llmKind: 'gemini',
+			review: {}
+		});
+		expect(prompts).toHaveLength(2);
+		expect(prompts[1]).toMatch(/A reviewer found this.*"butter"/);
+		expect(r.parsed.items.map((i) => i.product)).toEqual(['milk', 'butter']);
+		expect(r.parsed.ambiguities.join()).not.toMatch(/review:/);
+	}, 60_000);
+
+	it('what is still wrong after the retry is shown, not hidden', async () => {
+		const { h, ctx, kitchen } = await setup();
+		const llm: Llm = {
+			generate: async () => ({
+				text: JSON.stringify({ items: [milk] }),
+				model: 'gemini-test',
+				tokens: { in: 1, out: 1 },
+				latencyMs: 1
+			})
+		};
+		const r = await runRequest('1,000 L lactose-free milk and 5 kg butter by Monday', {
+			handlers: h,
+			ctx,
+			today: TODAY,
+			kitchen,
+			place: false,
+			llm,
+			llmKind: 'gemini',
+			review: {}
+		});
+		expect(r.parsed.ambiguities.join()).toMatch(/review: .*"butter"/);
+	}, 60_000);
+});
