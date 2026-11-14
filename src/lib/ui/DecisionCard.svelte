@@ -61,7 +61,7 @@
 	class="rounded-lg bg-sheet px-3.5 py-3 {d.signOff
 		? 'border-2 border-auth'
 		: 'border border-auth/45'}"
-	aria-label="Decision: {d.reason}"
+	aria-label="Decision: {d.title ?? d.reason}"
 >
 	<header class="flex items-start justify-between gap-3">
 		<p class="flex min-w-0 items-start gap-1.5 text-body font-semibold text-ink">
@@ -74,11 +74,14 @@
 					class="mt-0.5 shrink-0 text-auth"
 					aria-label="Needs your approval"
 				/>{/if}
-			<span>{d.reason}</span>
+			<span>{d.title ?? d.reason}</span>
 		</p>
 		<p class="mono shrink-0 text-body font-medium text-ink">{money(d.totalCents)}</p>
 	</header>
-	<p class="mt-1 text-meta text-ink-2">{d.why}</p>
+	<p class="mt-1 text-meta text-ink-2">
+		{#if d.title}<span class="font-medium text-ink">{d.reason}.</span>{/if}
+		{d.why}
+	</p>
 
 	<ul class="mt-2 border-t border-rule pt-1.5">
 		{#each shown as l (l.id)}

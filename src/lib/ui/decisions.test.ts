@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Approval, Line, Plan } from '$lib/core/contracts';
-import { decisionCount, decisionsDue, decisionsOf } from './decisions';
+import { decisionCount, decisionsDue, decisionsOf, titleOf } from './decisions';
 
 const line = (id: string, reasons: string[], tier: Line['tier'], cents: number, needId: string) =>
 	({ id, reasons, tier, lineCents: cents, needId, state: 'held' }) as unknown as Line;
@@ -50,5 +50,38 @@ describe('decisionsOf', () => {
 
 	it('counts in words', () => {
 		expect([0, 1, 2].map(decisionCount)).toEqual(['No decisions', '1 decision', '2 decisions']);
+	});
+});
+
+describe('decision titles say what approving does', () => {
+	const labels = new Map([
+		['n1', 'Lanttulaatikko (swede casserole)'],
+		['n2', 'Joulutorttu (prune star tart)'],
+		['n3', 'Joulukinkku (Christmas ham)']
+	]);
+	const l = (o: Partial<Line>) => ({ id: 'x', reasons: [], ...o }) as unknown as Line;
+	const mih = { id: 's', kind: 'make_in_house' as const };
+	it('names the dishes made in house and the allergen change', () => {
+		const lines = [
+			l({ needId: 'n1', strategy: mih, substituteFor: 'p1' }),
+			l({ needId: 'n1', strategy: mih, substituteFor: 'p1' }),
+			l({ needId: 'n2', strategy: mih, substituteFor: 'p2' })
+		];
+		expect(titleOf(lines, ['new_sku', 'allergen_change'], labels)).toBe(
+			'Make lanttulaatikko and joulutorttu in house · allergens change'
+		);
+	});
+	it('separates substitutes from new products', () => {
+		const lines = [
+			l({ needId: 'n3', substituteFor: 'p3' }),
+			l({ needId: 'n1' }),
+			l({ needId: 'n2' })
+		];
+		expect(titleOf(lines, ['new_sku'], labels)).toBe(
+			'Use a substitute for joulukinkku · Buy 2 new products'
+		);
+	});
+	it('every decision carries a title', () => {
+		for (const d of decisionsOf(plan, approval)) expect(d.title).toMatch(/^Buy \d new products?/);
 	});
 });

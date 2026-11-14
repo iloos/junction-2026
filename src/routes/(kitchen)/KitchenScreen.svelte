@@ -529,13 +529,13 @@
 		<div class="mt-6 h-64 animate-pulse rounded bg-well"></div>
 	</main>
 {:else}
-	{#snippet lineRow(l: Line, d: DishView)}
+	{#snippet lineRow(l: Line, d: DishView, inGroup = false)}
 		<LineRow
 			line={l}
 			name={names.get(l.productId) ?? l.productId}
 			approved={approvedIds.has(l.id)}
 			flash={k.flash.has(l.id)}
-			replaces={l.substituteFor
+			replaces={l.substituteFor && !inGroup
 				? {
 						name: names.get(l.substituteFor) ?? l.substituteFor,
 						because:
@@ -724,8 +724,21 @@
 									{#each groupLines(lines) as g (g.key)}
 										{#if g.make}
 											<li>
-												<StrategyCard title={d.nameFi} lines={g.lines}>
-													{#snippet row(l)}{@render lineRow(l, d)}{/snippet}
+												<StrategyCard
+													title={d.nameFi}
+													lines={g.lines}
+													replaces={g.lines[0]?.substituteFor
+														? {
+																name:
+																	names.get(g.lines[0].substituteFor) ?? g.lines[0].substituteFor,
+																because:
+																	d.outage === 'undeliverable'
+																		? "Valio can't deliver it"
+																		: 'out of stock at Valio'
+															}
+														: undefined}
+												>
+													{#snippet row(l)}{@render lineRow(l, d, true)}{/snippet}
 												</StrategyCard>
 											</li>
 										{:else}

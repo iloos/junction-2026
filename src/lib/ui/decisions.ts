@@ -11,6 +11,8 @@ import { reasonLong, reasonShort } from './reasons';
 export interface Decision {
 	/** Stable per approval and reason group. */
 	key: string;
+	/** What approving does, consequence first: "Make lanttulaatikko and joulutorttu in house · allergens change". */
+	title: string;
 	/** Short reason, e.g. "New product · Allergen change". */
 	reason: string;
 	/** The reasons in full sentences. */
@@ -52,6 +54,7 @@ export function decisionsOf(plan: Plan, approval: Approval | null | undefined): 
 		].filter((x): x is string => !!x);
 		return {
 			key: `${approval.id}:${reason}`,
+			title: titleOf(g.lines, g.reasons, needLabel),
 			reason,
 			why: g.reasons.map(reasonLong).join(' '),
 			lineIds: g.lines.map((l) => l.id),
@@ -64,6 +67,53 @@ export function decisionsOf(plan: Plan, approval: Approval | null | undefined): 
 			termsHash: approval.termsHash
 		};
 	});
+}
+
+/** A dish named mid-sentence: Finnish dish names are common nouns ("make lanttulaatikko in house"). */
+const dishName = (label: string) => {
+	const n = label.split(' (')[0];
+	return n[0].toLowerCase() + n.slice(1);
+};
+const listed = (xs: string[]) =>
+	xs.length <= 2 ? xs.join(' and ') : `${xs.slice(0, 2).join(', ')} and ${xs.length - 2} more`;
+const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
+
+/**
+ * A decision named by what approving it does, from its lines: making dishes in house, switching to substitutes,
+ * buying new products; an allergen change is said in the title because it is the reason it needs a sign-off.
+ */
+export function titleOf(
+	lines: readonly Line[],
+	reasons: readonly string[],
+	needLabel: ReadonlyMap<string, string>
+): string {
+	const dishesOf = (ls: readonly Line[]) => [
+		...new Set(
+			ls
+				.map((l) => (l.needId ? needLabel.get(l.needId) : undefined))
+				.filter((x): x is string => !!x)
+		)
+	];
+	const made = lines.filter((l) => l.strategy?.kind === 'make_in_house');
+	const swapped = lines.filter((l) => l.strategy?.kind !== 'make_in_house' && l.substituteFor);
+	const bought = lines.filter((l) => l.strategy?.kind !== 'make_in_house' && !l.substituteFor);
+	const parts: string[] = [];
+	if (made.length) {
+		const ds = dishesOf(made).map(dishName);
+		parts.push(`Make ${ds.length ? listed(ds) : plural(made.length, 'dish', 'dishes')} in house`);
+	}
+	if (swapped.length) {
+		const ds = dishesOf(swapped).map(dishName);
+		parts.push(
+			ds.length
+				? `Use a substitute for ${listed(ds)}`
+				: plural(swapped.length, 'substitute', 'substitutes')
+		);
+	}
+	if (bought.length) parts.push(`Buy ${plural(bought.length, 'new product', 'new products')}`);
+	if (reasons.includes('allergen_change')) parts.push('allergens change');
+	const t = parts.join(' · ');
+	return t ? t[0].toUpperCase() + t.slice(1) : 'Approve these lines';
 }
 
 function consequenceOf(needs: string[], n: number): string {
