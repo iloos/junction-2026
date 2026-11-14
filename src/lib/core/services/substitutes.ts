@@ -10,6 +10,7 @@
  *  - applying: replaces `saved` with the recommendation, re-quotes, and so voids the approval.
  * With no qualifying product the seed's make-in-house recipe is recommended (sign-off); otherwise kind `none`.
  */
+import { isPreference, presetWeights } from '../rank/presets';
 import {
 	err,
 	ok,
@@ -247,7 +248,11 @@ export async function findSubstitutes(
 	const apply =
 		input.apply ??
 		(!input.weights && !input.requireOrigin && !input.requirements && saved.length === 0);
-	const rankKitchen = input.weights ? { ...kitchen, weights: input.weights } : kitchen;
+	// Explicit weights win; a request's preference (rankBy) reweights for this call only, never a tier or authority.
+	const weights =
+		input.weights ??
+		(isPreference(input.rankBy) ? presetWeights(input.rankBy, kitchen) : undefined);
+	const rankKitchen = weights ? { ...kitchen, weights } : kitchen;
 
 	const seed = plan0.eventId ? ports.events?.[plan0.eventId] : undefined;
 	const need = plan0.needs.find((n) => n.id === line.needId);

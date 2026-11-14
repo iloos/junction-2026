@@ -24,6 +24,12 @@ import { readingOf, reviewReading } from '$lib/server/request/reading';
 import { dayWords, ledgerSummary, readTask } from '$lib/server/tasks/outcome';
 import { explain } from './explain';
 import { answerInChat } from './question';
+import { PREFERENCE_NAME } from '$lib/core/rank/presets';
+import {
+	preferenceSentence,
+	readPreference,
+	type Preference
+} from '$lib/server/agent/intents/preference';
 import { outsideOptions, outsideSteps } from './outside';
 import { readChoice, readQuestion } from '$lib/server/agent/intents/questions';
 import { understand } from './understand';
@@ -54,6 +60,9 @@ import { planName } from '$lib/server/agent/plan-name';
  * Every turn ends with the task written back (compare-and-set on its version), so a reconnect reads the task, not a
  * transcript. Lines: step* → clarify | decision? → ledger? → done.
  */
+/** A sentence after the answer, when there is one. */
+const sentenceAfter = (t: string) => (t ? ` ${t}` : '');
+
 export interface ChatDeps {
 	handlers: ToolHandlers;
 	/** The chef's context (visitor cookie or key); the agent acts under it ∩ its own scopes. */
@@ -788,6 +797,8 @@ async function* turnLines(
 	let answered = false;
 	let planId: string | undefined = primary;
 	let run: AgentRun | null = null;
+	/** This turn's ranking preference, when its words or its task's state one. */
+	let pref: Preference | null = null;
 	/** A menu proposal shown this turn (the event flow). */
 	let menuCard: Extract<ChatEvent, { type: 'menu' }> | null = null;
 	/** What a Continue did: bought something, or found nothing newly authorised. */
@@ -977,6 +988,9 @@ async function* turnLines(
 		const planner = model ? withFallback(model, scriptedPlanner()) : scriptedPlanner();
 		steps = [];
 		const touched: string[] = [];
+		// "Cheapest", "lowest carbon", "prefer Finnish": this task's ranking preference (its own words first, then the
+		// requirement's), for its searches, substitutes and routine choice only.
+		pref = readPreference(words ?? '') ?? readPreference(String(task.requirement.goal ?? ''));
 		for (const g of goals) {
 			const p =
 				goals.length > 1
@@ -992,7 +1006,9 @@ async function* turnLines(
 				goal: g,
 				run: ({ signal, onEvent }) =>
 					runGoal({
-						goal: g,
+						// The preference words are a ranking, not part of what to buy.
+						goal: pref ? g.replace(pref.said, ' ').replace(/\s+/g, ' ').trim() : g,
+						...(pref ? { rankBy: pref.rankBy } : {}),
 						principal: p,
 						handlers: deps.handlers,
 						planner,
@@ -1223,6 +1239,7 @@ async function* turnLines(
 		state: task.state,
 		text:
 			(await scrub(text, deps)).slice(0, 600) +
+			(pref && run ? sentenceAfter(preferenceSentence(pref, steps, PREFERENCE_NAME)) : '') +
 			(outside?.text
 				? `
 

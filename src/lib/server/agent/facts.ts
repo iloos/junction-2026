@@ -175,6 +175,8 @@ export function toFacts(tool: ToolName, value: unknown, intent?: Intent, input?:
 						return {
 							productId: code(o.productId),
 							unitCents: num(obj(o.price).unitCents),
+							comparisonCents: num(obj(obj(o.price).comparison).cents),
+							comparisonUnit: code(obj(obj(o.price).comparison).unit, 8),
 							availability: code(a.kind, 16),
 							logisticModel: code(a.logisticModel, 16),
 							amount: num(a.amount),

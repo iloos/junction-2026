@@ -1,4 +1,4 @@
-import type { Actor, ToolName } from '$lib/core/contracts';
+import type { Actor, ToolName, Weights } from '$lib/core/contracts';
 import type { ClarifyField } from '$lib/core/contracts/task';
 import type { ParsedItem } from '$lib/server/request/parse';
 import type { ReqUnit } from '$lib/server/request/lexicon';
@@ -96,7 +96,8 @@ export type PlanPick = 'task' | 'named' | 'event' | 'kitchen' | 'shortage' | 'on
 
 /** What the planner may read about its situation without a tool call (the context bootstrap). */
 export interface AgentContext {
-	kitchens: { id: string; name: string }[];
+	/** Authorised kitchens; `weights` break a ranking preference's ties as /request does. */
+	kitchens: { id: string; name: string; weights?: Weights }[];
 	/**
 	 * The plan the request is about, or null when there is none or the request does not say which of
 	 * several (then `openPlans` lists them and the intent asks).

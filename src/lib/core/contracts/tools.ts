@@ -34,6 +34,15 @@ export const SCOPES_BY_ACTOR = {
 const PlanRef = z.object({ planId: z.string(), version: z.int().nonnegative() });
 
 /**
+ * A ranking preference for one call ("cheapest", "lowest carbon", "prefer Finnish", "most reliable"; `kitchen` = the
+ * kitchen's own weights, the /request page's names): it reweights the
+ * order candidates are shown or picked in, never a line's tier or authority, and is never persisted. Requiring an
+ * origin stays a mandate rule only a chef sets.
+ */
+export const RankBy = z.enum(['kitchen', 'price', 'carbon', 'finnish', 'reliability']);
+export type RankBy = z.infer<typeof RankBy>;
+
+/**
  * What a client (or a model) should understand from a result without parsing it: one sentence, the next tool to
  * call, and where a human approves. Always our own wording from typed fields, never supplier or web strings, so a
  * catalogue name can't inject instructions into an agent's context.
@@ -213,7 +222,12 @@ export const toolSchemas = {
 	search_products: {
 		scope: 'read',
 		description: 'Search the static catalogue (no Valio call). Returns products with provenance.',
-		input: z.object({ query: z.string().min(1), limit: z.int().min(1).max(50).default(10) }),
+		input: z.object({
+			query: z.string().min(1),
+			limit: z.int().min(1).max(50).default(10),
+			/** Order the hits by this preference (carbon, origin, reliability: static fields; price needs a quote). */
+			rankBy: RankBy.optional()
+		}),
 		output: out({ products: z.array(Product) })
 	},
 	quote: {
@@ -308,6 +322,8 @@ export const toolSchemas = {
 			weights: z.record(z.string(), z.number().min(0)).optional(),
 			/** Extra origin requirement for this ranking only, e.g. "fi" (a case of `requirements`). */
 			requireOrigin: z.string().length(2).optional(),
+			/** A preference for this call only; reweights the ranking, never a tier or authority. Ignored when `weights` is given. */
+			rankBy: RankBy.optional(),
 			/**
 			 * Extra hard requirements for this ranking, added to the need's own (a union, never weaker). A preview unless
 			 * `apply` is true.
