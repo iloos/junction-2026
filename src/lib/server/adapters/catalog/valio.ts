@@ -17,6 +17,9 @@ import {
 	assemble,
 	RetrievalIndex,
 	retrievalModeFromEnv,
+	searchModeFromEnv,
+	type Resolution,
+	type Resolver,
 	toRetrievalProduct,
 	type RetrievalMode
 } from './retrieval';
@@ -31,8 +34,10 @@ export interface ValioCatalogOptions {
 	/** Fetch cache misses from the mock API. Without it the adapter is the fixture: cache only. */
 	live?: { apiKey: string; baseUrl?: string; fetch?: typeof fetch };
 	overlay?: SimOverlay;
-	/** Substitute candidate retrieval (default: CATALOG_RETRIEVAL env, else `id`). */
+	/** Substitute candidate retrieval (default: CATALOG_RETRIEVAL env, else `hybrid`). */
 	retrieval?: RetrievalMode;
+	/** Free-text search (default: CATALOG_SEARCH env, else substring `id`). */
+	search?: RetrievalMode;
 }
 
 const BOM = new RegExp('^\uFEFF');
@@ -160,12 +165,14 @@ async function pool<T, R>(items: T[], limit: number, fn: (t: T) => Promise<R>): 
 
 export function createValioCatalog(
 	opts: ValioCatalogOptions = {}
-): Catalog & { products: Map<ProductId, Product> } {
+): Catalog & Resolver & { products: Map<ProductId, Product> } {
 	const dir = opts.dir ?? join('data', 'valio');
 	const customer = opts.customer ?? '123';
 	const products = loadCatalogue(dir);
 	const retrieval = opts.retrieval ?? retrievalModeFromEnv();
+	const searchMode = opts.search ?? searchModeFromEnv();
 	let index: RetrievalIndex | undefined;
+	const ix = () => (index ??= new RetrievalIndex([...products.values()].map(toRetrievalProduct)));
 	const cache = new OfferCache(join(dir, 'cache'));
 	let failures = 0;
 
@@ -209,6 +216,11 @@ export function createValioCatalog(
 			return out;
 		},
 		async search(query, o = {}) {
+			if (searchMode === 'hybrid' && (o.foodOnly ?? true)) {
+				return ix()
+					.search(query, o.limit ?? 10)
+					.map((id) => products.get(id)!);
+			}
 			const words = query.toLowerCase().split(/\s+/).filter(Boolean);
 			const foodOnly = o.foodOnly ?? true;
 			const hits: Product[] = [];
@@ -220,6 +232,9 @@ export function createValioCatalog(
 				if (hits.length >= (o.limit ?? 10)) break;
 			}
 			return hits;
+		},
+		async resolve(query, o): Promise<Resolution> {
+			return ix().resolve(query, o);
 		},
 		async offers(ids, deliverBy) {
 			const known = ids.filter((id) => products.has(id));
@@ -256,12 +271,10 @@ export function createValioCatalog(
 			const p = products.get(productId);
 			if (!p) return [];
 			if (retrieval === 'hybrid') {
-				index ??= new RetrievalIndex([...products.values()].map(toRetrievalProduct));
-				const ix = index;
 				return assemble(
 					{ ...toRetrievalProduct(p), valioSubstitutes: p.valioSubstitutes },
 					(id) => products.has(id),
-					(exclude, room) => ix.similar(toRetrievalProduct(p), exclude, room),
+					(exclude, room) => ix().similar(toRetrievalProduct(p), exclude, room),
 					limit
 				);
 			}

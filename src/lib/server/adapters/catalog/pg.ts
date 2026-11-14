@@ -17,6 +17,10 @@ import {
 	assemble,
 	RetrievalIndex,
 	retrievalModeFromEnv,
+	searchModeFromEnv,
+	type Resolution,
+	type Resolver,
+	type RetrievalProduct,
 	toRetrievalProduct,
 	type RetrievalMode
 } from './retrieval';
@@ -27,8 +31,10 @@ type Raw = any;
 export interface PgCatalogOptions {
 	customer?: string;
 	overlay?: SimOverlay;
-	/** Substitute candidate retrieval (default: CATALOG_RETRIEVAL env, else `id`). */
+	/** Substitute candidate retrieval (default: CATALOG_RETRIEVAL env, else `hybrid`). */
 	retrieval?: RetrievalMode;
+	/** Free-text search (default: CATALOG_SEARCH env, else substring `id`). */
+	search?: RetrievalMode;
 }
 
 export type OfferCacheRow = typeof offerCache.$inferInsert;
@@ -56,18 +62,42 @@ const iso = (t: string) => new Date(t).toISOString();
 
 const escapeLike = (s: string) => s.replace(/[\\%_]/g, (c) => `\\${c}`);
 
-export function createPgCatalog(db: AnyDb, opts: PgCatalogOptions = {}): Catalog {
+export function createPgCatalog(db: AnyDb, opts: PgCatalogOptions = {}): Catalog & Resolver {
 	const customer = opts.customer ?? '123';
 	const retrieval = opts.retrieval ?? retrievalModeFromEnv();
-	// The hybrid index needs every food product's name fields once (~17.5k small rows), then lives in memory.
+	const searchMode = opts.search ?? searchModeFromEnv();
+	// The hybrid index reads each food product's name and filter fields once (~17.5k small rows), then lives in memory.
 	let index: Promise<RetrievalIndex> | undefined;
 	const loadIndex = () =>
 		(index ??= (async () => {
 			const rows = await db
-				.select({ doc: products.doc })
+				.select({
+					productId: products.productId,
+					nameFi: products.nameFi,
+					nameEn: products.nameEn,
+					category: products.category,
+					categoryGroup: sql<string>`${products.doc}->>'categoryGroup'`,
+					brand: sql<string | null>`${products.doc}->>'brand'`,
+					temperatureClass: sql<string>`${products.doc}->>'temperatureClass'`,
+					freeFrom: sql<string[]>`coalesce(${products.doc}->'freeFrom', '[]'::jsonb)`,
+					flags: sql<string[]>`coalesce(${products.doc}->'dataQualityFlags', '[]'::jsonb)`,
+					netUnit: sql<string | null>`${products.doc}->'netPerSalesUnit'->'value'->>'unit'`
+				})
 				.from(products)
 				.where(eq(products.isFood, true));
-			const ps = rows.map((r) => toRetrievalProduct(r.doc as Product));
+			const ps: RetrievalProduct[] = rows.map((r) => ({
+				productId: r.productId,
+				nameFi: r.nameFi,
+				nameEn: r.nameEn ?? undefined,
+				brand: r.brand ?? undefined,
+				category: r.category,
+				categoryGroup: r.categoryGroup,
+				temperatureClass: r.temperatureClass as RetrievalProduct['temperatureClass'],
+				isFood: true,
+				freeFrom: r.freeFrom,
+				dataQualityFlags: r.flags,
+				netUnit: r.netUnit ?? undefined
+			}));
 			return new RetrievalIndex(ps);
 		})().catch((e) => {
 			index = undefined;
@@ -98,6 +128,11 @@ export function createPgCatalog(db: AnyDb, opts: PgCatalogOptions = {}): Catalog
 		},
 
 		async search(query, o = {}) {
+			if (searchMode === 'hybrid' && (o.foodOnly ?? true)) {
+				const ids = (await loadIndex()).search(query, o.limit ?? 10);
+				const found = await docs(ids);
+				return ids.flatMap((id) => (found.has(id) ? [found.get(id)!] : []));
+			}
 			const words = query.toLowerCase().split(/\s+/).filter(Boolean);
 			const hay = sql`(${products.nameFi} || ' ' || coalesce(${products.nameEn}, '') || ' ' || coalesce(${products.doc}->>'brand', ''))`;
 			const conds = [
@@ -112,6 +147,10 @@ export function createPgCatalog(db: AnyDb, opts: PgCatalogOptions = {}): Catalog
 				.orderBy(asc(products.productId))
 				.limit(o.limit ?? 10);
 			return rows.map((r) => r.doc as Product);
+		},
+
+		async resolve(query, o): Promise<Resolution> {
+			return (await loadIndex()).resolve(query, o);
 		},
 
 		// The cache is not keyed by date (the mock API ignores requestedDate); deliverBy re-dates it (onScenario).

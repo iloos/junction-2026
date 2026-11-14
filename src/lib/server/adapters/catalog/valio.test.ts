@@ -92,7 +92,7 @@ describe('Valio catalog (fixture: cache only)', () => {
 
 	it('lists Valio rule candidates first', async () => {
 		const c = await ports.catalog.candidates('463437');
-		expect(c.slice(0, 2)).toEqual([
+		expect(c.slice(0, 2)).toMatchObject([
 			{ productId: '462421', fromValioRule: true },
 			{ productId: '464076', fromValioRule: true }
 		]);
