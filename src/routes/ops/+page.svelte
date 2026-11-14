@@ -3,7 +3,7 @@
 	import { resolve } from '$app/paths';
 	import { enhance } from '$app/forms';
 	import type { Plan, PlanView } from '$lib/core/contracts';
-	import { scenarioClock } from '$lib/core/scenario';
+	import { SCENARIO, scenarioClock, scenarioDate } from '$lib/core/scenario';
 	import { OpsStream } from './stream.svelte';
 	import CaseTicket from './CaseTicket.svelte';
 	import OpTimeline from './OpTimeline.svelte';
@@ -12,13 +12,24 @@
 	import ProblemCard from './ProblemCard.svelte';
 	import StoryPanel from './StoryPanel.svelte';
 	import ServiceStatus from './ServiceStatus.svelte';
+	import SponsorsPanel from './SponsorsPanel.svelte';
+	import RoomView from './RoomView.svelte';
+	import ForecastTab from './ForecastTab.svelte';
+	import { lastShortage, orderFeed, roomKitchens, storesCreated, storeTotals } from './room';
 	import OrdersTab from './OrdersTab.svelte';
 	import DemandTab from './DemandTab.svelte';
 	import GatePanel from './GatePanel.svelte';
 	import { gatePaths } from './gate';
 	import { storyOf } from './story';
 	import type { OpEnvelope } from '$lib/core/contracts';
-	import { buildCases, coverage, kitchenHref, openDecisions, openLines } from './cases';
+	import {
+		buildCases,
+		coverage,
+		kitchenHref,
+		openDecisions,
+		openLines,
+		withApprovals
+	} from './cases';
 	import { buildProblems, type Problem } from './problems';
 	import { ACTOR, euro, opPlanId, opSummary, SIM_KIND, viaLabel, type Names } from './labels';
 	import { useShell } from '$lib/ui/shell/shell.svelte';
@@ -69,7 +80,12 @@
 	const LOG_SHOWN = 15;
 	let logAll = $state(false);
 
-	const kitchenName = (id: string) => data.kitchens.find((k) => k.id === id)?.name ?? id;
+	/** The kitchens the page loaded plus stores created since it opened (D24). */
+	const kitchens = $derived(roomKitchens(data.kitchens, storesCreated(stream.roomSims)));
+	const kitchenName = (id: string) => kitchens.find((k) => k.id === id)?.name ?? id;
+	/** The shared room shows the room first. */
+	const inRoom = $derived(data.room.kind === 'shared' || data.room.kind === 'full');
+	const joinUrl = $derived(inRoom ? `${data.origin}${resolve('/')}?ws=${data.rooms.shared}` : null);
 	const plans = $derived(Object.values(stream.state.plans));
 
 	/**
@@ -115,7 +131,8 @@
 	 * Problems (cards and their story, the first screen), queue (work surface), wallboard (one column per kitchen)
 	 * or the engine room (timeline, op log and traces; shown with the System toggle). Remembered.
 	 */
-	type View = 'problems' | 'orders' | 'demand' | 'queue' | 'wallboard' | 'engine';
+	type View =
+		'room' | 'problems' | 'orders' | 'demand' | 'forecast' | 'queue' | 'wallboard' | 'engine';
 	const shell = useShell();
 	const system = $derived(!!shell?.system);
 	let chosen = $state<View>('problems');
@@ -124,13 +141,16 @@
 		try {
 			const saved = localStorage.getItem('ops-view');
 			if (
+				saved === 'room' ||
 				saved === 'orders' ||
 				saved === 'demand' ||
+				saved === 'forecast' ||
 				saved === 'queue' ||
 				saved === 'wallboard' ||
 				saved === 'engine'
 			)
 				chosen = saved;
+			else if (inRoom) chosen = 'room';
 		} catch {
 			/* storage blocked: keep the default */
 		}
@@ -164,7 +184,8 @@
 			const plansWithViews = Object.fromEntries(
 				Object.entries(stream.state.plans).map(([id, p]) => [id, withView(p)])
 			);
-			const withViews = { ...stream.state, plans: plansWithViews };
+			// Approved lines read as approved (withApprovals), as the decision tiles count them.
+			const withViews = withApprovals({ ...stream.state, plans: plansWithViews });
 			cases = buildCases(withViews, names, stream.heldSince);
 			problems = buildProblems(withViews, names, opsInOrder());
 			queueTimer = setTimeout(run, QUEUE_MS);
@@ -220,7 +241,7 @@
 	);
 
 	const columns = $derived(
-		data.kitchens.map((k) => {
+		kitchens.map((k) => {
 			const mine = plans.filter((p) => p.kitchenId === k.id);
 			const held = mine.flatMap((p) => openLines(withView(p)).map((line) => ({ line, plan: p })));
 			const orders = Object.values(stream.state.orders).filter((o) => o.kitchenId === k.id);
@@ -335,7 +356,11 @@
 			</nav>
 			<p class="roomline" title="Workspace and run this screen reads">
 				{data.room.label}
-				<span class="mono sys-only">{data.workspace}{data.run ? ` · ${data.run}` : ''}</span>
+				<span class="mono sys-only"
+					>{data.workspace}{stream.state.runId || data.run
+						? ` · ${stream.state.runId || data.run}`
+						: ''}</span
+				>
 			</p>
 			{#if data.room.notice}<p class="room-notice" role="note">{data.room.notice}</p>{/if}
 		</div>
@@ -461,7 +486,7 @@
 		</p>
 	{/if}
 
-	{#if stream.status === 'live' && !stream.log.length}
+	{#if stream.status === 'live' && !stream.log.length && !inRoom}
 		<section class="empty">
 			<h2>No orders in this workspace yet</h2>
 			<p>
@@ -474,6 +499,9 @@
 		</section>
 	{:else}
 		<div class="views" role="tablist" aria-label="View">
+			<button role="tab" aria-selected={view === 'room'} onclick={() => setView('room')}>
+				Room <b>{kitchens.length}</b>
+			</button>
 			<button role="tab" aria-selected={view === 'problems'} onclick={() => setView('problems')}>
 				Problems <b>{problems.filter((p) => p.tone !== 'quiet').length}</b>
 			</button>
@@ -482,6 +510,9 @@
 			</button>
 			<button role="tab" aria-selected={view === 'demand'} onclick={() => setView('demand')}>
 				Demand
+			</button>
+			<button role="tab" aria-selected={view === 'forecast'} onclick={() => setView('forecast')}>
+				Forecast
 			</button>
 			<button role="tab" aria-selected={view === 'queue'} onclick={() => setView('queue')}>
 				Queue <b>{cases.length}</b>
@@ -498,7 +529,17 @@
 			{/if}
 		</div>
 		<main class:split={view === 'problems' || view === 'engine'}>
-			{#if view === 'problems'}
+			{#if view === 'room'}
+				<RoomView
+					{kitchens}
+					totals={storeTotals(stream.state.orders)}
+					feed={orderFeed(stream.state.orders, kitchenName)}
+					shortage={lastShortage(stream.roomSims)}
+					{joinUrl}
+					seedName={(id) => data.kitchens.find((k) => k.id === id)?.name ?? 'a seeded kitchen'}
+					canShortage={!data.simulated && (data.presenter || data.room.kind === 'own')}
+				/>
+			{:else if view === 'problems'}
 				<section class="problems" aria-label="Problems, biggest first">
 					{#each problems as p (p.id)}
 						<ProblemCard
@@ -528,19 +569,31 @@
 					<GatePanel g={gatePaths(stream.state)} />
 				</div>
 			{:else if view === 'orders'}
-				<OrdersTab
-					ws={data.workspace}
-					kitchens={data.kitchens}
-					version={stream.last}
-					href={(planId, kitchenId) =>
-						data.simulated ? null : kitchenHref({ planId, kitchenId }, linkAt)}
+				<!-- A reset (here or in another tab) starts a new run with the seq cursor kept: remount to refetch. -->
+				{#key stream.state.runId}
+					<OrdersTab
+						ws={data.workspace}
+						{kitchens}
+						version={stream.last}
+						href={(planId, kitchenId) =>
+							data.simulated ? null : kitchenHref({ planId, kitchenId }, linkAt)}
+					/>
+				{/key}
+			{:else if view === 'forecast'}
+				<ForecastTab
+					ws={stream.state}
+					kinds={kitchens.map((k) => k.kind)}
+					from={scenarioDate(new Date(SCENARIO.start))}
+					shortage={lastShortage(stream.roomSims)}
 				/>
 			{:else if view === 'demand'}
-				<DemandTab ws={data.workspace} version={stream.last} />
+				{#key stream.state.runId}
+					<DemandTab ws={data.workspace} version={stream.last} />
+				{/key}
 			{:else if view === 'queue'}
 				<Queue
 					{cases}
-					kitchens={data.kitchens}
+					{kitchens}
 					now={caseNow}
 					relative={!data.simulated}
 					at={data.simulated
@@ -558,6 +611,7 @@
 								></i>{/if}
 						</button>
 					</div>
+					<SponsorsPanel workspace={data.workspace} />
 					<OpTimeline log={stream.log} {names} plans={stream.state.plans} />
 				</div>
 			{:else}

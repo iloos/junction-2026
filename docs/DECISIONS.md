@@ -121,6 +121,7 @@ What changes is that hard constraints get **one vocabulary and one evaluator in 
 - One pure `meets(product, requirements, kitchenConstraints) → { ok | unknown | no, why }` serves ranking, the validator (quote and commit), the request lookup filter, the substitutes and the UI's diet marks.
 - A dish's diet codes (G, L, VL, M, VEG, VE) compile into requirements on each of its needs.
 - An unknown answer (no allergen or diet record) is never "ok": it holds per the kitchen's `unknownCounts`.
+- A free-from claim that the record's own allergen list contradicts (claims gluten-free, lists wheat) is unknown: held and named ("claims free from gluten but lists wheat"), never ok and never refused outright, since gluten-free breads on gluten-free wheat starch and gluten-free oats are legal (R12-02, 14 Nov). One allergen table (`core/mandate/allergens.ts`) defines each group's codes; gluten is AW, UW, NR, GB, GO, GS, GK.
 
 **Why:** today three places interpret diet separately: the UI marks (lib/ui/diet.ts), the request filter (server/request filterHits, B's meatContradiction) and the core requirements (freeFrom/origin/labels only). Dish diet codes are display-only, which is how a vegetarian dish was substituted with meatballs on prod. The authority model and the single commit gate are sound. The vocabulary under them was too narrow and was enforced at the edges.
 
@@ -181,3 +182,44 @@ An affirmative reply ("great lets do it", "ok") counts as the chef's act only wh
 **Why:** the user's chat test showed "great lets do it" acting on another task's plan. The chef typing in their own dock is the person D13 requires, so a named offer plus a yes is consent; an unnamed or stale one is not.
 
 **Reopen if:** a trial shows a bare yes buying something the previous turn didn't name, or the menu accepted differs from the revision the card showed.
+
+### D23 · One conversation, two views: the dock is the door, the Kitchen is the workbench (lead, 14 Nov 23:00)
+Every ask enters one conversation, whatever its form (words, an order, an event, a menu, a photo): the chat dock on any page, or `/request`, which becomes that same conversation full-width (same transcript, same cards; `/request?text=` still prefills). The work shows as cards in the transcript as it happens: reading → dishes → products → bill. The result lands in the Kitchen as the basket for that kitchen and delivery day, with a ledger line saying what the agent did. Every line is managed with one row and one set of actions (approve this line, hold, swap with compare, change amount, remove, why), identical in a dock card and on the page, both calling the same tool. A reading never dead-ends on "nothing matched": it proposes its likeliest interpretation as one tap, and a product search returns labelled near-misses (best try) unless the ask is a hard requirement (allergens and the chef's hard rules stay strict).
+
+**Why:** the user: /request feels jarring and rule-based, only perfect matches; the chat and the page should be one flow from ingestion to approving and managing items.
+
+**Reopen if:** a chat-only journey and a page-only journey on the same ask end with different baskets, or a best-try near-miss is ordered without its label.
+
+### D24 · Room mode: everyone in the room runs their own store, Ops watches them all (lead, 14 Nov 23:00)
+A QR or link puts a visitor in the shared room (`ws-judges`) as **their own store**: a name and a kitchen type make a new kitchen copied from the nearest seeded profile (its own mandate, usual order and history, copied not linked, per ARCHITECTURE Tenancy), owned by that browser. They order by chat or on the page. Ops on the big screen shows the room: orders arriving live, demand per delivery day, and a presenter shortage that re-plans every store inside its own rules. The shared stock makes contention real. Each visitor's own sandbox stays the default; the room is opt-in and says that others can see it (`roomNotice`).
+
+**Why:** the user: an IRL demo where others sign on as their own store and we see the orders come in on Ops. It shows the machinery a cart can't: many kitchens, one stock, one gate.
+
+**Reopen if:** room load breaks the provider caps or one visitor can act on another's store.
+
+### D25 · The picker leads with "Your own kitchen"; the seeded kitchens are sample profiles (user + lead, 14 Nov 23:20)
+"Who are you cooking for?" offers **Your own kitchen** first: a name and an optional one-line description make a new, blank kitchen (default rules the chef can edit, no history, no booking), through the same `create_kitchen` as D24 with no profile to copy. Below it, under "Or try a sample kitchen", the seven seeded kitchens, labelled as sample profiles with simulated history. In the room (D24) the same card makes the visitor's store. Choosing still plans nothing; a blank kitchen's home says what to do first (tell the agent what you need, or set a usual order).
+
+**Why:** the user: the seeded kitchens are mock profiles; a blank kitchen of your own could even be the default.
+
+**Reopen if:** a blank kitchen's first screen is empty or dead-ends, or judges skip the samples and never see prediction from history.
+
+### D26 · Your workspace persists: your kitchens, baskets, phone and agent key all point at it (user + lead, 14 Nov 23:30)
+A visitor's own sandbox is a durable workspace, not a demo session. What they create stays: kitchens (D25), plans and baskets (one per kitchen per delivery day), orders and receipts. They come back to it on the same browser (signed cookie, 14 days), on their phone through pairing, and from their own agent through their MCP key, which acts in the same workspace. Runs are already stored in Postgres, so a deploy keeps them. "Start over" (System) clears plans and orders but keeps the kitchens the visitor made, re-seeding only the sample kitchens. The kitchen selector lists "Your kitchens" first. Every door (page, chat, phone, MCP) sees the same kitchens and the same baskets.
+
+**Why:** the user: let people create something that stays, jump back into their workspace, make more baskets and order; it also makes the mobile link and the MCP link mean something.
+
+**Reopen if:** a deploy, a reset or the visitor cap loses a visitor's own kitchens, or one door shows kitchens another door doesn't.
+
+### D27 · A stock model inside the simulator, not a separate backend or a scraped copy of Valio (user + lead, 14 Nov 23:30)
+Valio's availability is a static snapshot (re-probe, valio-data.md), so every movement is ours. We add a pure stock model in core (`src/lib/core/stock/`): per product and delivery day, the level starts from Valio's own answer (cached, fetched only for products a plan needed), then moves by rules we can state: every kitchen's committed orders drain it, restocks arrive on the product's logistic rhythm (warehouse items on Valio's delivery days, supplier items with their lead time), and scenario events (a shortage spike, a festive demand bump from the forecast) shift it. Seeded and deterministic, so a demo replays the same; every level carries its source (Valio, simulated drain, simulated restock, scenario). It feeds Ops' forecast ("where stock will run short", moment 4) and, later, the contention overlay. Products never fetched get no invented level: they stay "no stock info".
+
+No separate service and no bulk scrape: Valio's brief says "query the APIs only when needed" (a judged criterion), and a second backend is a second deploy six hours before the freeze.
+
+**Why:** the user wants realistic stock that moves (restocks, shortage spikes, history) and a layer we control like a signal generator.
+
+**Reopen if:** the model needs data we can't get without bulk calls, or two lanes need to write stock rules at once.
+
+**D27 addendum (user, 14 Nov 23:55): the target shape is a Valio twin, held until the app is stable.** The stock model becomes the engine of a "Valio twin": an adapter behind the CatalogPort that answers in Valio's own availability format, so the app can't tell it from Valio, and that Ops controls like a signal generator (demand level, restock cadence and size, short-shipment rate, scenario events, reset to Valio's snapshot). Restocking is balanced against demand by a **scarcity target** (how many of the products in play sit near or below what the kitchens need), not topped up freely, because plentiful stock leaves nothing to match, swap or contend for. Tonight: S4 builds the pure model with the scarcity target as a parameter and feeds the Forecast; the twin adapter and the control panel wait until the hero journey is green on prod.
+
+**D27 addendum 2 (user, 15 Nov 00:00): an incident deck for the twin, also held.** The twin can draw seeded incidents, each a named story over a set of products: a drought (a produce category scarcer and dearer for two weeks), a supplier going bankrupt (that vendor's products undeliverable), a strike (deliveries a day late), a festive rush (demand up). Each incident is data (which products, what changes to stock, price and dates, how long) plus one or two sentences of story, templated or written by Flash-Lite, and always shown as **Simulated incident**, never as news. Firing one runs the shortage cascade over every product it touches, so every kitchen re-plans inside its own rules. Real recalls stay real (Context.dev) and are never mixed into the deck.

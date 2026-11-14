@@ -390,6 +390,9 @@ export const stubHandlers: ToolHandlers = {
 	async get_outcome() {
 		return err('PROVIDER_UNAVAILABLE', 'get_outcome is served by the real handlers only');
 	},
+	async create_kitchen() {
+		return err('PROVIDER_UNAVAILABLE', 'create_kitchen is served by the real handlers only');
+	},
 	async read_image() {
 		return err('PROVIDER_UNAVAILABLE', 'read_image is served by the real handlers only');
 	},

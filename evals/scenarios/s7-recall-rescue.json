@@ -50,7 +50,7 @@
 		"lines": [
 			{
 				"productId": "462150",
-				"state": "held",
+				"state": "rejected",
 				"tier": "sign_off",
 				"reasons": ["recall"],
 				"historyStates": ["eligible", "held"]

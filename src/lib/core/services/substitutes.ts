@@ -216,6 +216,8 @@ export interface RescueOptions {
 	keep?: DraftLine[];
 	/** Served kg the kept lines (or the cut original) already cover: the candidate is sized to the remainder. */
 	coveredServedKg?: number;
+	/** For a direct need: what the kept lines already deliver, in the need's own unit (l, kg, pcs). */
+	coveredAmount?: number;
 	/** Products not to rank: the contended product, whatever is left of it is in `keep`. */
 	exclude?: string[];
 	/** Why this rescue ran, added to the new line's provenance. */
@@ -305,7 +307,12 @@ export async function findSubstitutes(
 		const s = !p
 			? null
 			: need?.kind === 'direct'
-				? ((q) => (q ? { qty: q } : null))(sizeDirect(p, need.amount))
+				? ((q) => (q ? { qty: q } : null))(
+						sizeDirect(p, {
+							...need.amount,
+							value: Math.max(0, need.amount.value - (opts.coveredAmount ?? 0))
+						})
+					)
 				: sizeFor(p, e, servedKg, line);
 		if (s) sized.set(id, s.qty);
 		else unsized.push(id);

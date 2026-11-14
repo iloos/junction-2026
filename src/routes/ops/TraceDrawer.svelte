@@ -103,8 +103,8 @@
 			</section>
 		{/if}
 		<p class="lede">
-			Every step the kitchen agent takes and every model call it makes, with timing and tokens. Live
-			only: runs that started before you opened this page are not shown.
+			Every step the kitchen agent takes and every model call it makes, with timing and tokens: the
+			stored calls of the last day, then new ones as they happen.
 		</p>
 
 		{#if canRun}
@@ -139,6 +139,8 @@
 							<span class:warn={run.done.stopped !== 'done'}
 								>{STOPPED[run.done.stopped] ?? run.done.stopped}</span
 							>
+						{:else if run.id.startsWith('req:')}
+							<span>{run.steps.length} call{run.steps.length === 1 ? '' : 's'}</span>
 						{:else}
 							<span class="live">Running</span>
 							{#if canRun}

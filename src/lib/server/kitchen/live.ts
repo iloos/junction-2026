@@ -9,7 +9,15 @@
  * snapshot never changes state (planning is the explicit `start` command). Selection is per browser session.
  */
 import { env } from '$env/dynamic/private';
-import type { Approval, Kitchen, Plan, ToolInput, ToolName } from '$lib/core/contracts';
+import type {
+	Approval,
+	DomainError,
+	Kitchen,
+	Plan,
+	ToolInput,
+	ToolName,
+	ToolOutput
+} from '$lib/core/contracts';
 import { isoWeek } from '$lib/core/mandate/tier';
 import { contextFor } from '$lib/server/auth';
 import { createServerPorts } from '$lib/server/store/server-ports';
@@ -25,7 +33,13 @@ import { reloadRunNow, resetDemoRun } from '$lib/server/demo/reset';
 import { isSandbox, resetSandbox } from '$lib/server/demo/sandbox';
 import { inWorkspace } from '$lib/server/adapters/simulator/overlay';
 import { rescueContention } from '$lib/core/services/contention';
-import { catchUp } from '$lib/server/bus';
+import { catchUp, publish } from '$lib/server/bus';
+import { replanShortage } from '$lib/core/services/shortage';
+import { createHash } from 'node:crypto';
+import { JUDGES_WORKSPACE } from '$lib/server/demo/workspaces';
+import type { RoomKind } from '$lib/server/demo/visitor';
+import type { ShortageReplanned } from '$lib/core/contracts';
+import { SCENARIO } from '$lib/core/scenario';
 import type { DietFacts } from '$lib/ui/diet';
 import { qtyWords, readableName } from '$lib/ui/format';
 
@@ -45,6 +59,24 @@ export interface Session {
 	planId: string | null;
 	/** The agent's last contention rescue on the plan on screen (see FixtureSnapshot.contentionRescue). */
 	contentionRescue?: FixtureSnapshot['contentionRescue'] & { planId: string };
+	/** The visitor this browser is (a hash of its own sandbox id): the owner of the kitchens it makes (D24). */
+	visitor?: string;
+}
+
+/** Who the browser is, from demo/visitor.ts: its own sandbox id, the room it is in and presenter rights. */
+export interface VisitorRef {
+	own: string;
+	kind?: RoomKind;
+	presenter?: boolean;
+}
+
+/** A visitor's owner id: a hash of its own sandbox id, so the sandbox id itself never lands in a kitchen doc. */
+export const visitorKey = (own: string) =>
+	createHash('sha256').update(`visitor:${own}`).digest('hex').slice(0, 24);
+
+function withVisitor(s: Session, v: VisitorRef | undefined): Session {
+	if (v?.own) s.visitor = visitorKey(v.own);
+	return s;
 }
 
 /** What the page was rendered from; every command must still match it (a stale tab gets STALE_VERSION). */
@@ -78,9 +110,12 @@ export function session(id: string, workspaceId: string): Session {
 /** The commands the screen may send through the helper. Planning and resets go through `scenario`. */
 const ALLOWED = new Set(['get_plan', 'edit_line', 'explain_line', 'approve', 'commit_order']);
 
-const chef = (s: Session) => contextFor('chef', 'kitchen-ui', 'kitchen', env, s.workspaceId);
+const asVisitor = <C extends object>(c: C, s: Session) =>
+	s.visitor ? { ...c, visitor: s.visitor } : c;
+const chef = (s: Session) =>
+	asVisitor(contextFor('chef', 'kitchen-ui', 'kitchen', env, s.workspaceId), s);
 const agent = (s: Session) =>
-	contextFor('kitchen_agent', 'kitchen-agent', 'kitchen', env, s.workspaceId);
+	asVisitor(contextFor('kitchen_agent', 'kitchen-agent', 'kitchen', env, s.workspaceId), s);
 
 /**
  * One kitchen request at a time per workspace. The snapshot plans and ranks with several tool calls against
@@ -109,7 +144,9 @@ export function callTool(
 	/** Where the chef acted: the Kitchen page or the agent dock (D13); recorded as the ops' `via`. */
 	surface: 'kitchen' | 'dock' = 'kitchen',
 	/** The browser tab that sent it: the ops read `<surface>#<tab>`, so a screen knows its own commands. */
-	tab?: string
+	tab?: string,
+	/** Who the browser is: owned kitchens take writes only from their owner (D24). */
+	visitor?: VisitorRef
 ): Promise<Served> {
 	return serial(workspaceId, async () => {
 		const deny = (message: string): Served => ({
@@ -118,7 +155,7 @@ export function callTool(
 			error: { code: 'FORBIDDEN', message, retryable: false }
 		});
 		if (!ALLOWED.has(name)) return deny(`the kitchen screen does not send ${name}`);
-		const remembered = session(sid, workspaceId);
+		const remembered = withVisitor(session(sid, workspaceId), visitor);
 		// The screen names the plan it shows; the command acts on that plan if this workspace has it, so it never
 		// depends on this process having seen the link. A copy: one screen's command (the dock's) never moves the
 		// plan another screen on this browser (the Kitchen page) reads by default.
@@ -268,7 +305,20 @@ export interface NotStarted {
 	event: { id: string; title: string; date: string; guests: number; serviceStyle: string } | null;
 }
 
-export type LiveSnapshot = FixtureSnapshot | NotStarted;
+/** A kitchen this browser can open: the workspace's samples and the stores visitors made (D24/D25). */
+export interface KitchenItem {
+	id: string;
+	name: string;
+	/** Made by this browser's visitor. */
+	mine: boolean;
+	/** Made blank (no sample copied). */
+	blank: boolean;
+	mandateWords: string;
+}
+
+export type LiveSnapshot = (FixtureSnapshot | NotStarted) & { kitchens?: KitchenItem[] };
+/** The snapshot after a shortage, with what each kitchen did about it. */
+export type ShortageSnapshot = LiveSnapshot & { shortage: ShortageReplanned };
 
 function notStarted(kitchenId: string): NotStarted {
 	const e = eventFor(kitchenId);
@@ -287,8 +337,12 @@ function notStarted(kitchenId: string): NotStarted {
 	};
 }
 
-export function snapshot(sid: string, workspaceId: string): Promise<LiveSnapshot> {
-	return serial(workspaceId, () => buildSnapshot(session(sid, workspaceId)));
+export function snapshot(
+	sid: string,
+	workspaceId: string,
+	visitor?: VisitorRef
+): Promise<LiveSnapshot> {
+	return serial(workspaceId, () => buildSnapshot(withVisitor(session(sid, workspaceId), visitor)));
 }
 
 /**
@@ -300,10 +354,11 @@ export function focusPlan(
 	workspaceId: string,
 	planId: string,
 	/** Read that plan without making it this browser's remembered plan (the dock's own view of another plan). */
-	peek = false
+	peek = false,
+	visitor?: VisitorRef
 ): Promise<LiveSnapshot | null> {
 	return serial(workspaceId, async () => {
-		const remembered = session(sid, workspaceId);
+		const remembered = withVisitor(session(sid, workspaceId), visitor);
 		const s = peek ? { ...remembered } : remembered;
 		const b = await createServerPorts();
 		const find = async () => {
@@ -408,7 +463,26 @@ function titleOf(plan: Plan): string {
 		: `${labels.slice(0, 3).join(', ')} and ${labels.length - 3} more`;
 }
 
+/** The snapshot plus the workspace's kitchens, this visitor's own first; others' stores are left out. */
 async function buildSnapshot(s: Session): Promise<LiveSnapshot> {
+	const [body, all] = await Promise.all([
+		snapshotBody(s),
+		createServerPorts().then((b) => b.ports.store.kitchens(s.workspaceId))
+	]);
+	const kitchens = all
+		.filter((k) => !k.owner || k.owner === s.visitor)
+		.map((k) => ({
+			id: k.id,
+			name: k.name,
+			mine: !!k.owner && k.owner === s.visitor,
+			blank: k.kind === 'blank',
+			mandateWords: k.mandate.words
+		}))
+		.sort((a, b) => Number(b.mine) - Number(a.mine));
+	return { ...body, kitchens };
+}
+
+async function snapshotBody(s: Session): Promise<FixtureSnapshot | NotStarted> {
 	const ctx = chef(s);
 	const planned = await findPlan(s);
 	if (!planned) return notStarted(s.kitchenId);
@@ -634,10 +708,15 @@ export function scenario(
 	action: string,
 	value: unknown,
 	/** The plan the screen shows: the command acts on it, not on whatever this browser's session last opened. */
-	planId?: string
-): Promise<LiveSnapshot | PlanProgress> {
+	planId?: string,
+	/** Who the browser is: owner of the kitchens it makes; presenter rights for the shared room's shortage. */
+	visitor?: VisitorRef
+): Promise<LiveSnapshot | PlanProgress | ShortageSnapshot> {
 	return serial(workspaceId, async () => {
-		const s = session(sid, workspaceId);
+		const s = withVisitor(session(sid, workspaceId), visitor);
+		// A shortage hits every store in the room: in the shared room only a presenter triggers it (fails closed).
+		if (action === 'shortage' && workspaceId === JUDGES_WORKSPACE && !visitor?.presenter)
+			throw new Error('only the presenter can start a shortage in the shared room');
 		if (planId && ON_PLAN.has(action)) {
 			const b = await createServerPorts();
 			const ctx = chef(s);
@@ -650,6 +729,58 @@ export function scenario(
 		return applyScenario(s, action, value);
 	});
 }
+let shortages = 0;
+
+/**
+ * Moment 1: Valio runs short of one product (default: the contended palvikinkku) and every kitchen in the workspace
+ * re-plans its open plan inside its own rules. The shortage is simulator state of this workspace only. The result
+ * goes out live as a `notice` (Ops and the Kitchen ledger) and comes back to the caller.
+ */
+async function shortage(s: Session, value: unknown): Promise<ShortageReplanned> {
+	const b = await createServerPorts();
+	const v = (value && typeof value === 'object' ? value : {}) as {
+		productId?: unknown;
+		left?: unknown;
+	};
+	const productId = typeof v.productId === 'string' ? v.productId : CONTENDED.productId;
+	b.overlay.clear();
+	const { offers } = await b.ports.catalog.offers([productId], SCENARIO.delivery);
+	const a = offers[0]?.availability;
+	const had = a?.kind === 'known' && a.amount != null ? a.amount : 0;
+	const left = typeof v.left === 'number' && v.left >= 0 ? Math.floor(v.left) : Math.floor(had / 3);
+	b.overlay.setAvailability({
+		productId,
+		amount: left,
+		label: `simulated: Valio is short, ${left} of ${had} left`
+	});
+	const ctx = agent(s);
+	const shortageId = `sh-${++shortages}`;
+	const r = await replanShortage(b.ports, ctx, {
+		productId,
+		had,
+		left,
+		shortageId,
+		note: `Valio is short: ${left} of ${had} left`
+	});
+	if (!r.ok) throw new Error(`shortage: ${r.error.code} ${r.error.message}`);
+	await publish(ctx.workspaceId, [
+		{
+			kind: 'notice',
+			workspaceId: ctx.workspaceId,
+			runId: ctx.runId,
+			at: b.ports.clock.now().toISOString(),
+			event: {
+				kind: 'shortage.replanned',
+				productId,
+				simAt: b.ports.clock.now().toISOString(),
+				detail: r.value,
+				label: `simulated: Valio is short of ${r.value.productName}`
+			}
+		}
+	]);
+	return r.value;
+}
+
 /** Commands about the plan on screen; starting, switching kitchen and resetting choose their own plan. */
 const ON_PLAN = new Set(['preset', 'apply', 'contention']);
 
@@ -657,7 +788,7 @@ async function applyScenario(
 	s: Session,
 	action: string,
 	value: unknown
-): Promise<LiveSnapshot | PlanProgress> {
+): Promise<LiveSnapshot | PlanProgress | ShortageSnapshot> {
 	const b = await createServerPorts();
 	if (action === 'start') {
 		await ensurePlan(s);
@@ -757,6 +888,8 @@ async function applyScenario(
 				};
 			}
 		} else await requote(s);
+	} else if (action === 'shortage') {
+		return { ...(await buildSnapshot(s)), shortage: await shortage(s, value) };
 	} else if (action === 'reset') {
 		// A fresh run server-side: no plan, orders or spend; the old run stays in the op log. Sandboxes go
 		// through the self-service reset (cooldown per sandbox); the stage only reaches here for a presenter.
@@ -771,4 +904,48 @@ async function applyScenario(
 		b.overlay.clear();
 	} else throw new Error(`unknown scenario action ${action}`);
 	return buildSnapshot(s);
+}
+
+/**
+ * create_kitchen from the Kitchen page (D24 room, D25 blank): as the chef of this browser, owned by its visitor.
+ * The kitchen is in the workspace's kitchens before this returns, so `join` can open it next; Ops and the room
+ * hear it as a `notice`.
+ */
+export function newKitchen(
+	sid: string,
+	workspaceId: string,
+	visitor: VisitorRef,
+	input: unknown,
+	roomNotice: string | null
+): Promise<
+	| { ok: true; value: ToolOutput<'create_kitchen'> & { roomNotice?: string } }
+	| { ok: false; status: number; error: DomainError }
+> {
+	return serial(workspaceId, async () => {
+		const s = withVisitor(session(sid, workspaceId), visitor);
+		const ctx = chef(s);
+		const r = await handlers.create_kitchen(ctx, input as ToolInput<'create_kitchen'>);
+		if (!r.ok)
+			return {
+				ok: false as const,
+				status: r.error.code === 'FORBIDDEN' ? 403 : 400,
+				error: r.error
+			};
+		const b = await createServerPorts();
+		await publish(ctx.workspaceId, [
+			{
+				kind: 'notice',
+				workspaceId: ctx.workspaceId,
+				runId: ctx.runId,
+				at: b.ports.clock.now().toISOString(),
+				event: {
+					kind: 'kitchen.created',
+					simAt: b.ports.clock.now().toISOString(),
+					detail: r.value.kitchen,
+					label: `New store: ${r.value.kitchen.name}`
+				}
+			}
+		]);
+		return { ok: true as const, value: { ...r.value, ...(roomNotice ? { roomNotice } : {}) } };
+	});
 }

@@ -36,10 +36,7 @@ import { coverage } from '../../../routes/ops/cases';
  * Open defects: id → owner. A listed case must still fail; once it passes, delete its line (the owner's fix lands
  * with that deletion). Owners: E = agent/chat, 8d = core, 9c = runtime/transport, D = web, lead = contracts.
  */
-const OPEN: Record<string, string> = {
-	'R8-web-write': 'D',
-	'R8-queue-claim': 'D'
-};
+const OPEN: Record<string, string> = {};
 /**
  * `it` for a guarded case, `it.fails` for an open one, named with its owner. `ADV_SHOW=1` runs every case as a plain
  * `it`, so an owner sees why an open case fails (the defect, not a broken setup).

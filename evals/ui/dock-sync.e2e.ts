@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { enterKitchen } from './flow';
 
 /**
  * The Kitchen page and the agent dock read one event stream, so what the chef does in one shows in the other
@@ -18,7 +19,7 @@ async function openDock(page: Page) {
 }
 
 async function planBuffet(page: Page) {
-	await page.goto(`${BASE}/`);
+	await enterKitchen(page, '/');
 	const start = page.getByRole('button', { name: 'Plan the event' });
 	await page.locator('#task-h').or(start).first().waitFor({ timeout: 60_000 });
 	if (await start.isVisible()) await start.click();
@@ -108,7 +109,7 @@ test('two Kitchen tabs: a change in one shows in the other, named as another tab
 	const a = await ctx.newPage();
 	await planBuffet(a);
 	const b = await ctx.newPage();
-	await b.goto(`${BASE}/`);
+	await enterKitchen(b, '/');
 	await expect(b.locator('#task-h')).toContainText('Christmas', { timeout: 120_000 });
 	await b.waitForTimeout(1500); // b's stream is open
 
@@ -127,7 +128,7 @@ test('a reset in another tab brings this tab back to the start, without a reload
 	const a = await ctx.newPage();
 	await planBuffet(a);
 	const b = await ctx.newPage();
-	await b.goto(`${BASE}/`);
+	await enterKitchen(b, '/');
 	await expect(b.locator('#task-h')).toContainText('Christmas', { timeout: 120_000 });
 	await b.waitForTimeout(1500);
 
@@ -142,13 +143,13 @@ test('in a shared room the stream follows that room, not the own sandbox', async
 	test.setTimeout(240_000);
 	const ctx = await browser.newContext();
 	const a = await ctx.newPage();
-	await a.goto(`${BASE}/?ws=ws-judges`);
+	await enterKitchen(a, '/?ws=ws-judges');
 	const start = a.getByRole('button', { name: 'Plan the event' });
 	await a.locator('#task-h').or(start).first().waitFor({ timeout: 60_000 });
 	if (await start.isVisible()) await start.click();
 	await expect(a.locator('#task-h')).toBeVisible({ timeout: 120_000 });
 	const b = await ctx.newPage();
-	await b.goto(`${BASE}/?ws=ws-judges`);
+	await enterKitchen(b, '/?ws=ws-judges');
 	await expect(b.locator('#task-h')).toBeVisible({ timeout: 120_000 });
 	await b.waitForTimeout(1500);
 

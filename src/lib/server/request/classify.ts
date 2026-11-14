@@ -4,6 +4,8 @@
  * never see it as a query. Deterministic and cheap: it runs before lookup, on both parser paths.
  */
 import type { ParsedItem } from './parse';
+import { readDish } from './dish';
+import { readShares } from './shares';
 
 /** What the words of an event request state; the full brief is built in the menu module. */
 export interface EventRead {
@@ -61,10 +63,21 @@ export function classifyRequest(
 	kitchenId: string
 ): EventRead | null {
 	const occasion = [...text.matchAll(OCCASION)].map((m) => m[1].toLowerCase());
-	if (!occasion.length) return null;
 	const purchase = items.some(
 		(i) => i.product !== null || (i.qty !== null && i.unit !== null && PHYSICAL.has(i.unit))
 	);
+	// A count with a dish noun is servings to plan ("500 pizzas no meat 50%"), unless a named product is bought too.
+	const shares = readDish(text) ? null : readShares(text);
+	if (shares && !purchase) {
+		const s = SEEDED.find((e) => e.kitchenId === kitchenId && e.words.test(text));
+		return {
+			guests: guestsIn(text) ?? shares.total,
+			courses: coursesIn(text),
+			occasion: shares.dishes,
+			seeded: s ? { eventId: s.eventId, title: s.title } : null
+		};
+	}
+	if (!occasion.length) return null;
 	if (purchase) return null;
 	const s = SEEDED.find((e) => e.kitchenId === kitchenId && e.words.test(text));
 	return {

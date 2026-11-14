@@ -19,7 +19,7 @@ _The lead rewrites this at each checkpoint. It is the "now": what works, what's 
 
 **Known open (top):** R12-02 cereal codes in `meets()`, R12-04 contention adds the full need (8d's Next); Ops doesn't follow a reset in another tab; dock approval status missing on prod; Ops rework not started; UI foundations (RESTART "Foundations first").
 
-**Waiting on the user:** PUBLIC_ORIGIN in the Aiven console on `mandate` · the Nemotron deployment name (current 404) · SMOKE_KEY · history rewrite and placeholder Valio prices before going public (also fixes the public Source 404) · OK for 91 and da to push their branches · the Ops brainstorm with the site session · whether to review the three foundation docs before fan-out.
+**Waiting on the user:** (PUBLIC_ORIGIN is set, user Sat 22:40; the lead runs the SMOKE_KEY smoke from the main checkout, OK to push main after a green gate) · the Nemotron deployment name (current 404) · SMOKE_KEY · history rewrite and placeholder Valio prices before going public (also fixes the public Source 404) · OK for 91 and da to push their branches · the Ops brainstorm with the site session · whether to review the three foundation docs before fan-out.
 
 **Rules learned (keep):**
 - The main checkout is lead-only; lanes work in `../junc26-lanes/<lane>`; stage exact paths; push only after `merge-gate: GREEN`.

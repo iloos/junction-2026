@@ -71,5 +71,61 @@ describe.skipIf(!existsSync(join(DIR, 'valio_aimo_junction26_product_data.json')
 			expect(meets(bread, { freeFrom: ['GLUTEN'] }).verdict).toBe('no');
 			expect(meets(bread, { excludes: ['gluten_cereals'] }).verdict).toBe('no');
 		});
+
+		it('produce is plant food by kind; carrots are not chicken; dairy is vegetarian, not vegan', () => {
+			const VEG = requirementsFromDiet(['VEG'])!;
+			const VE = requirementsFromDiet(['VE'])!;
+			// Raw carrots, potatoes and peaches with no allergen record: ok by category, for both.
+			for (const id of ['460721', '460478', '461196']) {
+				expect(meets(p(id), VEG).verdict).toBe('ok');
+				const v = meets(p(id), VE);
+				expect(v.verdict).toBe('ok');
+			}
+			// "porkkana" (carrot) holds "kana" (chicken): not a meat product.
+			expect(meets(p('460721'), { excludes: ['meat'] }).verdict).toBe('ok');
+			// Whipping cream: vegetarian, never vegan.
+			expect(meets(p('463366'), VEG).verdict).toBe('ok');
+			expect(meets(p('463366'), VE).verdict).toBe('no');
+			// Smoked reindeer is still meat.
+			const reindeer = [...cat.values()].find((x: Product) =>
+				/savuporo/i.test(x.nameFi)
+			) as Product;
+			expect(meets(reindeer, VEG).verdict).toBe('no');
+		});
+
+		it('Kikkoman 1 l (462277, AY + UW) is not gluten-free either', () => {
+			expect(meets(p('462277'), { excludes: ['gluten_cereals'] }).verdict).toBe('no');
+			expect(meets(p('462277'), requirementsFromDiet(['G'])).verdict).toBe('no');
+		});
+
+		it('R12-02: wheat, rye, barley and oats count as gluten; a claim the allergen list contradicts is never ok', () => {
+			// Kikkoman soy sauce lists AY and UW (wheat), no AW.
+			const soy = meets(p('460082'), { excludes: ['gluten_cereals'] });
+			expect(soy.verdict).toBe('no');
+			expect(soy.failing[0].why).toContain('wheat');
+			expect(meets(p('460082'), { freeFrom: ['GLUTEN'] }).verdict).toBe('no');
+			// A kitchen rule on the umbrella code covers the group.
+			const kitchen = { allergens: { freeFrom: ['AW'] }, origin: [] } as never;
+			expect(meets(p('460082'), undefined, kitchen).verdict).toBe('no');
+			const claim = {
+				...p('460082'),
+				nameFi: 'Testi leipä',
+				allergens: { contains: ['UW'], mayContain: [], declared: true },
+				freeFrom: ['GLUTEN']
+			} as Product;
+			for (const r of [{ freeFrom: ['GLUTEN'] }, { excludes: ['gluten_cereals'] as const }]) {
+				const m = meets(claim, r as never);
+				expect(m.verdict).not.toBe('ok');
+				expect(m.failing[0].why).toMatch(/claims free from gluten but lists wheat/);
+			}
+			// Lactose-free milk lists milk (AM) and stays lactose-free; listed lactose contradicts the claim.
+			expect(meets(p('464201'), { freeFrom: ['LACTOSE'] }).verdict).toBe('ok');
+			const lac = {
+				...claim,
+				allergens: { contains: ['ML'], mayContain: [], declared: true },
+				freeFrom: ['LACTOSE']
+			} as Product;
+			expect(meets(lac, { freeFrom: ['LACTOSE'] }).verdict).not.toBe('ok');
+		});
 	}
 );

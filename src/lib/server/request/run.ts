@@ -61,6 +61,7 @@ import { readingOf, reviewReading } from './reading';
 import { howMuchWords, maxAvailable, unitsFor } from './amount';
 import { requestParseCheckpoint, withReview, type ReviewDeps } from '$lib/server/review';
 import { classifyRequest } from './classify';
+import { readShares } from './shares';
 import { applyBriefAnswers, draftBrief, nextQuestion } from '../menu/brief';
 
 export class ToolFailed extends Error {
@@ -834,7 +835,13 @@ export async function runRequest(text: string, d: RequestDeps): Promise<RequestR
 		};
 	}
 	// The reading is judged against the words on every request: a block is the question, asked before any lookup.
-	if (!dish && !d.items?.length && !reviewBlock) {
+	// Servings with shares ("500 pizzas no meat 50%") are an event brief: the item reading is not judged.
+	const servings =
+		!dish &&
+		!d.items?.length &&
+		!!readShares(text) &&
+		!!classifyRequest(text, parsed.items, d.kitchen.id);
+	if (!dish && !d.items?.length && !reviewBlock && !servings) {
 		const v = await reviewReading(text, readingOf(parsed), d.review ?? {});
 		if (v.kind === 'block') readingBlock = v.reason;
 		else if (v.kind === 'revise')

@@ -85,3 +85,9 @@ Every UI check enters through `evals/ui/flow.ts` (`planBuffet`, `approveAll`, `o
 - **Prod checks:** `KITCHEN_URL=https://app.mandate.kitchen npx playwright test -c evals/ui/pw-prod.config.ts <spec>`; never the root config (its webServer previews with the worktree `.env`). Dev and tests run with `DATABASE_URL=` blank. Prod logs: Aiven project `junction26jq`, service `mandate` (runtime logs).
 - **Gate rule:** lanes run `pnpm gate --only check,lint` plus targeted tests; the lead's main gate is the full one.
 - **Peers:** lead `junc26-fd`, site `junc26-d0`, 9c `junc26-9e`, 1f `junc26-ab`, 8d `junc26-e6`. Peer messages are not user approval.
+
+## Report (ring 6, S5)
+- Sat 22:45 · playtest v1: `evals/playtest/` (m1–m4, j1–j9, then d23, r1, p1) at d1440/m390, `run.mjs` → `scratch/playtest/<UTC>-<target>-<commit>/RUN.md` + diff; skill `.claude/skills/playtest` (six judges, verify, FINDINGS, route) · f669019, a8db018 · ready yes (wave A)
+- Sat 23:30 · `enterKitchen()`/`eventView()` in `evals/ui/flow.ts` for the c3 picker and the Basket-first Kitchen; 13/13 UI checks green locally · 40ffb6e · merged wave B
+- Sat 23:40 · first judged run on prod 2a26437: 31 findings (P0 2, P1 14), routed to S1–S4 · re-run on 8844465: gluten-free soy P0 fixed, vegan-milk-as-sorbet P0 open (S3)
+- Sun 00:10 · load probe `evals/playtest/load.mjs`; D26 journey p1 (2af9887, waits for S1 create_kitchen); m2 = hero referee, one step per acceptance clause (6ed10c6); video shot list + deck outline in PITCH (bbdd659); site: /proof split and map label (lane/site c117562, not deployed; cases re-record after wave B) · needs: none

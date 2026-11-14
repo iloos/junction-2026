@@ -69,6 +69,12 @@ export const Kitchen = z.object({
 	 * The kitchen's standing-order baseline: products it orders in a normal week (scenario data until read from the
 	 * kitchen's Valio order template). Counts as ordered before for the never-delegate `new_sku` rule.
 	 */
-	usualProducts: z.array(ProductId).optional()
+	usualProducts: z.array(ProductId).optional(),
+	/** The seeded kitchen a visitor's store was copied from (D24): copied, never linked. */
+	copiedFrom: KitchenId.optional(),
+	/** The chef's own words about a kitchen they made (D25). */
+	description: z.string().max(300).optional(),
+	/** The visitor who owns a room store (a hashed id, never shown). Absent: a seeded kitchen anyone in the room may use. */
+	owner: z.string().max(80).optional()
 });
 export type Kitchen = z.infer<typeof Kitchen>;

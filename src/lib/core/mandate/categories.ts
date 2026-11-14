@@ -10,6 +10,10 @@ export const CATEGORY_GROUPS: Record<string, { prefixes: string[]; note: string 
 		prefixes: ['172', '1871', '1872', '1873', '1874', '1875'],
 		note: 'cold cuts and meat products (172xx); fresh pork, beef, reindeer, lamb, poultry (18710–18750)'
 	},
+	produce: {
+		prefixes: ['1740', '1741', '1742', '1743', '1745', '1747', '1748'],
+		note: 'fresh vegetables, fruit, potatoes, roots, herbs and sprouts, mushrooms, berries (1744x cut and prepared mixes excluded)'
+	},
 	milk: {
 		prefixes: ['10400', '10401'],
 		note: 'dairy milk and cream; plant drinks (10402) are not milk'

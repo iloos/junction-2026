@@ -311,7 +311,13 @@ export function tierLines(input: TierInput): TierResult {
 		);
 		return checks.length ? { unmet: checks } : {};
 	};
+	// A held line waits for a person who can approve it, so every held line is in the approval (one decision each).
+	// A fact gap (no price, not enough stock, no offer, an implausible amount) is not something a person can approve:
+	// the line can't be ordered as planned until the facts change or it is swapped, so it is unorderable, with its
+	// reasons, and gets the same substitute path as an outage.
 	const lines: Line[] = work.map((w) => {
+		// An orderable line keeps its tier, a fact gap included: that is how a view tells a gap (re-quote, swap) from a
+		// line the rules forbid.
 		const tier = w.orderable
 			? w.gap
 				? maxTier([...w.reasons, 'price_missing'])
@@ -319,7 +325,7 @@ export function tierLines(input: TierInput): TierResult {
 			: undefined;
 		const state: Line['state'] = w.zero
 			? 'rejected'
-			: !w.orderable
+			: !w.orderable || w.gap
 				? 'unorderable'
 				: tier === 'act'
 					? 'eligible'
@@ -341,22 +347,28 @@ export function tierLines(input: TierInput): TierResult {
 			provenance: w.draft.provenance
 		};
 	});
-	const all = [...(input.committed ?? []), ...lines];
-	const heldLines = lines.filter((l) => l.state === 'held');
+	const all0 = [...(input.committed ?? []), ...lines];
 	// Only waivable holds go to a human; a fact gap must be resolved first (a new quote, new terms).
 	// A recalled line that already has a non-recalled replacement is superseded: one approval must never buy both.
 	const superseded = (l: Line) =>
 		l.reasons.includes('recall') &&
-		all.some(
+		all0.some(
 			(x) =>
 				x.substituteFor === l.productId &&
 				x.needId === l.needId &&
 				x.state !== 'unorderable' &&
 				!x.reasons.includes('recall')
 		);
-	const approvable = heldLines.filter(
-		(l) => !work.find((w) => w.draft.id === l.id)?.gap && !superseded(l)
+	// A recalled line that already has its replacement is out of the order, not a second decision.
+	const all = all0.map((l) =>
+		l.state === 'held' && superseded(l)
+			? { ...l, state: 'rejected' as const, reasons: [...l.reasons, 'superseded' as const] }
+			: l
 	);
+	const settled = new Map(all.map((l) => [l.id, l]));
+	for (let i = 0; i < lines.length; i++) lines[i] = settled.get(lines[i].id) ?? lines[i];
+	const heldLines = lines.filter((l) => l.state === 'held');
+	const approvable = heldLines;
 	const open = lines.some((l) => l.state === 'eligible' || l.state === 'held');
 	const planState: PlanState = heldLines.length ? 'held' : open ? 'ready' : 'held';
 	return {

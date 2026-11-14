@@ -1,6 +1,6 @@
 import { readableName } from '$lib/ui/format';
 import { commandKey } from '$lib/core/command';
-import type { Plan, ToolName, ToolOutput } from '$lib/core/contracts';
+import type { LineState, Plan, ToolName, ToolOutput } from '$lib/core/contracts';
 import { ClarifyField, newTaskId, type Task, type TaskState } from '$lib/core/contracts/task';
 import type { CallContext, Llm, Ports, TaskStore, ToolHandlers } from '$lib/core/ports';
 import { runGoal } from '$lib/server/agent';
@@ -23,6 +23,7 @@ import { findDate } from '$lib/server/request/dates';
 import { parseRules } from '$lib/server/request/parse';
 import { readingOf, reviewReading } from '$lib/server/request/reading';
 import { dayWords, ledgerSummary, readTask } from '$lib/server/tasks/outcome';
+import type { TaskLedger } from '$lib/core/contracts/task';
 import { explain } from './explain';
 import { answerInChat } from './question';
 import { PREFERENCE_NAME } from '$lib/core/rank/presets';
@@ -1174,7 +1175,8 @@ async function* turnLines(
 		const summary = ledgerSummary(ledger, { deliverBy: read.value.plans[0]?.deliverBy });
 		if (asked || !sameLedger || !sameDecision)
 			yield { type: 'ledger', taskId: task.id, title: task.title, ledger, summary };
-		let answer = summary;
+		const standing = ledgerWords(ledger, read.value.plans[0]?.deliverBy, read.value.plans);
+		let answer = standing;
 		const explainer = deps.models?.explain ?? deps.llm;
 		if (!refusal && explainer && !continued) {
 			// Gemini words the answer from the ledger; a claim the ledger doesn't back falls back to the template.
@@ -1204,20 +1206,10 @@ async function* turnLines(
 		// say something new (never "not recognised" after a reading, never the summary twice).
 		const unread = !!refusal?.startsWith('I did not recognise');
 		if (unread) refusal = null;
-		text = refusal ? `${refusal} ${summary}` : answer;
+		text = refusal ? `${refusal} ${standing}` : answer;
 		if (unread) text = `${text} If you meant something new, tell me what you need.`;
 		// Which items wait for the chef, and why: the decision's own title, products and reason.
-		if (card?.type === 'decision' && !continued && ledger.decisionsLeft) {
-			const waits = card.decisions.slice(0, 2).map((d) => {
-				const names = d.lines.map((l) => readableName(l.productName ?? l.productId));
-				const listed =
-					names.length <= 3
-						? names.join(', ')
-						: `${names.slice(0, 3).join(', ')} and ${names.length - 3} more`;
-				return `${d.title} (${listed}). ${d.why}`;
-			});
-			text = `${text} Waiting on you: ${waits.join(' ')}`;
-		}
+		if (!continued && ledger.decisionsLeft) text += waitingWords(card);
 		if (continued === 'ordered') text = orderedWords(read.value.plans, ledger.decisionsLeft);
 		if (task.state === 'cancelled')
 			text = `This task was cancelled, so nothing more is ordered for it.${ledger.receiptIds.length ? ` ${plural(ledger.receiptIds.length, 'order')} placed before stay as they are.` : ''}`;
@@ -1392,10 +1384,81 @@ export async function taskView(taskId: string, deps: ChatDeps): Promise<ChatEven
 		type: 'done',
 		taskId,
 		state: p.task.state,
-		text: summary,
+		// The same words as the turn's answer, so a re-read never adds a second, different closing line.
+		text:
+			ledgerWords(read.value.ledger, read.value.plans[0]?.deliverBy, read.value.plans) +
+			(read.value.ledger.decisionsLeft ? waitingWords(card) : ''),
 		canContinue: p.canContinue
 	});
 	return out;
+}
+
+/** Which items wait for the chef, and why: the decision's own title, products and reason. Empty without a card. */
+function waitingWords(card: ChatEvent | null | undefined): string {
+	if (card?.type !== 'decision') return '';
+	const waits = card.decisions.slice(0, 2).map((d) => {
+		const names = d.lines.map((l) => readableName(l.productName ?? l.productId));
+		const listed =
+			names.length <= 3
+				? names.join(', ')
+				: `${names.slice(0, 3).join(', ')} and ${names.length - 3} more`;
+		return `${d.title} (${listed}). ${d.why}`;
+	});
+	return ` Waiting on you: ${waits.join(' ')}`;
+}
+
+/**
+ * Where the task stands, counted in items, not kilos: "For Thu 10 Dec: 11 ingredients. 4 have a product planned,
+ * 7 have no product yet; nothing is ordered yet. 1 decision waits for you." The ledger card keeps the numbers.
+ */
+export function ledgerWords(
+	l: TaskLedger,
+	deliverBy?: string,
+	plans: Pick<Plan, 'lines'>[] = []
+): string {
+	const n = l.needs.length;
+	// Each need by the state of the line that serves it: a held line has a product, it waits for a person.
+	const rank: Record<LineState, number> = {
+		committed: 5,
+		eligible: 4,
+		proposed: 4,
+		held: 3,
+		unorderable: 2,
+		rejected: 1
+	};
+	const best = new Map<string, LineState>();
+	for (const p of plans)
+		for (const line of p.lines) {
+			if (!line.needId) continue;
+			const was = best.get(line.needId);
+			if (!was || rank[line.state] > rank[was]) best.set(line.needId, line.state);
+		}
+	const count = (f: (s: LineState | undefined) => boolean) =>
+		l.needs.filter((x) => f(best.get(x.needId))).length;
+	const sent = count((s) => s === 'committed');
+	const ready = count((s) => s === 'eligible' || s === 'proposed');
+	const held = count((s) => s === 'held');
+	const blocked = count((s) => s === 'unorderable' || s === 'rejected');
+	const none = count((s) => s === undefined);
+	const noun = l.needs.some((x) => x.label.includes(' · ')) ? 'ingredient' : 'item';
+	const plural = (k: number, w: string) => `${k} ${w}${k === 1 ? '' : 's'}`;
+	const bits: string[] = [];
+	if (sent) bits.push(`${sent} sent to Valio`);
+	if (ready) bits.push(`${ready} ready to order`);
+	if (held) bits.push(`${held} with a product waiting for your approval`);
+	if (blocked) bits.push(`${blocked} can't be ordered as planned`);
+	if (none && plans.length) bits.push(`${none} without a product yet`);
+	const day = deliverBy ? `For ${dayWords(deliverBy)}: ` : '';
+	const head = n
+		? `${day}${plural(n, noun)}${bits.length ? `. ${bits.join(', ')}` : ''}`
+		: `${day}nothing planned`;
+	const order = l.receiptIds.length
+		? `ordered for €${(l.committedCents / 100).toFixed(2)}`
+		: 'nothing is ordered yet';
+	const wait = l.decisionsLeft
+		? ` ${l.decisionsLeft} ${l.decisionsLeft === 1 ? 'decision waits' : 'decisions wait'} for you.`
+		: ` ${l.nextAction}`;
+	return `${head}; ${order}.${wait}`.slice(0, 400);
 }
 
 const CANCEL =
@@ -1684,6 +1747,8 @@ async function eventTurn(
 			// The chef said to plan the menu they were shown: that is their review of this revision.
 			if (!r.ok && /review/i.test(r.error.message) && deps.acceptMenu) {
 				const a = await deps.acceptMenu(task.proposal.id, task.proposal.revision);
+				// The refusal was the review the chef has now given: it is not a step of the work.
+				if (a.ok) steps.pop();
 				if (a.ok)
 					r = await call(
 						'plan_event',

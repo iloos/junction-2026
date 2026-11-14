@@ -269,6 +269,13 @@ export interface BriefDraft {
 	/** Where each known field came from: the request words or the chef's answer. */
 	from: Partial<Record<BriefField, 'words' | 'answer'>>;
 	notes: string[];
+	/** Servings and shares the words state ("250 meat-free and 250 regular pizzas"). */
+	shares?: {
+		sentence: string;
+		dietary: string[];
+		/** Another reading is plausible: the likeliest is asked as one tap before the dietary field is set. */
+		ask: { question: string; yes: string; no: string; noValue: string } | null;
+	};
 }
 
 /** An answer to a brief question, keyed by the question's stable id ("brief.guests"). */

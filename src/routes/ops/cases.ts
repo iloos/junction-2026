@@ -15,6 +15,32 @@ export function pendingApprovalOf(s: WorkspaceState, planId: string) {
 	return Object.values(s.approvals).find((a) => a.planId === planId && a.state === 'pending');
 }
 
+/**
+ * The state as a person reads it: a held line that a granted approval of its plan's current version covers is
+ * approved and orderable now, so it shows as eligible, not as waiting for someone. Lines stay `held` in the reducer
+ * until the commit; without this, Problems and the Queue would say "waits for the chef" after the chef said yes.
+ */
+export function withApprovals(s: WorkspaceState): WorkspaceState {
+	const granted = new Set<string>();
+	for (const a of Object.values(s.approvals)) {
+		const plan = s.plans[a.planId];
+		if (a.state === 'granted' && plan && a.planVersion === plan.version)
+			for (const id of a.lineIds) granted.add(`${a.planId}:${id}`);
+	}
+	if (!granted.size) return s;
+	const plans: Record<string, Plan> = {};
+	for (const [id, p] of Object.entries(s.plans))
+		plans[id] = p.lines.some((l) => l.state === 'held' && granted.has(`${id}:${l.id}`))
+			? {
+					...p,
+					lines: p.lines.map((l) =>
+						l.state === 'held' && granted.has(`${id}:${l.id}`) ? { ...l, state: 'eligible' } : l
+					)
+				}
+			: p;
+	return { ...s, plans };
+}
+
 /** Decisions waiting for a person across plans, the way the kitchen counts them. */
 export function openDecisions(s: WorkspaceState, plans: Plan[]): Decision[] {
 	return plans.flatMap((p) => decisionsOf(p, pendingApprovalOf(s, p.id)));

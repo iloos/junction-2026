@@ -21,6 +21,21 @@ Valio's own example ("1,000 L lactose-free milk by Monday") runs as its own rout
 
 **Bold beat ("Same shortage. Your rules."):** the judge flips price-first to Finnish-required or changes a cap; eligible terms, rejections and residuals update; if nothing qualifies, it says so. [~] rehearse on the deployed app first.
 
+## Video shot list (≤ 2:00, filmed after the freeze on the tagged deploy)
+Each shot is a URL, the clicks, and what must be on screen. A shot is filmed only when the playtest journey named beside it is green on the deployed commit (`node evals/playtest/run.mjs --grep <id>`); otherwise cut it or say "next". Fresh browser profile per take (each one is a new sandbox); 1440 × 900, one 390 phone insert.
+
+| Time | Shot | URL and clicks | On screen (must) | Journey · status |
+|---|---|---|---|---|
+| 0:00–0:10 | Opener | `/` → the picker "Who are you cooking for?" → Hotel Rautatientori | Seven kitchens, each with its rules; the hotel's mandate in the chef's words | j1 · [x] picker on 8844465 |
+| 0:10–0:45 | **Hero: words → a costed plan** | Dock: "a no-meat dinner for 120 with a peach dessert" → menu card → "plan it" | The agent's steps as they happen: dishes → ingredients → Valio products → a priced basket; every unavailable item labelled or swapped, never silent | m2 (hero referee) · [ ] see RUN.md of the latest run |
+| 0:45–1:05 | The chef decides | In the dock: Review → Confirm exact terms; Order the approved lines | Each held line in one decision; "Ordered · N lines", one receipt; "supplier simulated" on screen | m2 · [ ] |
+| 1:05–1:20 | Valio sees it | `/ops` → Orders, then Demand | The order arrives; demand per delivery day | m2 last step, m4 · [ ] forecast/flow not on 8844465 |
+| 1:20–1:40 | A shortage, re-planned | Presenter: scenario `shortage` (S1 812d714) → Kitchen and Ops | Which kitchens, which swaps, what each mandate allowed, what waits for a person | m1 · [ ] shortage action not deployed yet |
+| 1:40–1:55 | An outside agent is stopped | Claude with the judge key: place_order over the €800 line cap, then approve | Held, and the refusal names the rule; the chef approves on the paired phone (390 insert) | m3 · [x] held + 403 on 8844465; rule wording to check |
+| 1:55–2:00 | Close | `mandate.kitchen` | "What do you need? We'll sort it out. That's a mandate." | j9 · [x] |
+
+Deck outline (6 slides): 1 the problem in Valio's words · 2 the hero journey as one frame (words → plan → decision → order) · 3 the mandate: act, ask, refuse · 4 one stock, many kitchens (shortage + Ops) · 5 open door: any agent, same rules (MCP, 16 tools, none approve) · 6 what's real vs simulated, and next.
+
 ## Stage pitch (3:00)
 0–20 the problem · 20–105 the Christmas journey · 105–135 an outside agent on the judge's own key plans in the judge's sandbox and cannot approve · 135–160 Operations shows why kitchens are held · 160–180 the 4-week hotel pilot (targets, not results) and close.
 

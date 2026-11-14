@@ -70,7 +70,10 @@ export function lineView(
 	// Zero demand: nothing to buy, nothing to do.
 	if (l.state === 'rejected' && qty === 0)
 		return { reviewable: false, committable: false, ...none, nextAction: 'none' };
-	if (l.state === 'unorderable' || l.state === 'rejected') {
+	const gap = l.reasons.find((r) => GAPS.has(r));
+	// An orderable line held back by a fact gap (it has a tier): re-quote or swap, not "forbidden".
+	const factGap = gap && l.state === 'unorderable' && l.tier !== undefined;
+	if (!factGap && (l.state === 'unorderable' || l.state === 'rejected')) {
 		const code = l.reasons[0] ?? 'NOT_FOUND';
 		const replaced = plan.lines.some(
 			(x) => x.substituteFor === l.productId && x.needId === l.needId
@@ -89,7 +92,6 @@ export function lineView(
 						: 'resolve_rule'
 		};
 	}
-	const gap = l.reasons.find((r) => GAPS.has(r));
 	if (gap)
 		return {
 			reviewable: false,

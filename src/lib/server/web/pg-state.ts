@@ -12,6 +12,7 @@ import { sql } from 'drizzle-orm';
 import type { AnyDb } from '../store/drizzle-store';
 import { LimitError, utcDay, type SpendGuard, type SpendLimits } from '../external/ledger';
 import type { CacheStore, CacheEntry } from '../external/call';
+import type { WorkItem } from './queue';
 
 type Row = Record<string, unknown>;
 const rowsOf = (res: unknown): Row[] =>
@@ -115,7 +116,12 @@ export function createPgWebState(db: AnyDb, clock: () => Date = () => new Date()
 	 * Claims up to `limit` due queue items for `owner` for `leaseMs`: rows another instance holds are skipped,
 	 * not waited for. A claim that outlives its lease (a crashed instance) is due again.
 	 */
-	async function claimQueue(owner: string, limit: number, leaseMs = 120_000, maxAttempts = 6) {
+	async function claimWork(
+		owner: string,
+		limit: number,
+		leaseMs = 120_000,
+		maxAttempts = 6
+	): Promise<WorkItem[]> {
 		return rowsOf(
 			await db.execute(sql`update web_queue set locked_by = ${owner},
 					locked_until = now() + (${leaseMs} * interval '1 millisecond')
@@ -124,8 +130,13 @@ export function createPgWebState(db: AnyDb, clock: () => Date = () => new Date()
 					where attempts < ${maxAttempts} and (locked_until is null or locked_until < now())
 					order by at limit ${limit}
 					for update skip locked)
-				returning id`)
-		).map((r) => String(r.id));
+				returning id, doc`)
+		).map((r) => ({ ...(r.doc as WorkItem), id: String(r.id) }));
+	}
+
+	/** ID-only view retained for diagnostics; workers use the documents returned by the atomic claim. */
+	async function claimQueue(owner: string, limit: number, leaseMs = 120_000, maxAttempts = 6) {
+		return (await claimWork(owner, limit, leaseMs, maxAttempts)).map((w) => w.id);
 	}
 
 	async function releaseQueue(owner: string) {
@@ -134,7 +145,7 @@ export function createPgWebState(db: AnyDb, clock: () => Date = () => new Date()
 		);
 	}
 
-	return { upsert, remove, load, cache, guard, usage, claimQueue, releaseQueue };
+	return { upsert, remove, load, cache, guard, usage, claimQueue, claimWork, releaseQueue };
 }
 
 export type PgWebState = ReturnType<typeof createPgWebState>;

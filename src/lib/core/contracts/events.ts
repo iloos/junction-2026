@@ -8,7 +8,9 @@ export const SimEventKind = z.enum([
 	'contention.detected',
 	'cutoff.closed',
 	'allocation.decided',
-	'supply.arrived'
+	'supply.arrived',
+	'kitchen.created',
+	'shortage.replanned'
 ]);
 export type SimEventKind = z.infer<typeof SimEventKind>;
 
@@ -23,6 +25,74 @@ export const SimEvent = z.object({
 });
 export type SimEvent = z.infer<typeof SimEvent>;
 
+/** `kitchen.created` detail (D24): a visitor's store, copied from the nearest seeded kitchen. */
+export const KitchenCreated = z.object({
+	kitchenId: z.string(),
+	name: z.string(),
+	kind: z.string(),
+	city: z.string(),
+	copiedFrom: z.string(),
+	/** The store's mandate in one sentence. */
+	mandateWords: z.string(),
+	weeklyCapCents: z.int().nonnegative(),
+	createdAt: IsoDateTime
+});
+export type KitchenCreated = z.infer<typeof KitchenCreated>;
+
+const Qty = z.object({ qty: z.number(), unit: z.string() });
+
+/** `shortage.replanned` detail (moment 1): one product short, each kitchen's open plan re-planned inside its own rules. */
+export const ShortageReplanned = z.object({
+	shortageId: z.string(),
+	productId: ProductId,
+	productName: z.string(),
+	/** Valio stock before and after, in sales units. */
+	had: z.number(),
+	left: z.number(),
+	unit: z.string(),
+	kitchens: z.array(
+		z.object({
+			kitchenId: z.string(),
+			kitchenName: z.string(),
+			/** Null: no open plan relied on the product. */
+			planId: z.string().nullable(),
+			/**
+			 * kept: what is left covers it; swapped: a substitute added within the rules; held: the substitute waits
+			 * for a person; short: nothing the rules allow fits.
+			 */
+			outcome: z.enum(['unaffected', 'kept', 'swapped', 'held', 'short']),
+			changed: z.array(
+				z.object({
+					lineId: z.string(),
+					productId: ProductId,
+					productName: z.string(),
+					/** Null: an added line. */
+					was: Qty.nullable(),
+					/** Null: a removed line. */
+					now: Qty.nullable()
+				})
+			),
+			swaps: z.array(
+				z.object({
+					fromProductId: ProductId,
+					fromName: z.string(),
+					toProductId: ProductId,
+					toName: z.string(),
+					qty: z.number(),
+					unit: z.string(),
+					physical: z.string().optional()
+				})
+			),
+			/** What its rules allowed, in words. */
+			allowedBy: z.string(),
+			waitsForPerson: z.int().nonnegative(),
+			/** One sentence for the ledger. */
+			why: z.string()
+		})
+	)
+});
+export type ShortageReplanned = z.infer<typeof ShortageReplanned>;
+
 /**
  * What SSE and `Ops.readAfter` deliver. Clients subscribe first, then catch up from their last seq,
  * deduplicate by seq, and poll on reconnect (D6).
@@ -30,6 +100,12 @@ export type SimEvent = z.infer<typeof SimEvent>;
 export const ServerEvent = z.discriminatedUnion('kind', [
 	z.object({ kind: z.literal('op'), seq: z.int().positive(), envelope: OpEnvelope }),
 	z.object({ kind: z.literal('sim'), seq: z.int().positive(), ...Scope.shape, event: SimEvent }),
+	/**
+	 * A room or shortage notice in a real workspace (kitchen.created, shortage.replanned). Not in the op log, so it has
+	 * no seq: it goes out live only, like a trace, and what it announces is readable on load (the kitchens table, the
+	 * re-planned plans and their anomalies).
+	 */
+	z.object({ kind: z.literal('notice'), ...Scope.shape, at: IsoDateTime, event: SimEvent }),
 	/** Agent trace steps (model, tokens, latency, tool calls): CLAUDE.md rule 7. Not part of state. */
 	z.object({
 		kind: z.literal('trace'),

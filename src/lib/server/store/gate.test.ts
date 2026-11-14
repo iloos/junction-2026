@@ -103,7 +103,7 @@ describe('finding 1: a repeated line id never buys twice', () => {
 });
 
 describe('finding 2: no price, no order', () => {
-	it('holds a priceless line outside any approval, refuses to commit it, and a new price means new terms', async () => {
+	it('keeps a priceless line out of the order and any approval, refuses to commit it, and a new price means new terms', async () => {
 		env.overlay.setPriceMissing('470418', 'simulated: Valio returned no price');
 		const p = must(
 			await h.place_order(ctx('chef'), {
@@ -114,7 +114,9 @@ describe('finding 2: no price, no order', () => {
 			})
 		);
 		const line = p.plan.lines[0];
-		expect(line).toMatchObject({ state: 'held', lineCents: null });
+		// Nobody can approve a missing price: the line can't be ordered as planned until it is re-quoted.
+		expect(line).toMatchObject({ state: 'unorderable', lineCents: null });
+		expect(line.view?.nextAction).toBe('requote');
 		expect(line.reasons).toContain('price_missing');
 		expect(p.approvalId).toBeNull(); // a fact gap is never put to a human
 

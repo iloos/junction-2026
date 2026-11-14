@@ -16,6 +16,7 @@ import { addDays, findDate, realDate, weekdayOf } from '../request/dates';
 import { CONSTRAINTS } from '../request/lexicon';
 import { coursesIn, guestsIn } from '../request/classify';
 import { constraintsIn } from '../request/parse';
+import { readShares } from '../request/shares';
 
 const STYLES: { style: ServiceStyleWord; re: RegExp }[] = [
 	{ style: 'buffet', re: /(?<![\p{L}])(buffet|noutopöytä\p{L}*|seisova pöytä)(?![\p{L}])/iu },
@@ -33,7 +34,10 @@ const STYLES: { style: ServiceStyleWord; re: RegExp }[] = [
 
 /** Requirements beyond the request parser's constraints, with an optional head count ("6 vegetarians"). */
 const DIETS: { label: string; re: RegExp }[] = [
-	{ label: 'vegetarian', re: /vegetarian\p{L}*|kasvis\p{L}*/iu },
+	{
+		label: 'vegetarian',
+		re: /vegetarian\p{L}*|kasvis\p{L}*|veggie|no[- ]meat|meat[- ]?free|meatless|without meat|lihaton\p{L}*/iu
+	},
 	{ label: 'vegan', re: /vegan\p{L}*|vegaan\p{L}*/iu },
 	{ label: 'nut-free', re: /nut[- ]free|no nuts|pähkinätön\p{L}*/iu },
 	{ label: 'dairy-free', re: /dairy[- ]free|maidoton\p{L}*/iu },
@@ -85,7 +89,9 @@ export function dietaryIn(text: string): string[] {
 export function draftBrief(text: string, today: string): BriefDraft {
 	const from: BriefDraft['from'] = {};
 	const notes: string[] = [];
-	const guests = guestsIn(text);
+	// "500 pizzas no meat 50%": the servings are the guests, each share a counted requirement.
+	const shares = readShares(text);
+	const guests = guestsIn(text) ?? shares?.total ?? null;
 	if (guests !== null) from.guests = 'words';
 
 	const d = findDate(text, today);
@@ -102,8 +108,20 @@ export function draftBrief(text: string, today: string): BriefDraft {
 	const serviceStyle = STYLES.find((s) => s.re.test(text))?.style ?? null;
 	if (serviceStyle) from.serviceStyle = 'words';
 
-	const typed = dietaryIn(text);
-	if (typed.length) from.dietary = 'words';
+	let typed = dietaryIn(text);
+	if (shares) {
+		// A counted share replaces the same diet read for every dish ("a third vegan" is not "all vegan").
+		const counted = new Set(shares.dietary.map((d) => d.split(':')[0]));
+		typed = [
+			...typed.filter((d) => !counted.has(d.split(':')[0])),
+			...shares.dietary.filter((d) => !typed.includes(d))
+		];
+		if (shares.parts.length && !shares.ask) notes.push(`read as ${shares.sentence}`);
+	}
+	// A reading that could mean something else is asked first, its likeliest form as one tap.
+	const askShares = !!shares?.ask;
+	if (askShares) typed = typed.filter((d) => !shares!.dietary.includes(d));
+	if (typed.length && !askShares) from.dietary = 'words';
 
 	let budgetCents: number | null = null;
 	const b = text.match(BUDGET);
@@ -131,10 +149,13 @@ export function draftBrief(text: string, today: string): BriefDraft {
 		dateText: d && !d.invalid ? d.text : null,
 		serviceStyle,
 		courses,
-		dietary: typed.length ? typed : null,
+		dietary: typed.length && !askShares ? typed : null,
 		budgetCents,
 		from,
-		notes
+		notes,
+		...(shares?.parts.length
+			? { shares: { sentence: shares.sentence, dietary: shares.dietary, ask: shares.ask } }
+			: {})
 	};
 }
 
@@ -144,11 +165,13 @@ const needsCourses = (s: ServiceStyleWord | null) => s === 'plated' || s === 'fa
 /** The fields still missing, in the order they are asked. */
 export function missing(d: BriefDraft): BriefField[] {
 	const out: BriefField[] = [];
+	// The shares reading is confirmed before anything else: it is how the words were understood.
+	if (d.dietary === null && d.shares?.ask) out.push('dietary');
 	if (d.guests === null) out.push('guests');
 	if (d.date === null) out.push('date');
 	if (d.serviceStyle === null) out.push('serviceStyle');
 	if (d.courses === null && needsCourses(d.serviceStyle)) out.push('courses');
-	if (d.dietary === null) out.push('dietary');
+	if (d.dietary === null && !d.shares?.ask) out.push('dietary');
 	if (d.budgetCents === null) out.push('budget');
 	return out;
 }
@@ -176,7 +199,7 @@ export function nextQuestion(d: BriefDraft, today: string): BriefQuestion | null
 				field,
 				text: 'On which day is the event?',
 				why: 'Delivery is planned for the day before, within the supplier’s cut-offs.',
-				chips: [chip(`Friday ${next(5)}`, next(5)), chip(`Saturday ${next(6)}`, next(6))],
+				chips: [chip(dayChip(next(5)), next(5)), chip(dayChip(next(6)), next(6))],
 				input: { kind: 'date', placeholder: 'YYYY-MM-DD' }
 			};
 		}
@@ -198,6 +221,18 @@ export function nextQuestion(d: BriefDraft, today: string): BriefQuestion | null
 				input: { kind: 'number', placeholder: 'Courses', unit: 'courses' }
 			};
 		case 'dietary':
+			if (d.shares?.ask)
+				return {
+					id,
+					field,
+					text: d.shares.ask.question,
+					why: 'This is how I read your words; one tap confirms it, or pick the other reading.',
+					chips: [
+						chip(d.shares.ask.yes, d.shares.dietary),
+						chip(d.shares.ask.no, [d.shares.ask.noValue])
+					],
+					input: { kind: 'text', placeholder: 'e.g. vegetarian:200, vegan:50' }
+				};
 			return {
 				id,
 				field,
@@ -233,6 +268,43 @@ export function nextQuestion(d: BriefDraft, today: string): BriefQuestion | null
 
 const STYLES_SET = new Set(Object.keys(STYLE_WORDS));
 
+/** "Fri 11 Dec": a chip says the day in words, never the ISO date. */
+const dayChip = (iso: string) =>
+	new Date(`${iso}T12:00:00Z`).toLocaleDateString('en-GB', {
+		weekday: 'short',
+		day: 'numeric',
+		month: 'short',
+		timeZone: 'UTC'
+	});
+
+/**
+ * A typed answer to "Any dietary requirements?": the requirements it names, [] for "none", or null when it answers
+ * something else ("no budget", "Saturday"), so the question stays open instead of storing the words as a diet.
+ */
+function typedDietary(v: string): string[] | null {
+	const s = v.trim();
+	if (
+		/^(none|no|nope|nothing|no requirements?|no restrictions?|n\/a|ei|ei mitään|ei ole)\.?$/i.test(
+			s
+		)
+	)
+		return [];
+	const known = dietaryIn(s);
+	if (known.length) return known;
+	const parts = s
+		.split(',')
+		.map((x) => x.trim())
+		.filter(Boolean);
+	const plausible = parts.every(
+		(p) =>
+			p.split(/\s+/).length <= 3 &&
+			!/budget|€|\beur|guest|people|day|date|buffet|plated|course|monday|tuesday|wednesday|thursday|friday|saturday|sunday|\d{3,}/i.test(
+				p
+			)
+	);
+	return plausible ? parts : null;
+}
+
 /** Applies the chef's answers; a malformed one is ignored and the question stays open. */
 export function applyBriefAnswers(
 	d: BriefDraft,
@@ -264,7 +336,7 @@ export function applyBriefAnswers(
 				break;
 			}
 			case 'brief.dietary': {
-				const list = (Array.isArray(v) ? v : typeof v === 'string' ? v.split(',') : null)
+				const list = (Array.isArray(v) ? v : typeof v === 'string' ? typedDietary(v) : null)
 					?.map((s) => String(s).trim().toLowerCase())
 					.filter((s) => s && s !== 'none' && s.length <= 60);
 				if (!list) break;

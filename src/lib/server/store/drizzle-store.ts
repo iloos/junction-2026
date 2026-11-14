@@ -369,6 +369,16 @@ export function createDrizzleStore(
 
 		load: (workspaceId, runId) => cachedLoad(db, workspaceId, runId),
 
+		async addKitchen(workspaceId, k) {
+			await db
+				.insert(schema.workspaces)
+				.values({ id: workspaceId, name: workspaceId })
+				.onConflictDoNothing();
+			await db
+				.insert(schema.kitchens)
+				.values({ workspaceId, id: k.id, mandateVersion: k.mandate.version, doc: k });
+		},
+
 		async kitchens(workspaceId) {
 			const rows = await db
 				.select()

@@ -29,6 +29,10 @@ export interface SourceSummary {
 	cacheHitRate: number;
 	tokensIn: number;
 	tokensOut: number;
+	/** Calls per answer mode: a live call, the cache, the replay book, the fixture; `none` for calls with no mode (tools). */
+	byMode: { live: number; cache: number; replay: number; fixture: number; none: number };
+	/** Live calls that succeeded: the only count that says the provider itself answered. */
+	liveOk: number;
 }
 
 export interface TraceStore {
@@ -85,7 +89,12 @@ export function createTraceStore(db: AnyDb, clock: () => Date = () => new Date()
 					avg(case when ok then 0 else 1 end)::float as error_rate,
 					avg(case when cache in ('cache', 'replay') then 1 else 0 end)::float as cache_rate,
 					coalesce(sum(tokens_in), 0)::int as tokens_in,
-					coalesce(sum(tokens_out), 0)::int as tokens_out
+					coalesce(sum(tokens_out), 0)::int as tokens_out,
+					count(*) filter (where cache = 'live')::int as m_live,
+					count(*) filter (where cache = 'cache')::int as m_cache,
+					count(*) filter (where cache = 'replay')::int as m_replay,
+					count(*) filter (where cache = 'fixture')::int as m_fixture,
+					count(*) filter (where cache = 'live' and ok)::int as live_ok
 				from traces
 				where ${where(f)}
 				group by source
@@ -99,7 +108,20 @@ export function createTraceStore(db: AnyDb, clock: () => Date = () => new Date()
 				errorRate: Number(r.error_rate) || 0,
 				cacheHitRate: Number(r.cache_rate) || 0,
 				tokensIn: Number(r.tokens_in) || 0,
-				tokensOut: Number(r.tokens_out) || 0
+				tokensOut: Number(r.tokens_out) || 0,
+				byMode: {
+					live: Number(r.m_live) || 0,
+					cache: Number(r.m_cache) || 0,
+					replay: Number(r.m_replay) || 0,
+					fixture: Number(r.m_fixture) || 0,
+					none:
+						Number(r.count) -
+						(Number(r.m_live) || 0) -
+						(Number(r.m_cache) || 0) -
+						(Number(r.m_replay) || 0) -
+						(Number(r.m_fixture) || 0)
+				},
+				liveOk: Number(r.live_ok) || 0
 			}));
 		}
 	};

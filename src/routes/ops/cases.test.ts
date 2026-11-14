@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
+import type { Approval, Line, Plan } from '$lib/core/contracts';
+import type { WorkspaceState } from '$lib/core/state';
 import { applyOps, emptyState } from '$lib/core/state';
 import { SCENARIO } from '$lib/core/scenario';
 import { SYNTH_PRODUCTS, SYNTH_WORKSPACE, syntheticRun } from '$lib/server/bus/synthetic';
-import { buildCases, coverage, kitchenHref } from './cases';
+import { buildCases, coverage, kitchenHref, withApprovals } from './cases';
 
 function stateAfter(steps: number) {
 	const ops = syntheticRun({ runId: 'r', startSeq: 1 })
@@ -159,5 +161,21 @@ describe('ops cases', () => {
 		const cases = buildCases(s2, SYNTH_PRODUCTS, {});
 		expect(cases[0].title.startsWith('Kirjolohi')).toBe(true);
 		expect(cases[0].deadline).toBe(early);
+	});
+
+	it('reads lines a granted approval of the current version covers as approved, not waiting', () => {
+		const line = (id: string) => ({ id, state: 'held' }) as unknown as Line;
+		const plan = { id: 'p1', version: 3, lines: [line('a'), line('b')] } as unknown as Plan;
+		const approval = (state: string, planVersion: number) =>
+			({ id: 'ap', planId: 'p1', planVersion, state, lineIds: ['a'] }) as unknown as Approval;
+		const s = (ap: Approval) =>
+			({ ...emptyState('ws', 'r'), plans: { p1: plan }, approvals: { ap } }) as WorkspaceState;
+		expect(withApprovals(s(approval('granted', 3))).plans.p1.lines.map((l) => l.state)).toEqual([
+			'eligible',
+			'held'
+		]);
+		// Pending, or granted on an older version (the plan changed since): still waiting.
+		expect(withApprovals(s(approval('pending', 3))).plans.p1.lines[0].state).toBe('held');
+		expect(withApprovals(s(approval('granted', 2))).plans.p1.lines[0].state).toBe('held');
 	});
 });

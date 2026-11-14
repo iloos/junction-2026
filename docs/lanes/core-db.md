@@ -44,6 +44,9 @@
 10. **Every place_order line makes a need** (D18): today only lines with an amount, requirements or an ask do.
 11. Glance at da's rankBy edit in services/substitutes.ts (agent-rank rebase). `set_mandate` stays on hold.
 
+## Ideas: where a model or a sponsor would do better than code (noted, not scheduled)
+- **Product kind by judgement, not word lists** (15 Nov). meets() falls back to Finnish name words for meat/fish/dairy, which over- and under-catch: 'kana' inside 'porkkana' made carrots meat; 'jauhelihalle' (a seasoning for mince) and 'hedelmälihalla' (juice with fruit flesh) read as meat; 973 products are meat by name only, 145 of them with no meat word in their English name. Better: one batch pass with Gemini Decisions over nameFi + nameEn + category + keyIngredients (~115 calls for 13.5k foods), stored as an enrichment with provenance, read by meets() before the words; checked against the facets eval at 0 unsafe. Language-general without a translation API (Valio gives nameEn for 95%; the model reads Finnish). DeepL only if we show names in more languages.
+
 ## Traps
 - Run tests with the DB off: `DATABASE_URL= pnpm vitest run --project server`; otherwise they hit Aiven. The Postgres race test is opt-in: `pnpm test:pg`.
 - "Now" is `ports.clock.now()`. Every offers path re-dates through `onScenario` (both catalog adapters do, defaulting to `SCENARIO.delivery`); a new path that skips it shows November cut-offs, and A3 refuses everything. Tests that order for November dates need a November clock (`createDbPorts({ now })`): the default is the scenario start, Mon 7 Dec 21:40.
