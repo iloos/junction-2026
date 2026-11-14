@@ -20,7 +20,12 @@ export interface KeyEntry {
 	actor: ActorKind;
 	/** Shown as the actor id in ops and traces; the key itself is never logged. */
 	label: string;
+	/** Workspace the key acts in; default the stage workspace (MANDATE_WORKSPACE or ws-demo). */
+	workspaceId?: string;
 }
+
+/** Judges' MCP keys act in their own sandbox so they can't disturb the stage run. */
+export const JUDGES_WORKSPACE = 'ws-judges';
 
 export const FIXTURE_KEYS: readonly KeyEntry[] = [
 	{ key: 'fx-chef', actor: 'chef', label: 'fixture-chef' },
@@ -50,10 +55,16 @@ export function keyTable(env: Env, opts: { dev: boolean }): KeyEntry[] {
 			out.push({ key, actor, label: actor.replace('_', '-') });
 	}
 	for (const item of (env.MCP_KEYS ?? '').split(',')) {
-		const [label, actor, key] = item.trim().split(':');
+		// label:actor:key[:workspace]; MCP_KEYS entries default to the judges' sandbox.
+		const [label, actor, key, workspaceId] = item.trim().split(':');
 		if (!label || !key || key.length < MIN_KEY_LENGTH) continue;
 		if (!(KEYED_ACTORS as readonly string[]).includes(actor)) continue;
-		out.push({ key, actor: actor as ActorKind, label });
+		out.push({
+			key,
+			actor: actor as ActorKind,
+			label,
+			workspaceId: workspaceId || JUDGES_WORKSPACE
+		});
 	}
 	if (opts.dev || env.MANDATE_FIXTURE_KEYS === '1') out.push(...FIXTURE_KEYS);
 	return out;
@@ -64,11 +75,12 @@ export function contextFor(
 	actor: ActorKind,
 	label: string,
 	via: string,
-	env: Env = {}
+	env: Env = {},
+	workspaceId: string = env.MANDATE_WORKSPACE || 'ws-demo'
 ): CallContext {
 	return {
-		workspaceId: env.MANDATE_WORKSPACE || 'ws-demo',
-		runId: env.MANDATE_RUN || currentRun(env.MANDATE_WORKSPACE || 'ws-demo'),
+		workspaceId,
+		runId: env.MANDATE_RUN || currentRun(workspaceId),
 		actor: { kind: actor, id: label },
 		scopes: SCOPES_BY_ACTOR[actor],
 		via
@@ -82,7 +94,7 @@ export function resolveKey(
 ): CallContext | null {
 	if (!key) return null;
 	const entry = keyTable(env, opts).find((e) => timingSafeEqual(e.key, key));
-	return entry ? contextFor(entry.actor, entry.label, opts.via, env) : null;
+	return entry ? contextFor(entry.actor, entry.label, opts.via, env, entry.workspaceId) : null;
 }
 
 export function bearerFrom(request: Request): string | null {
