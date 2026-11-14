@@ -7,7 +7,7 @@ description: The lead's integration pass during the parallel build: fan out lane
 
 ## Fan-out (once, after the contracts commit)
 1. Check that `main` has `core/types.ts`, `core/ops.ts`, `ports/*.ts`, fixtures and the generator, and that `pnpm check` passes.
-2. For each lane in `docs/concept/ARCHITECTURE.md`, write `docs/lanes/<lane>.md` from `_TEMPLATE.md`: one-sentence goal, owned paths that **don't overlap**, the contracts used, observable acceptance checks, the dev port. Commit the briefs to `main`.
+2. For each track in `docs/DISPATCH.md`, write `docs/lanes/<lane>.md` from `_TEMPLATE.md`: one-sentence goal, owned paths that **don't overlap**, the contracts used, observable acceptance checks, the dev port. Commit the briefs to `main`.
 3. Create the worktrees: `git worktree add ../junc26-lanes/<lane> -b lane/<lane> main`, then `pnpm i` and copy `.env` (never symlink).
 4. Give the human the exact opening line for each lane session: `Use the lane skill. Your brief is docs/lanes/<lane>.md.`
 
