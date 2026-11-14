@@ -9,13 +9,14 @@ import type { RequestHandler } from './$types';
 /**
  * GET /api/calendar/<kitchen>.ics?token=<calendar token>: the same feed as /kitchen-api/calendar.ics, for a
  * calendar app that subscribes by URL. The token (from /api/demo/calendar-link) reads one sandbox's feed and
- * nothing else. An agent key (`?key=` or Bearer) also works, for scripts.
+ * nothing else. Scripts may use an agent key, but only as a Bearer header: a key that can plan and order never
+ * goes in a URL that calendars sync.
  */
 export const GET: RequestHandler = async ({ params, url, request }) => {
-	const bearer = request.headers.get('authorization')?.replace(/^Bearer\s+/i, '');
+	const bearer = request.headers.get('authorization')?.match(/^Bearer\s+(.+)$/i)?.[1];
 	const workspaceId =
 		readCalendar(url.searchParams.get('token'), env) ??
-		resolveKey(url.searchParams.get('key') || bearer, env, { dev, via: 'calendar' })?.workspaceId;
+		(bearer ? resolveKey(bearer, env, { dev, via: 'calendar' })?.workspaceId : undefined);
 	if (!workspaceId) error(401, 'a calendar token is required: ?token=<token>');
 	const ics = await kitchenCalendar(workspaceId, params.kitchen);
 	if (!ics) error(404, `no kitchen ${params.kitchen} in this workspace`);
