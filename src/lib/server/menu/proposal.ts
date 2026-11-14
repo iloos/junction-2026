@@ -20,8 +20,8 @@ import {
 import { canonicalJson, sha256Hex } from '$lib/core/hash';
 import type { Catalog, Llm, MenuStore, Resolution } from '$lib/core/ports';
 import { slug } from '../request/parse';
-import { fitIssues } from './fit';
-import { pinnedFor, resolveVariants, type Resolved } from './resolve';
+import { chooseProducts, type Choice, type ChoiceItem } from './choose';
+import { candidatePool, pinnedFor, rememberPin, type PinSource } from './resolve';
 import { dietBase, reviewProposal, type Issue } from './rubric';
 
 /** Brief requirements the catalogue resolver can enforce, as its product flags. */
@@ -89,33 +89,14 @@ export const menuFlags = (brief: Pick<EventBrief, 'dietary'>) =>
 		.map((x) => RESOLVER_DIET[dietBase(x)])
 		.filter(Boolean);
 
-/**
- * One menu ingredient: a remembered pin or a caller's hint first (unless it breaks a whole-menu flag), then the query
- * and its variants through the diet-aware resolver.
- */
-export async function resolveMenuIngredient(
-	catalog: Pick<Catalog, 'resolve' | 'get'>,
-	o: {
-		query: string;
-		alt?: string[];
-		label: string;
-		flags: string[];
-		plant?: string[];
-		pinned?: { productId: string; source: 'remembered' | 'hint' };
-	}
-): Promise<Resolved | null> {
-	if (!catalog.resolve) return null;
-	const pinned =
-		o.pinned && !(await breaksFlags(catalog, [o.pinned.productId], o.flags)).size
-			? o.pinned
-			: undefined;
-	return resolveVariants(catalog, (q) => resolveIngredient(catalog, q, o.flags, o.plant), {
-		query: o.query,
-		alt: o.alt,
-		label: o.label,
-		pinned: pinned?.productId,
-		pinSource: pinned?.source
-	});
+/** A pinned product, if it exists and breaks no whole-menu flag (a pin never overrides the brief's diet). */
+async function usablePin(
+	catalog: Pick<Catalog, 'get'>,
+	productId: string | undefined,
+	flags: string[]
+): Promise<string | undefined> {
+	if (!productId || !(await catalog.get([productId])).has(productId)) return undefined;
+	return (await breaksFlags(catalog, [productId], flags)).size ? undefined : productId;
 }
 
 /** A caller's hint for an ingredient: its words name the hint's ingredient, or the hint names them. */
@@ -127,15 +108,12 @@ function hintFor(hints: ProposeDeps['hints'], words: string[]): string | undefin
 	})?.productId;
 }
 
-/** How an ingredient got its product, for the provenance note. */
-function howResolved(got: Resolved, query: string): string {
-	if (got.pinned)
-		return got.pinned === 'hint' ? 'the caller named it' : 'pinned before in this kitchen';
-	const n = got.resolution.status === 'resolved' ? got.resolution.candidates.length : 0;
-	return got.via
-		? `best of ${n} for "${got.via}" (no match for "${query}")`
-		: `best of ${n} for "${query}"`;
-}
+const PIN_WORDS: Record<PinSource | 'hint', string> = {
+	hint: 'the caller named it',
+	chef: 'the chef pinned it for this kitchen',
+	agent: 'an agent pinned it for this kitchen',
+	model: 'chosen before for this kitchen'
+};
 
 /* ── Model output ─────────────────────────────────────────────────────────── */
 
@@ -486,6 +464,17 @@ export async function proposeMenu(d: ProposeDeps): Promise<Proposed> {
 		'd-'
 	);
 	const dishes: DishTemplate[] = [];
+	/** Per ingredient: its pin, or the resolver's own pick and the chooser's candidates. */
+	const work: {
+		di: number;
+		id: string;
+		i: LlmMenu['dishes'][number]['ingredients'][number];
+		dish: string;
+		plant: string[];
+		pin?: { productId: string; how: string };
+		det: Resolution | null;
+		pool: string[];
+	}[] = [];
 	// A whole-menu vegetarian/vegan requirement, or a dish offered as one, keeps meat and fish out of its picks.
 	const plantFor = (claims: string[]) => [
 		...new Set(
@@ -499,62 +488,102 @@ export async function proposeMenu(d: ProposeDeps): Promise<Proposed> {
 			dish.ingredients.map((i) => i.label),
 			`${dishIds[di]}.`
 		);
-		const ingredients: DishIngredient[] = [];
 		for (const [ii, i] of dish.ingredients.entries()) {
 			d.onStep?.({ step: 'products', done: done++, total });
-			const base = {
-				id: ingIds[ii],
-				label: i.label,
-				amountPerCover: i.amountPerCover,
-				unit: i.unit
-			};
 			const words = [i.query, i.label];
-			const hint = hintFor(d.hints, words);
-			const remembered = pinnedFor(d.workspaceId, d.kitchenId, words);
-			const got = await resolveMenuIngredient(d.catalog, {
-				query: i.query,
-				alt: i.alt ?? [],
-				label: i.label,
-				flags,
-				plant: plantFor(dish.claimedCompatible),
-				pinned: hint
-					? { productId: hint, source: 'hint' }
-					: remembered
-						? { productId: remembered, source: 'remembered' }
-						: undefined
-			});
-			const r = got?.resolution;
-			if (got && r?.status === 'resolved' && r.candidates.length) {
-				// A vegan dish's pick without a declared allergen record is not called vegan: the note says to check it.
-				const unchecked =
-					plantFor(dish.claimedCompatible).includes('VEGAN') &&
-					!(await d.catalog.get([r.candidates[0].productId])).get(r.candidates[0].productId)
-						?.allergens.declared;
-				ingredients.push({
-					...base,
-					productId: r.candidates[0].productId,
-					provenance: {
-						source,
-						at,
-						ref: i.query,
-						note: `amount: ${source === 'llm' ? 'model' : 'team'} estimate; product: ${howResolved(got, i.query)}${unchecked ? '; vegan: no allergen record — check' : ''}`
-					}
-				});
-			} else
-				ingredients.push({
-					...base,
-					unresolved: r?.status === 'unresolved' ? r.reason : 'no catalogue resolver',
-					provenance: { source, at, ref: i.query }
-				});
+			const plant = plantFor(dish.claimedCompatible);
+			const hint = await usablePin(d.catalog, hintFor(d.hints, words), flags);
+			const kept = pinnedFor(d.workspaceId, d.kitchenId, words);
+			const pin = hint
+				? { productId: hint, how: PIN_WORDS.hint }
+				: kept && (await usablePin(d.catalog, kept.productId, flags))
+					? { productId: kept.productId, how: PIN_WORDS[kept.by] }
+					: undefined;
+			const one = (q: string) => resolveIngredient(d.catalog, q, flags, plant);
+			const det = pin ? null : await one(i.query);
+			const pool =
+				pin || !d.llm
+					? []
+					: await candidatePool(one, { query: i.query, alt: i.alt ?? [], label: i.label });
+			work.push({ di, id: ingIds[ii], i, dish: dish.name, plant, pin, det, pool });
 		}
 		dishes.push({
 			id: dishIds[di],
 			name: dish.name,
 			course: dish.course,
 			claimedCompatible: dish.claimedCompatible,
-			ingredients,
+			ingredients: [],
 			provenance: { source, at }
 		});
+	}
+
+	// One judgement per menu: for each ingredient, the candidate that is it as its dish needs it, or none.
+	const names = new Map(
+		[...(await d.catalog.get([...new Set(work.flatMap((w) => w.pool))]))].map(([k, p]) => [
+			k,
+			p.nameFi
+		])
+	);
+	const choices: Map<string, Choice> = d.llm
+		? await chooseProducts(
+				d.llm,
+				work
+					.filter((w) => w.pool.length)
+					.map((w): ChoiceItem => ({
+						key: w.id,
+						dish: w.dish,
+						label: w.i.label,
+						amount: `${w.i.amountPerCover} ${w.i.unit} per guest`,
+						candidates: w.pool.map((productId) => ({
+							productId,
+							name: names.get(productId) ?? productId
+						}))
+					}))
+			)
+		: new Map();
+
+	const concerns: { id: string; text: string }[] = [];
+	for (const w of work) {
+		const base = { id: w.id, label: w.i.label, amountPerCover: w.i.amountPerCover, unit: w.i.unit };
+		const c = choices.get(w.id);
+		if (c?.concern)
+			concerns.push({ id: `fit:${w.id}`, text: `${w.i.label}: ${c.concern}`.slice(0, 300) });
+		let productId: string | undefined;
+		let how = '';
+		let unresolved: string | undefined;
+		if (w.pin) ({ productId, how } = w.pin);
+		else if (c) {
+			if (c.productId) {
+				productId = c.productId;
+				how = `chosen from ${w.pool.length} candidates: ${c.reason}`;
+				rememberPin(d.workspaceId, d.kitchenId, [w.i.query, w.i.label], c.productId, 'model');
+			} else unresolved = `none of ${w.pool.length} candidates is ${w.i.label}: ${c.reason}`;
+		} else if (w.det?.status === 'resolved' && w.det.candidates.length) {
+			productId = w.det.candidates[0].productId;
+			how = `best of ${w.det.candidates.length} for "${w.i.query}"`;
+		} else unresolved = w.det?.status === 'unresolved' ? w.det.reason : 'no catalogue resolver';
+
+		let ing: DishIngredient;
+		if (productId) {
+			// A vegan dish's pick without a declared allergen record is not called vegan: the note says to check it.
+			const unchecked =
+				w.plant.includes('VEGAN') &&
+				!(await d.catalog.get([productId])).get(productId)?.allergens.declared;
+			ing = {
+				...base,
+				productId,
+				provenance: {
+					source,
+					at,
+					ref: w.i.query,
+					note: `amount: ${source === 'llm' ? 'model' : 'team'} estimate; product: ${how}${unchecked ? '; vegan: no allergen record, check' : ''}`.slice(
+						0,
+						500
+					)
+				}
+			};
+		} else ing = { ...base, unresolved, provenance: { source, at, ref: w.i.query } };
+		dishes[w.di].ingredients.push(ing);
 	}
 
 	const proposal = MenuProposal.parse({
@@ -564,17 +593,15 @@ export async function proposeMenu(d: ProposeDeps): Promise<Proposed> {
 		status: 'proposed',
 		brief: d.brief,
 		dishes,
-		open: menu.open.map((text, i) => {
-			const [k, rest] = text.includes('|') ? text.split('|', 2) : [`open-${i + 1}`, text];
-			return { id: k, text: rest.slice(0, 300) };
-		}),
+		open: [
+			...menu.open.map((text, i) => {
+				const [k, rest] = text.includes('|') ? text.split('|', 2) : [`open-${i + 1}`, text];
+				return { id: k, text: rest.slice(0, 300) };
+			}),
+			...concerns
+		],
 		provenance: { source, at, ref: model, ...(fallback ? { note: fallback } : {}) }
 	});
 	await d.store.put(d.workspaceId, proposal);
-	return {
-		proposal,
-		issues: [...reviewProposal(d.brief, proposal), ...(await fitIssues(d.catalog, proposal))],
-		fallback,
-		model
-	};
+	return { proposal, issues: reviewProposal(d.brief, proposal), fallback, model };
 }
