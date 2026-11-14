@@ -1,0 +1,346 @@
+{
+	"$comment": "Recipes for each profile's simulated order history (D14). The mock has no real order history, so src/lib/core/patterns/history.ts generates one per kitchen from these recipes with a seeded PRNG: same kitchen, same date, same history. Every generated line is labelled 'simulated history'; it is never written to the op log or a database. Rhythms follow docs/research/horeca-profiles.md §2–3: P1 daily breakfast staples plus a bistro mix, P2 Mon–Fri lunch (deliveries Mon/Wed/Fri, Friday lower), P3 school weeks with the autumn break 12–16 Oct near zero. Quantities are team estimates sized to the seeded kitchens (300 breakfast covers, 320 lunch covers, 2,000 meals a day). Product ids come from fixtures/seeds/christmas-buffet-140.json, fixtures/seeds/kitchens.json (P3's tender list) and evals/retrieval/substitutes.json; names are kept only for readability, units and lot steps are the catalogue's.",
+	"label": "simulated history",
+	"weeks": 16,
+	"profiles": {
+		"P1": {
+			"noise": 0.12,
+			"missRate": 0.04,
+			"items": [
+				{
+					"productId": "464201",
+					"name": "Valio kevytmaito 1 l laktoositon UHT",
+					"unit": "ST",
+					"lotStep": 1,
+					"qty": 36,
+					"days": ["mon", "tue", "wed", "thu", "fri", "sat"],
+					"note": "breakfast"
+				},
+				{
+					"productId": "467464",
+					"name": "Kieku Vapaan kanan muna irto S90 4320g",
+					"unit": "KI",
+					"lotStep": 1,
+					"qty": 4,
+					"days": ["mon", "tue", "wed", "thu", "fri", "sat"],
+					"note": "breakfast"
+				},
+				{
+					"productId": "464517",
+					"name": "AIMO maustamaton jogurtti 5 kg laktoositon",
+					"unit": "PRK",
+					"lotStep": 1,
+					"qty": 2,
+					"days": ["mon", "wed", "fri"],
+					"note": "breakfast"
+				},
+				{
+					"productId": "463400",
+					"name": "Valio Arki juustoviipale e500 g",
+					"unit": "ST",
+					"lotStep": 1,
+					"qty": 8,
+					"days": ["mon", "tue", "wed", "thu", "fri", "sat"],
+					"note": "breakfast"
+				},
+				{
+					"productId": "461332",
+					"name": "Kulta Katriina kahvi 5x1kg",
+					"unit": "KI",
+					"lotStep": 1,
+					"qty": 2,
+					"days": ["mon", "thu"],
+					"note": "breakfast and bistro"
+				},
+				{
+					"productId": "462150",
+					"name": "Lohifilee C-leikattu 10 kg",
+					"unit": "KG",
+					"lotStep": 10,
+					"qty": 15,
+					"days": ["tue", "fri"],
+					"note": "bistro"
+				},
+				{
+					"productId": "475214",
+					"name": "SPL annosperuna 10 kg",
+					"unit": "ST",
+					"lotStep": 1,
+					"qty": 3,
+					"days": ["tue", "fri"],
+					"note": "bistro"
+				},
+				{
+					"productId": "464249",
+					"name": "Valio ruokakerma 15 % 1 l laktoositon",
+					"unit": "ST",
+					"lotStep": 1,
+					"qty": 12,
+					"days": ["wed"],
+					"note": "bistro"
+				},
+				{
+					"productId": "466964",
+					"name": "Myllyn Paras Puuroriisi 1 kg",
+					"unit": "BAG",
+					"lotStep": 1,
+					"qty": 10,
+					"everyWeeks": 2,
+					"day": "wed",
+					"note": "breakfast porridge, every other week"
+				},
+				{
+					"productId": "464411",
+					"name": "Valio voi 500 g suolaamaton",
+					"unit": "ST",
+					"lotStep": 1,
+					"qty": 40,
+					"monthlyOn": 1,
+					"note": "monthly butter stock-up"
+				},
+				{
+					"productId": "464320",
+					"name": "Oatly iKaffe kaurajuoma 1L",
+					"unit": "ST",
+					"lotStep": 1,
+					"qty": 12,
+					"days": ["mon", "wed", "fri"],
+					"sinceDaysAgo": 20,
+					"note": "joined: oat drink added to the breakfast buffet"
+				},
+				{
+					"productId": "462016",
+					"name": "Kirjolohifilee C-leikattu 10 kg",
+					"unit": "KG",
+					"lotStep": 10,
+					"qty": 10,
+					"days": ["fri"],
+					"untilDaysAgo": 38,
+					"note": "dropped: trout left the bistro menu"
+				},
+				{
+					"productId": "462919",
+					"name": "HK Joulun Juhlakinkku viipaloitu 2,5 kg",
+					"unit": "ST",
+					"lotStep": 1,
+					"qty": 4,
+					"onceDaysAgo": 23,
+					"note": "one-off: a December tasting"
+				},
+				{
+					"productId": "473317",
+					"name": "Vaasan Joulutorttu 40x60g",
+					"unit": "KI",
+					"lotStep": 1,
+					"qty": 2,
+					"onceDaysAgo": 9,
+					"note": "one-off: pikkujoulu dessert"
+				}
+			]
+		},
+		"P2": {
+			"noise": 0.1,
+			"missRate": 0.04,
+			"dayFactor": { "fri": 0.85 },
+			"items": [
+				{
+					"productId": "475214",
+					"name": "SPL annosperuna 10 kg",
+					"unit": "ST",
+					"lotStep": 1,
+					"qty": 5,
+					"days": ["mon", "wed", "fri"]
+				},
+				{
+					"productId": "470418",
+					"name": "Snellman naudan jauheliha 17% 2 kg",
+					"unit": "ST",
+					"lotStep": 1,
+					"qty": 12,
+					"days": ["mon", "wed"]
+				},
+				{
+					"productId": "462209",
+					"name": "Happy Chef broilerin rintafilee 2,5 kg",
+					"unit": "ST",
+					"lotStep": 1,
+					"qty": 8,
+					"days": ["wed"]
+				},
+				{
+					"productId": "474247",
+					"name": "Jäävuorisalaatti leikattu 1 kg",
+					"unit": "ST",
+					"lotStep": 1,
+					"qty": 10,
+					"days": ["mon", "wed", "fri"]
+				},
+				{
+					"productId": "460195",
+					"name": "Sipuli 10 kg säkki",
+					"unit": "ST",
+					"lotStep": 1,
+					"qty": 2,
+					"days": ["mon"]
+				},
+				{
+					"productId": "460708",
+					"name": "Porkkana 10 kg",
+					"unit": "ST",
+					"lotStep": 1,
+					"qty": 2,
+					"days": ["mon"]
+				},
+				{
+					"productId": "464249",
+					"name": "Valio ruokakerma 15 % 1 l laktoositon",
+					"unit": "ST",
+					"lotStep": 1,
+					"qty": 12,
+					"days": ["mon", "fri"]
+				},
+				{
+					"productId": "464201",
+					"name": "Valio kevytmaito 1 l laktoositon UHT",
+					"unit": "ST",
+					"lotStep": 1,
+					"qty": 20,
+					"days": ["mon", "wed", "fri"]
+				},
+				{
+					"productId": "460510",
+					"name": "Barilla spagetti 5 kg",
+					"unit": "BAG",
+					"lotStep": 1,
+					"qty": 4,
+					"everyWeeks": 2,
+					"day": "mon",
+					"note": "pasta week of the menu cycle"
+				},
+				{
+					"productId": "461332",
+					"name": "Kulta Katriina kahvi 5x1kg",
+					"unit": "KI",
+					"lotStep": 1,
+					"qty": 2,
+					"monthlyOn": 3
+				},
+				{
+					"productId": "465845",
+					"name": "Valiojogurtti 1 kg maustamaton laktoositon",
+					"unit": "ST",
+					"lotStep": 1,
+					"qty": 6,
+					"days": ["wed"],
+					"sinceDaysAgo": 22,
+					"note": "joined: yoghurt dessert added to the buffet"
+				},
+				{
+					"productId": "462197",
+					"name": "AIMO naudan jauheliha 8% 2 kg",
+					"unit": "KG",
+					"lotStep": 2,
+					"qty": 10,
+					"days": ["fri"],
+					"untilDaysAgo": 36,
+					"note": "dropped: leaner mince left the menu"
+				},
+				{
+					"productId": "460027",
+					"name": "Tomaatti 1.lk",
+					"unit": "KG",
+					"lotStep": 0.01,
+					"qty": 6,
+					"onceDaysAgo": 17,
+					"note": "one-off"
+				}
+			]
+		},
+		"P3": {
+			"noise": 0.08,
+			"missRate": 0.02,
+			"breaks": [
+				{
+					"from": "2026-10-12",
+					"to": "2026-10-16",
+					"factor": 0,
+					"keep": { "464201": 0.1 },
+					"why": "autumn break: schools closed, daycare milk only"
+				}
+			],
+			"items": [
+				{
+					"productId": "464201",
+					"name": "Valio kevytmaito 1 l laktoositon UHT",
+					"unit": "ST",
+					"lotStep": 1,
+					"qty": 320,
+					"days": ["mon", "tue", "wed", "thu", "fri"]
+				},
+				{
+					"productId": "463335",
+					"name": "Valio Eila 3 % maitojuoma 1 l laktoositon",
+					"unit": "ST",
+					"lotStep": 1,
+					"qty": 60,
+					"days": ["mon", "tue", "wed", "thu", "fri"],
+					"note": "special diets"
+				},
+				{
+					"productId": "475214",
+					"name": "SPL annosperuna 10 kg",
+					"unit": "ST",
+					"lotStep": 1,
+					"qty": 18,
+					"days": ["mon", "wed", "thu"]
+				},
+				{
+					"productId": "466964",
+					"name": "Myllyn Paras Puuroriisi 1 kg",
+					"unit": "BAG",
+					"lotStep": 1,
+					"qty": 30,
+					"days": ["thu"]
+				},
+				{
+					"productId": "463437",
+					"name": "Valio Eila voi 500 g laktoositon",
+					"unit": "ST",
+					"lotStep": 1,
+					"qty": 40,
+					"days": ["mon"]
+				},
+				{
+					"productId": "462016",
+					"name": "Kirjolohifilee C-leikattu 10 kg",
+					"unit": "KG",
+					"lotStep": 10,
+					"qty": 60,
+					"everyWeeks": 2,
+					"day": "tue",
+					"note": "fish day, every other week of the cycle"
+				},
+				{
+					"productId": "464073",
+					"name": "Valio täysmaito 1 l laktoositon UHT",
+					"unit": "ST",
+					"lotStep": 1,
+					"qty": 40,
+					"days": ["mon", "wed", "fri"],
+					"sinceDaysAgo": 19,
+					"note": "joined: a new daycare group"
+				},
+				{
+					"productId": "472186",
+					"name": "Feelia kasvis-perunalaatikko 600g",
+					"unit": "ST",
+					"lotStep": 1,
+					"qty": 25,
+					"days": ["fri"],
+					"untilDaysAgo": 37,
+					"note": "dropped: now made in house"
+				}
+			]
+		}
+	}
+}
