@@ -17,12 +17,18 @@ import {
 } from '../contracts';
 import { sha256Hex } from '../hash';
 import { SCENARIO } from '../scenario';
-import { planEventDemand, type EventSeed } from '../demand';
+import {
+	makeInHouseQty,
+	planEventDemand,
+	rescueFor,
+	seedEntryFor,
+	sizeFor,
+	type EventSeed
+} from '../demand';
 import { draftFromLine, isoWeek, tierLines, type DraftLine } from '../mandate/tier';
 import type { CallContext, Ports, Tx } from '../ports';
 import type { WorkspaceState } from '../state';
 import { quoteOps, toLot } from './orders';
-import { resizeSubstitute } from './substitutes';
 import { AVAILABILITY_WORDING } from './wording';
 
 /** Ports plus the event seeds the server loaded (core reads no files). */
@@ -203,17 +209,25 @@ export async function editLine(
 			if (plan.lines.some((l) => l.needId === input.needId && l.state === 'committed'))
 				return { error: err('STALE_VERSION', 'a line of this need is already committed').error };
 			drafts = drafts.map((d) => (d.needId === input.needId ? (fresh.get(d.id) ?? d) : d));
-			// Substitutes serving this dish follow the new need (same yield/pack rules as when ranked).
-			const subs = drafts.filter(
-				(d) => d.needId === input.needId && d.substituteFor && !d.id.includes('-mih-')
-			);
+			// Replacements serving this dish follow the new need: a product substitute by the same yield/pack rules
+			// as when it was ranked, make-in-house ingredients by their amount per kg of dish.
+			const subs = drafts.filter((d) => d.needId === input.needId && d.substituteFor);
 			if (need && need.amount.unit === 'kg' && subs.length) {
 				const servedKg = need.amount.value * (need.dish?.yield ?? 1);
 				const products = await ports.catalog.get(subs.map((d) => d.productId));
+				const recipe = rescueFor(seed, subs[0].substituteFor!)?.chosen;
 				drafts = drafts.map((d) => {
-					const p = subs.includes(d) ? products.get(d.productId) : undefined;
+					if (!subs.includes(d)) return d;
+					if (d.id.includes('-mih-')) {
+						const g = recipe?.ingredients?.find(
+							(x: { productId: string }) => x.productId === d.productId
+						);
+						return g ? { ...d, qty: makeInHouseQty(g, need!.amount.value) } : d;
+					}
+					const p = products.get(d.productId);
 					const line = plan.lines.find((l) => l.id === d.id);
-					const qty = p && line ? resizeSubstitute(seed, before.label, servedKg, line, p) : null;
+					const entry = seedEntryFor(seed, before.label, d.substituteFor!, d.productId);
+					const qty = p && line ? sizeFor(p, entry, servedKg, line)?.qty : null;
 					return qty ? { ...d, qty } : d;
 				});
 			}

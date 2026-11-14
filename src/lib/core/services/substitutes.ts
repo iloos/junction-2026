@@ -1,21 +1,33 @@
 /**
  * find_substitutes (PRODUCT ★3, D6 ranking). Candidate pool: Valio's own rules and same-category products from the
  * catalog, plus the event seed's hand-checked candidates and rescue options for that dish. Each candidate is sized
- * from the dish's served amount and its own yield and pack, ranked, and the winner proposed. When no product
- * qualifies, the seed's make-in-house recipe (sign-off tier) is proposed; otherwise the residual stays visible.
+ * from the dish's served amount and its own yield and pack, checked by the shared validator, and ranked.
+ *
+ * Three things are kept apart (review round 3, finding 4):
+ *  - the recommendation (`chosen`): rank 1 under the rules used, never a rejected candidate;
+ *  - the plan's current substitute (`saved`): what will be bought until something is applied;
+ *  - applying: replaces `saved` with the recommendation, re-quotes, and so voids the approval.
+ * With no qualifying product the seed's make-in-house recipe is recommended (sign-off); otherwise kind `none`.
  */
 import {
 	err,
 	ok,
 	type Line,
 	type LineReason,
+	type PendingOp,
 	type Plan,
-	type Product,
 	type Result,
 	type ToolInput,
 	type ToolOutput
 } from '../contracts';
-import { roundToSales, type EventSeed, type SeedDish } from '../demand';
+import {
+	makeInHouseQty,
+	rescueFor,
+	seedEntryFor,
+	sizeFor,
+	type PoolEntry,
+	type SeedDish
+} from '../demand';
 import { draftFromLine, type DraftLine } from '../mandate/tier';
 import { rankCandidates } from '../rank/rank';
 import type { CallContext } from '../ports';
@@ -24,74 +36,14 @@ import { requote, type ServicePorts } from './events';
 /* eslint-disable @typescript-eslint/no-explicit-any -- seed candidate/rescue entries are loose JSON */
 type Loose = any;
 
-interface PoolEntry {
-	productId: string;
-	fromValioRule: boolean;
-	yield?: number;
-	pack?: Loose;
-}
-
-function rescueFor(seed: EventSeed | undefined, productId: string): Loose | undefined {
-	const rescue = (seed as Loose)?.rescue;
-	if (!rescue) return undefined;
-	const key = Object.keys(rescue).find((k) => k.endsWith(`-${productId}`));
-	return key ? rescue[key] : undefined;
-}
-
-/** Sales quantity of a candidate that serves the same amount as the original line's need. */
-function sizeFor(
-	p: Product,
-	entry: PoolEntry,
-	servedKg: number | null,
-	line: Line
-): { qty: Line['qty'] } | null {
-	if (servedKg === null) return p.salesUnit === line.qty.unit ? { qty: line.qty } : null;
-	const kg = servedKg / (entry.yield ?? 1);
-	const pack =
-		entry.pack ??
-		(p.netPerSalesUnit?.value.unit === 'kg' && !p.catchWeight
-			? { netKg: p.netPerSalesUnit.value.value }
-			: undefined);
-	if (!p.catchWeight && !pack) return null; // cannot size without a pack weight
-	return {
-		qty: roundToSales(
-			{ value: +kg.toFixed(4), unit: 'kg' },
-			{ salesUnit: p.salesUnit, lotStep: p.catchWeight ? p.lotStep : undefined, pack }
-		)
-	};
-}
-
 function unsizedReason(o: { availability: { kind: string } } | undefined): string {
 	const k = o?.availability.kind;
 	return k === 'out' || k === 'undeliverable' || k === 'blocked' ? k : 'UNKNOWN_REQUIRED';
 }
 
-/**
- * Re-sizes a product substitute after its dish's need changed (a g/guest edit): same yield and pack rules as when
- * it was ranked. Returns null when it can't be sized (then the line keeps its quantity).
- */
-export function resizeSubstitute(
-	seed: EventSeed | undefined,
-	needLabel: string,
-	servedKg: number,
-	line: Line,
-	p: Product
-): Line['qty'] | null {
-	const dish = seed?.dishes.find((d) => d.dish === needLabel) as Loose;
-	const rescue = line.substituteFor ? rescueFor(seed, line.substituteFor) : undefined;
-	const fromSeed = [
-		...((dish?.candidates ?? []) as Loose[]),
-		...((rescue?.alternatives ?? []) as Loose[]),
-		...(rescue?.chosen?.productId ? [rescue.chosen] : [])
-	].find((c) => c.productId === line.productId);
-	const entry: PoolEntry = {
-		productId: line.productId,
-		fromValioRule: false,
-		yield: fromSeed ? (fromSeed.yield ?? (rescue ? 1 : dish?.yield)) : dish?.yield,
-		pack: fromSeed?.pack
-	};
-	return sizeFor(p, entry, servedKg, line)?.qty ?? null;
-}
+const sameLines = (a: { productId: string; qty: { value: number } }[], b: typeof a) =>
+	a.length === b.length &&
+	a.every((x) => b.some((y) => y.productId === x.productId && y.qty.value === x.qty.value));
 
 export async function findSubstitutes(
 	ports: ServicePorts,
@@ -107,11 +59,12 @@ export async function findSubstitutes(
 		return err('STALE_VERSION', `plan is at v${plan0.version}, not v${input.version}`);
 	const kitchen = kitchens.find((k) => k.id === plan0.kitchenId);
 	if (!kitchen) return err('NOT_FOUND', `kitchen ${plan0.kitchenId}`);
-	const existing = plan0.lines.find(
+	const saved = plan0.lines.filter(
 		(l) => l.substituteFor === line.productId && l.needId === line.needId
 	);
-	// Per-call weights / origin re-rank without persisting (the "Your rules" beat); so does asking again.
-	const preview = Boolean(input.weights || input.requireOrigin || existing);
+	if (saved.some((l) => l.state === 'committed') && input.apply)
+		return err('STALE_VERSION', 'the substitute for this dish is already committed');
+	const apply = input.apply ?? (!input.weights && !input.requireOrigin && saved.length === 0);
 	const rankKitchen = input.weights ? { ...kitchen, weights: input.weights } : kitchen;
 
 	const seed = plan0.eventId ? ports.events?.[plan0.eventId] : undefined;
@@ -134,22 +87,12 @@ export async function findSubstitutes(
 	};
 	for (const c of await ports.catalog.candidates(line.productId, 12))
 		add({ productId: c.productId, fromValioRule: c.fromValioRule, yield: dish?.yield });
-	for (const c of ((dish as Loose)?.candidates ?? []) as Loose[])
-		add({
-			productId: c.productId,
-			fromValioRule: false,
-			yield: c.yield ?? dish?.yield,
-			pack: c.pack
-		});
-	for (const c of (rescue?.alternatives ?? []) as Loose[])
-		add({ productId: c.productId, fromValioRule: false, yield: c.yield ?? 1, pack: c.pack });
-	if (rescue?.chosen?.productId)
-		add({
-			productId: rescue.chosen.productId,
-			fromValioRule: false,
-			yield: rescue.chosen.yield ?? 1,
-			pack: rescue.chosen.pack
-		});
+	const seedIds = [
+		...((dish as Loose)?.candidates ?? []),
+		...(rescue?.alternatives ?? []),
+		...(rescue?.chosen?.productId ? [rescue.chosen] : [])
+	].map((c: Loose) => c.productId as string);
+	for (const id of seedIds) add(seedEntryFor(seed, need?.label ?? '', line.productId, id));
 
 	const ids = [...pool.keys()];
 	const [products, { offers }] = await Promise.all([
@@ -205,6 +148,7 @@ export async function findSubstitutes(
 		}))
 	];
 
+	// The recommendation under these rules.
 	const best = ranked.filter((r) => r.rank !== null).sort((a, b) => a.rank! - b.rank!)[0];
 	let kind: 'product' | 'make_in_house' | 'none' = 'product';
 	let labourNote: string | undefined;
@@ -223,7 +167,7 @@ export async function findSubstitutes(
 				}
 			}
 		];
-	else if (rescue?.chosen?.kind === 'make_in_house') {
+	else if (rescue?.chosen?.kind === 'make_in_house' && need?.amount.unit === 'kg') {
 		kind = 'make_in_house';
 		labourNote = rescue.chosen.recipe?.labour;
 		const extra: LineReason[] = ['allergen_change'];
@@ -231,7 +175,7 @@ export async function findSubstitutes(
 			id: `${line.id}-mih-${g.productId}`,
 			needId: line.needId,
 			productId: g.productId,
-			qty: { value: g.order.qty, unit: g.order.unit, rounding: g.need },
+			qty: makeInHouseQty(g, need.amount.value),
 			substituteFor: line.productId,
 			extraReasons: extra,
 			provenance: {
@@ -250,19 +194,11 @@ export async function findSubstitutes(
 		offer: null,
 		lineCents: null
 	});
-	if (preview) {
-		const already = plan0.lines.filter(
-			(l) => l.substituteFor === line.productId && l.needId === line.needId
-		);
-		return ok({
-			plan: plan0,
-			kind: existing ? (existing.id.includes('-mih-') ? 'make_in_house' : 'product') : kind,
-			chosen: existing ? already : drafts.map(proposedOf),
-			candidates,
-			labourNote,
-			residual
-		});
-	}
+	const base = { kind, candidates, labourNote, residual, saved };
+
+	// Preview, or nothing would change: the plan stays as it is.
+	if (!apply || sameLines(drafts, saved))
+		return ok({ ...base, plan: plan0, chosen: drafts.map(proposedOf), applied: false });
 
 	const r = await ports.store.transact<{ plan: Plan; chosen: Line[] }>(
 		ctx.workspaceId,
@@ -272,36 +208,55 @@ export async function findSubstitutes(
 				return {
 					error: err('STALE_VERSION', 'the plan changed while substitutes were ranked').error
 				};
-			const proposed: Line[] = drafts.map(proposedOf);
-			const op = {
+			const envelope = (op: PendingOp['op']): PendingOp => ({
 				workspaceId: ctx.workspaceId,
 				runId: ctx.runId,
 				actor: ctx.actor,
 				via: ctx.via,
-				op: {
-					type: 'ProposeSubstitute' as const,
+				op
+			});
+			const ops: PendingOp[] = [];
+			let version = plan.version;
+			const old = new Set(saved.map((l) => l.id));
+			if (old.size) {
+				// Replace, never stack: the old substitute leaves the plan before the new one is proposed.
+				ops.push(
+					envelope({
+						type: 'EditLine',
+						planId: plan.id,
+						baseVersion: version,
+						lines: saved.map((l) => ({ lineId: l.id, line: null })),
+						summary: `replaced the substitute for ${line.productId}`
+					})
+				);
+				version += 1;
+			}
+			const proposed: Line[] = drafts.map(proposedOf);
+			ops.push(
+				envelope({
+					type: 'ProposeSubstitute',
 					planId: plan.id,
-					baseVersion: plan.version,
+					baseVersion: version,
 					forLineId: line.id,
-					kind: kind === 'make_in_house' ? ('make_in_house' as const) : ('product' as const),
+					kind: kind === 'make_in_house' ? 'make_in_house' : 'product',
 					lines: proposed,
 					labourNote,
 					candidates
-				}
-			};
+				})
+			);
 			const after: Plan = {
 				...plan,
-				version: plan.version + 1,
+				version: version + 1,
 				state: 'draft',
 				termsHash: null,
-				lines: [...plan.lines, ...proposed]
+				lines: [...plan.lines.filter((l) => !old.has(l.id)), ...proposed]
 			};
 			const open = after.lines
 				.filter((l) => l.state !== 'committed')
 				.map<DraftLine>((l) => drafts.find((d) => d.id === l.id) ?? draftFromLine(l));
 			const q = await requote(ports, ctx, tx, state, after, kitchen, open);
 			return {
-				ops: [op, ...q.ops],
+				ops: [...ops, ...q.ops],
 				value: {
 					plan: q.plan,
 					chosen: q.plan.lines.filter((l) => drafts.some((d) => d.id === l.id))
@@ -309,5 +264,5 @@ export async function findSubstitutes(
 			};
 		}
 	);
-	return r.ok ? ok({ ...r.value.value, kind, candidates, labourNote, residual }) : r;
+	return r.ok ? ok({ ...base, ...r.value.value, applied: true }) : r;
 }
