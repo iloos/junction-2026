@@ -462,7 +462,7 @@ describe('cut-off at lookup: a date whose ordering closed is said and an open on
 		const it = r.lookup!.items[0];
 		expect(it.pick).toBeNull();
 		expect(it.question).toMatch(
-			/^Tomorrow's cut-off passed at 17:00 Mon; earliest delivery Wed 9 Dec/
+			/^The cut-off for Tue 8 Dec has passed \(17:00 Mon\); earliest delivery is Wed 9 Dec\./
 		);
 		expect(it.answer).toMatchObject({ kind: 'date', date: '2026-12-09' });
 		expect(r.parsed.deliverBy).toBe('2026-12-08'); // never moved silently

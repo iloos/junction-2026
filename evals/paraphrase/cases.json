@@ -135,16 +135,6 @@
 				"fi": ["4 kg laktoositonta voita huomiseksi", "Tilaa 4 kg laktoositonta voita huomiseksi"]
 			},
 			"expectFail": {
-				"LATE-request-words": [
-					"en#1.request.late.namesCutoff",
-					"en#1.request.late.offersNext",
-					"en#2.request.late.namesCutoff",
-					"en#2.request.late.offersNext",
-					"fi#1.request.late.namesCutoff",
-					"fi#1.request.late.offersNext",
-					"fi#2.request.late.namesCutoff",
-					"fi#2.request.late.offersNext"
-				],
 				"LATE-agent-words": [
 					"en#1.agent.late.namesCutoff",
 					"en#1.agent.late.offersNext",

@@ -238,7 +238,6 @@ async function lookupItems(
 				.sort()[0];
 			question = cutoffQuestion(
 				parsed.deliverBy,
-				d.today,
 				closed[0].availability.closingTime!,
 				earliest ?? null
 			);
@@ -591,7 +590,10 @@ export async function runRequest(text: string, d: RequestDeps): Promise<RequestR
 			lookup,
 			order: null,
 			unplaced,
-			message: 'Nothing to order yet: answer the questions above.'
+			// A passed cut-off is the whole answer: say it, with the date still open.
+			message: lookup.items.every((i) => i.answer?.kind === 'date')
+				? `${lookup.items[0].question} Nothing was ordered; choose that date to order.`
+				: 'Nothing to order yet: answer the questions above.'
 		};
 	if (unplaced.length && d.place !== false)
 		return {

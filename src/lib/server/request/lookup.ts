@@ -170,15 +170,9 @@ export function earliestDelivery(offer: Offer, deliverBy: string, now: Date): st
 	return null;
 }
 
-/** "Tomorrow's cut-off passed at 17:00 Mon; earliest delivery Wed 9 Dec". */
-export function cutoffQuestion(
-	deliverBy: string,
-	today: string,
-	closes: string,
-	earliest: string | null
-): string {
-	const which = deliverBy === addDays(today, 1) ? 'Tomorrow' : day(deliverBy);
-	return `${which}'s cut-off passed at ${closesWords(closes)}; ${earliest ? `earliest delivery ${day(earliest)}` : 'no delivery date in the next two weeks is still open'}.`;
+/** "The cut-off for Tue 8 Dec has passed (17:00 Mon); earliest delivery is Wed 9 Dec." */
+export function cutoffQuestion(deliverBy: string, closes: string, earliest: string | null): string {
+	return `The cut-off for ${day(deliverBy)} has passed (${closesWords(closes)}); ${earliest ? `earliest delivery is ${day(earliest)}` : 'no delivery date in the next two weeks is still open'}.`;
 }
 
 /** Why a quoted candidate can't be picked, or null when it can. */
