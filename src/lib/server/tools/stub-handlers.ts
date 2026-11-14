@@ -152,8 +152,9 @@ function toProduct(it: StubItem): Product {
 
 function toOffer(it: StubItem, deliverBy: string | null): Offer {
 	const a = it.availability;
+	// Valio's ≥999999 ("unlimited") means unknown, as in the normaliser (D6 amendment).
 	const kind: AvailabilityKind =
-		a.kind === 'unlimited' ? 'known' : ((a.kind as AvailabilityKind) ?? 'unknown');
+		a.kind === 'unlimited' ? 'unknown' : ((a.kind as AvailabilityKind) ?? 'unknown');
 	return {
 		productId: it.productId,
 		price:
