@@ -41,16 +41,17 @@ describe('page workspace', () => {
 	it('drops malformed answers', () => {
 		expect(
 			readAnswers([
-				{ item: 0, qty: 40, unit: 'kg' },
-				{ item: 1, productId: '464201' },
-				{ item: -1, qty: 1, unit: 'l' },
-				{ item: 2, qty: 5, unit: 'tonnes' },
-				{ item: 3, productId: '1; drop' },
+				{ item: 'butter', qty: 40, unit: 'kg' },
+				{ item: 'milk.lactose_free~2', productId: '464201' },
+				{ item: 0, qty: 1, unit: 'l' },
+				{ item: 'x y', qty: 1, unit: 'l' },
+				{ item: 'cream', qty: 5, unit: 'tonnes' },
+				{ item: 'milk', productId: '1; drop' },
 				'x'
 			])
 		).toEqual([
-			{ item: 0, qty: 40, unit: 'kg' },
-			{ item: 1, productId: '464201' }
+			{ item: 'butter', qty: 40, unit: 'kg' },
+			{ item: 'milk.lactose_free~2', productId: '464201' }
 		]);
 		expect(readAnswers('nope')).toEqual([]);
 	});
@@ -105,14 +106,14 @@ describe('case orders ask instead of picking', () => {
 			today: TODAY,
 			kitchen
 		});
-		expect(r.lookup!.items[0].answer).toMatchObject({ kind: 'qty', item: 0 });
+		expect(r.lookup!.items[0].answer).toMatchObject({ kind: 'qty', item: 'milk.lactose_free' });
 		expect(quoted).toEqual([]);
 		const r2 = await runRequest('lactose-free milk by Monday', {
 			handlers: h,
 			ctx,
 			today: TODAY,
 			kitchen,
-			answers: [{ item: 0, qty: 1000, unit: 'l' }]
+			answers: [{ item: 'milk.lactose_free', qty: 1000, unit: 'l' }]
 		});
 		expect(r2.parsed.items[0].ambiguities).toEqual([]);
 		expect(r2.lookup!.items[0].pick?.productId).toBe('464201');

@@ -27,8 +27,9 @@ export function readAnswers(raw: unknown): RequestAnswer[] {
 	for (const a of raw.slice(0, 12)) {
 		if (!a || typeof a !== 'object') continue;
 		const { item, qty, unit, productId } = a as Record<string, unknown>;
-		if (!Number.isInteger(item) || (item as number) < 0 || (item as number) > 11) continue;
-		const ans: RequestAnswer = { item: item as number };
+		// Item ids are what the parser gives: product key or typed words, constraints, variant, "~n".
+		if (typeof item !== 'string' || !/^[\p{L}\d._~-]{1,80}$/u.test(item)) continue;
+		const ans: RequestAnswer = { item };
 		if (
 			typeof qty === 'number' &&
 			qty > 0 &&

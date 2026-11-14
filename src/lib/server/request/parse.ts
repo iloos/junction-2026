@@ -7,7 +7,7 @@
  */
 import { z } from 'zod';
 import type { Llm } from '$lib/core/ports';
-import { findDate, weekdayName, weekdayOf } from './dates';
+import { findDate, realDate, weekdayName, weekdayOf } from './dates';
 import {
 	CONSTRAINTS,
 	NUMBER_WORDS,
@@ -19,6 +19,12 @@ import {
 } from './lexicon';
 
 export interface ParsedItem {
+	/**
+	 * Stable id for answers: product key (or the typed words), constraints and variant, numbered when
+	 * repeated. The same words give the same id on every run and on both parser paths, so an inline
+	 * answer stays on its item when the model splits the request differently.
+	 */
+	id: string;
 	/** The words of the request this item came from. */
 	text: string;
 	/** What was asked for, in the chef's words minus quantity ("lactose-free milk"). */
@@ -31,7 +37,7 @@ export interface ParsedItem {
 	unit: ReqUnit | null;
 	constraints: ConstraintKey[];
 	/** A variant the request named ("whole"), as a catalogue name token. */
-	variant: { token: string; label: string } | null;
+	variant: { token: string; label: string; search?: string } | null;
 	ambiguities: string[];
 }
 
@@ -44,7 +50,7 @@ export interface ParsedRequest {
 	notes: string[];
 	/** Request-level questions (date, disagreements); item questions live on the item. */
 	ambiguities: string[];
-	answered?: { item: number; qty?: number; unit?: ReqUnit; productId?: string }[];
+	answered?: { item: string; qty?: number; unit?: ReqUnit; productId?: string }[];
 	parser: {
 		kind: 'rules' | 'gemini' | 'featherless' | 'fixture';
 		model: string;
@@ -121,20 +127,101 @@ export function splitItems(text: string): string[] {
 		.filter((s) => s.length > 0);
 }
 
-function buildSearch(product: ProductWord | null, constraints: ConstraintKey[], rest: string[]) {
+/** Catalogue searches, most specific first; the last one is always the bare product word. */
+export function buildSearch(
+	typed: string,
+	constraints: ConstraintKey[],
+	variant: ParsedItem['variant'] = null
+): string[] {
+	if (!typed) return [];
 	const cwords = CONSTRAINTS.filter((c) => constraints.includes(c.key) && c.search).map(
 		(c) => c.search!
 	);
-	const typed = product ? product.search : rest.join(' ');
-	return typed ? [...new Set([[typed, ...cwords].join(' '), typed])] : [];
+	const first = variant?.search ? [[variant.search, ...cwords].join(' ')] : [];
+	return [...new Set([...first, [typed, ...cwords].join(' '), typed])];
 }
 
+/** The product's variant the words name, if any. */
+function variantIn(product: ProductWord | null, words: string[]): ParsedItem['variant'] {
+	// The last variant named wins, as in "whole … semi-skimmed".
+	const v = product?.variants?.findLast((v) => v.words.some((w) => words.includes(w)));
+	return v ? { token: v.token, label: v.label, ...(v.search ? { search: v.search } : {}) } : null;
+}
+
+/** Every constraint the words state, single words and two-word forms ("lactose free"). */
+export function constraintsIn(text: string): ConstraintKey[] {
+	const words = text
+		.toLowerCase()
+		.replace(/[!?()"“”,.;:]/g, ' ')
+		.split(/\s+/)
+		.filter(Boolean);
+	const out: ConstraintKey[] = [];
+	for (let i = 0; i < words.length; i++) {
+		const c =
+			(words[i + 1] ? constraintOf(`${words[i]} ${words[i + 1]}`) : null) ?? constraintOf(words[i]);
+		if (c && !out.includes(c)) out.push(c);
+	}
+	return out;
+}
+
+const slug = (s: string) =>
+	s
+		.toLowerCase()
+		.replace(/[^\p{L}\d]+/gu, '-')
+		.replace(/^-+|-+$/g, '')
+		.slice(0, 40) || 'item';
+
+/** The id an item gets from what it asks for (not its quantity, which an answer may change). */
+export function baseId(
+	it: Pick<ParsedItem, 'product' | 'search' | 'query' | 'constraints' | 'variant'>
+): string {
+	return [
+		it.product ?? slug(it.search.at(-1) ?? it.query),
+		...[...it.constraints].sort(),
+		it.variant?.token
+	]
+		.filter(Boolean)
+		.join('.');
+}
+
+/** Numbers repeated ids ("milk", "milk~2") in list order. */
+function withIds(items: (Omit<ParsedItem, 'id'> & { id?: string })[]): ParsedItem[] {
+	const seen = new Map<string, number>();
+	return items.map((it) => {
+		const b = it.id ?? baseId(it);
+		const n = (seen.get(b) ?? 0) + 1;
+		seen.set(b, n);
+		return { ...it, id: n === 1 ? b : `${b}~${n}` };
+	});
+}
+
+/** "for 300 breakfasts": how many are served, never an amount to buy. */
+const COVERS =
+	/(?:\bfor\s+)?(\d[\d\s,]*)\s+(breakfasts?|lunch(?:es)?|dinners?|meals?|guests|people|persons|covers|portions|servings|pax|diners|hengelle|henkeä|annosta|annokselle|aamiaiselle|lounaalle)(?![\p{L}])/iu;
+
+/** "2 x 10 kg" / "4×5 l": a count of packs of a stated size, i.e. 20 kg. */
+const MULTIPACK = /(\d+)\s*[x×]\s*(\d+(?:[.,]\d+)?)\s+([\p{L}.]+)/iu;
+
 /** One item phrase → an item. */
-export function parseItem(chunk: string, finnish: boolean): ParsedItem | null {
+export function parseItem(chunk: string, finnish: boolean): Omit<ParsedItem, 'id'> | null {
 	const ambiguities: string[] = [];
 	let s = chunk.toLowerCase();
 	// "1000l" → "1000 l", "2x" → "2 x"
 	s = s.replace(/(\d)([a-zäöå×])/giu, '$1 $2');
+
+	let covers: string | null = null;
+	const cv = s.match(COVERS);
+	if (cv) {
+		covers = cv[0].trim();
+		s = s.replace(cv[0], ' ');
+	}
+	const mp = s.match(MULTIPACK);
+	if (mp) {
+		const u = unitOf(mp[3]);
+		const n = parseNumber(mp[2]);
+		if (u && n && u.unit !== 'sales')
+			s = s.replace(mp[0], `${+(Number(mp[1]) * n.value).toFixed(6)} ${mp[3]}`);
+	}
 
 	let qty: number | null = null;
 	let unit: ReqUnit | null = null;
@@ -214,13 +301,7 @@ export function parseItem(chunk: string, finnish: boolean): ParsedItem | null {
 		if (!FILLER.has(words[i]) && !unitOf(words[i])) rest.push(words[i]);
 	}
 
-	let variant: ParsedItem['variant'] = null;
-	if (product?.variants) {
-		const all = `${words.join(' ')}`;
-		for (const v of product.variants)
-			if (v.words.some((w) => all.split(/\s+/).includes(w)))
-				variant = { token: v.token, label: v.label };
-	}
+	const variant = variantIn(product, words);
 	// Variant words are not leftovers.
 	const leftovers = rest.filter(
 		(w) => !product?.variants?.some((v) => v.words.includes(w)) && !/^\d/.test(w)
@@ -233,7 +314,12 @@ export function parseItem(chunk: string, finnish: boolean): ParsedItem | null {
 				? `"${leftovers.join(' ')}" is not in my word list: searched the catalogue as typed`
 				: 'no product named: what should I order?'
 		);
-	if (qty === null) ambiguities.push('no quantity given: how much?');
+	if (qty === null)
+		ambiguities.push(
+			covers
+				? `no quantity given: how much? ("${covers}" is how many you serve, not an amount)`
+				: 'no quantity given: how much?'
+		);
 	else if (unit === null) {
 		unit = 'sales';
 		ambiguities.push(`no unit given: read as ${qty} of the product's own sales unit`);
@@ -251,7 +337,7 @@ export function parseItem(chunk: string, finnish: boolean): ParsedItem | null {
 		text: chunk.trim(),
 		query,
 		product: product?.key ?? null,
-		search: buildSearch(product, constraints, leftovers),
+		search: buildSearch(product ? product.search : leftovers.join(' '), constraints, variant),
 		qty,
 		unit,
 		constraints,
@@ -267,12 +353,16 @@ export function parseRules(text: string, today: string): Omit<ParsedRequest, 'pa
 	const date = findDate(text, today);
 	const body = date ? text.replace(date.text, ' ') : text;
 	const finnish = looksFinnish(text);
-	const items = splitItems(body)
-		.map((c) => parseItem(c, finnish))
-		.filter((i): i is ParsedItem => i !== null);
+	const items = withIds(
+		splitItems(body)
+			.map((c) => parseItem(c, finnish))
+			.filter((i): i is Omit<ParsedItem, 'id'> => i !== null)
+	);
 
 	let deliverBy = today;
-	if (date) {
+	if (date?.invalid) {
+		ambiguities.push(`${date.invalid}: using today, ${weekdayName(today)} ${today}`);
+	} else if (date) {
 		deliverBy = date.iso;
 		if (date.note) ambiguities.push(`"${date.text}": ${date.note}`);
 		if (date.iso < today) ambiguities.push(`"${date.text}" is in the past`);
@@ -285,7 +375,7 @@ export function parseRules(text: string, today: string): Omit<ParsedRequest, 'pa
 		items,
 		deliverBy,
 		deliverByText: date?.text ?? null,
-		deliverBySource: date ? 'request' : 'default',
+		deliverBySource: date && !date.invalid ? 'request' : 'default',
 		notes,
 		ambiguities
 	};
@@ -323,27 +413,28 @@ function constraintKey(s: string): ConstraintKey | null {
 }
 
 /** Maps one model item onto the lexicon, so ranking uses the same categories and defaults as the rules. */
-function fromLlmItem(it: z.infer<typeof LlmItem>): ParsedItem {
+function fromLlmItem(it: z.infer<typeof LlmItem>): Omit<ParsedItem, 'id'> {
 	const words = [
 		...it.query.toLowerCase().split(/\s+/),
 		...it.searchFi.map((w) => w.toLowerCase())
 	];
 	const product = words.map(productOf).find(Boolean) ?? null;
 	const constraints = it.constraints.map(constraintKey).filter((c): c is ConstraintKey => !!c);
-	const variantDef = product?.variants?.find((v) =>
-		v.words.some((w) => (it.variant ?? '').toLowerCase().includes(w))
-	);
+	const variant = variantIn(product, [
+		...(it.variant ?? '').toLowerCase().split(/\s+/),
+		...it.query.toLowerCase().split(/\s+/)
+	]);
 	const ambiguities: string[] = [];
 	if (it.qty === null) ambiguities.push('no quantity given: how much?');
 	if (!product)
 		ambiguities.push(
 			`"${it.query}" is not in my word list: searched with the model's Finnish words`
 		);
-	const cwords = CONSTRAINTS.filter((c) => constraints.includes(c.key) && c.search).map(
-		(c) => c.search!
+	const search = buildSearch(
+		product ? product.search : (it.searchFi[0] ?? it.query),
+		constraints,
+		variant
 	);
-	const base = product ? product.search : (it.searchFi[0] ?? it.query);
-	const search = [...new Set([[base, ...cwords].join(' '), base])];
 	return {
 		text: it.query,
 		query: it.query,
@@ -352,16 +443,76 @@ function fromLlmItem(it: z.infer<typeof LlmItem>): ParsedItem {
 		qty: it.qty,
 		unit: it.qty === null ? null : (it.unit ?? 'sales'),
 		constraints,
-		variant: variantDef ? { token: variantDef.token, label: variantDef.label } : null,
+		variant,
 		ambiguities
 	};
 }
 
-function sameItem(a: ParsedItem, b: ParsedItem): string | null {
+const label = (c: ConstraintKey) => CONSTRAINTS.find((x) => x.key === c)!.label;
+
+/** Every way the model's item differs from the rules' reading of the same words. */
+export function sameItem(a: Omit<ParsedItem, 'id'>, b: Omit<ParsedItem, 'id'>): string[] {
+	const out: string[] = [];
 	if (a.qty !== b.qty || a.unit !== b.unit)
-		return `${a.query}: the model read ${a.qty ?? '?'} ${a.unit ?? ''}, the rules ${b.qty ?? '?'} ${b.unit ?? ''}`;
-	if (a.product !== b.product) return `${a.query}: the model and the rules read different products`;
-	return null;
+		out.push(
+			`${a.query}: the model read ${a.qty ?? '?'} ${a.unit ?? ''}, the rules ${b.qty ?? '?'} ${b.unit ?? ''}`
+		);
+	if (a.product !== b.product)
+		out.push(`${a.query}: the model and the rules read different products`);
+	const missing = b.constraints.filter((c) => !a.constraints.includes(c));
+	const extra = a.constraints.filter((c) => !b.constraints.includes(c));
+	if (missing.length)
+		out.push(`${a.query}: the model read no ${missing.map(label).join(', ')}, the rules did`);
+	if (extra.length)
+		out.push(`${a.query}: the model read ${extra.map(label).join(', ')}, the rules did not`);
+	return out;
+}
+
+/** The rules item a model item describes: same product, else shared words, else the only one. */
+function matchRules(
+	m: Omit<ParsedItem, 'id'>,
+	rules: ParsedItem[],
+	used: Set<string>,
+	single: boolean
+): ParsedItem | null {
+	const free = rules.filter((r) => !used.has(r.id));
+	if (m.product) {
+		const r = free.find((r) => r.product === m.product);
+		if (r) return r;
+	}
+	const words = m.query
+		.toLowerCase()
+		.split(/[^\p{L}\d]+/u)
+		.filter((w) => w.length >= 3);
+	const r = free.find((r) => words.some((w) => r.text.toLowerCase().includes(w)));
+	if (r) return r;
+	return single && free.length === 1 ? free[0] : null;
+}
+
+/**
+ * Constraints the chef typed are never lost to the model: the rules read them from the raw words,
+ * they are added to the model's item with the search words they bring, and the item says so.
+ */
+function reconcile(
+	m: Omit<ParsedItem, 'id'>,
+	r: ParsedItem | null
+): Omit<ParsedItem, 'id'> & { id?: string } {
+	const typed = r?.constraints ?? constraintsIn(m.query);
+	const dropped = typed.filter((c) => !m.constraints.includes(c));
+	if (!dropped.length) return r ? { ...m, id: r.id } : m;
+	const constraints = [...m.constraints, ...dropped];
+	const words = dropped.map(label).join(' ');
+	return {
+		...m,
+		...(r ? { id: r.id } : {}),
+		constraints,
+		search: buildSearch(m.search.at(-1) ?? m.query, constraints, m.variant),
+		query: m.query.toLowerCase().includes(words.toLowerCase()) ? m.query : `${words} ${m.query}`,
+		ambiguities: [
+			...m.ambiguities,
+			`the model dropped ${dropped.map(label).join(', ')}: kept from your words`
+		]
+	};
 }
 
 export interface ParseOptions {
@@ -396,8 +547,15 @@ export async function parseRequest(text: string, o: ParseOptions): Promise<Parse
 		const raw = r.text.trim().replace(/^```(?:json)?\s*|\s*```$/g, '');
 		const parsed = LlmOut.safeParse(JSON.parse(raw));
 		if (!parsed.success) return rulesOut(`the model's JSON did not match the schema`);
-		const items = parsed.data.items.map(fromLlmItem);
-		if (items.length === 0) return rulesOut('the model found no item');
+		const read = parsed.data.items.map(fromLlmItem);
+		if (read.length === 0) return rulesOut('the model found no item');
+		const used = new Set<string>();
+		const pairs = read.map((m) => {
+			const r = matchRules(m, rules.items, used, read.length === 1);
+			if (r) used.add(r.id);
+			return { r, m: reconcile(m, r) };
+		});
+		const items = withIds(pairs.map((p) => p.m));
 
 		const ambiguities = [...rules.ambiguities.filter((a) => !a.startsWith('no item found'))];
 		ambiguities.push(...parsed.data.ambiguities.map((a) => `model: ${a}`));
@@ -406,8 +564,10 @@ export async function parseRequest(text: string, o: ParseOptions): Promise<Parse
 		const md = parsed.data.deliverBy;
 		if (
 			rules.deliverBySource === 'default' &&
+			// Words the rules read as a date that does not exist are never replaced by the model's guess.
+			rules.deliverByText === null &&
 			md &&
-			/^\d{4}-\d{2}-\d{2}$/.test(md) &&
+			realDate(md) &&
 			md >= o.today
 		) {
 			deliverBy = md;
@@ -422,11 +582,10 @@ export async function parseRequest(text: string, o: ParseOptions): Promise<Parse
 			ambiguities.push(
 				`the model found ${items.length} item(s), the rules ${rules.items.length}: check the list`
 			);
-		else
-			items.forEach((it, i) => {
-				const d = sameItem(it, rules.items[i]);
-				if (d) it.ambiguities.push(d);
-			});
+		items.forEach((it, i) => {
+			const r = pairs[i].r;
+			if (r) it.ambiguities.push(...sameItem(it, r));
+		});
 
 		return {
 			...rules,

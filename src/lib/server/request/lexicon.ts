@@ -14,8 +14,13 @@ export interface ProductWord {
 	categories?: string[];
 	/** Default variant when the request does not say: a name token, and why. */
 	prefer?: { token: string; reason: string };
-	/** Variant words in the request → the name token to prefer instead of the default. */
-	variants?: { words: string[]; token: string; label: string }[];
+	/** Catalogue compounds that start with the search word count as the product (lohi → lohifilee). */
+	compound?: boolean;
+	/**
+	 * Variant words in the request → the name token to prefer instead of the default (a catalogue
+	 * word ending in it counts: kirjolohifilee ends in filee). Its `search` word is searched first when given.
+	 */
+	variants?: { words: string[]; token: string; label: string; search?: string }[];
 }
 
 export const PRODUCTS: ProductWord[] = [
@@ -72,7 +77,22 @@ export const PRODUCTS: ProductWord[] = [
 		search: 'kananmuna',
 		categories: ['10590']
 	},
-	{ key: 'salmon', forms: ['salmon', 'lohi', 'lohta'], search: 'lohi' },
+	{
+		key: 'salmon',
+		forms: ['salmon', 'lohi', 'lohta'],
+		search: 'lohi',
+		// Fresh, cold-chain and frozen fish: the ready meals (lohi-juustotorttu, lohikeitto) are elsewhere.
+		categories: ['18701', '18702', '18706', '41720'],
+		compound: true,
+		variants: [
+			{
+				words: ['fillet', 'fillets', 'filet', 'filets', 'filee', 'fileet', 'fileetä', 'fileitä'],
+				token: 'filee',
+				label: 'fillet',
+				search: 'lohifilee'
+			}
+		]
+	},
 	{ key: 'onions', forms: ['onion', 'onions', 'sipuli', 'sipulia', 'sipuleita'], search: 'sipuli' },
 	{
 		key: 'carrots',

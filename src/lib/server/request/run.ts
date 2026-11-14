@@ -13,6 +13,7 @@ import type {
 	ApprovalView,
 	RequestAnswer,
 	CandidateView,
+	EventView,
 	LookupItemView,
 	LookupView,
 	OrderView,
@@ -27,6 +28,7 @@ import { hardLimit, sanityWarnings } from './sanity';
 import { hardLimitCents } from '$lib/core/mandate/validate';
 import { rankCandidates, SHORTLIST, unpickable, type Ranked } from './lookup';
 import { parseRequest, type ParsedRequest } from './parse';
+import { classifyRequest } from './classify';
 
 export class ToolFailed extends Error {
 	constructor(
@@ -63,7 +65,7 @@ export interface RequestDeps {
 	nonce?: string;
 	/** Stop after lookup (no plan is created). */
 	place?: boolean;
-	/** The chef's inline answers to earlier questions, by item index. */
+	/** The chef's inline answers to earlier questions, by item id. */
 	answers?: RequestAnswer[];
 	/** The chef saw the size warnings and wants the order placed anyway. */
 	confirmLarge?: boolean;
@@ -71,6 +73,16 @@ export interface RequestDeps {
 }
 
 const DAY_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'] as const;
+
+/** Each distinct reason the candidates were passed over, with how many: "2 out of stock at Valio". */
+export function skipSummary(views: Pick<CandidateView, 'skipped'>[]): string {
+	const n = new Map<string, number>();
+	for (const v of views) {
+		const r = v.skipped ?? 'not quoted';
+		n.set(r, (n.get(r) ?? 0) + 1);
+	}
+	return [...n].map(([r, k]) => `${k} ${r}`).join('; ');
+}
 
 function candidateView(r: Ranked, offer: Offer | null, quoted: boolean): CandidateView {
 	const c = r.conversion;
@@ -118,7 +130,7 @@ async function lookupItems(parsed: ParsedRequest, d: RequestDeps): Promise<Looku
 			hits.push(...r.products);
 		}
 		const { ranked, rejected } = rankCandidates(item, hits);
-		const pin = d.answers?.find((a) => a.item === parsed.items.indexOf(item))?.productId ?? null;
+		const pin = d.answers?.find((a) => a.item === item.id)?.productId ?? null;
 		// The chosen product leads the shortlist, with the chef named as the reason.
 		const at = pin ? ranked.findIndex((r) => r.product.productId === pin) : -1;
 		if (at > 0) ranked.unshift(...ranked.splice(at, 1));
@@ -166,7 +178,7 @@ async function lookupItems(parsed: ParsedRequest, d: RequestDeps): Promise<Looku
 		}
 		let question: string | null = null;
 		let answer: AnswerSpec | null = null;
-		const idx = parsed.items.indexOf(p.item);
+		const idx = p.item.id;
 		if (p.item.qty === null) {
 			question = `How much ${p.item.query}?`;
 			answer = { kind: 'qty', item: idx, units: ['l', 'kg', 'pcs', 'case'] };
@@ -213,7 +225,7 @@ async function lookupItems(parsed: ParsedRequest, d: RequestDeps): Promise<Looku
 			question =
 				conv && conv.conversion && !conv.conversion.ok
 					? `${conv.name}: ${conv.conversion.reason}.`
-					: `None of the ${views.length} matches can be delivered for ${parsed.deliverBy}. Pick another product or date?`;
+					: `None of the ${views.length} matches can be ordered for ${parsed.deliverBy}: ${skipSummary(views)}. Pick another product or date?`;
 		}
 
 		// Valio's own substitute rules for the pick (or the leading candidate): shown, never proposed.
@@ -329,8 +341,8 @@ export async function approvalView(
 /** The chef's inline answers replace what the words left open; each one is recorded on the item. */
 export function applyAnswers(parsed: ParsedRequest, answers: RequestAnswer[]): ParsedRequest {
 	if (!answers.length) return parsed;
-	const items = parsed.items.map((it, i) => {
-		const a = answers.find((x) => x.item === i);
+	const items = parsed.items.map((it) => {
+		const a = answers.find((x) => x.item === it.id);
 		if (!a) return it;
 		const next = { ...it, ambiguities: [...it.ambiguities] };
 		if (a.qty !== undefined && a.unit) {
@@ -358,6 +370,27 @@ export async function runRequest(text: string, d: RequestDeps): Promise<RequestR
 		d.answers ?? []
 	);
 	const parsedView = parsed as ParsedView;
+
+	// An event brief is never a catalogue query: say what it is, and where a seeded plan lives.
+	const brief = classifyRequest(text, parsed.items, d.kitchen.id);
+	if (brief) {
+		const event: EventView = {
+			...brief,
+			deliverBy: parsed.deliverBy,
+			deliverByText: parsed.deliverByText
+		};
+		emit({ step: 'request', status: 'blocked', ms: ms(), data: parsedView });
+		return {
+			parsed: parsedView,
+			lookup: null,
+			order: null,
+			event,
+			message: brief.seeded
+				? `This is an event to plan, not products to buy. ${d.kitchen.name} already plans the ${brief.seeded.title} in the Kitchen; planning other events from a brief is coming.`
+				: 'This is an event to plan, not products to buy. Event planning from a brief is coming; nothing was searched or ordered.'
+		};
+	}
+
 	const askFirst = parsed.items.length === 0;
 	emit({
 		step: 'request',
@@ -379,13 +412,17 @@ export async function runRequest(text: string, d: RequestDeps): Promise<RequestR
 
 	const lookup = await lookupItems(parsed, d);
 	const picks = lookup.items.filter((i) => i.pick);
+	// An item without a pick holds the whole order: placing the rest now and the answered item
+	// later would place the rest twice (the answer changes the lines, so the key).
+	const unplaced = lookup.items
+		.filter((i) => !i.pick)
+		.map((i) => ({ id: i.item.id, query: i.item.query, reason: i.question ?? 'nothing to pick' }));
 	emit({
 		step: 'lookup',
 		status:
-			picks.length === 0 || (lookup.sanity.length && !d.confirmLarge)
+			unplaced.length || (lookup.sanity.length && !d.confirmLarge)
 				? 'blocked'
 				: lookup.sanity.length ||
-					  picks.length < lookup.items.length ||
 					  picks.some((i) => i.pick?.conversion?.ok && i.pick.conversion.warnings.length)
 					? 'warn'
 					: 'done',
@@ -397,7 +434,16 @@ export async function runRequest(text: string, d: RequestDeps): Promise<RequestR
 			parsed: parsedView,
 			lookup,
 			order: null,
+			unplaced,
 			message: 'Nothing to order yet: answer the questions above.'
+		};
+	if (unplaced.length && d.place !== false)
+		return {
+			parsed: parsedView,
+			lookup,
+			order: null,
+			unplaced,
+			message: `Nothing placed yet: ${unplaced.map((u) => u.query).join(', ')} still ${unplaced.length === 1 ? 'needs' : 'need'} an answer. Answer above, or take ${unplaced.length === 1 ? 'it' : 'them'} out of the request to order the other ${picks.length}.`
 		};
 	if (lookup.sanity.length && !d.confirmLarge && d.place !== false)
 		return {

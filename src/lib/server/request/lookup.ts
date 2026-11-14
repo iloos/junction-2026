@@ -4,11 +4,29 @@
  * constraints the chef stated are hard filters, defaults ("semi-skimmed") are preferences and say so.
  */
 import type { Offer, Product } from '$lib/core/contracts';
+import { toLot } from '$lib/core/services/orders';
 import { convert, type Conversion } from './convert';
 import { PRODUCTS } from './lexicon';
 import type { ParsedItem } from './parse';
 
 export const SHORTLIST = 5;
+
+/**
+ * The conversion rounded up to the product's lot step, the same rounding place_order applies, so
+ * the preview's quantity, price and size checks are what will be ordered.
+ */
+export function withLot(c: Conversion, p: Product): Conversion {
+	if (!c.ok) return c;
+	const lot = toLot(c.salesQty, c.salesUnit, p);
+	if (lot.value === c.salesQty || !lot.rounding) return c;
+	return {
+		...c,
+		salesQty: lot.value,
+		exact: false,
+		explain: `${c.explain}; ordered in lots of ${p.lotStep}: ${lot.value} ${c.salesUnit}`,
+		warnings: [...c.warnings, `rounded up to the lot size: ${lot.rounding}`]
+	};
+}
 
 export interface Ranked {
 	product: Product;
@@ -67,7 +85,13 @@ export function rankCandidates(
 			reject(`not in the ${lex.key} category (${p.category})`);
 			continue;
 		}
-		if (lex && !t.some((w) => w === lex.search || w.endsWith(lex.search))) {
+		if (
+			lex &&
+			!t.some(
+				(w) =>
+					w === lex.search || w.endsWith(lex.search) || (lex.compound && w.startsWith(lex.search))
+			)
+		) {
 			const near = t.find((w) => w.includes(lex.search));
 			reject(near ? `"${near}", not ${lex.search}` : `name does not say ${lex.search}`);
 			continue;
@@ -84,11 +108,12 @@ export function rankCandidates(
 			reasons.push(`meets: ${item.constraints.map((c) => c.replace('_', '-')).join(', ')}`);
 		const want =
 			item.variant ?? (lex?.prefer ? { token: lex.prefer.token, label: lex.prefer.reason } : null);
-		if (want && t.includes(want.token)) {
+		if (want && t.some((w) => w === want.token || w.endsWith(want.token))) {
 			score += 3;
 			reasons.push(item.variant ? `the ${item.variant.label} you asked for` : want.label);
 		}
-		const conversion = item.qty !== null && item.unit ? convert(item.qty, item.unit, p) : null;
+		const conversion =
+			item.qty !== null && item.unit ? withLot(convert(item.qty, item.unit, p), p) : null;
 		if (conversion?.ok) {
 			score += 2;
 			if (conversion.exact) score += 1;
