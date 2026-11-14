@@ -27,6 +27,11 @@ export interface ContentionInput {
 	note: string;
 	/** The simulator event's id, for provenance. */
 	ref?: string;
+	/**
+	 * One stock for every plan (a shortage across kitchens): plans keep what is left in the order they were made,
+	 * so a later plan sees only what earlier ones did not keep. Without it each plan is compared to the whole stock.
+	 */
+	shared?: boolean;
 }
 
 export interface ContentionRescue {
@@ -64,15 +69,24 @@ export async function rescueContention(
 		...(input.ref ? { ref: input.ref } : {})
 	};
 	const rescued: ContentionRescue[] = [];
+	let remaining: number | null = null;
+	// State keeps plans in the order their CreatePlan ops were applied: the order they were made.
 	for (const plan0 of Object.values(state.plans)) {
 		if (plan0.state === 'committed') continue;
 		const line = plan0.lines.find((l) => l.productId === input.productId && open(l));
 		if (!line) continue;
 		const { offers } = await ports.catalog.offers([input.productId], plan0.deliverBy);
 		const a = offers[0]?.availability;
-		const left = a?.kind === 'out' ? 0 : a?.kind === 'known' ? (a.amount ?? null) : null;
-		if (left === null || left >= line.qty.value) continue;
+		const stock = a?.kind === 'out' ? 0 : a?.kind === 'known' ? (a.amount ?? null) : null;
+		if (stock === null) continue;
+		if (input.shared && remaining === null) remaining = stock;
+		const left: number = input.shared ? remaining! : stock;
+		if (left >= line.qty.value) {
+			if (input.shared) remaining = left - line.qty.value;
+			continue;
+		}
 		const kept = Math.max(0, Math.floor(left));
+		if (input.shared) remaining = left - kept;
 
 		const need = plan0.needs.find((n) => n.id === line.needId);
 		const seed = plan0.eventId ? ports.events?.[plan0.eventId] : undefined;
