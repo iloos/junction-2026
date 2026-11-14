@@ -4,7 +4,7 @@
  * stand-in, only for the explicit offline demonstration.
  */
 import { ToolError, Unreachable, livePost, type ApiMode } from './api';
-import type { PresetId } from './fixture-plan';
+import type { PresetId } from './view-model';
 import * as fx from './fixture-server';
 import type { FixtureSnapshot } from './fixture-server';
 

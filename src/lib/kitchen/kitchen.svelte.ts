@@ -1,7 +1,7 @@
 /* eslint-disable svelte/prefer-svelte-reactivity -- Maps and Sets here are built fresh and replaced wholesale ($state.raw), never mutated after. */
 import type { Approval, DomainError, Line } from '$lib/core/contracts';
 import { ToolError, Unreachable, call, type ApiMode } from './api';
-import type { PresetId } from './fixture-plan';
+import type { PresetId } from './view-model';
 import * as backend from './backend';
 import type { Snapshot } from './backend';
 

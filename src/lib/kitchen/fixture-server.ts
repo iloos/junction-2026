@@ -212,11 +212,11 @@ const handlers: { [N in ToolName]?: Handler<N> } = {
 			s = initial(input.kitchenId);
 		}
 		if (!s.built) await rebuild(false);
-		return { plan: withFixtureView(s.built.plan) };
+		return { plan: withFixtureView(s.built.plan, s.approvals) };
 	},
 	get_plan: async () => {
 		if (!s.built) await rebuild(false);
-		return { plan: withFixtureView(s.built.plan), approval: approvalOut() };
+		return { plan: withFixtureView(s.built.plan, s.approvals), approval: approvalOut() };
 	},
 	edit_line: async (input) => {
 		checkVersion(input.planId, input.version);
@@ -231,7 +231,7 @@ const handlers: { [N in ToolName]?: Handler<N> } = {
 			s.grams = { ...s.grams, [dish!.id]: g };
 			await rebuild(true, `${dish!.nameFi} ${before} → ${g} g/guest`);
 		}
-		return { plan: withFixtureView(s.built.plan) };
+		return { plan: withFixtureView(s.built.plan, s.approvals) };
 	},
 	find_substitutes: async (input) => {
 		checkVersion(input.planId, input.version);
@@ -239,7 +239,7 @@ const handlers: { [N in ToolName]?: Handler<N> } = {
 		const chosen =
 			s.built.plan.lines.find((l) => l.substituteFor && l.needId === dish?.needId) ?? null;
 		return {
-			plan: withFixtureView(s.built.plan),
+			plan: withFixtureView(s.built.plan, s.approvals),
 			kind: chosen ? ('product' as const) : ('none' as const),
 			chosen: chosen ? [chosen] : [],
 			applied: false,
@@ -377,7 +377,7 @@ export async function snapshot(): Promise<FixtureSnapshot> {
 	if (!s.built) await rebuild(false);
 	const invalid = [...s.approvals].reverse().find((a) => a.state === 'invalidated') ?? null;
 	return {
-		plan: withFixtureView(s.built.plan),
+		plan: withFixtureView(s.built.plan, s.approvals),
 		view: s.built.view,
 		approval: current(),
 		lastInvalidated: invalid,

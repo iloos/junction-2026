@@ -12,7 +12,7 @@
 	} from '@lucide/svelte';
 	import { KitchenStore } from '$lib/kitchen/kitchen.svelte';
 	import { KITCHENS, PRODUCTS } from '$lib/kitchen/catalog';
-	import type { DishView } from '$lib/kitchen/fixture-plan';
+	import type { DishView } from '$lib/kitchen/view-model';
 	import type { Line } from '$lib/core/contracts';
 	import LabelBar from '$lib/ui/LabelBar.svelte';
 	import StateChip from '$lib/ui/StateChip.svelte';
@@ -21,7 +21,6 @@
 	import CoverageBar from '$lib/ui/CoverageBar.svelte';
 	import CoverageLegend from '$lib/ui/CoverageLegend.svelte';
 	import { lineBasis } from '$lib/ui/coverage';
-	import { borrowed } from '$lib/kitchen/fixture-view';
 	import { whyChain } from '$lib/ui/why-chain';
 	import { day, fixed, money, moneyDelta, num, storyTime } from '$lib/ui/format';
 	import { SCENARIO } from '$lib/core/scenario';
@@ -127,7 +126,7 @@
 			line: whyLine,
 			siblings: plan.lines.filter((l) => l.needId === whyLine.needId),
 			fulfilment: need ? coverage.get(need.id) : undefined,
-			basis: (l) => l.view ?? borrowed.get(l.id),
+			basis: (l) => l.view,
 			name: (id) => names.get(id) ?? id,
 			dish:
 				whyDish && view
@@ -603,7 +602,7 @@
 									{#each lines as l (l.id)}
 										{@const rejected = l.state === 'rejected' || l.state === 'unorderable'}
 										{@const sub = !!l.substituteFor}
-										{@const b = lineBasis(l.qty, l.view ?? borrowed.get(l.id))}
+										{@const b = lineBasis(l.qty, l.view)}
 										<li
 											class="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3 gap-y-1 rounded-[5px] lg:grid-cols-[minmax(0,1fr)_84px_136px_28px] {k.flash.has(
 												l.id

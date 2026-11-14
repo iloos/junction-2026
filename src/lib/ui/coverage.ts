@@ -4,7 +4,7 @@
  * Pure, so the bar, the Why chain and tests read one definition.
  */
 import type { FulfilmentView, LineView, Measure } from '$lib/core/contracts';
-import { num } from './format';
+import { money, num } from './format';
 
 export type Bucket =
 	'supplierConfirmed' | 'awaitingSupplier' | 'plannedKnown' | 'plannedUnknown' | 'unresolved';
@@ -124,12 +124,11 @@ export function lineBasis(
 		p && !sameAsSales
 			? `≈ ${num(p.value, p.value < 10 ? 2 : 1)} ${p.unit}${p.basis && BASIS[p.basis] ? ` ${BASIS[p.basis]}` : ''}`
 			: null;
-	const eur = (c: number) => `€${(c / 100).toFixed(2)}`;
-	const unitPrice = view?.unitPrice ? `${eur(view.unitPrice.cents)}/${view.unitPrice.per}` : null;
+	const unitPrice = view?.unitPrice ? `${money(view.unitPrice.cents)}/${view.unitPrice.per}` : null;
 	const cp = view?.comparisonPrice;
 	const comparison =
 		cp && !(view?.unitPrice && cp.per.toUpperCase() === view.unitPrice.per.toUpperCase())
-			? `${eur(cp.cents)}/${cp.per}${cp.basis && cp.basis !== 'net' ? ` ${cp.basis}` : ''}`
+			? `${money(cp.cents)}/${cp.per}${cp.basis && cp.basis !== 'net' ? ` ${cp.basis}` : ''}`
 			: null;
 	return { buys, physical, unitPrice, comparison };
 }

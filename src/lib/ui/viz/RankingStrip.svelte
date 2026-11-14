@@ -8,7 +8,7 @@
 	import { select, scaleLinear, easeCubicOut } from 'd3';
 	// Registers selection.transition(); the d3 bundle's side effect is tree-shaken out of production builds.
 	import 'd3-transition';
-	import type { CandidateView } from '$lib/kitchen/fixture-plan';
+	import type { CandidateView } from '$lib/kitchen/view-model';
 	import { reasonShort } from '$lib/ui/reasons';
 
 	interface Props {
