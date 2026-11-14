@@ -14,7 +14,7 @@ export interface RankInput {
 	products: Map<string, Product>;
 	offers: Map<string, Offer>;
 	/** Recipe-fit 0–4 from Decide, when it answered. */
-	fit?: Map<string, { score: number; source: string }>;
+	fit?: Map<string, { score: number; source: string; model?: string; latencyMs?: number }>;
 	/** Weight of the fit term relative to the criteria (D6 w_fit). */
 	fitWeight?: number;
 }
@@ -107,7 +107,8 @@ export function rankCandidates(input: RankInput): Ranked[] {
 							score: fit.score,
 							provenance: {
 								source: fit.source === 'gemini' ? 'llm' : 'team_estimate',
-								note: `fit via ${fit.source}`
+								ref: fit.model,
+								note: `recipe fit via ${fit.source}${fit.latencyMs !== undefined ? `, ${Math.round(fit.latencyMs)} ms` : ''}`
 							}
 						}
 					}

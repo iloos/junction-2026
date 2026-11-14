@@ -1,0 +1,269 @@
+{
+	"_source": "Context.dev POST /web/scrape formats.json with RECALL_JSON_SCHEMA, real Ruokavirasto notices, recorded 2026-11-14 (spike)",
+	"notices": [
+		{
+			"title": "Muovisessa ensilusikassa kontaktimateriaalivirhe",
+			"publishedDate": "2026-11-11",
+			"reason": "Tuotteesta siirtyy bisfenoli AF:aa (BPAF) yli lainsäädännön havaitsemisrajan. Tuote ei siten täytä elintarvikekontaktimateriaaleille asetettuja vaatimuksia.",
+			"hazard": "contact_material",
+			"products": [
+				{
+					"name": "Ensilusikka",
+					"brand": "Nuby",
+					"manufacturer": null,
+					"gtin": null,
+					"packageSize": "kolmen lusikan pakkauksissa",
+					"batch": null,
+					"bestBefore": null
+				}
+			],
+			"distribution": "Prisma-myymälöissä sekä s-kaupat.fi- ja prisma.fi-verkkokaupoissa syyskuusta 2025 lähtien",
+			"foodService": false,
+			"url": "https://www.ruokavirasto.fi/elintarvikkeet/ohjeita-kuluttajille/takaisinvedot-2023-/muovisessa-ensilusikassa-kontaktimateriaalivirhe/",
+			"fetchedAt": "2026-11-14T01:05:00.000Z"
+		},
+		{
+			"title": "Pakastetussa chilissä kadmiumylitys",
+			"publishedDate": "2026-10-27",
+			"reason": "Tuote-erästä on omavalvonnassa löytynyt EU:n raja-arvon ylittävä määrä raskasmetallia (kadmium).",
+			"hazard": "chemical",
+			"products": [
+				{
+					"name": "Coop Chopped Chili",
+					"brand": "Coop",
+					"manufacturer": "SOK",
+					"gtin": "7340191134195",
+					"packageSize": "50 g",
+					"batch": null,
+					"bestBefore": "31.7.2027"
+				}
+			],
+			"distribution": "S-ryhmän myymälöissä ja verkkokaupoissa",
+			"foodService": false,
+			"url": "https://www.ruokavirasto.fi/elintarvikkeet/ohjeita-kuluttajille/takaisinvedot-2023-/pakastetussa-chilissa-kadmiumylitys/",
+			"fetchedAt": "2026-11-14T01:05:00.000Z"
+		},
+		{
+			"title": "Proteiinivanukkaissa mahdollisesti lasinsiruja",
+			"publishedDate": "2026-10-26",
+			"reason": "Tuotteisiin sisältyy erittäin vähäinen lasinsiruriski.",
+			"hazard": "foreign_body",
+			"products": [
+				{
+					"name": "Arla Protein Suklaa vanukas",
+					"brand": "Arla Protein",
+					"manufacturer": "Arla Oy",
+					"gtin": null,
+					"packageSize": "200g",
+					"batch": null,
+					"bestBefore": "08.01.2027, 09.01.2027, 22.01.2027 ja 25.01.2027"
+				},
+				{
+					"name": "Arla Protein Suolainen kinuski vanukas",
+					"brand": "Arla Protein",
+					"manufacturer": "Arla Oy",
+					"gtin": null,
+					"packageSize": "200g",
+					"batch": null,
+					"bestBefore": "08.01.2027, 09.01.2027, 22.01.2027 ja 25.01.2027"
+				},
+				{
+					"name": "Arla Protein Vanilja vanukas",
+					"brand": "Arla Protein",
+					"manufacturer": "Arla Oy",
+					"gtin": null,
+					"packageSize": "200g",
+					"batch": null,
+					"bestBefore": "08.01.2027, 09.01.2027, 22.01.2027 ja 25.01.2027"
+				}
+			],
+			"distribution": null,
+			"foodService": null,
+			"url": "https://www.ruokavirasto.fi/elintarvikkeet/ohjeita-kuluttajille/takaisinvedot-2023-/proteiinivanukkaissa-mahdollisesti-lasinsiruja/",
+			"fetchedAt": "2026-11-14T01:05:00.000Z"
+		},
+		{
+			"title": "Kananmunien takaisinveto",
+			"publishedDate": "2026-10-09",
+			"reason": "Viranomaisen näytteenoton yhteydessä yhdessä sen sopimustuottajan kanalassa on todettu salmonellaa.",
+			"hazard": "microbiological",
+			"products": [
+				{
+					"name": "Kotimaista Ulko M10",
+					"brand": "Kotimaista",
+					"manufacturer": "Munax Oy",
+					"gtin": "6415715101210",
+					"packageSize": "580 g",
+					"batch": "1FI15493",
+					"bestBefore": "28.10. tai aiempi"
+				},
+				{
+					"name": "Laitilan Kanatarha Ulko L6",
+					"brand": "Laitilan Kanatarha",
+					"manufacturer": "Munax Oy",
+					"gtin": "6430017904017",
+					"packageSize": "408 g",
+					"batch": "1FI15493",
+					"bestBefore": "28.10. tai aiempi"
+				},
+				{
+					"name": "Laitilan Kanatarha Ulko L10",
+					"brand": "Laitilan Kanatarha",
+					"manufacturer": "Munax Oy",
+					"gtin": "6430017900576",
+					"packageSize": "680 g",
+					"batch": "1FI15493",
+					"bestBefore": "28.10. tai aiempi"
+				},
+				{
+					"name": "Pirkka Ulko M8",
+					"brand": "Pirkka",
+					"manufacturer": "Munax Oy",
+					"gtin": "6410405224316",
+					"packageSize": "464g",
+					"batch": "1FI15493",
+					"bestBefore": "28.10. tai aiempi"
+				}
+			],
+			"distribution": "Myynnissä ainakin K- ja S-ketjujen myymälöissä.",
+			"foodService": null,
+			"url": "https://www.ruokavirasto.fi/elintarvikkeet/ohjeita-kuluttajille/takaisinvedot-2023-/kananmunien-takaisinveto2/",
+			"fetchedAt": "2026-11-14T01:05:00.000Z"
+		},
+		{
+			"title": "Täytetyn patongin ainesosaluettelo virheellinen, allergeenivaara",
+			"publishedDate": "2026-10-06",
+			"reason": "Osassa yhden tuote-erän pakkauksia on toisen tuotteen takaetiketti, jossa on mm. ainesosaluettelo. Virheen vuoksi etiketti ei kerro kaikkia tuotteen sisältämiä ainesosia, mm. anjovisuute on mainitsematta. Erityisesti kalalle allergisten on syytä huomioida asia.",
+			"hazard": "allergen",
+			"products": [
+				{
+					"name": "Kana-caesar patonki",
+					"brand": "Chef Lundén",
+					"manufacturer": "Lunden Food OÜ",
+					"gtin": null,
+					"packageSize": "200 g",
+					"batch": null,
+					"bestBefore": "07.10.2026"
+				}
+			],
+			"distribution": "K- ja S-ryhmien myymälöissä, Tokmanneissa, Minimaneissa, Kokkolan Halpa-Halleissa sekä Veljekset Keskisen myymälässä.",
+			"foodService": null,
+			"url": "https://www.ruokavirasto.fi/elintarvikkeet/ohjeita-kuluttajille/takaisinvedot-2023-/taytetyn-patongin-ainesosaluettelo-virheellinen-allergeenivaara/",
+			"fetchedAt": "2026-11-14T01:05:00.000Z"
+		},
+		{
+			"title": "Proteiiniriisipuurossa mahdollisesti gluteenijäämiä",
+			"publishedDate": "2026-10-01",
+			"reason": "Kyseisen päiväyksen erä saattaa sisältää pinaattia sekä gluteenijäämiä, joten tuote saattaa aiheuttaa oireita gluteenille herkille kuluttajille.",
+			"hazard": "allergen",
+			"products": [
+				{
+					"name": "Proteiiniriisipuuro",
+					"brand": "Juustoportti",
+					"manufacturer": "Juustoportti Oy",
+					"gtin": null,
+					"packageSize": "300 g",
+					"batch": null,
+					"bestBefore": "16.10.2026"
+				}
+			],
+			"distribution": "Koko maan alueella vähittäismyymälöissä.",
+			"foodService": false,
+			"url": "https://www.ruokavirasto.fi/elintarvikkeet/ohjeita-kuluttajille/takaisinvedot-2023-/proteiiniriisipuurossa-mahdollisesti-gluteenijaamia/",
+			"fetchedAt": "2026-11-14T01:05:00.000Z"
+		},
+		{
+			"title": "B3-vitamiinivalmisteissa liikaa nikotiinihappoa tai inositoliheksanikotinaattia",
+			"publishedDate": "2026-09-25",
+			"reason": "Takaisinvedettävien ravintolisien vuorokausiannos sisältää nikotiinihappoa tai sen johdannaista inositoliheksanikotinaattia määrän, joka ylittää UL-arvon 50–60-kertaisesti, minkä vuoksi ravintolisiä ei katsota turvallisiksi. Nikotiinihappo voi aiheuttaa suurina annoksina punoitusta, kutinaa, ihottumaa tai vatsaoireita.",
+			"hazard": "chemical",
+			"products": [
+				{
+					"name": "Vitamin B3 Niacin",
+					"brand": "Life Extension",
+					"manufacturer": null,
+					"gtin": null,
+					"packageSize": "500 mg, 100 kapselia",
+					"batch": "Kaikki erät",
+					"bestBefore": null
+				},
+				{
+					"name": "No Flush Niacin",
+					"brand": "Life Extension",
+					"manufacturer": null,
+					"gtin": null,
+					"packageSize": "640 mg, 100 kapselia",
+					"batch": "Kaikki erät",
+					"bestBefore": null
+				}
+			],
+			"distribution": "Yksittäiset terveystuotealan myymälät ja verkkokaupat ympäri Suomea",
+			"foodService": null,
+			"url": "https://www.ruokavirasto.fi/elintarvikkeet/ohjeita-kuluttajille/takaisinvedot-2023-/b3-vitamiinivalmisteissa-liikaa-nikotiinihappoa-tai-inositoliheksanikotinaattia/",
+			"fetchedAt": "2026-11-14T01:05:00.000Z"
+		},
+		{
+			"title": "Jäähilejuomissa liikaa glyserolia (E 422)",
+			"publishedDate": "2026-09-17",
+			"reason": "niissä todetun liian korkean glyserolipitoisuuden vuoksi",
+			"hazard": "chemical",
+			"products": [
+				{
+					"name": "jäähilejuoma",
+					"brand": "Frosty Pocket",
+					"manufacturer": "K.E. Sunqvist Oy",
+					"gtin": null,
+					"packageSize": "150 ml",
+					"batch": null,
+					"bestBefore": null
+				}
+			],
+			"distribution": "K-kaupat, Minimanit, Pick n Pay ja Veljekset Keskinen; myynnissä vuoden 2025 kesästä alkaen",
+			"foodService": null,
+			"url": "https://www.ruokavirasto.fi/elintarvikkeet/ohjeita-kuluttajille/takaisinvedot-2023-/jaahilejuomissa-liikaa-glyserolia-e-422/",
+			"fetchedAt": "2026-11-14T01:05:00.000Z"
+		},
+		{
+			"title": "Hasselpähkinälevitteen pakkauksessa vääränkieliset merkinnät",
+			"publishedDate": "2026-09-04",
+			"reason": "Osasta erän pakkauksista puuttuvat suomen- ja ruotsinkieliset merkinnät. Merkinnät ovat oikein, mutta muun muassa englanniksi ja ranskaksi. Käännösten puuttuminen aiheuttaa mahdollisen riskin pähkinä-, maapähkinä- ja maitoallergikoille.",
+			"hazard": "allergen",
+			"products": [
+				{
+					"name": "Good Good Suklaa-hassellevite",
+					"brand": "Good Good",
+					"manufacturer": "Aduki Oy",
+					"gtin": null,
+					"packageSize": "350g",
+					"batch": "L6079407",
+					"bestBefore": "20.9.2027"
+				}
+			],
+			"distribution": null,
+			"foodService": null,
+			"url": "https://www.ruokavirasto.fi/elintarvikkeet/ohjeita-kuluttajille/takaisinvedot-2023-/hasselpahkinalevitteen-pakkauksessa-vaarankieliset-merkinnat/",
+			"fetchedAt": "2026-11-14T01:05:00.000Z"
+		},
+		{
+			"title": "Vegaaninen raaste saattaa sisältää maitoa",
+			"publishedDate": "2026-08-28",
+			"reason": "Tuote saattaa sisältää ilmoittamatonta maitoa, joka on pakkausmerkinnöissä ilmoittamaton allergeeni.",
+			"hazard": "allergen",
+			"products": [
+				{
+					"name": "Vegan Topping Mozzarella Flavour",
+					"brand": "Vemondo",
+					"manufacturer": "Lidl Suomi Ky",
+					"gtin": null,
+					"packageSize": "150 g",
+					"batch": "L1141152",
+					"bestBefore": "19.11.2026"
+				}
+			],
+			"distribution": "Lidl-myymälät Pirkanmaalla, Satakunnassa, Kanta-Hämeessä, Varsinais-Suomessa sekä läntisellä Uudellamaalla (Vihdin, Raaseporin, Hangon, Karkkilan, Lohjan ja Hyvinkään myymälät).",
+			"foodService": false,
+			"url": "https://www.ruokavirasto.fi/elintarvikkeet/ohjeita-kuluttajille/takaisinvedot-2023-/vegaaninen-raaste-saattaa-sisaltaa-maitoa/",
+			"fetchedAt": "2026-11-14T01:05:00.000Z"
+		}
+	]
+}

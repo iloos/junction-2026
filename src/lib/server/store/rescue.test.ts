@@ -165,3 +165,31 @@ describe('make-in-house ingredients follow the portion', () => {
 		expect(lineOf(edited, '461378')?.qty.value).toBe(5); // 16.8 × 0.25 = 4.2 → 5
 	});
 });
+
+describe('nothing qualifies', () => {
+	it('an apply with no qualifying substitute writes nothing, however often it is repeated', async () => {
+		const env = await createDbPorts();
+		env.overlay.clear();
+		const hh = createHandlers(env.ports);
+		const { plan } = must(
+			await hh.plan_event(chef, { kitchenId: 'k-hotel', eventId: 'event-xmas-140' })
+		);
+		const ham = lineOf(plan, '462490')!;
+		const before = (await env.ports.store.load('ws-demo', 'run-1')).seq;
+		for (let i = 0; i < 3; i++) {
+			const r = must(
+				await hh.find_substitutes(chef, {
+					planId: plan.id,
+					version: plan.version,
+					lineId: ham.id,
+					requireOrigin: 'zz', // no product qualifies
+					apply: true
+				})
+			);
+			expect(r.kind).toBe('none');
+			expect(r.applied).toBe(false);
+			expect(r.plan.version).toBe(plan.version);
+		}
+		expect((await env.ports.store.load('ws-demo', 'run-1')).seq).toBe(before);
+	});
+});
