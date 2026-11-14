@@ -17,6 +17,7 @@ import type {
 	Tier
 } from '../contracts';
 import { inCategoryGroup } from './categories';
+import { meets, type TermResult } from './meets';
 
 export type Effect = 'forbid' | 'gap' | 'waive';
 
@@ -38,53 +39,11 @@ export interface ValidateOptions {
 	relaxed?: readonly ('origin' | 'labels')[];
 }
 
-/**
- * Words in Valio's own product name that state a claim the structured data may lack ("laktoositon" on a milk whose
- * freeFrom list is empty). The same evidence request lookup accepts, so a pick never fails its own requirement.
- */
-const NAME_CLAIMS: Record<string, string> = {
-	LACTOSE: 'laktoositon',
-	GLUTEN: 'gluteeniton',
-	EU_ORGANIC_FARMING: 'luomu'
-};
-const named = (p: Product, code: string) =>
-	NAME_CLAIMS[code] !== undefined &&
-	p.nameFi
-		.toLowerCase()
-		.split(/[^a-zåäö]+/)
-		.some((w) => w.startsWith(NAME_CLAIMS[code]));
+export type RequirementRule = 'freeFrom' | 'origin' | 'labels' | 'diet' | 'excludes';
 
-/**
- * Diet labels a need may require, met by the catalogue's diet tags: a vegan product is also vegetarian. Nothing else
- * meets them (no name guess: "kasvis" also names vegetable fat in meat dishes).
- */
-const DIETS: Record<string, string[]> = { vegetarian: ['vegetarian', 'vegan'], vegan: ['vegan'] };
-const hasDiet = (p: Product, label: string) => (DIETS[label] ?? []).some((d) => p.diet.includes(d));
-
-export type RequirementRule = 'freeFrom' | 'origin' | 'labels';
-
-/** The requirements a product does not meet, rule by rule, in words ("free from LACTOSE", "origin FI"). */
-export function unmetRules(
-	p: Product,
-	r: NeedRequirements | undefined
-): { rule: RequirementRule; text: string }[] {
-	if (!r) return [];
-	return [
-		...(r.freeFrom ?? [])
-			.filter((x) => !p.freeFrom.includes(x) && !named(p, x))
-			.map((x) => ({ rule: 'freeFrom' as const, text: `free from ${x}` })),
-		...(r.origin && p.origin !== r.origin
-			? [{ rule: 'origin' as const, text: `origin ${r.origin.toUpperCase()}` }]
-			: []),
-		...(r.labels ?? [])
-			.filter((x) => !p.labels.includes(x) && !hasDiet(p, x) && !named(p, x))
-			.map((x) => ({ rule: 'labels' as const, text: `label ${x}` }))
-	];
-}
-
-/** The requirements a product does not meet, in words; empty when it meets them all. */
+/** The requirements a product does not meet, in words; empty when it meets them all (unknown counts as unmet). */
 export function unmetRequirements(p: Product, r: NeedRequirements | undefined): string[] {
-	return unmetRules(p, r).map((u) => u.text);
+	return meets(p, r).failing.map((t) => t.text);
 }
 
 /**
@@ -99,8 +58,12 @@ export function mergeRequirements(
 	const freeFrom = [...new Set(all.flatMap((r) => r.freeFrom ?? []))];
 	const labels = [...new Set(all.flatMap((r) => r.labels ?? []))];
 	const origins = [...new Set(all.map((r) => r.origin).filter((o): o is string => Boolean(o)))];
+	const diet = [...new Set(all.flatMap((r) => r.diet ?? []))];
+	const excludes = [...new Set(all.flatMap((r) => r.excludes ?? []))];
 	return {
 		...(freeFrom.length ? { freeFrom } : {}),
+		...(diet.length ? { diet } : {}),
+		...(excludes.length ? { excludes } : {}),
 		...(labels.length ? { labels } : {}),
 		...(origins.length ? { origin: origins[0] } : {}),
 		...(origins.length > 1 ? { conflict: `origin ${origins.join(' and ').toUpperCase()}` } : {})
@@ -194,17 +157,29 @@ export function validateLine(
 	}
 
 	// The need's own hard requirements (the request said lactose-free): no approval passes a product that misses one.
-	// A rule a person accepted breaking (best try) holds for sign-off; allergens (freeFrom) never relax.
-	const unmet = unmetRules(p, opts.requirements);
-	const strict = unmet.filter((u) => u.rule === 'freeFrom' || !opts.relaxed?.includes(u.rule));
-	if (strict.length || opts.requirements?.conflict)
-		out.push({ reason: 'requirement_unmet', effect: 'forbid' });
-	for (const rule of new Set(unmet.filter((u) => !strict.includes(u)).map((u) => u.rule)))
-		out.push({
-			reason: `requirement_relaxed.${rule as 'origin' | 'labels'}`,
-			effect: 'waive',
-			tier: 'sign_off'
-		});
+	// The need's hard requirements (D16, one evaluator): "no" forbids, except a rule a person accepted breaking (best
+	// try: origin or a label, held for sign-off); "unknown" (no record either way) is never ok and follows the
+	// kitchen's unknownCounts. Allergens and diet never relax.
+	if (opts.requirements) {
+		const m = meets(p, opts.requirements);
+		const relaxable = (t: TermResult) =>
+			(t.term === 'origin' || t.term === 'labels') && opts.relaxed?.includes(t.term);
+		const noes = m.failing.filter((t) => t.verdict === 'no');
+		if (noes.some((t) => !relaxable(t)) || opts.requirements.conflict)
+			out.push({ reason: 'requirement_unmet', effect: 'forbid' });
+		for (const term of new Set(noes.filter(relaxable).map((t) => t.term)))
+			out.push({
+				reason: `requirement_relaxed.${term as 'origin' | 'labels'}`,
+				effect: 'waive',
+				tier: 'sign_off'
+			});
+		if (m.failing.some((t) => t.verdict === 'unknown'))
+			out.push(
+				k.constraints.allergens.unknownCounts === 'reject'
+					? { reason: 'requirement_unknown', effect: 'forbid' }
+					: { reason: 'requirement_unknown', effect: 'waive', tier: 'sign_off' }
+			);
+	}
 
 	// Tender list: anything off it goes to the named approver.
 	if (k.constraints.tenderListOnly && !k.constraints.tenderList?.includes(p.productId))

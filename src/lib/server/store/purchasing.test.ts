@@ -55,6 +55,24 @@ async function harness(
 	o: { deliveryDays?: Kitchen['deliveryDays']; origin?: Kitchen['constraints']['origin'] } = {}
 ) {
 	const products = new Map([
+		// A vegetable patty (out, below) and a meatball: the only substitute for a vegetarian dish is meat.
+		[
+			'470600',
+			Product.parse({
+				...milk('470600', 'Testi kasvispyörykkä 5 kg pakaste', false),
+				category: '41753',
+				diet: ['vegetarian'],
+				allergens: { contains: [], mayContain: [], declared: true }
+			})
+		],
+		[
+			'470601',
+			Product.parse({
+				...milk('470601', 'Testi lihapulla 5 kg kypsä pakaste', false),
+				category: '41705',
+				allergens: { contains: [], mayContain: [], declared: true }
+			})
+		],
 		// Two Swedish lactose-free milks: nothing Finnish and lactose-free exists in this catalogue.
 		[
 			'470499',
@@ -591,5 +609,69 @@ describe('order-scope strict requirements, best try and fallback', () => {
 		);
 		expect(r.chosen[0]?.productId).toBe('470500');
 		expect(r.fallback).toBe('no Finnish option qualified: picked Swedish');
+	});
+});
+
+describe('D16: a vegetarian dish is never bought as meat', () => {
+	it('only meat substitutes: nothing committable, the need and the candidate say why', async () => {
+		const { h, setCandidates } = await harness();
+		setCandidates(['470601']);
+		const p = must(
+			await h.place_order(ctx('chef'), {
+				kitchenId: 'k-hotel',
+				deliverBy: '2026-12-10',
+				idempotencyKey: 'veg',
+				requirements: { diet: ['vegetarian'] },
+				lines: [{ productId: '470600', qty: 2, unit: 'ST' }]
+			})
+		).plan;
+		// The meatball cannot be edited in either: the gate forbids it.
+		const swapped = must(
+			await h.edit_line(ctx('chef'), {
+				planId: p.id,
+				version: p.version,
+				lineId: p.lines[0].id,
+				patch: { productId: '470601' }
+			})
+		).plan;
+		expect(swapped.lines[0].state).toBe('unorderable');
+		expect(swapped.lines[0].reasons).toContain('requirement_unmet');
+		const back = must(
+			await h.edit_line(ctx('chef'), {
+				planId: p.id,
+				version: swapped.version,
+				lineId: p.lines[0].id,
+				patch: { productId: '470600' }
+			})
+		).plan;
+		expect(back.lines[0].reasons).not.toContain('requirement_unmet');
+	});
+
+	it('a substitute search with only meat leaves the vegetarian need unresolved, with the reason', async () => {
+		const { h, setCandidates } = await harness();
+		setCandidates(['470601']);
+		const p = must(
+			await h.place_order(ctx('chef'), {
+				kitchenId: 'k-hotel',
+				deliverBy: '2026-12-10',
+				idempotencyKey: 'veg2',
+				requirements: { diet: ['vegetarian'] },
+				lines: [{ productId: '470418', qty: 2, unit: 'ST', amount: { value: 2, unit: 'l' } }]
+			})
+		).plan;
+		const r = must(
+			await h.find_substitutes(ctx('chef'), {
+				planId: p.id,
+				version: p.version,
+				lineId: p.lines[0].id,
+				apply: true
+			})
+		);
+		expect(r.chosen).toEqual([]);
+		expect(r.candidates.find((c) => c.productId === '470601')?.rejectedReasons).toContain(
+			'requirement_unmet'
+		);
+		expect(r.plan.needs[0].unresolved).toBe('no product meets vegetarian');
+		expect(r.plan.lines.some((l) => l.view?.committable && l.productId === '470601')).toBe(false);
 	});
 });

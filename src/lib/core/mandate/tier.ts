@@ -105,6 +105,7 @@ export interface TierResult {
 const RANK: Record<Tier, number> = { act: 0, propose: 1, sign_off: 2 };
 const TIER_OF: Partial<Record<string, Tier>> = {
 	off_delivery_day: 'sign_off',
+	requirement_unknown: 'sign_off',
 	'requirement_relaxed.origin': 'sign_off',
 	'requirement_relaxed.labels': 'sign_off',
 	UNKNOWN_REQUIRED: 'propose',

@@ -76,6 +76,8 @@ const originWord = (c: string | undefined) =>
 function describeRequirements(r: NeedRequirements & { conflict?: string }): string {
 	if (r.conflict) return `${r.conflict} at once`;
 	return [
+		...(r.diet ?? []),
+		...(r.excludes ?? []).map((x) => (x === 'glutenCereals' ? 'no gluten cereals' : `no ${x}`)),
 		...(r.freeFrom ?? []).map((x) => `free from ${x}`),
 		...(r.origin ? [`origin ${r.origin.toUpperCase()}`] : []),
 		...(r.labels ?? []).map((x) => `label ${x}`)

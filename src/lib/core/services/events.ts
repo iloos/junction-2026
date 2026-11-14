@@ -43,6 +43,7 @@ import {
 	orderedBefore,
 	recalledProducts
 } from '../mandate/tier';
+import { requirementsFromDiet } from '../mandate/meets';
 import type { CallContext, Ports, Tx } from '../ports';
 import type { WorkspaceState } from '../state';
 import { kitchenOf, pending, quoteOps, toLot } from './orders';
@@ -78,6 +79,9 @@ function demandLines(planId: string, seed: EventSeed, overrides: Record<string, 
 				: n;
 		// The editable g/guest and how the need follows from it (kitchen table + Why drawer).
 		const dish = seed.dishes.find((x) => x.dish === n.label);
+		// The dish's diet codes (L, M, G, VEG, VE) bind every product bought for it.
+		const req = requirementsFromDiet((dish?.dietCodes as string[] | undefined) ?? []);
+		if (req) Object.assign(withNote, { requirements: req });
 		if (dish?.gServed === undefined) return withNote;
 		const g = overrides[n.id] ?? dish.gServed;
 		const y = dish.yield ?? 1;
@@ -284,9 +288,17 @@ export async function reviewedProposal(
 function menuLine(
 	planId: string,
 	item: MenuNeed,
-	products: Map<string, Product>
+	products: Map<string, Product>,
+	proposal?: MenuProposal
 ): { need: Need; draft?: DraftLine } {
-	const { need } = item;
+	// The brief's requirements and the dish's claims become hard requirements of the need (R10-03): a reviewed
+	// lactose-free soup is never bought as ordinary milk later, whatever substitutes or edits come.
+	const dish = proposal?.dishes.find((d) => d.id === item.need.source?.dishId);
+	const req = requirementsFromDiet([
+		...(proposal?.brief.dietary ?? []),
+		...(dish?.claimedCompatible ?? [])
+	]);
+	const need = req ? { ...item.need, requirements: req } : item.need;
 	if (item.unresolved || !item.productId) return { need };
 	const p = products.get(item.productId);
 	if (!p)
@@ -349,7 +361,7 @@ async function planProposal(
 		items.flatMap((i) => (i.productId && !i.unresolved ? [i.productId] : [])),
 		deliverBy
 	);
-	const sized = items.map((i) => menuLine(planId, i, pre.products));
+	const sized = items.map((i) => menuLine(planId, i, pre.products, proposal));
 	const needs = sized.map((x) => x.need);
 	const drafts = sized.flatMap((x) => (x.draft ? [x.draft] : []));
 	const r = await ports.store.transact<Plan>(ctx.workspaceId, async (tx, state) => {
@@ -486,10 +498,12 @@ async function prepareEdit(
 		const ids = new Set(drafts.filter((d) => d.needId === input.needId).map((d) => d.productId));
 		if (item.productId) ids.add(item.productId);
 		const products = await ports.catalog.get([...ids]);
-		const fresh = menuLine(plan.id, item, products);
-		// Every open line of this need follows the new amount: the bought product and any substitute, sized alike.
+		const fresh = menuLine(plan.id, item, products, proposal.value);
+		// Every open line of this need follows the new amount: the bought product and any substitute, sized alike. A
+		// superseded original stays at 0 (R10-04): only the active strategy is resized.
 		drafts = drafts.map((d) => {
 			if (d.needId !== input.needId) return d;
+			if (d.extraReasons?.includes('superseded')) return d;
 			if (d.id === fresh.draft?.id) return { ...d, qty: fresh.draft.qty };
 			const p = products.get(d.productId);
 			const qty = p ? sizeDirect(p, fresh.need.amount) : null;
@@ -530,7 +544,12 @@ async function prepareEdit(
 			return err('STALE_VERSION', 'a line of a dependent need is already committed');
 		const moved = new Set([input.needId, ...dependents.map((n) => n.id)]);
 		const fresh = new Map(next.drafts.map((d) => [d.id, d]));
-		drafts = drafts.map((d) => (d.needId && moved.has(d.needId) ? (fresh.get(d.id) ?? d) : d));
+		// A superseded original stays superseded (R10-04); everything else of the moved needs takes its fresh size.
+		drafts = drafts.map((d) =>
+			d.needId && moved.has(d.needId) && !d.extraReasons?.includes('superseded')
+				? (fresh.get(d.id) ?? d)
+				: d
+		);
 		// Replacements serving this dish follow the new need: a product substitute by the same yield/pack rules
 		// as when it was ranked, make-in-house ingredients by their amount per kg of dish.
 		const subs = drafts.filter((d) => d.needId === input.needId && d.substituteFor);
