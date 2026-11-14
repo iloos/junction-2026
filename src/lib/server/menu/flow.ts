@@ -120,6 +120,16 @@ export interface AmountEdit {
 	amountPerCover: number;
 }
 
+/** One chef change to a menu revision. */
+export type MenuChange =
+	| ({ kind: 'amount' } & AmountEdit)
+	/** Drop the pinned product: the ingredient stays on the menu, visibly unresolved. */
+	| { kind: 'unresolve'; ingredientId: string }
+	| { kind: 'removeIngredient'; ingredientId: string }
+	| { kind: 'removeDish'; dishId: string }
+	/** Keep a rubric shortfall (diet, courses, dishes) as an open item the chef accepts knowingly. */
+	| { kind: 'keepOpen'; issueId: string; text: string };
+
 /** The latest revision, or why the chef's edit or review cannot apply to the revision they saw. */
 async function current(d: MenuDeps, id: string, revision: number): Promise<Result<MenuProposalT>> {
 	const latest = await d.store.latest(d.workspaceId, id);
@@ -134,46 +144,104 @@ async function current(d: MenuDeps, id: string, revision: number): Promise<Resul
 	return ok(latest);
 }
 
-/**
- * The chef's amounts per guest: a new revision with every changed ingredient marked `user`, the estimate it replaced
- * in the note. Unchanged amounts are not an edit. Any earlier review stays on its own revision; the new one needs
- * its own.
- */
-export async function editAmounts(
+/** The chef's amounts per guest (see editMenu). */
+export function editAmounts(
 	d: MenuDeps,
 	o: { id: string; revision: number; edits: AmountEdit[] }
+): Promise<Result<MenuView>> {
+	return editMenu(d, {
+		id: o.id,
+		revision: o.revision,
+		changes: o.edits.map((e) => ({ kind: 'amount' as const, ...e }))
+	});
+}
+
+/**
+ * The chef's changes as one new revision: amounts (marked `user`, with the estimate they replaced), products dropped
+ * back to unresolved, ingredients or dishes removed, shortfalls kept as open items. Nothing that is not a change
+ * makes a revision. Any earlier review stays on its own revision; the new one needs its own.
+ */
+export async function editMenu(
+	d: MenuDeps,
+	o: { id: string; revision: number; changes: MenuChange[] }
 ): Promise<Result<MenuView>> {
 	const c = await current(d, o.id, o.revision);
 	if (!c.ok) return c;
 	const p = c.value;
-	const known = new Set(p.dishes.flatMap((x) => x.ingredients.map((i) => i.id)));
-	for (const e of o.edits) {
-		if (!known.has(e.ingredientId))
-			return err('INVALID_INPUT', `no ingredient ${e.ingredientId} on menu ${o.id}`);
-		if (!Number.isFinite(e.amountPerCover) || e.amountPerCover < 0 || e.amountPerCover > 2000)
-			return err('INVALID_INPUT', `${e.ingredientId}: amount per guest must be 0–2000`);
+	const ingredients = new Set(p.dishes.flatMap((x) => x.ingredients.map((i) => i.id)));
+	const dishIds = new Set(p.dishes.map((x) => x.id));
+	for (const ch of o.changes) {
+		if ('ingredientId' in ch && !ingredients.has(ch.ingredientId))
+			return err('INVALID_INPUT', `no ingredient ${ch.ingredientId} on menu ${o.id}`);
+		if (ch.kind === 'removeDish' && !dishIds.has(ch.dishId))
+			return err('INVALID_INPUT', `no dish ${ch.dishId} on menu ${o.id}`);
+		if (
+			ch.kind === 'amount' &&
+			(!Number.isFinite(ch.amountPerCover) || ch.amountPerCover < 0 || ch.amountPerCover > 2000)
+		)
+			return err('INVALID_INPUT', `${ch.ingredientId}: amount per guest must be 0–2000`);
+		if (ch.kind === 'keepOpen' && !/^[\w:.-]{1,64}$/.test(ch.issueId))
+			return err('INVALID_INPUT', `bad issue id ${ch.issueId}`);
 	}
 	const at = d.now().toISOString();
-	let changed = 0;
-	const dishes = p.dishes.map((dish) => ({
-		...dish,
-		ingredients: dish.ingredients.map((i) => {
-			const e = o.edits.find((x) => x.ingredientId === i.id);
-			if (!e || e.amountPerCover === i.amountPerCover) return i;
-			changed++;
-			return {
-				...i,
-				amountPerCover: e.amountPerCover,
-				provenance: {
-					source: 'user' as const,
-					at,
-					...(i.provenance.ref ? { ref: i.provenance.ref } : {}),
-					note: `chef set ${e.amountPerCover} ${i.unit} per guest (was ${i.amountPerCover} ${i.unit}, ${i.provenance.source === 'user' ? 'chef' : 'estimate'})`
-				}
-			};
-		})
-	}));
-	if (!changed) return ok(await menuView(d, p));
+	const did: string[] = [];
+	const removedDishes = new Set(
+		o.changes.flatMap((ch) => (ch.kind === 'removeDish' ? [ch.dishId] : []))
+	);
+	const removedIngredients = new Set(
+		o.changes.flatMap((ch) => (ch.kind === 'removeIngredient' ? [ch.ingredientId] : []))
+	);
+	const dishes = p.dishes
+		.filter((dish) => !removedDishes.has(dish.id))
+		.map((dish) => ({
+			...dish,
+			ingredients: dish.ingredients
+				.filter((i) => !removedIngredients.has(i.id))
+				.map((i) => {
+					let next = i;
+					const amount = o.changes.find(
+						(x): x is Extract<MenuChange, { kind: 'amount' }> =>
+							x.kind === 'amount' && x.ingredientId === i.id
+					);
+					if (amount && amount.amountPerCover !== i.amountPerCover) {
+						did.push(`${i.label} ${amount.amountPerCover} ${i.unit}`);
+						next = {
+							...next,
+							amountPerCover: amount.amountPerCover,
+							provenance: {
+								source: 'user' as const,
+								at,
+								...(i.provenance.ref ? { ref: i.provenance.ref } : {}),
+								note: `chef set ${amount.amountPerCover} ${i.unit} per guest (was ${i.amountPerCover} ${i.unit}, ${i.provenance.source === 'user' ? 'chef' : 'estimate'})`
+							}
+						};
+					}
+					if (
+						next.productId &&
+						o.changes.some((x) => x.kind === 'unresolve' && x.ingredientId === i.id)
+					) {
+						did.push(`${i.label} product dropped`);
+						const { productId, ...restIng } = next;
+						next = {
+							...restIng,
+							unresolved: `the chef turned down product ${productId}; find the right one before ordering`
+						};
+					}
+					return next;
+				})
+		}))
+		// A dish whose every ingredient was removed is removed with them.
+		.filter((dish) => dish.ingredients.length > 0);
+	for (const id of removedDishes) did.push(`dish ${id} removed`);
+	for (const id of removedIngredients) did.push(`ingredient ${id} removed`);
+	const open = [...p.open];
+	for (const ch of o.changes)
+		if (ch.kind === 'keepOpen' && !open.some((x) => x.id === ch.issueId)) {
+			open.push({ id: ch.issueId, text: `kept open by the chef: ${ch.text}`.slice(0, 300) });
+			did.push(`kept open: ${ch.issueId}`);
+		}
+	if (!did.length) return ok(await menuView(d, p));
+	if (!dishes.length) return err('INVALID_INPUT', 'a menu needs at least one dish');
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars
 	const { review, ...rest } = p;
 	const next = MenuProposal.parse({
@@ -181,11 +249,12 @@ export async function editAmounts(
 		revision: p.revision + 1,
 		status: 'proposed',
 		dishes,
+		open,
 		provenance: {
 			source: 'user',
 			at,
 			...(p.provenance.ref ? { ref: p.provenance.ref } : {}),
-			note: `chef edited ${changed} amount${changed === 1 ? '' : 's'} of revision ${p.revision}`
+			note: `chef changed revision ${p.revision}: ${did.join('; ')}`.slice(0, 500)
 		}
 	});
 	await d.store.put(d.workspaceId, next);

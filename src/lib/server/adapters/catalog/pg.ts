@@ -94,7 +94,11 @@ export function createPgCatalog(db: AnyDb, opts: PgCatalogOptions = {}): Catalog
 					temperatureClass: sql<string>`${products.doc}->>'temperatureClass'`,
 					freeFrom: sql<string[]>`coalesce(${products.doc}->'freeFrom', '[]'::jsonb)`,
 					flags: sql<string[]>`coalesce(${products.doc}->'dataQualityFlags', '[]'::jsonb)`,
-					netUnit: sql<string | null>`${products.doc}->'netPerSalesUnit'->'value'->>'unit'`
+					netUnit: sql<string | null>`${products.doc}->'netPerSalesUnit'->'value'->>'unit'`,
+					allergens: sql<{
+						contains: string[];
+						declared: boolean;
+					} | null>`${products.doc}->'allergens'`
 				})
 				.from(products)
 				.where(eq(products.isFood, true));
@@ -109,7 +113,10 @@ export function createPgCatalog(db: AnyDb, opts: PgCatalogOptions = {}): Catalog
 				isFood: true,
 				freeFrom: r.freeFrom,
 				dataQualityFlags: r.flags,
-				netUnit: r.netUnit ?? undefined
+				netUnit: r.netUnit ?? undefined,
+				allergens: r.allergens
+					? { contains: r.allergens.contains ?? [], declared: Boolean(r.allergens.declared) }
+					: undefined
 			}));
 			return new RetrievalIndex(ps);
 		})().catch((e) => {

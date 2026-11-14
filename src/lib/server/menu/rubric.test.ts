@@ -93,7 +93,7 @@ describe('fixture proposals pass the rubric', () => {
 			workspaceId: 'ws-t',
 			brief,
 			store,
-			catalog: {},
+			catalog: { get: async () => new Map() },
 			now: NOW
 		});
 		expect(again.proposal).toEqual(proposal);

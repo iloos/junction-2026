@@ -4,10 +4,10 @@ import { env } from '$env/dynamic/private';
 import { inScope, readBriefAnswers } from '$lib/server/request';
 import {
 	acceptMenuAsChef,
-	editMenu,
+	editMenuFor,
 	planMenuAsChef,
 	proposeFromRequest,
-	readEdits,
+	readChanges,
 	readMenuFor
 } from '$lib/server/menu/server';
 import { visitorWorkspace } from '$lib/server/demo/visitor';
@@ -39,7 +39,7 @@ export const POST: RequestHandler = async (event) => {
 			: body.action === 'read'
 				? await readMenuFor(workspaceId, ref.id)
 				: body.action === 'edit'
-					? await editMenu({ ...ref, edits: readEdits(body.edits) })
+					? await editMenuFor({ ...ref, changes: readChanges(body.changes) })
 					: body.action === 'accept'
 						? await acceptMenuAsChef({ env, ...ref })
 						: body.action === 'plan'

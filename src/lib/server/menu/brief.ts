@@ -63,7 +63,14 @@ const euros = (s: string) => {
 
 /** Every requirement the words state, normalised; a count is kept as "vegetarian:6". */
 export function dietaryIn(text: string): string[] {
-	const out = constraintsIn(text).map((c) => CONSTRAINTS.find((x) => x.key === c)!.label);
+	const out: string[] = [];
+	// Request constraints ("lactose-free") keep a head count when the words give one ("4 lactose-free").
+	for (const key of constraintsIn(text)) {
+		const c = CONSTRAINTS.find((x) => x.key === key)!;
+		const forms = c.forms.map((f) => f.replace(/[-\s]/g, '[- ]?')).join('|');
+		const counted = text.match(new RegExp(String.raw`(\d{1,4})\s+(?:${forms})(?![\p{L}])`, 'iu'));
+		out.push(counted ? `${c.label}:${Number(counted[1])}` : c.label);
+	}
 	for (const d of DIETS) {
 		const counted = text.match(
 			new RegExp(String.raw`(\d{1,4})\s+(?:${d.re.source})(?![\p{L}])`, 'iu')

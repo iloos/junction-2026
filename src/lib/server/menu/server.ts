@@ -14,11 +14,11 @@ import type { BriefAnswer } from '$lib/ui/request/types';
 import { applyBriefAnswers, draftBrief, toEventBrief } from './brief';
 import {
 	acceptMenu,
-	editAmounts,
+	editMenu,
 	planMenu,
 	proposeForBrief,
 	readMenu,
-	type AmountEdit,
+	type MenuChange,
 	type MenuDeps,
 	type MenuPlanResult,
 	type MenuView
@@ -69,13 +69,13 @@ export async function readMenuFor(workspaceId: string, id: string): Promise<Resu
 	return readMenu(await deps(workspaceId), id);
 }
 
-export async function editMenu(o: {
+export async function editMenuFor(o: {
 	workspaceId: string;
 	id: string;
 	revision: number;
-	edits: AmountEdit[];
+	changes: MenuChange[];
 }): Promise<Result<MenuView>> {
-	return editAmounts(await deps(o.workspaceId), o);
+	return editMenu(await deps(o.workspaceId), o);
 }
 
 /** The page's chef accepts the revision they saw. */
@@ -100,15 +100,29 @@ export async function planMenuAsChef(o: {
 	return planMenu({ ...(await deps(o.workspaceId)), handlers, ctx: a.chef, tasks }, o);
 }
 
-/** Amount edits from a request body; anything malformed is dropped, never trusted. */
-export function readEdits(raw: unknown): AmountEdit[] {
+const id64 = (v: unknown): v is string => typeof v === 'string' && v.length > 0 && v.length <= 64;
+
+/** The chef's menu changes from a request body; anything malformed is dropped, never trusted. */
+export function readChanges(raw: unknown): MenuChange[] {
 	if (!Array.isArray(raw)) return [];
-	return raw.slice(0, 200).flatMap((e) => {
-		const { ingredientId, amountPerCover } = (e ?? {}) as Record<string, unknown>;
-		return typeof ingredientId === 'string' &&
-			ingredientId.length <= 64 &&
-			typeof amountPerCover === 'number'
-			? [{ ingredientId, amountPerCover }]
-			: [];
+	return raw.slice(0, 200).flatMap((e): MenuChange[] => {
+		const c = (e ?? {}) as Record<string, unknown>;
+		switch (c.kind) {
+			case 'amount':
+				return id64(c.ingredientId) && typeof c.amountPerCover === 'number'
+					? [{ kind: 'amount', ingredientId: c.ingredientId, amountPerCover: c.amountPerCover }]
+					: [];
+			case 'unresolve':
+			case 'removeIngredient':
+				return id64(c.ingredientId) ? [{ kind: c.kind, ingredientId: c.ingredientId }] : [];
+			case 'removeDish':
+				return id64(c.dishId) ? [{ kind: 'removeDish', dishId: c.dishId }] : [];
+			case 'keepOpen':
+				return id64(c.issueId) && typeof c.text === 'string'
+					? [{ kind: 'keepOpen', issueId: c.issueId, text: c.text.slice(0, 280) }]
+					: [];
+			default:
+				return [];
+		}
 	});
 }

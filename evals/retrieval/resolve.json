@@ -1,0 +1,179 @@
+{
+	"$comment": "Menu ingredient queries through Catalog.resolve (the golden briefs' template ingredients and prod's model menu (suklaakakku, vadelmasorbetti), Finnish as the proposer sends them). `accept`/`reject` are regexes over the top candidate's Finnish name; `unresolved: true` means no product may be pinned (a wrong pin is worse than a visible gap). `diet` passes resolver flags. Runner: src/lib/server/adapters/catalog/retrieval.resolve.eval.test.ts (needs data/valio/).",
+	"cases": [
+		{
+			"q": "lohifilee",
+			"accept": "lohifilee|lohi.*filee",
+			"reject": "kirjolohi|savu|graavi|pasta"
+		},
+		{
+			"q": "tilli",
+			"accept": "tilli",
+			"reject": "pastilli|silli|tuorejuusto|kastike"
+		},
+		{
+			"q": "punajuuri",
+			"accept": "punajuuri",
+			"reject": "hummus|falafel|salaatti"
+		},
+		{
+			"q": "porkkana",
+			"accept": "porkkana",
+			"reject": "ruutu|piirakka|sämpylä|lettu|terriini|shot"
+		},
+		{
+			"q": "suolakurkku",
+			"accept": "suolakurkku",
+			"reject": "majonees"
+		},
+		{
+			"q": "peruna",
+			"accept": "peruna",
+			"reject": "croquette|rieska|sämpylä|gnocchi|laatikko|sose|lastu"
+		},
+		{
+			"q": "sipuli",
+			"accept": "sipuli",
+			"reject": "valkosipuli|keksi|cooking|pikkelöity"
+		},
+		{
+			"q": "ruokakerma",
+			"accept": "ruokakerma"
+		},
+		{
+			"q": "ruokakerma laktoositon",
+			"accept": "ruokakerma.*laktoositon|laktoositon.*ruokakerma"
+		},
+		{
+			"q": "kuhafilee",
+			"accept": "kuha",
+			"reject": "kana|broiler"
+		},
+		{
+			"q": "kuhafilee",
+			"diet": ["LACTOSE"],
+			"accept": "kuha",
+			"reject": "kana|broiler|anjovis"
+		},
+		{
+			"q": "voi",
+			"accept": "(^| )voi( |$)",
+			"reject": "voileip|kaali"
+		},
+		{
+			"q": "voi laktoositon",
+			"accept": "voi.*laktoositon|laktoositon.*voi"
+		},
+		{
+			"q": "naudan paisti",
+			"accept": "naud.*paisti|paisti.*naud"
+		},
+		{
+			"q": "joulukinkku",
+			"accept": "joulukinkku"
+		},
+		{
+			"q": "lanttu",
+			"accept": "lanttu",
+			"reject": "laatikko|survos"
+		},
+		{
+			"q": "risottoriisi",
+			"accept": "risottoriisi"
+		},
+		{
+			"q": "herkkusieni",
+			"accept": "herkkusieni",
+			"reject": "piiras"
+		},
+		{
+			"q": "juusto",
+			"accept": "juusto",
+			"reject": "kabanossi|makkara"
+		},
+		{
+			"q": "juusto laktoositon",
+			"accept": "juusto",
+			"reject": "kabanossi|makkara"
+		},
+		{
+			"q": "puuroriisi",
+			"accept": "puuroriisi"
+		},
+		{
+			"q": "maito",
+			"accept": "maito",
+			"reject": "kondensoitu|kahvi|juoma|suklaa"
+		},
+		{
+			"q": "maito laktoositon",
+			"accept": "maito.*laktoositon|laktoositon.*maito",
+			"reject": "kondensoitu"
+		},
+		{
+			"q": "kuivattu luumu",
+			"accept": "luumu",
+			"reject": "tomaatti|kiisseli|puuro"
+		},
+		{
+			"q": "kylmäsavulohi",
+			"accept": "kylmäsavulohi|kylmäsavu lohi",
+			"reject": "tuorejuusto|keitto|kiusaus"
+		},
+		{
+			"q": "ruisleipä",
+			"accept": "ruisleipä"
+		},
+		{
+			"q": "salaatti",
+			"accept": "salaatti"
+		},
+		{
+			"q": "tomaatti",
+			"accept": "tomaatti",
+			"reject": "pesto|nyhtö|kuivattu|basilika|tortilla"
+		},
+		{
+			"q": "vadelmasorbetti",
+			"accept": "vadelma",
+			"reject": "mango"
+		},
+		{
+			"q": "suklaakakku",
+			"accept": "suklaakakku",
+			"reject": "omena|päärynä"
+		},
+		{
+			"q": "naudan rinta",
+			"accept": "naudan rinta"
+		},
+		{
+			"q": "härkäpapu",
+			"accept": "härkäpapu"
+		},
+		{
+			"q": "vegaaninen suklaakakku",
+			"unresolved": true
+		},
+		{
+			"q": "perunapyree",
+			"unresolved": true
+		},
+		{
+			"q": "myskikurpitsa",
+			"unresolved": true
+		},
+		{
+			"q": "strutsifilee",
+			"unresolved": true
+		},
+		{
+			"q": "yksisarvisen liha",
+			"unresolved": true
+		},
+		{
+			"q": "xyzzy kvanttikvarkki",
+			"unresolved": true
+		}
+	]
+}

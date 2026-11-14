@@ -233,6 +233,6 @@ export interface BriefQuestion {
 	multi?: boolean;
 }
 
-export type { MenuPlanResult, MenuView } from '$lib/server/menu/flow';
+export type { MenuChange, MenuPlanResult, MenuView } from '$lib/server/menu/flow';
 import type { TaskLink } from '$lib/server/request/task';
 export type { TaskLink };

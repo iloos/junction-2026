@@ -39,7 +39,11 @@ export type RetrievalProduct = Pick<
 	| 'isFood'
 	| 'freeFrom'
 	| 'dataQualityFlags'
-> & { netUnit?: string };
+> & {
+	netUnit?: string;
+	/** Allergen record (codes, declared); resolve() reads it so produce without free-from data can meet a diet. */
+	allergens?: Pick<Product['allergens'], 'contains' | 'declared'>;
+};
 
 const env = (k: string) => (typeof process !== 'undefined' ? process.env?.[k] : undefined);
 
@@ -165,6 +169,49 @@ function dietOf(p: RetrievalProduct, nameOnly: boolean): Set<string> {
 	return out;
 }
 
+/** Valio allergen codes that break a diet: milk for lactose-free; gluten cereals for gluten-free. */
+const BREAKS: Record<string, string[]> = {
+	LACTOSE: ['AM'],
+	GLUTEN: ['AW', 'UW', 'GB', 'NR', 'GO', 'AX']
+};
+
+/**
+ * For a menu ingredient a diet is met by the product's promise (name or free-from data) or by a declared allergen
+ * record without the allergen: plain pike-perch is lactose-free though nobody labels it so. No record = not met.
+ */
+function meetsDiet(p: RetrievalProduct, flag: string): boolean {
+	if (dietOf(p, false).has(flag)) return true;
+	const a = p.allergens;
+	return Boolean(a?.declared && !(BREAKS[flag] ?? []).some((c) => a.contains.includes(c)));
+}
+
+/**
+ * Compound heads that make a different product from the ingredient: a dish, a spread, a mix ("porkkana-perunaruutu",
+ * "luumu-vaniljakiisseli", "kylmäsavulohi tuorejuusto"). A resolve candidate with one the query does not name is out.
+ */
+const OTHER_PRODUCT =
+	/(keitto|laatikko|piirakka|piiras|kastike|kastikkeessa|kiisseli|marmeladi|hillo|jogurtti|juusto|hummus|falafel|pihvi|kiusaus|pulla|pullat|sipsi|terriini|kierre|rieska|leipä|tortilla|panini|majoneesi|salaatti|ruutu|kuutio|sekoitus|seos|mix|pyree|sose|bowl|vuoka|pizza|lasagne|makkara|nakki|lenkki|pasteija|mureke|croquette|kroketti|lastu|muusi|ateria|annos|valmiste|leike|levite|smoothie|mehu|juoma|kakku|leivos|aine|pasta|sandwich|wrap|patonki|sämpylä|lettu|keksi|sipsit|puuro|rahka|mousse|vanukas)$/;
+
+/**
+ * Every content word of the query is in the candidate: the same word, a compound with it as head or modifier
+ * ("kerma" in "kuohukerma", "lohi" in "lohifilee"), or, for a compound query word, its head and its modifier both
+ * ("kuhafilee" needs "kuha", not only "filee").
+ */
+function present(q: string, words: string[]): boolean {
+	if (words.some((c) => c === q || (q.length >= 4 && (c.endsWith(q) || c.startsWith(q)))))
+		return true;
+	return words.some((c) => {
+		if (c.length < 4 || !q.endsWith(c)) return false;
+		const mod = q.slice(0, -c.length);
+		return (
+			mod.length >= 3 &&
+			words.some((m) => m !== c && (m === mod || m.startsWith(mod) || m.endsWith(mod))) &&
+			// Another compound on the same head names the product ("suklaa-päärynäkakku" is a pear cake).
+			!words.some((w) => w !== c && w.endsWith(c) && !w.startsWith(mod))
+		);
+	});
+}
+
 interface Indexed {
 	p: RetrievalProduct;
 	words: string[];
@@ -225,7 +272,7 @@ export class RetrievalIndex {
 				nearest: []
 			};
 		const diet = new Set([...dietOf(t, true), ...(o.diet ?? [])]);
-		const hits = this.similar(t, new Set(), limit, { minLex: 0.5, diet });
+		const hits = this.similar(t, new Set(), limit, { minLex: 0.5, diet, strict: true });
 		if (hits.length)
 			return {
 				status: 'resolved',
@@ -233,7 +280,7 @@ export class RetrievalIndex {
 				candidates: hits.map((c) => ({ productId: c.productId, score: c.score ?? 0 }))
 			};
 		if (diet.size) {
-			const any = this.similar(t, new Set(), 3, { minLex: 0.5, diet: new Set() });
+			const any = this.similar(t, new Set(), 3, { minLex: 0.5, diet: new Set(), strict: true });
 			if (any.length) {
 				const need = [...diet].map((f) => DIET_WORD[f] ?? f).join(' and ');
 				return {
@@ -245,11 +292,15 @@ export class RetrievalIndex {
 			}
 		}
 		const partial = this.similar(t, new Set(), 3, { minLex: 0.25, diet: new Set() });
+		const main = query
+			.toLowerCase()
+			.split(/\s+/)
+			.filter((w) => w && !DIET_KEYS.some((k) => k.word.test(w)));
 		return {
 			status: 'unresolved',
 			query,
 			reason: partial.length
-				? `no product name matches "${query}" closely enough; the nearest share only part of it`
+				? `no product whose main ingredient is ${main.join(' ') || query}; the nearest are other products or share only part of the name`
 				: `no product name matches "${query}"`,
 			nearest: partial.map((c) => ({ productId: c.productId, failed: 'match' }))
 		};
@@ -263,7 +314,7 @@ export class RetrievalIndex {
 		target: RetrievalProduct,
 		exclude: Set<ProductId>,
 		limit: number,
-		o: { minLex?: number; diet?: Set<string> } = {}
+		o: { minLex?: number; diet?: Set<string>; strict?: boolean } = {}
 	): Candidate[] {
 		const minLex = o.minLex ?? 0.25;
 		const tWords = contentWords(`${target.nameFi} ${target.nameEn ?? ''}`, target.brand);
@@ -301,7 +352,21 @@ export class RetrievalIndex {
 				(w) => PROCESSED.test(w) && !tWords.some((t) => wordSim(t, w) >= 0.8)
 			).length;
 			const sameCat = target.category !== '' && p.category === target.category;
-			if (diet.size > 0) {
+			if (o.strict) {
+				// resolve(): the product is the ingredient, not a dish or mix that contains it; diets may be met by a
+				// declared allergen record.
+				const named = tWords.filter((w) => !DIET_KEYS.some((k) => k.word.test(w)));
+				if (!named.every((q) => present(q, words))) continue;
+				if (
+					words.some(
+						(w) =>
+							OTHER_PRODUCT.test(w) &&
+							!named.some((q) => w.endsWith(q) || q.endsWith(w.match(OTHER_PRODUCT)![1]))
+					)
+				)
+					continue;
+				if ([...diet].some((f) => !meetsDiet(p, f))) continue;
+			} else if (diet.size > 0) {
 				const d = dietOf(p, false);
 				if ([...diet].some((f) => !d.has(f))) continue;
 			}
@@ -353,5 +418,6 @@ export const toRetrievalProduct = (p: Product): RetrievalProduct => ({
 	isFood: p.isFood,
 	freeFrom: p.freeFrom,
 	dataQualityFlags: p.dataQualityFlags,
-	netUnit: p.netPerSalesUnit?.value.unit
+	netUnit: p.netPerSalesUnit?.value.unit,
+	allergens: { contains: p.allergens.contains, declared: p.allergens.declared }
 });

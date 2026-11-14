@@ -18,7 +18,7 @@ import {
 	type Provenance
 } from '$lib/core/contracts';
 import { canonicalJson, sha256Hex } from '$lib/core/hash';
-import type { Catalog, Llm, MenuStore } from '$lib/core/ports';
+import type { Catalog, Llm, MenuStore, Resolution } from '$lib/core/ports';
 import { slug } from '../request/parse';
 import { dietBase, reviewProposal, type Issue } from './rubric';
 
@@ -27,6 +27,39 @@ const RESOLVER_DIET: Record<string, string> = {
 	'lactose-free': 'LACTOSE',
 	'gluten-free': 'GLUTEN'
 };
+/** Valio allergen codes that break a flag: milk for lactose-free; gluten cereals for gluten-free. */
+const BREAKS: Record<string, string[]> = {
+	LACTOSE: ['AM'],
+	GLUTEN: ['AW', 'UW', 'GB', 'NR', 'GO', 'AX']
+};
+
+/**
+ * Resolves one ingredient. The brief's diet is not a filter on every ingredient (plain carrots carry no free-from
+ * data and would lose to a processed product that does); the ingredient's own words carry it ("kerma laktoositon").
+ * A pinned product whose allergen record contains what the brief excludes is resolved again under the diet, and stays
+ * unresolved if nothing qualifies: a wrong pin is worse than a visible gap.
+ */
+async function resolveIngredient(
+	catalog: Pick<Catalog, 'resolve' | 'get'>,
+	query: string,
+	flags: string[]
+): Promise<Resolution | null> {
+	if (!catalog.resolve) return null;
+	const r = await catalog.resolve(query, { limit: 3 });
+	if (r.status !== 'resolved' || !flags.length) return r;
+	const got = await catalog.get(r.candidates.map((c) => c.productId));
+	const breaks = (id: string) => {
+		const p = got.get(id);
+		return flags.some(
+			(f) =>
+				!p?.freeFrom.includes(f) && (BREAKS[f] ?? []).some((c) => p?.allergens.contains.includes(c))
+		);
+	};
+	const safe = r.candidates.filter((c) => !breaks(c.productId));
+	if (safe.length === r.candidates.length) return r;
+	if (safe.length) return { ...r, candidates: safe };
+	return catalog.resolve(query, { limit: 3, diet: flags });
+}
 
 /* ── Model output ─────────────────────────────────────────────────────────── */
 
@@ -113,7 +146,7 @@ const T: Record<string, Template> = {
 			{ label: 'potato', query: 'peruna', amountPerCover: 80, unit: 'g' },
 			{ label: 'carrot', query: 'porkkana', amountPerCover: 60, unit: 'g' },
 			{ label: 'onion', query: 'sipuli', amountPerCover: 20, unit: 'g' },
-			{ label: 'cream', query: 'kerma', amountPerCover: 30, unit: 'ml', dairy: true }
+			{ label: 'cream', query: 'ruokakerma', amountPerCover: 30, unit: 'ml', dairy: true }
 		]
 	},
 	fish: {
@@ -133,7 +166,7 @@ const T: Record<string, Template> = {
 		ingredients: [
 			{ label: 'beef roast', query: 'naudan paisti', amountPerCover: 160, unit: 'g' },
 			{ label: 'potato', query: 'peruna', amountPerCover: 150, unit: 'g' },
-			{ label: 'cream', query: 'kerma', amountPerCover: 40, unit: 'ml', dairy: true }
+			{ label: 'cream', query: 'ruokakerma', amountPerCover: 40, unit: 'ml', dairy: true }
 		]
 	},
 	ham: {
@@ -169,7 +202,7 @@ const T: Record<string, Template> = {
 		ingredients: [
 			{ label: 'porridge rice', query: 'puuroriisi', amountPerCover: 30, unit: 'g' },
 			{ label: 'milk', query: 'maito', amountPerCover: 150, unit: 'ml', dairy: true },
-			{ label: 'plums', query: 'luumu', amountPerCover: 30, unit: 'g' }
+			{ label: 'dried plums', query: 'kuivattu luumu', amountPerCover: 30, unit: 'g' }
 		]
 	},
 	amuse: {
@@ -269,7 +302,7 @@ export interface ProposeDeps {
 	workspaceId: string;
 	brief: EventBrief;
 	store: MenuStore;
-	catalog: Pick<Catalog, 'resolve'>;
+	catalog: Pick<Catalog, 'resolve' | 'get'>;
 	now: Date;
 	/** Absent: the fixture templates. */
 	llm?: Llm | null;
@@ -331,7 +364,11 @@ export async function proposeMenu(d: ProposeDeps): Promise<Proposed> {
 	} else menu = fixtureMenu(d.brief);
 
 	const at = d.now.toISOString();
-	const flags = d.brief.dietary.map((x) => RESOLVER_DIET[dietBase(x)]).filter(Boolean);
+	// A whole-menu requirement checks every pick; a counted one ("lactose-free:4") is met by some dishes.
+	const flags = d.brief.dietary
+		.filter((x) => !x.includes(':'))
+		.map((x) => RESOLVER_DIET[dietBase(x)])
+		.filter(Boolean);
 	const dishIds = idsFor(
 		menu.dishes.map((x) => x.name),
 		'd-'
@@ -350,9 +387,7 @@ export async function proposeMenu(d: ProposeDeps): Promise<Proposed> {
 				amountPerCover: i.amountPerCover,
 				unit: i.unit
 			};
-			const r = d.catalog.resolve
-				? await d.catalog.resolve(i.query, { diet: flags, limit: 3 })
-				: null;
+			const r = await resolveIngredient(d.catalog, i.query, flags);
 			if (r?.status === 'resolved' && r.candidates.length)
 				ingredients.push({
 					...base,
