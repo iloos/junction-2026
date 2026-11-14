@@ -31,7 +31,6 @@ import { GET as agentCard } from '../../../routes/.well-known/agent.json/+server
 /** Open defects: id → owner. Delete a line when its case goes red ("looks fixed"). R10-07 and R10-16 were fixed on main
  * before this suite landed: they run as guards. */
 const OPEN: Record<string, string> = {
-	'R10-05': '8d',
 	'R10-06': '8d',
 	'R10-08': '8d'
 };

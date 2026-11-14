@@ -25,7 +25,10 @@ import { reloadRunNow, resetDemoRun } from '$lib/server/demo/reset';
 import { isSandbox, resetSandbox } from '$lib/server/demo/sandbox';
 import { inWorkspace } from '$lib/server/adapters/simulator/overlay';
 import { rescueContention } from '$lib/core/services/contention';
-import { catchUp } from '$lib/server/bus';
+import { catchUp, publish } from '$lib/server/bus';
+import { replanShortage } from '$lib/core/services/shortage';
+import type { ShortageReplanned } from '$lib/core/contracts';
+import { SCENARIO } from '$lib/core/scenario';
 import type { DietFacts } from '$lib/ui/diet';
 import { qtyWords, readableName } from '$lib/ui/format';
 
@@ -269,6 +272,8 @@ export interface NotStarted {
 }
 
 export type LiveSnapshot = FixtureSnapshot | NotStarted;
+/** The snapshot after a shortage, with what each kitchen did about it. */
+export type ShortageSnapshot = LiveSnapshot & { shortage: ShortageReplanned };
 
 function notStarted(kitchenId: string): NotStarted {
 	const e = eventFor(kitchenId);
@@ -635,7 +640,7 @@ export function scenario(
 	value: unknown,
 	/** The plan the screen shows: the command acts on it, not on whatever this browser's session last opened. */
 	planId?: string
-): Promise<LiveSnapshot | PlanProgress> {
+): Promise<LiveSnapshot | PlanProgress | ShortageSnapshot> {
 	return serial(workspaceId, async () => {
 		const s = session(sid, workspaceId);
 		if (planId && ON_PLAN.has(action)) {
@@ -650,6 +655,58 @@ export function scenario(
 		return applyScenario(s, action, value);
 	});
 }
+let shortages = 0;
+
+/**
+ * Moment 1: Valio runs short of one product (default: the contended palvikinkku) and every kitchen in the workspace
+ * re-plans its open plan inside its own rules. The shortage is simulator state of this workspace only. The result
+ * goes out live as a `notice` (Ops and the Kitchen ledger) and comes back to the caller.
+ */
+async function shortage(s: Session, value: unknown): Promise<ShortageReplanned> {
+	const b = await createServerPorts();
+	const v = (value && typeof value === 'object' ? value : {}) as {
+		productId?: unknown;
+		left?: unknown;
+	};
+	const productId = typeof v.productId === 'string' ? v.productId : CONTENDED.productId;
+	b.overlay.clear();
+	const { offers } = await b.ports.catalog.offers([productId], SCENARIO.delivery);
+	const a = offers[0]?.availability;
+	const had = a?.kind === 'known' && a.amount != null ? a.amount : 0;
+	const left = typeof v.left === 'number' && v.left >= 0 ? Math.floor(v.left) : Math.floor(had / 3);
+	b.overlay.setAvailability({
+		productId,
+		amount: left,
+		label: `simulated: Valio is short, ${left} of ${had} left`
+	});
+	const ctx = agent(s);
+	const shortageId = `sh-${++shortages}`;
+	const r = await replanShortage(b.ports, ctx, {
+		productId,
+		had,
+		left,
+		shortageId,
+		note: `Valio is short: ${left} of ${had} left`
+	});
+	if (!r.ok) throw new Error(`shortage: ${r.error.code} ${r.error.message}`);
+	await publish(ctx.workspaceId, [
+		{
+			kind: 'notice',
+			workspaceId: ctx.workspaceId,
+			runId: ctx.runId,
+			at: b.ports.clock.now().toISOString(),
+			event: {
+				kind: 'shortage.replanned',
+				productId,
+				simAt: b.ports.clock.now().toISOString(),
+				detail: r.value,
+				label: `simulated: Valio is short of ${r.value.productName}`
+			}
+		}
+	]);
+	return r.value;
+}
+
 /** Commands about the plan on screen; starting, switching kitchen and resetting choose their own plan. */
 const ON_PLAN = new Set(['preset', 'apply', 'contention']);
 
@@ -657,7 +714,7 @@ async function applyScenario(
 	s: Session,
 	action: string,
 	value: unknown
-): Promise<LiveSnapshot | PlanProgress> {
+): Promise<LiveSnapshot | PlanProgress | ShortageSnapshot> {
 	const b = await createServerPorts();
 	if (action === 'start') {
 		await ensurePlan(s);
@@ -757,6 +814,8 @@ async function applyScenario(
 				};
 			}
 		} else await requote(s);
+	} else if (action === 'shortage') {
+		return { ...(await buildSnapshot(s)), shortage: await shortage(s, value) };
 	} else if (action === 'reset') {
 		// A fresh run server-side: no plan, orders or spend; the old run stays in the op log. Sandboxes go
 		// through the self-service reset (cooldown per sandbox); the stage only reaches here for a presenter.

@@ -7,9 +7,15 @@
  * is committed here: the agent repairs, a person still decides.
  */
 import type { CallContext } from '../ports';
-import type { Anomaly, Line, Plan, Provenance } from '../contracts';
+import type { Anomaly, Line, MeasureUnit, Plan, Product, Provenance } from '../contracts';
 import { ok, type Result } from '../contracts';
-import { rescueFor, seedEntryFor, servedKgOf, type PoolEntry } from '../demand/sizing';
+import {
+	contentValue,
+	rescueFor,
+	seedEntryFor,
+	servedKgOf,
+	type PoolEntry
+} from '../demand/sizing';
 import { draftFromLine } from '../mandate/tier';
 import { editLine, type ServicePorts } from './events';
 import { pending } from './orders';
@@ -21,6 +27,11 @@ export interface ContentionInput {
 	note: string;
 	/** The simulator event's id, for provenance. */
 	ref?: string;
+	/**
+	 * One stock for every plan (a shortage across kitchens): plans keep what is left in the order they were made,
+	 * so a later plan sees only what earlier ones did not keep. Without it each plan is compared to the whole stock.
+	 */
+	shared?: boolean;
 }
 
 export interface ContentionRescue {
@@ -34,6 +45,14 @@ export interface ContentionRescue {
 	chosen: Line[];
 	anomalyId: string;
 	plan: Plan;
+}
+
+/** What `units` sales units of `p` deliver in `unit`: by weight for KG-sold, by content, or one piece per unit. */
+function keptAmount(p: Product, units: number, unit: MeasureUnit): number {
+	if (units <= 0) return 0;
+	if (p.salesUnit === 'KG') return unit === 'kg' ? units : 0;
+	if (unit === 'pcs') return units;
+	return units * (contentValue(p, unit) ?? 0);
 }
 
 const open = (l: Line) => l.state !== 'committed' && l.qty.value > 0;
@@ -50,15 +69,24 @@ export async function rescueContention(
 		...(input.ref ? { ref: input.ref } : {})
 	};
 	const rescued: ContentionRescue[] = [];
+	let remaining: number | null = null;
+	// State keeps plans in the order their CreatePlan ops were applied: the order they were made.
 	for (const plan0 of Object.values(state.plans)) {
 		if (plan0.state === 'committed') continue;
 		const line = plan0.lines.find((l) => l.productId === input.productId && open(l));
 		if (!line) continue;
 		const { offers } = await ports.catalog.offers([input.productId], plan0.deliverBy);
 		const a = offers[0]?.availability;
-		const left = a?.kind === 'out' ? 0 : a?.kind === 'known' ? (a.amount ?? null) : null;
-		if (left === null || left >= line.qty.value) continue;
+		const stock = a?.kind === 'out' ? 0 : a?.kind === 'known' ? (a.amount ?? null) : null;
+		if (stock === null) continue;
+		if (input.shared && remaining === null) remaining = stock;
+		const left: number = input.shared ? remaining! : stock;
+		if (left >= line.qty.value) {
+			if (input.shared) remaining = left - line.qty.value;
+			continue;
+		}
 		const kept = Math.max(0, Math.floor(left));
+		if (input.shared) remaining = left - kept;
 
 		const need = plan0.needs.find((n) => n.id === line.needId);
 		const seed = plan0.eventId ? ports.events?.[plan0.eventId] : undefined;
@@ -76,7 +104,13 @@ export async function rescueContention(
 		if (!entry.pack && rescue?.chosen?.productId === line.productId)
 			entry.pack = rescue.chosen.pack;
 		const qtyKept = { ...line.qty, value: kept };
-		const covered = need?.amount.unit === 'kg' ? (servedKgOf(product, entry, qtyKept) ?? 0) : 0;
+		const covered =
+			need?.kind !== 'direct' && need?.amount.unit === 'kg'
+				? (servedKgOf(product, entry, qtyKept) ?? 0)
+				: 0;
+		// A direct need ("4 l milk") counts what is kept in its own unit, so the substitute covers only the rest.
+		const coveredAmount =
+			need?.kind === 'direct' && product ? keptAmount(product, kept, need.amount.unit) : 0;
 		const note = `${kept} of ${line.qty.value} left: ${input.note}`;
 
 		let target: Line = line;
@@ -111,6 +145,7 @@ export async function rescueContention(
 			{
 				keep,
 				coveredServedKg: covered,
+				coveredAmount,
 				exclude: [input.productId],
 				note: input.note,
 				keepOriginal: !original && kept > 0
