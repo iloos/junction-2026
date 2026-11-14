@@ -421,7 +421,9 @@
 				action: 'commit',
 				planId: plan.id,
 				version,
-				attempt: commits.length + 1
+				attempt: commits.length + 1,
+				// A retry names the same lines, so it is the same command and the same receipt.
+				...(committed ? { lineIds: committed.lineIds } : {})
 			});
 			commits = [...commits, r.commit];
 			plan = r.plan;

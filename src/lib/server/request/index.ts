@@ -33,6 +33,8 @@ import type { ParsedRequest } from './parse';
 import type { RankBy } from './rank-by';
 
 export { ToolFailed } from './run';
+import { ToolFailed } from './run';
+import { canonicalJson, sha256Hex } from '$lib/core/hash';
 export { readBriefAnswers } from '$lib/server/menu/brief';
 export { readAnswers } from './workspace';
 
@@ -181,9 +183,37 @@ export async function approveRequest(o: {
 	return { state: r.state, ...view };
 }
 
-/** The commit key is derived from the plan version, so a retry (or a double click) is the same commit. */
-export function commitKey(planId: string, version: number): string {
-	return `rq-commit-${planId}-v${version}`;
+/**
+ * The lines a commit from Request means now: every eligible line plus every open line a granted approval covers
+ * (what commit_order commits by default), named exactly.
+ */
+export function committableLines(
+	plan: { lines: { id: string; state: string }[] },
+	approval: { state: string; lineIds: string[] } | null
+): string[] {
+	const granted = approval?.state === 'granted' ? new Set(approval.lineIds) : new Set<string>();
+	const open = new Set(['proposed', 'eligible', 'held']);
+	return plan.lines
+		.filter((l) => l.state === 'eligible' || (granted.has(l.id) && open.has(l.state)))
+		.map((l) => l.id)
+		.sort();
+}
+
+/**
+ * The one command identity for a commit from Request: plan, version, accepted terms and the exact lines. A transport
+ * retry (same lines) is the same key and replays the receipt; a remainder approved later is a new command. Swapped
+ * for core's commandKey (D18) when it lands, here only.
+ */
+export async function commitKey(
+	planId: string,
+	version: number,
+	termsHash: string | null,
+	lineIds: readonly string[]
+): Promise<string> {
+	const h = await sha256Hex(
+		canonicalJson({ planId, version, termsHash, lineIds: [...lineIds].sort() })
+	);
+	return `rq-commit-${h.slice(0, 24)}`;
 }
 
 export async function commitRequest(o: {
@@ -192,18 +222,30 @@ export async function commitRequest(o: {
 	planId: string;
 	version: number;
 	attempt: number;
+	/** A retry of an earlier commit: its exact lines, so the key and the receipt are the same. */
+	lineIds?: string[];
 }): Promise<{
 	commit: CommitView;
 	plan: Awaited<ReturnType<typeof approvalView>>['plan'];
 	approval: ApprovalView | null;
 }> {
 	const a = await actors(o.env, o.workspaceId);
-	const idempotencyKey = commitKey(o.planId, o.version);
+	const before = await approvalView(handlers, a.chef, o.planId);
+	const lineIds = o.lineIds?.length
+		? [...o.lineIds]
+		: committableLines(before.plan, before.approval);
+	if (!lineIds.length)
+		throw new ToolFailed('commit_order', 'FORBIDDEN', 'no line can be committed now');
+	const idempotencyKey = await commitKey(o.planId, o.version, before.plan.termsHash, lineIds);
 	const r = await callTool(handlers, a.chef, 'commit_order', {
 		planId: o.planId,
 		version: o.version,
-		idempotencyKey
+		idempotencyKey,
+		lineIds
 	});
 	const view = await approvalView(handlers, a.chef, o.planId);
-	return { commit: { ...r, idempotencyKey, version: o.version, attempt: o.attempt }, ...view };
+	return {
+		commit: { ...r, idempotencyKey, version: o.version, attempt: o.attempt, lineIds },
+		...view
+	};
 }

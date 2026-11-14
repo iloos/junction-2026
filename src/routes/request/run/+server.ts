@@ -47,7 +47,12 @@ export const POST: RequestHandler = async (event) => {
 					workspaceId,
 					planId: str('planId'),
 					version: int('version'),
-					attempt: Math.max(1, int('attempt'))
+					attempt: Math.max(1, int('attempt')),
+					lineIds: Array.isArray(body.lineIds)
+						? (body.lineIds as unknown[])
+								.filter((x): x is string => typeof x === 'string' && /^[\w.:~-]{1,80}$/.test(x))
+								.slice(0, 50)
+						: undefined
 				})
 			);
 	} catch (e) {
