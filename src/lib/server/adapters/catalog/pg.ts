@@ -6,6 +6,7 @@
  * category/temperature/unit, and the simulator overlay is applied last.
  */
 import { and, asc, desc, eq, ilike, inArray, sql } from 'drizzle-orm';
+import { onScenario } from '$lib/core/scenario';
 import type { Catalog } from '$lib/core/ports';
 import type { Offer, Product, ProductId } from '$lib/core/contracts';
 import { products, offerCache } from '../../db/schema';
@@ -89,8 +90,8 @@ export function createPgCatalog(db: AnyDb, opts: PgCatalogOptions = {}): Catalog
 			return rows.map((r) => r.doc as Product);
 		},
 
-		// deliverBy is unused: the cache is not keyed by date (the mock API ignores requestedDate).
-		async offers(ids) {
+		// The cache is not keyed by date (the mock API ignores requestedDate); deliverBy re-dates it (onScenario).
+		async offers(ids, deliverBy) {
 			const knownSet = new Set(
 				ids.length === 0
 					? []
@@ -138,7 +139,10 @@ export function createPgCatalog(db: AnyDb, opts: PgCatalogOptions = {}): Catalog
 					at: newest?.at,
 					ref: `customer ${customer}`
 				});
-				return opts.overlay ? opts.overlay.apply(offer) : offer;
+				const dated = deliverBy
+					? { ...offer, availability: onScenario(offer.availability, deliverBy) }
+					: offer;
+				return opts.overlay ? opts.overlay.apply(dated) : dated;
 			});
 			return { offers, notFound };
 		},

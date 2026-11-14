@@ -6,6 +6,7 @@
  * - The simulator overlay is applied last, so every offer says whether it is cache, live or simulated.
  */
 import { createHash } from 'node:crypto';
+import { onScenario } from '$lib/core/scenario';
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Catalog } from '$lib/core/ports';
@@ -233,7 +234,10 @@ export function createValioCatalog(
 					at: newest?.fetchedAt,
 					ref: `customer ${customer}`
 				});
-				return opts.overlay ? opts.overlay.apply(offer) : offer;
+				const dated = deliverBy
+					? { ...offer, availability: onScenario(offer.availability, deliverBy) }
+					: offer;
+				return opts.overlay ? opts.overlay.apply(dated) : dated;
 			});
 			return { offers, notFound };
 		},
