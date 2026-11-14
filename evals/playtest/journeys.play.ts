@@ -717,7 +717,10 @@ journey(
 		const ops = page;
 		await r.step('Ops on the big screen joins the room', async () => {
 			await ops.goto(`${BASE}/ops?ws=ws-judges`);
-			await ops.waitForTimeout(3000);
+			const room = ops.getByRole('tab', { name: /^Room/ });
+			if (await room.isVisible().catch(() => false)) await room.click();
+			// Orders already there when the page loads don't light up for the first 3 s (S4 50ad21f).
+			await ops.waitForTimeout(4000);
 		});
 		const stores = ['Playtest Bistro', 'Playtest Canteen', 'Playtest Hotel'];
 		const ctxs = await Promise.all(
@@ -756,6 +759,9 @@ journey(
 						{ beat: false }
 					);
 					await p.screenshot({ path: `${r.dir}/store-${i + 1}-ordered.png`, fullPage: true });
+					// The big screen within a second of this store's order: a "First order" badge and the room line.
+					await ops.waitForTimeout(800);
+					await ops.screenshot({ path: `${r.dir}/ops-after-store-${i + 1}.png` });
 				})
 			);
 		} finally {
@@ -767,6 +773,29 @@ journey(
 			const seen = stores.filter((s) => text.includes(s));
 			r.note('opsSeesStores', seen);
 			if (seen.length < 3) throw new Error(`Ops names ${seen.length}/3 stores: ${seen.join(', ')}`);
+		});
+		await r.step('Ops lit up a first order', async () => {
+			const lit = await ops
+				.getByText(/First order|placed its first order/)
+				.first()
+				.isVisible()
+				.catch(() => false);
+			r.note('firstOrderLightUp', lit);
+			if (!lit)
+				throw new Error(
+					'no "First order" badge or room line on Ops (it fades after 8 s; see ops-after-store-*.png)'
+				);
+		});
+		await r.step('the room QR full screen shows the public link', async () => {
+			await ops
+				.getByRole('button', { name: /Show the code full screen/ })
+				.click({ timeout: 10_000 });
+			await ops.waitForTimeout(1000);
+			const text = await ops.locator('body').innerText();
+			r.note('qrLink', /app\.mandate\.kitchen\/\?ws=ws-judges/.test(text));
+			if (!/app\.mandate\.kitchen\/\?ws=ws-judges/.test(text))
+				throw new Error('the full-screen code does not show app.mandate.kitchen/?ws=ws-judges');
+			await ops.keyboard.press('Escape');
 		});
 	},
 	420_000
