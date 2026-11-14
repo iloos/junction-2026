@@ -132,6 +132,25 @@ export function presentMeta(
 		}
 		case 'set_mandate':
 			return { summary: `Mandate is now version ${String(v.mandateVersion)}.` };
+		case 'lookup_facts': {
+			const n = ((v.facts ?? []) as unknown[]).length;
+			return {
+				summary: `${plural(n, 'web fact')} with sources${v.cached ? ' (cached)' : ''}; catalogue facts still win.`
+			};
+		}
+		case 'find_outside': {
+			const n = ((v.options ?? []) as unknown[]).length;
+			return {
+				summary: `${plural(n, 'option')} outside the catalogue, for the chef; never ordered.`
+			};
+		}
+		case 'check_recall': {
+			const notices = (v.notices ?? []) as { match?: string }[];
+			const gtin = notices.filter((x) => x.match === 'gtin').length;
+			return {
+				summary: `${plural(notices.length, 'recall notice')} checked; ${gtin} cite this product by GTIN.`
+			};
+		}
 		case 'get_context':
 			return undefined;
 	}
