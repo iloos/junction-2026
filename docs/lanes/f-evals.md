@@ -19,10 +19,20 @@
 | CHAT-add-item: "and 2 l of whipping cream too" adds no line | `evals/chat/free/sessions.json` f1 | E |
 | CHAT-two-items: the milk in "perunoita ja maitoa" is dropped | `evals/chat/free/sessions.json` f2 | E |
 
-- Prod defects: `docs/BUGS.md` (bug bash of 825874d, re-tested on eefe4db and f3591fd; #1, #2 and the cut-off dead end fixed on prod; #5, #6 and #9 fixed on main, prod re-test pending).
-- BUG-1 regression: an agent's approvalUrl fails on a fresh local PGlite build of main ("not in this browser's sandbox", `snapshot?plan` 404) and passes on prod. 1f is bisecting with `scratch/bugbash/link-main.mjs <base>`; `gate --full` stays red on BUG-1 until it's fixed.
-- Claims pass before the 22:00 video: `docs/CLAIMS.md`, a prod screenshot per demo beat.
-- Review on/off arms: wait for `REVIEW=1` on prod paths; the same trials both ways via `eval:live`.
+- Adversarial suite (`src/lib/server/evals/adversarial*.test.ts`): 15 open cases in `OPEN` with owners (E: R9-01…05, R8-task-*, R8-next-action; 8d: R7-03/05/11; 9c: R9-08…10; D: R8-web-write, R8-queue-claim). Substitution kinds: 2 open targets (8d). Grounded menu: green on the Exa replay.
+- Prod defects: `docs/BUGS.md`, re-tested through `7b3daf1`/`e9ec36c`. Open: #7 (ham weight bases), off-day hold copy, three different decision deadlines, chat vs `/request` basket, Ops door label (REST shown as MCP).
+- Waiting on deploys: 8d's unknown-availability fix (re-word CLAIMS/PITCH, re-record d0's case cards 3 and 7); 9c's g7 `services[]` (`evals/ui/services.e2e.ts` then runs).
+
+## Self-review (Ring 4 checkpoint, 14 Nov)
+- **Solid:** the gate and its eval layers (scenarios, fidelity, paraphrase, chat replay, adversarial and kinds suites with owned `it.fails`); prod evidence for every "say it" row, with page text and screenshots in `scratch/claims/obs*`; `evals/ui` against prod after each deploy.
+- **Fragile:** the prod observation scripts in `scratch/claims/*.e2e.ts` are untracked and key on UI text (the chat's "Working…" changed under me); the menu proposal varies between runs, so menu claims rest on one recorded run; the substitution kinds are derived from grades plus name rules (only kind 1 hand-checked).
+- **Untested:** the UI void of an approval after an edit and a UI retry on prod; chat as a fidelity entry; the review on/off arms; the full gate without `data/valio/` (it fails: the fixture catalogue reads the dataset).
+- **Plan to the deadline** (Sat 15:30 → Sun 06:00 feature freeze, 10:00 submission):
+  1. Now: `evals/ui/journeys.e2e.ts` is tracked (prod-only, `JOURNEYS=1`; page text and screenshots per beat); run it on every deploy and fill the CLAIMS rows for the freeze build.
+  2. Evening: the open adversarial and kinds cases as owners fix them (delete `OPEN` lines); chat events and the off-day copy re-tested as they land; the UI void and UI retry made observable beats.
+  3. Before 06:00: one final journeys pass on the freeze build; CLAIMS, PITCH and the site's cases re-checked against it.
+  4. 06:00–10:00: no code; re-run the journeys after the last deploy, check the video and submission texts against CLAIMS, and keep prod evidence current until submission.
+- **Owned slip today:** I called the core's outside-agent approval guard missing (d0 corrected it with `core/state.ts`); claims about code get a grep before they're sent.
 
 ## Traps
 - An `expectFail` entry hides any other mistake in the same expectation; probe today's state before writing one (the chat items probe found two wrong expectations of mine).
@@ -33,15 +43,9 @@
 - Gate gaps: e2e only with `--full`; `test:pg`, `test:live`, `eval:live` are opt-in; evals run twice per gate (inside `test:unit` too).
 
 ## Resume
-- **Branch** `lane/f-evals`, head `401f0db` (this brief's commit) (rebased on origin/main 70c30e2; eb9e03b merged).
-- **Own:**
-  - `scripts/merge-gate.mjs`, `scripts/smoke-race.mjs`;
-  - `evals/**` (not `retrieval/`) and `src/lib/server/evals/**`;
-  - `docs/CLAIMS.md`, `docs/BUGS.md`;
-  - `evals/ui/*.e2e.ts` (the Kitchen order and clock prod checks);
-  - the chat suites: scripted c1–c4, free-text plus `replay-llm.ts`.
+- **Branch** `lane/f-evals`, head: the commit that adds this block (rebased on main `6b0d7b6`'s base). Not pushed: the lead merges from the shared local refs.
+- **Own:** `scripts/merge-gate.mjs`, `scripts/smoke-race.mjs`; `evals/**` and `src/lib/server/evals/**` (kind labels in `evals/retrieval/substitutes.json` by agreement); `docs/CLAIMS.md`, `docs/BUGS.md`; `evals/ui/*.e2e.ts` (order summary, clocks, approval link, services); the chat suites and `replay-llm.ts`; the Exa replay recordings for the golden menus.
 - **Next:**
-  1. After each deploy (watch `/healthz` commit), run `evals/ui` against prod with `pw-prod.config.ts` and mark BUGS rows fixed with that commit.
-  2. Follow up the BUG-1 local regression with 1f.
-  3. Do a claims pass with prod screenshots before the video.
-  4. When E fixes CHAT-add-item or CHAT-two-items, re-record and delete the entries.
+  1. After the next deploy: the full prod journey re-test, every demo beat (the checkpoint's prod evidence), and `evals/ui` incl. `services.e2e.ts` once g7 is live.
+  2. When 8d's unknown-availability fix is on prod (a watcher checks `normalize.ts` of the `/healthz` commit): re-word CLAIMS/PITCH from the screen in the lead's words, and have d0 re-record case cards 3 and 7.
+  3. Move the `scratch/claims` journeys into a tracked prod-only `evals/ui` spec; keep re-testing BUGS rows per deploy.
