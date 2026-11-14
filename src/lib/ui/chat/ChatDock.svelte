@@ -12,6 +12,7 @@
 	import DecisionCard from '$lib/ui/DecisionCard.svelte';
 	import Receipt from '$lib/ui/Receipt.svelte';
 	import type { ChatEvent, ChatTurnInput } from './types';
+	import { foldRows, outcomeLine, stepsSinceChef, workedLine, type Entry } from './turn-view';
 	import { useShell } from '$lib/ui/shell/shell.svelte';
 
 	/**
@@ -55,11 +56,12 @@
 		if (!pinned) open = false;
 	}
 
-	type Entry = { kind: 'chef'; text: string } | { kind: 'event'; e: ChatEvent };
 	/** The dock's task is remembered per kitchen for this browser tab. */
 	const key = () => `mandate.chat.task.${kitchenId}`;
 	let taskId = $state<string | null>(null);
 	let entries = $state.raw<Entry[]>([]);
+	/** After "New task": the next turn starts its own task instead of joining the plan on screen. */
+	let fresh = $state(false);
 	let text = $state('');
 	let busy = $state(false);
 	let error = $state<string | null>(null);
@@ -131,20 +133,23 @@
 		const l = entries.findLast((x) => x.kind === 'event' && x.e.type === 'ledger');
 		return l?.kind === 'event' && l.e.type === 'ledger' ? l.e.ledger.receiptIds.length : 0;
 	});
+	const rows = $derived(foldRows(entries));
+	/** Steps so far in the turn that is running, for the indicator ("step 3"). */
+	const stepsThisTurn = $derived(stepsSinceChef(entries));
 	const doneLine = $derived(last?.kind === 'event' && last.e.type === 'done' ? last.e : undefined);
 
 	async function turn(body: ChatTurnInput, said?: string) {
 		if (busy) return;
 		busy = true;
 		error = null;
-		if (said) entries = [...entries, { kind: 'chef', text: said }];
+		if (said) entries = [...entries, { kind: 'chef', text: said, at: Date.now() }];
 		try {
 			const res = await fetch('/api/chat/turn', {
 				method: 'POST',
 				headers: { 'content-type': 'application/json' },
 				body: JSON.stringify({
 					...body,
-					...(taskId ? { taskId } : planId ? { planId } : {}),
+					...(taskId ? { taskId } : planId && !fresh ? { planId } : {}),
 					kitchenId
 				})
 			});
@@ -175,7 +180,8 @@
 						taskId = e.taskId;
 						remember(taskId);
 					}
-					entries = [...entries, { kind: 'event', e }];
+					entries = [...entries, { kind: 'event', e, at: Date.now() }];
+					fresh = false;
 				}
 			}
 		} catch (e) {
@@ -195,6 +201,7 @@
 
 	function newTask() {
 		taskId = null;
+		fresh = true;
 		remember(null);
 		entries = [];
 		error = null;
@@ -271,93 +278,122 @@
 				agent’s questions come as buttons.
 			</li>
 		{/if}
-		{#each entries as x, i (i)}
-			{#if x.kind === 'chef'}
-				<li class="ml-8 rounded-lg bg-well px-3 py-2 text-ink">{x.text}</li>
-			{:else if x.e.type === 'step'}
-				<li class="flex gap-2 text-ink-2">
-					{#if x.e.ok}
-						<CircleCheck size={15} class="mt-0.5 shrink-0 text-ok" />
-					{:else}
-						<CircleX size={15} class="mt-0.5 shrink-0 text-out" />
-					{/if}
-					<div class="min-w-0">
-						<span class="font-medium text-ink">{TOOL[x.e.tool] ?? x.e.tool}.</span>
-						{x.e.summary}
-						{#if x.e.receipt}
-							<div class="mt-1"><Receipt receipt={x.e.receipt} orders={latestReceipts || 1} /></div>
-						{/if}
-						{#if x.e.href}
-							<a class="ml-1 inline-flex items-center text-accent-ink underline" href={x.e.href}
-								>plan<ArrowUpRight size={12} /></a
-							>
-						{/if}
-					</div>
-				</li>
-			{:else if x.e.type === 'clarify'}
-				{@const active = pendingClarify === x}
-				<li class="rounded-lg border border-rule bg-paper px-3 py-2">
-					<p class="text-ink">{x.e.question}</p>
-					{#if x.e.options.length}
-						<div class="mt-2 flex flex-wrap gap-1.5">
-							{#each x.e.options as o (o.value)}
-								<button
-									type="button"
-									class="rounded-full border border-accent px-3 py-1 text-meta font-medium text-accent-ink hover:bg-accent-wash disabled:opacity-50"
-									disabled={!active || busy}
-									onclick={() =>
-										x.e.type === 'clarify' &&
-										turn({ answer: { field: x.e.field, value: o.value } }, o.label)}
-									>{o.label}</button
-								>
-							{/each}
-						</div>
-					{:else if active}
-						<p class="mt-1 text-meta text-ink-3">Type the answer below.</p>
-					{/if}
-				</li>
-			{:else if x.e.type === 'decision'}
-				{@const names = new Map(Object.entries(x.e.names))}
-				<li class="space-y-2">
-					{#each x.e.decisions as d (d.key)}
-						<DecisionCard decision={d} {names} due={x.e.due} readonly />
-					{/each}
-					<a
-						class="inline-flex items-center gap-1 font-medium text-propose underline"
-						href={x.e.approvalUrl}
-						onclick={(ev) => x.e.type === 'decision' && locate(ev, x.e.planId)}
-						>{x.e.planId === planId ? 'Show the decision' : 'Open the approval in Kitchen'}
-						<ArrowUpRight size={13} /></a
-					>
-					<p class="text-meta text-ink-3">
-						Only a chef approves, in the Kitchen screen. Then continue here.
-					</p>
-				</li>
-			{:else if x.e.type === 'ledger'}
-				<li class="border-l-2 border-accent pl-3 text-ink">
-					<span class="num">{x.e.summary}</span>
-				</li>
-			{:else if x.e.type === 'done' && x.e.state !== 'awaiting_clarification'}
-				{@const ledgerLine = entries[i - 1]}
-				{#if !(ledgerLine?.kind === 'event' && ledgerLine.e.type === 'ledger' && ledgerLine.e.summary === x.e.text)}
-					<!-- The agent's answer, worded from the ledger (the line above carries the numbers). -->
-					<li class="text-ink">{x.e.text}</li>
-				{/if}
-				{#if x === last && (x.e.canContinue || x.e.state === 'awaiting_chef')}
-					<li class="flex flex-wrap gap-2">
-						<button
-							type="button"
-							class="rounded-md bg-accent px-3 py-1.5 text-meta font-semibold text-sheet disabled:opacity-50"
-							disabled={busy}
-							onclick={() => turn({ continue: true }, 'Continue')}
+		{#each rows as r (r.i)}
+			{#if r.kind === 'steps'}
+				{@const bad = r.steps.filter((x) => !x.ok).length}
+				<li>
+					<details class="group">
+						<summary
+							class="flex cursor-pointer list-none items-center gap-1.5 text-meta text-ink-2 hover:text-ink"
 						>
-							{x.e.canContinue ? 'Continue: submit what may be ordered' : 'I’ve decided: continue'}
-						</button>
+							<ChevronDown
+								size={13}
+								class="-rotate-90 transition-transform group-open:rotate-0"
+								aria-hidden="true"
+							/>
+							{workedLine(r)}
+							{#if bad}<span class="text-out">· {bad} refused</span>{/if}
+						</summary>
+						<ol class="mt-1.5 space-y-1 border-l border-rule pl-3">
+							{#each r.steps as st (st.n)}
+								<li class="flex gap-1.5 text-meta text-ink-2">
+									{#if st.ok}
+										<CircleCheck size={13} class="mt-0.5 shrink-0 text-ok" aria-hidden="true" />
+									{:else}
+										<CircleX size={13} class="mt-0.5 shrink-0 text-out" aria-hidden="true" />
+									{/if}
+									<span class="min-w-0">
+										<span class="font-medium text-ink">{TOOL[st.tool] ?? st.tool}.</span>
+										{st.summary}
+										<span class="mono sys-only text-micro text-ink-3">{st.tool}</span>
+										{#if st.href}
+											<a class="inline-flex items-center text-accent-ink underline" href={st.href}
+												>plan<ArrowUpRight size={11} /></a
+											>
+										{/if}
+									</span>
+								</li>
+							{/each}
+						</ol>
+					</details>
+					{#each r.steps.filter((x) => x.receipt) as st (st.n)}
+						<div class="mt-2"><Receipt receipt={st.receipt!} orders={latestReceipts || 1} /></div>
+					{/each}
+				</li>
+			{:else}
+				{@const x = r.x}
+				{@const i = r.i}
+				{#if x.kind === 'chef'}
+					<li class="ml-8 rounded-lg bg-well px-3 py-2 text-ink">{x.text}</li>
+				{:else if x.e.type === 'clarify'}
+					{@const active = pendingClarify === x}
+					<li class="rounded-lg border border-rule bg-paper px-3 py-2">
+						<p class="text-ink">{x.e.question}</p>
+						{#if x.e.options.length}
+							<div class="mt-2 flex flex-wrap gap-1.5">
+								{#each x.e.options as o (o.value)}
+									<button
+										type="button"
+										class="rounded-full border border-accent px-3 py-1 text-meta font-medium text-accent-ink hover:bg-accent-wash disabled:opacity-50"
+										disabled={!active || busy}
+										onclick={() =>
+											x.e.type === 'clarify' &&
+											turn({ answer: { field: x.e.field, value: o.value } }, o.label)}
+										>{o.label}</button
+									>
+								{/each}
+							</div>
+						{:else if active}
+							<p class="mt-1 text-meta text-ink-3">Type the answer below.</p>
+						{/if}
 					</li>
+				{:else if x.e.type === 'decision'}
+					{@const names = new Map(Object.entries(x.e.names))}
+					<li class="space-y-2">
+						{#each x.e.decisions as d (d.key)}
+							<DecisionCard decision={d} {names} due={x.e.due} readonly compact />
+						{/each}
+						<a
+							class="inline-flex items-center gap-1 font-medium text-propose underline"
+							href={x.e.approvalUrl}
+							onclick={(ev) => x.e.type === 'decision' && locate(ev, x.e.planId)}
+							>{x.e.planId === planId ? 'Show the decision' : 'Open the approval in Kitchen'}
+							<ArrowUpRight size={13} /></a
+						>
+						<p class="text-meta text-ink-3">
+							Only a chef approves, in the Kitchen screen. Then continue here.
+						</p>
+					</li>
+				{:else if x.e.type === 'ledger'}
+					<li class="border-l-2 border-accent pl-3 text-ink" title={x.e.summary}>
+						{outcomeLine(x.e.ledger)}
+					</li>
+				{:else if x.e.type === 'done' && x.e.state !== 'awaiting_clarification'}
+					{@const ledgerLine = entries[i - 1]}
+					{#if !(ledgerLine?.kind === 'event' && ledgerLine.e.type === 'ledger' && ledgerLine.e.summary === x.e.text)}
+						<!-- The agent's answer, worded from the ledger (the line above carries the numbers). -->
+						<li class="text-ink">{x.e.text}</li>
+					{/if}
+					{#if x === last && (x.e.canContinue || x.e.state === 'awaiting_chef')}
+						<li class="flex flex-wrap gap-2">
+							<button
+								type="button"
+								class="rounded-md bg-accent px-3 py-1.5 text-meta font-semibold text-sheet disabled:opacity-50"
+								disabled={busy}
+								onclick={() => turn({ continue: true }, 'Continue')}
+							>
+								{x.e.canContinue
+									? 'Continue: submit what may be ordered'
+									: 'I’ve decided: continue'}
+							</button>
+						</li>
+					{/if}
 				{/if}
 			{/if}
 		{/each}
-		{#if busy}<li class="text-ink-3">Working…</li>{/if}
+		{#if busy}<li class="text-meta text-ink-3" role="status">
+				Working · step {stepsThisTurn + 1}…
+			</li>{/if}
 		{#if error}<li class="text-out">{error}</li>{/if}
 	</ol>
 

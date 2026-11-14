@@ -50,6 +50,15 @@
 	const approvalLines = $derived(
 		(approval?.lineIds ?? []).map((id) => byId.get(id)).filter((l): l is Line => !!l)
 	);
+	/** Every line a human approved on this plan, across decisions (approved one at a time or together). */
+	const approvedN = $derived(
+		plan.lines.filter(
+			(l) =>
+				l.tier !== undefined &&
+				l.tier !== 'act' &&
+				(l.state === 'committed' || l.view?.committable === true)
+		).length
+	);
 	const approvalCents = $derived(approvalLines.reduce((s, l) => s + (l.lineCents ?? 0), 0));
 	// Committable comes from the server's read model only (the offline stand-in builds it with core's lineView).
 	const eligible = $derived(plan.lines.filter((l) => l.view?.committable === true));
@@ -207,8 +216,8 @@
 					{:else if granted}
 						<CircleCheck size={16} class="text-ok" aria-hidden="true" />
 						<span
-							><b class="font-medium">You approved these terms</b> · {approvalLines.length} lines. Approved
-							is not yet ordered, and not supplier-confirmed.</span
+							><b class="font-medium">You approved these terms</b> · {approvedN} lines. Approved is not
+							yet ordered, and not supplier-confirmed.</span
 						>
 					{:else}
 						{#if approval.tier === 'sign_off'}
@@ -314,8 +323,10 @@
 			<dt class="text-ink-2">Delivery</dt>
 			<dd class="text-right text-ink">{day(plan.deliverBy)}</dd>
 			{#if approval && pending}
-				<dt class="text-ink-2">Approval valid until</dt>
-				<dd class="text-right text-ink">{storyTime(approval.expiresAt)}</dd>
+				<!-- An approval can't outlive the order cut-off: past it, nothing it approves can be ordered. -->
+				{@const capped = new Date(due).getTime() < new Date(approval.expiresAt).getTime()}
+				<dt class="text-ink-2">{capped ? 'Approve before the cut-off' : 'Approval valid until'}</dt>
+				<dd class="text-right text-ink">{storyTime(capped ? due : approval.expiresAt)}</dd>
 			{/if}
 		</dl>
 		{#if approval}

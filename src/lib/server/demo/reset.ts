@@ -68,6 +68,17 @@ export function ensureRunLoaded(
 const RUN_REFRESH_MS = 5_000;
 const checked = (g.__mandateRunChecked ??= new Map<string, number>());
 
+/**
+ * Re-read the workspace's newest run now, ignoring the refresh window: a read that missed something another
+ * process (or a just-started run) wrote can look again on the current run.
+ */
+export async function reloadRunNow(workspaceId: string): Promise<string> {
+	if (isMemoryOnly(workspaceId)) return currentRun(workspaceId);
+	checked.set(workspaceId, Date.now());
+	const { db } = await ports();
+	return loadCurrentRun(db, workspaceId);
+}
+
 async function refreshRun(workspaceId: string): Promise<string> {
 	const now = Date.now();
 	if (now - (checked.get(workspaceId) ?? 0) >= RUN_REFRESH_MS) {

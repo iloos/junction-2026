@@ -15,8 +15,10 @@
 		lines: Line[];
 		/** Renders one ingredient line (the kitchen passes a LineRow with its Why handler). */
 		row: Snippet<[Line]>;
+		/** The product the whole recipe replaces, said once for the group (not on every ingredient). */
+		replaces?: { name: string; because: string };
 	}
-	let { title, lines, row }: Props = $props();
+	let { title, lines, row, replaces }: Props = $props();
 
 	/** An ingredient is ready when it can be bought with a known quantity: not out, not short, not unknown. */
 	const ready = (l: Line) =>
@@ -39,6 +41,11 @@
 		</p>
 		<p class="mono text-body text-ink">{money(cents)}</p>
 	</header>
+	{#if replaces}
+		<p class="mt-0.5 text-meta leading-snug text-ink-2">
+			Replaces <span class="text-ink">{replaces.name}</span>: {replaces.because}
+		</p>
+	{/if}
 	<p class="mt-0.5 text-meta text-ink-2">
 		Needs all {n} ingredients.
 		<span class={ok === n ? 'text-ink' : 'font-medium text-signoff'}

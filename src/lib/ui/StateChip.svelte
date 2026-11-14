@@ -50,7 +50,7 @@
 	 */
 	const META = {
 		committed: {
-			label: 'Committed',
+			label: 'Ordered',
 			icon: Lock,
 			cls: 'font-mono text-micro tracking-normal text-ink-2 bg-well border-rule-strong'
 		},

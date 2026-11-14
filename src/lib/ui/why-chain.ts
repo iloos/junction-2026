@@ -55,7 +55,7 @@ function ruleNode(line: Line): ChainNode {
 		return {
 			label: 'Rule',
 			value: 'Ordered',
-			detail: 'Committed to the supplier.',
+			detail: 'Ordered from Valio.',
 			source: 'mandate'
 		};
 	const held = line.reasons.filter((r) => r !== 'UNKNOWN_REQUIRED');

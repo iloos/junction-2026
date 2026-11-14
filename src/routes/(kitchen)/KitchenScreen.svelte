@@ -2,6 +2,7 @@
 	import { onMount, tick, untrack } from 'svelte';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
+	import { goto } from '$app/navigation';
 	import { ChevronDown, Play, CloudOff, LoaderCircle, CircleX } from '@lucide/svelte';
 	import { KitchenStore } from '$lib/kitchen/kitchen.svelte';
 	import { KITCHENS, PRODUCTS, SEED } from '$lib/kitchen/catalog';
@@ -82,6 +83,14 @@
 		untrack(() => void k.load(linked).then(honourDeepLink));
 	});
 
+	/** Leave a link that didn't resolve: drop it from the address and open the kitchen's own plan. */
+	async function openOwn() {
+		await goto(resolve('/'), { replaceState: true });
+		k.linkMissing = null;
+		linkedSeen = null;
+		await k.load();
+	}
+
 	onMount(() => {
 		if (!new URL(location.href).searchParams.get('plan')) k.load().then(honourDeepLink);
 		const t = setInterval(() => k.tick(), 1000);
@@ -98,11 +107,8 @@
 		])
 	);
 	let toggled = $state<Record<string, boolean>>({});
-	// The first real outage opens by default; the chef's own toggles win after that.
-	const open = $derived.by(() => {
-		const first = view?.dishes.find((d) => d.rescue)?.id;
-		return first && toggled[first] === undefined ? { ...toggled, [first]: true } : toggled;
-	});
+	// Rescues start collapsed: one sentence on the row, the ranked options behind "See the options".
+	const open = $derived(toggled);
 
 	/** Phone zones (Decide / Plan / Order); desktop shows all three. Decide first while anything needs the chef. */
 	const ZONES = [
@@ -450,7 +456,28 @@
 	</div>
 {/if}
 
-{#if k.started === false}
+{#if k.started !== true && (k.opening || k.linkMissing)}
+	<!-- An approval link never lands on the start screen: wait for its plan, or say plainly it isn't here. -->
+	<main class="mx-auto max-w-[720px] px-4 py-14 md:px-6" aria-busy={!!k.opening}>
+		{#if k.opening}
+			<p class="flex items-center gap-2 text-body text-ink-2" role="status">
+				<LoaderCircle size={15} class="animate-spin text-accent" aria-hidden="true" />
+				Opening the linked plan…
+			</p>
+		{:else}
+			<h1 class="text-title font-semibold text-ink">This link's plan isn't in your sandbox</h1>
+			<p class="mt-2 max-w-[60ch] text-body leading-relaxed text-ink-2">
+				The link names a plan this browser's sandbox doesn't have. It may belong to another sandbox,
+				or the sandbox was started over since the link was made.
+			</p>
+			<button
+				type="button"
+				class="mt-5 inline-flex h-11 items-center rounded-md border border-rule-strong px-4 text-body font-medium text-ink hover:bg-well"
+				onclick={openOwn}>Open this kitchen's plan</button
+			>
+		{/if}
+	</main>
+{:else if k.started === false}
 	{@const kit = KITCHENS.find((x) => x.id === k.startKitchen) ?? KITCHENS[0]}
 	<main class="mx-auto max-w-[760px] px-4 py-10 md:px-6 md:py-14">
 		<p class="text-meta text-ink-3">
@@ -529,13 +556,13 @@
 		<div class="mt-6 h-64 animate-pulse rounded bg-well"></div>
 	</main>
 {:else}
-	{#snippet lineRow(l: Line, d: DishView)}
+	{#snippet lineRow(l: Line, d: DishView, inGroup = false)}
 		<LineRow
 			line={l}
 			name={names.get(l.productId) ?? l.productId}
 			approved={approvedIds.has(l.id)}
 			flash={k.flash.has(l.id)}
-			replaces={l.substituteFor
+			replaces={l.substituteFor && !inGroup
 				? {
 						name: names.get(l.substituteFor) ?? l.substituteFor,
 						because:
@@ -715,7 +742,9 @@
 											</p>{/if}
 										<p class="mt-0.5 text-micro text-ink-3 {isEvent ? '' : 'hidden'}">
 											{#if d.usual}normal week {num(d.usual.qty)} {d.usual.unit}{:else}<span
-													class="rounded-sm bg-well px-1 text-ink-2">event only</span
+													class="rounded-sm bg-well px-1 text-ink-2"
+													title="Bought only for this event: the kitchen's normal week has none of it"
+													>event only · not in a normal week</span
 												>{/if}
 										</p>
 									</div>
@@ -724,8 +753,21 @@
 									{#each groupLines(lines) as g (g.key)}
 										{#if g.make}
 											<li>
-												<StrategyCard title={d.nameFi} lines={g.lines}>
-													{#snippet row(l)}{@render lineRow(l, d)}{/snippet}
+												<StrategyCard
+													title={d.nameFi}
+													lines={g.lines}
+													replaces={g.lines[0]?.substituteFor
+														? {
+																name:
+																	names.get(g.lines[0].substituteFor) ?? g.lines[0].substituteFor,
+																because:
+																	d.outage === 'undeliverable'
+																		? "Valio can't deliver it"
+																		: 'out of stock at Valio'
+															}
+														: undefined}
+												>
+													{#snippet row(l)}{@render lineRow(l, d, true)}{/snippet}
 												</StrategyCard>
 											</li>
 										{:else}
@@ -745,6 +787,14 @@
 							{/if}
 							{#if d.rescue}
 								<div class="px-4 pb-3">
+									<p class="mb-1.5 text-body leading-snug text-ink">
+										<span class="font-medium"
+											>{d.outage === 'out'
+												? 'Out of stock at Valio.'
+												: "Valio can't deliver it."}</span
+										>
+										{d.rescue.summary}
+									</p>
 									<button
 										type="button"
 										class="flex w-full items-center gap-2 text-left text-meta font-medium text-ink-2 hover:text-ink"
@@ -756,7 +806,7 @@
 											class="transition-transform duration-200 {open[d.id] ? '' : '-rotate-90'}"
 											aria-hidden="true"
 										/>
-										{d.outage === 'out' ? 'Out of stock at Valio' : "Valio can't deliver it"} ·
+										{open[d.id] ? 'Hide the options' : 'See the options'} ·
 										{d.rescue.kind === 'make_in_house'
 											? 'make it in house'
 											: `${d.rescue.candidates.length} substitutes ranked`}
