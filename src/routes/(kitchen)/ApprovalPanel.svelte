@@ -4,7 +4,7 @@
 	import type { CommitNote } from '$lib/kitchen/kitchen.svelte';
 	import type { CommitRecord } from '$lib/kitchen/fixture-server';
 	import HoldButton from '$lib/ui/HoldButton.svelte';
-	import { money, num, shortHash, day } from '$lib/ui/format';
+	import { money, num, shortHash, day, storyTime } from '$lib/ui/format';
 	import { reasonShort } from '$lib/ui/reasons';
 
 	interface Props {
@@ -157,7 +157,7 @@
 			<dd class="mono text-right text-ink">v{approval.mandateVersion}</dd>
 			<dt class="text-ink-3">Delivery · expires</dt>
 			<dd class="text-right text-ink">
-				{day(plan.deliverBy)} · {day(approval.expiresAt.slice(0, 10))} 17:00
+				{day(plan.deliverBy)} · {storyTime(approval.expiresAt)}
 			</dd>
 		</dl>
 		{#if pending}

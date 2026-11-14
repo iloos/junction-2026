@@ -78,10 +78,13 @@ export function availText(o?: Offer): string {
 
 /** "Joulukinkku (Christmas ham)" → Finnish and English names; "Riisipuuro (rice porridge): rice" keeps the part. */
 function names(label: string): { nameFi: string; name: string } {
-	const m = label.match(/^([^(]+?)\s*\(([^)]+)\)\s*(?::\s*(.+))?$/);
+	// "Graavilohi (cured salmon), cured in-house" and "Riisipuuro (rice porridge): rice" keep their tail.
+	const m = label.match(/^([^(]+?)\s*\(([^)]+)\)\s*(.*)$/);
 	if (!m) return { nameFi: label, name: label };
-	const part = m[3] ? `: ${m[3]}` : '';
-	return { nameFi: `${m[1]}${part}`, name: `${m[2]}${part}` };
+	const tail = m[3].replace(/^[:,]\s*/, '');
+	const part = tail ? `: ${tail}` : '';
+	const en = m[2].charAt(0).toUpperCase() + m[2].slice(1);
+	return { nameFi: m[3].startsWith(':') ? `${m[1]}${part}` : m[1], name: `${en}${part}` };
 }
 
 const isOpen = (l: Line) => l.state === 'eligible' || l.state === 'held';

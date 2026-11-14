@@ -15,6 +15,9 @@ import { rulesFor, type PresetId } from '$lib/kitchen/fixture-plan';
 import type { CommitRecord, FixtureSnapshot } from '$lib/kitchen/fixture-server';
 import { buildLiveView, type ProductFacts, type SubstitutesOut } from '$lib/kitchen/live-view';
 import seed from '../../../../fixtures/seeds/christmas-buffet-140.json';
+import { scenarioClock } from '$lib/core/scenario';
+import { currentRun, currentRunStartedAt } from '$lib/server/demo/run';
+import { resetDemo } from '$lib/server/demo/reset';
 
 const EVENT_ID = 'event-xmas-140';
 /** The palvikinkku the ham rescue relies on (13 of 15 in stock): the contention preset takes 4 of them. */
@@ -29,9 +32,20 @@ const state: { kitchenId: string; preset: PresetId; contention: boolean } = {
 const chef = () => contextFor('chef', 'kitchen-ui', 'kitchen', env);
 const agent = () => contextFor('kitchen_agent', 'kitchen-agent', 'kitchen', env);
 
+/**
+ * One kitchen request at a time. The snapshot plans and ranks with several tool calls against one plan version;
+ * a chef edit landing in between would make those calls stale, so screen requests queue behind each other.
+ */
+let queue: Promise<unknown> = Promise.resolve();
+function serial<T>(fn: () => Promise<T>): Promise<T> {
+	const next = queue.then(fn, fn);
+	queue = next.catch(() => undefined);
+	return next;
+}
+
 /** One tool call as the chef, through the shared gate. */
 export function callTool(name: string, input: unknown): Promise<Served> {
-	return serveTool(name, chef(), input, handlers);
+	return serial(() => serveTool(name, chef(), input, handlers));
 }
 
 async function must<N extends ToolName>(
@@ -52,12 +66,19 @@ async function ensurePlan() {
 		kitchenId: state.kitchenId,
 		eventId: EVENT_ID
 	})) as PlanOut;
-	for (;;) {
+	// Each outage gets one proposal attempt: a kitchen whose rules reject every proposal must not loop.
+	const tried = new Set<string>();
+	for (let i = 0; i < 8; i++) {
 		const covered = new Set(plan.lines.map((l) => l.substituteFor).filter(Boolean));
 		const out = plan.lines.find(
-			(l) => l.state === 'unorderable' && !l.substituteFor && !covered.has(l.productId)
+			(l) =>
+				l.state === 'unorderable' &&
+				!l.substituteFor &&
+				!covered.has(l.productId) &&
+				!tried.has(l.id)
 		);
 		if (!out) return plan;
+		tried.add(out.id);
 		const r = (await must(
 			'find_substitutes',
 			{ planId: plan.id, version: plan.version, lineId: out.id },
@@ -66,6 +87,7 @@ async function ensurePlan() {
 		if (r.plan.version === plan.version) return plan; // nothing proposed: stop instead of looping
 		plan = r.plan;
 	}
+	return plan;
 }
 
 function presetInput(kitchen: Kitchen) {
@@ -77,7 +99,11 @@ function presetInput(kitchen: Kitchen) {
 	};
 }
 
-export async function snapshot(): Promise<FixtureSnapshot> {
+export function snapshot(): Promise<FixtureSnapshot> {
+	return serial(buildSnapshot);
+}
+
+async function buildSnapshot(): Promise<FixtureSnapshot> {
 	const ctx = chef();
 	const planned = await ensurePlan();
 	const b = await createServerPorts();
@@ -181,7 +207,11 @@ export async function snapshot(): Promise<FixtureSnapshot> {
 		rules,
 		preset: state.preset,
 		contention: state.contention,
-		mandateVersion: kitchen.mandate.version
+		mandateVersion: kitchen.mandate.version,
+		clock: {
+			nowIso: scenarioClock(currentRunStartedAt(ctx.workspaceId)).at(Date.now()).toISOString(),
+			runId: currentRun(ctx.workspaceId)
+		}
 	};
 }
 
@@ -200,13 +230,27 @@ async function requote() {
 	});
 }
 
-export async function scenario(action: string, value: unknown) {
+export function scenario(action: string, value: unknown): Promise<FixtureSnapshot> {
+	return serial(() => applyScenario(action, value));
+}
+
+async function applyScenario(action: string, value: unknown): Promise<FixtureSnapshot> {
 	const b = await createServerPorts();
 	if (action === 'preset' && (value === 'kitchen' || value === 'price' || value === 'finnish'))
 		state.preset = value;
 	else if (action === 'kitchen' && typeof value === 'string') {
+		const before = { ...state };
 		state.kitchenId = value;
 		state.preset = 'kitchen';
+		try {
+			return await buildSnapshot();
+		} catch (e) {
+			// A kitchen whose plan can't be built must not strand the screen: go back and say why.
+			Object.assign(state, before);
+			throw new Error(
+				`could not open ${value}: ${e instanceof Error ? e.message : String(e)}; staying on ${before.kitchenId}`
+			);
+		}
 	} else if (action === 'contention') {
 		state.contention = Boolean(value);
 		b.overlay.clear();
@@ -218,9 +262,12 @@ export async function scenario(action: string, value: unknown) {
 			});
 		await requote();
 	} else if (action === 'reset') {
+		// A fresh run server-side (9c): new plan, no orders or spend; the old run stays in the op log.
+		await resetDemo();
+		state.kitchenId = 'k-hotel';
 		state.preset = 'kitchen';
 		state.contention = false;
 		b.overlay.clear();
 	} else throw new Error(`unknown scenario action ${action}`);
-	return snapshot();
+	return buildSnapshot();
 }

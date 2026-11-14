@@ -44,6 +44,12 @@ export class KitchenStore {
 	lastCommit = $state.raw<CommitNote | null>(null);
 	/** Live unless the server can't be reached (then the labelled offline fixture). */
 	mode = $state<ApiMode>(apiMode());
+	/** Scenario "now" (Helsinki story time), ticking. */
+	now = $state.raw<Date | null>(null);
+	/** Plan version when this screen first saw the run: older voided approvals are history, not news. */
+	firstVersion = $state<number | null>(null);
+	runId = $state<string | null>(null);
+	#clockBase: { scenarioMs: number; wallMs: number } | null = null;
 	#seq = 0;
 	#flashTimer: ReturnType<typeof setTimeout> | undefined;
 
@@ -195,16 +201,46 @@ export class KitchenStore {
 		try {
 			await fn();
 		} catch (e) {
-			if (e instanceof ToolError) {
-				this.error = e.error;
-				this.#log('error', `${e.error.code}: ${e.error.message}`);
-			} else throw e;
-		} finally {
-			this.snap = await snapshot();
+			this.#fail(e);
+		}
+		try {
+			const next = await snapshot();
+			this.snap = next;
+			this.#clockAt(next);
 			this.mode = apiMode();
-			this.#flashChanges(before, this.snap.plan.lines);
+			this.#flashChanges(before, next.plan.lines);
+		} catch (e) {
+			// Keep showing the last server state; never substitute fixture data for a failed server read.
+			this.#fail(e);
+		} finally {
 			this.busy = false;
 		}
+	}
+
+	#fail(e: unknown) {
+		if (e instanceof ToolError) {
+			this.error = e.error;
+			this.#log('error', `${e.error.code}: ${e.error.message}`);
+		} else {
+			const message = e instanceof Error ? e.message : String(e);
+			this.error = { code: 'PROVIDER_UNAVAILABLE', message, retryable: true };
+			this.#log('error', message);
+		}
+	}
+
+	/** The scenario clock: the server's reading at snapshot time, then advanced by the wall clock. */
+	#clockAt(s: FixtureSnapshot) {
+		if (!s.clock) return;
+		this.#clockBase = { scenarioMs: new Date(s.clock.nowIso).getTime(), wallMs: Date.now() };
+		if (this.firstVersion === null || s.clock.runId !== this.runId)
+			this.firstVersion = s.plan.version;
+		this.runId = s.clock.runId;
+		this.tick();
+	}
+
+	tick() {
+		if (this.#clockBase)
+			this.now = new Date(this.#clockBase.scenarioMs + (Date.now() - this.#clockBase.wallMs));
 	}
 
 	#flashChanges(before: Line[], after: Line[]) {

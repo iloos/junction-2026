@@ -10,7 +10,7 @@
 	import StateChip from '$lib/ui/StateChip.svelte';
 	import GramsStepper from '$lib/ui/GramsStepper.svelte';
 	import WhyDrawer from '$lib/ui/WhyDrawer.svelte';
-	import { day, fixed, money, moneyDelta, num } from '$lib/ui/format';
+	import { day, fixed, money, moneyDelta, num, storyTime } from '$lib/ui/format';
 	import { reasonShort } from '$lib/ui/reasons';
 	import RescuePanel from './RescuePanel.svelte';
 	import RulesPanel from './RulesPanel.svelte';
@@ -19,10 +19,17 @@
 	const k = new KitchenStore();
 	onMount(() => {
 		k.load();
+		const t = setInterval(() => k.tick(), 1000);
+		return () => clearInterval(t);
 	});
 
 	const names = new Map(Object.values(PRODUCTS).map((p) => [p.productId, p.name]));
-	let open = $state<Record<string, boolean>>({ ham: true });
+	let toggled = $state<Record<string, boolean>>({});
+	// The first real outage opens by default; the chef's own toggles win after that.
+	const open = $derived.by(() => {
+		const first = view?.dishes.find((d) => d.rescue)?.id;
+		return first && toggled[first] === undefined ? { ...toggled, [first]: true } : toggled;
+	});
 
 	// The phone's sticky "needs you" bar steps aside once the approval card itself is on screen.
 	let approvalInView = $state(false);
@@ -117,7 +124,9 @@
 			</select>
 		</label>
 		<div class="ml-auto flex items-center gap-4 text-[12.5px] text-ink-2">
-			<span><span class="mono text-ink">Mon 7 Dec 21:40</span> · simulated clock</span>
+			<span
+				><span class="mono text-ink">{k.now ? storyTime(k.now) : '—'}</span> · simulated clock</span
+			>
 			<button
 				type="button"
 				class="inline-flex items-center gap-1 hover:text-ink"
@@ -291,7 +300,7 @@
 								</div>
 								<ul class="col-span-2 space-y-2 lg:col-span-1">
 									{#each lines as l (l.id)}
-										{@const rejected = l.state === 'rejected'}
+										{@const rejected = l.state === 'rejected' || l.state === 'unorderable'}
 										{@const sub = !!l.substituteFor}
 										<li
 											class="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3 gap-y-1 rounded-[5px] lg:grid-cols-[minmax(0,1fr)_84px_136px_28px] {k.flash.has(
@@ -355,7 +364,7 @@
 										type="button"
 										class="flex w-full items-center gap-2 text-left text-[12.5px] font-medium text-ink-2 hover:text-ink"
 										aria-expanded={!!open[d.id]}
-										onclick={() => (open = { ...open, [d.id]: !open[d.id] })}
+										onclick={() => (toggled = { ...toggled, [d.id]: !open[d.id] })}
 									>
 										<ChevronDown
 											size={14}
@@ -394,7 +403,10 @@
 			<ApprovalPanel
 				{plan}
 				{approval}
-				lastInvalidated={snap.lastInvalidated}
+				lastInvalidated={snap.lastInvalidated &&
+				snap.lastInvalidated.planVersion >= (k.firstVersion ?? Infinity)
+					? snap.lastInvalidated
+					: null}
 				orders={snap.orders}
 				lastCommit={k.lastCommit}
 				{names}

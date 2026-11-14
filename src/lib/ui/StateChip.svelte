@@ -8,7 +8,8 @@
 		Truck,
 		CircleHelp,
 		Lock,
-		CircleDashed
+		CircleDashed,
+		PackageX
 	} from '@lucide/svelte';
 
 	interface Props {
@@ -70,6 +71,7 @@
 	} as const;
 
 	const m = $derived(META[kind]);
+	const short = $derived(reasons.includes('INSUFFICIENT_STOCK'));
 	const unknown = $derived(reasons.includes('unknown') || reasons.includes('UNKNOWN_REQUIRED'));
 </script>
 
@@ -87,6 +89,15 @@
 		>
 			<CircleHelp size={13} strokeWidth={2.2} aria-hidden="true" />
 			Qty unknown
+		</span>
+	{/if}
+	{#if short && state !== 'committed'}
+		<span
+			class="inline-flex h-6 items-center gap-1 rounded-[5px] border border-out/40 px-1.5 text-[12px] leading-none whitespace-nowrap text-out"
+			title="Not enough in stock for this quantity at the last quote. Held until covered or replaced."
+		>
+			<PackageX size={13} strokeWidth={2.2} aria-hidden="true" />
+			Short stock
 		</span>
 	{/if}
 </span>
