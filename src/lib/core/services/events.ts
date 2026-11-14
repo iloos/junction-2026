@@ -31,6 +31,7 @@ import {
 	seedEntryFor,
 	seedNeedQty,
 	sizeDirect,
+	contentValue,
 	sizeFor,
 	type EventSeed,
 	type MenuNeed
@@ -609,10 +610,24 @@ async function prepareEdit(
 				detail: { relax: input.patch.relax }
 			});
 		const productId = input.patch.productId ?? line.productId;
-		const product = (await ports.catalog.get([productId])).get(productId);
+		const got = await ports.catalog.get([productId, line.productId]);
+		const product = got.get(productId);
 		if (!product) return err('NOT_FOUND', `product ${productId}`);
+		// A new product without a quantity buys what the old line delivered, in the new product's packs (4 × 4.3 kg of
+		// eggs is 17.3 kg, so 2 × 12.3 kg, not 4); a quantity given wins. When a pack's content is unknown, the count stays.
+		const resized =
+			input.patch.qty === undefined && productId !== line.productId
+				? resizeTo(
+						got.get(line.productId),
+						product,
+						line.qty.value,
+						plan.needs.find((n) => n.id === line.needId)
+					)
+				: null;
 		const qty =
-			input.patch.qty !== undefined ? toLot(input.patch.qty, product.salesUnit, product) : line.qty;
+			input.patch.qty !== undefined
+				? toLot(input.patch.qty, product.salesUnit, product)
+				: (resized ?? line.qty);
 		return ok({
 			plan,
 			kitchen,
@@ -770,4 +785,28 @@ export async function explainLine(
 		source: 'mandate'
 	});
 	return ok({ steps });
+}
+
+/**
+ * The new product's sales quantity for what `units` of the old one delivered physically, in the need's unit when it
+ * has one (kg, l) or else the old pack's own unit; null when either content is unknown.
+ */
+function resizeTo(
+	old: Product | undefined,
+	next: Product,
+	units: number,
+	need: Need | undefined
+): Line['qty'] | null {
+	if (!old) return null;
+	const unit =
+		need && (need.amount.unit === 'kg' || need.amount.unit === 'l')
+			? need.amount.unit
+			: old.salesUnit === 'KG'
+				? 'kg'
+				: old.netPerSalesUnit?.value.unit;
+	if (!unit || unit === 'pcs') return null;
+	const per = old.salesUnit === 'KG' ? (unit === 'kg' ? 1 : null) : contentValue(old, unit);
+	if (!per) return null;
+	const sized = sizeDirect(next, { value: units * per, unit });
+	return sized ? { value: sized.value, unit: sized.unit } : null;
 }
