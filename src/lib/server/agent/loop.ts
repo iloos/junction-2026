@@ -101,6 +101,8 @@ export async function runAgent(o: {
 	onEvent?: (e: ServerEvent) => void;
 	maxSteps?: number;
 	deadlineMs?: number;
+	/** Ends the run as `deadline` when it aborts, whatever the clock says (tests; an outer expiry). */
+	deadlineSignal?: AbortSignal;
 	/** "Stop agent": aborting it stops the run. Closing a response stream is not a cancel. */
 	signal?: AbortSignal;
 	intent?: Intent;
@@ -133,10 +135,19 @@ export async function runAgent(o: {
 	const history: PlannerStep[] = [];
 
 	// One internal signal for both stops, so the planner can be released the moment either fires.
+	// The deadline is a flag set when the timer fires, not only a clock comparison: a timer may fire a
+	// moment before Date.now() reaches the deadline, and the run must then still read as `deadline`.
 	const ctl = new AbortController();
+	let pastDeadline = false;
+	const expire = () => {
+		pastDeadline = true;
+		ctl.abort();
+	};
 	const stopReason = (): 'cancelled' | 'deadline' | null =>
-		o.signal?.aborted ? 'cancelled' : Date.now() >= deadline ? 'deadline' : null;
-	const timer = setTimeout(() => ctl.abort(), Math.max(0, deadline - Date.now()));
+		o.signal?.aborted ? 'cancelled' : pastDeadline || Date.now() >= deadline ? 'deadline' : null;
+	const timer = setTimeout(expire, Math.max(0, deadline - Date.now()));
+	o.deadlineSignal?.addEventListener('abort', expire, { once: true });
+	if (o.deadlineSignal?.aborted) expire();
 	const onCancel = () => ctl.abort();
 	o.signal?.addEventListener('abort', onCancel, { once: true });
 	if (o.signal?.aborted) ctl.abort();
@@ -150,6 +161,7 @@ export async function runAgent(o: {
 	const finish = async (stopped: StopReason, plannerText: string): Promise<AgentRun> => {
 		let plannerSummary = plannerText;
 		clearTimeout(timer);
+		o.deadlineSignal?.removeEventListener('abort', expire);
 		o.signal?.removeEventListener('abort', onCancel);
 		let outcome: GoalOutcome | undefined;
 		try {

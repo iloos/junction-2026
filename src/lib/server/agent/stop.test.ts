@@ -34,18 +34,24 @@ const search: Planner = async () => ({
 });
 
 describe('deadline and cancel (finding C)', () => {
+	// Deadlines are driven through `deadlineSignal`, so these tests never depend on timer precision or load.
+	const longDeadline = 60_000;
+
 	it('a slow planner past the deadline dispatches zero tools', async () => {
 		const { h, calls } = counted();
-		const slow: Planner = async (s) => {
-			await sleep(40);
-			return search(s, new AbortController().signal);
+		const deadline = new AbortController();
+		const slow: Planner = async (s, signal) => {
+			deadline.abort(); // the deadline passes while the planner is still thinking
+			await new Promise((r) => setTimeout(r, 0));
+			return search(s, signal);
 		};
 		const run = await runAgent({
 			goal: 'x',
 			ctx: contextFor('kitchen_agent', 't', 'agent'),
 			handlers: h,
 			planner: slow,
-			deadlineMs: 5
+			deadlineMs: longDeadline,
+			deadlineSignal: deadline.signal
 		});
 		expect(run.stopped).toBe('deadline');
 		expect(run.steps).toHaveLength(0);
@@ -54,27 +60,51 @@ describe('deadline and cancel (finding C)', () => {
 
 	it('a planner that never answers is released at the deadline', async () => {
 		const { h, calls } = counted();
-		const t0 = Date.now();
+		const deadline = new AbortController();
 		const run = await runAgent({
 			goal: 'x',
 			ctx: contextFor('kitchen_agent', 't', 'agent'),
 			handlers: h,
-			planner: () => new Promise(() => {}),
-			deadlineMs: 20
+			planner: () => {
+				deadline.abort();
+				return new Promise(() => {});
+			},
+			deadlineMs: longDeadline,
+			deadlineSignal: deadline.signal
 		});
 		expect(run.stopped).toBe('deadline');
-		expect(Date.now() - t0).toBeLessThan(1000);
 		expect(calls).toEqual([]);
 	});
 
+	it('the wall-clock deadline also stops a planner that never answers', async () => {
+		const run = await runAgent({
+			goal: 'x',
+			ctx: contextFor('kitchen_agent', 't', 'agent'),
+			handlers: counted().h,
+			planner: () => new Promise(() => {}),
+			deadlineMs: 20
+		});
+		// Whether the timer or the clock check sees it first, it is a deadline, never a planner error.
+		expect(run.stopped).toBe('deadline');
+	});
+
 	it('a slow tool finishes and is recorded, then nothing else starts', async () => {
-		const { h, calls } = counted(stubHandlers, { search_products: 60 });
+		const deadline = new AbortController();
+		const { h: base, calls } = counted();
+		const h = {
+			...base,
+			search_products: async (ctx, input) => {
+				deadline.abort(); // the deadline passes while the tool runs
+				return base.search_products(ctx, input);
+			}
+		} as ToolHandlers;
 		const run = await runAgent({
 			goal: 'x',
 			ctx: contextFor('kitchen_agent', 't', 'agent'),
 			handlers: h,
 			planner: search,
-			deadlineMs: 30
+			deadlineMs: longDeadline,
+			deadlineSignal: deadline.signal
 		});
 		expect(run.stopped).toBe('deadline');
 		expect(calls).toEqual(['search_products']);
