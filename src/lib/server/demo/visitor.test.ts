@@ -72,7 +72,7 @@ describe('visitor workspace', () => {
 		expect(signed.startsWith(`${target}.`)).toBe(true);
 	}, 30_000);
 
-	it('defaults a signed-in presenter to the stage; dev keeps the stage as before', async () => {
+	it('defaults a signed-in presenter to the stage; dev starts in its own sandbox', async () => {
 		const env = { MANDATE_KEY_CHEF: 'chef-key-0123456789abcdef' };
 		const p = browser();
 		p.set(PRESENTER_COOKIE, presenterToken(env.MANDATE_KEY_CHEF, env)!, {} as never);
@@ -81,7 +81,17 @@ describe('visitor workspace', () => {
 			kind: 'stage',
 			presenter: true
 		});
-		expect((await visitorWorkspace({ cookies: browser() }, {}, true)).workspaceId).toBe('ws-demo');
+		// Dev servers share the deployed database: their default must not be prod's stage.
+		const d = browser();
+		expect((await visitorWorkspace({ cookies: d }, {}, true)).kind).toBe('own');
+		// ...but dev keeps presenter rights, so the stage is one link away.
+		const toStage = visitorWorkspace(
+			{ cookies: d, url: new URL('http://x/ops?ws=ws-demo') },
+			{},
+			true,
+			{ follow: true }
+		);
+		expect((await toStage).workspaceId).toBe('ws-demo');
 		// A stale stage room falls back to the visitor's own sandbox once the session is gone.
 		const q = browser();
 		q.set(ROOM_COOKIE, 'ws-demo', {} as never);

@@ -54,6 +54,9 @@ export class OpsStream {
 	heldSince: Record<string, string> = $state.raw({});
 	/** Agent runs, newest first; traces are live only (they have no seq and no catch-up). */
 	traces: TraceRun[] = $state.raw([]);
+	/** Ops the reducer refused (stale writes from another run or process), shown as one muted line. */
+	refused = $state(0);
+	lastRefused: string | null = $state(null);
 	/** Wall ms the current run started, from the server (`ready` and `run` events): the clock's anchor. */
 	runStartedAt: number | null = $state(null);
 
@@ -221,13 +224,12 @@ export class OpsStream {
 				state = r.value;
 				batchAt = e.envelope.at;
 				added.push({ kind: 'op', seq: e.seq, envelope: e.envelope });
-			} else
-				added.push({
-					kind: 'op',
-					seq: e.seq,
-					envelope: e.envelope,
-					rejected: `${r.error.code}: ${r.error.message}`
-				});
+			} else {
+				// A write the board can't apply even after a rebuild (another run, a lagging process): counted,
+				// not listed, so stale writes never lead the feed.
+				this.refused += 1;
+				this.lastRefused = `${r.error.code}: ${r.error.message}`;
+			}
 		}
 		if (refused || !added.length) return;
 		// One pass per batch (a frame's worth of events): first-held time = the batch's last op time.

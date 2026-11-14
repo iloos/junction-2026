@@ -54,6 +54,10 @@
 					.toISOString()
 	);
 
+	/** The op log flows with the page (no scroll inside a scroll); the newest LOG_SHOWN, the rest on request. */
+	const LOG_SHOWN = 15;
+	let logAll = $state(false);
+
 	const kitchenName = (id: string) => data.kitchens.find((k) => k.id === id)?.name ?? id;
 	const plans = $derived(Object.values(stream.state.plans));
 
@@ -316,9 +320,13 @@
 				<form method="POST" action="?/signOut" use:enhance class="presenter">
 					<button>Presenter: sign out</button>
 				</form>
-			{:else if !data.presenter}
+			{:else if !data.presenter && data.showPresenterSignIn}
 				<details class="presenter">
-					<summary>Presenter</summary>
+					<summary>Presenter sign-in (stage operator only)</summary>
+					<p class="keynote">
+						For whoever runs the stage demo: their chef or approver key unlocks Run, Stop and Start
+						over on the stage. Visitors don't need it.
+					</p>
 					<form method="POST" action="?/signIn" use:enhance>
 						<label
 							><span>Chef or approver key</span>
@@ -458,8 +466,13 @@
 
 			<section class="log" aria-label="Op log" aria-live="polite">
 				<h2>What just happened</h2>
+				{#if stream.refused}
+					<p class="stale sys-only" title={stream.lastRefused ?? ''}>
+						{stream.refused} stale write{stream.refused === 1 ? '' : 's'} refused (another run)
+					</p>
+				{/if}
 				<ol>
-					{#each stream.log as e (e.seq)}
+					{#each logAll ? stream.log : stream.log.slice(0, LOG_SHOWN) as e (e.seq)}
 						{#if e.kind === 'sim'}
 							<li class="sim" class:fresh={e.seq === stream.fresh}>
 								<div class="when">
@@ -497,6 +510,11 @@
 						{/if}
 					{/each}
 				</ol>
+				{#if stream.log.length > LOG_SHOWN}
+					<button class="more" onclick={() => (logAll = !logAll)}
+						>{logAll ? 'Show the latest only' : `Show all ${stream.log.length}`}</button
+					>
+				{/if}
 			</section>
 		</main>
 	{/if}
@@ -903,7 +921,7 @@
 		display: flex;
 		flex-direction: column;
 		min-height: 0;
-		max-height: calc(100dvh - 210px);
+		align-self: start;
 	}
 	.log h2 {
 		margin: 0 20px 10px;
@@ -915,7 +933,17 @@
 		list-style: none;
 		margin: 0;
 		padding: 0;
-		overflow-y: auto;
+	}
+	.log .more {
+		margin: 8px 20px 14px;
+		align-self: flex-start;
+		background: transparent;
+		border: 1px solid var(--line);
+		color: var(--muted);
+		border-radius: 999px;
+		padding: 4px 14px;
+		font: inherit;
+		cursor: pointer;
 	}
 	li {
 		display: grid;
@@ -1086,5 +1114,10 @@
 		li.fresh {
 			animation: none;
 		}
+	}
+	.stale {
+		margin: 0 20px 8px;
+		color: var(--faint);
+		font-size: 15px;
 	}
 </style>

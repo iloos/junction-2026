@@ -22,6 +22,9 @@ const RUN_CHECK_MS = 3_000;
  *   so EventSource's automatic reconnect resumes from Last-Event-ID.
  * - `…&mode=poll` → JSON `{ events, last }` for clients that fall back to polling.
  */
+/** The run an event belongs to. */
+const runOfEvent = (e: ServerEvent) => (e.kind === 'op' ? e.envelope.runId : e.runId);
+
 /** The highest seq among `events`, or `from` if none is higher. */
 const highestSeq = (events: ServerEvent[], from: number) =>
 	events.reduce((m, e) => ('seq' in e ? Math.max(m, e.seq) : m), from);
@@ -87,6 +90,9 @@ export const GET: RequestHandler = async ({ url, request, cookies }) => {
 				}
 			};
 			const send = (e: ServerEvent) => {
+				// Only the followed run: a write to another run of this workspace (an old run, or another
+				// process that hasn't caught up with a reset yet) is not part of what this client shows.
+				if (followRun && runOfEvent(e) !== runId) return;
 				if ('seq' in e) {
 					if (e.seq <= last) return;
 					last = e.seq;
@@ -103,13 +109,19 @@ export const GET: RequestHandler = async ({ url, request, cookies }) => {
 				HEARTBEAT_MS
 			);
 			// A reset elsewhere: tell the client to clear the stage for the new run.
-			const runCheck = setInterval(() => {
-				if (!followRun || currentRun(workspaceId) === runId) return;
-				runId = currentRun(workspaceId);
+			const runCheck = setInterval(async () => {
+				if (!followRun) return;
+				// Re-reads the newest run from the database at most every few seconds (demo/reset.ts), so a
+				// reset made by another process reaches this stream too.
+				const now = await ensureRunLoaded(workspaceId).catch(() => currentRun(workspaceId));
+				if (now === runId) return;
+				runId = now;
 				write(`event: run
 data: ${JSON.stringify({ workspaceId, runId, startedAt: startedAt() })}
 
 `);
+				// Ops of the new run that arrived before the switch were held back above: send them now.
+				for (const e of await catchUpAll(last).catch(() => [])) send(e);
 			}, RUN_CHECK_MS);
 			cleanup = () => {
 				if (closed) return;

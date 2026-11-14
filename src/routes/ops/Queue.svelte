@@ -227,11 +227,11 @@
 	.row {
 		--tone: var(--act);
 		display: grid;
-		grid-template-columns: 120px minmax(220px, 1.6fr) minmax(160px, 1.2fr) 170px 120px 64px minmax(
-				180px,
-				1.2fr
-			);
-		gap: 0 16px;
+		/* Every column can shrink and wrap, so the table always fits its panel (no clipped last column). */
+		grid-template-columns:
+			minmax(0, 0.7fr) minmax(0, 1.6fr) minmax(0, 1.1fr) minmax(0, 1fr) minmax(0, 0.8fr)
+			minmax(0, 0.45fr) minmax(0, 1.1fr);
+		gap: 0 14px;
 		align-items: baseline;
 		padding: 11px 20px 11px 16px;
 		border-top: 1px solid var(--line);

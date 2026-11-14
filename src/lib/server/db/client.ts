@@ -3,18 +3,48 @@ import postgres from 'postgres';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import { migrate } from 'drizzle-orm/postgres-js/migrator';
 import { env } from '$env/dynamic/private';
+import { dev } from '$app/environment';
 import * as schema from './schema';
 
 export type DbMode = 'postgres' | 'fixture';
 
 /**
- * No DATABASE_URL means fixture mode: the app runs without Postgres. Tests always run in fixture mode,
- * because SvelteKit fills $env/dynamic/private from .env and would point them at the shared Aiven DB;
- * an opt-in Postgres test sets MANDATE_TEST_PG=1 and uses its own workspace and run.
+ * Which database a process uses, from what it is and its env:
+ * - No DATABASE_URL: fixture mode (PGlite in memory).
+ * - Tests: fixture mode, because SvelteKit fills $env/dynamic/private from .env and would point them at the
+ *   shared Aiven database; the opt-in Postgres tests set MANDATE_TEST_PG=1.
+ * - A dev server (vite dev): fixture mode unless DEV_USE_REMOTE_DB=1. Every worktree's .env names the deployed
+ *   database, and a dev server writing it races the deployed app on the same workspaces and runs.
+ * - The production build and the node scripts (db:migrate, db:seed) use DATABASE_URL as given.
  */
+export function chooseDbMode(o: {
+	url: string | undefined;
+	dev: boolean;
+	vitest: boolean;
+	testPg: boolean;
+	devUseRemote: boolean;
+}): DbMode {
+	if (o.vitest) return o.testPg && o.url ? 'postgres' : 'fixture';
+	if (!o.url) return 'fixture';
+	if (o.dev && !o.devUseRemote) return 'fixture';
+	return 'postgres';
+}
+
+let devNoticeShown = false;
+
 export function dbMode(): DbMode {
-	if (process.env.VITEST && process.env.MANDATE_TEST_PG !== '1') return 'fixture';
-	return env.DATABASE_URL ? 'postgres' : 'fixture';
+	const mode = chooseDbMode({
+		url: env.DATABASE_URL,
+		dev,
+		vitest: !!process.env.VITEST,
+		testPg: process.env.MANDATE_TEST_PG === '1',
+		devUseRemote: env.DEV_USE_REMOTE_DB === '1'
+	});
+	if (dev && !process.env.VITEST && env.DATABASE_URL && mode === 'fixture' && !devNoticeShown) {
+		devNoticeShown = true;
+		console.warn('dev: using in-memory Postgres (set DEV_USE_REMOTE_DB=1 to use DATABASE_URL)');
+	}
+	return mode;
 }
 
 /**
@@ -74,7 +104,10 @@ export function sql(): Sql {
 			'Postgres is off in the ordinary test suite (set MANDATE_TEST_PG=1 for test:pg).'
 		);
 	const url = env.DATABASE_URL;
-	if (!url) throw new Error('DATABASE_URL is not set (fixture mode has no Postgres).');
+	if (!url || dbMode() === 'fixture')
+		throw new Error(
+			'This process is in fixture mode (no DATABASE_URL, or a dev server): no Postgres.'
+		);
 	return (g.__mandateSql ??= connect(url));
 }
 

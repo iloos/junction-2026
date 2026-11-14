@@ -24,7 +24,10 @@ async function knowRun(workspaceId: string): Promise<void> {
 	await loadCurrentRun(db, workspaceId);
 }
 
-const g = globalThis as typeof globalThis & { __mandateRunLoads?: Map<string, Promise<string>> };
+const g = globalThis as typeof globalThis & {
+	__mandateRunLoads?: Map<string, Promise<string>>;
+	__mandateRunChecked?: Map<string, number>;
+};
 const loads = (g.__mandateRunLoads ??= new Map());
 
 /**
@@ -51,9 +54,28 @@ export function ensureRunLoaded(
 		})();
 		p.catch(() => loads.delete(workspaceId));
 		loads.set(workspaceId, p);
+		checked.set(workspaceId, Date.now());
 		return p;
 	}
-	return p.then(() => currentRun(workspaceId));
+	return p.then(() => refreshRun(workspaceId));
+}
+
+/**
+ * How often a process re-reads a workspace's newest run. The runs table is the authority: another process (a
+ * second instance, staging, a dev server on the same database) may have started a fresh run, and every writer
+ * here must follow it within this window instead of writing on to the old one.
+ */
+const RUN_REFRESH_MS = 5_000;
+const checked = (g.__mandateRunChecked ??= new Map<string, number>());
+
+async function refreshRun(workspaceId: string): Promise<string> {
+	const now = Date.now();
+	if (now - (checked.get(workspaceId) ?? 0) >= RUN_REFRESH_MS) {
+		checked.set(workspaceId, now);
+		const { db } = await ports();
+		await loadCurrentRun(db, workspaceId);
+	}
+	return currentRun(workspaceId);
 }
 
 /**
