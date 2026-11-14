@@ -182,13 +182,25 @@ export async function understand(
 		u = { kind: 'read', ...(u.question ? { question: u.question } : {}) };
 		guard = 'a question stays a read';
 	}
+	// A changed amount per guest stays a change to the dish ("salmon to 160 g per guest" is never an order for
+	// 160 g of salmon), and a stated order is never read away as small talk or a question.
+	if (rules.kind === 'adjust' && u.kind !== 'adjust')
+		return byRules('a dish change stays a dish change');
+	if (rules.kind === 'order' && rules.amount && u.kind !== 'order')
+		return byRules('a stated order stays an order');
 	let goal = words;
 	if (u.kind === 'order' && u.items?.length) {
 		// A stated amount the model left out is never dropped: then the chef's own words run.
 		const lost =
 			rules.kind === 'order' && rules.amount && u.items.some((i) => i.amount === undefined);
 		if (lost) guard = 'the model left out a stated amount';
-		else goal = u.items.map(itemWords).join(' and ');
+		else {
+			// One order: the products joined, the delivery day said once at the end.
+			const date = u.items.find((i) => i.date)?.date;
+			goal = [u.items.map((i) => itemWords({ ...i, date: undefined })).join(' and '), date ?? '']
+				.join(' ')
+				.trim();
+		}
 	}
 	return {
 		understanding: u,

@@ -83,6 +83,26 @@ describe('the rules guard around the model', () => {
 		expect(u.understanding.kind).toBe('read');
 		expect(u.guard).toMatch(/stays a read/);
 	});
+	it('a dish change never becomes an order, a stated order never becomes small talk', async () => {
+		const adjust = await understand('Raise the cured salmon to 160 g per guest', {
+			today: set.today,
+			llm: model(['{"kind":"order","items":[{"product":"cured salmon","amount":160,"unit":"g"}]}'])
+				.llm
+		});
+		expect(adjust).toMatchObject({
+			understanding: { kind: 'adjust' },
+			source: 'rules',
+			goal: 'Raise the cured salmon to 160 g per guest'
+		});
+		expect(adjust.guard).toMatch(/dish change/);
+		const order = await understand('4 kg butter for tomorrow', {
+			today: set.today,
+			llm: model(['{"kind":"smalltalk"}']).llm
+		});
+		expect(order).toMatchObject({ understanding: { kind: 'order' }, source: 'rules' });
+		expect(order.guard).toMatch(/stays an order/);
+	});
+
 	it('a stated amount the model drops is kept: the chef words run', async () => {
 		const m = model(['{"kind":"order","items":[{"product":"butter","date":"tomorrow"}]}']);
 		const u = await understand('4 kg butter tomorrow', { today: set.today, llm: m.llm });
