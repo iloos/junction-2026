@@ -18,6 +18,7 @@ import { day, money } from '$lib/ui/format';
 import { canonicalJson, sha256Hex } from '$lib/core/hash';
 import type { CallContext, Clock, Llm, TaskStore, ToolHandlers } from '$lib/core/ports';
 import { taskForPlan } from './task';
+import { preferenceNote, preferenceOrder, type RankBy } from './rank-by';
 import { serveTool } from '$lib/server/tools/serve';
 import type {
 	AnswerSpec,
@@ -102,6 +103,8 @@ export interface RequestDeps {
 	 * times, the same one place_order and commit judge by. Absent (and no `now`): lookup leaves cut-offs to place_order.
 	 */
 	clock?: Pick<Clock, 'now'>;
+	/** A per-request ranking preference for the lookup (Rank by); never saved to the kitchen. */
+	rankBy?: RankBy;
 	/** A fixed instant instead of `clock`, for tests. */
 	now?: Date;
 	/** Procurement tasks (ports.tasks); absent: no task is stored and the result still links the plan. */
@@ -168,6 +171,7 @@ async function lookupItems(
 ): Promise<{ lookup: LookupView; picked: Map<string, Product> }> {
 	let searchCalls = 0;
 	const now = nowOf(d);
+	const rankBy = d.rankBy ?? 'kitchen';
 	const prepared: {
 		item: ParsedRequest['items'][number];
 		searches: { query: string; hits: number }[];
@@ -221,7 +225,28 @@ async function lookupItems(
 		// A case is a different size for every product: without the chef saying which, ask.
 		const askCase = p.item.unit === 'case' && !pin && p.item.qty !== null;
 		let pick: CandidateView | null = null;
-		for (const [i, v] of views.entries()) {
+		// The kitchen default picks in shortlist order; a "Rank by" preference re-orders the quoted shortlist first.
+		const pickableAt = (i: number) =>
+			p.item.qty !== null &&
+			!askCase &&
+			(!pin || views[i].productId === pin) &&
+			!unpickable(offers.get(views[i].productId), short[i].conversion, now);
+		const defaultAt = views.findIndex((_, i) => pickableAt(i));
+		const order =
+			(!pin &&
+				!askCase &&
+				preferenceOrder(
+					rankBy,
+					d.kitchen,
+					short.map((r) => ({
+						product: r.product,
+						qty: r.conversion?.ok ? r.conversion.salesQty : 0
+					})),
+					offers
+				)) ||
+			views.map((_, i) => i);
+		for (const i of order) {
+			const v = views[i];
 			if (p.item.qty === null) break;
 			if (pin && v.productId !== pin) continue;
 			const why = unpickable(offers.get(v.productId), short[i].conversion, now);
@@ -234,6 +259,17 @@ async function lookupItems(
 				break;
 			}
 		}
+		const chosenAt = pick ? views.indexOf(pick) : -1;
+		const rankNote =
+			chosenAt >= 0
+				? preferenceNote(
+						rankBy,
+						{ product: short[chosenAt].product, offer: offers.get(views[chosenAt].productId) },
+						defaultAt >= 0
+							? { product: short[defaultAt].product, offer: offers.get(views[defaultAt].productId) }
+							: null
+					)
+				: null;
 		let question: string | null = null;
 		let answer: AnswerSpec | null = null;
 		const idx = p.item.id;
@@ -362,7 +398,8 @@ async function lookupItems(
 			pick,
 			question,
 			answer,
-			valioRules
+			valioRules,
+			...(rankNote ? { rankNote } : {})
 		};
 	});
 

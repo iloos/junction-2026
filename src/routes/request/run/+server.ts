@@ -9,6 +9,7 @@ import {
 	submitRequest,
 	ToolFailed
 } from '$lib/server/request';
+import { readRankBy } from '$lib/server/request/rank-by';
 import { visitorWorkspace } from '$lib/server/demo/visitor';
 import type { RequestHandler } from './$types';
 
@@ -76,6 +77,7 @@ export const POST: RequestHandler = async (event) => {
 					briefAnswers: readBriefAnswers(body.briefAnswers),
 					confirmLarge: body.confirmLarge === true,
 					deliverBy: /^\d{4}-\d{2}-\d{2}$/.test(str('deliverBy')) ? str('deliverBy') : undefined,
+					rankBy: readRankBy(body.rankBy),
 					workspaceId,
 					env,
 					onEvent: send

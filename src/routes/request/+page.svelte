@@ -216,6 +216,7 @@
 			answers = [];
 			briefAnswers = [];
 			deliverBy = null;
+			rankBy = 'kitchen';
 		}
 		text = req;
 		reset();
@@ -232,7 +233,8 @@
 					answers,
 					briefAnswers,
 					confirmLarge,
-					...(deliverBy ? { deliverBy } : {})
+					...(deliverBy ? { deliverBy } : {}),
+					...(rankBy !== 'kitchen' ? { rankBy } : {})
 				})
 			});
 			if (!res.ok || !res.body) {
@@ -499,6 +501,22 @@
 			status = { request: 'done', lookup: 'done', order: 'done', approval: 'done' };
 	}
 
+	/** Rank by: a per-request preference that re-runs the lookup; never saved to the kitchen's mandate. */
+	type RankBy = 'kitchen' | 'price' | 'carbon' | 'finnish' | 'reliability';
+	let rankBy = $state<RankBy>('kitchen');
+	const RANK_OPTIONS: [RankBy, string][] = [
+		['kitchen', 'Kitchen default'],
+		['price', 'Price'],
+		['carbon', 'Lowest carbon'],
+		['finnish', 'Finnish'],
+		['reliability', 'Most reliable']
+	];
+	function chooseRank(by: RankBy) {
+		if (by === rankBy) return;
+		rankBy = by;
+		submit(text, true);
+	}
+
 	/** The chef took the first open delivery date after a cut-off: same words, that date, said in the notes. */
 	let deliverBy = $state<string | null>(null);
 	function chooseDate(date: string) {
@@ -559,6 +577,7 @@
 		answers = [];
 		briefAnswers = [];
 		deliverBy = null;
+		rankBy = 'kitchen';
 		text = '';
 		nonce = newNonce();
 	}
@@ -976,6 +995,33 @@
 								? ''
 								: 's'} ({offerSourceWords(lookup.offerSources)}){:else}nothing quoted{/if}
 					</p>
+					{#if lookup.quotedIds.length > 1}
+						<div class="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1.5" data-testid="rank-by">
+							<span class="text-meta text-ink-3">Rank by</span>
+							<div
+								role="radiogroup"
+								aria-label="Rank by"
+								class="inline-flex flex-wrap overflow-hidden rounded-md border border-rule-strong"
+							>
+								{#each RANK_OPTIONS as [by, label] (by)}
+									<button
+										type="button"
+										role="radio"
+										aria-checked={rankBy === by}
+										disabled={busy}
+										onclick={() => chooseRank(by)}
+										class="h-8 border-r border-rule px-2.5 text-meta last:border-r-0 disabled:opacity-50 {rankBy ===
+										by
+											? 'bg-accent text-sheet'
+											: 'bg-sheet text-ink-2 hover:text-ink'}">{label}</button
+									>
+								{/each}
+							</div>
+							<span class="text-micro text-ink-3"
+								>for this request only; your mandate is unchanged</span
+							>
+						</div>
+					{/if}
 					{#if lookup.sanity.length}
 						<div
 							class="mt-3 rounded-lg border border-out/35 bg-out-wash px-3 py-2.5 text-body"
@@ -1029,7 +1075,12 @@
 										</p>
 										<dl class="mt-1.5 grid grid-cols-[6.5rem_1fr] gap-x-2 gap-y-1 text-body">
 											<dt class="text-ink-3">Why this one</dt>
-											<dd>{it.pick.reasons.join('; ') || 'best remaining match'}</dd>
+											<dd>
+												{it.pick.reasons.join('; ') || 'best remaining match'}
+												{#if it.rankNote}<span class="block text-ink" data-testid="rank-note"
+														>{it.rankNote}</span
+													>{/if}
+											</dd>
 											<dt class="text-ink-3">Quantity</dt>
 											<dd class="num">
 												{quantityWords(
