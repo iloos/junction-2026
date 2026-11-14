@@ -82,7 +82,8 @@ function wrapBook(
 			const r = await o.inner.generate(req);
 			if (o.record) {
 				book[key] = { text: r.text, model: r.model, tokens: r.tokens };
-				writeFileSync(o.path, JSON.stringify(book, null, 1) + '\n');
+				// Tab-indented, as Prettier formats JSON, so a fresh recording passes `pnpm lint`.
+				writeFileSync(o.path, JSON.stringify(book, null, '\t') + '\n');
 			}
 			return r;
 		}
