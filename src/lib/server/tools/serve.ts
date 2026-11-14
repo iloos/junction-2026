@@ -10,6 +10,7 @@ import {
 } from '$lib/core/contracts';
 import type { CallContext, ToolHandlers } from '$lib/core/ports';
 import { inWorkspace } from '$lib/server/adapters/simulator/overlay';
+import { isMetered, takeKeyCall } from './key-limits';
 import { presentMeta } from './present';
 import { isRecordedRefusal, recordRefusal } from './refusals';
 
@@ -94,6 +95,17 @@ export async function serveTool(
 	// process's reset) so this call reads and writes the same run.
 	ctx = await (await import('$lib/server/demo/reset')).onCurrentRun(ctx);
 	const t0 = performance.now();
+	// An outside agent's key is metered (key-limits.ts); a full window is a 429, not a refusal for the op log.
+	const limited = isMetered(ctx) ? takeKeyCall(ctx, name) : null;
+	if (limited) {
+		const error = err(
+			'PROVIDER_UNAVAILABLE',
+			`Too many ${limited.bucket === 'calls' ? '' : `${limited.bucket} `}calls from this key; wait ${limited.retryAfter} s.`,
+			{ sub: 'rate_limit', detail: { retryAfter: limited.retryAfter, limit: limited.bucket } }
+		).error;
+		hooks.onCall?.({ tool: name, ctx, ok: false, code: error.code, ms: 0 });
+		return fail(error);
+	}
 	// Simulated scarcity is per workspace: quotes inside this call see only this workspace's overlay.
 	const scoped = ctx;
 	const out = await inWorkspace(scoped.workspaceId, () => run(name, scoped, rawInput, handlers));
