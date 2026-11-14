@@ -35,7 +35,15 @@ function measure(l: Line, value: number): Measure {
 
 type ApprovalLike = Pick<Approval, 'state' | 'lineIds' | 'planVersion'>;
 
-export function lineView(l: Line, plan: Plan, approval: ApprovalLike | null): LineView {
+/**
+ * `approval` is the plan's live approvals (one, or several after a per-group decision): a line is covered when a
+ * granted approval on the current plan version lists it; a denied group's lines can't be bought.
+ */
+export function lineView(
+	l: Line,
+	plan: Plan,
+	approval: ApprovalLike | readonly ApprovalLike[] | null
+): LineView {
 	const unknown = l.offer?.availability.kind === 'unknown';
 	const qty = l.qty.value;
 	const covered = (n: number) => ({
@@ -81,7 +89,9 @@ export function lineView(l: Line, plan: Plan, approval: ApprovalLike | null): Li
 						? 'resolve_rule'
 						: 'find_substitute'
 		};
-	const current = approval && approval.planVersion === plan.version ? approval : null;
+	const live = (approval === null ? [] : Array.isArray(approval) ? approval : [approval]).filter(
+		(a: ApprovalLike) => a.planVersion === plan.version
+	) as ApprovalLike[];
 	if (l.state === 'eligible' && l.tier === 'act')
 		return { reviewable: false, committable: true, ...covered(qty), nextAction: 'commit' };
 	// A recalled line with a replacement is superseded: out of the approval, nothing to do.
@@ -97,7 +107,10 @@ export function lineView(l: Line, plan: Plan, approval: ApprovalLike | null): Li
 	)
 		return { reviewable: false, committable: false, ...none, nextAction: 'none' };
 	// Held for a reason a human may accept.
-	const approved = current?.state === 'granted' && current.lineIds.includes(l.id);
+	const approved = live.some((a) => a.state === 'granted' && a.lineIds.includes(l.id));
+	// A human said no to this line's group: it is not bought; replace it or change the plan to ask again.
+	if (!approved && live.some((a) => a.state === 'denied' && a.lineIds.includes(l.id)))
+		return { reviewable: false, committable: false, ...none, nextAction: 'find_substitute' };
 	return {
 		reviewable: true,
 		committable: approved,
@@ -107,7 +120,10 @@ export function lineView(l: Line, plan: Plan, approval: ApprovalLike | null): Li
 	};
 }
 
-/** The plan with every line's view filled, given its current approval (newest pending or granted). */
-export function withLineViews(plan: Plan, approval: ApprovalLike | null): Plan {
+/** The plan with every line's view filled, given its live approvals. */
+export function withLineViews(
+	plan: Plan,
+	approval: ApprovalLike | readonly ApprovalLike[] | null
+): Plan {
 	return { ...plan, lines: plan.lines.map((l) => ({ ...l, view: lineView(l, plan, approval) })) };
 }

@@ -16,7 +16,7 @@ import {
 } from '../contracts';
 import type { CallContext, ToolHandlers } from '../ports';
 import { editLine, explainLine, planEvent, type ServicePorts } from './events';
-import { approve, commitOrder, currentApproval, getPlan, placeOrder } from './orders';
+import { approve, commitOrder, getPlan, liveApprovals, placeOrder } from './orders';
 import { lineView } from '../mandate/view';
 import { withPlanView } from './views';
 import { quote, searchProducts } from './quote';
@@ -67,7 +67,7 @@ async function withViews(ports: ServicePorts, ctx: CallContext, value: unknown):
 	const v = value as { plan?: Plan; chosen?: Line[]; saved?: Line[] };
 	if (!v || typeof v !== 'object' || !v.plan) return value;
 	const state = await ports.store.load(ctx.workspaceId, ctx.runId);
-	const approval = currentApproval(state, v.plan.id);
+	const approval = liveApprovals(state, v.plan.id);
 	const plan = await withPlanView(ports, v.plan, state, approval);
 	const view = (ls?: Line[]) => ls?.map((l) => ({ ...l, view: lineView(l, plan, approval) }));
 	return {

@@ -138,4 +138,25 @@ describe('per-line authority', () => {
 		const r = commit(held);
 		expect(r.ok ? null : r.error.code).toBe('FORBIDDEN');
 	});
+
+	it('a second commit with another key after the lines are bought is a conflict, not bad input', async () => {
+		const { plan } = await mixedPlan();
+		const first = must(
+			await h.commit_order(ctx('chef'), {
+				planId: plan.id,
+				version: plan.version,
+				idempotencyKey: 'k1'
+			})
+		);
+		expect(first.committedLineIds.length).toBe(2);
+		for (const lineIds of [undefined, first.committedLineIds]) {
+			const again = await h.commit_order(ctx('chef'), {
+				planId: plan.id,
+				version: plan.version,
+				idempotencyKey: `k2-${lineIds ? 'explicit' : 'default'}`,
+				...(lineIds ? { lineIds } : {})
+			});
+			expect(again.ok ? null : again.error.code).toBe('STALE_VERSION');
+		}
+	});
 });

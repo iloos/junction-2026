@@ -120,8 +120,9 @@ export async function withPlanView(
 	ports: ServicePorts,
 	plan: Plan,
 	state: WorkspaceState,
-	approval: ApprovalLike | null
+	approval: ApprovalLike | readonly ApprovalLike[] | null
 ): Promise<Plan> {
+	const approvals = approval === null ? [] : Array.isArray(approval) ? approval : [approval];
 	const products = await ports.catalog.get([...new Set(plan.lines.map((l) => l.productId))]);
 	const seed = plan.eventId ? ports.events?.[plan.eventId] : undefined;
 	const facts = factsFor(plan, products, seed, state);
@@ -136,10 +137,14 @@ export async function withPlanView(
 		(k) => k.id === plan.kitchenId
 	);
 	const now = ports.clock.now();
-	const live =
-		approval && approval.planVersion === plan.version && approval.expiresAt
-			? [approval.expiresAt]
-			: [];
+	const live = (approvals as ApprovalLike[])
+		.filter(
+			(a) =>
+				a.planVersion === plan.version &&
+				(a.state === 'pending' || a.state === 'granted') &&
+				a.expiresAt
+		)
+		.map((a) => a.expiresAt!);
 	const cutoffs = lines
 		.filter((l) => l.state !== 'committed' && (l.view.committable || l.view.reviewable))
 		.map((l) => l.offer?.availability.closingTime)
