@@ -3,7 +3,7 @@ import { err, ok, type Result } from '$lib/core/contracts';
 import { Task } from '$lib/core/contracts/task';
 import type { TaskStore } from '$lib/core/ports';
 import { agentTasks } from '../db/schema';
-import type { AnyDb } from '../store/drizzle-store';
+import { txOf, type AnyDb } from '../store/drizzle-store';
 
 /**
  * TaskStore adapters. Both compare-and-set on `version`: `put(task, expected)` writes only when the stored version is
@@ -58,6 +58,7 @@ export function drizzleTaskStore(db: AnyDb): TaskStore {
 			const [r] = await db.select().from(agentTasks).where(at(ws, id));
 			return r ? Task.parse(r.doc) : null;
 		},
+		getIn: (tx, ws, id) => drizzleTaskStore(txOf(tx).db).get(ws, id),
 		async list(ws, o = {}) {
 			const conds = [eq(agentTasks.workspaceId, ws)];
 			if (o.kitchenId) conds.push(eq(agentTasks.kitchenId, o.kitchenId));
