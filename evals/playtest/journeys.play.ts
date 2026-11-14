@@ -559,7 +559,13 @@ journey('j2', 'Request in words: shares, units, brands', async (r, page) => {
 
 journey('j3', 'Chat: vague turns, an order, the dock approval', async (r, page) => {
 	await r.step('home', () => home(page));
-	for (const t of ['what', '50 eggs for friday', 'ok', 'approve it'])
+	for (const t of [
+		'what',
+		'50 eggs for friday',
+		'ok',
+		'approve it',
+		'10 l milk for friday, order it'
+	])
 		await r.step(`say "${t}"`, () => say(r, page, t));
 });
 
@@ -764,7 +770,7 @@ journey(
 					await r.step(
 						`${name}: orders`,
 						async () => {
-							await say(r, p, '10 l milk for friday, order it');
+							await say(r, p, '10 l milk for friday');
 							// Approve on the page (the dock closed so the Decide rail shows), then order.
 							const close = p.getByRole('button', { name: 'Close chat' });
 							if (await close.isVisible().catch(() => false)) await close.click();
