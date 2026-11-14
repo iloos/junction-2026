@@ -6,7 +6,7 @@
 	import { neededVsBuying } from './coverage';
 	import SourceTag from './SourceTag.svelte';
 	import StateChip from './StateChip.svelte';
-	import { humanDates, money, num, qtyWords } from './format';
+	import { humanDates, money, qtyWords } from './format';
 	import type { WhyChain } from './why-chain';
 	import { page } from '$app/state';
 	import SourceChip from './SourceChip.svelte';

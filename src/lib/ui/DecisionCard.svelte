@@ -10,7 +10,7 @@
 	import HoldButton from './HoldButton.svelte';
 	import BillLines from './BillLines.svelte';
 	import type { Decision } from './decisions';
-	import { money, num, shortHash, storyTime, qtyWords } from './format';
+	import { money, shortHash, storyTime, qtyWords } from './format';
 
 	interface Props {
 		decision: Decision;
