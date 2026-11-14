@@ -192,10 +192,6 @@ export async function placeOrder(
 	// A physical amount is the demand authority (F10): the server sizes it, and a qty that disagrees is refused.
 	const sized: (SalesQty | null)[] = [];
 	for (const [i, l] of input.lines.entries()) {
-		if (l.requirements && !l.amount)
-			return err('INVALID_INPUT', `lines[${i}]: requirements need an amount to live on`, {
-				detail: { line: i }
-			});
 		if (!l.amount) {
 			sized.push(null);
 			continue;
@@ -218,7 +214,7 @@ export async function placeOrder(
 	}
 	const { offers } = await ports.catalog.offers(ids, input.deliverBy); // outside the lock (D6)
 	const planId = `pl-${ctx.runId}-${await short(`${ctx.actor.id}|${input.idempotencyKey}`)}`;
-	const needs: Need[] = input.lines.flatMap((l, i) =>
+	const needs: Need[] = input.lines.flatMap((l, i): Need[] =>
 		l.amount
 			? [
 					{
@@ -229,10 +225,27 @@ export async function placeOrder(
 						...(l.requirements
 							? { requirements: l.requirements, requirementsFrom: 'request' as const }
 							: {}),
+						...(l.ask ? { ask: l.ask } : {}),
 						provenance: { source: 'user' as const, note: `${ctx.actor.kind} via ${ctx.via}` }
 					}
 				]
-			: []
+			: l.requirements || l.ask
+				? [
+						// D18: packs, cases or sales units with no stated content still make a need, in sales units, so the
+						// ask and its requirements live on through substitutes and edits.
+						{
+							id: `need:sales-${i + 1}`,
+							label: `${l.qty} ${l.unit} ${products.get(l.productId)!.nameFi}`,
+							kind: 'sales' as const,
+							amount: { value: l.qty, unit: 'pcs' as const },
+							ask: l.ask ?? { qty: l.qty, unit: 'sales_unit' as const },
+							...(l.requirements
+								? { requirements: l.requirements, requirementsFrom: 'request' as const }
+								: {}),
+							provenance: { source: 'user' as const, note: `${ctx.actor.kind} via ${ctx.via}` }
+						}
+					]
+				: []
 	);
 
 	return idempotent(ports, ctx, 'place_order', input.idempotencyKey, input, async (tx, state) => {
@@ -243,7 +256,11 @@ export async function placeOrder(
 		});
 		const drafts: DraftLine[] = input.lines.map((l, i) => ({
 			id: `${planId}-l${i + 1}`,
-			...(l.amount ? { needId: `need:direct-${i + 1}` } : {}),
+			...(l.amount
+				? { needId: `need:direct-${i + 1}` }
+				: l.requirements || l.ask
+					? { needId: `need:sales-${i + 1}` }
+					: {}),
 			productId: l.productId,
 			qty: sized[i] ?? toLot(l.qty, l.unit, products.get(l.productId)!),
 			provenance: { source: 'user', note: `${ctx.actor.kind} via ${ctx.via}` }

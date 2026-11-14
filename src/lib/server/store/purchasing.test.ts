@@ -695,3 +695,43 @@ describe('D16: a vegetarian dish is never bought as meat', () => {
 		expect(r.plan.lines.some((l) => l.view?.committable && l.productId === '470601')).toBe(false);
 	});
 });
+
+describe('D18: packs and cases make a need too (R11-02)', () => {
+	it('"4 packs lactose-free milk" keeps the requirement in a sales-unit need, through substitution', async () => {
+		const { h, setCandidates } = await harness();
+		setCandidates(['470418', '470420']);
+		const p = must(
+			await h.place_order(ctx('chef'), {
+				kitchenId: 'k-hotel',
+				deliverBy: '2026-12-10',
+				idempotencyKey: 'packs',
+				lines: [
+					{
+						productId: '464201',
+						qty: 4,
+						unit: 'ST',
+						requirements: { freeFrom: ['LACTOSE'] },
+						ask: { words: '4 packs lactose-free milk', qty: 4, unit: 'pack' }
+					}
+				]
+			})
+		).plan;
+		expect(p.needs[0]).toMatchObject({
+			kind: 'sales',
+			amount: { value: 4, unit: 'pcs' },
+			requirements: { freeFrom: ['LACTOSE'] },
+			ask: { qty: 4, unit: 'pack' }
+		});
+		expect(p.lines[0].needId).toBe(p.needs[0].id);
+		expect(p.view!.fulfilment[0]).toMatchObject({ required: { value: 4 } });
+		const r = must(
+			await h.find_substitutes(ctx('chef'), {
+				planId: p.id,
+				version: p.version,
+				lineId: p.lines[0].id,
+				apply: true
+			})
+		);
+		expect(r.chosen.map((l) => l.productId)).toEqual(['470420']); // lactose-free, never 470418
+	});
+});
