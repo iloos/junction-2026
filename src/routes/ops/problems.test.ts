@@ -95,7 +95,7 @@ describe('the story of a problem', () => {
 		expect(steps[1].what).toBe("Valio's live terms: HK Christmas ham is out.");
 		expect(steps[1].then).toBe('The plan lost its Christmas ham.');
 		const propose = steps.find((x) => x.chip === 'kitchen_agent' && x.what.includes('proposed'));
-		expect(propose?.what).toMatch(/proposed HK Palvikinkku\.$/);
+		expect(propose?.what).toMatch(/proposed HK Palvikinkku instead of HK Christmas ham\.$/);
 		expect(steps.some((x) => x.what.startsWith('Asked the chef to decide'))).toBe(true);
 		expect(hidden).toBe(0);
 	});
