@@ -7,6 +7,7 @@
 	import type { Snippet } from 'svelte';
 	import { ChefHat } from '@lucide/svelte';
 	import type { Line } from '$lib/core/contracts';
+	import { supplyOf } from '$lib/core/rank/rank';
 	import { money } from './format';
 	import AgentMark from './AgentMark.svelte';
 
@@ -23,14 +24,21 @@
 	}
 	let { title, lines, row, replaces, by }: Props = $props();
 
-	/** An ingredient is ready when it can be bought with a known quantity: not out, not short, not unknown. */
-	const ready = (l: Line) =>
-		l.state !== 'rejected' &&
-		l.state !== 'unorderable' &&
-		l.view?.blockedReason?.detail !== 'stock' &&
-		l.view?.blockedReason?.detail !== 'qty';
+	/**
+	 * An ingredient is ready when it can be bought and Valio states its stock: the line's own supply certainty from
+	 * core (its view's unknown-stock cover, else supplyOf on its offer), never a rule of this card's own.
+	 */
+	const blocked = (l: Line) =>
+		l.state === 'rejected' ||
+		l.state === 'unorderable' ||
+		l.view?.blockedReason?.detail === 'stock' ||
+		l.view?.blockedReason?.detail === 'qty';
+	const unstated = (l: Line) =>
+		l.view ? l.view.unknownStockCover.value > 0 : supplyOf(l.offer) === 'unknown_stock';
+	const ready = (l: Line) => !blocked(l) && !unstated(l);
 	const n = $derived(lines.length);
 	const ok = $derived(lines.filter(ready).length);
+	const quiet = $derived(lines.filter((l) => !blocked(l) && unstated(l)).length);
 	const cents = $derived(lines.reduce((s, l) => s + (l.lineCents ?? 0), 0));
 </script>
 
@@ -53,7 +61,11 @@
 	<p class="mt-0.5 text-meta text-ink-2">
 		Needs all {n} ingredients.
 		<span class={ok === n ? 'text-ink' : 'font-medium text-signoff'}
-			>{ok} of {n} can be bought with a known quantity.</span
+			>{ok === n
+				? `All ${n} have a stated stock.`
+				: quiet
+					? `Valio doesn't state stock for ${quiet} of ${n}.`
+					: `${ok} of ${n} can be bought.`}</span
 		>
 	</p>
 	<div class="mt-2 grid grid-cols-[14px_minmax(0,1fr)] gap-x-2">
