@@ -2,6 +2,7 @@
  * Context.dev monitor admin for the recall watch. Run with tsx so the server modules resolve:
  *   pnpm tsx --env-file=.env scripts/web/monitor.ts create <appBaseUrl> [everyMinutes]
  *   pnpm tsx --env-file=.env scripts/web/monitor.ts list
+ *   pnpm tsx --env-file=.env scripts/web/monitor.ts cadence <monitorId> <everyMinutes>
  *   pnpm tsx --env-file=.env scripts/web/monitor.ts ping <appBaseUrl>   (signed test change, needs CONTEXT_DEV_WEBHOOK_SECRET)
  * `create` writes the monitor id and its webhook signing secret to scratch/web/monitor.json (gitignored)
  * and prints only the id; set the secret as CONTEXT_DEV_WEBHOOK_SECRET where the app runs.
@@ -38,6 +39,15 @@ if (cmd === 'create') {
 	);
 	console.log(
 		`monitor ${m.id} created; webhook secret ${m.webhookSecret ? 'saved to scratch/web/monitor.json' : 'not returned'}`
+	);
+} else if (cmd === 'cadence') {
+	const minutes = Number(every);
+	if (!base || !Number.isInteger(minutes) || minutes < 1)
+		throw new Error('give the monitor id and the interval in minutes');
+	const r = (await cd.setCadence(base, minutes)) as { id?: string; schedule?: unknown };
+	console.log(
+		`monitor ${r.id ?? base} schedule now`,
+		JSON.stringify(r.schedule ?? r).slice(0, 300)
 	);
 } else if (cmd === 'list') {
 	const r = (await cd.listMonitors()) as { data?: unknown[]; monitors?: unknown[] };

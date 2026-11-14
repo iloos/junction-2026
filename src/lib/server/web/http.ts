@@ -1,12 +1,15 @@
 /**
  * One HTTP call to Context.dev or Exa: cached, traced, bounded. Both providers charge for cached
- * results on their side too, so every successful response is kept here (memory, plus a directory when
- * configured) and repeated questions cost nothing.
+ * results on their side too, so a successful response is kept here (memory, plus a directory when
+ * configured) for a day by default and repeated questions cost nothing. Only a 2xx whose body the
+ * caller accepts (extraction succeeded, output parsed) is cached. Every network call is charged to a
+ * spend guard first; after a 429 the API cools down and a stale cached answer is served when one exists.
  */
 import { createHash } from 'node:crypto';
 import { mkdirSync, readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { logTrace, noTrace, type Trace } from '../adapters/llm/trace';
+import { WebLimitError, type SpendGuard } from './spend';
 
 export type WebApi = 'context.dev' | 'exa';
 
@@ -23,12 +26,21 @@ export interface WebHttpOptions {
 	trace?: Trace;
 	fetch?: typeof fetch;
 	timeoutMs?: number;
+	/** Charged before every network call (never for cache hits). */
+	guard?: SpendGuard;
 }
 
+/** Cached answers older than this are read again unless the caller says otherwise. */
+export const DEFAULT_MAX_AGE_MS = 24 * 3_600_000;
+/** Cool-down after a 429 when the provider gives no Retry-After. */
+export const DEFAULT_COOL_S = 60;
+
 export interface CallOptions {
-	/** Reuse a cached response younger than this; 0 = always call. Default: forever. */
+	/** Reuse a cached response younger than this; 0 = always call. Default: `DEFAULT_MAX_AGE_MS`. */
 	maxAgeMs?: number;
-	method?: 'GET' | 'POST';
+	/** Cache the 2xx body only when this holds (e.g. the extraction succeeded). Default: always. */
+	accept?: (body: unknown) => boolean;
+	method?: 'GET' | 'POST' | 'PATCH';
 	/** What the call is for, shown in the trace ("recall list", "facts 460002"). */
 	purpose?: string;
 }
@@ -42,6 +54,8 @@ export interface WebResponse<T> {
 	at: string;
 	/** Context.dev credits or Exa dollars, when the provider reported them. */
 	cost?: { credits?: number; usd?: number };
+	/** An older cached answer served because the provider is rate-limiting. */
+	stale?: boolean;
 }
 
 interface Entry {
@@ -52,6 +66,14 @@ interface Entry {
 }
 
 const mem = new Map<string, Entry>();
+/** Per API: no calls before this time (ms) after a 429. Process-wide, like the provider's limit. */
+const coolUntil = new Map<WebApi, number>();
+
+/** Test hook: forget cached answers and cool-downs. */
+export function resetWebHttp() {
+	mem.clear();
+	coolUntil.clear();
+}
 
 export class WebError extends Error {
 	constructor(
@@ -104,10 +126,16 @@ export function createWebHttp(o: WebHttpOptions) {
 	): Promise<WebResponse<T>> {
 		const method = c.method ?? (body === undefined ? 'GET' : 'POST');
 		const key = keyOf(method, path, body);
-		const maxAge = c.maxAgeMs ?? Infinity;
-		const hit = maxAge > 0 ? readCache(key) : undefined;
-		if (hit && Date.now() - Date.parse(hit.at) <= maxAge) {
-			const data = { source: o.api, model: path, purpose: c.purpose, cache: 'hit', latencyMs: 0 };
+		const maxAge = c.maxAgeMs ?? DEFAULT_MAX_AGE_MS;
+		const cachedEntry = readCache(key);
+		const fromCache = (hit: Entry, stale: boolean): WebResponse<T> => {
+			const data = {
+				source: o.api,
+				model: path,
+				purpose: c.purpose,
+				cache: stale ? 'stale' : 'hit',
+				latencyMs: 0
+			};
 			trace('tool', data);
 			logTrace(data);
 			return {
@@ -117,9 +145,20 @@ export function createWebHttp(o: WebHttpOptions) {
 				cached: true,
 				latencyMs: 0,
 				at: hit.at,
-				cost: hit.cost
+				cost: hit.cost,
+				...(stale ? { stale: true } : {})
 			};
+		};
+		if (maxAge > 0 && cachedEntry && Date.now() - Date.parse(cachedEntry.at) <= maxAge)
+			return fromCache(cachedEntry, false);
+
+		// Rate-limited: answer from an older cache entry, or refuse without calling (no 503 storm).
+		const cool = coolUntil.get(o.api) ?? 0;
+		if (cool > Date.now()) {
+			if (cachedEntry) return fromCache(cachedEntry, true);
+			throw new WebLimitError('rate-limit', o.api, Math.ceil((cool - Date.now()) / 1000));
 		}
+		o.guard?.charge(o.api);
 
 		const headers: Record<string, string> = { 'content-type': 'application/json' };
 		if (o.api === 'exa') headers['x-api-key'] = o.apiKey;
@@ -138,7 +177,7 @@ export function createWebHttp(o: WebHttpOptions) {
 			});
 			if ((res.status === 429 || res.status >= 500) && attempt < 1) {
 				attempt++;
-				const wait = Math.min(Number(res.headers.get('retry-after') ?? 2) * 1000, 8000);
+				const wait = Math.min(retryAfterS(res, 2) * 1000, 8000);
 				await new Promise((r) => setTimeout(r, wait));
 				continue;
 			}
@@ -171,10 +210,22 @@ export function createWebHttp(o: WebHttpOptions) {
 		};
 		trace(res.ok ? 'tool' : 'error', data);
 		logTrace(data);
+		if (res.status === 429) {
+			const s = retryAfterS(res, DEFAULT_COOL_S);
+			coolUntil.set(o.api, Date.now() + s * 1000);
+			if (cachedEntry) return fromCache(cachedEntry, true);
+			throw new WebLimitError('rate-limit', o.api, s);
+		}
 		if (!res.ok) throw new WebError(o.api, res.status, parsed);
-		writeCache(key, { at, status: res.status, body: parsed, cost });
+		if (!c.accept || c.accept(parsed))
+			writeCache(key, { at, status: res.status, body: parsed, cost });
 		return { ok: true, status: res.status, body: parsed as T, cached: false, latencyMs, at, cost };
 	};
+}
+
+function retryAfterS(res: Response, fallback: number): number {
+	const n = Number(res.headers.get('retry-after'));
+	return Number.isFinite(n) && n > 0 ? Math.ceil(n) : fallback;
 }
 
 export type WebCall = ReturnType<typeof createWebHttp>;

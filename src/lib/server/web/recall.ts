@@ -116,7 +116,9 @@ export const RecallNotice = z.object({
 	distribution: nullish(z.string()),
 	foodService: nullish(z.boolean()),
 	/** Set when this is a recorded notice played back on stage, never for a live read. */
-	replayOf: z.string().optional()
+	replayOf: z.string().optional(),
+	/** A presenter drill re-targeted at a catalogue GTIN: its own identity, never the real notice's. */
+	drill: z.object({ gtin: z.string(), workspaceId: z.string() }).optional()
 });
 export type RecallNotice = z.infer<typeof RecallNotice>;
 
@@ -133,6 +135,78 @@ export function noticeKey(url: string): string {
 	const norm = `${u.host}${u.pathname.replace(/\/+$/, '')}`.toLowerCase();
 	return createHash('sha256').update(norm).digest('hex').slice(0, 16);
 }
+
+/**
+ * Who a notice is. A real notice is its page (`recall:<key>`); a drill lives in its own namespace,
+ * per workspace (`drill:<workspace>:<key>:<gtin>`), so playing one never marks the real notice as seen,
+ * collides with its anomalies, or shows in another workspace.
+ */
+export function noticeIdentity(n: Pick<RecallNotice, 'url' | 'drill'>): {
+	key: string;
+	/** Infix of anomaly ids. */
+	id: string;
+	findingId: string;
+} {
+	const key = noticeKey(n.url);
+	return n.drill
+		? {
+				key,
+				id: `drill-${key}-${n.drill.gtin}`,
+				findingId: `drill:${n.drill.workspaceId}:${key}:${n.drill.gtin}`
+			}
+		: { key, id: key, findingId: `recall:${key}` };
+}
+
+const itemKey = (p: RecalledProduct) =>
+	p.gtin?.replace(/\D/g, '') || p.name.toLowerCase().replace(/\s+/g, ' ').trim();
+const ITEM_FIELDS = ['name', 'gtin', 'batch', 'bestBefore', 'packageSize'] as const;
+
+/**
+ * What a notice says, as a short hash: title, hazard and every recalled item's codes. The same page read
+ * twice gives the same revision; an edited notice (a batch added, a product added) gives a new one.
+ */
+export function noticeRevision(n: RecallNotice): string {
+	const items = n.products
+		.map((p) => ITEM_FIELDS.map((f) => (p[f] ?? '').toString().trim().toLowerCase()).join('|'))
+		.sort();
+	const norm = JSON.stringify([n.title.trim(), n.hazard ?? '', items]);
+	return createHash('sha256').update(norm).digest('hex').slice(0, 10);
+}
+
+export interface NoticeDiff {
+	added: RecalledProduct[];
+	removed: RecalledProduct[];
+	changed: {
+		item: RecalledProduct;
+		field: (typeof ITEM_FIELDS)[number];
+		from: string | null;
+		to: string | null;
+	}[];
+}
+
+/** Item-level difference between two reads of the same notice (items keyed by GTIN, else name). */
+export function diffNotice(prev: RecallNotice, next: RecallNotice): NoticeDiff {
+	const before = new Map(prev.products.map((p) => [itemKey(p), p]));
+	const after = new Map(next.products.map((p) => [itemKey(p), p]));
+	const out: NoticeDiff = { added: [], removed: [], changed: [] };
+	for (const [k, p] of after) {
+		const q = before.get(k);
+		if (!q) {
+			out.added.push(p);
+			continue;
+		}
+		for (const f of ITEM_FIELDS)
+			if ((q[f] ?? null) !== (p[f] ?? null))
+				out.changed.push({ item: p, field: f, from: q[f] ?? null, to: p[f] ?? null });
+	}
+	for (const [k, p] of before) if (!after.has(k)) out.removed.push(p);
+	return out;
+}
+
+/** Recalled items the diff touches (added or changed), as item keys. */
+export const touchedItems = (d: NoticeDiff) =>
+	new Set([...d.added, ...d.changed.map((c) => c.item)].map(itemKey));
+export { itemKey as recalledItemKey };
 
 export type MatchTier = 'gtin' | 'name' | 'supplier';
 

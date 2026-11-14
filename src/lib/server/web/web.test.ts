@@ -24,7 +24,7 @@ import {
 	wordOverlap,
 	type RecallNotice
 } from './recall';
-import { replayRecorded, newNoticeUrls } from './watch';
+import { replayRecorded, selectReads } from './watch';
 
 const prod = (p: Partial<Product> & { productId: string; nameFi: string }): Product => ({
 	category: '10101',
@@ -268,9 +268,9 @@ describe('ingest through the store (PGlite)', { timeout: 30_000 }, () => {
 		const again = await replayRecorded(deps, { drillGtin: product.gtin });
 		expect(again.recorded).toEqual([]);
 		expect(again.alreadyKnown).toBe(1);
-		expect(findings.get(`recall:${first.noticeKey}`)?.ops?.[0].seqs).toEqual([
-			first.recorded[0].seq
-		]);
+		expect(first.findingId).toBe(`drill:ws-demo:${first.noticeKey}:${product.gtin}`);
+		expect(findings.get(first.findingId)?.ops?.[0].seqs).toEqual([first.recorded[0].seq]);
+		expect(findings.get(`recall:${first.noticeKey}`)).toBeUndefined(); // the real notice is unseen
 	});
 
 	it('the real egg recall ingests as one notice-level anomaly (no catalogue GTIN match)', async () => {
@@ -288,15 +288,18 @@ describe('ingest through the store (PGlite)', { timeout: 30_000 }, () => {
 
 describe('watching the list', () => {
 	it('picks unseen notices inside the news window, newest first, at most three', async () => {
-		const findings = createFindings();
-		const urls = await newNoticeUrls(
-			null,
-			createFixtureRecallSource(),
-			findings,
-			new Date('2026-11-14T10:00:00Z')
-		);
-		expect(urls.length).toBeLessThanOrEqual(3);
-		expect(urls[0]).toMatch(/muovisessa-ensilusikassa/);
+		const list = await createFixtureRecallSource().readList();
+		const picks = selectReads({
+			candidates: list.flatMap((r) => (r.url ? [{ url: r.url, date: r.date }] : [])),
+			pending: [],
+			findings: createFindings(undefined, true),
+			now: new Date('2026-11-14T10:00:00Z')
+		});
+		expect(picks.length).toBe(3);
+		expect(picks[0]).toEqual({
+			url: expect.stringMatching(/muovisessa-ensilusikassa/),
+			reason: 'new'
+		});
 	});
 });
 
@@ -315,7 +318,8 @@ describe('Exa lookups (recorded answers)', { timeout: 30_000 }, () => {
 		);
 		expect(r.catalogue.allergens).toBeNull(); // Valio has no allergen record for it
 		const ing = r.suggestions.find((s) => s.field === 'ingredients')!;
-		expect(ing.verified).toBe('gtin');
+		expect(ing.gtinCited).toBe(true);
+		expect(ing.sources[0].gtinCited).toBe(true);
 		expect(ing.sources[0].url).toContain('6416796729140');
 		expect(ing.sources[0].quote).toMatch(/Ainesosat/);
 		expect(r.recorded.length).toBe(r.suggestions.length);

@@ -14,6 +14,11 @@ export interface Finding {
 	title: string;
 	/** URLs the finding rests on. */
 	sources: string[];
+	/**
+	 * Set when the finding belongs to one workspace (a drill, a caller's lookup); absent for a public
+	 * source read (a real recall notice), which every workspace may see.
+	 */
+	workspaceId?: string;
 	/** Seqs of the ops it produced in the run it was recorded in. */
 	ops?: { runId: string; seqs: number[] }[];
 	data: unknown;
@@ -21,8 +26,9 @@ export interface Finding {
 
 const g = globalThis as typeof globalThis & { __webFindings?: Map<string, Finding> };
 
-export function createFindings(file?: string) {
-	const map = (g.__webFindings ??= new Map());
+/** `fresh` gives a private map (tests); otherwise one map per process, shared by every route. */
+export function createFindings(file?: string, fresh = false) {
+	const map: Map<string, Finding> = fresh ? new Map() : (g.__webFindings ??= new Map());
 	if (file && existsSync(file) && map.size === 0) {
 		try {
 			for (const f of JSON.parse(readFileSync(file, 'utf8')) as Finding[]) map.set(f.id, f);
@@ -37,9 +43,11 @@ export function createFindings(file?: string) {
 	};
 	return {
 		get: (id: string) => map.get(id),
-		list: (kind?: Finding['kind']) =>
+		/** Newest first; with `workspaceId`, only public findings and that workspace's own. */
+		list: (kind?: Finding['kind'], workspaceId?: string) =>
 			[...map.values()]
 				.filter((f) => !kind || f.kind === kind)
+				.filter((f) => !workspaceId || !f.workspaceId || f.workspaceId === workspaceId)
 				.sort((a, b) => b.at.localeCompare(a.at)),
 		put(f: Finding) {
 			const prev = map.get(f.id);

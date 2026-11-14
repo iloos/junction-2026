@@ -1,35 +1,18 @@
 import { dev } from '$app/environment';
 import { env } from '$env/dynamic/private';
-import { json } from '$lib/server/tools/http';
-import { findingsFor, servedPorts, webClients } from '$lib/server/web';
-import { findOutside } from '$lib/server/web/lookup';
-import { authed, body, fail, providerFail } from '$lib/server/web/route';
-import { busTrace } from '$lib/server/web/watch';
+import { webContext, webTools } from '$lib/server/web';
+import { authed, body, resultJson } from '$lib/server/web/route';
 import type { RequestHandler } from './$types';
 
 /**
- * POST /api/web/outside (any key): `{ need, context? }`, e.g. `{ need: "joulutorttu", context: "140-guest
- * buffet" }` → recipes or alternatives from the web with sources, each ingredient matched to catalogue
- * products the kitchen can order.
+ * POST /api/web/outside (any key): the `find_outside` tool over REST. `{ need, amount? }`, e.g.
+ * `{ need: "joulutorttu", amount: { value: 140, unit: "pcs" } }` → options outside the catalogue, each
+ * with its source. Never ordered; runs in the caller's workspace under its key's daily web cap.
  */
 export const POST: RequestHandler = async ({ request }) => {
 	const ctx = authed(request, env, dev, 'web:outside');
 	if (ctx instanceof Response) return ctx;
-	const b = await body<{ need?: string; context?: string }>(request);
+	const b = await body(request);
 	if (b instanceof Response) return b;
-	if (!b.need?.trim()) return fail('INVALID_INPUT', 'give a need', 400);
-	try {
-		const ports = await servedPorts();
-		const { exa } = webClients(env, busTrace(ports.scope, { lane: 'web' }));
-		return json(
-			await findOutside(b.need.trim().slice(0, 120), {
-				exa,
-				catalog: ports.catalog,
-				findings: findingsFor(env),
-				context: b.context?.slice(0, 200)
-			})
-		);
-	} catch (e) {
-		return providerFail(e);
-	}
+	return resultJson(await webTools(env).find_outside(await webContext(ctx), b));
 };
