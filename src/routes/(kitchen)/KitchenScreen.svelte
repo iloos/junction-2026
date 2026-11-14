@@ -118,6 +118,20 @@
 	}
 
 	const snap = $derived(k.snap);
+
+	// The dock asked to show this plan's decisions: Decide zone on a phone, then the approval panel in view.
+	let locatedAt = 0;
+	$effect(() => {
+		const l = shell?.locate;
+		if (!l || l.at === locatedAt || l.planId !== k.snap?.plan.id) return;
+		locatedAt = l.at;
+		untrack(() => {
+			zone = 'decide';
+			void tick().then(() =>
+				document.getElementById('approval')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+			);
+		});
+	});
 	const view = $derived(k.view);
 	const plan = $derived(k.plan);
 	const approval = $derived(snap?.approval ?? null);
@@ -494,6 +508,10 @@
 					cannot={needsYou.cannot}
 					{orderable}
 					ordered={orderedState}
+					others={(snap?.others ?? []).map((o) => ({
+						...o,
+						href: `${resolve('/')}?kitchen=${snap!.kitchen.id}&plan=${o.id}`
+					}))}
 				>
 					{#snippet action()}
 						{#if decisions.length && active !== 'decide'}

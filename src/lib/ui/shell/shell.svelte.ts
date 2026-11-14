@@ -31,6 +31,8 @@ export class Shell {
 	chatOpen = $state(false);
 	/** What the agent is scoped to on this page: the kitchen and the plan on screen (Kitchen, Request, Ops). */
 	chat = $state<{ kitchenId?: string; planId?: string }>({});
+	/** A request to show a plan's decisions in place (the dock's decision card on the plan already on screen). */
+	locate = $state<{ planId: string; at: number } | null>(null);
 }
 
 const KEY = Symbol('shell');

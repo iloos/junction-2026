@@ -5,7 +5,7 @@
 	 * supplier confirmed vs awaiting, and that editing is locked. One primary action, passed in by the page.
 	 */
 	import type { Snippet } from 'svelte';
-	import { Ban, Lock } from '@lucide/svelte';
+	import { Ban, Lock, ListTodo } from '@lucide/svelte';
 	import type { FulfilmentView } from '$lib/core/contracts';
 
 	import { BUCKETS, needTally } from './coverage';
@@ -29,6 +29,8 @@
 		/** Set once the order is placed: the header becomes the order's state. */
 		ordered?: { confirmed: number; awaiting: number; cents: number } | null;
 		action?: Snippet;
+		/** The kitchen's other plans in this sandbox, each with a link that opens it here. */
+		others?: { id: string; title: string; open: number; ordered: number; href: string }[];
 	}
 	let {
 		title,
@@ -40,7 +42,8 @@
 		cannot = 0,
 		orderable,
 		ordered = null,
-		action
+		action,
+		others = []
 	}: Props = $props();
 
 	const t = $derived(needTally(coverage));
@@ -63,6 +66,28 @@
 	<div class="px-4 pt-3.5 md:px-5">
 		<h1 id="task-h" class="text-title font-semibold tracking-[-0.01em] text-ink">{title}</h1>
 		{#if meta}<p class="text-meta text-ink-2">{meta}</p>{/if}
+		{#if others.length}
+			<nav
+				aria-label="Other tasks in this kitchen"
+				class="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-meta text-ink-2"
+			>
+				<ListTodo size={13} class="text-ink-3" aria-hidden="true" />
+				<span class="text-ink-3">Also open:</span>
+				{#each others as o (o.id)}
+					<!-- The page builds the href with resolve(). -->
+					<!-- eslint-disable svelte/no-navigation-without-resolve -->
+					<a
+						href={o.href}
+						class="inline-flex max-w-full min-w-0 rounded-full border border-rule-strong px-2 py-0.5 text-ink hover:border-accent hover:text-accent-ink"
+						title={o.title}
+						><span class="max-w-[14rem] truncate">{o.title}</span><span class="shrink-0 text-ink-3"
+							>&nbsp;· {o.open ? `${o.open} open` : `${o.ordered} ordered`}</span
+						></a
+					>
+					<!-- eslint-enable svelte/no-navigation-without-resolve -->
+				{/each}
+			</nav>
+		{/if}
 	</div>
 
 	<div
