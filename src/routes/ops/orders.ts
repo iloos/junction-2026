@@ -4,9 +4,11 @@
  */
 import type { ActorKind } from '$lib/core/contracts';
 import type { OrderStages, Origin } from '$lib/core/services/stages';
-import { decisionsDue, type Decision } from '$lib/ui/decisions';
+import type { Decision } from '$lib/ui/decisions';
+import { SCENARIO } from '$lib/core/scenario';
 import { day } from '$lib/ui/format';
 import { salesUnitWords } from '$lib/ui/request/words';
+import { dueOf } from '$lib/core/mandate/due';
 import { dishName } from './problems';
 
 export interface OrderRow {
@@ -36,7 +38,7 @@ export interface OrderRow {
 	decisions: Decision[];
 	/** What an approve binds to: the pending approval, its plan version and terms, and the run. */
 	approval: { id: string; planVersion: number; termsHash: string; runId: string } | null;
-	/** When the decisions are due (decisionsDue), for cards without their own time. */
+	/** When the decisions are due (dueOf, else the scenario cut-off), for cards without their own time. */
 	due: string;
 	/** Product names by id, for the cards. */
 	names: Record<string, string>;
@@ -185,7 +187,7 @@ export function orderRow(s: OrderStages, decisions: Decision[]): OrderRow {
 					runId: s.plan.runId
 				}
 			: null,
-		due: decisionsDue(s.plan, s.pending),
+		due: dueOf(s.plan, s.pending) ?? SCENARIO.cutoff,
 		names: Object.fromEntries(s.plan.lines.map((l) => [l.productId, l.productName ?? l.productId])),
 		ordered: s.ordered.map((o) => ({
 			orderId: o.orderId,

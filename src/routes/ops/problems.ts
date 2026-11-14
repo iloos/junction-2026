@@ -10,6 +10,7 @@ import type { WorkspaceState } from '$lib/core/state';
 import { decisionsOf } from '$lib/ui/decisions';
 import { salesUnitWords } from '$lib/ui/request/words';
 import { pendingApprovalOf } from './cases';
+import { dueOf } from '$lib/core/mandate/due';
 import { productName, reasonText, type Names } from './labels';
 
 /** Who the problem waits on now. */
@@ -205,9 +206,16 @@ export function buildProblems(
 			already = `Agents already ${parts.join(' and ')}${tail}`;
 		}
 
+		// When it is due: dueOf (core/mandate/due.ts) over each plan's lines in question, the earliest across plans.
 		let deadline: string | null = null;
-		for (const { l } of held) deadline = earliest(deadline, l.offer?.availability.closingTime);
-		for (const h of hits) deadline = earliest(deadline, h.u.offer?.availability.closingTime);
+		for (const h of hits)
+			deadline = earliest(
+				deadline,
+				dueOf(h.plan, pendingApprovalOf(s, h.plan.id), [
+					h.u,
+					...h.rescue.filter((l) => l.state === 'held' || l.state === 'proposed')
+				])
+			);
 		const lines = hits.flatMap((h) => [
 			{ planId: h.plan.id, lineId: h.u.id },
 			...h.rescue.map((l) => ({ planId: h.plan.id, lineId: l.id }))
@@ -274,7 +282,15 @@ export function buildProblems(
 		const title = `${list(dishes)}: ${plural(n, 'line')} not ordered until ${WAITS_WORDS[waits]} decides`;
 		const asked = askedBy(log, g.items, WAITS_WORDS[waits]);
 		let deadline: string | null = null;
-		for (const { l } of g.items) deadline = earliest(deadline, l.offer?.availability.closingTime);
+		for (const plan of new Set(g.items.map((x) => x.plan)))
+			deadline = earliest(
+				deadline,
+				dueOf(
+					plan,
+					pendingApprovalOf(s, plan.id),
+					g.items.filter((x) => x.plan === plan).map((x) => x.l)
+				)
+			);
 		const first = g.items[0];
 		out.push({
 			id: `held:${g.reason}`,

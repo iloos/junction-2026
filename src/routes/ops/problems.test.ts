@@ -3,6 +3,8 @@ import type { OpEnvelope } from '$lib/core/contracts';
 import { applyOps, emptyState } from '$lib/core/state';
 import seeded from './fixtures/seeded-ops.ndjson?raw';
 import { buildProblems, dishName } from './problems';
+import { dueOf } from '$lib/core/mandate/due';
+import { pendingApprovalOf } from './cases';
 import { doorOf, storyOf } from './story';
 
 /** The seeded Christmas run of a fresh visitor, as the op stream delivered it (bulky payloads trimmed). */
@@ -72,6 +74,14 @@ describe('problems on the seeded run', () => {
 		const p = early.find((x) => x.id === 'outage:462490');
 		expect(p?.tone).toBe('blocked');
 		expect(p?.already).toBeNull();
+	});
+
+	it('is due when dueOf says, the same time the decision card and the calendar show', () => {
+		const st = stateAfter();
+		const plan = Object.values(st.plans)[0];
+		const pending = pendingApprovalOf(st, plan.id);
+		const lines = plan.lines.filter((l) => ham.lines.some((x) => x.lineId === l.id));
+		expect(ham.deadline).toBe(dueOf(plan, pending, lines));
 	});
 
 	it('glosses dish names in English', () => {
