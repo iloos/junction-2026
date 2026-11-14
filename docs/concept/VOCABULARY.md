@@ -74,3 +74,6 @@ The useful interface is a decision with consequences: “This product is unavail
 5. Use the same language in onboarding, Why, review, receipts and agent tools; then design the visual hierarchy around those concepts.
 
 This is a product contract with tests and examples, not merely an editorial cleanup.
+
+## "Covers" (user, Sat 14 Nov night)
+Never show the trade word **covers** to a person. Say **guests** for an event ("Christmas dinner buffet, 140 guests"), **lunches** or **meals** for a day's service ("Wednesday lunch buffet, 320 lunches"; "School lunch, 2,000 meals"), and **per guest** / **per meal** for sizing ("15.8 kg per meal"). Code may keep `covers` as an internal field name; rendered text, chat, receipts, the site and the tool descriptions agents read may not.
