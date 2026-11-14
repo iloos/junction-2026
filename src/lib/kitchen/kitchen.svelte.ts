@@ -217,6 +217,12 @@ export class KitchenStore {
 				decision
 			});
 			ok = out.state === 'granted';
+			// The grant must be visible before the panel moves on: re-read if the store still says pending.
+			for (let i = 0; ok && i < 3; i++) {
+				const s = await backend.snapshot(this.mode);
+				if (!('plan' in s) || s.approval?.id !== a.id || s.approval.state !== 'pending') break;
+				await new Promise((r) => setTimeout(r, 250));
+			}
 			this.#log(
 				'approval',
 				`${out.state}: ${a.lineIds.length} lines, bound to v${a.planVersion} · ${a.termsHash.slice(0, 8)}`

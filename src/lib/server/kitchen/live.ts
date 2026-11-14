@@ -179,7 +179,9 @@ async function buildSnapshot(s: Session): Promise<LiveSnapshot> {
 	const b = await createServerPorts();
 	const kitchens = await b.ports.store.kitchens(ctx.workspaceId);
 	const kitchen = kitchens.find((k) => k.id === s.kitchenId) ?? kitchens[0];
-	const { plan } = (await must(s, 'get_plan', { planId: planned.id })) as PlanOut;
+	const { plan, approval: gpApproval } = (await must(s, 'get_plan', {
+		planId: planned.id
+	})) as PlanOut & { approval: { id: string; state: Approval['state'] } | null };
 
 	// Rankings under the active rules preset (previews: nothing is persisted).
 	const rescues: Record<string, SubstitutesOut> = {};
@@ -217,10 +219,13 @@ async function buildSnapshot(s: Session): Promise<LiveSnapshot> {
 
 	const ws = await b.ports.store.load(ctx.workspaceId, ctx.runId);
 	const approvals = Object.values(ws.approvals).filter((a) => a.planId === plan.id);
-	const current =
-		approvals
-			.filter((a) => a.state === 'pending' || a.state === 'granted')
-			.sort((a, b) => b.planVersion - a.planVersion)[0] ?? null;
+	// The plan's current approval is the one get_plan names (core's rule), with its state as get_plan reports it.
+	const named = gpApproval ? approvals.find((a) => a.id === gpApproval.id) : undefined;
+	const current: Approval | null = named
+		? { ...named, state: gpApproval!.state }
+		: (approvals
+				.filter((a) => a.state === 'pending' || a.state === 'granted')
+				.sort((a, b) => b.planVersion - a.planVersion)[0] ?? null);
 	const lastInvalidated: Approval | null =
 		approvals
 			.filter((a) => a.state === 'invalidated')
