@@ -1,8 +1,8 @@
 {
-	"recordedAt": "2026-11-14T15:36:33.087Z",
-	"appCommit": "7a45877705b9de3288966882f509bad2debe8366",
+	"recordedAt": "2026-11-14T16:05:19.534Z",
+	"appCommit": "b2dfe9c1a94cd0ea0b51284cf504a53cb6589c3e",
 	"chain": {
-		"recordedAt": "2026-11-14T15:36:33.087Z",
+		"recordedAt": "2026-11-14T16:05:19.533Z",
 		"line": {
 			"dish": "Salmon soup",
 			"ingredient": "potatoes",
@@ -12,9 +12,9 @@
 			"per": "100 g"
 		},
 		"counts": {
-			"canOrderNow": 5,
-			"waiting": 4,
-			"unknownQuantity": 4
+			"canOrderNow": 4,
+			"waiting": 5,
+			"unknownQuantity": 5
 		},
 		"steps": [
 			{
@@ -62,16 +62,16 @@
 				"text": "Ordered on one receipt.",
 				"decides": {
 					"kind": "signoff",
-					"text": "5 lines can be ordered now · 4 wait for the chef · 4 of them because Valio doesn't state a quantity"
+					"text": "4 lines can be ordered now · 5 wait for the chef · 5 of them because Valio doesn't state a quantity"
 				}
 			}
 		],
-		"appCommit": "7a45877705b9de3288966882f509bad2debe8366"
+		"appCommit": "b2dfe9c1a94cd0ea0b51284cf504a53cb6589c3e"
 	},
 	"cases": [
 		{
 			"id": "lactose-free",
-			"recordedAt": "2026-11-14T15:36:24.232Z",
+			"recordedAt": "2026-11-14T16:05:09.229Z",
 			"source": {
 				"app": "https://app.mandate.kitchen",
 				"endpoints": [
@@ -132,7 +132,7 @@
 		},
 		{
 			"id": "within-mandate",
-			"recordedAt": "2026-11-14T15:36:26.117Z",
+			"recordedAt": "2026-11-14T16:05:10.829Z",
 			"source": {
 				"app": "https://app.mandate.kitchen",
 				"endpoints": [
@@ -183,7 +183,7 @@
 		},
 		{
 			"id": "agent-cannot-approve",
-			"recordedAt": "2026-11-14T15:36:27.370Z",
+			"recordedAt": "2026-11-14T16:05:12.358Z",
 			"source": {
 				"app": "https://app.mandate.kitchen",
 				"endpoints": [
@@ -231,7 +231,7 @@
 		},
 		{
 			"id": "cut-off",
-			"recordedAt": "2026-11-14T15:36:28.496Z",
+			"recordedAt": "2026-11-14T16:05:13.931Z",
 			"source": {
 				"app": "https://app.mandate.kitchen",
 				"endpoints": [
@@ -266,7 +266,7 @@
 		},
 		{
 			"id": "one-receipt",
-			"recordedAt": "2026-11-14T15:36:30.149Z",
+			"recordedAt": "2026-11-14T16:05:16.422Z",
 			"source": {
 				"app": "https://app.mandate.kitchen",
 				"endpoints": [
@@ -305,7 +305,7 @@
 		},
 		{
 			"id": "out-of-stock",
-			"recordedAt": "2026-11-14T15:36:31.484Z",
+			"recordedAt": "2026-11-14T16:05:18.128Z",
 			"source": {
 				"app": "https://app.mandate.kitchen",
 				"endpoints": [
