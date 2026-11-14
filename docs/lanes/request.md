@@ -102,6 +102,7 @@ In priority order, for the Conversation session that takes over B, E and 41 (rin
     4. Screenshots: scratch/b2-*.mjs. Live eval: `INTENT_LIVE=1 LLM_PROVIDER=gemini node --env-file=.env node_modules/vitest/vitest.mjs run --project server src/lib/server/request/intent.live.test.ts`.
     5. Gate: `pnpm gate --only check,lint`.
     6. For a stuck gate on Windows, find its worktree with the scratchpad cwd.ps1 script (it reads a process's cwd). Stopping the shell leaves node alive.
+- Sat 14 Nov 23:55 (S3, ring 6) · done: shares reading on both doors, one-tap likeliest reading (e48dc9e) · stubbed: menu has no per-share dish beyond vegetarian:N · needs: none (BriefDraft.shares added in ui/request/types.ts) · ready to merge: yes
 
 ## Run
 ```bash
