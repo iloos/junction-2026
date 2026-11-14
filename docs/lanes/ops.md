@@ -1,82 +1,59 @@
-# Lane: ops (deploy, Operations, op stream, demo runs)
+# Lane: ops (deploy, Operations, op stream, visitor sandboxes)
 
-**Branch:** `lane/ops` · **Worktree:** `../junc26-lanes/ops` · **Dev port:** 5176 · **Owner:** session 9c
+## Dispatch
 
-## Goal (one sentence, user-visible)
-The app runs on Aiven. Operations shows every held line, refused commit and anomaly as one live queue, and each visitor gets a demo run they can start over safely.
+- **Track:** G (SYNTHESIS §5/§8): sandboxes, Operations, deploy. Session 9c.
+- **Branch / worktree:** `lane/g3` in `../junc26-lanes/ops`, base main `f2052ca`. Dev port 5176.
+- **Owned paths:**
+  - `src/lib/server/demo/**`, `src/lib/server/bus/**`, `src/lib/server/db/client.ts`
+  - `src/routes/ops/**`, `src/routes/api/events/**`, `src/routes/api/demo/**`, `src/routes/healthz/**`
+  - `Dockerfile`, `scripts/deploy/**`, `docs/foundations/deploy.md`
+- **Next deliverable:** cleanup of the owned paths, then the plan upgrade once the store cache is on prod.
+- **Depends on:** 8d's store cache (`lane/a-store-cache`) for the 10-visitor latency target.
+- **Acceptance:** `pnpm gate` green; for anything touching sandboxes, `src/routes/ops/visitor-gate.e2e.ts` green on a production build.
 
-## Owned paths
-- Deploy: `Dockerfile`, `scripts/deploy/**`, `docs/foundations/deploy.md`, `src/lib/server/db/client.ts`, `src/routes/healthz/**`
-- Op stream: `src/lib/server/bus/**`, `src/routes/api/events/**`
-- Demo runs: `src/lib/server/demo/**`, `src/routes/api/demo/**`, `src/lib/core/scenario.ts`
-- Operations: `src/routes/ops/**`
+## State
 
-## Handoff (Sat 14 Nov)
+- **Prod:** main `f2052ca` on Aiven `mandate`. Smoke passes, including the commit race check on `ws-smoke`.
+- **On main:**
+  - One resolver for every surface (`demo/visitor.ts`): a signed cookie gives each browser its own sandbox `ws-j-<24 hex>`, seeded lazily with a fresh run. Rooms are `mine`, `ws-judges` and `ws-demo` (presenters only).
+  - Judge keys `jk_<ws>.<exp>.<hmac>` (`demo/judge-key.ts`, `GET /api/demo/judge-key`).
+  - A presenter session on /ops.
+  - Per workspace: reset cooldown, kitchen queue, simulator overlay and served clock. The overlay and clock use an AsyncLocalStorage scope entered by `serveTool` and the kitchen queue.
+  - A reset clears the workspace's idempotency rows.
+  - /ops: urgency queue, wallboard, trace drawer with Stop, `?ws&run` deep links. Its held count matches the kitchen.
+  - The op stream: paged catch-up, run re-anchoring, and a rebuild on a refused op.
+- **On `lane/g3`, not merged:**
+  - `c3c0017`: the judge-key tamper test always changes the MAC.
+  - `7b8f752`: `SQL_TRACE`, `scripts/deploy/visitors.mjs`.
+  - This brief and deploy.md.
+- **Measured:**
+  - 30 concurrent visitors on prod: 0 errors.
+  - Planning is serialized on the 512 MB plan: 2.6 s alone, about 25 s each for 10 at once.
+  - The store cache cuts one visitor's statements from 341 to 201.
 
-**State.** `lane/ops` = main `5615a58`, nothing unmerged. Prod runs `f2edb21` (Aiven `commit_sha`), smoke OK; ws-demo on run `run-mwfr9p7l`, ws-judges on `run-mwfr9pis`. Review: `docs/handoff/review-9c-ops.md`. Next: Track G in `docs/handoff/SYNTHESIS.md` §5, pending the user's re-scope.
+## Open
 
-**How it fits** (read in this order):
-- `demo/run.ts`: `currentRun` per workspace, loaded from the newest `runs` row and held in memory.
-- `demo/reset.ts` and `sandbox.ts`: start a new run; audit rows survive.
-- `bus/index.ts`: `publish` (the Store calls it after commit) → MemoryBus ring of 500 per workspace, plus PgTransport NOTIFY `mandate_events` on prod.
-- `/api/events`: subscribe → catch up (run filter in SQL before the limit) → dedupe by seq. It sends `event: run` when the run changes and falls back to polling.
-- `ops/stream.svelte.ts`: applies events in rAF batches. `ops/cases.ts` builds the queue and is pure and tested.
-- The scenario clock is `core/scenario.ts`, ticked from the run's start.
+- **Plan upgrade:** `startup-100-2048` ($0.0685/h, `aws-eu-central-1`) after the cache deploys. Lead approval pending. Then re-measure 10 concurrent visitors, target ≤ 5 s each.
+- **F16 kitchen side:** the "link from an earlier run / another sandbox" notice and the sandbox reset label. The patch is with 1f (`scratch/f16-kitchen.patch`) to apply on `lane/c-kitchen`.
+- **F16 request side:** /request review recovery after a reload, not started.
+- Still hot after the cache: `store.kitchens` is read 16× per visitor, catalogue product docs 23× (8d's paths).
+- `publishSim` has no callers, so live sandboxes show no simulator events.
 
-**Non-obvious.**
-- **Aiven env updates replace the whole list.** `aiven_service_update` drops `PROJECT_CA_CERT` and the console-added keys (Gemini, Exa, Context.dev). Add single variables in the console. Never read `.env` values; ask the user to paste secrets.
-- **Redeploy:**
-  - Push main, then `aiven_application_redeploy` (project `junction26jq`, service `mandate`).
-  - Expect about 1 min of 302/307 to Aiven's status page, then `EXPECT_DB=ok scripts/deploy/smoke.sh https://widely-many-scorpion.eur-1.aiven.app`.
-  - Check the deployed `commit_sha` with `aiven_service_get`, not by timing.
-- **Warm up before judging:** the first hit after a deploy or idle takes about 7 s. Open `/`, `/ops` and `/request`, run one quote and the smoke test, and don't redeploy in the last 30 min.
-- Presenter actions on prod (reset, run, stop) need the chef key via `curl` (deploy.md has the command); `DEMO_RESET_OPEN` stays unset.
-- Workspace choice is made in three places, none of them mine: `kitchen/live.ts:62`, `request/workspace.ts` `pageWorkspace`, and `ops/+page.server.ts:49` (defaults to ws-demo, hence F2).
-- `/api/events` on prod serves only ws-demo, ws-judges and ws-synth. Track G turns that into a pattern.
-- NOTIFY payloads over 7,000 bytes are dropped with a warning; ops fall back to a ref fetch, traces don't.
-- Context.dev returns 4xx without retrying. A delivery that failed while the route or secret was missing stays failed; retry it by hand with the `retry-webhook-delivery` MCP tool. The monitor runs hourly.
+## Traps
 
-**Open threads:**
-- Track G: per-visitor workspace (`ws-j-<id>` cookie) with a scoped reset, Ops following the visitor, exact-plan links, a presenter session and a two-browser test. My step-2 additions to its done-when:
-  - one resolver for the workspace;
-  - a cap on what each visitor costs;
-  - `/api/events` gated by the visitor's cookie;
-  - a judge key minted at runtime.
-- Bugs, both F26: the `/ops` clock doesn't re-anchor when the run is reset elsewhere (`+page.svelte:26`); an empty `?/cancelAgent` returns 500 instead of 400.
-- No tests yet:
-  - `PgTransport`;
-  - the NOTIFY ref path;
-  - `publishSim` in Postgres. It has no callers anyway, so live workspaces show no simulated events.
-- The pg race test (`MANDATE_TEST_PG=1`) result isn't recorded in the deploy.md evidence table yet.
+- **Aiven env updates replace the whole list.** Add single variables in the console; change the plan with `plan` alone.
+- **No redeploy in the last 30 minutes before judging.**
+- Prettier reformats on save, so scripted string replacements miss after a format; use the Edit tool.
+- When resolving a rebase conflict, never take a whole file with `--theirs`/`--ours` in a file other lanes also edit. That reverted the request lane's work once.
+- `Stop-Process` kills `node build` hard; old servers can keep a port and serve a deleted build. Check the port's listener before restarting.
+- Per-process state (run pointers, sessions, cooldowns, rings, the state cache): never scale `mandate` past one instance.
+- Other dev servers on the same `DATABASE_URL` hold Aiven connections (15 in total). Stop the ones you don't use.
 
-**Traps:**
-- Prettier reformats on save, so Python or sed string replacements miss; use Edit.
-- Svelte rejects a `<form>` inside `<p>`.
-- Lint `no-navigation-without-resolve` needs `resolve()` or a scoped disable.
-- `reader.test` needs a 30 s timeout.
-- Docker Desktop can wedge (engine 500); the fix is `wsl --shutdown`, which is the user's call.
-- Per-process state (`currentRun`, cooldown, agent lock, rings): never scale `mandate` past one instance.
+## Resume
 
-**Resume:**
-- In the worktree: `pnpm i`, copy `.env` and `data/valio/` from the main checkout, then `pnpm dev --port 5176`.
-- Load tests: dev-only `ws-stress` at `/ops?ws=ws-stress&copies=10|50`.
-- Playwright scripts and screenshots are in `scratch/` (gitignored).
-- Checks: `pnpm check && pnpm lint && pnpm test:unit`.
-- Aiven over MCP: project `junction26jq`; app `mandate`; Postgres `pg-1dfeeeed` (PG 18.7, pool max 3, TLS verified via `PROJECT_CA_CERT`).
-
-**Only I know:**
-- The €2.7M sandbox order came in through key-less `/request`, before the ceiling.
-- The kitchen runaway loop (996 ops) is fixed by 8d.
-- Plan the event takes 4.24 s, of which 2.88 s is the stage-2 rescues; that's the next latency target.
-- `ops/+page.server.ts` names come from seeds plus `SYNTH_PRODUCTS`, not `catalog.get`, so a product outside them shows as "Product <id>".
-
-## Report
-- Sat 14 Nov ~06:00 · Track G (lane/g-visitor) · done:
-  - one visitor resolver (signed cookie, lazy seed with a fresh run, rooms `mine` / `ws-judges` / `ws-demo`);
-  - D9 judge keys and `GET /api/demo/judge-key`;
-  - presenter session on /ops;
-  - per-workspace reset cooldown, kitchen queue, sessions and simulator overlay;
-  - bus ring cap of 60; idempotency cleared on reset (s11 F1-idem flipped);
-  - F15 count parity, F16 Ops-side deep links `?ws&run`, F26 clock re-anchor and 400 on an empty cancel, F27 paged catch-up and resync on a refused op;
-  - `warm.sh`.
-  Integration gate `src/routes/ops/visitor-gate.e2e.ts` is green on a prod build (fixture DB), and so is merge-gate. Outside paths, approved by the lead: `auth.resolveKey` (judge keys) and `tools/serve.ts` (current run and overlay scope); edits to `evals/adapter.ts` reset and `adapters/simulator/overlay.ts`. Not yet done: the 30-visitor bound test on prod (second merge); the `/request` reload recovery (req). Ready to merge: yes.
+- **Worktree setup:** `pnpm i`; copy `.env` and `data/valio/` from the main checkout.
+- **Checks:** `pnpm check && pnpm lint && pnpm test:unit --run`, then `pnpm gate` before handing a SHA.
+- **Integration gate on a production build without Aiven:** `pnpm build`, run `scripts/deploy/serve-fixture.sh` (fixture DB, throwaway secrets, port 4177), then `GATE_URL=http://localhost:4177 npx playwright test -c scripts/deploy/pw-gate.config.ts`.
+- **Load and statements against Aiven:** `SQL_TRACE=1 PORT=4178 node --env-file=.env build`, then `node scripts/deploy/visitors.mjs http://localhost:4178 5`.
+- **Deploy:** see `docs/foundations/deploy.md` (redeploy, warm.sh, smoke with `SMOKE_KEY`).

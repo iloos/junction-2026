@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { Line } from '$lib/core/contracts';
-	import { euro, reasonText, TIER, type Names } from './labels';
+	import { euro, productName, reasonText, TIER, type Names } from './labels';
 
 	let { line, names, fresh = false }: { line: Line; names: Names; fresh?: boolean } = $props();
 
@@ -13,11 +13,11 @@
 	class="ticket"
 	data-tone={tone}
 	class:fresh
-	aria-label="{tierWord}: {names[line.productId] ?? line.productId}"
+	aria-label="{tierWord}: {productName(names, line.productId)}"
 >
 	<div class="edge" aria-hidden="true"></div>
 	<div class="body">
-		<h3>{names[line.productId] ?? `Product ${line.productId}`}</h3>
+		<h3>{productName(names, line.productId)}</h3>
 		<div class="figs">
 			<span class="pid">{line.productId}</span>
 			<span class="qty">{line.qty.value}&nbsp;<small>{line.qty.unit}</small></span>

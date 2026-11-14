@@ -3,7 +3,7 @@
  * page monitors with webhooks (`/monitors`), and webhook signature checks. Plain fetch, no SDK.
  * The fixture twin (fixture.ts) serves recorded real responses through the same interface.
  */
-import { createHmac, timingSafeEqual } from 'node:crypto';
+import { hmac, sameBytes, sameText } from '$lib/server/auth/crypto';
 import type { WebCall } from './http';
 import {
 	RECALL_INSTRUCTIONS,
@@ -173,16 +173,12 @@ export function verifyContextSignature(
 	);
 	const t = Number(parts.t);
 	if (!Number.isFinite(t) || Math.abs(nowS - t) > SIGNATURE_TOLERANCE_S || !parts.v1) return false;
-	const want = createHmac('sha256', secret).update(`${t}.${rawBody}`).digest('hex');
-	const a = Buffer.from(want, 'hex');
-	const b = Buffer.from(String(parts.v1), 'hex');
-	return a.length === b.length && timingSafeEqual(a, b);
+	const want = hmac(secret, `${t}.${rawBody}`, 'hex');
+	return sameBytes(Buffer.from(want, 'hex'), Buffer.from(String(parts.v1), 'hex'));
 }
 
 /** Constant-time compare for the shared-secret header used by our own scripts and replays. */
 export function sameSecret(given: string | null, secret: string | undefined): boolean {
 	if (!given || !secret || secret.length < 16) return false;
-	const a = Buffer.from(given);
-	const b = Buffer.from(secret);
-	return a.length === b.length && timingSafeEqual(a, b);
+	return sameText(given, secret);
 }

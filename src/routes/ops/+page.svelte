@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { resolve } from '$app/paths';
 	import { enhance } from '$app/forms';
+	import type { Plan, PlanView } from '$lib/core/contracts';
 	import { scenarioClock } from '$lib/core/scenario';
 	import { OpsStream } from './stream.svelte';
 	import Ticket from './Ticket.svelte';
@@ -37,7 +38,7 @@
 	let tracesOpen = $state(false);
 	let confirmReset = $state(false);
 	// svelte-ignore state_referenced_locally
-	let anchor = $state(data.runStartedAt);
+	const anchor = data.runStartedAt;
 	let wall = $state(Date.now());
 	onMount(() => {
 		const t = setInterval(() => (wall = Date.now()), 15_000);
@@ -54,6 +55,33 @@
 
 	const kitchenName = (id: string) => data.kitchens.find((k) => k.id === id)?.name ?? id;
 	const plans = $derived(Object.values(stream.state.plans));
+
+	/**
+	 * Plan views (fulfilment per need) from the server: the op stream carries plans, not their read model. Fetched
+	 * once the stream is live and again at most every VIEWS_MS after ops arrive.
+	 */
+	const VIEWS_MS = 1500;
+	let views = $state.raw<Record<string, PlanView>>({});
+	let viewsTimer: ReturnType<typeof setTimeout> | null = null;
+	async function loadViews() {
+		viewsTimer = null;
+		try {
+			const r = await fetch(`/ops/views?ws=${encodeURIComponent(data.workspace)}`);
+			if (r.ok) views = ((await r.json()) as { views: Record<string, PlanView> }).views;
+		} catch {
+			/* keep the last views; coverage says "not reported" until one arrives */
+		}
+	}
+	$effect(() => {
+		void stream.state;
+		if (data.simulated || stream.status !== 'live' || viewsTimer) return;
+		viewsTimer = setTimeout(loadViews, VIEWS_MS);
+	});
+	onMount(() => () => {
+		if (viewsTimer) clearTimeout(viewsTimer);
+	});
+	const withView = (p: Plan): Plan => (views[p.id] ? { ...p, view: views[p.id] } : p);
+
 	const planKitchen = (planId: string) => {
 		const p = stream.state.plans[planId];
 		return p ? kitchenName(p.kitchenId) : planId;
@@ -124,7 +152,7 @@
 				anomalies,
 				pending,
 				external,
-				cover: coverage(mine)
+				cover: coverage(mine.map(withView))
 			};
 		})
 	);
@@ -190,13 +218,13 @@
 				>
 				<a
 					data-sveltekit-reload
-					href={resolve('/ops') + '?ws=ws-judges'}
-					aria-current={data.workspace === 'ws-judges' ? 'page' : undefined}>Shared room</a
+					href={resolve('/ops') + `?ws=${data.rooms.shared}`}
+					aria-current={data.workspace === data.rooms.shared ? 'page' : undefined}>Shared room</a
 				>
 				<a
 					data-sveltekit-reload
-					href={resolve('/ops') + '?ws=ws-demo'}
-					aria-current={data.workspace === 'ws-demo' ? 'page' : undefined}>Stage</a
+					href={resolve('/ops') + `?ws=${data.rooms.stage}`}
+					aria-current={data.workspace === data.rooms.stage ? 'page' : undefined}>Stage</a
 				>
 				<a
 					data-sveltekit-reload
@@ -260,17 +288,17 @@
 						confirmReset = false;
 						return async ({ result, update }) => {
 							if (result.type === 'success' && result.data?.reset)
-								stream.resetTo(String(result.data.reset));
+								stream.resetTo(String(result.data.reset), Number(result.data.startedAt));
 							await update({ reset: false });
 						};
 					}}
 				>
 					<button class:armed={confirmReset}
 						>{confirmReset
-							? data.workspace === 'ws-demo'
+							? data.workspace === data.rooms.stage
 								? 'Click again to clear the stage'
 								: 'Click again to clear this sandbox'
-							: data.workspace === 'ws-demo'
+							: data.workspace === data.rooms.stage
 								? 'Start a fresh run'
 								: 'Start this sandbox over'}</button
 					>
@@ -378,13 +406,12 @@
 										{#if !c.plans.length}
 											No order in progress.
 										{:else if c.cover && c.cover.covered === c.cover.total}
-											Covered: all {c.cover.total}
-											{c.cover.unit} are ordered or orderable within the mandate.
+											Covered: all {c.cover.total} needs have known supply.
 										{:else if c.cover}
-											Nothing held, but only {c.cover.covered} of {c.cover.total}
-											{c.cover.unit} are covered.
+											Nothing held, but only {c.cover.covered} of {c.cover.total} needs have known supply;
+											the rest is unresolved or rests on stock of unknown quantity.
 										{:else}
-											Nothing held. Coverage not reported.
+											Nothing held. Coverage not reported yet.
 										{/if}
 									</p>
 								{/each}

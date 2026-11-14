@@ -76,10 +76,3 @@ export async function readOps(
 		order by seq limit ${limit}`;
 	return rows.map((r) => r.envelope);
 }
-
-/** Allocate a seq from the workspace sequence (the same counter ops use). Null if the workspace row is missing. */
-export async function allocateSeq(workspaceId: string): Promise<number | null> {
-	const rows = await sql()<{ seq: number }[]>`
-		update workspaces set last_seq = last_seq + 1 where id = ${workspaceId} returning last_seq as seq`;
-	return rows[0] ? Number(rows[0].seq) : null;
-}

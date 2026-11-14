@@ -1,11 +1,11 @@
 /**
- * The Operations work queue (review round 4, #9): every thing a person or agent must act on, as one list
+ * The Operations work queue: every thing a person or agent must act on, as one list
  * sorted by urgency. Pure: derived from the reduced WorkspaceState plus when each line was first held.
  */
 import type { Line, Plan } from '$lib/core/contracts';
 import { SCENARIO } from '$lib/core/scenario';
 import type { WorkspaceState } from '$lib/core/state';
-import { lineIsHeld, reasonText, type Names } from './labels';
+import { lineIsHeld, productName, reasonText, type Names } from './labels';
 
 export type Owner = 'Chef' | 'Approver' | 'Kitchen agent' | 'Operations';
 export type Tone = 'blocked' | 'sign_off' | 'propose' | 'act';
@@ -44,7 +44,7 @@ function lineCase(
 	names: Names,
 	since: string | null
 ): Case {
-	const name = names[l.productId] ?? `Product ${l.productId}`;
+	const name = productName(names, l.productId);
 	const pending = pendingLines.has(lineKey(plan.id, l.id));
 	const hasSub = plan.lines.some((x) => x.substituteFor === l.productId);
 	const base = {
@@ -146,25 +146,21 @@ export function buildCases(
 	);
 }
 
-/** Coverage evidence for a kitchen: needs (or lines, for direct orders) that are ordered or orderable. */
-export function coverage(
-	plans: Plan[]
-): { covered: number; total: number; unit: 'needs' | 'lines' } | null {
+/**
+ * Coverage of a kitchen's needs, from each plan's FulfilmentView (the one definition, shared with get_plan and the
+ * kitchen): a need is covered when nothing is unresolved and nothing rests on supply of unknown quantity (D10).
+ * Plans without a view (the simulated run) are not counted; null when no plan reports one.
+ */
+export function coverage(plans: Plan[]): { covered: number; total: number } | null {
+	const EPS = 1e-9;
 	let covered = 0;
 	let total = 0;
-	let unit: 'needs' | 'lines' = 'needs';
-	for (const p of plans) {
-		const ok = (l: Line) => l.state === 'eligible' || l.state === 'committed';
-		if (p.needs.length) {
-			total += p.needs.length;
-			covered += p.needs.filter((n) => p.lines.some((l) => l.needId === n.id && ok(l))).length;
-		} else {
-			unit = 'lines';
-			total += p.lines.length;
-			covered += p.lines.filter(ok).length;
+	for (const p of plans)
+		for (const f of p.view?.fulfilment ?? []) {
+			total += 1;
+			if (f.unresolved.value <= EPS && f.plannedUnknown.value <= EPS) covered += 1;
 		}
-	}
-	return total ? { covered, total, unit } : null;
+	return total ? { covered, total } : null;
 }
 
 /**

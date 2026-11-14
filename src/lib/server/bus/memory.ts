@@ -9,7 +9,7 @@ export const RING_SIZE = 500;
  * Rings kept at once. With a sandbox per visitor, rings of workspaces nobody is watching are dropped, least
  * recently written first; ops stay in the database, so only sim events of an idle sandbox are forgotten.
  */
-export const MAX_RINGS = 60;
+const MAX_RINGS = 60;
 
 export const hasSeq = (e: ServerEvent): e is Seqd => 'seq' in e;
 
@@ -53,10 +53,6 @@ export class MemoryBus {
 		}
 	}
 
-	ringCount(): number {
-		return this.rings.size;
-	}
-
 	/** Sequenced events with seq > after, oldest first. */
 	after(workspaceId: string, after: number): Seqd[] {
 		return (this.rings.get(workspaceId) ?? []).filter((e) => e.seq > after);
@@ -64,13 +60,6 @@ export class MemoryBus {
 
 	highestSeq(workspaceId: string): number {
 		return this.maxSeq.get(workspaceId) ?? 0;
-	}
-
-	/** Reserve a seq locally: only valid where nothing else allocates seqs for this workspace. */
-	reserveSeq(workspaceId: string): number {
-		const next = this.highestSeq(workspaceId) + 1;
-		this.maxSeq.set(workspaceId, next);
-		return next;
 	}
 
 	subscribe(workspaceId: string, fn: Listener): () => void {
@@ -87,7 +76,7 @@ export class MemoryBus {
 		return this.listeners.get(workspaceId)?.size ?? 0;
 	}
 
-	/** Forget a workspace's ring (synthetic restarts). */
+	/** Forget a workspace's ring (a fresh load-test run). */
 	reset(workspaceId: string): void {
 		this.rings.delete(workspaceId);
 	}

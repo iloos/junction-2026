@@ -17,7 +17,8 @@ import type { ServicePorts } from '$lib/core/services/events';
 import { SCENARIO, scenarioClock, scenarioDate } from '$lib/core/scenario';
 import { currentRun, currentRunStartedAt, loadCurrentRun } from '../demo/run';
 
-export const DEMO_WORKSPACE = 'ws-demo';
+import { DEMO_WORKSPACE } from '../demo/workspaces';
+export { DEMO_WORKSPACE };
 export const DEMO_RUN = 'run-1';
 
 /** Event seeds by id (core reads no files; handlers get them through ports.events). */

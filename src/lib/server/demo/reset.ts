@@ -4,17 +4,24 @@ import { clearIdempotency } from './idempotency';
 import { realHandlers } from '$lib/server/tools/handlers';
 import { createServerPorts } from '$lib/server/store/server-ports';
 import { loadSeedKitchens } from '$lib/server/store/db-ports';
-import { SYNTH_WORKSPACE } from '$lib/server/bus/synthetic';
-import { STRESS_WORKSPACE } from '$lib/server/bus/stress';
+import { isMemoryOnly } from '$lib/server/bus';
 import { isVisitorWorkspace } from './visitor-id';
 import { currentRun, hasRun, loadCurrentRun, newRunId, setCurrentRun } from './run';
 
-export const DEMO_WORKSPACE = 'ws-demo';
+import { DEMO_WORKSPACE } from './workspaces';
+export { DEMO_WORKSPACE };
 
 /** The app's ports, built the way the tools build them (so the bus publish hook is in place). */
 async function ports() {
 	await realHandlers();
 	return createServerPorts();
+}
+
+/** Read the workspace's newest run from the database unless this process already knows one. */
+async function knowRun(workspaceId: string): Promise<void> {
+	if (hasRun(workspaceId)) return;
+	const { db } = await ports();
+	await loadCurrentRun(db, workspaceId);
 }
 
 const g = globalThis as typeof globalThis & { __mandateRunLoads?: Map<string, Promise<string>> };
@@ -29,13 +36,11 @@ export function ensureRunLoaded(
 	workspaceId: string,
 	opts: { start?: boolean } = {}
 ): Promise<string> {
-	if (workspaceId === SYNTH_WORKSPACE || workspaceId === STRESS_WORKSPACE)
-		return Promise.resolve(currentRun(workspaceId));
+	if (isMemoryOnly(workspaceId)) return Promise.resolve(currentRun(workspaceId));
 	let p = loads.get(workspaceId);
 	if (!p) {
 		p = (async () => {
-			const { db } = await ports();
-			if (!hasRun(workspaceId)) await loadCurrentRun(db, workspaceId);
+			await knowRun(workspaceId);
 			if (!hasRun(workspaceId) && opts.start) return (await resetDemoRun(workspaceId)).runId;
 			return currentRun(workspaceId);
 		})();
@@ -44,11 +49,6 @@ export function ensureRunLoaded(
 		return p;
 	}
 	return p.then(() => currentRun(workspaceId));
-}
-
-/** Workspaces this process has loaded or started (bounded by the visitor cap in `visitor.ts`). */
-export function loadedWorkspaces(): number {
-	return loads.size;
 }
 
 /**
@@ -60,7 +60,7 @@ export async function resetDemoRun(
 	workspaceId: string
 ): Promise<{ runId: string; previous: string }> {
 	const { store, db } = await ports();
-	if (!hasRun(workspaceId)) await loadCurrentRun(db, workspaceId);
+	await knowRun(workspaceId);
 	const previous = currentRun(workspaceId);
 	const runId = newRunId();
 	await clearIdempotency(db, workspaceId);

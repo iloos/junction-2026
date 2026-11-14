@@ -1,44 +1,35 @@
 import { json } from '@sveltejs/kit';
 import type { ServerEvent } from '$lib/core/contracts';
-import {
-	catchUp,
-	startStress,
-	STRESS_WORKSPACE,
-	subscribe,
-	SYNTH_WORKSPACE
-} from '$lib/server/bus';
+import { catchUp, isMemoryOnly, startStress, STRESS_WORKSPACE, subscribe } from '$lib/server/bus';
 import { currentRun, currentRunStartedAt } from '$lib/server/demo/run';
-import { ensureRunLoaded } from '$lib/server/demo/reset';
-import { ownWorkspace } from '$lib/server/demo/visitor';
+import { DEMO_WORKSPACE, ensureRunLoaded } from '$lib/server/demo/reset';
+import { mayRead, ownWorkspace } from '$lib/server/demo/visitor';
 import { env } from '$env/dynamic/private';
 import { dev } from '$app/environment';
 import type { RequestHandler } from './$types';
-
-/**
- * Production serves the public rooms, and a visitor sandbox only to the browser whose signed cookie names it
- * (D9): another visitor's id in the query reads nothing.
- */
-const PUBLIC_WORKSPACES = new Set(['ws-demo', 'ws-judges', SYNTH_WORKSPACE]);
 
 /** Catch-up reads pages of PAGE events until a short page, at most MAX_PAGES (then live takes over). */
 const PAGE = 1000;
 const MAX_PAGES = 20;
 
-/** Read-only until the agent lane's CallContext lands; then the workspace comes from the key. */
-const DEFAULT_WORKSPACE = 'ws-demo';
 const HEARTBEAT_MS = 15_000;
 const RUN_CHECK_MS = 3_000;
 
 /**
  * Live op stream (D6): subscribe first, then catch up from `after`, then deliver live, deduplicated by seq.
- * - `GET /api/events?workspace=ws-demo&after=42` → text/event-stream. Each sequenced event has `id: <seq>`,
+ * Read-only; without `ws` it streams the browser's own sandbox (or the stage when it has none).
+ * - `GET /api/events?ws=ws-demo&after=42` → text/event-stream. Each sequenced event has `id: <seq>`,
  *   so EventSource's automatic reconnect resumes from Last-Event-ID.
  * - `…&mode=poll` → JSON `{ events, last }` for clients that fall back to polling.
  */
+/** The highest seq among `events`, or `from` if none is higher. */
+const highestSeq = (events: ServerEvent[], from: number) =>
+	events.reduce((m, e) => ('seq' in e ? Math.max(m, e.seq) : m), from);
+
 export const GET: RequestHandler = async ({ url, request, cookies }) => {
-	const workspaceId = url.searchParams.get('workspace') || DEFAULT_WORKSPACE;
-	const readable = PUBLIC_WORKSPACES.has(workspaceId) || workspaceId === ownWorkspace(cookies, env);
-	if (!dev && !readable)
+	// Production: the public rooms, and a sandbox only to its own browser (D9).
+	const workspaceId = url.searchParams.get('ws') || ownWorkspace(cookies, env) || DEMO_WORKSPACE;
+	if (!dev && !mayRead(workspaceId, cookies, env))
 		return json(
 			{ error: { code: 'FORBIDDEN', message: 'unknown workspace', retryable: false } },
 			{ status: 403 }
@@ -52,8 +43,8 @@ export const GET: RequestHandler = async ({ url, request, cookies }) => {
 	if (dev && workspaceId === STRESS_WORKSPACE && after === 0)
 		startStress(Math.min(Math.max(Number(url.searchParams.get('copies')) || 10, 1), 100));
 
-	// Synthetic workspaces carry their own runs; every other workspace shows only its current run.
-	const followRun = workspaceId !== SYNTH_WORKSPACE && workspaceId !== STRESS_WORKSPACE;
+	// Memory-only workspaces carry their own runs; every other workspace shows only its current run.
+	const followRun = !isMemoryOnly(workspaceId);
 	let runId = followRun ? await ensureRunLoaded(workspaceId) : undefined;
 
 	/** Everything after `from` in the followed run, page by page. */
@@ -63,7 +54,7 @@ export const GET: RequestHandler = async ({ url, request, cookies }) => {
 		for (let i = 0; i < MAX_PAGES; i++) {
 			const page = await catchUp(workspaceId, cursor, PAGE, runId);
 			out.push(...page);
-			const top = page.reduce((m, e) => ('seq' in e ? Math.max(m, e.seq) : m), cursor);
+			const top = highestSeq(page, cursor);
 			if (page.length < PAGE || top === cursor) break;
 			cursor = top;
 		}
@@ -73,7 +64,7 @@ export const GET: RequestHandler = async ({ url, request, cookies }) => {
 
 	if (url.searchParams.get('mode') === 'poll') {
 		const events = await catchUpAll(after);
-		const last = events.reduce((m, e) => ('seq' in e ? Math.max(m, e.seq) : m), after);
+		const last = highestSeq(events, after);
 		return json({ events, last }, { headers: { 'cache-control': 'no-store' } });
 	}
 
@@ -134,6 +125,11 @@ data: ${JSON.stringify({ workspaceId, runId, startedAt: startedAt() })}
 			};
 			request.signal.addEventListener('abort', cleanup);
 
+			const ready = () =>
+				write(
+					`event: ready\ndata: ${JSON.stringify({ workspaceId, runId, last, startedAt: startedAt() })}\n\n`
+				);
+
 			write(`retry: 2000\n\n`);
 			catchUpAll(after)
 				.then((events) => {
@@ -141,9 +137,7 @@ data: ${JSON.stringify({ workspaceId, runId, startedAt: startedAt() })}
 					pending.sort((a, b) => ('seq' in a && 'seq' in b ? a.seq - b.seq : 0));
 					for (const e of pending.splice(0)) send(e);
 					live = true;
-					write(
-						`event: ready\ndata: ${JSON.stringify({ workspaceId, runId, last, startedAt: startedAt() })}\n\n`
-					);
+					ready();
 				})
 				.catch((err) => {
 					// Catch-up failed (e.g. the op log table is missing); stay subscribed for live events.
@@ -152,9 +146,7 @@ data: ${JSON.stringify({ workspaceId, runId, startedAt: startedAt() })}
 					write(`event: catchup-error\ndata: ${JSON.stringify({ message })}\n\n`);
 					for (const e of pending.splice(0)) send(e);
 					live = true;
-					write(
-						`event: ready\ndata: ${JSON.stringify({ workspaceId, runId, last, startedAt: startedAt() })}\n\n`
-					);
+					ready();
 				});
 		},
 		cancel() {

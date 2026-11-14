@@ -1,4 +1,6 @@
 import { SCOPES_BY_ACTOR, type ActorKind } from '$lib/core/contracts';
+import { DEMO_WORKSPACE, JUDGES_WORKSPACE } from '$lib/server/demo/workspaces';
+import { sameText } from './crypto';
 import { currentRun } from '$lib/server/demo/run';
 import { judgeLabel, verifyJudgeKey } from '$lib/server/demo/judge-key';
 import type { CallContext } from '$lib/core/ports';
@@ -28,7 +30,7 @@ export interface KeyEntry {
 }
 
 /** Judges' MCP keys act in their own sandbox so they can't disturb the stage run. */
-export const JUDGES_WORKSPACE = 'ws-judges';
+export { JUDGES_WORKSPACE };
 
 export const FIXTURE_KEYS: readonly KeyEntry[] = [
 	{ key: 'fx-chef', actor: 'chef', label: 'fixture-chef' },
@@ -79,7 +81,7 @@ export function contextFor(
 	label: string,
 	via: string,
 	env: Env = {},
-	workspaceId: string = env.MANDATE_WORKSPACE || 'ws-demo'
+	workspaceId: string = env.MANDATE_WORKSPACE || DEMO_WORKSPACE
 ): CallContext {
 	return {
 		workspaceId,
@@ -99,7 +101,7 @@ export function resolveKey(
 	// Judge keys (HMAC of a visitor workspace, JUDGE_KEY_SECRET): an external agent in that sandbox only.
 	const judgeWs = verifyJudgeKey(key, env);
 	if (judgeWs) return contextFor('external_agent', judgeLabel(judgeWs), opts.via, env, judgeWs);
-	const entry = keyTable(env, opts).find((e) => timingSafeEqual(e.key, key));
+	const entry = keyTable(env, opts).find((e) => sameText(e.key, key));
 	return entry ? contextFor(entry.actor, entry.label, opts.via, env, entry.workspaceId) : null;
 }
 
@@ -116,11 +118,4 @@ export function resolveRequest(
 	opts: { dev: boolean; via: string; pathKey?: string }
 ): CallContext | null {
 	return resolveKey(bearerFrom(request) ?? opts.pathKey, env, opts);
-}
-
-function timingSafeEqual(a: string, b: string): boolean {
-	if (a.length !== b.length) return false;
-	let diff = 0;
-	for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
-	return diff === 0;
 }

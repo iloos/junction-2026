@@ -12,9 +12,9 @@
  * - At most MAX_VISITORS sandboxes are seeded per process; past that, new visitors share ws-judges.
  */
 import type { Cookies } from '@sveltejs/kit';
-import { JUDGES_WORKSPACE } from '$lib/server/auth';
+import { DEMO_WORKSPACE, JUDGES_WORKSPACE, SYNTH_WORKSPACE } from './workspaces';
 import { isPresenter } from './presenter';
-import { ensureRunLoaded, DEMO_WORKSPACE } from './reset';
+import { ensureRunLoaded } from './reset';
 import { newVisitorWorkspace, readVisitor, signVisitor } from './visitor-id';
 
 type Env = Record<string, string | undefined>;
@@ -38,9 +38,6 @@ export interface Visitor {
 const g = globalThis as typeof globalThis & { __mandateVisitors?: Set<string> };
 const seeded = (g.__mandateVisitors ??= new Set());
 
-/** Sandboxes seeded in this process (for the cap and the load test). */
-export const visitorCount = () => seeded.size;
-
 const cookieOpts = { path: '/', httpOnly: true, sameSite: 'lax' as const, maxAge: COOKIE_AGE_S };
 
 type Room = 'own' | typeof JUDGES_WORKSPACE | typeof DEMO_WORKSPACE;
@@ -58,9 +55,17 @@ export function ownWorkspace(cookies: Cookies, env: Env): string | null {
 	return readVisitor(cookies.get(VISITOR_COOKIE), env);
 }
 
+/** Rooms anyone may watch: the stage, the shared room and the simulated run. */
+const PUBLIC_ROOMS = new Set<string>([DEMO_WORKSPACE, JUDGES_WORKSPACE, SYNTH_WORKSPACE]);
+
+/** Whether this browser may read a workspace's ops and plan views: a public room, or its own sandbox. */
+export function mayRead(workspaceId: string, cookies: Cookies, env: Env): boolean {
+	return PUBLIC_ROOMS.has(workspaceId) || workspaceId === ownWorkspace(cookies, env);
+}
+
 /**
  * Resolve (and, on a page load with `?ws=`, change) this browser's workspace, then make sure that workspace has
- * a current run. `follow`: honour `?ws=` (and the older `?workspace=`) on the URL; page loads pass it, API calls
+ * a current run. `follow`: honour `?ws=` on the URL; page loads pass it, API calls
  * don't, so a stray query can't move a running screen.
  */
 export async function visitorWorkspace(
@@ -79,10 +84,7 @@ export async function visitorWorkspace(
 	}
 
 	if (opts.follow && url) {
-		const asked = roomFrom(
-			url.searchParams.get('ws') ?? url.searchParams.get('workspace'),
-			presenter
-		);
+		const asked = roomFrom(url.searchParams.get('ws'), presenter);
 		if (asked) cookies.set(ROOM_COOKIE, asked, cookieOpts);
 	}
 	const room = roomFrom(cookies.get(ROOM_COOKIE), presenter);

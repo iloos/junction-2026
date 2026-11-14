@@ -5,12 +5,13 @@
  * workspace's current run, so a reset keeps it working. Without JUDGE_KEY_SECRET judge keys are off.
  */
 import type { JudgeKeys } from '$lib/core/ports';
-import { hmac, isVisitorWorkspace, judgeSecret, sameText } from './visitor-id';
+import { hmac, sameText } from '$lib/server/auth/crypto';
+import { isVisitorWorkspace, judgeSecret } from './visitor-id';
 
 type Env = Record<string, string | undefined>;
 
 /** Keys expire when the event does (override with JUDGE_KEY_EXPIRES, an ISO time). */
-export const DEFAULT_EXPIRY = '2026-11-16T00:00:00+02:00';
+const DEFAULT_EXPIRY = '2026-11-16T00:00:00+02:00';
 
 export const judgeKeysOn = (env: Env) => judgeSecret(env) !== null;
 

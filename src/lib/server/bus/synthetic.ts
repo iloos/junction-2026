@@ -1,6 +1,6 @@
 /**
- * A scripted, simulated run across the three demo kitchens, for the Operations view until core-db
- * produces real ops. Every op is a valid OpEnvelope that `applyOps` accepts; product ids and names
+ * The scripted, simulated run across the three demo kitchens that /ops shows in its "Simulated run" view
+ * (ws-synth). Every op is a valid OpEnvelope that `applyOps` accepts; product ids and names
  * are real Valio catalogue rows from fixtures/seeds, quantities and prices are invented.
  * Everything here carries provenance `simulator` and is labelled simulated in the UI.
  */
@@ -15,7 +15,8 @@ import type {
 	Tier
 } from '$lib/core/contracts';
 
-export const SYNTH_WORKSPACE = 'ws-synth';
+import { SYNTH_WORKSPACE } from '$lib/server/demo/workspaces';
+export { SYNTH_WORKSPACE };
 
 export const SYNTH_PRODUCTS: Record<string, string> = {
 	'462490': 'HK Viljaporsaan Juhlakinkku potkalla 6-8 kg',

@@ -1,5 +1,5 @@
 /**
- * Which run of a workspace is current, and starting a fresh one (R0-d). Tools, the store, the op stream
+ * Which run of a workspace is current, and starting a fresh one. Tools, the store, the op stream
  * and /ops all follow `currentRun`, so a reset clears the stage without deleting history: old runs stay
  * readable in the `ops` table.
  */
@@ -7,7 +7,7 @@ import { desc, eq } from 'drizzle-orm';
 import * as schema from '$lib/server/db/schema';
 import type { AnyDb } from '$lib/server/store/drizzle-store';
 
-export const DEFAULT_RUN = 'run-1';
+const DEFAULT_RUN = 'run-1';
 
 interface RunInfo {
 	id: string;

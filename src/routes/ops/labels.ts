@@ -59,7 +59,9 @@ export const ACTOR: Record<ActorKind, string> = {
 };
 
 export type Names = Record<string, string>;
-const name = (names: Names, id: string) => names[id] ?? `Product ${id}`;
+/** A product's name, or `Product <id>` when neither the seeds nor the simulated run name it. */
+export const productName = (names: Names, id: string) => names[id] ?? `Product ${id}`;
+const name = productName;
 
 export function lineIsHeld(l: Line): boolean {
 	return l.state === 'held' || l.state === 'unorderable';

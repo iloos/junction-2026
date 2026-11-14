@@ -4,7 +4,7 @@ import { SYNTH_PRODUCTS, SYNTH_WORKSPACE } from '$lib/server/bus/synthetic';
 import { fail } from '@sveltejs/kit';
 import { env } from '$env/dynamic/private';
 import { dev } from '$app/environment';
-import { cancelAgentRun, startAgentRun } from '$lib/server/bus/agent-runs';
+import { cancelAgentRun, startAgentRun } from '$lib/server/agent/runs';
 import {
 	isPresenter,
 	presenterOpen,
@@ -12,7 +12,8 @@ import {
 	PRESENTER_COOKIE,
 	PRESENTER_TTL_MS
 } from '$lib/server/demo/presenter';
-import { DEMO_WORKSPACE, ensureRunLoaded, resetDemo } from '$lib/server/demo/reset';
+import { ensureRunLoaded, resetDemo } from '$lib/server/demo/reset';
+import { DEMO_WORKSPACE, JUDGES_WORKSPACE } from '$lib/server/demo/workspaces';
 import { currentRun, currentRunStartedAt } from '$lib/server/demo/run';
 import { isSandbox, resetSandbox } from '$lib/server/demo/sandbox';
 import { roomLabel, visitorWorkspace, ROOM_COOKIE } from '$lib/server/demo/visitor';
@@ -29,7 +30,7 @@ export type OpsKitchen = {
 	weeklyCapCents: number;
 };
 
-/** productId → name from the seeds; the catalog port replaces this once core-db serves names. */
+/** productId → name from the seeds and the simulated run's products; anything else shows as `Product <id>`. */
 function seedNames(): Record<string, string> {
 	const out: Record<string, string> = {};
 	const walk = (o: unknown) => {
@@ -61,7 +62,7 @@ const kitchens: OpsKitchen[] = kitchenSeed.kitchens.map((k) => ({
  * the dev load test and (for non-presenters) the stage are view-only and don't move it.
  */
 async function opsWorkspace(event: RequestEvent) {
-	const asked = event.url.searchParams.get('ws') ?? event.url.searchParams.get('workspace');
+	const asked = event.url.searchParams.get('ws');
 	const presenter = isPresenter(event.cookies, env, dev);
 	const viewOnly =
 		asked === SYNTH_WORKSPACE ||
@@ -81,6 +82,8 @@ export const load: PageServerLoad = async (event) => {
 		run: workspace === SYNTH_WORKSPACE ? null : currentRun(workspace),
 		simulated: workspace === SYNTH_WORKSPACE,
 		synthWorkspace: SYNTH_WORKSPACE,
+		/** Named rooms for the nav and labels (the page can't import server modules). */
+		rooms: { stage: DEMO_WORKSPACE, shared: JUDGES_WORKSPACE },
 		room: {
 			kind: viewOnly ? null : v.kind,
 			label: viewOnly

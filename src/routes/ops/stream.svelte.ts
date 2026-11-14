@@ -1,6 +1,7 @@
 import type { OpEnvelope, ServerEvent, SimEvent } from '$lib/core/contracts';
 import { applyOps, emptyState, type WorkspaceState } from '$lib/core/state';
 import { lineKey } from './cases';
+import { lineIsHeld } from './labels';
 
 export type LogEntry =
 	| { kind: 'op'; seq: number; envelope: OpEnvelope; rejected?: string }
@@ -87,7 +88,7 @@ export class OpsStream {
 	}
 
 	private url(extra = '') {
-		return `/api/events?workspace=${encodeURIComponent(this.workspaceId)}&after=${this.last}${this.extraQuery}${extra}`;
+		return `/api/events?ws=${encodeURIComponent(this.workspaceId)}&after=${this.last}${this.extraQuery}${extra}`;
 	}
 
 	private openSse(): void {
@@ -145,7 +146,7 @@ export class OpsStream {
 
 	/** A fresh run started: clear the board and the log, keep the seq cursor, re-anchor the clock. */
 	resetTo(runId: string, startedAt?: number): void {
-		if (typeof startedAt === 'number') this.runStartedAt = startedAt;
+		if (Number.isFinite(startedAt)) this.runStartedAt = startedAt!;
 		this.state = emptyState(this.workspaceId, runId);
 		this.log = [];
 		this.heldSince = {};
@@ -264,7 +265,7 @@ function trackHeld(
 	const next: Record<string, string> = {};
 	for (const p of Object.values(s.plans))
 		for (const l of p.lines)
-			if (l.state === 'held' || l.state === 'unorderable') {
+			if (lineIsHeld(l)) {
 				const k = lineKey(p.id, l.id);
 				next[k] = prev[k] ?? at;
 			}
