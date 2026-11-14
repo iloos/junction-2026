@@ -3,13 +3,7 @@
  * same scopes, validation and idempotency apply as for MCP and REST. Valio is touched only by
  * `quote`, and only for the shortlisted ids (plus Valio's own substitute rule for the pick).
  */
-import type {
-	Kitchen,
-	Offer,
-	Product,
-	ToolName,
-	ToolOutput
-} from '$lib/core/contracts';
+import type { Kitchen, Offer, Product, ToolName, ToolOutput } from '$lib/core/contracts';
 import { orderLineFor, type OrderLine } from './order-line';
 import { addDays } from '$lib/core/scenario';
 import { day, money, num, readableName } from '$lib/ui/format';
