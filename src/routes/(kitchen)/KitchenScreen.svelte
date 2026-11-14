@@ -132,6 +132,24 @@
 		untrack(() => void k.load(linked).then(honourDeepLink));
 	});
 
+	/**
+	 * Switch kitchen from the header: the address then names the kitchen (and its plan, if it has one) the page shows,
+	 * so a reload lands on the same kitchen, not the previous kitchen's plan.
+	 */
+	async function switchKitchen(id: string) {
+		await k.setKitchen(id);
+		// Only a plan of the kitchen just chosen; a kitchen with nothing started has none to name.
+		const planId =
+			k.started !== false && k.snap?.kitchen.id === id ? (k.snap.plan.id ?? null) : null;
+		linkedSeen = planId;
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- built and read once per switch
+		const q = new URLSearchParams({ kitchen: id });
+		if (planId) q.set('plan', planId);
+		const view = page.url.searchParams.get('view');
+		if (view) q.set('view', view);
+		replaceState(resolve(`/?${q}`), page.state);
+	}
+
 	/** Leave a link that didn't resolve: drop it from the address and open the kitchen's own plan. */
 	async function openOwn() {
 		await goto(resolve('/'), { replaceState: true });
@@ -871,7 +889,7 @@
 				value={needsJoin ? '' : (snap?.kitchen.id ?? homeKit.id)}
 				disabled={k.readOnly || (!snap && !needsJoin)}
 				onchange={(e) =>
-					needsJoin ? choose(e.currentTarget.value) : k.setKitchen(e.currentTarget.value)}
+					needsJoin ? choose(e.currentTarget.value) : switchKitchen(e.currentTarget.value)}
 			>
 				{#if needsJoin}<option value="" disabled>Choose a kitchen</option>{/if}
 				{#if own.length}
