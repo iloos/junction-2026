@@ -17,7 +17,7 @@ describe('readQuestion', () => {
 		['Where is the butter from?', { kind: 'product', aspect: 'origin', query: 'butter' }],
 		[
 			'Does kermavaahto contain gluten?',
-			{ kind: 'product', aspect: 'allergens', query: 'kermavaahto gluten' }
+			{ kind: 'product', aspect: 'allergens', query: 'kermavaahto', allergen: 'gluten' }
 		],
 		['Tell me about Oltermanni', { kind: 'product', aspect: 'facts', query: 'Oltermanni' }]
 	])('%s', (text, want) => {
@@ -223,4 +223,64 @@ describe('R10-15: a named product is that product, or the chef picks', () => {
 		);
 		expect(a.steps.find((s) => s.tool === 'lookup_facts')?.source).toBe('replay');
 	});
+});
+
+describe('allergen answers (D16: one evaluator, no record is unknown)', () => {
+	it.each([
+		['Does the Arla whole milk contain lactose?', 'lactose', 'Arla whole milk'],
+		['Does the butter contain milk?', 'milk', 'butter'],
+		['Is the Valio milk lactose free?', 'lactose', 'Valio milk'],
+		['Does Oltermanni contain nuts?', 'nuts', 'Oltermanni']
+	])('%s → %s in %s', (text, allergen, query) => {
+		expect(readQuestion(text)).toMatchObject({ aspect: 'allergens', allergen, query });
+	});
+
+	it(
+		'answers lactose through meets(): a milk with a milk allergen record is not free from it',
+		{ timeout: 60_000 },
+		async () => {
+			const { ctx, handlers, products } = await milks();
+			const recorded = products.map((p) => ({
+				...p,
+				allergens: { contains: ['AM'], mayContain: [], declared: true },
+				freeFrom: []
+			}));
+			const a = await answerQuestion(
+				readQuestion('Does the Arla whole milk contain lactose?')!,
+				ctx,
+				{ ...handlers, search_products: async () => ok({ products: recorded }) } as ToolHandlers
+			);
+			expect(a.text).toMatch(/^No: Arla whole milk is not free from lactose/);
+		}
+	);
+
+	it(
+		'says unknown, never free, when there is no allergen record',
+		{ timeout: 60_000 },
+		async () => {
+			const { ctx, handlers, products } = await milks();
+			const none = products.map((p) => ({
+				...p,
+				allergens: { contains: [], mayContain: [], declared: false },
+				freeFrom: []
+			}));
+			const h = {
+				...handlers,
+				search_products: async () => ok({ products: none })
+			} as ToolHandlers;
+			const lactose = await answerQuestion(
+				readQuestion('Does the Arla whole milk contain lactose?')!,
+				ctx,
+				h
+			);
+			expect(lactose.text).toMatch(/^Unknown/);
+			const nuts = await answerQuestion(
+				{ kind: 'product', aspect: 'allergens', query: 'Arla whole milk', allergen: 'nuts' },
+				ctx,
+				h
+			);
+			expect(nuts.text).toMatch(/^Unknown/);
+			expect(nuts.text).not.toMatch(/free from nuts/);
+		}
+	);
 });

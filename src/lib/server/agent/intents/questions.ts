@@ -7,6 +7,7 @@
  */
 import type { Product, ToolName } from '$lib/core/contracts';
 import type { CallContext, ToolHandlers } from '$lib/core/ports';
+import { ALLERGEN_NAMES, meets } from '$lib/core/mandate/meets';
 import { PRODUCTS } from '$lib/server/request/lexicon';
 import { serveTool, type Served } from '$lib/server/tools/serve';
 import { isAuthorityImperative, isQuestion } from '../classify';
@@ -21,6 +22,8 @@ export type Question =
 			query: string;
 			/** The product the chef picked from "Which one?": answer for exactly this one. */
 			productId?: string;
+			/** The allergen asked about ("contain gluten?"): a key of ASKED_ALLERGENS. */
+			allergen?: string;
 	  };
 
 export interface AnswerStep {
@@ -123,6 +126,44 @@ const ASPECTS: [ProductAspect, RegExp][] = [
 const NOT_PRODUCT =
 	/\b(is|are|was|the|a|an|our|my|this|that|any|there|does|do|has|have|it|its|of|in|on|for|from|with|me|about|tell|what|whats|what's|which|where|show|explain|please|can|you|check|still|ok|okay|safe|use|made|produced|country|origin|finnish|domestic|swedish|imported|kotimai\w*|suomalai\w*|recall|recalls|recalled|withdrawn|allergen\w*|contain|contains|may|facts?|ingredients?|nutrition|onko|mikä|mitä|mistä|kerro|näytä|takaisinve\w*|takaisinkutsu\w*|alkuperä\w*|sisältää|tietoja|ainesosa\w*)\b/gi;
 
+/**
+ * Allergens a chef asks about, by word (English and Finnish): the free-from code meets() reads (lactose, milk, gluten),
+ * else the allergen record's codes. Order matters: "lactose" before "milk", so "is the milk lactose-free?" asks about
+ * lactose in milk.
+ */
+export const ASKED_ALLERGENS: { key: string; words: RegExp; freeFrom?: string; codes: string[] }[] =
+	[
+		{
+			key: 'lactose',
+			words: /\b(lactose\w*|laktoosi\w*)\b/i,
+			freeFrom: 'LACTOSE',
+			codes: ['ML', 'AM']
+		},
+		{ key: 'gluten', words: /\b(gluten\w*|gluteeni\w*)\b/i, freeFrom: 'GLUTEN', codes: ['AW'] },
+		{ key: 'peanuts', words: /\b(peanuts?|maapähkinä\w*)\b/i, codes: ['AP'] },
+		{ key: 'nuts', words: /\b(nuts?|tree nuts|pähkinä\w*)\b/i, codes: ['AN', 'SA', 'SH'] },
+		{ key: 'egg', words: /\b(eggs?|kananmuna\w*|muna)\b/i, codes: ['AE'] },
+		{ key: 'soy', words: /\b(soy|soya|soija\w*)\b/i, codes: ['AY'] },
+		{ key: 'sesame', words: /\b(sesame|seesami\w*)\b/i, codes: ['AS'] },
+		{ key: 'fish', words: /\b(fish|kala)\b/i, codes: ['AF'] },
+		{ key: 'celery', words: /\b(celery|selleri\w*)\b/i, codes: ['BC'] },
+		{ key: 'mustard', words: /\b(mustard|sinappi\w*)\b/i, codes: ['BM'] },
+		{ key: 'milk', words: /\b(milk protein|milk|maitoa?)\b/i, freeFrom: 'MILK', codes: ['AM'] }
+	];
+
+/** The allergen asked about and the words left for the product, or null when none is named. */
+function askedAllergen(text: string): { key: string; rest: string } | null {
+	for (const a of ASKED_ALLERGENS) {
+		const m = a.words.exec(text);
+		if (!m) continue;
+		const rest = text.replace(m[0], ' ').replace(/\b(free|free-from|-free|vapaa|ton|tön)\b/gi, ' ');
+		// "milk" is the allergen only when another product word remains ("does the butter contain milk?").
+		if (a.key === 'milk' && !/[\p{L}]{3,}/u.test(rest.replace(NOT_PRODUCT, ' '))) continue;
+		return { key: a.key, rest };
+	}
+	return null;
+}
+
 /** A question this module answers, or null (the words go to the plan-based agent as before). */
 export function readQuestion(text: string): Question | null {
 	const t = text.trim();
@@ -132,8 +173,9 @@ export function readQuestion(text: string): Question | null {
 	if (MANDATE_WORDS.test(t)) return { kind: 'mandate' };
 	for (const [aspect, re] of ASPECTS) {
 		if (!re.test(t)) continue;
-		// Allergen words also name the product's own dietary label ("lactose-free cream"); the rest is the product.
-		const query = t
+		// The allergen asked about is not part of the product's name ("does kermavaahto contain gluten?").
+		const asked = aspect === 'allergens' ? askedAllergen(t) : null;
+		const query = (asked?.rest ?? t)
 			.replace(/[?!.,;:"“”'’]/g, ' ')
 			.replace(NOT_PRODUCT, ' ')
 			.replace(/\s+/g, ' ')
@@ -141,7 +183,7 @@ export function readQuestion(text: string): Question | null {
 		// A question about the plan or an order is the agent's, not a product question.
 		if (!query || /\b(plan|order|orders|event|lines?|approval|tilaus|suunnitelma)\b/i.test(query))
 			return null;
-		return { kind: 'product', aspect, query };
+		return { kind: 'product', aspect, query, ...(asked ? { allergen: asked.key } : {}) };
 	}
 	return null;
 }
@@ -194,6 +236,14 @@ type ContextKitchen = {
 		allergenFreeFrom: string[];
 		tenderListOnly: boolean;
 	};
+	/** The kitchen's hard constraints (D16), when get_context carries them. */
+	constraints?: {
+		freeFrom: { code: string; name: string }[];
+		origin: { categoryGroup: string; rule: 'prefer' | 'require'; country: string }[];
+		notes: string[];
+		unknownAllergenRecord: 'hold' | 'reject';
+		traces: 'hold' | 'reject';
+	};
 };
 
 /** The mandate in the chef's own words first, then the numbers the tools enforce. */
@@ -236,7 +286,20 @@ export function mandateSentence(k: ContextKitchen): string {
 		`I may order alone up to ${euros(m.lineCapCents)} a line, ${euros(m.orderCapCents)} an order and ${euros(m.weeklyCapCents)} a week; more waits for a chef, and over ${euros(m.hardLimitCents)} is refused even with approval.`
 	];
 	if (never.length) parts.push(`Always asked first: ${never.join(', ')}.`);
-	if (m.allergenFreeFrom.length) parts.push(`Must be free from: ${m.allergenFreeFrom.join(', ')}.`);
+	const c = k.constraints;
+	const free = c ? c.freeFrom.map((x) => x.name) : m.allergenFreeFrom;
+	if (free.length) parts.push(`Every product must be free from ${free.join(', ')}.`);
+	if (c) {
+		const required = c.origin.filter((o) => o.rule === 'require');
+		if (required.length)
+			parts.push(
+				`Origin required: ${required.map((o) => `${country(o.country)} for category group ${o.categoryGroup}`).join('; ')}.`
+			);
+		if (free.length)
+			parts.push(
+				`A product with no allergen record is ${c.unknownAllergenRecord === 'reject' ? 'rejected' : 'held for a chef'}, never treated as allergen-free.`
+			);
+	}
 	if (m.tenderListOnly) parts.push('Only products on the tender list.');
 	return parts.join(' ');
 }
@@ -339,6 +402,36 @@ async function pickProduct(call: Call, query: string, productId?: string): Promi
 /** At most this many "Which one?" buttons; more matches ask for a closer name. */
 const MAX_CHOICES = 4;
 
+/**
+ * "Does X contain <allergen>?" from the catalogue record. Lactose, milk and gluten go through core's one evaluator
+ * (meets, D16), the same rule the validator enforces; other allergens read the allergen record. No record is unknown,
+ * never "free from".
+ */
+function allergenAnswer(steps: AnswerStep[], p: Product, name: string, key: string): Answer {
+	const a = ASKED_ALLERGENS.find((x) => x.key === key)!;
+	if (a.freeFrom) {
+		const r = meets(p, { freeFrom: [a.freeFrom] });
+		const why = r.failing[0]?.why;
+		const text =
+			r.verdict === 'ok'
+				? `Yes, ${name} is free from ${key}, according to Valio's catalogue.`
+				: r.verdict === 'no'
+					? `No: ${name} is not free from ${key} (${why ?? 'the catalogue record'}).`
+					: `Unknown: Valio has no allergen record for ${name}, so it counts as possibly containing ${key}. A kitchen excluding ${key} holds it for a chef.`;
+		return { steps, text, sources: [] };
+	}
+	const rec = p.allergens;
+	const hit = (list: string[]) => list.some((c) => a.codes.includes(c));
+	const text = !rec.declared
+		? `Unknown: Valio has no allergen record for ${name}, so it may contain ${key}; it is never assumed free.`
+		: hit(rec.contains)
+			? `Yes: ${name} contains ${key}, according to its allergen record.`
+			: hit(rec.mayContain)
+				? `It may contain traces of ${key}, according to its allergen record.`
+				: `Its allergen record declares no ${key}.`;
+	return { steps, text, sources: [] };
+}
+
 async function answerProduct(
 	call: Call,
 	q: Extract<Question, { kind: 'product' }>
@@ -436,11 +529,13 @@ async function answerProduct(
 			sources: []
 		};
 
+	if (q.aspect === 'allergens' && q.allergen) return allergenAnswer(steps, p, name, q.allergen);
 	if (q.aspect === 'allergens' && p.allergens.declared) {
 		const a = p.allergens;
+		const named = (codes: string[]) => codes.map((c) => ALLERGEN_NAMES[c] ?? c).join(', ');
 		const bits = [
-			a.contains.length ? `contains ${a.contains.join(', ')}` : 'declares no allergens it contains',
-			a.mayContain.length ? `may contain ${a.mayContain.join(', ')}` : '',
+			a.contains.length ? `contains ${named(a.contains)}` : 'declares no allergens it contains',
+			a.mayContain.length ? `may contain ${named(a.mayContain)}` : '',
 			p.freeFrom.length ? `is labelled free from ${p.freeFrom.join(', ')}` : ''
 		].filter(Boolean);
 		return {

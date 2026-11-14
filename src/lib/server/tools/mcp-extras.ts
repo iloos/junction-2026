@@ -183,8 +183,8 @@ export function registerExtras(server: McpServer, ctx: CallContext, handlers: To
 				say(
 					[
 						`Plan ${eventId ? `the event ${eventId}` : 'a seeded event'}${kitchenId ? ` for ${kitchenId}` : ''} inside the kitchen's mandate.`,
-						'1. Call get_context and read that kitchen’s mandate (or the mandate://<kitchen> resource): caps per line, order and week, what is never delegated, allergens it must be free from.',
-						'2. Call plan_event. For lines that cannot be ordered as planned, call find_substitutes and prefer the options inside the mandate.',
+						'1. Call get_context and read that kitchen’s mandate and constraints (or the mandate://<kitchen> resource): caps per line, order and week, what is never delegated, the allergens every product must be free from and any required origin. A dish’s diet codes (VEG, VE, M, G, L) bind its needs as requirements (diet:vegetarian, excludes:milk, …); they are never relaxed.',
+						'2. Call plan_event. For lines that cannot be ordered as planned, or that miss a requirement (line.unmet names the requirement and the product fact), call find_substitutes for that line; it only ranks products that meet the need’s requirements.',
 						'3. Lines that are held wait for a chef: give the human meta.approvalUrl first, as a link to open on their device, and wait. Never try to approve. Then call get_plan and commit_order only for what the mandate or the chef’s approval allows.',
 						'4. Finish with get_outcome and report it in numbers: supplier confirmed, awaiting the supplier, held, unresolved.'
 					].join('\n')

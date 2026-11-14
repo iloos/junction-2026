@@ -66,7 +66,7 @@ export function mcpInstructions(tools: readonly string[]): string {
  * remedy is another tool call; the rest (INVALID_INPUT, FORBIDDEN, ...) are fixed by changing the input.
  */
 export function errorNext(
-	{ code, sub }: { code: ErrorCode; sub?: string },
+	{ code, sub, detail }: { code: ErrorCode; sub?: string; detail?: Record<string, unknown> },
 	args: unknown
 ): { tool: ToolName; why: string; args?: Record<string, unknown> } | null {
 	const planId = (args as { planId?: unknown } | null)?.planId;
@@ -94,6 +94,7 @@ export function errorNext(
 				...ref
 			};
 		case 'FORBIDDEN':
+			if (sub === 'requirement_unmet') return requirementNext(detail, args);
 			return sub === 'approval_required'
 				? {
 						tool: 'get_plan',
@@ -104,6 +105,43 @@ export function errorNext(
 		default:
 			return null;
 	}
+}
+
+/**
+ * A line refused for a hard requirement (D16): rank substitutes for that exact line, naming what it misses and the
+ * product fact behind it, so the agent repairs it rather than guessing. find_substitutes keeps the need's own
+ * requirements; nothing here can relax one.
+ */
+function requirementNext(
+	detail: Record<string, unknown> | undefined,
+	args: unknown
+): { tool: ToolName; why: string; args?: Record<string, unknown> } {
+	const a = (args ?? {}) as { planId?: unknown; version?: unknown };
+	const lines = (detail?.lines ?? []) as {
+		lineId?: string;
+		productId?: string;
+		unmet?: { requirement: string; fact: string }[];
+	}[];
+	const first = lines[0];
+	const misses = (first?.unmet ?? []).map((u) => `${u.requirement} (${u.fact})`).join('; ');
+	return {
+		tool: 'find_substitutes',
+		why: `${first?.productId ?? 'a line'} misses ${misses || 'a hard requirement'}: rank substitutes that meet it${lines.length > 1 ? `, then the other ${lines.length - 1} line(s)` : ''}. Requirements are never relaxed.`.slice(
+			0,
+			200
+		),
+		...(typeof a.planId === 'string' && first?.lineId
+			? {
+					args: {
+						planId: a.planId,
+						...(typeof a.version === 'number' ? { version: a.version } : {}),
+						lineId: first.lineId
+					}
+				}
+			: typeof a.planId === 'string'
+				? { args: { planId: a.planId } }
+				: {})
+	};
 }
 
 /** `origin`: where the result's links point (publicOrigin); paths stay paths without it. */

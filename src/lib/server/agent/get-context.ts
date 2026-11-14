@@ -5,6 +5,7 @@ import type { CallContext } from '$lib/core/ports';
 import type { ServicePorts } from '$lib/core/services/events';
 import { liveApprovals } from '$lib/core/services/orders';
 import { withPlanView } from '$lib/core/services/views';
+import { ALLERGEN_NAMES } from '$lib/core/mandate/meets';
 import { hardLimitCents } from '$lib/core/mandate/validate';
 import { SCENARIO } from '$lib/core/scenario';
 import { SUPPORTED_EVENTS } from './context';
@@ -61,6 +62,20 @@ export function createGetContext(ports: ServicePorts): GetContextHandler {
 					neverDelegate: [...k.mandate.neverDelegate],
 					allergenFreeFrom: [...k.constraints.allergens.freeFrom],
 					tenderListOnly: k.constraints.tenderListOnly
+				},
+				constraints: {
+					freeFrom: k.constraints.allergens.freeFrom.map((code) => ({
+						code,
+						name: ALLERGEN_NAMES[code] ?? code.toLowerCase()
+					})),
+					origin: k.constraints.origin.map((o) => ({
+						categoryGroup: o.categoryGroup,
+						rule: o.rule,
+						country: o.country.toLowerCase()
+					})),
+					notes: [...k.constraints.labels],
+					unknownAllergenRecord: k.constraints.allergens.unknownCounts,
+					traces: k.constraints.allergens.traces ?? 'hold'
 				}
 			})),
 			// Read with their views (as get_plan returns them), so core's rule sees each line's state as of now.
