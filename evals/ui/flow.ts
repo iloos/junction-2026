@@ -18,11 +18,25 @@ export async function enterKitchen(page: Page, path = '/', kitchenId = 'k-hotel'
 	const picker = page.getByTestId('establishment-picker');
 	const views = page.getByRole('navigation', { name: 'Kitchen view' });
 	const canvas = page.locator('#task-h').or(page.getByRole('button', { name: /^Plan the event/ }));
-	await picker.or(views).or(canvas).first().waitFor({ timeout: 60_000 });
+	// A store or kitchen with no plan yet opens on its own home (an h1 such as "Your kitchen is set up…").
+	const home = page.locator('main h1');
+	await picker.or(views).or(canvas).or(home).first().waitFor({ timeout: 60_000 });
 	if (await picker.isVisible().catch(() => false)) {
-		await picker.locator(`[data-kitchen-id="${kitchenId}"]`).click();
+		const sample = picker.locator(`[data-kitchen-id="${kitchenId}"]`);
+		if (await sample.count()) await sample.click();
+		else {
+			// The shared room (D24) offers no sample kitchens: a visitor joins as their own store.
+			await picker
+				.getByLabel(/Store name|Kitchen name/)
+				.fill(`Playtest Room ${Date.now().toString(36)}`);
+			await picker.getByRole('button', { name: /Start my (store|kitchen)/ }).click();
+		}
 		await picker.waitFor({ state: 'hidden', timeout: 60_000 });
-		await views.or(canvas).first().waitFor({ timeout: 60_000 });
+		await views
+			.or(canvas)
+			.or(page.getByRole('button', { name: /Ask the agent/ }))
+			.first()
+			.waitFor({ timeout: 60_000 });
 	}
 	await eventView(page);
 	await page.waitForLoadState('networkidle').catch(() => undefined);

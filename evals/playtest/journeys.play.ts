@@ -293,14 +293,25 @@ journey(
 			await inDock.waitFor({ timeout: 10_000 }).catch(() => undefined);
 			if (!(await inDock.isVisible().catch(() => false))) {
 				// The dock's "Decide · N decisions before …" bar may be a collapsed toggle: open it as a visitor would.
+				const show = dock.getByRole('button', { name: /^Show\b/ }).first();
 				const bar = dock.getByText(/^Decide\b/).first();
-				if (await bar.isVisible().catch(() => false)) {
-					await bar.click({ timeout: 5_000 }).catch(() => undefined);
+				const toggle = (await show.isVisible().catch(() => false)) ? show : bar;
+				if (await toggle.isVisible().catch(() => false)) {
+					await toggle.click({ timeout: 5_000 }).catch(() => undefined);
 					r.note('openedDecideBar', true);
 					await inDock.waitFor({ timeout: 5_000 }).catch(() => undefined);
 				}
 			}
 			const viaDock = await inDock.isVisible().catch(() => false);
+			// S2 508db7d: beside the open dock the page keeps "Accept all N · €X" for the plan's decisions.
+			const acceptAll = page.getByRole('button', { name: /^Accept all/ }).first();
+			if (!viaDock && (await acceptAll.isVisible().catch(() => false))) {
+				r.note('approvedOn', 'page: Accept all, dock open');
+				await acceptAll.click();
+				await page.waitForTimeout(2000);
+				r.note('approvedDecisions', 'all');
+				return;
+			}
 			if (!viaDock) {
 				// Hero finding when this fires: the dock is open on the plan, says the decisions "wait above", and neither
 				// the dock nor the page offers a Review. Close the dock (the page's Decide rail returns) to go on.
@@ -347,7 +358,9 @@ journey(
 			const inDock = dock.getByRole('button', { name: /^Order/ }).first();
 			const order = (await inDock.isVisible().catch(() => false))
 				? inDock
-				: page.getByRole('button', { name: /^(Order|Place order)/ }).first();
+				: page
+						.getByRole('button', { name: /^(Order \d+ lines? now|Order the|Place order)/ })
+						.first();
 			await order.click({ timeout: 30_000 });
 			await page
 				.getByText(/Ordered\s*·\s*\d+\s+lines?/)
@@ -706,7 +719,10 @@ journey(
 		const ops = page;
 		await r.step('Ops on the big screen joins the room', async () => {
 			await ops.goto(`${BASE}/ops?ws=ws-judges`);
-			await ops.waitForTimeout(3000);
+			const room = ops.getByRole('tab', { name: /^Room/ });
+			if (await room.isVisible().catch(() => false)) await room.click();
+			// Orders already there when the page loads don't light up for the first 3 s (S4 50ad21f).
+			await ops.waitForTimeout(4000);
 		});
 		const stores = ['Playtest Bistro', 'Playtest Canteen', 'Playtest Hotel'];
 		const ctxs = await Promise.all(
@@ -740,11 +756,28 @@ journey(
 						`${name}: orders`,
 						async () => {
 							await say(r, p, '10 l milk for friday, order it');
-							await approveAll(p).catch(() => 0);
+							// Approve on the page (the dock closed so the Decide rail shows), then order.
+							const close = p.getByRole('button', { name: 'Close chat' });
+							if (await close.isVisible().catch(() => false)) await close.click();
+							const all = p.getByRole('button', { name: /^Accept all/ }).first();
+							if (await all.isVisible().catch(() => false)) await all.click();
+							else await approveAll(p).catch(() => 0);
+							await p.waitForTimeout(1500);
+							await p
+								.getByRole('button', { name: /^(Order \d+ lines? now|Order the|Place order)/ })
+								.first()
+								.click({ timeout: 20_000 });
+							await p
+								.getByText(/Ordered\s*·\s*\d+\s+lines?/)
+								.first()
+								.waitFor({ timeout: 60_000 });
 						},
 						{ beat: false }
 					);
 					await p.screenshot({ path: `${r.dir}/store-${i + 1}-ordered.png`, fullPage: true });
+					// The big screen within a second of this store's order: a "First order" badge and the room line.
+					await ops.waitForTimeout(800);
+					await ops.screenshot({ path: `${r.dir}/ops-after-store-${i + 1}.png` });
 				})
 			);
 		} finally {
@@ -756,6 +789,29 @@ journey(
 			const seen = stores.filter((s) => text.includes(s));
 			r.note('opsSeesStores', seen);
 			if (seen.length < 3) throw new Error(`Ops names ${seen.length}/3 stores: ${seen.join(', ')}`);
+		});
+		await r.step('Ops lit up a first order', async () => {
+			const lit = await ops
+				.getByText(/First order|placed its first order/)
+				.first()
+				.isVisible()
+				.catch(() => false);
+			r.note('firstOrderLightUp', lit);
+			if (!lit)
+				throw new Error(
+					'no "First order" badge or room line on Ops (it fades after 8 s; see ops-after-store-*.png)'
+				);
+		});
+		await r.step('the room QR full screen shows the public link', async () => {
+			await ops
+				.getByRole('button', { name: /Show the code full screen/ })
+				.click({ timeout: 10_000 });
+			await ops.waitForTimeout(1000);
+			const text = await ops.locator('body').innerText();
+			r.note('qrLink', /app\.mandate\.kitchen\/\?ws=ws-judges/.test(text));
+			if (!/app\.mandate\.kitchen\/\?ws=ws-judges/.test(text))
+				throw new Error('the full-screen code does not show app.mandate.kitchen/?ws=ws-judges');
+			await ops.keyboard.press('Escape');
 		});
 	},
 	420_000
