@@ -603,7 +603,12 @@ async function applyRules(s: Session) {
 	const b = await createServerPorts();
 	const kitchens = await b.ports.store.kitchens(chef(s).workspaceId);
 	const kitchen = kitchens.find((k) => k.id === s.kitchenId) ?? kitchens[0];
-	const outages = plan0.lines.filter((l) => l.state === 'unorderable' && !l.substituteFor);
+	// A dish already ordered keeps what was ordered: its rescue is not re-picked (the screen says so up front).
+	const ordered = (id: string) =>
+		plan0.lines.some((l) => l.substituteFor === id && l.state === 'committed');
+	const outages = plan0.lines.filter(
+		(l) => l.state === 'unorderable' && !l.substituteFor && !ordered(l.id)
+	);
 	for (const line of outages) {
 		const plan = (await findPlan(s))!;
 		await must(s, 'find_substitutes', {

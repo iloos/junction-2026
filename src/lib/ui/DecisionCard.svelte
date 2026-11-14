@@ -35,6 +35,8 @@
 		onsee?: () => void;
 		/** The plan's delivery date: the product cards price for it. */
 		deliverBy?: string;
+		/** The scenario's now: past the decision's cut-off, approving is greyed out with the reason. */
+		now?: Date | string | null;
 	}
 	let {
 		decision: d,
@@ -48,10 +50,17 @@
 		compact = false,
 		headless = false,
 		onsee,
-		deliverBy
+		deliverBy,
+		now
 	}: Props = $props();
 	/** One rule everywhere: the decision's own due time (decisionsDue over its lines). */
 	const when = $derived(d.due ?? due);
+	/** Why approving can't work now, known before the click; null when it can. */
+	const blocked = $derived(
+		when && now && new Date(now).getTime() > new Date(when).getTime()
+			? `The order cut-off passed (${storyTime(when)}): this can't be ordered for this delivery any more.`
+			: null
+	);
 
 	/** The lines whose terms changed since the chef saw them open the details by themselves. */
 	const changedHere = $derived(d.lineIds.some((id) => changed?.has(id)));
@@ -174,18 +183,20 @@
 		{:else}
 			<div class="mt-3 flex flex-wrap items-center gap-x-1 gap-y-2">
 				{#if d.signOff}
-					<div class="min-w-48 flex-1">
+					<div class="min-w-48 flex-1" title={blocked ?? undefined}>
 						<HoldButton
 							label="Hold to sign off {n} {noun}"
-							disabled={busy}
+							disabled={busy || !!blocked}
 							onconfirm={() => void approve()}
 						/>
 					</div>
 				{:else}
 					<button
 						type="button"
-						class="h-10 rounded-md bg-ink px-4 text-body font-medium text-sheet hover:bg-ink/85 disabled:opacity-50"
-						disabled={busy}
+						class="h-10 rounded-md bg-ink px-4 text-body font-medium text-sheet hover:bg-ink/85 disabled:cursor-not-allowed disabled:opacity-50"
+						disabled={busy || !!blocked}
+						title={blocked ?? undefined}
+						aria-describedby={blocked ? `blocked-${d.key}` : undefined}
 						onclick={review}
 						>Review {n} {noun} · <span class="mono">{money(d.totalCents)}</span></button
 					>
@@ -206,6 +217,9 @@
 					>
 				{/if}
 			</div>
+			{#if blocked}
+				<p id="blocked-{d.key}" class="mt-1.5 text-meta leading-snug text-ink-2">{blocked}</p>
+			{/if}
 		{/if}
 	{/if}
 </article>
