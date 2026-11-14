@@ -1,0 +1,526 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mandate · Story</title>
+<meta name="description" content="The Mandate story in nine slides: a kitchen purchasing agent that orders on its own only inside limits the chef sets. Built on Valio Aimo's catalogue for Junction 2026.">
+<meta property="og:title" content="Mandate · Story">
+<meta property="og:description" content="A kitchen purchasing agent that orders on its own only inside limits the chef sets.">
+<meta property="og:url" content="https://mandate.kitchen/story">
+<meta name="color-scheme" content="dark">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23176b70'/%3E%3Cpath d='M8 23V10l8 8 8-8v13' fill='none' stroke='%23fff' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0b0d0e; --bg2:#111416; --panel:#15191b; --line:#23292c; --line2:#2f373b;
+  --ink:#eef1ef; --ink2:#a7b0ad; --ink3:#8a9491;
+  --ok:#3fbf8a; --teal:#2bb3a6; --amber:#e8a93c; --red:#e2604f;
+  --serif:'Instrument Serif', Georgia, serif; --sans:'IBM Plex Sans', system-ui, sans-serif; --mono:'IBM Plex Mono', ui-monospace, monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-snap-type:y mandatory;scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+body{background:var(--bg);color:var(--ink);font:15px/1.55 var(--sans);-webkit-font-smoothing:antialiased;overflow-x:hidden}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+a{color:inherit}
+:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
+
+/* chrome */
+.top{position:fixed;inset:0 0 auto 0;height:60px;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:0 28px;z-index:20;background:linear-gradient(var(--bg) 55%,transparent)}
+.brand{display:flex;gap:10px;align-items:center;font-weight:600;letter-spacing:.01em;text-decoration:none;font-size:16px}
+.brand svg{width:24px;height:24px;flex:none}
+.top nav{display:flex;gap:22px;font-size:14px;color:var(--ink2)}
+.top nav a{text-decoration:none}.top nav a:hover{color:var(--ink)}
+.top nav a[aria-current="page"]{color:var(--ink)}
+.btn{display:inline-flex;align-items:center;gap:8px;min-height:42px;padding:0 18px;border-radius:999px;font:500 14px var(--sans);text-decoration:none;border:1px solid var(--line2);color:var(--ink);background:transparent;cursor:pointer;white-space:nowrap}
+.btn.primary{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.btn:hover{border-color:var(--ink2)}
+.btn .short{display:none}
+.dots{position:fixed;right:22px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:10px;z-index:20}
+.dots a{width:7px;height:7px;border-radius:50%;background:var(--line2);display:block}
+.dots a.on{background:var(--ink);height:20px;border-radius:4px}
+.counter{position:fixed;left:28px;bottom:22px;font:12px var(--mono);color:var(--ink3);z-index:20}
+.keys{position:fixed;right:28px;bottom:22px;font:12px var(--mono);color:var(--ink3);z-index:20}
+
+/* slides */
+section{min-height:100vh;min-height:100svh;scroll-snap-align:start;padding:96px 8vw 72px;display:flex;flex-direction:column;justify-content:center;position:relative}
+h1,h2{font-family:var(--serif);font-weight:400;letter-spacing:-.01em;line-height:1.04;text-wrap:balance}
+h1{font-size:clamp(40px,5.4vw,84px);max-width:14ch}
+h2{font-size:clamp(30px,3.5vw,54px);max-width:24ch}
+.lede{font-size:clamp(16px,1.35vw,20px);color:var(--ink2);max-width:46ch;margin-top:24px;text-wrap:pretty}
+.label{font:12px var(--mono);color:var(--ink3);margin-top:18px}
+.reveal{opacity:0;transform:translateY(18px);transition:opacity .8s ease,transform .8s ease}
+.in .reveal{opacity:1;transform:none}
+.in .reveal.d1{transition-delay:.12s}.in .reveal.d2{transition-delay:.24s}.in .reveal.d3{transition-delay:.36s}.in .reveal.d4{transition-delay:.48s}
+
+/* hero */
+#hero{display:grid;grid-template-columns:1.05fr 1fr;gap:5vw;align-items:center}
+#hero .ctas{display:flex;flex-wrap:wrap;gap:12px;margin-top:36px}
+.gatebox{position:relative;height:min(64vh,560px);border:1px solid var(--line);border-radius:18px;background:radial-gradient(120% 80% at 50% 0%,#152022 0%,var(--bg2) 60%);overflow:hidden}
+.gatebox canvas{position:absolute;inset:0;width:100%;height:100%}
+.gatebox .legend{position:absolute;left:18px;right:18px;bottom:14px;display:flex;flex-wrap:wrap;gap:6px 16px;font:12px var(--mono);color:var(--ink3)}
+.gatebox .legend b{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:0}
+.gatebox .tick{position:absolute;right:18px;top:14px;font:12px var(--mono);color:var(--ink3);text-align:right}
+
+/* problem */
+.bigrow{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:14px;overflow:hidden;margin-top:40px;max-width:980px}
+.bigrow>div{background:var(--bg);padding:26px 24px}
+.bigrow .n{font:400 44px/1.1 var(--serif)}
+.bigrow .l{color:var(--ink2);font-size:14px;margin-top:6px}
+.bigrow .n.red{color:var(--red)}.bigrow .n.amber{color:var(--amber)}
+
+/* flow */
+.three{display:grid;grid-template-columns:1fr 1fr 1fr;gap:18px;margin-top:44px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px;position:relative}
+.card h3{font:500 12px var(--mono);color:var(--ink3);letter-spacing:.06em;text-transform:uppercase;margin-bottom:14px;display:flex;justify-content:space-between}
+.msg{background:#1c2225;border-radius:12px 12px 12px 4px;padding:12px 14px;font-size:14px;margin-bottom:10px}
+.msg.me{background:#24302f;border-radius:12px 12px 4px 12px;margin-left:24px}
+.outcome{font:12px var(--mono);color:var(--teal);border-top:1px solid var(--line);padding-top:10px;margin-top:6px}
+.line{display:grid;grid-template-columns:1fr auto;gap:6px 10px;padding:10px 0;border-bottom:1px solid var(--line);font-size:14px}
+.line:last-of-type{border:0}
+.line s{color:var(--ink3)}
+.line .q{font:12px var(--mono);color:var(--ink2);text-align:right}
+.line .chip{grid-column:1/-1;justify-self:start}
+.chip{font:12px var(--mono);padding:2px 8px;border-radius:999px;border:1px solid currentColor;white-space:nowrap}
+.chip.amber{color:var(--amber)}.chip.ok{color:var(--ok)}.chip.teal{color:var(--teal)}.chip.dim{color:var(--ink3)}
+.decision{border:1px solid var(--amber);border-radius:12px;padding:14px;margin-top:4px}
+.decision .t{display:flex;justify-content:space-between;gap:10px;font-weight:500}
+.decision p{color:var(--ink2);font-size:13.5px;margin:6px 0 12px}
+.hold{height:38px;padding:0 18px;border-radius:999px;background:var(--ink);color:var(--bg);display:grid;place-items:center;font-weight:500;font-size:13.5px;position:relative;overflow:hidden}
+.hold::before{content:"";position:absolute;inset:0;background:var(--amber);transform:scaleX(0);transform-origin:left;animation:hold 3.2s ease-in-out infinite;opacity:.9}
+.hold span{position:relative}
+@keyframes hold{0%,20%{transform:scaleX(0)}70%,100%{transform:scaleX(1)}}
+
+/* mandate */
+.mandate{display:grid;grid-template-columns:1fr 64px 1fr;align-items:center;margin-top:52px}
+.words{font:400 clamp(22px,2.2vw,32px)/1.35 var(--serif)}
+.words mark{background:none;color:var(--ink);border-bottom:2px solid var(--c);padding-bottom:1px;transition:background .3s}
+.words mark.hot{background:color-mix(in oklab,var(--c) 22%,transparent)}
+.arrow{color:var(--ink3);text-align:center;font-size:28px}
+.rules{display:flex;flex-direction:column;gap:10px}
+.rule{display:grid;grid-template-columns:10px 1fr auto;gap:12px;align-items:center;padding:14px 16px;border:1px solid var(--line);border-radius:12px;background:var(--panel);font-size:14.5px;transition:border-color .3s}
+.rule i{width:10px;height:10px;border-radius:2px;background:var(--c)}
+.rule small{font:12px var(--mono);color:var(--ink2)}
+.rule.hot{border-color:var(--c)}
+
+/* gate */
+.compact h2{font-size:clamp(30px,3.3vw,50px);max-width:40ch}
+#gate .stage{margin-top:24px;border:1px solid var(--line);border-radius:18px;background:var(--bg2);position:relative}
+#gate svg{width:100%;height:auto;display:block}
+.node rect{fill:var(--panel);stroke:var(--line2)}
+.node text{fill:var(--ink);font:500 14px var(--sans)}
+.node .sub{fill:var(--ink3);font:12px var(--mono)}
+.plabel{font:500 12px var(--mono);paint-order:stroke;stroke:var(--bg2);stroke-width:4px}
+.wire{stroke:var(--line2);fill:none;stroke-width:1.2}
+.scrollhint{display:none}
+
+/* certainty */
+.cert{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-top:48px}
+.cert .sw{height:84px;border-radius:10px;margin-bottom:12px}
+.cert b{font-weight:500;display:block}
+.cert span{color:var(--ink2);font-size:13.5px}
+.solid{background:var(--teal)}.hatch{background:repeating-linear-gradient(135deg,var(--amber) 0 4px,transparent 4px 8px)}.conf{background:var(--ok)}
+
+/* partners */
+.pt{display:grid;grid-template-columns:260px 1fr;gap:16px;margin-top:32px;align-items:start}
+.pt-list{display:flex;flex-direction:column;gap:6px}
+.pt-tab{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;text-align:left;padding:12px 16px;border:1px solid var(--line);border-radius:12px;background:transparent;color:var(--ink2);cursor:pointer;transition:border-color .2s,background .2s;font:inherit}
+.pt-tab b{font:400 24px/1.1 var(--serif);color:var(--ink);display:block}
+.pt-tab small{font:12.5px var(--sans);color:var(--ink3)}
+.pt-tab .tag{font:12px var(--mono);padding:2px 8px;border-radius:999px;border:1px solid #24533f;color:var(--ok);white-space:nowrap}
+.pt-tab:hover{border-color:var(--line2)}
+.pt-tab[aria-selected="true"]{border-color:var(--teal);background:#122220}
+.pt-panel{border:1px solid var(--line);border-radius:16px;background:var(--panel);padding:22px 24px;min-height:420px}
+.pt-head{display:flex;justify-content:space-between;align-items:baseline;gap:16px;flex-wrap:wrap}
+.pt-head h3{font:400 34px/1.05 var(--serif)}
+.pt-head .role{font:12px var(--mono);color:var(--teal)}
+.pt-strip{display:flex;gap:4px;margin:16px 0 18px;flex-wrap:wrap}
+.pt-strip span{flex:1;min-width:64px;text-align:center;font:12px var(--mono);padding:7px 4px;border-radius:7px;border:1px solid var(--line);color:var(--ink3);transition:all .25s}
+.pt-strip span.on{border-color:var(--teal);color:var(--ink);background:#143029}
+.pt-cols{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.pt-cols h4{font:500 12px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--ink3);margin-bottom:6px}
+.pt-cols p{font-size:14.5px;color:var(--ink2);line-height:1.6}
+.pt-cols b{color:var(--ink);font-weight:500}
+.pt-ex{margin-top:16px;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.pt-ex .bar{display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px 10px;font:12px var(--mono);color:var(--ink3);padding:8px 14px;border-bottom:1px solid var(--line);background:rgba(255,255,255,.02)}
+.pt-ex pre{margin:0;padding:12px 14px;font:12.5px/1.6 var(--mono);color:var(--ink);white-space:pre-wrap;overflow-wrap:anywhere}
+.pt-ex pre i{font-style:normal;color:var(--ink3)}
+.pt-ex pre em{font-style:normal;color:var(--ok)}
+.pt-ex pre u{text-decoration:none;color:var(--amber)}
+.pt-foot{display:flex;gap:8px 20px;flex-wrap:wrap;margin-top:14px;font:12px var(--mono);color:var(--ink3)}
+.pt-foot b{color:var(--ink2);font-weight:500}
+
+/* proof */
+.proof{margin-top:40px;border-top:1px solid var(--line);max-width:1100px}
+.pr{display:grid;grid-template-columns:1.3fr 1fr 96px;gap:8px 24px;padding:16px 0;border-bottom:1px solid var(--line);align-items:baseline}
+.pr .c{font:400 22px/1.25 var(--serif)}
+.pr .e{font:12px var(--mono);color:var(--ink2)}
+.pr .chip{justify-self:end}
+.stats{display:flex;flex-wrap:wrap;gap:28px 56px;margin-top:36px}
+.stats div{font:400 52px/1.1 var(--serif)}.stats span{display:block;font:12px var(--mono);color:var(--ink3);margin-top:4px}
+.more{margin-top:28px;font-size:15px;color:var(--ink2)}
+.more a{color:var(--ink)}
+
+/* close */
+#close{align-items:flex-start}
+.key{margin-top:32px;display:flex;flex-wrap:wrap;border:1px solid var(--line2);border-radius:12px;overflow:hidden;font:13px var(--mono);max-width:100%}
+.key span{padding:14px 18px;color:var(--ink2);overflow-wrap:anywhere}
+.key a{padding:14px 18px;background:var(--panel);border-left:1px solid var(--line2);font-weight:500;text-decoration:none}
+.key a:hover{background:#1c2225}
+.closebtns{display:flex;flex-wrap:wrap;gap:12px;margin-top:20px}
+.foot{position:absolute;bottom:28px;left:8vw;right:8vw;display:flex;flex-wrap:wrap;gap:6px 24px;justify-content:space-between;font:12px var(--mono);color:var(--ink3)}
+
+@media (max-width:1100px){.top nav{gap:16px}}
+@media (max-width:900px){
+  html{scroll-snap-type:y proximity}
+  #hero,.three,.mandate,.cert,.bigrow,.pt,.pt-cols{grid-template-columns:1fr}
+  .arrow{transform:rotate(90deg);margin:8px 0}
+  .dots,.counter,.keys{display:none}
+  section{min-height:auto;padding:92px 16px 56px}
+  #hero{padding-top:92px;gap:32px}
+  .gatebox{height:340px}
+  .pt-list{flex-direction:row;overflow-x:auto;padding-bottom:4px}
+  .pt-tab{flex:0 0 auto;min-width:0}
+  .pt-tab small{white-space:nowrap}
+  .top{background:var(--bg);border-bottom:1px solid var(--line)}
+  .cert{gap:12px;margin-top:32px}
+  .cert>div{display:grid;grid-template-columns:56px 1fr;column-gap:14px;align-items:center}
+  .cert .sw{height:44px;margin:0;grid-row:span 2}
+  .pt-panel{padding:16px;min-height:0}
+  .pt-head h3{font-size:28px}
+  .pr{grid-template-columns:1fr 96px}
+  .pr .e{grid-column:1/-1;grid-row:2}
+  #gate .stage{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  #gate svg{min-width:860px}
+  .scrollhint{display:block;font:12px var(--mono);color:var(--ink3);margin-top:8px}
+  .foot{position:static;margin-top:48px}
+  .stats div{font-size:44px}
+}
+@media (max-width:600px){
+  .top{padding:0 16px;gap:10px}
+  .top nav{gap:14px;font-size:13.5px}
+  .top nav .cur{display:none}
+  .btn.go{padding:0 14px}
+  .btn.go .long{display:none}.btn.go .short{display:inline}
+  h1{font-size:40px}
+  .gatebox{height:300px}
+  .bigrow .n{font-size:38px}
+  .bigrow>div{padding:20px 18px}
+}
+@media (max-width:360px){.top nav a.opt{display:none}}
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  .reveal{opacity:1;transform:none;transition:none}
+  .hold::before{animation:none;transform:scaleX(.6)}
+  .words mark,.rule,.pt-tab,.pt-strip span{transition:none}
+}
+</style>
+</head>
+<body>
+<header class="top">
+  <a class="brand" href="/" aria-label="Mandate home">
+    <svg viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="7" fill="#2bb3a6"/><path d="M8 23V10l8 8 8-8v13" fill="none" stroke="#0b0d0e" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    Mandate
+  </a>
+  <nav aria-label="Site">
+    <a class="cur" href="/story" aria-current="page">Story</a>
+    <a href="/how">How it works</a>
+    <a class="opt" href="/proof">Proof</a>
+  </nav>
+  <a class="btn go" href="https://app.mandate.kitchen/"><span class="long">Open the kitchen →</span><span class="short">Kitchen →</span></a>
+</header>
+<nav class="dots" id="dots" aria-label="Slides"></nav>
+<div class="counter mono" id="counter" aria-hidden="true">01 / 09</div>
+<div class="keys" aria-hidden="true">← → or scroll</div>
+
+<main>
+<!-- 1 HERO -->
+<section id="hero" aria-label="Mandate">
+  <div>
+    <h1 class="reveal d1">A purchasing agent that stays inside the chef's limits.</h1>
+    <p class="lede reveal d2">Mandate plans a kitchen's orders from its menu and finds substitutes when Valio runs out of something. It orders on its own only within limits the chef wrote down. Anything else waits for the chef.</p>
+    <div class="ctas reveal d3">
+      <a class="btn primary" href="https://app.mandate.kitchen/">See the Christmas buffet</a>
+      <a class="btn" href="#close">Connect your own agent</a>
+    </div>
+  </div>
+  <div class="gatebox reveal d2" role="img" aria-label="Illustration: order lines from the kitchen, the chat, an outside agent and REST pass the same checks and end as a receipt, held for the chef, or refused with a reason.">
+    <canvas id="gatecv"></canvas>
+    <div class="tick">illustration</div>
+    <div class="legend"><span><b style="background:var(--ok)"></b>ordered within the mandate</span><span><b style="background:var(--amber)"></b>held for the chef</span><span><b style="background:var(--red)"></b>refused, with the reason</span></div>
+  </div>
+</section>
+
+<!-- 2 PROBLEM -->
+<section id="problem" aria-label="The problem">
+  <h2 class="reveal d1">140 guests on Saturday, and Valio is out of the ham and the swede casserole.</h2>
+  <div class="bigrow reveal d2">
+    <div><div class="n">140</div><div class="l">guests at a Christmas buffet in a hotel kitchen</div></div>
+    <div><div class="n red">2</div><div class="l">products out of stock in Valio's own data</div></div>
+    <div><div class="n amber">17:00</div><div class="l">order cut-off, the day before delivery</div></div>
+  </div>
+  <p class="lede reveal d3">Today a chef reworks the order by hand before the cut-off. An agent can find another ham quickly. The hard part is knowing what it may buy without asking.</p>
+  <p class="label reveal d4">Demo scenario: the hotel and the booking are made up. The two outages are in Valio's challenge data.</p>
+</section>
+
+<!-- 3 FLOW -->
+<section id="flow" aria-label="How a plan is made">
+  <h2 class="reveal d1">The chef asks. The agent plans and flags the exceptions.</h2>
+  <div class="three">
+    <div class="card reveal d2">
+      <h3>1 · The ask <span>chat</span></h3>
+      <div class="msg me">Plan the Christmas buffet for 140 on Saturday.</div>
+      <div class="msg">The whole ham is out, so I picked HK Palvikinkku, which Valio states a quantity for. Valio is out of ready-made lanttulaatikko, so I propose making it in house. Nothing is ordered yet.</div>
+      <div class="outcome">↳ planned and held for the chef</div>
+    </div>
+    <div class="card reveal d3">
+      <h3>2 · The plan <span>lines</span></h3>
+      <div class="line"><div><s>HK whole Christmas ham</s> out<br>HK Palvikinkku viipaloitu 1,5 kg</div><div class="q">13 packs<br>€200.59</div><span class="chip teal">known-stock candidate</span></div>
+      <div class="line"><div>Atria Rosolli 2,5 kg</div><div class="q">6 packs<br>€78.18</div><span class="chip amber">stock unknown · not counted as cover</span></div>
+      <div class="outcome">↳ each line says how sure its supply is</div>
+    </div>
+    <div class="card reveal d4">
+      <h3>3 · The decision <span>chef</span></h3>
+      <div class="decision">
+        <div class="t"><span>Make lanttulaatikko in house</span><span class="mono">€31.58</span></div>
+        <p>New ingredients, with milk, egg and wheat. An allergen change needs the chef's sign-off, in its own decision.</p>
+        <div class="hold"><span>Hold to sign off</span></div>
+      </div>
+      <div class="outcome">↳ the approval covers these exact terms; any edit voids it</div>
+    </div>
+  </div>
+  <p class="label reveal d4">Products and prices from Valio's challenge data. Recipes and amounts are team estimates. The chat is shortened.</p>
+</section>
+
+<!-- 4 MANDATE -->
+<section id="mandate" aria-label="The mandate">
+  <h2 class="reveal d1">The chef writes the limits once. Every order is checked against them.</h2>
+  <div class="mandate">
+    <p class="words reveal d2" id="words">“Order alone up to <mark style="--c:var(--teal)" data-r="0">€800 a line and €1,000 an order, €4,000 a week</mark>. <mark style="--c:var(--red)" data-r="1">Never change an allergen.</mark> Ask me before <mark style="--c:var(--amber)" data-r="2">any new product or any substitute I haven't seen</mark>.”</p>
+    <div class="arrow reveal d3" aria-hidden="true">→</div>
+    <div class="rules reveal d3">
+      <div class="rule" style="--c:var(--teal)" data-r="0"><i></i>Over a cap: not ordered alone, even when split<small>refused</small></div>
+      <div class="rule" style="--c:var(--red)" data-r="1"><i></i>Allergen change: the chef signs off<small>never delegated</small></div>
+      <div class="rule" style="--c:var(--amber)" data-r="2"><i></i>New product or new substitute: waits for the chef<small>needs approval</small></div>
+    </div>
+  </div>
+  <p class="label reveal d4">The demo hotel's mandate. The amounts are team estimates.</p>
+</section>
+
+<!-- 5 GATE -->
+<section id="gate" class="compact" aria-label="One gate">
+  <h2 class="reveal d1">Every order goes through the same checks, whoever sends it.</h2>
+  <div class="stage reveal d2">
+    <svg id="gatesvg" viewBox="0 0 1200 370" role="img" aria-label="The kitchen screen, the chat, an outside agent over MCP and REST all go through one gate and one state change. The outcome is applied with one receipt, held for the chef, or refused with its reason. Operations sees the same held lines."></svg>
+  </div>
+  <p class="scrollhint">Scroll the diagram sideways →</p>
+  <p class="lede reveal d3" style="max-width:62ch">The kitchen screen, the chat and an outside agent over MCP or REST use the same tools. An approval is tied to the exact lines and prices. Sending the same order twice returns the same receipt. An outside agent can plan but cannot approve.</p>
+</section>
+
+<!-- 6 CERTAINTY -->
+<section id="certainty" aria-label="How sure the supply is">
+  <h2 class="reveal d1">Each amount shows how sure we are that it will arrive.</h2>
+  <div class="cert">
+    <div class="reveal d1"><div class="sw conf"></div><b>Supplier confirmed</b><span>backed by a receipt</span></div>
+    <div class="reveal d2"><div class="sw" style="background:repeating-linear-gradient(135deg,var(--ok) 0 4px,transparent 4px 8px)"></div><b>Ordered, awaiting supplier</b><span>committed, the supplier has not confirmed yet</span></div>
+    <div class="reveal d2"><div class="sw solid"></div><b>Planned, known stock</b><span>Valio states a quantity. Nothing is reserved.</span></div>
+    <div class="reveal d3"><div class="sw hatch"></div><b>Planned, unknown stock</b><span>never counted as covering a dish</span></div>
+    <div class="reveal d4"><div class="sw" style="border:1.5px dashed var(--red)"></div><b>Unresolved</b><span>nothing is planned for it yet</span></div>
+  </div>
+  <p class="lede reveal d4">Solid means Valio stated a quantity or the supplier confirmed it. Hatched means planned or ordered without a confirmation. A dashed outline means nothing covers it yet.</p>
+</section>
+
+<!-- 7 PARTNERS -->
+<section id="partners" class="compact" aria-label="Partners">
+  <h2 class="reveal d1">Where Valio, Gemini, Aiven, Exa and Context.dev are used.</h2>
+  <div data-partners class="reveal d2"></div>
+</section>
+
+<!-- 8 PROOF -->
+<section id="proof" aria-label="Proof">
+  <h2 class="reveal d1">The claims on this page and what backs them.</h2>
+  <div class="proof reveal d2">
+    <div class="pr"><div class="c">Approve, order, and one receipt comes back</div><div class="e">seen on the deployed app: one order, one receipt</div><span class="chip ok">seen live</span></div>
+    <div class="pr"><div class="c">No double orders, even when requests race</div><div class="e">same order sent 4 times at once: one receipt</div><span class="chip ok">seen live</span></div>
+    <div class="pr"><div class="c">An outside agent can never approve</div><div class="e">approve over the judge key is refused</div><span class="chip ok">seen live</span></div>
+    <div class="pr"><div class="c">Approval is bound to the exact terms</div><div class="e">a price change voids it; the order is refused</div><span class="chip dim">tested</span></div>
+    <div class="pr"><div class="c">Unknown supply never counts as cover</div><div class="e">ranking and coverage tests</div><span class="chip dim">tested</span></div>
+  </div>
+  <div class="stats reveal d3"><div>~420<span>server tests in the merge gate</span></div><div>30<span>visitors at once, 0 errors</span></div><div>1<span>receipt per order key</span></div></div>
+  <p class="more reveal d4">Every claim with its test and where we saw it: <a href="/proof">Proof</a>.</p>
+</section>
+
+<!-- 9 CLOSE -->
+<section id="close" aria-label="Try it">
+  <h2 class="reveal d1">Connect your own agent and try to make it overspend.</h2>
+  <p class="lede reveal d2">You get a key for your own sandbox. Over MCP or REST your agent can read, plan and place orders that the mandate holds or refuses. It cannot approve them.</p>
+  <div class="key reveal d3"><span>app.mandate.kitchen/mcp/k/&lt;your key&gt;</span><a href="https://app.mandate.kitchen/agents">Get my key →</a></div>
+  <div class="closebtns reveal d4"><a class="btn primary" href="https://app.mandate.kitchen/">Open the kitchen</a><a class="btn" href="https://app.mandate.kitchen/request">How a request becomes an order</a><a class="btn" href="/how">How it's built</a></div>
+  <div class="foot"><span>Junction 2026 · Valio Aimo, Trusted Trade Agents · MIT</span><span>Valio data is challenge mock data · orders are local simulated commitments</span></div>
+</section>
+</main>
+
+<script>
+const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+// slide nav: dots, counter, reveal on view, keys
+(()=>{
+ const secs=[...document.querySelectorAll('main section')],dots=document.getElementById('dots'),ctr=document.getElementById('counter');
+ let cur=0;
+ secs.forEach((s,i)=>{const a=document.createElement('a');a.href='#'+s.id;a.setAttribute('aria-label','Slide '+(i+1)+': '+(s.getAttribute('aria-label')||s.id));dots.appendChild(a)});
+ const setCur=i=>{cur=i;[...dots.children].forEach((d,j)=>d.classList.toggle('on',i===j));ctr.textContent=String(i+1).padStart(2,'0')+' / '+String(secs.length).padStart(2,'0')};
+ setCur(0);
+ const rev=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting)e.target.classList.add('in')}),{threshold:.08});
+ const act=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting)setCur(secs.indexOf(e.target))}),{rootMargin:'-45% 0px -45% 0px'});
+ secs.forEach(s=>{rev.observe(s);act.observe(s)});
+ addEventListener('keydown',e=>{
+  if(e.altKey||e.ctrlKey||e.metaKey)return;
+  const t=e.target;if(t.closest&&t.closest('input,textarea,select,[role="tab"]'))return;
+  if(e.key===' '&&t.closest&&t.closest('a,button'))return;
+  if(['ArrowRight','ArrowDown','PageDown',' '].includes(e.key)){e.preventDefault();secs[Math.min(cur+1,secs.length-1)].scrollIntoView()}
+  else if(['ArrowLeft','ArrowUp','PageUp'].includes(e.key)){e.preventDefault();secs[Math.max(cur-1,0)].scrollIntoView()}
+ });
+})();
+
+// mandate: highlight the chef's words and the rule they become
+(()=>{
+ const marks=[...document.querySelectorAll('#words mark')],rules=[...document.querySelectorAll('.rule')];let mi=0;
+ const show=i=>{marks.forEach(m=>m.classList.toggle('hot',+m.dataset.r===i));rules.forEach(r=>r.classList.toggle('hot',+r.dataset.r===i))};
+ [...marks,...rules].forEach(el=>el.addEventListener('mouseenter',()=>{mi=+el.dataset.r;show(mi)}));
+ if(reduce)return;
+ setInterval(()=>{show(mi);mi=(mi+1)%3},1600);
+})();
+
+// hero: an illustration of order lines passing the checks
+(()=>{
+ const cv=document.getElementById('gatecv'),cx=cv.getContext('2d');let W,H;
+ function rs(){const dpr=devicePixelRatio||1;W=cv.clientWidth;H=cv.clientHeight;cv.width=W*dpr;cv.height=H*dpr;cx.setTransform(dpr,0,0,dpr,0,0)}rs();
+ const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+ const C={ok:css('--ok'),am:css('--amber'),red:css('--red'),line:css('--line2'),ink3:css('--ink3'),ink:css('--ink')};
+ const narrow=()=>W<520;
+ const checks=()=>narrow()?['mandate','caps','terms','cut-off','stock']:['mandate','caps','exact terms','cut-off','stock'];
+ const doors=()=>narrow()?['Kitchen','Chat','Agent','REST']:['Kitchen','Chat','Your agent','REST'];
+ const names=['HK Palvikinkku 1,5 kg','Atria Rosolli 2,5 kg','Lanttu Britannia','Valio kevytmaito','Dansukker siirappi','Kalaneuvos kirjolohi'];
+ let parts=[],t=0;
+ function spawn(x){const fate=Math.random();const f=fate<.62?'ok':fate<.9?'held':'ref';const failAt=f==='ok'?99:f==='held'?2+Math.floor(Math.random()*3):Math.floor(Math.random()*2)+1;
+  parts.push({d:Math.floor(Math.random()*4),x:x||0,f,failAt,name:names[Math.floor(Math.random()*names.length)],sp:.0014+Math.random()*.0004})}
+ function geo(){const n=narrow();return{L:n?W*.2:W*.18,R:n?W*.74:W*.78,gx0:W*.28,gx1:W*.66,cy:H*.46}}
+ function frame(){
+  cx.clearRect(0,0,W,H);const g=geo(),ck=checks(),dr=doors();
+  cx.font=(narrow()?'11px':'12px')+' "IBM Plex Mono", monospace';cx.textBaseline='middle';
+  dr.forEach((d,i)=>{const y=H*(.16+i*.16);cx.fillStyle=C.ink3;cx.textAlign='left';cx.fillText(d,14,y);
+   cx.strokeStyle=C.line;cx.beginPath();cx.moveTo(g.L-4,y);cx.bezierCurveTo(g.L+40,y,g.gx0-50,g.cy,g.gx0,g.cy);cx.stroke()});
+  cx.strokeStyle=C.line;cx.beginPath();cx.moveTo(g.gx0,g.cy);cx.lineTo(g.gx1,g.cy);cx.stroke();
+  ck.forEach((c,i)=>{const x=g.gx0+(g.gx1-g.gx0)*(i+.5)/ck.length;cx.strokeStyle=C.line;cx.beginPath();cx.moveTo(x,g.cy-30);cx.lineTo(x,g.cy+30);cx.stroke();
+   cx.fillStyle=C.ink3;cx.textAlign='center';cx.fillText(c,x,i%2?g.cy+44:g.cy-42)});
+  const outs={ok:[g.R,H*.22,'receipt',C.ok],held:[g.R,H*.46,'held',C.am],ref:[g.R,H*.7,'refused',C.red]};
+  Object.values(outs).forEach(([x,y,l,c])=>{cx.strokeStyle=C.line;cx.beginPath();cx.moveTo(g.gx1,g.cy);cx.bezierCurveTo(g.gx1+30,g.cy,x-40,y,x,y);cx.stroke();cx.fillStyle=c;cx.textAlign='left';cx.fillText(l,x+8,y)});
+  parts.forEach(p=>{
+   const dy=H*(.16+p.d*.16);
+   const pos=u=>{
+    if(u<.3){const s=u/.3;return[(1-s)**3*(g.L-4)+3*(1-s)**2*s*(g.L+40)+3*(1-s)*s*s*(g.gx0-50)+s**3*g.gx0,(1-s)**3*dy+3*(1-s)**2*s*dy+3*(1-s)*s*s*g.cy+s**3*g.cy]}
+    if(u<.7)return[g.gx0+(g.gx1-g.gx0)*(u-.3)/.4,g.cy];
+    const [ox,oy]=outs[p.f];const s=(u-.7)/.3;return[(1-s)**3*g.gx1+3*(1-s)**2*s*(g.gx1+30)+3*(1-s)*s*s*(ox-40)+s**3*ox,(1-s)**3*g.cy+3*(1-s)**2*s*g.cy+3*(1-s)*s*s*oy+s**3*oy]};
+   const [x,y]=pos(Math.min(p.x,1));
+   const checkU=.3+.4*(p.failAt+.5)/ck.length;
+   let col=C.ink;if(p.x>checkU)col=p.f==='ok'?C.ok:p.f==='held'?C.am:C.red;
+   if(p.f!=='ok'&&p.x>checkU&&p.x<.7){const cxp=g.gx0+(g.gx1-g.gx0)*(p.failAt+.5)/ck.length;cx.strokeStyle=col;cx.globalAlpha=Math.max(0,1-(p.x-checkU)*12);cx.beginPath();cx.arc(cxp,g.cy,9,0,7);cx.stroke();cx.globalAlpha=1}
+   cx.fillStyle=col;cx.beginPath();cx.arc(x,y,3.2,0,7);cx.fill();
+   if(Math.abs(p.x-.5)<.04){cx.fillStyle=C.ink3;cx.textAlign='center';cx.fillText(p.name,(g.gx0+g.gx1)/2,g.cy+70)}
+  });
+ }
+ if(reduce){
+  // a still frame: one line at each stage
+  [[0,.12,'ok'],[1,.5,'ok'],[2,.85,'held'],[3,.95,'ref'],[0,.9,'ok']].forEach(([d,x,f])=>parts.push({d,x,f,failAt:f==='ok'?99:f==='held'?3:1,name:'',sp:0}));
+  frame();addEventListener('resize',()=>{rs();frame()});return;
+ }
+ addEventListener('resize',rs);
+ spawn(.15);spawn(.45);
+ (function loop(){t++;if(t%90===0)spawn();parts.forEach(p=>p.x+=p.sp);parts=parts.filter(p=>p.x<1.05);frame();requestAnimationFrame(loop)})();
+})();
+
+// gate diagram: four doors, one gate, one state change; applied, held or refused; Operations sees the change
+(()=>{
+ const s=document.getElementById('gatesvg'),NS='http://www.w3.org/2000/svg';
+ const el=(t,a,p=s)=>{const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);p.appendChild(e);return e};
+ const doors=[['Kitchen screen','the chef · may approve'],['Chat','the in-app agent'],['Your agent · MCP','judge key · cannot approve'],['REST','the same tools'],['Operations','sees the held lines']];
+ const DY=i=>18+i*68;
+ doors.forEach(([a,b],i)=>{const y=DY(i);const g=el('g',{class:'node'});el('rect',{x:20,y,width:230,height:52,rx:10},g);el('text',{x:38,y:y+23},g).textContent=a;el('text',{x:38,y:y+41,class:'sub'},g).textContent=b;
+  if(i<4)el('path',{class:'wire',id:'w'+i,d:`M250 ${y+26} C 340 ${y+26}, 340 178, 420 178`})});
+ const box=(x,y,w,h,t,l1,l2,c)=>{const g=el('g',{class:'node'});el('rect',{x,y,width:w,height:h,rx:12,style:`stroke:${c}`},g);el('text',{x:x+18,y:y+30},g).textContent=t;el('text',{x:x+18,y:y+52,class:'sub'},g).textContent=l1;if(l2)el('text',{x:x+18,y:y+70,class:'sub'},g).textContent=l2};
+ box(420,128,240,100,'One gate','checks who is calling','and what they may do','var(--teal)');
+ box(720,138,210,80,'One state change','every change goes','through one function','var(--teal)');
+ el('path',{class:'wire',d:'M660 178 L720 178',id:'wm'});
+ const outs=[['Applied','one receipt per order',28,'var(--ok)'],['Held for the chef','approval = exact terms',148,'var(--amber)'],['Refused','with its reason',268,'var(--red)']];
+ outs.forEach(([a,b,y,c],i)=>{const g=el('g',{class:'node'});el('rect',{x:1000,y,width:180,height:56,rx:10,style:`stroke:${c}`},g);el('text',{x:1016,y:y+24},g).textContent=a;el('text',{x:1016,y:y+42,class:'sub'},g).textContent=b;
+  el('path',{class:'wire',id:'o'+i,d:`M930 178 C 965 178, 965 ${y+28}, 1000 ${y+28}`})});
+ el('path',{class:'wire',id:'gref',d:'M540 228 C 560 300, 900 296, 1000 296','stroke-dasharray':'4 4'});
+ el('path',{class:'wire',id:'notify',d:`M825 218 C 825 330, 420 ${DY(4)+26}, 250 ${DY(4)+26}`,'stroke-dasharray':'2 5'});
+ if(reduce)return;
+ const note=el('text',{x:1180,y:16,class:'sub','text-anchor':'end',style:'fill:var(--ok)'});
+ const COL={ok:'var(--ok)',held:'var(--amber)',ref:'var(--red)',ev:'var(--ink3)'};
+ // [door, what it sends, outcome]; 'gate' = refused at the gate itself
+ const SC=[[0,'order','ok'],[1,'edit a line','held'],[2,'approve','gate'],[3,'order','held'],[0,'same order again','same'],[1,'order over a cap','cap'],[2,'order','held'],[0,'approve','ok']];
+ let si=0;
+ function run(paths,label,col,done){const c=el('circle',{r:4.5,style:`fill:${col}`});const t=el('text',{class:'plabel','text-anchor':'middle',style:`fill:${col}`});t.textContent=label;let k=0,u=0;
+  (function step(){const p=paths[k];u+=1.7/p.getTotalLength();if(u>=1){u=0;k++;if(k>=paths.length){c.remove();t.remove();done&&done();return}}
+   const pt=paths[k].getPointAtLength(u*paths[k].getTotalLength());c.setAttribute('cx',pt.x);c.setAttribute('cy',pt.y);t.setAttribute('x',pt.x);t.setAttribute('y',pt.y-11);requestAnimationFrame(step)})()}
+ const $=id=>document.getElementById(id);
+ function fire(){const [d,what,out]=SC[si++%SC.length];
+  if(out==='gate'){run([$('w'+d)],what,'var(--ink)',()=>run([$('gref')],'approve: not allowed',COL.ref));return}
+  const o=out==='held'?1:out==='cap'?2:0;const col=out==='held'?COL.held:out==='cap'?COL.ref:COL.ok;
+  run([$('w'+d),$('wm')],what,'var(--ink)',()=>run([$('o'+o)],out==='cap'?'over the cap':out==='same'?'same receipt':out==='held'?'held':'receipt',col,()=>{
+   if(out==='same'){note.textContent='sent twice: the same receipt comes back';setTimeout(()=>note.textContent='',2600)}
+   if(out!=='cap')run([$('notify')],'update',COL.ev)}))}
+ fire();setInterval(fire,3600);
+})();
+
+// partners: where each sponsor sits in a call
+(()=>{
+const STAGES=['Parse','Authorise','Lookup','Enrich','Decide','Commit','Watch'];
+const P=[
+ {name:'Valio Aimo',role:'Catalogue, price and availability',sub:'catalogue, price, availability',stages:['Lookup'],
+  how:"Every product, pack size and lot rule comes from Valio's catalogue of <b>17,546 products</b>. Price and availability are fetched <b>only for shortlisted products</b>, cached with the time they were fetched.",
+  why:"The agent plans against what Valio states. Products with a stated quantity rank first. A product whose quantity Valio doesn't state is <b>never counted as cover</b>.",
+  ex:{t:'one line in the Christmas plan',n:'values from the demo scenario',b:'<i>→</i> quote: HK Palvikinkku viipaloitu 1,5 kg\n<i>←</i> <em>Valio states 15 packs</em> · €15.43 a pack · 1 pack = 1.5 kg\n   <i>Valio, cached, with the time fetched</i>'},
+  fb:'the cached offer, labelled with its age',proof:'the Why drawer labels each value Valio cached or live'},
+ {name:'Gemini',role:'Reading requests, proposing menus, ranking substitutes',sub:'Flash-Lite, Flash, Decisions',stages:['Parse','Decide'],
+  how:"<b>Flash-Lite</b> reads a buyer's words into a structured request. <b>Gemini 3.8 Flash</b> proposes a menu from an event brief, every amount marked as an estimate. <b>Gemini Decisions</b> ranks substitutes.",
+  why:'Words like "lactose-free" survive the parse, so the basket matches what was asked. Every check that decides what may be ordered runs in plain code.',
+  ex:{t:"Valio's own example",n:'illustrative',b:'<i>→</i> "1,000 L lactose-free milk by Monday"\n<i>←</i> 1,000 L milk · <em>lactose-free: required</em> · by Monday'},
+  fb:'Decisions falls back to a replay, then to rules',proof:"Valio's milk example keeps lactose-free on the request page"},
+ {name:'Aiven',role:'Postgres and the app runtime',sub:'Postgres, one container',stages:['Commit'],
+  how:'Postgres holds the plans, approvals, orders and order keys. The app runs as <b>one container</b> on Aiven.',
+  why:'The database enforces one order per key. Retries, double clicks and two agents racing all get <b>the same receipt</b>.',
+  ex:{t:'race check after each deploy',n:'seen on the deployed app',b:'<i>→</i> the same order × 4 at once, same key\n<i>←</i> <em>1 order · 1 receipt</em>\n<i>→</i> 3 different keys, same plan\n<i>←</i> <em>1 receipt</em> · the other two refused'},
+  fb:'an in-memory Postgres for tests',proof:'30 visitors at once, 0 errors'},
+ {name:'Exa',role:'Facts from the web',sub:'web evidence in the Why drawer',stages:['Enrich'],
+  how:"When the catalogue lacks a fact, the <b>Why</b> drawer shows what the web says: net content, origin and ingredients, each <b>with its source</b>.",
+  why:"The chef sees where a fact came from. If Valio has no allergen record for a product, the drawer says so.",
+  ex:{t:'Why on the Christmas ham',n:'seen on the deployed app',b:'<i>→</i> Why: HK whole Christmas ham\n<i>←</i> From the web: net content, origin, ingredients\n   <em>each with its product code and source</em>\n   <u>Valio has no allergen record for this product</u>'},
+  fb:'the drawer shows catalogue facts only',proof:'seen in the Why drawer on the deployed app'},
+ {name:'Context.dev',role:'Recall watch',sub:'Ruokavirasto recall list',stages:['Watch'],
+  how:"A monitor checks the <b>Ruokavirasto recall list every 5 minutes</b>. Each notice becomes a case in Operations, matched against the catalogue.",
+  why:'Someone at the supplier sees each recall next to the products it could touch, with the result of the match.',
+  ex:{t:'a recall notice in Operations',n:'seen on the deployed app',b:'<i>→</i> new notice on the Ruokavirasto list\n<i>←</i> a case in Operations\n   <em>No catalogue product matches. Nothing held.</em>'},
+  fb:'a labelled drill',proof:'recall notices shown as cases in Operations'},
+];
+document.querySelectorAll('[data-partners]').forEach(root=>{
+ root.classList.add('pt');
+ root.innerHTML=`<div class="pt-list" role="tablist" aria-label="Partners">${P.map((p,i)=>`<button class="pt-tab" role="tab" id="pt-tab-${i}" aria-controls="pt-panel" data-i="${i}" aria-selected="${i===0}" tabindex="${i===0?0:-1}"><span><b>${p.name}</b><small>${p.sub}</small></span><span class="tag">live</span></button>`).join('')}</div><div class="pt-panel" id="pt-panel" role="tabpanel" aria-live="polite"></div>`;
+ const panel=root.querySelector('.pt-panel'),tabs=[...root.querySelectorAll('.pt-tab')];
+ function show(i){const p=P[i];tabs.forEach((t,j)=>{t.setAttribute('aria-selected',j===i);t.tabIndex=j===i?0:-1});panel.setAttribute('aria-labelledby','pt-tab-'+i);
+  panel.innerHTML=`<div class="pt-head"><h3>${p.name}</h3><span class="role">${p.role}</span></div>
+  <div class="pt-strip" aria-label="Where it sits in a call">${STAGES.map(s=>`<span class="${p.stages.includes(s)?'on':''}">${s}</span>`).join('')}</div>
+  <div class="pt-cols"><div><h4>How we use it</h4><p>${p.how}</p></div><div><h4>Why it matters</h4><p>${p.why}</p></div></div>
+  <div class="pt-ex"><div class="bar"><span>Example · ${p.ex.t}</span><span>${p.ex.n}</span></div><pre>${p.ex.b}</pre></div>
+  <div class="pt-foot"><span>if it fails: <b>${p.fb}</b></span><span>evidence: <b>${p.proof}</b></span></div>`}
+ tabs.forEach(t=>{t.onclick=()=>show(+t.dataset.i);t.onkeydown=e=>{const d={ArrowDown:1,ArrowRight:1,ArrowUp:-1,ArrowLeft:-1}[e.key];if(!d)return;e.preventDefault();e.stopPropagation();const n=(+t.dataset.i+d+P.length)%P.length;tabs[n].focus();show(n)}});
+ show(0)});
+})();
+</script>
+</body>
+</html>
