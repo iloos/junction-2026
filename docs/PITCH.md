@@ -9,11 +9,11 @@ _Working doc, not final copy. Lead-owned until a pitch owner exists. Claims only
 | Time | Beat | What they see | Label on screen | Status |
 |---|---|---|---|---|
 | 0–15 | The problem | Christmas buffet for 140 (`event-xmas-140`); whole ham `462490` and lanttulaatikko `462482` out in Valio's own data | Valio mock data (fetched/cached); booking and the December clock are the scenario | [x] live kitchen |
-| 15–40 | It thinks like a chef | Edit grams per guest; demand → packs with unit bases and a coverage ruler per dish | Recipes and stock-on-hand are team estimates | [x] live kitchen (C1) |
+| 15–40 | It thinks like a chef | Edit grams per guest; demand → packs with unit bases; the Why drawer shows the arithmetic (135 g × 140 ÷ 0.7 yield → 4 × 7 kg lots) with each step's source | Recipes and stock-on-hand are team estimates | [x] seen on prod `70c30e2` (Why drawer); the edit itself to rehearse |
 | 40–70 | It refuses | Candidates ranked known stock first; a rejected candidate with its reason; Terminal items labelled unknown stock, never counted as cover | Real data + our rules | [x] in code and tests; see it deployed before saying it |
 | 70–95 | It's honest | Ham → HK Palvikinkku `476768` (known-stock candidate); lanttulaatikko and joulutorttu made in house from known-stock ingredients; any shortfall shown | Hand-checked rescue in the seed | [x] tests; prod check open |
-| 95–115 | Trust you can test | Approve exact terms → commit → deliberate retry → one receipt; an edit after approval voids it | Local simulated commitment | [x] |
-| 115–120 | The other side | The same held lines in Operations, in the visitor's own workspace | | [x] |
+| 95–115 | Trust you can test | Approve exact terms → commit → deliberate retry → one receipt; an edit after approval voids it | Local simulated commitment | [x] approve → one receipt seen on prod `70c30e2`; retry on prod via the race smoke; the UI void to rehearse |
+| 115–120 | The other side | The same held lines in Operations, grouped by cause, in the visitor's own workspace | | [x] seen on prod `70c30e2`; don't point at the count tiles until `a5ca1f5` deploys |
 
 Valio's own example ("1,000 L lactose-free milk by Monday") runs as its own route, `/request` (their required flow: request → lookup → order → approval), not inside this story.
 
@@ -40,23 +40,31 @@ Valio's own example ("1,000 L lactose-free milk by Monday") runs as its own rout
 | For the cases we test, the same words give the same basket through `/request`, the agent and REST | `evals/fidelity/cases.json` (`pnpm eval`); paraphrase gaps open in `evals/paraphrase` |
 | Decide per reason group: an allergen change never rides with routine lines | `server/store/groups.test.ts` |
 | Cut-off enforced at commit (F9) | `server/store/cutoff.test.ts`; eval r5-f9 |
+| Knows the cut-off: "tomorrow" after 17:00 is caught before ordering, the cut-off named and the next day offered | `evals/paraphrase` `late-tomorrow`, chat trials c1/c4; seen on prod `70c30e2` `/request` ("earliest delivery is Wed 9 Dec") |
+| An event in words becomes a plan: brief questions → a menu proposed by Gemini (3.8 Flash), every amount an estimate → the chef accepts → a plan | `core/services/events.ts` `plan_event{proposal}`, `MenuReview.svelte`; seen on prod `70c30e2` (50 guests → 20 lines) |
+| Chat: plain words → a held plan and a decision card; "approve it" is refused; answers come from the task's ledger | `server/chat/`, `evals/chat` (scripted trials + 15 messy EN/FI turns replayed in the gate); seen on prod `70c30e2` `/agents/chat` |
+| The Why drawer cites the web (Exa): net content, origin and ingredients, GTIN-cited, with sources | `server/web/evidence.ts`; seen on prod `70c30e2` (ham `462490`, hk.fi) |
+| Context.dev watches Ruokavirasto's recall list every 5 minutes; each notice becomes an Ops case matched against the catalogue | `foundations/web.md`, `/api/web/contextdev`; recall cases seen in prod Ops |
 | A voided approval shows what changed | eval r6-5 (`get_plan.lastVoided`) |
 | Each visitor mints a judge key on `/agents`; it reads but cannot approve | `server/demo/judge-key.test.ts`; observed on prod: `approve`/`set_mandate` → 403 |
 | Outside agents get the same tools over MCP and REST and can never approve | `SCOPES_BY_ACTOR` (`core/contracts/tools.ts`); `agent/adversarial.test.ts` (`pnpm eval:agent`); eval s5 `tools.externalAgentMustNotHave` |
 | Every visitor gets their own sandbox; a judge key works only there | `server/demo/{visitor,judge-key,sandbox}.test.ts`; two-browser gate `src/routes/ops/visitor-gate.e2e.ts` (production build) |
-| Gemini Decisions scores recipe fit in ranking, with replay and rules fallbacks | `server/adapters/decide`; `DECIDE_LIVE=1 pnpm test:live` (one live call) |
+| Substitutes are ranked with Gemini Decisions, with replay and rules fallbacks (not "recipe-aware": no labelled fit set has run) | `server/adapters/decide`; `DECIDE_LIVE=1 pnpm test:live` (one live call) |
 | Valio's milk example runs on `/request`, keeping "lactose-free" | `server/request/fixes.test.ts`, `request.test.ts`; seen deployed with the Gemini parser |
+| Approve → order → one receipt, in the Kitchen; the order summary adds up and survives a reload | `evals/ui/kitchen-order.e2e.ts`, green against prod `70c30e2` |
 
 Every claim's observed status and verdict: [CLAIMS.md](CLAIMS.md).
 
 ## Not yet claimable
-- **Open menus** ("Christmas dinner for 50 on 20 December" → a plan): brief questions are live; the menu proposal is in progress and `plan_event` from a reviewed proposal (A4) is not built.
+- **New events from chat**: open menus plan on `/request` only; the chat plans only the seeded buffet.
+- **The menu's product picks up close**: a trout ingredient resolved to pork (BUGS #11); show the menu, not the picks, until fixed.
+- **Every sponsor call in the trace drawer**: Valio live, chat Gemini text and MCP `propose_menu` aren't traced there yet.
 - **Review mechanism**: on main behind `REVIEW=1`, off until the on/off arms run.
 - **Ops coverage numbers**: not until Ops cases close per cause (Track G, F12-ops).
 - **Recipe-aware**: no labelled fit set has run; say "ranks by the kitchen's rules" instead.
 - **"Ordered the buffet"**: the default agent goal commits nothing; it plans and holds.
-- **Exa**: tools exist (`lookup_facts`, `find_outside`) but no judge-facing UI yet; decide at the Sat 22:00 checkpoint.
-- **Context.dev**: not "a real recall hit our orders" (drill only) and not "within minutes" (hourly monitor unless the 10-min cadence is approved).
+- **Context.dev**: not "a real recall hit our orders" (drill only); say "every 5 minutes", never "hourly".
+- **Vector search on Aiven / pgvector**: never; the column exists but retrieval is lexical. Also never "schema-constrained" model output.
 - **An external agent's stale commit refused on prod over MCP**: covered in tests, not yet observed deployed.
 - **Simulator events "labelled simulated"** in the kitchen's own workspace: the synthetic stream runs only in `ws-synth`.
 - **Data residency** ("data stays in Finland"): never; D5.
@@ -71,7 +79,7 @@ Every claim's observed status and verdict: [CLAIMS.md](CLAIMS.md).
 - **Isn't this Choco's OrderAgent Autopilot?** Choco claims "only genuine exceptions reach a person" as a vendor feature inside its own app. Ours: the exception rule is the customer's own mandate, enforced in an open interface any agent can use, with approval bound to exact terms.
 - **What breaks it?** Unknown supply: we hold and say so, and never call it covered.
 - **How are substitutes better than "Katso korvaavat"?** Theirs lists similar products with no reason. Ours gives a reason line per candidate and a rule-based rejection (e.g. an allergen difference).
-- **Doesn't the agent ask too much?** Usual products go through within the mandate (the standing-order baseline), so only what is new or over a limit is held. Grouping the held lines into one decision per reason is in progress (A2b + C).
+- **Doesn't the agent ask too much?** Usual products go through within the mandate (the standing-order baseline), so only what is new or over a limit is held. Held lines are grouped into one decision per reason, so an allergen change never rides with routine lines.
 - **Images?** None from Valio's data; we show none rather than guess.
 - **Valio's words:** order templates (*tilauspohjat*), cart per delivery date, main user (*pääkäyttäjä*), claims (*reklamaatiot*). Our standing order is their template read as the agent's baseline.
 - **What did you build vs use? Who pays?** Built: the gate, mandate, ranking, planning, request flow, Ops, MCP/REST. Used: Valio's mock data and API, Gemini, Aiven, Exa, Context.dev. Valio pays; free to kitchens.
