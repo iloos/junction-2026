@@ -258,6 +258,7 @@ export async function placeOrder(
 			orderedBefore: orderedBefore(state, kitchen),
 			recalled: recalledProducts(state),
 			needs,
+			orderRequirements: input.requirements,
 			deliverBy: input.deliverBy
 		});
 		const plan0: Plan = {
@@ -268,6 +269,7 @@ export async function placeOrder(
 			version: 0,
 			state: 'draft',
 			deliverBy: input.deliverBy,
+			...(input.requirements ? { requirements: input.requirements } : {}),
 			needs,
 			lines: [],
 			totalCents: null,
@@ -488,6 +490,7 @@ export async function commitOrder(
 			// The same yardstick as the quote, so a line held for its quantity stays held here.
 			expectedQty: seed ? seedNeedQty(plan.id, seed) : undefined,
 			needs: plan.needs,
+			orderRequirements: plan.requirements,
 			deliverBy: plan.deliverBy
 		});
 		// F9: lines whose cut-off has passed (scenario clock) can't be bought. Named explicitly, the commit is refused by

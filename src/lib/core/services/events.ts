@@ -10,6 +10,7 @@ import {
 	type Line,
 	type MenuProposal,
 	type Need,
+	type NeedRequirements,
 	type Offer,
 	type Plan,
 	type Product,
@@ -159,6 +160,7 @@ export async function requote(
 		committed: plan.lines.filter((l) => l.state === 'committed'),
 		expectedQty: expectedFor(ports, plan, drafts, pre.products),
 		needs: plan.needs,
+		orderRequirements: plan.requirements,
 		deliverBy: plan.deliverBy
 	});
 	return quoteOps(ctx, ports, plan, kitchen, t, pre.offers);
@@ -195,6 +197,8 @@ const conflict = (what: string) => ({
 /** Who a new plan is for beyond the tool input (Ring 2: the procurement task that asked for it). */
 export interface PlanOptions {
 	taskId?: string;
+	/** Order-scope requirements (from the tool input): every need of the plan meets them. */
+	requirements?: NeedRequirements;
 }
 
 export async function planEvent(
@@ -203,6 +207,7 @@ export async function planEvent(
 	input: ToolInput<'plan_event'>,
 	opts: PlanOptions = {}
 ): Promise<Result<ToolOutput<'plan_event'>>> {
+	if (input.requirements) opts = { ...opts, requirements: input.requirements };
 	if (input.proposal) return planProposal(ports, ctx, input.kitchenId, input.proposal, opts);
 	if (input.eventId === undefined)
 		return err('INVALID_INPUT', 'give a seeded eventId or a chef-reviewed menu proposal');
@@ -234,6 +239,7 @@ export async function planEvent(
 			deliverBy,
 			eventId: input.eventId,
 			...(opts.taskId ? { taskId: opts.taskId } : {}),
+			...(opts.requirements ? { requirements: opts.requirements } : {}),
 			needs,
 			lines: [],
 			totalCents: null,
@@ -358,6 +364,7 @@ async function planProposal(
 			deliverBy,
 			source: { proposalId: proposal.id, revision: proposal.revision },
 			...(opts.taskId ? { taskId: opts.taskId } : {}),
+			...(opts.requirements ? { requirements: opts.requirements } : {}),
 			needs,
 			lines: [],
 			totalCents: null,
@@ -561,6 +568,15 @@ async function prepareEdit(
 		const line = plan.lines.find((l) => l.id === input.lineId);
 		if (!line) return err('NOT_FOUND', `line ${input.lineId}`);
 		if (line.state === 'committed') return err('STALE_VERSION', 'committed lines cannot be edited');
+		// An agent may add strict requirements, never relax one: accepting a best try is a person's call.
+		if (
+			input.patch.relax &&
+			(ctx.actor.kind === 'kitchen_agent' || ctx.actor.kind === 'external_agent')
+		)
+			return err('FORBIDDEN', 'only a person can accept breaking a strict requirement', {
+				sub: 'scope',
+				detail: { relax: input.patch.relax }
+			});
 		const productId = input.patch.productId ?? line.productId;
 		const product = (await ports.catalog.get([productId])).get(productId);
 		if (!product) return err('NOT_FOUND', `product ${productId}`);
@@ -575,10 +591,17 @@ async function prepareEdit(
 							...d,
 							productId,
 							qty,
-							// A quantity set by hand brings a superseded line back.
-							...(qty.value > 0
-								? { extraReasons: d.extraReasons?.filter((r) => r !== 'superseded') }
-								: {})
+							...((): Pick<DraftLine, 'extraReasons'> => {
+								// A quantity set by hand brings a superseded line back; a new product drops an earlier relax; a
+								// relax is a person accepting that one rule breaks for this line (held for sign-off).
+								let extra = d.extraReasons ?? [];
+								if (qty.value > 0) extra = extra.filter((r) => r !== 'superseded');
+								if (productId !== line.productId)
+									extra = extra.filter((r) => !r.startsWith('requirement_relaxed.'));
+								if (input.patch.relax)
+									extra = [...extra, `requirement_relaxed.${input.patch.relax}`];
+								return { extraReasons: [...new Set(extra)] };
+							})()
 						}
 					: d
 			),

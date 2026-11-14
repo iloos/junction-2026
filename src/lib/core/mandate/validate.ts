@@ -32,8 +32,10 @@ export interface ValidateOptions {
 	substitute?: boolean;
 	/** What the dish needs, in the line's sales unit, when the line serves a dish. */
 	expectedQty?: number;
-	/** Hard requirements of the need this line serves: any one unmet forbids the line. */
-	requirements?: NeedRequirements;
+	/** Hard requirements of the need this line serves (merged with the order's): any one unmet forbids the line. */
+	requirements?: NeedRequirements & { conflict?: string };
+	/** Rules a person accepted breaking for this line (a best try): held for sign-off instead of forbidden. */
+	relaxed?: readonly ('origin' | 'labels')[];
 }
 
 /**
@@ -59,18 +61,50 @@ const named = (p: Product, code: string) =>
 const DIETS: Record<string, string[]> = { vegetarian: ['vegetarian', 'vegan'], vegan: ['vegan'] };
 const hasDiet = (p: Product, label: string) => (DIETS[label] ?? []).some((d) => p.diet.includes(d));
 
-/** The requirements a product does not meet, in words ("free from LACTOSE"); empty when it meets them all. */
-export function unmetRequirements(p: Product, r: NeedRequirements | undefined): string[] {
+export type RequirementRule = 'freeFrom' | 'origin' | 'labels';
+
+/** The requirements a product does not meet, rule by rule, in words ("free from LACTOSE", "origin FI"). */
+export function unmetRules(
+	p: Product,
+	r: NeedRequirements | undefined
+): { rule: RequirementRule; text: string }[] {
 	if (!r) return [];
 	return [
 		...(r.freeFrom ?? [])
 			.filter((x) => !p.freeFrom.includes(x) && !named(p, x))
-			.map((x) => `free from ${x}`),
-		...(r.origin && p.origin !== r.origin ? [`origin ${r.origin.toUpperCase()}`] : []),
+			.map((x) => ({ rule: 'freeFrom' as const, text: `free from ${x}` })),
+		...(r.origin && p.origin !== r.origin
+			? [{ rule: 'origin' as const, text: `origin ${r.origin.toUpperCase()}` }]
+			: []),
 		...(r.labels ?? [])
 			.filter((x) => !p.labels.includes(x) && !hasDiet(p, x) && !named(p, x))
-			.map((x) => `label ${x}`)
+			.map((x) => ({ rule: 'labels' as const, text: `label ${x}` }))
 	];
+}
+
+/** The requirements a product does not meet, in words; empty when it meets them all. */
+export function unmetRequirements(p: Product, r: NeedRequirements | undefined): string[] {
+	return unmetRules(p, r).map((u) => u.text);
+}
+
+/**
+ * Requirements that apply together (the order's, the need's): they only tighten. Free-from claims and labels add up;
+ * two different origins can't both hold, so `conflict` names them and no product meets the result.
+ */
+export function mergeRequirements(
+	...rs: (NeedRequirements | undefined)[]
+): (NeedRequirements & { conflict?: string }) | undefined {
+	const all = rs.filter((r): r is NeedRequirements => Boolean(r));
+	if (!all.length) return undefined;
+	const freeFrom = [...new Set(all.flatMap((r) => r.freeFrom ?? []))];
+	const labels = [...new Set(all.flatMap((r) => r.labels ?? []))];
+	const origins = [...new Set(all.map((r) => r.origin).filter((o): o is string => Boolean(o)))];
+	return {
+		...(freeFrom.length ? { freeFrom } : {}),
+		...(labels.length ? { labels } : {}),
+		...(origins.length ? { origin: origins[0] } : {}),
+		...(origins.length > 1 ? { conflict: `origin ${origins.join(' and ').toUpperCase()}` } : {})
+	};
 }
 
 /** The mandate's ceiling: above it nothing is orderable, whoever approves. */
@@ -160,8 +194,17 @@ export function validateLine(
 	}
 
 	// The need's own hard requirements (the request said lactose-free): no approval passes a product that misses one.
-	if (unmetRequirements(p, opts.requirements).length)
+	// A rule a person accepted breaking (best try) holds for sign-off; allergens (freeFrom) never relax.
+	const unmet = unmetRules(p, opts.requirements);
+	const strict = unmet.filter((u) => u.rule === 'freeFrom' || !opts.relaxed?.includes(u.rule));
+	if (strict.length || opts.requirements?.conflict)
 		out.push({ reason: 'requirement_unmet', effect: 'forbid' });
+	for (const rule of new Set(unmet.filter((u) => !strict.includes(u)).map((u) => u.rule)))
+		out.push({
+			reason: `requirement_relaxed.${rule as 'origin' | 'labels'}`,
+			effect: 'waive',
+			tier: 'sign_off'
+		});
 
 	// Tender list: anything off it goes to the named approver.
 	if (k.constraints.tenderListOnly && !k.constraints.tenderList?.includes(p.productId))
