@@ -443,13 +443,22 @@
 		const cents = live.reduce((t, l) => t + (l.lineCents ?? 0), 0);
 		const made = live.filter((l) => l.strategy?.kind === 'make_in_house');
 		const by = live.map((l) => snap?.byAgent?.[l.id]).find(Boolean);
+		// Why the row isn't the planned product, from the replaced line and the rescue: said on the collapsed row.
+		const replacedId = (made[0] ?? live.find((l) => l.substituteFor))?.substituteFor;
+		const was = replacedId ? (names.get(replacedId) ?? replacedId) : null;
+		const cause = d.outage === 'undeliverable' ? "Valio can't deliver it" : 'out at Valio';
+		const changes = (id: string) =>
+			d.rescue?.candidates.find((c) => c.productId === id)?.whatChanges;
 		if (made.length)
 			return {
 				kind: 'make' as const,
 				product: `Make in house · ${made.length} ingredients`,
 				more: 0,
 				cents,
-				by
+				by,
+				was,
+				cause,
+				changes: null as string | null | undefined
 			};
 		const main = live.find((l) => l.substituteFor) ?? live[0];
 		if (!main)
@@ -458,14 +467,20 @@
 				product: `${names.get(lines[0]?.productId ?? '') ?? d.nameFi} · not orderable`,
 				more: 0,
 				cents,
-				by
+				by,
+				was: null,
+				cause,
+				changes: null as string | null | undefined
 			};
 		return {
 			kind: main.substituteFor ? ('sub' as const) : ('buy' as const),
 			product: names.get(main.productId) ?? main.productId,
 			more: live.length - 1,
 			cents,
-			by
+			by,
+			was: main.substituteFor ? was : null,
+			cause,
+			changes: main.substituteFor ? changes(main.productId) : null
 		};
 	}
 
@@ -970,9 +985,12 @@
 										<DietMarks marks={dishMarks(lines)} />
 									</p>
 									<p class="truncate text-meta text-ink-3">
-										<span class="lg:hidden">{r.product}</span><span class="max-lg:hidden"
-											>{d.name !== d.nameFi ? d.name : ''}</span
-										>
+										<span class="lg:hidden"
+											>{#if r.was}<span class="text-signoff"
+													>{r.cause.replace(/^./, (c) => c.toUpperCase())}</span
+												>
+												→ {r.product}{:else}{r.product}{/if}</span
+										><span class="max-lg:hidden">{d.name !== d.nameFi ? d.name : ''}</span>
 									</p>
 								</div>
 								<div class="hidden lg:block">
@@ -993,30 +1011,41 @@
 									<span class="text-meta text-ink-3">{needUnit(d.need.unit)}</span>
 								</p>
 								<!-- A 40 px product thumbnail can sit before the name here without growing the row. -->
-								<p class="hidden min-w-0 items-center gap-1.5 text-body lg:flex">
-									{#if r.kind === 'make'}<ChefHat
-											size={14}
-											class="shrink-0 text-accent"
-											aria-hidden="true"
-										/>{:else if r.kind === 'sub'}<CornerDownRight
-											size={14}
-											class="shrink-0 text-accent"
-											aria-label="Replaces the planned product"
-										/>{:else if r.kind === 'none'}<Ban
-											size={14}
-											class="shrink-0 text-sup-missing"
-											aria-hidden="true"
-										/>{/if}
-									<span class="truncate {r.kind === 'none' ? 'text-ink-3' : 'text-ink'}"
-										>{r.product}</span
-									>
-									{#if r.more}<span class="shrink-0 text-meta text-ink-3">+{r.more}</span>{/if}
-									{#if r.by}<Bot
-											size={13}
-											class="shrink-0 text-propose"
-											aria-label="by the agent"
-										/>{/if}
-								</p>
+								<div class="hidden min-w-0 lg:block">
+									<p class="flex min-w-0 items-center gap-1.5 text-body">
+										{#if r.kind === 'make'}<ChefHat
+												size={14}
+												class="shrink-0 text-accent"
+												aria-hidden="true"
+											/>{:else if r.kind === 'sub'}<CornerDownRight
+												size={14}
+												class="shrink-0 text-accent"
+												aria-label="Replaces the planned product"
+											/>{:else if r.kind === 'none'}<Ban
+												size={14}
+												class="shrink-0 text-sup-missing"
+												aria-hidden="true"
+											/>{/if}
+										<span class="truncate {r.kind === 'none' ? 'text-ink-3' : 'text-ink'}"
+											>{r.product}</span
+										>
+										{#if r.more}<span class="shrink-0 text-meta text-ink-3">+{r.more}</span>{/if}
+										{#if r.by}<Bot
+												size={13}
+												class="shrink-0 text-propose"
+												aria-label="by the agent"
+											/>{/if}
+									</p>
+									{#if r.was}
+										<!-- Why this isn't the planned product, on the row: what was replaced, the cause, what changes. -->
+										<p class="truncate text-meta text-ink-2" title="{r.was}: {r.cause}">
+											<span class="text-signoff"
+												>{r.cause.replace(/^./, (c) => c.toUpperCase())}</span
+											>{#if r.changes}
+												&nbsp;· {r.changes}{/if} · replaces {r.was}
+										</p>
+									{/if}
+								</div>
 								<div class="flex flex-col items-end gap-1 lg:contents">
 									<p class="mono text-right text-body text-ink">{r.cents ? money(r.cents) : '—'}</p>
 									<div class="min-w-0">
