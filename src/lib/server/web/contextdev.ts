@@ -90,7 +90,7 @@ export function createContextDev(call: WebCall): RecallSource & {
 					change_detection: { type: 'semantic', confidence_threshold: 0.6 },
 					schedule: { type: 'interval', frequency: m.everyMinutes, unit: 'minutes' },
 					webhook: m.webhookUrl
-						? { url: m.webhookUrl, events: ['change.detected'], retry: {} }
+						? { url: m.webhookUrl, events: ['change.detected', 'run.completed'], retry: {} }
 						: null
 				},
 				{ maxAgeMs: 0, purpose: 'create monitor' }

@@ -29,9 +29,19 @@ export const POST: RequestHandler = async ({ request }) => {
 	} catch {
 		return fail('INVALID_INPUT', 'body is not JSON', 400);
 	}
-	if (event.event !== 'change.detected') return json({ ignored: event.event ?? null });
-
 	const ports = await servedPorts();
+	if (event.event !== 'change.detected') {
+		// run.completed: the monitor checked the page; shown in the trace drawer as "last checked".
+		busTrace(ports.scope, { lane: 'web' })('step', {
+			source: 'context.dev',
+			model: 'webhook',
+			purpose: event.event ?? 'unknown',
+			signed,
+			data: event.data ?? null
+		});
+		return json({ received: event.event ?? null });
+	}
+
 	const trace = busTrace(ports.scope, { lane: 'web', change: event.data?.change?.id });
 	const { recalls } = webClients(env, trace);
 	const receivedAt = new Date().toISOString();

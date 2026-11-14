@@ -56,17 +56,18 @@ export async function handleChange(
 ): Promise<IngestResult[]> {
 	const change = body.data?.change ?? null;
 	const urls = await newNoticeUrls(change, deps.recalls, deps.findings);
+	// Fresh reads (the monitor said the page changed), in parallel: at most MAX_NEW_PER_CHANGE.
+	const notices = await Promise.all(
+		urls.map((url) => deps.recalls.readNotice(url, { maxAgeMs: 0 }))
+	);
 	const out: IngestResult[] = [];
-	for (const url of urls) {
-		// A fresh read: the monitor said the page changed.
-		const notice = await deps.recalls.readNotice(url, { maxAgeMs: 0 });
+	for (const notice of notices)
 		out.push(
 			await ingestRecall(notice, {
 				...deps,
 				via: `web:contextdev-monitor${change ? `:${change.monitor_id}` : ''}`
 			})
 		);
-	}
 	return out;
 }
 
