@@ -50,6 +50,7 @@ test('two browsers, an outside agent and a stranger with a link stay in their ow
 	const ra = await room(a);
 	expect(ra.ws).toMatch(/^ws-j-[a-z0-9]{24}$/);
 	expect(await queueCount(a)).toBeGreaterThan(0);
+	await a.screenshot({ path: 'scratch/gate-a-planned.png' });
 
 	// 2. B is somewhere else and sees nothing of A's.
 	const rb = await room(b);

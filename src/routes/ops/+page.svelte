@@ -511,7 +511,7 @@
 
 	.figures {
 		display: flex;
-		gap: 44px;
+		gap: 28px;
 		margin: 0;
 		justify-content: center;
 	}
@@ -520,6 +520,7 @@
 		flex-direction: column-reverse;
 	}
 	.figures dt {
+		white-space: nowrap;
 		color: var(--muted);
 		font-size: 16px;
 	}

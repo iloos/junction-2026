@@ -23,6 +23,7 @@ import { scenarioClock } from '$lib/core/scenario';
 import { currentRun, currentRunStartedAt } from '$lib/server/demo/run';
 import { resetDemoRun } from '$lib/server/demo/reset';
 import { isSandbox, resetSandbox } from '$lib/server/demo/sandbox';
+import { inWorkspace } from '$lib/server/adapters/simulator/overlay';
 
 const EVENT_ID = 'event-xmas-140';
 /** The palvikinkku the ham rescue relies on (13 of 15 in stock): the contention preset takes 4 of them. */
@@ -39,7 +40,7 @@ export interface Session {
 /**
  * Selection per browser session (cookie id), in the workspace the visitor resolver chose for this request. A
  * browser that moves to another room starts with a fresh selection there. The simulator overlay itself is
- * process-wide: see `contention`. Bounded: the oldest selections are dropped past MAX_SESSIONS.
+ * per workspace (adapters/simulator/overlay.ts): see `contention`. Bounded: the oldest selections are dropped past MAX_SESSIONS.
  */
 const MAX_SESSIONS = 2000;
 const sessions = new Map<string, Session>();
@@ -71,7 +72,9 @@ const agent = (s: Session) =>
  */
 const queues = new Map<string, Promise<unknown>>();
 function serial<T>(workspaceId: string, fn: () => Promise<T>): Promise<T> {
-	const next = (queues.get(workspaceId) ?? Promise.resolve()).then(fn, fn);
+	// Inside the workspace's scope, so the simulated overlay (contention) is this sandbox's alone.
+	const scoped = () => inWorkspace(workspaceId, fn);
+	const next = (queues.get(workspaceId) ?? Promise.resolve()).then(scoped, scoped);
 	const tail = next.catch(() => undefined);
 	queues.set(workspaceId, tail);
 	// Forget an idle workspace's queue once nothing is waiting behind this call.
@@ -413,7 +416,8 @@ async function applyScenario(
 			);
 		}
 	} else if (action === 'contention') {
-		// The overlay is simulator state of the run (one Valio stock for every kitchen), not a view setting.
+		// The overlay is simulator state of this workspace (one Valio stock for every kitchen in it), not a
+		// view setting; other sandboxes never see it.
 		s.contention = Boolean(value);
 		b.overlay.clear();
 		if (s.contention)
