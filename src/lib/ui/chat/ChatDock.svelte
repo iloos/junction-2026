@@ -194,6 +194,21 @@
 		}
 		return null;
 	});
+	/**
+	 * The task named by what it is about: its own title when the server sends one, else the chef's first words, else
+	 * the needs it holds. The task id is for the System layer.
+	 */
+	const taskTitle = $derived.by(() => {
+		for (const x of entries)
+			if (x.kind === 'event' && 'title' in x.e && typeof x.e.title === 'string' && x.e.title)
+				return x.e.title;
+		const said = entries.find((x) => x.kind === 'chef');
+		if (said?.kind === 'chef') return said.text;
+		const l = entries.findLast((x) => x.kind === 'event' && x.e.type === 'ledger');
+		const labels =
+			l?.kind === 'event' && l.e.type === 'ledger' ? l.e.ledger.needs.map((n) => n.label) : [];
+		return labels.length ? labels.slice(0, 3).join(', ') : 'Your task';
+	});
 	const doneLine = $derived(last?.kind === 'event' && last.e.type === 'done' ? last.e : undefined);
 
 	async function turn(body: ChatTurnInput, said?: string) {
@@ -307,7 +322,8 @@
 		<div class="min-w-0 flex-1">
 			<p class="text-body font-semibold">Purchasing agent</p>
 			<p class="truncate text-meta text-ink-3">
-				{taskId ? `Task ${taskId}` : 'Plans and orders within your mandate. Never approves.'}
+				{#if taskId}{taskTitle}<span class="sys-only mono"> · {taskId}</span>{:else}Plans and orders
+					within your mandate. Never approves.{/if}
 			</p>
 		</div>
 		<button

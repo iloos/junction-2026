@@ -126,6 +126,19 @@
 	}
 
 	const snap = $derived(k.snap);
+	/** Why a link didn't land exactly where it pointed, if it didn't. */
+	const linkNote = $derived.by(() => {
+		if (!fromOps || !snap) return null;
+		if (fromOps.ws && snap.clock?.workspaceId && fromOps.ws !== snap.clock.workspaceId)
+			return 'The link is from another sandbox, which only its own browser can open; showing yours.';
+		if (fromOps.run && snap.clock?.runId && fromOps.run !== snap.clock.runId)
+			return 'The link is from before this sandbox was started over; showing the current plan.';
+		if (fromOps.plan && fromOps.plan !== snap.plan.id)
+			return "The link points to a plan this sandbox doesn't have; showing this kitchen's plan.";
+		if (Number.isFinite(fromOps.v) && fromOps.v !== snap.plan.version)
+			return `The plan changed since the link was made (v${fromOps.v} → v${snap.plan.version}). Check what changed before acting.`;
+		return null;
+	});
 	/** The latest change to this plan, before → after, from the two snapshots (not from copy). */
 	const changed = $derived(
 		k.changeFrom && k.snap
@@ -455,36 +468,13 @@
 	</div>
 {/if}
 
-{#if fromOps && snap}
-	<div class="border-b border-propose/30 bg-propose-wash" role="status">
+{#if linkNote}
+	<!-- Only when the link and what this browser shows disagree; a link that landed needs no banner. -->
+	<div class="border-b border-signoff/40 bg-signoff-wash" role="status">
 		<div
 			class="mx-auto flex max-w-[1440px] flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2 text-body text-ink md:px-6"
 		>
-			<b class="font-medium">Opened by link</b>
-			<span class="text-ink-2"
-				>{snap.kitchen.name.replace(' (fictional)', '')}{fromOps.need
-					? ` · ${view?.dishes.find((d) => d.needId === fromOps!.need)?.nameFi ?? fromOps.need}`
-					: ''}</span
-			>
-			{#if fromOps.ws && snap.clock?.workspaceId && fromOps.ws !== snap.clock.workspaceId}
-				<span class="text-signoff"
-					>The link is from another sandbox, which only its own browser can open; showing yours.</span
-				>
-			{:else if fromOps.run && snap.clock?.runId && fromOps.run !== snap.clock.runId}
-				<span class="text-signoff"
-					>The link is from an earlier run of this sandbox (it was started over); showing the
-					current plan.</span
-				>
-			{:else if fromOps.plan && fromOps.plan !== snap.plan.id}
-				<span class="text-signoff"
-					>The link points to another plan ({fromOps.plan}); showing this kitchen's current plan.</span
-				>
-			{:else if Number.isFinite(fromOps.v) && fromOps.v !== snap.plan.version}
-				<span class="text-signoff"
-					>Operations saw v{fromOps.v}; the plan is now v{snap.plan.version}. Check what changed
-					before acting.</span
-				>
-			{/if}
+			<span>{linkNote}</span>
 			<button
 				type="button"
 				class="ml-auto text-meta text-ink-2 underline underline-offset-2"
@@ -649,14 +639,16 @@
 					{/snippet}
 				</TaskHeader>
 				{#if isEvent}<p class="mt-2 text-meta text-ink-2">
-						A normal week <span class="mono">{money(view.normalWeek.cents, { whole: true })}</span>
-						({view.normalWeek.lines} lines) → this week
-						<span class="mono text-ink">{money(view.thisWeek.cents, { whole: true })}</span>
-						({view.thisWeek.lines} lines): the event adds
+						The event adds
 						<span class="mono text-ink"
 							>{moneyDelta(view.thisWeek.cents - view.normalWeek.cents)}</span
 						>
-						and <span class="mono">{fixed(view.eventKg)}</span> kg of food.
+						and <span class="mono text-ink">{fixed(view.eventKg)}</span> kg of food to a normal week
+						<span class="text-ink-3"
+							>(team estimate: <span class="mono"
+								>{money(view.normalWeek.cents, { whole: true })}</span
+							>, {view.normalWeek.lines} lines)</span
+						>.
 					</p>{/if}
 				{#if weekMeter}
 					<div class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-meta text-ink-3">
