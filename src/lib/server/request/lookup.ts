@@ -4,7 +4,7 @@
  * constraints the chef stated are hard filters, defaults ("semi-skimmed") are preferences and say so.
  */
 import type { NeedRequirements, Offer, Product } from '$lib/core/contracts';
-import { meets } from '$lib/core/mandate/meets';
+import { meets, requirementsFromDiet } from '$lib/core/mandate/meets';
 import { toLot } from '$lib/core/services/orders';
 import { num } from '$lib/ui/format';
 import { convert, type Conversion } from './convert';
@@ -75,7 +75,7 @@ const tokens = (name: string) =>
  * Unknown is not ok: a product with no record either way is passed over with the reason.
  */
 function requirementFails(item: ParsedItem, p: Product): string | null {
-	const req = requirementsOf(item.constraints);
+	const req = requirementsOf(item.constraints, item.diet);
 	if (!req) return null;
 	const m = meets(p, req);
 	if (m.verdict === 'ok') return null;
@@ -83,8 +83,12 @@ function requirementFails(item: ParsedItem, p: Product): string | null {
 	return m.verdict === 'no' ? `not ${f.text}: ${f.why}` : `${f.text} not stated: ${f.why}`;
 }
 
-/** The request's stated constraints as D16 requirements. */
-export function requirementsOf(constraints: readonly string[]): NeedRequirements | undefined {
+/** The request's stated constraints and diet asks as D16 requirements (diet through core's requirementsFromDiet). */
+export function requirementsOf(
+	constraints: readonly string[],
+	diet: readonly string[] = []
+): NeedRequirements | undefined {
+	const fromDiet = requirementsFromDiet(diet);
 	const freeFrom = [
 		...(constraints.includes('lactose_free') ? ['LACTOSE'] : []),
 		...(constraints.includes('gluten_free') ? ['GLUTEN'] : [])
@@ -94,6 +98,9 @@ export function requirementsOf(constraints: readonly string[]): NeedRequirements
 		...(constraints.includes('finnish') ? { origin: 'fi' } : {}),
 		...(constraints.includes('organic') ? { labels: ['EU_ORGANIC_FARMING'] } : {})
 	};
+	if (fromDiet?.freeFrom) r.freeFrom = [...new Set([...(r.freeFrom ?? []), ...fromDiet.freeFrom])];
+	if (fromDiet?.excludes) r.excludes = fromDiet.excludes;
+	if (fromDiet?.diet) r.diet = fromDiet.diet;
 	return Object.keys(r).length ? r : undefined;
 }
 

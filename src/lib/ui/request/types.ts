@@ -28,6 +28,8 @@ export interface ParsedItemView {
 	unitToken?: string;
 	/** A brand the words named, required at lookup. */
 	brand?: string;
+	/** Hard diet asks (D16 tags: vegan, vegetarian, dairy-free, no pork), required at lookup and on the need. */
+	diet?: string[];
 	/** How much was asked, as a kind (D20): exact, a range, as much as available, for N people, or unknown. */
 	amount?:
 		| { kind: 'exact' }

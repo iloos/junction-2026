@@ -16,8 +16,17 @@ import {
 	type Verdict
 } from '$lib/server/review';
 import { num } from '$lib/ui/format';
-import { BRANDS, CONSTRAINTS, PRODUCTS, UNITS, hasWord, type ConstraintKey } from './lexicon';
-import { constraintsIn, parseNumber, unknownUnitWord } from './parse';
+import {
+	BRANDS,
+	CONSTRAINTS,
+	DIET_UNCHECKABLE,
+	PRODUCTS,
+	UNITS,
+	dietTagsIn,
+	hasWord,
+	type ConstraintKey
+} from './lexicon';
+import { constraintsIn, parseNumber, unitPosition } from './parse';
 
 export interface ReadingItem {
 	id: string;
@@ -33,6 +42,8 @@ export interface ReadingItem {
 	brand?: string;
 	/** The variant kept on the item ("whole milk"), as its catalogue token. */
 	variant?: string | null;
+	/** Hard diet asks kept on the item (D16 tags). */
+	diet?: string[];
 	ambiguities?: string[];
 }
 
@@ -52,14 +63,6 @@ export interface Reading {
 	/** Words of the request that are the delivery date (their numbers are not quantities). */
 	dateText?: string | null;
 }
-
-/** Diet words the request can't carry as a requirement yet: they are said, never dropped silently. */
-const DIET_UNSUPPORTED: { re: RegExp; label: string }[] = [
-	{ re: /\b(vegan|vegaani\w*)\b/i, label: 'vegan' },
-	{ re: /\b(vegetarian|kasvis\w*)\b/i, label: 'vegetarian' },
-	{ re: /\b(halal)\b/i, label: 'halal' },
-	{ re: /\b(kosher)\b/i, label: 'kosher' }
-];
 
 const label = (c: string) => CONSTRAINTS.find((x) => x.key === c)?.label ?? c;
 const close = (a: number, b: number) => Math.abs(a - b) <= 1e-6 * Math.max(1, Math.abs(a));
@@ -96,7 +99,15 @@ export function statedAmounts(
 		if (!n) continue;
 		const u = unitWord(m[2]);
 		if (u) out.push({ text: m[0], value: +(n.value * u.factor).toFixed(6), unit: u.unit });
-		else if (unknownUnitWord(m[2]))
+		else if (
+			unitPosition(
+				m[2],
+				t
+					.slice((m.index ?? 0) + m[0].length)
+					.split(/\s+/)
+					.filter(Boolean)
+			)
+		)
 			out.push({ text: m[0], value: n.value, unit: '?', unknown: m[2].replace(/\.$/, '') });
 	}
 	return out;
@@ -184,11 +195,19 @@ export const requestReadingCheckpoint: Checkpoint<{ text: string }, Reading, nul
 					message: `The request says "${said.label}" ${i.query}, but the reading kept ${i.variant ? `a different kind` : 'no kind'}. Which ${i.query} is it?`
 				});
 		}
-		for (const d of DIET_UNSUPPORTED)
-			if (d.re.test(input.text))
+		// 4. A hard diet ask is a requirement of an item, or the reading stops: a warning never replaces it.
+		const carriedDiet = new Set(output.items.flatMap((i) => i.diet ?? []));
+		const askedDiet = dietTagsIn(input.text).filter((t) => !carriedDiet.has(t));
+		if (askedDiet.length)
+			out.push({
+				severity: 'block',
+				message: `The request says ${askedDiet.join(', ')}, but no item carries it. Which item must be ${askedDiet.join(', ')}?`
+			});
+		for (const w of DIET_UNCHECKABLE)
+			if (hasWord(input.text, w))
 				out.push({
-					severity: 'revise',
-					message: `"${d.label}" is not kept as a requirement here yet: check the product before approving.`
+					severity: 'block',
+					message: `"${w}" can't be checked against Valio's product records here. Order it from a supplier who states it, or remove the word to go on.`
 				});
 
 		return out;
@@ -248,6 +267,7 @@ export function readingOf(p: {
 		unitToken?: string;
 		brand?: string;
 		variant?: { token: string } | null;
+		diet?: string[];
 	}[];
 	deliverByText?: string | null;
 }): Reading {
@@ -261,7 +281,8 @@ export function readingOf(p: {
 			requirements: [...i.constraints],
 			...(i.unitToken ? { unitToken: i.unitToken } : {}),
 			...(i.brand ? { brand: i.brand } : {}),
-			variant: i.variant?.token ?? null
+			variant: i.variant?.token ?? null,
+			...(i.diet?.length ? { diet: [...i.diet] } : {})
 		})),
 		dateText: p.deliverByText ?? null
 	};

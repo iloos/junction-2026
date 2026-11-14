@@ -188,6 +188,38 @@ export const BRANDS = [
 /** Escapes a brand for a pattern ("Dr. Oetker", "Gold&Green"). */
 export const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
+/**
+ * Hard diet asks in the request's words, as the tags core's requirementsFromDiet reads (D16's one vocabulary), plus
+ * the few ways a chef says them that core's tags don't spell ("plant-based" is vegan, "meat-free" vegetarian).
+ */
+const DIET_WORDS: [string, string][] = [
+	['vegan', 'vegan'],
+	['vegaaninen', 'vegan'],
+	['vegaani', 'vegan'],
+	['plant-based', 'vegan'],
+	['plant based', 'vegan'],
+	['kasvipohjainen', 'vegan'],
+	['vegetarian', 'vegetarian'],
+	['kasvis', 'vegetarian'],
+	['meat-free', 'vegetarian'],
+	['lihaton', 'vegetarian'],
+	['dairy-free', 'dairy-free'],
+	['dairy free', 'dairy-free'],
+	['milk-free', 'dairy-free'],
+	['maidoton', 'dairy-free'],
+	['no pork', 'no pork'],
+	['pork-free', 'no pork'],
+	['sianlihaton', 'no pork']
+];
+
+/** The hard diet tags the words state ("vegan", "dairy-free", "no pork"), each once. */
+export function dietTagsIn(text: string): string[] {
+	return [...new Set(DIET_WORDS.filter(([w]) => hasWord(text, w)).map(([, t]) => t))];
+}
+
+/** Diet asks this service cannot check against a product at all (no record to read): the reading stops. */
+export const DIET_UNCHECKABLE = ['halal', 'kosher'];
+
 /** `word` (one or more words) stands on its own in `text`, case-insensitive. */
 export function hasWord(text: string, word: string): boolean {
 	return new RegExp(`(^|[^\\p{L}])${esc(word.toLowerCase())}($|[^\\p{L}])`, 'u').test(
