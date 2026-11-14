@@ -1,5 +1,6 @@
 import type { Llm } from '$lib/core/ports';
 import type { TaskLedger } from '$lib/core/contracts/task';
+import { outcomeTextCheckpoint } from '$lib/server/review/outcome';
 import { ledgerTotals } from '$lib/server/tasks/ledger';
 
 /**
@@ -47,8 +48,10 @@ export function factsOf(l: TaskLedger) {
 
 const NUM = /(?<![\p{L}\d.,])\d+(?:[.,]\d+)?(?![\p{L}\d])/gu;
 const ORDERED = /\b(ordered|tilattu|tilattiin|tilasin|tilannut)\b/i;
-const CONFIRMED =
-	/\b(supplier[- ]confirmed|confirmed by the supplier|toimittaja vahvisti|vahvistettu)\b/i;
+/** Any "confirmed" or "delivered" claim: the ledger backs it only with a receipt-confirmed amount. */
+const CONFIRMED = /\b(confirmed|delivered|vahvist\p{L}*|toimitettu|toimitettiin)\b/iu;
+const NOT_CONFIRMED =
+	/\b(not|no|never|un|awaiting|until|before)\s+(yet\s+)?(supplier[- ])?(confirmed|delivered)|\bei (ole )?(vielä )?(vahvistettu|toimitettu)/iu;
 const APPROVED = /\b(approved|hyväksytty|hyväksyin)\b/i;
 
 /** Numbers the facts contain, as the strings a reply may write them. */
@@ -60,8 +63,8 @@ function allowedNumbers(f: ReturnType<typeof factsOf>): Set<number> {
 	};
 	for (const n of f.needs)
 		[n.required, n.supplierConfirmed, n.awaitingSupplier, n.planned, n.unresolved].forEach(add);
-	const t = f.totals;
-	[t.required, t.supplierConfirmed, t.awaitingSupplier, t.planned, t.unresolved].forEach(add);
+	for (const t of Object.values(f.totals))
+		[t.required, t.supplierConfirmed, t.awaitingSupplier, t.planned, t.unresolved].forEach(add);
 	[f.committedEuros, f.receipts, f.decisionsLeft, f.needs.length].forEach(add);
 	// Numbers inside the labels and the next-action sentence are facts too.
 	for (const s of [f.nextAction, ...f.needs.map((n) => n.label)])
@@ -83,8 +86,9 @@ export function unbacked(text: string, l: TaskLedger): string | null {
 		f.receipts === 0
 	)
 		return '"ordered" without a receipt';
-	if (CONFIRMED.test(text) && f.totals.supplierConfirmed <= 0)
-		return '"supplier confirmed" without a confirmed amount';
+	const confirmed = Object.values(f.totals).some((t) => t.supplierConfirmed > 0);
+	if (CONFIRMED.test(text) && !NOT_CONFIRMED.test(text) && !confirmed)
+		return '"confirmed" or "delivered" without a confirmed amount';
 	if (APPROVED.test(text) && !/\bnot (yet )?approved\b/i.test(text) && f.decisionsLeft > 0)
 		return '"approved" with decisions left';
 	return null;

@@ -95,16 +95,31 @@ export function computeLedger(i: LedgerInput): TaskLedger {
 	};
 }
 
-/** Totals over a ledger's needs that share a unit, for one-line summaries ("4 kg planned, 0 supplier confirmed"). */
-export function ledgerTotals(l: TaskLedger) {
-	const sum = (k: keyof Omit<TaskLedgerNeed, 'needId' | 'planId' | 'label'>) =>
-		l.needs.reduce((s, n) => s + n[k].value, 0);
-	return {
-		required: sum('required'),
-		supplierConfirmed: sum('supplierConfirmed'),
-		awaitingSupplier: sum('awaitingSupplier'),
-		planned: sum('plannedKnown') + sum('plannedUnknown'),
-		unresolved: sum('unresolved'),
-		units: [...new Set(l.needs.map((n) => n.required.unit))]
-	};
+/** Totals over a ledger's needs per unit (kg and l never add up), for one-line summaries and the claim check. */
+export function ledgerTotals(l: TaskLedger): Record<
+	string,
+	{
+		required: number;
+		supplierConfirmed: number;
+		awaitingSupplier: number;
+		planned: number;
+		unresolved: number;
+	}
+> {
+	const out: ReturnType<typeof ledgerTotals> = {};
+	for (const n of l.needs) {
+		const t = (out[n.required.unit] ??= {
+			required: 0,
+			supplierConfirmed: 0,
+			awaitingSupplier: 0,
+			planned: 0,
+			unresolved: 0
+		});
+		t.required += n.required.value;
+		t.supplierConfirmed += n.supplierConfirmed.value;
+		t.awaitingSupplier += n.awaitingSupplier.value;
+		t.planned += n.plannedKnown.value + n.plannedUnknown.value;
+		t.unresolved += n.unresolved.value;
+	}
+	return out;
 }
