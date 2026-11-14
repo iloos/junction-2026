@@ -21,7 +21,14 @@
 	import { gatePaths } from './gate';
 	import { storyOf } from './story';
 	import type { OpEnvelope } from '$lib/core/contracts';
-	import { buildCases, coverage, kitchenHref, openDecisions, openLines } from './cases';
+	import {
+		buildCases,
+		coverage,
+		kitchenHref,
+		openDecisions,
+		openLines,
+		withApprovals
+	} from './cases';
 	import { buildProblems, type Problem } from './problems';
 	import { ACTOR, euro, opPlanId, opSummary, SIM_KIND, viaLabel, type Names } from './labels';
 	import { useShell } from '$lib/ui/shell/shell.svelte';
@@ -174,7 +181,8 @@
 			const plansWithViews = Object.fromEntries(
 				Object.entries(stream.state.plans).map(([id, p]) => [id, withView(p)])
 			);
-			const withViews = { ...stream.state, plans: plansWithViews };
+			// Approved lines read as approved (withApprovals), as the decision tiles count them.
+			const withViews = withApprovals({ ...stream.state, plans: plansWithViews });
 			cases = buildCases(withViews, names, stream.heldSince);
 			problems = buildProblems(withViews, names, opsInOrder());
 			queueTimer = setTimeout(run, QUEUE_MS);
