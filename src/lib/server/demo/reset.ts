@@ -1,7 +1,6 @@
-import { eq } from 'drizzle-orm';
 import type { CallContext } from '$lib/core/ports';
 import { SCENARIO } from '$lib/core/scenario';
-import * as schema from '$lib/server/db/schema';
+import { clearIdempotency } from './idempotency';
 import { realHandlers } from '$lib/server/tools/handlers';
 import { createServerPorts } from '$lib/server/store/server-ports';
 import { loadSeedKitchens } from '$lib/server/store/db-ports';
@@ -55,8 +54,7 @@ export function loadedWorkspaces(): number {
 /**
  * Start a fresh run: a new runs row with the seed kitchens, made current. Old runs and their ops stay in
  * the database; everything that reads `currentRun` (store, auth, op stream, /ops) moves to the new one.
- * Idempotency records are per workspace, not per run, so the workspace's are cleared: otherwise a retried key
- * after a reset would replay a plan from the old run that the new run can't find.
+ * The workspace's idempotency records are cleared with it (see `clearIdempotency`).
  */
 export async function resetDemoRun(
 	workspaceId: string
@@ -65,7 +63,7 @@ export async function resetDemoRun(
 	if (!hasRun(workspaceId)) await loadCurrentRun(db, workspaceId);
 	const previous = currentRun(workspaceId);
 	const runId = newRunId();
-	await db.delete(schema.idempotency).where(eq(schema.idempotency.workspaceId, workspaceId));
+	await clearIdempotency(db, workspaceId);
 	await store.ensure({
 		workspaceId,
 		runId,

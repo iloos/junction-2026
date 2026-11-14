@@ -4,6 +4,7 @@
  * replaying the persisted ops through applyOps, so they show exactly what the store recorded.
  */
 import { and, asc, eq, ne } from 'drizzle-orm';
+import { clearIdempotency } from '$lib/server/demo/idempotency';
 import {
 	SCOPES_BY_ACTOR,
 	toolSchemas,
@@ -261,6 +262,7 @@ export async function playScenario(s: Scenario): Promise<EndState> {
 			case 'reset': {
 				// A fresh run on the same database and workspace; the old run's ops stay for audit.
 				runs++;
+				await clearIdempotency(env.db, env.workspaceId); // as demo/reset.ts resetDemoRun does
 				env = await open({ db: env.db, runId: `run-eval-${runs}`, overlay: env.overlay });
 				ports = env.ports;
 				h = createHandlers(ports);
