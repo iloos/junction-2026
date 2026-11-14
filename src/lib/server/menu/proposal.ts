@@ -20,6 +20,8 @@ import {
 import { canonicalJson, sha256Hex } from '$lib/core/hash';
 import type { Catalog, Llm, MenuStore, Resolution } from '$lib/core/ports';
 import { slug } from '../request/parse';
+import { fitIssues } from './fit';
+import { pinnedFor, resolveVariants, type Resolved } from './resolve';
 import { dietBase, reviewProposal, type Issue } from './rubric';
 
 /** Brief requirements the catalogue resolver can enforce, as its product flags. */
@@ -49,18 +51,90 @@ async function resolveIngredient(
 	if (!catalog.resolve) return null;
 	const r = await catalog.resolve(query, { limit: 3, diet: plant });
 	if (r.status !== 'resolved' || !flags.length) return r;
-	const got = await catalog.get(r.candidates.map((c) => c.productId));
-	const breaks = (id: string) => {
-		const p = got.get(id);
-		return flags.some(
-			(f) =>
-				!p?.freeFrom.includes(f) && (BREAKS[f] ?? []).some((c) => p?.allergens.contains.includes(c))
-		);
-	};
-	const safe = r.candidates.filter((c) => !breaks(c.productId));
+	const bad = await breaksFlags(
+		catalog,
+		r.candidates.map((c) => c.productId),
+		flags
+	);
+	const safe = r.candidates.filter((c) => !bad.has(c.productId));
 	if (safe.length === r.candidates.length) return r;
 	if (safe.length) return { ...r, candidates: safe };
 	return catalog.resolve(query, { limit: 3, diet: [...flags, ...plant] });
+}
+
+/** The products among `ids` whose allergen record contains what a whole-menu flag excludes (lactose, gluten). */
+export async function breaksFlags(
+	catalog: Pick<Catalog, 'get'>,
+	ids: string[],
+	flags: string[]
+): Promise<Set<string>> {
+	if (!flags.length || !ids.length) return new Set();
+	const got = await catalog.get(ids);
+	return new Set(
+		ids.filter((id) => {
+			const p = got.get(id);
+			return flags.some(
+				(f) =>
+					!p?.freeFrom.includes(f) &&
+					(BREAKS[f] ?? []).some((c) => p?.allergens.contains.includes(c))
+			);
+		})
+	);
+}
+
+/** The brief's whole-menu diet requirements the resolver enforces, as product flags. */
+export const menuFlags = (brief: Pick<EventBrief, 'dietary'>) =>
+	brief.dietary
+		.filter((x) => !x.includes(':'))
+		.map((x) => RESOLVER_DIET[dietBase(x)])
+		.filter(Boolean);
+
+/**
+ * One menu ingredient: a remembered pin or a caller's hint first (unless it breaks a whole-menu flag), then the query
+ * and its variants through the diet-aware resolver.
+ */
+export async function resolveMenuIngredient(
+	catalog: Pick<Catalog, 'resolve' | 'get'>,
+	o: {
+		query: string;
+		alt?: string[];
+		label: string;
+		flags: string[];
+		plant?: string[];
+		pinned?: { productId: string; source: 'remembered' | 'hint' };
+	}
+): Promise<Resolved | null> {
+	if (!catalog.resolve) return null;
+	const pinned =
+		o.pinned && !(await breaksFlags(catalog, [o.pinned.productId], o.flags)).size
+			? o.pinned
+			: undefined;
+	return resolveVariants(catalog, (q) => resolveIngredient(catalog, q, o.flags, o.plant), {
+		query: o.query,
+		alt: o.alt,
+		label: o.label,
+		pinned: pinned?.productId,
+		pinSource: pinned?.source
+	});
+}
+
+/** A caller's hint for an ingredient: its words name the hint's ingredient, or the hint names them. */
+function hintFor(hints: ProposeDeps['hints'], words: string[]): string | undefined {
+	const ws = words.map((w) => w.trim().toLowerCase()).filter(Boolean);
+	return hints?.find((h) => {
+		const n = h.ingredient.trim().toLowerCase();
+		return n && ws.some((w) => w === n || w.includes(n) || n.includes(w));
+	})?.productId;
+}
+
+/** How an ingredient got its product, for the provenance note. */
+function howResolved(got: Resolved, query: string): string {
+	if (got.pinned)
+		return got.pinned === 'hint' ? 'the caller named it' : 'pinned before in this kitchen';
+	const n = got.resolution.status === 'resolved' ? got.resolution.candidates.length : 0;
+	return got.via
+		? `best of ${n} for "${got.via}" (no match for "${query}")`
+		: `best of ${n} for "${query}"`;
 }
 
 /* ── Model output ─────────────────────────────────────────────────────────── */
@@ -70,7 +144,9 @@ const LlmIngredient = z.object({
 	/** Finnish catalogue words. */
 	query: z.string().min(1).max(120),
 	amountPerCover: z.number().positive().max(2000),
-	unit: z.enum(['g', 'ml', 'pcs'])
+	unit: z.enum(['g', 'ml', 'pcs']),
+	/** Other catalogue words for the same thing (plain noun, split compound, trade name), tried after `query`. */
+	alt: z.array(z.string().min(1).max(120)).max(3).default([])
 });
 const LlmDish = z.object({
 	name: z.string().min(1).max(160),
@@ -100,6 +176,8 @@ Return only JSON: {"dishes":[{"name":string,"course":"starter"|"soup"|"fish"|"ma
 - One dish per requested course; a buffet has 5-8 dishes.
 - amountPerCover is the served amount per guest; 250-1500 g of food per guest in total.
 - query: 1-3 Finnish catalogue words in base form (lohifilee, peruna, kerma laktoositon).
+- alt: up to 3 other words a wholesaler may list it under: the plain noun, a split compound, a trade name (keltasipuli -> ["sipuli"], porsaankylki -> ["porsaan kylki"], wonton-levyt -> ["won ton"], kylkirivi -> ["ribs","spare ribs"]).
+- A requested course is never "side": a dish that is one of the requested courses gets that course (a second main is "main").
 - claimedCompatible: the brief requirements this dish meets, exactly as written in the brief.
 - Every requirement in the brief must hold for every dish; one with a head count ("vegetarian:6") needs at least one dish for those guests.
 - Never drop a requirement. Put anything you cannot meet, or would ask the chef, in open.`;
@@ -270,7 +348,8 @@ export function fixtureMenu(brief: EventBrief): LlmMenu {
 				label: i.label,
 				query: lactoseFree && i.dairy ? `${i.query} laktoositon` : i.query,
 				amountPerCover: i.amountPerCover,
-				unit: i.unit
+				unit: i.unit,
+				alt: []
 			}))
 		};
 	});
@@ -287,6 +366,24 @@ export function fixtureMenu(brief: EventBrief): LlmMenu {
 }
 
 /* ── Proposal ─────────────────────────────────────────────────────────────── */
+
+const MEAL = new Set(['starter', 'soup', 'fish', 'main', 'dessert', 'cheese', 'other']);
+
+/**
+ * A model that files a requested course as "side" leaves the menu short of its courses. When fewer course dishes come
+ * back than the brief asks for, sides become mains, in order, until the count is met; nothing else is relabelled.
+ */
+export function normaliseCourses(menu: LlmMenu, brief: Pick<EventBrief, 'courses'>): LlmMenu {
+	if (brief.courses === undefined) return menu;
+	let short = brief.courses - menu.dishes.filter((x) => MEAL.has(x.course)).length;
+	if (short <= 0) return menu;
+	const dishes = menu.dishes.map((x) => {
+		if (short <= 0 || x.course !== 'side') return x;
+		short--;
+		return { ...x, course: 'main' as const };
+	});
+	return { ...menu, dishes };
+}
 
 /** Stable ids from names, numbered when repeated; short enough that dish + ingredient fit a 64-character id. */
 function idsFor(names: string[], prefix: string): string[] {
@@ -308,6 +405,8 @@ export interface ProposeDeps {
 	now: Date;
 	/** Absent: the fixture templates. */
 	llm?: Llm | null;
+	/** Products the caller already knows for an ingredient; tried before the resolver, never past a diet flag. */
+	hints?: { ingredient: string; productId: string }[];
 	/** Makes two proposals for the same brief distinct; the same nonce returns the stored one. */
 	nonce?: string;
 	/** Progress for a waiting page: the dishes once written, then products matched so far. */
@@ -370,6 +469,7 @@ export async function proposeMenu(d: ProposeDeps): Promise<Proposed> {
 			menu = fixtureMenu(d.brief);
 		}
 	} else menu = fixtureMenu(d.brief);
+	menu = normaliseCourses(menu, d.brief);
 	d.onStep?.({
 		step: 'dishes',
 		dishes: menu.dishes.map((x) => x.name),
@@ -380,10 +480,7 @@ export async function proposeMenu(d: ProposeDeps): Promise<Proposed> {
 
 	const at = d.now.toISOString();
 	// A whole-menu requirement checks every pick; a counted one ("lactose-free:4") is met by some dishes.
-	const flags = d.brief.dietary
-		.filter((x) => !x.includes(':'))
-		.map((x) => RESOLVER_DIET[dietBase(x)])
-		.filter(Boolean);
+	const flags = menuFlags(d.brief);
 	const dishIds = idsFor(
 		menu.dishes.map((x) => x.name),
 		'd-'
@@ -411,13 +508,23 @@ export async function proposeMenu(d: ProposeDeps): Promise<Proposed> {
 				amountPerCover: i.amountPerCover,
 				unit: i.unit
 			};
-			const r = await resolveIngredient(
-				d.catalog,
-				i.query,
+			const words = [i.query, i.label];
+			const hint = hintFor(d.hints, words);
+			const remembered = pinnedFor(d.workspaceId, d.kitchenId, words);
+			const got = await resolveMenuIngredient(d.catalog, {
+				query: i.query,
+				alt: i.alt ?? [],
+				label: i.label,
 				flags,
-				plantFor(dish.claimedCompatible)
-			);
-			if (r?.status === 'resolved' && r.candidates.length) {
+				plant: plantFor(dish.claimedCompatible),
+				pinned: hint
+					? { productId: hint, source: 'hint' }
+					: remembered
+						? { productId: remembered, source: 'remembered' }
+						: undefined
+			});
+			const r = got?.resolution;
+			if (got && r?.status === 'resolved' && r.candidates.length) {
 				// A vegan dish's pick without a declared allergen record is not called vegan: the note says to check it.
 				const unchecked =
 					plantFor(dish.claimedCompatible).includes('VEGAN') &&
@@ -430,7 +537,7 @@ export async function proposeMenu(d: ProposeDeps): Promise<Proposed> {
 						source,
 						at,
 						ref: i.query,
-						note: `amount: ${source === 'llm' ? 'model' : 'team'} estimate; product: best of ${r.candidates.length} for "${i.query}"${unchecked ? '; vegan: no allergen record — check' : ''}`
+						note: `amount: ${source === 'llm' ? 'model' : 'team'} estimate; product: ${howResolved(got, i.query)}${unchecked ? '; vegan: no allergen record — check' : ''}`
 					}
 				});
 			} else
@@ -464,5 +571,10 @@ export async function proposeMenu(d: ProposeDeps): Promise<Proposed> {
 		provenance: { source, at, ref: model, ...(fallback ? { note: fallback } : {}) }
 	});
 	await d.store.put(d.workspaceId, proposal);
-	return { proposal, issues: reviewProposal(d.brief, proposal), fallback, model };
+	return {
+		proposal,
+		issues: [...reviewProposal(d.brief, proposal), ...(await fitIssues(d.catalog, proposal))],
+		fallback,
+		model
+	};
 }
