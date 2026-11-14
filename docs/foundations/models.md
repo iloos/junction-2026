@@ -46,6 +46,19 @@ One adapter covers everything: `createOpenAICompatible({ name, baseURL, apiKey, 
 - **Usage:** Featherless also returns `usage.cost` in USD, which the trace drawer can show.
 - **Still untested:** Verda and NVIDIA Build through the SDK (no Nemotron key yet). Rerun `node sdk-check.mjs nvidia nvidia/nemotron-3.5-super-vl-120b-a12b` once a key arrives.
 
+## 4b. Gemini per router job (D12)
+Every model call names a job; `LLM_ROUTES` in `src/lib/server/adapters/llm/router.ts` is the source of truth. Measured per job in [research/gemini-models.md](../research/gemini-models.md).
+| Job | Model | Thinking | Max tokens | Fallback |
+|---|---|---|---|---|
+| request.parse | Flash-Lite (`gemini-3.5-flash-lite`) | minimal | 600 | rules parser |
+| agent.plan | Flash-Lite | minimal | 600 | scripted planner |
+| agent.review_rewrite | Flash-Lite | minimal | 200 | the outcome as written |
+| explain | Flash-Lite | minimal | 400 | template |
+| chat.understand | Flash-Lite | minimal | 400 | rules (not yet measured) |
+| menu.propose | `gemini-3.8-flash` | low | 4,000 | team templates |
+| establishment.match | Flash-Lite | minimal | 300 | rules in `core/establishment.ts` (evals/establishment); not yet measured live |
+| image.read | Nemotron 3.5 Super VL (Verda) | off | 1,500 | — |
+
 ## 5. Nemotron eval for the write-up ("how we improved its outputs")
 **Set of 16 cases, all made by us:**
 - 6 phone photos of handwritten prep lists (messy, Finnish/English mix, crossed-out lines).

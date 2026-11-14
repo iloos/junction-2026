@@ -1,0 +1,48 @@
+{
+	"$comment": "Describe your kitchen (D15): a chef's sentence → the nearest seeded kitchen. Fixture path (rules, no model). `close: false` = no seeded kitchen is this kind; the why must say so and name the nearest. Run by src/lib/server/evals/establishment.test.ts in pnpm eval.",
+	"cases": [
+		{
+			"id": "school-fi",
+			"text": "Kunnan keskuskeittiö, teemme ruoat kouluille ja päiväkodeille, noin 2000 annosta päivässä.",
+			"kitchenId": "k-central",
+			"close": true
+		},
+		{
+			"id": "care-home-en",
+			"text": "We cook for a care home with 90 elderly residents, lactose-free house menu and soft textures.",
+			"kitchenId": "k-carehome",
+			"close": true
+		},
+		{
+			"id": "hotel-breakfast",
+			"text": "Business hotel in Tampere, big breakfast buffet every morning and a small bar menu.",
+			"kitchenId": "k-hotel",
+			"close": true
+		},
+		{
+			"id": "lunch-fi",
+			"text": "Lounasravintola toimistoalueella, arkisin noin 250 lounasta.",
+			"kitchenId": "k-lounas",
+			"close": true
+		},
+		{
+			"id": "ski-lapland",
+			"text": "Ski hotel up in Lapland, only open in the winter season, deliveries come twice a week.",
+			"kitchenId": "k-skiresort",
+			"close": true
+		},
+		{
+			"id": "cafe-bakery",
+			"text": "Small café with a bakery counter, cinnamon buns and coffee.",
+			"kitchenId": "k-cafe",
+			"close": true
+		},
+		{
+			"id": "food-truck",
+			"text": "A food truck.",
+			"kitchenId": "k-cafe",
+			"close": false,
+			"whyIncludes": ["None of our kitchens", "nearest"]
+		}
+	]
+}
