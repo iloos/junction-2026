@@ -25,7 +25,7 @@
 - Optional dev aids: `plannotator` (annotate agent plans before execution), `lot-map` (live map of tool calls and subagents).
 
 ## Agent workflow
-See [ORCHESTRATION.md](ORCHESTRATION.md): concept first (brainstorming, research subagents, CONCEPT/ARCHITECTURE, contracts), then parallel lanes (`lane` / `integrate` skills). Design: `/impeccable` with PRODUCT.md/DESIGN.md in the polish phase; `frontend-design` for direction.
+See [ORCHESTRATION.md](../../ORCHESTRATION.md): concept first (brainstorming, research subagents, CONCEPT/ARCHITECTURE, contracts), then parallel lanes (`lane` / `integrate` skills). Design: `/impeccable` with PRODUCT.md/DESIGN.md in the polish phase; `frontend-design` for direction.
 
 ## Event-night setup (Fri 13 Nov)
 | Tool | State | Use |

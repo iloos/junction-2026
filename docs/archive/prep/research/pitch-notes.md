@@ -1,6 +1,6 @@
 # Pitch notes (notes only; pitch work waits for a tagged stable point)
 
-**Sources:** [valio-baseline](valio-baseline.md), [analogs](analogs.md), [sibling-repos](sibling-repos.md), [substitutes](substitutes.md). Claim only what's wired (CLAUDE.md rule 8).
+**Sources:** [valio-baseline](../../../research/valio-baseline.md), [analogs](../../../research/analogs.md), [sibling-repos](../../../research/sibling-repos.md), [substitutes](../../../research/substitutes.md). Claim only what's wired (CLAUDE.md rule 8).
 
 - **Baseline line (say it respectfully, with the date):** we asked Valio's own assistant their example ("1,000 L lactose-free milk by Monday"). It said it can't confirm availability or price and pointed to sales service. That's right for a knowledge assistant. The missing layer is transactional: stock, price and authority. That's what we built. Don't claim to replace A.I.mo or the webshop.
 - **Choco question:** Choco's OrderAgent Autopilot already claims "only genuine exceptions reach a person". Our answer: the exception rule is the customer's own mandate, enforced in an open interface any agent can use, with approval bound to exact terms. Choco's is a vendor feature inside its own app.

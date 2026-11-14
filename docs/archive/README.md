@@ -1,6 +1,6 @@
 # Archive
 
-History, kept for the record. Nothing here is current: the live docs are [STATUS](../STATUS.md), [DISPATCH](../DISPATCH.md), [PLAN](../PLAN.md), [DECISIONS](../DECISIONS.md) and [concept/](../concept/CONCEPT.md). Links inside archived files point at where things were when they were written.
+History, kept for the record. Nothing here is current: the live docs are [STATUS](../STATUS.md), [DISPATCH](../DISPATCH.md), [PLAN](../PLAN.md), [DECISIONS](../DECISIONS.md) and [concept/](../concept/CONCEPT.md). Links inside archived files resolve to current paths; line anchors (`#L…`) and quoted code describe the repo as it was then.
 
 ## handoff/ (checkpoint, Sat 14 Nov ~05:40)
 | File | What it was | Superseded by |
