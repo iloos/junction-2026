@@ -57,9 +57,10 @@ function invalidateApprovals(state: WorkspaceState, planId: string): Record<stri
 }
 
 /**
- * Who may commit which lines (★5/★7). Within the mandate: only `act`-tier eligible lines, never for an
- * external caller or an externally created plan. With an approval: it must be granted, bound to this exact
- * plan version and terms, and cover every line that isn't act-tier eligible.
+ * Who may commit which lines (★5/★7). Every order line is checked against the authority it names (F8; orders
+ * stored before per-line authority read the order-level one). `mandate`: only `act`-tier eligible lines, never for
+ * an external caller or an externally created plan. An approval: granted, bound to this exact plan version and
+ * terms, and covering that line.
  */
 function commitAuthority(
 	state: WorkspaceState,
@@ -71,23 +72,35 @@ function commitAuthority(
 		return err('TERMS_CHANGED', `order does not match plan ${plan.id} v${plan.version}`);
 	const byId = new Map(plan.lines.map((l) => [l.id, l]));
 	const external = actorKind === 'external_agent' || plan.createdBy.kind === 'external_agent';
-	const approval =
-		order.authority === 'mandate' ? null : state.approvals[order.authority.approvalId];
-	if (order.authority !== 'mandate') {
+	const usable = (approvalId: string): Result<Approval> => {
+		const approval = state.approvals[approvalId];
 		if (!approval || approval.planId !== plan.id) return err('NOT_FOUND', 'approval');
 		if (approval.state !== 'granted')
 			return err('TERMS_CHANGED', `approval ${approval.id} is ${approval.state}`);
 		if (approval.planVersion !== plan.version || approval.termsHash !== plan.termsHash)
 			return err('TERMS_CHANGED', `approval ${approval.id} no longer matches the plan`);
+		return ok(approval);
+	};
+	if (order.authority !== 'mandate') {
+		const a = usable(order.authority.approvalId);
+		if (!a.ok) return a;
 	}
 	for (const ol of order.lines) {
 		const line = byId.get(ol.lineId);
 		if (!line) return err('NOT_FOUND', `line ${ol.lineId}`);
 		if (line.state === 'committed') return err('DUPLICATE', `line ${ol.lineId} already committed`);
-		const inMandate = !external && line.state === 'eligible' && line.tier === 'act';
-		const approved = approval?.lineIds.includes(ol.lineId) ?? false;
-		if (!inMandate && !approved)
-			return err('FORBIDDEN', `line ${ol.lineId} needs an approval to commit`);
+		const auth = ol.authority ?? order.authority;
+		if (auth === 'mandate') {
+			// Legacy orders named one approval for all lines; their act-tier lines stood on the mandate.
+			if (!external && line.state === 'eligible' && line.tier === 'act') continue;
+			return err('FORBIDDEN', `line ${ol.lineId} is outside the mandate and needs an approval`);
+		}
+		const a = usable(auth.approvalId);
+		if (!a.ok) return a;
+		if (a.value.lineIds.includes(ol.lineId)) continue;
+		// A legacy order (no per-line authority) may carry act-tier lines under the order's approval.
+		if (!ol.authority && !external && line.state === 'eligible' && line.tier === 'act') continue;
+		return err('FORBIDDEN', `approval ${auth.approvalId} does not cover line ${ol.lineId}`);
 	}
 	return ok(true);
 }

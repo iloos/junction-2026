@@ -34,6 +34,29 @@ describe('quotes on the scenario clock', () => {
 		expect(a.provenance.note).toMatch(/^scenario dates/);
 	});
 
+	it('dates a quote without deliverBy for the scenario delivery, with its cut-off still ahead', async () => {
+		const env = await createDbPorts();
+		const h = createHandlers(env.ports);
+		const r = await h.quote(chef, { productIds: ['464201', '462157'] });
+		if (!r.ok) throw new Error(r.error.message);
+		for (const o of r.value.offers) {
+			if (!o.availability.closingTime) continue;
+			expect(o.availability.provenance.note).toMatch(/^scenario dates/);
+			expect(new Date(o.availability.closingTime).getTime()).toBeGreaterThan(
+				env.ports.clock.now().getTime()
+			);
+		}
+		expect(r.value.offers[0].availability.availableDate).toBe(SCENARIO.delivery);
+	});
+
+	it('re-dates every offers call, even one that names no delivery date', async () => {
+		const env = await createDbPorts();
+		// The port requires deliverBy; an untyped caller (a script, a JS client) can still omit it.
+		const { offers } = await env.ports.catalog.offers(['464201'], undefined as unknown as string);
+		expect(offers[0].availability.availableDate).toBe(SCENARIO.delivery);
+		expect(offers[0].availability.closingTime?.startsWith('2026-12-')).toBe(true);
+	});
+
 	it('has the story cut-off at the earliest cut-off of the event lines, after the scenario start', async () => {
 		const env = await createDbPorts();
 		const h = createHandlers(env.ports);

@@ -1,6 +1,6 @@
 {
 	"id": "s4-real-outages-stale-approval",
-	"title": "Three real outages: whole ham out → Finnish palvikinkku in stock (13 of 15), lanttulaatikko out → Terminal 6×400 g held as unknown quantity, joulutorttu undeliverable → make in house; a price change voids the approval",
+	"title": "Three real outages: whole ham out → Finnish palvikinkku in stock (13 of 15), lanttulaatikko out → made in house from confirmed stock (D8: the Terminal 6×400 g of unknown supply stays ranked below), joulutorttu undeliverable → make in house; a price change voids the approval",
 	"stories": ["★3", "★5"],
 	"edgeCases": [2, 3, 5],
 	"seeds": {
@@ -130,12 +130,34 @@
 				"reasons": ["out"]
 			},
 			{
-				"productId": "462157",
-				"qty": 3,
-				"unit": "KI",
+				"productId": "460879",
 				"state": "held",
-				"reasons": ["UNKNOWN_REQUIRED"],
-				"lineCents": 5436
+				"tier": "sign_off",
+				"reasons": ["allergen_change"]
+			},
+			{
+				"productId": "464249",
+				"state": "held",
+				"tier": "sign_off",
+				"reasons": ["allergen_change"]
+			},
+			{
+				"productId": "460613",
+				"state": "held",
+				"tier": "sign_off",
+				"reasons": ["allergen_change"]
+			},
+			{
+				"productId": "467464",
+				"state": "held",
+				"tier": "sign_off",
+				"reasons": ["allergen_change"]
+			},
+			{
+				"productId": "461314",
+				"state": "held",
+				"tier": "sign_off",
+				"reasons": ["allergen_change"]
 			},
 			{
 				"productId": "473317",
@@ -186,7 +208,7 @@
 			}
 		],
 		"residualShortfall": [],
-		"unconfirmedCover": ["463860", "461210", "462455", "462157"],
+		"unconfirmedCover": ["463860", "461210", "462455"],
 		"commitResults": [
 			{
 				"idempotencyKey": "s4-commit-1",
@@ -204,13 +226,12 @@
 		"weekSpentCents": 21450,
 		"approvalStates": ["pending", "granted", "invalidated", "pending", "granted"],
 		"availabilityKinds": {
-			"462490": "out",
-			"462482": "out",
-			"462447": "out",
 			"462210": "undeliverable",
+			"462447": "out",
+			"462482": "out",
+			"462490": "out",
 			"471247": "undeliverable",
 			"473317": "undeliverable",
-			"462157": "unknown",
 			"476768": "known"
 		},
 		"wordingMustDiffer": ["out", "undeliverable"],
@@ -219,5 +240,5 @@
 			"first": "476768"
 		}
 	},
-	"notes": "Both stock outages and the tart are real in the static mock. Ham: HK Palvikinkku 476768 (FI, Stock 15 ST, €10.29/kg) outranks the Terminal juhlakinkku 462919 on price at equal origin, reliability and carbon; 18.9 kg cooked → 13 × 1.5 kg (13 of the 15 in stock: a contention beat). Lanttulaatikko: no ready-made option in Stock, so the Terminal 6×400 g case 462157 is proposed and held as unknown quantity. Joulutorttu: every product is undeliverable, so the seed rescue recipe (puff pastry 460373 + prune purée 461378) is proposed as make-in-house, sign-off tier. The price of 476768 changes after approval (simulated), so the first commit fails TERMS_CHANGED."
+	"notes": "Both stock outages and the tart are real in the static mock. Ham: HK Palvikinkku 476768 (FI, Stock 15 ST, €10.29/kg) outranks the Terminal juhlakinkku 462919 on price at equal origin, reliability and carbon; 18.9 kg cooked → 13 × 1.5 kg (13 of the 15 in stock: a contention beat). Lanttulaatikko: no ready-made option in Stock; the Terminal 6×400 g case 462157 has unknown supply, so (D8) the seed's make-in-house recipe from confirmed Stock ingredients is recommended, sign-off tier for the allergen change. Joulutorttu: every product is undeliverable, so the seed rescue recipe (puff pastry 460373 + prune purée 461378) is proposed as make-in-house, sign-off tier. The price of 476768 changes after approval (simulated), so the first commit fails TERMS_CHANGED."
 }

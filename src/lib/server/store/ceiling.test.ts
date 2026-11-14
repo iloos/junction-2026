@@ -59,6 +59,9 @@ describe('hard limit', () => {
 			nextAction: 'resolve_rule'
 		});
 		expect(placed.approvalId).toBeNull();
+		// F32-total: a forbidden order still reports what it would cost, as the split order does.
+		expect(line.lineCents).toBe(Math.round(200_000 * line.offer!.price!.unitCents));
+		expect(placed.plan.totalCents).toBe(line.lineCents);
 
 		for (const lineIds of [undefined, [line.id]]) {
 			const r = await h.commit_order(ctx('chef'), {
@@ -86,6 +89,7 @@ describe('hard limit', () => {
 		);
 		expect(placed.plan.lines.every((l) => l.state === 'unorderable')).toBe(true);
 		expect(placed.plan.lines.every((l) => l.reasons.includes('over_hard_limit'))).toBe(true);
+		expect(placed.plan.totalCents).toBeGreaterThan(800_000);
 		expect(placed.approvalId).toBeNull();
 	});
 });
@@ -120,5 +124,45 @@ describe('quantity sanity', () => {
 		// Serving a dish: more than 20× its need.
 		expect(at(200, 10)).not.toContain('qty_implausible');
 		expect(at(201, 10)).toContain('qty_implausible');
+	});
+
+	it('holds an event line edited past 20× its dish need, at quote and at commit', async () => {
+		const chef = ctx('chef');
+		const { plan } = must(
+			await h.plan_event(chef, { kitchenId: 'k-hotel', eventId: 'event-xmas-140' })
+		);
+		// An in-stock line priced low enough that 25× stays under the hard limit.
+		const pick = plan.lines.find(
+			(l) =>
+				l.state !== 'unorderable' &&
+				l.offer?.availability.amount == null &&
+				(l.lineCents ?? Infinity) * 25 < 800_000
+		)!;
+		const edit = async (p: typeof plan, value: number) =>
+			must(
+				await h.edit_line(chef, {
+					planId: p.id,
+					version: p.version,
+					lineId: pick.id,
+					patch: { qty: value }
+				})
+			).plan;
+		const ok20 = await edit(plan, pick.qty.value * 20);
+		expect(ok20.lines.find((l) => l.id === pick.id)!.reasons).not.toContain('qty_implausible');
+
+		const typo = await edit(ok20, pick.qty.value * 25);
+		const line = typo.lines.find((l) => l.id === pick.id)!;
+		expect(line.reasons).toContain('qty_implausible');
+		expect(line.view).toMatchObject({
+			committable: false,
+			blockedReason: { code: 'qty_implausible', effect: 'gap' }
+		});
+		const r = await h.commit_order(chef, {
+			planId: typo.id,
+			version: typo.version,
+			idempotencyKey: 'typo-commit',
+			lineIds: [pick.id]
+		});
+		expect(r.ok).toBe(false);
 	});
 });

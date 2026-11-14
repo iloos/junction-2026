@@ -6,7 +6,7 @@
  * category/temperature/unit, and the simulator overlay is applied last.
  */
 import { and, asc, desc, eq, ilike, inArray, sql } from 'drizzle-orm';
-import { onScenario } from '$lib/core/scenario';
+import { SCENARIO, onScenario } from '$lib/core/scenario';
 import type { Catalog } from '$lib/core/ports';
 import type { Offer, Product, ProductId } from '$lib/core/contracts';
 import { products, offerCache } from '../../db/schema';
@@ -202,9 +202,11 @@ export function createPgCatalog(db: AnyDb, opts: PgCatalogOptions = {}): Catalog
 					at: newest?.at,
 					ref: `customer ${customer}`
 				});
-				const dated = deliverBy
-					? { ...offer, availability: onScenario(offer.availability, deliverBy) }
-					: offer;
+				// Always on the scenario's dates: an offers path that skipped this would show November cut-offs.
+				const dated = {
+					...offer,
+					availability: onScenario(offer.availability, deliverBy ?? SCENARIO.delivery)
+				};
 				return opts.overlay ? opts.overlay.apply(dated) : dated;
 			});
 			return { offers, notFound };

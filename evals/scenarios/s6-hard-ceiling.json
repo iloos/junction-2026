@@ -110,8 +110,5 @@
 			]
 		}
 	},
-	"expectFail": {
-		"F32-total": ["plans[juice-2.7m]"]
-	},
-	"notes": "k-hotel: order cap €1,000, weekly €4,000 → hard limit €8,000 (larger of 5× order cap and 2× weekly). Juice 472817: KI = 5 × 1 l. Both forbidden plans should report the total that broke the limit; the single-line one reports 0 (F32-total). Unit coverage: store/ceiling.test.ts."
+	"notes": "k-hotel: order cap €1,000, weekly €4,000 → hard limit €8,000 (larger of 5× order cap and 2× weekly). Juice 472817: KI = 5 × 1 l. Both forbidden plans should report the total that broke the limit. Unit coverage: store/ceiling.test.ts."
 }

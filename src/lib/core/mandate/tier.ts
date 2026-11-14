@@ -58,6 +58,8 @@ export interface TierInput {
 	orderedBefore: Set<string>;
 	/** Products named by a recall notice (from state.anomalies): their lines are held for sign-off. */
 	recalled?: Set<string>;
+	/** What a line serving a dish needs, by line id (seedNeedQty): beyond 20× it the quantity is a gap. */
+	expectedQty?: Map<string, { productId: string; value: number }>;
 	/** Lines already committed stay as they are and are not re-tiered. */
 	committed?: Line[];
 }
@@ -131,25 +133,43 @@ export function tierLines(input: TierInput): TierResult {
 		/** A fact gap (no price, not enough stock): held but never approvable. */
 		gap: boolean;
 		lineCents: number | null;
+		/** Quantity 0: nothing to buy. */
+		zero?: boolean;
 	};
 
 	const work: Work[] = input.lines.map((draft) => {
 		const offer = offers.get(draft.productId) ?? null;
 		const product = products.get(draft.productId);
+		// Zero demand buys nothing: the line stays (a later need edit can bring it back) but is out of the order.
+		if (draft.qty.value <= 0)
+			return {
+				draft,
+				offer,
+				reasons: [],
+				orderable: false,
+				gap: false,
+				lineCents: null,
+				zero: true
+			};
 		// The shared validator decides what rules a line out, what is a fact gap and what a human may waive.
+		const need = input.expectedQty?.get(draft.id);
 		const findings = validateLine(kitchen, product, offer, draft.qty, {
-			substitute: Boolean(draft.substituteFor)
+			substitute: Boolean(draft.substituteFor),
+			expectedQty: need?.productId === draft.productId ? need.value : undefined
 		});
 		const ruledOut = forbidden(findings);
-		if (ruledOut.length)
+		if (ruledOut.length) {
+			// Over the hard limit the line's cost is known and is the point: the plan reports it (F32).
+			const over = ruledOut.some((f) => f.reason === 'over_hard_limit') && offer?.price;
 			return {
 				draft,
 				offer,
 				reasons: ruledOut.map((f) => f.reason),
 				orderable: false,
 				gap: false,
-				lineCents: null
+				lineCents: over ? Math.round(draft.qty.value * offer.price!.unitCents) : null
 			};
+		}
 		const reasons: LineReason[] = findings.map((f) => f.reason);
 		const gap = findings.some((f) => f.effect === 'gap');
 		const lineCents = offer?.price ? Math.round(draft.qty.value * offer.price.unitCents) : null;
@@ -164,17 +184,25 @@ export function tierLines(input: TierInput): TierResult {
 	});
 
 	const orderable = work.filter((w) => w.orderable);
-	const totalCents = orderable.reduce((s, w) => s + (w.lineCents ?? 0), 0);
+	const orderableCents = orderable.reduce((s, w) => s + (w.lineCents ?? 0), 0);
+	// The reported total also counts lines forbidden over the hard limit, so a forbidden order shows what it
+	// would cost, whether one line or the sum crossed the limit.
+	const totalCents =
+		orderableCents +
+		work
+			.filter((w) => !w.orderable && w.reasons.includes('over_hard_limit'))
+			.reduce((s, w) => s + (w.lineCents ?? 0), 0);
 	// Over the hard limit the whole order is out: no approval can pass it, the mandate must change first.
-	if (totalCents > hardLimitCents(m))
+	if (orderableCents > hardLimitCents(m))
 		for (const w of orderable) {
 			w.orderable = false;
 			w.reasons = ['over_hard_limit'];
 		}
 	for (const w of orderable) {
 		if (!w.orderable) continue;
-		if (totalCents > m.orderCapCents) w.reasons.push('CAP_EXCEEDED.order');
-		if (input.weekSpentCents + totalCents > m.weeklyCapCents) w.reasons.push('CAP_EXCEEDED.weekly');
+		if (orderableCents > m.orderCapCents) w.reasons.push('CAP_EXCEEDED.order');
+		if (input.weekSpentCents + orderableCents > m.weeklyCapCents)
+			w.reasons.push('CAP_EXCEEDED.weekly');
 		if (external) w.reasons.push('external_agent_needs_approval');
 	}
 
@@ -184,11 +212,13 @@ export function tierLines(input: TierInput): TierResult {
 				? maxTier([...w.reasons, 'price_missing'])
 				: maxTier(w.reasons)
 			: undefined;
-		const state: Line['state'] = !w.orderable
-			? 'unorderable'
-			: tier === 'act'
-				? 'eligible'
-				: 'held';
+		const state: Line['state'] = w.zero
+			? 'rejected'
+			: !w.orderable
+				? 'unorderable'
+				: tier === 'act'
+					? 'eligible'
+					: 'held';
 		return {
 			id: w.draft.id,
 			needId: w.draft.needId,

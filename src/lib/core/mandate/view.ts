@@ -51,6 +51,9 @@ export function lineView(l: Line, plan: Plan, approval: ApprovalLike | null): Li
 			...covered(qty),
 			nextAction: unknown ? 'wait_for_supplier' : 'none'
 		};
+	// Zero demand: nothing to buy, nothing to do.
+	if (l.state === 'rejected' && qty === 0)
+		return { reviewable: false, committable: false, ...none, nextAction: 'none' };
 	if (l.state === 'unorderable' || l.state === 'rejected') {
 		const code = l.reasons[0] ?? 'NOT_FOUND';
 		const replaced = plan.lines.some(

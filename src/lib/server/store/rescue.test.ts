@@ -192,4 +192,21 @@ describe('nothing qualifies', () => {
 		}
 		expect((await env.ports.store.load('ws-demo', 'run-1')).seq).toBe(before);
 	});
+
+	it('applying under a rule nothing meets keeps the saved rescue and its approval (NEW-apply-wipe)', async () => {
+		const plan = await rescuedHam();
+		const ham = lineOf(plan, '462490')!;
+		const r = must(
+			await h.find_substitutes(chef, {
+				planId: plan.id,
+				version: plan.version,
+				lineId: ham.id,
+				requireOrigin: 'se',
+				apply: true
+			})
+		);
+		expect(r.applied).toBe(false);
+		expect(r.plan.version).toBe(plan.version);
+		expect(lineOf(r.plan, '476768')?.qty.value).toBe(13);
+	});
 });

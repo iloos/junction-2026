@@ -24,6 +24,7 @@ import {
 	planEventDemand,
 	rescueFor,
 	seedEntryFor,
+	seedNeedQty,
 	sizeFor,
 	type EventSeed
 } from '../demand';
@@ -131,7 +132,7 @@ export async function prefetch(
  * on prefetched catalogue data; only the budget row is read here, through the transaction.
  */
 export async function requote(
-	ports: Ports,
+	ports: ServicePorts,
 	ctx: CallContext,
 	tx: Tx,
 	state: WorkspaceState,
@@ -155,9 +156,16 @@ export async function requote(
 		createdBy: plan.createdBy.kind,
 		orderedBefore: orderedBefore(state, kitchen),
 		recalled: recalledProducts(state),
-		committed: plan.lines.filter((l) => l.state === 'committed')
+		committed: plan.lines.filter((l) => l.state === 'committed'),
+		expectedQty: expectedFor(ports, plan)
 	});
 	return quoteOps(ctx, ports, plan, kitchen, t, pre.offers);
+}
+
+/** The seed's per-line need for an event plan (none for a direct order). */
+export function expectedFor(ports: ServicePorts, plan: Plan) {
+	const seed = plan.eventId ? ports.events?.[plan.eventId] : undefined;
+	return seed ? seedNeedQty(plan.id, seed) : undefined;
 }
 
 const conflict = (what: string) => ({

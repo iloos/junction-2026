@@ -62,4 +62,20 @@ describe('substitute pool for a seeded dish', () => {
 		expect(r.candidates.map((c) => c.productId)).not.toContain(PORK_KIDNEY);
 		expect(r.chosen[0]?.productName).toMatch(/kinkku/i);
 	});
+
+	it('D8: recommends making swede casserole in house over a product of unknown supply, which stays ranked below', async () => {
+		for (const w of [undefined, PRICE_FIRST]) {
+			const r = await substitutesFor('462482', w);
+			expect(r.kind).toBe('make_in_house');
+			const terminal = r.candidates.find((c) => c.productId === '462157');
+			expect(terminal?.rank).not.toBeNull(); // still visible and rankable
+			expect(r.chosen.map((l) => l.productId)).not.toContain('462157');
+		}
+	});
+
+	it('D8: the ham keeps its confirmed Stock replacement first', async () => {
+		const r = await substitutesFor('462490');
+		expect(r.kind).toBe('product');
+		expect(r.chosen[0]?.productId).toBe('476768');
+	});
 });
