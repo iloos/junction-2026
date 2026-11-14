@@ -44,7 +44,9 @@ export const PolicyReason = z.enum([
 	'qty_implausible',
 	'low_reliability',
 	'external_agent_needs_approval',
-	'cutoff_passed'
+	'cutoff_passed',
+	/** Gemini says the product may break a hard constraint the catalogue has no record of: held for a human. */
+	'CAUTION.model_constraint'
 ]);
 export type PolicyReason = z.infer<typeof PolicyReason>;
 

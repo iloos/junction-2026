@@ -27,6 +27,45 @@ describe.skipIf(process.env.DECIDE_LIVE !== '1')('Gemini Decisions, live', () =>
 		expect(d.value).toBeLessThanOrEqual(4);
 	}, 30_000);
 
+	it('answers a rescue batch (fit, violates, origin per candidate) in one call', async () => {
+		const traces: Record<string, unknown>[] = [];
+		const decide = createDecide({
+			env: { ...process.env, LLM_PROVIDER: 'gemini' } as never,
+			trace: (_s, d) => void traces.push(d)
+		});
+		const context = JSON.stringify({
+			dish: 'Graavilohi (cured salmon) on a Finnish hotel Christmas buffet',
+			hard_constraints: ['no shellfish'],
+			candidates: [
+				{ id: 'trout', name: 'Kirjolohifilee, suomalainen kasvatettu' },
+				{ id: 'shrimp', name: 'Katkarapu kypsä kuorittu, Thaimaa' }
+			]
+		});
+		const r = await decide.batch!(
+			['trout', 'shrimp'].flatMap((id) => [
+				{
+					id: `${id}_fit`,
+					kind: 'score' as const,
+					question: `How well does candidate "${id}" replace the salmon in this dish?`,
+					rubric: 'unusable;poor;acceptable with changes;good;equivalent',
+					max: 4,
+					context
+				},
+				{
+					id: `${id}_violates`,
+					kind: 'yes_no' as const,
+					question: `Does candidate "${id}" break any hard constraint?`,
+					context
+				}
+			])
+		);
+		console.log(JSON.stringify(r), JSON.stringify(traces[0]));
+		expect(r.trout_fit.source).toBe('gemini');
+		expect(r.shrimp_violates.p).toBeGreaterThan(0.5);
+		expect(r.trout_fit.value).toBeGreaterThan(r.shrimp_fit.value as number);
+		expect(traces.filter((t) => t.cache === 'live')).toHaveLength(1);
+	}, 30_000);
+
 	it('gets JSON from Flash-Lite for a request parse prompt', async () => {
 		const { geminiLlm, geminiKey } = await import('../llm');
 		const llm = geminiLlm(geminiKey(process.env as never)!);

@@ -22,7 +22,13 @@ import { currentRun } from '../demo/run';
 import { DEMO_WORKSPACE } from '../store/db-ports';
 import type { AnyDb } from '../store/drizzle-store';
 import { createWebHttp } from './http';
-import { createContextDev, type RecallSource } from './contextdev';
+import {
+	createContextDev,
+	createNewsSource,
+	fixtureNewsSource,
+	type NewsSource,
+	type RecallSource
+} from './contextdev';
 import { createExa, type FactSearch } from './exa';
 import { createFixtureFactSearch, createFixtureRecallSource } from './fixture';
 import { createFindings } from './findings';
@@ -66,7 +72,7 @@ export function webClients(
 	env: Env,
 	trace?: Trace,
 	caller: string | null = null
-): { recalls: RecallSource; exa: FactSearch } {
+): { recalls: RecallSource; exa: FactSearch; news: NewsSource } {
 	const mode = webMode(env);
 	const dir = cacheDir(env);
 	// Internal callers (the monitor) are bound by the global cap only.
@@ -98,7 +104,19 @@ export function webClients(
 					})
 				)
 			: createFixtureFactSearch();
-	return { recalls, exa };
+	const news =
+		mode === 'live' && env.CONTEXT_DEV_API_KEY
+			? createNewsSource(
+					createWebHttp({
+						api: 'context.dev',
+						apiKey: env.CONTEXT_DEV_API_KEY,
+						cacheDir: join(dir, 'context-dev'),
+						trace,
+						guard
+					})
+				)
+			: fixtureNewsSource;
+	return { recalls, exa, news };
 }
 
 export const findingsFor = (env: Env) => createFindings(join(cacheDir(env), 'findings.json'));

@@ -41,7 +41,12 @@ export function ensureRunLoaded(
 	if (!p) {
 		p = (async () => {
 			await knowRun(workspaceId);
-			if (!hasRun(workspaceId) && opts.start) return (await resetDemoRun(workspaceId)).runId;
+			if (!hasRun(workspaceId) && opts.start) {
+				const { runId } = await resetDemoRun(workspaceId);
+				// A new visitor's sandbox gets the stored real recalls (sandbox.ts imports this module).
+				void import('./sandbox').then((m) => m.seedSandboxRecalls(workspaceId, runId));
+				return runId;
+			}
 			return currentRun(workspaceId);
 		})();
 		p.catch(() => loads.delete(workspaceId));

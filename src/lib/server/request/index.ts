@@ -103,6 +103,7 @@ export async function submitRequest(o: {
 		? {
 				decide: createDecide({
 					env: o.env,
+					trace,
 					replayPath: 'src/lib/server/adapters/decide/replay.json'
 				}),
 				trace,

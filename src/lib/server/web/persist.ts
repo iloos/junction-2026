@@ -3,27 +3,9 @@
  * application ledger, the spend ledger, cached responses). Read whole, written whole. A missing or
  * corrupt file reads as the fallback; a failed write is logged and the process keeps its memory copy.
  */
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname } from 'node:path';
+import { readJson, writeJson } from '../external/persist';
 
-export function readJson<T>(file: string | undefined, fallback: T): T {
-	if (!file || !existsSync(file)) return fallback;
-	try {
-		return JSON.parse(readFileSync(file, 'utf8')) as T;
-	} catch {
-		return fallback;
-	}
-}
-
-export function writeJson(file: string | undefined, value: unknown): void {
-	if (!file) return;
-	try {
-		mkdirSync(dirname(file), { recursive: true });
-		writeFileSync(file, JSON.stringify(value));
-	} catch (e) {
-		console.error('[web] could not write', file, (e as Error)?.message ?? e);
-	}
-}
+export { readJson, writeJson };
 
 /** A process-wide map loaded once from `file` (items keyed by `keyOf`); `fresh` gives a private one. */
 export function persistedMap<T>(

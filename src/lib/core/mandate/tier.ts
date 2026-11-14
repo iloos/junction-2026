@@ -30,7 +30,11 @@ export interface DraftLine {
 }
 
 /** Reasons a caller adds that the data can't recompute; they survive every re-quote. */
-const STICKY: ReadonlySet<string> = new Set(['allergen_change', 'substitute_breaks_preference']);
+const STICKY: ReadonlySet<string> = new Set([
+	'allergen_change',
+	'substitute_breaks_preference',
+	'CAUTION.model_constraint'
+]);
 
 /** A stored line back to a draft for re-quoting, keeping its sticky reasons. */
 export function draftFromLine(l: Line): DraftLine {
@@ -92,7 +96,8 @@ const TIER_OF: Partial<Record<string, Tier>> = {
 	allergen_trace: 'sign_off',
 	recall: 'sign_off',
 	price_missing: 'propose',
-	allergen_change: 'sign_off'
+	allergen_change: 'sign_off',
+	'CAUTION.model_constraint': 'sign_off'
 };
 const tierOf = (r: LineReason): Tier =>
 	r.startsWith('CAP_EXCEEDED') ? 'sign_off' : (TIER_OF[r] ?? 'propose');
