@@ -90,6 +90,14 @@
 	/** After "New task": the next turn starts its own task instead of joining the plan on screen. */
 	let fresh = $state(false);
 	let text = $state('');
+	// A page can seed the composer once (the Kitchen's day picker: "For Tue 8 Dec: "); taken, then cleared.
+	$effect(() => {
+		const draft = shell?.chatDraft;
+		if (!draft) return;
+		text = draft;
+		shell.chatDraft = null;
+		queueMicrotask(() => document.getElementById('chat-text')?.focus());
+	});
 	let busy = $state(false);
 	/** The working turn's own words for what it is doing ("Writing a 3-course menu for 20, about 15 s"). */
 	let status = $state<string | null>(null);

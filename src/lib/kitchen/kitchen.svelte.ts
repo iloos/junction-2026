@@ -289,6 +289,18 @@ export class KitchenStore {
 		});
 	}
 
+	/** The chef chose this establishment (D15): switch to it; nothing is planned until they ask. */
+	async join(kitchenId: string) {
+		if (this.readOnly) return;
+		await this.#run(async () => {
+			const answer = await backend.joinKitchen(this.mode, kitchenId);
+			this.focusedPlan = null;
+			this.lastCommit = null;
+			this.#log('rules', 'Joined as this establishment', kitchenId);
+			return answer;
+		});
+	}
+
 	async setContention(on: boolean) {
 		if (this.readOnly) return;
 		await this.#run(async () => {
