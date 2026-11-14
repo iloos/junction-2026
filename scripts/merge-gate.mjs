@@ -22,7 +22,8 @@ const STEPS = [
 			'--test',
 			'evals/check.test.ts',
 			'evals/chat/check.test.ts',
-			'evals/chat/free-check.test.ts'
+			'evals/chat/free-check.test.ts',
+			'evals/menu/grounding-check.test.ts'
 		]
 	},
 	// check passes on code that still fails to bundle (adapter-node, SSR imports): build it.

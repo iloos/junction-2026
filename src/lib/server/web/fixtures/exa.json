@@ -278,6 +278,2375 @@
 			],
 			"at": "2026-11-14T01:10:00.000Z",
 			"costUsd": 0.007
+		},
+		"outside:root-vegetable-soup": {
+			"content": {
+				"options": [
+					{
+						"title": "White bean and root vegetable soup",
+						"kind": "recipe",
+						"ingredients": [
+							"3.2 l water",
+							"1600 g frozen potato-onion mix",
+							"1600 g canned white beans",
+							"600 g frozen diced sweet potatoes",
+							"600 g frozen diced carrots",
+							"50 g vegetable bouillon powder (no gluten or celery)",
+							"30 g crushed garlic",
+							"4 g crushed black pepper",
+							"1 g dried thyme",
+							"12 g iodised salt",
+							"6 dl oat cooking cream 15% (gluten free)"
+						],
+						"yield": "20 portions",
+						"note": "Yield from 20 portion recipe is 7.500 kg. Can be prepared cold by heating in a GN container in an oven with the steam function until 80°C."
+					},
+					{
+						"title": "Vegetable soup for 50 people",
+						"kind": "recipe",
+						"ingredients": [
+							"4 kg boneless beef chuck or shin, cubed",
+							"1 cup all-purpose flour",
+							"1 tablespoon salt",
+							"2 teaspoons black pepper",
+							"1/2 cup vegetable oil",
+							"4 garlic cloves, minced",
+							"2 whole bay leaves",
+							"2 teaspoons dried thyme",
+							"6 liters water",
+							"1.7 to 2 kg peeled tomatoes",
+							"1.5 liters tomato juice",
+							"12 beef bouillon cubes",
+							"2 cups pearl barley",
+							"1 kg potatoes, peeled and cubed or grated",
+							"750 g carrots, sliced",
+							"500 g chopped cabbage",
+							"500 g onion, chopped",
+							"450 g frozen green beans",
+							"450 g frozen peas"
+						],
+						"yield": "50 servings",
+						"note": "Requires browning meat in batches and simmering in a large stock pot or soup kettle."
+					}
+				]
+			},
+			"grounding": [
+				{
+					"field": "options[0].note",
+					"citations": [
+						{
+							"url": "https://ilmastoruoka.fi/en/recipe/white-bean-and-root-vegetable-soup-cold-preparation/",
+							"title": "White bean and root vegetable soup - Climate Friendly Veggie Food"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[0].kind",
+					"citations": [
+						{
+							"url": "https://ilmastoruoka.fi/en/recipe/white-bean-and-root-vegetable-soup-cold-preparation/",
+							"title": "White bean and root vegetable soup - Climate Friendly Veggie Food"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[0].title",
+					"citations": [
+						{
+							"url": "https://ilmastoruoka.fi/en/recipe/white-bean-and-root-vegetable-soup-cold-preparation/",
+							"title": "White bean and root vegetable soup - Climate Friendly Veggie Food"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[0].ingredients",
+					"citations": [
+						{
+							"url": "https://ilmastoruoka.fi/en/recipe/white-bean-and-root-vegetable-soup-cold-preparation/",
+							"title": "White bean and root vegetable soup - Climate Friendly Veggie Food"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[0].yield",
+					"citations": [
+						{
+							"url": "https://ilmastoruoka.fi/en/recipe/white-bean-and-root-vegetable-soup-cold-preparation/",
+							"title": "White bean and root vegetable soup - Climate Friendly Veggie Food"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[1].kind",
+					"citations": [
+						{
+							"url": "https://www.foodloversrecipes.com/2015/06/vegetable-soup-for-50-people/",
+							"title": "VEGETABLE SOUP FOR 50 PEOPLE - Food Lovers Recipes"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[1].ingredients",
+					"citations": [
+						{
+							"url": "https://www.foodloversrecipes.com/2015/06/vegetable-soup-for-50-people/",
+							"title": "VEGETABLE SOUP FOR 50 PEOPLE - Food Lovers Recipes"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[1].note",
+					"citations": [
+						{
+							"url": "https://www.foodloversrecipes.com/2015/06/vegetable-soup-for-50-people/",
+							"title": "VEGETABLE SOUP FOR 50 PEOPLE - Food Lovers Recipes"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[1].title",
+					"citations": [
+						{
+							"url": "https://www.foodloversrecipes.com/2015/06/vegetable-soup-for-50-people/",
+							"title": "VEGETABLE SOUP FOR 50 PEOPLE - Food Lovers Recipes"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[1].yield",
+					"citations": [
+						{
+							"url": "https://www.foodloversrecipes.com/2015/06/vegetable-soup-for-50-people/",
+							"title": "VEGETABLE SOUP FOR 50 PEOPLE - Food Lovers Recipes"
+						}
+					],
+					"confidence": "high"
+				}
+			],
+			"results": [
+				{
+					"url": "https://ilmastoruoka.fi/en/recipe/white-bean-and-root-vegetable-soup-cold-preparation/",
+					"title": "White bean and root vegetable soup - Climate Friendly Veggie Food",
+					"publishedDate": null,
+					"highlights": [
+						"|\n| 600 g diced sweet potatoes frozen |\n| 600 g diced carrots frozen |\n| 50 g vegetable bouillon powder (no gluten or cellery) |\n| 30 g crushed garlic |\n| 4 g ... |\n| 1 g dried thyme |\n| 12 g iodised ... |\n| 6 dl oat cooking cream 15% gluten free |"
+					]
+				},
+				{
+					"url": "https://ruokaboksi.fi/fi-en/recipes/juustoinen-kasvissosekeitto-ja-tuoretta-ruisleipaa",
+					"title": "Cheesy Vegetable Purée Soup & Fresh Rye Bread | Ruokaboksi",
+					"publishedDate": null,
+					"highlights": [
+						"The cheesy vegetable purée soup is made with local root vegetables. The soup is finished with flavorful processed cheese and served with fresh rye bread.\n\n...\n\nSoup:\n\n500 g carrots\n\n500g parsnips\n\n1 swede\n\n2 onions\n\n1 tbsp butter\n\n1 tbsp oil\n\napprox. 14-15 dl water\n\n1 vegetable fond\n\n1 tsp salt\n\na pinch of black pepper\n\n2 tsp dried herb mix\n\n0,5 tblsp white wine vinegar\n\n1 box processed cheese"
+					]
+				},
+				{
+					"url": "https://www.foodloversrecipes.com/2015/06/vegetable-soup-for-50-people/",
+					"title": "VEGETABLE SOUP FOR 50 PEOPLE - Food Lovers Recipes",
+					"publishedDate": "2015-06-03T14:16:08.000Z",
+					"highlights": [
+						"VEGETABLE SOUP FOR 50 PEOPLE Here is a great soup to serve for a large gathering. 4 kg boneless beef chuck or shin, cut into 1/2-inch cubes 1 cup all-purpose flour 1 tablespoon salt 2 teaspoons black pepper 1⁄2 cup vegetable oil 4 garlic cloves, minced 2 whole bay leaves 2 teaspoons dried thyme 6 liters water 1.7 to 2 kg peeled tomatoes 1.5 liters tomato juice 12 beef bouillon cubes 2 cups pearl barley 1 kg potatoes, peeled and cubed or grated 750 g carrots, sliced 500 g chopped cabbage 500 g onion, chopped 450 g frozen green beans 450 g frozen peas\n\nToss meat with flour, salt and pepper. In a large Dutch oven, brown the meat in batches in oil, drain. Transfer to a large stock pot or soup ke"
+					]
+				},
+				{
+					"url": "https://www.foodandwine.com/recipes/nordic-winter-vegetable-soup",
+					"title": "Nordic Winter Vegetable Soup Recipe - Trina Hahnemann",
+					"publishedDate": "2013-12-06T23:39:02.000Z",
+					"highlights": [
+						"## Ingredients\n\n- 2 tablespoons extra-virgin olive oil\n- 1 large onion, thinly sliced\n- 2 leeks, white and tender green parts only, thinly sliced\n- 2 garlic cloves, minced\n- 1 cup pearled barley\n- 8 cups low-sodium vegetable broth\n- 4 cups water\n- 10 thyme sprigs\n- 2 bay leaves\n- 1 1/2 pounds celery root, peeled and cut into 1/2-inch cubes\n- 1 pound parsnips, peeled and cut into 1/2-inch pieces\n- Salt and freshly ground pepper\n- 1 pound baby spinach\n- 1 teaspoon freshly grated nutmeg\n\n...\n\nAdd the celery root and parsnips and season with ... Simmer over moderately low heat until the barley and root vegetables are tender, about 40 minutes. \n2."
+					]
+				},
+				{
+					"url": "https://northwildkitchen.com/rootvegetablesoupwithcrispyfenalar/",
+					"title": "Root Vegetable Soup with Crispy Fenalår - North Wild Kitchen",
+					"publishedDate": "2015-11-30T13:07:41.000Z",
+					"highlights": [
+						"## Root Vegetable Soup with Crispy Fenalår\n\nServes 6 to 8\n\nIngredients:\n\n- 1/2 cup (112 g) butter\n- 2 medium onions, roughly chopped\n- 2 parsnips, peeled and cut into pieces\n- 3 carrots, peeled and cut into pieces\n- 1 celery root (about 225g with the skin and core removed), cut into pieces\n- 1 parsley root, peeled and cut into pieces\n- 6 1/4 cups (1.5 litres) vegetable or chicken broth\n- 3 small potatoes, peeled and cut into pieces\n- 2 tablespoons fresh parsley leaves\n- 1 tablespoon fresh thyme leaves\n- Norwegian fenalår or other types of cured meats, such as bacon, cut into thin strips\n- 1 1/2 cups (360 ml) heavy cream\n- Salt and pepper"
+					]
+				}
+			],
+			"at": "2026-11-14T11:17:56.131Z",
+			"costUsd": 0.007
+		},
+		"outside:gravlax-with-dill-and-rye-crisp": {
+			"content": {
+				"options": [
+					{
+						"title": "Gravadlax with mustard and dill sauce (SwedishFood.com)",
+						"kind": "recipe",
+						"ingredients": [
+							"1 kg (2 lb) fresh salmon, filleted and boned, with skin on",
+							"100 g caster (superfine) sugar",
+							"75 g sea salt flakes",
+							"1 tbsp white peppercorns, crushed",
+							"100 g dill, including stalks",
+							"4 tbsp Swedish mustard (or 3 tbsp Dijon)",
+							"2 tbsp caster (superfine) sugar",
+							"1 tbsp white vinegar",
+							"salt and freshly ground black pepper",
+							"150 ml vegetable oil",
+							"3 tbsp fresh dill, finely chopped"
+						],
+						"yield": "12 servings",
+						"note": "Serves 12 as a starter. For larger quantities, swedes often cure a whole fish by sandwiching two fillets together, skin-side out. Must be cured for 48 hours in the fridge, turning every 12 hours."
+					},
+					{
+						"title": "Gravadlax with Dill and Mustard Sauce (Building Feasts)",
+						"kind": "recipe",
+						"ingredients": [
+							"1.5kg side of salmon",
+							"1.5 tbsp black peppercorns",
+							"1 tbsp coriander seeds or juniper berries",
+							"100g granulated sugar",
+							"75g maldon salt",
+							"2-3 tbsp Aquavit or Gin (optional)",
+							"100g dill + 6 extra dill sprigs"
+						],
+						"yield": "8-12 servings",
+						"note": "Serves 8-12. Requires 48 hours to cure in the fridge under a weight, turning every 12 hours. Serve on rye bread or rye crackers."
+					}
+				]
+			},
+			"grounding": [
+				{
+					"field": "options[0].kind",
+					"citations": [
+						{
+							"url": "https://www.swedishfood.com/images/Starter/Gravadlax/gravadlax-1a-page-version.pdf",
+							"title": "SwedishFood.com"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[0].ingredients",
+					"citations": [
+						{
+							"url": "https://www.swedishfood.com/images/Starter/Gravadlax/gravadlax-1a-page-version.pdf",
+							"title": "SwedishFood.com"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[0].note",
+					"citations": [
+						{
+							"url": "https://www.swedishfood.com/images/Starter/Gravadlax/gravadlax-1a-page-version.pdf",
+							"title": "SwedishFood.com"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[0].title",
+					"citations": [
+						{
+							"url": "https://www.swedishfood.com/images/Starter/Gravadlax/gravadlax-1a-page-version.pdf",
+							"title": "SwedishFood.com"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[0].yield",
+					"citations": [
+						{
+							"url": "https://www.swedishfood.com/images/Starter/Gravadlax/gravadlax-1a-page-version.pdf",
+							"title": "SwedishFood.com"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[1].ingredients",
+					"citations": [
+						{
+							"url": "https://www.buildingfeasts.com/recipe/gravadlax-with-dill-and-mustard-sauce/",
+							"title": "Gravadlax and a Sauce - Building Feasts"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[1].kind",
+					"citations": [
+						{
+							"url": "https://www.buildingfeasts.com/recipe/gravadlax-with-dill-and-mustard-sauce/",
+							"title": "Gravadlax and a Sauce - Building Feasts"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[1].title",
+					"citations": [
+						{
+							"url": "https://www.buildingfeasts.com/recipe/gravadlax-with-dill-and-mustard-sauce/",
+							"title": "Gravadlax and a Sauce - Building Feasts"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[1].yield",
+					"citations": [
+						{
+							"url": "https://www.buildingfeasts.com/recipe/gravadlax-with-dill-and-mustard-sauce/",
+							"title": "Gravadlax and a Sauce - Building Feasts"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[1].note",
+					"citations": [
+						{
+							"url": "https://www.buildingfeasts.com/recipe/gravadlax-with-dill-and-mustard-sauce/",
+							"title": "Gravadlax and a Sauce - Building Feasts"
+						}
+					],
+					"confidence": "high"
+				}
+			],
+			"results": [
+				{
+					"url": "https://www.saveur.com/article/recipes/gravadlax-swedish-cured-salmon/",
+					"title": "Gravadlax (Swedish Cured Salmon) | Saveur",
+					"publishedDate": "2014-05-26T10:26:39.000Z",
+					"highlights": [
+						"A salt and sugar cure flavored with fresh dill transforms salmon into gravadlax, silky ribbons of fish ready to be piled atop slices of rustic brown bread or crunchy rye crispbread for a Swedish Midsummer feast. This recipe first appeared in our June/July 2014 issue with Per Styregård's article \"A Midsummer's Dream.\"\n\n...\n\n## Ingredients\n\n- 2 ⁄ 3 cup kosher salt\n- 1 ⁄ 3 cup sugar\n- 2 tbsp. coarsely ground white peppercorns\n- 1 (2-lb.) piece center-cut, skin-on salmon fillet, pin bones removed\n- 1 ⁄ 2 cup minced dill fronds and tender stems\n- 3 tbsp. unflavored aquavit or vodka\n- 1 lemon, thinly sliced, for garnish\n- Softened unsalted butter and seeded crispbread, for serving, optional\n\n...\n\n"
+					]
+				},
+				{
+					"url": "https://www.swedishfood.com/images/Starter/Gravadlax/gravadlax-1a-page-version.pdf",
+					"title": "SwedishFood.com",
+					"publishedDate": null,
+					"highlights": [
+						"it and drain off the salty, sticky liquid and discard it. Scrape off most of herbs. ... and dill sauce, rye bread and, if desired, some crème fraîche and black lumpfish caviar.\n...\nfilm (food wrap) and store in the fridge. Use within a week."
+					]
+				},
+				{
+					"url": "https://www.newscancook.com/seafood/crispy-rye-bread-with-gravlax",
+					"title": "Crispy Rye Bread with Gravlax — NSC",
+					"publishedDate": "2020-05-08T09:38:42.000Z",
+					"highlights": [
+						"#### List of ingredients\n\n4 pieces Finn Crisp or other thin, crispy rye toast or cracker \n\n6 to 8 medium almond potatoes \n\n1 tbs. lemon juice \n\n1 tbs. capers \n\n1 tbs. finely chopped dill \n\n3 tbs. olive oil \n\nSalt and pepper to taste \n\n3 to 4 hard boiled eggs, sliced \n\n½ lbs. (225 g) gravlax, thinly sliced \n\n1 small red onion, thinly sliced \n\n2 tbs. crème fraîche \n\n1 to 2 tsp. water \n\n1 tsp. finely grated horseradish \n\n4 tsp. beluga caviar or salmon roe (optional)"
+					]
+				},
+				{
+					"url": "https://thekitchentable.com/recipe/50/smorrebrod-salmon-gravlax-on-rye-bread-with-mustard-dill-sauce",
+					"title": "Smørrebrød: Salmon Gravlax on Rye Bread with Mustard Dill ...",
+					"publishedDate": null,
+					"highlights": [
+						"For the salmon gravlax: 3 tbsp salt 1 tbsp sugar 1 shot vodka 1 lemon, zested 1 tbsp fresh dill, chopped 1 salmon fillet with skin on, around 6 oz (170g)\n...\n1 tbsp honey 1 tbsp cider vinegar 1 tbsp olive oil 1 tbsp fresh"
+					]
+				},
+				{
+					"url": "https://www.buildingfeasts.com/recipe/gravadlax-with-dill-and-mustard-sauce/",
+					"title": "Gravadlax and a Sauce - Building Feasts",
+					"publishedDate": "2016-04-10T21:09:10.000Z",
+					"highlights": [
+						"- 1.5kg side of salmon\n- 1.5 tbsp black peppercorns\n- 1 tbsp coriander seeds or juniper berries\n- 100g granulated sugar\n- 75g maldon salt\n- 2-3 tbsp Aquavit or Gin (optional)\n- 100g dill + 6 extra dill sprigs\n- Dill and Mustard Sauce\n- Remove any pin bones and I like to trim the edges of the fillet so that its edges are tidy (but this is not completely necessary!)\n- Crush the peppercorns and coriander seeds (or juniper berries) in a mortar and pestle, and mix with the salt and sugar.\n- Finely chop the dill.\n- Cut the fillet into two equal pieces and lay them skin side down\n\n...\n\n- Wrap tightly in two layers of cling film and put in a tray or dish to catch any brine."
+					]
+				}
+			],
+			"at": "2026-11-14T11:17:58.139Z",
+			"costUsd": 0.007
+		},
+		"outside:roast-beef-potato-gratin": {
+			"content": {
+				"options": [
+					{
+						"title": "Rib roast with potato gratin",
+						"kind": "recipe",
+						"ingredients": [
+							"2 tbsp olive oil",
+							"2 tbsp chopped rosemary",
+							"2 tsp Dijon mustard",
+							"3 anchovy fillets",
+							"1 rack of beef (approx 4.3kg)",
+							"3 onions, thickly sliced",
+							"500 ml pouring cream",
+							"4 garlic cloves",
+							"5 Desiree potatoes (approx 2kg)",
+							"nutmeg"
+						],
+						"yield": "6-8 servings",
+						"note": "Serves 6-8. Roast on top shelf for 1.5 hours, rest for 30 minutes. Gratin baked at 190C for 45-60 mins covered, then 30 mins uncovered."
+					},
+					{
+						"title": "Short ribs with potato gratin",
+						"kind": "recipe",
+						"ingredients": [
+							"2 pcs beef short ribs (approx 3 kg)",
+							"6 tbsp honey",
+							"6 tbsp tomato puree",
+							"4 tbsp spicy mustard",
+							"125 ml water",
+							"125 ml sunflower oil",
+							"6 tbsp Spare Ribs Seasoning Mix",
+							"500 g waxy potatoes",
+							"100 g leek",
+							"125 ml whipping cream",
+							"125 ml sour cream",
+							"2 eggs",
+							"3 tbsp grated Parmesan",
+							"garlic granules, parsley, nutmeg, sea salt, pepper"
+						],
+						"yield": "6 servings",
+						"note": "Serves 6. Marinate ribs overnight. Ribs roasted at 130C; gratin baked at 200C for 50 minutes."
+					},
+					{
+						"title": "Roast Beef and Potatoes au Gratin",
+						"kind": "recipe",
+						"ingredients": [
+							"1 sirloin roast beef",
+							"1 tbsp olive oil",
+							"2 tbsp butter",
+							"400 ml 15% cooking cream",
+							"150 g grated cheese (Gruyère, Comté or Cheddar)",
+							"1 tbsp wholegrain mustard",
+							"1 tsp grated nutmeg",
+							"4 garlic cloves",
+							"3 medium onions",
+							"1 tbsp fresh thyme",
+							"1 tbsp fresh rosemary",
+							"450 g potatoes",
+							"450 g sweet potatoes",
+							"50 g grated Parmesan cheese"
+						],
+						"yield": "4-6 servings",
+						"note": "Serves 4-6. Roast at 180C. Gratin baked covered for 1 hour, then 15-20 minutes uncovered."
+					},
+					{
+						"title": "Norrland-Style Tjälknöl (Slow-Roasted Beef) with Gratin",
+						"kind": "recipe",
+						"ingredients": [
+							"1.5 kg beef top round/eye of round",
+							"1 liter water, 50 g salt, 30 g sugar",
+							"peppercorns, juniper berries, bay leaves, garlic, thyme",
+							"1.2 kg potatoes",
+							"1 onion",
+							"3 garlic cloves",
+							"400 ml heavy cream, 150 ml whole milk",
+							"125 g grated hard cheese",
+							"30 g butter, nutmeg, salt, pepper"
+						],
+						"yield": "6 servings",
+						"note": "Slow-roast beef at 90C for 9-11 hours, then brine overnight. Gratin baked at 200C for 50-60 minutes."
+					}
+				]
+			},
+			"grounding": [
+				{
+					"field": "options[0].title",
+					"citations": [
+						{
+							"url": "https://www.gourmettraveller.com.au/recipe/mains/rib-roast-with-potato-gratin-12017/",
+							"title": "Rib roast with potato gratin recipe | Gourmet Traveller"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[0].yield",
+					"citations": [
+						{
+							"url": "https://www.gourmettraveller.com.au/recipe/mains/rib-roast-with-potato-gratin-12017/",
+							"title": "Rib roast with potato gratin recipe | Gourmet Traveller"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[0].kind",
+					"citations": [
+						{
+							"url": "https://www.gourmettraveller.com.au/recipe/mains/rib-roast-with-potato-gratin-12017/",
+							"title": "Rib roast with potato gratin recipe | Gourmet Traveller"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[0].note",
+					"citations": [
+						{
+							"url": "https://www.gourmettraveller.com.au/recipe/mains/rib-roast-with-potato-gratin-12017/",
+							"title": "Rib roast with potato gratin recipe | Gourmet Traveller"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[0].ingredients",
+					"citations": [
+						{
+							"url": "https://www.gourmettraveller.com.au/recipe/mains/rib-roast-with-potato-gratin-12017/",
+							"title": "Rib roast with potato gratin recipe | Gourmet Traveller"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[1].yield",
+					"citations": [
+						{
+							"url": "https://www.kotanyi.com/en/recipe/short-ribs-with-potato-gratin/",
+							"title": "Short ribs with potato gratin — Recipe | Kotányi"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[1].kind",
+					"citations": [
+						{
+							"url": "https://www.kotanyi.com/en/recipe/short-ribs-with-potato-gratin/",
+							"title": "Short ribs with potato gratin — Recipe | Kotányi"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[1].note",
+					"citations": [
+						{
+							"url": "https://www.kotanyi.com/en/recipe/short-ribs-with-potato-gratin/",
+							"title": "Short ribs with potato gratin — Recipe | Kotányi"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[1].ingredients",
+					"citations": [
+						{
+							"url": "https://www.kotanyi.com/en/recipe/short-ribs-with-potato-gratin/",
+							"title": "Short ribs with potato gratin — Recipe | Kotányi"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[1].title",
+					"citations": [
+						{
+							"url": "https://www.kotanyi.com/en/recipe/short-ribs-with-potato-gratin/",
+							"title": "Short ribs with potato gratin — Recipe | Kotányi"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[2].note",
+					"citations": [
+						{
+							"url": "https://commerce.iga.net/en/inspiring_recipes/recipes/roast_beef_and_potatoes_au_gratin",
+							"title": "Roast Beef and Potatoes au Gratin | IGA Recipes |"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[2].kind",
+					"citations": [
+						{
+							"url": "https://commerce.iga.net/en/inspiring_recipes/recipes/roast_beef_and_potatoes_au_gratin",
+							"title": "Roast Beef and Potatoes au Gratin | IGA Recipes |"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[2].ingredients",
+					"citations": [
+						{
+							"url": "https://commerce.iga.net/en/inspiring_recipes/recipes/roast_beef_and_potatoes_au_gratin",
+							"title": "Roast Beef and Potatoes au Gratin | IGA Recipes |"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[2].yield",
+					"citations": [
+						{
+							"url": "https://commerce.iga.net/en/inspiring_recipes/recipes/roast_beef_and_potatoes_au_gratin",
+							"title": "Roast Beef and Potatoes au Gratin | IGA Recipes |"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[2].title",
+					"citations": [
+						{
+							"url": "https://commerce.iga.net/en/inspiring_recipes/recipes/roast_beef_and_potatoes_au_gratin",
+							"title": "Roast Beef and Potatoes au Gratin | IGA Recipes |"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[3].ingredients",
+					"citations": [
+						{
+							"url": "https://rhythmofthehome.com/norrland-style-tjalknol-slow-roasted-venison-or-beef/",
+							"title": "Norrland-Style Tjälknöl: Slow-Roasted Venison or Beef – Rhythm of the Home"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[3].note",
+					"citations": [
+						{
+							"url": "https://rhythmofthehome.com/norrland-style-tjalknol-slow-roasted-venison-or-beef/",
+							"title": "Norrland-Style Tjälknöl: Slow-Roasted Venison or Beef – Rhythm of the Home"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[3].title",
+					"citations": [
+						{
+							"url": "https://rhythmofthehome.com/norrland-style-tjalknol-slow-roasted-venison-or-beef/",
+							"title": "Norrland-Style Tjälknöl: Slow-Roasted Venison or Beef – Rhythm of the Home"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[3].yield",
+					"citations": [
+						{
+							"url": "https://rhythmofthehome.com/norrland-style-tjalknol-slow-roasted-venison-or-beef/",
+							"title": "Norrland-Style Tjälknöl: Slow-Roasted Venison or Beef – Rhythm of the Home"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[3].kind",
+					"citations": [
+						{
+							"url": "https://rhythmofthehome.com/norrland-style-tjalknol-slow-roasted-venison-or-beef/",
+							"title": "Norrland-Style Tjälknöl: Slow-Roasted Venison or Beef – Rhythm of the Home"
+						}
+					],
+					"confidence": "high"
+				}
+			],
+			"results": [
+				{
+					"url": "https://www.gourmettraveller.com.au/recipe/mains/rib-roast-with-potato-gratin-12017/",
+					"title": "Rib roast with potato gratin recipe | Gourmet Traveller",
+					"publishedDate": "2014-07-02T04:11:00.000Z",
+					"highlights": [
+						"as a standing rib roast), with at least 5 ribs (4.3kg)\n...\n3. Meanwhile, place beef on top of onions in a roasting dish and roast on top shelf until medium-rare (1½ hours). Set beef aside loosely covered with foil to rest (30 minutes), then serve with"
+					]
+				},
+				{
+					"url": "https://www.kotanyi.com/en/recipe/short-ribs-with-potato-gratin/",
+					"title": "Short ribs with potato gratin — Recipe | Kotányi",
+					"publishedDate": null,
+					"highlights": [
+						"Mix\n- ### For the potato gratin\n\n- 500 g Potatoes, waxy\n- 100 g Leek,\n...\n- 125 ml Sour cream\n- 2 Eggs\n- 3 tbsp. Parmesan, grated\n- Oil\n- 2 tsp.\n...\nNutmeg, Whole\n- 1 pinch Sea Salt, Coarse\n- 1 pinch Pepper Black, Whole"
+					]
+				},
+				{
+					"url": "https://commerce.iga.net/en/inspiring_recipes/recipes/roast_beef_and_potatoes_au_gratin",
+					"title": "Roast Beef and Potatoes au Gratin | IGA Recipes |",
+					"publishedDate": null,
+					"highlights": [
+						"### Ingredients \n\n1. 1 Sterling Silver sirloin roast beef \n2. 15 ml (1 tbsp.) olive oil \n3. 30 ml (2 tbsp.) butter \n4. 400 ml (1 2/3 cup) 15 % cooking cream \n5. 150 g grated cheese (Gruyère, Comté or Cheddar) \n6. 15 ml (1 tablespoon) wholegrain mustard \n7. 5 ml (1 tsp.) grated nutmeg \n8. 4 garlic cloves, minced \n9. 3 medium onions, minced \n10. 15 ml (1 tbsp.) fresh thyme (or 7 ml (1/2 tsp.) dried thyme) \n11. 15 ml (1 tablespoon) fresh rosemary (or 7 ml (1/2 teaspoon) dried) \n12. 450 g (1 lb) potatoes, peeled and thinly sliced \n13. 450 g (1 lb) sweet potatoes, peeled and thinly sliced \n14. 50 g grated Parmesan cheese (for gratinating) \n15. Salt and pepper to taste\n\n...\n\n1.\n\n...\n\n2. In a deep "
+					]
+				},
+				{
+					"url": "https://www.thetaste.ie/roast-fillet-of-beef-recipe-with-garlic-gratin-potato-peppered-sauce-by-chef-gareth-mullins-of-the-marker-hotel",
+					"title": "Roast Fillet of Beef Recipe with Garlic Gratin Potato, Peppered Sauce by Chef Gareth Mullins of The Marker Hotel - TheTaste.ie",
+					"publishedDate": "2021-11-01T16:29:46.000Z",
+					"highlights": [
+						"#### Garlic potatoes\n\n- 1 kg potatoes rooster \n- 250 mls cream\n- 1 clove garlic\n- 20 g parmesan\n...\nboil and set to one side peel the potatoes and slice on a mandolin or as thin as you can ... and season. Spoon the potatoes in a wide shallow dish evenly."
+					]
+				},
+				{
+					"url": "https://rhythmofthehome.com/norrland-style-tjalknol-slow-roasted-venison-or-beef/",
+					"title": "Norrland-Style Tjälknöl: Slow-Roasted Venison or Beef – Rhythm of the Home",
+					"publishedDate": "2025-11-11T02:06:09.000Z",
+					"highlights": [
+						"°F). Grease a 2-liter (2-quart) baking dish with a little butter. In a large bowl, toss ... the remaining cheese. Bake 50–60 minutes until the top is deeply golden and a knife slides through the center without resistance. Rest 10–15 minutes for clean"
+					]
+				}
+			],
+			"at": "2026-11-14T11:18:03.122Z",
+			"costUsd": 0.007
+		},
+		"outside:pike-perch-with-butter-potatoes": {
+			"content": {
+				"options": [
+					{
+						"title": "Roasted Pike-Perch with Herb Butter and New Potatoes",
+						"kind": "recipe",
+						"ingredients": [
+							"Pike perch (fresh) fillets (with skin)",
+							"Potatoes (new potatoes)",
+							"Butter (unsalted)",
+							"Parsley",
+							"Olive oil (cold pressed)",
+							"Salt",
+							"Optional: (implied) parchment paper/seasoning"
+						],
+						"yield": "2 servings",
+						"note": "Oven-bake potatoes first, then bake pike-perch on top with parsley butter; serves immediately. No explicit large-batch scaling guidance is stated (ingredients are listed for 2 servings)."
+					},
+					{
+						"title": "Pike-Perch with Potatoes (roasted in one dish with butter + sour cream)",
+						"kind": "recipe",
+						"ingredients": [
+							"Potatoes (sliced)",
+							"Butter (divided)",
+							"Salt",
+							"Pike-perch fillet",
+							"Sour cream",
+							"Sweet paprika (pinch)",
+							"Onion (finely chopped)"
+						],
+						"yield": "4 servings (approx.; serving calculator indicated)",
+						"note": "Roast potatoes in a heatproof dish, then arrange pike-perch on top and continue roasting with sour cream, butter, paprika, and onion. Receptnaptár notes servings and includes a serving calculator, but no explicit instructions for scaling to a large batch are provided in the page text."
+					},
+					{
+						"title": "Pan-fried pike-perch with fennel cream potatoes",
+						"kind": "alternative_dish",
+						"ingredients": [
+							"Firm potatoes",
+							"Fennel bulb",
+							"Butter",
+							"Cooking cream",
+							"Milk",
+							"Salt",
+							"Crushed black pepper",
+							"Pike-perch fillets (bones removed)",
+							"Canola oil",
+							"Butter for frying",
+							"Salt to taste"
+						],
+						"yield": "4 servings",
+						"note": "Includes pike-perch plus butter-based potatoes (cream potatoes). No explicit large-batch scaling guidance is stated on the page."
+					},
+					{
+						"title": "Pike perch | Saffron sauce | Potatoes | Fennel",
+						"kind": "alternative_dish",
+						"ingredients": [
+							"Pike perch (back pieces with skin)",
+							"Butter (for pike perch)",
+							"Lemon",
+							"Dill",
+							"Salt",
+							"Pepper",
+							"Saffron (ground)",
+							"Onion",
+							"Celery",
+							"Butter (for sauce)",
+							"White wine",
+							"Double cream",
+							"Vegetable stock powder",
+							"Corn flour",
+							"Potatoes",
+							"Salt",
+							"Fennel",
+							"Vegetable stock (for fennel)"
+						],
+						"yield": "4 people (starter)",
+						"note": "Chef-style plated dish: pike perch with dill-lemon butter, saffron cream sauce, and butter-tossed steamed potatoes plus fennel. Not ‘butter potatoes’ only, but contains butter potatoes element. No explicit scaling guidance is stated."
+					},
+					{
+						"title": "Buttered Perch with Potatoes, Sage and White Wine",
+						"kind": "alternative_dish",
+						"ingredients": [
+							"Perch fillets",
+							"Boiled potatoes",
+							"Flour",
+							"Butter",
+							"Sage",
+							"White wine",
+							"Salt",
+							"Pepper"
+						],
+						"yield": "4 servings",
+						"note": "Not specifically pike-perch; uses perch fillets. ‘Butter + sage’ with potatoes (described as served with mashed potatoes). Page provides servings but no explicit large-batch scaling instructions."
+					}
+				]
+			},
+			"grounding": [
+				{
+					"field": "options[0].title",
+					"citations": [
+						{
+							"url": "https://www.histamin.io/recipe/roasted-pike-perch-with-herb-butter-and-new-potatoes",
+							"title": "Roasted Pike-Perch with Herb Butter and New Potatoes"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[0].kind",
+					"citations": [
+						{
+							"url": "https://www.histamin.io/recipe/roasted-pike-perch-with-herb-butter-and-new-potatoes",
+							"title": "Roasted Pike-Perch with Herb Butter and New Potatoes"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[0].ingredients",
+					"citations": [
+						{
+							"url": "https://www.histamin.io/recipe/roasted-pike-perch-with-herb-butter-and-new-potatoes",
+							"title": "Roasted Pike-Perch with Herb Butter and New Potatoes"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[0].yield",
+					"citations": [
+						{
+							"url": "https://www.histamin.io/recipe/roasted-pike-perch-with-herb-butter-and-new-potatoes",
+							"title": "Roasted Pike-Perch with Herb Butter and New Potatoes"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[0].note",
+					"citations": [
+						{
+							"url": "https://www.histamin.io/recipe/roasted-pike-perch-with-herb-butter-and-new-potatoes",
+							"title": "Roasted Pike-Perch with Herb Butter and New Potatoes"
+						}
+					],
+					"confidence": "medium"
+				},
+				{
+					"field": "options[1].title",
+					"citations": [
+						{
+							"url": "https://receptnaptar.hu/en/recept/hungarian--fogas-burgonyaval/",
+							"title": "Pike-Perch with Potatoes recipe (55 min) | Receptnaptár"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[1].kind",
+					"citations": [
+						{
+							"url": "https://receptnaptar.hu/en/recept/hungarian--fogas-burgonyaval/",
+							"title": "Pike-Perch with Potatoes recipe (55 min) | Receptnaptár"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[1].ingredients",
+					"citations": [
+						{
+							"url": "https://receptnaptar.hu/en/recept/hungarian--fogas-burgonyaval/",
+							"title": "Pike-Perch with Potatoes recipe (55 min) | Receptnaptár"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[1].yield",
+					"citations": [
+						{
+							"url": "https://receptnaptar.hu/en/recept/hungarian--fogas-burgonyaval/",
+							"title": "Pike-Perch with Potatoes recipe (55 min) | Receptnaptár"
+						}
+					],
+					"confidence": "medium"
+				},
+				{
+					"field": "options[1].note",
+					"citations": [
+						{
+							"url": "https://receptnaptar.hu/en/recept/hungarian--fogas-burgonyaval/",
+							"title": "Pike-Perch with Potatoes recipe (55 min) | Receptnaptár"
+						}
+					],
+					"confidence": "medium"
+				},
+				{
+					"field": "options[2].title",
+					"citations": [
+						{
+							"url": "https://maku.kitchen/en/recipes/pikeperch-with-fennelcreampotatoes/",
+							"title": "Pan-fried pike-perch with fennel cream potatoes – Maku Kitchen Life"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[2].kind",
+					"citations": [
+						{
+							"url": "https://maku.kitchen/en/recipes/pikeperch-with-fennelcreampotatoes/",
+							"title": "Pan-fried pike-perch with fennel cream potatoes – Maku Kitchen Life"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[2].ingredients",
+					"citations": [
+						{
+							"url": "https://maku.kitchen/en/recipes/pikeperch-with-fennelcreampotatoes/",
+							"title": "Pan-fried pike-perch with fennel cream potatoes – Maku Kitchen Life"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[2].yield",
+					"citations": [
+						{
+							"url": "https://maku.kitchen/en/recipes/pikeperch-with-fennelcreampotatoes/",
+							"title": "Pan-fried pike-perch with fennel cream potatoes – Maku Kitchen Life"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[2].note",
+					"citations": [
+						{
+							"url": "https://maku.kitchen/en/recipes/pikeperch-with-fennelcreampotatoes/",
+							"title": "Pan-fried pike-perch with fennel cream potatoes – Maku Kitchen Life"
+						}
+					],
+					"confidence": "medium"
+				},
+				{
+					"field": "options[3].title",
+					"citations": [
+						{
+							"url": "https://www.inspiration-ateliers.ch/en/pike-perch-saffron-sauce-potatoes-fennel/",
+							"title": "Pike perch | Saffron sauce | Potatoes | Fennel"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[3].kind",
+					"citations": [
+						{
+							"url": "https://www.inspiration-ateliers.ch/en/pike-perch-saffron-sauce-potatoes-fennel/",
+							"title": "Pike perch | Saffron sauce | Potatoes | Fennel"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[3].ingredients",
+					"citations": [
+						{
+							"url": "https://www.inspiration-ateliers.ch/en/pike-perch-saffron-sauce-potatoes-fennel/",
+							"title": "Pike perch | Saffron sauce | Potatoes | Fennel"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[3].yield",
+					"citations": [
+						{
+							"url": "https://www.inspiration-ateliers.ch/en/pike-perch-saffron-sauce-potatoes-fennel/",
+							"title": "Pike perch | Saffron sauce | Potatoes | Fennel"
+						}
+					],
+					"confidence": "medium"
+				},
+				{
+					"field": "options[3].note",
+					"citations": [
+						{
+							"url": "https://www.inspiration-ateliers.ch/en/pike-perch-saffron-sauce-potatoes-fennel/",
+							"title": "Pike perch | Saffron sauce | Potatoes | Fennel"
+						}
+					],
+					"confidence": "medium"
+				},
+				{
+					"field": "options[4].title",
+					"citations": [
+						{
+							"url": "https://www.lacucinaitaliana.com/recipe/main-course/buttered-perch-potatoes-sage-and-white-wine",
+							"title": "Buttered Perch with Potatoes, Sage and White Wine Recipe"
+						}
+					],
+					"confidence": "medium"
+				},
+				{
+					"field": "options[4].kind",
+					"citations": [
+						{
+							"url": "https://www.lacucinaitaliana.com/recipe/main-course/buttered-perch-potatoes-sage-and-white-wine",
+							"title": "Buttered Perch with Potatoes, Sage and White Wine Recipe"
+						}
+					],
+					"confidence": "medium"
+				},
+				{
+					"field": "options[4].ingredients",
+					"citations": [
+						{
+							"url": "https://www.lacucinaitaliana.com/recipe/main-course/buttered-perch-potatoes-sage-and-white-wine",
+							"title": "Buttered Perch with Potatoes, Sage and White Wine Recipe"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[4].yield",
+					"citations": [
+						{
+							"url": "https://www.lacucinaitaliana.com/recipe/main-course/buttered-perch-potatoes-sage-and-white-wine",
+							"title": "Buttered Perch with Potatoes, Sage and White Wine Recipe"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[4].note",
+					"citations": [
+						{
+							"url": "https://www.lacucinaitaliana.com/recipe/main-course/buttered-perch-potatoes-sage-and-white-wine",
+							"title": "Buttered Perch with Potatoes, Sage and White Wine Recipe"
+						}
+					],
+					"confidence": "medium"
+				}
+			],
+			"results": [
+				{
+					"url": "https://www.histamin.io/recipe/roasted-pike-perch-with-herb-butter-and-new-potatoes",
+					"title": "Roasted Pike-Perch with Herb Butter and New Potatoes",
+					"publishedDate": null,
+					"highlights": [
+						"Each ingredient is compared with the food database and manually checked.\n\nPike perch (fresh)\n\n2 fillets · with skin (total approx. 300-350 g)\n\nSuitable\n\nPotatoes\n\n500 g\n\nSuitable\n\nButter\n\n40 g · unsalted, high-quality\n\nParsley\n\n1 large handful · fresh\n\nOlive oil (cold pressed)\n\n2 tablespoon · tolerated (e.g. rapeseed or light olive oil)\n\nHimalayan salt\n\n1 pinch · ideally rock, iodine-free\n\n...\n\nWash the new potatoes thoroughly (you don’t need to peel them if the skin is thin) and pat them dry. ... In a bowl, toss them with 1 tablespoon of oil and a pinch of salt. Spread them out on a baking sheet lined with parchment paper and bake for 20 minutes.\n2.\n\n...\n\nStep 2\n\nWhile the potatoes are baki"
+					]
+				},
+				{
+					"url": "https://receptnaptar.hu/en/recept/hungarian--fogas-burgonyaval/",
+					"title": "Pike-Perch with Potatoes recipe (55 min) | Receptnaptár",
+					"publishedDate": null,
+					"highlights": [
+						"## Ingredients\n\n- 800 g potatoes\n- 60 g butter (divided)\n- salt\n- 650 g pike-perch fillet\n- 2 dl sour cream\n- 1 pinch sweet paprika\n- 1 small onion, very finely chopped\n\n...\n\n1. Cut the peeled potatoes into equal, long slices.\n2. Layer them in rows in a heatproof (fish-roasting) dish, salt, and scatter a few knobs of butter on top.\n3. Place in a preheated 200°C oven and roast for about 20-25 minutes, until the potatoes are half-cooked. ⏱ Timer: 20 min\n4. Remove the dish, and arrange the pike-perch fillets on top.\n5. Spoon sour cream over the fish, scatter a few knobs of butter, a pinch of paprika, and the finely chopped onion on top.\n6. Return to the oven and roast for another 20-25 minutes,"
+					]
+				},
+				{
+					"url": "https://www.inspiration-ateliers.ch/en/pike-perch-saffron-sauce-potatoes-fennel/",
+					"title": "Pike perch | Saffron sauce | Potatoes | Fennel",
+					"publishedDate": "2022-03-15T13:05:02.000Z",
+					"highlights": [
+						"|\n| | Lemon juice, Vegetable stock powder, Salt, Corn flour |\n| ... | |\n| 400 g | potatoes, waxy, peeled |\n| 50 g | butter |\n| | Salt |\n| ... | |\n| 2 pcs | fennel, peeled |\n| 1 lt | vegetable stock |"
+					]
+				},
+				{
+					"url": "https://maku.kitchen/en/recipes/pikeperch-with-fennelcreampotatoes/",
+					"title": "Pan-fried pike-perch with fennel cream potatoes – Maku Kitchen Life",
+					"publishedDate": null,
+					"highlights": [
+						"Serves 4, cooking time: 45 minutes\n\n- 500 g firm potatoes, peeled\n- 1 fennel bulb\n- 50 g butter\n- 200 ml cooking cream\n- 300 ml milk\n- 1 tsp salt\n- 1 tsp crushed black pepper\n- 4 pike-perch fillets (approx. 200 g per fillet, bones removed)\n- 50 ml canola oil\n- Butter for frying"
+					]
+				},
+				{
+					"url": "https://www.lacucinaitaliana.com/recipe/main-course/buttered-perch-potatoes-sage-and-white-wine",
+					"title": "Buttered Perch with Potatoes, Sage and White Wine Recipe",
+					"publishedDate": "2020-09-06T12:00:00.000Z",
+					"highlights": [
+						"1\n\nLightly flour the fish fillets and brown them in plenty of foamy butter with sage leaves, a few at a time, for 3-4 minutes each. Then add a splash of white wine and let evaporate.\n...\nto taste. Serve with mashed potatoes and season with the fish sauce."
+					]
+				}
+			],
+			"at": "2026-11-14T11:18:05.952Z",
+			"costUsd": 0.007
+		},
+		"outside:mushroom-risotto": {
+			"content": {
+				"options": [
+					{
+						"title": "Mushroom risotto for 70 persons",
+						"kind": "recipe",
+						"ingredients": [
+							"7 kg Risotto rice",
+							"5.25 kg Mushrooms",
+							"35 Onions",
+							"3.5 L White wine",
+							"2.1 kg Parmesan",
+							"1.4 L Clarified butter",
+							"700 g Butter",
+							"35 cloves Garlic",
+							"21 L Soup",
+							"Salt",
+							"Pepper"
+						],
+						"yield": "70 servings",
+						"note": "Mushroom risotto recipe scaled for 70 persons."
+					},
+					{
+						"title": "Mushroom risotto for 20 persons",
+						"kind": "recipe",
+						"ingredients": [
+							"2 kg Risotto rice",
+							"1.5 kg Mushrooms",
+							"10 Onions",
+							"1 L White wine",
+							"600 g Parmesan",
+							"400 ml Clarified butter",
+							"200 g Butter",
+							"10 cloves Garlic",
+							"6 L Soup",
+							"Salt",
+							"Pepper"
+						],
+						"yield": "20 servings",
+						"note": "Mushroom risotto recipe scaled for 20 persons."
+					},
+					{
+						"title": "Wild mushroom risotto casserole",
+						"kind": "recipe",
+						"ingredients": [
+							"3 ounces dried porcini mushrooms",
+							"3/4 cup dry white wine",
+							"7 cups beef or vegetable stock",
+							"1.5 cups butter",
+							"2 onions, chopped",
+							"3 carrots, peeled and finely chopped",
+							"3 cups arborio rice",
+							"6 cloves garlic, chopped",
+							"1.5 pounds mushrooms, sliced",
+							"2 red bell peppers, seeded and chopped",
+							"1 cup parsley, chopped",
+							"Salt and pepper to taste",
+							"2 cups parmesan cheese, grated",
+							"1.5 cups whipping cream",
+							"3 eggs",
+							"1/4 teaspoon freshly ground nutmeg"
+						],
+						"yield": "16 - 20 servings",
+						"note": "This is a no-stir risotto casserole recipe that can be prepared in advance and baked, making it suitable for feeding a large crowd."
+					}
+				]
+			},
+			"grounding": [
+				{
+					"field": "options[0].note",
+					"citations": [
+						{
+							"url": "https://www.seasonal-servings.com/recipes/mushroom-risotto/70-persons",
+							"title": "Mushroom risotto for 70 persons – Seasonal Servings"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[0].ingredients",
+					"citations": [
+						{
+							"url": "https://www.seasonal-servings.com/recipes/mushroom-risotto/70-persons",
+							"title": "Mushroom risotto for 70 persons – Seasonal Servings"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[0].title",
+					"citations": [
+						{
+							"url": "https://www.seasonal-servings.com/recipes/mushroom-risotto/70-persons",
+							"title": "Mushroom risotto for 70 persons – Seasonal Servings"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[0].kind",
+					"citations": [
+						{
+							"url": "https://www.seasonal-servings.com/recipes/mushroom-risotto/70-persons",
+							"title": "Mushroom risotto for 70 persons – Seasonal Servings"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[0].yield",
+					"citations": [
+						{
+							"url": "https://www.seasonal-servings.com/recipes/mushroom-risotto/70-persons",
+							"title": "Mushroom risotto for 70 persons – Seasonal Servings"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[1].ingredients",
+					"citations": [
+						{
+							"url": "https://www.seasonal-servings.com/recipes/mushroom-risotto/20-persons",
+							"title": "Mushroom risotto for 20 persons – Seasonal Servings"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[1].title",
+					"citations": [
+						{
+							"url": "https://www.seasonal-servings.com/recipes/mushroom-risotto/20-persons",
+							"title": "Mushroom risotto for 20 persons – Seasonal Servings"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[1].note",
+					"citations": [
+						{
+							"url": "https://www.seasonal-servings.com/recipes/mushroom-risotto/20-persons",
+							"title": "Mushroom risotto for 20 persons – Seasonal Servings"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[1].yield",
+					"citations": [
+						{
+							"url": "https://www.seasonal-servings.com/recipes/mushroom-risotto/20-persons",
+							"title": "Mushroom risotto for 20 persons – Seasonal Servings"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[1].kind",
+					"citations": [
+						{
+							"url": "https://www.seasonal-servings.com/recipes/mushroom-risotto/20-persons",
+							"title": "Mushroom risotto for 20 persons – Seasonal Servings"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[2].title",
+					"citations": [
+						{
+							"url": "https://somethingnewfordinner.com/recipe/wild-mushroom-risotto-casserole/",
+							"title": "Wild mushroom risotto casserole | Something New For Dinner"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[2].yield",
+					"citations": [
+						{
+							"url": "https://somethingnewfordinner.com/recipe/wild-mushroom-risotto-casserole/",
+							"title": "Wild mushroom risotto casserole | Something New For Dinner"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[2].note",
+					"citations": [
+						{
+							"url": "https://somethingnewfordinner.com/recipe/wild-mushroom-risotto-casserole/",
+							"title": "Wild mushroom risotto casserole | Something New For Dinner"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[2].ingredients",
+					"citations": [
+						{
+							"url": "https://somethingnewfordinner.com/recipe/wild-mushroom-risotto-casserole/",
+							"title": "Wild mushroom risotto casserole | Something New For Dinner"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[2].kind",
+					"citations": [
+						{
+							"url": "https://somethingnewfordinner.com/recipe/wild-mushroom-risotto-casserole/",
+							"title": "Wild mushroom risotto casserole | Something New For Dinner"
+						}
+					],
+					"confidence": "high"
+				}
+			],
+			"results": [
+				{
+					"url": "https://www.seasonal-servings.com/recipes/mushroom-risotto/70-persons",
+					"title": "Mushroom risotto for 70 persons – Seasonal Servings",
+					"publishedDate": null,
+					"highlights": [
+						"Ingredients for 70 persons: 7 kg Risotto rice, 5.25 kg Mushrooms, 35 Onions, 3.5 L White wine, 2.1 kg Parmesan, 1.4 L Clarified butter, 700 g Butter, 35 cloves Garlic, Salt, Pepper\n...\nwith 3.5 L White wine. Allow the liquid to boil away completely."
+					]
+				},
+				{
+					"url": "https://www.seasonal-servings.com/recipes/mushroom-risotto/20-persons",
+					"title": "Mushroom risotto for 20 persons – Seasonal Servings",
+					"publishedDate": null,
+					"highlights": [
+						"Ingredients for 20 persons: 2 kg Risotto rice, 1.5 kg Mushrooms, 10 Onions, 1 L White wine, 600 g Parmesan, 400 ml Clarified butter, 200 g Butter, 10 cloves Garlic, Salt, Pepper\n...\ncompletely. Infuse with 6 L Soup. Simmer over a low heat for approx. 15"
+					]
+				},
+				{
+					"url": "https://www.suomisiitake.fi/resepti/siitakesienirisotto",
+					"title": "Shiitake Mushroom Risotto",
+					"publishedDate": "2022-10-17T08:23:25.000Z",
+					"highlights": [
+						"- 2 dl of Arborio risotto rice\n- 2 shallots\n- 1 pack of Emperor shiitake mushrooms (save a few for garnish)\n- ½ dl of white wine\n- 2 tbsp of white wine vinegar\n- 6 dl of chicken or vegetable broth\n- 60 g of grated parmesan cheese\n- 50 g of butter\n- (salt)"
+					]
+				},
+				{
+					"url": "https://somethingnewfordinner.com/recipe/wild-mushroom-risotto-casserole/",
+					"title": "Wild mushroom risotto casserole | Something New For Dinner",
+					"publishedDate": "2013-09-24T15:00:18.000Z",
+					"highlights": [
+						". This unconventional risotto casserole recipe is great for a crowd, serving 16 to 20 people, and can be prepared in advanced. No constant stirring required. It can be prepared early in the day, and then baked just before you are ready to serve. I have"
+					]
+				},
+				{
+					"url": "https://www.seriouseats.com/healthy-delicious-mushroom-risotto-recipe",
+					"title": "Mushroom Risotto Recipe",
+					"publishedDate": "2009-11-09T10:00:00.000Z",
+					"highlights": [
+						"- 1 ounce (30 g) dried porcini or morel mushrooms (optional)\n- 1 1/2 cups (about 300 g) risotto rice, such as arborio or vialone nano\n- 4 tablespoons (60 ml) extra-virgin olive oil\n- 1 1/2 pounds (700 g) mixed mushrooms, such as shiitake, cremini, oyster, and chanterelle, trimmed and thinly sliced\n- 4 tablespoons (50 g) unsalted butter\n- Kosher salt and freshly ground black pepper\n- 1 medium yellow onion, finely chopped (about 6 ounces; 170 g)\n\n...\n\n- 1 tablespoon (15 ml) light miso paste\n- 3/4 cup (175 ml) dry white wine\n- 1/4 cup (60 ml) heavy cream (optional)\n- 1 ounce (30 g) finely grated Parmigiano-Reggiano cheese, plus more for serving\n\n...\n\n1.\n\n...\n\nStrain\n\n...\n\nHeat oil and butter in"
+					]
+				}
+			],
+			"at": "2026-11-14T11:18:07.576Z",
+			"costUsd": 0.007
+		},
+		"outside:rice-pudding-with-plum-compote": {
+			"content": {
+				"options": [
+					{
+						"title": "Baked Rice Pudding with Plum Compote",
+						"kind": "recipe",
+						"ingredients": [
+							"1/2 cup (105g) round/short-grain rice",
+							"1/2 cup (100g) sugar",
+							"1/4 teaspoon salt",
+							"1 vanilla bean",
+							"4 cups (1l) whole milk",
+							"2 tablespoons (30g) butter",
+							"1 1/2 pounds (700g) prune plums",
+							"1/3 cup (80ml) white wine (or water/apple juice)",
+							"3 tablespoons sugar",
+							"1/2 vanilla bean"
+						],
+						"yield": "6 servings",
+						"note": "Yields 6 servings. Suitable for scaling. Plum compote can be made in advance; rice pudding thickens as it sets. Alternative milks may work."
+					},
+					{
+						"title": "Creamy rice pudding with stewed plums",
+						"kind": "recipe",
+						"ingredients": [
+							"200ml port",
+							"200ml red wine",
+							"1 cinnamon stick",
+							"1 star anise",
+							"100g clear honey",
+							"zest and juice of 2 oranges",
+							"500g plums",
+							"1l full-fat milk",
+							"250ml double cream",
+							"1 vanilla pod",
+							"1 cinnamon stick",
+							"100g caster sugar",
+							"200g pudding rice",
+							"50g salted butter",
+							"250g tub mascarpone"
+						],
+						"yield": "6 servings",
+						"note": "Yields 6 servings. Creamy texture achieved by folding in butter and mascarpone after cooking."
+					},
+					{
+						"title": "Cream rice pudding with cinnamon and plum compote",
+						"kind": "recipe",
+						"ingredients": [
+							"800g plums",
+							"80g sugar",
+							"250ml fruit juice (dark)",
+							"1 cinnamon stick",
+							"cornstarch",
+							"250g rice pudding",
+							"1 liter milk",
+							"100g whipped cream",
+							"4 tbsp hazelnut flakes"
+						],
+						"yield": "6 servings",
+						"note": "Yields 6 servings. Finished with toasted hazelnut flakes."
+					}
+				]
+			},
+			"grounding": [
+				{
+					"field": "options[0].title",
+					"citations": [
+						{
+							"url": "https://www.davidlebovitz.com/recipe-baked-rice-pudding-riz-au-lait-plum-compote/",
+							"title": "Baked Rice Pudding with Plum Compote"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[0].ingredients",
+					"citations": [
+						{
+							"url": "https://www.davidlebovitz.com/recipe-baked-rice-pudding-riz-au-lait-plum-compote/",
+							"title": "Baked Rice Pudding with Plum Compote"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[0].yield",
+					"citations": [
+						{
+							"url": "https://www.davidlebovitz.com/recipe-baked-rice-pudding-riz-au-lait-plum-compote/",
+							"title": "Baked Rice Pudding with Plum Compote"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[0].kind",
+					"citations": [
+						{
+							"url": "https://www.davidlebovitz.com/recipe-baked-rice-pudding-riz-au-lait-plum-compote/",
+							"title": "Baked Rice Pudding with Plum Compote"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[0].note",
+					"citations": [
+						{
+							"url": "https://www.davidlebovitz.com/recipe-baked-rice-pudding-riz-au-lait-plum-compote/",
+							"title": "Baked Rice Pudding with Plum Compote"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[1].title",
+					"citations": [
+						{
+							"url": "https://www.bbcgoodfood.com/recipes/creamy-rice-pudding-stewed-plums",
+							"title": "Creamy rice pudding with stewed plums recipe | Good Food"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[1].kind",
+					"citations": [
+						{
+							"url": "https://www.bbcgoodfood.com/recipes/creamy-rice-pudding-stewed-plums",
+							"title": "Creamy rice pudding with stewed plums recipe | Good Food"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[1].note",
+					"citations": [
+						{
+							"url": "https://www.bbcgoodfood.com/recipes/creamy-rice-pudding-stewed-plums",
+							"title": "Creamy rice pudding with stewed plums recipe | Good Food"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[1].ingredients",
+					"citations": [
+						{
+							"url": "https://www.bbcgoodfood.com/recipes/creamy-rice-pudding-stewed-plums",
+							"title": "Creamy rice pudding with stewed plums recipe | Good Food"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[1].yield",
+					"citations": [
+						{
+							"url": "https://www.bbcgoodfood.com/recipes/creamy-rice-pudding-stewed-plums",
+							"title": "Creamy rice pudding with stewed plums recipe | Good Food"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[2].ingredients",
+					"citations": [
+						{
+							"url": "https://chefreader.com/cream-rice-pudding-with-cinnamon-and-plum-compote/",
+							"title": "Cream rice pudding with cinnamon and plum compote | Chef Reader"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[2].yield",
+					"citations": [
+						{
+							"url": "https://chefreader.com/cream-rice-pudding-with-cinnamon-and-plum-compote/",
+							"title": "Cream rice pudding with cinnamon and plum compote | Chef Reader"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[2].kind",
+					"citations": [
+						{
+							"url": "https://chefreader.com/cream-rice-pudding-with-cinnamon-and-plum-compote/",
+							"title": "Cream rice pudding with cinnamon and plum compote | Chef Reader"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[2].note",
+					"citations": [
+						{
+							"url": "https://chefreader.com/cream-rice-pudding-with-cinnamon-and-plum-compote/",
+							"title": "Cream rice pudding with cinnamon and plum compote | Chef Reader"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[2].title",
+					"citations": [
+						{
+							"url": "https://chefreader.com/cream-rice-pudding-with-cinnamon-and-plum-compote/",
+							"title": "Cream rice pudding with cinnamon and plum compote | Chef Reader"
+						}
+					],
+					"confidence": "high"
+				}
+			],
+			"results": [
+				{
+					"url": "https://www.davidlebovitz.com/recipe-baked-rice-pudding-riz-au-lait-plum-compote/",
+					"title": "Baked Rice Pudding with Plum Compote",
+					"publishedDate": "2017-09-07T14:33:43.000Z",
+					"highlights": [
+						"#### For the plum compote\n\n- 1 1/2 pounds (700g) prune plums\n- 1/3 cup (80ml) white wine, (see headnote)\n- 3 tablespoons sugar\n- 1/2 vanilla bean, split lengthwise with seeds scraped out\n\n- Preheat the oven to 325ºF (160ºC). \n- In a 2-quart baking dish, or larger, with high sides, mix the rice, sugar, salt, and vanilla bean & seeds. Pour in the milk. Mix it with the other ingredients, then strew the bits of butter over the top. \n- Place the dish of rice in the oven, stirring the rice every 10 to 15 minutes, being sure the scrape the bottom of the baking dish to avoid any grains of rice sticking there. Don't worry if the top starts to brown; simply stir that in*. \n- While the rice pudding is "
+					]
+				},
+				{
+					"url": "https://www.bbcgoodfood.com/recipes/creamy-rice-pudding-stewed-plums",
+					"title": "Creamy rice pudding with stewed plums recipe | Good Food",
+					"publishedDate": null,
+					"highlights": [
+						"### For the plums\n\n- 200ml port\n- 200ml\n...\n### For the rice pudding\n\n- 1l full-fat milk\n- 250ml double cream\n- 1 vanilla pod\n\n split\n- 1 cinnamon stick\n- 100g caster sugar\n- 200g pudding rice\n- 50g salted butter\n- 250g tub mascarpone"
+					]
+				},
+				{
+					"url": "https://www.dairydiary.co.uk/blogs/recipe/creamy-rice-pudding-with-plum-compote",
+					"title": "Creamy Rice Pudding with Plum Compote\n – Dairy Diary by Collins Debden",
+					"publishedDate": "2026-05-20T08:24:01.000Z",
+					"highlights": [
+						"### For the plum compote\n\n- Soft brown sugar 50g (2oz)\n- Star anise 1\n- Citrus peel orange or lemon, 1 strip\n- Ripe plums 250g\n\n...\n\n1. To make the rice pudding, put the rice, milk and vanilla in a large non stick saucepan over a low heat. Bring to a gentle simmer, stirring frequently to prevent the rice from sticking. Part cover with a lid and simmer for 25-30 minutes, stirring more often as the rice swells. When tender and creamy, remove from the heat and stir in the honey.\n2. While the rice is cooking, make the compote. Bring 300ml water to the boil in a small saucepan with the sugar, star anise and citrus zest. Add the plums and simmer gently for 15-20 minutes until softened and slightly"
+					]
+				},
+				{
+					"url": "https://www.citchn.com/recipe/rice-pudding-with-plum-compote-53413/",
+					"title": "Rice Pudding With Plum Compote Recipe",
+					"publishedDate": null,
+					"highlights": [
+						"#### Ingredients\n\n Servings: 6 \n\n- 10 Cardamom Capsules \n- 400 g Plums \n- 2 Cinnamon sticks \n- 150 ml sweet dessert wine \n- 1 TEASPOON Arrowroot \n- 600 ml Milk \n- 225 g Rice Pudding \n- 3 Egg yolk (size M) \n- 75 g extra fine sugar"
+					]
+				},
+				{
+					"url": "https://chefreader.com/cream-rice-pudding-with-cinnamon-and-plum-compote/",
+					"title": "Cream rice pudding with cinnamon and plum compote | Chef Reader",
+					"publishedDate": "2017-08-29T13:23:11.000Z",
+					"highlights": [
+						"## Ingredients for 6 servings:\n\n- 800 g plum(s)\n- 80 g sugar\n- 250 ml fruit juice (multi-fruit juice, dark, e.g. red multivitamin juice\n- 1 stalk(s) cinnamon\n- some cornstarch\n- 250 g rice pudding\n- 1 liter of milk\n- 100 g whipped cream\n- 4 tbsp hazelnut"
+					]
+				}
+			],
+			"at": "2026-11-14T11:18:10.189Z",
+			"costUsd": 0.007
+		},
+		"outside:rosolli-beetroot-salad": {
+			"content": {
+				"options": [
+					{
+						"title": "Rosolli (10 portions for large-scale preparation)",
+						"kind": "recipe",
+						"ingredients": [
+							"200 g boiled potato",
+							"200 g boiled carrot",
+							"250 g beetroot (or pickled beetroot)",
+							"1 pickled cucumber",
+							"1 apple",
+							"1 small onion",
+							"salt and white pepper to taste",
+							"2 dl whipping cream",
+							"1-2 tsp vinegar",
+							"pinch of sugar and salt",
+							"1-2 tsp beetroot pickling liquid"
+						],
+						"yield": "10 portions",
+						"note": "This recipe is calculated for 10 servings. The ingredients can be scaled by multiplying by the desired number of servings. The source suggests cooking and cubing root vegetables a day in advance and keeping them separate until serving to prevent the beetroot from staining other ingredients."
+					},
+					{
+						"title": "Rosolli (15 portions for large-scale preparation)",
+						"kind": "recipe",
+						"ingredients": [
+							"300 g boiled potato",
+							"300 g boiled carrot",
+							"375 g beetroot",
+							"1.5 pickled cucumber",
+							"1.5 apple",
+							"1.5 small onion",
+							"3 dl whipping cream",
+							"vinegar, sugar, and salt to taste (adjusting for volume)",
+							"beetroot liquid for color"
+						],
+						"yield": "15 portions",
+						"note": "Scaled version for 15 servings based on professional kitchen calculations provided in the source. Adjust seasoning and coloring liquids according to taste."
+					}
+				]
+			},
+			"grounding": [
+				{
+					"field": "options[0].note",
+					"citations": [
+						{
+							"url": "https://joulunaika.fi/rosolli/",
+							"title": "Rosolli resepti: perinteinen rosolli ja kastike"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[0].kind",
+					"citations": [
+						{
+							"url": "https://joulunaika.fi/rosolli/",
+							"title": "Rosolli resepti: perinteinen rosolli ja kastike"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[0].yield",
+					"citations": [
+						{
+							"url": "https://joulunaika.fi/rosolli/",
+							"title": "Rosolli resepti: perinteinen rosolli ja kastike"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[0].ingredients",
+					"citations": [
+						{
+							"url": "https://joulunaika.fi/rosolli/",
+							"title": "Rosolli resepti: perinteinen rosolli ja kastike"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[0].title",
+					"citations": [
+						{
+							"url": "https://joulunaika.fi/rosolli/",
+							"title": "Rosolli resepti: perinteinen rosolli ja kastike"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[1].title",
+					"citations": [
+						{
+							"url": "https://joulunaika.fi/rosolli/",
+							"title": "Rosolli resepti: perinteinen rosolli ja kastike"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[1].kind",
+					"citations": [
+						{
+							"url": "https://joulunaika.fi/rosolli/",
+							"title": "Rosolli resepti: perinteinen rosolli ja kastike"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[1].yield",
+					"citations": [
+						{
+							"url": "https://joulunaika.fi/rosolli/",
+							"title": "Rosolli resepti: perinteinen rosolli ja kastike"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[1].ingredients",
+					"citations": [
+						{
+							"url": "https://joulunaika.fi/rosolli/",
+							"title": "Rosolli resepti: perinteinen rosolli ja kastike"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[1].note",
+					"citations": [
+						{
+							"url": "https://joulunaika.fi/rosolli/",
+							"title": "Rosolli resepti: perinteinen rosolli ja kastike"
+						}
+					],
+					"confidence": "high"
+				}
+			],
+			"results": [
+				{
+					"url": "https://joulunaika.fi/rosolli/",
+					"title": "Rosolli resepti: perinteinen rosolli ja kastike",
+					"publishedDate": "2026-11-10T07:56:17.000Z",
+					"highlights": [
+						"| Aines | 4 hengelle | 10 hengelle | 15 hengelle |\n| ... | --- | --- | --- |\n| Keitetty peruna | 80 g (noin ... g (3) | 300 g (4–5) |\n| Keitetty porkkana | 80 g ( ... ) | 300 g (4–5) |\n| Punajuuri | 100 g (1–2) | ... g (3–4) | 375 g (5–6) |"
+					]
+				},
+				{
+					"url": "https://herkkumaa.fi/rosolli/",
+					"title": "Rosolli – Herkkumaa",
+					"publishedDate": null,
+					"highlights": [
+						"### Rosolli:\n\n- 4 potatoes (waxy or all-purpose)\n- 4 carrots\n- 0.5–1 pack Herkkumaa cubed or mini beetroot\n- 1–2 onions\n- 2 Herkkumaa Pickled Cucumber or Cucumber Cubes\n- 2 apples\n\n#### Sauce:\n\n- 1 pack whipping cream or substitute\n- 1–3 tsp vinegar (spirit, white wine or red wine vinegar)\n- Pinch of salt\n- Pinch of black pepper"
+					]
+				},
+				{
+					"url": "https://scandification.com/finnish-beetroot-salad-recipe/",
+					"title": "Scandinavian Recipe For Finnish Beetroot Salad (Rosolli)",
+					"publishedDate": "2019-11-14T17:34:26.000Z",
+					"highlights": [
+						"#### Ingredients\n\nFor the salad:\n\n- 4 beetroots (regular or pickled is fine)\n- 2 potatoes\n- 2 carrots\n- 1 onion\n- 1 apple\n- 1 – 2 pickled cucumbers\n- Salt\n- Pepper\n\nFor the sauce:\n\n- 6 tbsp + 2 tsp of heavy cream\n- ½ tsp of white vinegar\n- ¼ tsp of sugar\n- ¼ tsp of salt\n- A couple cubes of the chopped beetroot (for colouring)\n\n...\n\n1. Boil the beetroots, potatoes and carrots in their skins, in separate pots. Take them off the heat once they are tender, being mindful not to overcook them.\n2. Once they’re cool, peel the vegetables and cut into very small cubes.\n3. Mince the onion.\n4. Peel and slice the apple into small cubes (same size as the vegetables).\n5. Cut the pickled cucumbers into smal"
+					]
+				},
+				{
+					"url": "https://mydearkitcheninhelsinki.com/2015/11/30/rosolli-salad-colourful-finnish-salad-for-christmas-table/",
+					"title": "Rosolli Salad – Colourful Finnish Salad For Christmas Table",
+					"publishedDate": "2015-11-30T06:24:10.000Z",
+					"highlights": [
+						"Salad: 4 beetroots boiled and cut into cubes, or equivalent amount of pickled beetroot (I used pickled beetroot) 2 potatoes, boiled and cut into cubes 2 carrots, boiled and cut into cubes 1 onion, cut into small pieces 1 apple, cut into small pieces 2-3 pickled cucumbers, cut into small cubes (the original recipe I adopted this from, on maku.fi, says only 1 cucumber but I love pickled cucumber so I used more..)\n\nSauce: 1 dl. / 6 tbsp. + 2 tsp. heavy cream (kuohukerma in Finnish) 1/2 tsp. vinegar (the original recipe uses white vinegar, but I used organic apple cider vinegar as it is my favourite..) 1/4 tsp. sugar 1/4 tsp."
+					]
+				},
+				{
+					"url": "https://spintheglobeofficial.com/recipe/finnish-rosolli-beetroot-herring-salad",
+					"title": "Rosolli (Finnish Beetroot and Herring Salad), a North Karelia, Finland recipe | Spin the Globe",
+					"publishedDate": null,
+					"highlights": [
+						"Diced beetroot, potato, carrot, gherkin, apple and onion layered with pickled herring and egg, served cold with a pink dressing of whipped cream tinted with beetroot vinegar, from the Finnish\n\n...\n\nServes 6\n\n- 4 medium (about 500 g) beetroots, unpeeled\n- 3 medium waxy potatoes, unpeeled\n- 3 medium carrots, unpeeled\n- 3 pickled cucumbers (gherkins), diced\n- 1 tart apple, peeled, cored and diced\n- 1 small onion, very finely chopped\n- 200 g pickled herring fillets, drained and cut in small pieces\n- 2 eggs, hard-boiled and chopped\n- to taste salt\n- to taste white pepper\n- 200 ml whipping cream (for the dressing)\n- 1 tbsp white vinegar or beetroot pickling liquid\n- 1/2 tsp sugar"
+					]
+				}
+			],
+			"at": "2026-11-14T11:18:15.891Z",
+			"costUsd": 0.007
+		},
+		"outside:green-salad": {
+			"content": {
+				"options": [
+					{
+						"title": "Vihreä salaatti 50 hengelle",
+						"kind": "recipe",
+						"ingredients": [
+							"2-2,5 kg jäävuorisalaattia",
+							"1,5 kg rucolaa tai lehtisalaattia",
+							"1 kg kirsikkatomaatteja",
+							"800 g kurkkua",
+							"600 g paprikaa",
+							"300-400 ml oliiviöljyä",
+							"100-150 ml balsamiviinietikkaa",
+							"suolaa",
+							"pippuria"
+						],
+						"yield": "50 annosta",
+						"note": "Ohje on 50 hengelle. Lisukkeena lasketaan 100-120 g per henkilö, pääruokana 140-180 g. Kastike lisätään vasta ennen tarjoilua. Salaatin voi jakaa 2-3 isompaan kulhoon. Tuplaa määrät 100 hengelle ja valmista useammassa erässä."
+					},
+					{
+						"title": "Stor grönsallad för 20 personer",
+						"kind": "recipe",
+						"ingredients": [
+							"3-4 kg blandad sallad (ruccola, babyspenat, lollo)",
+							"4-6 kpl gurka",
+							"2-3 kg tomater",
+							"1-1,5 kg riven morot",
+							"6-8 kpl rödlök",
+							"1,5-2 kg vita bönor eller kikärter",
+							"2-3 dl olivolja",
+							"1-1,5 dl rödvinsvinäger eller balsamvinäger",
+							"suolaa",
+							"pippuria"
+						],
+						"yield": "20 annosta",
+						"note": "Ohje on 20 hengelle. Lisukkeena lasketaan 75-100 g per henkilö, pääruokana 150-200 g. Kastike lisätään juuri ennen tarjoilua. Salaatti voidaan jakaa useampaan kulhoon."
+					},
+					{
+						"title": "Tossed Salad for 100",
+						"kind": "recipe",
+						"ingredients": [
+							"8 heads lettuce",
+							"10 lbs carrots",
+							"3 heads celery",
+							"6 lbs tomatoes",
+							"2 heads red cabbage",
+							"6 lbs green pepper",
+							"6 lbs cucumbers"
+						],
+						"yield": "100 annosta",
+						"note": "Ohje on 100 hengelle. Muita mahdollisia ainesosia ovat auringonkukansiemenet, idut, tempe/tofu ja karpalot. Salaatti kannattaa pukea vasta tarjoiluhetkellä pienemmässä kulhossa."
+					},
+					{
+						"title": "Giant Green Salad for a Crowd",
+						"kind": "recipe",
+						"ingredients": [
+							"5 bunches romaine lettuce",
+							"20 cups torn leaf and iceberg lettuces",
+							"6 cups dried cranberries",
+							"3 sweet yellow peppers",
+							"3 sweet green peppers",
+							"3 sweet red peppers",
+							"4 cups walnut halves",
+							"3 tablespoons butter",
+							"1/4 cup sugar",
+							"4 envelopes Italian salad dressing mix",
+							"2 cups vegetable or olive oil",
+							"1 cup red wine vinegar"
+						],
+						"yield": "100 annosta",
+						"note": "Ohje on 100 hengelle. Kastike kannattaa valmistaa vähintään päivää aiemmin. Pähkinät voidaan paahtaa ja sokeroida etukäteen. Salaatti sekoitetaan juuri ennen tarjoilua."
+					}
+				]
+			},
+			"grounding": [
+				{
+					"field": "options[0].yield",
+					"citations": [
+						{
+							"url": "https://klapsakka.fi/vihrea-salaatti-50-hengelle-taydellinen-ohje-2025/",
+							"title": "Vihreä Salaatti 50 Hengelle - Täydellinen Ohje 2025 - KLAPSAKKA"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[0].ingredients",
+					"citations": [
+						{
+							"url": "https://klapsakka.fi/vihrea-salaatti-50-hengelle-taydellinen-ohje-2025/",
+							"title": "Vihreä Salaatti 50 Hengelle - Täydellinen Ohje 2025 - KLAPSAKKA"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[0].note",
+					"citations": [
+						{
+							"url": "https://klapsakka.fi/vihrea-salaatti-50-hengelle-taydellinen-ohje-2025/",
+							"title": "Vihreä Salaatti 50 Hengelle - Täydellinen Ohje 2025 - KLAPSAKKA"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[0].kind",
+					"citations": [
+						{
+							"url": "https://klapsakka.fi/vihrea-salaatti-50-hengelle-taydellinen-ohje-2025/",
+							"title": "Vihreä Salaatti 50 Hengelle - Täydellinen Ohje 2025 - KLAPSAKKA"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[0].title",
+					"citations": [
+						{
+							"url": "https://klapsakka.fi/vihrea-salaatti-50-hengelle-taydellinen-ohje-2025/",
+							"title": "Vihreä Salaatti 50 Hengelle - Täydellinen Ohje 2025 - KLAPSAKKA"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[1].note",
+					"citations": [
+						{
+							"url": "https://elsaskantin.se/blog/sallad-for-20-personer.html",
+							"title": "Recept på stor sallad för 20 personer – enkelt och gott - Elsas Kantin"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[1].kind",
+					"citations": [
+						{
+							"url": "https://elsaskantin.se/blog/sallad-for-20-personer.html",
+							"title": "Recept på stor sallad för 20 personer – enkelt och gott - Elsas Kantin"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[1].title",
+					"citations": [
+						{
+							"url": "https://elsaskantin.se/blog/sallad-for-20-personer.html",
+							"title": "Recept på stor sallad för 20 personer – enkelt och gott - Elsas Kantin"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[1].ingredients",
+					"citations": [
+						{
+							"url": "https://elsaskantin.se/blog/sallad-for-20-personer.html",
+							"title": "Recept på stor sallad för 20 personer – enkelt och gott - Elsas Kantin"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[1].yield",
+					"citations": [
+						{
+							"url": "https://elsaskantin.se/blog/sallad-for-20-personer.html",
+							"title": "Recept på stor sallad för 20 personer – enkelt och gott - Elsas Kantin"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[2].ingredients",
+					"citations": [
+						{
+							"url": "https://edmonton.foodnotbombs.us/recipes/tossed_salad_for_100",
+							"title": "Tossed Salad for 100 — Food Not Bombs Edmonton"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[2].yield",
+					"citations": [
+						{
+							"url": "https://edmonton.foodnotbombs.us/recipes/tossed_salad_for_100",
+							"title": "Tossed Salad for 100 — Food Not Bombs Edmonton"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[2].note",
+					"citations": [
+						{
+							"url": "https://edmonton.foodnotbombs.us/recipes/tossed_salad_for_100",
+							"title": "Tossed Salad for 100 — Food Not Bombs Edmonton"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[2].kind",
+					"citations": [
+						{
+							"url": "https://edmonton.foodnotbombs.us/recipes/tossed_salad_for_100",
+							"title": "Tossed Salad for 100 — Food Not Bombs Edmonton"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[2].title",
+					"citations": [
+						{
+							"url": "https://edmonton.foodnotbombs.us/recipes/tossed_salad_for_100",
+							"title": "Tossed Salad for 100 — Food Not Bombs Edmonton"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[3].title",
+					"citations": [
+						{
+							"url": "http://cookingwithmaxanderma.blogspot.com/2007/06/crowd-coming-fix-this-giant-green-salad.html",
+							"title": "Cooking with Max & Erma: Crowd Coming? Fix This Giant Green Salad"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[3].ingredients",
+					"citations": [
+						{
+							"url": "http://cookingwithmaxanderma.blogspot.com/2007/06/crowd-coming-fix-this-giant-green-salad.html",
+							"title": "Cooking with Max & Erma: Crowd Coming? Fix This Giant Green Salad"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[3].kind",
+					"citations": [
+						{
+							"url": "http://cookingwithmaxanderma.blogspot.com/2007/06/crowd-coming-fix-this-giant-green-salad.html",
+							"title": "Cooking with Max & Erma: Crowd Coming? Fix This Giant Green Salad"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[3].note",
+					"citations": [
+						{
+							"url": "http://cookingwithmaxanderma.blogspot.com/2007/06/crowd-coming-fix-this-giant-green-salad.html",
+							"title": "Cooking with Max & Erma: Crowd Coming? Fix This Giant Green Salad"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[3].yield",
+					"citations": [
+						{
+							"url": "http://cookingwithmaxanderma.blogspot.com/2007/06/crowd-coming-fix-this-giant-green-salad.html",
+							"title": "Cooking with Max & Erma: Crowd Coming? Fix This Giant Green Salad"
+						}
+					],
+					"confidence": "high"
+				}
+			],
+			"results": [
+				{
+					"url": "https://kotiliesi.fi/resepti/green-goddess-salaatti/",
+					"title": "Green goddess -salaatti on terveellinen ja täyttävä - Kotiliesi.fi",
+					"publishedDate": "2024-06-11T13:00:00.000Z",
+					"highlights": [
+						"### Green goddess -salaatti \n\n- 150 g varhaiskaalia \n- 2 kevätsipulia \n- ½ kurkku \n- 3 lehteä lehtikaalia \n- ½ parsakaali\n...\njalkaosa \n- 1 dl\n...\n- 3 dl kylmää vettä liotukseen \n- 1 limetin puristettu mehu \n-"
+					]
+				},
+				{
+					"url": "https://edmonton.foodnotbombs.us/recipes/tossed_salad_for_100",
+					"title": "Tossed Salad for 100 — Food Not Bombs Edmonton",
+					"publishedDate": null,
+					"highlights": [
+						"Ingredients: \n\n- 8 heads lettuce, torn\n- 10 lbs. carrots, chopped\n- 3 heads celery, chopped\n- 6 lbs tomatoes, chopped\n- 2 heads red cabbage, shredded\n- 6 lbs. green pepper, chopped\n- 6 lbs. cucumbers, sliced"
+					]
+				},
+				{
+					"url": "http://cookingwithmaxanderma.blogspot.com/2007/06/crowd-coming-fix-this-giant-green-salad.html",
+					"title": "Cooking with Max & Erma: Crowd Coming? Fix This Giant Green Salad",
+					"publishedDate": "2007-06-25T00:00:00.000Z",
+					"highlights": [
+						"I’m sending along a copy of the recipe I have used several times when feeding a large group, such as your Rehearsal ... It is a basic tossed salad with the addition of sugared nuts and dried cranberries. I think it most useful as a guideline for how much to prepare. You know, you put out a giant bowl and say to yourself, how much stuff do I need to feed 100 people\n\nGiant Green Salad for a Crowd: \n\n5 bunches of romaine lettuce, torn 20 cups of torn leaf and iceberg lettuces 6 cups dried cranberries 3 sweet yellow peppers 3 sweet green peppers 3 sweet red peppers 4 cups walnut halves 3 tablespoons butter 1/4 cup sugar\n\nIn a heavy skillet, melt the butter. Add the walnuts and cook over medium h"
+					]
+				},
+				{
+					"url": "https://klapsakka.fi/vihrea-salaatti-50-hengelle-taydellinen-ohje-2025/",
+					"title": "Vihreä Salaatti 50 Hengelle - Täydellinen Ohje 2025 - KLAPSAKKA",
+					"publishedDate": "2025-12-21T09:49:16.000Z",
+					"highlights": [
+						"Perussalaattipohjaan tarvitset: 2-2,5 kg jäävuorisalaattia, 1,5 kg rucolaa tai lehtisalaattia, 1 kg kirsikkatomaatteja, 800g kurkkua ja 600g paprikaa. Kastikkeeseen varaa 300-400 ml oliiviöljyä, ... -150 ml balsamiviinietikkaa, suolaa ja pippuria maun"
+					]
+				},
+				{
+					"url": "https://elsaskantin.se/blog/sallad-for-20-personer.html",
+					"title": "Recept på stor sallad för 20 personer – enkelt och gott - Elsas Kantin",
+					"publishedDate": "2026-11-03T13:32:00.000Z",
+					"highlights": [
+						"- För 20 personer: räkna med ca 150-200 g blandad sallad per person om salladen är huvudrätt, eller 75-100 g per person som tillbehör.\n\n...\n\n## Recept: Stor grönsallad för 20 personer (grundrecept)\n\nDetta är en flexibel bas som går att komplettera med bönor, ost, grillad kyckling, lax eller rostade frön och nötter beroende på vad du vill servera till.\n\n| Ingrediens | Mängd (för 20 personer) |\n| --- | --- |\n| Blandad sallad (ruccola, babyspenat, lollo) | 3-4 kg |\n| Gurka | 4-6 st |\n| Tomater (mix av körsbär och skurna tomater) | 2-3 kg |\n| Riven morot | 1-1,5 kg |\n| Rödlök (strimlad) | 6-8 st |\n| Vita bönor eller kikärter (kokta) | 2-3 burkar eller 1,5-2 kg |\n| Olivolja | 2-3 dl |\n| Rödvinsvi"
+					]
+				}
+			],
+			"at": "2026-11-14T11:18:17.263Z",
+			"costUsd": 0.007
+		},
+		"outside:christmas-ham-with-swede-casserole": {
+			"content": {
+				"options": [
+					{
+						"title": "Lanttulaatikko (Finnish Swede Casserole)",
+						"kind": "recipe",
+						"ingredients": [
+							"1 kg swede (rutabaga)",
+							"60 g dry breadcrumbs (plus extra for topping)",
+							"200-250 ml cream",
+							"1 egg",
+							"2 tbsp dark syrup or 50 ml golden syrup",
+							"1 tsp salt",
+							"1/2 tsp ginger (ground)",
+							"1/4-1/2 tsp nutmeg",
+							"1/8-1/4 tsp white pepper",
+							"20-30 g butter"
+						],
+						"yield": "6-10 servings per batch",
+						"note": "Traditional Finnish side dish served alongside Christmas ham. Can be made ahead and reheated. For large quantities, these recipes scale by increasing ingredients proportionally."
+					},
+					{
+						"title": "Glazed Roast Ham",
+						"kind": "recipe",
+						"ingredients": [
+							"3-3.5 kg bone-in ham",
+							"100 g brown sugar",
+							"100 g honey",
+							"20 ml soy sauce",
+							"1 tbsp cornflour",
+							"1.5 tbsp glacé cherries (chopped)",
+							"Zest of 1 orange",
+							"3 tsp fresh thyme leaves",
+							"1/2 whole nutmeg (grated)"
+						],
+						"yield": "6 servings",
+						"note": "Glazed roast ham recipe; served alongside roasted swede. Preparation involves boiling ham, resting, and then glazing in the oven."
+					}
+				]
+			},
+			"grounding": [
+				{
+					"field": "options[0].title",
+					"citations": [
+						{
+							"url": "https://spintheglobeofficial.com/recipe/finnish-lanttulaatikko-swede-casserole",
+							"title": "Lanttulaatikko (Finnish Swede Casserole), a North Karelia, Finland recipe | Spin the Globe"
+						},
+						{
+							"url": "https://peckishpickle.com/swede-casserole/",
+							"title": "Swede Casserole - PECKISH PICKLE"
+						},
+						{
+							"url": "https://www.foreignersinfinland.fi/post/finnish-swede-casserole",
+							"title": "Finnish Swede casserole"
+						},
+						{
+							"url": "https://yumundi.com/en/recipes/lanttulaatikko-finnish-swede-casserole/",
+							"title": "Lanttulaatikko (Finnish Swede Casserole) Recipe | Yumundi"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[0].yield",
+					"citations": [
+						{
+							"url": "https://spintheglobeofficial.com/recipe/finnish-lanttulaatikko-swede-casserole",
+							"title": "Lanttulaatikko (Finnish Swede Casserole), a North Karelia, Finland recipe | Spin the Globe"
+						},
+						{
+							"url": "https://peckishpickle.com/swede-casserole/",
+							"title": "Swede Casserole - PECKISH PICKLE"
+						},
+						{
+							"url": "https://yumundi.com/en/recipes/lanttulaatikko-finnish-swede-casserole/",
+							"title": "Lanttulaatikko (Finnish Swede Casserole) Recipe | Yumundi"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[0].kind",
+					"citations": [
+						{
+							"url": "https://spintheglobeofficial.com/recipe/finnish-lanttulaatikko-swede-casserole",
+							"title": "Lanttulaatikko (Finnish Swede Casserole), a North Karelia, Finland recipe | Spin the Globe"
+						},
+						{
+							"url": "https://peckishpickle.com/swede-casserole/",
+							"title": "Swede Casserole - PECKISH PICKLE"
+						},
+						{
+							"url": "https://yumundi.com/en/recipes/lanttulaatikko-finnish-swede-casserole/",
+							"title": "Lanttulaatikko (Finnish Swede Casserole) Recipe | Yumundi"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[0].ingredients",
+					"citations": [
+						{
+							"url": "https://spintheglobeofficial.com/recipe/finnish-lanttulaatikko-swede-casserole",
+							"title": "Lanttulaatikko (Finnish Swede Casserole), a North Karelia, Finland recipe | Spin the Globe"
+						},
+						{
+							"url": "https://peckishpickle.com/swede-casserole/",
+							"title": "Swede Casserole - PECKISH PICKLE"
+						},
+						{
+							"url": "https://yumundi.com/en/recipes/lanttulaatikko-finnish-swede-casserole/",
+							"title": "Lanttulaatikko (Finnish Swede Casserole) Recipe | Yumundi"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[0].note",
+					"citations": [
+						{
+							"url": "https://spintheglobeofficial.com/recipe/finnish-lanttulaatikko-swede-casserole",
+							"title": "Lanttulaatikko (Finnish Swede Casserole), a North Karelia, Finland recipe | Spin the Globe"
+						},
+						{
+							"url": "https://yumundi.com/en/recipes/lanttulaatikko-finnish-swede-casserole/",
+							"title": "Lanttulaatikko (Finnish Swede Casserole) Recipe | Yumundi"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[1].note",
+					"citations": [
+						{
+							"url": "https://www.sbs.com.au/food/recipe/glazed-roast-ham-swede-and-festive-sides/dt4sgxvrr",
+							"title": "Glazed roast ham, roast whole swede and festive sides recipe | SBS Food"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[1].kind",
+					"citations": [
+						{
+							"url": "https://www.sbs.com.au/food/recipe/glazed-roast-ham-swede-and-festive-sides/dt4sgxvrr",
+							"title": "Glazed roast ham, roast whole swede and festive sides recipe | SBS Food"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[1].ingredients",
+					"citations": [
+						{
+							"url": "https://www.sbs.com.au/food/recipe/glazed-roast-ham-swede-and-festive-sides/dt4sgxvrr",
+							"title": "Glazed roast ham, roast whole swede and festive sides recipe | SBS Food"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[1].title",
+					"citations": [
+						{
+							"url": "https://www.sbs.com.au/food/recipe/glazed-roast-ham-swede-and-festive-sides/dt4sgxvrr",
+							"title": "Glazed roast ham, roast whole swede and festive sides recipe | SBS Food"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[1].yield",
+					"citations": [
+						{
+							"url": "https://www.sbs.com.au/food/recipe/glazed-roast-ham-swede-and-festive-sides/dt4sgxvrr",
+							"title": "Glazed roast ham, roast whole swede and festive sides recipe | SBS Food"
+						}
+					],
+					"confidence": "high"
+				}
+			],
+			"results": [
+				{
+					"url": "https://spintheglobeofficial.com/recipe/finnish-lanttulaatikko-swede-casserole",
+					"title": "Lanttulaatikko (Finnish Swede Casserole), a North Karelia, Finland recipe | Spin the Globe",
+					"publishedDate": null,
+					"highlights": [
+						"syrup, ginger and nutmeg, baked slowly until the top is patterned brown, the Finnish Christmas casserole served beside the ham.\n...\nand cut in chunks\n- 1 tsp salt, plus some for the cooking water\n- 60 g"
+					]
+				},
+				{
+					"url": "https://peckishpickle.com/swede-casserole/",
+					"title": "Swede Casserole - PECKISH PICKLE",
+					"publishedDate": "2021-12-22T18:53:29.000Z",
+					"highlights": [
+						"very distinct flavour, it’s slightly sweet with a hint of spices, usually from ... is traditionally served as a side dish to baked ham and/or fish. Heads-up though, boiling and cooking swedes may not be the most pleasant of"
+					]
+				},
+				{
+					"url": "https://www.sbs.com.au/food/recipe/glazed-roast-ham-swede-and-festive-sides/dt4sgxvrr",
+					"title": "Glazed roast ham, roast whole swede and festive sides recipe | SBS Food",
+					"publishedDate": "2025-11-27T00:32:06.000Z",
+					"highlights": [
+						"1. Start with the ham by preheating oven to 200°C.\n2. Place the ham on a large baking tray and cover tightly with a sheet of kitchen foil before placing in the pre-heated oven and cooking for 3 hours.\n\n...\n\nOnce cooked, remove the ham and allow it to rest in a warm place for 1 hour. Reduce oven to 180°C.\n4. Meanwhile, towards the end of the ham cooking time, begin the braised cabbage: Thinly slice the red cabbage using a sharp knife or a mandolin; it should be almost wafer thin and even, so it cooks at the same time.\n5. Place a large oven proof casserole dish on a medium heat and add the oil, then go in with the spices: star anise, cinnamon and mixed spice. Cook these off for a minute to rel"
+					]
+				},
+				{
+					"url": "https://www.foreignersinfinland.fi/post/finnish-swede-casserole",
+					"title": "Finnish Swede casserole",
+					"publishedDate": "2019-12-10T09:03:45.000Z",
+					"highlights": [
+						", one of the most loved traditional Christmas dishes from Finland. Made from mashed ... , it is slightly sweet and spiced with ginger, nutmeg, white pepper, and cinnamon, and usually served with other"
+					]
+				},
+				{
+					"url": "https://yumundi.com/en/recipes/lanttulaatikko-finnish-swede-casserole/",
+					"title": "Lanttulaatikko (Finnish Swede Casserole) Recipe | Yumundi",
+					"publishedDate": null,
+					"highlights": [
+						"them soak for 10 minutes.\n4. Mix the soaked breadcrumbs, mashed ... , egg, syrup, nutmeg, pepper and salt until blended. Spoon the mixture into the dish and smooth the top.\n5. Sprinkle with the 3 tbsp ... for 55 to 60 minutes, until set and browned on"
+					]
+				}
+			],
+			"at": "2026-11-14T11:18:21.461Z",
+			"costUsd": 0.007
 		}
 	}
 }
