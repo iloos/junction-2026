@@ -2,7 +2,9 @@ import type { Plan, ToolName, ToolOutput } from '$lib/core/contracts';
 import { ClarifyField, type Task, type TaskState } from '$lib/core/contracts/task';
 import type { CallContext, Ports, TaskStore, ToolHandlers } from '$lib/core/ports';
 import { runGoal } from '$lib/server/agent';
+import { classifyGoal } from '$lib/server/agent/classify';
 import type { ContextSource } from '$lib/server/agent/context';
+import { withoutKitchen } from '$lib/server/agent/intent';
 import {
 	scriptedPlanner,
 	type AgentRun,
@@ -196,8 +198,22 @@ export async function* runChatTurn(
 		task = blankTask(deps, text);
 		expected = null;
 	}
+	// Words that are a request of their own (a product with an amount, or an event brief) start a new task, even while
+	// a question is open: they are never squeezed into the open slot, and their quantities are never dropped.
+	const words = input.text?.trim();
+	const reading = words ? classifyGoal(withoutKitchen(words), deps.today) : null;
+	const newRequest =
+		expected !== null &&
+		!!reading &&
+		((reading.kind === 'order' && reading.amount) || reading.kind === 'event');
+	if (newRequest) {
+		task = { ...blankTask(deps, words!), kitchenId: task.kitchenId };
+		expected = null;
+	}
 	/** The task existed before this turn's words (a follow-up), rather than being started by them. */
-	const followUp = !!input.taskId || !!input.planId;
+	const followUp = expected !== null || (!!input.planId && !newRequest);
+	/** A question or an authority request while a clarify is open is its own goal, not the answer. */
+	const ownGoal = reading?.kind === 'read' || reading?.kind === 'authority';
 	const principal = buildRunPrincipal({
 		initiator: deps.ctx,
 		agentRunId: newAgentRunId(),
@@ -241,7 +257,7 @@ export async function* runChatTurn(
 		let slots: Slots = { ...(task.slots as Slots) };
 		const answer =
 			input.answer ??
-			(followUp && task.pending.kind === 'clarify' && input.text
+			(followUp && task.pending.kind === 'clarify' && input.text && !ownGoal
 				? { field: task.pending.field, value: input.text }
 				: undefined);
 		if (answer) {
@@ -335,25 +351,8 @@ export async function* runChatTurn(
 		task = p.task;
 		canContinue = p.canContinue;
 		const ledger = read.value.ledger;
-		if (task.pending.kind === 'decision') {
-			const pd = task.pending;
-			const plan = read.value.plans.find((x) => x.id === pd.planId)!;
-			const approval = read.value.approvals.find((x) => x.id === pd.approvalId) ?? null;
-			yield {
-				type: 'decision',
-				taskId: task.id,
-				approvalId: pd.approvalId,
-				planId: pd.planId,
-				planVersion: pd.planVersion,
-				groups: pd.groups,
-				approvalUrl: pd.approvalUrl,
-				decisions: decisionsOf(plan, approval),
-				names: Object.fromEntries(
-					plan.lines.map((l) => [l.productId, l.productName ?? l.productId])
-				),
-				due: decisionsDue(plan, approval)
-			};
-		}
+		const card = decisionEvent(task, read.value);
+		if (card) yield card;
 		const summary = ledgerSummary(ledger);
 		yield { type: 'ledger', taskId: task.id, ledger, summary };
 		text = refusal ? `${refusal} ${summary}` : summary;
@@ -385,6 +384,94 @@ export async function* runChatTurn(
 		return;
 	}
 	yield { type: 'done', taskId: task.id, state: task.state, text: text.slice(0, 600), canContinue };
+}
+
+type TaskRead =
+	Awaited<ReturnType<typeof readTask>> extends infer R
+		? R extends { ok: true; value: infer V }
+			? V
+			: never
+		: never;
+
+/** The decision card for a task's pending decision, with the Kitchen page's own grouping, names and due time. */
+function decisionEvent(task: Task, read: TaskRead): ChatEvent | null {
+	if (task.pending.kind !== 'decision') return null;
+	const pd = task.pending;
+	const plan = read.plans.find((x) => x.id === pd.planId);
+	if (!plan) return null;
+	const approval = read.approvals.find((x) => x.id === pd.approvalId) ?? null;
+	return {
+		type: 'decision',
+		taskId: task.id,
+		approvalId: pd.approvalId,
+		planId: pd.planId,
+		planVersion: pd.planVersion,
+		groups: pd.groups,
+		approvalUrl: pd.approvalUrl,
+		decisions: decisionsOf(plan, approval),
+		names: Object.fromEntries(plan.lines.map((l) => [l.productId, l.productName ?? l.productId])),
+		due: decisionsDue(plan, approval)
+	};
+}
+
+/**
+ * A task as it stands now, as the lines a turn ends with (clarify | decision, ledger, done), without running
+ * anything: the dock calls it when it opens on a remembered task, so its cards come from the plans as they are, not
+ * from what the last turn saw.
+ */
+export async function taskView(taskId: string, deps: ChatDeps): Promise<ChatEvent[]> {
+	const store = storeOf(deps.ports);
+	const t = await store.get(deps.workspaceId, taskId);
+	if (!t)
+		return [
+			{ type: 'done', taskId, state: 'failed', text: `No task ${taskId} here.`, canContinue: false }
+		];
+	const out: ChatEvent[] = [];
+	if (t.pending.kind === 'clarify') {
+		const q = t.pending;
+		out.push({ type: 'clarify', taskId, field: q.field, question: q.question, options: q.options });
+		out.push({ type: 'done', taskId, state: t.state, text: q.question, canContinue: false });
+		return out;
+	}
+	if (!t.plans.length)
+		return [
+			{
+				type: 'done',
+				taskId,
+				state: t.state,
+				text: 'Nothing is planned on this task yet.',
+				canContinue: false
+			}
+		];
+	const read = await readTask(
+		deps.ctx,
+		deps.ports,
+		deps.handlers,
+		t.plans.map((p) => p.planId)
+	);
+	if (!read.ok)
+		return [
+			{
+				type: 'done',
+				taskId,
+				state: t.state,
+				text: "I can't see this task's plan from here.",
+				canContinue: false
+			}
+		];
+	const p = project(t, read.value);
+	const card = decisionEvent(p.task, read.value);
+	if (card) out.push(card);
+	const summary = ledgerSummary(read.value.ledger);
+	out.push({ type: 'ledger', taskId, ledger: read.value.ledger, summary });
+	out.push({
+		type: 'done',
+		taskId,
+		state: p.task.state,
+		text: summary,
+		canContinue: p.canContinue
+	});
+	return out;
 }
 
 /** Collects a turn's lines (tests, callers without streaming). */

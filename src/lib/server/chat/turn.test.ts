@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { scenarioDate } from '$lib/core/scenario';
 import { trialWorkspace } from '../agent/trial-harness';
 import { FIDELITY_NOW } from '../evals/fidelity';
-import { chatTurn, readAnswer } from './turn';
+import { chatTurn, readAnswer, taskView } from './turn';
 
 async function setup(now = FIDELITY_NOW) {
 	const w = await trialWorkspace();
@@ -238,6 +238,68 @@ describe('suite: chat turns · a question about the plan the screen has open', (
 			});
 			const bogus = await chatTurn({ planId: 'pl-nope', text: 'status' }, deps);
 			expect(bogus.at(-1)).toMatchObject({ text: "I can't see that plan from here." });
+		}
+	);
+});
+
+describe('suite: chat turns · prod bug bash', () => {
+	it(
+		'#8 a new request typed while a question is open starts a new task and keeps its amount',
+		{ timeout: 120_000 },
+		async () => {
+			const { w, deps } = await setup();
+			const t1 = await chatTurn({ text: 'I need lactose-free butter for tomorrow' }, deps);
+			const first = t1[0].taskId;
+			expect(t1[0]).toMatchObject({ type: 'clarify', field: 'qty' });
+
+			// A question while it is open is not the answer.
+			const q = await chatTurn({ taskId: first, text: 'What needs my decision?' }, deps);
+			expect(q.every((e) => e.taskId === first)).toBe(true);
+			const kept = await w.env.ports.tasks!.get(w.env.workspaceId, first);
+			expect(kept?.slots).toEqual({});
+
+			const t2 = await chatTurn({ taskId: first, text: 'Order 60 kg butter for Friday' }, deps);
+			const second = t2.at(-1)!.taskId;
+			expect(second).not.toBe(first);
+			const ledger = t2.find((e) => e.type === 'ledger');
+			if (ledger?.type !== 'ledger') throw new Error('no ledger');
+			expect(ledger.ledger.needs.map((n) => n.required)).toEqual([{ value: 60, unit: 'kg' }]);
+			const d = t2.find((e) => e.type === 'decision');
+			if (d?.type !== 'decision') throw new Error('no decision');
+			// The deep link names the kitchen, the plan and its version, as the Kitchen screen reads them.
+			expect(d.approvalUrl).toBe(`/?kitchen=k-hotel&plan=${d.planId}&v=${d.planVersion}`);
+			// The first task still waits for its amount, untouched.
+			const old = await w.env.ports.tasks!.get(w.env.workspaceId, first);
+			expect(old).toMatchObject({ state: 'awaiting_clarification', slots: {} });
+		}
+	);
+
+	it(
+		'taskView shows the cards as the plans are now: an approval made elsewhere clears the decision',
+		{ timeout: 120_000 },
+		async () => {
+			const { w, chef, deps } = await setup();
+			const t = await chatTurn({ text: 'Order 60 kg butter for Friday' }, deps);
+			const d = t.find((e) => e.type === 'decision');
+			if (d?.type !== 'decision') throw new Error('no decision');
+			expect((await taskView(d.taskId, deps)).map((e) => e.type)).toEqual([
+				'decision',
+				'ledger',
+				'done'
+			]);
+			const v = await w.handlers.get_plan(chef, { planId: d.planId });
+			if (!v.ok || !v.value.approval) throw new Error('no approval');
+			const a = v.value.approval;
+			await w.handlers.approve(chef, {
+				approvalId: a.id,
+				planVersion: a.planVersion,
+				termsHash: a.termsHash,
+				decision: 'grant'
+			});
+			const after = await taskView(d.taskId, deps);
+			expect(after.map((e) => e.type)).toEqual(['ledger', 'done']);
+			expect(after.at(-1)).toMatchObject({ canContinue: true });
+			expect((await taskView('task-nope', { ...deps })).at(-1)).toMatchObject({ state: 'failed' });
 		}
 	);
 });

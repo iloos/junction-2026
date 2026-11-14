@@ -25,12 +25,15 @@
 		open?: boolean;
 		/** Desktop: always-open column (agent page). Unpinned, it opens and closes like the phone sheet (Kitchen). */
 		pinned?: boolean;
+		/** The plan the screen has open: a turn without a task joins the task that holds it. */
+		planId?: string;
 	}
-	let { kitchenId = 'k-hotel', open = $bindable(false), pinned = true }: Props = $props();
+	let { kitchenId = 'k-hotel', open = $bindable(false), pinned = true, planId }: Props = $props();
 
 	type Entry = { kind: 'chef'; text: string } | { kind: 'event'; e: ChatEvent };
-	const KEY = 'mandate.chat.task';
-	let taskId = $state<string | null>(read());
+	/** The dock's task is remembered per kitchen for this browser tab. */
+	const key = () => `mandate.chat.task.${kitchenId}`;
+	let taskId = $state<string | null>(null);
 	let entries = $state.raw<Entry[]>([]);
 	let text = $state('');
 	let busy = $state(false);
@@ -38,17 +41,48 @@
 
 	function read(): string | null {
 		try {
-			return typeof sessionStorage === 'undefined' ? null : sessionStorage.getItem(KEY);
+			return typeof sessionStorage === 'undefined' ? null : sessionStorage.getItem(key());
 		} catch {
 			return null;
 		}
 	}
 	function remember(id: string | null) {
 		try {
-			if (id) sessionStorage.setItem(KEY, id);
-			else sessionStorage.removeItem(KEY);
+			if (id) sessionStorage.setItem(key(), id);
+			else sessionStorage.removeItem(key());
 		} catch {
 			/* storage blocked: the task lives for this page only */
+		}
+	}
+
+	/**
+	 * On opening (and on a kitchen switch): the remembered task's cards as they are now, read from its plans, so an
+	 * approval made on the Kitchen screen meanwhile shows up and an old card never lingers.
+	 */
+	let loadedFor: string | null = null;
+	$effect(() => {
+		const k = kitchenId;
+		if (!open && !pinned) return;
+		if (loadedFor === k) return;
+		loadedFor = k;
+		taskId = read();
+		entries = [];
+		if (taskId) void restore(taskId);
+	});
+
+	async function restore(id: string) {
+		try {
+			const res = await fetch(`/api/chat/task?id=${encodeURIComponent(id)}`);
+			if (!res.ok) return;
+			const { events } = (await res.json()) as { events: ChatEvent[] };
+			const done = events.at(-1);
+			if (done?.type === 'done' && done.state === 'failed') {
+				newTask();
+				return;
+			}
+			if (taskId === id) entries = events.map((e) => ({ kind: 'event', e }));
+		} catch {
+			/* offline: the next turn reads the task */
 		}
 	}
 
@@ -74,7 +108,11 @@
 			const res = await fetch('/api/chat/turn', {
 				method: 'POST',
 				headers: { 'content-type': 'application/json' },
-				body: JSON.stringify({ ...body, ...(taskId ? { taskId } : {}), kitchenId })
+				body: JSON.stringify({
+					...body,
+					...(taskId ? { taskId } : planId ? { planId } : {}),
+					kitchenId
+				})
 			});
 			if (!res.ok || !res.body) {
 				const j = await res.json().catch(() => null);
@@ -98,6 +136,8 @@
 						continue;
 					}
 					if (e.taskId && e.taskId !== taskId) {
+						// The words started another task: the old task's cards leave with it.
+						if (taskId) entries = entries.filter((x) => x.kind === 'chef').slice(-1);
 						taskId = e.taskId;
 						remember(taskId);
 					}
