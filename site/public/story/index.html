@@ -200,6 +200,7 @@ section.s .sub.big { font-size: clamp(20px, 1.8vw, 24px); line-height: 1.35; col
 .pane { display: flex; flex-direction: column; gap: 12px; padding: 20px; border: 1px solid var(--rule); border-radius: 16px; background: var(--sheet); }
 .ph { font-size: 13.5px; font-weight: 600; color: var(--ink-3); }
 .msg { padding: 12px 14px; border-radius: 12px; background: var(--well); font-size: 15px; line-height: 1.5; color: var(--ink); }
+.msg .rl { display: block; font-size: 12.5px; color: var(--ink-3); margin-bottom: 2px; }
 .msg.me { margin-left: 24px; background: color-mix(in oklab, var(--accent) 12%, var(--well)); }
 .pfoot { margin: auto 0 0; padding-top: 10px; border-top: 1px solid var(--rule); font-size: 13.5px; color: var(--ink-3); }
 .plines { display: grid; }
@@ -416,7 +417,7 @@ section.s .sub.big { font-size: clamp(20px, 1.8vw, 24px); line-height: 1.35; col
 		<div class="pane">
 			<div class="ph">The ask</div>
 			<div class="msg me" data-s="plan.ask">Plan the Christmas buffet for 140 on Saturday.</div>
-			<div class="msg" id="p-reply" data-s="plan.reply">For Thu 10 Dec: 92.82 kg + 10.5 l needed; 84.42 kg + 10.5 l planned, not yet submitted; 8.4 kg unresolved; no order placed yet; 3 decisions wait for you.</div>
+			<div class="msg"><span class="rl">The agent's reply begins:</span> <span id="p-reply">Delivery is on Thu 10 Dec and 3 decisions wait. …</span></div>
 			<details class="runbox"><summary id="p-runsum">5 steps: Understand → Plan the event → Find substitutes ×2 → Explain</summary>
 			<ol class="steps-run" id="p-steps">
 				<li><b>Understand</b><span>An event brief.</span></li>
@@ -720,7 +721,8 @@ function fillPlan(d) {
 	const pl = d && d.plan;
 	if (!pl) return;
 	const H = (x) => String(x).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
-	if (pl.reply) { const m = String(pl.reply).match(/^.*?[.;](\s|$)/); $('p-reply').textContent = m ? m[0].trim().replace(/;$/, '.') : pl.reply; }
+	// An excerpt of the model's reply, verbatim to its first full stop (91: excerpt, labelled, never re-recorded to suit).
+	if (pl.reply) { const m = String(pl.reply).match(/^.*?\.(?=\s|$)/); $('p-reply').textContent = m && m[0].length < String(pl.reply).length ? m[0] + ' …' : pl.reply; }
 	const TOOL = { understand: 'Understand', plan_event: 'Plan the event', find_substitutes: 'Find substitutes', explain: 'Explain' };
 	if (Array.isArray(pl.steps)) {
 		const names = [];
