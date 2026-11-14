@@ -91,6 +91,8 @@
 	let fresh = $state(false);
 	let text = $state('');
 	let busy = $state(false);
+	/** The working turn's own words for what it is doing ("Writing a 3-course menu for 20, about 15 s"). */
+	let status = $state<string | null>(null);
 	let error = $state<string | null>(null);
 
 	/** The page plan's name, for the header before the plan has a task. */
@@ -399,6 +401,7 @@
 	async function turn(body: ChatTurnInput, said?: string) {
 		if (busy) return;
 		busy = true;
+		status = null;
 		error = null;
 		if (said) entries = [...entries, { kind: 'chef', text: said, at: Date.now() }];
 		try {
@@ -432,6 +435,11 @@
 					const e = JSON.parse(line) as ChatEvent | { type: 'error'; error: { message: string } };
 					if (e.type === 'error') {
 						error = e.error.message;
+						continue;
+					}
+					// What the turn is doing now: shown while it works, not kept in the transcript.
+					if (e.type === 'status') {
+						status = e.text;
 						continue;
 					}
 					if (e.taskId && e.taskId !== taskId) {
@@ -763,7 +771,7 @@
 								</a>
 							{/each}
 							<p class="text-meta text-ink-3">
-								Only a chef approves, on the page. Then continue here.
+								This decision is on the page: approve it on its card there, then continue here.
 							</p>
 						</li>
 					{/if}
@@ -817,7 +825,7 @@
 			{/if}
 		{/each}
 		{#if busy}<li class="text-meta text-ink-3" role="status">
-				Working · step {stepsThisTurn + 1}…
+				Working · {status ?? `step ${stepsThisTurn + 1}`}…
 			</li>{/if}
 		{#if error}<li class="text-out">{error}</li>{/if}
 	</ol>

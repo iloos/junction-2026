@@ -75,6 +75,12 @@ export type ChatEvent =
 			reviewUrl: string;
 	  }
 	| {
+			/** What the turn is doing now, in words ("Writing a 3-course menu for 20, about 15 s"); not a message. */
+			type: 'status';
+			taskId: string;
+			text: string;
+	  }
+	| {
 			type: 'done';
 			taskId: string;
 			/** The task's title for the dock header ("Christmas dinner for 50", "Order for Wed 9 Dec"). */

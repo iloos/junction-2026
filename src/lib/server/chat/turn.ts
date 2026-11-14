@@ -85,6 +85,14 @@ export interface ChatDeps {
 	models?: { understand?: Llm | null; explain?: Llm | null; plan?: Llm | null };
 	/** Reads a dish with a count ("10000 bolognese pasta"); by default ./dish. */
 	dish?: InterpretDish;
+	/**
+	 * The chef accepts the menu revision the chat showed (their "plan it" after its card is their review, D13). Set by
+	 * the route as the signed-in chef; absent, an unreviewed menu is sent to its review page.
+	 */
+	acceptMenu?: (
+		id: string,
+		revision: number
+	) => Promise<{ ok: boolean; error?: { message: string } }>;
 }
 
 /**
@@ -418,9 +426,6 @@ async function* turnLines(
 			return;
 		}
 	}
-	// "Go ahead", "plan it", "jatka" on a task is Continue (for an event task: plan the reviewed menu).
-	if ((input.taskId || input.planId) && input.text && GO_AHEAD.test(input.text.trim()))
-		input = { ...input, text: undefined, continue: true };
 	const kinds = [input.text !== undefined, input.answer !== undefined, input.continue === true];
 	if (kinds.filter(Boolean).length !== 1) {
 		yield fail(input.taskId ?? '', 'Send one of text, answer or continue.');
@@ -442,11 +447,14 @@ async function* turnLines(
 	}
 	// The plan on screen wins over a remembered task that has nothing of its own (no plan, no open question): the
 	// dock answers for what the chef is looking at.
+	// Only a task with nothing of its own gives way: no plan, no question, no menu, not an event in progress.
 	const idle =
 		!!remembered &&
 		!!input.planId &&
 		!remembered.plans.length &&
-		remembered.pending.kind !== 'clarify';
+		remembered.pending.kind === 'none' &&
+		!remembered.proposal &&
+		remembered.requirement.kind !== 'event';
 	if (remembered && !idle) {
 		task = remembered;
 		expected = remembered.version;
@@ -491,6 +499,17 @@ async function* turnLines(
 		if (picked)
 			input = { ...input, text: undefined, answer: { field: task.pending.field, value: picked } };
 	}
+	// A yes to the task's offered next action ("go ahead", "great lets do it", "jatka"): that action, Continue (for an
+	// event task: plan the menu it showed). While a question is open, a yes is an answer to it instead.
+	if (
+		expected !== null &&
+		input.text?.trim() &&
+		task.pending.kind !== 'clarify' &&
+		(task.plans.length || task.proposal) &&
+		task.state !== 'cancelled' &&
+		GO_AHEAD.test(input.text.trim())
+	)
+		input = { ...input, text: undefined, continue: true };
 	// The answer to "10,000 portions of pasta bolognese?": plan the dish as an event, or buy that many packs.
 	const dishAsked =
 		expected !== null &&
@@ -744,6 +763,8 @@ async function* turnLines(
 		words &&
 		!answering &&
 		!dish &&
+		// A task with a plan keeps the conversation in its context: its standing answers unclear words.
+		!(expected !== null && task.plans.length) &&
 		(u?.kind === 'other' || (!u && reading?.kind === 'other') || !/[\p{L}\d]/u.test(words)) &&
 		task.pending.kind !== 'clarify'
 	) {
@@ -872,6 +893,8 @@ async function* turnLines(
 			]
 		};
 	} else if (eventFlow) {
+		const say = eventStatus(task, input, words, deps.today);
+		if (say) yield { type: 'status', taskId: task.id, text: say };
 		const r = await eventTurn(task, input, words, agentCtx, deps);
 		steps = r.steps;
 		clarify = r.clarify;
@@ -913,6 +936,7 @@ async function* turnLines(
 		) as TaskStore;
 		const cancelled = async () =>
 			(await rawStore.get(deps.workspaceId, task.id))?.state === 'cancelled';
+		yield { type: 'status', taskId: task.id, text: 'Ordering what may be bought now' };
 		steps = await continueTask(
 			task,
 			{
@@ -992,6 +1016,11 @@ async function* turnLines(
 		// "Cheapest", "lowest carbon", "prefer Finnish": this task's ranking preference (its own words first, then the
 		// requirement's), for its searches, substitutes and routine choice only.
 		pref = readPreference(words ?? '') ?? readPreference(String(task.requirement.goal ?? ''));
+		yield {
+			type: 'status',
+			taskId: task.id,
+			text: `Looking up ${goals.join(', ').slice(0, 80)} in Valio's catalogue`
+		};
 		for (const g of goals) {
 			const p =
 				goals.length > 1
@@ -1126,7 +1155,8 @@ async function* turnLines(
 		if (task.pending.kind === 'clarify') task.pending = { kind: 'none' };
 		const p = project(task, read.value);
 		task = p.task;
-		canContinue = p.canContinue;
+		// A cancelled task is terminal: nothing to continue, whatever its plans still hold.
+		canContinue = task.state === 'cancelled' ? false : p.canContinue;
 		const ledger = read.value.ledger;
 		const card = decisionEvent(task, read.value);
 		const sameDecision =
@@ -1170,7 +1200,12 @@ async function* turnLines(
 						: `template sentence${ex.rejected ? ` (model reply not used: ${ex.rejected})` : ''}`
 			};
 		}
+		// Words the agent could not place on a task that has a plan: the plan's standing answers them, with a way to
+		// say something new (never "not recognised" after a reading, never the summary twice).
+		const unread = !!refusal?.startsWith('I did not recognise');
+		if (unread) refusal = null;
 		text = refusal ? `${refusal} ${summary}` : answer;
+		if (unread) text = `${text} If you meant something new, tell me what you need.`;
 		// Which items wait for the chef, and why: the decision's own title, products and reason.
 		if (card?.type === 'decision' && !continued && ledger.decisionsLeft) {
 			const waits = card.decisions.slice(0, 2).map((d) => {
@@ -1184,7 +1219,9 @@ async function* turnLines(
 			text = `${text} Waiting on you: ${waits.join(' ')}`;
 		}
 		if (continued === 'ordered') text = orderedWords(read.value.plans, ledger.decisionsLeft);
-		if (continued === 'nothing')
+		if (task.state === 'cancelled')
+			text = `This task was cancelled, so nothing more is ordered for it.${ledger.receiptIds.length ? ` ${plural(ledger.receiptIds.length, 'order')} placed before stay as they are.` : ''}`;
+		else if (continued === 'nothing')
 			text = ledger.decisionsLeft
 				? `Nothing new to order: ${ledger.decisionsLeft} ${ledger.decisionsLeft === 1 ? 'decision is' : 'decisions are'} still waiting for you.`
 				: 'Nothing new to order.';
@@ -1363,6 +1400,36 @@ export async function taskView(taskId: string, deps: ChatDeps): Promise<ChatEven
 
 const CANCEL =
 	/^(?:please\s+|ok\s+)?(?:cancel|forget|scrap|drop)\b(?:\s+(?:it|that|this|the order|everything))?\s*[.!]*$|^(?:peru|peruuta|unohda)\b/i;
+/**
+ * What the event step is about to do, in words, for the dock while it works: writing the menu when the brief is
+ * complete ("Writing a gluten-free 3-course menu for 20, about 15 s"), planning it once proposed, else nothing (a
+ * question comes back at once).
+ */
+function eventStatus(
+	task: Task,
+	input: ChatTurnInput,
+	words: string | undefined,
+	today: string
+): string | null {
+	if (task.proposal) return "Planning the menu: matching each ingredient to Valio's catalogue";
+	const slots = { ...(task.slots as Record<string, unknown>) };
+	const open = task.pending.kind === 'clarify' ? task.pending.field : null;
+	const field = (input.answer?.field ?? (words ? open : null)) as BriefField | null;
+	if (field && BRIEF_FIELDS.includes(field)) {
+		const v = briefValue(field, input.answer ? input.answer.value : words);
+		if (v !== null) slots[field] = v;
+	}
+	const goal = String(task.requirement.brief ?? task.requirement.goal ?? '');
+	const draft = applyBriefAnswers(
+		draftBrief(goal, today),
+		briefAnswers({ ...task, slots: slots as Task['slots'] }),
+		today
+	);
+	if (nextQuestion(draft, today)) return null;
+	const diet = (draft.dietary ?? []).map((d) => d.split(':')[0]).join(', ');
+	return `Writing a ${diet ? `${diet} ` : ''}${draft.courses ? `${draft.courses}-course ` : ''}menu for ${draft.guests ?? 'your guests'}, about 15 s`;
+}
+
 /** Whether typed words can be an answer for a field: a day for a date, a number for an amount, a unit word. */
 function answerFits(field: ClarifyField, words: string, today: string): boolean {
 	if (field === 'date') return !!findDate(words, today)?.iso;
@@ -1551,8 +1618,12 @@ function briefValue(field: BriefField, raw: unknown): BriefAnswer['value'] | nul
 }
 
 /** Words that mean Continue on a task in hand. */
+/**
+ * A yes to the task's offered next action (Continue, or "plan it" for a reviewed menu): the action itself, never a
+ * new request. Words that add anything else are read as their own goal.
+ */
 const GO_AHEAD =
-	/^(ok(ay)?[,!.]?\s+|yes[,!.]?\s+|kyllä[,!.]?\s+)?(go ahead|continue|proceed|order it|do it|plan it|plan the menu|jatka|tilaa se|suunnittele)[.!]?$/i;
+	/^(?:(?:ok(?:ay)?|yes|yeah|yep|sure|great|perfect|good|fine|kyllä|joo|selvä|hyvä)[,!.]?\s*)*(?:go ahead|continue|proceed|order it|do it|let'?s do it|lets do it|let'?s go|sounds good|plan it|plan the menu|jatka|tilaa se|suunnittele|tehdään)?[.!]*$/i;
 
 /** "Plan it", "go ahead", "suunnittele": plan the reviewed menu. */
 const PLAN_IT = /\b(plan( it| the menu)?|go ahead|order it|let'?s go|suunnittele|tee se|tilaa)\b/i;
@@ -1605,11 +1676,28 @@ async function eventTurn(
 	// A menu already proposed: plan it when asked, else say where it is reviewed.
 	if (task.proposal) {
 		if (input.continue || (words && PLAN_IT.test(words))) {
-			const r = await call(
+			let r = await call(
 				'plan_event',
 				{ kitchenId: task.kitchenId, proposal: task.proposal },
 				'plan the reviewed menu'
 			);
+			// The chef said to plan the menu they were shown: that is their review of this revision.
+			if (!r.ok && /review/i.test(r.error.message) && deps.acceptMenu) {
+				const a = await deps.acceptMenu(task.proposal.id, task.proposal.revision);
+				if (a.ok)
+					r = await call(
+						'plan_event',
+						{ kitchenId: task.kitchenId, proposal: task.proposal },
+						'plan the menu the chef accepted in the chat'
+					);
+				else
+					return {
+						steps,
+						clarify: null,
+						menu: null,
+						say: `The menu can't be accepted yet: ${a.error?.message ?? 'its review refused it'}. Open it to fix that, then say "plan it".`
+					};
+			}
 			if (r.ok)
 				return {
 					steps,
@@ -1762,10 +1850,11 @@ async function scrub(text: string, deps: ChatDeps): Promise<string> {
 	return out;
 }
 
-/** Collects a turn's lines (tests, callers without streaming). */
+/** Collects a turn's lines (tests, callers without streaming), without its passing status lines. */
 export async function chatTurn(input: ChatTurnInput, deps: ChatDeps): Promise<ChatEvent[]> {
 	const out: ChatEvent[] = [];
-	for await (const e of runChatTurn(input, deps)) out.push(e);
+	// Status lines are what a turn is doing while it streams; a collected turn keeps only what it said.
+	for await (const e of runChatTurn(input, deps)) if (e.type !== 'status') out.push(e);
 	return out;
 }
 
