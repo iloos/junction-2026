@@ -12,9 +12,11 @@ import type { ToolName } from '$lib/core/contracts';
  * 4. a need with unresolved quantity (no line covers it) → edit the need or find a substitute by hand;
  * 5. ordered lines awaiting the supplier → wait for the supplier;
  * 6. otherwise every need is supplier confirmed (or the plan has nothing open) → nothing to do.
+ *
+ * Kinds use the action names of core's next-action read model where they meet ('change_date').
  */
 export type NextKind =
-	'substitute' | 'date' | 'commit' | 'chef' | 'resolve' | 'await_supplier' | 'done';
+	'substitute' | 'change_date' | 'commit' | 'chef' | 'resolve' | 'await_supplier' | 'done';
 
 export interface NextAction {
 	kind: NextKind;
@@ -96,7 +98,7 @@ export function nextActionFor(plan: NextPlan, o: { approvalPending?: boolean } =
 		};
 	if (late.length)
 		return {
-			kind: 'date',
+			kind: 'change_date',
 			text: `The cut-off for ${plan.deliverBy ? `delivery on ${plan.deliverBy}` : 'this delivery date'} has passed for ${plural(late.length, 'line')}: pick a later delivery date (the product is not the problem).`,
 			needsChef: false,
 			counts

@@ -144,7 +144,7 @@ describe('one nextActionFor(plan) (review §ranked 4)', () => {
 		const p = plan(['unorderable'], { deliverBy: '2026-12-08' } as Partial<Plan>);
 		(p.lines[0] as unknown as { reasons: string[] }).reasons = ['cutoff_passed'];
 		const n = nextActionFor(p);
-		expect(n.kind).toBe('date');
+		expect(n.kind).toBe('change_date');
 		expect(n.tool).toBeUndefined();
 		expect(n.text).toMatch(/cut-off .* has passed/);
 	});
