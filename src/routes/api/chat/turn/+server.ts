@@ -20,7 +20,7 @@ const bad = (message: string) =>
 	json({ error: { code: 'INVALID_INPUT', message, retryable: false } }, 400);
 
 /**
- * POST /api/chat/turn `{taskId?, kitchenId?, text? | answer:{field,value} | continue:true}` from the Kitchen screen
+ * POST /api/chat/turn `{taskId?, planId?, kitchenId?, text? | answer:{field,value} | continue:true}` from the Kitchen screen
  * (visitor cookie, D9: the browser's own workspace, as its chef). NDJSON, one ChatEvent per line: step* → clarify |
  * decision? → ledger? → done. The agent acts under the chef's context ∩ its own scopes, so it never approves; the
  * task is written back at the end of the turn, so a reconnect reads the task rather than replaying the stream.
@@ -35,6 +35,8 @@ export const POST: RequestHandler = async (event) => {
 	const input: ChatTurnInput = {};
 	if (typeof body.taskId === 'string' && /^task-[\w-]{1,60}$/.test(body.taskId))
 		input.taskId = body.taskId;
+	if (typeof body.planId === 'string' && /^[\w:.-]{1,128}$/.test(body.planId))
+		input.planId = body.planId;
 	if (typeof body.text === 'string') {
 		const text = body.text.trim();
 		if (!text || text.length > 500) return bad('text: 1–500 characters');

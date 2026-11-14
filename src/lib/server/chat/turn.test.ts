@@ -186,3 +186,58 @@ describe('suite: chat turns · an edit after the approval', () => {
 		}
 	);
 });
+
+describe('suite: chat turns · a question about the plan the screen has open', () => {
+	it(
+		'"What still needs my decision?" with planId answers from that plan, planned and ordered',
+		{ timeout: 120_000 },
+		async () => {
+			const { w, chef, deps } = await setup();
+			const planned = await w.handlers.plan_event(chef, {
+				kitchenId: 'k-hotel',
+				eventId: 'event-xmas-140'
+			});
+			if (!planned.ok) throw new Error(planned.error.message);
+			const plan = planned.value.plan;
+			const committed = await w.handlers.commit_order(chef, {
+				planId: plan.id,
+				version: plan.version,
+				idempotencyKey: 'chat-plan-test'
+			});
+			expect(committed.ok).toBe(true);
+			const opsBefore = w.ops.length;
+
+			const out = await chatTurn({ planId: plan.id, text: 'What still needs my decision?' }, deps);
+			const done = out.at(-1);
+			expect(done?.type).toBe('done');
+			if (done?.type !== 'done') return;
+			expect(done.text).not.toMatch(/no plan yet/i);
+			expect(out.some((e) => e.type === 'clarify')).toBe(false);
+			const ledger = out.find((e) => e.type === 'ledger');
+			if (ledger?.type !== 'ledger') throw new Error('no ledger');
+			expect(ledger.ledger.receiptIds).toHaveLength(1);
+			expect(done.text).toMatch(/ordered for €/);
+			// A read: the turn writes no op, and plans nothing new.
+			expect(w.ops.slice(opsBefore)).toEqual([]);
+			expect(Object.keys((await w.state()).plans)).toHaveLength(1);
+
+			// The same plan again joins the same task.
+			const again = await chatTurn({ planId: plan.id, text: "What's ordered?" }, deps);
+			expect(again.at(-1)?.taskId).toBe(done.taskId);
+			const task = await w.env.ports.tasks!.get(w.env.workspaceId, done.taskId);
+			expect(task?.plans).toEqual([expect.objectContaining({ planId: plan.id, role: 'primary' })]);
+
+			// A plan this workspace can't see is refused politely.
+			const other = await chatTurn(
+				{ planId: plan.id, text: 'What still needs my decision?' },
+				{ ...deps, ctx: { ...chef, workspaceId: 'ws-other' }, workspaceId: 'ws-other' }
+			);
+			expect(other.at(-1)).toMatchObject({
+				type: 'done',
+				text: "I can't see that plan from here."
+			});
+			const bogus = await chatTurn({ planId: 'pl-nope', text: 'status' }, deps);
+			expect(bogus.at(-1)).toMatchObject({ text: "I can't see that plan from here." });
+		}
+	);
+});
