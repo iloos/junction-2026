@@ -395,6 +395,38 @@
 			proposing = null;
 		}
 	}
+	/**
+	 * Re-reads the menu every 2 s while any dish's sourced-recipe check is pending (at most 30 s), taking only the
+	 * grounding: evidence for the chef, never a change to the menu itself.
+	 */
+	let groundingPoll = 0;
+	async function pollGrounding() {
+		const run = ++groundingPoll;
+		for (let i = 0; i < 15; i++) {
+			const m = menu;
+			if (!m?.grounding || !Object.values(m.grounding).some((g) => g.state === 'pending')) return;
+			await new Promise((r) => setTimeout(r, 2000));
+			if (run !== groundingPoll || !menu || menu.proposal.id !== m.proposal.id) return;
+			try {
+				const res = await fetch('/request/menu', {
+					method: 'POST',
+					headers: { 'content-type': 'application/json' },
+					body: JSON.stringify({ action: 'read', id: m.proposal.id })
+				});
+				if (!res.ok) return;
+				const r = (await res.json()) as MenuView;
+				if (menu && menu.proposal.id === r.proposal.id && r.grounding)
+					menu = { ...menu, grounding: r.grounding };
+			} catch {
+				return;
+			}
+		}
+	}
+	$effect(() => {
+		if (menu?.grounding && Object.values(menu.grounding).some((g) => g.state === 'pending'))
+			void pollGrounding();
+	});
+
 	async function editMenu(changes: MenuChange[]) {
 		if (!menu) return;
 		const r = await menuCall<MenuView>({
