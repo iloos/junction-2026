@@ -74,6 +74,35 @@ export async function createDbPorts(o: DbPortsOptions = {}) {
 		kitchens: o.kitchens ?? loadSeedKitchens(),
 		simStart: live ? SCENARIO.start : now
 	});
+	// Other workspaces (e.g. the judges' sandbox) are created with the seed kitchens on first use.
+	const ensured = new Map<string, Promise<void>>([[workspaceId, Promise.resolve()]]);
+	const ensureWorkspace = (ws: string) => {
+		let p = ensured.get(ws);
+		if (!p) {
+			p = (async () => {
+				if (live) await loadCurrentRun(db, ws);
+				await store.ensure({
+					workspaceId: ws,
+					runId: live ? currentRun(ws) : runId,
+					kitchens: o.kitchens ?? loadSeedKitchens(),
+					simStart: live ? SCENARIO.start : now
+				});
+			})();
+			p.catch(() => ensured.delete(ws));
+			ensured.set(ws, p);
+		}
+		return p;
+	};
+	const transact = store.transact.bind(store);
+	store.transact = async (ws, fn) => {
+		await ensureWorkspace(ws);
+		return transact(ws, fn);
+	};
+	const kitchens = store.kitchens.bind(store);
+	store.kitchens = async (ws) => {
+		await ensureWorkspace(ws);
+		return kitchens(ws);
+	};
 	const today = () =>
 		new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Helsinki' }).format(base.clock.now());
 	const ports: ServicePorts = {

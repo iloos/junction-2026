@@ -118,6 +118,11 @@
 					href={resolve('/ops') + `?workspace=${data.synthWorkspace}`}
 					aria-current={data.simulated ? 'page' : undefined}>Simulated run</a
 				>
+				<a
+					data-sveltekit-reload
+					href={resolve('/ops') + '?workspace=ws-judges'}
+					aria-current={data.workspace === 'ws-judges' ? 'page' : undefined}>Judges' sandbox</a
+				>
 			</nav>
 		</div>
 

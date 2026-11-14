@@ -55,8 +55,8 @@ export const load: PageServerLoad = async ({ url }) => {
 		names,
 		/** Wall-clock ms the current run started; the page ticks the scenario clock from it. */
 		runStartedAt: currentRunStartedAt(workspace),
-		canRunAgent: workspace === agentWorkspace(),
-		canReset: workspace === agentWorkspace() && resetOpen()
+		canRunAgent: workspace === agentWorkspace() && presenterOpen(),
+		canReset: workspace === agentWorkspace() && presenterOpen()
 	};
 };
 
@@ -69,13 +69,20 @@ const agentWorkspace = () => env.MANDATE_WORKSPACE || 'ws-demo';
  */
 const COOLDOWN_MS = 20_000;
 
-/** The key-less reset button: on in dev, and on the deployed app only with DEMO_RESET_OPEN=1. */
-const resetOpen = () => dev || env.DEMO_RESET_OPEN === '1';
+/**
+ * The key-less presenter buttons (run the agent, reset the stage): on in dev, and on the deployed app only
+ * with DEMO_RESET_OPEN=1. In production the presenter uses POST /api/agent/run and /api/demo/reset with a key.
+ */
+const presenterOpen = () => dev || env.DEMO_RESET_OPEN === '1';
 let lastReset = 0;
 let lastStart = 0;
 
 export const actions: Actions = {
 	runAgent: async () => {
+		if (!presenterOpen())
+			return fail(403, {
+				message: 'Running the agent from here is turned off; use POST /api/agent/run.'
+			});
 		const wait = lastStart + COOLDOWN_MS - Date.now();
 		if (wait > 0) return fail(429, { message: `Try again in ${Math.ceil(wait / 1000)} s.` });
 		const started = startAgentRun({ env });
@@ -85,7 +92,7 @@ export const actions: Actions = {
 		return { started: started.id };
 	},
 	resetRun: async () => {
-		if (!resetOpen())
+		if (!presenterOpen())
 			return fail(403, { message: 'Reset is turned off here; use POST /api/demo/reset.' });
 		if (Date.now() - lastReset < COOLDOWN_MS)
 			return fail(429, { message: 'Just reset; wait a moment.' });

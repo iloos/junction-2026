@@ -32,7 +32,7 @@ How it was created (once, via the Aiven MCP `aiven_application_create`):
 - project `junction26jq`, service `mandate`, repo `https://github.com/iloos/junction-2026`, branch `main`, port `3000`, Dockerfile `Dockerfile`, build path `.`
 - integration: `pg-1dfeeeed` → `connection_string` as `DATABASE_URL` (the platform also injects `PROJECT_CA_CERT`)
 - env: `NODE_ENV=production`, `LLM_PROVIDER=fixture`; add API keys as `secret` kind only when a live provider is switched on.
-- Tool routes (`/api/tools/*`, `/mcp`) accept only keys from `MCP_KEYS`, or the public fixture keys when `MANDATE_FIXTURE_KEYS=1`; production has neither until one is set.
+- Tool routes (`/api/tools/*`, `/mcp`) accept the keys under Production rules below.
 
 **Redeploy after a merge** (lead):
 1. `git push origin main`
@@ -40,6 +40,19 @@ How it was created (once, via the Aiven MCP `aiven_application_create`):
 3. `EXPECT_DB=ok scripts/deploy/smoke.sh https://<mandate url>`
 
 Env changes go through `aiven_service_update` (`user_config.application.environment_variables`), not a rebuild.
+
+## Production rules
+- **Keys** (Aiven env, kind `secret`; values also in the main checkout's `.env`, never printed): `MANDATE_KEY_CHEF`, `MANDATE_KEY_KITCHEN_AGENT`, `MANDATE_KEY_APPROVER`, `MANDATE_KEY_EXTERNAL_AGENT` act in the stage workspace `ws-demo`. `MCP_KEYS` = `label:actor:key[:workspace]`, comma-separated; judge entries default to the sandbox `ws-judges`, created with the seed kitchens on first use. Public fixture keys (`MANDATE_FIXTURE_KEYS`) stay off.
+- **`GEMINI_STUDIO_API_KEY`** is pasted into the Aiven console by the user (agents never read `.env` values).
+- **Env updates replace the whole list.** `aiven_service_update` with `environment_variables` drops anything not re-sent, including `PROJECT_CA_CERT` (base64 of `certs/aiven-ca.pem`) and the console-added Gemini key. Prefer adding a single variable in the console.
+- **Presenter actions need a key on prod:** `POST /api/demo/reset` (chef or approver key) starts a fresh `ws-demo` run; `POST /api/agent/run` (chef, kitchen-agent or approver key) runs the routine agent. The key-less /ops buttons appear only in dev or with `DEMO_RESET_OPEN=1`, which stays unset on prod.
+- **`/api/events`** serves only `ws-demo`, `ws-judges` and `ws-synth` on prod until CallContext gates it.
+- **Scenario clock:** `src/lib/core/scenario.ts`; the served app ticks it from each run's start. Reset re-anchors it.
+
+```sh
+# Reset the stage before a demo (reads the key from .env without printing it)
+curl -s -X POST -H "Authorization: Bearer $(grep -E '^MANDATE_KEY_CHEF=' .env | cut -d= -f2-)" https://widely-many-scorpion.eur-1.aiven.app/api/demo/reset
+```
 
 ## Verda VM (plan B)
 `CPU.4V.16G` at $0.048/h (catalog; €200 balance). Ubuntu 24.04 + Docker, the same image, Caddy in front for HTTPS on `<ip>.sslip.io`. Billed create: needs the user's yes.
