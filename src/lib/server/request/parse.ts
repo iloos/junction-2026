@@ -99,6 +99,29 @@ const FILLER = new Set([
 	'tarvis'
 ]);
 
+/** Short everyday words that follow a number without being a unit ("50 on Friday", "2 ja 3"). */
+const SHORT_WORDS = new Set(
+	'on in at by to is it we my or an as so up no me us am pm ja ei se ne tai klo'.split(' ')
+);
+
+/**
+ * A word right after a number that names a unit the request can't order in: a known one (oz, cup), or a one- or
+ * two-letter token that is no word the parser knows ("250 zz"). Longer unknown words are product words.
+ */
+export function unknownUnitWord(w: string): boolean {
+	const k = w.toLowerCase().replace(/\.$/, '');
+	if (UNKNOWN_UNITS.has(k)) return true;
+	return (
+		/^\p{L}{1,2}$/u.test(k) &&
+		!unitOf(k) &&
+		!productOf(k) &&
+		!constraintOf(k) &&
+		!FILLER.has(k) &&
+		!SHORT_WORDS.has(k) &&
+		NUMBER_WORDS[k] === undefined
+	);
+}
+
 /** "1,000" / "1 000" = thousands; "1,5" / "1.5" = decimal. Returns the value and whether the comma was ambiguous. */
 export function parseNumber(s: string): { value: number; commaThousands: boolean } | null {
 	const t = s.replace(/\s/g, '');
@@ -266,7 +289,7 @@ export function parseItem(chunk: string, finnish: boolean): Omit<ParsedItem, 'id
 			unit = u.unit;
 			qty = +(qty * u.factor).toFixed(6);
 			unitWordAt = words.indexOf(w0);
-		} else if (UNKNOWN_UNITS.has(w0.toLowerCase())) {
+		} else if (unknownUnitWord(w0)) {
 			// An explicit unit the request can't order in: asked, never read as sales units.
 			unknownUnit = w0;
 			unitWordAt = words.indexOf(w0);

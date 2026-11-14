@@ -636,7 +636,9 @@ describe('R11-01: units as typed; an unknown explicit unit asks, never buys sale
 		const pick = ml.lookup!.items[0].pick;
 		if (pick?.conversion?.ok) expect(pick.conversion.salesQty).toBeLessThanOrEqual(1);
 		const oz = await runRequest('8 oz butter Thursday', base);
-		expect(oz.lookup!.items[0].pick).toBeNull();
-		expect(oz.lookup!.items[0].answer?.kind).toBe('qty');
+		// The reading checkpoint asks before any lookup or order.
+		expect(oz.lookup).toBeNull();
+		expect(oz.order).toBeNull();
+		expect(oz.message).toMatch(/can't order in oz\. How much/);
 	});
 });

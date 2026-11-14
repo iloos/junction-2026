@@ -186,7 +186,11 @@ export const UNITS: { forms: string[]; unit: ReqUnit; factor: number }[] = [
 		factor: 1
 	},
 	{ forms: ['pcs', 'pc', 'piece', 'pieces', 'kpl', 'st', 'kappaletta'], unit: 'pcs', factor: 1 },
-	{ forms: ['pack', 'packs', 'pakkaus', 'pakkausta'], unit: 'sales', factor: 1 }
+	{
+		forms: ['pack', 'packs', 'pakkaus', 'pakkausta', 'paketti', 'pakettia', 'paketit', 'pkt'],
+		unit: 'sales',
+		factor: 1
+	}
 ];
 
 /**

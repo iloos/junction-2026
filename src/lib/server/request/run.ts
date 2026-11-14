@@ -51,6 +51,7 @@ import {
 } from './lookup';
 import { parseRequest, parseRules, type ParsedRequest } from './parse';
 import { dishItems, interpretDish, type DishInterpretation } from './dish';
+import { readingOf, reviewReading } from './reading';
 import { requestParseCheckpoint, withReview, type ReviewDeps } from '$lib/server/review';
 import { classifyRequest } from './classify';
 import { applyBriefAnswers, draftBrief, nextQuestion } from '../menu/brief';
@@ -524,6 +525,7 @@ export function applyAnswers(parsed: ParsedRequest, answers: RequestAnswer[]): P
 		if (!a) return it;
 		const next = { ...it, ambiguities: [...it.ambiguities] };
 		if (a.qty !== undefined && a.unit) {
+			// An answered amount replaces the words' one; an unknown unit token stays to say what was answered.
 			next.qty = a.qty;
 			next.unit = a.unit;
 			next.ambiguities = next.ambiguities.filter((x) => !/^no (quantity|unit) given/.test(x));
@@ -656,6 +658,7 @@ export async function runRequest(text: string, d: RequestDeps): Promise<RequestR
 	let parsed = withDate(applyAnswers(read, d.answers ?? []), d.deliverBy, d.today);
 	// A dish with a count is portions to serve: priced ready-made and from raw, and the kitchen's way is ordered.
 	let dish: DishInterpretation | null = null;
+	let readingBlock: string | null = null;
 	if (!d.dish?.packs && !d.items?.length && !reviewBlock) {
 		const words = d.dish?.portions
 			? text.replace(/\d{1,3}(?:[ ,]\d{3})+|\d+(?:[.,]\d+)?/, String(d.dish.portions))
@@ -690,7 +693,18 @@ export async function runRequest(text: string, d: RequestDeps): Promise<RequestR
 			dishChoice: kind
 		};
 	}
+	// The reading is judged against the words on every request: a block is the question, asked before any lookup.
+	if (!dish && !d.items?.length && !reviewBlock) {
+		const v = await reviewReading(text, readingOf(parsed), d.review ?? {});
+		if (v.kind === 'block') readingBlock = v.reason;
+		else if (v.kind === 'revise')
+			parsed = { ...parsed, ambiguities: [...parsed.ambiguities, `check: ${v.feedback}`] };
+	}
 	let parsedView = parsed as ParsedView;
+	if (readingBlock) {
+		emit({ step: 'request', status: 'blocked', ms: ms(), data: parsedView });
+		return { parsed: parsedView, lookup: null, order: null, message: readingBlock };
+	}
 	if (reviewBlock) {
 		emit({ step: 'request', status: 'blocked', ms: ms(), data: parsedView });
 		return {
@@ -804,6 +818,34 @@ export async function runRequest(text: string, d: RequestDeps): Promise<RequestR
 				? `${lookup.items[0].question} Nothing was ordered; choose that date to order.`
 				: 'Nothing to order yet: answer the questions above.'
 		};
+	// The chosen lines, echoed against the ask: more than one pack over what was asked is never placed.
+	const echo = await reviewReading(
+		text,
+		{
+			items: [],
+			echo: lookup.items.flatMap((i) => {
+				const p = i.pick;
+				const u = i.item.unit;
+				if (!p?.conversion?.ok || !p.amount || i.item.qty === null || (u !== 'kg' && u !== 'l'))
+					return [];
+				return [
+					{
+						item: i.item.id,
+						asked: { value: i.item.qty, unit: u },
+						salesQty: p.conversion.salesQty,
+						salesUnit: p.salesUnit,
+						perUnit:
+							p.amount.unit === u
+								? { value: p.amount.value / p.conversion.salesQty, unit: u }
+								: null
+					}
+				];
+			})
+		},
+		{}
+	);
+	if (echo.kind === 'block' && d.place !== false)
+		return { parsed: parsedView, lookup, order: null, message: echo.reason };
 	if (dish && dishLeft.length && d.place !== false)
 		return {
 			parsed: parsedView,
