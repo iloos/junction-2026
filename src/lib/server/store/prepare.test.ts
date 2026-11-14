@@ -1,5 +1,5 @@
 /**
- * Review round 4, triage #1: no catalogue (or other non-transaction) query runs while a store transaction holds
+ * No catalogue (or other non-transaction) query runs while a store transaction holds
  * the lock. On Aiven the pool is 3 connections; a handler that queried the catalogue inside `transact` could
  * starve it under three concurrent commands (and deadlocks outright on single-connection PGlite). Here every
  * catalog call made inside a transaction throws, and the whole Christmas journey plus concurrent calls must pass.

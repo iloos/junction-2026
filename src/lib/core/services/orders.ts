@@ -41,7 +41,8 @@ const APPROVAL_TTL_MS = 24 * 3600 * 1000;
 
 const short = async (s: string) => (await sha256Hex(s)).slice(0, 12);
 
-function pending(ctx: CallContext, op: PendingOp['op'], idempotencyKey?: string): PendingOp {
+/** The one op envelope builder: who, through what, for which agent run (initiatedBy), and the op. */
+export function pending(ctx: CallContext, op: PendingOp['op'], idempotencyKey?: string): PendingOp {
 	return {
 		workspaceId: ctx.workspaceId,
 		runId: ctx.runId,
@@ -53,7 +54,11 @@ function pending(ctx: CallContext, op: PendingOp['op'], idempotencyKey?: string)
 	};
 }
 
-async function kitchenOf(ports: Ports, ctx: CallContext, id: string): Promise<Kitchen | null> {
+export async function kitchenOf(
+	ports: Ports,
+	ctx: CallContext,
+	id: string
+): Promise<Kitchen | null> {
 	return (await ports.store.kitchens(ctx.workspaceId)).find((k) => k.id === id) ?? null;
 }
 

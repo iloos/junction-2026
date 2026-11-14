@@ -1,4 +1,4 @@
-/** Review round 4, triage #4: every line a tool returns says what can be done with it, decided by the server. */
+/** Every line a tool returns says what can be done with it, decided by the server. */
 import { beforeEach, describe, expect, it } from 'vitest';
 import { SCOPES_BY_ACTOR, type Plan } from '$lib/core/contracts';
 import type { CallContext, ToolHandlers } from '$lib/core/ports';

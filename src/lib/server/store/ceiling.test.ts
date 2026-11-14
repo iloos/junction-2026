@@ -1,5 +1,5 @@
 /**
- * Prod rehearsal P0: one sign-off click committed €2.7M of orange juice. Above the mandate's hard limit nothing is
+ * The hard limit: above it nothing is
  * orderable, approval or not; a quantity far beyond any kitchen order is a gap ("check the quantity").
  */
 import { beforeEach, describe, expect, it } from 'vitest';

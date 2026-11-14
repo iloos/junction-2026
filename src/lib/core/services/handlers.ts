@@ -28,10 +28,11 @@ type Impl<N extends ToolName> = (
 	input: ToolInput<N>
 ) => Promise<Result<ToolOutput<N>>>;
 
-const notYet =
-	(slice: string): Impl<ToolName> =>
+/** A registered tool core does not serve: it fails explicitly, never with a made-up answer. */
+const unavailable =
+	(why: string): Impl<ToolName> =>
 	async () =>
-		err('PROVIDER_UNAVAILABLE', `not implemented yet (core-db ${slice})`);
+		err('PROVIDER_UNAVAILABLE', why);
 
 /**
  * Served outside core and composed in server/tools/handlers.ts: get_context by the agent door
@@ -49,7 +50,7 @@ const IMPLS: { [N in Exclude<ToolName, ServedElsewhere>]: Impl<N> } = {
 	explain_line: explainLine,
 	approve,
 	commit_order: commitOrder,
-	set_mandate: notYet('slice 2')
+	set_mandate: unavailable('set_mandate is not served: mandates come from the kitchen seed')
 };
 
 function invalid(issues: { path: PropertyKey[]; message: string }[]): {
@@ -87,7 +88,7 @@ export function createHandlers(ports: ServicePorts): ToolHandlers {
 		const schema = toolSchemas[name];
 		const impl =
 			((IMPLS as Partial<Record<ToolName, Impl<ToolName>>>)[name] as Impl<ToolName> | undefined) ??
-			notYet('agent door');
+			unavailable(`${name} is served by the server layer, not core`);
 		out[name] = async (ctx, input) => {
 			if (!ctx.scopes.includes(schema.scope))
 				return err('FORBIDDEN', `${ctx.actor.kind} lacks scope "${schema.scope}" for ${name}`, {

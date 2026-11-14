@@ -1,5 +1,5 @@
 /**
- * The one scenario clock (review 01:55, R0-d; dates ruled by the lead). The simulator, the kitchen and /ops
+ * The one scenario clock. The simulator, the kitchen and /ops
  * all read these, so the story is consistent on stage: Monday evening, the cut-off on Tuesday, delivery
  * Thursday, the Christmas buffet on Saturday. Pure: no Svelte, no DOM, no I/O, no reading the wall clock.
  * Terminal (supplier) lead times are not enforced by core, so the demo has one cut-off.

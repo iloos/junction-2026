@@ -1,5 +1,5 @@
 /**
- * Review round 3, finding 4: the rescue the chef changes is the rescue that gets bought. Preview never presents a
+ * The rescue the chef changes is the rescue that gets bought. Preview never presents a
  * rejected saved choice as the answer; applying replaces the old substitute and voids the approval; portion edits
  * resize product substitutes and make-in-house ingredients; more demand is never served by the old quantity.
  */

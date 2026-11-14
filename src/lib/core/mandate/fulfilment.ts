@@ -1,5 +1,5 @@
 /**
- * The one definition of "covered" (review round 5, F12): per need, an exact partition of what is required into
+ * The one definition of "covered": per need, an exact partition of what is required into
  * supplier-confirmed, awaiting supplier, planned against known stock, planned against unknown stock and unresolved,
  * plus what lines buy beyond it (excess). Kitchen, Ops, Request and the agent's outcome read this; none recomputes it.
  *

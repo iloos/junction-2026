@@ -1,4 +1,4 @@
-/** Review round 3, finding 6: recipe fit from Decide feeds the substitute ranking, with its provenance. */
+/** Recipe fit from Decide feeds the substitute ranking, with its provenance. */
 import { describe, expect, it } from 'vitest';
 import { SCOPES_BY_ACTOR } from '$lib/core/contracts';
 import type { CallContext, Decide } from '$lib/core/ports';

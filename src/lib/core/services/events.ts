@@ -10,7 +10,6 @@ import {
 	type Line,
 	type Need,
 	type Offer,
-	type PendingOp,
 	type Plan,
 	type Product,
 	type Result,
@@ -38,20 +37,11 @@ import {
 } from '../mandate/tier';
 import type { CallContext, Ports, Tx } from '../ports';
 import type { WorkspaceState } from '../state';
-import { quoteOps, toLot } from './orders';
+import { kitchenOf, pending, quoteOps, toLot } from './orders';
 import { AVAILABILITY_WORDING } from './wording';
 
 /** Ports plus the event seeds the server loaded (core reads no files). */
 export type ServicePorts = Ports & { events?: Record<string, EventSeed> };
-
-const pending = (ctx: CallContext, op: PendingOp['op']): PendingOp => ({
-	workspaceId: ctx.workspaceId,
-	runId: ctx.runId,
-	actor: ctx.actor,
-	via: ctx.via,
-	...(ctx.initiatedBy ? { initiatedBy: ctx.initiatedBy } : {}),
-	op
-});
 
 /** The delivery for an event: the scenario's delivery for the scenario's event, otherwise two days before it. */
 export function deliverByFor(eventDate: string): string {
@@ -105,11 +95,7 @@ function demandLines(planId: string, seed: EventSeed, overrides: Record<string, 
 	return { needs, drafts };
 }
 
-async function kitchenOf(ports: Ports, ctx: CallContext, id: string): Promise<Kitchen | null> {
-	return (await ports.store.kitchens(ctx.workspaceId)).find((k) => k.id === id) ?? null;
-}
-
-/** Catalogue data a quote needs, fetched before the transaction (never inside it: D6, review triage #1). */
+/** Catalogue data a quote needs, fetched before the transaction (never inside it: D6). */
 export interface Prefetched {
 	offers: Offer[];
 	products: Map<string, Product>;

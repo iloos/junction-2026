@@ -43,7 +43,7 @@ export interface DbPortsOptions {
 	/** The ops lane's bus; called after each committed transaction. */
 	publish?: (workspaceId: string, events: ServerEvent[]) => void;
 	/**
-	 * Served app (R0-d): the store follows the workspace's current run (reset starts a new one) and the
+	 * Served app: the store follows the workspace's current run (reset starts a new one) and the
 	 * clock is the scenario clock, ticking from the run's start. Tests and evals leave this off.
 	 */
 	followCurrentRun?: boolean;

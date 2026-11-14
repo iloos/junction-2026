@@ -46,6 +46,8 @@ export function lineView(
 ): LineView {
 	const unknown = l.offer?.availability.kind === 'unknown';
 	const qty = l.qty.value;
+	// D10: `confirmedCover` is a legacy wire name for known-stock cover (Valio states the stock), not supplier-confirmed;
+	// only FulfilmentView.supplierConfirmed is receipt-backed.
 	const covered = (n: number) => ({
 		confirmedCover: measure(l, unknown ? 0 : n),
 		unconfirmedCover: measure(l, unknown ? n : 0)
