@@ -23,7 +23,7 @@ try {
 	/* unknown commit: the run still goes */
 }
 const target = process.env.KITCHEN_URL ? new URL(base).host : 'local-fixture';
-const stamp = new Date().toISOString().slice(0, 16).replace(/[-:]/g, '').replace('T', '-');
+const stamp = new Date().toISOString().slice(0, 19).replace(/[-:]/g, '').replace('T', '-');
 const runs = join(root, 'scratch', 'playtest');
 mkdirSync(runs, { recursive: true });
 const previous = readdirSync(runs)
