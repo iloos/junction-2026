@@ -42,5 +42,44 @@ The user's read: many small nudges, often the same ones, because the foundations
 - **Dock approval status** ("You approved N lines") never appears: `evals/ui/dock-sync.e2e.ts:28` fails on prod → Conversation/Kitchen.
 - The smoke can't verify Add to calendar (it's a menu) or the bill at 390 → fix the smoke selectors.
 
+## From the breadcrumb audit (every user message in all 19 sessions; [BREADCRUMBS](BREADCRUMBS.md))
+- **Kitchen and basket:**
+  - rebase c3's lane/c3-basket b0729bc onto main. It conflicts with 1f's rules rework in KitchenScreen: c3 wrapped `<main>` in tabs and 1f restructured the rows and rules. Keep 1f's rows and rules, put c3's tabs around them, then the 390 px pass and the e2e;
+  - the in-app "Usual order" and "How ordering works" pages per `docs/superpowers/specs/2026-11-14-usual-order-and-ordering-journey-design.md` (Goals 1–3, `core/usual` maths with a 10× test, labelled sample history);
+  - one ranking/priority/filter control, in the same place on the Kitchen, the request card and the dock (with Foundations 3).
+- **Core + Kitchen + Conversation:**
+  - a strict or best-try control per order and per line for diet, allergen and origin. Core has it (39d2368); add a tool parameter, the parity test, and an eval where best try returns a labelled near-miss;
+  - align the kg↔l comment at `contracts/tools.ts:303` with the density conversion in `services/events.ts:447`, plus a "make it 20 kg" test.
+- **Conversation, top (user, Sat late):** "hi i want 500 pizzas no meat 50%" on prod a9f06ee read "pizzas no meat" as a product word, called "50%" unclear, and dead-ended at "nothing matched".
+  - The reading shape (D20) needs **shares**: one amount split into parts, each with its own requirements (250 vegetarian + 250 any; "half beef, half mixed" is the same shape).
+  - A dish noun with a count takes the dish path (ready-made vs from raw).
+  - An ambiguous reading proposes its most likely interpretation as a one-tap question ("250 meat-free and 250 regular?"), never a dead end.
+  - Held-out paraphrases: "300 burgers, a third vegan", "half the 80 lunches gluten-free", "200 pizzas 40% veggie".
+- **Conversation:** photos in the dock. The dock takes a photo and calls `read_image` when `VISION_LIVE=1`; otherwise the button is hidden or says why. Acceptance: one photo → reading → need on prod, traced.
+- **Ops + Kitchen:** festivities as demand signals (a holiday adjustment with its source in the Forecast and the usual order) and a spending-trend chip, labelled simulated.
+- **Site:**
+  - the user's last notes (Sat 19:23–20:56): the earlier side layout was better and the text is too big; the middle component is too big; the hero wrap is awkward;
+  - settle the scroll slides (the user said keep them; site-design.md says no snap);
+  - check /story for a gap taller than one viewport at 1440 and 390;
+  - each with screenshots in light and dark.
+- **Evals:**
+  - V1, a sponsor-usage pass plus an e2e quality review on the deployed build: every sponsor in CLAIMS observed with a trace on the deployed SHA;
+  - rerun the Round 12 journeys before filming.
+- **Lead:**
+  - promote `scratch/site-review/SYSTEM-MAP.md` into `docs/concept/` (re-checked against main, linked from ARCHITECTURE);
+  - write the product principle "value is simulation, prediction and automatic capture, not a dashboard of past data" into CONCEPT;
+  - add the parked web-menus → ingredients → proposed basket idea to PITCH Next and GROWTH;
+  - the comment sweep;
+  - rewrite PLAN.md's Sunday checklist;
+  - refresh USER-DIRECTIVES from BREADCRUMBS;
+  - update CLAUDE.md rule 6 (fixture is the default for tests only; prod prefers live) and its freeze framing (converge; the freeze only times the video and submission).
+
 ## Waiting on the user
+- **Decide:** may a person signed in with OAuth approve from an outside chat client? D13/D17 say no as written; the user argued yes. Record the answer as D22 and align agent-door-v2.
+- **Decide:** Verda/Featherless routing. 91's proposal (f-evals.md:27): Verda after 3 passing vision runs, skip Featherless, a read-only routing view in System.
+- **Before public:** rotate the static MCP judge keys and SMOKE_KEY, which were pasted into a lane chat.
+- **SMOKE_KEY:** it was set in Aiven Sat ~05:45 and the race smoke passed at 05:51, but today's smoke ran without it (13 skipped). It needs to be in the Ops session's shell, not newly created.
+- **Clarify:** the Sat 21:25 question to the site session, "URL-based or internal events?". Its meaning isn't recorded.
+
+## Also waiting on the user
 PUBLIC_ORIGIN in the Aiven console · Nemotron deployment name · SMOKE_KEY · history rewrite and placeholder prices before public (also fixes the Source 404) · the Ops brainstorm with d0.

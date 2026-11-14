@@ -58,3 +58,6 @@ docs/review/ROADMAP-PREPARATION.md
 
 # Agent tool worktrees
 /.claude/worktrees/
+
+# Impeccable skill state (local)
+/.impeccable/
