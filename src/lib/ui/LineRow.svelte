@@ -35,6 +35,8 @@
 		onwhy?: () => void;
 		/** Offer "Swap" (D28): the plan on screen, and what to do after a pick (re-read). */
 		swap?: { planId: string; version: number; deliverBy?: string; onchanged: () => void };
+		/** Open the compare panel (Swap pressed on the collapsed dish row). */
+		swapOpen?: boolean;
 		/** This line's own decision (D23): Accept / Reject, or a sign-off one by one. */
 		decide?: {
 			state: 'pending' | 'granted' | 'denied';
@@ -57,9 +59,13 @@
 		expanded = $bindable(false),
 		onwhy,
 		swap,
-		decide
+		decide,
+		swapOpen = false
 	}: Props = $props();
 	let swapping = $state(false);
+	$effect(() => {
+		if (swapOpen) swapping = true;
+	});
 
 	const rejected = $derived(l.state === 'rejected' || l.state === 'unorderable');
 	const b = $derived(lineBasis(l.qty, l.view));
@@ -149,7 +155,7 @@
 			<span class="inline-flex shrink-0 gap-1.5">
 				<button
 					type="button"
-					class="inline-flex h-8 items-center rounded-md bg-accent px-3 text-meta font-medium text-sheet hover:bg-accent-ink disabled:opacity-50"
+					class="inline-flex h-8 items-center rounded-md border border-accent px-3 text-meta font-medium text-accent-ink hover:bg-accent-wash disabled:opacity-50"
 					disabled={decide.busy}
 					onclick={decide.onaccept}>Accept</button
 				>

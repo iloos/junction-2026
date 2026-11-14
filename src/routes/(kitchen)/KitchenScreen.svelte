@@ -14,7 +14,8 @@
 		LoaderCircle,
 		CircleCheck,
 		Info,
-		Smartphone
+		Smartphone,
+		Repeat
 	} from '@lucide/svelte';
 	import { Popover } from 'bits-ui';
 	import { KitchenStore } from '$lib/kitchen/kitchen.svelte';
@@ -406,6 +407,8 @@
 	const approvedIds = $derived(
 		new Set([...decisionsByLine].filter(([, d]) => d.state === 'granted').map(([id]) => id))
 	);
+	/** A Swap pressed on a collapsed dish row: that line opens with its compare panel. */
+	let swapAsk = $state<string | null>(null);
 	/** The only bulk action: accept every pending line that may be accepted together. */
 	const all = $derived(acceptAll(snap?.plan.lines ?? [], decisionsByLine));
 	function decideOne(lineId: string, decision: 'grant' | 'deny') {
@@ -1155,6 +1158,7 @@
 						onreject: () => decideOne(l.id, 'deny')
 					}
 				: undefined}
+			swapOpen={swapAsk === l.id}
 			swap={k.mode === 'live' && plan && !k.readOnly
 				? {
 						planId: plan.id,
@@ -1529,6 +1533,15 @@
 							{@const lockedDish = lines.some((l) => l.state === 'committed')}
 							{@const isMarked = !!marked && d.lineIds.some((id) => marked!.has(id))}
 							{@const justApproved = d.lineIds.some((id) => approvedNow.has(id))}
+							{@const pendingHere = lines.filter(
+								(l) => decisionsByLine.get(l.id)?.state === 'pending'
+							)}
+							{@const quick =
+								pendingHere.length > 0 &&
+								pendingHere.every((l) => !decisionsByLine.get(l.id)!.signOff) &&
+								new Set(pendingHere.map((l) => decisionsByLine.get(l.id)!.approval.id)).size === 1
+									? pendingHere
+									: null}
 							<div
 								id="need-{d.id}"
 								data-marked={isMarked || undefined}
@@ -1677,6 +1690,57 @@
 										/></button
 									>
 								</div>
+								{#if quick && !k.readOnly}
+									<!-- The dish's own decision, on the row (D23): no click into the detail to manage it. -->
+									<div class="flex flex-wrap items-center justify-end gap-2 px-4 pb-2.5">
+										<span class="mr-auto text-meta text-ink-3 lg:mr-0"
+											>{quick.length === 1
+												? 'Waits for you'
+												: `${quick.length} lines wait for you`}</span
+										>
+										<button
+											type="button"
+											class="inline-flex h-8 items-center rounded-md border border-accent px-3 text-meta font-medium text-accent-ink hover:bg-accent-wash disabled:opacity-50"
+											disabled={k.busy}
+											onclick={() =>
+												void k.decideLines(
+													[
+														{
+															approval: decisionsByLine.get(quick[0].id)!.approval,
+															lineIds: quick.map((l) => l.id)
+														}
+													],
+													'grant'
+												)}>{quick.length === 1 ? 'Accept' : `Accept ${quick.length}`}</button
+										>
+										<button
+											type="button"
+											class="inline-flex h-8 items-center rounded-md border border-rule-strong px-3 text-meta text-ink hover:border-out disabled:opacity-50"
+											disabled={k.busy}
+											title="Not ordered: {d.nameFi} loses cover"
+											onclick={() =>
+												void k.decideLines(
+													[
+														{
+															approval: decisionsByLine.get(quick[0].id)!.approval,
+															lineIds: quick.map((l) => l.id)
+														}
+													],
+													'deny'
+												)}>Reject</button
+										>
+										{#if quick.length === 1 && k.mode === 'live'}
+											<button
+												type="button"
+												class="inline-flex h-8 items-center gap-1 rounded-md px-2 text-meta text-ink-2 hover:bg-well hover:text-ink"
+												onclick={() => {
+													swapAsk = quick[0].id;
+													expanded = { ...expanded, [d.id]: true };
+												}}><Repeat size={13} aria-hidden="true" />Swap</button
+											>
+										{/if}
+									</div>
+								{/if}
 								{#if isOpen}
 									<div
 										id="detail-{d.id}"
