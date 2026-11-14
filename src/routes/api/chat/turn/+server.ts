@@ -1,9 +1,9 @@
 import { dev } from '$app/environment';
 import { env } from '$env/dynamic/private';
 import { scenarioDate } from '$lib/core/scenario';
-import { ClarifyField } from '$lib/core/contracts/task';
 import { createLlmRouter } from '$lib/server/adapters/llm/router';
 import { contextFor } from '$lib/server/auth';
+import { readTurnBody } from '$lib/server/chat/body';
 import { runChatTurn } from '$lib/server/chat/turn';
 import { visitorWorkspace } from '$lib/server/demo/visitor';
 import { onCurrentRun } from '$lib/server/demo/reset';
@@ -11,9 +11,7 @@ import { withCallScope } from '$lib/server/scope';
 import { createServerPorts } from '$lib/server/store/server-ports';
 import { serverTasks } from '$lib/server/tasks/server';
 import { handlers as scopedHandlers } from '$lib/server/tools/handlers';
-import { isTaskId } from '$lib/core/contracts/task';
 import { json } from '$lib/server/tools/http';
-import type { ChatTurnInput } from '$lib/ui/chat/types';
 import type { RequestHandler } from './$types';
 
 const bad = (message: string) =>
@@ -26,28 +24,15 @@ const bad = (message: string) =>
  * task is written back at the end of the turn, so a reconnect reads the task rather than replaying the stream.
  */
 export const POST: RequestHandler = async (event) => {
-	let body: Record<string, unknown>;
+	let raw: unknown;
 	try {
-		body = (await event.request.json()) as Record<string, unknown>;
+		raw = await event.request.json();
 	} catch {
 		return bad('body is not JSON');
 	}
-	const input: ChatTurnInput = {};
-	if (isTaskId(body.taskId)) input.taskId = body.taskId;
-	if (typeof body.planId === 'string' && /^[\w:.-]{1,128}$/.test(body.planId))
-		input.planId = body.planId;
-	if (typeof body.text === 'string') {
-		const text = body.text.trim();
-		if (!text || text.length > 500) return bad('text: 1–500 characters');
-		input.text = text;
-	}
-	if (body.answer && typeof body.answer === 'object') {
-		const a = body.answer as { field?: unknown; value?: unknown };
-		const field = ClarifyField.safeParse(a.field);
-		if (!field.success) return bad('answer.field is not a field I ask about');
-		input.answer = { field: field.data, value: a.value };
-	}
-	if (body.continue === true) input.continue = true;
+	const read = readTurnBody(raw);
+	if (!read.ok) return bad(read.reason);
+	const { input, kitchenId } = read;
 
 	const v = await visitorWorkspace(event, env, dev);
 	const ctx = await onCurrentRun(contextFor('chef', 'chef', 'chat', env, v.workspaceId));
@@ -55,7 +40,7 @@ export const POST: RequestHandler = async (event) => {
 	const [b, tasks] = await Promise.all([createServerPorts(), serverTasks()]);
 	const kitchens = await b.ports.store.kitchens(v.workspaceId);
 	const kitchen =
-		kitchens.find((k) => k.id === body.kitchenId) ??
+		kitchens.find((k) => k.id === kitchenId) ??
 		kitchens.find((k) => k.id === 'k-hotel') ??
 		kitchens[0];
 	if (!kitchen) return bad('no kitchen in this workspace');

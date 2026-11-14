@@ -297,7 +297,14 @@ export function withServerKey(
 	if (tool !== 'place_order' && tool !== 'commit_order') return input;
 	const i = (input ?? {}) as Record<string, unknown>;
 	if (tool === 'commit_order')
-		return { ...i, idempotencyKey: `agent:commit:${String(i.planId)}:v${String(i.version)}` };
+		return {
+			...i,
+			// Plan + version + the exact lines (all open lines when none are named): a different subset of the same
+			// version is a new command; terms that change bump the version.
+			idempotencyKey: `agent:commit:${String(i.planId)}:v${String(i.version)}:${digest(
+				Array.isArray(i.lineIds) ? [...(i.lineIds as string[])].sort().join(',') : '*'
+			)}`
+		};
 	const what =
 		intent?.kind === 'routine_order'
 			? {
