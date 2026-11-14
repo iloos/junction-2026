@@ -146,7 +146,7 @@ export type Task = z.infer<typeof Task>;
  * drawer and an Ops cost view read one format. `cache` says honestly where the answer came from.
  */
 export const ExternalCallTrace = z.object({
-	api: z.enum(['valio', 'gemini', 'exa', 'contextdev', 'featherless', 'other']),
+	api: z.enum(['valio', 'gemini', 'exa', 'contextdev', 'featherless', 'verda', 'other']),
 	/** What the call was for, e.g. 'offers', 'decide.fit', 'menu.propose', 'lookup_facts'. */
 	purpose: z.string().max(80),
 	cache: z.enum(['live', 'cache', 'replay', 'fixture']),

@@ -1,0 +1,101 @@
+{
+	"$comment": "Expected readings of the sample pictures, written by hand (fixture, not a model answer). Keyed by the sha256 of the image bytes; regenerate after re-rendering the PNGs.",
+	"readings": {
+		"d30f71afa31e2b1c728853eb4efb81ea40b26892a5e54724b2cc33975709dc9f": {
+			"file": "prep-list.png",
+			"reading": {
+				"kind": "list",
+				"lines": [
+					{
+						"text": "Butter, unsalted 4 kg",
+						"qty": 4,
+						"unit": "kg",
+						"productHint": "Butter, unsalted"
+					},
+					{
+						"text": "Lactose-free milk 12 l",
+						"qty": 12,
+						"unit": "l",
+						"productHint": "Lactose-free milk"
+					},
+					{
+						"text": "Whipping cream 35 % 6 l",
+						"qty": 6,
+						"unit": "l",
+						"productHint": "Whipping cream 35 %"
+					},
+					{
+						"text": "Swede (lanttu) 15 kg",
+						"qty": 15,
+						"unit": "kg",
+						"productHint": "Swede (lanttu)"
+					},
+					{
+						"text": "Rainbow trout fillet 9 kg",
+						"qty": 9,
+						"unit": "kg",
+						"productHint": "Rainbow trout fillet"
+					},
+					{
+						"text": "Rye bread 40 pcs",
+						"qty": 40,
+						"unit": "pcs",
+						"productHint": "Rye bread"
+					}
+				],
+				"notes": "Sat buffet for 140, order by Thu. No shellfish on the buffet; ham is ordered separately.",
+				"confidence": 0.9
+			}
+		},
+		"7a0874550a4d802d9df7a71f21fe11780fbfb3314e979074aff81d42956345f3": {
+			"file": "delivery-note.png",
+			"reading": {
+				"kind": "delivery_note",
+				"lines": [
+					{
+						"text": "Kerma 35 % 1 l: ordered 6, delivered 6 ST",
+						"qty": 6,
+						"unit": "ST",
+						"productHint": "Kerma 35 % 1 l"
+					},
+					{
+						"text": "Voi 500 g: ordered 8, delivered 8 ST",
+						"qty": 8,
+						"unit": "ST",
+						"productHint": "Voi 500 g"
+					},
+					{
+						"text": "Kirjolohifilee 1 kg: ordered 9, delivered 7 KG",
+						"qty": 7,
+						"unit": "KG",
+						"productHint": "Kirjolohifilee 1 kg"
+					},
+					{
+						"text": "Laktoositon maito 1 l: ordered 12, delivered 12 ST",
+						"qty": 12,
+						"unit": "ST",
+						"productHint": "Laktoositon maito 1 l"
+					}
+				],
+				"notes": "Delivery note 2026-1144, delivered 10.12.2026. Short delivery: trout 2 kg missing, credit to follow.",
+				"confidence": 0.9
+			}
+		},
+		"eec3fd708b20dcef15d9153cd486c9a37b9858fdd23fe52f94ba8b7f0cc7ec35": {
+			"file": "label.png",
+			"reading": {
+				"kind": "label",
+				"lines": [
+					{
+						"text": "Esimerkki voi, normaalisuolainen voi 500 g",
+						"qty": 500,
+						"unit": "g",
+						"productHint": "6400000123457"
+					}
+				],
+				"notes": "Ingredients: cream (milk), salt 1.2 %. Allergens: milk. Best before 20.01.2027, store at +2…+6 °C.",
+				"confidence": 0.9
+			}
+		}
+	}
+}

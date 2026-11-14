@@ -5,6 +5,7 @@ import { capFromEnv, scopedCap } from '../../external/ledger';
 import { createExternalCall } from '../../external/call';
 import { currentScope } from '../../external/scope';
 import { logTrace, noTrace, type Trace } from './trace';
+import { verdaLlm, VERDA_VISION_MODEL } from './verda';
 
 /**
  * One routing table for every model job: which provider and model a job uses and its token ceiling. Every
@@ -18,13 +19,14 @@ export const LLM_JOBS = [
 	'request.parse',
 	'menu.propose',
 	'explain',
-	'chat.understand'
+	'chat.understand',
+	'image.read'
 ] as const;
 export type LlmJob = (typeof LLM_JOBS)[number];
 
 export interface LlmRoute {
 	/** `env` = whatever LLM_PROVIDER says; a named provider is used only when its key is set. */
-	provider: 'env' | 'gemini' | 'featherless';
+	provider: 'env' | 'gemini' | 'featherless' | 'verda';
 	/** Model id for the provider (Gemini only; Featherless reads FEATHERLESS_MODEL). */
 	model?: string;
 	/** Ceiling for this job, under the adapter's global ceiling; includes thinking tokens. */
@@ -60,7 +62,9 @@ export const LLM_ROUTES: Record<LlmJob, LlmRoute> = {
 		model: GEMINI_LLM_MODEL,
 		thinking: 'minimal',
 		maxTokens: 400
-	}
+	},
+	// Pictures: NVIDIA Nemotron 3.5 Super VL on Verda, thinking off (adapters/llm/verda.ts).
+	'image.read': { provider: 'verda', model: VERDA_VISION_MODEL, maxTokens: 1500 }
 };
 
 export interface LlmRouter {
@@ -73,6 +77,8 @@ export interface LlmRouter {
  * the rules, the planner to its stop).
  */
 export const DEFAULT_LLM_LIMITS = { perKey: 200, global: 3000 };
+/** Picture readings (image.read) per visitor workspace and per instance (UTC day). */
+export const DEFAULT_VISION_LIMITS = { perKey: 30, global: 500 };
 
 /**
  * Every job's calls go through the shared outside-call helper: one ExternalCallTrace each (job, model, tokens,
@@ -95,6 +101,13 @@ export function createLlmRouter(
 			global: capFromEnv(env.LLM_CAP_GLOBAL, DEFAULT_LLM_LIMITS.global)
 		}
 	});
+	const visionGuard = scopedCap({
+		name: 'verda-vision',
+		limits: {
+			perKey: capFromEnv(env.VISION_CAP_PER_WORKSPACE, DEFAULT_VISION_LIMITS.perKey),
+			global: capFromEnv(env.VISION_CAP_GLOBAL, DEFAULT_VISION_LIMITS.global)
+		}
+	});
 	return {
 		for(job) {
 			const hit = cache.get(job);
@@ -109,21 +122,29 @@ export function createLlmRouter(
 				(trace ?? currentScope()?.trace ?? noTrace)(step, { ...data, job });
 			const gk = geminiKey(env);
 			const live =
-				provider === 'gemini' && gk ? 'gemini' : provider === 'featherless' ? 'featherless' : null;
+				provider === 'gemini' && gk
+					? 'gemini'
+					: provider === 'featherless'
+						? 'featherless'
+						: provider === 'verda' && env.VERDA_INFERENCE_KEY
+							? 'verda'
+							: null;
 			const base =
 				live && client
 					? client(route)
 					: live === 'gemini'
 						? geminiLlm(gk!, noTrace, route.model ?? GEMINI_LLM_MODEL, route.thinking ?? 'minimal')
-						: createLlm({ ...env, LLM_PROVIDER: provider }, noTrace);
+						: live === 'verda'
+							? verdaLlm({ apiKey: env.VERDA_INFERENCE_KEY!, model: route.model })
+							: createLlm({ ...env, LLM_PROVIDER: provider }, noTrace);
 			const call = live
 				? createExternalCall({
 						api: live,
-						name: live === 'gemini' ? 'gemini-text' : 'featherless-text',
+						name: `${live}-${live === 'verda' ? 'vision' : 'text'}`,
 						step: 'text',
 						cache: false,
 						trace: jobTrace,
-						guard
+						guard: live === 'verda' ? visionGuard : guard
 					})
 				: null;
 			const llm: Llm = {

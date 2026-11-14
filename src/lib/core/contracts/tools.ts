@@ -75,6 +75,29 @@ export const WebFact = z.object({
 });
 export type WebFact = z.infer<typeof WebFact>;
 
+/**
+ * What a picture said (read_image): a prep list, a delivery note, a product label or something else, as lines in the
+ * picture's own words. A reading is evidence for a person or the agent to act on; it never orders or changes a plan.
+ */
+export const ImageReading = z.object({
+	kind: z.enum(['list', 'delivery_note', 'label', 'other']),
+	lines: z
+		.array(
+			z.object({
+				text: z.string().min(1).max(300),
+				qty: z.number().nonnegative().optional(),
+				unit: z.string().max(16).optional(),
+				/** A product name or code as written (a GTIN, "Voi 500 g"); not a catalogue match. */
+				productHint: z.string().max(120).optional()
+			})
+		)
+		.max(60),
+	notes: z.string().max(600).optional(),
+	/** The reader's own confidence in the reading, 0–1. */
+	confidence: z.number().min(0).max(1)
+});
+export type ImageReading = z.infer<typeof ImageReading>;
+
 export const toolSchemas = {
 	get_context: {
 		scope: 'read',
@@ -397,6 +420,18 @@ export const toolSchemas = {
 				'give planId or taskId'
 			),
 		output: out({ ledger: TaskLedger })
+	},
+	read_image: {
+		scope: 'read',
+		description:
+			'Read a photo or scan of a prep list, delivery note or product label (base64 JPEG, PNG or WebP, at most 4 MB) into lines with quantities and units. Reads only: the image is not stored and nothing is ordered.',
+		input: z.object({
+			imageBase64: z.string().min(16).max(5_600_000),
+			mimeType: z.enum(['image/jpeg', 'image/png', 'image/webp']),
+			/** What the picture is for, e.g. "delivery check for plan pl-…"; steers the reading. */
+			purpose: z.string().max(200).optional()
+		}),
+		output: out({ reading: ImageReading })
 	}
 } as const;
 

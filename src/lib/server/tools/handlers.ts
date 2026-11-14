@@ -9,6 +9,7 @@ import type { AnyDb } from '$lib/server/store/drizzle-store';
 import { env } from '$env/dynamic/private';
 import { createDecide } from '$lib/server/adapters/decide';
 import { createGetContext } from '$lib/server/agent/get-context';
+import { readImageHandler } from '$lib/server/images/tool';
 import { createGetOutcome } from '$lib/server/tasks/outcome';
 import { proposeMenuHandler } from '$lib/server/menu/tool';
 import { createLlmRouter } from '$lib/server/adapters/llm/router';
@@ -105,6 +106,13 @@ export function realHandlers(): Promise<ToolHandlers> {
 					(process.env.VITEST ? 'fixture' : (env.LLM_PROVIDER ?? 'fixture')) === 'fixture'
 						? null
 						: menuLlm.for('menu.propose')
+			}),
+			// Pictures go to the vision model (router job image.read); fixture mode reads only the sample pictures.
+			read_image: readImageHandler({
+				llm: () =>
+					(process.env.VITEST ? 'fixture' : (env.LLM_PROVIDER ?? 'fixture')) === 'fixture'
+						? null
+						: menuLlm.for('image.read')
 			}),
 			// Ledgers are recomputed from the plans on every read, never taken from a stored task.
 			get_outcome: createGetOutcome(
