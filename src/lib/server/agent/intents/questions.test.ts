@@ -43,8 +43,11 @@ describe('answerQuestion', () => {
 		async () => {
 			const w = await trialWorkspace();
 			// get_context is served by the server layer; wired here as tools/handlers.ts does.
-		const handlers = { ...w.handlers, get_context: createGetContext(w.env.ports) } as ToolHandlers;
-		const a = await answerQuestion({ kind: 'mandate' }, w.ctx('kitchen_agent'), handlers, {
+			const handlers = {
+				...w.handlers,
+				get_context: createGetContext(w.env.ports)
+			} as ToolHandlers;
+			const a = await answerQuestion({ kind: 'mandate' }, w.ctx('kitchen_agent'), handlers, {
 				kitchenId: 'k-hotel'
 			});
 			expect(a.text).toContain('Hotel');
@@ -70,6 +73,18 @@ describe('answerQuestion', () => {
 			expect(w.ops).toHaveLength(0);
 		}
 	);
+
+	it('finds butter as butter (voi), never butternut squash', { timeout: 60_000 }, async () => {
+		const w = await trialWorkspace();
+		const a = await answerQuestion(
+			{ kind: 'product', aspect: 'origin', query: 'butter' },
+			w.ctx('kitchen_agent'),
+			w.handlers
+		);
+		expect(a.steps[0].summary.toLowerCase()).not.toContain('butternut');
+		expect(a.text.toLowerCase()).not.toContain('butternut');
+		expect(a.text).not.toMatch(/ from [a-z]{2},/);
+	});
 
 	it('says plainly when no product matches', { timeout: 60_000 }, async () => {
 		const w = await trialWorkspace();

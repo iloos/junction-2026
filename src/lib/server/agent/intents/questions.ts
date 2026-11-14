@@ -7,6 +7,7 @@
  */
 import type { Product, ToolName } from '$lib/core/contracts';
 import type { CallContext, ToolHandlers } from '$lib/core/ports';
+import { PRODUCTS } from '$lib/server/request/lexicon';
 import { serveTool, type Served } from '$lib/server/tools/serve';
 import { isAuthorityImperative, isQuestion } from '../classify';
 
@@ -206,7 +207,7 @@ export function mandateSentence(k: ContextKitchen): string {
 
 const country = (code: string) => {
 	try {
-		return new Intl.DisplayNames(['en'], { type: 'region' }).of(code) ?? code;
+		return new Intl.DisplayNames(['en'], { type: 'region' }).of(code.toUpperCase()) ?? code;
 	} catch {
 		return code;
 	}
@@ -217,30 +218,80 @@ const productName = (p: Product) => p.nameEn ?? p.nameShort?.value ?? p.nameFi;
 const factValue = (v: unknown) =>
 	typeof v === 'string' ? v : Array.isArray(v) ? v.join(', ') : JSON.stringify(v);
 
+const words = (t: string) =>
+	t
+		.toLowerCase()
+		.split(/[^\p{L}\d]+/u)
+		.filter(Boolean);
+const names = (p: Product) =>
+	[p.nameFi, p.nameEn, p.nameShort?.value].filter(Boolean).join(' ').toLowerCase();
+
+type Picked =
+	| { ok: true; product: Product; summary: string; text?: undefined }
+	| { ok: boolean; product?: undefined; summary: string; text: string };
+
+/**
+ * The one product a question is about. A word the request page knows ("butter", "voi") searches with its catalogue
+ * word inside its categories, preferring its default variant, as /request resolves it. Otherwise a hit counts only
+ * when every asked word is a whole word of its name, so "butter" never lands on butternut squash; when none is,
+ * the chef is asked which product.
+ */
+async function pickProduct(call: Call, query: string): Promise<Picked> {
+	const asked = words(query);
+	const known = PRODUCTS.find((w) => asked.some((a) => w.forms.includes(a)));
+	const s = await call('search_products', { query: known?.search ?? query, limit: 20 });
+	if (!s.ok)
+		return {
+			ok: false,
+			summary: 'The catalogue search failed.',
+			text: `I could not search the catalogue: ${s.error.message}`
+		};
+	let hits = (s.value as { products: Product[] }).products;
+	if (known) {
+		if (known.categories) hits = hits.filter((p) => known.categories!.includes(p.category));
+		const prefer = known.prefer?.token;
+		if (prefer)
+			hits = [...hits].sort((a, b) => +names(b).includes(prefer) - +names(a).includes(prefer));
+	} else {
+		const whole = hits.filter((p) => {
+			const n = new Set(words(names(p)));
+			return asked.every((a) => n.has(a) || [...n].some((w) => w.startsWith(a) && a.length >= 5));
+		});
+		if (!whole.length && hits.length)
+			return {
+				ok: true,
+				summary: `No product is named “${query}”; closest: ${hits.slice(0, 3).map(productName).join(', ')}.`,
+				text: `I'm not sure which product you mean by “${query}”. The closest catalogue names are ${hits
+					.slice(0, 3)
+					.map(productName)
+					.join(', ')}. Ask again with the product's name as the catalogue has it.`
+			};
+		hits = whole;
+	}
+	if (!hits.length)
+		return {
+			ok: true,
+			summary: `No catalogue product matches “${query}”.`,
+			text: `I found no product for “${query}” in the Valio catalogue. Name it as the catalogue does, for example “kermavaahto” or “voi”.`
+		};
+	const others =
+		hits.length > 1 ? ` (also matched: ${hits.slice(1, 3).map(productName).join(', ')})` : '';
+	return { ok: true, product: hits[0], summary: `Found ${productName(hits[0])}${others}.` };
+}
+
 async function answerProduct(
 	call: Call,
 	q: Extract<Question, { kind: 'product' }>
 ): Promise<Answer> {
 	const steps: AnswerStep[] = [];
-	const s = await call('search_products', { query: q.query, limit: 3 });
-	const products = s.ok ? (s.value as { products: Product[] }).products : [];
-	if (!products.length) {
-		steps.push({
-			tool: 'search_products',
-			ok: s.ok,
-			summary: s.ok ? `No catalogue product matches “${q.query}”.` : 'The catalogue search failed.'
-		});
-		return {
-			steps,
-			text: `I found no product for “${q.query}” in the Valio catalogue. Name it as the catalogue does, for example “kermavaahto” or “Valio butter”.`,
-			sources: []
-		};
+	const picked = await pickProduct(call, q.query);
+	if (!picked.product) {
+		steps.push({ tool: 'search_products', ok: picked.ok, summary: picked.summary });
+		return { steps, text: picked.text, sources: [] };
 	}
-	const p = products[0];
+	const p = picked.product;
 	const name = productName(p);
-	const others =
-		products.length > 1 ? ` (also matched: ${products.slice(1).map(productName).join(', ')})` : '';
-	steps.push({ tool: 'search_products', ok: true, summary: `Found ${name}${others}.` });
+	steps.push({ tool: 'search_products', ok: true, summary: picked.summary });
 
 	if (q.aspect === 'recall') {
 		const r = await call('check_recall', { productId: p.productId });
