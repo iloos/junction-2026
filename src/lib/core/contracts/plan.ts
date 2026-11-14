@@ -137,7 +137,7 @@ export const ScoreBreakdown = z.object({
 export type ScoreBreakdown = z.infer<typeof ScoreBreakdown>;
 
 /**
- * Server-derived read model for one line (review round 4, triage #4): what the UI may do with it, so clients never
+ * Server-derived read model for one line: what the UI may do with it, so clients never
  * infer it from state + reasons. Computed at read time (it depends on the live approval), never stored.
  */
 export const LineView = z.object({
@@ -215,7 +215,7 @@ export const Line = z.object({
 export type Line = z.infer<typeof Line>;
 
 /**
- * Server-derived coverage of one need (review round 5, F12): the one definition of "covered" that Kitchen, Ops,
+ * Server-derived coverage of one need: the one definition of "covered" that Kitchen, Ops,
  * Request and the agent's outcome all read. An exact partition of `required`, in the need's unit:
  *
  *   required = supplierConfirmed + awaitingSupplier + plannedKnown + plannedUnknown + unresolved

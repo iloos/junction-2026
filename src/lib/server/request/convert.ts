@@ -17,7 +17,6 @@ export {
 import {
 	baseUnitsPerSales,
 	contentPerSalesUnit,
-	nameMeasures,
 	type Content,
 	type Dim
 } from '$lib/core/demand/content';

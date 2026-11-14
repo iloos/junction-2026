@@ -204,7 +204,9 @@ export function syntheticRun(opts: {
 		specs: LineSpec[],
 		by: Actor,
 		at: Date,
-		authority: 'mandate' | { approvalId: string }
+		authority: 'mandate' | { approvalId: string },
+		/** Lines the approval lists; the others stood on the mandate. Default: all of them. */
+		approved: string[] = specs.map((s) => s.id)
 	) => ({
 		...scope,
 		id,
@@ -216,7 +218,9 @@ export function syntheticRun(opts: {
 			productId: s.productId,
 			qty: { value: s.qty, unit: s.unit },
 			unitCents: Math.round(s.cents / s.qty),
-			lineCents: s.cents
+			lineCents: s.cents,
+			authority:
+				authority !== 'mandate' && approved.includes(s.id) ? authority : ('mandate' as const)
 		})),
 		totalCents: total(specs),
 		termsHash: terms(planId, planVersion),
@@ -230,7 +234,11 @@ export function syntheticRun(opts: {
 		...scope,
 		id,
 		orderId,
-		confirmed: specs.map((s) => ({ productId: s.productId, qty: { value: s.qty, unit: s.unit } })),
+		confirmed: specs.map((s) => ({
+			productId: s.productId,
+			qty: { value: s.qty, unit: s.unit },
+			lineId: s.id
+		})),
 		awaitingSupplier: [],
 		at: at.toISOString(),
 		provenance: sim
@@ -416,9 +424,17 @@ export function syntheticRun(opts: {
 				type: 'CommitOrder',
 				outcome: {
 					result: 'committed',
-					order: order('o-lounas', 'p-lounas', 1, 'k-lounas', LOUNAS, A.lounasChef, wall(14), {
-						approvalId: 'ap-lounas'
-					}),
+					order: order(
+						'o-lounas',
+						'p-lounas',
+						1,
+						'k-lounas',
+						LOUNAS,
+						A.lounasChef,
+						wall(14),
+						{ approvalId: 'ap-lounas' },
+						['l-cream']
+					),
 					receipt: receipt('r-lounas', 'o-lounas', LOUNAS, wall(14))
 				}
 			},

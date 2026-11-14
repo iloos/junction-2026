@@ -9,7 +9,8 @@ import { STRESS_WORKSPACE } from '$lib/server/bus/stress';
 import { isVisitorWorkspace } from './visitor-id';
 import { currentRun, hasRun, loadCurrentRun, newRunId, setCurrentRun } from './run';
 
-export const DEMO_WORKSPACE = 'ws-demo';
+import { DEMO_WORKSPACE } from '../store/db-ports';
+export { DEMO_WORKSPACE };
 
 /** The app's ports, built the way the tools build them (so the bus publish hook is in place). */
 async function ports() {
