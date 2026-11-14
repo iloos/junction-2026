@@ -119,7 +119,20 @@ const FILLER = new Set([
 	'tarvitsen',
 	'tarvitsemme',
 	'kiitos',
-	'tarvis'
+	'tarvis',
+	// Determiners and pronouns: grammar, never part of what to buy.
+	'all',
+	'your',
+	'yours',
+	'my',
+	'our',
+	'any',
+	'these',
+	'those',
+	'this',
+	'that',
+	'would',
+	'like'
 ]);
 
 /** Short everyday words that follow a number without being a unit ("50 on Friday", "2 ja 3"). */
