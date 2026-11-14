@@ -34,7 +34,7 @@ describe('suite: agent goal trials · server-owned idempotency keys', () => {
 			const sent = [...a.steps, ...b.steps]
 				.filter((x) => x.tool === 'place_order' || x.tool === 'commit_order')
 				.map((x) => (x.input as { idempotencyKey: string }).idempotencyKey);
-			expect(sent.every((k) => k.startsWith('agent:'))).toBe(true);
+			expect(sent.every((k) => k.startsWith('agent:') || k.startsWith('cmd-'))).toBe(true);
 			const s = await w.state();
 			expect(Object.keys(s.plans)).toHaveLength(1);
 			expect(Object.keys(s.receipts)).toHaveLength(1);

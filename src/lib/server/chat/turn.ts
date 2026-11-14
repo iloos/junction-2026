@@ -1,3 +1,4 @@
+import { commandKey } from '$lib/core/command';
 import type { Plan, ToolName, ToolOutput } from '$lib/core/contracts';
 import { ClarifyField, newTaskId, type Task, type TaskState } from '$lib/core/contracts/task';
 import type { CallContext, Llm, Ports, TaskStore, ToolHandlers } from '$lib/core/ports';
@@ -1748,16 +1749,6 @@ function contextSource(deps: ChatDeps): ContextSource {
 	};
 }
 
-/** FNV-1a, hex: a short stable digest for command keys (not a security hash). */
-function digest(x: string): string {
-	let h = 0x811c9dc5;
-	for (let i = 0; i < x.length; i++) {
-		h ^= x.charCodeAt(i);
-		h = Math.imul(h, 0x01000193);
-	}
-	return (h >>> 0).toString(16).padStart(8, '0');
-}
-
 /**
  * `continue_task`: for every plan of the task, commit exactly the lines that may be bought now (the line views'
  * `committable`: within the mandate, or covered by a chef's live grant), naming them. Each such set is one purchase
@@ -1821,11 +1812,14 @@ async function continueTask(
 				planId: plan.id,
 				version: plan.version,
 				lineIds,
-				// One purchase command: task + plan + version + accepted terms + the exact lines. A retry of it replays its
-				// receipt; changed terms or another line set is a new command, never blocked by an earlier failed one.
-				idempotencyKey: `task:${task.id}:commit:${digest(
-					[plan.id, plan.version, plan.termsHash ?? '', lineIds.join(',')].join('|')
-				)}`
+				// One purchase command (D18): plan + version + accepted terms + the exact lines, the same key on every
+				// entry. A retry replays its receipt; changed terms or another line set is a new command.
+				idempotencyKey: await commandKey({
+					planId: plan.id,
+					version: plan.version,
+					termsHash: plan.termsHash ?? null,
+					lineIds
+				})
 			},
 			`commit the ${lineIds.length} line(s) that may be bought now`
 		);

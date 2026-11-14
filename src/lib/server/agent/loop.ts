@@ -3,9 +3,11 @@ import {
 	err,
 	toolSchemas,
 	type DomainError,
+	type Plan,
 	type ServerEvent,
 	type ToolName
 } from '$lib/core/contracts';
+import { commandKey } from '$lib/core/command';
 import type { CallContext, Llm, ToolHandlers } from '$lib/core/ports';
 import { traceEvent, type TraceStep } from '$lib/server/adapters/llm/trace';
 import { serveTool, toolsFor } from '$lib/server/tools/serve';
@@ -225,7 +227,17 @@ export async function runAgent(o: {
 		if ('done' in action) return finish('done', action.summary);
 
 		// Idempotency keys are the server's, whatever a planner (a model) sent: no double order rests on its keys.
-		action.input = withServerKey(action.tool, action.input, o.intent, o.goal, o.keyScope);
+		action.input = await withServerKey(
+			action.tool,
+			action.input,
+			o.intent,
+			o.goal,
+			o.keyScope,
+			async (planId) => {
+				const r = await o.handlers.get_plan(o.ctx, { planId });
+				return r.ok ? r.value.plan : null;
+			}
+		);
 		emit('step', { n, tool: action.tool, why: action.why, input: action.input });
 		const t0 = performance.now();
 		const refusal = await refuse(action, tools, o.kitchenIds, planKitchen, o.ctx, o.handlers);
@@ -286,25 +298,35 @@ function digest(s: string): string {
  * separate requests with the same words stay two orders. commit_order: one per plan version, so a plan is bought at most once per
  * version.
  */
-export function withServerKey(
+export async function withServerKey(
 	tool: ToolName,
 	input: unknown,
 	intent: Intent | undefined,
 	goal: string,
 	/** What makes this request its own (its task, else its agent run): two requests never share an order. */
-	scope?: string
-): unknown {
+	scope?: string,
+	/** The plan as it stands, for a commit's accepted terms and its open lines. */
+	readPlan?: (planId: string) => Promise<Pick<Plan, 'termsHash' | 'lines'> | null>
+): Promise<unknown> {
 	if (tool !== 'place_order' && tool !== 'commit_order') return input;
 	const i = (input ?? {}) as Record<string, unknown>;
-	if (tool === 'commit_order')
+	if (tool === 'commit_order') {
+		// One command identity for every entry (D18): plan, version, accepted terms and the exact lines (the open
+		// lines when none are named). Another line set or re-approved terms is a new command.
+		const plan = readPlan ? await readPlan(String(i.planId)) : null;
+		const lineIds = Array.isArray(i.lineIds)
+			? (i.lineIds as string[])
+			: (plan?.lines.filter((l) => l.state === 'eligible').map((l) => l.id) ?? []);
 		return {
 			...i,
-			// Plan + version + the exact lines (all open lines when none are named): a different subset of the same
-			// version is a new command; terms that change bump the version.
-			idempotencyKey: `agent:commit:${String(i.planId)}:v${String(i.version)}:${digest(
-				Array.isArray(i.lineIds) ? [...(i.lineIds as string[])].sort().join(',') : '*'
-			)}`
+			idempotencyKey: await commandKey({
+				planId: String(i.planId),
+				version: Number(i.version),
+				termsHash: plan?.termsHash ?? null,
+				lineIds
+			})
 		};
+	}
 	const what =
 		intent?.kind === 'routine_order'
 			? {
