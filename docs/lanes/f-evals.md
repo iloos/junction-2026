@@ -23,7 +23,7 @@
 | F12-ops coverage | `surfaces.test.ts` | 9c |
 | A4 held plan from a brief | `briefs/golden.json` | menu track |
 
-- Claim ledger `docs/CLAIMS.md` (owned): first pass done; rerun before the 22:00 video with prod screenshots per demo beat.
+- Claim ledger `docs/CLAIMS.md` (owned): first pass done, deployed two-browser + MCP journey recorded on ab3a557; rerun before the 22:00 video with prod screenshots per demo beat.
 - Review on/off comparison: waits for E's `REVIEW=1`; then the same trials both ways via `eval:live` (pass rate and tokens per arm).
 - Ring 2 chat evals: **scaffolded** on T1 (`evals/chat/check.ts` + 8 self-tests in evals:self; trials c1 clarify, c2 approval handoff + continue, c3 edit voids approval; driver `chat.test.ts` skips until E's `src/lib/server/chat/turn.ts` exports `runChatTurn(input, deps)` yielding the turn's NDJSON events with `taskId`). On wiring: probe, then expectFail with owners. `evals/chat/*.json`: scripted turns through the real chat entry point, judged on the task record and the op log, never on the model's prose:
   - **clarification**: a turn missing a fact (kitchen, date, amount) gets exactly one question about that field; an answered field is never asked again; a typed requirement survives every later turn.
