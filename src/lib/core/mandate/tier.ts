@@ -14,6 +14,7 @@ import type {
 	Tier
 } from '../contracts';
 import type { TermsLine } from '../hash';
+import { forbidden, validateLine } from './validate';
 
 export interface DraftLine {
 	id: string;
@@ -74,11 +75,13 @@ const TIER_OF: Partial<Record<string, Tier>> = {
 	INSUFFICIENT_STOCK: 'propose',
 	new_sku: 'propose',
 	low_reliability: 'propose',
-	allergen_unknown: 'propose',
+	allergen_unknown: 'sign_off',
 	substitute_breaks_preference: 'sign_off',
 	off_tender_list: 'sign_off',
 	origin_required: 'sign_off',
 	external_agent_needs_approval: 'sign_off',
+	allergen_trace: 'sign_off',
+	price_missing: 'propose',
 	allergen_change: 'sign_off'
 };
 const tierOf = (r: LineReason): Tier =>
@@ -95,40 +98,38 @@ export function tierLines(input: TierInput): TierResult {
 		offer: Offer | null;
 		reasons: LineReason[];
 		orderable: boolean;
+		/** A fact gap (no price, not enough stock): held but never approvable. */
+		gap: boolean;
 		lineCents: number | null;
 	};
 
 	const work: Work[] = input.lines.map((draft) => {
 		const offer = offers.get(draft.productId) ?? null;
 		const product = products.get(draft.productId);
-		const a = offer?.availability;
-		const reasons: LineReason[] = [];
-		if (!offer || !a)
-			return { draft, offer, reasons: ['NOT_FOUND'], orderable: false, lineCents: null };
-		if (a.kind === 'out' || a.kind === 'undeliverable' || a.kind === 'blocked')
-			return { draft, offer, reasons: [a.kind], orderable: false, lineCents: null };
-		if (a.kind === 'known' && a.amount !== null && a.amount < draft.qty.value) {
-			if (a.amount < (product?.lotStep ?? 0.01))
-				return { draft, offer, reasons: ['BELOW_LOT'], orderable: false, lineCents: null };
-			reasons.push('INSUFFICIENT_STOCK');
-		}
-		if (a.kind === 'unknown') reasons.push('UNKNOWN_REQUIRED');
-		const lineCents = offer.price ? Math.round(draft.qty.value * offer.price.unitCents) : null;
-		if (lineCents === null) reasons.push('UNKNOWN_REQUIRED');
+		// The shared validator decides what rules a line out, what is a fact gap and what a human may waive.
+		const findings = validateLine(kitchen, product, offer, draft.qty, {
+			substitute: Boolean(draft.substituteFor)
+		});
+		const ruledOut = forbidden(findings);
+		if (ruledOut.length)
+			return {
+				draft,
+				offer,
+				reasons: ruledOut.map((f) => f.reason),
+				orderable: false,
+				gap: false,
+				lineCents: null
+			};
+		const reasons: LineReason[] = findings.map((f) => f.reason);
+		const gap = findings.some((f) => f.effect === 'gap');
+		const lineCents = offer?.price ? Math.round(draft.qty.value * offer.price.unitCents) : null;
 		if (m.neverDelegate.includes('new_sku') && !input.orderedBefore.has(draft.productId))
 			reasons.push('new_sku');
 		if (product?.reliability !== undefined && product.reliability < 0.7)
 			reasons.push('low_reliability');
-		if (
-			kitchen.constraints.tenderListOnly &&
-			!kitchen.constraints.tenderList?.includes(draft.productId)
-		)
-			reasons.push('off_tender_list');
-		if (kitchen.constraints.allergens.freeFrom.length > 0 && product && !product.allergens.declared)
-			reasons.push('allergen_unknown');
 		if (lineCents !== null && lineCents > m.lineCapCents) reasons.push('CAP_EXCEEDED.line');
 		reasons.push(...(draft.extraReasons ?? []));
-		return { draft, offer, reasons, orderable: true, lineCents };
+		return { draft, offer, reasons, orderable: true, gap, lineCents };
 	});
 
 	const orderable = work.filter((w) => w.orderable);
@@ -140,7 +141,11 @@ export function tierLines(input: TierInput): TierResult {
 	}
 
 	const lines: Line[] = work.map((w) => {
-		const tier = w.orderable ? maxTier(w.reasons) : undefined;
+		const tier = w.orderable
+			? w.gap
+				? maxTier([...w.reasons, 'price_missing'])
+				: maxTier(w.reasons)
+			: undefined;
 		const state: Line['state'] = !w.orderable
 			? 'unorderable'
 			: tier === 'act'
@@ -163,6 +168,8 @@ export function tierLines(input: TierInput): TierResult {
 	});
 	const all = [...(input.committed ?? []), ...lines];
 	const heldLines = lines.filter((l) => l.state === 'held');
+	// Only waivable holds go to a human; a fact gap must be resolved first (a new quote, new terms).
+	const approvable = heldLines.filter((l) => !work.find((w) => w.draft.id === l.id)?.gap);
 	const open = lines.some((l) => l.state === 'eligible' || l.state === 'held');
 	const planState: PlanState = heldLines.length ? 'held' : open ? 'ready' : 'held';
 	return {
@@ -177,8 +184,11 @@ export function tierLines(input: TierInput): TierResult {
 				unit: l.qty.unit,
 				unitCents: l.offer!.price!.unitCents
 			})),
-		held: heldLines.length
-			? { lineIds: heldLines.map((l) => l.id), tier: maxTier(heldLines.flatMap((l) => l.reasons)) }
+		held: approvable.length
+			? {
+					lineIds: approvable.map((l) => l.id),
+					tier: maxTier(approvable.flatMap((l) => l.reasons))
+				}
 			: null
 	};
 }

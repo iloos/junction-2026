@@ -19,6 +19,7 @@ export interface PriceOverride {
 export class SimOverlay {
 	private availability = new Map<string, AvailabilityOverride>();
 	private price = new Map<string, PriceOverride>();
+	private noPrice = new Map<string, string>();
 
 	setAvailability(o: AvailabilityOverride) {
 		this.availability.set(o.productId, o);
@@ -26,9 +27,14 @@ export class SimOverlay {
 	setPrice(o: PriceOverride) {
 		this.price.set(o.productId, o);
 	}
+	/** Valio returns no price for this product (a fact gap the gate must not paper over). */
+	setPriceMissing(productId: string, label: string) {
+		this.noPrice.set(productId, label);
+	}
 	clear() {
 		this.availability.clear();
 		this.price.clear();
+		this.noPrice.clear();
 	}
 
 	apply(offer: Offer): Offer {
@@ -56,6 +62,7 @@ export class SimOverlay {
 					provenance: { source: 'simulator', note: p.label, ref: 'overlay' }
 				}
 			};
+		if (this.noPrice.has(offer.productId)) out = { ...out, price: null };
 		return out;
 	}
 }

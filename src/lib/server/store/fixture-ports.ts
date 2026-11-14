@@ -3,6 +3,7 @@
  * Decide/Llm/Web/Jobs belong to other lanes; here they fail loudly so a test never depends on a model by accident.
  */
 import type { Catalog, Ports } from '$lib/core/ports';
+import { SCENARIO } from '$lib/core/scenario';
 import { createValioCatalog } from '../adapters/catalog/valio';
 import { SimOverlay } from '../adapters/simulator/overlay';
 
@@ -14,7 +15,7 @@ let sharedCatalog: (Catalog & { products: Map<string, unknown> }) | null = null;
 let sharedOverlay: SimOverlay | null = null;
 
 export interface FixturePortsOptions {
-	/** Simulator time; default: the demo clock, Sat 14 Nov 2026 12:00 Helsinki. */
+	/** Simulator time; default: the scenario start (Mon 7 Dec 21:40 Helsinki). */
 	now?: string;
 	dir?: string;
 	overlay?: SimOverlay;
@@ -30,7 +31,7 @@ export function createFixturePorts(o: FixturePortsOptions = {}): Ports & { overl
 	sharedOverlay ??= overlay;
 	const catalog =
 		o.catalog ?? (sharedCatalog ??= createValioCatalog({ dir: o.dir, overlay: sharedOverlay }));
-	const now = new Date(o.now ?? '2026-11-14T12:00:00+02:00');
+	const now = new Date(o.now ?? SCENARIO.start);
 	const base: Ports = {
 		clock: { now: () => now },
 		catalog,

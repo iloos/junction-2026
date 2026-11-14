@@ -10,7 +10,6 @@ import {
 	type Approval,
 	type DomainError,
 	type Kitchen,
-	type Line,
 	type Offer,
 	type Order,
 	type PendingOp,
@@ -288,6 +287,9 @@ export async function commitOrder(
 	ctx: CallContext,
 	input: ToolInput<'commit_order'>
 ): Promise<Result<ToolOutput<'commit_order'>>> {
+	// A line id twice would buy it twice under one approval: refuse before anything is read or written.
+	if (input.lineIds && new Set(input.lineIds).size !== input.lineIds.length)
+		return err('INVALID_INPUT', 'lineIds must be unique');
 	const pre = await ports.store.load(ctx.workspaceId, ctx.runId);
 	const plan0 = pre.plans[input.planId];
 	if (!plan0) return err('NOT_FOUND', `plan ${input.planId}`);
@@ -371,10 +373,39 @@ export async function commitOrder(
 						}).error
 					: err('INVALID_INPUT', 'no open line to commit').error
 			);
-		const lines = selected.map((id) => byId.get(id)).filter((l): l is Line => Boolean(l));
-		if (lines.length !== selected.length) return fail(err('NOT_FOUND', 'unknown line id').error);
+		if (selected.some((id) => !byId.has(id)))
+			return fail(err('NOT_FOUND', 'unknown line id').error);
+		// Revalidate exactly what is being bought against the fresh quote: rules and facts, never an approval, decide.
+		const requoted = new Map(t.lines.map((l) => [l.id, l]));
+		const lines = selected.map((id) => requoted.get(id) ?? byId.get(id)!);
+		for (const l of lines) {
+			if (l.state === 'unorderable')
+				return fail(
+					err('FORBIDDEN', `${l.productId} is ruled out: ${l.reasons.join(', ')}`, {
+						sub: 'rule',
+						detail: { lineId: l.id, reasons: l.reasons }
+					}).error
+				);
+			if (!l.offer?.price || l.lineCents === null)
+				return fail(
+					err('UNKNOWN_REQUIRED', `${l.productId} has no price: it cannot be ordered`, {
+						sub: 'price',
+						detail: { lineId: l.id }
+					}).error
+				);
+			if (l.reasons.includes('INSUFFICIENT_STOCK'))
+				return fail(
+					err(
+						'INSUFFICIENT_STOCK',
+						`${l.productId}: not enough stock for ${l.qty.value} ${l.qty.unit}`,
+						{
+							detail: { lineId: l.id }
+						}
+					).error
+				);
+		}
 		const inMandate = !external && lines.every((l) => l.state === 'eligible' && l.tier === 'act');
-		const totalCents = lines.reduce((s, l) => s + (l.lineCents ?? 0), 0);
+		const totalCents = lines.reduce((s, l) => s + l.lineCents!, 0);
 		let authority: Order['authority'];
 		if (inMandate) {
 			if (spent + totalCents > kitchen.mandate.weeklyCapCents)
@@ -427,8 +458,8 @@ export async function commitOrder(
 				lineId: l.id,
 				productId: l.productId,
 				qty: l.qty,
-				unitCents: l.offer?.price?.unitCents ?? 0,
-				lineCents: l.lineCents ?? 0
+				unitCents: l.offer!.price!.unitCents,
+				lineCents: l.lineCents!
 			})),
 			totalCents,
 			termsHash: plan.termsHash!,

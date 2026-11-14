@@ -16,6 +16,7 @@ import {
 	type ToolOutput
 } from '../contracts';
 import { sha256Hex } from '../hash';
+import { SCENARIO } from '../scenario';
 import { planEventDemand, type EventSeed } from '../demand';
 import { draftFromLine, isoWeek, tierLines, type DraftLine } from '../mandate/tier';
 import type { CallContext, Ports, Tx } from '../ports';
@@ -35,8 +36,9 @@ const pending = (ctx: CallContext, op: PendingOp['op']): PendingOp => ({
 	op
 });
 
-/** The delivery for an event lands two days before it (demo scenario: Thu 10 Dec for Sat 12 Dec). */
+/** The delivery for an event: the scenario's delivery for the scenario's event, otherwise two days before it. */
 export function deliverByFor(eventDate: string): string {
+	if (eventDate === SCENARIO.event) return SCENARIO.delivery;
 	const d = new Date(`${eventDate}T00:00:00Z`);
 	d.setUTCDate(d.getUTCDate() - 2);
 	return d.toISOString().slice(0, 10);
