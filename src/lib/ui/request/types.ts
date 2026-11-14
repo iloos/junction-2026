@@ -105,6 +105,8 @@ export interface LookupView {
 	offerSources: string[];
 	/** Size checks against the kitchen's own numbers; non-empty means confirm before placing. */
 	sanity: string[];
+	/** Set when the order is over the mandate's hard limit: placing it gives an unorderable line. */
+	hardLimit: { totalCents: number; limitCents: number } | null;
 }
 
 export interface ApprovalView {
@@ -134,6 +136,7 @@ export interface OrderView {
 		lineCapCents: number;
 		orderCapCents: number;
 		weeklyCapCents: number;
+		hardLimitCents: number;
 		mandateVersion: number;
 	};
 	deliveryNote: string | null;

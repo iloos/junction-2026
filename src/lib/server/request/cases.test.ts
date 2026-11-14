@@ -106,7 +106,8 @@ describe('size check before placing', () => {
 		expect(w[0]).toMatch(
 			/^1,000,000 l of orange juice is 2,631.6 l per daily cover .*380 covers a day.*263.2× the 10 l per cover/
 		);
-		expect(w[1]).toMatch(/^€2,700,000 is 675× your €4,000 weekly limit$/);
+		expect(w[1]).toMatch(/^€2,700,000 is over this kitchen's €8,000 hard limit/);
+		expect(w[2]).toMatch(/^€2,700,000 is 675× your €4,000 weekly limit$/);
 	});
 
 	it('a huge order is not placed until confirmed; the milk example passes unflagged', async () => {

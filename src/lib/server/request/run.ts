@@ -23,7 +23,8 @@ import type {
 } from '$lib/ui/request/types';
 import { weekdayOf } from './dates';
 import { caseBreakdown, caseHeadline, orderAmount } from './convert';
-import { sanityWarnings } from './sanity';
+import { hardLimit, sanityWarnings } from './sanity';
+import { hardLimitCents } from '$lib/core/mandate/validate';
 import { rankCandidates, SHORTLIST, unpickable, type Ranked } from './lookup';
 import { parseRequest, type ParsedRequest } from './parse';
 
@@ -280,7 +281,8 @@ async function lookupItems(parsed: ParsedRequest, d: RequestDeps): Promise<Looku
 		searchCalls,
 		quotedIds: [...offers.keys()],
 		offerSources,
-		sanity: sanityWarnings(items, d.kitchen)
+		sanity: sanityWarnings(items, d.kitchen),
+		hardLimit: hardLimit(items, d.kitchen)
 	};
 }
 
@@ -436,6 +438,7 @@ export async function runRequest(text: string, d: RequestDeps): Promise<RequestR
 				lineCapCents: d.kitchen.mandate.lineCapCents,
 				orderCapCents: d.kitchen.mandate.orderCapCents,
 				weeklyCapCents: d.kitchen.mandate.weeklyCapCents,
+				hardLimitCents: hardLimitCents(d.kitchen.mandate),
 				mandateVersion: d.kitchen.mandate.version
 			},
 			deliveryNote: d.kitchen.deliveryDays.includes(dow)
@@ -443,9 +446,12 @@ export async function runRequest(text: string, d: RequestDeps): Promise<RequestR
 				: `${d.kitchen.name} takes deliveries on ${d.kitchen.deliveryDays.join(', ')}; ${parsed.deliverBy} is a ${dow}`
 		};
 		const held = plan.lines.some((l) => l.state === 'held');
+		const nothingOrderable = plan.lines.every(
+			(l) => l.state === 'unorderable' || l.state === 'rejected'
+		);
 		emit({
 			step: 'order',
-			status: held || order.deliveryNote ? 'warn' : 'done',
+			status: nothingOrderable ? 'error' : held || order.deliveryNote ? 'warn' : 'done',
 			ms: ms(),
 			data: order
 		});

@@ -7,6 +7,7 @@ export interface Caps {
 	lineCapCents: number;
 	orderCapCents: number;
 	weeklyCapCents: number;
+	hardLimitCents?: number;
 }
 
 export function reasonWords(
@@ -23,6 +24,12 @@ export function reasonWords(
 			return `${money(planTotal)} order is over your ${w(caps.orderCapCents)} order limit`;
 		case 'CAP_EXCEEDED.weekly':
 			return `this order takes the week over your ${w(caps.weeklyCapCents)} weekly limit`;
+		case 'over_hard_limit': {
+			// Unorderable lines carry no line total; the attempted amount is quantity × quoted price.
+			const unit = line.offer?.price?.unitCents;
+			const tried = unit === undefined ? null : Math.round(unit * line.qty.value);
+			return `${tried === null ? 'This' : money(tried, { whole: true })} is over this kitchen's ${caps.hardLimitCents ? w(caps.hardLimitCents) + ' ' : ''}hard limit: no approval can pass it. Raise the mandate first`;
+		}
 		case 'new_sku':
 			return "a product this kitchen hasn't bought before: your mandate says ask first";
 		default:

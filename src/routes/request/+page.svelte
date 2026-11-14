@@ -107,6 +107,7 @@
 	function approvalStatus(): Status {
 		if (commits.length) return 'done';
 		if (!plan) return 'idle';
+		if (!approval && plan.lines.some((l) => l.reasons.includes('over_hard_limit'))) return 'error';
 		if (
 			approval?.state === 'denied' ||
 			approval?.state === 'invalidated' ||
@@ -268,6 +269,28 @@
 		nonce = newNonce();
 	}
 
+	/** The judges' sandbox only: a fresh run with the seed kitchens; the old run stays for audit. */
+	let sandboxNote = $state<string | null>(null);
+	async function resetSandbox() {
+		busy = true;
+		sandboxNote = null;
+		try {
+			const res = await fetch('/api/demo/sandbox/reset', { method: 'POST' });
+			const b = await res.json().catch(() => null);
+			if (res.status === 429)
+				sandboxNote = `The sandbox was just reset. Try again in ${Math.ceil((b?.retryInMs ?? 0) / 1000)} s.`;
+			else if (!res.ok) sandboxNote = b?.error?.message ?? `Reset failed (HTTP ${res.status}).`;
+			else {
+				startOver();
+				sandboxNote = `Sandbox started over: fresh run ${b.runId}, no orders yet.`;
+			}
+		} catch (e) {
+			sandboxNote = e instanceof Error ? e.message : String(e);
+		} finally {
+			busy = false;
+		}
+	}
+
 	const sim = $derived(day(data.today));
 	/** A cut-off before the scenario's now is a cached date from another clock: not shown as a deadline. */
 	const cutoffText = (iso: string | null) =>
@@ -353,7 +376,20 @@
 				{#each data.kitchens as k (k.id)}<option value={k.id}>{k.name}</option>{/each}
 			</select>
 		</label>
+		{#if !data.workspace.stage}
+			<button
+				type="button"
+				disabled={busy || !ready}
+				onclick={resetSandbox}
+				class="inline-flex h-9 items-center gap-1.5 rounded-md border border-rule-strong bg-sheet px-3 text-[13px] text-ink-2 hover:text-ink disabled:opacity-50"
+			>
+				<RotateCcw size={14} aria-hidden="true" /> Start over (sandbox)
+			</button>
+		{/if}
 	</header>
+	{#if sandboxNote}
+		<p class="-mt-2 mb-4 text-[13px] text-ink-2" role="status">{sandboxNote}</p>
+	{/if}
 
 	<form
 		class="rounded-xl border border-rule-strong bg-sheet p-2 shadow-[0_1px_0_oklch(0.9_0.01_85)] focus-within:border-accent/60"
@@ -516,7 +552,9 @@
 							role="alert"
 						>
 							<p class="font-medium text-out">
-								Unusually large order{needsConfirm ? ': nothing placed yet' : ''}
+								{lookup.hardLimit ? 'Over the hard limit' : 'Unusually large order'}{needsConfirm
+									? ': nothing placed yet'
+									: ''}
 							</p>
 							<ul class="mt-1 space-y-0.5 text-ink">
 								{#each lookup.sanity as w (w)}<li>· {w}.</li>{/each}
@@ -528,7 +566,9 @@
 										disabled={busy}
 										onclick={() => submit(text, true, true)}
 										class="h-9 rounded-md border border-out/50 bg-sheet px-3 text-[13px] font-medium text-out hover:bg-out-wash disabled:opacity-50"
-										>Place it anyway (still needs approval)</button
+										>{lookup.hardLimit
+											? 'Place it anyway (it will be refused: over the hard limit)'
+											: 'Place it anyway (still needs approval)'}</button
 									>
 									<button
 										type="button"
@@ -718,6 +758,14 @@
 							<b class="font-medium">{TIER_WORDS[approval.tier].title}.</b>
 							<span class="text-ink-2">{TIER_WORDS[approval.tier].body}</span>
 						</p>
+					{:else if plan.lines.some((l) => l.reasons.includes('over_hard_limit'))}
+						<p class="mt-2 text-[13.5px]">
+							<b class="font-medium text-out">Over this kitchen's hard limit.</b>
+							<span class="text-ink-2"
+								>Nothing here can be ordered, and no approval can change that. Raise the mandate
+								first, or order less.</span
+							>
+						</p>
 					{:else if plan.lines.every((l) => l.tier === 'act')}
 						<p class="mt-2 text-[13.5px]">
 							<b class="font-medium">{TIER_WORDS.act.title}.</b>
@@ -783,7 +831,14 @@
 						{/if}
 					{:else if !committed}
 						<p class="text-[13.5px] text-ink-2">
-							No approval needed: every line is within your mandate.
+							{#if plan.lines.every((l) => l.state === 'eligible' && l.tier === 'act')}
+								No approval needed: every line is within your mandate.
+							{:else if plan.lines.some((l) => l.reasons.includes('over_hard_limit'))}
+								Nothing to approve: the order is over this kitchen's hard limit. Raise the mandate
+								first.
+							{:else}
+								Nothing to approve: no line can be ordered as it stands.
+							{/if}
 						</p>
 					{/if}
 
