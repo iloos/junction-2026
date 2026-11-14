@@ -46,5 +46,6 @@ describe('D8 supply tier', () => {
 		]);
 		// The score still says which is cheaper; only the order is lexicographic.
 		expect(ranked[1].score!.total).toBeGreaterThan(ranked[0].score!.total);
+		expect(ranked.map((r) => r.score!.supplyTier)).toEqual(['confirmed', 'unknown']);
 	});
 });

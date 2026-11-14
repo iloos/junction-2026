@@ -59,6 +59,9 @@ describe('hard limit', () => {
 			nextAction: 'resolve_rule'
 		});
 		expect(placed.approvalId).toBeNull();
+		// F32-total: a forbidden order still reports what it would cost, as the split order does.
+		expect(line.lineCents).toBe(Math.round(200_000 * line.offer!.price!.unitCents));
+		expect(placed.plan.totalCents).toBe(line.lineCents);
 
 		for (const lineIds of [undefined, [line.id]]) {
 			const r = await h.commit_order(ctx('chef'), {
@@ -86,6 +89,7 @@ describe('hard limit', () => {
 		);
 		expect(placed.plan.lines.every((l) => l.state === 'unorderable')).toBe(true);
 		expect(placed.plan.lines.every((l) => l.reasons.includes('over_hard_limit'))).toBe(true);
+		expect(placed.plan.totalCents).toBeGreaterThan(800_000);
 		expect(placed.approvalId).toBeNull();
 	});
 });

@@ -117,6 +117,7 @@ export function rankCandidates(input: RankInput): Ranked[] {
 		const totalScore = fit ? (base + fitWeight * (fit.score / 4)) / (1 + fitWeight) : base;
 		const score: ScoreBreakdown = {
 			total: +totalScore.toFixed(4),
+			supplyTier: supplyOf(x.o),
 			components,
 			...(fit
 				? {

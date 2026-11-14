@@ -503,7 +503,13 @@ export async function commitOrder(
 				productId: l.productId,
 				qty: l.qty,
 				unitCents: l.offer!.price!.unitCents,
-				lineCents: l.lineCents!
+				lineCents: l.lineCents!,
+				// F8: each line names what allowed it. A line the approval covered names it, even if the mandate
+				// alone would have allowed it; an act-tier line bought alongside names the mandate.
+				authority:
+					authority !== 'mandate' && granted?.lineIds.includes(l.id)
+						? { approvalId: granted.id }
+						: 'mandate'
 			})),
 			totalCents,
 			termsHash: plan.termsHash!,
