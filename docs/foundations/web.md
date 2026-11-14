@@ -25,6 +25,10 @@ _Code: `src/lib/server/web/**`, routes `src/routes/api/web/**`, scripts `scripts
 | `find_outside` | Exa `/search` + `outputSchema` | MCP / REST tool, and `POST /api/web/outside {need, amount?}` | `{options: [{title, url, note?, provenance}]}`; no citation, no option; never ordered |
 | `check_recall` | none (notices on file) | MCP / REST tool, and `POST /api/web/recall {productId}` | `{notices: [{url, title, match: gtin, name or none, drill, seenAt}]}`; a drill shows only in its own workspace |
 | Findings | — | `GET /api/web/findings?kind=` | `{mode, workspaceId, findings, applications, queued}`: public notices plus the caller's workspace's own findings, its applications, queued recall work |
+| Why-drawer evidence | Exa (as `lookup_facts`) | `POST /api/web/evidence {productId, question?}` | `{catalogue: "Valio has no allergen record…", gap, source: live/cache/replay, fields: [{label, value, gtinCited, sources: [{url, host, title, quote, gtinCited}]}], disclaimer}`; GTIN-cited fields first (`evidence.ts`) |
+| Make in house | Exa (as `find_outside`) + `Catalog.resolve` | `POST /api/web/make-in-house {need, context?}` | `{status: 'held', reasons, recipe{title,url,yield}, ingredients[{text, status resolved/nearest/none, products}], coverage}`; proposes only, nothing is written to a plan |
+| Supplier leads | Context.dev `POST /news/search` (entity by name, 6 h cache, 1 credit / 10 results) | `GET /api/web/leads?planId=` | `{source, vendors, leads: [{vendor, title, url, host, publishedAt, level}]}` from the last 30 days; leads only, never a hold. Fixture mode reads none and says so |
+| Sandbox recalls | stored reads (no network) | `prepareSandboxRecalls(env, ctx, {drillProductId?})` in `sandbox.ts`, for the sandbox seeder | stored public notices applied to the visitor's run, plus an optional labelled DRILL in the visitor's own namespace |
 
 Every route and tool runs under a `WebExecutionContext` (`webContext(ctx)` for routes; `tools/handlers.ts` for tools): the caller's workspace and run, never the default. Tool summaries are labelled `[live]`, `[cache]` or `[replay]`. The planner sees only counts and field codes from web results (`agent/facts.ts`).
 
@@ -78,3 +82,6 @@ CONTEXT_DEV_WEBHOOK_SECRET=… pnpm tsx --env-file=.env scripts/web/monitor.ts p
 ## Fixtures
 
 `src/lib/server/web/fixtures/`: `recall-list.json` (16 notices), `recall-notices.json` (10 extracted real notices incl. the 9 Oct 2026 egg recall), `exa.json` (`facts:460002`, `outside:joulutorttu`). All recorded 2026-11-14 from the live APIs, trimmed.
+
+## Shared outside-call plumbing (`src/lib/server/external/`)
+`createExternalCall` wraps every outside call (web HTTP now; Gemini Decide; Valio next): response cache (memory + dir), a spend guard charged only on a network call, a half-open breaker per API (5 failures or a 429 opens it; one probe when the cool-down ends), and one `ExternalCallTrace` per call (`{api, purpose, cache: live|cache|replay|fixture, ok, latencyMs, costUnits, model, workspaceId}`). `withExternalScope(scopeFor(ctx), fn)` carries the caller's workspace so adapters built once per process trace into its drawer and charge its caps. `ledger.ts` is the daily cap ledger (web: `WEB_CAP_*`; Decide: `DECIDE_CAP_PER_WORKSPACE` 300, `DECIDE_CAP_GLOBAL` 5000).
