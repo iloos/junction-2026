@@ -2,13 +2,15 @@
 	import { CornerDownLeft } from '@lucide/svelte';
 	import type { AnswerSpec, ReqUnit, RequestAnswer } from './types';
 
-	/** Answer a lookup question in place: pick one of the offered options, or type an amount. */
+	/** Answer a lookup question in place: pick an offered option, type an amount, or take the open date. */
 	interface Props {
 		spec: AnswerSpec;
 		busy: boolean;
 		onanswer: (a: RequestAnswer) => void;
+		/** A cut-off answer: run the request again for this delivery date. */
+		ondate?: (date: string) => void;
 	}
-	let { spec, busy, onanswer }: Props = $props();
+	let { spec, busy, onanswer, ondate }: Props = $props();
 
 	const UNIT_LABEL: Record<ReqUnit, string> = {
 		l: 'l',
@@ -18,7 +20,11 @@
 		sales: 'sales units'
 	};
 	const units = $derived(
-		spec.kind === 'qty' ? spec.units : (spec.alsoQty?.units ?? ([] as ReqUnit[]))
+		spec.kind === 'qty'
+			? spec.units
+			: spec.kind === 'choice'
+				? (spec.alsoQty?.units ?? ([] as ReqUnit[]))
+				: ([] as ReqUnit[])
 	);
 	let qty = $state('');
 	let unit = $state<ReqUnit | ''>('');
@@ -49,6 +55,15 @@
 				</li>
 			{/each}
 		</ul>
+	{/if}
+	{#if spec.kind === 'date'}
+		<button
+			type="button"
+			disabled={busy || !ondate}
+			onclick={() => ondate?.(spec.date)}
+			class="mt-2 inline-flex h-9 items-center gap-1.5 rounded-md bg-accent px-3 text-[13px] font-medium text-sheet disabled:opacity-40"
+			data-testid="cutoff-date">{spec.label} <CornerDownLeft size={14} aria-hidden="true" /></button
+		>
 	{/if}
 	{#if units.length}
 		<form class="flex flex-wrap items-center gap-2" onsubmit={send}>

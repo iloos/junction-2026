@@ -445,3 +445,49 @@ describe('core-physical-intent: /request sends the physical amount', () => {
 		expect(plan.lines[0].qty.value).toBe((pick.conversion as { salesQty: number }).salesQty);
 	});
 });
+
+describe('cut-off at lookup: a date whose ordering closed is said and an open one offered', () => {
+	it('"for tomorrow" on Mon 21:40 asks for Wed 9 Dec, then orders for it when chosen', async () => {
+		const { h, ctx, kitchen } = await setup();
+		const base = {
+			handlers: h,
+			ctx,
+			today: '2026-12-07',
+			kitchen,
+			now: new Date('2026-12-07T21:40:00+02:00'),
+			nonce: 'cutoff'
+		};
+		const r = await runRequest('4 kg butter for tomorrow', base);
+		expect(r.order).toBeNull();
+		const it = r.lookup!.items[0];
+		expect(it.pick).toBeNull();
+		expect(it.question).toMatch(
+			/^Tomorrow's cut-off passed at 17:00 Mon; earliest delivery Wed 9 Dec/
+		);
+		expect(it.answer).toMatchObject({ kind: 'date', date: '2026-12-09' });
+		expect(r.parsed.deliverBy).toBe('2026-12-08'); // never moved silently
+
+		const again = await runRequest('4 kg butter for tomorrow', {
+			...base,
+			deliverBy: '2026-12-09'
+		});
+		expect(again.order?.plan.deliverBy).toBe('2026-12-09');
+		expect(again.parsed.notes.join()).toMatch(
+			/delivery Wed 9 Dec: your choice; the request said Tue 8 Dec/
+		);
+	});
+});
+
+describe('cut-off before the case question', () => {
+	it('"2 cases of butter tomorrow" after the cut-off offers the open date, not case sizes', async () => {
+		const { h, ctx, kitchen } = await setup();
+		const r = await runRequest('2 cases of butter tomorrow', {
+			handlers: h,
+			ctx,
+			today: '2026-12-07',
+			kitchen,
+			now: new Date('2026-12-07T21:40:00+02:00')
+		});
+		expect(r.lookup!.items[0].answer).toMatchObject({ kind: 'date', date: '2026-12-09' });
+	});
+});

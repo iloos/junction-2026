@@ -33,7 +33,9 @@ export type AnswerSpec =
 			options: { label: string; detail: string; answer: RequestAnswer }[];
 			/** Also offer "give the amount instead" in these units. */
 			alsoQty?: { units: ReqUnit[] };
-	  };
+	  }
+	/** Ordering for the date has closed: one click re-runs the request for the first date still open. */
+	| { kind: 'date'; item: string; date: string; label: string };
 
 export interface ParsedView {
 	text: string;

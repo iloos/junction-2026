@@ -82,6 +82,8 @@ export async function submitRequest(o: {
 	answers?: RequestAnswer[];
 	briefAnswers?: BriefAnswer[];
 	confirmLarge?: boolean;
+	/** The chef's chosen delivery date (a cut-off answer). */
+	deliverBy?: string;
 	env: Env;
 	/** The page passes its workspace; the API passes the key's context instead. */
 	workspaceId?: string;
@@ -121,6 +123,8 @@ export async function submitRequest(o: {
 		answers: o.answers,
 		briefAnswers: o.briefAnswers,
 		confirmLarge: o.confirmLarge,
+		deliverBy: o.deliverBy,
+		now: (await ports()).ports.clock.now(),
 		onEvent: o.onEvent,
 		review
 	});

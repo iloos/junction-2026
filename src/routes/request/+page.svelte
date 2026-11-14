@@ -167,6 +167,7 @@
 		if (!keepAnswers || req !== text) {
 			answers = [];
 			briefAnswers = [];
+			deliverBy = null;
 		}
 		text = req;
 		reset();
@@ -176,7 +177,15 @@
 			const res = await fetch('/request/run', {
 				method: 'POST',
 				headers: { 'content-type': 'application/json' },
-				body: JSON.stringify({ text: req, kitchenId, nonce, answers, briefAnswers, confirmLarge })
+				body: JSON.stringify({
+					text: req,
+					kitchenId,
+					nonce,
+					answers,
+					briefAnswers,
+					confirmLarge,
+					...(deliverBy ? { deliverBy } : {})
+				})
 			});
 			if (!res.ok || !res.body) {
 				const b = await res.json().catch(() => null);
@@ -289,6 +298,13 @@
 		return `${what}: ${parts.join(', ')}`;
 	}
 
+	/** The chef took the first open delivery date after a cut-off: same words, that date, said in the notes. */
+	let deliverBy = $state<string | null>(null);
+	function chooseDate(date: string) {
+		deliverBy = date;
+		submit(text, true);
+	}
+
 	/** Answer the brief's open question and run the same words again with every brief answer so far. */
 	function answerBrief(a: BriefAnswer) {
 		briefAnswers = [...briefAnswers.filter((x) => x.id !== a.id), a];
@@ -341,6 +357,7 @@
 		reset();
 		answers = [];
 		briefAnswers = [];
+		deliverBy = null;
 		text = '';
 		nonce = newNonce();
 	}
@@ -779,7 +796,12 @@
 											aria-hidden="true"
 										/>{it.question}
 									</p>
-									{#if it.answer}<Answer spec={it.answer} {busy} onanswer={answer} />{/if}
+									{#if it.answer}<Answer
+											spec={it.answer}
+											{busy}
+											onanswer={answer}
+											ondate={chooseDate}
+										/>{/if}
 								{/if}
 								{#each it.valioRules as r (r.to)}
 									<p

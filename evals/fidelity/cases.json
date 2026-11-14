@@ -30,9 +30,10 @@
 				"sameCategoryAs": "464411"
 			},
 			"expectFail": {
-				"A3-agent-cutoff": ["agent.physical", "agent.category"]
+				"A3-agent-cutoff": ["agent.physical", "agent.category"],
+				"B-cutoff-date": ["request.plan"]
 			},
-			"$expectFailNote": "The agent picks 463798 (Terminal, cut-off D-2, unknown supply), which can never deliver tomorrow; A3 refuses it. The agent should prefer an orderable product (E)."
+			"$expectFailNote": "The agent picks 463798 (Terminal, cut-off D-2, unknown supply), which can never deliver tomorrow; A3 refuses it. The agent should prefer an orderable product (E). B-cutoff-date (stale expectation, 91): on Mon 7 Dec 21:40 tomorrow's cut-off (17:00 Mon) has passed, so /request asks for the first open date (Wed 9 Dec, one click) instead of placing an order A3 would refuse at commit. Replace with the cut-off-aware expectation."
 		},
 		{
 			"id": "lactose-free-milk-2l",
@@ -92,7 +93,11 @@
 				},
 				"sameCategoryAs": "463437",
 				"freeFrom": "LACTOSE"
-			}
+			},
+			"expectFail": {
+				"B-cutoff-date": ["request.plan"]
+			},
+			"$expectFailNote": "B-cutoff-date (stale expectation, 91): on Mon 7 Dec 21:40 tomorrow's cut-off (17:00 Mon) has passed, so /request asks for the first open date (Wed 9 Dec, one click) instead of placing an order A3 would refuse at commit. Replace with the cut-off-aware expectation."
 		},
 		{
 			"id": "cream-constraint-last",

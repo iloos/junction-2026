@@ -29,7 +29,16 @@ import { weekdayOf } from './dates';
 import { caseBreakdown, caseHeadline, orderAmount } from './convert';
 import { hardLimit, sanityWarnings } from './sanity';
 import { hardLimitCents } from '$lib/core/mandate/validate';
-import { filterHits, SHORTLIST, unpickable, type Ranked } from './lookup';
+import {
+	cutoffPassed,
+	cutoffQuestion,
+	earliestDelivery,
+	filterHits,
+	SHORTLIST,
+	unpickable,
+	type Ranked
+} from './lookup';
+import { SCENARIO, scenarioDate } from '$lib/core/scenario';
 import { parseRequest, type ParsedRequest } from './parse';
 import { requestParseCheckpoint, withReview, type ReviewDeps } from '$lib/server/review';
 import { classifyRequest } from './classify';
@@ -79,6 +88,13 @@ export interface RequestDeps {
 	onEvent?: (e: RequestEvent) => void;
 	/** Set when the parse is reviewed (REVIEW=1): the reviewer's deps (Decide, trace, budget). */
 	review?: ReviewDeps;
+	/**
+	 * The scenario clock's instant, for cut-offs. Absent: the scenario's start, a lower bound (the clock only moves
+	 * forward from it), so a cut-off reported as passed has passed.
+	 */
+	now?: Date;
+	/** The chef chose this delivery date instead of the one the words gave (a cut-off answer). Shown, never silent. */
+	deliverBy?: string;
 }
 
 const cap = (s: string) => s[0].toUpperCase() + s.slice(1);
@@ -126,6 +142,10 @@ async function lookupItems(
 	d: RequestDeps
 ): Promise<{ lookup: LookupView; picked: Map<string, Product> }> {
 	let searchCalls = 0;
+	// Without the clock's instant, the scenario's start is a lower bound once its day has come (the clock only moves
+	// forward from it); before that day the cut-off is left to place_order's tiering.
+	const start = new Date(SCENARIO.start);
+	const now = d.now ?? (d.today >= scenarioDate(start) ? start : undefined);
 	const prepared: {
 		item: ParsedRequest['items'][number];
 		searches: { query: string; hits: number }[];
@@ -182,7 +202,7 @@ async function lookupItems(
 		for (const [i, v] of views.entries()) {
 			if (p.item.qty === null) break;
 			if (pin && v.productId !== pin) continue;
-			const why = unpickable(offers.get(v.productId), short[i].conversion);
+			const why = unpickable(offers.get(v.productId), short[i].conversion, now);
 			if (why) v.skipped = why;
 			else if (!pick && !askCase) {
 				v.picked = true;
@@ -195,13 +215,41 @@ async function lookupItems(
 		let question: string | null = null;
 		let answer: AnswerSpec | null = null;
 		const idx = p.item.id;
+		const closed = short
+			.map((r) => offers.get(r.product.productId))
+			.filter((o): o is Offer => !!o && !!now && cutoffPassed(o, now) !== null)
+			// The latest cut-off that closed first: the one that came closest to this date.
+			.sort((a, b) => b.availability.closingTime!.localeCompare(a.availability.closingTime!));
+		// Nothing on the shortlist can be ordered now, and ordering for this date closed for some of it.
+		const allClosed =
+			closed.length > 0 &&
+			!short.some((r) => !unpickable(offers.get(r.product.productId), r.conversion, now));
 		if (p.item.qty === null) {
 			question = `How much ${p.item.query}?`;
 			answer = { kind: 'qty', item: idx, units: ['l', 'kg', 'pcs', 'case'] };
+		} else if (!pick && allClosed) {
+			// Ordering for this date has closed: say when, offer the first date still open, never move it silently.
+			const earliest = closed
+				.map((o) => earliestDelivery(o, parsed.deliverBy, now!))
+				.filter((x): x is string => x !== null)
+				.sort()[0];
+			question = cutoffQuestion(
+				parsed.deliverBy,
+				d.today,
+				closed[0].availability.closingTime!,
+				earliest ?? null
+			);
+			if (earliest)
+				answer = {
+					kind: 'date',
+					item: idx,
+					date: earliest,
+					label: `Deliver ${day(earliest)} instead`
+				};
 		} else if (askCase) {
 			const options = short
 				.map((r, i) => ({ r, v: views[i] }))
-				.filter(({ r, v }) => !unpickable(offers.get(v.productId), r.conversion))
+				.filter(({ r, v }) => !unpickable(offers.get(v.productId), r.conversion, now))
 				.slice(0, 4)
 				.map(({ r, v }) => {
 					// Headline and detail come from the same breakdown, so they can never disagree.
@@ -409,6 +457,30 @@ export function orderLine(
 	return sized ? { ...base, qty: sized.value, unit: sized.unit, amount } : base;
 }
 
+/** The chef's chosen delivery date over the words' one, said in the request's notes; a past or bad date is ignored. */
+export function withDate(
+	parsed: ParsedRequest,
+	chosen: string | undefined,
+	today: string
+): ParsedRequest {
+	if (
+		!chosen ||
+		!/^\d{4}-\d{2}-\d{2}$/.test(chosen) ||
+		chosen < today ||
+		chosen === parsed.deliverBy
+	)
+		return parsed;
+	return {
+		...parsed,
+		deliverBy: chosen,
+		ambiguities: parsed.ambiguities.filter((a) => !a.startsWith('no delivery date given')),
+		notes: [
+			...parsed.notes,
+			`delivery ${day(chosen)}: your choice; the request said ${day(parsed.deliverBy)}`
+		]
+	};
+}
+
 /** Runs the request flow and reports each step as it finishes. */
 export async function runRequest(text: string, d: RequestDeps): Promise<RequestResult> {
 	const emit = (e: RequestEvent) => d.onEvent?.(e);
@@ -436,7 +508,7 @@ export async function runRequest(text: string, d: RequestDeps): Promise<RequestR
 			read = { ...read, ambiguities: [...read.ambiguities, `review: ${r.verdict.feedback}`] };
 		if (r.verdict.kind === 'block') reviewBlock = r.verdict.reason;
 	} else read = await parse();
-	const parsed = applyAnswers(read, d.answers ?? []);
+	const parsed = withDate(applyAnswers(read, d.answers ?? []), d.deliverBy, d.today);
 	const parsedView = parsed as ParsedView;
 	if (reviewBlock) {
 		emit({ step: 'request', status: 'blocked', ms: ms(), data: parsedView });
