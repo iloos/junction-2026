@@ -6,14 +6,14 @@
  *
  * The Store calls `publish(workspaceId, events)` after each transaction commits.
  */
-import type { OpEnvelope, Scope, ServerEvent, SimEvent } from '$lib/core/contracts';
+import type { OpEnvelope, ServerEvent } from '$lib/core/contracts';
 import type { Ops } from '$lib/core/ports';
 import { and, asc, eq, gt } from 'drizzle-orm';
 import { dbMode } from '$lib/server/db/client';
 import * as schema from '$lib/server/db/schema';
 import type { AnyDb } from '$lib/server/store/drizzle-store';
 import { hasSeq, MemoryBus } from './memory';
-import { allocateSeq, PgTransport, readOps } from './pg';
+import { PgTransport, readOps } from './pg';
 import { SYNTH_WORKSPACE, syntheticRun } from './synthetic';
 import { STRESS_WORKSPACE, stressEvents } from './stress';
 
@@ -62,14 +62,6 @@ export async function publish(workspaceId: string, events: ServerEvent[]): Promi
 	const pg = viaPg(workspaceId);
 	if (pg) await pg.publish(workspaceId, events);
 	else bus().local.deliver(workspaceId, events);
-}
-
-/** Publish a simulator event, taking its seq from the workspace sequence (Postgres) or the local ring. */
-export async function publishSim(scope: Scope, event: SimEvent): Promise<void> {
-	const pg = viaPg(scope.workspaceId);
-	const seq = pg ? await allocateSeq(scope.workspaceId) : bus().local.reserveSeq(scope.workspaceId);
-	if (seq === null) throw new Error(`workspace ${scope.workspaceId} not found`);
-	await publish(scope.workspaceId, [{ kind: 'sim', seq, ...scope, event }]);
 }
 
 /** An OpsReader over any Drizzle db with our schema (PGlite or Postgres). */

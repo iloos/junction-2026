@@ -1,5 +1,5 @@
 import type { Cookies } from '@sveltejs/kit';
-import { hmac, sameText } from './visitor-id';
+import { hmac, sameText } from '$lib/server/auth/crypto';
 
 type Env = Record<string, string | undefined>;
 

@@ -39,7 +39,6 @@ describe('MemoryBus', () => {
 		expect(seen).toEqual([1, 2, 3]);
 		expect(bus.after('w', 1).map((e) => e.seq)).toEqual([2, 3]);
 		expect(bus.highestSeq('w')).toBe(3);
-		expect(bus.reserveSeq('w')).toBe(4);
 	});
 
 	it('keeps only the last RING_SIZE events', () => {

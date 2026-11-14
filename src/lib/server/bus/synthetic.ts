@@ -15,7 +15,8 @@ import type {
 	Tier
 } from '$lib/core/contracts';
 
-export const SYNTH_WORKSPACE = 'ws-synth';
+import { SYNTH_WORKSPACE } from '$lib/server/demo/workspaces';
+export { SYNTH_WORKSPACE };
 
 export const SYNTH_PRODUCTS: Record<string, string> = {
 	'462490': 'HK Viljaporsaan Juhlakinkku potkalla 6-8 kg',

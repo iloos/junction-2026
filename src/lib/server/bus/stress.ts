@@ -6,7 +6,8 @@
 import type { ServerEvent } from '$lib/core/contracts';
 import { SYNTH_WORKSPACE, syntheticRun } from './synthetic';
 
-export const STRESS_WORKSPACE = 'ws-stress';
+import { STRESS_WORKSPACE } from '$lib/server/demo/workspaces';
+export { STRESS_WORKSPACE };
 
 const ID =
 	/\b((?:p|ap|o|r|an)-(?:hotel|lounas|central|salmon)|(?:h|l|c)-(?:ham|salmon|casserole|herring|milk|cream|potato|eggs|rosolli|carrot|tart|trout))\b/g;

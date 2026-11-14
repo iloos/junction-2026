@@ -2,7 +2,8 @@
  * Visitor identity primitives (D9). A visitor workspace is `ws-j-` + 24 lowercase hex chars (96 random bits),
  * and it reaches the server only inside a signed value: the id alone is never authorisation.
  */
-import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
+import { randomBytes } from 'node:crypto';
+import { hmac, sameText } from '$lib/server/auth/crypto';
 import { VisitorWorkspaceId } from '$lib/core/contracts';
 
 type Env = Record<string, string | undefined>;
@@ -38,15 +39,6 @@ function cookieSecret(env: Env): string {
 		console.warn('[visitor] JUDGE_KEY_SECRET unset: visitor cookies are signed per process');
 	}
 	return (g.__mandateCookieSecret ??= randomBytes(32).toString('hex'));
-}
-
-export const hmac = (secret: string, text: string) =>
-	createHmac('sha256', secret).update(text).digest('base64url');
-
-export function sameText(a: string, b: string): boolean {
-	const x = Buffer.from(a);
-	const y = Buffer.from(b);
-	return x.length === y.length && timingSafeEqual(x, y);
 }
 
 /** Cookie value for a visitor workspace: `<ws>.<HMAC("vs|" + ws)>`. */

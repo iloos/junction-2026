@@ -3,7 +3,7 @@
  * the sandbox may start it over, at most once per SANDBOX_COOLDOWN_MS per workspace. The stage (ws-demo) is
  * never reset from here; it stays presenter-only.
  */
-import { JUDGES_WORKSPACE } from '$lib/server/auth';
+import { JUDGES_WORKSPACE } from './workspaces';
 import { resetDemoRun } from './reset';
 import { isVisitorWorkspace } from './visitor-id';
 

@@ -12,10 +12,9 @@
  * - At most MAX_VISITORS sandboxes are seeded per process; past that, new visitors share ws-judges.
  */
 import type { Cookies } from '@sveltejs/kit';
-import { JUDGES_WORKSPACE } from '$lib/server/auth';
+import { DEMO_WORKSPACE, JUDGES_WORKSPACE, SYNTH_WORKSPACE } from './workspaces';
 import { isPresenter } from './presenter';
-import { ensureRunLoaded, DEMO_WORKSPACE } from './reset';
-import { SYNTH_WORKSPACE } from '$lib/server/bus';
+import { ensureRunLoaded } from './reset';
 import { newVisitorWorkspace, readVisitor, signVisitor } from './visitor-id';
 
 type Env = Record<string, string | undefined>;

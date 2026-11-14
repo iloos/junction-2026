@@ -12,7 +12,8 @@ import {
 	PRESENTER_COOKIE,
 	PRESENTER_TTL_MS
 } from '$lib/server/demo/presenter';
-import { DEMO_WORKSPACE, ensureRunLoaded, resetDemo } from '$lib/server/demo/reset';
+import { ensureRunLoaded, resetDemo } from '$lib/server/demo/reset';
+import { DEMO_WORKSPACE, JUDGES_WORKSPACE } from '$lib/server/demo/workspaces';
 import { currentRun, currentRunStartedAt } from '$lib/server/demo/run';
 import { isSandbox, resetSandbox } from '$lib/server/demo/sandbox';
 import { roomLabel, visitorWorkspace, ROOM_COOKIE } from '$lib/server/demo/visitor';
@@ -81,6 +82,8 @@ export const load: PageServerLoad = async (event) => {
 		run: workspace === SYNTH_WORKSPACE ? null : currentRun(workspace),
 		simulated: workspace === SYNTH_WORKSPACE,
 		synthWorkspace: SYNTH_WORKSPACE,
+		/** Named rooms for the nav and labels (the page can't import server modules). */
+		rooms: { stage: DEMO_WORKSPACE, shared: JUDGES_WORKSPACE },
 		room: {
 			kind: viewOnly ? null : v.kind,
 			label: viewOnly

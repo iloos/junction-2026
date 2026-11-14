@@ -218,13 +218,13 @@
 				>
 				<a
 					data-sveltekit-reload
-					href={resolve('/ops') + '?ws=ws-judges'}
-					aria-current={data.workspace === 'ws-judges' ? 'page' : undefined}>Shared room</a
+					href={resolve('/ops') + `?ws=${data.rooms.shared}`}
+					aria-current={data.workspace === data.rooms.shared ? 'page' : undefined}>Shared room</a
 				>
 				<a
 					data-sveltekit-reload
-					href={resolve('/ops') + '?ws=ws-demo'}
-					aria-current={data.workspace === 'ws-demo' ? 'page' : undefined}>Stage</a
+					href={resolve('/ops') + `?ws=${data.rooms.stage}`}
+					aria-current={data.workspace === data.rooms.stage ? 'page' : undefined}>Stage</a
 				>
 				<a
 					data-sveltekit-reload
@@ -295,10 +295,10 @@
 				>
 					<button class:armed={confirmReset}
 						>{confirmReset
-							? data.workspace === 'ws-demo'
+							? data.workspace === data.rooms.stage
 								? 'Click again to clear the stage'
 								: 'Click again to clear this sandbox'
-							: data.workspace === 'ws-demo'
+							: data.workspace === data.rooms.stage
 								? 'Start a fresh run'
 								: 'Start this sandbox over'}</button
 					>

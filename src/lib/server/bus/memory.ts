@@ -62,13 +62,6 @@ export class MemoryBus {
 		return this.maxSeq.get(workspaceId) ?? 0;
 	}
 
-	/** Reserve a seq locally: only valid where nothing else allocates seqs for this workspace. */
-	reserveSeq(workspaceId: string): number {
-		const next = this.highestSeq(workspaceId) + 1;
-		this.maxSeq.set(workspaceId, next);
-		return next;
-	}
-
 	subscribe(workspaceId: string, fn: Listener): () => void {
 		const set = this.listeners.get(workspaceId) ?? new Set();
 		set.add(fn);

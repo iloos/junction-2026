@@ -8,7 +8,8 @@ import { isMemoryOnly } from '$lib/server/bus';
 import { isVisitorWorkspace } from './visitor-id';
 import { currentRun, hasRun, loadCurrentRun, newRunId, setCurrentRun } from './run';
 
-export const DEMO_WORKSPACE = 'ws-demo';
+import { DEMO_WORKSPACE } from './workspaces';
+export { DEMO_WORKSPACE };
 
 /** The app's ports, built the way the tools build them (so the bus publish hook is in place). */
 async function ports() {

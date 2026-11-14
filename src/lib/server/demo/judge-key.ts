@@ -5,7 +5,8 @@
  * workspace's current run, so a reset keeps it working. Without JUDGE_KEY_SECRET judge keys are off.
  */
 import type { JudgeKeys } from '$lib/core/ports';
-import { hmac, isVisitorWorkspace, judgeSecret, sameText } from './visitor-id';
+import { hmac, sameText } from '$lib/server/auth/crypto';
+import { isVisitorWorkspace, judgeSecret } from './visitor-id';
 
 type Env = Record<string, string | undefined>;
 
