@@ -20,6 +20,8 @@ import {
 import { canonicalJson, sha256Hex } from '$lib/core/hash';
 import type { Catalog, Llm, MenuStore, Resolution } from '$lib/core/ports';
 import { slug } from '../request/parse';
+import { chooseProducts, type Choice, type ChoiceItem } from './choose';
+import { candidatePool, pinnedFor, rememberPin, type PinSource } from './resolve';
 import { dietBase, reviewProposal, type Issue } from './rubric';
 
 /** Brief requirements the catalogue resolver can enforce, as its product flags. */
@@ -39,7 +41,7 @@ const BREAKS: Record<string, string[]> = {
  * A pinned product whose allergen record contains what the brief excludes is resolved again under the diet, and stays
  * unresolved if nothing qualifies: a wrong pin is worse than a visible gap.
  */
-async function resolveIngredient(
+export async function resolveIngredient(
 	catalog: Pick<Catalog, 'resolve' | 'get'>,
 	query: string,
 	flags: string[],
@@ -49,19 +51,78 @@ async function resolveIngredient(
 	if (!catalog.resolve) return null;
 	const r = await catalog.resolve(query, { limit: 3, diet: plant });
 	if (r.status !== 'resolved' || !flags.length) return r;
-	const got = await catalog.get(r.candidates.map((c) => c.productId));
-	const breaks = (id: string) => {
-		const p = got.get(id);
-		return flags.some(
-			(f) =>
-				!p?.freeFrom.includes(f) && (BREAKS[f] ?? []).some((c) => p?.allergens.contains.includes(c))
-		);
-	};
-	const safe = r.candidates.filter((c) => !breaks(c.productId));
+	const bad = await breaksFlags(
+		catalog,
+		r.candidates.map((c) => c.productId),
+		flags
+	);
+	const safe = r.candidates.filter((c) => !bad.has(c.productId));
 	if (safe.length === r.candidates.length) return r;
 	if (safe.length) return { ...r, candidates: safe };
 	return catalog.resolve(query, { limit: 3, diet: [...flags, ...plant] });
 }
+
+/** The products among `ids` whose allergen record contains what a whole-menu flag excludes (lactose, gluten). */
+export async function breaksFlags(
+	catalog: Pick<Catalog, 'get'>,
+	ids: string[],
+	flags: string[]
+): Promise<Set<string>> {
+	if (!flags.length || !ids.length) return new Set();
+	const got = await catalog.get(ids);
+	return new Set(
+		ids.filter((id) => {
+			const p = got.get(id);
+			return flags.some(
+				(f) =>
+					!p?.freeFrom.includes(f) &&
+					(BREAKS[f] ?? []).some((c) => p?.allergens.contains.includes(c))
+			);
+		})
+	);
+}
+
+/** A whole-menu vegetarian/vegan requirement, or a dish offered as one, keeps meat and fish out of its picks. */
+export const plantDiet = (brief: Pick<EventBrief, 'dietary'>, claims: string[]) => [
+	...new Set(
+		[...brief.dietary.filter((x) => !x.includes(':')), ...claims]
+			.map(dietBase)
+			.flatMap((b) => (b === 'vegan' ? ['VEGAN'] : b === 'vegetarian' ? ['VEGETARIAN'] : []))
+	)
+];
+
+/** The brief's whole-menu diet requirements the resolver enforces, as product flags. */
+export const menuFlags = (brief: Pick<EventBrief, 'dietary'>) =>
+	brief.dietary
+		.filter((x) => !x.includes(':'))
+		.map((x) => RESOLVER_DIET[dietBase(x)])
+		.filter(Boolean);
+
+/** A pinned product, if it exists and breaks no whole-menu flag (a pin never overrides the brief's diet). */
+async function usablePin(
+	catalog: Pick<Catalog, 'get'>,
+	productId: string | undefined,
+	flags: string[]
+): Promise<string | undefined> {
+	if (!productId || !(await catalog.get([productId])).has(productId)) return undefined;
+	return (await breaksFlags(catalog, [productId], flags)).size ? undefined : productId;
+}
+
+/** A caller's hint for an ingredient: its words name the hint's ingredient, or the hint names them. */
+function hintFor(hints: ProposeDeps['hints'], words: string[]): string | undefined {
+	const ws = words.map((w) => w.trim().toLowerCase()).filter(Boolean);
+	return hints?.find((h) => {
+		const n = h.ingredient.trim().toLowerCase();
+		return n && ws.some((w) => w === n || w.includes(n) || n.includes(w));
+	})?.productId;
+}
+
+const PIN_WORDS: Record<PinSource | 'hint', string> = {
+	hint: 'the caller named it',
+	chef: 'the chef pinned it for this kitchen',
+	agent: 'an agent pinned it for this kitchen',
+	model: 'chosen before for this kitchen'
+};
 
 /* ── Model output ─────────────────────────────────────────────────────────── */
 
@@ -70,7 +131,9 @@ const LlmIngredient = z.object({
 	/** Finnish catalogue words. */
 	query: z.string().min(1).max(120),
 	amountPerCover: z.number().positive().max(2000),
-	unit: z.enum(['g', 'ml', 'pcs'])
+	unit: z.enum(['g', 'ml', 'pcs']),
+	/** Other catalogue words for the same thing (plain noun, split compound, trade name), tried after `query`. */
+	alt: z.array(z.string().min(1).max(120)).max(3).default([])
 });
 const LlmDish = z.object({
 	name: z.string().min(1).max(160),
@@ -100,6 +163,8 @@ Return only JSON: {"dishes":[{"name":string,"course":"starter"|"soup"|"fish"|"ma
 - One dish per requested course; a buffet has 5-8 dishes.
 - amountPerCover is the served amount per guest; 250-1500 g of food per guest in total.
 - query: 1-3 Finnish catalogue words in base form (lohifilee, peruna, kerma laktoositon).
+- alt: up to 3 other words a wholesaler may list it under: the plain noun, a split compound, a trade name (keltasipuli -> ["sipuli"], porsaankylki -> ["porsaan kylki"], wonton-levyt -> ["won ton"], kylkirivi -> ["ribs","spare ribs"]).
+- A requested course is never "side": a dish that is one of the requested courses gets that course (a second main is "main").
 - claimedCompatible: the brief requirements this dish meets, exactly as written in the brief.
 - Every requirement in the brief must hold for every dish; one with a head count ("vegetarian:6") needs at least one dish for those guests.
 - Never drop a requirement. Put anything you cannot meet, or would ask the chef, in open.`;
@@ -270,7 +335,8 @@ export function fixtureMenu(brief: EventBrief): LlmMenu {
 				label: i.label,
 				query: lactoseFree && i.dairy ? `${i.query} laktoositon` : i.query,
 				amountPerCover: i.amountPerCover,
-				unit: i.unit
+				unit: i.unit,
+				alt: []
 			}))
 		};
 	});
@@ -287,6 +353,24 @@ export function fixtureMenu(brief: EventBrief): LlmMenu {
 }
 
 /* ── Proposal ─────────────────────────────────────────────────────────────── */
+
+const MEAL = new Set(['starter', 'soup', 'fish', 'main', 'dessert', 'cheese', 'other']);
+
+/**
+ * A model that files a requested course as "side" leaves the menu short of its courses. When fewer course dishes come
+ * back than the brief asks for, sides become mains, in order, until the count is met; nothing else is relabelled.
+ */
+export function normaliseCourses(menu: LlmMenu, brief: Pick<EventBrief, 'courses'>): LlmMenu {
+	if (brief.courses === undefined) return menu;
+	let short = brief.courses - menu.dishes.filter((x) => MEAL.has(x.course)).length;
+	if (short <= 0) return menu;
+	const dishes = menu.dishes.map((x) => {
+		if (short <= 0 || x.course !== 'side') return x;
+		short--;
+		return { ...x, course: 'main' as const };
+	});
+	return { ...menu, dishes };
+}
 
 /** Stable ids from names, numbered when repeated; short enough that dish + ingredient fit a 64-character id. */
 function idsFor(names: string[], prefix: string): string[] {
@@ -308,6 +392,8 @@ export interface ProposeDeps {
 	now: Date;
 	/** Absent: the fixture templates. */
 	llm?: Llm | null;
+	/** Products the caller already knows for an ingredient; tried before the resolver, never past a diet flag. */
+	hints?: { ingredient: string; productId: string }[];
 	/** Makes two proposals for the same brief distinct; the same nonce returns the stored one. */
 	nonce?: string;
 	/** Progress for a waiting page: the dishes once written, then products matched so far. */
@@ -370,6 +456,7 @@ export async function proposeMenu(d: ProposeDeps): Promise<Proposed> {
 			menu = fixtureMenu(d.brief);
 		}
 	} else menu = fixtureMenu(d.brief);
+	menu = normaliseCourses(menu, d.brief);
 	d.onStep?.({
 		step: 'dishes',
 		dishes: menu.dishes.map((x) => x.name),
@@ -380,74 +467,125 @@ export async function proposeMenu(d: ProposeDeps): Promise<Proposed> {
 
 	const at = d.now.toISOString();
 	// A whole-menu requirement checks every pick; a counted one ("lactose-free:4") is met by some dishes.
-	const flags = d.brief.dietary
-		.filter((x) => !x.includes(':'))
-		.map((x) => RESOLVER_DIET[dietBase(x)])
-		.filter(Boolean);
+	const flags = menuFlags(d.brief);
 	const dishIds = idsFor(
 		menu.dishes.map((x) => x.name),
 		'd-'
 	);
 	const dishes: DishTemplate[] = [];
-	// A whole-menu vegetarian/vegan requirement, or a dish offered as one, keeps meat and fish out of its picks.
-	const plantFor = (claims: string[]) => [
-		...new Set(
-			[...d.brief.dietary.filter((x) => !x.includes(':')), ...claims]
-				.map(dietBase)
-				.flatMap((b) => (b === 'vegan' ? ['VEGAN'] : b === 'vegetarian' ? ['VEGETARIAN'] : []))
-		)
-	];
+	/** Per ingredient: its pin, or the resolver's own pick and the chooser's candidates. */
+	const work: {
+		di: number;
+		id: string;
+		i: LlmMenu['dishes'][number]['ingredients'][number];
+		dish: string;
+		plant: string[];
+		pin?: { productId: string; how: string };
+		det: Resolution | null;
+		pool: string[];
+	}[] = [];
+	const plantFor = (claims: string[]) => plantDiet(d.brief, claims);
 	for (const [di, dish] of menu.dishes.entries()) {
 		const ingIds = idsFor(
 			dish.ingredients.map((i) => i.label),
 			`${dishIds[di]}.`
 		);
-		const ingredients: DishIngredient[] = [];
 		for (const [ii, i] of dish.ingredients.entries()) {
 			d.onStep?.({ step: 'products', done: done++, total });
-			const base = {
-				id: ingIds[ii],
-				label: i.label,
-				amountPerCover: i.amountPerCover,
-				unit: i.unit
-			};
-			const r = await resolveIngredient(
-				d.catalog,
-				i.query,
-				flags,
-				plantFor(dish.claimedCompatible)
-			);
-			if (r?.status === 'resolved' && r.candidates.length) {
-				// A vegan dish's pick without a declared allergen record is not called vegan: the note says to check it.
-				const unchecked =
-					plantFor(dish.claimedCompatible).includes('VEGAN') &&
-					!(await d.catalog.get([r.candidates[0].productId])).get(r.candidates[0].productId)
-						?.allergens.declared;
-				ingredients.push({
-					...base,
-					productId: r.candidates[0].productId,
-					provenance: {
-						source,
-						at,
-						ref: i.query,
-						note: `amount: ${source === 'llm' ? 'model' : 'team'} estimate; product: best of ${r.candidates.length} for "${i.query}"${unchecked ? '; vegan: no allergen record — check' : ''}`
-					}
-				});
-			} else
-				ingredients.push({
-					...base,
-					unresolved: r?.status === 'unresolved' ? r.reason : 'no catalogue resolver',
-					provenance: { source, at, ref: i.query }
-				});
+			const words = [i.query, i.label];
+			const plant = plantFor(dish.claimedCompatible);
+			const hint = await usablePin(d.catalog, hintFor(d.hints, words), flags);
+			const kept = pinnedFor(d.workspaceId, d.kitchenId, words);
+			const pin = hint
+				? { productId: hint, how: PIN_WORDS.hint }
+				: kept && (await usablePin(d.catalog, kept.productId, flags))
+					? { productId: kept.productId, how: PIN_WORDS[kept.by] }
+					: undefined;
+			const one = (q: string) => resolveIngredient(d.catalog, q, flags, plant);
+			const det = pin ? null : await one(i.query);
+			const pool =
+				pin || !d.llm
+					? []
+					: await candidatePool(one, { query: i.query, alt: i.alt ?? [], label: i.label });
+			work.push({ di, id: ingIds[ii], i, dish: dish.name, plant, pin, det, pool });
 		}
 		dishes.push({
 			id: dishIds[di],
 			name: dish.name,
 			course: dish.course,
 			claimedCompatible: dish.claimedCompatible,
-			ingredients,
+			ingredients: [],
 			provenance: { source, at }
 		});
+	}
+
+	// One judgement per menu: for each ingredient, the candidate that is it as its dish needs it, or none.
+	const names = new Map(
+		[...(await d.catalog.get([...new Set(work.flatMap((w) => w.pool))]))].map(([k, p]) => [
+			k,
+			p.nameFi
+		])
+	);
+	const choices: Map<string, Choice> = d.llm
+		? await chooseProducts(
+				d.llm,
+				work
+					.filter((w) => w.pool.length)
+					.map((w): ChoiceItem => ({
+						key: w.id,
+						dish: w.dish,
+						label: w.i.label,
+						amount: `${w.i.amountPerCover} ${w.i.unit} per guest`,
+						candidates: w.pool.map((productId) => ({
+							productId,
+							name: names.get(productId) ?? productId
+						}))
+					}))
+			)
+		: new Map();
+
+	const concerns: { id: string; text: string }[] = [];
+	for (const w of work) {
+		const base = { id: w.id, label: w.i.label, amountPerCover: w.i.amountPerCover, unit: w.i.unit };
+		const c = choices.get(w.id);
+		if (c?.concern)
+			concerns.push({ id: `fit:${w.id}`, text: `${w.i.label}: ${c.concern}`.slice(0, 300) });
+		let productId: string | undefined;
+		let how = '';
+		let unresolved: string | undefined;
+		if (w.pin) ({ productId, how } = w.pin);
+		else if (c) {
+			if (c.productId) {
+				productId = c.productId;
+				how = `chosen from ${w.pool.length} candidates: ${c.reason}`;
+				rememberPin(d.workspaceId, d.kitchenId, [w.i.query, w.i.label], c.productId, 'model');
+			} else unresolved = `none of ${w.pool.length} candidates is ${w.i.label}: ${c.reason}`;
+		} else if (w.det?.status === 'resolved' && w.det.candidates.length) {
+			productId = w.det.candidates[0].productId;
+			how = `best of ${w.det.candidates.length} for "${w.i.query}"`;
+		} else unresolved = w.det?.status === 'unresolved' ? w.det.reason : 'no catalogue resolver';
+
+		let ing: DishIngredient;
+		if (productId) {
+			// A vegan dish's pick without a declared allergen record is not called vegan: the note says to check it.
+			const unchecked =
+				w.plant.includes('VEGAN') &&
+				!(await d.catalog.get([productId])).get(productId)?.allergens.declared;
+			ing = {
+				...base,
+				productId,
+				provenance: {
+					source,
+					at,
+					ref: w.i.query,
+					note: `amount: ${source === 'llm' ? 'model' : 'team'} estimate; product: ${how}${unchecked ? '; vegan: no allergen record, check' : ''}`.slice(
+						0,
+						500
+					)
+				}
+			};
+		} else ing = { ...base, unresolved, provenance: { source, at, ref: w.i.query } };
+		dishes[w.di].ingredients.push(ing);
 	}
 
 	const proposal = MenuProposal.parse({
@@ -457,10 +595,13 @@ export async function proposeMenu(d: ProposeDeps): Promise<Proposed> {
 		status: 'proposed',
 		brief: d.brief,
 		dishes,
-		open: menu.open.map((text, i) => {
-			const [k, rest] = text.includes('|') ? text.split('|', 2) : [`open-${i + 1}`, text];
-			return { id: k, text: rest.slice(0, 300) };
-		}),
+		open: [
+			...menu.open.map((text, i) => {
+				const [k, rest] = text.includes('|') ? text.split('|', 2) : [`open-${i + 1}`, text];
+				return { id: k, text: rest.slice(0, 300) };
+			}),
+			...concerns
+		],
 		provenance: { source, at, ref: model, ...(fallback ? { note: fallback } : {}) }
 	});
 	await d.store.put(d.workspaceId, proposal);
