@@ -400,7 +400,7 @@ journey('m4', "Valio's view: demand, forecast, short stock", async (r, page) => 
 		await page.goto(`${BASE}/ops`);
 		await page.waitForTimeout(4000);
 	});
-	for (const tab of ['Demand', 'Orders', 'Forecast', 'Flow']) {
+	for (const tab of ['Room', 'Demand', 'Orders', 'Forecast', 'Flow']) {
 		const t = page
 			.getByRole('tab', { name: new RegExp(tab, 'i') })
 			.or(page.getByRole('link', { name: new RegExp(`^${tab}`, 'i') }));
