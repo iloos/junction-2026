@@ -7,6 +7,7 @@
  */
 import { readJson, writeJson } from '../external/persist';
 import type { WebSlot } from './pg-state';
+import { errMsg, log } from '$lib/server/obs/log';
 
 export { readJson, writeJson };
 
@@ -78,7 +79,7 @@ export function persistedMap<T>(
 		if (!writes.length) return;
 		const done = Promise.all(writes).then(
 			() => {},
-			(e) => console.error('[web] state write failed', slot, (e as Error)?.message ?? e)
+			(e) => log.error('web.state_write_failed', { slot, error: errMsg(e) })
 		);
 		g.__webWrites = (g.__webWrites ?? Promise.resolve()).then(() => done);
 	};

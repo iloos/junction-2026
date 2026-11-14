@@ -13,6 +13,9 @@ import { inWorkspace } from '$lib/server/adapters/simulator/overlay';
 import { isMetered, takeKeyCall } from './key-limits';
 import { presentMeta } from './present';
 import { isRecordedRefusal, recordRefusal } from './refusals';
+import { errMsg, log } from '$lib/server/obs/log';
+import { annotateRequest } from '$lib/server/obs/context';
+import { recordTrace } from '$lib/server/obs/traces';
 
 /**
  * The one gate every surface (REST, MCP, the routine agent) calls a tool through: input validated
@@ -103,6 +106,12 @@ export async function serveTool(
 	// A key resolves to its workspace's run synchronously; follow the newest run (a restart or another
 	// process's reset) so this call reads and writes the same run.
 	ctx = await (await import('$lib/server/demo/reset')).onCurrentRun(ctx);
+	annotateRequest({
+		workspaceId: ctx.workspaceId,
+		runId: ctx.runId,
+		actor: { kind: ctx.actor.kind, id: ctx.actor.id },
+		via: ctx.via
+	});
 	const t0 = performance.now();
 	// An outside agent's key is metered (key-limits.ts); a full window is a 429, not a refusal for the op log.
 	const limited = isMetered(ctx) ? takeKeyCall(ctx, name) : null;
@@ -113,7 +122,9 @@ export async function serveTool(
 			{ sub: 'rate_limit', detail: { retryAfter: limited.retryAfter, limit: limited.bucket } }
 		).error;
 		hooks.onCall?.({ tool: name, ctx, ok: false, code: error.code, ms: 0 });
-		return fail(error);
+		const limitedOut = fail(error);
+		noteToolCall(name, ctx, limitedOut, 0);
+		return limitedOut;
 	}
 	// Simulated scarcity is per workspace: quotes inside this call see only this workspace's overlay.
 	const scoped = ctx;
@@ -121,14 +132,43 @@ export async function serveTool(
 	// An agent refused by the gate is a trust event: it goes in the op log (refusals.ts).
 	if (!out.ok && isRecordedRefusal(ctx, out.error, name))
 		await recordRefusal(ctx, name, rawInput, out.error);
-	hooks.onCall?.({
-		tool: name,
-		ctx,
-		ok: out.ok,
-		code: out.ok ? undefined : out.error.code,
-		ms: Math.round(performance.now() - t0)
-	});
+	const ms = Math.round(performance.now() - t0);
+	hooks.onCall?.({ tool: name, ctx, ok: out.ok, code: out.ok ? undefined : out.error.code, ms });
+	noteToolCall(name, ctx, out, ms);
 	return out;
+}
+
+/** The top frames of a thrown error, on one line. */
+const stackHead = (e: unknown) =>
+	e instanceof Error ? e.stack?.split(/\r?\n/).slice(0, 4).join(' | ') : undefined;
+
+/** One log line and one stored trace row per tool call: name, actor, outcome and time. */
+function noteToolCall(name: string, ctx: CallContext, out: Served, ms: number) {
+	const outcome = out.ok
+		? { ok: true }
+		: { ok: false, code: out.error.code, ...(out.error.sub ? { sub: out.error.sub } : {}) };
+	const fields = {
+		tool: name,
+		actor: `${ctx.actor.kind}:${ctx.actor.id}`,
+		via: ctx.via,
+		workspaceId: ctx.workspaceId,
+		runId: ctx.runId,
+		ms,
+		...outcome
+	};
+	if (out.ok) log.info('tool.call', fields);
+	else log.warn('tool.call', fields);
+	recordTrace(out.ok ? 'tool' : 'error', {
+		source: 'tool',
+		tool: name,
+		actor: { kind: ctx.actor.kind, id: ctx.actor.id },
+		via: ctx.via,
+		workspaceId: ctx.workspaceId,
+		runId: ctx.runId,
+		latencyMs: ms,
+		ok: out.ok,
+		...(out.ok ? {} : { error: `${out.error.code}: ${out.error.message}`, status: out.status })
+	});
 }
 
 async function run<N extends ToolName>(
@@ -158,14 +198,14 @@ async function run<N extends ToolName>(
 	} catch (e) {
 		// A thrown handler is a bug or an outage we did not classify; the closed code set has no
 		// INTERNAL: a bug on our side, not retryable.
-		console.error(`[tools] ${name} threw`, e);
+		log.error('tool.threw', { tool: name, error: errMsg(e), stack: stackHead(e) });
 		return fail(err('INTERNAL', `${name} failed unexpectedly`).error, 500);
 	}
 	if (!result.ok) return fail(result.error);
 
 	const output = spec.output.safeParse(result.value);
 	if (!output.success) {
-		console.error(`[tools] ${name} returned an invalid output`, z.prettifyError(output.error));
+		log.error('tool.invalid_output', { tool: name, error: z.prettifyError(output.error) });
 		return fail(
 			err('INTERNAL', `${name} returned an invalid output`, {
 				detail: { issues: output.error.issues }
@@ -180,7 +220,7 @@ async function run<N extends ToolName>(
 			const meta = presentMeta(name, input.data, value);
 			if (meta) value.meta = meta;
 		} catch (e) {
-			console.error(`[tools] ${name}: meta failed`, e);
+			log.error('tool.meta_failed', { tool: name, error: errMsg(e) });
 		}
 	return { ok: true, status: 200, value };
 }

@@ -20,6 +20,7 @@ import { DEMO_WORKSPACE, JUDGES_WORKSPACE, SYNTH_WORKSPACE } from './workspaces'
 import { isPresenter, PRESENTER_COOKIE, validPresenterToken } from './presenter';
 import { ensureRunLoaded } from './reset';
 import { newVisitorWorkspace, readVisitor, signVisitor } from './visitor-id';
+import { log } from '$lib/server/obs/log';
 
 type Env = Record<string, string | undefined>;
 
@@ -104,9 +105,7 @@ export async function visitorWorkspace(
 		if (seeded.size >= maxVisitors(env)) {
 			workspaceId = JUDGES_WORKSPACE;
 			kind = 'full';
-			console.warn(
-				`[visitor] sandbox cap ${maxVisitors(env)} reached: a new visitor shares ${JUDGES_WORKSPACE}`
-			);
+			log.warn('visitor.sandbox_cap', { cap: maxVisitors(env), shares: JUDGES_WORKSPACE });
 		} else seeded.add(chosen);
 	}
 

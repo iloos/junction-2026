@@ -44,6 +44,7 @@ import type { Finding } from './findings';
 import type { WorkItem } from './queue';
 import type { Application } from './applications';
 import { hasWords, memoryIndex, type CatalogIndex } from './recall';
+import { errMsg, log } from '$lib/server/obs/log';
 
 type Env = Record<string, string | undefined>;
 
@@ -89,7 +90,7 @@ export function webStateReady(env: Env): Promise<void> {
 		setSharedLedger(pg);
 	})();
 	g.__webReady.catch((e) => {
-		console.error('[web] Postgres state unavailable; using files', (e as Error)?.message ?? e);
+		log.error('web.state_unavailable', { using: 'files', error: errMsg(e) });
 		g.__webReady = undefined;
 	});
 	return g.__webReady.catch(() => {});

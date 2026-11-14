@@ -5,6 +5,7 @@ import { resolveRequest, type Env } from '$lib/server/auth';
 import { CORS, unauthorized, withCors } from './http';
 import { registerExtras } from './mcp-extras';
 import { isToolName, serveTool, toolsFor } from './serve';
+import { errMsg, log } from '$lib/server/obs/log';
 
 /**
  * Stateless MCP (streamable HTTP, SDK v2): a fresh server per request, built for the caller's context.
@@ -154,7 +155,7 @@ export function buildMcpServer(ctx: CallContext, handlers: ToolHandlers): McpSer
 export function createMcpEndpoint(handlers: ToolHandlers, opts: { env: Env; dev: boolean }) {
 	const mcp = createMcpHandler(
 		({ authInfo }) => buildMcpServer(authInfo?.extra?.ctx as CallContext, handlers),
-		{ responseMode: 'json', onerror: (e) => console.error('[mcp]', e.message) }
+		{ responseMode: 'json', onerror: (e) => log.error('mcp.error', { error: errMsg(e) }) }
 	);
 	return async (request: Request, pathKey?: string): Promise<Response> => {
 		if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });

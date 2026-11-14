@@ -342,3 +342,38 @@ export const webApplications = pgTable(
 	},
 	(t) => [index('web_applications_ws').on(t.workspaceId, t.runId)]
 );
+
+/**
+ * One row per model call, outside call or tool call (CLAUDE.md rule 7), kept 7 days so a restart keeps the
+ * history the trace drawer and Ops read. `data` is the redacted, size-capped trace payload; prompts never land here.
+ */
+export const traces = pgTable(
+	'traces',
+	{
+		id: text('id').primaryKey(),
+		at: ts('at').notNull(),
+		requestId: text('request_id'),
+		workspaceId: text('workspace_id'),
+		runId: text('run_id'),
+		actorKind: text('actor_kind'),
+		actorId: text('actor_id'),
+		via: text('via'),
+		step: text('step').notNull(),
+		source: text('source').notNull(),
+		model: text('model'),
+		tool: text('tool'),
+		tokensIn: integer('tokens_in'),
+		tokensOut: integer('tokens_out'),
+		latencyMs: integer('latency_ms'),
+		cache: text('cache'),
+		ok: boolean('ok').notNull(),
+		error: text('error'),
+		costUnits: numeric('cost_units', { mode: 'number' }),
+		data: jsonb('data')
+	},
+	(t) => [
+		index('traces_at').on(t.at),
+		index('traces_ws_at').on(t.workspaceId, t.at),
+		index('traces_request').on(t.requestId)
+	]
+);

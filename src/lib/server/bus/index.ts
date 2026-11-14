@@ -12,6 +12,7 @@ import { and, asc, eq, gt } from 'drizzle-orm';
 import { dbMode } from '$lib/server/db/client';
 import * as schema from '$lib/server/db/schema';
 import type { AnyDb } from '$lib/server/store/drizzle-store';
+import { log } from '$lib/server/obs/log';
 import { hasSeq, MemoryBus } from './memory';
 import { PgTransport, readOps } from './pg';
 import { simDone, simTraces, SYNTH_WORKSPACE, syntheticRun } from './synthetic';
@@ -59,9 +60,29 @@ const viaPg = (workspaceId: string) => !isMemoryOnly(workspaceId) && bus().pg;
 /** Deliver events to every subscriber of the workspace (across processes in Postgres mode). */
 export async function publish(workspaceId: string, events: ServerEvent[]): Promise<void> {
 	if (!events.length) return;
+	if (!isMemoryOnly(workspaceId)) logOps(workspaceId, events);
 	const pg = viaPg(workspaceId);
 	if (pg) await pg.publish(workspaceId, events);
 	else bus().local.deliver(workspaceId, events);
+}
+
+/** One line per op written (type, seq) and a warning line per refusal; the simulated runs stay quiet. */
+function logOps(workspaceId: string, events: ServerEvent[]) {
+	for (const e of events) {
+		if (e.kind !== 'op') continue;
+		const { op, runId, via, actor } = e.envelope;
+		const fields = {
+			workspaceId,
+			runId,
+			type: op.type,
+			seq: e.seq,
+			via,
+			actor: `${actor.kind}:${actor.id}`
+		};
+		if (op.type === 'RecordRefusal')
+			log.warn('refusal', { ...fields, tool: op.tool, code: op.code, sub: op.sub });
+		else log.info('op.written', fields);
+	}
 }
 
 /** An OpsReader over any Drizzle db with our schema (PGlite or Postgres). */

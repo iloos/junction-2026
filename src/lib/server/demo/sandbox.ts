@@ -6,6 +6,7 @@
 import { JUDGES_WORKSPACE } from './workspaces';
 import { resetDemoRun } from './reset';
 import { isVisitorWorkspace } from './visitor-id';
+import { errMsg, log } from '$lib/server/obs/log';
 
 /** The shared room every visitor can open by link. */
 export const SANDBOX_WORKSPACE = JUDGES_WORKSPACE;
@@ -51,6 +52,6 @@ export async function seedSandboxRecalls(workspaceId: string, runId: string): Pr
 			via: 'web:sandbox'
 		});
 	} catch (e) {
-		console.warn('[sandbox] stored recalls not applied', (e as Error)?.message ?? e);
+		log.warn('sandbox.recalls_not_applied', { error: errMsg(e) });
 	}
 }

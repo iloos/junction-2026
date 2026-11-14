@@ -1,6 +1,7 @@
 import type { OpEnvelope, ServerEvent } from '$lib/core/contracts';
 import { sql } from '$lib/server/db/client';
 import type { MemoryBus } from './memory';
+import { errMsg, log } from '$lib/server/obs/log';
 
 /** One channel for every workspace; the payload names the workspace. */
 export const CHANNEL = 'mandate_events';
@@ -29,7 +30,7 @@ export class PgTransport {
 			.listen(CHANNEL, (payload) => this.enqueue(payload))
 			.catch((e) => {
 				this.listening = null;
-				console.error('[bus] LISTEN failed', e instanceof Error ? e.message : e);
+				log.error('bus.listen_failed', { error: errMsg(e) });
 			}));
 	}
 
@@ -41,7 +42,7 @@ export class PgTransport {
 			// The limit is in bytes: Finnish and other non-ASCII text takes more bytes than characters.
 			if (Buffer.byteLength(text, 'utf8') > INLINE_LIMIT) {
 				if (e.kind !== 'op') {
-					console.warn(`[bus] dropped ${e.kind} event over ${INLINE_LIMIT} bytes`);
+					log.warn('bus.event_dropped', { kind: e.kind, limitBytes: INLINE_LIMIT, workspaceId });
 					continue;
 				}
 				wire = { ws: workspaceId, ref: { kind: 'op', seq: e.seq } };
@@ -57,7 +58,7 @@ export class PgTransport {
 		try {
 			wire = JSON.parse(payload) as Wire;
 		} catch (e) {
-			console.error('[bus] bad NOTIFY payload', e instanceof Error ? e.message : e);
+			log.error('bus.bad_payload', { error: errMsg(e) });
 			return;
 		}
 		const prev = this.chains.get(wire.ws) ?? Promise.resolve();
@@ -75,7 +76,7 @@ export class PgTransport {
 			if (env?.seq === wire.ref.seq)
 				this.local.deliver(wire.ws, [{ kind: 'op', seq: env.seq, envelope: env }]);
 		} catch (e) {
-			console.error('[bus] notification not delivered', e instanceof Error ? e.message : e);
+			log.error('bus.not_delivered', { error: errMsg(e) });
 		}
 	}
 }

@@ -15,6 +15,7 @@ import {
 import { currentScope } from '../../external/scope';
 import { geminiKey } from '../llm';
 import { logTrace, noTrace, type Trace } from '../llm/trace';
+import { errMsg, log } from '$lib/server/obs/log';
 
 /**
  * Decide port: Gemini Decisions API (`gemini-decision-1`, v1beta) → recorded replay → rules
@@ -149,7 +150,7 @@ export function loadReplay(path?: string): ReplayBook {
 		return JSON.parse(readFileSync(path, 'utf8')) as ReplayBook;
 	} catch (e) {
 		// Without the book, decisions fall back to the rules; say so once instead of failing quietly.
-		console.warn(`[decide] replay book not loaded from ${path}: ${(e as Error).message}`);
+		log.warn('decide.replay_book_missing', { path, error: errMsg(e) });
 		return {};
 	}
 }
@@ -316,7 +317,7 @@ export function createDecide(o: DecideOptions): Decide {
 			...(replayed ? { replayKey: key } : {})
 		};
 		traceOf()('decision', data);
-		logTrace(data);
+		logTrace(data, 'decision');
 		return { rec, source, latencyMs };
 	}
 

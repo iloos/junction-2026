@@ -5,6 +5,7 @@
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
+import { errMsg, log } from '$lib/server/obs/log';
 
 export function readJson<T>(file: string | undefined, fallback: T): T {
 	if (!file || !existsSync(file)) return fallback;
@@ -21,6 +22,6 @@ export function writeJson(file: string | undefined, value: unknown): void {
 		mkdirSync(dirname(file), { recursive: true });
 		writeFileSync(file, JSON.stringify(value));
 	} catch (e) {
-		console.error('[external] could not write', file, (e as Error)?.message ?? e);
+		log.error('external.write_failed', { file, error: errMsg(e) });
 	}
 }

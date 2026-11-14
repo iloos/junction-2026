@@ -4,6 +4,7 @@ import { generateText } from 'ai';
 import type { Llm } from '$lib/core/ports';
 import type { Env } from '$lib/server/auth';
 import { logTrace, noTrace, type Trace } from './trace';
+import { log } from '$lib/server/obs/log';
 
 type Req = Parameters<Llm['generate']>[0];
 type Res = Awaited<ReturnType<Llm['generate']>>;
@@ -31,7 +32,7 @@ function traced(source: string, model: string, trace: Trace, fn: (r: Req) => Pro
 					maxTokens
 				};
 				trace('text', data);
-				logTrace(data);
+				logTrace(data, 'text');
 				return res;
 			} catch (e) {
 				const data = {
@@ -41,7 +42,7 @@ function traced(source: string, model: string, trace: Trace, fn: (r: Req) => Pro
 					error: String((e as Error)?.message ?? e).slice(0, 200)
 				};
 				trace('error', data);
-				logTrace(data);
+				logTrace(data, 'error');
 				throw e;
 			}
 		}
@@ -143,6 +144,6 @@ export function createLlm(env: Env, trace: Trace = noTrace): Llm {
 			},
 			trace
 		);
-	if (p !== 'fixture') console.warn(`[llm] LLM_PROVIDER=${p} has no usable key; using fixture`);
+	if (p !== 'fixture') log.warn('llm.no_key', { provider: p, using: 'fixture' });
 	return fixtureLlm(trace);
 }
