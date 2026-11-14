@@ -18,7 +18,7 @@ import { createLlm } from '../adapters/llm';
 import { runGoal } from '../agent';
 import { llmPlanner } from '../agent/loop';
 import { trialWorkspace } from '../agent/trial-harness';
-import { cases, checkBasket } from './fidelity';
+import { cases, checkBasket, FIDELITY_NOW } from './fidelity';
 
 interface Goal {
 	id: string;
@@ -32,6 +32,8 @@ interface Trial {
 	id: string;
 	goal: string;
 	after: string[];
+	/** Scenario clock for the trial; the fidelity cases are written for Mon 7 Dec 09:00, before the 17:00 cut-off. */
+	now?: Date;
 	judge: (o: Observed) => string[];
 }
 interface Observed {
@@ -75,6 +77,7 @@ const trials: Trial[] = [
 		id: `fidelity-${c.id}`,
 		goal: c.agentText ?? c.text,
 		after: [],
+		now: FIDELITY_NOW,
 		judge: (o: Observed) =>
 			checkBasket(c, 'agent', { plans: o.plans, error: `stopped ${o.stopped}` })
 				.filter((r) => !r.pass)
@@ -90,6 +93,8 @@ describe.skipIf(!live)('live planner diagnostics', () => {
 			const runs: Record<string, unknown>[] = [];
 			for (let n = 0; n < REPEATS; n++) {
 				const w = await trialWorkspace();
+				// Same clock as the offline fidelity suite, so a live failure is the model's, not a closed cut-off.
+				if (t.now) w.env.ports.clock = { now: () => t.now! };
 				const today = scenarioDate(w.env.ports.clock.now());
 				const source = { ...w.source, today: () => today };
 				let tokens = 0;
