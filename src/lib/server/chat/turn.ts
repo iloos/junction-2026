@@ -783,8 +783,9 @@ const RESIZE =
 	/^(?:ok\s+|actually\s+|no\s+|sorry\s+)?(?:make (?:it|that)|change (?:it |that )?to|muuta (?:se )?|tee siitä|vaihda (?:se )?)\s*(\d+(?:[.,]\d+)?)\s*(kg|kiloa?|g|l|litraa?|dl)?\b/iu;
 
 /**
- * "Make it 20 kg" on a task with one purchase line: the line's sales quantity for the new physical amount, from the
- * line's own physical content per sales unit, through edit_line (the same gate as the Kitchen's edit).
+ * "Make it 20 l": the task's one direct need takes the new amount and core re-sizes its lines (edit_line
+ * {needId, patch: {amount}}), so demand and purchase stay one. An amount in another dimension (kg for a need in
+ * litres) is refused by core with the need's unit, which becomes the question; zero is an amount, not one pack.
  */
 async function resizeLine(
 	planId: string,
@@ -799,42 +800,54 @@ async function resizeLine(
 		n: 1,
 		tool: 'get_plan',
 		input: { planId },
-		why: 'read the line to resize',
+		why: 'read the need to change',
 		ok: r.ok,
 		...(r.ok ? { value: r.value } : { error: r.error }),
 		ms: 0
 	});
 	if (!r.ok) return steps;
 	const plan = (r.value as ToolOutput<'get_plan'>).plan;
-	const lines = plan.lines.filter(
-		(l) => !['rejected', 'unorderable', 'committed'].includes(l.state)
-	);
-	const line = lines.length === 1 ? lines[0] : undefined;
-	const phys = line?.view?.physical;
-	if (!line || !phys || !(line.qty.value > 0)) return steps;
-	const unit = (m[2] ?? '').toLowerCase();
-	let amount = Number(m[1].replace(',', '.'));
-	if (unit === 'g') amount /= 1000;
-	if (unit === 'dl') amount /= 10;
-	// Kilograms for a line bought in litres (or the reverse) are another dimension: ask, never invent a density.
-	const dim = /^(kg|kilo|g)/.test(unit) ? 'kg' : /^(l|litra|dl)/.test(unit) ? 'l' : null;
-	if ((dim && dim !== phys.unit) || !(amount > 0)) {
-		mismatch.at = `That line is bought in ${phys.unit === 'l' ? 'litres' : phys.unit}; say the new amount in ${phys.unit === 'l' ? 'litres' : phys.unit}.`;
+	const direct = plan.needs.filter((n) => !n.dish);
+	const need = direct.length === 1 ? direct[0] : undefined;
+	if (!need) {
+		mismatch.at = 'Which product should change? This order has several; name it with the amount.';
 		return steps;
 	}
-	const per = phys.value / line.qty.value;
-	const qty = Math.max(1, Math.ceil(amount / per - 1e-9));
-	const input = { planId, version: plan.version, lineId: line.id, patch: { qty } };
+	const word = (m[2] ?? '').toLowerCase();
+	let value = Number(m[1].replace(',', '.'));
+	let unit: string = need.amount.unit;
+	if (/^(kg|kilo)/.test(word)) unit = 'kg';
+	else if (word === 'g') {
+		unit = 'kg';
+		value /= 1000;
+	} else if (/^(l|litra)/.test(word)) unit = 'l';
+	else if (word === 'dl') {
+		unit = 'l';
+		value /= 10;
+	}
+	const input = {
+		planId,
+		version: plan.version,
+		needId: need.id,
+		patch: { amount: { value, unit } }
+	};
 	const e = await serveTool('edit_line', ctx, input, handlers);
 	steps.push({
 		n: 2,
 		tool: 'edit_line',
 		input,
-		why: `${amount} ${phys.unit} ≈ ${qty} ${line.qty.unit}`,
+		why: `${need.label}: ${value} ${unit}`,
 		ok: e.ok,
 		...(e.ok ? { value: e.value } : { error: e.error }),
 		ms: 0
 	});
+	if (!e.ok) {
+		const needUnit = (e.error.detail as { needUnit?: string } | undefined)?.needUnit;
+		const words = (u: string) => (u === 'l' ? 'litres' : u === 'kg' ? 'kilograms' : u);
+		mismatch.at = needUnit
+			? `That need is in ${words(needUnit)}: how many ${words(needUnit)}?`
+			: `Not changed: ${e.error.message}`;
+	}
 	return steps;
 }
 

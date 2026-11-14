@@ -258,12 +258,17 @@ describe('suite: chat transitions (round 9)', () => {
 		const p = await s.place(['100002']);
 		const t = await s.task([p]);
 		const out = await chatTurn({ taskId: t.id, text: 'make it 20 kg' }, s.deps);
-		expect(out.some((e) => e.type === 'step' && e.tool === 'edit_line')).toBe(false);
-		expect(out.at(-1)).toMatchObject({ type: 'done', text: expect.stringMatching(/litres/) });
+		expect(out.some((e) => e.type === 'step' && e.tool === 'edit_line' && e.ok)).toBe(false);
+		expect(out.at(-1)).toMatchObject({
+			type: 'done',
+			text: expect.stringMatching(/That need is in litres: how many litres\?/)
+		});
 		const ok = await chatTurn({ taskId: t.id, text: 'make it 6 l' }, s.deps);
 		expect(ok.some((e) => e.type === 'step' && e.tool === 'edit_line' && e.ok)).toBe(true);
 		const plan = must(await s.h.get_plan(s.ctx('chef'), { planId: p.id })).plan;
+		// The need and the purchase move together.
 		expect(plan.lines[0].qty.value).toBe(6);
+		expect(plan.needs[0].amount).toMatchObject({ value: 6, unit: 'l' });
 	});
 
 	it('R8: a task survives a failed save after its effects; the effect is reconciled onto it', async () => {
