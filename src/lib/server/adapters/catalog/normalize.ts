@@ -66,6 +66,42 @@ function netPerSalesUnit(raw: Raw): Product['netPerSalesUnit'] {
 	};
 }
 
+/** Bump when normalizeProduct's output changes: a cached normalised catalogue of another version is rebuilt. */
+export const NORMALIZE_VERSION = '2';
+
+const LITRES: Record<string, number> = { LTR: 1, DLT: 0.1, CLT: 0.01, MLT: 0.001 };
+const KILOS: Record<string, number> = { KGM: 1, GRM: 0.001 };
+/** Densities outside this are a unit slip in the source (1,000 "l" weighing 1 kg), never a product. */
+const PLAUSIBLE_KG_PER_L = [0.3, 2] as const;
+
+/**
+ * Content volume per sales unit, only when Valio states both a volume in a volume unit and a net weight in a
+ * weight unit for the base unit, and the two give a plausible density. Valio's `volume` often holds grams or pieces.
+ */
+function netVolumePerSalesUnit(raw: Raw): Product['netVolumePerSalesUnit'] {
+	const base = (raw.synkkaData?.unitConversions ?? []).find(
+		(u: Raw) => u.synkkaPackagingType === 'BASE_UNIT_OR_EACH'
+	);
+	const v = base?.volume;
+	const w = base?.netWeight;
+	if (!(v?.value > 0) || !(w?.value > 0)) return undefined;
+	const l = LITRES[v.unit] !== undefined ? v.value * LITRES[v.unit] : null;
+	const kg = KILOS[w.unit] !== undefined ? w.value * KILOS[w.unit] : null;
+	if (l === null || kg === null) return undefined;
+	const density = kg / l;
+	if (density < PLAUSIBLE_KG_PER_L[0] || density > PLAUSIBLE_KG_PER_L[1]) return undefined;
+	const sales = (raw.units ?? []).find((u: Raw) => u.unitId === raw.salesUnit);
+	const factor = raw.salesUnit === raw.baseUnit ? 1 : (sales?.sizeInBaseUnits ?? null);
+	if (!factor) return undefined;
+	return {
+		value: { value: +(l * factor).toFixed(4), unit: 'l' },
+		provenance: {
+			source: 'valio_static',
+			note: `unitConversions.volume ${v.value} ${v.unit} beside netWeight ${w.value} ${w.unit} (${density.toFixed(3)} kg/l)`
+		}
+	};
+}
+
 export function normalizeProduct(
 	raw: Raw,
 	extra: { co2?: Map<string, number>; reliability?: Map<string, number> } = {}
@@ -105,6 +141,7 @@ export function normalizeProduct(
 		catchWeight:
 			raw.salesUnit === 'KG' && (lotStep > 0.01 || Boolean(raw.synkkaData?.variableUnit)),
 		netPerSalesUnit: netPerSalesUnit(raw),
+		netVolumePerSalesUnit: netVolumePerSalesUnit(raw),
 		co2PerKg:
 			co2 === undefined
 				? undefined

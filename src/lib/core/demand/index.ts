@@ -5,3 +5,4 @@ export * from './factors';
 export * from './sizing';
 export * from './content';
 export * from './menu';
+export * from './convert';

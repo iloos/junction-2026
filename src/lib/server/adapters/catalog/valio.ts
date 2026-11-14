@@ -11,7 +11,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSy
 import { join } from 'node:path';
 import type { Catalog } from '$lib/core/ports';
 import type { Offer, Product, ProductId } from '$lib/core/contracts';
-import { normalizeProduct, toOffer } from './normalize';
+import { NORMALIZE_VERSION, normalizeProduct, toOffer } from './normalize';
 import { createValioLive, type ValioLiveOptions } from './valio-live';
 import type { SimOverlay } from '../simulator/overlay';
 import {
@@ -59,8 +59,13 @@ function readCsvMap(path: string): Map<string, number> {
 export function loadCatalogue(dir: string): Map<ProductId, Product> {
 	const normalized = join(dir, 'normalized', 'products.json');
 	const raw = join(dir, RAW_PRODUCTS);
+	const version = join(dir, 'normalized', 'version');
+	const sameVersion =
+		!existsSync(raw) ||
+		(existsSync(version) && readFileSync(version, 'utf-8').trim() === NORMALIZE_VERSION);
 	const fresh =
 		existsSync(normalized) &&
+		sameVersion &&
 		(!existsSync(raw) || statSync(normalized).mtimeMs >= statSync(raw).mtimeMs);
 	let products: Product[];
 	if (fresh) products = JSON.parse(readFileSync(normalized, 'utf-8'));
@@ -74,6 +79,7 @@ export function loadCatalogue(dir: string): Map<ProductId, Product> {
 		);
 		mkdirSync(join(dir, 'normalized'), { recursive: true });
 		writeFileSync(normalized, JSON.stringify(products));
+		writeFileSync(version, NORMALIZE_VERSION);
 	}
 	return new Map(products.map((p) => [p.productId, p]));
 }
