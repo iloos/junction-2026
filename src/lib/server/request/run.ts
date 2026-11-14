@@ -4,11 +4,14 @@
  * `quote`, and only for the shortlisted ids (plus Valio's own substitute rule for the pick).
  */
 import type { Kitchen, Offer, Product, ToolName, ToolOutput } from '$lib/core/contracts';
+import { money } from '$lib/ui/format';
 import { canonicalJson, sha256Hex } from '$lib/core/hash';
 import type { CallContext, Llm, ToolHandlers } from '$lib/core/ports';
 import { serveTool } from '$lib/server/tools/serve';
 import type {
+	AnswerSpec,
 	ApprovalView,
+	RequestAnswer,
 	CandidateView,
 	LookupItemView,
 	LookupView,
@@ -19,6 +22,7 @@ import type {
 	ValioRuleView
 } from '$lib/ui/request/types';
 import { weekdayOf } from './dates';
+import { caseDescription } from './convert';
 import { rankCandidates, SHORTLIST, unpickable, type Ranked } from './lookup';
 import { parseRequest, type ParsedRequest } from './parse';
 
@@ -64,7 +68,9 @@ export interface RequestDeps {
 	nonce?: string;
 	/** Stop after lookup (no plan is created). */
 	place?: boolean;
-	/** Approval fields get_plan does not return (mandate version, expiry). */
+	/** The chef's inline answers to earlier questions, by item index. */
+	answers?: RequestAnswer[];
+	/** Fallback for approval fields get_plan leaves out (mandate version, expiry, who). */
 	approvalRecord?: (id: string) => Promise<ApprovalRecord | null>;
 	onEvent?: (e: RequestEvent) => void;
 }
@@ -104,6 +110,7 @@ async function lookupItems(parsed: ParsedRequest, d: RequestDeps): Promise<Looku
 		searches: { query: string; hits: number }[];
 		ranked: Ranked[];
 		rejected: { productId: string; name: string; reason: string }[];
+		pin: string | null;
 	}[] = [];
 
 	for (const item of parsed.items) {
@@ -116,7 +123,12 @@ async function lookupItems(parsed: ParsedRequest, d: RequestDeps): Promise<Looku
 			hits.push(...r.products);
 		}
 		const { ranked, rejected } = rankCandidates(item, hits);
-		prepared.push({ item, searches, ranked, rejected });
+		const pin = d.answers?.find((a) => a.item === parsed.items.indexOf(item))?.productId ?? null;
+		// The chosen product leads the shortlist, with the chef named as the reason.
+		const at = pin ? ranked.findIndex((r) => r.product.productId === pin) : -1;
+		if (at > 0) ranked.unshift(...ranked.splice(at, 1));
+		if (at >= 0) ranked[0] = { ...ranked[0], reasons: ['you chose this', ...ranked[0].reasons] };
+		prepared.push({ item, searches, ranked, rejected, pin });
 	}
 
 	// One quote call for every shortlist that can be ordered (has a quantity), plus Valio's own
@@ -141,23 +153,56 @@ async function lookupItems(parsed: ParsedRequest, d: RequestDeps): Promise<Looku
 		const views = short.map((r) =>
 			candidateView(r, offers.get(r.product.productId) ?? null, offers.has(r.product.productId))
 		);
+		const pin = p.pin;
+		// A case is a different size for every product: without the chef saying which, ask.
+		const askCase = p.item.unit === 'case' && !pin && p.item.qty !== null;
 		let pick: CandidateView | null = null;
 		for (const [i, v] of views.entries()) {
 			if (p.item.qty === null) break;
+			if (pin && v.productId !== pin) continue;
 			const why = unpickable(offers.get(v.productId), short[i].conversion);
 			if (why) v.skipped = why;
-			else if (!pick) {
+			else if (!pick && !askCase) {
 				v.picked = true;
 				pick = v;
 				break;
 			}
 		}
 		let question: string | null = null;
-		if (p.item.qty === null) question = `How much ${p.item.query}?`;
-		else if (!short.length)
+		let answer: AnswerSpec | null = null;
+		const idx = parsed.items.indexOf(p.item);
+		if (p.item.qty === null) {
+			question = `How much ${p.item.query}?`;
+			answer = { kind: 'qty', item: idx, units: ['l', 'kg', 'pcs', 'case'] };
+		} else if (askCase) {
+			const options = short
+				.map((r, i) => ({ r, v: views[i] }))
+				.filter(({ r, v }) => !unpickable(offers.get(v.productId), r.conversion))
+				.slice(0, 4)
+				.map(({ r, v }) => {
+					const size = caseDescription(r.product);
+					return {
+						label: size ?? `1 ${r.product.salesUnit === 'KI' ? 'KI' : 'case'}, size not stated`,
+						detail: `${r.product.nameFi} · ${(v.conversion as { explain: string }).explain} · ${money(offers.get(v.productId)?.price?.unitCents)} / ${r.product.salesUnit}`,
+						answer: { item: idx, productId: r.product.productId }
+					};
+				});
+			question = options.length
+				? `Which case? Case sizes differ between products, so ${p.item.qty} cases of ${p.item.query} could be very different amounts.`
+				: `None of the matching cases can be delivered for ${parsed.deliverBy}. Give the amount in kg or l?`;
+			answer = {
+				kind: 'choice',
+				item: idx,
+				options,
+				alsoQty: { units: ['kg', 'l', 'pcs'] }
+			};
+		} else if (!short.length)
 			question = `Nothing in the catalogue matched "${p.item.query}". Which product do you mean?`;
+		else if (!pick && pin && !views.some((v) => v.productId === pin))
+			question = `The product you chose (${pin}) is no longer in the shortlist. Pick again?`;
 		else if (!pick) {
 			const conv = views.find((v) => v.conversion && !v.conversion.ok);
+			if (conv) answer = { kind: 'qty', item: idx, units: ['sales'], salesUnit: conv.salesUnit };
 			question =
 				conv && conv.conversion && !conv.conversion.ok
 					? `${conv.name}: ${conv.conversion.reason}.`
@@ -212,6 +257,7 @@ async function lookupItems(parsed: ParsedRequest, d: RequestDeps): Promise<Looku
 			rejectedCount: p.rejected.length,
 			pick,
 			question,
+			answer,
 			valioRules
 		};
 	});
@@ -245,7 +291,9 @@ export async function approvalView(
 	const g = await callTool(handlers, ctx, 'get_plan', { planId });
 	const a = g.approval;
 	if (!a) return { plan: g.plan, approval: null };
-	const rec = record ? await record(a.id) : null;
+	const who = (x?: { kind: string; id: string }) => (x ? `${x.kind}:${x.id}` : undefined);
+	const fromTool = a.mandateVersion !== undefined && a.expiresAt !== undefined;
+	const rec = fromTool || !record ? null : await record(a.id);
 	const ids = new Set(a.lineIds);
 	return {
 		plan: g.plan,
@@ -259,12 +307,29 @@ export async function approvalView(
 			totalCents: g.plan.lines
 				.filter((l) => ids.has(l.id))
 				.reduce((s, l) => s + (l.lineCents ?? 0), 0),
-			mandateVersion: rec?.mandateVersion ?? null,
-			expiresAt: rec?.expiresAt ?? null,
-			requestedBy: rec?.requestedBy ?? null,
-			decidedBy: rec?.decidedBy ?? null
+			mandateVersion: a.mandateVersion ?? rec?.mandateVersion ?? null,
+			expiresAt: a.expiresAt ?? rec?.expiresAt ?? null,
+			requestedBy: who(a.requestedBy) ?? rec?.requestedBy ?? null,
+			decidedBy: who(a.decidedBy) ?? rec?.decidedBy ?? null
 		}
 	};
+}
+
+/** The chef's inline answers replace what the words left open; each one is recorded on the item. */
+export function applyAnswers(parsed: ParsedRequest, answers: RequestAnswer[]): ParsedRequest {
+	if (!answers.length) return parsed;
+	const items = parsed.items.map((it, i) => {
+		const a = answers.find((x) => x.item === i);
+		if (!a) return it;
+		const next = { ...it, ambiguities: [...it.ambiguities] };
+		if (a.qty !== undefined && a.unit) {
+			next.qty = a.qty;
+			next.unit = a.unit;
+			next.ambiguities = next.ambiguities.filter((x) => !/^no (quantity|unit) given/.test(x));
+		}
+		return next;
+	});
+	return { ...parsed, items, answered: answers };
 }
 
 /** Runs the request flow and reports each step as it finishes. */
@@ -277,7 +342,10 @@ export async function runRequest(text: string, d: RequestDeps): Promise<RequestR
 		return n;
 	};
 
-	const parsed = await parseRequest(text, { today: d.today, llm: d.llm, llmKind: d.llmKind });
+	const parsed = applyAnswers(
+		await parseRequest(text, { today: d.today, llm: d.llm, llmKind: d.llmKind }),
+		d.answers ?? []
+	);
 	const parsedView = parsed as ParsedView;
 	const askFirst = parsed.items.length === 0;
 	emit({

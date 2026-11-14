@@ -1,16 +1,26 @@
 import { json } from '@sveltejs/kit';
+import { dev } from '$app/environment';
 import { env } from '$env/dynamic/private';
-import { approveRequest, commitRequest, submitRequest, ToolFailed } from '$lib/server/request';
+import {
+	approveRequest,
+	commitRequest,
+	pageWorkspace,
+	readAnswers,
+	submitRequest,
+	ToolFailed
+} from '$lib/server/request';
 import type { RequestHandler } from './$types';
 
 /**
  * The /request page's server side. `request` streams one NDJSON line per finished step, then the
  * result; `approve` and `commit` answer with JSON. The page never holds a key: the actors are
- * server-side contexts (kitchen agent places, head chef approves, chef commits).
+ * server-side contexts (kitchen agent places, head chef approves, chef commits), in the workspace
+ * pageWorkspace() decides: the judges' sandbox unless presenter actions are open.
  */
 export const POST: RequestHandler = async ({ request }) => {
 	const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
 	const str = (k: string) => (typeof body[k] === 'string' ? (body[k] as string) : '');
+	const workspaceId = pageWorkspace(env, dev).id;
 	const int = (k: string) => (Number.isInteger(body[k]) ? (body[k] as number) : -1);
 
 	try {
@@ -18,6 +28,7 @@ export const POST: RequestHandler = async ({ request }) => {
 			return json(
 				await approveRequest({
 					env,
+					workspaceId,
 					approvalId: str('approvalId'),
 					planId: str('planId'),
 					planVersion: int('planVersion'),
@@ -29,6 +40,7 @@ export const POST: RequestHandler = async ({ request }) => {
 			return json(
 				await commitRequest({
 					env,
+					workspaceId,
 					planId: str('planId'),
 					version: int('version'),
 					attempt: Math.max(1, int('attempt'))
@@ -58,6 +70,8 @@ export const POST: RequestHandler = async ({ request }) => {
 					text,
 					kitchenId: str('kitchenId') || undefined,
 					nonce: str('nonce') || undefined,
+					answers: readAnswers(body.answers),
+					workspaceId,
 					env,
 					onEvent: send
 				});

@@ -18,6 +18,25 @@ export interface ParsedItemView {
 	ambiguities: string[];
 }
 
+/** The chef's inline answer to a question, by item index: a quantity, a product, or both. */
+export interface RequestAnswer {
+	item: number;
+	qty?: number;
+	unit?: ReqUnit;
+	productId?: string;
+}
+
+/** How a question can be answered inline. */
+export type AnswerSpec =
+	| { kind: 'qty'; item: number; units: ReqUnit[]; salesUnit?: string }
+	| {
+			kind: 'choice';
+			item: number;
+			options: { label: string; detail: string; answer: RequestAnswer }[];
+			/** Also offer "give the amount instead" in these units. */
+			alsoQty?: { units: ReqUnit[] };
+	  };
+
 export interface ParsedView {
 	text: string;
 	items: ParsedItemView[];
@@ -26,6 +45,8 @@ export interface ParsedView {
 	deliverBySource: 'request' | 'default';
 	notes: string[];
 	ambiguities: string[];
+	/** Inline answers applied on top of the words. */
+	answered?: RequestAnswer[];
 	parser: {
 		kind: 'rules' | 'gemini' | 'featherless' | 'fixture';
 		model: string;
@@ -70,6 +91,7 @@ export interface LookupItemView {
 	pick: CandidateView | null;
 	/** Set when nothing could be picked: the question for the chef. */
 	question: string | null;
+	answer: AnswerSpec | null;
 	valioRules: ValioRuleView[];
 }
 
