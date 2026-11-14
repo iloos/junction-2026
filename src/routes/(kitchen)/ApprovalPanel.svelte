@@ -63,7 +63,11 @@
 	);
 	const granted = $derived(approval?.state === 'granted');
 	const showVoid = $derived(
-		lastInvalidated && pending && !lastInvalidated.reason?.includes('committed')
+		// Only an approval someone actually gave can "no longer apply"; a voided pending one was never approved.
+		lastInvalidated &&
+			lastInvalidated.decidedBy &&
+			pending &&
+			!lastInvalidated.reason?.includes('committed')
 	);
 	const changedIds = $derived(new Set(changes.map((c) => c.lineId)));
 	/** One decision per reason group (lib/ui/decisions): the same count the task header and phone bar show. */
