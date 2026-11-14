@@ -31,7 +31,7 @@ import {
 import { draftFromLine, type DraftLine } from '../mandate/tier';
 import { rankCandidates } from '../rank/rank';
 import type { CallContext } from '../ports';
-import { requote, type ServicePorts } from './events';
+import { prefetch, requote, type ServicePorts } from './events';
 
 /* eslint-disable @typescript-eslint/no-explicit-any -- seed candidate/rescue entries are loose JSON */
 type Loose = any;
@@ -200,6 +200,18 @@ export async function findSubstitutes(
 	if (!apply || sameLines(drafts, saved))
 		return ok({ ...base, plan: plan0, chosen: drafts.map(proposedOf), applied: false });
 
+	// Prepare outside the transaction: the open lines after the swap, and their catalogue data.
+	const old = new Set(saved.map((l) => l.id));
+	const proposedLines = drafts.map(proposedOf);
+	const openAfter = [...plan0.lines.filter((l) => !old.has(l.id)), ...proposedLines]
+		.filter((l) => l.state !== 'committed')
+		.map<DraftLine>((l) => drafts.find((d) => d.id === l.id) ?? draftFromLine(l));
+	const fetched = await prefetch(
+		ports,
+		openAfter.map((d) => d.productId),
+		plan0.deliverBy
+	);
+
 	const r = await ports.store.transact<{ plan: Plan; chosen: Line[] }>(
 		ctx.workspaceId,
 		async (tx, state) => {
@@ -217,7 +229,6 @@ export async function findSubstitutes(
 			});
 			const ops: PendingOp[] = [];
 			let version = plan.version;
-			const old = new Set(saved.map((l) => l.id));
 			if (old.size) {
 				// Replace, never stack: the old substitute leaves the plan before the new one is proposed.
 				ops.push(
@@ -231,7 +242,7 @@ export async function findSubstitutes(
 				);
 				version += 1;
 			}
-			const proposed: Line[] = drafts.map(proposedOf);
+			const proposed = proposedLines;
 			ops.push(
 				envelope({
 					type: 'ProposeSubstitute',
@@ -251,10 +262,7 @@ export async function findSubstitutes(
 				termsHash: null,
 				lines: [...plan.lines.filter((l) => !old.has(l.id)), ...proposed]
 			};
-			const open = after.lines
-				.filter((l) => l.state !== 'committed')
-				.map<DraftLine>((l) => drafts.find((d) => d.id === l.id) ?? draftFromLine(l));
-			const q = await requote(ports, ctx, tx, state, after, kitchen, open);
+			const q = await requote(ports, ctx, tx, state, after, kitchen, openAfter, fetched);
 			return {
 				ops: [...ops, ...q.ops],
 				value: {
