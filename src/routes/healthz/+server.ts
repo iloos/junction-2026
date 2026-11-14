@@ -12,6 +12,8 @@ const commit =
 	(existsSync('COMMIT') ? readFileSync('COMMIT', 'utf8').trim() : '') ||
 	'unknown';
 
+const PORTS_WAIT_MS = 1500;
+
 /** Whether a service may go live at all (its key is set and nothing forces the fixture). Presence only. */
 function configured(s: Service): boolean {
 	switch (s) {
@@ -34,8 +36,12 @@ function configured(s: Service): boolean {
  */
 export const GET: RequestHandler = async () => {
 	const health = await dbHealth();
-	// The ports are built once per process; building them here registers the live Valio adapter if there is one.
-	await createServerPorts().catch(() => undefined);
+	// The ports are built once per process; building them registers the live Valio adapter if there is one.
+	// Liveness never waits on it: at most PORTS_WAIT_MS, then the services report what they have.
+	await Promise.race([
+		createServerPorts().catch(() => undefined),
+		new Promise((r) => setTimeout(r, PORTS_WAIT_MS))
+	]);
 	const services = servicesStatus().map((s) => ({ ...s, configured: configured(s.service) }));
 	return json(
 		{ ok: health.db !== 'error', ...health, commit, time: new Date().toISOString(), services },
