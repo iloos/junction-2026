@@ -41,8 +41,11 @@
 		ondismiss?: (id: string) => void;
 		/** Cancel what is still open on that task (its lines to zero). Resolves true when done. */
 		oncancel?: (id: string) => Promise<boolean>;
+		/** Title, sentence and cover only: the page's action bar carries the decisions and the order (D29). */
+		compact?: boolean;
 	}
 	let {
+		compact = false,
 		title,
 		meta,
 		decisions,
@@ -183,70 +186,72 @@
 		{/if}
 	</div>
 
-	<div
-		class="mt-3 flex flex-col gap-3 border-t border-rule px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between md:px-5"
-	>
-		<div class="min-w-0">
-			{#if ordered && (decisions > 0 || openLines > 0)}
-				<!-- A partial order: what went, and what still needs the chef; only ordered lines are locked. -->
-				<p class="text-display font-semibold tracking-[-0.015em] text-ink">
-					<span class="mono">{ordered.confirmed + ordered.awaiting}</span>
-					{ordered.confirmed + ordered.awaiting === 1 ? 'line' : 'lines'} ordered
-					<span class="text-ink-2">·</span>
-					{decisions > 0 ? `${decisionCount(decisions)} left` : `${openLines} open`}
-				</p>
-				<p class="mt-1 text-body text-ink-2">
-					<span class="mono text-ink">{money(ordered.cents)}</span> ordered:
-					<span class="mono text-ink">{ordered.confirmed}</span> supplier confirmed,
-					<span class="mono text-ink">{ordered.awaiting}</span> awaiting the supplier. Ordered lines are
-					locked; the rest can still change.
-				</p>
-			{:else if ordered}
-				<p class="flex items-center gap-2 text-display font-semibold tracking-[-0.015em] text-ink">
-					<Lock size={22} aria-hidden="true" /> Ordered
-				</p>
-				<p class="mt-1 text-body text-ink-2">
-					<span class="mono text-ink">{ordered.confirmed}</span> supplier confirmed,
-					<span class="mono text-ink">{ordered.awaiting}</span> awaiting the supplier ·
-					<span class="mono text-ink">{money(ordered.cents)}</span>. Editing is locked.
-				</p>
-			{:else}
-				<p class="text-title font-semibold tracking-[-0.015em] text-ink sm:text-display">
-					{decisionCount(decisions)}
-					{#if decisions > 0}<span class="text-ink-2">before</span>
-						<!-- One line on a phone ("Tue 15:00"); the full date in the big mono from sm. -->
-						<span class="mono whitespace-nowrap sm:hidden">{shortDue}</span><span
-							class="mono hidden whitespace-nowrap sm:inline">{storyTime(due)}</span
-						>{/if}
-				</p>
-				<p class="mt-1 text-body text-ink-2">
-					{#if decisions > 0}{left ? `Due ${left}. ` : ''}Each decision is approved on its own.{:else}Nothing
-						needs you: every open line is within the mandate.{/if}
-					{#if orderable?.lines && !onorder}
-						<span class="text-ink"
-							><span class="mono">{orderable.lines}</span> lines,
-							<span class="mono">{money(orderable.cents)}</span> can be ordered now.</span
-						>{/if}
-				</p>
-				{#if orderable?.lines && onorder}
-					<!-- What can go now is the action, up here where it is seen; primary only when nothing needs the chef. -->
-					<button
-						type="button"
-						class="mt-2.5 inline-flex h-10 items-center gap-2 rounded-md px-4 text-body font-medium disabled:opacity-50 {decisions >
-						0
-							? 'border border-accent text-accent-ink hover:bg-accent-wash'
-							: 'bg-accent text-sheet hover:bg-accent-ink'}"
-						disabled={busy}
-						onclick={onorder}
-						>Order {orderable.lines}
-						{orderable.lines === 1 ? 'line' : 'lines'} now ·
-						<span class="mono">{money(orderable.cents)}</span></button
+	{#if !compact}<div
+			class="mt-3 flex flex-col gap-3 border-t border-rule px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between md:px-5"
+		>
+			<div class="min-w-0">
+				{#if ordered && (decisions > 0 || openLines > 0)}
+					<!-- A partial order: what went, and what still needs the chef; only ordered lines are locked. -->
+					<p class="text-display font-semibold tracking-[-0.015em] text-ink">
+						<span class="mono">{ordered.confirmed + ordered.awaiting}</span>
+						{ordered.confirmed + ordered.awaiting === 1 ? 'line' : 'lines'} ordered
+						<span class="text-ink-2">·</span>
+						{decisions > 0 ? `${decisionCount(decisions)} left` : `${openLines} open`}
+					</p>
+					<p class="mt-1 text-body text-ink-2">
+						<span class="mono text-ink">{money(ordered.cents)}</span> ordered:
+						<span class="mono text-ink">{ordered.confirmed}</span> supplier confirmed,
+						<span class="mono text-ink">{ordered.awaiting}</span> awaiting the supplier. Ordered lines
+						are locked; the rest can still change.
+					</p>
+				{:else if ordered}
+					<p
+						class="flex items-center gap-2 text-display font-semibold tracking-[-0.015em] text-ink"
 					>
+						<Lock size={22} aria-hidden="true" /> Ordered
+					</p>
+					<p class="mt-1 text-body text-ink-2">
+						<span class="mono text-ink">{ordered.confirmed}</span> supplier confirmed,
+						<span class="mono text-ink">{ordered.awaiting}</span> awaiting the supplier ·
+						<span class="mono text-ink">{money(ordered.cents)}</span>. Editing is locked.
+					</p>
+				{:else}
+					<p class="text-title font-semibold tracking-[-0.015em] text-ink sm:text-display">
+						{decisionCount(decisions)}
+						{#if decisions > 0}<span class="text-ink-2">before</span>
+							<!-- One line on a phone ("Tue 15:00"); the full date in the big mono from sm. -->
+							<span class="mono whitespace-nowrap sm:hidden">{shortDue}</span><span
+								class="mono hidden whitespace-nowrap sm:inline">{storyTime(due)}</span
+							>{/if}
+					</p>
+					<p class="mt-1 text-body text-ink-2">
+						{#if decisions > 0}{left ? `Due ${left}. ` : ''}Each decision is approved on its own.{:else}Nothing
+							needs you: every open line is within the mandate.{/if}
+						{#if orderable?.lines && !onorder}
+							<span class="text-ink"
+								><span class="mono">{orderable.lines}</span> lines,
+								<span class="mono">{money(orderable.cents)}</span> can be ordered now.</span
+							>{/if}
+					</p>
+					{#if orderable?.lines && onorder}
+						<!-- What can go now is the action, up here where it is seen; primary only when nothing needs the chef. -->
+						<button
+							type="button"
+							class="mt-2.5 inline-flex h-10 items-center gap-2 rounded-md px-4 text-body font-medium disabled:opacity-50 {decisions >
+							0
+								? 'border border-accent text-accent-ink hover:bg-accent-wash'
+								: 'bg-accent text-sheet hover:bg-accent-ink'}"
+							disabled={busy}
+							onclick={onorder}
+							>Order {orderable.lines}
+							{orderable.lines === 1 ? 'line' : 'lines'} now ·
+							<span class="mono">{money(orderable.cents)}</span></button
+						>
+					{/if}
 				{/if}
-			{/if}
-		</div>
-		{#if action}<div class="shrink-0">{@render action()}</div>{/if}
-	</div>
+			</div>
+			{#if action}<div class="shrink-0">{@render action()}</div>{/if}
+		</div>{/if}
 
 	{#if coverage.length}
 		<ul

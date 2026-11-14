@@ -14,8 +14,7 @@
 		LoaderCircle,
 		CircleCheck,
 		Info,
-		Smartphone,
-		Repeat
+		Smartphone
 	} from '@lucide/svelte';
 	import { Popover } from 'bits-ui';
 	import { KitchenStore } from '$lib/kitchen/kitchen.svelte';
@@ -27,7 +26,7 @@
 	import TaskHeader from '$lib/ui/TaskHeader.svelte';
 	import LineRow from '$lib/ui/LineRow.svelte';
 	import StrategyCard from '$lib/ui/StrategyCard.svelte';
-	import { decisionCount, decisionsDue, decisionsOf } from '$lib/ui/decisions';
+	import { decisionsDue, decisionsOf } from '$lib/ui/decisions';
 	import GramsStepper from '$lib/ui/GramsStepper.svelte';
 	import WhyDrawer from '$lib/ui/WhyDrawer.svelte';
 	import DishStatus from '$lib/ui/DishStatus.svelte';
@@ -66,6 +65,9 @@
 	import Basket from './Basket.svelte';
 	import NothingPlanned from './NothingPlanned.svelte';
 	import UseElsewhere from '$lib/ui/UseElsewhere.svelte';
+	import ActionBar from '$lib/ui/ActionBar.svelte';
+	import HoldButton from '$lib/ui/HoldButton.svelte';
+	import Receipt from '$lib/ui/Receipt.svelte';
 	import ProductThumb from '$lib/ui/ProductThumb.svelte';
 	import { acceptAll, lineDecisions } from '$lib/kitchen/line-decisions';
 	import type { ShortageNotice } from '$lib/ui/ledger';
@@ -185,18 +187,8 @@
 	// Rescues start collapsed: one sentence on the row, the ranked options behind "See the options".
 	const open = $derived(toggled);
 
-	/** Phone zones (Decide / Plan / Order); desktop shows all three. Decide first while anything needs the chef. */
-	const ZONES = [
-		{ id: 'decide', label: 'Decide' },
-		{ id: 'plan', label: 'Plan' },
-		{ id: 'order', label: 'Order' }
-	] as const;
-	type Zone = (typeof ZONES)[number]['id'];
-	let zone = $state<Zone | null>(null);
-	function show(z: Zone) {
-		zone = z;
-		document.getElementById('zones')?.scrollIntoView({ block: 'start', behavior: 'smooth' });
-	}
+	/** The page's sections (D29 shows them all, in one column; kept as a name for the section classes). */
+	type Zone = 'decide' | 'plan' | 'order';
 
 	const snap = $derived(k.snap);
 	let mandateOpen = $state(false);
@@ -286,17 +278,9 @@
 	const dishMarks = (ls: Line[]) => rollUp(liveLines(ls).map(lineMarks));
 	const orderMarks = $derived(rollUp(liveLines(k.plan?.lines ?? []).map(lineMarks)));
 
-	/** Who made the plan on screen, in words, for a plan that isn't the booking (its CreatePlan op). */
-	const ORIGIN: Record<string, string> = {
-		chat: 'Drafted by the agent in chat',
-		request: 'From a purchase request',
-		outside_agent: 'Prepared by an outside agent',
-		kitchen: 'Planned in the Kitchen'
-	};
 	/** A plan made from a menu: its needs are "Dish · ingredient", read as dishes → ingredients → products. */
 	const needNames = $derived(k.view?.dishes.map((d) => d.nameFi) ?? []);
 	const menuName = $derived(k.snap?.plan.eventId ? null : menuTitle(needNames));
-	const originWords = $derived(k.snap?.origin ? (ORIGIN[k.snap.origin] ?? '') : '');
 	const weekday = (iso: string) =>
 		new Intl.DateTimeFormat('en-GB', { weekday: 'long', timeZone: 'UTC' }).format(
 			new Date(`${iso}T12:00:00Z`)
@@ -402,7 +386,6 @@
 		if (!l || l.at === locatedAt || l.planId !== k.snap?.plan.id) return;
 		locatedAt = l.at;
 		untrack(() => {
-			zone = l.zone ?? 'decide';
 			void tick().then(() => {
 				const card = l.decision
 					? document.querySelector<HTMLElement>(`[data-decision="${CSS.escape(l.decision)}"]`)
@@ -559,8 +542,49 @@
 		return out;
 	});
 
-	/** Decisions: the one count the header, the panel and the phone bar share. */
-	const decisions = $derived(plan ? decisionsOf(plan, approval) : []);
+	/** Decisions: every pending approval's reason groups (a split approval leaves several pending). */
+	const decisions = $derived.by(() => {
+		if (!plan) return [];
+		const pending = (snap?.approvals ?? (approval ? [approval] : [])).filter(
+			(a) => a.state === 'pending'
+		);
+		return pending.flatMap((a) => decisionsOf(plan, a));
+	});
+	/**
+	 * The plan's short title (D29): the event's name, the menu's dishes, else where it came from ("Usual Wednesday
+	 * order", "Order from the chat"); never a list of products.
+	 */
+	const planTitle = $derived.by(() => {
+		if (!plan || !view) return '';
+		if (plan.eventId) return view.title;
+		if (menuName) return menuName;
+		const o = snap?.origin;
+		if (/^usual/i.test(view.title)) return `Usual ${weekday(plan.deliverBy)} order`;
+		if (o === 'chat') return 'Order from the chat';
+		if (o === 'request') return 'Purchase request';
+		if (o === 'outside_agent') return 'Order from an outside agent';
+		return `Order for ${day(plan.deliverBy)}`;
+	});
+	/** One sentence under it: "5 items · €269.43 · 2 need you before Wed 9 Dec, 08:50 · delivery Thu 10 Dec". */
+	const planSentence = $derived.by(() => {
+		if (!plan || !view) return '';
+		const items = view.dishes.length + looseLines.length;
+		const cents = plan.lines.reduce((t, l) => t + (l.qty.value > 0 ? (l.lineCents ?? 0) : 0), 0);
+		const waiting = all.count + all.signOff;
+		return [
+			plan.eventId ? `${day(view.date)} · ${num(view.guests)} guests · ${view.serviceStyle}` : null,
+			`${items} ${items === 1 ? 'item' : 'items'}`,
+			money(cents),
+			waiting
+				? `${waiting} ${waiting === 1 ? 'needs' : 'need'} you before ${storyTime(decisionsDue(plan, approval))}`
+				: null,
+			`delivery ${day(plan.deliverBy)}`
+		]
+			.filter(Boolean)
+			.join(' · ');
+	});
+	const PRICE_NOTE =
+		"Prices are Valio catalogue prices ex VAT. Lines where Valio doesn't state a quantity are ordered, but never counted as cover.";
 	/** The seeded event plan (normal-week diff, buffet timeline), or a plan opened by link (an order, a menu). */
 	const isEvent = $derived(!!plan?.eventId);
 	const orderable = $derived.by(() => {
@@ -568,13 +592,8 @@
 		return { lines: ls.length, cents: ls.reduce((a, l) => a + (l.lineCents ?? 0), 0) };
 	});
 	/** The next step leads: decide while anything needs the chef, then order (and its receipt), else the plan. */
-	const active = $derived<Zone>(
-		zone ?? (decisions.length ? 'decide' : orderable.lines || k.lastCommit ? 'order' : 'plan')
-	);
-	// Deciding the last decision moves the phone on to the next step instead of an empty Decide tab.
-	$effect(() => {
-		if (decisions.length === 0 && untrack(() => zone) === 'decide') zone = null;
-	});
+	// D29: one page, no zones; every section shows (the action bar carries the steps).
+	const active = $derived<Zone>('plan');
 	/** Once every orderable line is ordered, the header becomes the order's state. */
 	const orderedState = $derived.by(() => {
 		const done = (plan?.lines ?? []).filter((l) => l.state === 'committed');
@@ -823,12 +842,6 @@
 	}
 
 	/**
-	 * With the agent open and decisions waiting, the Decide panel lives at the top of the agent rail (the same panel
-	 * and command), once, instead of beside the plan as well.
-	 */
-	const inRail = $derived(!!shell?.chatOpen && decisions.length > 0);
-
-	/**
 	 * The lines of the decision the chef is looking at (opened, hovered or focused in the rail, or "See the lines"):
 	 * their rows get an accent band and the rest dim a little. Opening scrolls the first one into view.
 	 */
@@ -873,7 +886,8 @@
 	}
 	$effect(() => {
 		if (!shell) return;
-		shell.railHeader = inRail && k.plan && k.snap ? railDecide : null;
+		// D29: the page's action bar and Decide groups stay in view beside the dock; the rail keeps the conversation.
+		shell.railHeader = null;
 		return () => {
 			if (shell.railHeader === railDecide) shell.railHeader = null;
 		};
@@ -1218,19 +1232,14 @@
 			{#if mode === 'live' && !roomNotice}<div class="mt-8"><UseElsewhere /></div>{/if}
 		</main>
 	{:else}
-		<main
-			class="mx-auto grid max-w-[1440px] grid-cols-1 gap-6 px-4 pt-5 pb-6 md:px-6 {shell?.chatOpen
-				? '2xl:grid-cols-[minmax(0,1fr)_360px]'
-				: 'lg:grid-cols-[minmax(0,1fr)_360px]'}"
-		>
+		<main class="mx-auto max-w-[1180px] px-4 pt-5 pb-28 md:px-6 lg:pb-6">
 			<div class="min-w-0">
 				<!-- The task: decisions left, by when, cover by certainty; the event as a diff of a normal week -->
 				<section aria-label="This task">
 					<TaskHeader
-						title={isEvent ? view.title : (menuName ?? readableName(view.title))}
-						meta={isEvent
-							? `${day(view.date)} · ${num(view.guests)} guests · ${view.serviceStyle} · delivery ${day(plan.deliverBy)}`
-							: [originWords, `delivery ${day(plan.deliverBy)}`].filter(Boolean).join(' · ')}
+						compact
+						title={planTitle}
+						meta={planSentence}
 						decisions={decisions.length}
 						due={decisionsDue(plan, approval)}
 						now={k.now}
@@ -1260,18 +1269,7 @@
 									return ok;
 								}
 							: undefined}
-					>
-						{#snippet action()}
-							{#if decisions.length && active !== 'decide'}
-								<button
-									type="button"
-									class="inline-flex h-10 items-center gap-1.5 rounded-md bg-ink px-4 text-body font-medium text-sheet hover:bg-ink-2 lg:hidden"
-									onclick={() => show('decide')}
-									>Review {decisions.length === 1 ? 'the decision' : 'decisions'}</button
-								>
-							{/if}
-						{/snippet}
-					</TaskHeader>
+					></TaskHeader>
 					{#if isEvent}<p class="mt-2 text-meta text-ink-2">
 							{#if view.thisWeek.cents - view.normalWeek.cents > 0}
 								The event adds
@@ -1323,31 +1321,100 @@
 					{/if}
 				</section>
 
-				<!-- Phone: one zone at a time, Decide first while anything needs the chef -->
-				<div
-					id="zones"
-					role="tablist"
-					aria-label="Task zones"
-					class="sticky top-0 z-20 -mx-4 mt-4 flex border-b border-rule bg-paper/95 px-4 backdrop-blur lg:hidden"
-				>
-					{#each ZONES as z (z.id)}
-						<button
-							type="button"
-							role="tab"
-							aria-selected={active === z.id}
-							class="flex h-11 flex-1 items-center justify-center gap-1.5 border-b-2 text-body {active ===
-							z.id
-								? 'border-ink font-semibold text-ink'
-								: 'border-transparent text-ink-2'}"
-							onclick={() => show(z.id)}
-							>{z.label}{#if z.id === 'decide' && decisions.length}<span
-									class="mono grid size-5 place-items-center rounded-full bg-auth text-micro text-sheet"
-									>{decisions.length}</span
-								>{/if}</button
-						>
-					{/each}
+				<div class="mt-4">
+					<ActionBar
+						waiting={all.count + all.signOff}
+						acceptAll={{
+							count: all.count,
+							cents: all.cents,
+							onaccept: () => void k.decideLines([...all.byApproval.values()], 'grant')
+						}}
+						signOff={all.signOff}
+						order={{ lines: orderable.lines, cents: orderable.cents, onorder: () => k.commit() }}
+						ordered={orderedState
+							? {
+									lines: orderedState.confirmed + orderedState.awaiting,
+									cents: orderedState.cents
+								}
+							: null}
+						due={decisions.length ? storyTime(decisionsDue(plan, approval)) : null}
+						busy={k.busy || k.readOnly}
+						note={PRICE_NOTE}
+					/>
 				</div>
 
+				{#if decisions.length}
+					<!-- Decide (D29): the waiting lines, once, grouped by why they wait; each group decides itself. -->
+					<section aria-labelledby="decide-h" class="mt-6">
+						<h2 id="decide-h" class="text-heading font-semibold text-ink">Decide</h2>
+						<div class="mt-2 overflow-hidden rounded-lg border border-rule bg-sheet">
+							{#each decisions as g (g.key)}
+								{@const pendingIds = g.lineIds.filter(
+									(id) => decisionsByLine.get(id)?.state === 'pending'
+								)}
+								{@const terms = {
+									id: g.approvalId,
+									planVersion: g.planVersion,
+									termsHash: g.termsHash
+								}}
+								<div class="border-t border-rule first:border-t-0">
+									<div
+										data-testid="decision-group"
+										class="flex flex-wrap items-start gap-x-3 gap-y-2 bg-paper/60 px-4 py-2.5"
+									>
+										<div class="min-w-0 flex-1">
+											<p class="text-body font-semibold text-ink">{g.title}</p>
+											<p class="text-meta text-ink-2">
+												{g.why ? `${g.why} · ` : ''}{g.lines.length}
+												{g.lines.length === 1 ? 'line' : 'lines'} ·
+												<span class="mono">{money(g.totalCents)}</span>
+											</p>
+											<p class="text-meta text-ink-3">{g.consequence}</p>
+										</div>
+										{#if g.signOff}
+											<div class="w-full max-w-72 sm:w-64">
+												<HoldButton
+													label="Hold to sign off {g.lines.length} {g.lines.length === 1
+														? 'line'
+														: 'lines'}"
+													disabled={k.busy || k.readOnly}
+													onconfirm={() =>
+														void k.decideLines([{ approval: terms, lineIds: g.lineIds }], 'grant')}
+												/>
+											</div>
+										{:else if pendingIds.length}
+											<button
+												type="button"
+												class="inline-flex h-9 items-center rounded-md border border-accent px-3 text-meta font-medium whitespace-nowrap text-accent-ink hover:bg-accent-wash disabled:opacity-50"
+												disabled={k.busy || k.readOnly}
+												onclick={() =>
+													void k.decideLines([{ approval: terms, lineIds: pendingIds }], 'grant')}
+												>Accept these {pendingIds.length} ·
+												<span class="mono ml-1"
+													>{money(
+														g.lines
+															.filter((l) => pendingIds.includes(l.id))
+															.reduce((t, l) => t + (l.lineCents ?? 0), 0)
+													)}</span
+												></button
+											>
+										{/if}
+									</div>
+									<ul class="space-y-1 px-4 py-2">
+										{#each g.lines as l (l.id)}
+											<li>
+												{@render lineRow(
+													l,
+													view.dishes.find((d) => d.lineIds.includes(l.id)) ?? null
+												)}
+											</li>
+										{/each}
+									</ul>
+								</div>
+							{/each}
+						</div>
+					</section>
+				{/if}
 				<!-- Plan: dish → need → order -->
 				<section aria-labelledby="dishes-h" class="mt-6 {active === 'plan' ? '' : 'max-lg:hidden'}">
 					<div class="flex items-baseline justify-between gap-4">
@@ -1370,31 +1437,6 @@
 							</details>
 						</h2>
 					</div>
-					{#if all.count || all.signOff}
-						<!-- The one bulk action (D23): every line that may be accepted together; sign-offs stay one by one. -->
-						<div
-							class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-lg border border-rule bg-sheet px-4 py-2.5"
-						>
-							<p class="min-w-0 flex-1 text-body text-ink">
-								{all.count + all.signOff}
-								{all.count + all.signOff === 1 ? 'line waits' : 'lines wait'} for you. Accept, reject
-								or swap each line below{#if all.signOff}<span class="text-signoff">
-										&nbsp;· {all.signOff}
-										{all.signOff === 1 ? 'needs' : 'need'} your sign-off one by one</span
-									>{/if}.
-							</p>
-							{#if all.count}
-								<button
-									type="button"
-									class="inline-flex h-9 items-center rounded-md bg-accent px-4 text-body font-medium whitespace-nowrap text-sheet hover:bg-accent-ink disabled:opacity-50"
-									disabled={k.busy || k.readOnly}
-									onclick={() => void k.decideLines([...all.byApproval.values()], 'grant')}
-									>Accept all {all.count} ·
-									<span class="mono ml-1">{money(all.cents)}</span></button
-								>
-							{/if}
-						</div>
-					{/if}
 					{#if contended}
 						<p
 							class="mt-2 flex items-start gap-2 rounded-lg border border-signoff/50 bg-signoff-wash px-4 py-2.5 text-body text-ink"
@@ -1556,15 +1598,6 @@
 							{@const lockedDish = lines.some((l) => l.state === 'committed')}
 							{@const isMarked = !!marked && d.lineIds.some((id) => marked!.has(id))}
 							{@const justApproved = d.lineIds.some((id) => approvedNow.has(id))}
-							{@const pendingHere = lines.filter(
-								(l) => decisionsByLine.get(l.id)?.state === 'pending'
-							)}
-							{@const quick =
-								pendingHere.length > 0 &&
-								pendingHere.every((l) => !decisionsByLine.get(l.id)!.signOff) &&
-								new Set(pendingHere.map((l) => decisionsByLine.get(l.id)!.approval.id)).size === 1
-									? pendingHere
-									: null}
 							<div
 								id="need-{d.id}"
 								data-marked={isMarked || undefined}
@@ -1713,57 +1746,6 @@
 										/></button
 									>
 								</div>
-								{#if quick && !k.readOnly}
-									<!-- The dish's own decision, on the row (D23): no click into the detail to manage it. -->
-									<div class="flex flex-wrap items-center justify-end gap-2 px-4 pb-2.5">
-										<span class="mr-auto text-meta text-ink-3 lg:mr-0"
-											>{quick.length === 1
-												? 'Waits for you'
-												: `${quick.length} lines wait for you`}</span
-										>
-										<button
-											type="button"
-											class="inline-flex h-8 items-center rounded-md border border-accent px-3 text-meta font-medium text-accent-ink hover:bg-accent-wash disabled:opacity-50"
-											disabled={k.busy}
-											onclick={() =>
-												void k.decideLines(
-													[
-														{
-															approval: decisionsByLine.get(quick[0].id)!.approval,
-															lineIds: quick.map((l) => l.id)
-														}
-													],
-													'grant'
-												)}>{quick.length === 1 ? 'Accept' : `Accept ${quick.length}`}</button
-										>
-										<button
-											type="button"
-											class="inline-flex h-8 items-center rounded-md border border-rule-strong px-3 text-meta text-ink hover:border-out disabled:opacity-50"
-											disabled={k.busy}
-											title="Not ordered: {d.nameFi} loses cover"
-											onclick={() =>
-												void k.decideLines(
-													[
-														{
-															approval: decisionsByLine.get(quick[0].id)!.approval,
-															lineIds: quick.map((l) => l.id)
-														}
-													],
-													'deny'
-												)}>Reject</button
-										>
-										{#if quick.length === 1 && k.mode === 'live'}
-											<button
-												type="button"
-												class="inline-flex h-8 items-center gap-1 rounded-md px-2 text-meta text-ink-2 hover:bg-well hover:text-ink"
-												onclick={() => {
-													swapAsk = quick[0].id;
-													expanded = { ...expanded, [d.id]: true };
-												}}><Repeat size={13} aria-hidden="true" />Swap</button
-											>
-										{/if}
-									</div>
-								{/if}
 								{#if isOpen}
 									<div
 										id="detail-{d.id}"
@@ -1923,45 +1905,23 @@
 			</div>
 
 			<!-- With the agent rail open the page is narrower: the panels go under the plan until there is room again. -->
-			<aside
-				class="space-y-4 {shell?.chatOpen
-					? 'lg:grid lg:grid-cols-2 lg:gap-4 lg:space-y-0 2xl:sticky 2xl:top-4 2xl:block 2xl:space-y-4 2xl:self-start'
-					: 'lg:sticky lg:top-4 lg:self-start'}"
-				aria-label="Rules and approval"
-			>
-				{#if !inRail}
-					<div class={active === 'decide' ? '' : 'max-lg:hidden'}>
-						{@render decidePanel()}
-					</div>
-				{/if}
-				<div class="space-y-4 {active === 'order' ? '' : 'max-lg:hidden'}">
-					<ApprovalPanel
-						part="order"
-						{plan}
-						{approval}
-						lastInvalidated={null}
-						changes={k.changes}
-						{shortfalls}
-						orders={snap.orders}
-						lastCommit={k.lastCommit}
-						{names}
+			<div class="mt-6 space-y-4">
+				{#if k.lastCommit}
+					<Receipt
+						receipt={k.lastCommit}
+						orders={snap.orders.length}
 						busy={k.busy}
-						onapprove={(ids) => k.approve('grant', ids)}
-						ondeny={(ids) => k.approve('deny', ids)}
-						oncommit={() => k.commit()}
-						onretry={() => k.retryCommit()}
+						onretry={k.lastCommit.key ? () => k.retryCommit() : undefined}
 					/>
-					<!-- The scenario timeline pins the Christmas buffet: only the event plan has it. -->
-					<div class={isEvent ? '' : 'hidden'}>
-						<CutoffTimeline
-							now={k.now}
-							stock={openLines.stock}
-							terminal={openLines.terminal}
-							committed={openLines.stock + openLines.terminal === 0 && view.counts.committed > 0}
-						/>
-					</div>
-				</div>
-
+				{/if}
+				{#if isEvent}
+					<CutoffTimeline
+						now={k.now}
+						stock={openLines.stock}
+						terminal={openLines.terminal}
+						committed={openLines.stock + openLines.terminal === 0 && view.counts.committed > 0}
+					/>
+				{/if}
 				{#if k.error}
 					{#if k.error.detail?.retryInMs}
 						<p class="rounded-md bg-well px-3 py-2 text-meta text-ink" role="status">
@@ -1976,7 +1936,7 @@
 						</p>
 					{/if}
 				{/if}
-			</aside>
+			</div>
 		</main>
 		<!-- Under the plan and its panels, on the page's own columns: the rules (and, in System, the demo tools) under the plan,
 	     what happened under Order. Outside <main>, so the sticky panels never slide over it. -->
@@ -2061,18 +2021,6 @@
 				{/if}
 			</div>
 		</div>
-	{/if}
-
-	{#if decisions.length && active !== 'decide'}
-		<button
-			type="button"
-			class="fixed inset-x-3 bottom-3 z-30 flex h-12 items-center justify-between rounded-lg bg-ink px-4 text-body font-medium text-sheet shadow-[0_8px_24px_-8px_oklch(0.2_0.02_255/0.5)] lg:hidden"
-			onclick={() => show('decide')}
-		>
-			<span>{decisionCount(decisions.length)} before {storyTime(decisionsDue(plan, approval))}</span
-			>
-			<span>Review</span>
-		</button>
 	{/if}
 
 	<WhyDrawer
