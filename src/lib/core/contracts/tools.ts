@@ -9,11 +9,11 @@ import { IsoDate, KitchenId, Measure, ProductId, SalesQty } from './primitives';
  */
 
 /** Credential scopes. The external client never gets `approve` or `mandate:write` (eval s5). */
-export const ToolScope = z.enum(['read', 'plan', 'order', 'approve', 'mandate:write']);
+export const ToolScope = z.enum(['read', 'plan', 'order', 'approve', 'mandate:write', 'agent:run']);
 export type ToolScope = z.infer<typeof ToolScope>;
 
 export const SCOPES_BY_ACTOR = {
-	chef: ['read', 'plan', 'order', 'approve', 'mandate:write'],
+	chef: ['read', 'plan', 'order', 'approve', 'mandate:write', 'agent:run'],
 	kitchen_agent: ['read', 'plan', 'order'],
 	external_agent: ['read', 'plan', 'order'],
 	approver: ['read', 'approve'],

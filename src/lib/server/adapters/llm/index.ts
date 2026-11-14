@@ -72,6 +72,9 @@ export function geminiLlm(apiKey: string, trace: Trace = noTrace, model = GEMINI
 	});
 }
 
+const withTimeout = (signal?: AbortSignal) =>
+	signal ? AbortSignal.any([signal, AbortSignal.timeout(30_000)]) : AbortSignal.timeout(30_000);
+
 /** Any OpenAI-compatible endpoint (Featherless Gemma by default) through the AI SDK. */
 export function openAiCompatibleLlm(
 	o: { name: string; baseURL: string; apiKey: string; model: string },

@@ -83,7 +83,14 @@ export interface Decision<T> {
 
 /** Free-text / tool-calling model (Gemini flash-lite, Gemma via Featherless/Verda). Every call is traced. */
 export interface Llm {
-	generate(req: { system?: string; prompt: string; maxTokens: number; json?: boolean }): Promise<{
+	generate(req: {
+		system?: string;
+		prompt: string;
+		maxTokens: number;
+		json?: boolean;
+		/** Cancels the provider call when the run stops (an in-flight call may still be billed). */
+		signal?: AbortSignal;
+	}): Promise<{
 		text: string;
 		model: string;
 		tokens: { in: number; out: number };
@@ -153,6 +160,10 @@ export interface CallContext {
 	actor: Actor;
 	scopes: readonly string[];
 	via: string;
+	/** The principal who started an agent run acting under this context (never request-supplied). */
+	initiatedBy?: Actor;
+	/** Kitchens this context may act for; absent = every kitchen in the workspace. */
+	kitchenIds?: readonly string[];
 }
 
 /**

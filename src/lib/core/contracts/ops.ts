@@ -120,6 +120,8 @@ export const OpEnvelope = z.object({
 	actor: Actor,
 	/** Tool or route that produced it, e.g. "mcp:place_order". */
 	via: z.string(),
+	/** Who started the agent run that wrote this op, when it differs from `actor` (RunPrincipal). */
+	initiatedBy: Actor.optional(),
 	idempotencyKey: z.string().optional(),
 	op: Op
 });
