@@ -56,6 +56,25 @@
 		else delete html.dataset.theme;
 	});
 
+	/** The landing page: the logo's second click within a few seconds opens it; the first shows the hint. */
+	const LANDING = 'https://mandate.kitchen';
+	let logoHint = $state(false);
+	let logoTimer: ReturnType<typeof setTimeout> | undefined;
+	function logoReset() {
+		logoHint = false;
+		clearTimeout(logoTimer);
+	}
+	function logoClick(e: MouseEvent) {
+		if (logoHint) {
+			logoReset();
+			return; // the second click follows the link
+		}
+		e.preventDefault();
+		logoHint = true;
+		clearTimeout(logoTimer);
+		logoTimer = setTimeout(logoReset, 3000);
+	}
+
 	function toggleSystem() {
 		shell.system = !shell.system;
 		const url = new URL(page.url);
@@ -79,10 +98,17 @@
 
 <header data-theme={theme} class="border-b border-rule bg-sheet text-ink">
 	<div class="mx-auto flex h-11 max-w-[1440px] items-center gap-2 px-3 sm:gap-4 md:px-6">
+		<!-- The logo opens the landing page on a second click; the first only says so (no surprise navigation). -->
+		<!-- eslint-disable svelte/no-navigation-without-resolve -->
 		<a
-			href={resolve('/')}
-			class="flex shrink-0 items-center gap-2 text-heading font-semibold tracking-[-0.01em]"
-			aria-label="Mandate home"
+			href={LANDING}
+			class="relative flex shrink-0 items-center gap-2 text-heading font-semibold tracking-[-0.01em]"
+			aria-label={logoHint ? 'mandate.kitchen, opens the landing page: activate again' : 'Mandate'}
+			aria-describedby="logo-hint"
+			onclick={logoClick}
+			onmouseleave={logoReset}
+			onblur={logoReset}
+			onkeydown={(e) => e.key === 'Escape' && logoReset()}
 		>
 			<!-- The three tiers spell M: teal posts act, the blue bar proposes, the amber dot is the chef's sign-off. -->
 			<svg width="22" height="22" viewBox="0 0 32 32" aria-hidden="true">
@@ -93,7 +119,15 @@
 				<circle cx="16" cy="23" r="2.5" fill="#e5a14b" />
 			</svg>
 			<span class="hidden md:inline">Mandate</span>
+			<span
+				id="logo-hint"
+				class="pointer-events-none absolute top-full left-0 z-50 mt-1 rounded-md border border-rule-strong bg-sheet px-2 py-1 text-meta font-medium whitespace-nowrap text-ink shadow-md {logoHint
+					? ''
+					: 'sr-only'}"
+				aria-live="polite">{logoHint ? 'mandate.kitchen ↗ · click again' : ''}</span
+			>
 		</a>
+		<!-- eslint-enable svelte/no-navigation-without-resolve -->
 		<nav aria-label="Surfaces" class="min-w-0">
 			<ul class="flex h-11 items-stretch text-body">
 				{#each NAV as item (item.label)}
