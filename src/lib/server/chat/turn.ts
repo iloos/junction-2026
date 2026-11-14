@@ -21,6 +21,7 @@ import { parseRules } from '$lib/server/request/parse';
 import { dayWords, ledgerSummary, readTask } from '$lib/server/tasks/outcome';
 import { explain } from './explain';
 import { answerInChat } from './question';
+import { outsideOptions, outsideSteps } from './outside';
 import { readQuestion } from '$lib/server/agent/intents/questions';
 import { understand } from './understand';
 import { applyBriefAnswers, draftBrief, nextQuestion, toEventBrief } from '$lib/server/menu/brief';
@@ -734,6 +735,12 @@ export async function* runChatTurn(
 	}
 
 	for (const e of stepEvents(task.id, steps)) yield e;
+	// Needs a shortage repair left unresolved: options outside the catalogue, for the chef's information only.
+	const outside =
+		run?.outcome?.intent === 'shortage_repair'
+			? await outsideOptions(run.outcome.unresolvedNeeds, agentCtx, deps.handlers)
+			: null;
+	if (outside) for (const e of outsideSteps(task.id, steps.length, outside)) yield e;
 
 	// Plans this task touched: the first one is primary; reads never add plans of their own. An added product ("…too")
 	// is the task's newest purchase, so its plan becomes the one the task is about; the earlier stays on the task.
@@ -871,8 +878,15 @@ export async function* runChatTurn(
 		taskId: task.id,
 		title: task.title,
 		state: task.state,
-		text: (await scrub(text, deps)).slice(0, 600),
-		canContinue
+		text:
+			(await scrub(text, deps)).slice(0, 600) +
+			(outside?.text
+				? `
+
+${outside.text}`
+				: ''),
+		canContinue,
+		...(outside?.sources.length ? { sources: outside.sources } : {})
 	};
 }
 
