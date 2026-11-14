@@ -50,7 +50,9 @@ describe('a request creates its procurement task', () => {
 			now: new Date('2026-12-07T21:40:00+02:00')
 		};
 		const r = await runRequest('1,000 L lactose-free milk by Thursday', deps);
-		expect(r.message).toBe('This order is now in your Kitchen plan.');
+		expect(r.message).toBe(
+			'This plan is now in your Kitchen; nothing is placed until it is committed.'
+		);
 		const link = r.order!.task;
 		expect(link.kitchenUrl).toBe(
 			`/?kitchen=k-hotel&plan=${encodeURIComponent(r.order!.plan.id)}&v=${r.order!.plan.version}`

@@ -1123,7 +1123,16 @@
 								class="mt-0.5 shrink-0"
 								aria-hidden="true"
 							/>{order.deliveryNote}
-						</p>{/if}
+						</p>
+						{#if order.nextDeliveryDay && !committed}
+							<button
+								type="button"
+								disabled={busy}
+								onclick={() => chooseDate(order!.nextDeliveryDay!)}
+								class="mt-1 ml-6 inline-flex h-9 items-center gap-1.5 rounded-md bg-accent px-3 text-body font-medium text-sheet disabled:opacity-40"
+								data-testid="next-delivery-day">Deliver {day(order.nextDeliveryDay)} instead</button
+							>
+						{/if}{/if}
 					{#if approval}
 						{@const tw = tierWords(
 							approval.tier,
@@ -1154,7 +1163,7 @@
 					</blockquote>
 					<!-- eslint-disable svelte/no-navigation-without-resolve -- kitchen deep link with query, built from resolve('/') -->
 					<p class="mt-2 text-body text-ink" data-testid="order-in-kitchen">
-						This order is now in your Kitchen plan.
+						This plan is now in your Kitchen.
 						<a
 							href={resolve('/') + order.task.kitchenUrl.slice(1)}
 							class="inline-flex items-center gap-1 font-medium text-accent-ink underline"
