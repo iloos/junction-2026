@@ -90,7 +90,9 @@ export function opSummary(env: OpEnvelope, names: Names, plans: Record<string, P
 	const op = env.op;
 	switch (op.type) {
 		case 'CreatePlan':
-			return `Drafted an order with ${op.plan.lines.length} lines for delivery ${op.plan.deliverBy}`;
+			return op.plan.lines.length
+				? `Drafted an order of ${lines(op.plan.lines.length)} for delivery ${op.plan.deliverBy}`
+				: `Started an order for delivery ${op.plan.deliverBy}`;
 		case 'EditLine':
 			return op.summary;
 		case 'RecordOffer': {

@@ -9,8 +9,14 @@
 	import OpTimeline from './OpTimeline.svelte';
 	import TraceDrawer from './TraceDrawer.svelte';
 	import Queue from './Queue.svelte';
-	import { buildCases, coverage, openDecisions, openLines } from './cases';
-	import { ACTOR, euro, opPlanId, opSummary, SIM_KIND } from './labels';
+	import ProblemCard from './ProblemCard.svelte';
+	import StoryPanel from './StoryPanel.svelte';
+	import { storyOf } from './story';
+	import type { OpEnvelope } from '$lib/core/contracts';
+	import { buildCases, coverage, kitchenHref, openDecisions, openLines } from './cases';
+	import { buildProblems, type Problem } from './problems';
+	import { ACTOR, euro, opPlanId, opSummary, SIM_KIND, type Names } from './labels';
+	import { useShell } from '$lib/ui/shell/shell.svelte';
 
 	let { data, form } = $props();
 
@@ -67,12 +73,20 @@
 	 */
 	const VIEWS_MS = 1500;
 	let views = $state.raw<Record<string, PlanView>>({});
+	/** Product names: the seeds at load, then every product the plans name, from the catalogue (/ops/views). */
+	// svelte-ignore state_referenced_locally
+	let names = $state.raw<Names>(data.names);
 	let viewsTimer: ReturnType<typeof setTimeout> | null = null;
 	async function loadViews() {
 		viewsTimer = null;
 		try {
 			const r = await fetch(`/ops/views?ws=${encodeURIComponent(data.workspace)}`);
-			if (r.ok) views = ((await r.json()) as { views: Record<string, PlanView> }).views;
+			if (r.ok) {
+				const b = (await r.json()) as { views: Record<string, PlanView>; names?: Names };
+				views = b.views;
+				if (b.names && Object.keys(b.names).some((id) => names[id] !== b.names![id]))
+					names = { ...names, ...b.names };
+			}
 		} catch {
 			/* keep the last views; coverage says "not reported" until one arrives */
 		}
@@ -92,19 +106,25 @@
 		return p ? kitchenName(p.kitchenId) : planId;
 	};
 
-	/** Queue (work surface), wallboard (one column per kitchen) or timeline (op log by actor); remembered. */
-	type View = 'queue' | 'wallboard' | 'timeline';
-	let view = $state<View>('queue');
+	/**
+	 * Problems (cards and their story, the first screen), queue (work surface), wallboard (one column per kitchen)
+	 * or the engine room (timeline, op log and traces; shown with the System toggle). Remembered.
+	 */
+	type View = 'problems' | 'queue' | 'wallboard' | 'engine';
+	const shell = useShell();
+	const system = $derived(!!shell?.system);
+	let chosen = $state<View>('problems');
+	const view = $derived<View>(chosen === 'engine' && !system ? 'problems' : chosen);
 	onMount(() => {
 		try {
 			const saved = localStorage.getItem('ops-view');
-			if (saved === 'wallboard' || saved === 'timeline') view = saved;
+			if (saved === 'queue' || saved === 'wallboard' || saved === 'engine') chosen = saved;
 		} catch {
 			/* storage blocked: keep the default */
 		}
 	});
 	const setView = (v: View) => {
-		view = v;
+		chosen = v;
 		try {
 			localStorage.setItem('ops-view', v);
 		} catch {
@@ -114,12 +134,14 @@
 	/** The queue rebuilds at most every QUEUE_MS, so bursts of ops don't re-render 200 rows per frame. */
 	const QUEUE_MS = 250;
 	let cases = $state.raw<ReturnType<typeof buildCases>>([]);
+	let problems = $state.raw<Problem[]>([]);
 	let queueTimer: ReturnType<typeof setTimeout> | null = null;
 	let queueDirty = false;
 	$effect(() => {
 		void stream.state;
 		void stream.heldSince;
 		void views;
+		void names;
 		queueDirty = true;
 		if (queueTimer) return;
 		const run = () => {
@@ -130,11 +152,56 @@
 			const plansWithViews = Object.fromEntries(
 				Object.entries(stream.state.plans).map(([id, p]) => [id, withView(p)])
 			);
-			cases = buildCases({ ...stream.state, plans: plansWithViews }, data.names, stream.heldSince);
+			const withViews = { ...stream.state, plans: plansWithViews };
+			cases = buildCases(withViews, names, stream.heldSince);
+			problems = buildProblems(withViews, names, opsInOrder());
 			queueTimer = setTimeout(run, QUEUE_MS);
 		};
 		run();
 	});
+	/** The current run's ops, oldest first. */
+	const opsInOrder = () =>
+		stream.log
+			.filter((e): e is Extract<typeof e, { kind: 'op' }> => e.kind === 'op')
+			.map((e) => e.envelope)
+			.reverse();
+
+	/** The problem whose story shows: the one picked, else the first. */
+	let picked = $state<string | null>(null);
+	const selected = $derived(problems.find((p) => p.id === picked) ?? problems[0] ?? null);
+	const story = $derived(
+		selected ? storyOf(selected, opsInOrder(), stream.state, names) : { steps: [], hidden: 0 }
+	);
+	/** The op a story step's "Technical detail" opens in the trace drawer. */
+	let detailOp = $state<OpEnvelope | null>(null);
+	function showOp(seq: number) {
+		const e = stream.log.find((x) => x.kind === 'op' && x.seq === seq);
+		if (e?.kind !== 'op') return;
+		detailOp = e.envelope;
+		tracesOpen = true;
+	}
+
+	/** "cut-off in 16 h" on the cases' clock; absolute times in the simulated run. */
+	function span(ms: number): string {
+		const m = Math.round(Math.abs(ms) / 60_000);
+		if (m < 60) return `${m} min`;
+		const h = Math.round(m / 60);
+		return h < 48 ? `${h} h` : `${Math.round(h / 24)} d`;
+	}
+	const cutoffIn = (iso: string | null) => {
+		if (!iso) return null;
+		const abs = simTime(iso);
+		if (data.simulated) return { text: `cut-off ${abs}`, late: false, abs };
+		const ms = new Date(iso).getTime() - new Date(caseNow).getTime();
+		return ms < 0
+			? { text: `cut-off passed ${span(ms)} ago`, late: true, abs }
+			: { text: `cut-off in ${span(ms)}`, late: false, abs };
+	};
+	const linkAt = $derived(
+		data.simulated ? undefined : { ws: data.workspace, run: stream.state.runId || data.run }
+	);
+	const problemHref = (p: Problem) => (p.at ? kitchenHref(p.at, linkAt) : null);
+
 	/** "Now" on the cases' clock: op times are scenario time live, wall time in the simulated run. */
 	const caseNow = $derived(
 		data.simulated ? new Date(wall).toISOString() : (scenarioNow ?? new Date(wall).toISOString())
@@ -206,6 +273,13 @@
 			hour: '2-digit',
 			minute: '2-digit',
 			second: '2-digit'
+		});
+	/** Hours and minutes on the scenario's clock (Helsinki), for the story. */
+	const clockTime = (iso: string) =>
+		new Date(iso).toLocaleTimeString('en-GB', {
+			hour: '2-digit',
+			minute: '2-digit',
+			timeZone: 'Europe/Helsinki'
 		});
 	const simTime = (iso: string) =>
 		new Date(iso).toLocaleString('en-GB', {
@@ -287,12 +361,7 @@
 			{#if scenarioNow}
 				<p class="clock"><span>Scenario clock</span>{simTime(scenarioNow)}</p>
 			{/if}
-			<button class="traces" onclick={() => (tracesOpen = true)} aria-haspopup="dialog">
-				Agent traces
-				{#if stream.traces.length}<span class="count">{stream.traces.length}</span>{/if}
-				{#if stream.traces[0] && !stream.traces[0].done}<i class="busy" aria-label="running"
-					></i>{/if}
-			</button>
+
 			{#if data.canReset}
 				<form
 					method="POST"
@@ -359,7 +428,12 @@
 		</div>
 	</header>
 
-	<TraceDrawer runs={stream.traces} bind:open={tracesOpen} canRun={data.canRunAgent} />
+	<TraceDrawer
+		runs={stream.traces}
+		bind:open={tracesOpen}
+		bind:op={detailOp}
+		canRun={data.canRunAgent}
+	/>
 
 	{#if data.simulated}
 		<p class="banner">
@@ -386,18 +460,53 @@
 		</section>
 	{:else}
 		<div class="views" role="tablist" aria-label="View">
+			<button role="tab" aria-selected={view === 'problems'} onclick={() => setView('problems')}>
+				Problems <b>{problems.filter((p) => p.tone !== 'quiet').length}</b>
+			</button>
 			<button role="tab" aria-selected={view === 'queue'} onclick={() => setView('queue')}>
 				Queue <b>{cases.length}</b>
 			</button>
 			<button role="tab" aria-selected={view === 'wallboard'} onclick={() => setView('wallboard')}>
 				Wallboard
 			</button>
-			<button role="tab" aria-selected={view === 'timeline'} onclick={() => setView('timeline')}>
-				Timeline
-			</button>
+			{#if system}
+				<button role="tab" aria-selected={view === 'engine'} onclick={() => setView('engine')}>
+					Engine room
+				</button>
+			{:else}
+				<p class="engine-hint">Turn on System for the engine room.</p>
+			{/if}
 		</div>
-		<main>
-			{#if view === 'queue'}
+		<main class:split={view === 'problems' || view === 'engine'}>
+			{#if view === 'problems'}
+				<section class="problems" aria-label="Problems, biggest first">
+					{#each problems as p (p.id)}
+						<ProblemCard
+							{p}
+							selected={selected?.id === p.id}
+							due={cutoffIn(p.deadline)}
+							href={problemHref(p)}
+							onselect={() => (picked = p.id)}
+						/>
+					{:else}
+						<p class="clear">
+							Nothing waits on a person: no outage without an answer, no held line, no refused
+							commit.
+						</p>
+					{/each}
+				</section>
+				{#if selected}
+					<div class="story-col">
+						<StoryPanel
+							title={selected.title}
+							steps={story.steps}
+							hidden={story.hidden}
+							time={clockTime}
+							ondetail={showOp}
+						/>
+					</div>
+				{/if}
+			{:else if view === 'queue'}
 				<Queue
 					{cases}
 					kitchens={data.kitchens}
@@ -407,8 +516,19 @@
 						? undefined
 						: { ws: data.workspace, run: stream.state.runId || data.run }}
 				/>
-			{:else if view === 'timeline'}
-				<OpTimeline log={stream.log} names={data.names} plans={stream.state.plans} />
+			{:else if view === 'engine'}
+				<div class="engine">
+					<div class="engine-bar">
+						<h2>Engine room</h2>
+						<button class="traces" onclick={() => (tracesOpen = true)} aria-haspopup="dialog">
+							Agent traces
+							{#if stream.traces.length}<span class="count">{stream.traces.length}</span>{/if}
+							{#if stream.traces[0] && !stream.traces[0].done}<i class="busy" aria-label="running"
+								></i>{/if}
+						</button>
+					</div>
+					<OpTimeline log={stream.log} {names} plans={stream.state.plans} />
+				</div>
 			{:else}
 				<section class="board" aria-label="Cases by kitchen">
 					{#each columns as c (c.kitchen.id)}
@@ -472,58 +592,60 @@
 				</section>
 			{/if}
 
-			<section class="log" aria-label="Op log" aria-live="polite">
-				<h2>What just happened</h2>
-				{#if stream.refused}
-					<p class="stale sys-only" title={stream.lastRefused ?? ''}>
-						{stream.refused} stale write{stream.refused === 1 ? '' : 's'} refused (another run)
-					</p>
-				{/if}
-				<ol>
-					{#each logAll ? stream.log : stream.log.slice(0, LOG_SHOWN) as e (e.seq)}
-						{#if e.kind === 'sim'}
-							<li class="sim" class:fresh={e.seq === stream.fresh}>
-								<div class="when">
-									<span class="seqn">{e.seq}</span>
-									<span>{time(e.event.simAt)}</span>
-								</div>
-								<p><b>{SIM_KIND[e.event.kind]}.</b> {e.event.label}</p>
-								<p class="who">
-									<span class="simtag">simulated</span> Simulator, at simulated time
-								</p>
-							</li>
-						{:else}
-							{@const env = e.envelope}
-							{@const pid = opPlanId(env)}
-							<li
-								class:fresh={e.seq === stream.fresh}
-								class:rejected={!!e.rejected}
-								data-actor={env.actor.kind}
-							>
-								<div class="when">
-									<span class="seqn">{e.seq}</span>
-									<span>{time(env.at)}</span>
-								</div>
-								<p>
-									{#if pid}<b>{planKitchen(pid)}.</b>{/if}
-									{opSummary(env, data.names, stream.state.plans)}
-								</p>
-								<p class="who">
-									<span class="actor">{ACTOR[env.actor.kind]}</span>
-									<span class="via">{env.via}</span>
-									{#if data.simulated}<span class="simtag">simulated</span>{/if}
-								</p>
-								{#if e.rejected}<p class="rej">Rejected by the reducer: {e.rejected}</p>{/if}
-							</li>
-						{/if}
-					{/each}
-				</ol>
-				{#if stream.log.length > LOG_SHOWN}
-					<button class="more" onclick={() => (logAll = !logAll)}
-						>{logAll ? 'Show the latest only' : `Show all ${stream.log.length}`}</button
-					>
-				{/if}
-			</section>
+			{#if view === 'engine'}
+				<section class="log" aria-label="Op log" aria-live="polite">
+					<h2>What just happened</h2>
+					{#if stream.refused}
+						<p class="stale sys-only" title={stream.lastRefused ?? ''}>
+							{stream.refused} stale write{stream.refused === 1 ? '' : 's'} refused (another run)
+						</p>
+					{/if}
+					<ol>
+						{#each logAll ? stream.log : stream.log.slice(0, LOG_SHOWN) as e (e.seq)}
+							{#if e.kind === 'sim'}
+								<li class="sim" class:fresh={e.seq === stream.fresh}>
+									<div class="when">
+										<span class="seqn">{e.seq}</span>
+										<span>{time(e.event.simAt)}</span>
+									</div>
+									<p><b>{SIM_KIND[e.event.kind]}.</b> {e.event.label}</p>
+									<p class="who">
+										<span class="simtag">simulated</span> Simulator, at simulated time
+									</p>
+								</li>
+							{:else}
+								{@const env = e.envelope}
+								{@const pid = opPlanId(env)}
+								<li
+									class:fresh={e.seq === stream.fresh}
+									class:rejected={!!e.rejected}
+									data-actor={env.actor.kind}
+								>
+									<div class="when">
+										<span class="seqn">{e.seq}</span>
+										<span>{time(env.at)}</span>
+									</div>
+									<p>
+										{#if pid}<b>{planKitchen(pid)}.</b>{/if}
+										{opSummary(env, names, stream.state.plans)}
+									</p>
+									<p class="who">
+										<span class="actor">{ACTOR[env.actor.kind]}</span>
+										<span class="via">{env.via}</span>
+										{#if data.simulated}<span class="simtag">simulated</span>{/if}
+									</p>
+									{#if e.rejected}<p class="rej">Rejected by the reducer: {e.rejected}</p>{/if}
+								</li>
+							{/if}
+						{/each}
+					</ol>
+					{#if stream.log.length > LOG_SHOWN}
+						<button class="more" onclick={() => (logAll = !logAll)}
+							>{logAll ? 'Show the latest only' : `Show all ${stream.log.length}`}</button
+						>
+					{/if}
+				</section>
+			{/if}
 		</main>
 	{/if}
 </div>
@@ -654,6 +776,7 @@
 
 	.views {
 		display: flex;
+		flex-wrap: wrap;
 		gap: 4px;
 		margin-bottom: -6px;
 	}
@@ -818,9 +941,50 @@
 
 	main {
 		display: grid;
-		grid-template-columns: minmax(0, 2.1fr) minmax(360px, 1fr);
+		grid-template-columns: minmax(0, 1fr);
 		gap: 24px;
 		min-height: 0;
+		align-items: start;
+	}
+	main.split {
+		grid-template-columns: minmax(0, 1.6fr) minmax(360px, 1fr);
+	}
+
+	/* Problems: the cards, then the selected one's story beside them. */
+	.problems {
+		display: grid;
+		gap: 12px;
+		align-content: start;
+	}
+	.story-col {
+		position: sticky;
+		top: 16px;
+		max-height: calc(100dvh - 32px);
+		overflow-y: auto;
+		min-width: 0;
+	}
+	.engine {
+		display: grid;
+		gap: 12px;
+		min-width: 0;
+	}
+	.engine-bar {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 12px;
+	}
+	.engine-bar h2 {
+		margin: 0;
+		font-family: var(--cond);
+		font-size: 28px;
+		font-weight: 600;
+	}
+	.engine-hint {
+		margin: 0 0 0 auto;
+		align-self: center;
+		color: var(--faint);
+		font-size: 14px;
 	}
 
 	/* Board: one column per kitchen, held lines as tickets. */
@@ -1060,8 +1224,13 @@
 	}
 
 	@media (max-width: 1200px) {
-		main {
+		main,
+		main.split {
 			grid-template-columns: 1fr;
+		}
+		.story-col {
+			position: static;
+			max-height: none;
 		}
 		.log {
 			max-height: none;
