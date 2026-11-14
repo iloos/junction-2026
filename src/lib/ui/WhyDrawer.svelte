@@ -101,7 +101,9 @@
 							>
 								{productName}
 							</Dialog.Title>
-							<p class="mono mt-1 text-meta text-ink-3">{line.productId} · {line.id}</p>
+							<p class="mono mt-1 text-meta text-ink-3">
+								{line.productId}<span class="sys-only"> · {line.id}</span>
+							</p>
 						</div>
 						<Dialog.Close
 							class="grid size-8 shrink-0 place-items-center rounded-md text-ink-2 hover:bg-well hover:text-ink"
