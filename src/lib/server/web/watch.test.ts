@@ -245,3 +245,34 @@ describe('F28 recall wording', () => {
 		expect(lineFor(m('gtin', null))).toMatch(/every pack with this GTIN counts/);
 	});
 });
+
+describe('drain with a shared queue claim', { timeout: 30_000 }, () => {
+	it('works only the items this instance claimed; the rest stay queued for their holder', async () => {
+		const queue = createWorkQueue(undefined, true);
+		queue.add({ kind: 'list' });
+		let released = false;
+		const recalls: RecallSource = {
+			mode: 'fixture',
+			readList: async () => {
+				throw new Error('another instance holds the list read');
+			},
+			readNotice: async () => {
+				throw new Error('unused');
+			}
+		};
+		const r = await drain({
+			store: await store(),
+			index: idx,
+			findings: createFindings(undefined, true),
+			scope: { workspaceId: 'ws-claim', runId: 'run-w' },
+			recalls,
+			queue,
+			claim: async () => [],
+			release: async () => void (released = true)
+		});
+		expect(r.listError).toBeUndefined();
+		expect(r.picks).toEqual([]);
+		expect(queue.due()).toEqual([expect.objectContaining({ id: 'list', attempts: 0 })]);
+		expect(released).toBe(true);
+	});
+});

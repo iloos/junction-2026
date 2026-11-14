@@ -91,13 +91,16 @@
 			if (c.chosen) flags.push('In your order');
 			if (c.recommended && !c.chosen) flags.push('These rules pick');
 			// The server's ranking can still include unknown supply; it never counts as cover.
+			// A model caution is amber evidence on a selectable candidate, never an exclusion.
 			const chips = c.rejected.length
 				? [...new Set(c.rejected.map(exclusion))]
-				: c.kind === 'unknown'
-					? ['Qty unknown: not cover']
-					: c.partial
-						? ['Partial cover']
-						: [];
+				: c.cautions?.length
+					? ['Model caution: check']
+					: c.kind === 'unknown'
+						? ['Qty unknown: not cover']
+						: c.partial
+							? ['Partial cover']
+							: [];
 			return {
 				id: c.productId,
 				name: c.name,

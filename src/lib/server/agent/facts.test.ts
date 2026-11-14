@@ -46,4 +46,35 @@ describe('evidence separation (finding E)', () => {
 		});
 		expect(f.orderId).toBe('o-1approve');
 	});
+
+	it('a model-cautioned candidate reaches the planner as selectable, with its caution apart from rejections', () => {
+		const f = toFacts('find_substitutes', {
+			plan: { id: 'p1', version: 2, state: 'held', lines: [] },
+			kind: 'product',
+			chosen: [{ id: 'l1' }],
+			candidates: [
+				{
+					productId: '476768',
+					productName: 'HK Palvikinkku',
+					rank: 1,
+					rejectedReasons: ['CAUTION.model_constraint'],
+					caution: INJECTION
+				},
+				{ productId: '462919', rank: null, rejectedReasons: ['out'] }
+			]
+		});
+		const [flagged, out] = f.candidates as {
+			rank: number | null;
+			rejected: string[];
+			cautions: string[];
+		}[];
+		expect(flagged).toMatchObject({
+			rank: 1,
+			rejected: [],
+			cautions: ['CAUTION.model_constraint']
+		});
+		expect(out).toMatchObject({ rejected: ['out'], cautions: [] });
+		// The caution's words never reach the planner: codes only.
+		expect(JSON.stringify(f)).not.toContain('IGNORE');
+	});
 });

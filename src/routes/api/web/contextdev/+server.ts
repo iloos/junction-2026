@@ -1,4 +1,5 @@
 import { env } from '$env/dynamic/private';
+import { stateWrites } from '$lib/server/web/persist';
 import { json } from '$lib/server/tools/http';
 import {
 	sameSecret,
@@ -10,6 +11,8 @@ import {
 	findingsFor,
 	queueFor,
 	recallTargets,
+	webPg,
+	webStateReady,
 	scopeOf,
 	webClients
 } from '$lib/server/web';
@@ -44,8 +47,11 @@ export const POST: RequestHandler = async ({ request }) => {
 	}
 	const queue = queueFor(env);
 	const isChange = event.event === 'change.detected';
-	// Recorded before any await that can fail: a 202 never loses the change.
+	// Recorded before any await that can fail (the memory map, written through to Postgres): a 202 never
+	// loses the change.
 	const queued = isChange ? enqueueChange(event, queue) : [];
+	await webStateReady(env);
+	await stateWrites();
 	const receivedAt = new Date().toISOString();
 
 	let targets: Awaited<ReturnType<typeof recallTargets>>;
@@ -60,6 +66,8 @@ export const POST: RequestHandler = async ({ request }) => {
 	}
 	const findings = findingsFor(env);
 	const applications = applicationsFor(env);
+	const pg = webPg();
+	const owner = `${process.pid}:${receivedAt}`;
 	void (async () => {
 		// The notices are read once (first target); every target then gets them applied from the read.
 		for (const [i, w] of targets.entries()) {
@@ -87,6 +95,9 @@ export const POST: RequestHandler = async ({ request }) => {
 					applications,
 					queue,
 					recalls: webClients(env, trace, w.spendKey).recalls,
+					...(pg
+						? { claim: () => pg.claimQueue(owner, 10), release: () => pg.releaseQueue(owner) }
+						: {}),
 					heal: !isChange && i === 0
 				});
 				trace(r.failed.length || r.listError ? 'error' : 'done', {

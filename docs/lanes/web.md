@@ -35,7 +35,7 @@ Details and the full route table are in [docs/foundations/web.md](../foundations
 
 ## Gotchas
 - Real Ruokavirasto recalls are retail packs and match no catalogue GTIN. A held line on stage needs the labelled drill (`POST /api/web/replay {drillProductId}`) or a real foodservice notice.
-- Findings, the queue and the application ledger are per instance (files in `WEB_CACHE_DIR`). After a redeploy, stored reads are gone; the next run re-reads, and anomaly ids keep it idempotent.
+- Findings, the queue, the application ledger, the response cache and the web spend caps live in Postgres (migration 0004, `pg-state.ts`) once `webStateReady` has run; files in `WEB_CACHE_DIR` are the store only without a database. The Decide spend ledger is still a file.
 - The Context.dev rate limit is per minute (~10 calls).
 - Send `content-type: application/json` on POSTs; SvelteKit rejects other cross-site POSTs with 403.
 - In Git Bash, set `MSYS_NO_PATHCONV=1` for `scripts/web/*`.
@@ -48,7 +48,7 @@ Details and the full route table are in [docs/foundations/web.md](../foundations
 3. **Lead, merge review:** `697dd3a` edits 8d's `core/services/substitutes.ts` + `core/rank/rank.ts` (rescue batch: fit, violates, origin in one Gemini call; a calibrated P(violates) > 0.5 rejects, nothing un-rejects). `c3a2e9e` edits shared `tools/handlers.ts` (every tool runs in `withExternalScope(scopeFor(ctx))`) and `request/index.ts` (review Decide gets the trace). Review with 8d before merging.
 4. **Env (lead, `.env.example` + Runtime):** `DECIDE_CAP_PER_WORKSPACE` (default 300 calls/day), `DECIDE_CAP_GLOBAL` (default 5000). `LLM_PROVIDER=gemini` on prod so Decide is live; `GEMINI_STUDIO_API_KEY` already set.
 5. **Sandbox seeder (lead / demo owner):** call `prepareSandboxRecalls(env, ctx, { drillProductId })` from `demo/sandbox.ts` after a visitor sandbox is seeded (pick a product on the seeded plan for the drill, or omit it).
-6. **Web state into Postgres (item 3, with 9c):** not started, waiting on the lead's go and 9c's migration: tables `external_cache(key pk, api, at, value jsonb)`, `recall_queue(id, item jsonb, attempts, locked_at)` read with `FOR UPDATE SKIP LOCKED`, `spend_ledger(day, api, key, n)` charged with `UPDATE … WHERE n < cap RETURNING`, `web_findings(id pk, workspace_id, kind, at, data jsonb)`, `web_applications(scope, finding_id, state jsonb)`. The store code sits behind the existing `persist`/`ledger` seams.
+6. **Migration 0004 (lead):** `03470b3` adds `web_cache`, `web_spend`, `web_queue`, `web_findings`, `web_applications`; apply it on Aiven with `pnpm db:migrate` after merge. The store code (`cb9d989`) uses them from `webStateReady`.
 7. **UI (1f Why drawer, G Ops card):** mount `POST /api/web/evidence`, `POST /api/web/make-in-house`, `GET /api/web/leads`; RescuePanel can read `score.fit.provenance.note` ("recipe fit 2.2/4 via gemini, conf 0.33, 410 ms, Finnish origin p 0.97").
 
 ## Next
@@ -59,3 +59,4 @@ Details and the full route table are in [docs/foundations/web.md](../foundations
 ## Report
 - Sat 14 Nov (convergence, base main f2052ca) · done: cleanup (dead code removed, one JSON persistence helper, web route errors match the tool gate), the 5-min cadence recorded, `WEB_CAP_GLOBAL` default 1000, docs rewritten to the current state · stubbed: none · needs: 1–2 · ready to merge: yes
 - Sat 14 Nov (Ring 2 Track D, base main cf00345) · done: ExternalCall helper (fc23292), Decide.batch + p/probabilities + spend cap + 429 retry (4338a84), rescue batch for 8d (697dd3a), replay book recorded live (27ca0e5), scoped tool calls for the trace drawer (c3a2e9e), web evidence/make-in-house/leads/sandbox (bc99108) · stubbed: Postgres web state (item 3, waiting on lead + 9c), embeddings (item 5, not started) · needs: 3–7 · gate GREEN · ready to merge: yes, after 8d reviews 697dd3a
+- Sat 14 Nov (lead review round, base main eb9e790) · done: caution + hold instead of FORBIDDEN (a47db68), sandbox recall seeding [for G] (b020e4c), Decide cap names in .env.example (169e5dd), migration 0004 (03470b3), web state in Postgres (cb9d989) · stubbed: Decide ledger still a file; SKIP LOCKED proven on PGlite only (run `pnpm test:pg` style check on Aiven after migrate) · needs: 1–2, 6–7 · ready to merge: yes

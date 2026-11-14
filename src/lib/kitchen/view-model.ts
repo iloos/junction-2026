@@ -99,6 +99,10 @@ export interface CandidateView {
 	score?: ScoreBreakdown;
 	/** Hard exclusions, as reason codes. */
 	rejected: string[];
+	/** Model cautions (CAUTION.*): still selectable, held for a human if chosen. */
+	cautions?: string[];
+	/** The caution in words ("Gemini: may break … (p 0.51) … check"). */
+	cautionNote?: string;
 	/** Reasons it would need a human (tier ≠ act). */
 	holdReasons: string[];
 	tier: Tier;
