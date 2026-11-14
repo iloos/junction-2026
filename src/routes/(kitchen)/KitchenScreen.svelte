@@ -28,6 +28,8 @@
 	import WhyDrawer from '$lib/ui/WhyDrawer.svelte';
 	import DishStatus from '$lib/ui/DishStatus.svelte';
 	import DishChip from '$lib/ui/DishChip.svelte';
+	import DietMarks from '$lib/ui/DietMarks.svelte';
+	import { CODES, CODE_WORDS, marksOf, marksTitle, rollUp } from '$lib/ui/diet';
 	import CalendarSubscribe from '$lib/ui/CalendarSubscribe.svelte';
 	import AgentMark from '$lib/ui/AgentMark.svelte';
 	import { planDiff } from '$lib/ui/plan-diff';
@@ -171,6 +173,13 @@
 		agent: 'by the agent in chat',
 		outside: 'by an outside agent'
 	} as const;
+
+	/** Diet marks from each product's own record (lib/ui/diet): the line, its dish, the whole order. */
+	const lineMarks = (l: Line) => marksOf(k.snap?.diet?.[l.productId]);
+	const liveLines = (ls: readonly Line[]) =>
+		ls.filter((l) => l.state !== 'rejected' && l.state !== 'unorderable' && l.qty.value > 0);
+	const dishMarks = (ls: Line[]) => rollUp(liveLines(ls).map(lineMarks));
+	const orderMarks = $derived(rollUp(liveLines(k.plan?.lines ?? []).map(lineMarks)));
 
 	/** Who made the plan on screen, in words, for a plan that isn't the booking (its CreatePlan op). */
 	const ORIGIN: Record<string, string> = {
@@ -705,6 +714,7 @@
 			approved={approvedIds.has(l.id)}
 			flash={k.flash.has(l.id)}
 			by={inGroup ? undefined : snap?.byAgent?.[l.id]}
+			diet={lineMarks(l)}
 			replaces={l.substituteFor && !inGroup
 				? {
 						name: names.get(l.substituteFor) ?? l.substituteFor,
@@ -955,7 +965,10 @@
 									: ''}"
 							>
 								<div class="min-w-0">
-									<p class="truncate text-body font-medium text-ink">{d.nameFi}</p>
+									<p class="flex min-w-0 items-center gap-1.5 text-body font-medium text-ink">
+										<span class="truncate">{d.nameFi}</span>
+										<DietMarks marks={dishMarks(lines)} />
+									</p>
 									<p class="truncate text-meta text-ink-3">
 										<span class="lg:hidden">{r.product}</span><span class="max-lg:hidden"
 											>{d.name !== d.nameFi ? d.name : ''}</span
@@ -1152,6 +1165,17 @@
 						</div>
 					{/each}
 				</div>
+				{#if k.snap?.diet}
+					<p class="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-meta text-ink-2">
+						<span class="font-medium text-ink">This order:</span>
+						<DietMarks marks={orderMarks} />
+						<span>{marksTitle(orderMarks)}</span>
+					</p>
+					<p class="mt-1 text-meta text-ink-3" aria-label="Diet marks legend">
+						{CODES.map((c) => `${c} ${CODE_WORDS[c]}`).join(' · ')} · ? no allergen record (allergens
+						unknown, never read as free from)
+					</p>
+				{/if}
 				<p class="mt-2 text-meta leading-snug text-ink-3">
 					{#if isEvent}Grams per guest, yields and recipes are team estimates.{/if} Prices are Valio catalogue
 					prices ex VAT; lines where Valio doesn't state a quantity are ordered, but never counted as

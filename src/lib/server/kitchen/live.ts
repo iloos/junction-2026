@@ -26,6 +26,7 @@ import { isSandbox, resetSandbox } from '$lib/server/demo/sandbox';
 import { inWorkspace } from '$lib/server/adapters/simulator/overlay';
 import { rescueContention } from '$lib/core/services/contention';
 import { catchUp } from '$lib/server/bus';
+import type { DietFacts } from '$lib/ui/diet';
 
 const EVENT_ID = 'event-xmas-140';
 /** The palvikinkku the ham rescue relies on (13 of 15 in stock): the contention preset takes 4 of them. */
@@ -382,6 +383,14 @@ async function buildSnapshot(s: Session): Promise<LiveSnapshot> {
 		b.ports.catalog.get(ids),
 		b.ports.catalog.offers(ids, plan.deliverBy)
 	]);
+	const diet: Record<string, DietFacts> = {};
+	for (const [id, p] of products)
+		diet[id] = {
+			nameFi: p.nameFi,
+			allergens: p.allergens,
+			freeFrom: p.freeFrom,
+			diet: p.diet
+		};
 	const shortNames: Record<string, string> = {};
 	for (const [id, p] of products) if (p.nameShort?.value) shortNames[id] = p.nameShort.value;
 	const facts: Record<string, ProductFacts> = {};
@@ -486,6 +495,7 @@ async function buildSnapshot(s: Session): Promise<LiveSnapshot> {
 		preset: s.preset,
 		contention: s.contention,
 		byAgent,
+		diet,
 		origin: origin ?? (plan.eventId ? 'event' : null),
 		shortNames,
 		contentionRescue:

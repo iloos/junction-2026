@@ -1,3 +1,4 @@
+import type { DietFacts } from '$lib/ui/diet';
 import { withFixtureView } from './fixture-view';
 import type {
 	Approval,
@@ -401,6 +402,8 @@ export interface FixtureSnapshot {
 	byAgent?: Record<string, 'kitchen_agent' | 'external_agent'>;
 	/** Where the plan on screen came from (its CreatePlan op), so the page can say so. */
 	origin?: PlanOrigin | null;
+	/** Each product's allergen record and diet claims (lib/ui/diet), for the menu codes on lines, dishes and the order. */
+	diet?: Record<string, DietFacts>;
 	/** Readable product names where the catalogue has a normalised one (Product.nameShort), by product id. */
 	shortNames?: Record<string, string>;
 	/** The kitchen's other plans in this sandbox (an agent's order, the event), for the task switcher. */
