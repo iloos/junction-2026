@@ -55,17 +55,8 @@
 		(approval?.lineIds ?? []).map((id) => byId.get(id)).filter((l): l is Line => !!l)
 	);
 	const approvalCents = $derived(approvalLines.reduce((s, l) => s + (l.lineCents ?? 0), 0));
-	// Committable: in-mandate lines, plus held lines a granted approval covers (core keeps them `held`;
-	// the approval is their authority).
-	// Committable comes from the server's read model; the state/approval rule is the fallback for old outputs.
-	const eligible = $derived(
-		plan.lines.filter((l) =>
-			l.view
-				? l.view.committable
-				: l.state === 'eligible' ||
-					(l.state === 'held' && approval?.state === 'granted' && approval.lineIds.includes(l.id))
-		)
-	);
+	// Committable comes from the server's read model only (the offline stand-in builds it with core's lineView).
+	const eligible = $derived(plan.lines.filter((l) => l.view?.committable === true));
 	const eligibleCents = $derived(eligible.reduce((s, l) => s + (l.lineCents ?? 0), 0));
 
 	const committedN = $derived(plan.lines.filter((l) => l.state === 'committed').length);
@@ -94,7 +85,7 @@
 	});
 	/**
 	 * Lines a human already approved in an earlier group decision and that are not ordered yet: committable but not
-	 * within the mandate. Read from the server's view (offline: the fixture marks them eligible).
+	 * within the mandate. Read from the line's view.
 	 */
 	const approvedEarlier = $derived(
 		plan.lines.filter(
@@ -103,13 +94,13 @@
 				l.state !== 'committed' &&
 				l.tier !== undefined &&
 				l.tier !== 'act' &&
-				(l.view ? l.view.committable : l.state === 'eligible')
+				l.view?.committable === true
 		)
 	);
-	/** In the mandate on its own: eligible, and not because a human approved it. */
+	/** In the mandate on its own: committable at the agent's own tier, not because a human approved it. */
 	const withinCents = $derived(
 		plan.lines
-			.filter((l) => l.state === 'eligible' && !approvedEarlier.includes(l))
+			.filter((l) => l.view?.committable === true && l.tier === 'act')
 			.reduce((s, l) => s + (l.lineCents ?? 0), 0)
 	);
 

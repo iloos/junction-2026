@@ -17,7 +17,7 @@
 		tier?: Tier;
 		reasons?: string[];
 		approved?: boolean;
-		/** The server's read model: when present, authority and the gap come from it, not from reasons. */
+		/** The server's read model: authority and the gap come from it. Without it only the line state shows. */
 		view?: LineView;
 	}
 	let { state, tier, reasons = [], approved = false, view }: Props = $props();
@@ -108,11 +108,6 @@
 		if (state === 'committed' || state === 'rejected' || state === 'unorderable') return null;
 		const d = view?.blockedReason?.detail;
 		if (d) return GAP[d] ?? null;
-		if (view) return null;
-		if (reasons.includes('INSUFFICIENT_STOCK')) return GAP.stock;
-		if (reasons.includes('unknown')) return GAP.qty;
-		if (reasons.includes('UNKNOWN_REQUIRED'))
-			return { label: 'Unconfirmed', title: 'A required fact is not stated; not confirmed cover.' };
 		return null;
 	});
 </script>

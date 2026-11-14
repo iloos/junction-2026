@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Ban, ChefHat, CircleHelp, Clock3, TriangleAlert, Truck, Wheat } from '@lucide/svelte';
-	import type { RescueView } from '$lib/kitchen/fixture-plan';
+	import type { RescueView } from '$lib/kitchen/view-model';
 	import ScoreBar from '$lib/ui/ScoreBar.svelte';
 	import RankingStrip from '$lib/ui/viz/RankingStrip.svelte';
 	import { money, num, fixed } from '$lib/ui/format';

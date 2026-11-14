@@ -1,5 +1,4 @@
 import type {
-	AvailabilityKind,
 	Criterion,
 	Kitchen,
 	Line,
@@ -14,7 +13,38 @@ import type {
 	Tier,
 	Weights
 } from '$lib/core/contracts';
-import { CACHED_AT, CACHE_REF, KITCHENS, SEED, product, type ProductFact } from './catalog';
+import { money } from '$lib/ui/format';
+import { CACHED_AT, CACHE_REF, SEED, product, type ProductFact } from './catalog';
+import {
+	NORMAL_WEEK,
+	PRESETS,
+	rulesFor,
+	type CandidateView,
+	type DishStatus,
+	type DishView,
+	type EventView,
+	type MakeIngredient,
+	type MakeView,
+	type PresetId,
+	type PurchaseText,
+	type RescueView,
+	type Rules,
+	type WhyStep
+} from './view-model';
+export { NORMAL_WEEK, PRESETS, rulesFor };
+export type {
+	CandidateView,
+	DishStatus,
+	DishView,
+	EventView,
+	MakeIngredient,
+	MakeView,
+	PresetId,
+	PurchaseText,
+	RescueView,
+	Rules,
+	WhyStep
+};
 
 /**
  * Pure builder: the Christmas buffet seed + a kitchen's rules + the chef's edits → a contract `Plan`
@@ -23,24 +53,6 @@ import { CACHED_AT, CACHE_REF, KITCHENS, SEED, product, type ProductFact } from 
  */
 
 // ───────────────────────────── inputs ─────────────────────────────
-
-export type PresetId = 'kitchen' | 'price' | 'finnish';
-
-export interface Rules {
-	preset: PresetId;
-	weights: Weights;
-	/** Category groups where Finnish origin is required (reject non-FI, hold unknown). */
-	originRequire: string[];
-	/** Category groups where Finnish origin is preferred (a non-FI substitute breaks the preference). */
-	originPrefer: string[];
-	lineCapCents: number;
-	orderCapCents: number;
-	weeklyCapCents: number;
-	neverDelegate: string[];
-	tenderList: string[] | null;
-	mandateVersion: number;
-	words: string;
-}
 
 export interface Scenario {
 	guests: number;
@@ -58,176 +70,6 @@ export interface BuildInput {
 	version: number;
 	/** Lines already committed (immutable): their state stays `committed`. */
 	committed: Record<string, Line>;
-}
-
-export const PRESETS: Record<PresetId, { label: string; hint: string }> = {
-	kitchen: { label: 'Kitchen default', hint: "The hotel's own weights: reliability first" },
-	price: { label: 'Price first', hint: 'Cheapest that does the job; no origin preference' },
-	finnish: { label: 'Finnish required', hint: 'Meat, fish and milk must be Finnish' }
-};
-
-export function rulesFor(kitchen: Kitchen, preset: PresetId, mandateVersion = 1): Rules {
-	const prefer = kitchen.constraints.origin
-		.filter((o) => o.rule === 'prefer')
-		.map((o) => o.categoryGroup);
-	const require = kitchen.constraints.origin
-		.filter((o) => o.rule === 'require')
-		.map((o) => o.categoryGroup);
-	const base: Rules = {
-		preset,
-		weights: { ...kitchen.weights },
-		originRequire: require,
-		originPrefer: prefer,
-		lineCapCents: kitchen.mandate.lineCapCents,
-		orderCapCents: kitchen.mandate.orderCapCents,
-		weeklyCapCents: kitchen.mandate.weeklyCapCents,
-		neverDelegate: [...kitchen.mandate.neverDelegate],
-		tenderList: kitchen.constraints.tenderListOnly ? (kitchen.constraints.tenderList ?? []) : null,
-		mandateVersion,
-		words: kitchen.mandate.words
-	};
-	if (preset === 'price')
-		return {
-			...base,
-			weights: { price: 0.7, reliability: 0.3, finnish: 0, carbon: 0, organic: 0 },
-			originPrefer: [],
-			neverDelegate: base.neverDelegate.filter((n) => n !== 'substitute_breaks_preference')
-		};
-	if (preset === 'finnish')
-		return {
-			...base,
-			weights: { finnish: 0.4, reliability: 0.3, price: 0.2, carbon: 0.1, organic: 0 },
-			originRequire: ['meat', 'fish', 'milk'],
-			originPrefer: [],
-			neverDelegate: [...new Set([...base.neverDelegate, 'origin_requirement'])]
-		};
-	return base;
-}
-
-// ───────────────────────────── view types ─────────────────────────────
-
-export type DishStatus = 'ok' | 'unknown' | 'rescued' | 'partial' | 'shortfall';
-
-export interface CandidateView {
-	productId: string;
-	name: string;
-	/** Live: the rules being previewed recommend this one (may differ from what the order holds). */
-	recommended?: boolean;
-	origin?: string;
-	kind: AvailabilityKind;
-	logistic: 'Stock' | 'Terminal' | null;
-	availableText: string;
-	perKgCents: number | null;
-	qty: number | null;
-	unit: string;
-	rounding?: string;
-	lineCents: number | null;
-	coverValue: number;
-	partial: boolean;
-	rank: number | null;
-	score?: ScoreBreakdown;
-	/** Hard exclusions, as reason codes. */
-	rejected: string[];
-	/** Reasons it would need a human (tier ≠ act). */
-	holdReasons: string[];
-	tier: Tier;
-	chosen: boolean;
-	verdict: string;
-	reliability?: number;
-	co2PerKg?: number;
-}
-
-export interface MakeIngredient {
-	productId: string;
-	name: string;
-	origin?: string;
-	need: string;
-	qty: number;
-	unit: string;
-	lineCents: number;
-	availText: string;
-}
-
-export interface MakeView {
-	title: string;
-	ingredients: MakeIngredient[];
-	totalCents: number;
-	vsReadyMadeCents: number;
-	labourNote: string;
-	allergenNote?: string;
-	caveats: string[];
-	tier: Tier;
-	holdReasons: string[];
-	chosen: boolean;
-	recipeNote: string;
-}
-
-/** A short description of a purchase: "HK Palvikinkku viipaloitu 1,5 kg · 13 ST". */
-export interface PurchaseText {
-	productId: string;
-	name: string;
-	qtyText: string;
-}
-
-export interface RescueView {
-	forLineId: string;
-	/**
-	 * Preview vs saved (live): what the active rules recommend, what the order holds now. They differ when a
-	 * preset is being previewed; "Apply these rules" makes the order follow the recommendation.
-	 */
-	preview?: { recommended: PurchaseText[]; saved: PurchaseText[]; differs: boolean };
-	kind: 'product' | 'make_in_house' | 'none';
-	needServed: Measure;
-	candidates: CandidateView[];
-	make?: MakeView;
-	residual?: { value: number; unit: MeasureUnit; text: string; fitGrams?: number };
-	summary: string;
-}
-
-export interface DishView {
-	id: string;
-	needId: string;
-	name: string;
-	nameFi: string;
-	gServed: number;
-	gDefault: number;
-	editable: boolean;
-	yield: number;
-	need: Measure;
-	needFormula: string;
-	productId: string;
-	productName: string;
-	plannedLineId: string;
-	/** Lines in the plan that serve this dish (planned or rescue). */
-	lineIds: string[];
-	status: DishStatus;
-	outage?: 'out' | 'undeliverable';
-	usual?: { qty: number; unit: string; cents: number };
-	isNew: boolean;
-	rescue?: RescueView;
-	eventCents: number;
-}
-
-export interface WhyStep {
-	text: string;
-	source: string;
-	detail?: string;
-}
-
-export interface EventView {
-	eventId: string;
-	title: string;
-	date: string;
-	guests: number;
-	serviceStyle: string;
-	dishes: DishView[];
-	why: Record<string, WhyStep[]>;
-	normalWeek: { cents: number; lines: number };
-	thisWeek: { cents: number; lines: number };
-	eventKg: number;
-	planReasons: string[];
-	weekSpentCents: number;
-	counts: { outages: number; unknown: number; held: number; eligible: number; committed: number };
 }
 
 export interface Built {
@@ -356,30 +198,6 @@ const DISHES: DishDef[] = [
 		rescueKey: 'torttu'
 	}
 ];
-
-/** Usual weekly quantities for the hotel's standing-order products (team estimate, scenario). */
-const USUAL_QTY: Record<string, { qty: number; unit: string }> = {
-	'462150': { qty: 10, unit: 'KG' },
-	'475214': { qty: 3, unit: 'ST' },
-	'464201': { qty: 36, unit: 'ST' },
-	'466964': { qty: 1, unit: 'BAG' }
-};
-
-/**
- * A normal week at this hotel for the SKUs the event also uses. Which products are usual comes from the kitchen
- * seed's `usualProducts`, the same baseline the mandate's `new_sku` rule reads, so the view and the rule agree.
- */
-export const NORMAL_WEEK = {
-	cents: 312_000,
-	lines: 46,
-	usual: Object.fromEntries(
-		(KITCHENS.find((k) => k.id === 'k-hotel')?.usualProducts ?? []).map((id) => {
-			const q = USUAL_QTY[id];
-			if (!q) throw new Error(`usual product ${id} has no weekly quantity`);
-			return [id, q];
-		})
-	) as Record<string, { qty: number; unit: string }>
-};
 
 const TART_G = 60;
 
@@ -826,7 +644,7 @@ export function buildEvent(input: BuildInput): Built {
 			},
 			{ text: `Availability: ${availText(p)} (${p.availability.raw})`, source: 'valio_cache' },
 			{
-				text: `Price ${p.priceCents !== null ? `€${(p.priceCents / 100).toFixed(2)} / ${p.salesUnit}` : 'unknown'}, catalogue price ex VAT at 14 Nov`,
+				text: `Price ${p.priceCents !== null ? `${money(p.priceCents)} / ${p.salesUnit}` : 'unknown'}, catalogue price ex VAT at 14 Nov`,
 				source: 'valio_cache'
 			}
 		];
@@ -996,7 +814,7 @@ export function buildEvent(input: BuildInput): Built {
 						},
 						{ text: `Rounded: ${chosen.rounding ?? ''}`, source: 'valio_static' },
 						{
-							text: `Price €${((p.priceCents ?? 0) / 100).toFixed(2)} / ${p.salesUnit}, catalogue price ex VAT at 14 Nov`,
+							text: `Price ${money(p.priceCents ?? 0)} / ${p.salesUnit}, catalogue price ex VAT at 14 Nov`,
 							source: 'valio_cache'
 						},
 						...(chosen.partial
@@ -1073,7 +891,7 @@ export function buildEvent(input: BuildInput): Built {
 						{ text: `${ing.name}: ${ing.need} → ${ing.qty} ${ing.unit}`, source: 'team_estimate' },
 						{ text: `Availability: ${ing.availText}`, source: 'valio_cache' },
 						{
-							text: `Price €${((p.priceCents ?? 0) / 100).toFixed(2)} / ${p.salesUnit}, ex VAT at 14 Nov`,
+							text: `Price ${money(p.priceCents ?? 0)} / ${p.salesUnit}, ex VAT at 14 Nov`,
 							source: 'valio_cache'
 						},
 						{ text: make.labourNote, source: 'team_estimate' },
@@ -1089,7 +907,7 @@ export function buildEvent(input: BuildInput): Built {
 					needServed: need,
 					candidates: cands,
 					make,
-					summary: `No ready-made ${d.nameFi.toLowerCase()} can be delivered. Make it from in-stock ingredients: €${(make.totalCents / 100).toFixed(2)} vs €${(make.vsReadyMadeCents / 100).toFixed(2)} ready-made.`
+					summary: `No ready-made ${d.nameFi.toLowerCase()} can be delivered. Make it from in-stock ingredients: ${money(make.totalCents)} vs ${money(make.vsReadyMadeCents)} ready-made.`
 				};
 			}
 		}
@@ -1201,7 +1019,7 @@ export function buildEvent(input: BuildInput): Built {
 		if (line.state === 'committed') return { text: 'Committed', source: 'simulator' };
 		if (line.tier === 'act' || !line.tier)
 			return {
-				text: `Within your mandate: €${((line.lineCents ?? 0) / 100).toFixed(2)} ≤ €${(r.lineCapCents / 100).toFixed(0)} line cap, nothing on your never-delegate list. The agent may order it.`,
+				text: `Within your mandate: ${money(line.lineCents ?? 0)} ≤ ${money(r.lineCapCents, { whole: true })} line cap, nothing on your never-delegate list. The agent may order it.`,
 				source: 'mandate'
 			};
 		const why = line.reasons.filter((x) => x !== 'unknown').join(', ');

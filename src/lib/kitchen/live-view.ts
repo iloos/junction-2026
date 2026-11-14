@@ -23,7 +23,7 @@ import {
 	type PurchaseText,
 	type RescueView,
 	type Rules
-} from './fixture-plan';
+} from './view-model';
 
 export interface ProductFacts {
 	name: string;
@@ -89,13 +89,10 @@ function names(label: string): { nameFi: string; name: string } {
 }
 
 const isOpen = (l: Line) => l.state === 'eligible' || l.state === 'held';
-/** Supply the server cannot confirm (read model), with the reason code as the fallback for older outputs. */
+/** Supply with no stated quantity, and short stock, from the server's read model. */
 const hasUnknown = (l: Line) =>
-	l.view
-		? l.view.unconfirmedCover.value > 0 || l.view.blockedReason?.detail === 'qty'
-		: l.reasons.includes('UNKNOWN_REQUIRED');
-const isShort = (l: Line) =>
-	l.view ? l.view.blockedReason?.detail === 'stock' : l.reasons.includes('INSUFFICIENT_STOCK');
+	(l.view?.unconfirmedCover.value ?? 0) > 0 || l.view?.blockedReason?.detail === 'qty';
+const isShort = (l: Line) => l.view?.blockedReason?.detail === 'stock';
 
 function verdict(c: CandidateView): string {
 	if (c.rejected.includes('out')) return 'Rejected: out of stock (0)';

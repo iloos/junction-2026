@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Eye } from '@lucide/svelte';
-	import { PRESETS, type PresetId, type PurchaseText, type Rules } from '$lib/kitchen/fixture-plan';
+	import { PRESETS, type PresetId, type PurchaseText, type Rules } from '$lib/kitchen/view-model';
 	import ScoreLegend from '$lib/ui/ScoreLegend.svelte';
 	import { money } from '$lib/ui/format';
 
