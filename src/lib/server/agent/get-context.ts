@@ -50,6 +50,7 @@ export function createGetContext(ports: ServicePorts): GetContextHandler {
 					id: e.id,
 					title: e.title
 				})),
+				deliveryDays: [...k.deliveryDays],
 				mandate: {
 					version: k.mandate.version,
 					words: k.mandate.words,
