@@ -17,6 +17,7 @@ import { newAgentRunId, startAgentRun } from '$lib/server/agent/runs';
 import type { Slots } from '$lib/server/agent/types';
 import type { Env } from '$lib/server/auth';
 import { UNITS } from '$lib/server/request/lexicon';
+import { findDate } from '$lib/server/request/dates';
 import { parseRules } from '$lib/server/request/parse';
 import { readingOf, reviewReading } from '$lib/server/request/reading';
 import { dayWords, ledgerSummary, readTask } from '$lib/server/tasks/outcome';
@@ -472,22 +473,21 @@ async function* turnLines(
 		task = blankTask(deps, text);
 		expected = null;
 	}
+	// A typed reply to an open question that is one of its offered answers ("yes please" for "Yes, plan it as a
+	// dish", "tomorrow" for "Tomorrow, Tue 8 Dec") is that answer, as if its chip was pressed.
+	if (!input.answer && input.text && expected !== null && task.pending.kind === 'clarify') {
+		const picked = offeredAnswer(input.text, task.pending.options);
+		if (picked)
+			input = { ...input, text: undefined, answer: { field: task.pending.field, value: picked } };
+	}
 	// The answer to "10,000 portions of pasta bolognese?": plan the dish as an event, or buy that many packs.
 	const dishAsked =
 		expected !== null &&
 		task.pending.kind === 'clarify' &&
 		task.pending.field === 'dish' &&
 		task.pending.options.some((o) => o.value === 'as-dish');
-	const said = input.text?.trim() ?? '';
-	const dishChoice = !dishAsked
-		? null
-		: input.answer?.field === 'dish'
-			? String(input.answer.value)
-			: YES.test(said)
-				? 'as-dish'
-				: NO_PACKS.test(said)
-					? 'as-packs'
-					: null;
+	const dishChoice =
+		dishAsked && input.answer?.field === 'dish' ? String(input.answer.value) : null;
 	if (dishChoice === 'as-dish' || dishChoice === 'as-packs') {
 		const goal = String(task.requirement.goal ?? '');
 		const d = await (deps.dish ?? interpretDish)(goal, { today: deps.today });
@@ -553,8 +553,20 @@ async function* turnLines(
 		};
 		return;
 	}
-	// "What?" after a question or a refusal: say again what the last turn needs, never a generic menu.
-	if (expected !== null && words && WHAT.test(words)) {
+	// A reply to an open question that is none of its answers and not a request of its own ("what?", "hmm"): the
+	// question again, with what it is about. Unclear words on a task with nothing planned: what could not be done.
+	const pendingQ = task.pending.kind === 'clarify' ? task.pending : null;
+	const offTopic =
+		expected !== null &&
+		!!words &&
+		!!pendingQ &&
+		answering &&
+		(CHOICE_ONLY.includes(pendingQ.field) || pendingQ.options.some((o) => o.value === 'as-dish')
+			? true
+			: !answerFits(pendingQ.field, words, deps.today));
+	const unclear =
+		expected !== null && !!words && !pendingQ && u?.kind === 'other' && !task.plans.length;
+	if (offTopic || unclear) {
 		const goal = String(task.requirement.brief ?? task.requirement.goal ?? '');
 		if (task.pending.kind === 'clarify') {
 			const q = task.pending;
@@ -582,7 +594,7 @@ async function* turnLines(
 			};
 			return;
 		}
-		if (!task.plans.length) {
+		{
 			yield {
 				type: 'done',
 				taskId: task.id,
@@ -1320,11 +1332,41 @@ export async function taskView(taskId: string, deps: ChatDeps): Promise<ChatEven
 
 const CANCEL =
 	/^(?:please\s+|ok\s+)?(?:cancel|forget|scrap|drop)\b(?:\s+(?:it|that|this|the order|everything))?\s*[.!]*$|^(?:peru|peruuta|unohda)\b/i;
-/** A bare "what?": the chef did not follow the last turn. */
-const WHAT =
-	/^(what|what\?+|huh|sorry|pardon|eh|mitä|häh|what do you mean|what does that mean)\W*$/i;
-const YES = /^(y|yes|yeah|yep|sure|ok|kyllä|joo|plan it|as a dish)\b/i;
-const NO_PACKS = /^(no|nope|ei)\W*$|\bpacks?\b/i;
+/** Whether typed words can be an answer for a field: a day for a date, a number for an amount, a unit word. */
+function answerFits(field: ClarifyField, words: string, today: string): boolean {
+	if (field === 'date') return !!findDate(words, today)?.iso;
+	if (field === 'qty' || field === 'guests')
+		return Object.keys(readAnswer(field, words)).length > 0;
+	if (field === 'unit')
+		return UNITS.some((u) => u.forms.includes(words.trim().toLowerCase().replace(/s$/, '')));
+	return true;
+}
+
+/** Questions answered only by one of their offered answers (a typed value is never parsed for them). */
+const CHOICE_ONLY: readonly string[] = ['intent', 'plan', 'kitchen'];
+
+/**
+ * The offered answer a typed reply names, from the answers themselves: the whole label or value, or the label's
+ * leading word ("yes please" → "Yes, plan it as a dish"; "tomorrow" → "Tomorrow, Tue 8 Dec").
+ */
+function offeredAnswer(
+	reply: string,
+	options: readonly { label: string; value: string }[]
+): string | null {
+	const norm = (t: string) =>
+		t
+			.toLowerCase()
+			.replace(/[^\p{L}\d ]+/gu, ' ')
+			.replace(/\s+/g, ' ')
+			.trim();
+	const r = norm(reply);
+	if (!r) return null;
+	const whole = options.find((o) => norm(o.label) === r || norm(o.value) === r);
+	if (whole) return whole.value;
+	const first = r.split(' ')[0];
+	const lead = options.filter((o) => norm(o.label).split(' ')[0] === first);
+	return lead.length === 1 && !/^\d/.test(first) ? lead[0].value : null;
+}
 
 /** The product words of a dish request, without the count and the ordering words ("bolongese pasta"). */
 function productWords(goal: string, d: { dish: string }): string {
