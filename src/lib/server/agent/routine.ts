@@ -19,6 +19,10 @@ export interface RoutineCandidate {
 	unit: string;
 	lotStep?: number;
 	origin?: string;
+	/** CO₂e per kg (Valio's footprint file), for a carbon preference. */
+	co2PerKg?: number;
+	/** On-time share 0–1 (Valio's reliability file), for a reliability preference. */
+	reliability?: number;
 	/** Sales units that hold the asked quantity (rounded up), when the product states its content. */
 	salesQty: number | null;
 	/** What `salesQty` holds in total, when the product states its content (500 g asked → 0.5 kg or 4 kg). */
@@ -78,6 +82,8 @@ export function routineCandidates(intent: RoutineLine, hits: Product[]): Routine
 			unit: r.product.salesUnit,
 			lotStep: r.product.lotStep,
 			origin: r.product.origin ?? undefined,
+			...(r.product.co2PerKg ? { co2PerKg: r.product.co2PerKg.value } : {}),
+			...(r.product.reliability !== undefined ? { reliability: r.product.reliability } : {}),
 			salesQty: r.conversion?.ok ? r.conversion.salesQty : null,
 			amount: r.conversion?.ok ? orderAmount(r.product, r.conversion.salesQty) : null,
 			conversion:

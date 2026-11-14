@@ -1,6 +1,7 @@
 /** Read-only catalogue tools: search the static catalogue, quote live terms for known ids. */
 import { ok, type Result, type ToolInput, type ToolOutput } from '../contracts';
 import type { CallContext, Ports } from '../ports';
+import { sortByPreference } from '../rank/presets';
 import { defaultDeliverBy, scenarioDate } from '../scenario';
 
 /** Helsinki calendar date of the simulator clock (deliverBy default). */
@@ -11,7 +12,8 @@ export async function searchProducts(
 	_ctx: CallContext,
 	input: ToolInput<'search_products'>
 ): Promise<Result<ToolOutput<'search_products'>>> {
-	return ok({ products: await ports.catalog.search(input.query, { limit: input.limit }) });
+	const products = await ports.catalog.search(input.query, { limit: input.limit });
+	return ok({ products: sortByPreference(products, input.rankBy) });
 }
 
 /**

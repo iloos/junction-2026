@@ -1,4 +1,4 @@
-import type { Plan, ServerEvent, ToolName, ToolOutput } from '$lib/core/contracts';
+import type { Plan, RankBy, ServerEvent, ToolName, ToolOutput } from '$lib/core/contracts';
 import type { Llm, ToolHandlers } from '$lib/core/ports';
 import { createDecide } from '$lib/server/adapters/decide';
 import { createLlmRouter } from '$lib/server/adapters/llm/router';
@@ -44,6 +44,8 @@ export async function runGoal(o: {
 	keyScope?: string;
 	/** Tools this run may not use, on top of the intent's list (a chat turn leaves commit_order to Continue). */
 	withhold?: readonly ToolName[];
+	/** This request's ranking preference (chat: "cheapest", "lowest carbon"); never a tier or mandate change. */
+	rankBy?: RankBy;
 }): Promise<AgentRun> {
 	const p = o.principal;
 	const ctx = principalContext(p);
@@ -82,6 +84,7 @@ export async function runGoal(o: {
 		),
 		kitchenIds: p.kitchenIds,
 		keyScope: o.keyScope ?? p.agentRunId,
+		...(o.rankBy ? { rankBy: o.rankBy } : {}),
 		intro,
 		...(o.review
 			? {

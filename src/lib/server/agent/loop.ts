@@ -3,9 +3,11 @@ import {
 	err,
 	toolSchemas,
 	type DomainError,
+	type RankBy,
 	type ServerEvent,
 	type ToolName
 } from '$lib/core/contracts';
+import { isPreference, PREFERENCE_WORDS } from '$lib/core/rank/presets';
 import type { CallContext, Llm, ToolHandlers } from '$lib/core/ports';
 import { traceEvent, type TraceStep } from '$lib/server/adapters/llm/trace';
 import { serveTool, toolsFor } from '$lib/server/tools/serve';
@@ -64,6 +66,8 @@ export interface PlannerState {
 	history: PlannerStep[];
 	intent?: Intent;
 	context?: AgentContext;
+	/** This request's ranking preference ("cheapest", "lowest carbon"): orders a routine order's choice. */
+	rankBy?: RankBy;
 }
 export type Planner = (s: PlannerState, signal: AbortSignal) => Promise<AgentAction>;
 
@@ -81,6 +85,80 @@ export interface AgentRun {
 }
 
 class Stopped extends Error {}
+
+const lineCents = (c: RoutineCandidate, offers: Map<string | undefined, OfferFacts>) => {
+	const u = offers.get(c.productId)?.unitCents;
+	return u !== undefined && c.salesQty !== null ? u * c.salesQty : null;
+};
+
+/** Candidates in the request's preference order (stable; an unknown value sorts last, never favourably). */
+export function byPreference(
+	cands: RoutineCandidate[],
+	offers: Map<string | undefined, OfferFacts>,
+	rankBy: RankBy | undefined
+): RoutineCandidate[] {
+	if (!isPreference(rankBy)) return cands;
+	const key = (c: RoutineCandidate): number | null =>
+		rankBy === 'price'
+			? lineCents(c, offers)
+			: rankBy === 'carbon'
+				? (c.co2PerKg ?? null)
+				: rankBy === 'finnish'
+					? c.origin
+						? c.origin.toUpperCase() === 'FI'
+							? 0
+							: 1
+						: null
+					: c.reliability === undefined
+						? null
+						: -c.reliability;
+	return cands
+		.map((c, i) => ({ c, i, k: key(c) }))
+		.sort((a, b) =>
+			a.k === null && b.k === null
+				? a.i - b.i
+				: a.k === null
+					? 1
+					: b.k === null
+						? -1
+						: a.k - b.k || a.i - b.i
+		)
+		.map((x) => x.c);
+}
+
+/** "Picked X over Y: lower CO₂e (0.9 vs 1.4 kg CO₂e/kg)", when the preference changed the pick. */
+export function preferenceNote(
+	usual: RoutineCandidate | undefined,
+	picked: RoutineCandidate | undefined,
+	offers: Map<string | undefined, OfferFacts>,
+	rankBy: RankBy | undefined
+): string | null {
+	if (!isPreference(rankBy) || !usual || !picked || usual.productId === picked.productId)
+		return null;
+	const name = (c: RoutineCandidate) => c.name ?? c.productId;
+	const eur = (cents: number | null) => (cents === null ? '?' : `€${(cents / 100).toFixed(2)}`);
+	const detail =
+		rankBy === 'price'
+			? ` (${eur(lineCents(picked, offers))} vs ${eur(lineCents(usual, offers))})`
+			: rankBy === 'carbon' && picked.co2PerKg !== undefined && usual.co2PerKg !== undefined
+				? ` (${picked.co2PerKg.toFixed(1)} vs ${usual.co2PerKg.toFixed(1)} kg CO₂e/kg)`
+				: rankBy === 'reliability' && picked.reliability !== undefined
+					? ` (${Math.round(picked.reliability * 100)}% vs ${usual.reliability === undefined ? '?' : Math.round(usual.reliability * 100) + '%'} on time)`
+					: '';
+	return `Picked ${name(picked)} over ${name(usual)}: ${PREFERENCE_WORDS[rankBy]}${detail}`;
+}
+
+/** The request's preference on the calls that rank, unless the planner set one (a model may pass its own). */
+export function withPreference(
+	tool: ToolName,
+	input: unknown,
+	rankBy: RankBy | undefined
+): unknown {
+	if (!isPreference(rankBy) || (tool !== 'search_products' && tool !== 'find_substitutes'))
+		return input;
+	const i = (input ?? {}) as Record<string, unknown>;
+	return i.rankBy || i.weights ? input : { ...i, rankBy };
+}
 
 /** Resolves like `p`, or rejects as soon as `signal` aborts. The underlying call may still finish. */
 export function abortable<T>(p: Promise<T>, signal: AbortSignal): Promise<T> {
@@ -115,6 +193,11 @@ export async function runAgent(o: {
 	signal?: AbortSignal;
 	intent?: Intent;
 	context?: AgentContext;
+	/**
+	 * This request's ranking preference: added to every search_products and find_substitutes call the run makes, and
+	 * used to choose among a routine order's quoted candidates. Never a tier, authority or mandate change.
+	 */
+	rankBy?: RankBy;
 	/** Tools this run may use; intersected with the caller's scopes. Default: every scoped tool. */
 	allowedTools?: readonly ToolName[];
 	/** Kitchen grant: tool calls naming another kitchen (directly or through a plan) are refused. */
@@ -208,7 +291,7 @@ export async function runAgent(o: {
 		try {
 			action = await abortable(
 				o.planner(
-					{ goal: o.goal, tools, history, intent: o.intent, context: o.context },
+					{ goal: o.goal, tools, history, intent: o.intent, context: o.context, rankBy: o.rankBy },
 					ctl.signal
 				),
 				ctl.signal
@@ -226,6 +309,7 @@ export async function runAgent(o: {
 
 		// Idempotency keys are the server's, whatever a planner (a model) sent: no double order rests on its keys.
 		action.input = withServerKey(action.tool, action.input, o.intent, o.goal, o.keyScope);
+		action.input = withPreference(action.tool, action.input, o.rankBy);
 		emit('step', { n, tool: action.tool, why: action.why, input: action.input });
 		const t0 = performance.now();
 		const refusal = await refuse(action, tools, o.kitchenIds, planKitchen, o.ctx, o.handlers);
@@ -519,7 +603,7 @@ export function matchNeed(
  * commit what the mandate allows. Shortage repair: get_plan → substitutes. Inspect: get_plan.
  */
 export function scriptedPlanner(): Planner {
-	return async ({ history, tools, intent, context }) => {
+	return async ({ history, tools, intent, context, rankBy }) => {
 		if (!intent || intent.kind === 'unsupported')
 			return { done: true, summary: 'no supported intent to act on' };
 		const last = history.at(-1);
@@ -641,6 +725,8 @@ export function scriptedPlanner(): Planner {
 					(l) => candidatesFor(l).find((c) => c.salesQty !== null) ?? null
 				);
 				const closedFor = new Set<number>();
+				/** What the request's preference changed, per product line ("Picked X over Y: lower CO₂e"). */
+				const preferred: string[] = [];
 				if (found.some(Boolean) && !has('place_order') && tools.includes('quote')) {
 					const quoted = history.find((h) => h.tool === 'quote' && h.ok);
 					if (!has('quote')) {
@@ -668,15 +754,19 @@ export function scriptedPlanner(): Planner {
 							);
 						for (const [i, l] of lines.entries()) {
 							const cands = candidatesFor(l);
-							found[i] =
-								cands.find((c) => {
-									const o = offers.get(c.productId);
-									return (
-										c.salesQty !== null &&
-										orderable(o, intent.deliverBy, context?.now) &&
-										!(o?.availability === 'known' && o.amount != null && o.amount < c.salesQty)
-									);
-								}) ?? null;
+							const buyable = cands.filter((c) => {
+								const o = offers.get(c.productId);
+								return (
+									c.salesQty !== null &&
+									orderable(o, intent.deliverBy, context?.now) &&
+									!(o?.availability === 'known' && o.amount != null && o.amount < c.salesQty)
+								);
+							});
+							// The request's preference reorders what can be bought; without one, rank order decides.
+							const pick = byPreference(buyable, offers, rankBy);
+							found[i] = pick.at(0) ?? null;
+							const note = preferenceNote(buyable[0], pick[0], offers, rankBy);
+							if (note) preferred.push(note);
 							// Nothing open for that day among the quoted: a date problem for this product.
 							const quotedIds = cands.filter((c) => offers.has(c.productId));
 							if (
@@ -727,6 +817,7 @@ export function scriptedPlanner(): Planner {
 							placed
 								.map(({ l, f }) => `${l.qty} ${l.unit} ${l.query}: ${f.conversion}`)
 								.join('; ') +
+							(preferred.length ? `; preference: ${preferred.join('; ')}` : '') +
 							// A product nothing can be bought for is said, never dropped in silence.
 							(placed.length < lines.length
 								? `; not ordered: ${lines
