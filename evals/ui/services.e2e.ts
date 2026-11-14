@@ -79,31 +79,32 @@ test('Valio and Gemini answer live on the deployed app', async ({ page, request 
 	expect(parser?.model, 'a named model').toMatch(/^gemini-/);
 	expect(parser?.tokens?.in ?? 0, 'tokens spent on this request').toBeGreaterThan(0);
 	// The stored trace of that same call (O's traces table), found by this journey's request id.
-	const traces = await page.request.get(
-		`${BASE}/api/ops/traces?requestId=${requestId}&source=gemini`
-	);
+	type TraceRow = {
+		model: string | null;
+		tokensIn: number | null;
+		ok: boolean;
+		requestId: string | null;
+	};
+	const traceUrl = `${BASE}/api/ops/traces?requestId=${requestId}&source=gemini`;
+	const isCall = (t: TraceRow) =>
+		t.requestId === requestId && t.ok && /^gemini-/.test(t.model ?? '') && (t.tokensIn ?? 0) > 0;
+	let traces = await page.request.get(traceUrl);
 	if (traces.status() === 404)
 		test
 			.info()
 			.annotations.push({ type: 'note', description: 'no /api/ops/traces on this deploy yet' });
 	else {
 		expect(echoed, 'the response echoes this request id').toBe(requestId);
-		const body = (await traces.json()) as {
-			persisted?: boolean;
-			traces?: {
-				model: string | null;
-				tokensIn: number | null;
-				ok: boolean;
-				requestId: string | null;
-			}[];
-		};
+		let body = (await traces.json()) as { persisted?: boolean; traces?: TraceRow[] };
+		// The trace is written after the stream ends: give it a few seconds before calling it missing.
+		for (let i = 0; i < 10 && !body.traces?.some(isCall); i++) {
+			await page.waitForTimeout(500);
+			traces = await page.request.get(traceUrl);
+			body = (await traces.json()) as typeof body;
+		}
 		expect(body.persisted, 'traces are stored').toBe(true);
-		const call = body.traces?.find(
-			(t) =>
-				t.requestId === requestId && t.ok && /^gemini-/.test(t.model ?? '') && (t.tokensIn ?? 0) > 0
-		);
 		expect(
-			call,
+			body.traces?.find(isCall),
 			`a stored Gemini call for ${requestId}: ${JSON.stringify(body.traces?.slice(0, 3))}`
 		).toBeTruthy();
 	}
