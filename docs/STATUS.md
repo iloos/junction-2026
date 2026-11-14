@@ -2,42 +2,20 @@
 
 _The lead rewrites this at each checkpoint. It is the "now": what works, what's next, what bites._
 
-**Updated:** Sat 14 Nov ~07:00 (lead session). **Tag `ring0`** = main 4b030a4 (code identical to deployed f2edb21).
+**Updated:** Sat 14 Nov ~08:45 (lead session). **Tag `ring0`** = main 4b030a4 (code identical to deployed f2edb21).
 **State:** Ring 0 stable and deployed. Checkpoint done: 8 internal reviews + 5 outside (round 5) → [handoff/SYNTHESIS.md](handoff/SYNTHESIS.md) (32 ranked findings F1–F32, rulings, tracks T0/A–G, owners' replies in §7). Handoffs in `docs/lanes/{core-db,ops,baseline,kitchen,request,agent2,web}.md`. 252 server tests, `pnpm eval` 5/5, `pnpm eval:agent` 9/9, `pnpm test:pg` 4/4 on Aiven (opt-in), `pnpm test:live` 3/3 (Gemini, opt-in).
 **Deployed:** https://widely-many-scorpion.eur-1.aiven.app (Aiven Runtime `mandate`, Postgres, TLS verified, `LLM_PROVIDER=gemini`, web keys set). Warm up before judging (deploy.md). Redeploy: push main → `aiven_application_redeploy` → `scripts/deploy/smoke.sh`.
 **Works end to end on prod:** Christmas plan with real outages, curated rescues, edit-after-rescue voids and re-binds approval, commit, same receipt on retry; `/request` Valio milk flow (Gemini parse) with case questions and a size check; hard ceiling; MCP judge key can't approve; Ops urgency queue + wallboard + agent traces; recall drill; sandbox self-reset.
 **Biggest open (SYNTHESIS P0s):** F1 shared sandbox · F2 Ops on another workspace · F3 parse can drop "lactose-free" · F4 agent units/dates · F5 rescue with unknown supply · F6 no agent door · F7 open event requests.
 
-**Next:** user re-scopes SYNTHESIS §5 → lead lands T0 contracts → fan out A (8d), G (9c), B (request agent + 1f retrieval), C (kitchen agent), D (web agent), E (agent), F evals (new session). Pitch/submission held until the next stable tag.
+**Now (Sat ~08:45): Ring 1 fan-out.** T0 contracts landed `9cefdf2` (D8 supply tier, D9 visitor identity). Authoritative assignment: [handoff/SYNTHESIS.md §8](handoff/SYNTHESIS.md). Merge gate: `node scripts/merge-gate.mjs` (stops on first red; test:unit can flake under load, rerun).
+**Sessions (5):** lead junc26-18 (contracts, merges, lead agents for B-request, D-web, E-agent) · 8d Track A (core, A1→A4) · 9c Track G (visitor workspace, judge keys, ops, deploy) · 1f Track B retrieval · 91 Track F (evals + gate). C (kitchen visuals) starts on A2's fixtures.
+**First shared milestone:** two browsers + an MCP client each complete the milk flow in their own workspace; Ops opens the exact plan.
+**Open on the user's side:** `JUDGE_KEY_SECRET` in the Aiven console + local `.env`; yes/no on the 10-min Context.dev monitor (~144 credits/day); Exa submission decided at the 22:00 video checkpoint.
 
-**Read these, in order:**
-1. [DECISIONS.md](DECISIONS.md): D1 (Valio), D3 (one container on Aiven, Aiven Postgres), D4 (big scope on the real stack, built in rings 0→3).
-2. [concept/CONCEPT.md](concept/CONCEPT.md), [concept/PRODUCT.md](concept/PRODUCT.md) (Ring 0 = 8 stories), [concept/SCORECARD.md](concept/SCORECARD.md).
-3. [foundations/](foundations/README.md): ux, gemini, mcp, modal, models, data, valio-data (+ valio-profile.json).
-4. [research/](research/): horeca, horeca-profiles, menu-spike, agent-harness, mcpcon; [review/](review/): REVIEW-GPT-6, MULTI-CHALLENGE-STRATEGY-GPT-6.
+**Read these, in order:** DECISIONS (D4–D9) → SYNTHESIS §8 → your lane brief → CONCEPT/PRODUCT if new.
 
-**Next steps (schedule from the round-2 review; checkpoints, not activity targets)**
-1. **Contracts commit (lead) implementing D6**, aligned with `evals/` and `fixtures/seeds/` field names. **Sleep prerequisite:** contracts compile, the PGlite fixture boots, `DATABASE_URL` connects (first migration creates `vector`), a public container URL exists (Aiven Runtime if accessible now, otherwise the Verda VM per D3), and lane briefs name owned paths.
-2. **Lanes** via `scripts/lane-setup.ps1`: core-db · agent · kitchen · ops · jobs, all pinned to the same contracts SHA + seed hash; overnight guardrails in ORCHESTRATION.md (no contract edits or merges while the lead sleeps).
-3. **~07:00–10:00:** integrate core-db → agent → kitchen; deploy a full fixture journey (quote → edit → approval → commit → retry → reload); swap in live lookups and the Gemini fit decision; run the 8 Ring 0 checks, the 5 evals and concurrency tests on real Postgres; tag; record 60 s of demo. 10–11: Operations + Ring 1, or invoke D4 if Ring 0 fails.
-4. **Hero preflight:** hand-check a Stock (not Terminal) alternative for ham and casserole, or a make-in-house recipe; else present an honest partial rescue ([PITCH.md](PITCH.md)).
-
-**Open on the user's side:** Aiven: use the existing free `pg-1dfeeeed` (PG 18.7, developer-1, do-fra; `vector` 0.8.7 available, so `CREATE EXTENSION vector` goes in the first migration) → copy its URI into `.env` as `DATABASE_URL` (+ `PG_CA_CERT`); creating a Hobbyist service is a billing action the user does by hand if ever needed; ask #aiven for Runtime; #nvidia for the Verda Nemotron key + an NVIDIA Build key; ask about S-Pankki data and the AfterQuery harness; Valio mentor questions (PRODUCT.md §6, horeca-profiles.md); time today's Christmas order in the real webshop as a baseline.
-
-**S-Pankki:** dataset cloned to `data/s-pankki/` (gitignored); brief and fields in [foundations/s-pankki.md](foundations/s-pankki.md); balances exist, so "safe to spend" can be grounded.
-
-**Key facts (from the probes):** the Valio API ignores date and customer and is static (our simulator owns time and cut-offs); 18% of products are undeliverable; data has a `substitutions` field (250 rules); **no product images** (Cloudinary only for a document workflow); net weight 56% (89% with name parsing); no rate limiting seen (we use ≤4 concurrent, ≤200 ids, cache-through in `data/valio/cache/`). Gemini Decisions API works (`gemini-decision-1`, v1beta, 120 questions in ~0.56 s); key is `GEMINI_STUDIO_API_KEY`. Gemma on Featherless works (`gemma-4-E4B-it`). Nemotron has no endpoint yet. Slush is Wed 18–Thu 19 Nov (event hook). `GMAPS_API` is in `.env` (Google Maps; later, for app polish or validation).
-
-**Venues (done):** 3,560 real Helsinki/Espoo/Vantaa venues from OSM (ODbL), 8 profiles, 15 with structured menus (574 dishes); Exa found menu/banquet pages for ~19/29; Google Places skipped (no menus, restrictive terms). Demo picks: Scandic Kallio (chain Christmas lunch menu), Factory Elimäenkatu (weekly lunch), Don Corleone. Real names + invented volumes: anonymise in video. `data/venues/` is gitignored; [research/venues.md](research/venues.md).
-
-**Sessions:** this lead session (orchestrator) + peer junc26-8d + one more peer session (starting now). Roles and rules: ORCHESTRATION.md "Sessions". New peers: read STATUS → DECISIONS (D4–D6) → PRODUCT → PITCH, then message the lead for a chunk.
-
-**In flight:**
-- Venue dataset agent (OSM + Exa + Context.dev → `data/venues/`, `scripts/venues/`, `docs/research/venues.md`; uncommitted). When it lands: commit the scripts, the OSM file with ODbL attribution and venues.md; keep scraped menus out of git.
-- **Merged (9df92c2):** `scripts/lane-setup.{ps1,sh}` (worktree + copies .env, data/valio, data/venues; port 5171–5179), `evals/` (format + s1–s5 covering all 8 Ring 0 stories), `fixtures/seeds/` (k-hotel / k-lounas / k-central, Christmas buffet for 140 at 691 g/guest, calendar factors). Align field names in the contracts: line states `acted | held{tier} | rejected | committed | unorderable` and the README's reason codes. Also new: [research/supply-chain.md](research/supply-chain.md) (Promise status incl. `limited`/`below_lot`, Reservation with expiry, usage-capped fair share at cut-off, 5 simulator events).
-- Peer session **junc26-8d** (second brain, own worktree; was branch `contracts-support`): `scripts/lane-setup`, `evals/` format + first 5 Ring 0 scenarios, `fixtures/seeds/` (3 demo kitchen profiles, Christmas buffet for 140, calendar factors incl. Slush). It messages the lead with a sha on handoff, then reviews the contracts commit against PRODUCT.md Ring 0. The lead writes ARCHITECTURE.md, `src/lib/core/**`, db schema, ports, tool registry and deps; 8d doesn't touch those.
-- Contracts must include `workspaceId` + `actor` on every record and op (seam for the later roadmap in PLAN.md).
-- From live checks (8d): salmon 462150 and trout 462016 have `allowedLotSize` 10 kg (catch weight), so 11.5 kg rounds to 20 kg, and 9 kg left after contention is **below one lot → unorderable** (explicit scenario S3). Ham 462490 lot step 7 kg. Nearly all Christmas casseroles are out; the real substitute is lanttulaatikko 6×400 g `462157` (Terminal, 999999 = unknown → held, never counted as cover). Herring-type products need gross / net / drained weight and a price basis (per unit vs per comparison unit). All go into the contracts.
+**Key facts (from the probes):** the Valio API ignores date and customer and is static (our simulator owns time and cut-offs); 18% of products are undeliverable; data has a `substitutions` field (250 rules); no product images; net weight 56% (89% with name parsing). Gemini key is `GEMINI_STUDIO_API_KEY`. Free NVIDIA API ~40 req/min per key; Context.dev 10 req/min. Venues: 3,560 Helsinki/Espoo/Vantaa venues from OSM in `data/venues/` (gitignored), [research/venues.md](research/venues.md).
 
 **Platform submissions (created Fri night; no new ones can be created now, all editable until Sun 10:00):**
 - Real drafts named `Mandate`: Valio Aimo (primary; 8 tech challenges ticked), Context.dev real-time web, Exa butler, AfterQuery break-the-agent, S-Pankki trainer.
