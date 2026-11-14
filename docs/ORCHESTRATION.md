@@ -50,6 +50,19 @@ Typical lanes (adjust in ARCHITECTURE.md): `data` (generator, fixtures, sponsor 
 - Small commits; deterministic fixture checks; no network-dependent pass/fail; a browser screenshot for any UI claim.
 - Start lanes with `pwsh scripts/lane-setup.ps1 <name>` (worktree + copies .env and data, own port).
 
+### Checkpoint protocol: review → synthesis → handoff (lead triggers)
+Run before a stable tag and before any compaction or new sessions. Three steps, one file per author, so nothing collides.
+1. **Review** (every session and every live lead agent, in its own worktree): write `docs/handoff/review-<name>.md` (≤ 2 pages) and send the lead a SHA.
+   - Own scope: what is solid (with the test or evidence), what is fragile, known bugs, untested paths, shortcuts taken.
+   - Adjacent scopes it touched or depends on: seams, contract drift, assumptions about other lanes.
+   - The product as a whole: does the demo prove what PITCH claims? What would a judge break first?
+   - Continuation: the next 3–5 highest-value tasks, coverage gaps (stories, sponsors, evals), risks, ideas; disagreements with current decisions.
+   - Evidence over opinion: file:line, test names, screenshots, measured numbers. No praise, no restating STATUS.
+2. **Synthesis** (lead): read every review, write `docs/handoff/SYNTHESIS.md` (ranked findings, decisions, conflicts resolved, the next tracks with owners) and send it to every session. Each replies once, briefly: agree, or a specific objection or missing item. The lead folds that in.
+3. **Handoff dump** (every session): update `docs/lanes/<lane>.md` with a **Handoff** section: owned paths and branch, current state, non-obvious knowledge (gotchas, why things are the way they are), open threads with next steps, traps, how to resume (commands, env, ports), and anything only it knows. Then the lead merges, tags, rewrites STATUS, and the user compacts or restarts sessions.
+
+Rules: no fixes during step 1 (write them down); reviews are read-only except their own file; the lead is the only merger; a session that is mid-change finishes or parks it on its branch first and says which.
+
 ### Starting a lane (lead)
 ```powershell
 git worktree add ../junc26-lanes/viz -b lane/viz main
