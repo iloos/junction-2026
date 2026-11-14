@@ -18,15 +18,22 @@ export class Unreachable extends ToolError {}
  * What the page currently shows (run, plan, version), sent with every live tool call: the server refuses a
  * command from a page that is out of date (STALE_VERSION) instead of acting on a plan the chef never saw.
  */
-export const rendered: { view: { runId: string; planId: string; version: number } | null } = {
+export const rendered: { view: RenderedView | null } = {
 	view: null
 };
 
-export async function livePost<T>(path: string, body: unknown): Promise<T> {
+export type RenderedView = { runId: string; planId: string; version: number };
+
+export async function livePost<T>(
+	path: string,
+	body: unknown,
+	/** The view of the screen sending it (each Kitchen state keeps its own); the page's when absent. */
+	view: RenderedView | null = rendered.view
+): Promise<T> {
 	let res: Response;
 	const headers: Record<string, string> = { 'content-type': 'application/json' };
-	if (path.startsWith('/kitchen-api/tool/') && rendered.view)
-		headers['x-kitchen-view'] = JSON.stringify(rendered.view);
+	if (path.startsWith('/kitchen-api/tool/') && view)
+		headers['x-kitchen-view'] = JSON.stringify(view);
 	try {
 		res = await fetch(path, { method: 'POST', headers, body: JSON.stringify(body) });
 	} catch (e) {
@@ -51,9 +58,14 @@ export async function livePost<T>(path: string, body: unknown): Promise<T> {
 export function call<N extends ToolName>(
 	mode: ApiMode,
 	name: N,
-	input: ToolInput<N>
+	input: ToolInput<N>,
+	view?: RenderedView | null
 ): Promise<ToolOutput<N>> {
 	return mode === 'live'
-		? livePost<ToolOutput<N>>(`/kitchen-api/tool/${name}`, input)
+		? livePost<ToolOutput<N>>(
+				`/kitchen-api/tool/${name}`,
+				input,
+				view === undefined ? rendered.view : view
+			)
 		: fixtureCall(name, input);
 }

@@ -351,6 +351,7 @@
 		shell.labels = { source: valioSource, offline: k.mode === 'fixture' };
 		// The agent dock is scoped to this kitchen and the plan on screen.
 		shell.chat = { kitchenId: snap?.kitchen.id, planId: snap?.plan.id };
+		shell.kitchen = k;
 		shell.sandbox = snap?.clock
 			? {
 					workspace: snap.clock.workspaceId ?? 'ws-demo',
@@ -364,6 +365,7 @@
 			shell.labels = null;
 			shell.sandbox = null;
 			shell.chat = {};
+			shell.kitchen = null;
 		};
 	});
 

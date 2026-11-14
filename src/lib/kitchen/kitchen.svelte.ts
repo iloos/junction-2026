@@ -1,6 +1,7 @@
 /* eslint-disable svelte/prefer-svelte-reactivity -- Maps and Sets here are built fresh and replaced wholesale ($state.raw), never mutated after. */
 import type { Approval, DomainError, Line } from '$lib/core/contracts';
-import { ToolError, Unreachable, call, rendered, type ApiMode } from './api';
+import { ToolError, Unreachable, call, rendered, type ApiMode, type RenderedView } from './api';
+import type { ToolInput, ToolName, ToolOutput } from '$lib/core/contracts';
 import type { PresetId } from './view-model';
 import * as backend from './backend';
 import type { Snapshot } from './backend';
@@ -85,7 +86,11 @@ export class KitchenStore {
 	#seq = 0;
 	#flashTimer: ReturnType<typeof setTimeout> | undefined;
 
-	constructor(mode: ApiMode) {
+	/** `shared`: the Kitchen screen's state, which also publishes its view for code with no state at hand. */
+	constructor(
+		mode: ApiMode,
+		private readonly shared = true
+	) {
 		this.mode = mode;
 	}
 
@@ -199,7 +204,7 @@ export class KitchenStore {
 		if (!dish || !this.plan || grams === dish.gServed || this.readOnly) return;
 		this.pendingGrams = { ...this.pendingGrams, [dishId]: grams };
 		await this.#run(async () => {
-			await call(this.mode, 'edit_line', {
+			await this.#call('edit_line', {
 				planId: this.plan!.id,
 				version: this.plan!.version,
 				needId: dish.needId,
@@ -276,7 +281,7 @@ export class KitchenStore {
 		if (!a || this.readOnly) return false;
 		let ok = false;
 		await this.#run(async () => {
-			const out = await call(this.mode, 'approve', {
+			const out = await this.#call('approve', {
 				approvalId: a.id,
 				planVersion: a.planVersion,
 				termsHash: a.termsHash,
@@ -312,7 +317,7 @@ export class KitchenStore {
 
 	async #commitWith(key: string, replay: boolean) {
 		await this.#run(async () => {
-			const out = await call(this.mode, 'commit_order', {
+			const out = await this.#call('commit_order', {
 				planId: this.plan!.id,
 				version: this.plan!.version,
 				idempotencyKey: key
@@ -338,7 +343,7 @@ export class KitchenStore {
 	async openWhy(lineId: string) {
 		if (!this.plan) return;
 		try {
-			const out = await call(this.mode, 'explain_line', { planId: this.plan.id, lineId });
+			const out = await this.#call('explain_line', { planId: this.plan.id, lineId });
 			this.whySteps = out.steps;
 			this.whyLineId = lineId;
 		} catch (e) {
@@ -348,6 +353,15 @@ export class KitchenStore {
 
 	closeWhy() {
 		this.whyLineId = null;
+	}
+
+	/**
+	 * What this state last rendered (run, plan, version), sent with its commands: its own, so a second state (the
+	 * dock's) can't change what the page sends.
+	 */
+	rendered: RenderedView | null = null;
+	#call<N extends ToolName>(name: N, input: ToolInput<N>): Promise<ToolOutput<N>> {
+		return call(this.mode, name, input, this.rendered);
 	}
 
 	/** Runs a command, then shows the snapshot it answered with, or reads one when it answered nothing. */
@@ -382,10 +396,11 @@ export class KitchenStore {
 							: null;
 				this.snap = next;
 				this.#receiptFrom(next);
-				rendered.view =
+				this.rendered =
 					this.mode === 'live' && next.clock
 						? { runId: next.clock.runId, planId: next.plan.id, version: next.plan.version }
 						: null;
+				if (this.shared) rendered.view = this.rendered;
 				this.#remember(next);
 				this.#clockAt(next);
 				this.#flashChanges(before, next.plan.lines);
