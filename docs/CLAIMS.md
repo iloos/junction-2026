@@ -52,7 +52,7 @@ _The claim ledger for the video and the stage. Every sentence in [PITCH.md](PITC
 | Proof · lactose-free "through substitutes and edits", Seen on the live app | **narrow** | Prod saw the request resolve lactose-free; the substitute and edit half is tests (adversarial R7-01): label it Seen + Tested |
 | Proof · every other row | say it | Matches the rows above |
 | How · 9 op types, pure core enforced by lint, termsHash = date + sorted lines, approval has an expiry, refusals logged | say it | Checked in code (`core/state.ts`, `eslint.config.js`, `core/hash.ts`, `contracts/plan.ts`); refusal seen in Ops |
-| How · "the core refuses an approval from an outside agent even if a scope slipped" | cite or reword | The tested core guard is on commit: an outside agent's commit needs a chef's grant (`core/services/orders.ts`); approve is refused by scope in `serveTool` |
+| How · "the core refuses an approval from an outside agent even if a scope slipped" | say it | Two guards: scope in `serveTool` first, then `applyOps` refuses a granted `RecordApproval` decided by an external agent (`core/state.ts` RecordApproval; `core/state.test.ts`); an outside agent's commit also needs a chef's grant (`core/services/orders.ts`). Corrected by d0 |
 
 ## Not claimable
 | Claim | Why | Verdict |
