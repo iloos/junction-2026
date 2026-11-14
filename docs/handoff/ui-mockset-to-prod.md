@@ -38,7 +38,7 @@ Value = what a judge feels. Risk = chance of breaking the demo. Everything we wa
 | 12 | Gate paths ("91% straight through · 6% held · 2.4% same request · 0.6% refused") | Ops side panel | Needs counted sources: ops, idempotency replays, refusals. Show only counts we record | High (Q&A) | Medium (truth of counts) | Wave 2 | 9c + 91 |
 | 13 | Forecast: "Will stock hold?" rows and the stock line | Ops tab | Needs a pure `projectDemand(kitchens, horizon)` in `core/demand` plus `sim_stock`; the "Valio hasn't said" band for unknown stock | High | High | Wave 2 (reads the summed projection, see memory-and-tenancy.md) | 8d + 9c |
 | 14 | Demand flow (kitchen → menu → dish → product → stock) | Ops tab, `d3-sankey` | Over the workspace's real plans; top items + "other"; shortages never folded into other | Medium | Medium | Wave 2 | 9c |
-| 15 | Kitchen layout A (conversation first) vs B (plan first) | `KitchenScreen` | Pending user choice from `kitchen-a.html` / `kitchen-b.html`. B is closest to the shipped TaskHeader + Decide zone + docked ChatDock | High | High (layout churn) | Wave 1 for B's parts (#1, #2, #8); the full re-layout in Wave 2 only if Wave 1 lands clean | 1f |
+| 15 | Kitchen layout A vs B | `KitchenScreen` | **Closed (user):** neither as a re-layout; 1f's in-app redesign (compact rows, Decide/Order zones, the dock, the first screen, What changed) is better than both mocks. Small details carry over instead (see Carry-over from the kitchen mocks) | | | Closed | 1f |
 | 16 | Usual order / rhythm (settledness, confidence-scaled projection) | concept | Needs order history; maths in `rhythm.html`. Natural basis for the standing order and the act tier | High (pitch, as next) | n/a | Pitch, labelled next; Wave 2 if the memory projection lands | — |
 | 17 | Demand at Valio scale (2,400 kitchens) | concept | Synthetic data | Medium (pitch) | n/a | Pitch only | — |
 
@@ -92,6 +92,30 @@ Each lane verifies its own item with a Playwright screenshot of the production b
 - **Wave 1: none new.** `d3` 7.9 and `d3-transition` already ship; the static pages draw SVG in Svelte with `$state.raw` data, d3 for scales and shapes only (CLAUDE.md rule 4).
 - **Wave 2:** `d3-sankey` (small) for #14. **Post-hackathon:** `d3-dag` or `dagre` (~24 kB) if a menu drill needs a layered graph; `regl-scatterplot` for a 17.5k catalogue map. Not needed: `@xyflow/svelte` (the architecture map is static SVG); `elkjs` and `embedding-atlas` are over the 500 kB rule. Measure before adding.
 
+## Ready for lanes
+Wave 2 mocks that are finished and match the shipped vocabulary. Each lane builds from the read model; the mock's numbers are illustrative (`scratch/ux-mock/shared/scenario.js`) and never copied. Mocks are served from `scratch/ux-mock` (`python -m http.server 8765`).
+| # | Mock | Ready because | What the lane needs first | Lane |
+|---|---|---|---|---|
+| 13 | `engine.html` (Forecast) | Rebuilt as a sum of per-kitchen demand in four layers (ordered, planned, usual settled, usual forming) with P(short) per product per day; unknown supply shows "can't be judged" | A pure `projectDemand(kitchens, horizon)` in `core/demand`: per kitchen, mean and spread per layer; spreads combine as squares across kitchens; `P(short) = 1 − Φ((stock − mean) / spread)`; supply with no stated quantity returns no probability. With no order history it uses only the ordered and planned layers, and the "usual" layers stay hidden | 8d (maths + tests) → 9c (Ops tab) |
+| 14 | `flow.html`, `flow-scale.html` (Demand) | Kitchen → menu → dish → product → stock; top N per column + "other"; shortages never folded into other; the 2,400-kitchen version shows it scales | A read over the workspace's plans and needs, grouped by `Need.source`; `d3-sankey` | 9c |
+| 11 | Stakes chart in `ops.html` | € held per case by time to cut-off, labels no longer overlap | € held and cut-off per case from `cases.ts` | 9c |
+| 4 | "What happened to this case" in `ops.html` | Op-by-op story with technical detail inline | `opSummary` sentences for all 8 op types (see Review carefully) | 9c |
+
+Not ready: #16 and the memory panel in `rhythm.html` (need order history and the Patterns layer in memory-and-tenancy.md; pitch as next), #12 (counts must come from recorded sources first).
+
+## Carry-over from the kitchen mocks
+Compared on prod `b2dfe9c` (app.mandate.kitchen, Hotel Rautatientori after "Plan the event") with `kitchen-b.html`, at 1440 and 390. Screenshot pairs live in `scratch/ux-mock/` (gitignored): live `live-1440.png`, `live-1440-full.png`, `live-390.png`; mock `b-now.png` (1440), `b-1440-full.png`, `b-390.png`. The live page is the better whole; these are five small details, copy and hierarchy only, no new layout.
+
+| # | Detail | Live now | Mock B | Touches | Size |
+|---|---|---|---|---|---|
+| C1 | Name unknown stock the way the chef would say it | "Stock unstated" on 8 of 13 dish rows, the most common state on the page (`live-1440-full.png`, State column) | "? Valio hasn't said how many" (`b-1440-full.png`, dish rows) | `src/lib/ui/coverage.ts:269` (the chip word, e.g. "Valio hasn't said"; "Rescued · Valio hasn't said") | One string, plus any test that asserts it |
+| C2 | The order button where the eye already is | "3 lines, €302.62 can be ordered now" is a sentence in the header; the button "Order the 3 lines you can now" sits at the bottom of the rail, below the fold at 1440 (`live-1440-full.png`, y≈1300) | "Can be ordered now €319.78 · Place order" is the top card of the rail (`b-now.png`) | `src/lib/ui/TaskHeader.svelte` (make the "can be ordered now" phrase a button, or a link that scrolls to and focuses the ApprovalPanel button) | Small |
+| C3 | One-line deadline at 390 | "3 decisions before / Tue 8 Dec, 15:00" in large mono takes two lines and most of the first screen (`live-390.png`) | "2 decisions before Tue 15:00" on one line in body type (`b-390.png`) | `src/lib/ui/TaskHeader.svelte` (inside the cut-off's week drop the date: "before Tue 15:00"; the large mono only from `sm:`) | Small |
+| C4 | Mandate words don't push the task down on a phone | The chef's mandate quote is four lines above the task at 390 (`live-390.png`) | "Your agent may…" lives in the rail on desktop, out of the first screen on a phone (`b-now.png`) | `src/routes/(kitchen)/KitchenScreen.svelte:651` (below `sm`, clamp to one line with a "more" toggle; desktop unchanged) | Small |
+| C5 | "If you say no" instead of "If held" | "If held: 7 lines not ordered, 7 dishes lose cover." ("held" is the system's word) (`live-1440.png`, Decide rail) | "If you say no · 5 dishes not covered" (`b-now.png`, Needs you cards) | `src/lib/ui/DecisionCard.svelte:53` | One string |
+
+Not carried: B's serif title, the "Needs you" row above the menu (the rail does that job), the System lens toggle (System in the shell covers it), the per-row "Covered if you approve" sentences (the State column already says it in fewer words). "Subscribe in your calendar" in the header is replaced by the "Add to calendar" menu on `lane/c3-daypicker`.
+
 ## Drop
 - Per-row coverage bars on the main surface (they fail the 5-second test; keep the ruler inside Why).
 - Buttons whose action isn't wired ("Pre-position 16 packs", "Ask the 2 chefs") until a tool exists; no fake affordances.
@@ -107,6 +131,6 @@ Each lane verifies its own item with a Playwright screenshot of the production b
 - **Contrast and size** on the navy theme at 390 px, after the per-dish sentences replace bars.
 
 ## Open decisions (user)
-1. Kitchen direction: A (conversation first) or B (plan first, my pick).
+1. ~~Kitchen direction A or B~~: decided, neither as a re-layout (#15).
 2. Serif on `/story` and `/how`: keep or drop.
 3. Whether `/story` is linked from the Kitchen header or only shared as a URL.
