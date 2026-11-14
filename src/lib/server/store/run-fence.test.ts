@@ -44,8 +44,8 @@ describe('run fence', () => {
 			id: `${before}-next`,
 			workspaceId: ws,
 			label: 'reset elsewhere',
-			simStart: new Date('2026-12-07T19:40:00Z'),
-			createdAt: new Date(Date.now() + 60_000)
+			simStart: '2026-12-07T19:40:00Z',
+			createdAt: new Date(Date.now() + 60_000).toISOString()
 		});
 		const stale = await h.place_order(ctx(ws, before), order('old-run'));
 		expect(stale.ok ? null : stale.error).toMatchObject({ code: 'STALE_VERSION', sub: 'run' });
