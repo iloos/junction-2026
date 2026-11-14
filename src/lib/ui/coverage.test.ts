@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import type { FulfilmentView } from '$lib/core/contracts';
-import { coverageHeadline, coverageSentence, lineBasis, segments } from './coverage';
+import {
+	coverageHeadline,
+	coverageSentence,
+	lineBasis,
+	needStatus,
+	needTally,
+	segments
+} from './coverage';
 import rescued from '../../../fixtures/views/christmas-rescued.json';
 
 const kg = (value: number) => ({ value, unit: 'kg' as const });
@@ -92,5 +99,24 @@ describe('line basis (F14)', () => {
 			unitPrice: null,
 			comparison: null
 		});
+	});
+});
+
+describe('need tally', () => {
+	it('rates each need by its least certain cover', () => {
+		const fs = (rescued as unknown as { view: { fulfilment: FulfilmentView[] } }).view.fulfilment;
+		const t = needTally(fs);
+		expect(Object.values(t).reduce((a, b) => a + b, 0)).toBe(fs.length);
+		for (const f of fs)
+			if (f.unresolved.value > 0) expect(needStatus(f)).toBe('unresolved');
+			else if (f.plannedUnknown.value > 0) expect(needStatus(f)).toBe('plannedUnknown');
+	});
+
+	it('keeps ordered-awaiting apart from planned stock (D10)', () => {
+		expect(needStatus(f({ awaitingSupplier: kg(4), supplierConfirmed: kg(6) }))).toBe(
+			'awaitingSupplier'
+		);
+		expect(needStatus(f({ plannedKnown: kg(4), awaitingSupplier: kg(6) }))).toBe('plannedKnown');
+		expect(needStatus(f({ supplierConfirmed: kg(10) }))).toBe('supplierConfirmed');
 	});
 });

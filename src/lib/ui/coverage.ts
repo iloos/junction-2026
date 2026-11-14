@@ -146,3 +146,17 @@ export function lineBasis(
 			: null;
 	return { buys, physical, unitPrice, comparison };
 }
+
+/** A need's weakest link: the least certain bucket that still holds any of the required amount (BUCKETS order). */
+export type NeedStatus = Bucket;
+export function needStatus(f: FulfilmentView): NeedStatus {
+	for (const b of [...BUCKETS].reverse()) if (f[b.key].value > 0) return b.key;
+	return 'supplierConfirmed';
+}
+
+/** How many needs sit at each weakest link, for the task header. */
+export function needTally(fs: readonly FulfilmentView[]): Record<NeedStatus, number> {
+	const t = Object.fromEntries(BUCKETS.map((b) => [b.key, 0])) as Record<NeedStatus, number>;
+	for (const f of fs) t[needStatus(f)]++;
+	return t;
+}

@@ -1,20 +1,13 @@
 <script lang="ts">
 	import { tick } from 'svelte';
-	import {
-		CircleCheck,
-		RotateCcw,
-		ShieldAlert,
-		TriangleAlert,
-		Hand,
-		ArrowRight
-	} from '@lucide/svelte';
+	import { CircleCheck, ShieldAlert, TriangleAlert, Hand } from '@lucide/svelte';
 	import type { Approval, Line, Plan } from '$lib/core/contracts';
 	import type { CommitNote, TermChange } from '$lib/kitchen/kitchen.svelte';
 	import type { CommitRecord } from '$lib/kitchen/fixture-server';
-	import HoldButton from '$lib/ui/HoldButton.svelte';
+	import DecisionCard from '$lib/ui/DecisionCard.svelte';
+	import Receipt from '$lib/ui/Receipt.svelte';
+	import { decisionsDue, decisionsOf } from '$lib/ui/decisions';
 	import { money, num, shortHash, day, storyTime } from '$lib/ui/format';
-	import { reasonLong, reasonShort } from '$lib/ui/reasons';
-	import { SUBSET_APPROVE } from '$lib/kitchen/capabilities';
 
 	interface Props {
 		plan: Plan;
@@ -70,19 +63,15 @@
 		lastInvalidated && pending && !lastInvalidated.reason?.includes('committed')
 	);
 	const changedIds = $derived(new Set(changes.map((c) => c.lineId)));
-	const grouped = $derived.by(() => {
-		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local, rebuilt on every derive
-		const m = new Map<string, { reasons: string[]; lines: Line[]; signOff: boolean }>();
-		for (const l of approvalLines) {
-			const reasons = l.reasons.filter((r) => r !== 'unknown' && r !== 'UNKNOWN_REQUIRED');
-			const key = reasons.map(reasonShort).join(' · ') || 'Held';
-			const g = m.get(key) ?? { reasons, lines: [], signOff: false };
-			g.lines.push(l);
-			if (l.tier === 'sign_off') g.signOff = true;
-			m.set(key, g);
-		}
-		return [...m.entries()];
-	});
+	/** One decision per reason group (lib/ui/decisions): the same count the task header and phone bar show. */
+	const decisions = $derived(decisionsOf(plan, approval));
+	const due = $derived(decisionsDue(plan, approval));
+	/** After the order: why the approved lines needed a human, grouped the same way. */
+	const decided = $derived(
+		approval && !pending
+			? decisionsOf(plan, { ...approval, state: 'pending' })
+			: ([] as ReturnType<typeof decisionsOf>)
+	);
 	/**
 	 * Lines a human already approved in an earlier group decision and that are not ordered yet: committable but not
 	 * within the mandate. Read from the line's view.
@@ -104,41 +93,13 @@
 			.reduce((s, l) => s + (l.lineCents ?? 0), 0)
 	);
 
-	/**
-	 * One decision per reason group: Review → Confirm exact terms for a routine group; a sign-off group (an allergen
-	 * change, a broken requirement) takes a deliberate hold. Approving one group never grants another.
-	 */
-	let confirming = $state<string | null>(null);
-	let confirmBtn = $state<HTMLButtonElement | null>(null);
 	let commitBtn = $state<HTMLButtonElement | null>(null);
-	async function review(key: string) {
-		confirming = key;
+	async function approve(lineIds: string[]) {
+		const ok = await onapprove(lineIds);
 		await tick();
-		confirmBtn?.focus();
+		if (ok && decisions.length === 0) commitBtn?.focus();
+		return ok;
 	}
-	/** Groups the chef confirmed on screen, per approval (the fallback while core can't grant a subset). */
-	let checked = $state<Record<string, boolean>>({});
-	const ck = (key: string) => `${approval?.id}:${key}`;
-	const oneShot = $derived(SUBSET_APPROVE || grouped.length <= 1);
-	const allChecked = $derived(grouped.every(([key]) => checked[ck(key)]));
-	async function confirm(lines: Line[], key: string) {
-		if (!oneShot) {
-			checked = { ...checked, [ck(key)]: true };
-			confirming = null;
-			return;
-		}
-		const ok = await onapprove(SUBSET_APPROVE ? lines.map((l) => l.id) : undefined);
-		confirming = null;
-		await tick();
-		if (ok && grouped.length <= 1) commitBtn?.focus();
-	}
-	async function approveConfirmed() {
-		const ok = await onapprove();
-		checked = {};
-		await tick();
-		if (ok) commitBtn?.focus();
-	}
-	const sum = (ls: Line[]) => ls.reduce((a, l) => a + (l.lineCents ?? 0), 0);
 	const nameOf = (id: string) => names.get(id) ?? id;
 </script>
 
@@ -211,15 +172,15 @@
 					>
 				{:else}
 					{#if approval.tier === 'sign_off'}
-						<ShieldAlert size={16} class="text-signoff" aria-hidden="true" />
+						<ShieldAlert size={16} class="text-auth" aria-hidden="true" />
 					{:else}
-						<Hand size={16} class="text-propose" aria-hidden="true" />
+						<Hand size={16} class="text-auth" aria-hidden="true" />
 					{/if}
 					<span
 						><b class="font-medium"
-							>{grouped.length === 1
+							>{decisions.length === 1
 								? 'One decision needs you'
-								: `${grouped.length} decisions need you`}</b
+								: `${decisions.length} decisions need you`}</b
 						>
 						· {approvalLines.length} lines · {money(approvalCents)}</span
 					>
@@ -228,146 +189,31 @@
 
 			{#if pending}
 				<ol class="mt-2.5 space-y-2.5">
-					{#each grouped as [key, g] (key)}
-						<li
-							class="rounded-md border px-3 py-2.5 {g.signOff
-								? 'border-signoff/50 bg-signoff-wash/50'
-								: 'border-rule'}"
-						>
-							<div class="flex items-baseline justify-between gap-2">
-								<p class="text-meta font-medium text-ink">{key}</p>
-								<p class="mono text-meta text-ink">{money(sum(g.lines))}</p>
-							</div>
-							<p class="mt-0.5 text-micro leading-snug text-ink-2">
-								{g.reasons.map(reasonLong).join(' ')}
-							</p>
-							<ul class="mt-1.5">
-								{#each g.lines as l (l.id)}
-									<li
-										class="flex items-baseline justify-between gap-3 rounded-sm text-meta {changedIds.has(
-											l.id
-										)
-											? 'bg-signoff-wash'
-											: ''}"
-									>
-										<span class="min-w-0 truncate text-ink-2" title={nameOf(l.productId)}
-											>{nameOf(l.productId)}</span
-										>
-										<span class="mono shrink-0 text-ink">{num(l.qty.value)} {l.qty.unit}</span>
-									</li>
-								{/each}
-							</ul>
-							<div class="mt-2 space-y-1.5">
-								{#if checked[ck(key)]}
-									<p class="flex items-center justify-between gap-2 text-meta text-ink">
-										<span class="flex items-center gap-1.5"
-											><CircleCheck size={14} class="text-ok" aria-hidden="true" /> Confirmed by you</span
-										>
-										<button
-											type="button"
-											class="text-meta text-ink-3 underline underline-offset-2 hover:text-ink"
-											onclick={() => (checked = { ...checked, [ck(key)]: false })}>Undo</button
-										>
-									</p>
-								{:else if confirming === key}
-									<p class="text-meta text-ink">
-										{oneShot ? 'Approve' : 'Confirm'} exactly these {g.lines.length} lines, {money(
-											sum(g.lines)
-										)}, for delivery {day(plan.deliverBy)}?{grouped.length > 1
-											? ' The other decisions stay open.'
-											: ''}
-									</p>
-									<div class="flex gap-2">
-										<button
-											bind:this={confirmBtn}
-											type="button"
-											class="h-9 flex-1 rounded-md bg-ink px-3 text-body font-medium text-sheet disabled:opacity-50"
-											disabled={busy}
-											onclick={() => confirm(g.lines, key)}>Confirm exact terms</button
-										>
-										<button
-											type="button"
-											class="h-9 rounded-md border border-rule-strong px-3 text-body text-ink"
-											onclick={() => (confirming = null)}>Cancel</button
-										>
-									</div>
-								{:else if g.signOff}
-									<HoldButton
-										label="Hold to sign off {g.lines.length} {g.lines.length === 1
-											? 'line'
-											: 'lines'}"
-										disabled={busy}
-										onconfirm={() => void confirm(g.lines, key)}
-									/>
-								{:else}
-									<button
-										type="button"
-										class="flex h-9 w-full items-center justify-center gap-1.5 rounded-md border border-ink/70 text-body font-medium text-ink hover:bg-well disabled:opacity-50"
-										disabled={busy}
-										onclick={() => review(key)}
-										>{oneShot ? 'Approve' : 'Review'}
-										{g.lines.length}
-										{g.lines.length === 1 ? 'line' : 'lines'}
-										<ArrowRight size={14} aria-hidden="true" /></button
-									>
-								{/if}
-								{#if SUBSET_APPROVE && confirming !== key}
-									<button
-										type="button"
-										class="w-full text-center text-meta text-ink-3 hover:text-ink"
-										disabled={busy}
-										onclick={() => ondeny(g.lines.map((l) => l.id))}>Keep these held</button
-									>
-								{/if}
-							</div>
+					{#each decisions as d (d.key)}
+						<li>
+							<DecisionCard
+								decision={d}
+								{names}
+								{due}
+								{busy}
+								changed={changedIds}
+								onapprove={approve}
+								onkeep={(ids) => ondeny(ids)}
+							/>
 						</li>
 					{/each}
 				</ol>
-				{#if !oneShot}
-					<div class="mt-2.5 space-y-1.5">
-						{#if allChecked}
-							<button
-								type="button"
-								class="h-10 w-full rounded-md bg-ink px-3 text-body font-medium text-sheet disabled:opacity-50"
-								disabled={busy}
-								onclick={approveConfirmed}
-								>Approve the {grouped.length} confirmed decisions · {money(approvalCents)}</button
-							>
-						{:else}
-							<p class="text-meta leading-snug text-ink-3">
-								Confirm each decision on its own; one approval of these exact terms is sent when all
-								{grouped.length} are confirmed.
-							</p>
-						{/if}
-					</div>
-				{/if}
-				{#if !SUBSET_APPROVE}
-					<button
-						type="button"
-						class="mt-1.5 w-full text-center text-meta text-ink-3 hover:text-ink"
-						disabled={busy}
-						onclick={() => ondeny()}>Keep everything held</button
-					>
-				{/if}
 			{:else}
 				<ul class="mt-2.5 space-y-3">
-					{#each grouped as [key, g] (key)}
+					{#each decided as d (d.key)}
 						<li>
 							<p class="text-meta font-medium text-ink">
-								{ordered || granted ? 'Approved because' : 'Why it needs you'}: {key.toLowerCase()}
+								{ordered || granted ? 'Approved because' : 'Why it needed you'}: {d.reason.toLowerCase()}
 							</p>
-							<p class="text-micro leading-snug text-ink-3">
-								{g.reasons.map(reasonLong).join(' ')}
-							</p>
+							<p class="text-micro text-ink-3">{d.why}</p>
 							<ul class="mt-1">
-								{#each g.lines as l (l.id)}
-									<li
-										class="flex items-baseline justify-between gap-3 rounded-sm text-meta {changedIds.has(
-											l.id
-										)
-											? 'bg-signoff-wash'
-											: ''}"
-									>
+								{#each d.lines as l (l.id)}
+									<li class="flex items-baseline justify-between gap-3 text-meta">
 										<span class="min-w-0 truncate text-ink-2" title={nameOf(l.productId)}
 											>{nameOf(l.productId)}</span
 										>
@@ -471,32 +317,8 @@
 		{/if}
 
 		{#if lastCommit}
-			<div class="mt-3 rounded-md border border-accent/30 bg-accent-wash/60 px-3 py-2.5 text-meta">
-				<p class="flex items-baseline justify-between gap-2 text-ink">
-					<span class="font-medium">Receipt {lastCommit.receiptId}</span>
-					<span class="mono">{money(lastCommit.totalCents)}</span>
-				</p>
-				<p class="mt-0.5 text-ink-2">
-					{lastCommit.lines} lines ordered: {lastCommit.lines - lastCommit.awaiting} confirmed by the
-					simulated supplier, {lastCommit.awaiting} awaiting the supplier (Terminal: not counted as cover)
-				</p>
-				{#if lastCommit.replayed}
-					<p class="mt-1.5 font-medium text-accent-ink">
-						Same key, same receipt. No second order: {orders.length}
-						{orders.length === 1 ? 'order' : 'orders'} on this plan.
-					</p>
-				{/if}
-				<button
-					type="button"
-					class="mt-2 inline-flex h-8 items-center gap-1.5 rounded-md border border-accent/40 bg-sheet px-2.5 text-meta font-medium text-ink hover:bg-well"
-					disabled={busy}
-					onclick={onretry}
-				>
-					<RotateCcw size={13} aria-hidden="true" /> Send the same order again
-				</button>
-				<p class="mono mt-1 truncate text-micro text-ink-3" title={lastCommit.key}>
-					{lastCommit.orderId} · key {lastCommit.key}
-				</p>
+			<div class="mt-3">
+				<Receipt receipt={lastCommit} orders={orders.length} {busy} {onretry} />
 			</div>
 		{/if}
 	</div>
