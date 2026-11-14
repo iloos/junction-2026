@@ -63,8 +63,10 @@ export function usualFor(k: Kitchen, asOf: string, o: Omit<UsualOptions, 'asOf'>
 }
 
 export interface PricedUsualLine extends UsualLine {
-	/** Catalogue name (Finnish). */
+	/** Catalogue name (short normalised, else Finnish). */
 	name: string;
+	/** The catalogue's lot step in sales units (an edit keeps whole multiples of it). */
+	lotStep: number;
 	/** Price per sales unit ex VAT; null when the catalogue has no live price. */
 	unitCents: number | null;
 	lineCents: number | null;
@@ -120,13 +122,18 @@ export async function readUsualOrder(
 			])
 		: [new Map(), { offers: [], notFound: [] }];
 	const offer = new Map(offers.offers.map((x) => [x.productId, x]));
-	const name = (id: string) => products.get(id)?.nameFi ?? id;
+	// The catalogue's normalised short name where it has one ("Kevytmaito 1 l laktoositon"), else its Finnish name.
+	const name = (id: string) => {
+		const p = products.get(id);
+		return p ? (p.nameShort?.value ?? p.nameFi) : id;
+	};
 	const lines: PricedUsualLine[] = u.lines.map((l) => {
 		const off = offer.get(l.productId);
 		const unitCents = off?.price?.unitCents ?? null;
 		return {
 			...l,
 			name: name(l.productId),
+			lotStep: products.get(l.productId)?.lotStep ?? 1,
 			unitCents,
 			lineCents: unitCents === null ? null : Math.round(unitCents * l.qty),
 			availability: off?.availability.kind ?? null,

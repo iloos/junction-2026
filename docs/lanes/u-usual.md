@@ -27,12 +27,23 @@ Server (`$lib/server/patterns/usual`):
 - `usualSlice(kitchen, asOf)` — the get_context slice (product ids, qty, score, our sentences; no catalogue names or prices).
 - `kitchenHistory(kitchen, asOf)` — the raw simulated history (`SimulatedHistory {label, kitchenId, profile, from, to, lines}`).
 
+HTTP (`/kitchen-api/usual`, this browser's sandbox via `visitorWorkspace`):
+- `GET ?kitchen=<id>&date=<YYYY-MM-DD>&window=12w|3m|30d&every=<productId>:2w` → `UsualOrderView & {kitchenName, deliveryDays}`; `every` is a session-only override.
+- `GET ?q=<text>` → `{hits: {productId, name, unit, lotStep}[]}` (top-up search, food only).
+- `POST {kitchenId, deliveryDate, lines: {productId, qty, unit}[], nonce?}` → `{ok, planId, version, state, approvalId, summary}`; `place_order` as the chef (`kitchen-ui`) through `serveTool`. Errors come back as `{error: {code, message}}` with 400/404/409.
+
+Component `$lib/ui/UsualOrder.svelte` (self-contained; reads and plans through the route):
+- Props: `kitchenId: string`, `date?: string` (YYYY-MM-DD; default next receiving day), `endpoint?: string` (default `/kitchen-api/usual`), `onplanned?: ({planId, state, approvalId}) => void`.
+- Shows: title "Usual Thursday order · Thu 10 Dec", the history sentence, a "Simulated history" chip; lines with tick, name, editable qty (lot step), unit words, price, status icon + word, the seen-sentence and usual range; a per-line "Rhythm" select (session only); joined and dropped with Add / Add back; a top-up search; total and "Plan this order", then "Planned, waiting on your decisions: open it" linking `/?plan=<id>`.
+- Dev preview: `/dev/usual?kitchen=k-hotel&date=2026-12-10` (404 outside dev).
+
 UI rules: show "simulated history" wherever these appear; a usual order is a suggestion until the chef confirms it; render `sentence` (no ISO dates in it).
 
 ## Needs (lead)
 - **Shared file touched, additive:** `src/lib/core/contracts/tools.ts` — `get_context` output `kitchens[].usual` (optional) and one sentence in its description; `src/lib/server/agent/get-context.ts` fills it. Revert both if you'd rather keep get_context unchanged; nothing else depends on them.
-- No new tool and no route. If the UI wants HTTP, a `/kitchen-api/usual?kitchen=&date=` loader calling `readUsualOrder` is the smallest door; a `get_usual_order` read tool would need its own contract.
+- No new tool. The page's door is `/kitchen-api/usual` (below); a `get_usual_order` read tool for outside agents would need its own contract.
 - Period overrides have no storage yet: they are a function argument. Storing them belongs with the mandate/kitchen settings.
 
 ## Report
+- 14 Nov 18:20 · done: /kitchen-api/usual (read, search, plan as chef via serveTool), UsualOrder.svelte, dev preview, screenshots at 1440/390 for k-hotel Thu 10 Dec and k-lounas Wed 9 Dec (planned once end to end); a chef-set rhythm now keeps its product in the order · stubbed: overrides live in the component only · needs: mount in KitchenScreen (1f) · ready to merge: yes if gate GREEN
 - 14 Nov 17:30 · done: core detection + tests, seeded history for P1–P3, priced read path, get_context slice, plan via place_order · stubbed: overrides not persisted · needs: see above · ready to merge: yes if gate GREEN
