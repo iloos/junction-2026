@@ -12,13 +12,24 @@ import type {
 	Measure,
 	OpEnvelope,
 	Plan,
+	PlanOrigin,
 	PlanState,
 	SalesQty
 } from '../contracts';
 import { applyOps, emptyState, type WorkspaceState } from '../state';
 import { causeOf, type CauseBy } from './cause';
 
-export type Origin = 'chat' | 'request' | 'outside_agent' | 'event' | 'kitchen';
+export type Origin = 'chat' | 'request' | 'outside_agent' | 'event' | 'usual' | 'menu' | 'kitchen';
+
+/** The plan's server-set origin (Plan.origin) as an Origin. */
+const FROM_PLAN: Record<PlanOrigin, Origin> = {
+	event: 'event',
+	usual: 'usual',
+	request: 'request',
+	chat: 'chat',
+	agent: 'outside_agent',
+	menu: 'menu'
+};
 
 export interface StageChange {
 	seq: number;
@@ -135,6 +146,8 @@ function planIdOf(env: OpEnvelope): string | undefined {
 }
 
 function originOf(create: OpEnvelope, plan: Plan): Origin {
+	// The door recorded on the plan; older plans (before Plan.origin) are read from who made them and how.
+	if (plan.origin) return FROM_PLAN[plan.origin];
 	const door = create.via.split(':')[0];
 	if (plan.createdBy.kind === 'external_agent' || door === 'mcp' || door === 'rest')
 		return 'outside_agent';

@@ -103,6 +103,8 @@
 		request: 'Request',
 		outside_agent: 'Outside agent',
 		event: 'Event',
+		usual: 'Usual order',
+		menu: 'Menu',
 		kitchen: 'Kitchen'
 	} as const;
 	const CHIP = {
