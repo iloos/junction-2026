@@ -42,10 +42,12 @@ const BREAKS: Record<string, string[]> = {
 async function resolveIngredient(
 	catalog: Pick<Catalog, 'resolve' | 'get'>,
 	query: string,
-	flags: string[]
+	flags: string[],
+	/** VEGETARIAN / VEGAN when the dish is offered as one: no meat or fish product may be pinned. */
+	plant: string[] = []
 ): Promise<Resolution | null> {
 	if (!catalog.resolve) return null;
-	const r = await catalog.resolve(query, { limit: 3 });
+	const r = await catalog.resolve(query, { limit: 3, diet: plant });
 	if (r.status !== 'resolved' || !flags.length) return r;
 	const got = await catalog.get(r.candidates.map((c) => c.productId));
 	const breaks = (id: string) => {
@@ -58,7 +60,7 @@ async function resolveIngredient(
 	const safe = r.candidates.filter((c) => !breaks(c.productId));
 	if (safe.length === r.candidates.length) return r;
 	if (safe.length) return { ...r, candidates: safe };
-	return catalog.resolve(query, { limit: 3, diet: flags });
+	return catalog.resolve(query, { limit: 3, diet: [...flags, ...plant] });
 }
 
 /* ── Model output ─────────────────────────────────────────────────────────── */
@@ -374,6 +376,14 @@ export async function proposeMenu(d: ProposeDeps): Promise<Proposed> {
 		'd-'
 	);
 	const dishes: DishTemplate[] = [];
+	// A whole-menu vegetarian/vegan requirement, or a dish offered as one, keeps meat and fish out of its picks.
+	const plantFor = (claims: string[]) => [
+		...new Set(
+			[...d.brief.dietary.filter((x) => !x.includes(':')), ...claims]
+				.map(dietBase)
+				.flatMap((b) => (b === 'vegan' ? ['VEGAN'] : b === 'vegetarian' ? ['VEGETARIAN'] : []))
+		)
+	];
 	for (const [di, dish] of menu.dishes.entries()) {
 		const ingIds = idsFor(
 			dish.ingredients.map((i) => i.label),
@@ -387,7 +397,12 @@ export async function proposeMenu(d: ProposeDeps): Promise<Proposed> {
 				amountPerCover: i.amountPerCover,
 				unit: i.unit
 			};
-			const r = await resolveIngredient(d.catalog, i.query, flags);
+			const r = await resolveIngredient(
+				d.catalog,
+				i.query,
+				flags,
+				plantFor(dish.claimedCompatible)
+			);
 			if (r?.status === 'resolved' && r.candidates.length)
 				ingredients.push({
 					...base,

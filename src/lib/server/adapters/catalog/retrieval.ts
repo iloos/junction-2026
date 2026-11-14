@@ -190,7 +190,7 @@ function meetsDiet(p: RetrievalProduct, flag: string): boolean {
  * "luumu-vaniljakiisseli", "kylmäsavulohi tuorejuusto"). A resolve candidate with one the query does not name is out.
  */
 const OTHER_PRODUCT =
-	/(keitto|laatikko|piirakka|piiras|kastike|kastikkeessa|kiisseli|marmeladi|hillo|jogurtti|juusto|hummus|falafel|pihvi|kiusaus|pulla|pullat|sipsi|terriini|kierre|rieska|leipä|tortilla|panini|majoneesi|salaatti|ruutu|kuutio|sekoitus|seos|mix|pyree|sose|bowl|vuoka|pizza|lasagne|makkara|nakki|lenkki|pasteija|mureke|croquette|kroketti|lastu|muusi|ateria|annos|valmiste|leike|levite|smoothie|mehu|juoma|kakku|leivos|aine|pasta|sandwich|wrap|patonki|sämpylä|lettu|keksi|sipsit|puuro|rahka|mousse|vanukas)$/;
+	/(keitto|laatikko|piirakka|piiras|kastike|kastikkeessa|kiisseli|marmeladi|hillo|jogurtti|juusto|hummus|falafel|pihvi|kiusaus|pulla|pullat|sipsi|terriini|kierre|rieska|leipä|tortilla|panini|majoneesi|salaatti|ruutu|kuutio|sekoitus|seos|mix|pyree|sose|bowl|vuoka|pizza|lasagne|makkara|nakki|lenkki|pasteija|mureke|croquette|kroketti|lastu|muusi|ateria|annos|valmiste|leike|levite|smoothie|mehu|juoma|kakku|leivos|aine|tee|grilleri|pasta|sandwich|wrap|patonki|sämpylä|lettu|keksi|sipsit|puuro|rahka|mousse|vanukas)$/;
 
 /**
  * Every content word of the query is in the candidate: the same word, a compound with it as head or modifier
@@ -212,6 +212,28 @@ function present(q: string, words: string[]): boolean {
 	});
 }
 
+/**
+ * What kind of food a Valio category is, from its code: the catalogue's own hierarchy (187xx fresh fish and meat,
+ * 172xx cured meat, 417xx frozen, 226xx/221xx seasoning, sugar and baking). Used to keep a menu ingredient within
+ * its kind: whitefish is never a chicken fillet, vanilla never a sausage.
+ */
+export type FoodKind = 'fish' | 'poultry' | 'meat' | 'seasoning' | 'other';
+export function foodKind(category: string): FoodKind {
+	const c = Number(category);
+	if ((c >= 18701 && c <= 18708) || (c >= 41720 && c <= 41723)) return 'fish';
+	if (c === 18750 || c === 18751 || (c >= 41710 && c <= 41712)) return 'poultry';
+	if ((c >= 18710 && c <= 18761) || (c >= 17200 && c <= 17210) || (c >= 41701 && c <= 41705))
+		return 'meat';
+	// Sugar, salt, baking, spices and spice mixes; not sauces, mustards, pastes or purées (tomato is not a spice).
+	if ((c >= 22100 && c <= 22190) || [22600, 22601, 22630, 22640].includes(c)) return 'seasoning';
+	return 'other';
+}
+const ANIMAL = new Set<FoodKind>(['fish', 'poultry', 'meat']);
+/** Diet flags that are about the dish, not a free-from label: no meat or fish (and for vegan, no milk or egg). */
+const PLANT_FLAGS = new Set(['VEGETARIAN', 'VEGAN']);
+/** Below this retrieval score a resolve candidate is too weak to pin. */
+export const MIN_RESOLVE_SCORE = 0.4;
+
 interface Indexed {
 	p: RetrievalProduct;
 	words: string[];
@@ -220,6 +242,7 @@ interface Indexed {
 /** Lazily built word index over the catalogue (document frequency per word). */
 export class RetrievalIndex {
 	private items: Indexed[];
+	private byId = new Map<ProductId, Indexed>();
 	private df = new Map<string, number>();
 	constructor(products: Iterable<RetrievalProduct>) {
 		this.items = [];
@@ -227,6 +250,7 @@ export class RetrievalIndex {
 			if (!p.isFood || p.dataQualityFlags.includes('old_flagged_name')) continue;
 			const words = contentWords(`${p.nameFi} ${p.nameEn ?? ''}`, p.brand);
 			this.items.push({ p, words });
+			this.byId.set(p.productId, { p, words });
 			for (const w of words) this.df.set(w, (this.df.get(w) ?? 0) + 1);
 		}
 	}
@@ -271,13 +295,26 @@ export class RetrievalIndex {
 				reason: 'the query has no product words (only sizes, origins or brand words)',
 				nearest: []
 			};
-		const diet = new Set([...dietOf(t, true), ...(o.diet ?? [])]);
-		const hits = this.similar(t, new Set(), limit, { minLex: 0.5, diet, strict: true });
+		const all = new Set([...dietOf(t, true), ...(o.diet ?? [])]);
+		const plant = [...all].filter((f) => PLANT_FLAGS.has(f));
+		const diet = new Set([...all].filter((f) => !PLANT_FLAGS.has(f)));
+		const pool = this.similar(t, new Set(), 60, { minLex: 0.5, diet, strict: true });
+		const guarded = this.guard(query, pool, plant, [...diet]);
+		const hits = guarded.kept.slice(0, limit);
 		if (hits.length)
 			return {
 				status: 'resolved',
 				query,
 				candidates: hits.map((c) => ({ productId: c.productId, score: c.score ?? 0 }))
+			};
+		if (guarded.dropped.length)
+			return {
+				status: 'unresolved',
+				query,
+				reason: guarded.reason,
+				nearest: guarded.dropped
+					.slice(0, 3)
+					.map((c) => ({ productId: c.productId, failed: 'category' }))
 			};
 		if (diet.size) {
 			const any = this.similar(t, new Set(), 3, { minLex: 0.5, diet: new Set(), strict: true });
@@ -303,6 +340,72 @@ export class RetrievalIndex {
 				? `no product whose main ingredient is ${main.join(' ') || query}; the nearest are other products or share only part of the name`
 				: `no product name matches "${query}"`,
 			nearest: partial.map((c) => ({ productId: c.productId, failed: 'match' }))
+		};
+	}
+
+	/**
+	 * Category guards on resolve candidates, from Valio's category codes:
+	 * - the query's kind is what its own name matches mostly are (products whose name has the query word itself or as
+	 *   the compound head): a fish query keeps fish, a seasoning query keeps seasoning and baking categories;
+	 * - a vegetarian or vegan dish keeps no meat, poultry or fish (vegan: no declared milk or egg either);
+	 * - a candidate below MIN_RESOLVE_SCORE is not pinned.
+	 */
+	private guard(
+		query: string,
+		pool: Candidate[],
+		plant: string[],
+		asked: string[] = []
+	): { kept: Candidate[]; dropped: Candidate[]; reason: string } {
+		const named = contentWords(query).filter((w) => !DIET_KEYS.some((k) => k.word.test(w)));
+		const rows = pool.map((c) => ({ c, it: this.byId.get(c.productId)! })).filter((r) => r.it);
+		const headStrong = rows.filter((r) =>
+			named.every((q) => r.it.words.some((w) => w === q || (q.length >= 4 && w.endsWith(q))))
+		);
+		const base = headStrong.length ? headStrong : rows;
+		const count = new Map<FoodKind, number>();
+		for (const r of base) {
+			const k = foodKind(r.it.p.category);
+			count.set(k, (count.get(k) ?? 0) + 1);
+		}
+		let want: FoodKind | null = null;
+		for (const [k, n] of count) {
+			if (k === 'other') continue;
+			// Seasoning wins with a sixth of the matches (vanilla flavours far more yoghurts than it has pods); a protein
+			// needs a majority.
+			const share = n / Math.max(1, base.length);
+			if ((k === 'seasoning' && share >= 0.15) || (ANIMAL.has(k) && share > 0.5)) want = k;
+		}
+		const reasons: string[] = [];
+		const kept: Candidate[] = [];
+		const dropped: Candidate[] = [];
+		for (const r of rows) {
+			const k = foodKind(r.it.p.category);
+			let why: string | null = null;
+			if (want && k !== want)
+				why = `"${query}" is ${want}; this is ${k === 'other' ? 'another kind of product' : k}`;
+			else if (plant.length && ANIMAL.has(k))
+				why = `a ${plant.join('/').toLowerCase()} dish takes no ${k}`;
+			else if (
+				plant.includes('VEGAN') &&
+				r.it.p.allergens?.contains.some((a) => a === 'AM' || a === 'AE')
+			)
+				why = 'a vegan dish takes no milk or egg';
+			else if ((r.c.score ?? 0) < MIN_RESOLVE_SCORE) why = 'the name matches too weakly';
+			if (why) {
+				dropped.push(r.c);
+				if (!reasons.includes(why)) reasons.push(why);
+			} else kept.push(r.c);
+		}
+		// A free-from product nobody asked for (gluten-free bread for "leipä") goes after the plain ones.
+		const unasked = (c: Candidate) => {
+			const d = dietOf(this.byId.get(c.productId)!.p, false);
+			return DIET_KEYS.some((k) => d.has(k.flag) && !asked.includes(k.flag)) ? 1 : 0;
+		};
+		kept.sort((a, b) => unasked(a) - unasked(b));
+		return {
+			kept,
+			dropped,
+			reason: `no product whose main ingredient is ${named.join(' ') || query} fits: ${reasons.slice(0, 2).join('; ')}`
 		};
 	}
 
@@ -365,7 +468,7 @@ export class RetrievalIndex {
 					)
 				)
 					continue;
-				if ([...diet].some((f) => !meetsDiet(p, f))) continue;
+				if ([...diet].some((f) => !PLANT_FLAGS.has(f) && !meetsDiet(p, f))) continue;
 			} else if (diet.size > 0) {
 				const d = dietOf(p, false);
 				if ([...diet].some((f) => !d.has(f))) continue;
