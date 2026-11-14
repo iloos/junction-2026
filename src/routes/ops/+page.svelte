@@ -5,11 +5,11 @@
 	import type { Plan, PlanView } from '$lib/core/contracts';
 	import { scenarioClock } from '$lib/core/scenario';
 	import { OpsStream } from './stream.svelte';
-	import Ticket from './Ticket.svelte';
+	import CaseTicket from './CaseTicket.svelte';
 	import TraceDrawer from './TraceDrawer.svelte';
 	import Queue from './Queue.svelte';
-	import { buildCases, coverage } from './cases';
-	import { ACTOR, euro, lineIsHeld, opPlanId, opSummary, SIM_KIND } from './labels';
+	import { buildCases, coverage, openLines } from './cases';
+	import { ACTOR, euro, opPlanId, opSummary, SIM_KIND } from './labels';
 
 	let { data, form } = $props();
 
@@ -112,13 +112,18 @@
 	$effect(() => {
 		void stream.state;
 		void stream.heldSince;
+		void views;
 		queueDirty = true;
 		if (queueTimer) return;
 		const run = () => {
 			queueTimer = null;
 			if (!queueDirty) return;
 			queueDirty = false;
-			cases = buildCases(stream.state, data.names, stream.heldSince);
+			// Plans with their views, so an outage a rescue or commit has answered no longer shows as a case.
+			const plansWithViews = Object.fromEntries(
+				Object.entries(stream.state.plans).map(([id, p]) => [id, withView(p)])
+			);
+			cases = buildCases({ ...stream.state, plans: plansWithViews }, data.names, stream.heldSince);
 			queueTimer = setTimeout(run, QUEUE_MS);
 		};
 		run();
@@ -131,9 +136,7 @@
 	const columns = $derived(
 		data.kitchens.map((k) => {
 			const mine = plans.filter((p) => p.kitchenId === k.id);
-			const held = mine.flatMap((p) =>
-				p.lines.filter(lineIsHeld).map((line) => ({ line, plan: p }))
-			);
+			const held = mine.flatMap((p) => openLines(withView(p)).map((line) => ({ line, plan: p })));
 			const orders = Object.values(stream.state.orders).filter((o) => o.kitchenId === k.id);
 			const committed = orders.reduce((s, o) => s + o.totalCents, 0);
 			const anomalies = Object.values(stream.state.anomalies).filter((a) =>
@@ -152,6 +155,7 @@
 				anomalies,
 				pending,
 				external,
+				cases: cases.filter((c) => c.kitchenId === k.id),
 				cover: coverage(mine.map(withView))
 			};
 		})
@@ -382,7 +386,7 @@
 						: { ws: data.workspace, run: stream.state.runId || data.run }}
 				/>
 			{:else}
-				<section class="board" aria-label="Held lines by kitchen">
+				<section class="board" aria-label="Cases by kitchen">
 					{#each columns as c (c.kitchen.id)}
 						<div class="kitchen">
 							<header>
@@ -399,8 +403,8 @@
 							{/each}
 
 							<div class="tickets">
-								{#each c.held as h (`${h.line.id}:${h.line.state}:${h.line.tier}`)}
-									<Ticket line={h.line} names={data.names} fresh={freshPlan === h.plan.id} />
+								{#each c.cases as kc (kc.id)}
+									<CaseTicket c={kc} fresh={freshPlan === kc.planId} />
 								{:else}
 									<p class="clear">
 										{#if !c.plans.length}

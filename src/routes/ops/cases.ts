@@ -1,11 +1,12 @@
 /**
- * The Operations work queue: every thing a person or agent must act on, as one list
- * sorted by urgency. Pure: derived from the reduced WorkspaceState plus when each line was first held.
+ * The Operations work queue: every thing a person or agent must act on, one case per cause in a plan, sorted by
+ * urgency. Pure: derived from the reduced WorkspaceState (with plan views when /ops has them) plus when each line
+ * was first held.
  */
 import type { Line, Plan } from '$lib/core/contracts';
 import { SCENARIO } from '$lib/core/scenario';
 import type { WorkspaceState } from '$lib/core/state';
-import { lineIsHeld, productName, reasonText, type Names } from './labels';
+import { productName, reasonText, type Names } from './labels';
 
 export type Owner = 'Chef' | 'Approver' | 'Kitchen agent' | 'Operations';
 export type Tone = 'blocked' | 'sign_off' | 'propose' | 'act';
@@ -15,17 +16,20 @@ export interface Case {
 	kitchenId: string;
 	planId?: string;
 	version?: number;
+	/** The first line's need, for the kitchen deep link. */
 	needId?: string;
 	title: string;
 	detail?: string;
+	/** The lines this case stands for (one cause in one plan); empty for anomalies and refusals. */
+	lines: { id: string; name: string; detail: string }[];
 	causes: string[];
 	state: string;
 	owner: Owner;
 	next: string;
 	tone: Tone;
-	/** When it must be done by (ISO): the line's offer closing time, else the scenario cut-off. */
+	/** When it must be done by (ISO): the earliest offer closing time of its lines, else the scenario cut-off. */
 	deadline: string | null;
-	/** When it became a case (ISO, op time). */
+	/** When it became a case (ISO, op time): its longest-waiting line. */
 	since: string | null;
 }
 
@@ -37,47 +41,50 @@ const TONE_RANK: Record<Tone, number> = { blocked: 0, sign_off: 1, propose: 2, a
 /** Key for `heldSince`: one entry per plan line. */
 export const lineKey = (planId: string, lineId: string) => `${planId}:${lineId}`;
 
-function lineCase(
-	plan: Plan,
-	l: Line,
-	pendingLines: Set<string>,
-	names: Names,
-	since: string | null
-): Case {
-	const name = productName(names, l.productId);
-	const pending = pendingLines.has(lineKey(plan.id, l.id));
-	const hasSub = plan.lines.some((x) => x.substituteFor === l.productId);
-	const base = {
-		id: `line:${lineKey(plan.id, l.id)}`,
-		kitchenId: plan.kitchenId,
-		planId: plan.id,
-		version: plan.version,
-		needId: l.needId,
-		title: name,
-		detail: `${l.qty.value} ${l.qty.unit}${l.substituteFor ? `, replaces ${names[l.substituteFor] ?? l.substituteFor}` : ''}`,
-		causes: l.reasons.map(reasonText),
-		// Offers carry closing times re-dated onto the scenario clock; without an offer, the scenario cut-off.
-		deadline: l.offer?.availability.closingTime ?? SCENARIO.cutoff,
-		since
-	};
+const EPS = 1e-9;
+/** Lines that still stand for their need: an alternative in any of these states answers an outage. */
+const LIVE: ReadonlySet<Line['state']> = new Set(['proposed', 'eligible', 'held', 'committed']);
+
+/**
+ * Whether a line still needs someone. Held lines always do. A line that cannot be ordered stops being a case once
+ * its need is answered: the plan view says nothing is unresolved, or (without a view) another line for the same
+ * need is live (a rescue's substitute or make-in-house lines). A held alternative is its own case, so the outage
+ * is not counted twice.
+ */
+export function isOpen(plan: Plan, l: Line): boolean {
+	if (l.state === 'held') return true;
+	if (l.state !== 'unorderable') return false;
+	const f = plan.view?.fulfilment.find((x) => x.needId === l.needId);
+	if (f && f.unresolved.value <= EPS) return false;
+	return !plan.lines.some(
+		(x) =>
+			x.id !== l.id &&
+			LIVE.has(x.state) &&
+			(x.substituteFor === l.productId || (!!l.needId && x.needId === l.needId))
+	);
+}
+
+/** The lines of a plan that are cases now (see `isOpen`). */
+export const openLines = (plan: Plan) => plan.lines.filter((l) => isOpen(plan, l));
+
+type Shape = Pick<Case, 'state' | 'owner' | 'next' | 'tone'>;
+
+function shapeOf(l: Line, pending: boolean): Shape {
 	if (l.state === 'unorderable')
 		return {
-			...base,
-			state: hasSub ? 'Substitute proposed' : 'Cannot be ordered',
-			owner: hasSub ? 'Chef' : 'Kitchen agent',
-			next: hasSub ? 'Review the substitute' : 'Find a substitute or make in house',
+			state: 'Cannot be ordered',
+			owner: 'Kitchen agent',
+			next: 'Find a substitute or make in house',
 			tone: 'blocked'
 		};
 	if (l.tier === 'sign_off')
 		return {
-			...base,
 			state: pending ? 'Sign-off requested' : 'Held for sign-off',
 			owner: 'Approver',
 			next: 'Sign off or deny the exact lines',
 			tone: 'sign_off'
 		};
 	return {
-		...base,
 		state: pending ? 'Confirmation requested' : 'Held for the chef',
 		owner: 'Chef',
 		next: 'Confirm, edit or swap',
@@ -85,30 +92,69 @@ function lineCase(
 	};
 }
 
+const earliest = (a: string | null, b: string | null) =>
+	!a ? b : !b ? a : new Date(a).getTime() <= new Date(b).getTime() ? a : b;
+
 export function buildCases(
 	s: WorkspaceState,
 	names: Names,
 	heldSince: Record<string, string>
 ): Case[] {
-	const out: Case[] = [];
 	const pendingLines = new Set<string>();
 	for (const a of Object.values(s.approvals))
 		if (a.state === 'pending') for (const id of a.lineIds) pendingLines.add(lineKey(a.planId, id));
+
+	// One case per cause in a plan: the same state and the same reasons, however many lines share them.
+	const groups = new Map<string, Case>();
 	for (const plan of Object.values(s.plans))
-		for (const l of plan.lines)
-			if (lineIsHeld(l))
-				out.push(lineCase(plan, l, pendingLines, names, heldSince[lineKey(plan.id, l.id)] ?? null));
+		for (const l of openLines(plan)) {
+			const shape = shapeOf(l, pendingLines.has(lineKey(plan.id, l.id)));
+			const causes = l.reasons.map(reasonText);
+			const key = `${plan.id}|${shape.state}|${[...causes].sort().join(',')}`;
+			const name = productName(names, l.productId);
+			const replaces = l.substituteFor ? `, replaces ${productName(names, l.substituteFor)}` : '';
+			const detail = `${l.qty.value} ${l.qty.unit}${replaces}`;
+			const deadline = l.offer?.availability.closingTime ?? SCENARIO.cutoff;
+			const since = heldSince[lineKey(plan.id, l.id)] ?? null;
+			const c = groups.get(key);
+			if (c) {
+				c.lines.push({ id: l.id, name, detail });
+				c.deadline = earliest(c.deadline, deadline);
+				c.since = earliest(c.since, since);
+				continue;
+			}
+			groups.set(key, {
+				id: `group:${key}`,
+				kitchenId: plan.kitchenId,
+				planId: plan.id,
+				version: plan.version,
+				needId: l.needId,
+				title: name,
+				lines: [{ id: l.id, name, detail }],
+				causes,
+				...shape,
+				deadline,
+				since
+			});
+		}
+	const out: Case[] = [...groups.values()].map((c) => {
+		if (c.lines.length === 1) return { ...c, detail: c.lines[0].detail };
+		const names2 = c.lines.slice(0, 2).map((x) => x.name);
+		const more = c.lines.length > 2 ? ', …' : '';
+		return { ...c, title: `${c.lines.length} lines: ${names2.join(', ')}${more}` };
+	});
 
 	const linked = new Set(out.map((c) => c.planId));
 	for (const a of Object.values(s.anomalies)) {
 		const plan = a.planId ? s.plans[a.planId] : undefined;
-		if (plan && linked.has(plan.id)) continue; // already visible through its held lines
+		if (plan && linked.has(plan.id)) continue; // already visible through its open lines
 		out.push({
 			id: `anomaly:${a.id}`,
 			kitchenId: plan?.kitchenId ?? '',
 			planId: plan?.id,
 			version: plan?.version,
 			title: a.message,
+			lines: [],
 			causes: [a.kind.replaceAll('_', ' ')],
 			state: 'Detected',
 			owner: 'Operations',
@@ -119,15 +165,20 @@ export function buildCases(
 		});
 	}
 
-	for (const f of s.failedCommits) {
+	// One refusal case per plan (its latest), and none once the plan has committed.
+	const refused = new Map<string, WorkspaceState['failedCommits'][number]>();
+	for (const f of s.failedCommits)
+		if ((refused.get(f.planId)?.seq ?? -1) < f.seq) refused.set(f.planId, f);
+	for (const f of refused.values()) {
 		const plan = s.plans[f.planId];
 		if (!plan || plan.state === 'committed') continue;
 		out.push({
-			id: `refused:${f.planId}:${f.seq}`,
+			id: `refused:${f.planId}`,
 			kitchenId: plan.kitchenId,
 			planId: plan.id,
 			version: plan.version,
 			title: 'Commit refused',
+			lines: [],
 			causes: [reasonText(f.code)],
 			state: 'Refused',
 			owner: 'Kitchen agent',
@@ -152,7 +203,6 @@ export function buildCases(
  * Plans without a view (the simulated run) are not counted; null when no plan reports one.
  */
 export function coverage(plans: Plan[]): { covered: number; total: number } | null {
-	const EPS = 1e-9;
 	let covered = 0;
 	let total = 0;
 	for (const p of plans)

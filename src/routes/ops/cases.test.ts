@@ -17,11 +17,11 @@ describe('ops cases', () => {
 	it('lists blocked first, then sign-off, then chef, with owners and next steps', () => {
 		const cases = buildCases(stateAfter(19), SYNTH_PRODUCTS, {});
 		expect(cases.map((c) => [c.tone, c.owner])).toEqual([
-			['blocked', 'Chef'], // salmon: unorderable, trout substitute proposed
 			['blocked', 'Kitchen agent'], // the refused hotel commit
 			['sign_off', 'Approver'], // casserole
-			['propose', 'Chef'] // trout
+			['propose', 'Chef'] // trout, which replaces the salmon outage (no separate salmon case)
 		]);
+		expect(cases.find((c) => c.owner === 'Chef')?.detail).toMatch(/replaces/);
 		// The synthetic run has no offers, so every deadline falls back to the scenario cut-off.
 		expect(cases.every((c) => c.deadline === SCENARIO.cutoff)).toBe(true);
 	});
@@ -34,6 +34,70 @@ describe('ops cases', () => {
 		expect(kitchenHref(c!, { ws: 'ws-j-abcdefghijklmnop', run: 'run-x' })).toBe(
 			'/?ws=ws-j-abcdefghijklmnop&run=run-x&kitchen=k-hotel&plan=p-hotel&v=3'
 		);
+	});
+
+	it('closes an outage once its substitute is committed, and when the plan view says the need is met', () => {
+		const s = stateAfter(19);
+		const hotel = s.plans['p-hotel'];
+		const committed = {
+			...hotel,
+			lines: hotel.lines.map((l) => (l.substituteFor ? { ...l, state: 'committed' as const } : l))
+		};
+		const after = buildCases(
+			{ ...s, plans: { ...s.plans, 'p-hotel': committed } },
+			SYNTH_PRODUCTS,
+			{}
+		);
+		expect(after.some((c) => c.lines.some((l) => l.name.startsWith('Kirjolohi')))).toBe(false);
+		expect(after.some((c) => c.state === 'Cannot be ordered')).toBe(false);
+		// An outage with no alternative stays open until the view says its need has nothing unresolved.
+		const outage = { ...hotel.lines.find((l) => l.state === 'unorderable')!, needId: 'need-x' };
+		const bare = { ...hotel, lines: [outage] };
+		expect(buildCases({ ...s, plans: { 'p-hotel': bare } }, SYNTH_PRODUCTS, {})[0]?.state).toBe(
+			'Cannot be ordered'
+		);
+		const m = (value: number) => ({ value, unit: 'kg' as const });
+		const met = {
+			...bare,
+			view: {
+				asOf: '2026-12-07T21:40:00+02:00',
+				mandateVersion: 1,
+				fulfilment: [
+					{
+						needId: 'need-x',
+						label: 'x',
+						required: m(1),
+						supplierConfirmed: m(1),
+						awaitingSupplier: m(0),
+						plannedKnown: m(0),
+						plannedUnknown: m(0),
+						unresolved: m(0),
+						excess: m(0),
+						status: 'confirmed' as const,
+						allocations: []
+					}
+				]
+			}
+		};
+		const lines = buildCases({ ...s, plans: { 'p-hotel': met as never } }, SYNTH_PRODUCTS, {});
+		expect(lines.filter((c) => c.planId === 'p-hotel' && c.lines.length)).toEqual([]);
+	});
+
+	it('groups lines with the same cause in one plan into one case', () => {
+		const s = stateAfter(19);
+		const plan = Object.values(s.plans).find((p) => p.lines.some((l) => l.tier === 'sign_off'))!;
+		const one = plan.lines.find((l) => l.tier === 'sign_off' && l.state === 'held')!;
+		const twin = { ...one, id: `${one.id}-twin`, productId: `${one.productId}9` };
+		const grouped = { ...plan, lines: [...plan.lines, twin] };
+		const cases = buildCases(
+			{ ...s, plans: { ...s.plans, [plan.id]: grouped } },
+			SYNTH_PRODUCTS,
+			{}
+		);
+		const signOff = cases.filter((c) => c.tone === 'sign_off' && c.planId === plan.id);
+		expect(signOff).toHaveLength(1);
+		expect(signOff[0].lines).toHaveLength(2);
+		expect(signOff[0].title).toMatch(/^2 lines: /);
 	});
 
 	it('counts coverage from the plan view: unknown supply and unresolved need are not cover (D10)', () => {

@@ -1,40 +1,27 @@
 <script lang="ts">
-	import type { Line } from '$lib/core/contracts';
-	import { euro, productName, reasonText, TIER, type Names } from './labels';
+	import type { Case } from './cases';
 
-	let { line, names, fresh = false }: { line: Line; names: Names; fresh?: boolean } = $props();
-
-	const blocked = $derived(line.state === 'unorderable');
-	const tone = $derived(blocked ? 'blocked' : (line.tier ?? 'act'));
-	const tierWord = $derived(blocked ? 'Cannot order' : TIER[line.tier ?? 'act'].word);
+	/** One case on the wallboard: a cause in one plan, however many lines share it. */
+	let { c, fresh = false }: { c: Case; fresh?: boolean } = $props();
 </script>
 
-<article
-	class="ticket"
-	data-tone={tone}
-	class:fresh
-	aria-label="{tierWord}: {productName(names, line.productId)}"
->
+<article class="ticket" data-tone={c.tone} class:fresh aria-label="{c.state}: {c.title}">
 	<div class="edge" aria-hidden="true"></div>
 	<div class="body">
-		<h3>{productName(names, line.productId)}</h3>
-		<div class="figs">
-			<span class="pid">{line.productId}</span>
-			<span class="qty">{line.qty.value}&nbsp;<small>{line.qty.unit}</small></span>
-			<span class="money">{euro(line.lineCents)}</span>
-		</div>
-		{#if line.qty.rounding || line.substituteFor}
-			<div class="meta">
-				{#if line.qty.rounding}<span>{line.qty.rounding}</span>{/if}
-				{#if line.substituteFor}<span class="sub"
-						>replaces {names[line.substituteFor] ?? line.substituteFor}</span
-					>{/if}
-			</div>
+		<h3>{c.title}</h3>
+		{#if c.lines.length > 1}
+			<ul class="lines">
+				{#each c.lines.slice(0, 4) as l (l.id)}<li>{l.name} <small>{l.detail}</small></li>{/each}
+				{#if c.lines.length > 4}<li class="more">and {c.lines.length - 4} more</li>{/if}
+			</ul>
+		{:else if c.detail}
+			<p class="meta">{c.detail}</p>
 		{/if}
 		<div class="why">
-			<span class="tier"><i class="mark" aria-hidden="true"></i>{tierWord}</span>
-			{#each line.reasons as r (r)}<span class="reason">{reasonText(r)}</span>{/each}
+			<span class="tier"><i class="mark" aria-hidden="true"></i>{c.state}</span>
+			{#each c.causes as cause (cause)}<span class="reason">{cause}</span>{/each}
 		</div>
+		<p class="next">{c.owner}: {c.next}</p>
 	</div>
 </article>
 
@@ -77,41 +64,25 @@
 		-webkit-box-orient: vertical;
 		overflow: hidden;
 	}
-	.figs {
-		display: grid;
-		grid-template-columns: 1fr auto auto;
-		gap: 16px;
-		align-items: baseline;
-		margin-top: 4px;
-	}
-	.qty,
-	.money {
-		font-family: var(--mono);
-		font-size: 18px;
-		text-align: right;
-	}
-	.qty small {
-		color: var(--muted);
-		font-size: 15px;
-	}
-	.money {
-		color: var(--muted);
-		min-width: 6.5ch;
-	}
 	.meta {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 4px 14px;
-		margin-top: 2px;
+		margin: 2px 0 0;
 		color: var(--muted);
 		font-size: 16px;
 	}
-	.pid {
-		font-family: var(--mono);
-		color: var(--faint);
+	.lines {
+		margin: 6px 0 0;
+		padding: 0;
+		list-style: none;
+		font-size: 16px;
 	}
-	.sub {
-		color: var(--text);
+	.lines small,
+	.more {
+		color: var(--muted);
+	}
+	.next {
+		margin: 8px 0 0;
+		color: var(--muted);
+		font-size: 15px;
 	}
 	.why {
 		display: flex;
