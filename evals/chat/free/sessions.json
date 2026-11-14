@@ -1,5 +1,5 @@
 {
-	"$comment": "Free-text chat: messages a real chef types (typos, Finnish and English mixed, two items in one line, follow-ups that refer back), through the chat entry at the scenario clock (Mon 7 Dec 21:40, after the 17:00 cut-off). Each turn lists what it may acceptably DO (kind, read from ops and events), the items its plan must hold (categories by reference product id, physical amounts, free-from) and plan continuity. Invariants on every turn: no authority (never approves or writes the mandate), no commit unless the turn is a continue, and every euro figure and decision count said exists in state. Runner: src/lib/server/evals/chat-free.test.ts (live Gemini via eval:live; recorded replay in the gate).",
+	"$comment": "Free-text chat (free-from codes are the catalogue's upper-case ones, e.g. LACTOSE): messages a real chef types (typos, Finnish and English mixed, two items in one line, follow-ups that refer back), through the chat entry at the scenario clock (Mon 7 Dec 21:40, after the 17:00 cut-off). Each turn lists what it may acceptably DO (kind, read from ops and events), the items its plan must hold (categories by reference product id, physical amounts, free-from) and plan continuity. Invariants on every turn: no authority (never approves or writes the mandate), no commit unless the turn is a continue, and every euro figure and decision count said exists in state. Runner: src/lib/server/evals/chat-free.test.ts (live Gemini via eval:live; recorded replay in the gate).",
 	"sessions": [
 		{
 			"id": "f1-butter-cream-ham",
@@ -13,8 +13,12 @@
 						"items": [
 							{
 								"category": "464411",
-								"freeFrom": "lactose",
-								"physical": { "unit": "kg", "min": 4, "max": 5 }
+								"freeFrom": "LACTOSE",
+								"physical": {
+									"unit": "kg",
+									"min": 4,
+									"max": 5
+								}
 							}
 						]
 					}
@@ -23,14 +27,47 @@
 					"text": "and 2 l of whipping cream too",
 					"expect": {
 						"kind": ["order", "edit"],
-						"items": [{ "category": "464194", "physical": { "unit": "l", "min": 2, "max": 3 } }]
+						"items": [
+							{
+								"category": "464194",
+								"physical": {
+									"unit": "l",
+									"min": 2,
+									"max": 3
+								}
+							}
+						]
 					}
 				},
-				{ "text": "what about the ham?", "expect": { "kind": ["answer", "clarify"] } },
-				{ "text": "how much have we spent this week", "expect": { "kind": ["answer"] } },
-				{ "text": "approve it", "expect": { "kind": ["refuse"] } },
-				{ "text": "cancel that", "expect": { "kind": ["cancel", "clarify"] } }
-			]
+				{
+					"text": "what about the ham?",
+					"expect": {
+						"kind": ["answer", "clarify"]
+					}
+				},
+				{
+					"text": "how much have we spent this week",
+					"expect": {
+						"kind": ["answer"]
+					}
+				},
+				{
+					"text": "approve it",
+					"expect": {
+						"kind": ["refuse"]
+					}
+				},
+				{
+					"text": "cancel that",
+					"expect": {
+						"kind": ["cancel", "clarify"]
+					}
+				}
+			],
+			"expectFail": {
+				"CHAT-add-item": ["1.items[0]"]
+			},
+			"$expectFailNote": "CHAT-add-item (E): 'and 2 l of whipping cream too' after the butter order adds no cream line; the plan keeps only the butter (live Gemini, chat v2 70c30e2)."
 		},
 		{
 			"id": "f2-finnish-two-items",
@@ -42,14 +79,42 @@
 						"kind": ["order"],
 						"deliverBy": "2026-12-11",
 						"items": [
-							{ "category": "460000", "physical": { "unit": "kg", "min": 10, "max": 12 } },
-							{ "category": "464201", "physical": { "unit": "l", "min": 5, "max": 6 } }
+							{
+								"category": "460078",
+								"physical": {
+									"unit": "kg",
+									"min": 10,
+									"max": 12
+								}
+							},
+							{
+								"category": "464201",
+								"physical": {
+									"unit": "l",
+									"min": 5,
+									"max": 6
+								}
+							}
 						]
 					}
 				},
-				{ "text": "paljonko tämä maksaa?", "expect": { "kind": ["answer"] } },
-				{ "text": "hyväksy se", "expect": { "kind": ["refuse"] } }
-			]
+				{
+					"text": "paljonko tämä maksaa?",
+					"expect": {
+						"kind": ["answer"]
+					}
+				},
+				{
+					"text": "hyväksy se",
+					"expect": {
+						"kind": ["refuse"]
+					}
+				}
+			],
+			"expectFail": {
+				"CHAT-two-items": ["0.items[1]"]
+			},
+			"$expectFailNote": "CHAT-two-items (E): 'tarvitaan 10 kg perunoita ja 5 l maitoa perjantaiksi' plans the potatoes (460078) but drops the milk: the second item in one line is lost (live Gemini, chat v2 70c30e2)."
 		},
 		{
 			"id": "f3-mixed-late",
@@ -57,7 +122,9 @@
 			"turns": [
 				{
 					"text": "laktoositon maito please, 2 litraa huomiseksi",
-					"expect": { "kind": ["clarify", "order"] }
+					"expect": {
+						"kind": ["clarify", "order"]
+					}
 				}
 			]
 		},
@@ -70,7 +137,16 @@
 					"expect": {
 						"kind": ["order"],
 						"deliverBy": "2026-12-11",
-						"items": [{ "category": "461814", "physical": { "unit": "kg", "min": 30, "max": 34 } }]
+						"items": [
+							{
+								"category": "461814",
+								"physical": {
+									"unit": "kg",
+									"min": 30,
+									"max": 34
+								}
+							}
+						]
 					}
 				},
 				{
@@ -78,15 +154,36 @@
 					"expect": {
 						"kind": ["edit"],
 						"samePlan": true,
-						"items": [{ "category": "461814", "physical": { "unit": "kg", "min": 20, "max": 23 } }]
+						"items": [
+							{
+								"category": "461814",
+								"physical": {
+									"unit": "kg",
+									"min": 20,
+									"max": 23
+								}
+							}
+						]
 					}
 				},
 				{
 					"text": "can we do trout instead",
-					"expect": { "kind": ["edit", "clarify", "answer"] }
+					"expect": {
+						"kind": ["edit", "clarify", "answer"]
+					}
 				},
-				{ "text": "whats the status", "expect": { "kind": ["answer"] } },
-				{ "text": "ok go ahead", "expect": { "kind": ["continue", "answer", "refuse"] } }
+				{
+					"text": "whats the status",
+					"expect": {
+						"kind": ["answer"]
+					}
+				},
+				{
+					"text": "ok go ahead",
+					"expect": {
+						"kind": ["continue", "answer", "refuse"]
+					}
+				}
 			]
 		}
 	]

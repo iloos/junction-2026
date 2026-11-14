@@ -24,12 +24,11 @@ import {
 } from '../../../../evals/chat/free-check';
 import { applyExpectFail } from '../../../../evals/check';
 import type { CheckResult } from '../../../../evals/types';
-import { createLlm } from '../adapters/llm';
-import { llmPlanner } from '../agent/loop';
+import { createLlmRouter } from '../adapters/llm/router';
 import { trialWorkspace } from '../agent/trial-harness';
 import { runChatTurn } from '../chat/turn';
 import { physical, products } from './fidelity';
-import { replayLlm } from './replay-llm';
+import { replayBook } from './replay-llm';
 
 interface Session {
 	id: string;
@@ -51,7 +50,19 @@ const sessions = (
 
 const categoryOf = (id: string) => products.get(id)?.category;
 
-async function play(s: Session, llm: Llm): Promise<CheckResult[]> {
+type Models = { understand: Llm; explain: Llm; plan: Llm };
+
+/** The chat route's per-job models (D12), each through the one replay book: recorded live, replayed offline. */
+function models(): Models {
+	const book = replayBook(REPLAY);
+	const record = live && env.CHAT_RECORD === '1';
+	const router = live ? createLlmRouter(env as never) : null;
+	const job = (name: 'chat.understand' | 'explain' | 'agent.plan') =>
+		book.wrap(router?.for(name), record);
+	return { understand: job('chat.understand'), explain: job('explain'), plan: job('agent.plan') };
+}
+
+async function play(s: Session, m: Models): Promise<CheckResult[]> {
 	const w = await trialWorkspace();
 	const now = new Date(SCENARIO.start);
 	w.env.ports.clock = { now: () => now };
@@ -67,9 +78,9 @@ async function play(s: Session, llm: Llm): Promise<CheckResult[]> {
 		kitchen,
 		today: scenarioDate(now),
 		env,
-		planner: llmPlanner(llm),
-		// Chat v2 reads its understanding and answers through this port; v1 ignores it.
-		llm
+		// As the chat route wires it: the model reads, words and plans; the planner is the chat's own default.
+		llm: m.understand,
+		models: m
 	};
 	const results: CheckResult[] = [];
 	let taskId: string | undefined;
@@ -157,14 +168,7 @@ describe.skipIf(!live && !offline)('free-text chat', () => {
 	for (const s of sessions)
 		it(s.id, { timeout: 600_000 }, async () => {
 			for (let r = 0; r < REPEATS; r++) {
-				const llm = live
-					? replayLlm({
-							path: REPLAY,
-							inner: createLlm(env as never),
-							record: env.CHAT_RECORD === '1'
-						})
-					: replayLlm({ path: REPLAY });
-				const results = applyExpectFail(await play(s, llm), s.expectFail);
+				const results = applyExpectFail(await play(s, models()), s.expectFail);
 				const failed = results.filter((x) => !x.pass);
 				report.push({
 					session: s.id,

@@ -169,7 +169,7 @@ export function checkFreeTurn(
 		add(
 			`items[${i}]`,
 			ok,
-			`${match.length} lines${cat ? ` in ${cat}` : ''}${w.freeFrom ? ` ${w.freeFrom}-free` : ''}${w.physical ? ` ≈ ${amount?.toFixed(2)} ${w.physical.unit} (want ${w.physical.min}–${w.physical.max})` : ''}`
+			`${match.length} lines${cat ? ` in ${cat}` : ''}${w.freeFrom ? ` ${w.freeFrom}-free` : ''}${w.physical ? ` ≈ ${amount?.toFixed(2)} ${w.physical.unit} (want ${w.physical.min}–${w.physical.max})` : ''}${ok ? '' : `; plan has ${o.lines.map((l) => `${l.productId}:${l.category}:${l.state}`).join(', ') || 'no lines'}`}`
 		);
 	}
 	return out;
