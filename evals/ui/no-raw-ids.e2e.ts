@@ -106,7 +106,8 @@ async function ops(page: Page, w: number) {
 	await page.waitForLoadState('domcontentloaded');
 	await page.waitForTimeout(3000);
 	await sweep(page, `/ops ${w}`);
-	const row = page.locator('[role="table"] [role="row"], article.ticket').nth(1);
+	// Ops opens on Problems: a problem card shows its story beside it.
+	const row = page.locator('.card').first();
 	if (await row.count()) {
 		await row.click().catch(() => undefined);
 		await sweep(page, `/ops story ${w}`);
