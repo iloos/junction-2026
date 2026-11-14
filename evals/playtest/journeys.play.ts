@@ -65,7 +65,8 @@ async function say(r: Recorder, page: Page, text: string) {
 		.catch(() => undefined);
 	await page.waitForTimeout(1500);
 	const after = await dock.innerText();
-	const reply = after.startsWith(before) ? after.slice(before.length) : after;
+	const at = after.lastIndexOf(text);
+	const reply = at >= 0 ? after.slice(at + text.length) : after.slice(before.length);
 	r.j.chat.push({ said: text, reply: reply.trim().slice(0, 4000) });
 }
 
@@ -74,7 +75,9 @@ async function requestPage(page: Page, text: string) {
 	await page.locator('#req').fill(text);
 	await page.getByRole('button', { name: /Find and price/ }).click();
 	await page
-		.getByText(/Prepared by the kitchen agent|Nothing was ordered|Event brief|nothing quoted|Menu/)
+		.getByText(
+			/Prepared by the kitchen agent|Nothing was ordered|Event brief|nothing quoted|Menu|needs you|How much/
+		)
 		.first()
 		.waitFor({ timeout: 90_000 });
 	await page.waitForTimeout(1500);
@@ -120,7 +123,7 @@ journey('m1', 'A shortage hits and every kitchen re-plans', async (r, page) => {
 	if (!(await r.step('plan the hotel event', () => planEvent(page)))) return;
 	await r.step('a shortage hits (scenario shortage, else contention)', async () => {
 		let res = await page.request.post(`${BASE}/kitchen-api/scenario`, {
-			data: { action: 'shortage' }
+			data: { action: 'shortage', value: {} }
 		});
 		r.note('shortageAction', res.status());
 		if (!res.ok()) {
@@ -130,6 +133,8 @@ journey('m1', 'A shortage hits and every kitchen re-plans', async (r, page) => {
 			r.note('contentionAction', res.status());
 		}
 		if (!res.ok()) throw new Error(`scenario ${res.status()} ${(await res.text()).slice(0, 200)}`);
+		const body = (await res.json().catch(() => ({}))) as { shortage?: unknown };
+		if (body.shortage) r.note('shortage', body.shortage);
 		await page.waitForTimeout(4000);
 	});
 	await r.step('the kitchen shows what changed', async () => {
@@ -182,7 +187,7 @@ journey('m3', 'An outside agent overreaches and is stopped', async (r, page) => 
 					kitchenId: 'k-hotel',
 					deliverBy: '2026-12-11',
 					idempotencyKey: `playtest-${Date.now()}`,
-					lines: [{ productId: '464201', qty: 60, unit: 'ST' }]
+					lines: [{ productId: '464201', qty: 600, unit: 'ST' }] // ≈ €936: over the €800 line cap
 				}
 			});
 			const body = (await res.json()) as { plan?: { id: string; state: string }; meta?: unknown };
@@ -398,8 +403,18 @@ journey('j9', 'Public site: landing, how, proof, story', async (r, page) => {
 // ---------- D23 / D24 (lead, 14 Nov 23:00) ----------
 
 type SnapLine = { productId: string; qty?: number; unit?: string; state: string };
+/** The plan a door just made: the last plan link on its page (dock card or /request result), else the session's plan. */
 async function basket(page: Page) {
-	const snap = (await (await page.request.get(`${BASE}/kitchen-api/snapshot`)).json()) as {
+	const href = await page
+		.locator('a[href*="plan="]')
+		.last()
+		.getAttribute('href', { timeout: 5_000 })
+		.catch(() => null);
+	const planId = href ? new URL(href, BASE).searchParams.get('plan') : null;
+	const url = planId
+		? `${BASE}/kitchen-api/snapshot?plan=${encodeURIComponent(planId)}&peek=1`
+		: `${BASE}/kitchen-api/snapshot`;
+	const snap = (await (await page.request.get(url)).json()) as {
 		plan?: { id?: string; lines?: SnapLine[] };
 	};
 	return {
@@ -425,9 +440,15 @@ journey(
 		const other = await page.context().browser()!.newContext({ viewport: page.viewportSize()! });
 		const p2 = await other.newPage();
 		try {
-			await r.step('/request: the same ask (fresh visitor)', () => requestPage(p2, SAME_ASK), {
-				beat: false
-			});
+			await r.step(
+				'/request: the same ask (fresh visitor)',
+				async () => {
+					await home(p2);
+					await requestPage(p2, SAME_ASK);
+					await p2.screenshot({ path: `${r.dir}/request-door-result.png`, fullPage: true });
+				},
+				{ beat: false }
+			);
 			await r.step('/request: the basket on the Kitchen', async () => {
 				r.note('requestBasket', await basket(p2));
 				await home(p2);
