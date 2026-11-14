@@ -356,6 +356,25 @@ export async function commitOrder(
 				q.ops
 			);
 		}
+		// Same terms, but a line the agent could commit alone is now held (e.g. this week's spend moved since the
+		// quote): record the new tiers, open the approval, and say why, so the plan never shows it as committable.
+		const tiered = new Map(t.lines.map((l) => [l.id, l]));
+		const demoted = plan.lines.filter(
+			(l) => l.state === 'eligible' && tiered.get(l.id)?.state === 'held'
+		);
+		if (demoted.length) {
+			const q = await quoteOps(ctx, ports, plan, kitchen, t, offers);
+			const cap = tiered.get(demoted[0].id)!.reasons.find((r) => r.startsWith('CAP_EXCEEDED'));
+			return fail(
+				cap
+					? err('CAP_EXCEEDED', `${cap}: needs a human since the quote`, { sub: cap.split('.')[1] })
+							.error
+					: err('FORBIDDEN', 'held since the quote: needs a granted approval', {
+							sub: 'approval_required'
+						}).error,
+				q.ops
+			);
+		}
 
 		// Which lines, under which authority.
 		const approval = currentApproval(state, plan.id);
