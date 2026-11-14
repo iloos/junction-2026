@@ -1,7 +1,10 @@
 import type { Llm } from '$lib/core/ports';
 import type { Env } from '$lib/server/auth';
 import { createLlm, GEMINI_LLM_MODEL, geminiKey, geminiLlm, type ThinkingLevel } from './index';
-import { noTrace, type Trace } from './trace';
+import { capFromEnv, scopedCap } from '../../external/ledger';
+import { createExternalCall } from '../../external/call';
+import { currentScope } from '../../external/scope';
+import { logTrace, noTrace, type Trace } from './trace';
 
 /**
  * One routing table for every model job: which provider and model a job uses and its token ceiling. Every
@@ -64,13 +67,34 @@ export interface LlmRouter {
 	for(job: LlmJob): Llm;
 }
 
+/**
+ * Daily model calls (all text jobs together) per visitor workspace and per instance (UTC day). Over a cap the call is
+ * refused with a rate-limit error before anything is sent; every caller already falls back on a failed call (parse to
+ * the rules, the planner to its stop).
+ */
+export const DEFAULT_LLM_LIMITS = { perKey: 200, global: 3000 };
+
+/**
+ * Every job's calls go through the shared outside-call helper: one ExternalCallTrace each (job, model, tokens,
+ * latency) into the caller's trace drawer, a breaker, and the daily caps. The trace goes to `trace` when given, else to
+ * the caller's scope (a tool call's workspace). Fixture calls are traced as `fixture` and charge nothing.
+ */
 export function createLlmRouter(
 	env: Env,
-	trace: Trace = noTrace,
-	routes: Record<LlmJob, LlmRoute> = LLM_ROUTES
+	trace?: Trace,
+	routes: Record<LlmJob, LlmRoute> = LLM_ROUTES,
+	/** Test hook: the provider client for a live route (default: the Gemini or OpenAI-compatible adapter). */
+	client?: (route: LlmRoute) => Llm
 ): LlmRouter {
 	const fixture = (env.LLM_PROVIDER ?? 'fixture') === 'fixture';
 	const cache = new Map<LlmJob, Llm>();
+	const guard = scopedCap({
+		name: 'gemini-text',
+		limits: {
+			perKey: capFromEnv(env.LLM_CAP_PER_WORKSPACE, DEFAULT_LLM_LIMITS.perKey),
+			global: capFromEnv(env.LLM_CAP_GLOBAL, DEFAULT_LLM_LIMITS.global)
+		}
+	});
 	return {
 		for(job) {
 			const hit = cache.get(job);
@@ -81,15 +105,66 @@ export function createLlmRouter(
 				: route.provider === 'env'
 					? env.LLM_PROVIDER
 					: route.provider;
-			const jobTrace: Trace = (step, data) => trace(step, { ...data, job });
+			const jobTrace: Trace = (step, data) =>
+				(trace ?? currentScope()?.trace ?? noTrace)(step, { ...data, job });
 			const gk = geminiKey(env);
+			const live =
+				provider === 'gemini' && gk ? 'gemini' : provider === 'featherless' ? 'featherless' : null;
 			const base =
-				provider === 'gemini' && gk
-					? geminiLlm(gk, jobTrace, route.model ?? GEMINI_LLM_MODEL, route.thinking ?? 'minimal')
-					: createLlm({ ...env, LLM_PROVIDER: provider }, jobTrace);
+				live && client
+					? client(route)
+					: live === 'gemini'
+						? geminiLlm(gk!, noTrace, route.model ?? GEMINI_LLM_MODEL, route.thinking ?? 'minimal')
+						: createLlm({ ...env, LLM_PROVIDER: provider }, noTrace);
+			const call = live
+				? createExternalCall({
+						api: live,
+						name: live === 'gemini' ? 'gemini-text' : 'featherless-text',
+						step: 'text',
+						cache: false,
+						trace: jobTrace,
+						guard
+					})
+				: null;
 			const llm: Llm = {
-				generate: (req) =>
-					base.generate({ ...req, maxTokens: Math.min(req.maxTokens, route.maxTokens) })
+				async generate(req) {
+					const r = { ...req, maxTokens: Math.min(req.maxTokens, route.maxTokens) };
+					if (!call) {
+						const res = await base.generate(r);
+						// The ExternalCallTrace shape, with source 'fixture' so nothing reads it as a model answer.
+						const data = {
+							api: 'other',
+							purpose: job,
+							cache: 'fixture',
+							ok: true,
+							latencyMs: res.latencyMs,
+							model: res.model,
+							workspaceId: currentScope()?.workspaceId,
+							maxTokens: r.maxTokens,
+							source: 'fixture'
+						};
+						jobTrace('text', data);
+						logTrace(data);
+						return res;
+					}
+					const out = await call(
+						{
+							key: job,
+							purpose: job,
+							detail: { maxTokens: r.maxTokens, thinking: route.thinking }
+						},
+						async () => {
+							const res = await base.generate(r);
+							return {
+								value: res,
+								model: res.model,
+								costUnits: res.tokens.in + res.tokens.out,
+								detail: { tokensIn: res.tokens.in, tokensOut: res.tokens.out }
+							};
+						}
+					);
+					return out.value;
+				}
 			};
 			cache.set(job, llm);
 			return llm;
