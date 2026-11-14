@@ -771,7 +771,15 @@ journey(
 						`${name}: orders`,
 						async () => {
 							await say(r, p, '10 l milk for friday');
-							// Approve on the page (the dock closed so the Decide rail shows), then order.
+							// Open the dock's plan on the page, approve there (the dock closed), then order.
+							const open = p
+								.getByRole('link', { name: /Open this plan in the Kitchen/ })
+								.or(p.getByRole('button', { name: /Open this plan in the Kitchen/ }))
+								.last();
+							if (await open.isVisible().catch(() => false)) {
+								await open.click();
+								await p.waitForLoadState('networkidle').catch(() => {});
+							}
 							const close = p.getByRole('button', { name: 'Close chat' });
 							if (await close.isVisible().catch(() => false)) await close.click();
 							await approveAll(p).catch(() => 0);
@@ -784,6 +792,14 @@ journey(
 					// The big screen within a second of this store's order: a "First order" badge and the room line.
 					await ops.waitForTimeout(800);
 					await ops.screenshot({ path: `${r.dir}/ops-after-store-${i + 1}.png` });
+					if (
+						await ops
+							.getByText(/First order|placed its first order/)
+							.first()
+							.isVisible()
+							.catch(() => false)
+					)
+						r.note(`lit${i + 1}`, true);
 				})
 			);
 		} finally {
@@ -797,11 +813,8 @@ journey(
 			if (seen.length < 3) throw new Error(`Ops names ${seen.length}/3 stores: ${seen.join(', ')}`);
 		});
 		await r.step('Ops lit up a first order', async () => {
-			const lit = await ops
-				.getByText(/First order|placed its first order/)
-				.first()
-				.isVisible()
-				.catch(() => false);
+			// Checked right after each store's order (the badge fades after 8 s).
+			const lit = [1, 2, 3].some((n) => r.j.notes[`lit${n}`] === true);
 			r.note('firstOrderLightUp', lit);
 			if (!lit)
 				throw new Error(
