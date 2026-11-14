@@ -55,10 +55,7 @@ export const load: PageServerLoad = async (event) => {
 		prompts: MCP_PROMPTS,
 		kitchenUrl: `${origin}/`,
 		instructions: mcpInstructions(tools.map((t) => t.name)),
-		tools,
-		withheld: (Object.keys(toolSchemas) as (keyof typeof toolSchemas)[])
-			.filter((n) => !tools.some((t) => t.name === n))
-			.map((n) => ({ name: n, scope: toolSchemas[n].scope }))
+		tools
 	};
 };
 
