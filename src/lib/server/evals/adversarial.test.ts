@@ -51,7 +51,6 @@ const OPEN: Record<string, string> = {
 	'R7-04': '8d',
 	'R7-05': '8d',
 	'R7-11': '8d',
-	'R8-grant': 'lead',
 	'R8-task-intent': 'E',
 	'R8-task-write': 'E',
 	'R8-web-write': 'D',

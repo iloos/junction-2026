@@ -81,6 +81,53 @@ async function withViews(ports: ServicePorts, ctx: CallContext, value: unknown):
 	};
 }
 
+/** Kitchen, plan and approval ids an input names, at the top level or one object deep (e.g. `plan: {planId}`). */
+function refsOf(input: unknown): {
+	kitchenIds: string[];
+	planIds: string[];
+	approvalIds: string[];
+} {
+	const r = { kitchenIds: [] as string[], planIds: [] as string[], approvalIds: [] as string[] };
+	const take = (o: Record<string, unknown>) => {
+		if (typeof o.kitchenId === 'string') r.kitchenIds.push(o.kitchenId);
+		if (typeof o.planId === 'string') r.planIds.push(o.planId);
+		if (typeof o.approvalId === 'string') r.approvalIds.push(o.approvalId);
+	};
+	if (input && typeof input === 'object') {
+		take(input as Record<string, unknown>);
+		for (const v of Object.values(input))
+			if (v && typeof v === 'object' && !Array.isArray(v)) take(v as Record<string, unknown>);
+	}
+	return r;
+}
+
+/**
+ * A context granted some kitchens (`ctx.kitchenIds`) acts for those only: any kitchen the input names, directly or
+ * through a plan or approval, must be granted. Checked before the tool runs, so nothing is read or written for
+ * another kitchen.
+ */
+async function outsideGrant(ports: ServicePorts, ctx: CallContext, input: unknown) {
+	const granted = ctx.kitchenIds;
+	if (!granted) return null;
+	const refs = refsOf(input);
+	const kitchens = [...refs.kitchenIds];
+	if (refs.planIds.length || refs.approvalIds.length) {
+		const state = await ports.store.load(ctx.workspaceId, ctx.runId);
+		for (const id of refs.approvalIds) {
+			const planId = state.approvals[id]?.planId;
+			if (planId) refs.planIds.push(planId);
+		}
+		for (const id of refs.planIds) {
+			const k = state.plans[id]?.kitchenId;
+			if (k) kitchens.push(k);
+		}
+	}
+	const outside = kitchens.find((k) => !granted.includes(k));
+	return outside
+		? err('FORBIDDEN', `this context does not act for kitchen ${outside}`, { sub: 'kitchen' })
+		: null;
+}
+
 export function createHandlers(ports: ServicePorts): ToolHandlers {
 	const out = {} as Record<
 		ToolName,
@@ -99,6 +146,8 @@ export function createHandlers(ports: ServicePorts): ToolHandlers {
 			const parsed = schema.input.safeParse(input);
 			if (!parsed.success) return invalid(parsed.error.issues);
 			try {
+				const denied = await outsideGrant(ports, ctx, parsed.data);
+				if (denied) return denied;
 				const r = await impl(ports, ctx, parsed.data as ToolInput<ToolName>);
 				return r.ok ? ok(await withViews(ports, ctx, r.value)) : r;
 			} catch (e) {
