@@ -48,6 +48,14 @@ export const Product = z.object({
 	netPerSalesUnit: Derived(
 		z.object({ value: z.number().positive(), unit: MeasureUnit })
 	).optional(),
+	/**
+	 * Content volume per sales unit, beside a net weight in kg: together they are this product's own density, the
+	 * only basis for turning kg into litres or back. Only from Valio's `volume` in LTR/MLT/CLT, and only when
+	 * weight ÷ volume is a plausible 0.3–2 kg/l (the field often holds grams or pieces instead). Absent: ask.
+	 */
+	netVolumePerSalesUnit: Derived(
+		z.object({ value: z.number().positive(), unit: z.literal('l') })
+	).optional(),
 	co2PerKg: Derived(z.number().nonnegative()).optional(),
 	/** 0–1 from Valio's reliability file; absent = unknown, never invented. */
 	reliability: z.number().min(0).max(1).optional(),
