@@ -216,11 +216,16 @@ async function lookupItems(
 			hits.push(...r.products);
 		}
 		const { ranked, rejected } = filterHits(item, hits);
-		const pin = d.answers?.find((a) => a.item === item.id)?.productId ?? null;
+		const pinned = d.answers?.find((a) => a.item === item.id);
+		const pin = pinned?.productId ?? null;
 		// The chosen product leads the shortlist, with the chef named as the reason.
 		const at = pin ? ranked.findIndex((r) => r.product.productId === pin) : -1;
 		if (at > 0) ranked.unshift(...ranked.splice(at, 1));
-		if (at >= 0) ranked[0] = { ...ranked[0], reasons: ['you chose this', ...ranked[0].reasons] };
+		if (at >= 0)
+			ranked[0] = {
+				...ranked[0],
+				reasons: [pinned?.why ?? 'you chose this', ...ranked[0].reasons]
+			};
 		prepared.push({ item, searches, ranked, rejected, pin });
 	}
 

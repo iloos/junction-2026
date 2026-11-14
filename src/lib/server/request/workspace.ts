@@ -10,6 +10,8 @@ export interface RequestAnswer {
 	qty?: number;
 	unit?: ReqUnit;
 	productId?: string;
+	/** Why the product is pinned, when the server pinned it (a dish line); never read from a request body. */
+	why?: string;
 }
 
 const UNITS = new Set(['l', 'kg', 'pcs', 'case', 'sales']);

@@ -666,7 +666,11 @@ export function dishItems(
 			variant: null,
 			ambiguities: []
 		});
-		answers.push({ item: id, productId: l.product.productId });
+		answers.push({
+			item: id,
+			productId: l.product.productId,
+			why: `the dish's ${kind === 'raw' ? 'from-raw' : 'ready-made'} pick, the cheapest that fits`
+		});
 	}
 	return { items, answers, left };
 }
