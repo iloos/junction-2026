@@ -26,6 +26,8 @@ import type {
 	RequestResult
 } from '$lib/ui/request/types';
 import { scenarioDate } from '$lib/core/scenario';
+import { inWorkspace } from '$lib/server/adapters/simulator/overlay';
+import { ensureRunLoaded } from '$lib/server/demo/reset';
 import { approvalView, callTool, runRequest } from './run';
 import type { ParsedRequest } from './parse';
 
@@ -54,13 +56,22 @@ export async function ports() {
 	return createServerPorts();
 }
 
-/** The scenario clock's instant (ISO), for comparing cut-offs on the page. */
-export async function simNow(): Promise<string> {
-	return (await ports()).ports.clock.now().toISOString();
+/**
+ * Run with the workspace's own scenario clock: the shared ports read the clock of the call's workspace scope, and
+ * a workspace whose run this process hasn't loaded would tick from process start instead of its run's start.
+ */
+export async function inScope<T>(workspaceId: string, fn: () => Promise<T>): Promise<T> {
+	await ensureRunLoaded(workspaceId);
+	return inWorkspace(workspaceId, fn);
 }
 
-export async function simToday(): Promise<string> {
-	return scenarioDate((await ports()).ports.clock.now());
+/** The scenario clock's instant (ISO) in a workspace, for comparing cut-offs on the page. */
+export async function simNow(workspaceId: string): Promise<string> {
+	return inScope(workspaceId, async () => (await ports()).ports.clock.now().toISOString());
+}
+
+export async function simToday(workspaceId: string): Promise<string> {
+	return inScope(workspaceId, async () => scenarioDate((await ports()).ports.clock.now()));
 }
 
 export async function kitchens(ctx: CallContext): Promise<Kitchen[]> {
@@ -74,7 +85,13 @@ export function llmKind(env: Env): ParsedRequest['parser']['kind'] {
 	return 'fixture';
 }
 
-export async function submitRequest(o: {
+/** A request runs in its caller's workspace: its clock, run and plans, never another room's. */
+export async function submitRequest(o: SubmitOptions): Promise<RequestResult> {
+	const ctx = o.ctx ?? (await actors(o.env, o.workspaceId ?? JUDGES_WORKSPACE)).agent;
+	return inScope(ctx.workspaceId, () => submitInScope({ ...o, ctx }));
+}
+
+type SubmitOptions = {
 	text: string;
 	kitchenId?: string;
 	nonce?: string;
@@ -89,7 +106,9 @@ export async function submitRequest(o: {
 	workspaceId?: string;
 	ctx?: CallContext;
 	onEvent?: (e: RequestEvent) => void;
-}): Promise<RequestResult> {
+};
+
+async function submitInScope(o: SubmitOptions): Promise<RequestResult> {
 	const ctx = o.ctx ?? (await actors(o.env, o.workspaceId ?? JUDGES_WORKSPACE)).agent;
 	const all = await kitchens(ctx);
 	const kitchen = all.find((k) => k.id === (o.kitchenId || DEFAULT_KITCHEN));
@@ -115,7 +134,7 @@ export async function submitRequest(o: {
 	return runRequest(o.text, {
 		handlers,
 		ctx,
-		today: await simToday(),
+		today: await simToday(ctx.workspaceId),
 		kitchen,
 		llm,
 		llmKind: kind,

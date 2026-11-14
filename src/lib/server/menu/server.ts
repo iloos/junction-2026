@@ -46,7 +46,7 @@ export async function proposeFromRequest(o: {
 	briefAnswers: BriefAnswer[];
 	nonce?: string;
 }): Promise<Result<MenuView>> {
-	const today = await simToday();
+	const today = await simToday(o.workspaceId);
 	const brief = toEventBrief(
 		applyBriefAnswers(draftBrief(o.text, today), o.briefAnswers, today),
 		o.text

@@ -1,7 +1,7 @@
 import { json } from '@sveltejs/kit';
 import { dev } from '$app/environment';
 import { env } from '$env/dynamic/private';
-import { readBriefAnswers } from '$lib/server/request';
+import { inScope, readBriefAnswers } from '$lib/server/request';
 import {
 	acceptMenuAsChef,
 	editMenu,
@@ -25,7 +25,8 @@ export const POST: RequestHandler = async (event) => {
 	const { workspaceId } = await visitorWorkspace(event, env, dev);
 	const ref = { workspaceId, id: str('id'), revision: int('revision') };
 
-	const r =
+	// Every step runs on this workspace's own run and clock.
+	const r = await inScope(workspaceId, async () =>
 		body.action === 'propose'
 			? await proposeFromRequest({
 					env,
@@ -43,7 +44,8 @@ export const POST: RequestHandler = async (event) => {
 						? await acceptMenuAsChef({ env, ...ref })
 						: body.action === 'plan'
 							? await planMenuAsChef({ env, ...ref })
-							: null;
+							: null
+	);
 	if (!r)
 		return json({ error: { code: 'INVALID_INPUT', message: 'unknown action' } }, { status: 400 });
 	return r.ok ? json(r.value) : json({ error: r.error }, { status: 422 });

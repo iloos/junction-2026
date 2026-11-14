@@ -9,8 +9,8 @@ export const load: PageServerLoad = async (event) => {
 	const ctx = (await actors(env, v.workspaceId)).agent;
 	const list = await kitchens(ctx);
 	return {
-		today: await simToday(),
-		now: await simNow(),
+		today: await simToday(v.workspaceId),
+		now: await simNow(v.workspaceId),
 		parser: llmKind(env),
 		workspace: {
 			id: v.workspaceId,
