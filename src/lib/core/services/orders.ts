@@ -10,7 +10,6 @@ import {
 	type Approval,
 	type DomainError,
 	type Kitchen,
-	type Line,
 	type Offer,
 	type Order,
 	type PendingOp,
