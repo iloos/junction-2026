@@ -16,6 +16,7 @@
 	import GramsStepper from '$lib/ui/GramsStepper.svelte';
 	import WhyDrawer from '$lib/ui/WhyDrawer.svelte';
 	import DishStatus from '$lib/ui/DishStatus.svelte';
+	import { planDiff } from '$lib/ui/plan-diff';
 	import { dishGate } from '$lib/ui/coverage';
 	import { whyChain } from '$lib/ui/why-chain';
 	import { day, fixed, money, moneyDelta, num, storyTime } from '$lib/ui/format';
@@ -124,6 +125,16 @@
 	}
 
 	const snap = $derived(k.snap);
+	/** The latest change to this plan, before → after, from the two snapshots (not from copy). */
+	const changed = $derived(
+		k.changeFrom && k.snap
+			? planDiff(
+					{ plan: k.changeFrom.plan, approval: k.changeFrom.approval },
+					{ plan: k.snap.plan, approval: k.snap.approval }
+				)
+			: null
+	);
+	const amt = (v: number) => fixed(v, v < 10 ? 2 : 1);
 	/** The booking's menu by dish name (a dish with two needs, rice and milk, is one dish). */
 	const preMenu = [...new Set(SEED.dishes.map((d) => d.dish.split(' (')[0]))];
 	/** The booking's products Valio could not supply at the last catalogue check (seed), for the pre-plan card. */
@@ -683,6 +694,53 @@
 						Change grams per guest and the order recomputes: need, lots, price, mandate.
 					</p>
 				</div>
+				{#if changed}
+					<section
+						class="mt-2 rounded-lg border border-accent/40 bg-accent-wash/50 px-4 py-2.5"
+						aria-label="What changed"
+					>
+						<div class="flex items-baseline justify-between gap-3">
+							<p class="text-body font-semibold text-ink">
+								What changed
+								<span class="mono text-meta font-normal text-ink-3"
+									>v{changed.from} → v{changed.to}</span
+								>
+							</p>
+							<button
+								type="button"
+								class="text-meta text-ink-2 underline underline-offset-2 hover:text-ink"
+								onclick={() => (k.changeFrom = null)}>Dismiss</button
+							>
+						</div>
+						<ul class="mt-1 space-y-0.5 text-meta text-ink-2">
+							{#each changed.needs as n (n.label)}
+								<li>
+									<span class="text-ink">{n.label.split(' (')[0]}</span> needs
+									<span class="mono">{amt(n.before)} → {amt(n.after)} {n.unit}</span>
+								</li>
+							{/each}
+							{#each changed.lines.slice(0, 4) as l (l.lineId)}
+								<li>
+									<span class="text-ink">{l.name}</span>
+									{#if l.before === null}<span
+											>added, <span class="mono">{num(l.after!)} {l.unit}</span></span
+										>{:else if l.after === null}<span>dropped</span
+										>{:else if l.before === l.after}<span
+											>stays <span class="mono">{num(l.after)} {l.unit}</span></span
+										>{:else}<span class="mono">{num(l.before)} → {num(l.after)} {l.unit}</span>{/if}
+								</li>
+							{/each}
+							{#if changed.lines.length > 4}<li>and {changed.lines.length - 4} more lines</li>{/if}
+							<li>
+								Plan <span class="mono"
+									>{money(changed.cents.before)} → {money(changed.cents.after)}</span
+								>
+								· decisions
+								<span class="mono">{changed.decisions.before} → {changed.decisions.after}</span>
+							</li>
+						</ul>
+					</section>
+				{/if}
 				<div class="mt-2 overflow-hidden rounded-lg border border-rule bg-sheet">
 					<div
 						class="hidden grid-cols-[minmax(150px,0.7fr)_minmax(210px,0.9fr)_minmax(0,3fr)] gap-x-4 border-b border-rule bg-well px-4 py-2 text-micro font-medium text-ink-3 lg:grid"
