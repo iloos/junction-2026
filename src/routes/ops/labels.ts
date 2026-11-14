@@ -16,6 +16,8 @@ const REASON: Record<string, string> = {
 	substitute_breaks_preference: 'Substitute breaks a preference',
 	origin_required: 'Origin rule not met',
 	off_tender_list: 'Not on the tender list',
+	over_hard_limit: 'Over the hard limit',
+	qty_implausible: 'Check the quantity',
 	allergen_unknown: 'Allergens not declared',
 	allergen_change: 'Allergen change',
 	low_reliability: 'Unreliable delivery record',

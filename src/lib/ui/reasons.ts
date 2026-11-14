@@ -70,6 +70,14 @@ const TEXT: Record<string, { short: string; long: string }> = {
 	},
 	BELOW_LOT: { short: 'Below lot', long: "Below Valio's minimum lot: cannot be ordered." },
 	price_missing: { short: 'No price', long: 'Valio returned no price for this product.' },
+	over_hard_limit: {
+		short: 'Over the hard limit',
+		long: "Above the mandate's hard limit: no approval can pass it. Raise the mandate first."
+	},
+	qty_implausible: {
+		short: 'Check the quantity',
+		long: 'Far more than this dish or any kitchen order needs: check the quantity before anyone approves it.'
+	},
 	partial: {
 		short: 'Partial cover',
 		long: 'Covers only part of the need; the rest is stated as a shortfall.'

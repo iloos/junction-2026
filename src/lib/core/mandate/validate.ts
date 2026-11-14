@@ -6,7 +6,7 @@
  *  - `waive`: a human may accept it (unknown Terminal quantity, tender list, a preference); held for approval.
  * Unknown never counts as fine: a missing allergen record or origin is treated by the kitchen's stated policy.
  */
-import type { Kitchen, LineReason, Offer, Product, SalesQty, Tier } from '../contracts';
+import type { Kitchen, LineReason, Mandate, Offer, Product, SalesQty, Tier } from '../contracts';
 import { inCategoryGroup } from './categories';
 
 export type Effect = 'forbid' | 'gap' | 'waive';
@@ -21,6 +21,25 @@ export interface Finding {
 export interface ValidateOptions {
 	/** The line replaces another product: origin preferences then apply (a preference broken needs sign-off). */
 	substitute?: boolean;
+	/** What the dish needs, in the line's sales unit, when the line serves a dish. */
+	expectedQty?: number;
+}
+
+/** The mandate's ceiling: above it nothing is orderable, whoever approves. */
+export function hardLimitCents(m: Mandate): number {
+	return m.hardLimitCents ?? Math.max(5 * m.orderCapCents, 2 * m.weeklyCapCents);
+}
+
+/** More than this many of the dish need is a typo, not an order. */
+export const QTY_NEED_FACTOR = 20;
+/** Without a dish need: more than this many of the product's largest pack is beyond any kitchen order. */
+export const QTY_MAX_LARGEST_PACKS = 500;
+
+function implausible(p: Product, qty: SalesQty, expected: number | undefined): boolean {
+	if (expected !== undefined && expected > 0) return qty.value > QTY_NEED_FACTOR * expected;
+	const per = p.packs.find((x) => x.unit === qty.unit)?.baseUnits ?? 1;
+	const largest = Math.max(1, ...p.packs.map((x) => x.baseUnits));
+	return qty.value * per > QTY_MAX_LARGEST_PACKS * largest;
 }
 
 const EPS = 1e-9;
@@ -56,6 +75,9 @@ export function validateLine(
 				: { reason: 'INSUFFICIENT_STOCK', effect: 'gap' }
 		);
 	if (o && !o.price) out.push({ reason: 'price_missing', effect: 'gap' });
+	if (o?.price && Math.round(qty.value * o.price.unitCents) > hardLimitCents(k.mandate))
+		out.push({ reason: 'over_hard_limit', effect: 'forbid' });
+	if (implausible(p, qty, opts.expectedQty)) out.push({ reason: 'qty_implausible', effect: 'gap' });
 
 	// Purchasable quantity: Valio sells in its sales unit, in whole lots.
 	if (qty.unit !== p.salesUnit) out.push({ reason: 'unit_mismatch', effect: 'forbid' });

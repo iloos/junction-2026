@@ -139,6 +139,8 @@ describe('size check before placing', () => {
 			confirmLarge: true
 		});
 		expect(placed.order?.plan.lines[0].qty.value).toBe(1_000_000);
-		expect(placed.order?.plan.lines[0].tier).toBe('sign_off');
+		// Confirming the size places it, but €1.56M is over the mandate's hard limit: no approval can pass it.
+		expect(placed.order?.plan.lines[0]).toMatchObject({ state: 'unorderable' });
+		expect(placed.order?.plan.lines[0].reasons).toContain('over_hard_limit');
 	}, 60_000);
 });
