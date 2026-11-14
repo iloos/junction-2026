@@ -3,7 +3,8 @@
  * pick the first deliverable, priced, convertible candidate. Ranking is deterministic and explained;
  * constraints the chef stated are hard filters, defaults ("semi-skimmed") are preferences and say so.
  */
-import type { Offer, Product } from '$lib/core/contracts';
+import type { NeedRequirements, Offer, Product } from '$lib/core/contracts';
+import { meets } from '$lib/core/mandate/meets';
 import { toLot } from '$lib/core/services/orders';
 import { convert, type Conversion } from './convert';
 import { PRODUCTS } from './lexicon';
@@ -48,22 +49,31 @@ const tokens = (name: string) =>
 		.split(/[^\p{L}\d]+/u)
 		.filter(Boolean);
 
-function constraintFails(item: ParsedItem, p: Product): string | null {
-	const t = tokens(p.nameFi);
-	for (const c of item.constraints) {
-		if (c === 'lactose_free' && !(p.freeFrom.includes('LACTOSE') || t.includes('laktoositon')))
-			return 'not lactose-free';
-		if (
-			c === 'organic' &&
-			!(p.labels.includes('EU_ORGANIC_FARMING') || t.some((w) => w.startsWith('luomu')))
-		)
-			return 'not organic';
-		if (c === 'finnish' && p.origin !== 'fi')
-			return `origin ${p.origin?.toUpperCase() ?? 'unknown'}, not Finnish`;
-		if (c === 'gluten_free' && !(p.freeFrom.includes('GLUTEN') || t.includes('gluteeniton')))
-			return 'not gluten-free';
-	}
-	return null;
+/**
+ * The item's stated requirements (lactose-free, organic, Finnish, gluten-free) judged by core's one evaluator (D16).
+ * Unknown is not ok: a product with no record either way is passed over with the reason.
+ */
+function requirementFails(item: ParsedItem, p: Product): string | null {
+	const req = requirementsOf(item.constraints);
+	if (!req) return null;
+	const m = meets(p, req);
+	if (m.verdict === 'ok') return null;
+	const f = m.failing[0];
+	return m.verdict === 'no' ? `not ${f.text}: ${f.why}` : `${f.text} not stated: ${f.why}`;
+}
+
+/** The request's stated constraints as D16 requirements. */
+export function requirementsOf(constraints: readonly string[]): NeedRequirements | undefined {
+	const freeFrom = [
+		...(constraints.includes('lactose_free') ? ['LACTOSE'] : []),
+		...(constraints.includes('gluten_free') ? ['GLUTEN'] : [])
+	];
+	const r: NeedRequirements = {
+		...(freeFrom.length ? { freeFrom } : {}),
+		...(constraints.includes('finnish') ? { origin: 'fi' } : {}),
+		...(constraints.includes('organic') ? { labels: ['EU_ORGANIC_FARMING'] } : {})
+	};
+	return Object.keys(r).length ? r : undefined;
 }
 
 /**
@@ -105,7 +115,7 @@ export function filterHits(
 			reject(`${p.brand ? `brand ${p.brand}` : 'no brand stated'}, you asked for ${item.brand}`);
 			continue;
 		}
-		const fail = constraintFails(item, p);
+		const fail = requirementFails(item, p);
 		if (fail) {
 			reject(fail);
 			continue;

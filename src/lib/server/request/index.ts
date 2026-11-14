@@ -34,7 +34,7 @@ import type { RankBy } from './rank-by';
 
 export { ToolFailed } from './run';
 import { ToolFailed } from './run';
-import { canonicalJson, sha256Hex } from '$lib/core/hash';
+import { commandKey } from '$lib/core/command';
 export { readBriefAnswers } from '$lib/server/menu/brief';
 export { readAnswers } from './workspace';
 
@@ -203,20 +203,16 @@ export function committableLines(
 }
 
 /**
- * The one command identity for a commit from Request: plan, version, accepted terms and the exact lines. A transport
- * retry (same lines) is the same key and replays the receipt; a remainder approved later is a new command. Swapped
- * for core's commandKey (D18) when it lands, here only.
+ * A commit from Request under core's one command identity (D18): plan, version, accepted terms and the exact lines.
+ * A transport retry (same lines) replays the receipt; a remainder approved later is a new command.
  */
-export async function commitKey(
+export function commitKey(
 	planId: string,
 	version: number,
 	termsHash: string | null,
 	lineIds: readonly string[]
 ): Promise<string> {
-	const h = await sha256Hex(
-		canonicalJson({ planId, version, termsHash, lineIds: [...lineIds].sort() })
-	);
-	return `rq-commit-${h.slice(0, 24)}`;
+	return commandKey({ planId, version, termsHash, lineIds });
 }
 
 export async function commitRequest(o: {

@@ -6,6 +6,7 @@
 import type {
 	Kitchen,
 	Measure,
+	NeedAsk,
 	NeedRequirements,
 	Offer,
 	Product,
@@ -48,6 +49,7 @@ import {
 	closesWords,
 	cutoffPassed,
 	filterHits,
+	requirementsOf,
 	SHORTLIST,
 	unpickable,
 	type Ranked
@@ -570,25 +572,13 @@ export function applyAnswers(parsed: ParsedRequest, answers: RequestAnswer[]): P
 	return { ...parsed, items, answered: answers };
 }
 
+export { requirementsOf };
+
 /**
  * One place_order line. A physical amount the chef typed ("2 l", "4 kg") travels as `amount`, so the plan holds a
  * direct need and a substitute is sized to it, as when the agent orders; the quantity is the server's own sizing of
  * that amount. Cases, packs and pieces the catalogue can't size go as the sales quantity alone.
  */
-/** The request's stated constraints as the need's hard requirements: core keeps them through substitutes and edits. */
-export function requirementsOf(constraints: readonly string[]): NeedRequirements | undefined {
-	const freeFrom = [
-		...(constraints.includes('lactose_free') ? ['LACTOSE'] : []),
-		...(constraints.includes('gluten_free') ? ['GLUTEN'] : [])
-	];
-	const r: NeedRequirements = {
-		...(freeFrom.length ? { freeFrom } : {}),
-		...(constraints.includes('finnish') ? { origin: 'fi' } : {}),
-		...(constraints.includes('organic') ? { labels: ['EU_ORGANIC_FARMING'] } : {})
-	};
-	return Object.keys(r).length ? r : undefined;
-}
-
 export function orderLine(
 	i: LookupItemView,
 	product: Product
@@ -598,6 +588,7 @@ export function orderLine(
 	unit: string;
 	amount?: Measure;
 	requirements?: NeedRequirements;
+	ask?: NeedAsk;
 } {
 	const base = {
 		productId: i.pick!.productId,
@@ -617,16 +608,30 @@ export function orderLine(
 					? { value: i.pick!.amount.value, unit: i.pick!.amount.unit }
 					: null;
 	const sized = amount ? sizeDirect(product, amount) : null;
+	// D18: the ask as stated travels on every line; without a physical size the line makes a sales-kind need that
+	// still carries the ask and the requirements.
+	const ask: NeedAsk | undefined =
+		qty === null || unit === null ? undefined : { words: i.item.text, qty, unit: ASK_UNIT[unit] };
 	return amount && sized
 		? {
 				...base,
 				qty: sized.value,
 				unit: sized.unit,
 				amount,
-				...(requirements ? { requirements } : {})
+				...(requirements ? { requirements } : {}),
+				...(ask ? { ask } : {})
 			}
-		: base;
+		: { ...base, ...(requirements ? { requirements } : {}), ...(ask ? { ask } : {}) };
 }
+
+/** The request's units in the ask's words: packs and an unstated unit are the product's own sales units. */
+const ASK_UNIT: Record<string, NeedAsk['unit']> = {
+	kg: 'kg',
+	l: 'l',
+	pcs: 'pcs',
+	case: 'case',
+	sales: 'pack'
+};
 
 /** The chef's chosen delivery date over the words' one, said in the request's notes; a past or bad date is ignored. */
 export function withDate(
