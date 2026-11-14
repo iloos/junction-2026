@@ -4,6 +4,8 @@
  * Σ wⱼ·utilityⱼ over price, carbon, Finnish origin, reliability and organic (weights normalised; utilities on fixed
  * 0–1 scales; a missing value scores 0, never favourably) + w_fit·fit/4 when a recipe-fit score exists.
  * Ties break on productId. Unknown supply is not excluded here: the mandate holds it (UNKNOWN_REQUIRED).
+ * D8: ranking is lexicographic on supply first. Confirmed supply (Valio states availability) ranks above unknown
+ * supply whatever the score, so a candidate that covers nothing confirmed is never recommended over one that does.
  */
 import type { Kitchen, LineReason, Offer, Product, ScoreBreakdown } from '../contracts';
 import { blocking, validateLine } from '../mandate/validate';
@@ -26,10 +28,20 @@ export interface Ranked {
 	fromValioRule: boolean;
 	rank: number | null;
 	score?: ScoreBreakdown;
+	/** D8 supply tier: Valio confirms availability, or it does not (Terminal, no stock figure). */
+	supply?: Supply;
 	rejectedReasons: LineReason[];
 }
 
 const RELIABILITY_FLOOR = 0.7;
+
+export type Supply = 'confirmed' | 'unknown';
+
+/** D8: what Valio says about supply. Unknown never counts as cover, so it never outranks confirmed. */
+export function supplyOf(o: Offer | null | undefined): Supply {
+	return o?.availability.kind === 'known' ? 'confirmed' : 'unknown';
+}
+const SUPPLY_ORDER: Record<Supply, number> = { confirmed: 0, unknown: 1 };
 
 /** Hard constraints: availability, lot/quantity, tender list. Every failing reason is collected. */
 /**
@@ -119,10 +131,13 @@ export function rankCandidates(input: RankInput): Ranked[] {
 					}
 				: {})
 		};
-		return { x, score };
+		return { x, score, supply: supplyOf(x.o) };
 	});
 	scored.sort(
-		(a, b) => b.score.total - a.score.total || (a.x.c.productId < b.x.c.productId ? -1 : 1)
+		(a, b) =>
+			SUPPLY_ORDER[a.supply] - SUPPLY_ORDER[b.supply] ||
+			b.score.total - a.score.total ||
+			(a.x.c.productId < b.x.c.productId ? -1 : 1)
 	);
 
 	const ranked: Ranked[] = scored.map((s, i) => ({
@@ -130,6 +145,7 @@ export function rankCandidates(input: RankInput): Ranked[] {
 		fromValioRule: s.x.c.fromValioRule,
 		rank: i + 1,
 		score: s.score,
+		supply: s.supply,
 		rejectedReasons: []
 	}));
 	for (const x of checked)

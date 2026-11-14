@@ -50,22 +50,26 @@ async function rescueHam(decide?: Decide) {
 }
 
 describe('recipe fit in the substitute ranking', () => {
-	it('asks Decide about the top survivors and lets dish fit change the recommendation', async () => {
+	it('asks Decide about the top survivors; fit reorders within a supply tier, never above it (D8)', async () => {
 		const asked: string[] = [];
 		const r = await rescueHam(stubDecide(asked));
 		expect(asked.length).toBeGreaterThan(0);
 		expect(asked.length).toBeLessThanOrEqual(3);
+		// Palvikinkku 476768 is in Stock; the juhlakinkku 462919 that fits the dish better is Terminal, unknown supply.
 		const top = r.candidates.find((c) => c.rank === 1)!;
-		expect(top.productId).toBe('462919'); // the real juhlakinkku wins on fit over cheaper smoked ham
+		expect(top.productId).toBe('476768');
 		expect(top.score?.fit).toMatchObject({
-			score: 4,
+			score: 1,
 			provenance: {
 				source: 'llm',
 				ref: 'gemini-decision-1',
 				note: expect.stringContaining('210 ms')
 			}
 		});
-		expect(r.chosen.map((l) => l.productId)).toEqual(['462919']);
+		const juhla = r.candidates.find((c) => c.productId === '462919')!;
+		expect(juhla.score?.fit?.score).toBe(4);
+		expect(juhla.rank).toBeGreaterThan(1);
+		expect(r.chosen.map((l) => l.productId)).toEqual(['476768']);
 	});
 
 	it('falls back to the deterministic ranking when Decide fails', async () => {

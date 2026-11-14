@@ -30,7 +30,7 @@ import {
 	type SeedDish
 } from '../demand';
 import { draftFromLine, recalledProducts, type DraftLine } from '../mandate/tier';
-import { rankCandidates } from '../rank/rank';
+import { rankCandidates, supplyOf } from '../rank/rank';
 import type { CallContext } from '../ports';
 import { prefetch, requote, type ServicePorts } from './events';
 
@@ -146,9 +146,13 @@ export async function findSubstitutes(
 	for (const id of seedIds) add(seedEntryFor(seed, need?.label ?? '', line.productId, id));
 
 	const ids = [...pool.keys()];
+	// The seed's make-in-house recipe, and its ingredients' offers: D8 prefers it to a product of unknown supply.
+	const recipe =
+		rescue?.chosen?.kind === 'make_in_house' && need?.amount.unit === 'kg' ? rescue.chosen : null;
+	const recipeIds: string[] = ((recipe?.ingredients ?? []) as Loose[]).map((g) => g.productId);
 	const [products, { offers }] = await Promise.all([
 		ports.catalog.get(ids),
-		ports.catalog.offers(ids, plan0.deliverBy)
+		ports.catalog.offers([...new Set([...ids, ...recipeIds])], plan0.deliverBy)
 	]);
 	const sized = new Map<string, Line['qty']>();
 	const unsized: string[] = [];
@@ -233,8 +237,23 @@ export async function findSubstitutes(
 		}))
 	];
 
-	// The recommendation under these rules.
-	const best = ranked.filter((r) => r.rank !== null).sort((a, b) => a.rank! - b.rank!)[0];
+	// The recommendation under these rules. D8: a product whose supply Valio does not confirm loses to the seed's
+	// recipe when every ingredient's supply is confirmed for the amount it needs; it stays listed, ranked and labelled.
+	const top = ranked.filter((r) => r.rank !== null).sort((a, b) => a.rank! - b.rank!)[0];
+	const recipeConfirmed =
+		recipe !== null &&
+		recipeIds.length > 0 &&
+		((recipe.ingredients ?? []) as Loose[]).every((g) => {
+			const o = offers.find((x) => x.productId === g.productId);
+			const a = o?.availability;
+			const qty = makeInHouseQty(g, need!.amount.value).value;
+			return (
+				supplyOf(o) === 'confirmed' &&
+				!recalled.has(g.productId) &&
+				(a?.amount == null || a.amount >= qty)
+			);
+		});
+	const best = top && (top.supply === 'confirmed' || !recipeConfirmed) ? top : undefined;
 	let kind: 'product' | 'make_in_house' | 'none' = 'product';
 	let labourNote: string | undefined;
 	let drafts: DraftLine[] = [];
@@ -252,7 +271,7 @@ export async function findSubstitutes(
 				}
 			}
 		];
-	else if (rescue?.chosen?.kind === 'make_in_house' && need?.amount.unit === 'kg') {
+	else if (recipe && need) {
 		kind = 'make_in_house';
 		labourNote = rescue.chosen.recipe?.labour;
 		const extra: LineReason[] = ['allergen_change'];
