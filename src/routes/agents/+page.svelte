@@ -235,6 +235,49 @@
 			Not in your list: {data.withheld.map((w) => `${w.name} (${w.scope})`).join(', ')}. Those are
 			the chef’s.
 		</p>
+		{#if data.tools.some((t) => (t.name as string) === 'read_image')}
+			<p class="mt-2 text-sm text-ink-2" data-testid="read-image-note">
+				<code class="font-mono">read_image</code> takes a picture (a delivery note, a handwritten
+				list, a shelf) as a base64 string in the call’s arguments:
+				<code class="font-mono">{'{ imageBase64, mimeType: jpeg | png | webp, purpose? }'}</code>,
+				up to 4 MB. The type is checked from the bytes, the picture is never stored, and the reading
+				(lines with amounts and product hints, and a confidence) never orders anything.
+			</p>
+		{/if}
+	</section>
+
+	<section class="mb-8" aria-labelledby="extras">
+		<h2 id="extras" class="font-semibold">Resources and prompts</h2>
+		<p class="mt-1 text-sm text-ink-2">
+			Besides the tools, the server offers read-only resources and three starting prompts, scoped to
+			your key. None of them can approve.
+		</p>
+		<ul class="mt-2 divide-y divide-rule rounded-lg border border-rule bg-sheet">
+			{#each data.resources as r (r.uri)}
+				<li class="px-4 py-3">
+					<div class="flex flex-wrap items-baseline gap-x-2">
+						<code class="font-mono text-sm font-semibold">{r.uri}</code>
+						<span class="text-sm text-ink-3">resource · {r.title}</span>
+					</div>
+					<p class="mt-0.5 text-sm text-ink-2">{r.description}</p>
+				</li>
+			{/each}
+			{#each data.prompts as p (p.name)}
+				<li class="px-4 py-3">
+					<div class="flex flex-wrap items-baseline gap-x-2">
+						<span class="text-sm font-semibold">{p.title}</span>
+						<span class="text-sm text-ink-3">prompt</span>
+					</div>
+					<p class="mt-0.5 text-sm text-ink-2">{p.description}</p>
+				</li>
+			{/each}
+		</ul>
+		<p class="mt-2 text-sm text-ink-2">
+			Agent card (what this door offers, its scopes and limits, in one file):
+			<a class="text-accent-ink underline" href={resolve('/.well-known/agent.json')}
+				>{data.agentCardUrl}</a
+			>.
+		</p>
 	</section>
 
 	<section class="mb-8" aria-labelledby="transcript">

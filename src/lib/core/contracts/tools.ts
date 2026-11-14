@@ -114,6 +114,8 @@ export const toolSchemas = {
 					id: KitchenId,
 					name: z.string(),
 					events: z.array(z.object({ id: z.string(), title: z.string() })),
+					/** Weekdays the kitchen receives deliveries (mon…sun); order for one of these. */
+					deliveryDays: z.array(z.string()).optional(),
 					/**
 					 * The rules the tools enforce for this kitchen, so a caller can plan inside them instead of finding
 					 * out from held lines. Read-only: only a chef changes them.

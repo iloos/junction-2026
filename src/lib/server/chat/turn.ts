@@ -20,6 +20,9 @@ import { UNITS } from '$lib/server/request/lexicon';
 import { parseRules } from '$lib/server/request/parse';
 import { dayWords, ledgerSummary, readTask } from '$lib/server/tasks/outcome';
 import { explain } from './explain';
+import { answerInChat } from './question';
+import { outsideOptions, outsideSteps } from './outside';
+import { readQuestion } from '$lib/server/agent/intents/questions';
 import { understand } from './understand';
 import { applyBriefAnswers, draftBrief, nextQuestion, toEventBrief } from '$lib/server/menu/brief';
 import type { BriefAnswer, BriefField } from '$lib/ui/request/types';
@@ -275,7 +278,7 @@ export async function* runChatTurn(
 		text,
 		canContinue: false
 	});
-	// The answer to "What would you like to do?": a question reads, the other two say what to type.
+	// The answer to "What would you like to do?": a question reads, the others say what to type.
 	if (input.answer?.field === 'intent') {
 		const v = String(input.answer.value);
 		if (v === 'check')
@@ -288,7 +291,9 @@ export async function* runChatTurn(
 				text:
 					v === 'event'
 						? 'Describe the event: guests, the day and anything to avoid, for example "Dinner for 40 on Saturday, 4 courses, vegetarian:6".'
-						: 'Tell me what and how much, for example "4 kg lactose-free butter for Friday".',
+						: v === 'product'
+							? 'Ask about one product, for example "Is the Valio whipping cream recalled?", "Where is the butter from?" or "What is my cap?".'
+							: 'Tell me what and how much, for example "4 kg lactose-free butter for Friday".',
 				canContinue: false
 			};
 			return;
@@ -471,7 +476,21 @@ export async function* runChatTurn(
 				(understood.source === 'gemini' ? `via Gemini · ${understood.ms} ms` : 'read by rules') +
 				(understood.guard ? ` · ${understood.guard}` : '')
 		};
-	// Words that ask for nothing we can do ("??"): one short question with three answers, never a plan dump.
+	// A question about the mandate or one product ("what's my cap?", "is the cream recalled?") is answered read-only
+	// (chat/question.ts), ahead of the plan read and the "what would you like to do?" chips. Nothing is saved.
+	const question =
+		words && !answering && !input.answer && !resize && !addition
+			? readQuestion(withoutKitchen(words))
+			: null;
+	if (question) {
+		yield* answerInChat(question, deps, {
+			taskId: expected !== null ? task.id : '',
+			state: expected !== null ? task.state : 'open',
+			kitchenId: task.kitchenId
+		});
+		return;
+	}
+	// Words that ask for nothing we can do ("??"): one short question with four answers, never a plan dump.
 	if (
 		words &&
 		!answering &&
@@ -486,7 +505,8 @@ export async function* runChatTurn(
 			options: [
 				{ label: 'Order something', value: 'order' },
 				{ label: 'Plan an event', value: 'event' },
-				{ label: "Check what's open", value: 'check' }
+				{ label: "Check what's open", value: 'check' },
+				{ label: 'Ask about a product', value: 'product' }
 			]
 		};
 		yield {
@@ -715,6 +735,12 @@ export async function* runChatTurn(
 	}
 
 	for (const e of stepEvents(task.id, steps)) yield e;
+	// Needs a shortage repair left unresolved: options outside the catalogue, for the chef's information only.
+	const outside =
+		run?.outcome?.intent === 'shortage_repair'
+			? await outsideOptions(run.outcome.unresolvedNeeds, agentCtx, deps.handlers)
+			: null;
+	if (outside) for (const e of outsideSteps(task.id, steps.length, outside)) yield e;
 
 	// Plans this task touched: the first one is primary; reads never add plans of their own. An added product ("…too")
 	// is the task's newest purchase, so its plan becomes the one the task is about; the earlier stays on the task.
@@ -852,8 +878,15 @@ export async function* runChatTurn(
 		taskId: task.id,
 		title: task.title,
 		state: task.state,
-		text: (await scrub(text, deps)).slice(0, 600),
-		canContinue
+		text:
+			(await scrub(text, deps)).slice(0, 600) +
+			(outside?.text
+				? `
+
+${outside.text}`
+				: ''),
+		canContinue,
+		...(outside?.sources.length ? { sources: outside.sources } : {})
 	};
 }
 

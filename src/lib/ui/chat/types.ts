@@ -84,6 +84,8 @@ export type ChatEvent =
 			text: string;
 			/** Offered when continuing can do something (approval granted, lines within the mandate). */
 			canContinue: boolean;
+			/** Where a sourced answer came from (a recall notice, a web fact), with the site named. */
+			sources?: { url: string; title?: string; host?: string }[];
 	  };
 
 export interface ChatTurnInput {

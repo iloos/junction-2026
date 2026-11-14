@@ -6,6 +6,7 @@ import { currentRun } from '$lib/server/demo/run';
 import { judgeKeyExpiry, judgeKeyFor, judgeKeysOn, judgeLabel } from '$lib/server/demo/judge-key';
 import { visitorWorkspace } from '$lib/server/demo/visitor';
 import { mcpInstructions, TITLES } from '$lib/server/tools/mcp';
+import { MCP_PROMPTS, MCP_RESOURCES } from '$lib/server/tools/mcp-extras';
 import { toolsFor } from '$lib/server/tools/serve';
 import type { PageServerLoad } from './$types';
 
@@ -48,6 +49,9 @@ export const load: PageServerLoad = async (event) => {
 		expires: key ? judgeKeyExpiry(env).toISOString() : null,
 		mcpUrl,
 		openapiUrl: `${origin}/api/openapi.json`,
+		agentCardUrl: `${origin}/.well-known/agent.json`,
+		resources: MCP_RESOURCES,
+		prompts: MCP_PROMPTS,
 		kitchenUrl: `${origin}/`,
 		instructions: mcpInstructions(tools.map((t) => t.name)),
 		tools,
