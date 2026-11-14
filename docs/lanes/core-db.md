@@ -19,9 +19,12 @@
 - **Fixtures:** `fixtures/views/{christmas-rescued,milk-direct}.json` come from real tool outputs: `WRITE_VIEW_FIXTURES=1 DATABASE_URL= pnpm vitest run --project server src/lib/server/store/views-fixture.test.ts src/lib/server/store/direct.test.ts`, then `npx prettier --write fixtures/views/*.json`.
 
 ## Open (in order)
-1. Substitute kind (a): `core/demand/basekey.ts` (BaseKey from the name; `substituteKind`, `whatChanges`). Contract ecfb39c. Then fill it at normalise, wire it into candidates, report coverage in valio-data.md.
-2. `set_mandate` stays on hold (the lead's ring-3 synthesis).
-3. Read caching: `store.kitchens` (16× per visitor) and catalogue product docs (23×).
+1. R11-04: return a saved command result without a fresh quote (orders.ts preflight before the idempotency check).
+2. R11-09: rank by price on a common physical basis or total cost to satisfy, else say so (with B's rank-by).
+3. R11-10 + kinds with 91: pack/brand only for supported identity; apply 91's base-gap list to basekey.ts (origin and grade tokens, shared heads ≥ 5 letters, joined compounds, short bases, synonyms, category not required); flip substitute-kinds.test.ts.
+4. `facets(product)` as meets()'s evidence layer, using Valio's keyIngredients (needs the normaliser to keep them).
+5. "Valio suggests" decision-options contract; R10-05 contention residual in the need's unit; R10-06 recipe partial receipts; R10-08 calendar DTSTART.
+6. Every place_order line makes a need (today only lines with amount, requirements or ask do).
 
 ## Traps
 - Run tests with the DB off: `DATABASE_URL= pnpm vitest run --project server`; otherwise they hit Aiven. The Postgres race test is opt-in: `pnpm test:pg`.
@@ -31,30 +34,27 @@
 - A recipe's allocation appears on each ingredient line; sum the FulfilmentView buckets, never the allocations.
 - Under parallel gates PGlite hooks slow down; the server project's timeout is 120 s. Rerun before debugging a timeout.
 
-## Resume (14 Nov, Ring 4 checkpoint)
-- **Branch:** `lane/a-atp`. Head is in the Report line below. Everything through 81c3fb7 is gated green and sent to the lead; main merged up to 8094dc3 (04c4394).
-- **Since Ring 3:**
-  - change_date in LineView; contention re-rescue (`services/contention.ts`).
-  - R9/R7 fixes:
-    - NeedRequirements bind rank, quote and commit.
-    - superseded originals; amount edits (refused across dimensions, with the converted amount when the product's own density is known).
-    - dish dependency closure; off_delivery_day; run fence in `transact`.
-    - Valio per-adapter semaphore and 429 30 s pause.
-    - receipts confirm their qty; supply in the terms hash; CAUTION.model_fit.
-  - Valio's answers: ≥999999 unknown, lot step 1, D8a.
-- **Next:** (1) finish substitute kind (a), gate, send. (2) Read caching. (3) Whatever the Ring 4 synthesis assigns.
+## Resume (14 Nov night, checkpoint)
+- **Branch:** `lane/a-atp`, rebased on main 35fd83e and pushed. Head is in the lead message (f31e4d2 or later). Rule since 19:00: lanes run `pnpm gate --only check,lint` plus targeted vitest; only the lead runs the full gate.
+- **Done since Ring 4:**
+  - Contracts (all additive): ecfb39c BaseKey/kinds, f96db0e order requirements/best try, a8153c0/685f7b1/dc855e9 D16 (diet, excludes, RequirementCheck, Line.unmet, requirementsFrom, find_substitutes requirements), 362edd4 D18 (Need.ask, kind 'sales', exceeds_need, need_size_unknown, commandKey).
+  - Logic: ce5f37e kinds; 8fd0f4d dueOf; 39d2368 order-scope requirements + best try + relax; 6643b30/0a248d1 meets() as the one evaluator (validator, ranking, substitutes; dish codes → needs; refusals with detail); 942c646 R10-03/04; 1afb1b5 sales-unit needs (R11-02 core); 7256982 line binding (R11-01) + R11-05; f31e4d2 the 68-product facets eval (0 unsafe oks).
 - **Handed off:**
-  - E: chat resize → `edit_line{needId, patch.amount}`; core `nextActionFor`; R9-03 and R8-next-action close with that.
-  - 1f: reason labels for requirement_unmet, off_delivery_day, superseded, CAUTION.model_fit; the "rescued · stock unstated" chip; the contention wiring in `kitchen/live.ts`.
-  - lead: re-normalise and re-seed prod's catalogue (normaliser v3: density, ≥999999, lot step).
-- **Traps:** run dev and tests with `DATABASE_URL=` (the worktree `.env` is prod). The gate yields to the main checkout's gate. Never edit files while this worktree's gate runs. Tests that need known-stock milk/cream/butter set it through the simulator overlay, since Valio states none.
+  - B: request orderLine sends `ask`/requirements without amount.
+  - E/B/Kitchen: switch to core `commandKey`.
+  - da: builds on RequirementCheck and the refusal detail.
+  - 1f: reason labels for requirement_unknown, exceeds_need, need_size_unknown, requirement_relaxed.*; "rescued · stock unstated".
+  - lead: re-seed prod's catalogue (normaliser v4).
+- **Chat replays:** any tool *input* schema change misses the recorded f* sessions (the planner prompt embeds input schemas). Re-record: `CHAT_LIVE=1 CHAT_RECORD=1 LIVE_ONLY=f LLM_PROVIDER=gemini DATABASE_URL= node --env-file=.env node_modules/vitest/vitest.mjs run --project server src/lib/server/evals/chat-free.test.ts`.
+- **Traps:** run dev and tests with `DATABASE_URL=`. Never edit files while this worktree's gate runs. Never `cat >` without a heredoc (it waits on stdin and looks like a hang).
 
-## Self-review (Ring 4)
-- **Solid:** the shared validator is the single rule for rank, quote and commit (requirements, calendar, cut-off, hard limit). The run fence and terms hash make stale or drifted approvals fail closed. Each R7/R9 fix has a test that flips its probe.
+## Self-review (checkpoint)
+- **Solid:** one evaluator (meets) for every hard requirement, at rank, quote and commit, with the fact behind each refusal. Lines are bound to their need's amount. Each R9–R11 fix has a test that flips its probe.
 - **Fragile:**
-  - The terms hash now includes non-known supply. Any approval granted on unknown stock before this deploy voids once at the next commit.
-  - `findSubstitutes` has grown option flags (keep, keepOriginal, coveredServedKg, exclude); the contention split leans on them.
-- **Untested on prod:** the 429 pause and the semaphore against real Valio, the run fence across two real instances, and density conversions on a non-seeded catalogue.
-- **With one more hour:** an end-to-end prod walk of contention → split → approve → commit, plus a test that the ham story reads the same in the kitchen, Ops and MCP after the ≥999999 change.
+  - Diet judgement leans on category prefixes and name words. The eval set holds (0 unsafe), but coverage is 57/68 and prepared foods without a diet tag hold.
+  - `findSubstitutes` carries many options (keep, keepOriginal, coverage, exclude, per-call requirements, best try).
+  - D18's "every entry makes a need" is partial.
+- **Untested on prod:** the dish-code requirements on the lunch kitchen, `exceeds_need` against real request flows, and the 429 pause.
+- **With one more hour:** R11-04 (saved results without a re-quote) and the kinds reconciliation with 91.
 
 `git fetch && git checkout -b lane/a-<topic> main && pnpm i --frozen-lockfile` in the worktree (never link `node_modules`). Copy `.env` and `data/valio/` from the main checkout. `pnpm check`, then `DATABASE_URL= pnpm vitest run --project server`, then `pnpm gate`. Prod: https://widely-many-scorpion.eur-1.aiven.app; an MCP smoke as the judge key reads `MCP_KEYS` from `.env` via `node --env-file=.env`.
