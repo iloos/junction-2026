@@ -7,22 +7,22 @@
 	import { Bot } from '@lucide/svelte';
 	import DayPicker from '$lib/ui/DayPicker.svelte';
 	import UsualOrder from '$lib/ui/UsualOrder.svelte';
-	import { day } from '$lib/ui/format';
+	import { day, money } from '$lib/ui/format';
+	import { usualHeadline, type UsualSummary } from '$lib/ui/usual';
 
 	let {
 		kitchenId,
 		kitchenName,
-		mandateWords,
 		date = $bindable(null),
 		onplanned,
 		onask,
 		notes = null,
 		onnotes,
-		embedded = false
+		embedded = false,
+		blank = false
 	}: {
 		kitchenId: string;
 		kitchenName: string;
-		mandateWords: string;
 		/** The delivery day in view (YYYY-MM-DD); null until picked (UsualOrder then uses the next receiving day). */
 		date?: string | null;
 		/** A plan was made from the usual order: the page opens it. */
@@ -34,22 +34,59 @@
 		onnotes?: (notes: string) => void;
 		/** Inside another screen (below a booked event): no title of its own, no mandate quote. */
 		embedded?: boolean;
+		/** A new kitchen of your own (D25): no history, no booking. The agent is the way in. */
+		blank?: boolean;
 	} = $props();
+	let card = $state<UsualOrder | null>(null);
+	let setUp = $state(false);
 	let editingNotes = $state(false);
 	let draftNotes = $state('');
+	let usual = $state<UsualSummary | null>(null);
 </script>
 
 <div class="flex flex-col gap-6">
 	{#if !embedded}<div>
 			<p class="text-meta text-ink-3">{kitchenName}</p>
 			<h1 class="mt-1 text-title font-semibold tracking-[-0.015em] text-ink">
-				{date ? `Nothing planned for ${day(date)}` : 'Nothing planned yet'}
+				{blank
+					? 'Your kitchen is set up. Tell the agent what you need.'
+					: usual
+						? usualHeadline(usual, (c) => money(c, { whole: true }))
+						: date
+							? `Nothing planned for ${day(date)}`
+							: 'Nothing planned yet'}
 			</h1>
 			<p class="mt-1 max-w-[60ch] text-body text-ink-2">
-				Pick a delivery day. Start from what this kitchen usually orders that day, or tell the agent
-				what you need.
+				{blank
+					? 'Say it as you would to a supplier ("40 kg of potatoes for Friday"); the agent finds the products, prices them and orders within your rules. It learns your usual order as you go.'
+					: usual
+						? `Your agent read this kitchen's order history for ${day(usual.deliveryDate)}. Pick another delivery day, or tell the agent what you need.`
+						: 'Pick a delivery day. Start from what this kitchen usually orders that day, or tell the agent what you need.'}
 			</p>
-			{#if notes || onnotes}
+			{#if blank}
+				<div class="mt-3 flex flex-wrap gap-2">
+					<button
+						type="button"
+						class="inline-flex h-10 items-center gap-2 rounded-md bg-accent px-4 text-body font-medium text-sheet hover:bg-accent-ink"
+						onclick={() => onask(date)}
+						><Bot size={16} aria-hidden="true" />Tell the agent what you need</button
+					>
+					<button
+						type="button"
+						class="inline-flex h-10 items-center rounded-md border border-rule-strong px-4 text-body text-ink hover:border-accent"
+						aria-expanded={setUp}
+						onclick={() => (setUp = !setUp)}>Set up a usual order</button
+					>
+				</div>
+			{:else if usual && !usual.planned}
+				<button
+					type="button"
+					class="mt-3 inline-flex h-10 items-center rounded-md bg-accent px-4 text-body font-medium text-sheet hover:bg-accent-ink disabled:opacity-50"
+					disabled={usual.planning || !usual.lines}
+					onclick={() => card?.plan()}>{usual.planning ? 'Planning…' : 'Plan this order'}</button
+				>
+			{/if}
+			{#if notes || editingNotes}
 				<div class="mt-3 max-w-[60ch] rounded-md bg-well/60 px-3 py-2 text-meta text-ink-2">
 					{#if editingNotes}
 						<label for="np-notes" class="font-medium text-ink">Your notes</label>
@@ -96,15 +133,17 @@
 				{date ? `Ask the agent for ${day(date)}` : 'Ask the agent'}
 			</button>
 		</div>
-		{#key `${kitchenId}|${date ?? ''}`}
-			<UsualOrder {kitchenId} date={date ?? undefined} onplanned={(r) => onplanned(r.planId)} />
-		{/key}
+		{#if !blank || setUp}
+			{#key `${kitchenId}|${date ?? ''}`}
+				<UsualOrder
+					bind:this={card}
+					primary={embedded || !usual}
+					{kitchenId}
+					date={date ?? undefined}
+					onplanned={(r) => onplanned(r.planId)}
+					onsummary={(s) => (usual = s)}
+				/>
+			{/key}
+		{/if}
 	</div>
-
-	{#if !embedded}<blockquote class="border-l-2 border-accent pl-3 text-meta text-ink-2">
-			“{mandateWords}”
-			<footer class="mt-0.5 text-micro text-ink-3">
-				The chef's mandate: what the agent may do alone.
-			</footer>
-		</blockquote>{/if}
 </div>

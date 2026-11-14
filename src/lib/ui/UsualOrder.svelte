@@ -14,10 +14,12 @@
 		Search,
 		Sparkles,
 		X,
-		ArrowRight
+		ArrowRight,
+		ChevronRight
 	} from '@lucide/svelte';
 	import { resolve } from '$app/paths';
-	import { day, money, num } from './format';
+	import { day, money, num, readableName } from './format';
+	import type { UsualSummary } from './usual';
 	import { salesUnitWords, unitWord } from './request/words';
 
 	interface Props {
@@ -28,8 +30,19 @@
 		endpoint?: string;
 		/** After a plan was made: its id and state (the page may open it with /?plan=<id>). */
 		onplanned?: (r: { planId: string; state: string; approvalId: string | null }) => void;
+		/** What the usual order comes to as read and edited, for a headline outside the card. */
+		onsummary?: (s: UsualSummary | null) => void;
+		/** The card's own "Plan this order" is the zone's primary; false when a headline outside owns it. */
+		primary?: boolean;
 	}
-	let { kitchenId, date, endpoint = '/kitchen-api/usual', onplanned }: Props = $props();
+	let {
+		kitchenId,
+		date,
+		endpoint = '/kitchen-api/usual',
+		onplanned,
+		onsummary,
+		primary = true
+	}: Props = $props();
 
 	type Status = 'settled' | 'forming' | 'joined' | 'dropped' | 'not_settled';
 	interface Line {
@@ -177,6 +190,23 @@
 		const rest = data.sentence.replace(/^Usual \w+ order from /, '');
 		return rest === data.sentence ? rest : `From ${rest}`;
 	});
+	$effect(() => {
+		onsummary?.(
+			data && rows.length
+				? {
+						weekday: DAY_NAMES[data.weekday] ?? '',
+						deliveryDate: data.deliveryDate,
+						lines: chosen.length,
+						cents: total,
+						unpriced,
+						planning,
+						planned: !!planned
+					}
+				: null
+		);
+	});
+	/** Which rows show their history (how settled, the usual range, the rhythm). */
+	let openRow = $state<Record<string, boolean>>({});
 	const title = $derived(data ? `Usual ${DAY_NAMES[data.weekday] ?? ''} order` : 'Usual order');
 
 	function setQty(id: string, v: number, on = true) {
@@ -228,7 +258,8 @@
 		}, 250);
 	}
 
-	async function plan() {
+	/** Plan the order as read and edited; a headline outside the card calls it through `bind:this`. */
+	export async function plan() {
 		if (!data || !chosen.length) return;
 		planning = true;
 		planError = null;
@@ -324,37 +355,80 @@
 			{#each rows as r (r.productId)}
 				{@const l = lineOf(r.productId)}
 				{@const st = l ? STATUS[l.status] : null}
-				<li class="grid grid-cols-[auto_1fr_auto] items-start gap-x-3 gap-y-1 px-4 py-2.5">
-					<input
-						type="checkbox"
-						class="mt-1 size-4 accent-[var(--color-accent)]"
-						checked={r.on}
-						onchange={() => toggle(r)}
-						aria-label={`Include ${r.name}`}
-					/>
-					<div class="min-w-0">
-						<p class="line-clamp-2 text-body break-words {r.on ? '' : 'text-ink-3 line-through'}">
-							{r.name}
-						</p>
-						<p class="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-meta text-ink-2">
+				<li class="px-4 py-2">
+					<div class="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-3">
+						<input
+							type="checkbox"
+							class="size-4 accent-[var(--color-accent)]"
+							checked={r.on}
+							onchange={() => toggle(r)}
+							aria-label={`Include ${readableName(r.name)}`}
+						/>
+						<div class="min-w-0">
+							<button
+								type="button"
+								class="flex w-full min-w-0 items-baseline gap-1.5 text-left text-body break-words {r.on
+									? 'text-ink'
+									: 'text-ink-3 line-through'}"
+								aria-expanded={l ? !!openRow[r.productId] : undefined}
+								disabled={!l}
+								onclick={() => (openRow = { ...openRow, [r.productId]: !openRow[r.productId] })}
+							>
+								{#if l}<ChevronRight
+										size={13}
+										class="shrink-0 translate-y-0.5 text-ink-3 transition-transform {openRow[
+											r.productId
+										]
+											? 'rotate-90'
+											: ''}"
+										aria-hidden="true"
+									/>{/if}
+								<span class="min-w-0">{readableName(r.name)}</span>
+							</button>
 							{#if st}
 								{@const Icon = st.icon}
-								<span class="inline-flex items-center gap-1 {st.cls}">
-									<Icon size={13} aria-hidden="true" />{st.word}
+								<span class="ml-5 inline-flex items-center gap-1 text-meta {st.cls}">
+									<Icon size={12} aria-hidden="true" />{st.word}
 								</span>
-								<span>{l?.sentence}</span>
-								{#if l && l.low !== l.high}
-									<span class="text-ink-3">usually {num(l.low)}–{num(l.high)}</span>
-								{/if}
 							{:else}
-								<span class="inline-flex items-center gap-1 text-accent">
-									<Plus size={13} aria-hidden="true" />Top-up
+								<span class="inline-flex items-center gap-1 text-meta text-accent">
+									<Plus size={12} aria-hidden="true" />Top-up for this order
 								</span>
-								<span>added by you for this order</span>
 							{/if}
-						</p>
-						{#if l}
-							<label class="mt-1 inline-flex items-center gap-1 text-micro text-ink-3">
+						</div>
+						<div class="flex flex-col items-end gap-0.5">
+							<label class="flex items-center gap-1.5 text-meta text-ink-2">
+								<input
+									type="number"
+									inputmode="decimal"
+									min="0"
+									step={r.lotStep}
+									class="mono w-14 rounded-md border border-rule bg-sheet px-1.5 py-0.5 text-right text-body text-ink"
+									value={r.qty}
+									onchange={(e) =>
+										setQty(r.productId, Number((e.currentTarget as HTMLInputElement).value), r.on)}
+									aria-label={`Quantity of ${readableName(r.name)}`}
+								/>
+								<span class="whitespace-nowrap">{unitsOnly(r.qty, r.unit)}</span>
+							</label>
+							{#if r.unitCents === null}
+								<span class="text-meta whitespace-nowrap text-ink-3">priced when planned</span>
+							{:else}
+								<span
+									class="mono text-right text-meta tabular-nums {r.on ? 'text-ink' : 'text-ink-3'}"
+									>{money(r.unitCents * r.qty)}</span
+								>
+							{/if}
+						</div>
+					</div>
+					{#if l && openRow[r.productId]}
+						<div class="mt-1 ml-7 flex flex-col gap-1 text-meta text-ink-2">
+							<span
+								>{l.sentence}{#if l.low !== l.high}<span class="text-ink-3">
+										· usually {num(l.low)}–{num(l.high)}</span
+									>{/if}</span
+							>
+							<label class="inline-flex items-center gap-1 text-micro text-ink-3">
 								Rhythm
 								<select
 									class="rounded border border-rule bg-sheet px-1 py-0.5 text-micro text-ink-2"
@@ -369,31 +443,8 @@
 								</select>
 								{#if every[r.productId]}<span>· this session only</span>{/if}
 							</label>
-						{/if}
-					</div>
-					<div class="flex flex-col items-end gap-1">
-						<label class="flex items-center gap-1.5 text-meta text-ink-2">
-							<input
-								type="number"
-								inputmode="decimal"
-								min="0"
-								step={r.lotStep}
-								class="mono w-16 rounded-md border border-rule bg-sheet px-1.5 py-1 text-right text-body text-ink"
-								value={r.qty}
-								onchange={(e) =>
-									setQty(r.productId, Number((e.currentTarget as HTMLInputElement).value), r.on)}
-								aria-label={`Quantity of ${r.name}`}
-							/>
-							<span class="w-14 truncate">{unitsOnly(r.qty, r.unit)}</span>
-						</label>
-						{#if r.unitCents === null}
-							<span class="text-meta text-ink-3">priced when planned</span>
-						{:else}
-							<span class="mono text-meta {r.on ? 'text-ink' : 'text-ink-3'}">
-								{money(r.unitCents * r.qty)}
-							</span>
-						{/if}
-					</div>
+						</div>
+					{/if}
 				</li>
 			{/each}
 		</ul>
@@ -411,7 +462,7 @@
 					<ul class="mt-1 space-y-1.5">
 						{#each data.joined as c (c.productId)}
 							<li class="text-meta">
-								<span class="text-body text-ink">{c.name}</span>
+								<span class="text-body text-ink">{readableName(c.name)}</span>
 								<span class="block text-ink-2">{c.sentence}</span>
 								{#if !rows.some((r) => r.productId === c.productId)}
 									<button
@@ -437,7 +488,7 @@
 					<ul class="mt-1 space-y-1.5">
 						{#each data.dropped as c (c.productId)}
 							<li class="text-meta">
-								<span class="text-body text-ink">{c.name}</span>
+								<span class="text-body text-ink">{readableName(c.name)}</span>
 								<span class="block text-ink-2">{c.sentence}</span>
 								{#if !rows.some((r) => r.productId === c.productId)}
 									<button
@@ -477,7 +528,7 @@
 							class="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-body hover:bg-well"
 							onclick={() => addTopUp(h)}
 						>
-							<span class="truncate">{h.name}</span>
+							<span class="truncate">{readableName(h.name)}</span>
 							<span class="shrink-0 text-meta text-ink-3">per {unitWord(h.unit)}</span>
 						</button>
 					</li>
@@ -510,7 +561,9 @@
 			<!-- eslint-enable svelte/no-navigation-without-resolve -->
 		{:else}
 			<button
-				class="inline-flex items-center gap-1.5 rounded-md bg-accent px-4 py-2 text-body font-medium text-sheet disabled:opacity-50"
+				class="inline-flex items-center gap-1.5 rounded-md px-4 py-2 text-body font-medium disabled:opacity-50 {primary
+					? 'bg-accent text-sheet'
+					: 'border border-rule-strong text-ink hover:border-accent'}"
 				disabled={planning || !chosen.length || !data}
 				onclick={plan}
 			>

@@ -33,6 +33,8 @@
 		mark?: Snippet;
 		/** Extra classes on the token. */
 		class?: string;
+		/** Let a long name wrap instead of truncating (rows that have the width to say it all). */
+		wrap?: boolean;
 	}
 	let {
 		productId,
@@ -43,7 +45,8 @@
 		deliverBy,
 		imageUrl,
 		mark,
-		class: cls = ''
+		class: cls = '',
+		wrap = false
 	}: Props = $props();
 
 	const shell = useShell();
@@ -104,7 +107,7 @@
 			class="mono shrink-0 rounded-[5px] border border-rule bg-well px-1.5 py-px text-meta text-ink tabular-nums"
 			>{qtyText(qty)}</span
 		>{/if}
-	<span class="min-w-0 truncate text-ink">{label}</span>
+	<span class="min-w-0 text-ink {wrap ? 'break-words' : 'truncate'}">{label}</span>
 	{#if mark}{@render mark()}{:else if shownMarks}<DietMarks marks={shownMarks} />{/if}
 {/snippet}
 

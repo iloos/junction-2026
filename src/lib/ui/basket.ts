@@ -137,3 +137,33 @@ export function budgetShares(d: BasketDay): { ordered: number; ifAll: number } |
 export function tokenQty(q: BasketLine['qty']): { amount: number; unit: string } {
 	return { amount: q.value, unit: salesUnitWords(q.value, q.unit).replace(/^\S+\s/, '') };
 }
+
+export interface StageRun {
+	stage: BasketStage;
+	words: string;
+	lines: BasketLine[];
+	cents: number;
+}
+
+/**
+ * Lines grouped under their stage, in reading order (what waits on the chef first), each group with its count and
+ * subtotal. The group heading says the stage once, so the rows under it carry no per-row chip.
+ */
+export function stageRuns(lines: readonly BasketLine[]): StageRun[] {
+	return STAGES.map((stage) => {
+		const of = lines
+			.filter((l) => l.stage === stage)
+			.sort((a, b) => a.productName.localeCompare(b.productName));
+		return { stage, words: STAGE_WORDS[stage], lines: of, cents: centsOf(of) };
+	}).filter((r) => r.lines.length);
+}
+
+/** What can't be ordered for the day, as a count with its reason and the readable names behind a fold. */
+export function cannotOrder(d: BasketDay): { headline: string; names: string[] } | null {
+	const n = d.counts.cannotOrder;
+	if (!n) return null;
+	return {
+		headline: `${n} product${n === 1 ? '' : 's'} can't be ordered for this day`,
+		names: (d.cannotOrderNames ?? []).map((x) => readableName(x))
+	};
+}

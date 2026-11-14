@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
 	budgetSentence,
 	cannotOrderSentence,
+	cannotOrder,
+	stageRuns,
 	budgetShares,
 	dayAction,
 	dayHeadline,
@@ -147,5 +149,27 @@ describe('basket words', () => {
 	it('words quantities for the product token', () => {
 		expect(tokenQty({ value: 20, unit: 'KG' })).toEqual({ amount: 20, unit: 'kg' });
 		expect(tokenQty({ value: 13, unit: 'ST' }).amount).toBe(13);
+	});
+});
+
+describe('stage groups', () => {
+	it('groups lines by stage in reading order with counts and subtotals', () => {
+		const runs = stageRuns(day.lines);
+		expect(runs.map((r) => [r.words, r.lines.length, r.cents])).toEqual([
+			['Waits on you', 1, 20059],
+			['Can order now', 1, 28220],
+			['Ordered', 1, 13080]
+		]);
+	});
+
+	it('says what cannot be ordered as a count, names behind the fold', () => {
+		expect(cannotOrder(day)).toBeNull();
+		const c = cannotOrder({
+			...day,
+			counts: { ...day.counts, cannotOrder: 2 },
+			cannotOrderNames: ['Saarioinen Lanttulaatikko 700g', 'Vaasan Joulutorttu 40x60g']
+		});
+		expect(c?.headline).toBe("2 products can't be ordered for this day");
+		expect(c?.names).toHaveLength(2);
 	});
 });
