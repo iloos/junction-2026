@@ -55,6 +55,17 @@ async function harness(
 	o: { deliveryDays?: Kitchen['deliveryDays']; origin?: Kitchen['constraints']['origin'] } = {}
 ) {
 	const products = new Map([
+		// Milk sold only by the 5 l case.
+		[
+			'470700',
+			Product.parse({
+				...milk('470700', 'Testi maito 5 x 1 l', false),
+				salesUnit: 'KI',
+				baseUnit: 'KI',
+				packs: [{ unit: 'KI', baseUnits: 1 }],
+				netPerSalesUnit: { value: { value: 5, unit: 'l' }, provenance: prov }
+			})
+		],
 		// A vegetable patty (out, below) and a meatball: the only substitute for a vegetarian dish is meat.
 		[
 			'470600',
@@ -798,5 +809,27 @@ describe('D18: a line is bound to its need (R11-01, R11-05)', () => {
 		const back = await set(zero.version, 4);
 		expect(back.lines[0].qty.value).toBe(4);
 		expect(back.lines[0].state).not.toBe('rejected');
+	});
+});
+
+describe('D18: lot rounding far over the ask holds for a person', () => {
+	it('250 ml as one 5 l case is held (need_rounding_large), not forbidden; 4 l of 1 l packs is not flagged', async () => {
+		const { h } = await harness();
+		const p = must(
+			await h.place_order(ctx('kitchen_agent'), {
+				kitchenId: 'k-hotel',
+				deliverBy: '2026-12-10',
+				idempotencyKey: 'case',
+				lines: [
+					{ productId: '470700', qty: 1, unit: 'KI', amount: { value: 0.25, unit: 'l' } },
+					{ productId: '464201', qty: 4, unit: 'ST', amount: { value: 4, unit: 'l' } }
+				]
+			})
+		).plan;
+		const [caseLine, packs] = p.lines;
+		expect(caseLine.state).toBe('held');
+		expect(caseLine.reasons).toContain('need_rounding_large');
+		expect(caseLine.reasons).not.toContain('exceeds_need');
+		expect(packs.reasons).not.toContain('need_rounding_large');
 	});
 });

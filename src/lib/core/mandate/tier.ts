@@ -17,7 +17,7 @@ import type {
 } from '../contracts';
 import type { TermsLine } from '../hash';
 import { toMeasure } from '../demand/convert';
-import { sizeDirect } from '../demand/sizing';
+import { contentValue, sizeDirect } from '../demand/sizing';
 
 import { meets } from './meets';
 import { forbidden, hardLimitCents, mergeRequirements, validateLine } from './validate';
@@ -231,6 +231,12 @@ export function tierLines(input: TierInput): TierResult {
 						1e-9
 			)
 				findings.push({ reason: 'exceeds_need', effect: 'forbid' });
+			else {
+				// Within one lot, but the smallest pack is far bigger than the ask: a person confirms the case.
+				const per = product.salesUnit === 'KG' ? 1 : contentValue(product, bound.unit);
+				if (per && bound.value > 0 && draft.qty.value * per > 2 * bound.value + 1e-9)
+					findings.push({ reason: 'need_rounding_large', effect: 'waive', tier: 'propose' });
+			}
 		}
 		// The kitchen's calendar is a receiving constraint: another day is an explicit exception a person signs off.
 		if (input.deliverBy && !receivesOn(kitchen, input.deliverBy))
