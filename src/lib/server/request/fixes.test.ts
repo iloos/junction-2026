@@ -579,3 +579,22 @@ describe('off delivery day: the next receiving day as a one-tap choice', () => {
 		expect(again.order?.nextDeliveryDay).toBeNull();
 	});
 });
+
+describe('no day given: the earliest open day, never a passed one', () => {
+	it('"4 kg butter" on Mon 21:40 is ordered for Wed 9 Dec, and says why', async () => {
+		const { h, ctx, kitchen } = await setup();
+		const r = await runRequest('4 kg butter', {
+			handlers: h,
+			ctx,
+			today: '2026-12-07',
+			kitchen,
+			now: new Date('2026-12-07T21:40:00+02:00'),
+			nonce: 'default-day'
+		});
+		expect(r.parsed.deliverBy).toBe('2026-12-09');
+		expect(r.parsed.notes).toContain('no day given: earliest you can get, Wed 9 Dec');
+		expect(r.parsed.ambiguities.join()).not.toMatch(/using today/);
+		expect(r.lookup!.items[0].answer?.kind).not.toBe('date');
+		expect(r.order?.plan.deliverBy).toBe('2026-12-09');
+	});
+});

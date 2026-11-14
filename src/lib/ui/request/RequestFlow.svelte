@@ -871,6 +871,8 @@
 					{#if parsed.deliverByChosen}<span class="text-ink-3">your choice</span
 						>{:else if parsed.deliverByText}<span class="text-ink-3"
 							>from “{parsed.deliverByText}”</span
+						>{:else if parsed.notes.some((n) => n.startsWith('no day given: earliest'))}<span
+							class="text-ink-3">no day given: the earliest you can get</span
 						>{:else}<span class="text-signoff">(no day given)</span>{/if}
 				</p>
 				{#if lookup?.days && !event}

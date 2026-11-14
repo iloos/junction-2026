@@ -690,7 +690,7 @@ export async function runRequest(text: string, d: RequestDeps): Promise<RequestR
 			dishChoice: kind
 		};
 	}
-	const parsedView = parsed as ParsedView;
+	let parsedView = parsed as ParsedView;
 	if (reviewBlock) {
 		emit({ step: 'request', status: 'blocked', ms: ms(), data: parsedView });
 		return {
@@ -744,10 +744,35 @@ export async function runRequest(text: string, d: RequestDeps): Promise<RequestR
 			message: 'No item found in the request.'
 		};
 
-	const { lookup, picked, cands } = await lookupItems(
-		parsed,
-		dishAnswers.length ? { ...d, answers: [...(d.answers ?? []), ...dishAnswers] } : d
-	);
+	const lookupDeps = dishAnswers.length
+		? { ...d, answers: [...(d.answers ?? []), ...dishAnswers] }
+		: d;
+	let { lookup, picked, cands } = await lookupItems(parsed, lookupDeps);
+	// No day in the words: the default is the earliest day open for every item, never a passed one. Said, not silent.
+	const now = nowOf(d);
+	if (parsed.deliverBySource === 'default' && !parsed.deliverByChosen && now) {
+		const here = lookup.days?.find((x) => x.date === parsed.deliverBy);
+		const first = lookup.days?.find((x) => x.open && x.receiving);
+		if (here && !here.open && first) {
+			parsed = {
+				...parsed,
+				deliverBy: first.date,
+				ambiguities: parsed.ambiguities.filter((a) => !a.startsWith('no delivery date given')),
+				notes: [...parsed.notes, `no day given: earliest you can get, ${day(first.date)}`]
+			};
+			parsedView = parsed as ParsedView;
+			emit({
+				step: 'request',
+				status:
+					parsed.ambiguities.length || parsed.items.some((i) => i.ambiguities.length)
+						? 'warn'
+						: 'done',
+				ms: 0,
+				data: parsedView
+			});
+			({ lookup, picked, cands } = await lookupItems(parsed, lookupDeps));
+		}
+	}
 	const picks = lookup.items.filter((i) => i.pick);
 	// An item without a pick holds the whole order: placing the rest now and the answered item
 	// later would place the rest twice (the answer changes the lines, so the key).
