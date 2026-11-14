@@ -2,7 +2,7 @@
 	import { onMount, tick, untrack } from 'svelte';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
-	import { goto } from '$app/navigation';
+	import { goto, replaceState } from '$app/navigation';
 	import {
 		Ban,
 		Bot,
@@ -706,7 +706,18 @@
 	}
 
 	/** The Kitchen as a basket (every open plan per delivery day) or the plan on screen. */
-	let viewChoice = $state<'basket' | 'event' | null>(null);
+	// The tab the chef chose survives a reload (?view=basket|plan).
+	const urlView = page.url.searchParams.get('view');
+	let viewChoice = $state<'basket' | 'event' | null>(
+		urlView === 'basket' ? 'basket' : urlView === 'plan' ? 'event' : null
+	);
+	function setView(id: 'basket' | 'event') {
+		viewChoice = id;
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- built and read once per click
+		const q = new URLSearchParams(page.url.searchParams);
+		q.set('view', id === 'basket' ? 'basket' : 'plan');
+		replaceState(resolve(`/?${q}`), page.state);
+	}
 	const kitchenView = $derived(
 		viewChoice ?? ((snap?.others?.length ?? 0) > 0 ? 'basket' : 'event')
 	);
@@ -1077,7 +1088,7 @@
 				class="h-8 max-w-[60vw] truncate rounded-md px-3 text-body {kitchenView === id
 					? 'bg-ink font-medium text-sheet'
 					: 'text-ink-2 hover:bg-well hover:text-ink'}"
-				onclick={() => (viewChoice = id)}>{label}</button
+				onclick={() => setView(id)}>{label}</button
 			>
 		{/each}
 	</nav>
