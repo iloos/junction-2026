@@ -344,7 +344,7 @@ const DISHES: DishDef[] = [
 ];
 
 /** A normal week at this hotel for the SKUs the event also uses (team estimate, scenario). */
-const NORMAL_WEEK = {
+export const NORMAL_WEEK = {
 	cents: 312_000,
 	lines: 46,
 	usual: {

@@ -9,6 +9,19 @@ const TEXT: Record<string, { short: string; long: string }> = {
 		short: 'Unknown quantity',
 		long: 'Terminal item: Valio does not say how many there are. It can be ordered, but it never counts as cover.'
 	},
+	UNKNOWN_REQUIRED: {
+		short: 'Unknown quantity',
+		long: 'Terminal item: Valio does not say how many there are. It can be ordered, but it never counts as cover.'
+	},
+	INSUFFICIENT_STOCK: {
+		short: 'Not enough stock',
+		long: 'Valio has fewer than this line needs right now; it stays held until it is covered or replaced.'
+	},
+	NOT_FOUND: { short: 'Unknown product', long: 'This id is not in the Valio catalogue.' },
+	TERMS_CHANGED: {
+		short: 'Terms changed',
+		long: 'Price or availability changed since the quote; the approval no longer applies.'
+	},
 	blocked: { short: 'Blocked', long: 'Valio has blocked this product.' },
 	new_sku: {
 		short: 'New product',

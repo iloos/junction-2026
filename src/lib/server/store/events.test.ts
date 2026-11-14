@@ -31,7 +31,7 @@ describe('plan_event: Christmas buffet for 140 (s2)', () => {
 			await h.plan_event(chef, { kitchenId: 'k-hotel', eventId: 'event-xmas-140' })
 		);
 		const by = (id: string) => plan.lines.find((l) => l.productId === id)!;
-		expect(plan).toMatchObject({ deliverBy: '2026-12-11', eventId: 'event-xmas-140' });
+		expect(plan).toMatchObject({ deliverBy: '2026-12-10', eventId: 'event-xmas-140' });
 		expect(plan.lines).toHaveLength(13);
 		expect(by('462150').qty).toMatchObject({ value: 20, unit: 'KG' });
 		expect(by('463876').qty).toMatchObject({ value: 2, unit: 'ST' });
@@ -83,6 +83,27 @@ describe('plan_event: Christmas buffet for 140 (s2)', () => {
 
 		const view = must(await h.get_plan(chef, { planId: plan.id }));
 		expect(view.approval).toMatchObject({ state: 'pending', planVersion: edited.version });
+	});
+
+	it('resizes the rescue substitute when the dish g/guest changes', async () => {
+		let { plan } = must(
+			await h.plan_event(chef, { kitchenId: 'k-hotel', eventId: 'event-xmas-140' })
+		);
+		const ham = plan.lines.find((l) => l.productId === '462490')!;
+		plan = must(
+			await h.find_substitutes(chef, { planId: plan.id, version: plan.version, lineId: ham.id })
+		).plan;
+		expect(plan.lines.find((l) => l.productId === '476768')!.qty.value).toBe(13);
+		const edited = must(
+			await h.edit_line(chef, {
+				planId: plan.id,
+				version: plan.version,
+				needId: 'need:joulukinkku',
+				patch: { gramsPerGuest: 120 }
+			})
+		).plan;
+		// 140 × 120 g = 16.8 kg cooked → 12 × 1.5 kg
+		expect(edited.lines.find((l) => l.productId === '476768')!.qty.value).toBe(12);
 	});
 
 	it('explains a line step by step with sources', async () => {

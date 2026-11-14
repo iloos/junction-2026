@@ -21,7 +21,10 @@
 
 	const kind = $derived.by(() => {
 		if (state === 'committed') return 'committed';
-		if (state === 'rejected' && reasons.includes('undeliverable')) return 'undeliverable';
+		// Core marks real outages `unorderable` with the availability kind as the reason.
+		const outage = state === 'rejected' || state === 'unorderable';
+		if (outage && reasons.includes('undeliverable')) return 'undeliverable';
+		if (outage && reasons.includes('out')) return 'out';
 		if (state === 'rejected') return 'out';
 		if (state === 'unorderable') return 'unorderable';
 		if (state === 'held') return tier === 'sign_off' ? 'sign_off' : 'propose';
@@ -67,7 +70,7 @@
 	} as const;
 
 	const m = $derived(META[kind]);
-	const unknown = $derived(reasons.includes('unknown'));
+	const unknown = $derived(reasons.includes('unknown') || reasons.includes('UNKNOWN_REQUIRED'));
 </script>
 
 <span class="inline-flex flex-wrap items-center gap-1">
@@ -77,7 +80,7 @@
 		<m.icon size={13} strokeWidth={2.2} aria-hidden="true" />
 		{m.label}
 	</span>
-	{#if unknown && state !== 'rejected'}
+	{#if unknown && state !== 'rejected' && state !== 'unorderable'}
 		<span
 			class="inline-flex h-6 items-center gap-1 rounded-[5px] border border-dashed border-ink-3/50 px-1.5 text-[12px] leading-none whitespace-nowrap text-ink-2"
 			title="Terminal item: Valio does not state a quantity. It is ordered, but never counted as cover."
