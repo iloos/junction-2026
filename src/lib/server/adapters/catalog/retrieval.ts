@@ -69,7 +69,12 @@ export interface Resolver {
 	resolve(query: string, opts?: { limit?: number; diet?: string[] }): Promise<Resolution>;
 }
 
-const DIET_WORD: Record<string, string> = { LACTOSE: 'lactose-free', GLUTEN: 'gluten-free' };
+const DIET_WORD: Record<string, string> = {
+	LACTOSE: 'lactose-free',
+	GLUTEN: 'gluten-free',
+	VEGETARIAN: 'vegetarian',
+	VEGAN: 'vegan'
+};
 
 /** Words that describe packaging, grade, origin or trade, not what the product is. */
 const STOP = new Set(
