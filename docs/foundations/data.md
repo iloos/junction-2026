@@ -76,4 +76,4 @@ ops       seq bigserial pk · id uuid unique default uuidv7() · ts timestamptz 
 - Is Hobbyist actually offered in `upcloud-fi-hel` / `google-europe-north1` for our project, at what price? Do the $50 credits cover Runtime, or does limited-availability credit come separately?
 - Does Runtime append `uselibpqcompat=true` / `sslmode` to the injected URI? (It matters only for `pg`; postgres.js handles `sslmode=require` fine.)
 - Swarm at 5,000 agents (10×): is ~250 ops/s of inserts + NOTIFY fine on a 1-CPU Hobbyist? Spike it once the service exists; Startup-4 is the escape hatch.
-- Should we also use Aiven Valkey or Kafka for "best use"? Probably not: one service done deeply (pgvector + NOTIFY + Runtime) fits their "one service can be just as impressive".
+- Should we also use Aiven Valkey or Kafka for "best use"? Not before the freeze: one service done deeply (Postgres + NOTIFY + Runtime; retrieval is lexical, no pgvector) fits their "one service can be just as impressive". Kafka via Debezium from the op log is the pitch's "next" (PITCH).

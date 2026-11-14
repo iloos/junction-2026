@@ -72,6 +72,12 @@ Every claim's observed status and verdict: [CLAIMS.md](CLAIMS.md).
 - **Data residency** ("data stays in Finland"): never; D5.
 - Parked by D7, never in the pitch: Gemini Live voice, photo input, a 500-kitchen swarm, Nemotron, Modal jobs.
 
+## Next (say as next, never as built)
+- **Valio's systems subscribe to the op log (Aiven Kafka + Debezium).** The op log stays the source of truth. Aiven's Debezium connector streams it into Kafka topics, so Valio's ERP, warehouse, forecasting and recall systems can subscribe to held lines, orders and shortfalls with no app change and no dual writes.
+- **Usual orders across many kitchens** (D14): detected standing orders make demand dependable for Valio; the app has detection over a simulated history.
+- **Margin-aware suggestions**: the "Valio suggests" slot ranks by a stated reason today; with Valio's margin data it could weigh margin, still inside the mandate and never the default.
+- **Exa monitors for web-wide watch** (supplier and recall news before the official list), next to Context.dev's page monitor.
+
 ## Framing we can say truthfully (docs/research/agentic-commerce.md)
 - "Our mandate is what Google's agent payments protocol (AP2) calls an open mandate; our approval is a closed mandate bound to the exact terms by a hash; the approval surface is not an agent, and every check runs in deterministic code." Don't claim AP2/ACP compliance, payments or signatures.
 - Numbers (cite on a slide, docs/research/pitch-numbers-and-viz.md): Finnish food services waste ~61 Mkg of edible food a year (Luke); ~1 plate in 6 on a serving line is never eaten (Luke field study); EU law requires a 30% per-person cut by 2030; public kitchens serve ~380 M meals a year; buyers beat the algorithm only where they know something it doesn't (Kesavan & Kushwaha 2020), so we ask only at the exceptions. No Finnish online-order or fill-rate figures (none found).
