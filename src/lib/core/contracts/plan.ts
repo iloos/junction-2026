@@ -35,6 +35,10 @@ export const PolicyReason = z.enum([
 	'price_missing',
 	/** A recall notice names this product: held for a human, find a substitute. */
 	'recall',
+	/** Line or order above the mandate's hard limit: forbidden, no approval can pass it. */
+	'over_hard_limit',
+	/** Quantity far beyond the dish need or any kitchen-sized order: a gap, check the quantity. */
+	'qty_implausible',
 	'low_reliability',
 	'external_agent_needs_approval',
 	'cutoff_passed'

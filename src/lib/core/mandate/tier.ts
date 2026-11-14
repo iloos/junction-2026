@@ -14,7 +14,7 @@ import type {
 	Tier
 } from '../contracts';
 import type { TermsLine } from '../hash';
-import { forbidden, validateLine } from './validate';
+import { forbidden, hardLimitCents, validateLine } from './validate';
 
 export interface DraftLine {
 	id: string;
@@ -149,7 +149,14 @@ export function tierLines(input: TierInput): TierResult {
 
 	const orderable = work.filter((w) => w.orderable);
 	const totalCents = orderable.reduce((s, w) => s + (w.lineCents ?? 0), 0);
+	// Over the hard limit the whole order is out: no approval can pass it, the mandate must change first.
+	if (totalCents > hardLimitCents(m))
+		for (const w of orderable) {
+			w.orderable = false;
+			w.reasons = ['over_hard_limit'];
+		}
 	for (const w of orderable) {
+		if (!w.orderable) continue;
 		if (totalCents > m.orderCapCents) w.reasons.push('CAP_EXCEEDED.order');
 		if (input.weekSpentCents + totalCents > m.weeklyCapCents) w.reasons.push('CAP_EXCEEDED.weekly');
 		if (external) w.reasons.push('external_agent_needs_approval');

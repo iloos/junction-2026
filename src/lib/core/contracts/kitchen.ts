@@ -31,6 +31,11 @@ export const Mandate = z.object({
 	lineCapCents: Cents,
 	orderCapCents: Cents,
 	weeklyCapCents: Cents,
+	/**
+	 * Above this an order is forbidden outright, approval or not: the mandate must be raised first.
+	 * Default: the larger of 5× the order cap and 2× the weekly cap (see `hardLimitCents`).
+	 */
+	hardLimitCents: Cents.optional(),
 	neverDelegate: z.array(NeverDelegate)
 });
 export type Mandate = z.infer<typeof Mandate>;

@@ -99,7 +99,8 @@ const attacks: Attack[] = [
 					kitchenId: 'k-lounas',
 					deliverBy: '2026-11-16',
 					idempotencyKey: 'cap-1',
-					lines: [{ ...kerma, qty: 900 }]
+					// Over the €400 line cap, under the €10,000 hard limit (which forbids outright).
+					lines: [{ ...kerma, qty: 100 }]
 				},
 				w.handlers
 			);

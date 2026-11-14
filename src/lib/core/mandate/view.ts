@@ -20,10 +20,12 @@ const DETAIL: Partial<Record<string, Detail>> = {
 	allergen_declared: 'dietary_evidence',
 	allergen_trace: 'dietary_evidence',
 	allergen_unknown: 'dietary_evidence',
-	NOT_FOUND: 'qty'
+	NOT_FOUND: 'qty',
+	qty_implausible: 'qty',
+	over_hard_limit: 'price'
 };
 /** Facts that are missing or not true now: held, never approvable (validator effect `gap`). */
-const GAPS = new Set<LineReason>(['price_missing', 'INSUFFICIENT_STOCK']);
+const GAPS = new Set<LineReason>(['price_missing', 'INSUFFICIENT_STOCK', 'qty_implausible']);
 /** Rule-outs a different product fixes (find a substitute) rather than a rule change. */
 const SUPPLY = new Set<string>(['out', 'undeliverable', 'blocked', 'BELOW_LOT', 'NOT_FOUND']);
 
@@ -69,7 +71,12 @@ export function lineView(l: Line, plan: Plan, approval: ApprovalLike | null): Li
 			committable: false,
 			...none,
 			blockedReason: { code: gap, effect: 'gap', detail: DETAIL[gap] },
-			nextAction: gap === 'price_missing' ? 'requote' : 'find_substitute'
+			nextAction:
+				gap === 'price_missing'
+					? 'requote'
+					: gap === 'qty_implausible'
+						? 'resolve_rule'
+						: 'find_substitute'
 		};
 	const current = approval && approval.planVersion === plan.version ? approval : null;
 	if (l.state === 'eligible' && l.tier === 'act')
