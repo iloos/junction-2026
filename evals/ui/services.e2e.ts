@@ -43,67 +43,77 @@ test('Valio and Gemini answer live on the deployed app', async ({ page, request 
 	await page.route('**/request/run**', (route) =>
 		route.continue({ headers: { ...route.request().headers(), 'x-request-id': requestId } })
 	);
-	await page.goto(`${BASE}/request`);
-	// A sentence no one has sent before, so no parse cache can answer it: only a live model call shows tokens.
-	const litres = 11 + Math.floor(Math.random() * 80);
-	await page.locator('#req').fill(`${litres} l lactose-free milk for Friday`);
-	await page.getByRole('button', { name: /Find and price/ }).click();
-	await page
-		.getByText(/1 quote for|nothing quoted/)
-		.first()
-		.waitFor({ timeout: 60_000 });
-	// This request was read by a live Gemini call: its own result names the model, the latency and the tokens.
-	await page.waitForTimeout(500);
-	const step = streamed
-		.split('\n')
-		.filter((l) => l.includes('"step":"request"') && l.includes('"parser"'))
-		.map((l) => {
-			try {
-				return JSON.parse(l) as {
-					data?: {
-						parser?: {
-							kind?: string;
-							model?: string;
-							latencyMs?: number;
-							tokens?: { in?: number };
-						};
-					};
-				};
-			} catch {
-				return {};
-			}
-		})
-		.at(-1);
-	const parser = step?.data?.parser;
-	expect(parser?.kind, `parser: ${JSON.stringify(parser)}`).toBe('gemini');
+	type Parser = { kind?: string; model?: string; latencyMs?: number; tokens?: { in?: number } };
+	const lines = () =>
+		streamed
+			.split('\n')
+			.map((l) => {
+				try {
+					return JSON.parse(l) as { step?: string; status?: string; data?: { parser?: Parser } };
+				} catch {
+					return null;
+				}
+			})
+			.filter((x) => x !== null);
+	/** One request with a sentence no one has sent before, so no parse cache can answer it. */
+	const ask = async () => {
+		streamed = '';
+		await page.goto(`${BASE}/request`);
+		const litres = 11 + Math.floor(Math.random() * 80);
+		await page.locator('#req').fill(`${litres} l lactose-free milk for Friday`);
+		await page.getByRole('button', { name: /Find and price/ }).click();
+		await page
+			.getByText(/1 quote for|nothing quoted/)
+			.first()
+			.waitFor({ timeout: 60_000 });
+		await page.waitForTimeout(500);
+		return lines().findLast((l) => l.step === 'request' && l.data?.parser)?.data?.parser;
+	};
+	// This request was read by a live Gemini call: its own result names the model, the latency and the tokens. A run
+	// with no parser step at all (seen once right after a deploy) is asked again once, with its steps on record.
+	let parser = await ask();
+	if (!parser) {
+		const steps = lines().map((l) => `${l.step}:${l.status ?? ''}`);
+		test
+			.info()
+			.annotations.push({ type: 'retry', description: `no parser step: ${steps.join(', ')}` });
+		parser = await ask();
+	}
+	expect(
+		parser?.kind,
+		`parser: ${JSON.stringify(parser)}; steps: ${lines()
+			.map((l) => `${l.step}:${l.status ?? ''}`)
+			.join(', ')}`
+	).toBe('gemini');
 	expect(parser?.model, 'a named model').toMatch(/^gemini-/);
 	expect(parser?.tokens?.in ?? 0, 'tokens spent on this request').toBeGreaterThan(0);
 	// The stored trace of that same call (O's traces table), found by this journey's request id.
-	const traces = await page.request.get(
-		`${BASE}/api/ops/traces?requestId=${requestId}&source=gemini`
-	);
+	type TraceRow = {
+		model: string | null;
+		tokensIn: number | null;
+		ok: boolean;
+		requestId: string | null;
+	};
+	const traceUrl = `${BASE}/api/ops/traces?requestId=${requestId}&source=gemini`;
+	const isCall = (t: TraceRow) =>
+		t.requestId === requestId && t.ok && /^gemini-/.test(t.model ?? '') && (t.tokensIn ?? 0) > 0;
+	let traces = await page.request.get(traceUrl);
 	if (traces.status() === 404)
 		test
 			.info()
 			.annotations.push({ type: 'note', description: 'no /api/ops/traces on this deploy yet' });
 	else {
 		expect(echoed, 'the response echoes this request id').toBe(requestId);
-		const body = (await traces.json()) as {
-			persisted?: boolean;
-			traces?: {
-				model: string | null;
-				tokensIn: number | null;
-				ok: boolean;
-				requestId: string | null;
-			}[];
-		};
+		let body = (await traces.json()) as { persisted?: boolean; traces?: TraceRow[] };
+		// The trace is written after the stream ends: give it a few seconds before calling it missing.
+		for (let i = 0; i < 10 && !body.traces?.some(isCall); i++) {
+			await page.waitForTimeout(500);
+			traces = await page.request.get(traceUrl);
+			body = (await traces.json()) as typeof body;
+		}
 		expect(body.persisted, 'traces are stored').toBe(true);
-		const call = body.traces?.find(
-			(t) =>
-				t.requestId === requestId && t.ok && /^gemini-/.test(t.model ?? '') && (t.tokensIn ?? 0) > 0
-		);
 		expect(
-			call,
+			body.traces?.find(isCall),
 			`a stored Gemini call for ${requestId}: ${JSON.stringify(body.traces?.slice(0, 3))}`
 		).toBeTruthy();
 	}
