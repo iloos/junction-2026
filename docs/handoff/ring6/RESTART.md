@@ -15,6 +15,20 @@ _Lead, Sat 14 Nov late. The user asked to restart all lanes in fresh sessions. L
 
 0d is done: lane/history-profiles f418814 (R12-06 history for P4/P5/P6/P8 in ca8f9ed), ready; lane/valo-basket 7ecaa9e stays held. 0d retires; its open items move to Kitchen and basket (profiles, history) and the lead (valo-basket held).
 
+## North star (user, Sat late): it must not look like a shopping cart with an agent
+The user's read: the app now feels like a cart with a chat box. The machinery that makes it worth building is invisible: the mandate gate, one Valio stock shared across many kitchens, live supply and recall signals, prediction from order history, outside agents held to the same rules. Ring 6 designs every surface around showing that work, before the UI pass polishes it. The cart is the detail level, not the home.
+
+- **Home is "your kitchen's week, handled", not a basket.** A ledger of what the agent did on the kitchen's behalf (re-planned, swapped, held, ordered, and why), what it needs from the chef (the few decisions, each one row with one primary action), and what is coming (the next deliveries, the forecast, recalls watched). The basket and lines open beneath it.
+- **Four moments a judge sees in under a minute, each live, not narrated:**
+  1. **A shortage hits and the system re-plans:** Valio's stock drops; every affected kitchen's plan re-plans in seconds within its own rules, and the cascade is visible (which dishes, which swaps, what each kitchen's mandate allowed, what waits for a person).
+  2. **Words or a photo become a costed plan:** "a no-meat dinner for 120 with a peach dessert" (or a menu photo) → dishes → ingredients → products → a priced, rule-checked basket, with the reasoning shown step by step.
+  3. **An outside agent overreaches and is stopped:** a judge's own Claude tries to buy past the mandate; the refusal names the rule; the chef approves on their phone.
+  4. **Valio's view:** demand across all kitchens per delivery day, what the usual orders predict, where stock will run short (Ops rework, sankey, forecast).
+- **Motion shows the work:** a plan that re-plans animates the changed lines; the agent's steps appear as they happen; numbers count. Depth on demand: every number opens its why.
+- **Acceptance:** a first-time visitor understands within five seconds that an agent is running the kitchen's purchasing under rules, and sees it act within thirty.
+
+A short product-and-narrative session (design + pitch) writes this up as the target screens before Foundations 3 and the UI pass, so the polish serves the story.
+
 ## Foundations first (user, Sat late): settle these before the lanes fan out
 The user's read: many small nudges, often the same ones, because the foundations are thin. Ring 6 opens with three short foundation docs, each owned, reviewed by the lead and the user, then binding on every lane.
 
