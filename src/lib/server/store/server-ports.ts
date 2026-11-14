@@ -25,13 +25,14 @@ export function createServerPorts(o: ServerPortsOptions = {}): Promise<Built> {
 }
 
 async function build(o: ServerPortsOptions): Promise<Built> {
-	if (dbMode() === 'fixture') return createDbPorts({ publish: o.publish });
+	if (dbMode() === 'fixture') return createDbPorts({ publish: o.publish, followCurrentRun: true });
 	const db = (await createPgDb({ runMigrations: false })) as unknown as AnyDb;
 	const overlay = new SimOverlay();
 	return createDbPorts({
 		db,
 		overlay,
 		catalog: createPgCatalog(db, { overlay }),
-		publish: o.publish
+		publish: o.publish,
+		followCurrentRun: true
 	});
 }

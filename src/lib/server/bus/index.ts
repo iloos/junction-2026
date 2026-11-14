@@ -94,9 +94,13 @@ async function readOpEnvelopes(workspaceId: string, after: number, limit: number
 export async function catchUp(
 	workspaceId: string,
 	after: number,
-	limit = 1000
+	limit = 1000,
+	/** Only events of this run (the workspace's current run); all runs when omitted. */
+	runId?: string
 ): Promise<ServerEvent[]> {
-	const ops = await readOpEnvelopes(workspaceId, after, limit);
+	const ops = (await readOpEnvelopes(workspaceId, after, limit)).filter(
+		(e) => !runId || e.runId === runId
+	);
 	const opEvents: ServerEvent[] = ops.map((envelope) => ({
 		kind: 'op',
 		seq: envelope.seq,
@@ -104,7 +108,7 @@ export async function catchUp(
 	}));
 	const sims = bus()
 		.local.after(workspaceId, after)
-		.filter((e) => e.kind === 'sim');
+		.filter((e) => e.kind === 'sim' && (!runId || e.runId === runId));
 	const seen = new Set<number>();
 	return [...opEvents, ...sims]
 		.filter((e) => hasSeq(e) && !seen.has(e.seq) && seen.add(e.seq))
