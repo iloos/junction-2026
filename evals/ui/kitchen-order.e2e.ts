@@ -87,6 +87,11 @@ test('the order summary counts what was approved, adds up, and survives a reload
 
 	const approved = await approveAll(page);
 	expect(approved, 'lines signed off').toBeGreaterThan(0);
+	// What may be ordered now, from the server's plan (button labels can be read twice while a group re-renders).
+	const before = (await (await page.request.get(`${BASE}/kitchen-api/snapshot`)).json()) as {
+		plan?: { lines: { state: string; view?: { committable?: boolean } }[] };
+	};
+	const committable = before.plan?.lines.filter((l) => l.view?.committable === true).length;
 	await page
 		.getByRole('button', { name: /Place order/ })
 		.first()
@@ -112,7 +117,11 @@ test('the order summary counts what was approved, adds up, and survives a reload
 		said !== undefined && Number(said) === confirmed + awaiting,
 		`"Ordered · ${said} lines" vs receipt ${confirmed} confirmed + ${awaiting} awaiting`
 	);
-	check('BUG-5', Number(said) >= approved, `${said} ordered lines for ${approved} signed off`);
+	check(
+		'BUG-5',
+		committable !== undefined && Number(said) === committable,
+		`"Ordered · ${said} lines" vs ${committable} committable lines before Place order (${approved} signed off per the buttons)`
+	);
 	// The screen's count against the server's plan: every committed line, no more, no fewer.
 	const snap = (await (await page.request.get(`${BASE}/kitchen-api/snapshot`)).json()) as {
 		plan?: { lines: { state: string }[] };
