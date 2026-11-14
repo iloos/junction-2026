@@ -634,7 +634,7 @@ export function orderLine(
 		unit: i.pick!.salesUnit
 	};
 	const { qty, unit } = i.item;
-	const requirements = requirementsOf(i.item.constraints);
+	const requirements = requirementsOf(i.item.constraints, i.item.diet);
 	// A physical ask (kg, l, pcs) is the need's amount as typed. Packs and cases become one through what the picked
 	// product states one sales unit holds (never invented): the need then carries the requirements too.
 	const amount: Measure | null =

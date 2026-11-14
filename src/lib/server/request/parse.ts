@@ -16,6 +16,7 @@ import {
 	UNITS,
 	UNKNOWN_UNITS,
 	brandIn,
+	dietTagsIn,
 	esc,
 	type ConstraintKey,
 	type ProductWord,
@@ -49,6 +50,8 @@ export interface ParsedItem {
 	brand?: string;
 	/** How much, as a kind (D20); `exact` when qty and unit say it. */
 	amount?: HowMuch;
+	/** Hard diet asks as D16 tags (vegan, vegetarian, dairy-free, no pork): requirements, never a warning. */
+	diet?: string[];
 	/** What the item is: a product to buy, or a dish to serve (portions). */
 	what?: 'product' | 'dish';
 }
@@ -155,6 +158,33 @@ export function unknownUnitWord(w: string): boolean {
 		!FILLER.has(k) &&
 		!SHORT_WORDS.has(k) &&
 		NUMBER_WORDS[k] === undefined
+	);
+}
+
+/**
+ * The word after a number stands where a unit stands ("2 buckets milk", "3 tubs of yoghurt"): a known unsupported
+ * unit, or a word the parser doesn't know that is followed by "of" or, plural, by what to buy. Read by its position in
+ * the phrase, not from a list: it becomes an unknown unit, asked, never a quantity of something.
+ */
+export function unitPosition(w: string, rest: readonly string[]): boolean {
+	if (unknownUnitWord(w)) return true;
+	const k = w.toLowerCase().replace(/[.,:]+$/, '');
+	if (!/^\p{L}{3,}$/u.test(k) || knownWord(k)) return false;
+	const next = rest.map((x) => x.toLowerCase().replace(/^[,.:]+|[,.:]+$/g, '')).filter(Boolean);
+	if (next[0] === 'of' || next[0] === 'x' || next[0] === '×') return true;
+	const content = next.filter((x) => !FILLER.has(x) && !SHORT_WORDS.has(x));
+	return /[^s]s$/.test(k) && content.length > 0;
+}
+
+/** A word the parser reads as something: a unit, product, constraint, filler or number word. */
+function knownWord(k: string): boolean {
+	return (
+		!!unitOf(k) ||
+		!!productOf(k) ||
+		!!constraintOf(k) ||
+		FILLER.has(k) ||
+		SHORT_WORDS.has(k) ||
+		NUMBER_WORDS[k] !== undefined
 	);
 }
 
@@ -284,6 +314,8 @@ export function parseItem(chunk: string, finnish: boolean): Omit<ParsedItem, 'id
 		covers = cv[0].trim();
 		s = s.replace(cv[0], ' ');
 	}
+	// A hard diet ask is a requirement of the item (D16), whatever words say it.
+	const diet = dietTagsIn(s);
 	// A named brand is kept on the item (and required at lookup), never left as a stray word.
 	const brand = brandIn(s);
 	if (brand) s = s.replace(new RegExp(esc(brand.toLowerCase()), 'u'), ' ');
@@ -328,7 +360,7 @@ export function parseItem(chunk: string, finnish: boolean): Omit<ParsedItem, 'id
 			unit = u.unit;
 			qty = +(qty * u.factor).toFixed(6);
 			unitWordAt = words.indexOf(w0);
-		} else if (unknownUnitWord(w0)) {
+		} else if (unitPosition(w0, afterWords.slice(1))) {
 			// An explicit unit the request can't order in: asked, never read as sales units.
 			unknownUnit = w0;
 			unitWordAt = words.indexOf(w0);
@@ -419,6 +451,7 @@ export function parseItem(chunk: string, finnish: boolean): Omit<ParsedItem, 'id
 
 	const query = [
 		...CONSTRAINTS.filter((c) => constraints.includes(c.key)).map((c) => c.label),
+		...diet,
 		variant?.label,
 		product?.key ?? leftovers.join(' ')
 	]
@@ -432,6 +465,7 @@ export function parseItem(chunk: string, finnish: boolean): Omit<ParsedItem, 'id
 		product: product?.key ?? null,
 		search: brand && search.length ? [`${brand.toLowerCase()} ${search[0]}`, ...search] : search,
 		...(brand ? { brand } : {}),
+		...(diet.length ? { diet } : {}),
 		amount,
 		qty,
 		unit,
@@ -526,7 +560,8 @@ const LlmItem = z.object({
 	constraints: z.array(z.string()).default([]),
 	searchFi: z.array(z.string()).default([]),
 	variant: z.string().nullable().optional(),
-	brand: z.string().nullable().optional()
+	brand: z.string().nullable().optional(),
+	diet: z.array(z.string()).default([])
 });
 const LlmOut = z.object({
 	intent: z.enum(['order', 'question', 'change']).default('order'),
@@ -565,13 +600,21 @@ function fromLlmItem(it: z.infer<typeof LlmItem>): Omit<ParsedItem, 'id'> {
 		...it.query.toLowerCase().split(/\s+/),
 		...it.searchFi.map((w) => w.toLowerCase())
 	];
-	const product = words.map(productOf).find(Boolean) ?? null;
+	// A plant-based or dairy-free ask is not the dairy product its noun names: the model's own search words lead.
+	const plant = [...it.diet, it.query].some((t) =>
+		dietTagsIn(t).some((x) => x === 'vegan' || x === 'dairy-free')
+	);
+	const product = plant && it.searchFi.length ? null : (words.map(productOf).find(Boolean) ?? null);
 	const constraints = it.constraints.map(constraintKey).filter((c): c is ConstraintKey => !!c);
 	const variant = variantIn(product, [
 		...(it.variant ?? '').toLowerCase().split(/\s+/),
 		...it.query.toLowerCase().split(/\s+/)
 	]);
 	const ambiguities: string[] = [];
+	// The model's diet tags and any the item's own words state, in core's vocabulary.
+	const dietTags = [
+		...new Set([...it.diet.flatMap((t) => dietTagsIn(t)), ...dietTagsIn(it.query)])
+	];
 	const amount: HowMuch =
 		it.amount?.kind === 'range'
 			? {
@@ -612,7 +655,8 @@ function fromLlmItem(it: z.infer<typeof LlmItem>): Omit<ParsedItem, 'id'> {
 		ambiguities,
 		amount,
 		what: it.what,
-		...(it.brand ? { brand: it.brand } : {})
+		...(it.brand ? { brand: it.brand } : {}),
+		...(dietTags.length ? { diet: dietTags } : {})
 	};
 }
 
@@ -691,6 +735,18 @@ function reconcile(
 			]
 		};
 	if (r?.variant && !m.variant) m = { ...m, variant: r.variant };
+	if (r?.diet?.length) {
+		const lost = r.diet.filter((t) => !(m.diet ?? []).includes(t));
+		if (lost.length)
+			m = {
+				...m,
+				diet: [...(m.diet ?? []), ...lost],
+				ambiguities: [
+					...m.ambiguities,
+					`the model dropped ${lost.join(', ')}: kept from your words`
+				]
+			};
+	}
 	const typed = r?.constraints ?? constraintsIn(m.query);
 	const dropped = typed.filter((c) => !m.constraints.includes(c));
 	if (!dropped.length) return r ? { ...m, id: r.id } : m;
