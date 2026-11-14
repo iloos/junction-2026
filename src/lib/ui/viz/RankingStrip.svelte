@@ -313,7 +313,7 @@
 		class="block"
 	></svg>
 	{#if rows.hidden}
-		<p class="px-7 pb-1 text-[12px] text-ink-3">
+		<p class="px-7 pb-1 text-meta text-ink-3">
 			+{rows.hidden} more excluded by a hard rule (see all candidates)
 		</p>
 	{/if}

@@ -10,38 +10,50 @@ export type Bucket =
 	'supplierConfirmed' | 'awaitingSupplier' | 'plannedKnown' | 'plannedUnknown' | 'unresolved';
 
 /** In order of certainty, most certain first: the bar fills left to right in this order. */
-export const BUCKETS: { key: Bucket; label: string; hint: string }[] = [
+/** `cls` is the D10 supply fill (layout.css `supply-*`): solid observed, hatched not yet true, outline missing. */
+export const BUCKETS: { key: Bucket; label: string; hint: string; cls: string }[] = [
 	{
 		key: 'supplierConfirmed',
 		label: 'Supplier confirmed',
-		hint: 'ordered, and the supplier confirmed the quantity'
+		hint: 'ordered, and the supplier confirmed the quantity',
+		cls: 'supply-confirmed'
 	},
 	{
 		key: 'awaitingSupplier',
 		label: 'Ordered, awaiting supplier',
-		hint: 'ordered; the supplier has not confirmed a quantity'
+		hint: 'ordered; the supplier has not confirmed a quantity',
+		cls: 'supply-awaiting'
 	},
 	{
 		key: 'plannedKnown',
 		label: 'Planned, known stock',
-		hint: 'not ordered yet; stock is known but not reserved'
+		hint: 'not ordered yet; stock is known but not reserved',
+		cls: 'supply-known'
 	},
 	{
 		key: 'plannedUnknown',
 		label: 'Planned, stock unknown',
-		hint: 'not ordered yet; the supplier states no quantity, so it is not cover'
+		hint: 'not ordered yet; the supplier states no quantity, so it is not cover',
+		cls: 'supply-unknown'
 	},
-	{ key: 'unresolved', label: 'Not covered', hint: 'nothing in the plan covers this amount' }
+	{
+		key: 'unresolved',
+		label: 'Not covered',
+		hint: 'nothing in the plan covers this amount',
+		cls: 'supply-missing'
+	}
 ];
 
 export const EXCESS = {
 	label: 'Bought over the need',
-	hint: 'pack and lot rounding; not counted as cover'
+	hint: 'pack and lot rounding; not counted as cover',
+	cls: 'supply-excess'
 };
 
 export interface Segment {
 	key: Bucket | 'excess';
 	label: string;
+	cls: string;
 	value: number;
 	/** Share of the bar's full width (required + excess), 0..1. */
 	width: number;
@@ -56,6 +68,7 @@ export function segments(f: FulfilmentView): { parts: Segment[]; requiredAt: num
 	const parts: Segment[] = BUCKETS.filter((b) => f[b.key].value > 0).map((b) => ({
 		key: b.key,
 		label: b.label,
+		cls: b.cls,
 		value: f[b.key].value,
 		width: share(f[b.key].value)
 	}));
@@ -63,6 +76,7 @@ export function segments(f: FulfilmentView): { parts: Segment[]; requiredAt: num
 		parts.push({
 			key: 'excess',
 			label: EXCESS.label,
+			cls: EXCESS.cls,
 			value: f.excess.value,
 			width: share(f.excess.value)
 		});

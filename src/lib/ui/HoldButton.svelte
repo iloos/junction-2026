@@ -46,7 +46,7 @@
 
 <button
 	type="button"
-	class="relative isolate flex h-11 w-full items-center justify-center overflow-hidden rounded-md bg-ink px-4 text-[14px] font-medium text-sheet select-none disabled:cursor-not-allowed disabled:opacity-40"
+	class="relative isolate flex h-11 w-full items-center justify-center overflow-hidden rounded-md bg-ink px-4 text-body font-medium text-sheet select-none disabled:cursor-not-allowed disabled:opacity-40"
 	{disabled}
 	onpointerdown={begin}
 	onpointerup={cancel}

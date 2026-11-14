@@ -43,7 +43,7 @@
 >
 	<div class="relative flex flex-col items-center">
 		<span
-			class="z-10 flex size-8 items-center justify-center rounded-full border text-[13px] font-medium {m.cls}"
+			class="z-10 flex size-8 items-center justify-center rounded-full border text-body font-medium {m.cls}"
 			title={m.word}
 		>
 			{#if status === 'idle'}
@@ -67,7 +67,7 @@
 	<section class="min-w-0 pb-7" aria-label={title}>
 		<header class="flex min-h-8 flex-wrap items-center gap-x-3 gap-y-1">
 			<h2
-				class="text-[15px] font-semibold tracking-[-0.005em] {status === 'idle'
+				class="text-heading font-semibold tracking-[-0.005em] {status === 'idle'
 					? 'text-ink-3'
 					: 'text-ink'}"
 			>
@@ -76,7 +76,7 @@
 			<span class="sr-only">{m.word}</span>
 			{#if sources}<span class="flex flex-wrap items-center gap-1.5">{@render sources()}</span>{/if}
 			{#if ms !== null && status !== 'idle' && status !== 'running'}
-				<span class="mono ml-auto text-[11.5px] text-ink-3">{ms} ms</span>
+				<span class="mono ml-auto text-micro text-ink-3">{ms} ms</span>
 			{/if}
 		</header>
 		{#if children && status !== 'idle'}

@@ -45,7 +45,7 @@
 </script>
 
 <div class="rounded-md border border-rule bg-sheet">
-	<p class="border-b border-rule px-4 py-2.5 text-[13.5px] text-ink">
+	<p class="border-b border-rule px-4 py-2.5 text-body text-ink">
 		<span class="font-medium">Rescue.</span>
 		{rescue.summary}
 	</p>
@@ -66,21 +66,17 @@
 							: 'border-rule'}"
 				>
 					<div class="flex items-start justify-between gap-3">
-						<p
-							class="min-w-0 text-[13.5px] leading-snug font-medium {rej
-								? 'text-ink-2'
-								: 'text-ink'}"
-						>
+						<p class="min-w-0 text-body leading-snug font-medium {rej ? 'text-ink-2' : 'text-ink'}">
 							<span class="mono mr-1 text-ink-3">{c.rank ?? '–'}</span>{c.name}
 						</p>
-						{#if c.score && !rej}<span class="mono shrink-0 text-[13px] text-ink"
+						{#if c.score && !rej}<span class="mono shrink-0 text-body text-ink"
 								>{c.score.total.toFixed(2)}</span
 							>{/if}
 					</div>
-					<p class="mono mt-0.5 text-[11.5px] text-ink-3">
+					<p class="mono mt-0.5 text-micro text-ink-3">
 						{c.productId} · {c.origin ? c.origin.toUpperCase() : 'origin ?'}
 					</p>
-					<dl class="mt-1.5 grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 text-[12.5px]">
+					<dl class="mt-1.5 grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 text-meta">
 						<dt class="text-ink-3">Availability</dt>
 						<dd class="text-ink">{c.availableText}</dd>
 						<dt class="text-ink-3">Price</dt>
@@ -93,7 +89,7 @@
 						{/if}
 					</dl>
 					<p
-						class="mt-1.5 text-[12.5px] {rej
+						class="mt-1.5 text-meta {rej
 							? c.kind === 'undeliverable'
 								? 'text-undeliv'
 								: 'text-out'
@@ -108,17 +104,17 @@
 				</li>
 			{/each}
 			{#if hiddenCards}
-				<li class="px-1 text-[12px] text-ink-3">+{hiddenCards} more excluded by a hard rule</li>
+				<li class="px-1 text-meta text-ink-3">+{hiddenCards} more excluded by a hard rule</li>
 			{/if}
 		</ol>
 		<details class="border-t border-rule">
-			<summary class="cursor-pointer px-4 py-2 text-[12.5px] text-ink-2 select-none hover:text-ink"
+			<summary class="cursor-pointer px-4 py-2 text-meta text-ink-2 select-none hover:text-ink"
 				>All {rescue.candidates.length} candidates, every column</summary
 			>
 			<div class="overflow-x-auto">
-				<table class="w-full min-w-[720px] text-[13px]">
+				<table class="w-full min-w-[720px] text-body">
 					<thead>
-						<tr class="text-left text-[11.5px] font-medium text-ink-3">
+						<tr class="text-left text-micro font-medium text-ink-3">
 							<th class="w-9 py-2 pl-4 font-medium">#</th>
 							<th class="py-2 font-medium">Candidate</th>
 							<th class="py-2 font-medium">Availability</th>
@@ -141,7 +137,7 @@
 								</td>
 								<td class="py-2.5 pr-3">
 									<div class="font-medium {rej ? 'text-ink-2' : 'text-ink'}">{c.name}</div>
-									<div class="mono text-[11.5px] text-ink-3">
+									<div class="mono text-micro text-ink-3">
 										{c.productId} · {c.origin ? c.origin.toUpperCase() : 'origin ?'}
 										{#if c.reliability !== undefined}· rel {c.reliability.toFixed(2)}{/if}
 										{#if c.co2PerKg !== undefined}· {num(c.co2PerKg, 1)} kg CO₂e/kg{/if}
@@ -173,7 +169,7 @@
 									{#if c.score && !rej}
 										<ScoreBar score={c.score} max={maxScore} />
 									{:else}
-										<span class="text-[12px]">not ranked</span>
+										<span class="text-meta">not ranked</span>
 									{/if}
 								</td>
 								<td class="py-2.5 pr-4">
@@ -189,7 +185,7 @@
 										{c.verdict}
 									</div>
 									{#if !rej}
-										<div class="text-[12px] {tierCls(c.tier)}">
+										<div class="text-meta {tierCls(c.tier)}">
 											{tierText(c.tier)}{#if c.holdReasons.length}: {c.holdReasons
 													.map(reasonShort)
 													.join(', ')}{/if}
@@ -210,7 +206,7 @@
 			<div
 				class="flex flex-wrap items-center justify-between gap-3 border-t border-rule bg-signoff-wash px-4 py-3"
 			>
-				<p class="flex items-start gap-2 text-[13.5px] text-ink">
+				<p class="flex items-start gap-2 text-body text-ink">
 					<TriangleAlert size={16} class="mt-0.5 shrink-0 text-signoff" aria-hidden="true" />
 					<span>
 						<b class="font-medium">Shortfall, stated:</b>
@@ -220,7 +216,7 @@
 				{#if rescue.residual.fitGrams && rescue.residual.fitGrams < grams}
 					<button
 						type="button"
-						class="h-8 rounded-md border border-signoff/50 bg-sheet px-3 text-[13px] font-medium text-ink hover:bg-well"
+						class="h-8 rounded-md border border-signoff/50 bg-sheet px-3 text-body font-medium text-ink hover:bg-well"
 						onclick={() => onfit(rescue.residual!.fitGrams!)}
 					>
 						Serve {rescue.residual.fitGrams} g per guest instead
@@ -232,16 +228,16 @@
 		{@const m = rescue.make}
 		<div class="grid gap-0 md:grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)]">
 			<div class="border-b border-rule px-4 py-3 md:border-r md:border-b-0">
-				<p class="text-[12px] font-medium text-ink-3">Ready-made, checked</p>
-				<ul class="mt-2 space-y-1.5 text-[13px]">
+				<p class="text-meta font-medium text-ink-3">Ready-made, checked</p>
+				<ul class="mt-2 space-y-1.5 text-body">
 					{#each rescue.candidates as c (c.productId)}
 						<li class="flex items-start justify-between gap-3">
 							<span class="min-w-0 text-ink-2">
 								<span class="block truncate">{c.name}</span>
-								<span class="mono text-[11.5px] text-ink-3">{c.productId}</span>
+								<span class="mono text-micro text-ink-3">{c.productId}</span>
 							</span>
 							<span
-								class="shrink-0 text-[12px] whitespace-nowrap {c.kind === 'undeliverable'
+								class="shrink-0 text-meta whitespace-nowrap {c.kind === 'undeliverable'
 									? 'text-undeliv'
 									: c.kind === 'out'
 										? 'text-out'
@@ -252,36 +248,36 @@
 						</li>
 					{/each}
 				</ul>
-				<p class="mt-2 text-[12px] leading-snug text-ink-3">
+				<p class="mt-2 text-meta leading-snug text-ink-3">
 					{readyCounts.out} out of stock · {readyCounts.undeliverable} can't be delivered · {readyCounts.unknown}
 					unknown quantity (never counted as cover)
 				</p>
 			</div>
 			<div class="px-4 py-3">
 				<div class="flex flex-wrap items-baseline justify-between gap-2">
-					<p class="inline-flex items-center gap-1.5 text-[13.5px] font-medium text-ink">
+					<p class="inline-flex items-center gap-1.5 text-body font-medium text-ink">
 						<ChefHat size={15} class="text-accent" aria-hidden="true" />
 						{m.title}
 					</p>
-					<p class="text-[12.5px] text-ink-2">
+					<p class="text-meta text-ink-2">
 						<span class="mono text-ink">{money(m.totalCents)}</span> vs
 						<span class="mono">{money(m.vsReadyMadeCents)}</span> ready-made
 					</p>
 				</div>
-				<table class="mt-2 w-full text-[12.5px]">
+				<table class="mt-2 w-full text-meta">
 					<tbody>
 						{#each m.ingredients as ing (ing.productId)}
 							<tr class="border-t border-rule first:border-t-0">
 								<td class="py-1.5 pr-2">
 									<span class="text-ink">{ing.name}</span>
-									<span class="mono block text-[11px] text-ink-3"
+									<span class="mono block text-micro text-ink-3"
 										>{ing.productId} · {ing.origin?.toUpperCase() ?? '?'} · {ing.need}</span
 									>
 								</td>
 								<td class="mono py-1.5 pr-2 text-right whitespace-nowrap text-ink"
 									>{num(ing.qty)} {ing.unit}</td
 								>
-								<td class="py-1.5 pr-2 text-right text-[11.5px] whitespace-nowrap text-ok"
+								<td class="py-1.5 pr-2 text-right text-micro whitespace-nowrap text-ok"
 									>{ing.availText}</td
 								>
 								<td class="mono py-1.5 text-right whitespace-nowrap">{money(ing.lineCents)}</td>
@@ -289,7 +285,7 @@
 						{/each}
 					</tbody>
 				</table>
-				<ul class="mt-2 space-y-1 text-[12.5px] leading-snug text-ink-2">
+				<ul class="mt-2 space-y-1 text-meta leading-snug text-ink-2">
 					<li class="flex gap-1.5">
 						<Clock3 size={13} class="mt-0.5 shrink-0" aria-hidden="true" />{m.labourNote} · {m.recipeNote}
 					</li>
@@ -308,7 +304,7 @@
 						</li>
 					{/each}
 				</ul>
-				<p class="mt-2 text-[12px] {tierCls(m.tier)}">
+				<p class="mt-2 text-meta {tierCls(m.tier)}">
 					{tierText(m.tier)}{#if m.holdReasons.length}: {m.holdReasons
 							.map(reasonShort)
 							.join(', ')}{/if}

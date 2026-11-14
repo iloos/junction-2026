@@ -66,11 +66,14 @@
 	});
 
 	function draw(el: SVGSVGElement, w: number, t: Date | null, data: Lane[], done: boolean) {
+		// On a phone the lane names sit above their bars and the notes drop: the axis gets the full width.
+		const narrow = w < 560;
+		const ml = narrow ? 8 : M.left;
 		const x = scaleTime()
 			.domain([start, end])
-			.range([M.left, w - M.right]);
+			.range([ml, w - M.right]);
 		const root = select(el);
-		const fmt = timeFormat('%a %-d');
+		const fmt = timeFormat(narrow ? '%a' : '%a %-d');
 
 		root
 			.selectAll<SVGGElement, null>('g.axis')
@@ -112,11 +115,14 @@
 		pin
 			.select('text')
 			.attr('y', 13)
-			.attr('text-anchor', (d) => (d.id === 'event' ? 'end' : 'middle'))
+			.attr('text-anchor', (d) =>
+				d.id === 'event' ? 'end' : d.id === 'cutoff' ? (narrow ? 'start' : 'middle') : 'middle'
+			)
+			.attr('x', (d) => (d.id === 'cutoff' && narrow ? 4 : 0))
 			.attr('font-size', 11.5)
 			.attr('font-weight', 500)
 			.attr('fill', (d) => d.color)
-			.text((d) => d.label);
+			.text((d) => (narrow && d.id === 'cutoff' ? 'Cut-off' : d.label));
 
 		const lane = root
 			.selectAll<SVGGElement, Lane>('g.lane')
@@ -131,9 +137,9 @@
 			.attr('transform', (_, i) => `translate(0,${M.top + 6 + i * LANE})`);
 		lane
 			.select('text.name')
-			.attr('x', 0)
-			.attr('y', 12)
-			.attr('font-size', 12.5)
+			.attr('x', narrow ? ml : 0)
+			.attr('y', narrow ? 2 : 12)
+			.attr('font-size', narrow ? 11.5 : 12.5)
 			.attr('font-weight', 500)
 			.attr('fill', 'var(--color-ink)')
 			.text((d) => `${d.label} · ${d.count}`);
@@ -141,13 +147,13 @@
 			.select('text.note')
 			.attr('x', x(cutoff) + 8)
 			.attr('y', 13)
-			.attr('font-size', 10.5)
+			.attr('font-size', 11)
 			.attr('fill', 'var(--color-ink-3)')
-			.text((d) => (d.count ? d.note : 'none open'));
+			.text((d) => (narrow ? '' : d.count ? d.note : 'none open'));
 		lane
 			.select('rect.bar')
-			.attr('x', t ? x(t) : M.left)
-			.attr('y', 4)
+			.attr('x', t ? x(t) : ml)
+			.attr('y', narrow ? 7 : 4)
 			.attr('height', 12)
 			.attr('width', (d) => (t && d.count && !done ? Math.max(0, x(cutoff) - x(t)) : 0))
 			.attr('fill', (d) => (d.id === 'stock' ? 'var(--color-accent)' : 'var(--color-well)'))
@@ -179,14 +185,14 @@
 			.attr('font-size', 11.5)
 			.attr('font-weight', 600)
 			.attr('fill', 'var(--color-out)')
-			.text('Now');
+			.text(narrow ? '' : 'Now');
 	}
 </script>
 
 <section aria-labelledby="timeline-h" class="rounded-lg border border-rule bg-sheet px-4 pt-3 pb-1">
 	<div class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-		<h2 id="timeline-h" class="text-[14px] font-semibold text-ink">By when</h2>
-		<p class="text-[12.5px] text-ink-2">
+		<h2 id="timeline-h" class="text-body font-semibold text-ink">By when</h2>
+		<p class="text-meta text-ink-2">
 			{#if committed}Ordered: nothing waits on the cut-off.{:else}<span class="mono text-ink"
 					>{left}</span
 				> · scenario clock{/if}

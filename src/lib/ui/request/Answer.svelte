@@ -43,8 +43,8 @@
 						onclick={() => onanswer(o.answer)}
 						class="block h-full w-full rounded-lg border border-rule-strong bg-sheet px-3 py-2 text-left hover:border-accent/60 disabled:opacity-50"
 					>
-						<span class="num block text-[14px] font-medium text-ink">{o.label}</span>
-						<span class="mt-0.5 block text-[12px] leading-snug text-ink-2">{o.detail}</span>
+						<span class="num block text-body font-medium text-ink">{o.label}</span>
+						<span class="mt-0.5 block text-meta leading-snug text-ink-2">{o.detail}</span>
 					</button>
 				</li>
 			{/each}
@@ -52,7 +52,7 @@
 	{/if}
 	{#if units.length}
 		<form class="flex flex-wrap items-center gap-2" onsubmit={send}>
-			<label class="text-[13px] text-ink-2" for="ans-{spec.item}">
+			<label class="text-body text-ink-2" for="ans-{spec.item}">
 				{spec.kind === 'choice' ? 'Or give the amount:' : 'Amount:'}
 			</label>
 			<input
@@ -60,16 +60,16 @@
 				bind:value={qty}
 				inputmode="decimal"
 				placeholder="e.g. 40"
-				class="num h-9 w-24 rounded-md border border-rule-strong bg-sheet px-2 text-[14px]"
+				class="num h-9 w-24 rounded-md border border-rule-strong bg-sheet px-2 text-body"
 			/>
 			{#if spec.kind === 'qty' && spec.salesUnit}
-				<span class="text-[13px] text-ink-2">{spec.salesUnit}</span>
+				<span class="text-body text-ink-2">{spec.salesUnit}</span>
 			{:else}
 				<select
 					value={chosenUnit}
 					onchange={(e) => (unit = e.currentTarget.value as ReqUnit)}
 					aria-label="Unit"
-					class="h-9 rounded-md border border-rule-strong bg-sheet px-2 text-[13px]"
+					class="h-9 rounded-md border border-rule-strong bg-sheet px-2 text-body"
 				>
 					{#each units as u (u)}<option value={u}>{UNIT_LABEL[u]}</option>{/each}
 				</select>
@@ -77,7 +77,7 @@
 			<button
 				type="submit"
 				disabled={busy || !valid}
-				class="inline-flex h-9 items-center gap-1.5 rounded-md bg-accent px-3 text-[13px] font-medium text-sheet disabled:opacity-40"
+				class="inline-flex h-9 items-center gap-1.5 rounded-md bg-accent px-3 text-body font-medium text-sheet disabled:opacity-40"
 			>
 				Use this <CornerDownLeft size={14} aria-hidden="true" />
 			</button>

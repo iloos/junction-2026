@@ -378,7 +378,7 @@
 <svelte:head><title>Purchase request · Mandate</title></svelte:head>
 
 <div
-	class="border-b border-rule bg-well text-[12px] text-ink-2"
+	class="border-b border-rule bg-well text-meta text-ink-2"
 	role="note"
 	aria-label="Data sources"
 >
@@ -422,19 +422,19 @@
 <main class="mx-auto max-w-[820px] px-4 pt-6 pb-24 sm:pt-10">
 	<header class="mb-5 flex flex-wrap items-end justify-between gap-3">
 		<div>
-			<p class="text-[12px] font-medium tracking-[0.08em] text-ink-3 uppercase">
+			<p class="text-meta font-medium tracking-[0.08em] text-ink-3 uppercase">
 				Mandate · purchase request
 			</p>
-			<h1 class="mt-1 text-[22px] leading-tight font-semibold tracking-[-0.01em] sm:text-[26px]">
+			<h1 class="mt-1 text-title leading-tight font-semibold tracking-[-0.01em] sm:text-display">
 				What does the kitchen need?
 			</h1>
 		</div>
-		<label class="flex items-center gap-2 text-[13px] text-ink-2">
+		<label class="flex items-center gap-2 text-body text-ink-2">
 			<span>Kitchen</span>
 			<select
 				bind:value={kitchenId}
 				onchange={startOver}
-				class="h-9 max-w-[15rem] rounded-md border border-rule-strong bg-sheet px-2 text-[13px] text-ink"
+				class="h-9 max-w-[15rem] rounded-md border border-rule-strong bg-sheet px-2 text-body text-ink"
 			>
 				{#each data.kitchens as k (k.id)}<option value={k.id}>{k.name}</option>{/each}
 			</select>
@@ -444,14 +444,14 @@
 				type="button"
 				disabled={busy || !ready}
 				onclick={resetSandbox}
-				class="inline-flex h-9 items-center gap-1.5 rounded-md border border-rule-strong bg-sheet px-3 text-[13px] text-ink-2 hover:text-ink disabled:opacity-50"
+				class="inline-flex h-9 items-center gap-1.5 rounded-md border border-rule-strong bg-sheet px-3 text-body text-ink-2 hover:text-ink disabled:opacity-50"
 			>
 				<RotateCcw size={14} aria-hidden="true" /> Start over (sandbox)
 			</button>
 		{/if}
 	</header>
 	{#if sandboxNote}
-		<p class="-mt-2 mb-4 text-[13px] text-ink-2" role="status">{sandboxNote}</p>
+		<p class="-mt-2 mb-4 text-body text-ink-2" role="status">{sandboxNote}</p>
 	{/if}
 
 	<form
@@ -468,7 +468,7 @@
 			rows="2"
 			maxlength="500"
 			placeholder={PLACEHOLDER}
-			class="block w-full resize-none bg-transparent px-2.5 pt-2 text-[17px] leading-snug text-ink placeholder:text-ink-3 focus:outline-none"
+			class="block w-full resize-none bg-transparent px-2.5 pt-2 text-title leading-snug text-ink placeholder:text-ink-3 focus:outline-none"
 			onkeydown={(e) => {
 				if (e.key === 'Enter' && !e.shiftKey) {
 					e.preventDefault();
@@ -476,13 +476,13 @@
 				}
 			}}></textarea>
 		<div class="flex items-center justify-between gap-2 px-1 pt-1">
-			<span class="hidden px-1.5 text-[12px] text-ink-3 sm:inline"
+			<span class="hidden px-1.5 text-meta text-ink-3 sm:inline"
 				>English or Finnish. Quantity, product, day.</span
 			>
 			<button
 				type="submit"
 				disabled={busy || !ready}
-				class="ml-auto inline-flex h-10 items-center gap-1.5 rounded-lg bg-accent px-4 text-[14px] font-medium whitespace-nowrap text-sheet hover:bg-accent-ink disabled:opacity-50"
+				class="ml-auto inline-flex h-10 items-center gap-1.5 rounded-lg bg-accent px-4 text-body font-medium whitespace-nowrap text-sheet hover:bg-accent-ink disabled:opacity-50"
 			>
 				Find and price <ArrowRight size={16} aria-hidden="true" />
 			</button>
@@ -490,13 +490,13 @@
 	</form>
 
 	<div class="mt-3 flex flex-wrap items-center gap-2" aria-label="Examples">
-		<span class="text-[12px] text-ink-3">Try</span>
+		<span class="text-meta text-ink-3">Try</span>
 		{#each EXAMPLES as ex (ex)}
 			<button
 				type="button"
 				disabled={busy || !ready}
 				onclick={() => submit(ex)}
-				class="h-8 rounded-full border border-rule-strong bg-sheet px-3 text-[13px] text-ink-2 hover:border-accent/50 hover:text-accent-ink disabled:opacity-50"
+				class="h-8 rounded-full border border-rule-strong bg-sheet px-3 text-body text-ink-2 hover:border-accent/50 hover:text-accent-ink disabled:opacity-50"
 				>{ex}</button
 			>
 		{/each}
@@ -504,7 +504,7 @@
 
 	{#if error}
 		<p
-			class="mt-4 flex items-start gap-2 rounded-lg border border-out/30 bg-out-wash px-3 py-2 text-[13.5px] text-out"
+			class="mt-4 flex items-start gap-2 rounded-lg border border-out/30 bg-out-wash px-3 py-2 text-body text-out"
 			role="alert"
 		>
 			<TriangleAlert size={16} class="mt-0.5 shrink-0" aria-hidden="true" />{error}
@@ -522,7 +522,7 @@
 						/>{/if}
 				{/snippet}
 				{#if parsed}
-					<p class="text-[12.5px] text-ink-3">
+					<p class="text-meta text-ink-3">
 						{#if parsed.parser.kind === 'rules'}Parsed by rules: deterministic, no model call.{:else}Parsed
 							by {parsed.parser.model} ·
 							<span class="mono"
@@ -535,28 +535,27 @@
 					</p>
 					<ul class="mt-2 space-y-1.5" hidden={!!event}>
 						{#each parsed.items as it (it.id)}
-							<li class="flex flex-wrap items-baseline gap-x-2 gap-y-1 text-[15px]">
+							<li class="flex flex-wrap items-baseline gap-x-2 gap-y-1 text-heading">
 								<b class="num font-semibold">{qtyText(it.qty, it.unit)}</b>
 								<span>{it.product ?? it.query}</span>
 								{#each it.constraints as c (c)}<span
-										class="rounded border border-accent/30 bg-accent-wash px-1.5 text-[12px] text-accent-ink"
+										class="rounded border border-accent/30 bg-accent-wash px-1.5 text-meta text-accent-ink"
 										>{CONSTRAINT_WORDS[c] ?? c}</span
 									>{/each}
-								{#if it.variant}<span
-										class="rounded border border-rule px-1.5 text-[12px] text-ink-2"
+								{#if it.variant}<span class="rounded border border-rule px-1.5 text-meta text-ink-2"
 										>{it.variant.label}</span
 									>{/if}
-								<span class="mono text-[11.5px] text-ink-3">search “{it.search[0] ?? '—'}”</span>
+								<span class="mono text-micro text-ink-3">search “{it.search[0] ?? '—'}”</span>
 							</li>
 						{/each}
 					</ul>
-					<p class="mt-2 text-[14px] text-ink-2">
+					<p class="mt-2 text-body text-ink-2">
 						Deliver by <b class="font-medium text-ink">{day(parsed.deliverBy)}</b>
 						{#if parsed.deliverByText}<span class="text-ink-3">from “{parsed.deliverByText}”</span
 							>{:else}<span class="text-signoff">(no day given)</span>{/if}
 					</p>
 					{#if parsed.answered?.length}
-						<p class="mt-2 text-[13px] text-ink-2">
+						<p class="mt-2 text-body text-ink-2">
 							Your answers: {parsed.answered.map(answerText).join(' · ')}
 							<button
 								type="button"
@@ -578,7 +577,7 @@
 					]}
 					{#if asks.length}
 						<ul
-							class="mt-2 space-y-1 rounded-lg border border-signoff/30 bg-signoff-wash px-3 py-2 text-[13px] text-ink"
+							class="mt-2 space-y-1 rounded-lg border border-signoff/30 bg-signoff-wash px-3 py-2 text-body text-ink"
 						>
 							{#each asks as a (a)}<li class="flex gap-2">
 									<TriangleAlert
@@ -591,7 +590,7 @@
 					{/if}
 					{#if event}
 						<div
-							class="mt-3 rounded-lg border border-accent/30 bg-accent-wash px-3 py-2.5 text-[14px] text-ink"
+							class="mt-3 rounded-lg border border-accent/30 bg-accent-wash px-3 py-2.5 text-body text-ink"
 							data-testid="event-brief"
 						>
 							<p class="font-medium">
@@ -604,7 +603,7 @@
 							{#if event.draft}
 								{@const b = event.draft}
 								<dl
-									class="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 text-[13px]"
+									class="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 text-body"
 									aria-label="Brief so far"
 								>
 									{#each briefRows(b) as [k, v, f] (k)}
@@ -622,14 +621,14 @@
 									<BriefAsk q={event.question} {busy} onanswer={answerBrief} />
 								{/key}
 							{:else if event.draft}
-								<p class="mt-2 text-[13.5px] font-medium text-ink">
+								<p class="mt-2 text-body font-medium text-ink">
 									Brief complete. Menu proposal: next.
 								</p>
 							{/if}
 							{#if event.seeded}
 								<a
 									href={resolve('/')}
-									class="mt-2 inline-flex items-center gap-1 text-[13.5px] font-medium text-accent-ink underline"
+									class="mt-2 inline-flex items-center gap-1 text-body font-medium text-accent-ink underline"
 									>Or open the planned {event.seeded.title} in the Kitchen <ArrowRight
 										size={14}
 										aria-hidden="true"
@@ -653,7 +652,7 @@
 					{/if}
 				{/snippet}
 				{#if lookup}
-					<p class="text-[12.5px] text-ink-3">
+					<p class="text-meta text-ink-3">
 						{lookup.searchCalls} catalogue search{lookup.searchCalls === 1 ? '' : 'es'} (static, no Valio
 						call) ·
 						{#if lookup.quotedIds.length}1 quote for {lookup.quotedIds.length} shortlisted id{lookup
@@ -663,7 +662,7 @@
 					</p>
 					{#if lookup.sanity.length}
 						<div
-							class="mt-3 rounded-lg border border-out/35 bg-out-wash px-3 py-2.5 text-[13.5px]"
+							class="mt-3 rounded-lg border border-out/35 bg-out-wash px-3 py-2.5 text-body"
 							role="alert"
 						>
 							<p class="font-medium text-out">
@@ -680,7 +679,7 @@
 										type="button"
 										disabled={busy}
 										onclick={() => submit(text, true, true)}
-										class="h-9 rounded-md border border-out/50 bg-sheet px-3 text-[13px] font-medium text-out hover:bg-out-wash disabled:opacity-50"
+										class="h-9 rounded-md border border-out/50 bg-sheet px-3 text-body font-medium text-out hover:bg-out-wash disabled:opacity-50"
 										>{lookup.hardLimit
 											? 'Place it anyway (it will be refused: over the hard limit)'
 											: 'Place it anyway (still needs approval)'}</button
@@ -688,7 +687,7 @@
 									<button
 										type="button"
 										onclick={() => document.getElementById('req')?.focus()}
-										class="h-9 rounded-md px-3 text-[13px] text-ink-2 hover:text-ink"
+										class="h-9 rounded-md px-3 text-body text-ink-2 hover:text-ink"
 										>Change the request</button
 									>
 								</div>
@@ -698,7 +697,7 @@
 					<div class="mt-3 space-y-4">
 						{#each lookup.items as it, i (i)}
 							<article class="rounded-lg border border-rule bg-sheet">
-								<header class="border-b border-rule px-3 py-2 text-[13px] text-ink-2">
+								<header class="border-b border-rule px-3 py-2 text-body text-ink-2">
 									<b class="font-medium text-ink">{it.item.query}</b> · {it.searches.reduce(
 										(s, x) => s + x.hits,
 										0
@@ -707,12 +706,12 @@
 								{#if it.pick && it.pick.conversion?.ok}
 									{@const o = it.pick.offer}
 									<div class="px-3 py-2.5">
-										<p class="flex flex-wrap items-baseline gap-x-2 text-[15px] font-medium">
-											{it.pick.name}<span class="mono text-[12px] font-normal text-ink-3"
+										<p class="flex flex-wrap items-baseline gap-x-2 text-heading font-medium">
+											{it.pick.name}<span class="mono text-meta font-normal text-ink-3"
 												>{it.pick.productId}</span
 											>
 										</p>
-										<dl class="mt-1.5 grid grid-cols-[6.5rem_1fr] gap-x-2 gap-y-1 text-[13.5px]">
+										<dl class="mt-1.5 grid grid-cols-[6.5rem_1fr] gap-x-2 gap-y-1 text-body">
 											<dt class="text-ink-3">Why this one</dt>
 											<dd>{it.pick.reasons.join('; ') || 'best remaining match'}</dd>
 											<dt class="text-ink-3">Quantity</dt>
@@ -738,9 +737,7 @@
 									</div>
 								{/if}
 								{#if it.question}
-									<p
-										class="flex gap-2 border-t border-rule bg-signoff-wash px-3 py-2 text-[13.5px]"
-									>
+									<p class="flex gap-2 border-t border-rule bg-signoff-wash px-3 py-2 text-body">
 										<TriangleAlert
 											size={15}
 											class="mt-0.5 shrink-0 text-signoff"
@@ -751,7 +748,7 @@
 								{/if}
 								{#each it.valioRules as r (r.to)}
 									<p
-										class="border-t border-dashed border-rule px-3 py-2 text-[13px] {r.status ===
+										class="border-t border-dashed border-rule px-3 py-2 text-body {r.status ===
 										'skipped'
 											? 'text-undeliv'
 											: 'text-ink-2'}"
@@ -768,7 +765,7 @@
 										>, {r.reason}.
 									</p>
 								{/each}
-								<details class="border-t border-rule px-3 py-2 text-[13px]">
+								<details class="border-t border-rule px-3 py-2 text-body">
 									<summary class="cursor-pointer text-ink-2">Shortlist and filtered hits</summary>
 									<ol class="mt-2 space-y-1.5">
 										{#each it.shortlist as c, ci (c.productId)}
@@ -777,7 +774,7 @@
 												<span>
 													<span class={c.picked ? 'font-medium text-accent-ink' : ''}>{c.name}</span
 													>
-													<span class="mono text-[11.5px] text-ink-3"
+													<span class="mono text-micro text-ink-3"
 														>{c.productId} · score {c.score}</span
 													>
 													<span class="block text-ink-2">
@@ -798,7 +795,7 @@
 										<p class="mt-2 text-ink-3">Filtered out ({it.rejectedCount}), e.g.:</p>
 										<ul class="mt-1 space-y-0.5 text-ink-3">
 											{#each it.rejected as r (r.productId)}<li>
-													<span class="mono text-[11.5px]">{r.productId}</span>
+													<span class="mono text-micro">{r.productId}</span>
 													{r.name}: {r.reason}
 												</li>{/each}
 										</ul>
@@ -816,7 +813,7 @@
 					{#if order}<SourceTag source="mandate" compact />{/if}
 				{/snippet}
 				{#if order && plan}
-					<p class="text-[12.5px] text-ink-3">
+					<p class="text-meta text-ink-3">
 						Placed by the kitchen agent for {order.kitchen.name} · key
 						<span class="mono">{order.idempotencyKey}</span>
 						{#if order.replayed}· <b class="font-medium text-ink-2"
@@ -828,10 +825,10 @@
 							<div class="border-b border-rule px-3 py-2.5 last:border-b-0">
 								<div class="flex flex-wrap items-start justify-between gap-x-3 gap-y-1">
 									<div class="min-w-0">
-										<p class="text-[14.5px] font-medium">
+										<p class="text-heading font-medium">
 											{l.productName ?? names.get(l.productId) ?? l.productId}
 										</p>
-										<p class="num text-[13px] text-ink-2">
+										<p class="num text-body text-ink-2">
 											{num(l.qty.value)}
 											{l.qty.unit} × {money(l.offer?.price?.unitCents)}
 											{#if l.qty.rounding}<span class="text-ink-3">({l.qty.rounding})</span>{/if}
@@ -844,11 +841,11 @@
 											reasons={l.reasons}
 											approved={approval?.state === 'granted' && approval.lineIds.includes(l.id)}
 										/>
-										<span class="num text-[15px] font-semibold">{money(l.lineCents)}</span>
+										<span class="num text-heading font-semibold">{money(l.lineCents)}</span>
 									</div>
 								</div>
 								{#if l.reasons.length}
-									<ul class="mt-1.5 space-y-0.5 text-[13px] text-ink-2">
+									<ul class="mt-1.5 space-y-0.5 text-body text-ink-2">
 										{#each l.reasons as r (r)}<li>
 												· {reasonWords(r, l, plan.totalCents, caps)}
 											</li>{/each}
@@ -856,12 +853,12 @@
 								{/if}
 							</div>
 						{/each}
-						<div class="flex items-center justify-between bg-well px-3 py-2 text-[14px]">
+						<div class="flex items-center justify-between bg-well px-3 py-2 text-body">
 							<span class="text-ink-2">Total ex VAT · deliver {day(plan.deliverBy)}</span>
-							<b class="num text-[16px]">{money(plan.totalCents)}</b>
+							<b class="num text-heading">{money(plan.totalCents)}</b>
 						</div>
 					</div>
-					{#if order.deliveryNote}<p class="mt-2 flex gap-2 text-[13px] text-signoff">
+					{#if order.deliveryNote}<p class="mt-2 flex gap-2 text-body text-signoff">
 							<TriangleAlert
 								size={14}
 								class="mt-0.5 shrink-0"
@@ -869,12 +866,12 @@
 							/>{order.deliveryNote}
 						</p>{/if}
 					{#if approval}
-						<p class="mt-2 text-[13.5px]">
+						<p class="mt-2 text-body">
 							<b class="font-medium">{TIER_WORDS[approval.tier].title}.</b>
 							<span class="text-ink-2">{TIER_WORDS[approval.tier].body}</span>
 						</p>
 					{:else if plan.lines.some((l) => l.reasons.includes('over_hard_limit'))}
-						<p class="mt-2 text-[13.5px]">
+						<p class="mt-2 text-body">
 							<b class="font-medium text-out">Over this kitchen's hard limit.</b>
 							<span class="text-ink-2"
 								>Nothing here can be ordered, and no approval can change that. Raise the mandate
@@ -882,12 +879,12 @@
 							>
 						</p>
 					{:else if plan.lines.every((l) => l.tier === 'act')}
-						<p class="mt-2 text-[13.5px]">
+						<p class="mt-2 text-body">
 							<b class="font-medium">{TIER_WORDS.act.title}.</b>
 							<span class="text-ink-2">{TIER_WORDS.act.body}</span>
 						</p>
 					{/if}
-					<blockquote class="mt-2 border-l-2 border-rule-strong pl-3 text-[13px] text-ink-3 italic">
+					<blockquote class="mt-2 border-l-2 border-rule-strong pl-3 text-body text-ink-3 italic">
 						Your mandate: “{order.kitchen.mandateWords}”
 					</blockquote>
 				{/if}
@@ -901,11 +898,11 @@
 				{#if plan}
 					{#if approval}
 						<div class="rounded-lg border border-rule bg-sheet px-3 py-2.5" id="approval">
-							<p class="text-[13px] text-ink-2">
+							<p class="text-body text-ink-2">
 								This approval is bound to exactly these terms. Any change to price, quantity, date
 								or mandate voids it.
 							</p>
-							<dl class="mt-2 grid grid-cols-[7.5rem_1fr] gap-x-2 gap-y-1 text-[13.5px]">
+							<dl class="mt-2 grid grid-cols-[7.5rem_1fr] gap-x-2 gap-y-1 text-body">
 								<dt class="text-ink-3">Total</dt>
 								<dd class="num font-semibold">{money(approval.totalCents)}</dd>
 								<dt class="text-ink-3">Plan version</dt>
@@ -937,15 +934,15 @@
 									type="button"
 									disabled={busy}
 									onclick={() => decide('deny')}
-									class="h-11 rounded-md border border-rule-strong px-4 text-[14px] text-ink-2 hover:text-out disabled:opacity-40"
+									class="h-11 rounded-md border border-rule-strong px-4 text-body text-ink-2 hover:text-out disabled:opacity-40"
 									>Deny</button
 								>
 							</div>
 						{:else if approval.state === 'denied'}
-							<p class="mt-2 text-[13.5px] text-ink-2">Denied. Nothing was ordered.</p>
+							<p class="mt-2 text-body text-ink-2">Denied. Nothing was ordered.</p>
 						{/if}
 					{:else if !committed}
-						<p class="text-[13.5px] text-ink-2">
+						<p class="text-body text-ink-2">
 							{#if plan.lines.every((l) => l.state === 'eligible' && l.tier === 'act')}
 								No approval needed: every line is within your mandate.
 							{:else if plan.lines.some((l) => l.reasons.includes('over_hard_limit'))}
@@ -962,7 +959,7 @@
 							type="button"
 							disabled={busy}
 							onclick={commit}
-							class="mt-3 inline-flex h-11 w-full items-center justify-center gap-2 rounded-md bg-accent px-4 text-[14px] font-medium text-sheet hover:bg-accent-ink disabled:opacity-50"
+							class="mt-3 inline-flex h-11 w-full items-center justify-center gap-2 rounded-md bg-accent px-4 text-body font-medium text-sheet hover:bg-accent-ink disabled:opacity-50"
 						>
 							<Check size={16} aria-hidden="true" /> Commit order as chef
 						</button>
@@ -970,10 +967,10 @@
 
 					{#if committed}
 						<div class="mt-3 rounded-lg border border-accent/35 bg-accent-wash px-3 py-2.5">
-							<p class="text-[14px] font-medium text-accent-ink">
+							<p class="text-body font-medium text-accent-ink">
 								Committed · local simulated commitment
 							</p>
-							<dl class="mt-1.5 grid grid-cols-[7.5rem_1fr] gap-x-2 gap-y-1 text-[13.5px]">
+							<dl class="mt-1.5 grid grid-cols-[7.5rem_1fr] gap-x-2 gap-y-1 text-body">
 								<dt class="text-ink-3">Order</dt>
 								<dd class="mono">{committed.orderId}</dd>
 								<dt class="text-ink-3">Receipt</dt>
@@ -989,7 +986,7 @@
 							</dl>
 						</div>
 						{#if commits.length > 1}
-							<ul class="mt-2 space-y-1 text-[13.5px]" aria-live="polite">
+							<ul class="mt-2 space-y-1 text-body" aria-live="polite">
 								{#each commits.slice(1) as c (c.attempt)}
 									<li class="flex items-start gap-2">
 										<Repeat size={14} class="mt-1 shrink-0 text-accent" aria-hidden="true" />
@@ -1010,14 +1007,14 @@
 								type="button"
 								disabled={busy}
 								onclick={commit}
-								class="inline-flex h-10 items-center gap-1.5 rounded-md border border-rule-strong bg-sheet px-3 text-[13.5px] text-ink hover:border-accent/50"
+								class="inline-flex h-10 items-center gap-1.5 rounded-md border border-rule-strong bg-sheet px-3 text-body text-ink hover:border-accent/50"
 							>
 								<Repeat size={15} aria-hidden="true" /> Send the same commit again
 							</button>
 							<button
 								type="button"
 								onclick={startOver}
-								class="inline-flex h-10 items-center gap-1.5 rounded-md px-3 text-[13.5px] text-ink-2 hover:text-ink"
+								class="inline-flex h-10 items-center gap-1.5 rounded-md px-3 text-body text-ink-2 hover:text-ink"
 							>
 								<RotateCcw size={15} aria-hidden="true" /> New request
 							</button>
@@ -1027,7 +1024,7 @@
 			</Step>
 		</ol>
 		{#if resultMessage && !plan && !needsConfirm && !event}
-			<p class="-mt-2 ml-11 text-[13.5px] text-ink-2">{resultMessage}</p>
+			<p class="-mt-2 ml-11 text-body text-ink-2">{resultMessage}</p>
 		{/if}
 	{/if}
 </main>

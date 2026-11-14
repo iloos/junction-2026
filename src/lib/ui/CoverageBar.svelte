@@ -19,7 +19,7 @@
 	<div class="track" role="img" aria-label={sentence}>
 		{#each geo.parts as s (s.key)}
 			<span
-				class="seg {s.key}"
+				class="seg {s.cls}"
 				style="width: {(s.width * 100).toFixed(2)}%"
 				title="{s.label}: {s.value} {f.required.unit} ({hint(s.key)})"
 			></span>
@@ -53,38 +53,7 @@
 		transition: width 300ms ease;
 	}
 	.seg + .seg {
-		box-shadow: inset 1px 0 0 var(--color-sheet);
-	}
-	.supplierConfirmed {
-		background: var(--color-ok);
-	}
-	.awaitingSupplier {
-		background: repeating-linear-gradient(
-			-45deg,
-			var(--color-ok) 0 3px,
-			color-mix(in oklch, var(--color-ok) 35%, var(--color-sheet)) 3px 6px
-		);
-	}
-	.plannedKnown {
-		background: var(--color-accent);
-	}
-	.plannedUnknown {
-		background: repeating-linear-gradient(
-			-45deg,
-			var(--color-signoff) 0 3px,
-			var(--color-signoff-wash) 3px 6px
-		);
-	}
-	.unresolved {
-		background: var(--color-out-wash);
-		box-shadow: inset 0 0 0 1px var(--color-out);
-	}
-	.excess {
-		background: repeating-linear-gradient(
-			90deg,
-			var(--color-rule-strong) 0 1px,
-			transparent 1px 4px
-		);
+		border-left: 1px solid var(--color-sheet);
 	}
 	.mark {
 		position: absolute;
@@ -95,12 +64,12 @@
 		background: var(--color-ink);
 	}
 	.head {
-		font-size: 11.5px;
-		line-height: 1.3;
+		font-size: var(--text-micro);
+		line-height: var(--text-micro--line-height);
 		color: var(--color-ink-3);
 	}
 	.tone-unresolved {
-		color: var(--color-out);
+		color: var(--color-sup-missing);
 	}
 	.tone-plannedUnknown {
 		color: var(--color-signoff);

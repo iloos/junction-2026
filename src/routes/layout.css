@@ -33,12 +33,137 @@
 	--color-ok: oklch(0.48 0.09 155);
 	--color-ok-wash: oklch(0.955 0.03 155);
 
+	/*
+	 * Supply certainty (D10). Colour + pattern + word, the same everywhere a quantity appears: solid means observed,
+	 * hatched means not yet true, an outline means missing. Patterns live in the `supply-*` utilities below and in
+	 * SupplyPatterns.svelte for SVG.
+	 */
+	--color-sup-confirmed: oklch(0.42 0.1 155);
+	--color-sup-known: oklch(0.5 0.085 195);
+	--color-sup-unknown: oklch(0.62 0.13 70);
+	--color-sup-unknown-wash: oklch(0.94 0.045 80);
+	--color-sup-missing: oklch(0.52 0.17 28);
+	--color-sup-excess: oklch(0.7 0.01 255);
+
+	/* Authority (who may act) never borrows a supply hue: a human is needed = blue, carried by icon and outline. */
+	--color-auth: oklch(0.47 0.13 255);
+	--color-auth-wash: oklch(0.95 0.025 255);
+
+	/*
+	 * Type scale: six sizes, weight carries hierarchy. Arbitrary `text-[..px]` is banned (type-scale.test.ts).
+	 * Ops reads at three metres: `[data-scale='wall']` lifts every size by 4 px.
+	 */
+	--text-display: 28px;
+	--text-display--line-height: 32px;
+	--text-title: 20px;
+	--text-title--line-height: 26px;
+	--text-heading: 15px;
+	--text-heading--line-height: 20px;
+	--text-body: 14px;
+	--text-body--line-height: 20px;
+	--text-meta: 12.5px;
+	--text-meta--line-height: 16px;
+	--text-micro: 11px;
+	--text-micro--line-height: 14px;
+
 	/* Score criteria: muted, distinguishable, not state colours. */
 	--color-c-price: oklch(0.6 0.1 195);
 	--color-c-reliability: oklch(0.55 0.08 255);
 	--color-c-finnish: oklch(0.62 0.1 240);
 	--color-c-carbon: oklch(0.62 0.1 145);
 	--color-c-organic: oklch(0.7 0.1 95);
+}
+
+/*
+ * Dark theme on the same tokens (Ops, read on a wall screen): cold-store navy rather than black. Set
+ * `data-theme='dark'` on any container (the shell sets it on <html> under /ops).
+ */
+[data-theme='dark'] {
+	--color-paper: oklch(0.22 0.035 245);
+	--color-sheet: oklch(0.255 0.04 245);
+	--color-well: oklch(0.29 0.04 245);
+	--color-rule: oklch(0.36 0.04 245);
+	--color-rule-strong: oklch(0.45 0.04 245);
+	--color-ink: oklch(0.94 0.012 240);
+	--color-ink-2: oklch(0.76 0.03 240);
+	--color-ink-3: oklch(0.6 0.035 240);
+	--color-accent: oklch(0.75 0.11 185);
+	--color-accent-ink: oklch(0.82 0.1 185);
+	--color-accent-wash: oklch(0.32 0.05 200);
+	--color-propose: oklch(0.72 0.14 252);
+	--color-propose-wash: oklch(0.32 0.06 252);
+	--color-signoff: oklch(0.8 0.14 75);
+	--color-signoff-wash: oklch(0.33 0.05 75);
+	--color-out: oklch(0.7 0.17 28);
+	--color-out-wash: oklch(0.32 0.06 28);
+	--color-undeliv: oklch(0.76 0.1 300);
+	--color-undeliv-wash: oklch(0.32 0.05 300);
+	--color-ok: oklch(0.76 0.12 165);
+	--color-ok-wash: oklch(0.31 0.05 165);
+	--color-sup-confirmed: oklch(0.72 0.13 160);
+	--color-sup-known: oklch(0.72 0.1 195);
+	--color-sup-unknown: oklch(0.8 0.14 75);
+	--color-sup-unknown-wash: oklch(0.33 0.05 75);
+	--color-sup-missing: oklch(0.7 0.17 28);
+	--color-sup-excess: oklch(0.55 0.02 245);
+	--color-auth: oklch(0.72 0.14 252);
+	--color-auth-wash: oklch(0.32 0.06 252);
+	color-scheme: dark;
+}
+[data-scale='wall'] {
+	--text-display: 32px;
+	--text-display--line-height: 38px;
+	--text-title: 24px;
+	--text-title--line-height: 30px;
+	--text-heading: 19px;
+	--text-heading--line-height: 24px;
+	--text-body: 18px;
+	--text-body--line-height: 25px;
+	--text-meta: 16.5px;
+	--text-meta--line-height: 22px;
+	--text-micro: 15px;
+	--text-micro--line-height: 19px;
+}
+
+/* Supply-state fills (D10): one definition for rulers, chips, cards and charts. */
+@utility supply-confirmed {
+	background: var(--color-sup-confirmed);
+}
+@utility supply-awaiting {
+	background: repeating-linear-gradient(
+		-45deg,
+		var(--color-sup-confirmed) 0 3px,
+		color-mix(in oklch, var(--color-sup-confirmed) 30%, var(--color-sheet)) 3px 6px
+	);
+	box-shadow: inset 0 0 0 1px var(--color-sup-confirmed);
+}
+@utility supply-known {
+	background: var(--color-sup-known);
+}
+@utility supply-unknown {
+	background: repeating-linear-gradient(
+		-45deg,
+		var(--color-sup-unknown) 0 3px,
+		var(--color-sup-unknown-wash) 3px 6px
+	);
+}
+@utility supply-missing {
+	background: color-mix(in oklch, var(--color-sup-missing) 8%, var(--color-sheet));
+	box-shadow: inset 0 0 0 1.5px var(--color-sup-missing);
+}
+@utility supply-forbidden {
+	background: var(--color-sup-missing);
+}
+@utility supply-excess {
+	background: repeating-linear-gradient(90deg, var(--color-sup-excess) 0 1px, transparent 1px 4px);
+}
+
+/* System layer: mechanics (formula, funnel, gate, seal, op ids) show only when the System toggle is on. */
+html:not([data-system]) .sys-only {
+	display: none !important;
+}
+html[data-system] .plain-only {
+	display: none !important;
 }
 
 @layer base {
