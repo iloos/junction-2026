@@ -4,7 +4,7 @@ import type { CallContext, ToolHandlers } from '$lib/core/ports';
 import { resolveRequest, type Env } from '$lib/server/auth';
 import { CORS, unauthorized, withCors } from './http';
 import { registerExtras } from './mcp-extras';
-import { isToolName, serveTool, toolsFor } from './serve';
+import { isToolName, offered, serveTool, toolsFor } from './serve';
 
 /**
  * Stateless MCP (streamable HTTP, SDK v2): a fresh server per request, built for the caller's context.
@@ -198,6 +198,8 @@ async function gateUnlisted(body: unknown, ctx: CallContext, handlers: ToolHandl
 		const msg = m as { method?: unknown; params?: { name?: unknown; arguments?: unknown } };
 		const name = msg?.method === 'tools/call' ? msg.params?.name : undefined;
 		if (typeof name !== 'string' || !isToolName(name) || toolsFor(ctx).includes(name)) continue;
+		// Only a scope refusal is logged; a tool not offered here is absent and does no work at all.
+		if (!offered(ctx, name)) continue;
 		await serveTool(name, ctx, msg.params?.arguments ?? {}, handlers);
 	}
 }

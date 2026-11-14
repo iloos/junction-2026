@@ -54,6 +54,16 @@ export function advertised(name: ToolName): boolean {
 	return true;
 }
 
+/** The doors an outside agent comes through. Availability (`advertised`) is enforced on these, before any work. */
+export const OUTSIDE_DOORS: ReadonlySet<string> = new Set(['mcp', 'rest']);
+
+/**
+ * Whether this caller may reach the tool at all: advertised to outside agents, any tool in process. One policy for
+ * list (toolsFor), call (serveTool), REST, OpenAPI and the agent card.
+ */
+export const offered = (ctx: Pick<CallContext, 'via'>, name: ToolName) =>
+	!OUTSIDE_DOORS.has(ctx.via) || advertised(name);
+
 export function toolsFor(ctx: CallContext): ToolName[] {
 	return (Object.keys(toolSchemas) as ToolName[]).filter(
 		(n) => advertised(n) && ctx.scopes.includes(toolSchemas[n].scope)
@@ -100,6 +110,8 @@ export async function serveTool(
 	hooks: ServeHooks = {}
 ): Promise<Served> {
 	if (!isToolName(name)) return fail(err('NOT_FOUND', `unknown tool ${name}`).error);
+	// A tool not offered on this door is absent: answered before any run lookup, metering or handler work.
+	if (!offered(ctx, name)) return fail(err('NOT_FOUND', `unknown tool ${name}`).error);
 	// A key resolves to its workspace's run synchronously; follow the newest run (a restart or another
 	// process's reset) so this call reads and writes the same run.
 	ctx = await (await import('$lib/server/demo/reset')).onCurrentRun(ctx);
