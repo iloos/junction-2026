@@ -92,6 +92,14 @@ export async function loadState(
 			const a = ((row.envelope as OpEnvelope).op as any).anomaly;
 			s.anomalies[a.id] = a;
 		}
+	for (const e of await db
+		.select()
+		.from(schema.enrichments)
+		.where(eq(schema.enrichments.workspaceId, workspaceId)))
+		s.enrichments[e.productId] = {
+			...s.enrichments[e.productId],
+			[e.field]: { value: e.value, provenance: e.provenance as any }
+		};
 	return s;
 }
 
@@ -143,6 +151,35 @@ async function persist(
 				committedAt: o.committedAt
 			});
 		}
+	// Enrichments are workspace knowledge (they outlive a demo run): latest op seq wins per product and field.
+	for (const e of envelopes)
+		if (e.op.type === 'RecordEnrichment')
+			await db
+				.insert(schema.enrichments)
+				.values({
+					workspaceId: ws,
+					productId: e.op.productId,
+					field: e.op.field,
+					value: (e.op.value ?? null) as object,
+					provenance: e.op.provenance,
+					seq: e.seq,
+					runId: e.runId
+				})
+				.onConflictDoUpdate({
+					target: [
+						schema.enrichments.workspaceId,
+						schema.enrichments.productId,
+						schema.enrichments.field
+					],
+					set: {
+						value: sql`excluded.value`,
+						provenance: sql`excluded.provenance`,
+						seq: sql`excluded.seq`,
+						runId: sql`excluded.run_id`,
+						updatedAt: sql`now()`
+					},
+					setWhere: sql`${schema.enrichments.seq} < excluded.seq`
+				});
 	for (const e of envelopes)
 		await db.insert(schema.ops).values({
 			workspaceId: ws,
