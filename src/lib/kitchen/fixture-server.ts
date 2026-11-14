@@ -415,7 +415,7 @@ export interface FixtureSnapshot {
 	/** Readable product names where the catalogue has a normalised one (Product.nameShort), by product id. */
 	shortNames?: Record<string, string>;
 	/** The kitchen's other plans in this sandbox (an agent's order, the event), for the task switcher. */
-	others?: { id: string; title: string; open: number; ordered: number }[];
+	others?: { id: string; title: string; open: number; ordered: number; version?: number }[];
 }
 
 /** The fixture's run starts when the module loads (or on reset), like a server run. */

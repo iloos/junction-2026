@@ -104,3 +104,10 @@ export function readableName(raw: string, short?: string | null): string {
 		})
 		.join('');
 }
+
+/** A sales unit in words: Valio's ST and KPL are pieces, KG and L lower case; a unit we don't know stays as written. */
+export function unitWord(u: string): string {
+	if (/^(st|kpl|pcs)$/i.test(u)) return 'pcs';
+	if (/^(kg|l|g|ml|dl|cl)$/i.test(u)) return u.toLowerCase();
+	return u;
+}

@@ -33,11 +33,13 @@
 
 <section
 	class="rounded-lg border border-sup-confirmed/40 bg-sheet px-3.5 py-3 text-meta"
-	aria-label="Receipt {r.receiptId}"
+	aria-label="Receipt"
 >
 	<header class="flex items-baseline justify-between gap-2">
 		<p class="flex items-center gap-1.5 text-body font-semibold text-ink">
-			<Lock size={14} aria-hidden="true" /> Ordered · receipt {r.receiptId}
+			<Lock size={14} aria-hidden="true" /> Ordered<span class="sys-only mono font-normal"
+				>&nbsp;· receipt {r.receiptId}</span
+			>
 		</p>
 		<p class="mono text-body font-medium text-ink">{money(r.totalCents)}</p>
 	</header>

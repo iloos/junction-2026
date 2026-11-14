@@ -45,6 +45,7 @@
 	import { reasonShort } from '$lib/ui/reasons';
 	import RescueCompare from '$lib/ui/RescueCompare.svelte';
 	import RulesPanel from './RulesPanel.svelte';
+	import { errorWords } from '$lib/kitchen/error-words';
 	import ApprovalPanel, { type Shortfall } from './ApprovalPanel.svelte';
 	import CutoffTimeline from '$lib/ui/viz/CutoffTimeline.svelte';
 
@@ -595,6 +596,25 @@
 	 * their rows get an accent band and the rest dim a little. Opening scrolls the first one into view.
 	 */
 	let marked = $state.raw<Set<string> | null>(null);
+
+	/** "Also open" tasks this browser chose to hide (a convenience kept per browser; nothing changes on the server). */
+	const DISMISSED = 'mandate.others.hidden';
+	let dismissed = $state.raw<Set<string>>(new Set());
+	$effect(() => {
+		try {
+			dismissed = new Set(JSON.parse(localStorage.getItem(DISMISSED) ?? '[]') as string[]);
+		} catch {
+			dismissed = new Set();
+		}
+	});
+	function dismiss(id: string) {
+		dismissed = new Set([...dismissed, id]);
+		try {
+			localStorage.setItem(DISMISSED, JSON.stringify([...dismissed].slice(-50)));
+		} catch {
+			// Private mode or blocked storage: hidden for this page view only.
+		}
+	}
 	function markLines(ids: string[] | null, scroll: boolean) {
 		marked = ids?.length ? new Set(ids) : null;
 		if (!scroll || !ids?.length) return;
@@ -878,7 +898,10 @@
 			</p>
 		{/if}
 		{#if k.error}
-			<p class="mt-4 text-body text-out" role="alert">{k.error.message}</p>
+			<p class="mt-4 text-body text-out" role="alert">
+				{errorWords(k.error)}
+				<span class="sys-only mono text-meta text-ink-3">{k.error.code}: {k.error.message}</span>
+			</p>
 		{/if}
 	</main>
 {:else if !snap || !view || !plan}
@@ -906,7 +929,7 @@
 		/>
 	{/snippet}
 	<main
-		class="mx-auto grid max-w-[1440px] grid-cols-1 gap-6 px-4 pt-5 pb-32 md:px-6 lg:pb-10 {shell?.chatOpen
+		class="mx-auto grid max-w-[1440px] grid-cols-1 gap-6 px-4 pt-5 pb-6 md:px-6 {shell?.chatOpen
 			? '2xl:grid-cols-[minmax(0,1fr)_360px]'
 			: 'lg:grid-cols-[minmax(0,1fr)_360px]'}"
 	>
@@ -930,11 +953,23 @@
 					openLines={(plan?.lines ?? []).filter(
 						(l) => !['committed', 'rejected', 'unorderable'].includes(l.state) && l.qty.value > 0
 					).length}
-					others={(snap?.others ?? []).map((o) => ({
-						...o,
-						title: readableName(o.title),
-						href: `${resolve('/')}?kitchen=${snap!.kitchen.id}&plan=${o.id}`
-					}))}
+					others={(snap?.others ?? [])
+						.filter((o) => !dismissed.has(o.id))
+						.map((o) => ({
+							...o,
+							title: readableName(o.title),
+							href: `${resolve('/')}?kitchen=${snap!.kitchen.id}&plan=${o.id}`
+						}))}
+					ondismiss={dismiss}
+					oncancel={k.mode === 'live'
+						? async (id) => {
+								const o = snap?.others?.find((x) => x.id === id);
+								if (!o?.version) return false;
+								const ok = await k.cancelOther(id, o.version);
+								if (ok) await k.retry();
+								return ok;
+							}
+						: undefined}
 				>
 					{#snippet action()}
 						{#if decisions.length && active !== 'decide'}
@@ -1444,14 +1479,43 @@
 					/>
 				</div>
 			</div>
+
+			{#if k.error}
+				{#if k.error.detail?.retryInMs}
+					<p class="rounded-md bg-well px-3 py-2 text-meta text-ink" role="status">
+						{k.error.message}
+					</p>
+				{:else}
+					<p class="rounded-md bg-out-wash px-3 py-2 text-meta text-ink" role="alert">
+						{errorWords(k.error)}
+						<span class="sys-only mono block text-micro text-ink-3"
+							>{k.error.code}: {k.error.message}</span
+						>
+					</p>
+				{/if}
+			{/if}
+		</aside>
+	</main>
+	<!-- Under the plan and its panels, on the page's own columns: the rules, ranking and simulator under the plan,
+	     what happened under Order. Outside <main>, so the sticky panels never slide over it. -->
+	<div
+		class="mx-auto grid max-w-[1440px] grid-cols-1 gap-6 px-4 pb-32 md:px-6 lg:pb-10 {shell?.chatOpen
+			? '2xl:grid-cols-[minmax(0,1fr)_360px]'
+			: 'lg:grid-cols-[minmax(0,1fr)_360px]'}"
+	>
+		<div class="min-w-0">
 			<div class="{active === 'plan' ? '' : 'max-lg:hidden'} {isEvent ? '' : 'hidden'}">
 				<RulesPanel
 					rules={snap.rules}
 					preset={snap.preset}
 					contention={snap.contention}
 					busy={k.busy}
+					ordered={view.dishes.filter((d) => linesOf(d).some((l) => l.state === 'committed'))
+						.length}
 					previews={view.dishes
-						.filter((d) => d.rescue?.preview?.differs)
+						.filter(
+							(d) => d.rescue?.preview?.differs && !linesOf(d).some((l) => l.state === 'committed')
+						)
 						.map((d) => ({
 							dish: d.nameFi,
 							recommended: d.rescue!.preview!.recommended,
@@ -1462,18 +1526,8 @@
 					oncontention={(on) => k.setContention(on)}
 				/>
 			</div>
-			{#if k.error}
-				{#if k.error.detail?.retryInMs}
-					<p class="rounded-md bg-well px-3 py-2 text-meta text-ink" role="status">
-						{k.error.message}
-					</p>
-				{:else}
-					<p class="rounded-md bg-out-wash px-3 py-2 text-meta text-ink" role="alert">
-						<b class="mono font-medium text-out">{k.error.code}</b>
-						{k.error.message}
-					</p>
-				{/if}
-			{/if}
+		</div>
+		<div class="min-w-0">
 			{#if k.activity.length}
 				<section
 					aria-labelledby="log-h"
@@ -1485,21 +1539,24 @@
 					<ol class="mt-1.5 space-y-1 text-meta text-ink-2">
 						{#each k.activity as a (a.id)}
 							<li class="flex gap-2">
-								<span class="mono w-7 shrink-0 text-ink-3">v{a.version}</span>
+								<span class="sys-only mono w-7 shrink-0 text-ink-3">v{a.version}</span>
 								<span
 									class={a.kind === 'error'
 										? 'text-out'
 										: a.kind === 'retry'
 											? 'text-accent-ink'
-											: ''}>{a.text}</span
+											: ''}
+									>{a.text}{#if a.sys}<span class="sys-only mono block text-micro text-ink-3"
+											>{a.sys}</span
+										>{/if}</span
 								>
 							</li>
 						{/each}
 					</ol>
 				</section>
 			{/if}
-		</aside>
-	</main>
+		</div>
+	</div>
 
 	{#if decisions.length && active !== 'decide'}
 		<button

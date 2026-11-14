@@ -8,8 +8,9 @@
 	import { ChevronDown, Clock3, Eye, Hand, ShieldAlert } from '@lucide/svelte';
 
 	import HoldButton from './HoldButton.svelte';
+	import BillLines from './BillLines.svelte';
 	import type { Decision } from './decisions';
-	import { money, num, shortHash, storyTime } from './format';
+	import { money, num, shortHash, storyTime, unitWord } from './format';
 
 	interface Props {
 		decision: Decision;
@@ -120,20 +121,18 @@
 		>
 		{#if details}
 			<p class="mt-1 text-meta text-ink-2">{d.why}</p>
-			<ul class="mt-1.5 border-t border-rule pt-1.5">
-				{#each d.lines as l (l.id)}
-					<li
-						class="flex items-baseline justify-between gap-3 py-0.5 text-meta {changed?.has(l.id)
-							? 'bg-signoff-wash'
-							: ''}"
-					>
-						<span class="min-w-0 truncate text-ink" title={names.get(l.productId) ?? l.productId}
-							>{names.get(l.productId) ?? l.productId}</span
-						>
-						<span class="mono shrink-0 text-ink-2">{num(l.qty.value)} {l.qty.unit}</span>
-					</li>
-				{/each}
-			</ul>
+			<div class="mt-1.5 border-t border-rule pt-1.5">
+				<BillLines
+					max={changedHere ? d.lines.length : 3}
+					label="The lines this approves"
+					rows={d.lines.map((l) => ({
+						id: l.id,
+						name: `${changed?.has(l.id) ? 'Changed: ' : ''}${names.get(l.productId) ?? l.productId}`,
+						qty: `${num(l.qty.value)} ${unitWord(l.qty.unit)}`,
+						cents: l.lineCents ?? null
+					}))}
+				/>
+			</div>
 		{/if}
 	{/if}
 	{#if when}
