@@ -77,3 +77,11 @@ This is a product contract with tests and examples, not merely an editorial clea
 
 ## "Covers" (user, Sat 14 Nov night)
 Never show the trade word **covers** to a person. Say **guests** for an event ("Christmas dinner buffet, 140 guests"), **lunches** or **meals** for a day's service ("Wednesday lunch buffet, 320 lunches"; "School lunch, 2,000 meals"), and **per guest** / **per meal** for sizing ("15.8 kg per meal"). Code may keep `covers` as an internal field name; rendered text, chat, receipts, the site and the tool descriptions agents read may not.
+
+## Voice: no slogan patterns (user, Sat 14 Nov night)
+Titles and intros say the concrete thing, in plain words. Avoid the patterns that read as machine-written:
+- Two-beat aphorisms ("Write the limits once. Every order answers to them.").
+- "X is not A. X is B." and "It's not just A, it's B."
+- "X implies Y" / "A is B" parallels, rhetorical triplets, and lines that end on a clever reversal.
+
+Prefer a title that names what the section shows ("The kitchen's limits, checked on every order") and an intro that states one fact with its number ("Four requests from the app; three stopped before buying, each for a stated reason").
