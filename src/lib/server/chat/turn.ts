@@ -1,3 +1,4 @@
+import { readableName } from '$lib/ui/format';
 import { commandKey } from '$lib/core/command';
 import type { Plan, ToolName, ToolOutput } from '$lib/core/contracts';
 import { ClarifyField, newTaskId, type Task, type TaskState } from '$lib/core/contracts/task';
@@ -1170,6 +1171,18 @@ async function* turnLines(
 			};
 		}
 		text = refusal ? `${refusal} ${summary}` : answer;
+		// Which items wait for the chef, and why: the decision's own title, products and reason.
+		if (card?.type === 'decision' && !continued && ledger.decisionsLeft) {
+			const waits = card.decisions.slice(0, 2).map((d) => {
+				const names = d.lines.map((l) => readableName(l.productName ?? l.productId));
+				const listed =
+					names.length <= 3
+						? names.join(', ')
+						: `${names.slice(0, 3).join(', ')} and ${names.length - 3} more`;
+				return `${d.title} (${listed}). ${d.why}`;
+			});
+			text = `${text} Waiting on you: ${waits.join(' ')}`;
+		}
 		if (continued === 'ordered') text = orderedWords(read.value.plans, ledger.decisionsLeft);
 		if (continued === 'nothing')
 			text = ledger.decisionsLeft
