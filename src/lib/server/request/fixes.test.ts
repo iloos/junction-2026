@@ -9,7 +9,7 @@ import { createHandlers } from '$lib/core/services/handlers';
 import { createDbPorts } from '../store/db-ports';
 import { classifyRequest } from './classify';
 import { findDate } from './dates';
-import { rankCandidates, withLot } from './lookup';
+import { filterHits, withLot } from './lookup';
 import { convert } from './convert';
 import { parseRequest, parseRules } from './parse';
 import { runRequest, skipSummary } from './run';
@@ -276,14 +276,14 @@ describe('F17: parser defects', () => {
 		expect(item.search[0]).toBe('lohifilee');
 		const hits: Product[] = [];
 		for (const q of item.search) hits.push(...(await catalog.search(q, { limit: 50 })));
-		const { ranked } = rankCandidates(item, hits);
+		const { ranked } = filterHits(item, hits);
 		expect(ranked.length).toBeGreaterThan(0);
 		for (const r of ranked.slice(0, 5)) expect(r.product.nameFi.toLowerCase()).toMatch(/lohi/);
 		expect(ranked[0].product.nameFi.toLowerCase()).toMatch(/filee/);
 		expect(ranked.some((r) => /juustotorttu/i.test(r.product.nameFi))).toBe(false);
 		// The tart (462463, a ready meal) is out of the fish categories even when searched directly.
 		const tart = (await catalog.get(['462463'])).get('462463')!;
-		expect(rankCandidates(item, [tart]).rejected[0].reason).toMatch(/not in the salmon category/);
+		expect(filterHits(item, [tart]).rejected[0].reason).toMatch(/not in the salmon category/);
 	}, 60_000);
 
 	it('the preview rounds to the lot step the order will use', () => {

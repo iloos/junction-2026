@@ -27,7 +27,7 @@ import { weekdayOf } from './dates';
 import { caseBreakdown, caseHeadline, orderAmount } from './convert';
 import { hardLimit, sanityWarnings } from './sanity';
 import { hardLimitCents } from '$lib/core/mandate/validate';
-import { rankCandidates, SHORTLIST, unpickable, type Ranked } from './lookup';
+import { filterHits, SHORTLIST, unpickable, type Ranked } from './lookup';
 import { parseRequest, type ParsedRequest } from './parse';
 import { classifyRequest } from './classify';
 import { applyBriefAnswers, draftBrief, nextQuestion } from '../menu/brief';
@@ -133,7 +133,7 @@ async function lookupItems(parsed: ParsedRequest, d: RequestDeps): Promise<Looku
 			searches.push({ query: q, hits: r.products.length });
 			hits.push(...r.products);
 		}
-		const { ranked, rejected } = rankCandidates(item, hits);
+		const { ranked, rejected } = filterHits(item, hits);
 		const pin = d.answers?.find((a) => a.item === item.id)?.productId ?? null;
 		// The chosen product leads the shortlist, with the chef named as the reason.
 		const at = pin ? ranked.findIndex((r) => r.product.productId === pin) : -1;

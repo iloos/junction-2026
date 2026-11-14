@@ -15,7 +15,7 @@ A chef types a purchase request and gets a priced, availability-checked, mandate
 - Tools through `serveTool` (no direct store access); `hardLimitCents`; `toLot` (`core/services/orders`); `scenarioDate`.
 - `EventBrief`, `MenuProposal`, `MenuStore`, `Catalog.resolve` (`core/contracts/event.ts`, `core/ports.ts`).
 - The page's workspace comes from `visitorWorkspace` / `roomLabel` (`server/demo/visitor.ts`, Track G).
-- Others import from this lane: the agent (`parseRules`, `baseId`, `rankCandidates`, `ParsedItem`, `ReqUnit`), evals (`runRequest`, `contentPerSalesUnit`, `orderAmount`). Keep those signatures stable.
+- Others import from this lane: the agent (`parseRules`, `baseId`, `filterHits`, `ParsedItem`, `ReqUnit`), evals (`runRequest`, `contentPerSalesUnit`, `orderAmount`). Keep those signatures stable.
 
 ## State
 **Purchase requests (`server/request`).**
