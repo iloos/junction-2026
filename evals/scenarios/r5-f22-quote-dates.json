@@ -25,8 +25,5 @@
 			}
 		]
 	},
-	"expectFail": {
-		"F22": ["attempts[0]"]
-	},
 	"notes": "F22: catalog offers default to the cache's dates when deliverBy is absent. Lands with F9 (both read onScenario)."
 }

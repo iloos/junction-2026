@@ -34,8 +34,5 @@
 			}
 		]
 	},
-	"expectFail": {
-		"F5": ["attempts[1]"]
-	},
 	"notes": "F5 / D8 supply tier: confirmed and make_in_house rank before unknown. SYNTHESIS done-when: lanttulaatikko → make_in_house. When F5 lands, s4 (which still expects 462157 held as UNKNOWN_REQUIRED) must change in the same merge."
 }

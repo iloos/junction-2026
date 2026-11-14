@@ -58,8 +58,5 @@
 			}
 		]
 	},
-	"expectFail": {
-		"F8": ["orderLines[464201]", "orderLines[475214]", "orderLines[463876]", "orderLines[463860]"]
-	},
 	"notes": "F8: order-level authority alone records the approval for act-tier lines no human saw. T0 adds Order.lines[].authority."
 }

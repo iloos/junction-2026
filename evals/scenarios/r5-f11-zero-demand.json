@@ -66,8 +66,5 @@
 			}
 		]
 	},
-	"expectFail": {
-		"F11": ["notProposed[460373]", "notProposed[461378]", "lines[462150]"]
-	},
 	"notes": "F11: event lines now size 0 g to 0 kg, but the line reads unorderable BELOW_LOT (a shortage) instead of not needed, and make-in-house ingredients keep 1 RAS pastry + 1 PRK filling at 0 tarts."
 }
