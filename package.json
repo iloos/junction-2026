@@ -17,7 +17,8 @@
 		"test:e2e": "playwright install && playwright test",
 		"eval": "vitest run --project server src/lib/server/evals",
 		"db:migrate": "node --env-file=.env scripts/db-migrate.ts",
-		"db:seed": "node --env-file=.env scripts/seed-db.ts"
+		"db:seed": "node --env-file=.env scripts/seed-db.ts",
+		"test:live": "node --env-file=.env node_modules/vitest/vitest.mjs run --project server src/lib/server/adapters/decide/live.test.ts"
 	},
 	"devDependencies": {
 		"@eslint/js": "^10.0.1",

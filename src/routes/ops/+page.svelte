@@ -6,6 +6,8 @@
 	import { OpsStream } from './stream.svelte';
 	import Ticket from './Ticket.svelte';
 	import TraceDrawer from './TraceDrawer.svelte';
+	import Queue from './Queue.svelte';
+	import { buildCases, coverage } from './cases';
 	import { ACTOR, euro, lineIsHeld, opPlanId, opSummary, SIM_KIND } from './labels';
 
 	let { data } = $props();
@@ -39,6 +41,47 @@
 		return p ? kitchenName(p.kitchenId) : planId;
 	};
 
+	/** Queue (work surface) or wallboard (three-column board); remembered per browser. */
+	let view = $state<'queue' | 'wallboard'>('queue');
+	onMount(() => {
+		try {
+			if (localStorage.getItem('ops-view') === 'wallboard') view = 'wallboard';
+		} catch {
+			/* storage blocked: keep the default */
+		}
+	});
+	const setView = (v: 'queue' | 'wallboard') => {
+		view = v;
+		try {
+			localStorage.setItem('ops-view', v);
+		} catch {
+			/* not remembered */
+		}
+	};
+	/** The queue rebuilds at most every QUEUE_MS, so bursts of ops don't re-render 200 rows per frame. */
+	const QUEUE_MS = 250;
+	let cases = $state.raw<ReturnType<typeof buildCases>>([]);
+	let queueTimer: ReturnType<typeof setTimeout> | null = null;
+	let queueDirty = false;
+	$effect(() => {
+		void stream.state;
+		void stream.heldSince;
+		queueDirty = true;
+		if (queueTimer) return;
+		const run = () => {
+			queueTimer = null;
+			if (!queueDirty) return;
+			queueDirty = false;
+			cases = buildCases(stream.state, data.names, stream.heldSince);
+			queueTimer = setTimeout(run, QUEUE_MS);
+		};
+		run();
+	});
+	/** "Now" on the cases' clock: op times are scenario time live, wall time in the simulated run. */
+	const caseNow = $derived(
+		data.simulated ? new Date(wall).toISOString() : (scenarioNow ?? new Date(wall).toISOString())
+	);
+
 	const columns = $derived(
 		data.kitchens.map((k) => {
 			const mine = plans.filter((p) => p.kitchenId === k.id);
@@ -54,7 +97,17 @@
 				(a) => a.state === 'pending' && mine.some((p) => p.id === a.planId)
 			);
 			const external = mine.some((p) => p.createdBy.kind === 'external_agent');
-			return { kitchen: k, plans: mine, held, orders, committed, anomalies, pending, external };
+			return {
+				kitchen: k,
+				plans: mine,
+				held,
+				orders,
+				committed,
+				anomalies,
+				pending,
+				external,
+				cover: coverage(mine)
+			};
 		})
 	);
 	const confirmedOf = (orderId: string) =>
@@ -213,58 +266,80 @@
 			>
 		</section>
 	{:else}
+		<div class="views" role="tablist" aria-label="View">
+			<button role="tab" aria-selected={view === 'queue'} onclick={() => setView('queue')}>
+				Queue <b>{cases.length}</b>
+			</button>
+			<button role="tab" aria-selected={view === 'wallboard'} onclick={() => setView('wallboard')}>
+				Wallboard
+			</button>
+		</div>
 		<main>
-			<section class="board" aria-label="Held lines by kitchen">
-				{#each columns as c (c.kitchen.id)}
-					<div class="kitchen">
-						<header>
-							<h2>{c.kitchen.name}</h2>
-							<p class="kmeta">
-								{c.kitchen.city}, {c.kitchen.kind.replaceAll('_', ' ')}
-								{#if c.external}<span class="outside">outside agent ordering</span>{/if}
-							</p>
-							<blockquote>“{c.kitchen.mandateWords}”</blockquote>
-						</header>
+			{#if view === 'queue'}
+				<Queue {cases} kitchens={data.kitchens} now={caseNow} relative={!data.simulated} />
+			{:else}
+				<section class="board" aria-label="Held lines by kitchen">
+					{#each columns as c (c.kitchen.id)}
+						<div class="kitchen">
+							<header>
+								<h2>{c.kitchen.name}</h2>
+								<p class="kmeta">
+									{c.kitchen.city}, {c.kitchen.kind.replaceAll('_', ' ')}
+									{#if c.external}<span class="outside">outside agent ordering</span>{/if}
+								</p>
+								<blockquote>“{c.kitchen.mandateWords}”</blockquote>
+							</header>
 
-						{#each c.anomalies as a (a.id)}
-							<p class="anomaly">{a.message}</p>
-						{/each}
+							{#each c.anomalies as a (a.id)}
+								<p class="anomaly">{a.message}</p>
+							{/each}
 
-						<div class="tickets">
-							{#each c.held as h (`${h.line.id}:${h.line.state}:${h.line.tier}`)}
-								<Ticket line={h.line} names={data.names} fresh={freshPlan === h.plan.id} />
-							{:else}
-								<p class="clear">
-									{c.plans.length
-										? 'Nothing held. The agent is inside its mandate.'
-										: 'No order in progress.'}
+							<div class="tickets">
+								{#each c.held as h (`${h.line.id}:${h.line.state}:${h.line.tier}`)}
+									<Ticket line={h.line} names={data.names} fresh={freshPlan === h.plan.id} />
+								{:else}
+									<p class="clear">
+										{#if !c.plans.length}
+											No order in progress.
+										{:else if c.cover && c.cover.covered === c.cover.total}
+											Covered: all {c.cover.total}
+											{c.cover.unit} are ordered or orderable within the mandate.
+										{:else if c.cover}
+											Nothing held, but only {c.cover.covered} of {c.cover.total}
+											{c.cover.unit} are covered.
+										{:else}
+											Nothing held. Coverage not reported.
+										{/if}
+									</p>
+								{/each}
+							</div>
+
+							{#each c.orders as o (o.id)}
+								<p class="order">
+									<span>Order committed, {o.lines.length} lines</span>
+									<span class="conf"
+										>supplier confirmed {confirmedOf(o.id)} of {o.lines.length}</span
+									>
+									<b>{euro(o.totalCents)}</b>
 								</p>
 							{/each}
+
+							<footer>
+								{#if c.pending.length}
+									<span class="waiting"
+										>{c.pending.length} approval{c.pending.length === 1 ? '' : 's'} waiting</span
+									>
+								{/if}
+								{#if c.committed}
+									<span>Committed <b>{euro(c.committed)}</b></span>
+								{:else}
+									<span>Nothing committed yet</span>
+								{/if}
+							</footer>
 						</div>
-
-						{#each c.orders as o (o.id)}
-							<p class="order">
-								<span>Order committed, {o.lines.length} lines</span>
-								<span class="conf">supplier confirmed {confirmedOf(o.id)} of {o.lines.length}</span>
-								<b>{euro(o.totalCents)}</b>
-							</p>
-						{/each}
-
-						<footer>
-							{#if c.pending.length}
-								<span class="waiting"
-									>{c.pending.length} approval{c.pending.length === 1 ? '' : 's'} waiting</span
-								>
-							{/if}
-							{#if c.committed}
-								<span>Committed <b>{euro(c.committed)}</b></span>
-							{:else}
-								<span>Nothing committed yet</span>
-							{/if}
-						</footer>
-					</div>
-				{/each}
-			</section>
+					{/each}
+				</section>
+			{/if}
 
 			<section class="log" aria-label="Op log" aria-live="polite">
 				<h2>What just happened</h2>
@@ -433,6 +508,34 @@
 		font-size: 15px;
 	}
 
+	.views {
+		display: flex;
+		gap: 4px;
+		margin-bottom: -6px;
+	}
+	.views button {
+		background: transparent;
+		border: 0;
+		border-bottom: 2px solid transparent;
+		color: var(--muted);
+		font: inherit;
+		font-family: var(--cond);
+		font-size: 20px;
+		font-weight: 600;
+		padding: 4px 12px 6px;
+		cursor: pointer;
+	}
+	.views button[aria-selected='true'] {
+		color: var(--text);
+		border-bottom-color: var(--text);
+	}
+	.views b {
+		font-family: var(--mono);
+		font-weight: 500;
+		font-size: 16px;
+		color: var(--sign-off);
+		margin-left: 4px;
+	}
 	.traces {
 		margin-top: 10px;
 		display: inline-flex;
