@@ -193,6 +193,11 @@ export interface CallContext {
 	initiatedBy?: Actor;
 	/** Kitchens this context may act for; absent = every kitchen in the workspace. */
 	kitchenIds?: readonly string[];
+	/**
+	 * Checked by commit_order under the workspace lock, immediately before the order is written: a reason to refuse
+	 * (the task this purchase serves was cancelled), or null to go on. Set by the server, never from a request.
+	 */
+	fence?: () => Promise<string | null>;
 }
 
 /**

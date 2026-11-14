@@ -618,10 +618,23 @@ export async function* runChatTurn(
 			yield fail(task.id, 'Nothing to continue: this task has no plan yet.', task.state);
 			return;
 		}
-		steps = await continueTask(task, agentCtx, deps.handlers, async () => {
-			const now = await store.get(deps.workspaceId, task.id);
-			return now?.state !== 'cancelled';
-		});
+		// The stored task, unprojected: whether it was cancelled is a stored fact.
+		const rawStore = (
+			'inner' in store ? (store as { inner: TaskStore }).inner : store
+		) as TaskStore;
+		const cancelled = async () =>
+			(await rawStore.get(deps.workspaceId, task.id))?.state === 'cancelled';
+		steps = await continueTask(
+			task,
+			{
+				...agentCtx,
+				// Checked by commit_order under the workspace lock, right before the order is written.
+				fence: async () =>
+					(await cancelled()) ? 'the task was cancelled; nothing was ordered' : null
+			},
+			deps.handlers,
+			async () => !(await cancelled())
+		);
 		const commits = steps.filter((x) => x.tool === 'commit_order');
 		continued = commits.some((x) => x.ok)
 			? 'ordered'
