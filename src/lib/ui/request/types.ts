@@ -1,10 +1,14 @@
 /**
  * What the request flow returns, step by step: Request → Lookup → Order → Approval. Shared by the
- * server orchestration, the JSON endpoint and the /request page (types only, no server code).
+ * server orchestration, the JSON endpoint and the /request page (types only, no server code; the answer and unit types live in server/request).
  */
 import type { Offer, Plan, Tier } from '$lib/core/contracts';
 
-export type ReqUnit = 'l' | 'kg' | 'pcs' | 'case' | 'sales';
+import type { ReqUnit } from '$lib/server/request/lexicon';
+import type { RequestAnswer } from '$lib/server/request/workspace';
+
+// The server owns the request's own vocabulary; the page sees the same types (type-only, erased in the build).
+export type { ReqUnit, RequestAnswer };
 
 export interface ParsedItemView {
 	/** Stable item id; answers are keyed by it. */
@@ -18,14 +22,6 @@ export interface ParsedItemView {
 	constraints: string[];
 	variant: { token: string; label: string; search?: string } | null;
 	ambiguities: string[];
-}
-
-/** The chef's inline answer to a question, by item id: a quantity, a product, or both. */
-export interface RequestAnswer {
-	item: string;
-	qty?: number;
-	unit?: ReqUnit;
-	productId?: string;
 }
 
 /** How a question can be answered inline. */
