@@ -22,6 +22,7 @@
 	import CoverageLegend from '$lib/ui/CoverageLegend.svelte';
 	import { lineBasis } from '$lib/ui/coverage';
 	import { borrowed } from '$lib/kitchen/fixture-view';
+	import { whyChain } from '$lib/ui/why-chain';
 	import { day, fixed, money, moneyDelta, num, storyTime } from '$lib/ui/format';
 	import { SCENARIO } from '$lib/core/scenario';
 	import { reasonShort } from '$lib/ui/reasons';
@@ -106,6 +107,30 @@
 
 	const whyLine = $derived(k.whyLineId ? (k.lineById.get(k.whyLineId) ?? null) : null);
 	const whyDish = $derived(view?.dishes.find((d) => d.lineIds.includes(k.whyLineId ?? '')) ?? null);
+
+	/** The worked calculation for the open Why line, from the plan's own numbers. */
+	const chain = $derived.by(() => {
+		if (!whyLine || !plan) return null;
+		const need = plan.needs.find((n) => n.id === whyLine.needId);
+		return whyChain({
+			need,
+			line: whyLine,
+			siblings: plan.lines.filter((l) => l.needId === whyLine.needId),
+			fulfilment: need ? coverage.get(need.id) : undefined,
+			basis: (l) => l.view ?? borrowed.get(l.id),
+			name: (id) => names.get(id) ?? id,
+			dish:
+				whyDish && view
+					? {
+							gServed: whyDish.gServed,
+							defaultGServed: whyDish.gDefault,
+							guests: view.guests,
+							yield: whyDish.yield,
+							formula: whyDish.needFormula
+						}
+					: undefined
+		});
+	});
 
 	const weekMeter = $derived.by(() => {
 		if (!snap || !plan) return null;
@@ -731,6 +756,7 @@
 		productName={whyLine ? (names.get(whyLine.productId) ?? whyLine.productId) : ''}
 		dishName={whyDish ? `${whyDish.nameFi} (${whyDish.name})` : ''}
 		steps={k.whySteps}
+		{chain}
 		onclose={() => k.closeWhy()}
 	/>
 {/if}
