@@ -12,7 +12,7 @@ The remaining failures arise where one entity is transformed into another withou
 
 | Entity/transition | Current identity and authoritative role | Required invariant / current limitation |
 |---|---|---|
-| Request → Need | Direct `place_order` stores explicit product/quantity but `needs: []` ([orders.ts:201](../../src/lib/core/services/orders.ts#L201)) | Preserve requested physical quantity, unit, dietary/origin conditions, requested-by date and fulfilment goal; direct substitution currently loses physical meaning |
+| Request → Need | Direct `place_order` stores explicit product/quantity but `needs: []` ([orders.ts:201](../../../src/lib/core/services/orders.ts#L201)) | Preserve requested physical quantity, unit, dietary/origin conditions, requested-by date and fulfilment goal; direct substitution currently loses physical meaning |
 | Event → Need | Seed dish → `needId`, amount, dish grams/guests/yield and provenance | Distinguish served amount, raw ingredient demand, on-hand/inbound offsets and zero demand; formulas must match the represented basis |
 | Need → Line | Line ID, `needId`, SKU, sales quantity, substituteFor, provenance | Preserve amount covered and residual in the Need's physical unit; a case is not a litre or portion |
 | Product + context → Offer | Product ID, price per sales unit, availability, dates, provenance | Observed supplier cache ≠ remaining simulator stock or fresh customer-specific promise |
@@ -29,7 +29,7 @@ Keep the entity chain rather than inventing a generic “item” object used int
 
 **Reproduced through fresh PGlite handlers:** synthetic original product is 1 L per `ST`, out of stock; replacement is 0.5 L per `ST`, available. `place_order` requests 1 original `ST` (1 L). `find_substitutes` chooses **1 replacement ST = 0.5 L**, with no residual. The request has lost half its required volume. The same defect generalizes to unequal same-unit packs and the milk example.
 
-**Cause:** direct plans have no Need; [sizing.ts:33](../../src/lib/core/demand/sizing.ts#L33) returns the original quantity whenever `servedKg === null` and the sales-unit strings match. An equality of technical sales-unit codes does not establish equal physical contents. Event-based sizing avoids this branch, which is why the golden Christmas scenarios do not expose it.
+**Cause:** direct plans have no Need; [sizing.ts:33](../../../src/lib/core/demand/sizing.ts#L33) returns the original quantity whenever `servedKg === null` and the sales-unit strings match. An equality of technical sales-unit codes does not establish equal physical contents. Event-based sizing avoids this branch, which is why the golden Christmas scenarios do not expose it.
 
 **Fix, core-db/request, 1–2 h:** persist direct Need in its original physical unit with the original product conversion/basis. Size every replacement against that Need, using each candidate's content; refuse/hold unknown or incompatible conversion. Do not infer litres from mass without a justified conversion. The request parser must pass its physical goal into this model, not only a rounded SKU quantity.
 
@@ -39,7 +39,7 @@ Keep the entity chain rather than inventing a generic “item” object used int
 
 **Reproduced:** injected scenario time `2026-12-10T12:00:00+02:00`, known-stock offer with `closingTime: 2026-12-09T17:00:00+02:00`. Create a priced plan and commit: **success, confirmed receipt**. The scenario deadline had passed by nineteen hours.
 
-**Cause:** `validateLine` checks stock, price presence, lots and kitchen constraints but takes no clock/requested-date context. `commitOrder` checks approval expiry but not offer cut-off, price `validTo` or availableDate against requested delivery ([orders.ts:448](../../src/lib/core/services/orders.ts#L448)). `onScenario` moves dates for display; that is not enforcement. No expired-price probe was run, but the missing check is visible in the same commit path.
+**Cause:** `validateLine` checks stock, price presence, lots and kitchen constraints but takes no clock/requested-date context. `commitOrder` checks approval expiry but not offer cut-off, price `validTo` or availableDate against requested delivery ([orders.ts:448](../../../src/lib/core/services/orders.ts#L448)). `onScenario` moves dates for display; that is not enforcement. No expired-price probe was run, but the missing check is visible in the same commit path.
 
 **Fix, core-db/clock, 45–90 min:** temporal validation at prepare and immediately before commit using one injected clock: cut-off not passed, requested delivery satisfiable and price terms valid. Return a typed re-quote/next-date outcome. Static mock dates may be translated by the labelled simulator; that simulator's translated deadline must still bind the order. Keep approval expiry and supplier-offer expiry separate.
 
@@ -49,7 +49,7 @@ Keep the entity chain rather than inventing a generic “item” object used int
 
 **Reproduced:** synthetic catalogue has one unit in known stock. First plan commits it. A second plan for one unit is returned **eligible, committable, confirmedCover 1**, with availability still 1. The second commit then fails `INSUFFICIENT_STOCK`, reporting 0 left.
 
-The atomic consume is correctly protecting stock. The defect is the upstream promise/read model, not overselling: catalogue `offers` reads cached supplier observations; consumption changes only `sim_stock` ([stock.ts:17](../../src/lib/server/adapters/simulator/stock.ts#L17)). No scoped availability-to-promise adjustment feeds the next quote. This is especially visible in the advertised multi-kitchen contention story.
+The atomic consume is correctly protecting stock. The defect is the upstream promise/read model, not overselling: catalogue `offers` reads cached supplier observations; consumption changes only `sim_stock` ([stock.ts:17](../../../src/lib/server/adapters/simulator/stock.ts#L17)). No scoped availability-to-promise adjustment feeds the next quote. This is especially visible in the advertised multi-kitchen contention story.
 
 **Fix, core-db/simulator, 1–2 h:** distinguish supplier observation from run-scoped ATP; tier/preview/read model against current ATP, and revalidate atomically at commit. Do not change the shared static supplier cache to represent one simulator run. A failed stock commitment should also re-quote/hold its plan so the UI does not keep advertising the same failed action.
 
@@ -65,7 +65,7 @@ The atomic consume is correctly protecting stock. The defect is the upstream pro
 
 ### 5. P2 — The advertised server-derived committable view lacks temporal authority
 
-Code inspection: `lineView` accepts only approval state, line IDs and planVersion ([view.ts:36](../../src/lib/core/mandate/view.ts#L36)); its approval type excludes expiry, hash and mandateVersion, and it has no clock. A stored granted approval can therefore remain `committable: true` after expiry or a policy-version change, although commit later refuses it. Cover is expressed as kg for `KG`, otherwise `pcs`; a `KI` case consequently appears as pieces despite the quantity remaining cases ([view.ts:32](../../src/lib/core/mandate/view.ts#L32)).
+Code inspection: `lineView` accepts only approval state, line IDs and planVersion ([view.ts:36](../../../src/lib/core/mandate/view.ts#L36)); its approval type excludes expiry, hash and mandateVersion, and it has no clock. A stored granted approval can therefore remain `committable: true` after expiry or a policy-version change, although commit later refuses it. Cover is expressed as kg for `KG`, otherwise `pcs`; a `KI` case consequently appears as pieces despite the quantity remaining cases ([view.ts:32](../../../src/lib/core/mandate/view.ts#L32)).
 
 **Fix, domain/read-model, 45–90 min:** derive eligibility from a complete effective authority/clock input, and expose sales quantity distinctly from physical cover. If availability is not reserved, name the field `availableCover`/`provisionalCover` rather than confirmed. Receipts alone establish confirmed supplier quantities. Return the same blocked reason the command will enforce.
 

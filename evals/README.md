@@ -1,10 +1,19 @@
-# Evals: Ring 0 scenarios
+# Evals
 
-Each scenario is one JSON file in `scenarios/`. A runner loads its seeds, sets the simulated clock and overrides, plays the `steps` through the **same gate the app uses** (service functions or the tool registry, never UI), and then compares the **end state** with `expect`. Prose is a comment; only `expect` is checked.
+Every eval plays through the **same gate the app uses** (tool handlers on PGlite, or the request and agent entry points), never the UI, and checks the **end state**. Prose is a comment; only `expect` is checked. Everything runs offline: fixture LLM and parser, no network.
 
-Vocabulary follows [D6](../docs/DECISIONS.md): the six-digit Valio `productId` is the key; money is **integer cents** ex VAT (`catalogPrice.value` from the mock API, fetched 14 Nov 2026); quantities carry an explicit `unit`.
+| Folder | What | Runner | Command |
+|---|---|---|---|
+| `scenarios/` | one journey per JSON file: `s*` (product stories), `r5-*` and `r6-*` (one per review finding) | `src/lib/server/evals/evals.test.ts` with `run.ts` + `check.ts` | `pnpm eval` |
+| `fidelity/cases.json` | the same words through `/request`, the agent and REST `place_order` must give the same basket (properties, not first hits) | `src/lib/server/evals/fidelity.test.ts` | `pnpm eval` |
+| `agent/goals.json` | free-text goals played by the agent on a fresh workspace; expectations on domain state and the outcome | `src/lib/server/agent/goals.test.ts` | `pnpm eval:agent` |
+| `retrieval/{substitutes,queries}.json` | labelled substitute targets (recall@12) and ingredient queries (precision@5) | `src/lib/server/adapters/catalog/retrieval*.eval.test.ts` | `pnpm test:unit` (skipped without `data/valio/`) |
 
-## File shape
+`pnpm gate` runs all of the above in order (plus check, lint and the checker's own tests, `node --test evals/check.test.ts`) and stops on the first red; it is the merge gate. Live-model diagnostics over the same goals are opt-in: `pnpm eval:live` (CLAUDE.md Commands).
+
+Vocabulary follows [D6](../docs/DECISIONS.md) and [VOCABULARY](../docs/concept/VOCABULARY.md): the six-digit Valio `productId` is the key; money is **integer cents** ex VAT (`catalogPrice.value` from the mock API, fetched 14 Nov 2026); quantities carry an explicit `unit`. Seeds are in [`fixtures/seeds/`](../fixtures/README.md).
+
+## Scenario file shape
 ```jsonc
 {
   "id": "s1-milk-over-cap",
@@ -85,21 +94,6 @@ Vocabulary follows [D6](../docs/DECISIONS.md): the six-digit Valio `productId` i
 Line matchers also take `notState`, `notReasons` and `substituteFor`, `closingTime`; plan matchers take `minTotalCents`.
 
 ### Known gaps: `expectFail`
-`"expectFail": {"F9": ["lines[463860]", "attempts[3]"]}` names result keys (or a key prefix such as `lines`) that must **still fail**, keyed by the SYNTHESIS finding id. Everything else must pass. When a listed key starts passing the eval goes red ("F9 looks fixed, delete this expectFail entry"), and a prefix that matches no result is red too. A lane that fixes a finding deletes its entry in the same merge; that is the one part of `evals/` other lanes may edit. An `expectFail` entry also hides any other mistake in the same expectation (a wrong unit stays invisible until the fix lands), so check expectations under a marker against a probe of today's state first. Expected facts never depend on a search order: assert the property (`notChosen`, `kind`, `excludes`) rather than the current first result where retrieval may change it.
+`"expectFail": {"F9": ["lines[463860]", "attempts[3]"]}` names result keys (or a key prefix such as `lines`) that must **still fail**, keyed by the finding id (`F<n>` from [SYNTHESIS](../docs/archive/handoff/SYNTHESIS.md) §2, or a review tag such as `R6-diff`). Everything else must pass. When a listed key starts passing the eval goes red ("F9 looks fixed, delete this expectFail entry"), and a prefix that matches no result is red too. A lane that fixes a finding deletes its entry in the same merge; that is the one part of `evals/` other lanes may edit. An `expectFail` entry also hides any other mistake in the same expectation (a wrong unit stays invisible until the fix lands), so check expectations under a marker against a probe of today's state first. Expected facts never depend on a search order: assert the property (`notChosen`, `kind`, `excludes`) rather than the current first result where retrieval may change it.
 
-The runner reports pass/fail per key, so a partial build shows exactly which guarantee holds.
-
-## Scenarios
-| id | stories | what it proves |
-|---|---|---|
-| `s1-milk-over-cap` | ★1 ★4 ★5 ★6 | Valio's example order: priced, over the line and order caps → held → approved → one receipt even after a retry; Valio's own substitute rule skipped because it is undeliverable |
-| `s2-christmas-plan` | ★2 ★8 | Event for 140 → kg → packs with lot/pack rounding; the g/guest edit recomputes; real outages and unknown quantities flagged, never counted as cover |
-| `s3-salmon-below-lot` | ★3 | 9 kg left (simulated contention) is below the 10 kg lot step → salmon unorderable (`BELOW_LOT`); Finnish trout ranks first; the unreliable trout is visibly rejected |
-| `s4-real-outages-stale-approval` | ★3 ★5 | Whole ham and lanttulaatikko really `out`, joulutorttu `undeliverable` → Terminal substitutes held as `UNKNOWN_REQUIRED`, a purchasable residual for the tarts; a price change invalidates the approval and the commit fails with `TERMS_CHANGED` |
-| `s5-external-agent-split` | ★4 ★6 ★7 | Outside agent orders through the gate: approval-required, idempotent, `DUPLICATE` on a reused key with another payload; a split second order still hits `CAP_EXCEEDED.weekly`; an unknown id is `NOT_FOUND` and never reaches Valio |
-
-| `s6`–`s11` | ★2–★6 | shipped since Friday: hard limit, recall rescue, usual-product baseline, scenario dates, substitute preview vs apply, sandbox reset |
-| `r5-f5/f8/f9/f10/f11/f22` | review round 5 | one journey per finding, expected-fail until track A lands it |
-| `r6-1`…`r6-5` | review round 6 | lineage across same-named dishes, recipe AND + partial receipts, amount/qty conflict, menu review guard, one perturbed requirement |
-
-Seeds live in `fixtures/seeds/`: `kitchens.json` (k-hotel, k-lounas, k-central), `christmas-buffet-140.json` (with a hand-checked `rescue` section: one Stock option per real outage), `calendar-factors.json`.
+The runner reports pass/fail per key, so a partial build shows exactly which guarantee holds. The fidelity cases take the same `expectFail` per case.

@@ -16,7 +16,7 @@ That gives you **one substantial product, two extensions and one separate domain
 
 “Platform scope” in my earlier review meant the combined responsibility for several interfaces, jobs, integrations and shared state. It did **not** mean a SaaS subscription business. You can build that larger system. The constraint is making each additional surface reveal work the agent already does, rather than commissioning another independent engine. Do not add SaaS administration, billing, account onboarding or arbitrary workflow configuration for this weekend.
 
-The new foundation evidence improves the outlook: [gemini.md:8](../foundations/gemini.md#L8) reports working batched decisions, and [mcp.md](../foundations/mcp.md) reports stateless transport and shared-schema spikes. Those are meaningful reductions in uncertainty. They do not yet establish integration. The UX estimate alone is approximately 25 must-have hours plus 15 should-have hours ([ux.md:80](../foundations/ux.md#L80)); plan integration and evidence work separately from UI agent effort.
+The new foundation evidence improves the outlook: [gemini.md:8](../../foundations/gemini.md#L8) reports working batched decisions, and [mcp.md](../../foundations/mcp.md) reports stateless transport and shared-schema spikes. Those are meaningful reductions in uncertainty. They do not yet establish integration. The UX estimate alone is approximately 25 must-have hours plus 15 should-have hours ([ux.md:80](../../foundations/ux.md#L80)); plan integration and evidence work separately from UI agent effort.
 
 ## What should be shared, and what should stay distinct
 
@@ -31,13 +31,13 @@ The new foundation evidence improves the outlook: [gemini.md:8](../foundations/g
 
 **Proposed flow:** source/input → typed request → retrieved facts → proposed plan → deterministic validation → model judgement where useful → authorization → committed result → persisted events. The kitchen renders the plan; Operations aggregates the persisted events; Lab repeats the flow in an isolated simulated world. Personal uses the same infrastructure but ends in a saved scenario or coaching plan, not a financial transaction.
 
-Keep MCP + REST + OpenAPI: the foundation now proposes one registry, making them relatively cheap projections. Keep the phone approval URL even if an MCP App is added. Host-rendered approval is still untested according to [mcp.md, §3](../foundations/mcp.md); do not make it the only way to authorize.
+Keep MCP + REST + OpenAPI: the foundation now proposes one registry, making them relatively cheap projections. Keep the phone approval URL even if an MCP App is added. Host-rendered approval is still untested according to [mcp.md, §3](../../foundations/mcp.md); do not make it the only way to authorize.
 
 ## Optimize each main challenge for its own rubric
 
 ### 1. Valio Aimo — the anchor and strongest direct fit
 
-Source: [verbatim brief, criteria](../event/challenges/main/valio-aimo--trusted-trade-agents.md#L30); current mapping: [SCORECARD:9](../concept/SCORECARD.md#L9).
+Source: [verbatim brief, criteria](../../event/challenges/main/valio-aimo--trusted-trade-agents.md#L30); current mapping: [SCORECARD:9](../../concept/SCORECARD.md#L9).
 
 | Weight | Build for the points | Judge-visible evidence |
 |---|---|---|
@@ -49,11 +49,11 @@ Source: [verbatim brief, criteria](../event/challenges/main/valio-aimo--trusted-
 
 **Winning framing:** “The chef tells the agent what changed. The agent repairs the order and asks only for the decisions outside its mandate.” An order diff, not chat, is the main interface. Operations shows the same repair landing across kitchens. That retains the ambitious shape while matching Valio's requested customer-agent experience.
 
-**Data opportunity:** catalogue normalization is useful infrastructure, not decoration. The new [valio-profile.json:1667](../foundations/valio-profile.json#L1667) reports net weight on any packaging level for only 55.8% of products, and base-unit weight for 45.7%. This is less optimistic than the earlier menu-spike note. Its name/weight comparison reports 11.1% flagged discrepancies in the checked subset ([line 2214](../foundations/valio-profile.json#L2214)); heuristic flags are not all proven errors. Normalize the whole catalogue structurally, enrich uncertain candidates on demand, and show unresolved fields. Do not promise safe quantity conversion for every SKU.
+**Data opportunity:** catalogue normalization is useful infrastructure, not decoration. The new [valio-profile.json:1667](../../foundations/valio-profile.json#L1667) reports net weight on any packaging level for only 55.8% of products, and base-unit weight for 45.7%. This is less optimistic than the earlier menu-spike note. Its name/weight comparison reports 11.1% flagged discrepancies in the checked subset ([line 2214](../../foundations/valio-profile.json#L2214)); heuristic flags are not all proven errors. Normalize the whole catalogue structurally, enrich uncertain candidates on demand, and show unresolved fields. Do not promise safe quantity conversion for every SKU.
 
 ### 2. Context.dev — make web changes cause a visible decision
 
-Source: [five equally weighted criteria](../event/challenges/main/context-dev--the-web-is-your-real-time-database.md#L34).
+Source: [five equally weighted criteria](../../event/challenges/main/context-dev--the-web-is-your-real-time-database.md#L34).
 
 **Build:** one monitored public source → extracted change → deduplicated event → product/order exposure matching → held or revised purchase proposal. A recall is a strong example, provided ambiguity is handled. A manufacturer specification change is another useful input. Menu ingestion supplies context, but a one-time menu scrape alone does not satisfy the strongest real-time story.
 
@@ -63,13 +63,13 @@ Source: [five equally weighted criteria](../event/challenges/main/context-dev--t
 - **Execution 20:** capture source URL, fetch time, extraction result, match basis and failure state.
 - **Real-timeness 20:** demonstrate change detection across two source versions. Record publication time when known, first observation, ingestion and plan update separately.
 
-**Evidence strategy:** prepare a clearly labelled historical recall replay and a controlled changing test page exercised through the actual monitor. The test page proves pipeline reaction, not real-world food-recall detection. Show a genuine fetched authority notice as well. Ask the mentor which demonstration they accept; never imply an official site published your planted event. GTIN without lot/best-before identity means “potentially affected,” not confirmed exposure ([horeca:19](../research/horeca.md#L19)).
+**Evidence strategy:** prepare a clearly labelled historical recall replay and a controlled changing test page exercised through the actual monitor. The test page proves pipeline reaction, not real-world food-recall detection. Show a genuine fetched authority notice as well. Ask the mentor which demonstration they accept; never imply an official site published your planted event. GTIN without lot/best-before identity means “potentially affected,” not confirmed exposure ([horeca:19](../../research/horeca.md#L19)).
 
 **Dashboard value:** affected kitchens, unknown matches, held lines and review state give Operations an immediate purpose. Estimated carbon completeness is less compelling than “these kitchens need action, and here is why.”
 
 ### 3. Exa — finish a chef's research task, not another search panel
 
-Source: [20 points each for Exa use, usefulness, clarity, originality and live implementation](../event/challenges/main/exa--the-internet-butler-your-personal-assist.md#L34).
+Source: [20 points each for Exa use, usefulness, clarity, originality and live implementation](../../event/challenges/main/exa--the-internet-butler-your-personal-assist.md#L34).
 
 **Build:** “Find a suitable replacement for this ingredient for this dish, with these requirements.” Exa discovers current manufacturer/specification sources; the agent matches evidence to catalogue candidates, performs targeted Valio lookups and produces an actionable order change. Final approval can remain human, consistent with the brief.
 
@@ -81,7 +81,7 @@ Source: [20 points each for Exa use, usefulness, clarity, originality and live i
 
 ### 4. AfterQuery — turn the simulator into an honest learning environment
 
-Source: [full rubric and rerun procedure](../event/challenges/main/afterquery--break-the-agent.md#L74). This is the most demanding extension in evaluation work, not in interface work.
+Source: [full rubric and rerun procedure](../../event/challenges/main/afterquery--break-the-agent.md#L74). This is the most demanding extension in evaluation work, not in interface work.
 
 **Environment:** a kitchen must fulfil a set of meals by delivery deadlines under a budget and hard ingredient constraints. Tools expose recipes, inventory, offers, pack units, delivery windows, draft edits and commitment. Simulated time advances explicitly. Inject a stock change or new booking at a documented step. Every fact needed for a good decision must be discoverable through the tools.
 
@@ -100,7 +100,7 @@ Use a small deterministic fixture set with a feasible reference solution, then h
 
 ### 5. S-Pankki — make a real personal-finance module
 
-Source: [five equally weighted criteria and synthetic-data brief](../event/challenges/main/s-pankki--personal-economic-trainer.md#L34). The repository does not yet establish a parsed S-Pankki dataset or working adapter. Verify access and schema before estimating the adapter confidently.
+Source: [five equally weighted criteria and synthetic-data brief](../../event/challenges/main/s-pankki--personal-economic-trainer.md#L34). The repository does not yet establish a parsed S-Pankki dataset or working adapter. Verify access and schema before estimating the adapter confidently.
 
 **Product:** a mobile view of one synthetic customer's money, with the three requested baskets: regular essentials, irregular essentials and everyday discretionary spending. The user asks a question or changes an assumption; the app explains and updates a structured scenario.
 
@@ -116,7 +116,7 @@ Source: [five equally weighted criteria and synthetic-data brief](../event/chall
 
 ## Tech challenges: assign each a useful job
 
-The target stack in [CONCEPT:60](../concept/CONCEPT.md#L60) is defensible when responsibilities are distinct. The following is a proposed division; all claims need actual traces.
+The target stack in [CONCEPT:60](../../concept/CONCEPT.md#L60) is defensible when responsibilities are distinct. The following is a proposed division; all claims need actual traces.
 
 | Challenge | Meaningful role in the larger build | Evidence that raises it above eligibility |
 |---|---|---|
@@ -130,11 +130,11 @@ The target stack in [CONCEPT:60](../concept/CONCEPT.md#L60) is defensible when r
 | **Nemotron — later** | Extract structured event details or delivery discrepancies from the document input, grounded to page/crop | Correct required model, labelled extraction cases, improvements after prompt/schema changes, visible downstream order effect and submission explanation |
 | **Codex** | The actual agent-assisted development process already used to build the product | One concrete feature from brief → implementation → failing check/fix → shipped evidence, with sanitized artifacts. No extra runtime integration needed |
 
-Sources: [Gemini](../event/challenges/tech/google-deepmind--best-use-of-gemini-api.md#L40), [Modal](../event/challenges/tech/modal--best-use-of-modal.md#L29), [Verda](../event/challenges/tech/verda--verda-compute-track.md#L33), [Aiven](../event/challenges/tech/aiven--best-use-of-aiven.md#L44), [Context tech](../event/challenges/tech/context-dev--best-use-of-context-dev-fully-structured.md#L50), [Gemma](../event/challenges/tech/google-deepmind--best-use-of-gemma.md#L30), [Cloudinary](../event/challenges/tech/cloudinary--best-use-of-cloudinary.md#L36), [Nemotron](../event/challenges/tech/nvidia--best-use-of-nemotron.md#L52), [Codex](../event/challenges/tech/openai--best-use-of-codex.md#L34).
+Sources: [Gemini](../../event/challenges/tech/google-deepmind--best-use-of-gemini-api.md#L40), [Modal](../../event/challenges/tech/modal--best-use-of-modal.md#L29), [Verda](../../event/challenges/tech/verda--verda-compute-track.md#L33), [Aiven](../../event/challenges/tech/aiven--best-use-of-aiven.md#L44), [Context tech](../../event/challenges/tech/context-dev--best-use-of-context-dev-fully-structured.md#L50), [Gemma](../../event/challenges/tech/google-deepmind--best-use-of-gemma.md#L30), [Cloudinary](../../event/challenges/tech/cloudinary--best-use-of-cloudinary.md#L36), [Nemotron](../../event/challenges/tech/nvidia--best-use-of-nemotron.md#L52), [Codex](../../event/challenges/tech/openai--best-use-of-codex.md#L34).
 
 **Modal + Verda can coexist:** Modal owns episode scheduling/batch execution; Verda owns actual open-model inference. That is a credible split only if the network hop and concurrency work acceptably. Use bounded queues; jobs can fail/retry without losing authoritative state. Avoid deploying the same large model twice just to use both clouds. Which provider serves the selected Gemma/Nemotron model remains an access/latency spike, not a settled fact.
 
-**Gemini confidence needs careful framing.** The new note proposes a threshold slider and ~20 eval scenarios ([gemini.md:61](../foundations/gemini.md#L61)). Twenty cases can reveal obvious errors; they cannot establish broad kitchen-specific calibration. Present “observed performance on our labelled cases,” distinguish task probability from answer confidence, and keep unknown allergens/origin held regardless of probability. The note also contains additive versus multiplicative ranking formulations: freeze one before lanes implement different rankings. Rules/replay results must retain their source label and must not inherit a live model's assurance merely by sharing its output shape.
+**Gemini confidence needs careful framing.** The new note proposes a threshold slider and ~20 eval scenarios ([gemini.md:61](../../foundations/gemini.md#L61)). Twenty cases can reveal obvious errors; they cannot establish broad kitchen-specific calibration. Present “observed performance on our labelled cases,” distinguish task probability from answer confidence, and keep unknown allergens/origin held regardless of probability. The note also contains additive versus multiplicative ranking formulations: freeze one before lanes implement different rankings. Rules/replay results must retain their source label and must not inherit a live model's assurance merely by sharing its output shape.
 
 Other tech prizes are not automatically part of this plan. Add one only if the delivered system already uses it meaningfully. Hardware/chain/database substitutions or extra voice services solely for another entry would create a new project dependency. No sponsor outreach or submission is authorized by this report itself.
 
@@ -163,7 +163,7 @@ This is a suggested overlay on the existing plan, not a replacement of lead-owne
 
 These total roughly **22–35 implementation hours, plus the 4–6-hour proof reserve**, spread across partially parallel work. So all five are possible as a larger coordinated build, but all five are not equally low risk in the original ~30-hour envelope. More agents reduce coding time; they do not eliminate contract changes, data discovery or the lead's merge queue. Scaffold all surfaces early; judge readiness by completed journeys, not populated routes.
 
-**Work packages:** lead owns core/service/DB contracts and deploy; kitchen lane owns the client workflow; operations/data lane owns dashboard projections and bounded jobs; research lane owns web evidence; Lab and Personal become dedicated domain packages once contracts stabilize. Stagger these if the agent environment cannot run that many workers. Keep shared-file edits with the lead; require fixtures and one acceptance journey per package, as [ORCHESTRATION:32](../ORCHESTRATION.md#L32) prescribes.
+**Work packages:** lead owns core/service/DB contracts and deploy; kitchen lane owns the client workflow; operations/data lane owns dashboard projections and bounded jobs; research lane owns web evidence; Lab and Personal become dedicated domain packages once contracts stabilize. Stagger these if the agent environment cannot run that many workers. Keep shared-file edits with the lead; require fixtures and one acceptance journey per package, as [ORCHESTRATION:32](../../ORCHESTRATION.md#L32) prescribes.
 
 **Early feasibility gates preserve the bigger ambition:** get S-Pankki data and AfterQuery's harness now; run one query/episode before polishing either UI. Test the chosen open-model endpoint before designing the swarm around it. Run the document-input spike before adding Nemotron to the pitch. If a gate fails, retain the scaffold but label that entry aspirational; do not count it as a competitive submission.
 

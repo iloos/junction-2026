@@ -7,13 +7,13 @@ Target main `f2edb21`. Deployed URL walked Sat 14 Nov ~03:55 (desktop 1440 and p
 - **Standing-order baseline.** A fresh Christmas run holds new products only.
   - Tests: `baseline.test.ts` (4 tests), and `view.test.ts` with salmon `commit` before and `none` after approve and commit.
   - **Deployed:** 10 held, 4 "Within mandate", against 14 held before the merge.
-- **One `orderedBefore`** in [tier.ts](../../src/lib/core/mandate/tier.ts). The duplicates in events.ts and orders.ts are gone.
-- **Backfill of existing workspaces.** `ensure` sets `doc.usualProducts` only when it is missing ([drizzle-store.ts](../../src/lib/server/store/drizzle-store.ts)). The test proves mandate edits survive.
-- **Commit with approval buys approved lines plus act-tier lines** ([orders.ts:375–445](../../src/lib/core/services/orders.ts#L375)). Without this, the baseline would have left in-mandate lines unbought and stuck behind "no open line". 8d is reviewing it.
+- **One `orderedBefore`** in [tier.ts](../../../src/lib/core/mandate/tier.ts). The duplicates in events.ts and orders.ts are gone.
+- **Backfill of existing workspaces.** `ensure` sets `doc.usualProducts` only when it is missing ([drizzle-store.ts](../../../src/lib/server/store/drizzle-store.ts)). The test proves mandate edits survive.
+- **Commit with approval buys approved lines plus act-tier lines** ([orders.ts:375–445](../../../src/lib/core/services/orders.ts#L375)). Without this, the baseline would have left in-mandate lines unbought and stuck behind "no open line". 8d is reviewing it.
 
 **Fragile, and shortcuts taken**
 - **Only k-hotel has a baseline.** For k-lounas and k-central, every product is still "new", so any request there is held. Not tested on those kitchens.
-- **The baseline is the normal week, not order history.** Event-only items (herrings, rosolli, casseroles) stay "new product" (8 of the 10 held). A hotel that runs Christmas buffets bought them last year. The real source is the kitchen's Valio order history: the webshop already has *Usein ostetut* (frequently bought) and *tilauspohjat* (order templates); see [valio-baseline](../research/valio-baseline.md).
+- **The baseline is the normal week, not order history.** Event-only items (herrings, rosolli, casseroles) stay "new product" (8 of the 10 held). A hotel that runs Christmas buffets bought them last year. The real source is the kitchen's Valio order history: the webshop already has *Usein ostetut* (frequently bought) and *tilauspohjat* (order templates); see [valio-baseline](../../research/valio-baseline.md).
 - **The backfill only fills a missing field.** A later change to the seed's baseline won't reach existing workspaces.
 - **`NORMAL_WEEK` throws at module load** if the seed and its quantities disagree. That is fail-loud by design, but a seed edit can crash the kitchen bundle.
 - **A mixed commit records `authority: {approvalId}` for in-mandate lines too.** The audit trail can't tell "approved" from "agent within mandate" per line.
@@ -21,13 +21,13 @@ Target main `f2edb21`. Deployed URL walked Sat 14 Nov ~03:55 (desktop 1440 and p
 - **The offline fixture disagrees with core.** `stub-handlers.ts:294` flags `new_sku` only for substitutes; core flags any product not ordered before. The offline demo and the live demo therefore hold different lines.
 
 **My docs that are already out of date**
-- [sibling-repos](../research/sibling-repos.md) cites findings C and D as open (`loop.ts:68`). Main now has the abort signal, `GoalOutcome`, intent-scoped tools and `RunPrincipal` (`stop.test.ts:37`, `:85`, `:123`).
-- [SURFACES](../concept/SURFACES.md) §3 still says 14 held.
+- [sibling-repos](../../research/sibling-repos.md) cites findings C and D as open (`loop.ts:68`). Main now has the abort signal, `GoalOutcome`, intent-scoped tools and `RunPrincipal` (`stop.test.ts:37`, `:85`, `:123`).
+- [SURFACES](../../concept/SURFACES.md) §3 still says 14 held.
 - Still open from sibling-repos: decision provenance (a prompt hash, model and rubric version on each decision). `grep promptHash` finds nothing.
 
 ## 2. Adjacent scopes
 - **Ops defaults to `ws-demo`, the kitchen to `ws-judges`.**
-  - Public kitchen sessions get the judges' sandbox ([live.ts:62–67](../../src/lib/server/kitchen/live.ts#L62)); `/ops` defaults to `ws-demo` ([ops/+page.server.ts:49](../../src/routes/ops/+page.server.ts#L49)).
+  - Public kitchen sessions get the judges' sandbox ([live.ts:62–67](../../../src/lib/server/kitchen/live.ts#L62)); `/ops` defaults to `ws-demo` ([ops/+page.server.ts:49](../../../src/routes/ops/+page.server.ts#L49)).
   - **Observed:** after planning in the kitchen, `/ops` shows "No orders in this workspace yet · seq 0". The plan appears only under the "Judges' sandbox" tab.
 - **The two screens count held lines differently.** Kitchen: "10 lines held · 3 outages". Ops (sandbox): "13 held for a person". Same plan, different numbers.
 - **Approval is one press for every reason.** The review panel groups by reason (*new product* vs *new product · allergen change*), but "Hold to approve 10 lines" grants the whole group at once. An allergen change rides with routine new products, which is the rubber-stamp risk SURFACES §4 *Decision* was meant to remove.
@@ -67,7 +67,7 @@ Target main `f2edb21`. Deployed URL walked Sat 14 Nov ~03:55 (desktop 1440 and p
 ## 4. Continuation
 **Next tasks, ranked by demo risk × effort**
 1. **A sandbox per visitor, or labelled and isolated per QR code, plus Ops opening the visitor's workspace** (S–M; kitchen + ops). Peer review is where this breaks.
-2. **Open request → menu → ingredients** (PLAN.md), with retrieval built first. Step 4 (ingredient → product) cannot work on the current candidate generation: same category ordered by product id, cut to 12 ([pg.ts:146](../../src/lib/server/adapters/catalog/pg.ts#L146)). The hybrid retrieval in `lanes/subs-retrieval.md` (lexical ∪ Gemini embeddings into the unused `products.embedding` ∪ Valio rules, then fact filters) is the shared base for request lookup, menu ingredients and substitutes. Build it first, inside this track.
+2. **Open request → menu → ingredients** (PLAN.md), with retrieval built first. Step 4 (ingredient → product) cannot work on the current candidate generation: same category ordered by product id, cut to 12 ([pg.ts:146](../../../src/lib/server/adapters/catalog/pg.ts#L146)). The hybrid retrieval in `lanes/subs-retrieval.md` (lexical ∪ Gemini embeddings into the unused `products.embedding` ∪ Valio rules, then fact filters) is the shared base for request lookup, menu ingredients and substitutes. Build it first, inside this track.
 3. **Agent door** (`lanes/agent-door.md`): tool results carry `summary`, `nextAction` and `approvalUrl`; plus `/agents` and a judge key path. This is Openness 15% and the external-agent beat.
 4. **One approval per judgement:** split allergen-change (and other sign-off reasons) from routine new products in the review panel, so each is granted separately. Kitchen, S.
 5. **Baseline from history:** read `usualProducts` from the run's committed orders plus a seeded "last season" list, so event staples stop being "new". Also give k-lounas and k-central baselines.

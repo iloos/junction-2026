@@ -2,7 +2,7 @@
 
 14 November 2026. Review began at `4c6b156` with T0 staged; T0 subsequently landed as `9cefdf2`, followed by STATUS `da09d47`. Recommendations address the current domain, agent and product direction, not only fan-out mechanics. Application inspection was read-only. No new test run, live-provider trial, production UI inspection or competitor survey was performed.
 
-Companion reviews: [foundations](ROUND6-FOUNDATIONS.md), [agent product](ROUND6-AGENT-PRODUCT.md), [product interactions](ROUND6-PRODUCT-INTERACTIONS.md), [shared vocabulary](ROUND6-VOCABULARY.md). The first two describe T0 as staged because that was its state during inspection; those same contracts are now committed, not proof of implemented handlers.
+Companion reviews: [foundations](ROUND6-FOUNDATIONS.md), [agent product](ROUND6-AGENT-PRODUCT.md), [product interactions](ROUND6-PRODUCT-INTERACTIONS.md), [shared vocabulary](../../concept/VOCABULARY.md). The first two describe T0 as staged because that was its state during inspection; those same contracts are now committed, not proof of implemented handlers.
 
 Final concurrent update: `91f034a` added hybrid substitute candidate retrieval behind `CATALOG_RETRIEVAL`, with tests and a labelled evaluation set. Credit this as progress on retrieval, not an absent capability; this review did not run that evaluation or verify its production flag. Better candidate recall remains distinct from sizing, feasibility, task completion and truthful explanation.
 
@@ -10,7 +10,7 @@ Final concurrent update: `91f034a` added hybrid substitute candidate retrieval b
 
 The concern is justified: a correct ordering flow, a bounded agent and an Operations board establish credibility. They do not by themselves establish a memorable product advantage. The user reports about 150 people in this track; that increases the importance of a clear distinction, but does not tell us what competing teams have built. No review can promise a win.
 
-The strongest direction already exists in the repo's [PRODUCT](../concept/PRODUCT.md): **help a kitchen keep service possible when plans and supply change, with less manual rework and a precise account of what can be promised.** Make that the organizing product outcome. Keep the platform: chef workspace, internal operations and open agent interface. Their value comes from carrying one task through different roles, not from the number of screens.
+The strongest direction already exists in the repo's [PRODUCT](../../concept/PRODUCT.md): **help a kitchen keep service possible when plans and supply change, with less manual rework and a precise account of what can be promised.** Make that the organizing product outcome. Keep the platform: chef workspace, internal operations and open agent interface. Their value comes from carrying one task through different roles, not from the number of screens.
 
 Ring labels are secondary. The repo now dispatches Ring 1 while the user still experiences foundation-building. Both descriptions are understandable: a deployed Ring 0 spine exists, and important semantic foundations are still being completed. Judge readiness by completed user journeys and evidence, rather than declaring a ring finished because its modules exist.
 
@@ -72,7 +72,7 @@ Business state and projection state are different: a board that missed events sh
 
 ### E. Unify vocabulary as a semantic contract
 
-Adopt the [vocabulary proposal](ROUND6-VOCABULARY.md). Reserve supplier confirmation for receipt evidence; distinguish planned, ordered, awaiting supplier and delivered. Separate need quantity from pack count; approval from product evidence; task from agent run from scenario run.
+Adopt the [vocabulary proposal](../../concept/VOCABULARY.md). Reserve supplier confirmation for receipt evidence; distinguish planned, ordered, awaiting supplier and delivered. Separate need quantity from pack count; approval from product evidence; task from agent run from scenario run.
 
 There is still a transitional inconsistency: T0's fulfilment partition uses `supplierConfirmed`, while the legacy `LineView.confirmedCover` and `SupplyTier.confirmed` refer to observed stock before commitment. Fix through deliberate adapters/compatibility, not a simultaneous uncontrolled rename across all lanes. A glossary without shared computations and examples will not solve the problem.
 

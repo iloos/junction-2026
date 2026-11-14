@@ -16,7 +16,7 @@ The principal risk is coordination rather than an unmanageable feature count: di
 
 ### 1. High: there are several competing dispatch documents
 
-[STATUS](../STATUS.md) says Ring 0 is stable and deployed. [PLAN](../PLAN.md)'s leading section still marks the request box, live Kitchen, deploy and other completed Ring 0 tracks unfinished. Its open-request and model-routing work is not organized as the adopted T0/A–G graph. SYNTHESIS itself still says its tracks are pending user re-scope; its introductory STATUS-staleness note predates the new STATUS.
+[STATUS](../../STATUS.md) says Ring 0 is stable and deployed. [PLAN](../../PLAN.md)'s leading section still marks the request box, live Kitchen, deploy and other completed Ring 0 tracks unfinished. Its open-request and model-routing work is not organized as the adopted T0/A–G graph. SYNTHESIS itself still says its tracks are pending user re-scope; its introductory STATUS-staleness note predates the new STATUS.
 
 The briefs also mix history and current authority: core-db's top report says tools are unimplemented, then its Handoff correctly says all slices are merged. Old proposal briefs still authorize a composer, embedding batch, approval page and Ops case work. These proposals are not all assigned or in the adopted schedule.
 
@@ -50,7 +50,7 @@ These are delivery boundaries, not a demand for four additional agents. Let C bu
 
 ### 4. High: subset approval is a state-machine change, not just an optional `lineIds`
 
-Current `approve` makes a pending approval terminal in one decision, `get_plan` returns one approval, and `currentApproval` selects a single pending/granted record ([orders service](../../src/lib/core/services/orders.ts#L217)). Per-reason grants must answer: what remains pending, can groups be granted sequentially, what happens to an earlier grant when another group is denied, which grants cover a commit, and what does editing invalidate?
+Current `approve` makes a pending approval terminal in one decision, `get_plan` returns one approval, and `currentApproval` selects a single pending/granted record ([orders service](../../../src/lib/core/services/orders.ts#L217)). Per-reason grants must answer: what remains pending, can groups be granted sequentially, what happens to an earlier grant when another group is denied, which grants cover a commit, and what does editing invalidate?
 
 **Before adding subset grants:** specify one example with three groups and grant/deny/commit/edit transitions; test that no grant authorizes an unseen line. Per-line order authority also needs backward reads for historical orders and a policy for the existing top-level `authority` field.
 

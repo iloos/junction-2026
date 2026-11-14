@@ -10,7 +10,7 @@ T0 already improves this substantially: stable proposal/dish/ingredient IDs, exp
 
 ## 1. P0 foundation — make the requirement graph explicit
 
-**Evidence:** staged [event.ts:54](../../src/lib/core/contracts/event.ts#L54) adds stable ingredient IDs, but core [Need](../../src/lib/core/contracts/plan.ts#L83) has no proposal/revision/dish/ingredient lineage fields. Event planning still finds a dish by its label ([events.ts:82](../../src/lib/core/services/events.ts#L82)); substitutes identify the original product plus `needId`, not an explicit chosen fulfilment strategy.
+**Evidence:** staged [event.ts:54](../../../src/lib/core/contracts/event.ts#L54) adds stable ingredient IDs, but core [Need](../../../src/lib/core/contracts/plan.ts#L83) has no proposal/revision/dish/ingredient lineage fields. Event planning still finds a dish by its label ([events.ts:82](../../../src/lib/core/services/events.ts#L82)); substitutes identify the original product plus `needId`, not an explicit chosen fulfilment strategy.
 
 **Why it matters:** “same dish, different ingredient,” duplicate dish names and model revisions cannot depend on string matching. Make-in-house and buy-ready-made are alternatives serving a requirement; their ingredient lines are not interchangeable alternatives themselves.
 
@@ -20,7 +20,7 @@ T0 already improves this substantially: stable proposal/dish/ingredient IDs, exp
 
 ## 2. P0 foundation — quantities need one conversion authority
 
-**Evidence:** staged [place_order](../../src/lib/core/contracts/tools.ts#L100) can carry both `qty/unit` and optional physical `amount`. Existing sizing has separate direct/package, dish/yield and make-in-house paths ([sizing.ts](../../src/lib/core/demand/sizing.ts)); [Product](../../src/lib/core/contracts/product.ts#L39) and [Measure](../../src/lib/core/contracts/primitives.ts#L43) hold content and basis, but no contract says what happens when caller-supplied physical amount conflicts with supplied sales quantity.
+**Evidence:** staged [place_order](../../../src/lib/core/contracts/tools.ts#L100) can carry both `qty/unit` and optional physical `amount`. Existing sizing has separate direct/package, dish/yield and make-in-house paths ([sizing.ts](../../../src/lib/core/demand/sizing.ts)); [Product](../../../src/lib/core/contracts/product.ts#L39) and [Measure](../../../src/lib/core/contracts/primitives.ts#L43) hold content and basis, but no contract says what happens when caller-supplied physical amount conflicts with supplied sales quantity.
 
 **Required decision:** physical requirement is the demand authority; sales quantity is its derived proposed purchase, or an explicitly separate manual purchase intent. Reject inconsistent dual inputs instead of choosing whichever field a consumer happens to read. Record conversion content, physical unit, net/drained/served/purchased basis, yield, lot increment and evidence in a calculation result used by all surfaces.
 
@@ -28,7 +28,7 @@ T0 already improves this substantially: stable proposal/dish/ingredient IDs, exp
 
 ## 3. P0 foundation — fulfilment must compose recipes, not sum unrelated lines
 
-**Evidence:** staged [FulfilmentView](../../src/lib/core/contracts/plan.ts#L194) correctly separates supplier-confirmed, awaiting, planned known/unknown and unresolved demand with excess outside the partition. However, current [Receipt](../../src/lib/core/contracts/plan.ts#L344) identifies product/quantity, not source order line; a make-in-house recipe has several purchase lines for one need. A rule that counts each line once is insufficient if each ingredient is mistakenly treated as independently covering the whole dish.
+**Evidence:** staged [FulfilmentView](../../../src/lib/core/contracts/plan.ts#L194) correctly separates supplier-confirmed, awaiting, planned known/unknown and unresolved demand with excess outside the partition. However, current [Receipt](../../../src/lib/core/contracts/plan.ts#L344) identifies product/quantity, not source order line; a make-in-house recipe has several purchase lines for one need. A rule that counts each line once is insufficient if each ingredient is mistakenly treated as independently covering the whole dish.
 
 **Implement one pure allocation function:** alternatives are OR; required recipe components are AND. Recipe-supported portions are bounded by the scarcest required ingredient after conversion/yield. Join receipts through immutable order-line identity; carry that identity on new receipt entries. Allocate required demand once, distinguish oversupply and leave every missing component visible. Receipt confirmation is not physical receiving or food served.
 
@@ -36,7 +36,7 @@ T0 already improves this substantially: stable proposal/dish/ingredient IDs, exp
 
 ## 4. P0 foundation — review status must be an authoritative transition
 
-**Evidence:** staged [PlanEventInput](../../src/lib/core/contracts/tools.ts#L52) accepts a full proposal with `status: chef_reviewed`; [MenuProposal](../../src/lib/core/contracts/event.ts#L100) has stable revision but no reviewing principal, reviewed digest or stored acceptance reference. The current handler still rejects non-seeded planning, so this is an implementation requirement—not a claim of a presently exploitable deployed menu path.
+**Evidence:** staged [PlanEventInput](../../../src/lib/core/contracts/tools.ts#L52) accepts a full proposal with `status: chef_reviewed`; [MenuProposal](../../../src/lib/core/contracts/event.ts#L100) has stable revision but no reviewing principal, reviewed digest or stored acceptance reference. The current handler still rejects non-seeded planning, so this is an implementation requirement—not a claim of a presently exploitable deployed menu path.
 
 **Required transition:** propose → edit → review an exact revision → deterministic planning. The server records who reviewed which scoped proposal/revision/digest. A caller cannot establish a chef review by submitting that status string. Menu acceptance authorizes using an estimate for planning; it does not verify allergens, grant spending authority or promote it to a trusted recipe KB.
 
@@ -44,7 +44,7 @@ Likewise, staged subset approval now has a useful split/grant/deny description. 
 
 ## 5. P1 foundation — persist planning documents and their recovery path
 
-**Evidence:** proposal types are staged, but the current [store projection](../../src/lib/server/store/drizzle-store.ts#L31) loads plans, approvals, orders, anomalies and enrichment—not menu proposals or requirement revisions. `Plan` has `eventId` but no proposal-revision link. [withViews](../../src/lib/core/services/handlers.ts#L62) separately reloads current approval state after a command returns its plan, which can mix revisions under concurrent edits.
+**Evidence:** proposal types are staged, but the current [store projection](../../../src/lib/server/store/drizzle-store.ts#L31) loads plans, approvals, orders, anomalies and enrichment—not menu proposals or requirement revisions. `Plan` has `eventId` but no proposal-revision link. [withViews](../../../src/lib/core/services/handlers.ts#L62) separately reloads current approval state after a command returns its plan, which can mix revisions under concurrent edits.
 
 **Minimal foundation:** persist the planning document and revision before returning a recoverable URL. A plan records the exact accepted source revision. Return a coherent versioned projection with `asOf`, effective authority and typed next actions; if state changed during assembly, retry or return a conflict rather than combine an old plan with new metadata. Add document schema versions and narrow upgrade/validation at stored-JSON boundaries when the first historical schema changes.
 
@@ -52,7 +52,7 @@ Likewise, staged subset approval now has a useful split/grant/deny description. 
 
 ## 6. P1 foundation — evidence and capability readiness must constrain actions
 
-**Evidence:** [Provenance](../../src/lib/core/contracts/primitives.ts#L70) names source/time/ref/note; staged `claimedCompatible` correctly avoids treating model output as a diet certificate. `tools-next.ts` keeps planned tools out of discovery until handlers exist—retain that discipline. Yet field source alone does not establish freshness, verification or that a kitchen is operationally ready.
+**Evidence:** [Provenance](../../../src/lib/core/contracts/primitives.ts#L70) names source/time/ref/note; staged `claimedCompatible` correctly avoids treating model output as a diet certificate. `tools-next.ts` keeps planned tools out of discovery until handlers exist—retain that discipline. Yet field source alone does not establish freshness, verification or that a kitchen is operationally ready.
 
 **Product opportunity:** model readiness by capability: location known, menu current, ingredient mapping reviewed, delivery agreement configured, policy accepted, shadow-ready, act-enabled. Evidence status governs each admission. A public venue is discoverable, not automatically a purchaser; a chef-entered number is editable demand, not a safety fact. Keep these statuses visible to admin/Operations and actionable as missing-evidence tasks.
 
