@@ -49,6 +49,31 @@ Rank and present in this order. A kind-3/4 swap always shows what changes (labou
 - **Recall@k of candidate generation:** for 20–40 out-of-stock lines, list the acceptable substitutes by hand. Compare id order (today) vs hybrid retrieval at k = 12.
 - **Fit precision:** minimal pairs (same product with one disqualifier flipped: allergen, form, temperature). Three arms: rules / model / model + policy. Report suitability, violations, abstains, latency and cost.
 
+## Does it generalise? (measured 14 Nov, Track F)
+The 30 labelled targets were hand-picked, so they can't answer this. Two checks that were never tuned on: `src/lib/server/evals/substitute-generalisation.test.ts` (opt-in: `SUBS_GENERALISE=1`, needs `data/valio/`; report in `scratch/subs-generalisation.json`). Hybrid retrieval, the real `find_substitutes` for the hotel, the target out of stock and every other product in stock at a neutral price, so the numbers measure the generator and the ranker, not which offers are cached.
+
+**1. Leave-one-out on Valio's own rules (250 rules, 189 products).** For each rule A → B, the rule is removed from the generator (A's other rules stay) and A is substituted.
+| Measure | Result |
+|---|---|
+| B retrieved in the top 12 (recall@12) | **70%** (175/250); same category 74% (92% of rules are), other category 25% |
+| MRR of B in the retrieved list | 0.33 |
+| Retrieved and allowed by the kitchen's rules: B's final rank | median **2**; first 35/108, top 3 **80/108 (74%)** |
+| Not ranked: not retrieved / held by the kitchen policy (no allergen record, `UNKNOWN_REQUIRED`) / below the lot step | 75 / 58 / 9 |
+| Retrieval by group (2-digit) | fresh meat and fish 18 18/18, chilled ready food 17 58/69, coffee/spices 22 9/11, dry grocery 21 24/32, **frozen 41 23/40, dairy and bread 10 43/76** |
+
+**2. Coverage on 100 food products** (stratified by 2-digit group, fixed seed). With the product out: **96** get at least one ranked candidate; **75** get one sharing the product's head word (a name-stem proxy for "same base" until 8d's base key exists); 0 get nothing retrieved; 4 retrieve candidates that the kitchen policy holds (no allergen record).
+
+**What fails, and what would fix it.** Five misses from (1):
+- `jääsalaatti 100 g` → `ruukkujääsalaatti 115 g`: a compound with a prefix (ruukku·jääsalaatti); our compound match only reads the head.
+- `riistakäristys` → `riistakäriste`: an inflected form of the same word.
+- `Valio … kevytmaitojuoma laktoositon` → `Arla kevytmaitojuoma laktoositon`: same words, different brand, and still missed. The brand-heavy name loses on rare-word weighting.
+- `parmesan reggiano` → `kova juusto lastuina` ("hard cheese flakes"): a synonym, with no shared word.
+- `kerakaali` → `kaalisuikale` ("shredded cabbage", other category): a form change across categories.
+
+The first three are lexical. Splitting compounds both ways, matching Finnish inflection stems and capping brand weight would fix them cheaply, before the freeze if anyone has time. The last two need meaning, not words: embedding recall (Gemini embeddings on a product card into the unused pgvector column, unioned with the lexical pool) is what would catch them. Cross-category recall is 25% today, and that's where embeddings would pay. Ranking isn't the bottleneck: once the right product is retrieved and allowed, it's ranked first or second in most cases.
+
+**Overfit?** The labelled 30 and Valio's 250 rules agree. Retrieval is good inside a category and weak across categories and synonyms, and ranking is sound once a product is retrieved. Nothing suggests the rules were tuned to our 30. The 58 policy holds are a data gap (Valio has no allergen record), which the Exa evidence in the Why drawer is there to fill, not a ranking fault.
+
 ## Partners (D7)
 - **Gemini:** embeddings for the product card, fit judgement on the short list, and the batch product profile (Flash-class).
 - **Aiven:** pgvector in our Aiven Postgres makes hybrid retrieval a real "meaningful use" (their 40%).
