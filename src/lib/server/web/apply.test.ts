@@ -182,3 +182,21 @@ describe('F20 applications per workspace and run', { timeout: 30_000 }, () => {
 		);
 	});
 });
+
+describe('sandbox recalls (visitor workspace, no network)', { timeout: 30_000 }, () => {
+	it('applies a stored public notice to the new sandbox run and files a labelled drill there', async () => {
+		const { sandboxRecalls } = await import('./sandbox');
+		const base = await setup();
+		// The monitor read the notice for the demo workspace earlier.
+		await ingestRecall(v1, { ...base, scope: { workspaceId: 'ws-demo-src', runId: 'run-a' } });
+		const r = await sandboxRecalls({ ...base, scope: runA }, { drillGtin: product.gtin! });
+		expect(r.applied).toHaveLength(1);
+		expect(r.drill).not.toBeNull();
+		expect(r.note).toMatch(/1 stored public notice\(s\) applied; one labelled DRILL/);
+		const anomalies = await anomaliesIn(base.store, 'run-a');
+		expect(anomalies.length).toBeGreaterThanOrEqual(2);
+		expect(
+			base.findings.list('recall', runA.workspaceId).some((f) => f.id.startsWith('drill:'))
+		).toBe(true);
+	});
+});

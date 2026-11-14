@@ -182,3 +182,46 @@ export function sameSecret(given: string | null, secret: string | undefined): bo
 	if (!given || !secret || secret.length < 16) return false;
 	return sameText(given, secret);
 }
+
+/** One article from Context.dev News Search (`POST /news/search`); fields the leads view reads. */
+export interface NewsArticle {
+	id?: string;
+	url: string;
+	title: string;
+	description?: string;
+	published_at?: string | null;
+	type?: string;
+	source?: { name?: string; domain?: string };
+	match?: { level?: string; confidence?: number | null } | null;
+}
+
+export interface NewsSource {
+	readonly mode: 'live' | 'fixture';
+	searchNews(company: string): Promise<{ articles: NewsArticle[]; cached: boolean }>;
+}
+
+/** Company news by name, newest first; cached for 6 h (1 credit per 10 results). */
+export function createNewsSource(call: WebCall): NewsSource {
+	return {
+		mode: 'live',
+		async searchNews(company) {
+			const r = await call<{ data?: NewsArticle[] }>(
+				'/news/search',
+				{ searchBy: { type: 'entity', entity: { type: 'name', name: company } }, limit: 10 },
+				{ maxAgeMs: 6 * 3_600_000, purpose: `news ${company}`.slice(0, 80) }
+			);
+			const articles = (r.body.data ?? []).filter(
+				(a) => typeof a?.url === 'string' && typeof a?.title === 'string'
+			);
+			return { articles, cached: r.cached };
+		}
+	};
+}
+
+/** Fixture mode reads no news: the leads view says so instead of inventing articles. */
+export const fixtureNewsSource: NewsSource = {
+	mode: 'fixture',
+	async searchNews() {
+		return { articles: [], cached: false };
+	}
+};
