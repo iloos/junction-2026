@@ -3,7 +3,7 @@
 _Lead, Sat 14 Nov 22:30. Replaces the seven-session table in [RESTART](RESTART.md) (read RESTART for the north star, foundations and the full queue; this page says who does what tonight and in what order). Freeze Sun 06:00, submission Sun 10:00. Prod runs a9f06ee; main (8e86190) is ahead and is deployed first._
 
 ## Roster (message by name)
-Lead **junc26-52** · S1 Core **junc26-73** · S2 Kitchen **junc26-c6** · S3 Conversation **junc26-a1** · S4 Ops/deploy **junc26-d5** · S5 Evals/story **junc26-fb**. Deploys need the user's OK in S4's own session; the lead never deploys on S4's behalf.
+Lead **junc26-52** · S1 Core **junc26-73** · S2 Kitchen **junc26-c6** · S3 Conversation **junc26-a1** · S4 Ops/deploy **junc26-d5** · S5 Evals/story **junc26-fb**. S6 Basket canvas **(GPT session, user-run)**: worktree `scratch/worktrees/basket-canvas`, branch `lane/basket-canvas`; owns only `src/routes/canvas/**` and `src/lib/canvas/**`; reads state through the existing projections and changes it only through the existing tools; not linked from the nav until the lead merges it after the hero journey is green. Deploys need the user's OK in S4's own session; the lead never deploys on S4's behalf.
 
 ## Added at 23:00: one flow (D23) and room mode (D24)
 The user wants one coherent flow from asking to managing items, in chat or on the page, and an IRL demo where everyone runs their own store while Ops shows the orders arriving. Read [DECISIONS D23, D24](../../DECISIONS.md). The priorities below already include them:

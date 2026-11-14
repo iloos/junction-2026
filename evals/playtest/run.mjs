@@ -26,9 +26,17 @@ const target = process.env.KITCHEN_URL ? new URL(base).host : 'local-fixture';
 const stamp = new Date().toISOString().slice(0, 19).replace(/[-:]/g, '').replace('T', '-');
 const runs = join(root, 'scratch', 'playtest');
 mkdirSync(runs, { recursive: true });
+// The run to diff against: a --grep/--project run diffs against the newest run; a full run against the newest full one.
+const partial = process.argv
+	.slice(2)
+	.some((a) => a.startsWith('--grep') || a.startsWith('--project'));
 const previous = readdirSync(runs)
 	.filter((d) => statSync(join(runs, d)).isDirectory() && existsSync(join(runs, d, 'steps.json')))
 	.sort()
+	.filter(
+		(d) =>
+			partial || JSON.parse(readFileSync(join(runs, d, 'steps.json'), 'utf-8')).steps.length >= 60
+	)
 	.at(-1);
 const dir = join(runs, `${stamp}-${target}-${commit}`);
 mkdirSync(dir, { recursive: true });

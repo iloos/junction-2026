@@ -13,6 +13,7 @@ import {
 	CONSTRAINTS,
 	NUMBER_WORDS,
 	PRODUCTS,
+	PLANT_ALT,
 	UNITS,
 	UNKNOWN_UNITS,
 	brandIn,
@@ -54,6 +55,11 @@ export interface ParsedItem {
 	diet?: string[];
 	/** What the item is: a product to buy, or a dish to serve (portions). */
 	what?: 'product' | 'dish';
+	/**
+	 * The lexicon noun the words name when a plant-based ask set the product aside ("vegan milk" → milk): candidates
+	 * must be that kind's plant alternative (PLANT_ALT), never another kind of product.
+	 */
+	kind?: string;
 }
 
 /**
@@ -463,11 +469,19 @@ export function parseItem(chunk: string, finnish: boolean): Omit<ParsedItem, 'id
 		.filter(Boolean)
 		.join(' ');
 
-	const search = buildSearch(product ? product.search : leftovers.join(' '), constraints, variant);
+	// A plant-based ask for a dairy noun ("vegan milk") searches the noun's plant alternative; the noun stays its kind.
+	const plantKind =
+		product && PLANT_ALT[product.key] && diet.some((t) => t === 'vegan' || t === 'dairy-free')
+			? product.key
+			: null;
+	const search = plantKind
+		? PLANT_ALT[plantKind].search
+		: buildSearch(product ? product.search : leftovers.join(' '), constraints, variant);
 	return {
 		text: chunk.trim(),
 		query: brand ? `${brand} ${query}` : query,
-		product: product?.key ?? null,
+		product: plantKind ? null : (product?.key ?? null),
+		...(plantKind ? { kind: plantKind } : {}),
 		search: brand && search.length ? [`${brand.toLowerCase()} ${search[0]}`, ...search] : search,
 		...(brand ? { brand } : {}),
 		...(diet.length ? { diet } : {}),
@@ -609,7 +623,10 @@ function fromLlmItem(it: z.infer<typeof LlmItem>): Omit<ParsedItem, 'id'> {
 	const plant = [...it.diet, it.query].some((t) =>
 		dietTagsIn(t).some((x) => x === 'vegan' || x === 'dairy-free')
 	);
-	const product = plant && it.searchFi.length ? null : (words.map(productOf).find(Boolean) ?? null);
+	const named = words.map(productOf).find(Boolean) ?? null;
+	const product = plant && it.searchFi.length ? null : named;
+	// The noun stays the item's kind: its plant alternative is a near miss, any other kind never is.
+	const kind = plant && named && PLANT_ALT[named.key] ? named.key : undefined;
 	const constraints = it.constraints.map(constraintKey).filter((c): c is ConstraintKey => !!c);
 	const variant = variantIn(product, [
 		...(it.variant ?? '').toLowerCase().split(/\s+/),
@@ -652,7 +669,8 @@ function fromLlmItem(it: z.infer<typeof LlmItem>): Omit<ParsedItem, 'id'> {
 		text: it.query,
 		query: it.query,
 		product: product?.key ?? null,
-		search,
+		search: kind ? [...new Set([...search, ...PLANT_ALT[kind].search])] : search,
+		...(kind ? { kind } : {}),
 		qty,
 		unit: qty === null ? null : (it.unit ?? 'sales'),
 		constraints,

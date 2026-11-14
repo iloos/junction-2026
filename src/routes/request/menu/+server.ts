@@ -11,6 +11,7 @@ import {
 	readMenuFor
 } from '$lib/server/menu/server';
 import { visitorWorkspace } from '$lib/server/demo/visitor';
+import { visitorKey } from '$lib/server/kitchen/live';
 import { readMenuBody } from '$lib/server/menu/body';
 import type { RequestHandler } from './$types';
 
@@ -32,7 +33,9 @@ export const POST: RequestHandler = async (event) => {
 	const { body } = read;
 	const str = (k: string) => (typeof body[k] === 'string' ? (body[k] as string) : '');
 	const int = (k: string) => (Number.isInteger(body[k]) ? (body[k] as number) : -1);
-	const { workspaceId } = await visitorWorkspace(event, env, dev);
+	const { workspaceId, own } = await visitorWorkspace(event, env, dev);
+	// Writes to a kitchen this browser owns carry its visitor (D24).
+	const visitor = visitorKey(own);
 	const ref = { workspaceId, id: str('id'), revision: int('revision') };
 
 	// Proposing takes seconds (a model call, then one catalogue match per ingredient): it streams NDJSON lines,
@@ -47,6 +50,7 @@ export const POST: RequestHandler = async (event) => {
 						proposeFromRequest({
 							env,
 							workspaceId,
+							visitor,
 							kitchenId: str('kitchenId') || 'k-hotel',
 							text: str('text').slice(0, 500),
 							briefAnswers: readBriefAnswers(body.briefAnswers),
@@ -75,9 +79,9 @@ export const POST: RequestHandler = async (event) => {
 			: body.action === 'edit'
 				? await editMenuFor({ ...ref, changes: readChanges(body.changes) })
 				: body.action === 'accept'
-					? await acceptMenuAsChef({ env, ...ref })
+					? await acceptMenuAsChef({ env, visitor, ...ref })
 					: body.action === 'plan'
-						? await planMenuAsChef({ env, ...ref })
+						? await planMenuAsChef({ env, visitor, ...ref })
 						: null
 	);
 	if (!r)

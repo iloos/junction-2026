@@ -440,11 +440,17 @@ async function* turnLines(
 	let remembered: Task | null = null;
 	if (input.taskId) {
 		const t = await store.get(deps.workspaceId, input.taskId);
-		if (!t) {
-			yield fail(input.taskId, `No task ${input.taskId} here.`);
+		if (!t && input.text === undefined) {
+			// An answer or a continue for a conversation this sandbox no longer has (reset, another browser).
+			yield fail(
+				input.taskId,
+				'That conversation is no longer here (the sandbox was reset). Tell me again what you need.'
+			);
 			return;
 		}
-		remembered = t;
+		// Words for a task that is gone are a new request: read them, never a dead end.
+		if (!t) input = { ...input, taskId: undefined };
+		else remembered = t;
 	}
 	// The plan on screen wins over a remembered task that has nothing of its own (no plan, no open question): the
 	// dock answers for what the chef is looking at.
