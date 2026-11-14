@@ -22,6 +22,7 @@
 - Adversarial suite (`src/lib/server/evals/adversarial*.test.ts`): 15 open cases in `OPEN` with owners (E: R9-01…05, R8-task-*, R8-next-action; 8d: R7-03/05/11; 9c: R9-08…10; D: R8-web-write, R8-queue-claim). Substitution kinds: 2 open targets (8d). Grounded menu: green on the Exa replay.
 - Prod defects: `docs/BUGS.md`, re-tested through `7b3daf1`/`e9ec36c`. Open: #7 (ham weight bases), off-day hold copy, three different decision deadlines, chat vs `/request` basket, Ops door label (REST shown as MCP).
 - Round 10 suite (`src/lib/server/evals/adversarial-r10.test.ts`, `adversarial-transport-r10.test.ts`): open 8d R10-03/04/05/06/08, da R10-15, 9c R10-09, E R10-02b (a cancel after the fence's re-read). Substitution kinds: one definition agreed with 8d; accuracy check open until `basekey.ts` matches the 253 pairs sent to 8d.
+- When the journeys check "a vegetarian dish's rescue never orders meat" goes green on prod (0d's 36c3d60, then D16): tell d0 to bring back the landing's "can be ordered now" figure and re-record.
 - When R10-03 (a menu's lactose-free requirement) is fixed and on prod: tell d0 (`junc26-d0`) to widen /how's "On a request, a product that breaks a stated requirement…" to menus.
 - Waiting on deploys: 8d's unknown-availability fix (re-word CLAIMS/PITCH, re-record d0's case cards 3 and 7); 9c's g7 `services[]` (`evals/ui/services.e2e.ts` then runs).
 

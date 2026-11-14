@@ -414,3 +414,43 @@ test('the agent card and the MCP resources and prompts', async ({ page }) => {
 		.toBe(true);
 	expect.soft(prompts).toMatch(/plan_event_in_mandate/);
 });
+
+test("a vegetarian dish's rescue never orders meat (the lunch buffet's vegetable balls)", async ({
+	page
+}) => {
+	test.setTimeout(180_000);
+	await page.goto(`${BASE}/`);
+	const r = await page.request.post(`${BASE}/kitchen-api/scenario`, {
+		data: { action: 'kitchen', value: 'k-lounas' },
+		headers: { origin: BASE }
+	});
+	expect(r.status()).toBe(200);
+	const snap = (await (await page.request.get(`${BASE}/kitchen-api/snapshot`)).json()) as {
+		plan?: {
+			needs: { id: string; label: string }[];
+			lines: {
+				needId: string;
+				productId: string;
+				productName?: string;
+				state: string;
+				view?: { committable?: boolean };
+			}[];
+		};
+	};
+	const need = snap.plan?.needs.find((n) => /kasvisp/i.test(`${n.id} ${n.label}`));
+	const lines = (snap.plan?.lines ?? []).filter((l) => l.needId === need?.id);
+	note('b13-vegetable-balls', { need, lines });
+	expect.soft(need, 'the vegetable-balls need').toBeTruthy();
+	// Lihapyörykkä, kinkku, broileri, nauta, sika, kala…: a meat or fish product for a vegetarian dish.
+	const meat = lines.filter(
+		(l) =>
+			!['unorderable', 'rejected'].includes(l.state) &&
+			/liha|kinkku|broiler|kana|nauta|sika|possu|kala|lohi|meat/i.test(l.productName ?? '')
+	);
+	expect
+		.soft(
+			meat.map((l) => `${l.productId} ${l.productName} (${l.state})`),
+			'meat planned for a vegetarian dish'
+		)
+		.toEqual([]);
+});
