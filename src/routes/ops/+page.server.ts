@@ -29,7 +29,7 @@ export type OpsKitchen = {
 	weeklyCapCents: number;
 };
 
-/** productId → name from the seeds; the catalog port replaces this once core-db serves names. */
+/** productId → name from the seeds and the simulated run's products; anything else shows as `Product <id>`. */
 function seedNames(): Record<string, string> {
 	const out: Record<string, string> = {};
 	const walk = (o: unknown) => {
@@ -61,7 +61,7 @@ const kitchens: OpsKitchen[] = kitchenSeed.kitchens.map((k) => ({
  * the dev load test and (for non-presenters) the stage are view-only and don't move it.
  */
 async function opsWorkspace(event: RequestEvent) {
-	const asked = event.url.searchParams.get('ws') ?? event.url.searchParams.get('workspace');
+	const asked = event.url.searchParams.get('ws');
 	const presenter = isPresenter(event.cookies, env, dev);
 	const viewOnly =
 		asked === SYNTH_WORKSPACE ||

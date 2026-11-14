@@ -1,11 +1,11 @@
 /**
- * The Operations work queue (review round 4, #9): every thing a person or agent must act on, as one list
+ * The Operations work queue: every thing a person or agent must act on, as one list
  * sorted by urgency. Pure: derived from the reduced WorkspaceState plus when each line was first held.
  */
 import type { Line, Plan } from '$lib/core/contracts';
 import { SCENARIO } from '$lib/core/scenario';
 import type { WorkspaceState } from '$lib/core/state';
-import { lineIsHeld, reasonText, type Names } from './labels';
+import { lineIsHeld, productName, reasonText, type Names } from './labels';
 
 export type Owner = 'Chef' | 'Approver' | 'Kitchen agent' | 'Operations';
 export type Tone = 'blocked' | 'sign_off' | 'propose' | 'act';
@@ -44,7 +44,7 @@ function lineCase(
 	names: Names,
 	since: string | null
 ): Case {
-	const name = names[l.productId] ?? `Product ${l.productId}`;
+	const name = productName(names, l.productId);
 	const pending = pendingLines.has(lineKey(plan.id, l.id));
 	const hasSub = plan.lines.some((x) => x.substituteFor === l.productId);
 	const base = {

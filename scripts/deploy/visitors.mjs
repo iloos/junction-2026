@@ -1,4 +1,4 @@
-// Bound test (Track G): N fresh visitors at once, each with its own cookie jar, open the kitchen (seeds a sandbox),
+// Load test: N fresh visitors at once, each with its own cookie jar, open the kitchen (seeds a sandbox),
 // plan the event, open /ops and read their own stream. Prints latency percentiles, errors, and /healthz latency
 // sampled during the load. Usage: node scripts/deploy/visitors.mjs <url> [N=30]
 const BASE = process.argv[2] ?? 'http://localhost:3000';

@@ -37,7 +37,7 @@
 	let tracesOpen = $state(false);
 	let confirmReset = $state(false);
 	// svelte-ignore state_referenced_locally
-	let anchor = $state(data.runStartedAt);
+	const anchor = data.runStartedAt;
 	let wall = $state(Date.now());
 	onMount(() => {
 		const t = setInterval(() => (wall = Date.now()), 15_000);
@@ -260,7 +260,7 @@
 						confirmReset = false;
 						return async ({ result, update }) => {
 							if (result.type === 'success' && result.data?.reset)
-								stream.resetTo(String(result.data.reset));
+								stream.resetTo(String(result.data.reset), Number(result.data.startedAt));
 							await update({ reset: false });
 						};
 					}}

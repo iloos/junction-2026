@@ -28,6 +28,6 @@ hit /
 hit /kitchen-api/snapshot
 hit /request
 hit /ops
-hit '/api/events?workspace=ws-demo&mode=poll'
+hit '/api/events?mode=poll'
 hit /healthz
 echo OK

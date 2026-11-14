@@ -1,12 +1,15 @@
 import { expect, test, type BrowserContext, type Page } from '@playwright/test';
 
 /**
- * Track G integration gate (D9): browser A, browser B, an outside agent holding A's judge key, and a fresh
+ * Visitor isolation gate (D9): browser A, browser B, an outside agent holding A's judge key, and a fresh
  * browser opening A's deep link. Each visitor works in its own sandbox; no cookie, query, key or link reaches
  * another's. Needs a production build (dev opens everything) with JUDGE_KEY_SECRET set:
  *   GATE_URL=http://localhost:4177 npx playwright test -c scripts/deploy/pw-gate.config.ts
  */
-const BASE = process.env.GATE_URL ?? 'http://localhost:4173';
+const BASE = process.env.GATE_URL ?? '';
+
+// Runs only when pointed at a server (GATE_URL); the default e2e preview has no JUDGE_KEY_SECRET.
+test.skip(!BASE, 'set GATE_URL to run the visitor isolation gate');
 
 /** Workspace and run the browser's /ops shows (its room line). */
 async function room(page: Page, query = ''): Promise<{ ws: string; run: string }> {
