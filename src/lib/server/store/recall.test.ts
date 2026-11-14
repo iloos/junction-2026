@@ -105,4 +105,28 @@ describe('recall', () => {
 		expect(trout?.rejectedReasons).toContain('recall');
 		expect(r.chosen.map((l) => l.productId)).not.toContain('462016');
 	});
+
+	it('drops a recalled line from the approval once it has a replacement', async () => {
+		const { plan } = must(
+			await h.plan_event(chef, { kitchenId: 'k-hotel', eventId: 'event-xmas-140' })
+		);
+		await recall('462150');
+		const held = must(await h.get_plan(chef, { planId: plan.id }));
+		const salmon = at(held.plan, '462150');
+		// The recall voided the old approval; the rescue's re-quote opens the next one.
+		expect(held.approval).toBeNull();
+		const r = must(
+			await h.find_substitutes(chef, {
+				planId: held.plan.id,
+				version: held.plan.version,
+				lineId: salmon.id
+			})
+		);
+		expect(r.applied).toBe(true);
+		const after = must(await h.get_plan(chef, { planId: plan.id }));
+		const sub = after.plan.lines.find((l) => l.substituteFor === '462150')!;
+		expect(after.approval?.lineIds).toContain(sub.id);
+		expect(after.approval?.lineIds).not.toContain(salmon.id);
+		expect(at(after.plan, '462150').view).toMatchObject({ reviewable: false, nextAction: 'none' });
+	});
 });

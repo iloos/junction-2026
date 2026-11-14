@@ -184,7 +184,19 @@ export function tierLines(input: TierInput): TierResult {
 	const all = [...(input.committed ?? []), ...lines];
 	const heldLines = lines.filter((l) => l.state === 'held');
 	// Only waivable holds go to a human; a fact gap must be resolved first (a new quote, new terms).
-	const approvable = heldLines.filter((l) => !work.find((w) => w.draft.id === l.id)?.gap);
+	// A recalled line that already has a non-recalled replacement is superseded: one approval must never buy both.
+	const superseded = (l: Line) =>
+		l.reasons.includes('recall') &&
+		all.some(
+			(x) =>
+				x.substituteFor === l.productId &&
+				x.needId === l.needId &&
+				x.state !== 'unorderable' &&
+				!x.reasons.includes('recall')
+		);
+	const approvable = heldLines.filter(
+		(l) => !work.find((w) => w.draft.id === l.id)?.gap && !superseded(l)
+	);
 	const open = lines.some((l) => l.state === 'eligible' || l.state === 'held');
 	const planState: PlanState = heldLines.length ? 'held' : open ? 'ready' : 'held';
 	return {
