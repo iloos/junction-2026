@@ -13,18 +13,31 @@
 - **Deploy race** `scripts/smoke-race.mjs`, run by `scripts/deploy/smoke.sh` when `SMOKE_KEY` is set (key `smoke:kitchen_agent:<key>:ws-smoke` in MCP_KEYS). Passed on prod Sat 14 Nov 05:51.
 - Removed today as unit-test duplicates: s6, s8, s9, s10, s11, r5-f5, r5-f8, r5-f11, r5-f22 (covered by store tests ceiling, baseline, dates, rescue, reset, pool, authority, zero).
 
-## Open
-| expectFail | where | owner |
-|---|---|---|
-| CHAT-add-item: "and 2 l of whipping cream too" adds no line | `evals/chat/free/sessions.json` f1 | E |
-| CHAT-two-items: the milk in "perunoita ja maitoa" is dropped | `evals/chat/free/sessions.json` f2 | E |
+## Open (checkpoint Sat 14 Nov, main 32b8eb4, prod b2dfe9c)
+**Done since the Ring 4 checkpoint** (all merged into main): R10 and R11 adversarial suites with the shared harness (`adversarial-harness.ts`); the judge recall table (`judge-recall.test.ts`, 9/10 reading defects flagged); substitution kinds on all 471 rows plus the order check; presets and per-line constraint evals; grounded-menu checks on the Exa replay; the vision bar (R10-14); the idle guard (R10-13); the phone dock check (R11-14); the services journey with per-request evidence (R11-13, `2cb3694`: the stored Gemini trace by `x-request-id` once O's traces deploy); the lane gate rule (`b57324b`: lanes run `--only check,lint`).
 
-- Adversarial suite (`src/lib/server/evals/adversarial*.test.ts`): 15 open cases in `OPEN` with owners (E: R9-01…05, R8-task-*, R8-next-action; 8d: R7-03/05/11; 9c: R9-08…10; D: R8-web-write, R8-queue-claim). Substitution kinds: 2 open targets (8d). Grounded menu: green on the Exa replay.
-- Prod defects: `docs/BUGS.md`, re-tested through `7b3daf1`/`e9ec36c`. Open: #7 (ham weight bases), off-day hold copy, three different decision deadlines, chat vs `/request` basket, Ops door label (REST shown as MCP).
-- Round 10 suite (`src/lib/server/evals/adversarial-r10.test.ts`, `adversarial-transport-r10.test.ts`): open 8d R10-03/04/05/06/08, da R10-15, 9c R10-09, E R10-02b (a cancel after the fence's re-read). Substitution kinds: one definition agreed with 8d; accuracy check open until `basekey.ts` matches the 253 pairs sent to 8d.
-- When the journeys check "a vegetarian dish's rescue never orders meat" goes green on prod (0d's 36c3d60, then D16): tell d0 to bring back the landing's "can be ordered now" figure and re-record.
-- When R10-03 (a menu's lactose-free requirement) is fixed and on prod: tell d0 (`junc26-d0`) to widen /how's "On a request, a product that breaks a stated requirement…" to menus.
-- Waiting on deploys: 8d's unknown-availability fix (re-word CLAIMS/PITCH, re-record d0's case cards 3 and 7); 9c's g7 `services[]` (`evals/ui/services.e2e.ts` then runs).
+**OPEN maps by owner** (delete a line when its case goes red, "looks fixed"):
+| owner | cases |
+|---|---|
+| 8d | R10-05, R10-06, R10-08 · R11-04a/b, R11-05, R11-09, R11-10 · kinds order 463876, 462482 |
+| 9c | R10-09 (transport) · R11-06a/b · R11-07a (with 1f) |
+| da | R10-15 · R11-08 |
+| D | R8-web-write, R8-queue-claim |
+| B | judge recall `brand-dropped` |
+| 1f | R11-14 phone dock composer (`evals/ui/mobile-dock.e2e.ts`, `OPEN_R11_14`) |
+| E | CHAT-add-item, CHAT-two-items (`evals/chat/free/sessions.json`) |
+
+**CLAIMS rows pending a prod pass:** chat events (ChatDock doesn't render the `menu` event); per-request service evidence (strict once O's traces deploy); the buffet's lines ordered alone and one explicit exception (journeys rehearsal lines); Labels and grounded menus on the freeze build; refusals in Ops.
+
+**e2e on prod b2dfe9c:** `services` green (trace part skipped: `/api/ops/traces` 404); journeys b1–b13 green on b2dfe9c including b13 (vegetarian rescue never orders meat); `mobile-dock` expected-fail (composer bottom at 1179 px of 844). The pinned pass needs prod = main: main is 32b8eb4, so after the batch deploys.
+
+**Site reviews for d0:** /story (73's f03f1bb → 06c550e) checks before a recorded stop drawn neutral, shipped. /how map: Gemini Decisions wording ruled ("scores how well each substitute fits the dish, one input to the code's ranking, and can flag a constraint risk that holds the line; it never approves"); pool.test path is `server/store/pool.test.ts`.
+
+**Risks:**
+- The pinned journeys pass keys on UI text; D15 stage 2 (picker, composer, step cards) changes the entry steps. `evals/ui/flow.ts` is the only file to change, and the selector contract below is what it needs.
+- Menu claims rest on recorded runs (menus vary per run).
+- `core/services/substitutes.ts` contradicts itself: the comment near line 288 says a calibrated "violates" rejects a candidate; `VIOLATES_P`'s doc and the site say it adds a caution that holds the line. Owner 8d should settle it; CLAIMS says "holds".
+- Prod BUGS still open: #7 ham weight bases, off-day hold copy, three decision deadlines, chat vs `/request` basket, Ops door label.
 
 ## Self-review (Ring 4 checkpoint, 14 Nov)
 - **Solid:** the gate and its eval layers (scenarios, fidelity, paraphrase, chat replay, adversarial and kinds suites with owned `it.fails`); prod evidence for every "say it" row, with page text and screenshots in `scratch/claims/obs*`; `evals/ui` against prod after each deploy.
@@ -52,6 +65,7 @@ Every UI check enters through `evals/ui/flow.ts` (`planBuffet`, `approveAll`, `o
 - **Branch** `lane/f-evals` (local; not pushed: the lead merges the local head). Merge the local head, never `origin/lane/f-evals` (stale at `ddf701a`; merging it reverted this brief once, in `d9ee3ee`).
 - **Own:** `scripts/merge-gate.mjs`, `scripts/smoke-race.mjs`; `evals/**` and `src/lib/server/evals/**` (kind labels in `evals/retrieval/substitutes.json` by agreement); `docs/CLAIMS.md`, `docs/BUGS.md`; `evals/ui/*.e2e.ts` (order summary, clocks, approval link, services, journeys, no-raw-ids) and the idle guard; `src/lib/server/images/score.ts`; the chat suites and `replay-llm.ts`; the Exa replay recordings for the golden menus.
 - **Next:**
-  1. When prod = main (`journeys` checks it first): the pinned freeze-build pass `JOURNEYS=1 KITCHEN_URL=https://app.mandate.kitchen npx playwright test -c evals/ui/pw-prod.config.ts journeys`, with the two rehearsal lines (the buffet's lines ordered alone; one explicit exception), then CLAIMS from `scratch/claims/<commit>/`.
-  2. Delete `OPEN` lines as owners' fixes land (adversarial, R10, kinds); tell d0 when R10-03 lands.
-  3. Re-run the full no-raw-ids sweep on prod once da's `/agents` code presentation ships.
+  1. After the batch with O's traces deploys (prod = main): `KITCHEN_URL=https://app.mandate.kitchen npx playwright test -c evals/ui/pw-prod.config.ts services` (the trace part turns strict), then the pinned freeze-build pass `JOURNEYS=1 KITCHEN_URL=https://app.mandate.kitchen npx playwright test -c evals/ui/pw-prod.config.ts journeys` with the two rehearsal lines; fill CLAIMS from `scratch/claims/<commit>/` and send the lead the CLAIMS-vs-prod summary.
+  2. Delete `OPEN` lines as owners' fixes land (table above); tell d0 when R10-03's menu half reaches prod (/how's "On a request…" widens to menus).
+  3. D15 stage 2: update `evals/ui/flow.ts` when the lead sends the branch.
+  4. Re-run the full no-raw-ids sweep on prod once da's `/agents` code presentation ships; evals for 8d's order-scope, prefer and best-try constraints (`constraints.test.ts` `it.todo`) and 1f's carbon/reliable presets when they land.
