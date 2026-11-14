@@ -9,9 +9,9 @@
 	import DayPicker from '$lib/ui/DayPicker.svelte';
 	import ProductToken from '$lib/ui/ProductToken.svelte';
 	import {
-		STAGE_WORDS,
 		budgetSentence,
-		cannotOrderSentence,
+		cannotOrder,
+		stageRuns,
 		budgetShares,
 		dayAction,
 		dayHeadline,
@@ -22,7 +22,9 @@
 		type BasketLine,
 		type BasketStage
 	} from '$lib/ui/basket';
-	import { day as dayLabel, money } from '$lib/ui/format';
+	import { day as dayLabel, money, readableName } from '$lib/ui/format';
+	import { qtyText } from '$lib/ui/product-card';
+	import Row from '$lib/ui/Row.svelte';
 	import NothingPlanned from './NothingPlanned.svelte';
 
 	let {
@@ -90,28 +92,37 @@
 </script>
 
 {#snippet lineRow(l: BasketLine, chip: string | null)}
-	<li
-		class="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3 gap-y-1 border-t border-rule px-3 py-2.5 first:border-t-0 sm:grid-cols-[minmax(0,1fr)_7rem_auto] sm:items-center"
-	>
-		<div class="min-w-0">
-			<ProductToken productId={l.productId} name={l.productName} qty={tokenQty(l.qty)} />
-			{#if l.need || l.substituteFor || chip}
-				<p class="mt-0.5 truncate text-meta text-ink-3">
-					{#if chip}<span class="mr-1 rounded-full bg-well px-1.5 py-px text-micro text-ink-2"
-							>{chip}</span
-						>{/if}{[l.need, l.substituteFor && `replaces ${l.substituteFor}`]
-						.filter(Boolean)
-						.join(' · ')}
-				</p>
-			{/if}
-		</div>
-		<span class="mono text-right text-body text-ink sm:order-none">{money(l.lineCents)}</span>
-		<span
-			class="col-span-2 justify-self-start rounded-full border px-2 py-0.5 text-micro font-medium sm:col-span-1 sm:justify-self-end {STAGE_TONE[
-				l.stage
-			]}">{STAGE_WORDS[l.stage]}</span
-		>
-	</li>
+	<Row lead={qtyText(tokenQty(l.qty))} value={money(l.lineCents)} class="border-t border-rule/60">
+		<ProductToken productId={l.productId} name={l.productName} wrap />
+		{#snippet sub()}
+			{#if chip}<span class="mr-1 rounded-full bg-well px-1.5 py-px text-micro text-ink-2"
+					>{chip}</span
+				>{/if}{[l.need, l.substituteFor && `replaces ${readableName(l.substituteFor)}`]
+				.filter(Boolean)
+				.join(' · ')}
+		{/snippet}
+	</Row>
+{/snippet}
+
+{#snippet stageGroups(lines: BasketLine[], chipOf: ((l: BasketLine) => string) | null)}
+	{#each stageRuns(lines) as r (r.stage)}
+		<li class="border-t border-rule first:border-t-0">
+			<ul aria-label="{r.words}, {r.lines.length} lines">
+				<Row head value={money(r.cents)}>
+					<span
+						class="inline-flex items-center gap-1.5 rounded-full border px-2 py-px {STAGE_TONE[
+							r.stage
+						]}">{r.words}</span
+					><span class="ml-2 text-ink-3"
+						>{r.lines.length} line{r.lines.length === 1 ? '' : 's'}</span
+					>
+				</Row>
+				{#each r.lines as l (l.lineId)}
+					{@render lineRow(l, chipOf?.(l) ?? null)}
+				{/each}
+			</ul>
+		</li>
+	{/each}
 {/snippet}
 
 <div class="grid gap-6 lg:grid-cols-[300px_minmax(0,1fr)] lg:items-start">
@@ -165,6 +176,7 @@
 			{#each days as d (d.date)}
 				{@const action = dayAction(d)}
 				{@const shares = budgetShares(d)}
+				{@const cannot = cannotOrder(d)}
 				<section
 					id="basket-{d.date}"
 					class="scroll-mt-4 rounded-lg border bg-sheet {d.date === date
@@ -200,8 +212,15 @@
 								<span class="text-meta text-ink-2">{budgetSentence(d)}</span>
 							</div>
 						{/if}
-						{#if cannotOrderSentence(d)}
-							<p class="text-meta text-ink-3">{cannotOrderSentence(d)}</p>
+						{#if cannot}
+							<details class="text-meta text-ink-2">
+								<summary class="cursor-pointer text-ink-2 hover:text-ink"
+									>{cannot.headline}: Valio can't supply them as listed</summary
+								>
+								<ul class="mt-1 list-disc pl-5 text-ink-3">
+									{#each cannot.names as n (n)}<li>{n}</li>{/each}
+								</ul>
+							</details>
 						{/if}
 					</header>
 
@@ -247,17 +266,14 @@
 									</span>
 								</div>
 								<ul>
-									{#each g.lines as l (l.lineId)}
-										{@render lineRow(l, null)}
-									{/each}
+									{@render stageGroups(g.lines, null)}
 								</ul>
 							</div>
 						{/each}
 					{:else}
+						{@const chips = new Map(flatByStage(d).map((x) => [x.line.lineId, x.chip]))}
 						<ul>
-							{#each flatByStage(d) as { line, chip } (line.lineId)}
-								{@render lineRow(line, chip)}
-							{/each}
+							{@render stageGroups(d.lines, (l) => chips.get(l.lineId) ?? '')}
 						</ul>
 					{/if}
 				</section>
