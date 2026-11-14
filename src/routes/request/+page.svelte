@@ -364,7 +364,7 @@
 		const what = item?.product ?? item?.query ?? a.item;
 		const parts = [
 			a.qty !== undefined ? `${num(a.qty, 3)} ${a.unit ? (UNIT_WORDS[a.unit] ?? a.unit) : ''}` : '',
-			a.productId ? `product ${a.productId}` : ''
+			a.productId ? readableName(names.get(a.productId) ?? 'the product you chose') : ''
 		].filter(Boolean);
 		return `${what}: ${parts.join(', ')}`;
 	}
@@ -818,13 +818,17 @@
 								{#if it.variant}<span class="rounded border border-rule px-1.5 text-meta text-ink-2"
 										>{it.variant.label}</span
 									>{/if}
-								<span class="mono text-micro text-ink-3">search “{it.search[0] ?? '—'}”</span>
+								{#if shell?.system}<span class="mono text-micro text-ink-3"
+										>search “{it.search[0] ?? '—'}”</span
+									>{/if}
 							</li>
 						{/each}
 					</ul>
 					<p class="mt-2 text-body text-ink-2" hidden={!!event}>
 						Deliver by <b class="font-medium text-ink">{day(parsed.deliverBy)}</b>
-						{#if parsed.deliverByText}<span class="text-ink-3">from “{parsed.deliverByText}”</span
+						{#if parsed.deliverByChosen}<span class="text-ink-3">your choice</span
+							>{:else if parsed.deliverByText}<span class="text-ink-3"
+								>from “{parsed.deliverByText}”</span
 							>{:else}<span class="text-signoff">(no day given)</span>{/if}
 					</p>
 					{#if parsed.answered?.length}
@@ -1070,9 +1074,9 @@
 									{@const o = it.pick.offer}
 									<div class="px-3 py-2.5">
 										<p class="flex flex-wrap items-baseline gap-x-2 text-heading font-medium">
-											{it.pick.name}<span class="mono text-meta font-normal text-ink-3"
-												>{it.pick.productId}</span
-											>
+											{readableName(it.pick.name)}{#if shell?.system}<span
+													class="mono text-meta font-normal text-ink-3">{it.pick.productId}</span
+												>{/if}
 										</p>
 										<dl class="mt-1.5 grid grid-cols-[6.5rem_1fr] gap-x-2 gap-y-1 text-body">
 											<dt class="text-ink-3">Why this one</dt>
@@ -1131,9 +1135,11 @@
 											? 'text-undeliv'
 											: 'text-ink-2'}"
 									>
-										Valio's own substitute rule <span class="mono">{r.from} → {r.to}</span>{r.toName
-											? ` (${r.toName})`
-											: ''}:
+										Valio's own substitute rule: {r.toName
+											? readableName(r.toName)
+											: 'another product'}{#if shell?.system}<span class="mono text-micro">
+												{r.from} → {r.to}</span
+											>{/if}:
 										<b class="font-medium"
 											>{r.status === 'skipped'
 												? 'skipped'
@@ -1153,9 +1159,9 @@
 													<span class={c.picked ? 'font-medium text-accent-ink' : ''}
 														>{readableName(c.name)}</span
 													>
-													<span class="mono text-micro text-ink-3"
-														>{c.productId} · score {c.score}</span
-													>
+													{#if shell?.system}<span class="mono text-micro text-ink-3"
+															>{c.productId} · score {c.score}</span
+														>{/if}
 													<span class="block text-ink-2">
 														{#if c.picked}Picked.{:else if c.skipped}<span class="text-undeliv"
 																>Skipped: {c.skipped}.</span
@@ -1174,8 +1180,8 @@
 										<p class="mt-2 text-ink-3">Filtered out ({it.rejectedCount}), e.g.:</p>
 										<ul class="mt-1 space-y-0.5 text-ink-3">
 											{#each it.rejected as r (r.productId)}<li>
-													<span class="mono text-micro">{r.productId}</span>
-													{r.name}: {r.reason}
+													{#if shell?.system}<span class="mono text-micro">{r.productId}</span>{/if}
+													{readableName(r.name)}: {r.reason}
 												</li>{/each}
 										</ul>
 									{/if}
@@ -1193,10 +1199,10 @@
 				{/snippet}
 				{#if order && plan}
 					<p class="text-meta text-ink-3">
-						{orderStatusWords()} · key
-						<span class="mono">{order.idempotencyKey}</span>
+						{orderStatusWords()}
+						{#if shell?.system}· key <span class="mono">{order.idempotencyKey}</span>{/if}
 						{#if order.replayed}· <b class="font-medium text-ink-2"
-								>same words, same key: the earlier plan returned, no second order</b
+								>same request as before: the earlier plan returned, no second order</b
 							>{/if}
 					</p>
 					<div class="mt-2 overflow-hidden rounded-lg border border-rule bg-sheet">
@@ -1380,14 +1386,14 @@
 								Committed · local simulated commitment
 							</p>
 							<dl class="mt-1.5 grid grid-cols-[7.5rem_1fr] gap-x-2 gap-y-1 text-body">
-								<dt class="text-ink-3">Order</dt>
-								<dd class="mono">{committed.orderId}</dd>
+								{#if shell?.system}<dt class="text-ink-3">Order</dt>
+									<dd class="mono">{committed.orderId}</dd>{/if}
 								<dt class="text-ink-3">Receipt</dt>
 								<dd class="mono">{committed.receiptId}</dd>
 								<dt class="text-ink-3">Total</dt>
 								<dd class="num font-semibold">{money(committed.totalCents)}</dd>
-								<dt class="text-ink-3">Commit key</dt>
-								<dd class="mono break-all">{committed.idempotencyKey}</dd>
+								{#if shell?.system}<dt class="text-ink-3">Commit key</dt>
+									<dd class="mono break-all">{committed.idempotencyKey}</dd>{/if}
 								{#if committed.awaitingSupplier.length}<dt class="text-ink-3">Awaiting</dt>
 									<dd>
 										{committed.awaitingSupplier.length} line(s) ordered, not confirmed (Terminal)
