@@ -153,16 +153,158 @@ journey('m1', 'A shortage hits and every kitchen re-plans', async (r, page) => {
 	});
 });
 
-journey('m2', 'Words become a costed plan, step by step', async (r, page) => {
-	await r.step('home', () => home(page));
-	await r.step('ask the agent for the dinner', () =>
-		say(r, page, 'a no-meat dinner for 120 with a peach dessert')
-	);
-	await r.step('plan it', () => say(r, page, 'plan it'));
-	await r.step('the same words on /request', () =>
-		requestPage(page, 'a no-meat dinner for 120 with a peach dessert')
-	);
-});
+type HeroLine = {
+	id: string;
+	productId?: string;
+	productName?: string;
+	state: string;
+	reasons?: string[];
+	lineCents?: number;
+	offer?: { price?: { unitCents?: number } };
+};
+const HERO = 'a no-meat dinner for 120 with a peach dessert';
+
+/**
+ * The hero journey (SESSIONS "The hero journey", user 23:40), refereed: words → menu → "plan it" → every ingredient a
+ * real product with a price or an honest label → every held line in exactly one decision → approve in the dock →
+ * ordered with a receipt → the order on Ops. Each acceptance clause is its own step, so RUN.md names the first broken
+ * clause. Runs after every deploy.
+ */
+journey(
+	'm2',
+	'HERO: words become a costed plan, approved in the dock, ordered, on Ops',
+	async (r, page) => {
+		let planId: string | null = null;
+		let lines: HeroLine[] = [];
+		await r.step('home', () => home(page));
+		await r.step('ask the agent for the dinner', () => say(r, page, HERO));
+		await r.step('answer what it asks, then "plan it"', async () => {
+			const dock = await openDock(page);
+			for (let i = 0; i < 3; i++) {
+				const chip = dock.getByRole('button', { name: /^(Sat|Saturday|Fri|Friday)\b/ }).last();
+				if (!(await chip.isVisible().catch(() => false))) break;
+				await chip.click();
+				await page.waitForTimeout(1500);
+				await page
+					.getByText(/^Working( · step \d+)?…/)
+					.first()
+					.waitFor({ state: 'detached', timeout: 180_000 })
+					.catch(() => undefined);
+			}
+			await say(r, page, 'plan it');
+		});
+		await r.step('a plan exists (a plan link in the dock)', async () => {
+			const dock = await openDock(page);
+			const href = await dock
+				.locator('a[href*="plan="]')
+				.last()
+				.getAttribute('href', { timeout: 120_000 });
+			planId = href ? new URL(href, BASE).searchParams.get('plan') : null;
+			if (!planId) throw new Error('no plan link after "plan it"');
+			const snap = (await (
+				await page.request.get(`${BASE}/kitchen-api/snapshot?plan=${planId}&peek=1`)
+			).json()) as { plan?: { lines?: HeroLine[]; totalCents?: number } };
+			lines = snap.plan?.lines ?? [];
+			r.note('plan', {
+				planId,
+				totalCents: snap.plan?.totalCents,
+				lines: lines.map((l) => ({
+					product: l.productName,
+					state: l.state,
+					reasons: l.reasons,
+					unitCents: l.offer?.price?.unitCents ?? null
+				}))
+			});
+			if (!lines.length) throw new Error('the plan has no lines');
+		});
+		if (!planId) return;
+		await r.step(
+			'every ingredient: a real product with a price, or an honest label',
+			async () => {
+				const bad = lines.filter(
+					(l) =>
+						!['rejected', 'superseded'].includes(l.state) &&
+						!(l.productId && (l.offer?.price?.unitCents ?? 0) > 0) &&
+						!(l.reasons ?? []).length
+				);
+				if (bad.length)
+					throw new Error(
+						`${bad.length} lines with neither a price nor a reason: ${bad.map((l) => l.id.split('-need:')[1] ?? l.id).join(', ')}`
+					);
+			},
+			{ beat: false }
+		);
+		await r.step('every held line sits in exactly one decision (Kitchen)', async () => {
+			await page.goto(`${BASE}/?plan=${planId}`);
+			await page.waitForLoadState('networkidle').catch(() => {});
+			const held = lines.filter((l) => l.state === 'held').length;
+			let inDecisions = 0;
+			for (const b of await page
+				.getByRole('button', { name: /^(Review|Hold to sign off) \d+ lines?/ })
+				.all())
+				if (await b.isVisible().catch(() => false))
+					inDecisions += Number(((await b.innerText()).match(/(\d+) lines?/) ?? [])[1] ?? 0);
+			r.note('decisionCover', { held, inDecisions });
+			if (held !== inDecisions)
+				throw new Error(`${held} held lines, ${inDecisions} lines across the decisions`);
+		});
+		await r.step('approve in the dock', async () => {
+			const dock = await openDock(page);
+			const here = dock.getByLabel('Decide here');
+			await here.waitFor({ timeout: 60_000 });
+			for (let i = 0; i < 6; i++) {
+				const review = here.getByRole('button', { name: /^Review \d+ lines?/ }).first();
+				const hold = here.getByRole('button', { name: /Hold to sign off/ }).first();
+				if (await review.isVisible().catch(() => false)) {
+					await review.click();
+					await here.getByRole('button', { name: 'Confirm exact terms' }).click();
+				} else if (await hold.isVisible().catch(() => false)) {
+					const b = (await hold.boundingBox())!;
+					await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2);
+					await page.mouse.down();
+					await page.waitForTimeout(4000);
+					await page.mouse.up();
+				} else break;
+				await page.waitForTimeout(1500);
+			}
+		});
+		await r.step('ordered, with a receipt', async () => {
+			const dock = await openDock(page);
+			const order = dock.getByRole('button', { name: /^Order/ }).first();
+			await order.click({ timeout: 30_000 });
+			await dock
+				.getByText(/Ordered\s*·\s*\d+\s+lines?/)
+				.first()
+				.waitFor({ timeout: 60_000 });
+			const t = await dock.innerText();
+			const rc = t.match(/rc-[a-z0-9]+/);
+			if (rc) r.j.receipts.push(rc[0]);
+		});
+		await r.step('the order shows on Ops', async () => {
+			await page.goto(`${BASE}/ops`);
+			await page.waitForTimeout(4000);
+			const orders = page
+				.getByRole('tab', { name: /Orders/ })
+				.or(page.getByRole('link', { name: /^Orders/ }));
+			if (
+				await orders
+					.first()
+					.isVisible()
+					.catch(() => false)
+			)
+				await orders.first().click();
+			await page.waitForTimeout(2500);
+			const text = await page.locator('body').innerText();
+			const named = lines
+				.filter((l) => l.state !== 'unorderable' && l.productName)
+				.some((l) => text.includes(l.productName!.slice(0, 20)));
+			r.note('opsNamesAProduct', named);
+			if (!named) throw new Error("Ops names none of the plan's products");
+		});
+		await r.step('the same words on /request', () => requestPage(page, HERO));
+	},
+	420_000
+);
 
 journey('m3', 'An outside agent overreaches and is stopped', async (r, page) => {
 	let auth: Awaited<ReturnType<typeof judgeAuth>> | undefined;
