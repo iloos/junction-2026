@@ -236,6 +236,21 @@ section.s:last-of-type { padding-bottom: 120px; }
 .hold.fill::before { transform: scaleX(0.82); transition: transform 1.8s cubic-bezier(0.4, 0, 0.2, 1); }
 .hold span { position: relative; }
 
+.runbox summary { cursor: pointer; font-size: 13.5px; color: var(--ink-3); list-style: none; }
+.runbox summary::-webkit-details-marker { display: none; }
+.runbox summary::before { content: '+ '; font-family: 'IBM Plex Mono', monospace; }
+.runbox[open] summary::before { content: '– '; }
+.runbox summary:hover { color: var(--ink-2); }
+.steps-run { list-style: none; margin: 10px 0 0; padding: 0 0 0 14px; border-left: 1px solid var(--rule-strong); display: grid; gap: 8px; }
+.steps-run li { display: grid; gap: 1px; font-size: 13.5px; line-height: 1.45; color: var(--ink-2); }
+.steps-run b { font-size: 12.5px; font-weight: 600; color: var(--ink-3); }
+.sl { grid-column: 1 / -1; font-size: 12.5px; color: var(--ink-3); }
+.pn s.nos { text-decoration: none; }
+.bar i { width: 100%; }
+.dchips { display: flex; gap: 6px; flex-wrap: wrap; }
+.dchips span { font-size: 12.5px; font-weight: 500; padding: 4px 9px; border-radius: 999px; background: var(--warn-wash); color: var(--warn); }
+.dcard p.dall { font-size: 13.5px; color: var(--ink-3); }
+
 /* supply states */
 .cert { display: grid; gap: 14px; }
 @media (min-width: 860px) { .cert { grid-template-columns: repeat(5, 1fr); } }
@@ -380,30 +395,39 @@ section.s:last-of-type { padding-bottom: 120px; }
 	<div class="three">
 		<div class="pane">
 			<div class="ph"><span>The ask</span><span>chat</span></div>
-			<div class="msg me" data-s="plan.ask">Christmas buffet for 140 on the 12th. The usual menu, but the ham is out. Keep it Finnish if you can.</div>
-			<div class="msg" data-s="plan.reply">Planned 14 dishes from your menu. Ham → HK Palvikinkku (known stock, Finnish). Lanttulaatikko made in house from 5 ingredients.</div>
-			<p class="pfoot"><span data-s="plan.counts.lines">60</span> lines planned · <span data-s="plan.counts.decisions">2</span> decisions for you · nothing ordered</p>
+			<div class="msg me" data-s="plan.ask">Plan the Christmas buffet for 140 on Saturday.</div>
+			<details class="runbox"><summary id="p-runsum">5 steps: Understand → Plan the event → Find substitutes ×2 → Explain</summary>
+			<ol class="steps-run" id="p-steps">
+				<li><b>Understand</b><span>An event brief.</span></li>
+				<li><b>Plan the event</b><span>Drafted the order for Thu 10 Dec: 13 lines, €651.50; 7 wait for your approval.</span></li>
+				<li><b>Find substitutes</b><span>Looked for substitutes for Thu 10 Dec: 19 lines, €883.55; 13 wait for your approval.</span></li>
+				<li><b>Explain</b><span>Answered from the order's numbers.</span></li>
+			</ol></details>
+			<div class="msg" data-s="plan.reply">For Thu 10 Dec: 92.82 kg + 10.5 l needed; 84.42 kg + 10.5 l planned, not yet submitted; 8.4 kg unresolved; no order placed yet; 3 decisions wait for you.</div>
+			<p class="pfoot" id="p-guard">The model's own reply didn't name the open need, so a sentence built from the order's numbers was used.</p>
 		</div>
 		<div class="pane">
 			<div class="ph"><span>The plan</span><span>ledger</span></div>
 			<div class="plines" id="plines">
-				<div class="pl"><div class="pn"><s>HK Viljaporsaan juhlakinkku</s><span>HK Palvikinkku viipaloitu 1,5 kg</span></div><div class="pq">13 ST<br>€200.59</div><div class="bar"><i class="known" style="width:96%"></i></div></div>
-				<div class="pl"><div class="pn"><span>Rosolli · Atria 2,5 kg</span></div><div class="pq">6 ST<br>€78.18</div><div class="bar"><i class="unknown" style="width:88%"></i></div></div>
-				<div class="pl"><div class="pn"><span>Graavilohi · cured in house</span></div><div class="pq">20 KG<br>€282.20</div><div class="bar"><i class="confirmed" style="width:60%"></i><i class="known" style="width:40%"></i></div></div>
+				<div class="pl"><div class="pn"><s>HK Viljaporsaan Juhlakinkku potkalla tuoresuolattu 6-8 kg</s><span>HK Palvikinkku viipaloitu 1,5 kg</span></div><div class="pq">13 × 1.5 kg<br>€200.59</div><div class="bar"><i class="known"></i></div><div class="sl">Valio states 15 in stock</div></div>
+				<div class="pl"><div class="pn"><span>Valio kevytmaito 1 l laktoositon UHT</span></div><div class="pq">11 × 1 l<br>€17.16</div><div class="bar"><i class="unknown"></i></div><div class="sl">Valio doesn't state a quantity</div></div>
+				<div class="pl"><div class="pn"><s class="nos">Lanttulaatikko, made in house</s><span>LANTTU BRITANNIA</span></div><div class="pq">5.95 kg<br>€13.98</div><div class="bar"><i class="unknown"></i></div><div class="sl">Valio doesn't state a quantity</div></div>
 			</div>
-			<p class="pfoot">Each bar shows how sure the supply is.</p>
+			<p class="pfoot" id="p-sum"><span data-s="plan.counts.dishes">12</span> dishes · <span data-s="plan.counts.lines">19</span> lines · <span data-s="plan.eur" data-f="eur">€883.55</span>, planned, not yet submitted. Unresolved: Joulutorttu (prune star tart), 8.4 kg.</p>
 		</div>
 		<div class="pane">
 			<div class="ph"><span>The decision</span><span>you</span></div>
 			<div class="dcard">
-				<div class="dt"><span data-s="plan.decision.title">Make lanttulaatikko in house</span><span class="eur" data-s="plan.decision.eur" data-f="eur">€31.46</span></div>
-				<p><span data-s="plan.decision.newIngredients">5</span> new ingredients · allergen change: <b id="d-allergens">+ milk, + egg, + gluten</b>. Declining leaves <span data-s="plan.decision.uncoveredKg">5.6</span> kg of <span data-s="plan.decision.servings">140</span> servings uncovered.</p>
+				<div class="dt"><span id="d-title">Make lanttulaatikko in house</span><span class="eur" data-s="plan.decision.eur" data-f="eur">€31.46</span></div>
+				<div class="dchips" id="d-reasons"><span>New product</span><span>Allergen change</span></div>
+				<p id="d-why">A product this kitchen has not bought before. Your mandate says to ask first. The allergens change. The kitchen never delegates an allergen change.</p>
+				<p class="dall" id="d-allergens">Allergens: milk (lactose-free cream), egg, wheat. A team estimate; a chef checks the label.</p>
 				<div class="hold" id="hold"><span>Hold to sign off</span></div>
 			</div>
-			<p class="pfoot">The approval is bound to these exact terms; any edit voids it.</p>
+			<p class="pfoot">One of <span data-s="plan.counts.decisions">3</span> decisions. The approval is bound to these exact terms; any edit voids it.</p>
 		</div>
 	</div>
-	<p class="foot-note" id="flow-note">Illustrative values, to be replaced by a recording from the app. Only the chef can sign off; the page never does.</p>
+	<p class="foot-note" id="flow-note">Recorded from one chat turn in the app on Sat 14 Nov: the demo buffet is on Sat 12 Dec, delivered Thu 10 Dec. Everything here is planned, not yet submitted. Only the chef can sign off; the page never does.</p>
 </section>
 
 <!-- 4 · The checks -->
@@ -665,16 +689,39 @@ function shortName(r) {
 // The decision card: the hold button fills once when seen, to show the gesture. It never signs anything.
 new IntersectionObserver((es, o) => es.forEach((e) => { if (e.isIntersecting && !reduce) { $('hold').classList.add('fill'); o.disconnect(); } }), { threshold: 0.6 }).observe($('hold'));
 
-// The plan slide: recorded values replace the illustrative ones when the recording has them.
+// The plan slide: rendered from the recording (cases.json → plan). The number of agent steps varies per run.
 function fillPlan(d) {
 	const pl = d && d.plan;
 	if (!pl) return;
-	$('flow-note').textContent = 'Recorded from the app. Only the chef can sign off; the page never does.';
-	if (pl.decision && Array.isArray(pl.decision.allergens)) $('d-allergens').textContent = pl.decision.allergens.map((a) => '+ ' + a).join(', ');
-	if (Array.isArray(pl.lines) && pl.lines.length) {
-		const W = { confirmed: 'confirmed', awaiting: 'awaiting', known: 'known', unknown: 'unknown', none: 'none' };
-		$('plines').innerHTML = pl.lines.slice(0, 3).map((l) => `<div class="pl"><div class="pn">${l.was ? `<s>${l.was}</s>` : ''}<span>${l.product}</span></div><div class="pq">${l.qty || ''}${l.eur != null ? '<br>' + eur(l.eur) : ''}</div><div class="bar"><i class="${W[l.supply] || 'none'}" style="width:100%"></i></div></div>`).join('');
+	const H = (x) => String(x).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+	const TOOL = { understand: 'Understand', plan_event: 'Plan the event', find_substitutes: 'Find substitutes', explain: 'Explain' };
+	if (Array.isArray(pl.steps)) {
+		const names = [];
+		pl.steps.forEach((st) => { const n = TOOL[st.tool] || st.tool, last = names[names.length - 1]; if (last && last.n === n) last.k++; else names.push({ n, k: 1 }); });
+		$('p-runsum').textContent = `${pl.steps.length} steps: ` + names.map((x) => x.n + (x.k > 1 ? ' ×' + x.k : '')).join(' → ');
 	}
+	if (Array.isArray(pl.steps)) $('p-steps').innerHTML = pl.steps.map((st) => `<li><b>${H(TOOL[st.tool] || st.tool)}</b><span>${H(st.summary)}</span></li>`).join('');
+	$('p-guard').textContent = pl.modelGuard ? 'The model\'s own reply didn\'t name the open need, so a sentence built from the order\'s numbers was used.' : 'The reply is checked against the order\'s numbers before it is shown.';
+	const SL = { known: (l) => (l.stated != null ? `Valio states ${l.stated} in stock` : 'Valio states a quantity'), unknown: () => 'Valio doesn\'t state a quantity', confirmed: () => 'Supplier confirmed', awaiting: () => 'Ordered, awaiting supplier', none: () => 'Nothing covers it yet' };
+	if (Array.isArray(pl.lines) && pl.lines.length) {
+		$('plines').innerHTML = pl.lines.slice(0, 3).map((l) => {
+			const top = l.was ? `<s>${H(l.was)}</s>` : l.dish ? `<s class="nos">${H(l.dish)}, made in house</s>` : '';
+			const sup = SL[l.supply] ? SL[l.supply](l) : '';
+			return `<div class="pl"><div class="pn">${top}<span>${H(l.product)}</span></div><div class="pq">${H(l.qty || '')}${l.eur != null ? '<br>' + eur(l.eur) : ''}</div><div class="bar"><i class="${H(l.supply || 'none')}"></i></div><div class="sl">${sup}</div></div>`;
+		}).join('');
+	}
+	const un = pl.unresolved && pl.unresolved.needs && pl.unresolved.needs[0];
+	if (pl.counts) $('p-sum').innerHTML = `${pl.counts.dishes} dishes · ${pl.counts.lines} lines · ${eur(pl.eur)}, planned, not yet submitted.${un ? ` Unresolved: ${H(un.label)}, ${un.value} ${H(un.unit)}.` : ''}`;
+	const dc = pl.decision;
+	if (dc) {
+		$('d-title').textContent = String(dc.title || '').split(' · ')[0];
+		if (dc.reason) $('d-reasons').innerHTML = dc.reason.split(' · ').map((r) => `<span>${H(r)}</span>`).join('');
+		if (dc.why) $('d-why').textContent = dc.why;
+		const note = dc.allergens && dc.allergens[0] && dc.allergens[0].note;
+		const m = note && note.match(/allergens:\s*([^;]+)/);
+		if (m) $('d-allergens').textContent = `Allergens: ${m[1].trim()}. A team estimate; a chef checks the label.`;
+	}
+	if (pl.recordedAt && pl.event) $('flow-note').textContent = `Recorded from one chat turn in the app on ${day(pl.recordedAt)}: the demo buffet is on ${pl.event.date}, delivered ${pl.event.deliverBy}. Everything here is planned, not yet submitted. Only the chef can sign off; the page never does.`;
 }
 
 // Partners: where each sits in a call, and what happens if it fails.
