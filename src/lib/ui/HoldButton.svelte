@@ -33,6 +33,9 @@
 		raf = 0;
 		progress = 0;
 	}
+	// A hold never survives losing focus or the button going away.
+	$effect(() => () => cancel());
+
 	function key(e: KeyboardEvent) {
 		if ((e.key === ' ' || e.key === 'Enter') && !e.repeat) begin(e);
 	}
@@ -49,6 +52,7 @@
 	onpointerup={cancel}
 	onpointerleave={cancel}
 	onpointercancel={cancel}
+	onblur={cancel}
 	onkeydown={key}
 	onkeyup={keyup}
 	oncontextmenu={(e) => e.preventDefault()}

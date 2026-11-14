@@ -165,6 +165,14 @@ export class KitchenStore {
 		});
 	}
 
+	async applyRules() {
+		if (this.readOnly) return;
+		await this.#run(async () => {
+			await backend.applyRules(this.mode);
+			this.#log('rules', 'Applied the previewed rules to the order: approval voided, re-quoted');
+		});
+	}
+
 	async setKitchen(kitchenId: string) {
 		if (this.readOnly) return;
 		await this.#run(async () => {

@@ -20,6 +20,7 @@ import {
 	type DishView,
 	type EventView,
 	type MakeView,
+	type PurchaseText,
 	type RescueView,
 	type Rules
 } from './fixture-plan';
@@ -116,7 +117,10 @@ function candidateViews(
 	return out.candidates.map((c) => {
 		const f = facts[c.productId];
 		const o = f?.offer;
-		const isChosen = previewRanking ? c.rank === 1 : chosenLine?.productId === c.productId;
+		// `chosen` = in the order now; `recommended` = what the previewed rules would pick.
+		const isChosen = chosenLine?.productId === c.productId;
+		const recommended = out.chosen.some((l) => l.productId === c.productId);
+		void previewRanking;
 		const line = chosenLine?.productId === c.productId ? chosenLine : undefined;
 		const partial = Boolean(line?.reasons.includes('INSUFFICIENT_STOCK'));
 		const view: CandidateView = {
@@ -143,6 +147,7 @@ function candidateViews(
 			holdReasons: line ? line.reasons.filter((r) => r !== 'UNKNOWN_REQUIRED') : [],
 			tier: line?.tier ?? (c.rank ? 'propose' : 'act'),
 			chosen: isChosen,
+			recommended,
 			verdict: '',
 			reliability: f?.reliability,
 			co2PerKg: f?.co2PerKg
@@ -150,6 +155,24 @@ function candidateViews(
 		view.verdict = verdict(view);
 		return view;
 	});
+}
+
+const purchase = (l: Line, facts: Record<string, ProductFacts>): PurchaseText => ({
+	productId: l.productId,
+	name: l.productName ?? facts[l.productId]?.name ?? l.productId,
+	qtyText: `${l.qty.value} ${l.qty.unit}`
+});
+
+/** What the rules recommend vs what the order holds; they differ by product or quantity. */
+function previewOf(out: SubstitutesOut, facts: Record<string, ProductFacts>) {
+	const recommended = out.chosen.map((l) => purchase(l, facts));
+	const saved = (out.saved ?? []).map((l) => purchase(l, facts));
+	const key = (xs: PurchaseText[]) =>
+		xs
+			.map((x) => `${x.productId}:${x.qtyText}`)
+			.sort()
+			.join('|');
+	return { recommended, saved, differs: key(recommended) !== key(saved) };
 }
 
 function makeView(
@@ -232,6 +255,7 @@ export function buildLiveView(input: LiveInput): EventView {
 				kind,
 				needServed: served,
 				candidates: candidateViews(out, productSub, facts, input.previewRanking),
+				preview: previewOf(out, facts),
 				make:
 					kind === 'make_in_house'
 						? makeView(nameFi, subs, out, seedRescueFor(input, planned!.productId), facts)

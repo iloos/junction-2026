@@ -28,8 +28,9 @@
 		if (outage && reasons.includes('out')) return 'out';
 		if (state === 'rejected') return 'out';
 		if (state === 'unorderable') return 'unorderable';
-		if (state === 'held') return tier === 'sign_off' ? 'sign_off' : 'propose';
+		// A granted approval is the line's authority even though core keeps it `held`.
 		if (approved) return 'approved';
+		if (state === 'held') return tier === 'sign_off' ? 'sign_off' : 'propose';
 		if (state === 'eligible') return 'eligible';
 		return 'proposed';
 	});
@@ -72,6 +73,8 @@
 
 	const m = $derived(META[kind]);
 	const short = $derived(reasons.includes('INSUFFICIENT_STOCK'));
+	// UNKNOWN_REQUIRED can mean a missing quantity, price or dietary fact; until the read model splits the
+	// cause, the chip says "unconfirmed" rather than claiming which one.
 	const unknown = $derived(reasons.includes('unknown') || reasons.includes('UNKNOWN_REQUIRED'));
 </script>
 
@@ -85,10 +88,10 @@
 	{#if unknown && state !== 'rejected' && state !== 'unorderable'}
 		<span
 			class="inline-flex h-6 items-center gap-1 rounded-[5px] border border-dashed border-ink-3/50 px-1.5 text-[12px] leading-none whitespace-nowrap text-ink-2"
-			title="Terminal item: Valio does not state a quantity. It is ordered, but never counted as cover."
+			title={reasons.includes('unknown') ? 'Terminal item: Valio does not state a quantity. It is ordered, but never counted as cover.' : 'A required fact (supplier quantity, price or dietary evidence) is not stated. Approval cannot make it known; it is not counted as confirmed cover.'}
 		>
 			<CircleHelp size={13} strokeWidth={2.2} aria-hidden="true" />
-			Qty unknown
+			{reasons.includes('unknown') ? 'Qty unknown' : 'Unconfirmed'}
 		</span>
 	{/if}
 	{#if short && state !== 'committed'}

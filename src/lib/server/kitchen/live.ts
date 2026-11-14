@@ -300,6 +300,29 @@ async function requote(s: Session) {
 	});
 }
 
+/**
+ * "Apply these rules": for each real outage, the chef asks find_substitutes to apply the recommendation under the
+ * session's preset. The core replaces the old substitute (never stacks), re-quotes and voids the approval.
+ */
+async function applyRules(s: Session) {
+	const plan0 = await findPlan(s);
+	if (!plan0) throw new Error('start the demo first');
+	const b = await createServerPorts();
+	const kitchens = await b.ports.store.kitchens(chef(s).workspaceId);
+	const kitchen = kitchens.find((k) => k.id === s.kitchenId) ?? kitchens[0];
+	const outages = plan0.lines.filter((l) => l.state === 'unorderable' && !l.substituteFor);
+	for (const line of outages) {
+		const plan = (await findPlan(s))!;
+		await must(s, 'find_substitutes', {
+			planId: plan.id,
+			version: plan.version,
+			lineId: line.id,
+			apply: true,
+			...presetInput(kitchen, s)
+		});
+	}
+}
+
 export function scenario(sid: string, action: string, value: unknown): Promise<LiveSnapshot> {
 	return serial(() => applyScenario(session(sid), action, value));
 }
@@ -313,6 +336,7 @@ async function applyScenario(s: Session, action: string, value: unknown): Promis
 		(value === 'kitchen' || value === 'price' || value === 'finnish')
 	)
 		s.preset = value;
+	else if (action === 'apply') await applyRules(s);
 	else if (action === 'kitchen' && typeof value === 'string') {
 		const before = { ...s };
 		s.kitchenId = value;

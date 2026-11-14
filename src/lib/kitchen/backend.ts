@@ -58,3 +58,8 @@ export async function reset(mode: ApiMode) {
 	if (mode === 'live') await scenario('reset');
 	else await fx.reset();
 }
+
+/** Live: make the order follow the previewed rules (replace substitutes, re-quote, void the approval). */
+export async function applyRules(mode: ApiMode) {
+	if (mode === 'live') await scenario('apply');
+}

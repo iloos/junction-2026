@@ -86,6 +86,25 @@
 		return at ? { live, at } : null;
 	});
 
+	/** Plain-words list of what the order still does not cover (residuals and unconfirmed supply). */
+	const shortfalls = $derived.by(() => {
+		const out: string[] = [];
+		for (const d of view?.dishes ?? []) {
+			if (d.rescue?.residual) out.push(`${d.nameFi}: ${d.rescue.residual.text}`);
+			else if (d.status === 'shortfall') out.push(`${d.nameFi}: no option qualifies`);
+		}
+		const unknown = (plan?.lines ?? []).filter(
+			(l) =>
+				(l.state === 'held' || l.state === 'eligible') &&
+				(l.reasons.includes('UNKNOWN_REQUIRED') || l.reasons.includes('unknown'))
+		).length;
+		if (unknown)
+			out.push(
+				`${unknown} lines with no stated supplier quantity: ordered, but not confirmed cover`
+			);
+		return out;
+	});
+
 	function linesOf(d: DishView): Line[] {
 		return d.lineIds.map((id) => k.lineById.get(id)).filter((l): l is Line => !!l);
 	}
@@ -488,6 +507,8 @@
 				snap.lastInvalidated.planVersion >= (k.firstVersion ?? Infinity)
 					? snap.lastInvalidated
 					: null}
+				changes={k.changes}
+				{shortfalls}
 				orders={snap.orders}
 				lastCommit={k.lastCommit}
 				{names}
@@ -502,6 +523,14 @@
 				preset={snap.preset}
 				contention={snap.contention}
 				busy={k.busy}
+				previews={view.dishes
+					.filter((d) => d.rescue?.preview?.differs)
+					.map((d) => ({
+						dish: d.nameFi,
+						recommended: d.rescue!.preview!.recommended,
+						saved: d.rescue!.preview!.saved
+					}))}
+				onapply={() => k.applyRules()}
 				onpreset={(p) => k.setPreset(p)}
 				oncontention={(on) => k.setContention(on)}
 			/>
