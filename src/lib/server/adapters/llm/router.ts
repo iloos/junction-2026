@@ -17,6 +17,7 @@ export const LLM_JOBS = [
 	'agent.plan',
 	'agent.review_rewrite',
 	'request.parse',
+	'request.parse.escalate',
 	'menu.propose',
 	'explain',
 	'chat.understand',
@@ -55,6 +56,13 @@ export const LLM_ROUTES: Record<LlmJob, LlmRoute> = {
 		model: GEMINI_LLM_MODEL,
 		thinking: 'minimal',
 		maxTokens: 600
+	},
+	// The parse's second pass when the first reading is unsure (D12 cascade, docs/foundations/models.md).
+	'request.parse.escalate': {
+		provider: 'env',
+		model: 'gemini-3.8-flash',
+		thinking: 'low',
+		maxTokens: 800
 	},
 	'menu.propose': { provider: 'env', model: 'gemini-3.8-flash', thinking: 'low', maxTokens: 4000 },
 	explain: { provider: 'env', model: GEMINI_LLM_MODEL, thinking: 'minimal', maxTokens: 400 },

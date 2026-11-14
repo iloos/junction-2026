@@ -16,7 +16,7 @@ import {
 	type Verdict
 } from '$lib/server/review';
 import { num } from '$lib/ui/format';
-import { CONSTRAINTS, UNITS, type ConstraintKey } from './lexicon';
+import { BRANDS, CONSTRAINTS, PRODUCTS, UNITS, hasWord, type ConstraintKey } from './lexicon';
 import { constraintsIn, parseNumber, unknownUnitWord } from './parse';
 
 export interface ReadingItem {
@@ -29,6 +29,10 @@ export interface ReadingItem {
 	requirements: string[];
 	/** An explicit unit the request can't order in. */
 	unitToken?: string;
+	/** The brand kept on the item, when the words named one. */
+	brand?: string;
+	/** The variant kept on the item ("whole milk"), as its catalogue token. */
+	variant?: string | null;
 	ambiguities?: string[];
 }
 
@@ -163,6 +167,23 @@ export const requestReadingCheckpoint: Checkpoint<{ text: string }, Reading, nul
 				severity: 'block',
 				message: `The request says ${lost.map(label).join(', ')}, but no item carries it. Which item is it for?`
 			});
+		// 3. A brand or a variant the words name is kept on an item: "Arla whole milk" is not just "milk".
+		for (const b of BRANDS)
+			if (hasWord(input.text, b))
+				if (!output.items.some((i) => i.brand?.toLowerCase() === b.toLowerCase()))
+					out.push({
+						severity: 'block',
+						message: `The request names ${b}, but no item keeps it. Should it be ${b} only?`
+					});
+		for (const i of output.items) {
+			const lex = PRODUCTS.find((p) => p.key === i.product);
+			const said = lex?.variants?.find((v) => v.words.some((w) => hasWord(input.text, w)));
+			if (said && i.variant !== said.token)
+				out.push({
+					severity: 'block',
+					message: `The request says "${said.label}" ${i.query}, but the reading kept ${i.variant ? `a different kind` : 'no kind'}. Which ${i.query} is it?`
+				});
+		}
 		for (const d of DIET_UNSUPPORTED)
 			if (d.re.test(input.text))
 				out.push({
@@ -220,6 +241,8 @@ export function readingOf(p: {
 		product: string | null;
 		constraints: string[];
 		unitToken?: string;
+		brand?: string;
+		variant?: { token: string } | null;
 	}[];
 	deliverByText?: string | null;
 }): Reading {
@@ -231,7 +254,9 @@ export function readingOf(p: {
 			unit: i.unit,
 			product: i.product,
 			requirements: [...i.constraints],
-			...(i.unitToken ? { unitToken: i.unitToken } : {})
+			...(i.unitToken ? { unitToken: i.unitToken } : {}),
+			...(i.brand ? { brand: i.brand } : {}),
+			variant: i.variant?.token ?? null
 		})),
 		dateText: p.deliverByText ?? null
 	};

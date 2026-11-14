@@ -120,6 +120,87 @@ export const PRODUCTS: ProductWord[] = [
 	}
 ];
 
+/**
+ * Brands a chef may name (Valio catalogue brands, food service; ones that are also everyday words are left out).
+ * A named brand is kept on the item and required at lookup.
+ */
+export const BRANDS = [
+	'Valio',
+	'Arla',
+	'Fazer',
+	'Atria',
+	'Santa Maria',
+	'Saarioinen',
+	'HK',
+	'Feelia',
+	'Vaasan',
+	'Meira',
+	'Filos',
+	'Apetit',
+	'Felix',
+	'Knorr',
+	'Myllyn Paras',
+	'Elovena',
+	'Snellman',
+	'Findus',
+	'Kariniemen',
+	'Taffel',
+	'Oddlygood',
+	'McCain',
+	'Pingviini',
+	'Dr. Oetker',
+	'Tamminen',
+	'Paulig',
+	'Kikkoman',
+	'Rummo',
+	'De Cecco',
+	'Heinz',
+	'Alpro',
+	'Valrhona',
+	'Torino',
+	'Dansukker',
+	'Oatly',
+	'Barilla',
+	'Ingman',
+	'Kokkikartano',
+	'Mutti',
+	'Juhla Mokka',
+	'Dafgårds',
+	'Old El Paso',
+	'Schär',
+	'Piltti',
+	'Grandiosa',
+	'Risella',
+	'Castello',
+	'Tage Lindblom',
+	'Semper',
+	'Gold&Green',
+	'Eila',
+	'Juustoportti',
+	'Kotimaista',
+	'Görans',
+	'Rönkä',
+	'Lagerblad',
+	'Wernsing',
+	'Aviko'
+] as const;
+
+/** Escapes a brand for a pattern ("Dr. Oetker", "Gold&Green"). */
+export const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+/** `word` (one or more words) stands on its own in `text`, case-insensitive. */
+export function hasWord(text: string, word: string): boolean {
+	return new RegExp(`(^|[^\\p{L}])${esc(word.toLowerCase())}($|[^\\p{L}])`, 'u').test(
+		text.toLowerCase().replace(/[®™]/g, '')
+	);
+}
+
+/** The brand the words name, longest first ("Myllyn Paras" before "Paras"), or null. */
+export function brandIn(text: string): string | null {
+	const hit = [...BRANDS].sort((a, b) => b.length - a.length).find((b) => hasWord(text, b));
+	return hit ?? null;
+}
+
 export type ConstraintKey = 'lactose_free' | 'organic' | 'finnish' | 'gluten_free';
 
 export const CONSTRAINTS: {

@@ -797,10 +797,11 @@
 				<p class="text-meta text-ink-3">
 					{#if parsed.parser.kind === 'rules'}{parsed.parser.model === 'your edit'
 							? 'Your edit · the words were not read again'
-							: 'Rules · no model call'}{:else}{modelName(parsed.parser.model)} · {parsed.parser
-							.tokens?.in
-							? 'live'
-							: 'cached'}<span class={shell?.system ? '' : 'hidden sm:inline'}
+							: 'Rules · no model call'}{:else}{modelName(parsed.parser.model)}{parsed.parser
+							.escalatedFrom
+							? ` (second reading: ${modelName(parsed.parser.escalatedFrom)} was unsure)`
+							: ''} · {parsed.parser.tokens?.in ? 'live' : 'cached'}<span
+							class={shell?.system ? '' : 'hidden sm:inline'}
 							>{parsed.parser.tokens?.in
 								? ` · ${num(parsed.parser.tokens.in)} → ${num(parsed.parser.tokens.out)} tokens`
 								: ''} · {num(parsed.parser.latencyMs)} ms</span
