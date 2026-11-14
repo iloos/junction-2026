@@ -83,24 +83,13 @@
 			class="flex shrink-0 items-center gap-2 text-heading font-semibold tracking-[-0.01em]"
 			aria-label="Mandate home"
 		>
-			<svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true">
-				<rect
-					x="1.5"
-					y="1.5"
-					width="17"
-					height="17"
-					rx="3"
-					fill="none"
-					stroke="currentColor"
-					stroke-width="1.6"
-				/>
-				<path
-					d="M5.5 14V6.5l4.5 5 4.5-5V14"
-					fill="none"
-					stroke="var(--color-accent)"
-					stroke-width="1.8"
-					stroke-linejoin="round"
-				/>
+			<!-- The three tiers spell M: teal posts act, the blue bar proposes, the amber dot is the chef's sign-off. -->
+			<svg width="22" height="22" viewBox="0 0 32 32" aria-hidden="true">
+				<rect width="32" height="32" rx="7" fill="#161b21" />
+				<rect x="6.5" y="7" width="5" height="18" rx="2.5" fill="#1d9999" />
+				<rect x="13.5" y="7" width="5" height="11" rx="2.5" fill="#4c88d3" />
+				<rect x="20.5" y="7" width="5" height="18" rx="2.5" fill="#1d9999" />
+				<circle cx="16" cy="23" r="2.5" fill="#e5a14b" />
 			</svg>
 			<span class="hidden md:inline">Mandate</span>
 		</a>
