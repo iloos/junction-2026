@@ -14,7 +14,14 @@ _The lead rewrites this at each checkpoint. It is the "now": what works, what's 
 - Web: recall revisions per URL, per-run applications with retry, spend caps (429 with Retry-After), `lookup_facts` / `find_outside` / `check_recall` on MCP and REST. Context.dev monitor every 5 min.
 - Evidence: `pnpm gate` green (check, lint, unit ~420 server tests, evals incl. fidelity, surfaces, golden briefs); race smoke on prod Postgres (same key ×4 → one receipt; three keys → one receipt).
 
-**Now (Sat evening): Ring 4 checkpoint, landing.** Plan: [handoff/ring4/SYNTHESIS.md](handoff/ring4/SYNTHESIS.md) (reviews alongside); Ring 3 context in [handoff/ring3/](handoff/ring3/). Prod `6af9c1b` at https://app.mandate.kitchen (fallback the aiven.app URL); public site https://mandate.kitchen. Guarantees hold (adversarial suite: 2 open, D's web durability). Valio's answers are applied (≥999999 = unknown, lot 1, 429 pause; D6 amendment, D8a). Next: M1 dock plan pin (1f), the Ops Orders tab (9c), substitute kinds + one dueOf (8d), web routes through the gate (D), the docs truth pass and CLAIMS rows, then the video on the freeze build.
+**Now (Sat evening): Ring 4 + Round 10, landing.** Plan: [handoff/ring4/SYNTHESIS.md](handoff/ring4/SYNTHESIS.md) incl. its Round 10 amendment ([review](review/ROUND10-ADVERSARIAL.md)). Prod `2c28b4b` at https://app.mandate.kitchen (fallback aiven.app); site https://mandate.kitchen.
+
+**Lead resume (for the next lead context):**
+- A main gate is running on local main (merges of 8d kinds + dueOf, 1f 0851da2, B Rank by e33ad08, 9c Orders g11 6b98e4c, 91 8add067; kind-accuracy check marked open). Log: `scratch/gate-main.log`. When GREEN: `git push`, ask 9c (junc26-9e) to deploy, and re-seed the catalogue (`pnpm db:seed`, normaliser v4) before the deploy. Push only after `merge-gate: GREEN`.
+- Sessions: 8d core (junc26-e6) · 9c ops/deploy (junc26-9e) · 1f kitchen UI (junc26-ab) · 91 evals/claims (junc26-2f) · da agent door (junc26-da) · d0 site + domain (junc26-d0) · 0d valo-basket, HELD (junc26-0d) · 0a brand (junc26-0a) · c3 design (junc26-c3) · lead subagents E (chat), B (request), D (sponsors/images), resumable via SendMessage by agent id.
+- Queue (R10 order): E command identity + cancel fence + envelope validation → 8d R10-03/04 + order-scope strict + best-try → da R10-15 + /agents sweep + dueOf → D web durability + empty-grounding TTL → 9c dueOf + seq gap recovery → 1f R10-11 + dock↔page live sync + kind chips → 91 R10 probes OPEN + gate guards + pinned rehearsal.
+- Waiting on the user: Usual order/How ordering works design (d0's spec; held behind R10), serif on /story+/how, /story link from the app, VALO prices placeholder before public, the history rewrite before public (old secrets + ROADMAP-PREPARATION.md in 8e4dd68), SMOKE_KEY for the race smoke, the Nemotron endpoint name.
+- Rules learned today: stage exact paths only; the main checkout is lead-only; check `git branch --show-current` before merging; dev and test previews with `DATABASE_URL=` blank.
 
 **Sessions:** lead junc26-18 (+ lead agents for request, web, agent) · 8d core · 9c ops/deploy · 1f kitchen UI · 91 evals and gate.
 
