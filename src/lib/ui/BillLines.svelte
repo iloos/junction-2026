@@ -14,7 +14,7 @@
 
 <script lang="ts">
 	/**
-	 * A short bill: a name that truncates (the whole name on hover), the quantity and the price right-aligned in
+	 * A short bill: a name that wraps, the quantity and the price right-aligned in
 	 * tabular figures, long lists folded to the first rows and "and N more".
 	 */
 	import { money } from './format';
@@ -45,10 +45,10 @@
 		<li class="{BILL_COLS} items-baseline py-0.5">
 			{#if r.productId}
 				<span class="min-w-0 text-ink-2"
-					><ProductToken productId={r.productId} name={r.name} {deliverBy} /></span
+					><ProductToken productId={r.productId} name={r.name} {deliverBy} wrap /></span
 				>
 			{:else}
-				<span class="min-w-0 truncate text-ink-2" title={r.name}>{r.name}</span>
+				<span class="min-w-0 break-words text-ink-2">{r.name}</span>
 			{/if}
 			<span class="mono text-right whitespace-nowrap text-ink-3 tabular-nums">{r.qty}</span>
 			<span class="mono text-right text-ink tabular-nums"

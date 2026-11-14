@@ -65,6 +65,7 @@
 	import Basket from './Basket.svelte';
 	import NothingPlanned from './NothingPlanned.svelte';
 	import UseElsewhere from '$lib/ui/UseElsewhere.svelte';
+	import ProductThumb from '$lib/ui/ProductThumb.svelte';
 	import { menuTitle, splitNeed, startsDish } from '$lib/kitchen/menu-plan';
 	import {
 		readOwn,
@@ -1120,7 +1121,7 @@
 			<button
 				type="button"
 				aria-pressed={kitchenView === id}
-				class="h-8 max-w-[60vw] truncate rounded-md px-3 text-body {kitchenView === id
+				class="min-h-8 rounded-md px-3 py-1 text-left text-body {kitchenView === id
 					? 'bg-ink font-medium text-sheet'
 					: 'text-ink-2 hover:bg-well hover:text-ink'}"
 				onclick={() => setView(id)}>{label}</button
@@ -1475,14 +1476,16 @@
 										: ''}"
 								>
 									<div class="min-w-0">
-										<p class="flex min-w-0 items-center gap-1.5 text-body font-medium text-ink">
+										<p
+											class="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5 text-body font-medium text-ink"
+										>
 											<span
 												class="min-w-0 break-words {menuName && nn.dish ? 'pl-3 font-normal' : ''}"
 												>{menuName && nn.dish ? nn.part : d.nameFi}</span
 											>
 											<DietMarks marks={dishMarks(lines)} />
 										</p>
-										<p class="truncate text-meta text-ink-3">
+										<p class="text-meta break-words text-ink-3">
 											<span class="lg:hidden"
 												>{#if r.was}<span class="text-signoff"
 														>{r.cause.replace(/^./, (c) => c.toUpperCase())}</span
@@ -1536,15 +1539,19 @@
 												/>{/if}
 											{#if r.productId}
 												<!-- The product opens its card (pack, price, supply in words, the Valio listing). -->
+												<ProductThumb productId={r.productId} size={32} eager={di < 8} />
 												<ProductToken
 													productId={r.productId}
 													name={r.product}
 													deliverBy={plan?.deliverBy}
+													wrap
 													class="hover:text-accent-ink"
 												/>
 											{:else}
-												<span class="truncate {r.kind === 'none' ? 'text-ink-3' : 'text-ink'}"
-													>{r.product}</span
+												<span
+													class="min-w-0 break-words {r.kind === 'none'
+														? 'text-ink-3'
+														: 'text-ink'}">{r.product}</span
 												>
 											{/if}
 											{#if r.more}<span class="shrink-0 text-meta text-ink-3">+{r.more}</span>{/if}
@@ -1556,7 +1563,7 @@
 										</p>
 										{#if r.was}
 											<!-- Why this isn't the planned product, on the row: what was replaced, the cause, what changes. -->
-											<p class="truncate text-meta text-ink-2" title="{r.was}: {r.cause}">
+											<p class="text-meta break-words text-ink-2">
 												<span class="text-signoff"
 													>{r.cause.replace(/^./, (c) => c.toUpperCase())}</span
 												>{#if r.changes}
