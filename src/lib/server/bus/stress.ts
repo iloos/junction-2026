@@ -1,7 +1,7 @@
 /**
  * Load for the /ops 10× check (CLAUDE.md rule 4): `copies` of the synthetic run interleaved into one run of
  * STRESS_WORKSPACE, every plan, line, approval, order and anomaly id suffixed per copy so they coexist.
- * Dev only; the bus refuses it in production.
+ * Dev only: /api/events starts it only when `dev` is true.
  */
 import type { ServerEvent } from '$lib/core/contracts';
 import { SYNTH_WORKSPACE, syntheticRun } from './synthetic';

@@ -17,16 +17,13 @@ export const isSandbox = (ws: string) => ws === SANDBOX_WORKSPACE || isVisitorWo
 const g = globalThis as typeof globalThis & { __mandateSandboxResets?: Map<string, number> };
 const last = (g.__mandateSandboxResets ??= new Map());
 
-export type SandboxReset =
+type SandboxReset =
 	| { ok: true; runId: string; previous: string }
 	| { ok: false; retryInMs: number }
 	| { ok: false; forbidden: true };
 
 /** Start a sandbox over: a fresh run, the old one kept for audit. */
-export async function resetSandbox(
-	workspaceId: string = SANDBOX_WORKSPACE,
-	now = Date.now()
-): Promise<SandboxReset> {
+export async function resetSandbox(workspaceId: string, now = Date.now()): Promise<SandboxReset> {
 	if (!isSandbox(workspaceId)) return { ok: false, forbidden: true };
 	const wait = (last.get(workspaceId) ?? 0) + SANDBOX_COOLDOWN_MS - now;
 	if (wait > 0) return { ok: false, retryInMs: wait };

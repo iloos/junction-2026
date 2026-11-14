@@ -1,6 +1,6 @@
 /**
- * A scripted, simulated run across the three demo kitchens, for the Operations view until core-db
- * produces real ops. Every op is a valid OpEnvelope that `applyOps` accepts; product ids and names
+ * The scripted, simulated run across the three demo kitchens that /ops shows in its "Simulated run" view
+ * (ws-synth). Every op is a valid OpEnvelope that `applyOps` accepts; product ids and names
  * are real Valio catalogue rows from fixtures/seeds, quantities and prices are invented.
  * Everything here carries provenance `simulator` and is labelled simulated in the UI.
  */

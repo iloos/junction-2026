@@ -26,7 +26,7 @@ describe('judge keys', () => {
 		const key = keys.mint(ws, later)!;
 		const [, exp, mac] = key.split('.');
 		expect(keys.verify(`jk_${other}.${exp}.${mac}`, new Date())).toBeNull();
-		// Flip a character to a different one; replacing the last with 'A' was a no-op whenever it already was 'A'.
+		// Swap one character for a different one, so the MAC text always changes.
 		const flip = (c: string) => (c === 'A' ? 'B' : 'A');
 		const tampered = mac.slice(0, 20) + flip(mac[20]) + mac.slice(21);
 		expect(keys.verify(`jk_${ws}.${exp}.${tampered}`, new Date())).toBeNull();

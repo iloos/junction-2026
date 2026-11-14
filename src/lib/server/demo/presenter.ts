@@ -1,5 +1,5 @@
-import { createHmac, timingSafeEqual } from 'node:crypto';
 import type { Cookies } from '@sveltejs/kit';
+import { hmac, sameText } from './visitor-id';
 
 type Env = Record<string, string | undefined>;
 
@@ -23,13 +23,7 @@ const roleKey = (env: Env, role: Role) => {
 	const k = env[ROLE_KEYS[role]]?.trim();
 	return k && k.length >= 16 ? k : null;
 };
-const sign = (key: string, role: Role, exp: number) =>
-	createHmac('sha256', key).update(`presenter:${role}:${exp}`).digest('base64url');
-const same = (a: string, b: string) => {
-	const x = Buffer.from(a);
-	const y = Buffer.from(b);
-	return x.length === y.length && timingSafeEqual(x, y);
-};
+const sign = (key: string, role: Role, exp: number) => hmac(key, `presenter:${role}:${exp}`);
 
 /**
  * A presenter session token for a pasted key, or null if the key is neither the chef's nor the approver's.
@@ -39,7 +33,7 @@ export function presenterToken(pasted: string, env: Env, now = Date.now()): stri
 	const exp = now + PRESENTER_TTL_MS;
 	for (const role of Object.keys(ROLE_KEYS) as Role[]) {
 		const key = roleKey(env, role);
-		if (key && same(key, pasted.trim())) return `${role}.${exp}.${sign(key, role, exp)}`;
+		if (key && sameText(key, pasted.trim())) return `${role}.${exp}.${sign(key, role, exp)}`;
 	}
 	return null;
 }
@@ -49,7 +43,7 @@ export function validPresenterToken(token: string | undefined, env: Env, now = D
 	if (!(role in ROLE_KEYS) || !mac) return false;
 	const exp = Number(expRaw);
 	const key = roleKey(env, role as Role);
-	return !!key && Number.isFinite(exp) && exp > now && same(mac, sign(key, role as Role, exp));
+	return !!key && Number.isFinite(exp) && exp > now && sameText(mac, sign(key, role as Role, exp));
 }
 
 /** Presenter rights for this browser: open for everyone (dev, DEMO_RESET_OPEN) or a signed-in session. */

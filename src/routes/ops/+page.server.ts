@@ -4,7 +4,7 @@ import { SYNTH_PRODUCTS, SYNTH_WORKSPACE } from '$lib/server/bus/synthetic';
 import { fail } from '@sveltejs/kit';
 import { env } from '$env/dynamic/private';
 import { dev } from '$app/environment';
-import { cancelAgentRun, startAgentRun } from '$lib/server/bus/agent-runs';
+import { cancelAgentRun, startAgentRun } from '$lib/server/agent/runs';
 import {
 	isPresenter,
 	presenterOpen,

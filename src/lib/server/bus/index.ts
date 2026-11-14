@@ -2,9 +2,9 @@
  * The event bus behind the `Ops` port (core/ports.ts) and /api/events.
  * - Fixture mode (no DATABASE_URL): in-process MemoryBus only.
  * - Postgres mode: publish goes through NOTIFY and every process delivers from its LISTEN connection.
- * The synthetic workspace always stays in memory and never touches the database.
+ * The simulated run and the dev load test stay in memory and never touch the database.
  *
- * Contract with the Store (core-db): call `publish(workspaceId, events)` after the transaction commits.
+ * The Store calls `publish(workspaceId, events)` after each transaction commits.
  */
 import type { OpEnvelope, Scope, ServerEvent, SimEvent } from '$lib/core/contracts';
 import type { Ops } from '$lib/core/ports';
@@ -30,7 +30,7 @@ type OpsReader = (
 interface BusState {
 	local: MemoryBus;
 	pg: PgTransport | null;
-	/** Where op catch-up reads from in fixture mode (core-db plugs its PGlite reader in). */
+	/** Where op catch-up reads from in fixture mode (tools/handlers.ts installs the PGlite reader). */
 	fixtureReader: OpsReader | null;
 	synth: { timer: ReturnType<typeof setTimeout> | null; run: number };
 }
@@ -50,8 +50,11 @@ function bus(): BusState {
 	return g.__mandateBus;
 }
 
-const viaPg = (workspaceId: string) =>
-	workspaceId !== SYNTH_WORKSPACE && workspaceId !== STRESS_WORKSPACE && bus().pg;
+/** The simulated run and the dev load test live in memory only: no database rows, no NOTIFY. */
+export const isMemoryOnly = (workspaceId: string) =>
+	workspaceId === SYNTH_WORKSPACE || workspaceId === STRESS_WORKSPACE;
+
+const viaPg = (workspaceId: string) => !isMemoryOnly(workspaceId) && bus().pg;
 
 /** Deliver events to every subscriber of the workspace (across processes in Postgres mode). */
 export async function publish(workspaceId: string, events: ServerEvent[]): Promise<void> {
@@ -96,7 +99,7 @@ export function setFixtureOpsReader(reader: OpsReader | null): void {
 async function readOpEnvelopes(workspaceId: string, after: number, limit: number, runId?: string) {
 	const b = bus();
 	if (viaPg(workspaceId)) return readOps(workspaceId, after, limit, runId);
-	if (b.fixtureReader && workspaceId !== SYNTH_WORKSPACE && workspaceId !== STRESS_WORKSPACE)
+	if (b.fixtureReader && !isMemoryOnly(workspaceId))
 		return b.fixtureReader(workspaceId, after, limit, runId);
 	return b.local
 		.after(workspaceId, after)

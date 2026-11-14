@@ -10,11 +10,11 @@ import { hmac, isVisitorWorkspace, judgeSecret, sameText } from './visitor-id';
 type Env = Record<string, string | undefined>;
 
 /** Keys expire when the event does (override with JUDGE_KEY_EXPIRES, an ISO time). */
-export const DEFAULT_EXPIRY = '2026-11-16T00:00:00+02:00';
+const DEFAULT_EXPIRY = '2026-11-16T00:00:00+02:00';
 
 export const judgeKeysOn = (env: Env) => judgeSecret(env) !== null;
 
-export function judgeKeyExpiry(env: Env): Date {
+function judgeKeyExpiry(env: Env): Date {
 	const d = new Date(env.JUDGE_KEY_EXPIRES || DEFAULT_EXPIRY);
 	return Number.isFinite(d.getTime()) ? d : new Date(DEFAULT_EXPIRY);
 }
