@@ -83,6 +83,10 @@ export class OpsStream {
 			this.errors = 0;
 			this.status = 'live';
 		});
+		es.addEventListener('run', (m) => {
+			const { runId } = JSON.parse((m as MessageEvent).data) as { runId: string };
+			this.resetTo(runId);
+		});
 		es.addEventListener('catchup-error', (m) => {
 			this.catchupError = (JSON.parse((m as MessageEvent).data) as { message: string }).message;
 		});
@@ -113,6 +117,13 @@ export class OpsStream {
 			this.status = 'offline';
 			this.pollTimer = setTimeout(() => this.poll(), POLL_MS);
 		}
+	}
+
+	/** A fresh run started: clear the board and the log, keep the seq cursor. */
+	resetTo(runId: string): void {
+		this.state = emptyState(this.workspaceId, runId);
+		this.log = [];
+		this.simClock = null;
 	}
 
 	private onTrace(e: Extract<ServerEvent, { kind: 'trace' }>): void {

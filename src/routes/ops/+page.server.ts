@@ -3,7 +3,10 @@ import buffetSeed from '../../../fixtures/seeds/christmas-buffet-140.json';
 import { SYNTH_PRODUCTS, SYNTH_WORKSPACE } from '$lib/server/bus/synthetic';
 import { fail } from '@sveltejs/kit';
 import { env } from '$env/dynamic/private';
+import { dev } from '$app/environment';
 import { startAgentRun } from '$lib/server/bus/agent-runs';
+import { ensureRunLoaded, resetDemo } from '$lib/server/demo/reset';
+import { currentRunStartedAt } from '$lib/server/demo/run';
 import type { Actions, PageServerLoad } from './$types';
 
 export type OpsKitchen = {
@@ -41,15 +44,19 @@ const kitchens: OpsKitchen[] = kitchenSeed.kitchens.map((k) => ({
 	weeklyCapCents: k.mandate.weeklyCapCents
 }));
 
-export const load: PageServerLoad = ({ url }) => {
+export const load: PageServerLoad = async ({ url }) => {
 	const workspace = url.searchParams.get('workspace') || 'ws-demo';
+	if (workspace !== SYNTH_WORKSPACE) await ensureRunLoaded(workspace);
 	return {
 		workspace,
 		simulated: workspace === SYNTH_WORKSPACE,
 		synthWorkspace: SYNTH_WORKSPACE,
 		kitchens,
 		names,
-		canRunAgent: workspace === agentWorkspace()
+		/** Wall-clock ms the current run started; the page ticks the scenario clock from it. */
+		runStartedAt: currentRunStartedAt(workspace),
+		canRunAgent: workspace === agentWorkspace(),
+		canReset: workspace === agentWorkspace() && resetOpen()
 	};
 };
 
@@ -61,6 +68,10 @@ const agentWorkspace = () => env.MANDATE_WORKSPACE || 'ws-demo';
  * one run at a time (startAgentRun) and at most one start per COOLDOWN_MS.
  */
 const COOLDOWN_MS = 20_000;
+
+/** The key-less reset button: on in dev, and on the deployed app only with DEMO_RESET_OPEN=1. */
+const resetOpen = () => dev || env.DEMO_RESET_OPEN === '1';
+let lastReset = 0;
 let lastStart = 0;
 
 export const actions: Actions = {
@@ -72,5 +83,14 @@ export const actions: Actions = {
 		lastStart = Date.now();
 		started.done.catch((e) => console.error('[ops] agent run failed', e));
 		return { started: started.id };
+	},
+	resetRun: async () => {
+		if (!resetOpen())
+			return fail(403, { message: 'Reset is turned off here; use POST /api/demo/reset.' });
+		if (Date.now() - lastReset < COOLDOWN_MS)
+			return fail(429, { message: 'Just reset; wait a moment.' });
+		lastReset = Date.now();
+		const { runId } = await resetDemo();
+		return { reset: runId, startedAt: currentRunStartedAt('ws-demo') };
 	}
 };

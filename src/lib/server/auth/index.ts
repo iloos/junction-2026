@@ -1,4 +1,5 @@
 import { SCOPES_BY_ACTOR, type ActorKind } from '$lib/core/contracts';
+import { currentRun } from '$lib/server/demo/run';
 import type { CallContext } from '$lib/core/ports';
 
 /**
@@ -67,7 +68,7 @@ export function contextFor(
 ): CallContext {
 	return {
 		workspaceId: env.MANDATE_WORKSPACE || 'ws-demo',
-		runId: env.MANDATE_RUN || 'run-1',
+		runId: env.MANDATE_RUN || currentRun(env.MANDATE_WORKSPACE || 'ws-demo'),
 		actor: { kind: actor, id: label },
 		scopes: SCOPES_BY_ACTOR[actor],
 		via

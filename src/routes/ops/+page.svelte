@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { resolve } from '$app/paths';
+	import { enhance } from '$app/forms';
+	import { scenarioClock } from '$lib/core/scenario';
 	import { OpsStream } from './stream.svelte';
 	import Ticket from './Ticket.svelte';
 	import TraceDrawer from './TraceDrawer.svelte';
@@ -17,6 +19,18 @@
 	});
 
 	let tracesOpen = $state(false);
+	let confirmReset = $state(false);
+	// svelte-ignore state_referenced_locally
+	let anchor = $state(data.runStartedAt);
+	let wall = $state(Date.now());
+	onMount(() => {
+		const t = setInterval(() => (wall = Date.now()), 15_000);
+		return () => clearInterval(t);
+	});
+	/** Simulator events carry their own time; otherwise the scenario clock ticking from the run start. */
+	const scenarioNow = $derived(
+		data.simulated ? stream.simClock : scenarioClock(anchor).at(wall).toISOString()
+	);
 
 	const kitchenName = (id: string) => data.kitchens.find((k) => k.id === id)?.name ?? id;
 	const plans = $derived(Object.values(stream.state.plans));
@@ -130,8 +144,8 @@
 			<p class="pill" data-status={stream.status}>
 				<i aria-hidden="true"></i>{STATUS[stream.status]}<span class="seq">seq {stream.last}</span>
 			</p>
-			{#if stream.simClock}
-				<p class="clock"><span>Simulator clock</span>{simTime(stream.simClock)}</p>
+			{#if scenarioNow}
+				<p class="clock"><span>Scenario clock</span>{simTime(scenarioNow)}</p>
 			{/if}
 			<button class="traces" onclick={() => (tracesOpen = true)} aria-haspopup="dialog">
 				Agent traces
@@ -139,6 +153,30 @@
 				{#if stream.traces[0] && !stream.traces[0].done}<i class="busy" aria-label="running"
 					></i>{/if}
 			</button>
+			{#if data.canReset}
+				<form
+					method="POST"
+					action="?/resetRun"
+					class="reset"
+					use:enhance={({ cancel }) => {
+						if (!confirmReset) {
+							confirmReset = true;
+							setTimeout(() => (confirmReset = false), 4000);
+							return cancel();
+						}
+						confirmReset = false;
+						return async ({ result, update }) => {
+							if (result.type === 'success' && result.data?.reset)
+								stream.resetTo(String(result.data.reset));
+							await update({ reset: false });
+						};
+					}}
+				>
+					<button class:armed={confirmReset}
+						>{confirmReset ? 'Click again to clear the stage' : 'Start a fresh run'}</button
+					>
+				</form>
+			{/if}
 		</div>
 	</header>
 
@@ -406,6 +444,24 @@
 	}
 	.traces:hover {
 		border-color: var(--muted);
+	}
+	.reset {
+		display: inline-block;
+		margin: 10px 0 0 8px;
+	}
+	.reset button {
+		padding: 6px 14px;
+		border-radius: 6px;
+		border: 1px solid var(--line);
+		background: transparent;
+		color: var(--muted);
+		font: inherit;
+		font-size: 16px;
+		cursor: pointer;
+	}
+	.reset button.armed {
+		border-color: var(--sign-off);
+		color: var(--sign-off);
 	}
 	.count {
 		font-family: var(--mono);

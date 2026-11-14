@@ -14,6 +14,8 @@ import seedKitchens from '../../../../fixtures/seeds/kitchens.json';
 import buffetSeed from '../../../../fixtures/seeds/christmas-buffet-140.json';
 import { EventSeed } from '$lib/core/demand';
 import type { ServicePorts } from '$lib/core/services/events';
+import { SCENARIO, scenarioClock } from '$lib/core/scenario';
+import { currentRun, currentRunStartedAt, loadCurrentRun } from '../demo/run';
 
 export const DEMO_WORKSPACE = 'ws-demo';
 export const DEMO_RUN = 'run-1';
@@ -40,6 +42,11 @@ export interface DbPortsOptions {
 	catalog?: Catalog;
 	/** The ops lane's bus; called after each committed transaction. */
 	publish?: (workspaceId: string, events: ServerEvent[]) => void;
+	/**
+	 * Served app (R0-d): the store follows the workspace's current run (reset starts a new one) and the
+	 * clock is the scenario clock, ticking from the run's start. Tests and evals leave this off.
+	 */
+	followCurrentRun?: boolean;
 }
 
 export async function createDbPorts(o: DbPortsOptions = {}) {
@@ -49,16 +56,23 @@ export async function createDbPorts(o: DbPortsOptions = {}) {
 	const db = o.db ?? ((await createFixtureDb()).db as unknown as AnyDb);
 	const overlay = o.overlay ?? new SimOverlay();
 	const base = createFixturePorts({ now, overlay, catalog: o.catalog });
+	if (o.followCurrentRun) {
+		await loadCurrentRun(db, workspaceId);
+		base.clock = {
+			now: () => scenarioClock(currentRunStartedAt(workspaceId)).at(Date.now())
+		};
+	}
+	const live = o.followCurrentRun ?? false;
 	const store = createDrizzleStore(db, {
-		runOf: () => runId,
-		now: base.clock.now,
+		runOf: live ? (ws) => currentRun(ws) : () => runId,
+		now: () => base.clock.now(),
 		publish: o.publish ?? (() => {})
 	});
 	await store.ensure({
 		workspaceId,
-		runId,
+		runId: live ? currentRun(workspaceId) : runId,
 		kitchens: o.kitchens ?? loadSeedKitchens(),
-		simStart: now
+		simStart: live ? SCENARIO.start : now
 	});
 	const today = () =>
 		new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Helsinki' }).format(base.clock.now());
