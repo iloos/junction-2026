@@ -1,6 +1,7 @@
 import { json } from '@sveltejs/kit';
 import type { ServerEvent } from '$lib/core/contracts';
 import { catchUp, isMemoryOnly, startStress, STRESS_WORKSPACE, subscribe } from '$lib/server/bus';
+import { orderedSender } from '$lib/server/bus/ordered';
 import { currentRun, currentRunStartedAt } from '$lib/server/demo/run';
 import { DEMO_WORKSPACE, ensureRunLoaded } from '$lib/server/demo/reset';
 import { mayRead, ownWorkspace } from '$lib/server/demo/visitor';
@@ -76,8 +77,9 @@ export const GET: RequestHandler = async ({ url, request, cookies }) => {
 
 	const stream = new ReadableStream<Uint8Array>({
 		start(controller) {
-			let last = after;
 			let live = false;
+			/** The highest seq sent, for memory-only workspaces (the rest go through `ordered`). */
+			let memoryLast = after;
 			let closed = false;
 			const pending: ServerEvent[] = [];
 
@@ -89,15 +91,33 @@ export const GET: RequestHandler = async ({ url, request, cookies }) => {
 					cleanup();
 				}
 			};
+			// Sequenced events go out in seq order: one that skips ahead waits while the gap is read from the op
+			// log (bus/ordered.ts), because the client keeps only what is above the highest seq it has.
+			type Sequenced = Extract<ServerEvent, { seq: number }>;
+			const ordered = orderedSender<Sequenced>({
+				after,
+				deliver: (e) => write(`id: ${e.seq}\nevent: ${e.kind}\ndata: ${JSON.stringify(e)}\n\n`),
+				readAfter: async (from) =>
+					(await catchUpAll(from)).filter(
+						(e): e is Sequenced => 'seq' in e && (!followRun || runOfEvent(e) === runId)
+					),
+				onError: (err) =>
+					console.warn(
+						`[events] gap read failed for ${workspaceId}: ${err instanceof Error ? err.message : err}`
+					)
+			});
+			const highest = () => (followRun ? ordered.last() : memoryLast);
 			const send = (e: ServerEvent) => {
 				// Only the followed run: a write to another run of this workspace (an old run, or another
 				// process that hasn't caught up with a reset yet) is not part of what this client shows.
 				if (followRun && runOfEvent(e) !== runId) return;
-				if ('seq' in e) {
-					if (e.seq <= last) return;
-					last = e.seq;
+				if (!('seq' in e)) write(`event: ${e.kind}\ndata: ${JSON.stringify(e)}\n\n`);
+				else if (followRun) ordered.push(e);
+				// Memory-only workspaces (the simulated run) have no op log to fill a gap from.
+				else if (e.seq > memoryLast) {
+					memoryLast = e.seq;
 					write(`id: ${e.seq}\nevent: ${e.kind}\ndata: ${JSON.stringify(e)}\n\n`);
-				} else write(`event: ${e.kind}\ndata: ${JSON.stringify(e)}\n\n`);
+				}
 			};
 
 			const off = subscribe(workspaceId, (e) => (live ? send(e) : pending.push(e)));
@@ -121,7 +141,7 @@ data: ${JSON.stringify({ workspaceId, runId, startedAt: startedAt() })}
 
 `);
 				// Ops of the new run that arrived before the switch were held back above: send them now.
-				for (const e of await catchUpAll(last).catch(() => [])) send(e);
+				for (const e of await catchUpAll(highest()).catch(() => [])) send(e);
 			}, RUN_CHECK_MS);
 			cleanup = () => {
 				if (closed) return;
@@ -139,7 +159,7 @@ data: ${JSON.stringify({ workspaceId, runId, startedAt: startedAt() })}
 
 			const ready = () =>
 				write(
-					`event: ready\ndata: ${JSON.stringify({ workspaceId, runId, last, startedAt: startedAt() })}\n\n`
+					`event: ready\ndata: ${JSON.stringify({ workspaceId, runId, last: highest(), startedAt: startedAt() })}\n\n`
 				);
 
 			write(`retry: 2000\n\n`);
