@@ -86,6 +86,57 @@
 		</p>
 	</section>
 
+	<section class="mb-8" aria-labelledby="clients">
+		<h2 id="clients" class="font-semibold">Client configuration</h2>
+		<div class="mt-2 space-y-3">
+			{#each data.configs as c (c.id)}
+				<div class="rounded-lg border border-rule bg-sheet">
+					<div class="flex items-center justify-between border-b border-rule px-3 py-2 text-sm">
+						<span class="font-medium">{c.label}</span>
+						<button
+							type="button"
+							class="flex items-center gap-1 rounded px-2 py-0.5 text-accent-ink hover:bg-accent-wash"
+							onclick={() => copy(c.id, c.text)}
+						>
+							{#if copied === c.id}<Check size={14} /> Copied{:else}<Copy size={14} /> Copy{/if}
+						</button>
+					</div>
+					<pre
+						class="overflow-x-auto px-3 py-2 font-mono text-xs whitespace-pre text-ink-2">{c.text}</pre>
+				</div>
+			{/each}
+		</div>
+	</section>
+
+	<section class="mb-8" aria-labelledby="calls">
+		<h2 id="calls" class="font-semibold">Your agent’s changes</h2>
+		{#if data.calls.length}
+			<ol class="mt-2 divide-y divide-rule rounded-lg border border-rule bg-sheet text-sm">
+				{#each data.calls as c (c.seq)}
+					<li class="flex flex-wrap items-baseline gap-x-3 px-3 py-2">
+						<span class="num text-ink-3">#{c.seq}</span>
+						<code class="font-mono font-semibold">{c.type}</code>
+						<span class="text-ink-2">{c.via}</span>
+						<span class="num ml-auto text-ink-3"
+							>{new Date(c.at).toLocaleTimeString('en-GB', { timeZone: 'Europe/Helsinki' })}</span
+						>
+					</li>
+				{/each}
+			</ol>
+		{:else}
+			<p class="mt-1 text-sm text-ink-3">
+				Nothing yet. Every plan, order and substitute your key writes shows up here; reads leave no
+				trace in the op log.
+			</p>
+		{/if}
+		<p class="mt-2 text-sm text-ink-2">
+			Or talk to the same agent here: <a
+				class="text-accent-ink underline"
+				href={resolve('/agents/chat')}>agent chat</a
+			>.
+		</p>
+	</section>
+
 	<section class="mb-8" aria-labelledby="start">
 		<h2 id="start" class="font-semibold">What your agent reads first</h2>
 		<p class="mt-1 text-sm text-ink-2">The server’s MCP instructions, sent on initialize:</p>
