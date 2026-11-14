@@ -24,6 +24,8 @@ export interface ParsedItemView {
 	constraints: string[];
 	variant: { token: string; label: string; search?: string } | null;
 	ambiguities: string[];
+	/** An explicit unit the request can't order in ("oz"). */
+	unitToken?: string;
 }
 
 /** How a question can be answered inline. */

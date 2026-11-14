@@ -14,6 +14,7 @@ import {
 	NUMBER_WORDS,
 	PRODUCTS,
 	UNITS,
+	UNKNOWN_UNITS,
 	type ConstraintKey,
 	type ProductWord,
 	type ReqUnit
@@ -40,6 +41,8 @@ export interface ParsedItem {
 	/** A variant the request named ("whole"), as a catalogue name token. */
 	variant: { token: string; label: string; search?: string } | null;
 	ambiguities: string[];
+	/** An explicit unit the request can't order in ("oz"): the amount is asked again, never guessed. */
+	unitToken?: string;
 }
 
 export interface ParsedRequest {
@@ -255,12 +258,18 @@ export function parseItem(chunk: string, finnish: boolean): Omit<ParsedItem, 'id
 
 	// The unit is the first word after the number (or a number word when no digit was given).
 	const afterWords = after.split(/\s+/).filter(Boolean);
+	let unknownUnit: string | null = null;
 	if (qty !== null && afterWords.length) {
-		const u = unitOf(afterWords[0]);
+		const w0 = afterWords[0].replace(/^[,.:]+|[,.:]+$/g, '');
+		const u = unitOf(w0);
 		if (u) {
 			unit = u.unit;
 			qty = +(qty * u.factor).toFixed(6);
-			unitWordAt = words.indexOf(afterWords[0].replace(/^[,.:]+|[,.:]+$/g, ''));
+			unitWordAt = words.indexOf(w0);
+		} else if (UNKNOWN_UNITS.has(w0.toLowerCase())) {
+			// An explicit unit the request can't order in: asked, never read as sales units.
+			unknownUnit = w0;
+			unitWordAt = words.indexOf(w0);
 		}
 	}
 	if (qty === null) {
@@ -321,7 +330,13 @@ export function parseItem(chunk: string, finnish: boolean): Omit<ParsedItem, 'id
 				? `"${leftovers.join(' ')}" is not in my word list: searched the catalogue as typed`
 				: 'no product named: what should I order?'
 		);
-	if (qty === null)
+	if (unknownUnit) {
+		ambiguities.push(
+			`"${qty} ${unknownUnit}": I can't order in ${unknownUnit}. How much, in kg, l, pieces, cases or packs?`
+		);
+		qty = null;
+		unit = null;
+	} else if (qty === null)
 		ambiguities.push(
 			covers
 				? `no quantity given: how much? ("${covers}" is how many you serve, not an amount)`
@@ -349,7 +364,8 @@ export function parseItem(chunk: string, finnish: boolean): Omit<ParsedItem, 'id
 		unit,
 		constraints,
 		variant,
-		ambiguities
+		ambiguities,
+		...(unknownUnit ? { unitToken: unknownUnit } : {})
 	};
 }
 
@@ -537,6 +553,18 @@ function reconcile(
 	m: Omit<ParsedItem, 'id'>,
 	r: ParsedItem | null
 ): Omit<ParsedItem, 'id'> & { id?: string } {
+	if (r?.unitToken)
+		// The words named a unit the request can't order in: the model's guess at a quantity is not used.
+		m = {
+			...m,
+			qty: null,
+			unit: null,
+			unitToken: r.unitToken,
+			ambiguities: [
+				...m.ambiguities.filter((a) => !/^no quantity/.test(a)),
+				...r.ambiguities.filter((a) => a.includes(r.unitToken!))
+			]
+		};
 	const typed = r?.constraints ?? constraintsIn(m.query);
 	const dropped = typed.filter((c) => !m.constraints.includes(c));
 	if (!dropped.length) return r ? { ...m, id: r.id } : m;

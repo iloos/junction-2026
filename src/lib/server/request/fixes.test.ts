@@ -598,3 +598,45 @@ describe('no day given: the earliest open day, never a passed one', () => {
 		expect(r.order?.plan.deliverBy).toBe('2026-12-09');
 	});
 });
+
+describe('R11-01: units as typed; an unknown explicit unit asks, never buys sales units', () => {
+	const one = (t: string) => parseRules(t, TODAY).items[0];
+	it('ml, cl, g, joined forms and multipacks', () => {
+		expect(one('250 ml milk')).toMatchObject({ qty: 0.25, unit: 'l' });
+		expect(one('250ml milk')).toMatchObject({ qty: 0.25, unit: 'l' });
+		expect(one('75 cl cream')).toMatchObject({ qty: 0.75, unit: 'l' });
+		expect(one('500g butter')).toMatchObject({ qty: 0.5, unit: 'kg' });
+		expect(one('6x1l milk')).toMatchObject({ qty: 6, unit: 'l' });
+		expect(one('2 x 10 kg potatoes')).toMatchObject({ qty: 20, unit: 'kg' });
+	});
+	it('"8 oz butter" asks for the amount: no quantity, no sales unit', () => {
+		const it = one('8 oz butter');
+		expect(it).toMatchObject({ qty: null, unit: null, unitToken: 'oz', product: 'butter' });
+		expect(it.ambiguities.join()).toMatch(/can't order in oz/);
+	});
+	it('the model cannot turn an unknown unit into a quantity', async () => {
+		const r = await parseRequest('8 oz butter', {
+			today: TODAY,
+			llmKind: 'gemini',
+			llm: model({ items: [{ query: 'butter', qty: 8, unit: 'sales', searchFi: ['voi'] }] })
+		});
+		expect(r.items[0]).toMatchObject({ qty: null, unit: null, unitToken: 'oz' });
+	});
+	it('through the request: 250 ml of a 1 l milk is never 250 packs, and oz places nothing', async () => {
+		const { h, ctx, kitchen } = await setup();
+		const base = {
+			handlers: h,
+			ctx,
+			today: '2026-12-07',
+			kitchen,
+			now: new Date('2026-12-07T09:00:00+02:00'),
+			place: false as const
+		};
+		const ml = await runRequest('250 ml milk Thursday', base);
+		const pick = ml.lookup!.items[0].pick;
+		if (pick?.conversion?.ok) expect(pick.conversion.salesQty).toBeLessThanOrEqual(1);
+		const oz = await runRequest('8 oz butter Thursday', base);
+		expect(oz.lookup!.items[0].pick).toBeNull();
+		expect(oz.lookup!.items[0].answer?.kind).toBe('qty');
+	});
+});

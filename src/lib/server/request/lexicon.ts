@@ -168,12 +168,18 @@ export const UNITS: { forms: string[]; unit: ReqUnit; factor: number }[] = [
 		factor: 1
 	},
 	{ forms: ['dl'], unit: 'l', factor: 0.1 },
+	{ forms: ['cl'], unit: 'l', factor: 0.01 },
+	{
+		forms: ['ml', 'millilitre', 'millilitres', 'milliliter', 'milliliters'],
+		unit: 'l',
+		factor: 0.001
+	},
 	{
 		forms: ['kg', 'kgs', 'kilo', 'kilos', 'kiloa', 'kilogram', 'kilograms'],
 		unit: 'kg',
 		factor: 1
 	},
-	{ forms: ['g', 'gram', 'grams', 'grammaa'], unit: 'kg', factor: 0.001 },
+	{ forms: ['g', 'gr', 'gram', 'grams', 'gramma', 'grammaa'], unit: 'kg', factor: 0.001 },
 	{
 		forms: ['case', 'cases', 'box', 'boxes', 'ki', 'laatikko', 'laatikkoa', 'laatikollista', 'ltk'],
 		unit: 'case',
@@ -182,6 +188,45 @@ export const UNITS: { forms: string[]; unit: ReqUnit; factor: number }[] = [
 	{ forms: ['pcs', 'pc', 'piece', 'pieces', 'kpl', 'st', 'kappaletta'], unit: 'pcs', factor: 1 },
 	{ forms: ['pack', 'packs', 'pakkaus', 'pakkausta'], unit: 'sales', factor: 1 }
 ];
+
+/**
+ * Units a chef may type that the request can't order in. Typed after a number they are an explicit unit, never "no
+ * unit": the item asks for the amount again instead of becoming a count of sales units.
+ */
+export const UNKNOWN_UNITS = new Set([
+	'oz',
+	'lb',
+	'lbs',
+	'pound',
+	'pounds',
+	'cup',
+	'cups',
+	'pint',
+	'pints',
+	'pt',
+	'qt',
+	'quart',
+	'quarts',
+	'gal',
+	'gallon',
+	'gallons',
+	'tbsp',
+	'tsp',
+	'mg',
+	'mm',
+	'cm',
+	'rkl',
+	'tl',
+	'ss',
+	'hl',
+	'ton',
+	'tons',
+	'tonne',
+	'tonnes',
+	'bunch',
+	'bunches',
+	'handful'
+]);
 
 export const NUMBER_WORDS: Record<string, number> = {
 	a: 1,
