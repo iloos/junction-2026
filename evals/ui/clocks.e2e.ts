@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { BASE, planBuffet } from './flow';
 
 /**
  * One visitor, one scenario clock (docs/BUGS.md #2): in a fresh browser the clock pill on /request, /ops and the
@@ -6,7 +7,6 @@ import { expect, test, type Page } from '@playwright/test';
  * clock anchored at process start, 6 h ahead of the visitor's run and drifting, so "tomorrow" meant another day there.
  * Runs in `pnpm gate --full`, or against prod: KITCHEN_URL=<url> npx playwright test -c evals/ui/pw-prod.config.ts
  */
-const BASE = process.env.KITCHEN_URL ?? 'http://localhost:4173';
 const MONTHS: Record<string, number> = { Nov: 10, Dec: 11 };
 const PILL = /(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun) (\d{1,2}) (Nov|Dec),? (\d\d):(\d\d)/;
 
@@ -27,12 +27,9 @@ async function clockOn(
 
 test('every surface shows the visitor run’s scenario clock', async ({ page }) => {
 	test.setTimeout(180_000);
-	// The Kitchen shows its clock once the event is planned.
-	await page.goto(`${BASE}/`);
-	const start = page.getByRole('button', { name: 'Plan the event' });
-	await page.locator('#task-h, #event-h').or(start).first().waitFor({ timeout: 60_000 });
-	if (await start.isVisible()) await start.click();
-	await page.getByText('What happened').first().waitFor({ timeout: 90_000 });
+	// The Kitchen shows its clock once the event is planned: wait on the plan's own heading (flow.ts), which a
+	// reused, already-planned sandbox shows too and no viewport hides.
+	await planBuffet(page);
 
 	const seen: Record<string, { text: string; minutes: number } | null> = {
 		kitchen: await clockOn(page, '/'),
