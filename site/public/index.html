@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Mandate: a kitchen purchasing agent</title>
+<meta name="description" content="A kitchen purchasing agent that orders on its own only inside limits the chef sets. Built on Valio Aimo's catalogue for Junction 2026." />
+<meta property="og:title" content="Mandate" />
+<meta property="og:description" content="A kitchen purchasing agent that orders on its own only inside limits the chef sets." />
+<meta property="og:url" content="https://mandate.kitchen" />
+<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="/site.css" />
+<style>
+.hero { display: grid; gap: 40px; padding: 40px 0 56px; align-items: center; }
+@media (min-width: 900px) { .hero { grid-template-columns: 1.05fr 1fr; padding: 64px 0 80px; gap: 56px; } }
+
+/* Decision card: the three outcomes a mandate allows. */
+.card { background: var(--sheet); border: 1px solid var(--rule); border-radius: 14px; box-shadow: 0 1px 0 var(--rule), 0 18px 40px -24px oklch(0.3 0.03 255 / 0.35); overflow: hidden; }
+.card-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 16px 18px 12px; border-bottom: 1px solid var(--rule); }
+.card-head b { font-weight: 600; font-size: 15px; }
+.card-head span { font-size: 13px; color: var(--ink-3); }
+.line { display: grid; grid-template-columns: 32px 1fr; gap: 12px; padding: 14px 18px; border-bottom: 1px solid var(--rule); }
+.line:last-of-type { border-bottom: 0; }
+.line .what { font-weight: 500; font-size: 15px; margin: 0; }
+.line .why { font-size: 13.5px; color: var(--ink-2); margin: 2px 0 0; }
+.line .tag { margin-top: 8px; }
+.card-foot { padding: 12px 18px; background: var(--well); font-size: 12.5px; color: var(--ink-3); border-top: 1px solid var(--rule); }
+
+/* Problem strip */
+.facts { display: grid; gap: 1px; background: var(--rule); border: 1px solid var(--rule); border-radius: 12px; overflow: hidden; }
+@media (min-width: 720px) { .facts { grid-template-columns: repeat(3, 1fr); } }
+.fact { background: var(--sheet); padding: 20px; display: grid; gap: 6px; align-content: start; }
+.fact b { font-size: 40px; line-height: 1; font-weight: 600; letter-spacing: -0.02em; }
+.fact b.out { color: var(--out); }
+.fact b.ok { color: var(--ok); }
+.fact p { margin: 0; color: var(--ink-2); font-size: 15px; }
+.fact .tag { justify-self: start; }
+
+/* The gate: doors → checks → outcomes. Columns on wide screens, a stack on phones. */
+.gate { display: grid; gap: 12px; align-items: stretch; }
+@media (min-width: 900px) { .gate { grid-template-columns: 1fr 28px 1.25fr 28px 1fr; gap: 0; } }
+.gate h3 { font: 500 12.5px/1 'IBM Plex Mono', monospace; color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 12px; }
+.gcol { display: grid; align-content: center; }
+.gcol ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.door { background: var(--sheet); border: 1px solid var(--rule); border-radius: 10px; padding: 10px 14px; font-size: 15px; display: flex; justify-content: space-between; gap: 8px; }
+.door span { color: var(--ink-3); font-size: 13px; }
+.checks { background: var(--sheet); border: 1.5px solid var(--accent); border-radius: 14px; padding: 18px 18px 14px; box-shadow: 0 18px 40px -28px oklch(0.46 0.085 195 / 0.6); }
+.checks h3 { color: var(--accent-ink); }
+.checks li { display: grid; grid-template-columns: 20px 1fr; gap: 10px; font-size: 15px; padding: 6px 0; border-top: 1px dashed var(--rule); }
+.checks li:first-child { border-top: 0; }
+.checks li svg { width: 18px; height: 18px; color: var(--accent); margin-top: 2px; }
+.checks li small { display: block; color: var(--ink-3); font-size: 13px; }
+.result { display: flex; align-items: center; gap: 12px; background: var(--sheet); border: 1px solid var(--rule); border-radius: 10px; padding: 10px 14px; font-size: 15px; }
+.arrow { display: grid; place-items: center; color: var(--rule-strong); }
+.arrow svg { width: 22px; height: 22px; transform: rotate(90deg); }
+@media (min-width: 900px) { .arrow svg { transform: none; } }
+.more { margin: 24px 0 0; font-size: 15px; }
+.more a { color: var(--accent-ink); font-weight: 500; text-underline-offset: 3px; }
+
+/* Bring your own agent */
+.steps { counter-reset: s; list-style: none; padding: 0; margin: 0; display: grid; gap: 12px; }
+.steps li { counter-increment: s; display: grid; grid-template-columns: 32px 1fr; gap: 12px; align-items: start; }
+.steps li::before { content: counter(s); width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; background: var(--accent-wash); color: var(--accent-ink); font: 500 13px/1 'IBM Plex Mono', monospace; }
+.steps p { margin: 3px 0 0; color: var(--ink-2); }
+.steps b { color: var(--ink); font-weight: 500; }
+
+/* Real vs simulated */
+.honest { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
+.honest li { display: grid; grid-template-columns: 92px 1fr; gap: 12px; font-size: 15px; color: var(--ink-2); }
+.honest li b { font: 500 12.5px/1.9 'IBM Plex Mono', monospace; color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.04em; }
+
+/* Go deeper */
+.deeper a { display: grid; gap: 4px; background: var(--sheet); border: 1px solid var(--rule); border-radius: 12px; padding: 16px 18px; text-decoration: none; transition: border-color 0.12s ease; }
+.deeper a:hover { border-color: var(--accent); }
+.deeper b { font-weight: 600; display: flex; justify-content: space-between; }
+.deeper b::after { content: '→'; color: var(--accent); }
+.deeper span { color: var(--ink-2); font-size: 14px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+	<header class="top">
+		<a class="brand" href="/" aria-label="Mandate home">
+			<svg viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="7" fill="var(--accent)"/><path d="M8 23V10l8 8 8-8v13" fill="none" stroke="var(--on-accent)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+			Mandate
+		</a>
+		<nav>
+			<a class="hide-sm" href="/story">Story</a>
+			<a class="hide-sm" href="/how">How it works</a>
+			<a class="hide-sm" href="/proof">Proof</a>
+			<a href="https://app.mandate.kitchen/">Open the app</a>
+		</nav>
+	</header>
+
+	<main>
+		<section class="hero">
+			<div>
+				<p class="eyebrow">Junction 2026 · Valio Aimo: Trusted Trade Agents</p>
+				<h1>An agent that orders for your kitchen, only inside the limits you set.</h1>
+				<p class="lede">Mandate plans a kitchen's order from Valio Aimo's catalogue, finds substitutes when products run out, and orders on its own only within the chef's mandate. Everything else waits for a person, with the reason.</p>
+				<div class="ctas">
+					<a class="btn primary" href="https://app.mandate.kitchen/">
+						Open the kitchen
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+					</a>
+					<a class="btn" href="https://app.mandate.kitchen/agents">
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 7h3a5 5 0 0 1 0 10h-3M9 17H6A5 5 0 0 1 6 7h3M8 12h8"/></svg>
+						Connect your agent
+					</a>
+				</div>
+				<p class="note">Every visitor gets a private sandbox. Nothing is sent to Valio.</p>
+			</div>
+
+			<div class="card" role="img" aria-label="Example decisions for a Christmas buffet: one line ordered within the mandate, one held for approval, one refused.">
+				<div class="card-head"><b>Christmas buffet, 140 guests</b><span>Saturday</span></div>
+				<div class="line ok">
+					<div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>
+					<div>
+						<p class="what">Whole ham is out. Ordered HK Palvikinkku instead.</p>
+						<p class="why">Same use, Valio states stock for it, and it fits the weekly cap.</p>
+						<span class="tag">Within the mandate</span>
+					</div>
+				</div>
+				<div class="line auth">
+					<div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c1.2-3.6 4-5.5 7-5.5s5.8 1.9 7 5.5"/></svg></div>
+					<div>
+						<p class="what">A substitute changes the allergens.</p>
+						<p class="why">The chef never delegates allergen changes, so it waits for a person.</p>
+						<span class="tag">Needs your approval</span>
+					</div>
+				</div>
+				<div class="line out">
+					<div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M6.5 17.5l11-11"/></svg></div>
+					<div>
+						<p class="what">An extra order would pass the hard limit.</p>
+						<p class="why">No approval can lift it, even if the order is split.</p>
+						<span class="tag">Refused</span>
+					</div>
+				</div>
+				<div class="card-foot">An illustration of the three outcomes. Product names come from Valio's challenge data.</div>
+			</div>
+		</section>
+
+		<section class="band" id="problem">
+			<h2>A buffet for 140, and Valio is out of two products</h2>
+			<p class="sub">Today the chef reworks the order by hand in the webshop before the cut-off. An agent can find a replacement in seconds. The kitchen also needs to know what it may buy alone, at what price, and when it has to ask.</p>
+			<div class="facts">
+				<div class="fact">
+					<b>140</b>
+					<p>guests at a hotel's Christmas buffet on Saturday</p>
+					<span class="tag plain">Demo scenario</span>
+				</div>
+				<div class="fact">
+					<b class="out">2</b>
+					<p>products out of stock in Valio's own data: the whole ham and the swede casserole</p>
+					<span class="tag plain">Valio challenge data</span>
+				</div>
+				<div class="fact">
+					<b class="ok">1</b>
+					<p>receipt when the same order is sent four times</p>
+					<span class="tag ok">Seen on the live app</span>
+				</div>
+			</div>
+		</section>
+
+		<section class="band" id="how">
+			<h2>Every door goes through the same checks</h2>
+			<p class="sub">The kitchen screen, the chat and outside agents all call one gate. The limits are data, checked in code at the moment of ordering, so no model can talk its way past them.</p>
+			<div class="gate">
+				<div class="gcol">
+					<h3>Who asks</h3>
+					<ul>
+						<li class="door">Kitchen screen <span>the chef</span></li>
+						<li class="door">Chat <span>our agent</span></li>
+						<li class="door">MCP <span>your agent</span></li>
+						<li class="door">REST <span>your code</span></li>
+					</ul>
+				</div>
+				<div class="arrow" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+				<div class="gcol">
+					<div class="checks">
+						<h3>One gate</h3>
+						<ul>
+							<li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>The mandate<small>what the agent may buy alone, and what the chef never delegates</small></span></li>
+							<li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Spend caps and a hard limit<small>held even when an order is split</small></span></li>
+							<li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>The exact terms<small>a price or quantity change voids the approval</small></span></li>
+							<li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Cut-off and pack sizes<small>a passed cut-off or a part pack is refused</small></span></li>
+						</ul>
+					</div>
+				</div>
+				<div class="arrow" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+				<div class="gcol">
+					<h3>What happens</h3>
+					<ul>
+						<li class="result ok"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>Ordered, with one receipt</li>
+						<li class="result auth"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c1.2-3.6 4-5.5 7-5.5s5.8 1.9 7 5.5"/></svg></span>Held for a person, with the reason</li>
+						<li class="result out"><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M6.5 17.5l11-11"/></svg></span>Refused, with the reason</li>
+					</ul>
+				</div>
+			</div>
+			<p class="more">Products whose stock Valio doesn't state are labelled unknown and never counted as covered. <a href="/how">See how it's built</a></p>
+		</section>
+
+		<section class="band" id="agents">
+			<div class="grid two">
+				<div>
+					<h2>Bring your own agent, and try to make it overspend</h2>
+					<p class="sub">Your agent gets the same tools over MCP and REST as ours, inside your own sandbox. It can plan and order within the mandate. It has no tool to approve, and the gate refuses it if it tries.</p>
+				</div>
+				<ol class="steps">
+					<li><p><b>Get a key.</b> Open <a href="https://app.mandate.kitchen/agents">app.mandate.kitchen/agents</a> to mint one for your sandbox.</p></li>
+					<li><p><b>Connect.</b> Point any MCP client at <code>https://app.mandate.kitchen/mcp/k/&lt;key&gt;</code>.</p></li>
+					<li><p><b>Start.</b> Call <code>get_context</code>, then ask it to plan the buffet. Then ask it to approve.</p></li>
+				</ol>
+			</div>
+		</section>
+
+		<section class="band">
+			<h2>What's real, what's simulated</h2>
+			<p class="sub">Each screen in the app carries the same labels.</p>
+			<ul class="honest">
+				<li><b>Real</b><span>Valio Aimo's catalogue, and live price and availability calls for shortlisted products, cached with the time fetched.</span></li>
+				<li><b>Simulated</b><span>The booking, the clock, stock on hand, recipes, and the order itself. Valio's API has no order endpoint, so nothing is sent to Valio.</span></li>
+				<li><b>Models</b><span>Gemini reads requests and ranks substitutes. Every check that decides what may be ordered runs in plain code.</span></li>
+			</ul>
+		</section>
+
+		<section class="band">
+			<h2>Go deeper</h2>
+			<p class="sub">Each page takes one angle.</p>
+			<div class="grid four deeper">
+				<a href="/story"><b>Story</b><span>The pitch, slide by slide.</span></a>
+				<a href="/how"><b>How it works</b><span>The gate, the ports and the fallbacks.</span></a>
+				<a href="/proof"><b>Proof</b><span>Each claim and the test behind it.</span></a>
+				<a href="/story#partners"><b>Partners</b><span>How we use Valio, Gemini, Aiven, Exa and Context.dev.</span></a>
+			</div>
+		</section>
+	</main>
+
+	<footer>
+		<span>Mandate · built at Junction 2026, Espoo · MIT licensed</span>
+		<nav><a href="https://app.mandate.kitchen/">Open the app</a><a href="/proof">Proof</a><a href="https://github.com/iloos/junction-2026">Source</a></nav>
+	</footer>
+</div>
+</body>
+</html>

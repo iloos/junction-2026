@@ -14,7 +14,7 @@ _Draft texts for the Junction 2026 platform, written for the judges. Every behav
 **Description** (~150 words):
 > Mandate is a purchasing agent for professional kitchens, built on Valio Aimo's catalogue and price and availability API. It plans a kitchen's order from an event, ranks substitutes when products run out, and orders on its own only inside the kitchen's mandate: spend caps, a hard limit, origin rules and things the chef never delegates, such as an allergen change. Everything else is held for a person, grouped by reason. An approval covers the exact terms the person saw; any later edit voids it and shows what changed. Retrying an order returns the same receipt, never a second order. Products whose supply Valio doesn't state are labelled unknown and never counted as covered. The kitchen screen, the in-app agent, REST and MCP all pass through one gate, so an outside agent gets the same tools and can never approve. Each visitor gets a private sandbox and their own agent key.
 
-**Live:** https://widely-many-scorpion.eur-1.aiven.app · **Source:** `[repo]` (MIT) · **Video:** `[video]`
+**Live:** https://mandate.kitchen (the app: https://app.mandate.kitchen) · **Source:** `[repo]` (MIT) · **Video:** `[video]`
 
 **Technologies:** SvelteKit 2 (Svelte 5), TypeScript, Tailwind 4, d3, Drizzle, Postgres, MCP (Streamable HTTP) and OpenAPI, Gemini API (`gemini-decision-1`, `gemini-3.5-flash-lite`, `gemini-3.8-flash`), Aiven Runtime and Aiven for PostgreSQL, Exa, Context.dev, Playwright, Vitest.
 
@@ -35,7 +35,7 @@ _Draft texts for the Junction 2026 platform, written for the judges. Every behav
 
 **Real vs simulated.** Real: Valio's catalogue, and live price and availability calls only for shortlisted products, cached and labelled. Simulated and labelled: the booking, the clock, stock on hand, recipes, and the order itself (Valio's API has no order endpoint, so nothing is sent to Valio).
 
-**Try it.** https://widely-many-scorpion.eur-1.aiven.app gives you a private sandbox. `/agents` mints an MCP key for it: connect any MCP client to `/mcp/k/<key>` and start with `get_context`. Your agent can plan and order within the mandate, never approve. Valio's view is `/ops`.
+**Try it.** https://app.mandate.kitchen gives you a private sandbox. `/agents` mints an MCP key for it: connect any MCP client to `/mcp/k/<key>` and start with `get_context`. Your agent can plan and order within the mandate, never approve. Valio's view is `/ops`.
 
 **Next.** The kitchen's usual week (Valio's order templates) as the baseline the agent runs inside, so only exceptions reach the chef before cut-off; delivery shortfalls turned into claims and rescues; and for Valio, a registry of outside agents with their own grants and spend caps. A 4-week hotel shadow pilot is the proposed first step.
 
@@ -62,7 +62,7 @@ Without Decisions, substitute ranking would rely only on price, supply and keywo
 
 ### Aiven: Best Use of Aiven
 
-- **Aiven Runtime** hosts the whole app as one Node container (SvelteKit `adapter-node`, our Dockerfile). Production is https://widely-many-scorpion.eur-1.aiven.app; a second Runtime app builds the `staging` branch so changes are checked before prod.
+- **Aiven Runtime** hosts the whole app as one Node container (SvelteKit `adapter-node`, our Dockerfile). Production is https://app.mandate.kitchen (custom domain on Aiven; https://widely-many-scorpion.eur-1.aiven.app also works); a second Runtime app builds the `staging` branch so changes are checked before prod.
 - **Aiven for PostgreSQL** holds all state: kitchens, plans, approvals, orders, the op log and per-visitor workspaces. TLS is verified against the Aiven project CA.
 - **No double orders, enforced in Postgres.** The idempotency table and per-workspace locking make a retried commit return the same receipt. After each deploy, a race check runs against the production database: four commits with one key give one receipt; three with different keys give one receipt and two refusals.
 - **LISTEN/NOTIFY as the event bus.** Every change is published on one Postgres channel and streamed to browsers over server-sent events, so the Kitchen and Valio's Ops view update from the same source.

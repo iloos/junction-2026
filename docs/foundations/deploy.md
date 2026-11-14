@@ -4,11 +4,16 @@ One container (`adapter-node`, [Dockerfile](../../Dockerfile)) on **Aiven Runtim
 
 | Service | Plan | $/h (catalog) | What |
 |---|---|---|---|
-| `mandate` | `startup-100-2048` (1 vCPU, 2 GB) | 0.0685 | prod, https://widely-many-scorpion.eur-1.aiven.app |
+| `mandate` | `startup-100-2048` (1 vCPU, 2 GB) | 0.0685 | prod, https://app.mandate.kitchen (fallback https://widely-many-scorpion.eur-1.aiven.app) |
 | `mandate-staging` | `startup-20-512` | 0.0164 | staging, https://ideally-expert-wolf.eur-1.aiven.app |
 | `pg-1dfeeeed` | `startup-4` (2 vCPU, 4 GB, 100 connections, PgBouncer on :24911) | 0.158 | Postgres 18.7, shared by prod and staging |
 
 About $0.24/h in total. Plans were raised on Sat 14 Nov ~05:00 with the user's approval (budget ~$50 to Sun 14:00).
+
+## Domains
+- **`mandate.kitchen`** (registered at Namecheap, DNS on Cloudflare): the landing page plus `/story`, `/how` and `/proof`, served by the Cloudflare Worker `mandate-landing` from `site/public`. Deploy from `site/` with `npx wrangler@4 deploy`. Paths the site lacks 302 to the app, so `mandate.kitchen/agents` lands on the app's `/agents`; `www` 301s to the bare domain.
+- **`app.mandate.kitchen`**: a Cloudflare CNAME (DNS only, never proxied, or Aiven can't issue the certificate) to the Aiven app, added as a custom domain on port `default`; Let's Encrypt certificate. Aiven takes subdomains only, which is why the app isn't on the bare domain. A failed domain check is not retried automatically: press Verify in the console or call `aiven_application_custom_domain_verify`.
+- The `aiven.app` URL keeps working as the fallback.
 
 ## Health and smoke
 
@@ -22,7 +27,7 @@ About $0.24/h in total. Plans were raised on Sat 14 Nov ~05:00 with the user's a
 
 ```sh
 # From the main checkout; the key is read from .env without printing it
-SMOKE_KEY="$(grep -E '^SMOKE_KEY=' .env | cut -d= -f2-)" SMOKE_UI=1 EXPECT_DB=ok scripts/deploy/smoke.sh https://widely-many-scorpion.eur-1.aiven.app
+SMOKE_KEY="$(grep -E '^SMOKE_KEY=' .env | cut -d= -f2-)" SMOKE_UI=1 EXPECT_DB=ok scripts/deploy/smoke.sh https://app.mandate.kitchen
 ```
 
 ## Database connection ([client.ts](../../src/lib/server/db/client.ts))
@@ -93,7 +98,7 @@ The resolver is `server/demo/visitor.ts`. Another visitor's id in a link, cookie
 
 ```sh
 # Start the stage over before a demo (reads the key from .env without printing it)
-curl -s -X POST -H "Authorization: Bearer $(grep -E '^MANDATE_KEY_CHEF=' .env | cut -d= -f2-)" https://widely-many-scorpion.eur-1.aiven.app/api/demo/reset
+curl -s -X POST -H "Authorization: Bearer $(grep -E '^MANDATE_KEY_CHEF=' .env | cut -d= -f2-)" https://app.mandate.kitchen/api/demo/reset
 ```
 
 - `POST /api/demo/reset`: starts a fresh run of the key's workspace. Chef or approver keys may reset the stage. A key bound to another workspace may reset only that one. Outside agents never may.

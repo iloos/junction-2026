@@ -1,0 +1,44 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "overused-font",
+        "value": "instrument serif",
+        "files": [
+          "public/story/index.html"
+        ],
+        "createdAt": "2026-11-14T12:05:32.111Z",
+        "reason": "user confirmed: chose dark deck with Instrument Serif on /story and /how only"
+      },
+      {
+        "rule": "overused-font",
+        "value": "instrument serif",
+        "files": [
+          "public/how/index.html"
+        ],
+        "createdAt": "2026-11-14T12:05:32.421Z",
+        "reason": "user confirmed: chose dark deck with Instrument Serif on /story and /how only"
+      },
+      {
+        "rule": "cramped-padding",
+        "value": "*",
+        "files": [
+          "public/how/index.html"
+        ],
+        "createdAt": "2026-11-14T12:05:39.703Z",
+        "reason": "Claude verified: only flag is the 'who' table, rows meet border by design, cells padded 12-14px"
+      },
+      {
+        "rule": "cramped-padding",
+        "value": "*",
+        "files": [
+          "public/story/index.html"
+        ],
+        "createdAt": "2026-11-14T12:05:40.068Z",
+        "reason": "Claude verified: flags are the gate canvas (fills frame, legend inset 18px) and the 38px hold pill (centred text, 18px sides)"
+      }
+    ]
+  }
+}

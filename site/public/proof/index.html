@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Mandate proof</title>
+<meta name="description" content="Each claim Mandate makes, the test behind it, and where we saw it work." />
+<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="/site.css" />
+<style>
+.intro { padding: 40px 0 32px; }
+.legend { display: flex; flex-wrap: wrap; gap: 8px 20px; font-size: 14px; color: var(--ink-2); margin: 0; padding: 0; list-style: none; }
+.legend li { display: flex; align-items: center; gap: 8px; }
+.group { border-top: 1px solid var(--rule); padding: 32px 0; }
+.group h2 { font-size: 20px; margin-bottom: 4px; }
+.group > p { color: var(--ink-2); margin: 0 0 16px; }
+.claims { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.claim { background: var(--sheet); border: 1px solid var(--rule); border-radius: 12px; padding: 14px 16px; display: grid; gap: 8px; }
+@media (min-width: 820px) { .claim { grid-template-columns: 1fr 260px; gap: 20px; align-items: start; } }
+.claim p { margin: 0; }
+.claim .what { font-weight: 500; }
+.claim .seen { color: var(--ink-2); font-size: 14px; margin-top: 4px; }
+.claim .ev { display: grid; gap: 6px; justify-items: start; }
+.claim .ev a { font: 400 12.5px/1.4 'IBM Plex Mono', monospace; color: var(--ink-2); overflow-wrap: anywhere; }
+.claim .ev a:hover { color: var(--accent-ink); }
+.never { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.never li { display: grid; grid-template-columns: 24px 1fr; gap: 10px; color: var(--ink-2); }
+.never svg { width: 18px; height: 18px; color: var(--out); margin-top: 3px; }
+.never b { color: var(--ink); font-weight: 500; }
+</style>
+</head>
+<body>
+<div class="wrap">
+	<header class="top">
+		<a class="brand" href="/" aria-label="Mandate home">
+			<svg viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="7" fill="var(--accent)"/><path d="M8 23V10l8 8 8-8v13" fill="none" stroke="var(--on-accent)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+			Mandate
+		</a>
+		<nav>
+			<a class="hide-sm" href="/story">Story</a>
+			<a class="hide-sm" href="/how">How it works</a>
+			<a class="hide-sm" href="/proof" aria-current="page">Proof</a>
+			<a href="https://app.mandate.kitchen/">Open the app</a>
+		</nav>
+	</header>
+
+	<main>
+		<section class="intro">
+			<p class="eyebrow">Proof</p>
+			<h1>What we claim, and how we know</h1>
+			<p class="lede">Each claim below has a test in the repository. Where we also watched it work on the deployed app, it says so.</p>
+			<ul class="legend">
+				<li><span class="tag ok">Seen on the live app</span> observed on the deployed app in a fresh visitor sandbox</li>
+				<li><span class="tag plain">Tested</span> green in the test suite on main</li>
+			</ul>
+		</section>
+
+		<section class="group">
+			<h2>The chef's authority</h2>
+			<p>What the agent may do alone, and what only a person can approve.</p>
+			<ul class="claims">
+				<li class="claim">
+					<div><p class="what">An approval covers the exact terms the chef saw. A later price or quantity change voids it, and the screen shows what changed.</p></div>
+					<div class="ev"><span class="tag plain">Tested</span><a href="https://github.com/iloos/junction-2026/blob/main/src/lib/server/store/gate.test.ts">store/gate.test.ts</a><a href="https://github.com/iloos/junction-2026/blob/main/src/lib/core/state.test.ts">core/state.test.ts</a></div>
+				</li>
+				<li class="claim">
+					<div><p class="what">A hard limit that no approval can pass, even when the order is split across lines.</p></div>
+					<div class="ev"><span class="tag plain">Tested</span><a href="https://github.com/iloos/junction-2026/blob/main/src/lib/server/store/ceiling.test.ts">store/ceiling.test.ts</a></div>
+				</li>
+				<li class="claim">
+					<div><p class="what">The agent never orders over its spend caps on its own, even when it splits an order.</p></div>
+					<div class="ev"><span class="tag plain">Tested</span><a href="https://github.com/iloos/junction-2026/tree/main/evals/scenarios">evals/scenarios (s5)</a></div>
+				</li>
+				<li class="claim">
+					<div><p class="what">Decisions are grouped by reason, so an allergen change never rides along with routine lines.</p><p class="seen">On the live app, the chef signs off each group separately.</p></div>
+					<div class="ev"><span class="tag ok">Seen on the live app</span><a href="https://github.com/iloos/junction-2026/blob/main/src/lib/server/store/groups.test.ts">store/groups.test.ts</a></div>
+				</li>
+				<li class="claim">
+					<div><p class="what">Each ordered line names what allowed it: the mandate or a specific approval.</p></div>
+					<div class="ev"><span class="tag plain">Tested</span><a href="https://github.com/iloos/junction-2026/blob/main/src/lib/server/store/authority.test.ts">store/authority.test.ts</a></div>
+				</li>
+			</ul>
+		</section>
+
+		<section class="group">
+			<h2>Orders</h2>
+			<p>What happens when an order is placed, retried or late.</p>
+			<ul class="claims">
+				<li class="claim">
+					<div><p class="what">No double orders. The same order sent four times gives one receipt.</p><p class="seen">On the deployed Postgres: one key four times gave one receipt; three competing keys gave one receipt and two refusals.</p></div>
+					<div class="ev"><span class="tag ok">Seen on the live app</span><a href="https://github.com/iloos/junction-2026/blob/main/src/lib/server/store/pg-race.test.ts">store/pg-race.test.ts</a><a href="https://github.com/iloos/junction-2026/blob/main/scripts/smoke-race.mjs">scripts/smoke-race.mjs</a></div>
+				</li>
+				<li class="claim">
+					<div><p class="what">Approve, place the order, get one receipt, all in the kitchen screen.</p><p class="seen">The buffet: 18 lines on one order, 15 supplier confirmed and 3 awaiting the supplier.</p></div>
+					<div class="ev"><span class="tag ok">Seen on the live app</span><a href="https://github.com/iloos/junction-2026/blob/main/evals/ui/kitchen-order.e2e.ts">evals/ui/kitchen-order.e2e.ts</a></div>
+				</li>
+				<li class="claim">
+					<div><p class="what">The order cut-off is enforced when ordering. A date that's too late is caught first, with the cut-off named and the next day offered.</p><p class="seen">"4 kg lactose-free butter for tomorrow" after the cut-off: the request names the passed cut-off and offers the next delivery day. Nothing is ordered.</p></div>
+					<div class="ev"><span class="tag ok">Seen on the live app</span><a href="https://github.com/iloos/junction-2026/blob/main/src/lib/server/store/cutoff.test.ts">store/cutoff.test.ts</a></div>
+				</li>
+				<li class="claim">
+					<div><p class="what">A delivery on a day the kitchen doesn't receive goods is held for sign-off, never ordered alone.</p></div>
+					<div class="ev"><span class="tag ok">Seen on the live app</span><a href="https://github.com/iloos/junction-2026/blob/main/src/lib/server/store/purchasing.test.ts">store/purchasing.test.ts</a></div>
+				</li>
+				<li class="claim">
+					<div><p class="what">Amounts are physical. 10 litres of milk is sized in litres, then turned into Valio's packs.</p></div>
+					<div class="ev"><span class="tag ok">Seen on the live app</span><a href="https://github.com/iloos/junction-2026/blob/main/src/lib/server/store/direct.test.ts">store/direct.test.ts</a></div>
+				</li>
+				<li class="claim">
+					<div><p class="what">An amount that doesn't fit Valio's pack step can't be ordered.</p></div>
+					<div class="ev"><span class="tag plain">Tested</span><a href="https://github.com/iloos/junction-2026/tree/main/evals/scenarios">evals/scenarios (s3)</a></div>
+				</li>
+			</ul>
+		</section>
+
+		<section class="group">
+			<h2>Honest supply</h2>
+			<p>What the agent knows about stock, and what it won't pretend to know.</p>
+			<ul class="claims">
+				<li class="claim">
+					<div><p class="what">Products whose stock Valio doesn't state never count as covered, and products with stated stock rank first.</p><p class="seen">On the live app those lines read "Ordered, awaiting supplier", not counted as cover.</p></div>
+					<div class="ev"><span class="tag plain">Tested</span><a href="https://github.com/iloos/junction-2026/blob/main/src/lib/core/rank/rank.ts">core/rank/rank.ts</a><a href="https://github.com/iloos/junction-2026/blob/main/src/lib/server/store/pool.test.ts">store/pool.test.ts</a><a href="https://github.com/iloos/junction-2026/blob/main/src/lib/core/mandate/fulfilment.test.ts">mandate/fulfilment.test.ts</a></div>
+				</li>
+				<li class="claim">
+					<div><p class="what">A lactose-free request is never bought as ordinary milk, through substitutes and edits.</p><p class="seen">In English and Finnish, the request resolves to Valio's lactose-free milk.</p></div>
+					<div class="ev"><span class="tag ok">Seen on the live app</span><a href="https://github.com/iloos/junction-2026/blob/main/src/lib/server/request/fixes.test.ts">request/fixes.test.ts</a></div>
+				</li>
+				<li class="claim">
+					<div><p class="what">The Why drawer cites the web for net content, origin and ingredients, with each source shown.</p></div>
+					<div class="ev"><span class="tag ok">Seen on the live app</span><a href="https://github.com/iloos/junction-2026/blob/main/src/lib/server/web/evidence.ts">server/web/evidence.ts</a></div>
+				</li>
+			</ul>
+		</section>
+
+		<section class="group">
+			<h2>Agents and sandboxes</h2>
+			<p>What an outside agent can and can't do.</p>
+			<ul class="claims">
+				<li class="claim">
+					<div><p class="what">Outside agents get the same tools over MCP and REST, and can never approve.</p><p class="seen">On a judge key: reading works; approve and changing the mandate are refused; the MCP tool list has no approve tool.</p></div>
+					<div class="ev"><span class="tag ok">Seen on the live app</span><a href="https://github.com/iloos/junction-2026/blob/main/src/lib/core/contracts/tools.ts">contracts/tools.ts</a><a href="https://github.com/iloos/junction-2026/blob/main/src/lib/server/agent/adversarial.test.ts">agent/adversarial.test.ts</a></div>
+				</li>
+				<li class="claim">
+					<div><p class="what">Every visitor gets their own sandbox, and a judge key works only there.</p><p class="seen">Two browsers: neither can read, approve or reset the other's sandbox.</p></div>
+					<div class="ev"><span class="tag ok">Seen on the live app</span><a href="https://github.com/iloos/junction-2026/blob/main/src/routes/ops/visitor-gate.e2e.ts">ops/visitor-gate.e2e.ts</a><a href="https://github.com/iloos/junction-2026/blob/main/src/lib/server/demo/judge-key.test.ts">demo/judge-key.test.ts</a></div>
+				</li>
+				<li class="claim">
+					<div><p class="what">The chat turns plain words into a held plan and a decision card, and refuses to approve.</p></div>
+					<div class="ev"><span class="tag ok">Seen on the live app</span><a href="https://github.com/iloos/junction-2026/tree/main/evals/chat">evals/chat</a></div>
+				</li>
+				<li class="claim">
+					<div><p class="what">An event brief becomes a menu proposed by Gemini, every amount labelled an estimate, and then a plan once the chef accepts.</p></div>
+					<div class="ev"><span class="tag ok">Seen on the live app</span><a href="https://github.com/iloos/junction-2026/blob/main/src/lib/core/services/events.ts">services/events.ts</a></div>
+				</li>
+				<li class="claim">
+					<div><p class="what">For the cases we test, in English and Finnish, the same words give the same basket through the request page, the agent and REST.</p></div>
+					<div class="ev"><span class="tag plain">Tested</span><a href="https://github.com/iloos/junction-2026/tree/main/evals/fidelity">evals/fidelity</a></div>
+				</li>
+			</ul>
+		</section>
+
+		<section class="group">
+			<h2>What we don't claim</h2>
+			<p>Things it would be easy to say and that aren't true yet.</p>
+			<ul class="never">
+				<li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M6.5 17.5l11-11"/></svg><span><b>Real orders.</b> Valio's API has no order endpoint. Orders are simulated and nothing is sent to Valio.</span></li>
+				<li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M6.5 17.5l11-11"/></svg><span><b>Recipe-aware ranking.</b> Substitutes are ranked by the kitchen's rules and Gemini Decisions, with a rules fallback. We haven't measured recipe fit.</span></li>
+				<li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M6.5 17.5l11-11"/></svg><span><b>Vector search.</b> Catalogue search is lexical.</span></li>
+				<li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M6.5 17.5l11-11"/></svg><span><b>A live recall hitting our orders.</b> Context.dev checks Ruokavirasto's recall list every 5 minutes and matches each notice against the catalogue. The recall that affects an order is a drill.</span></li>
+				<li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M6.5 17.5l11-11"/></svg><span><b>Data residency.</b> We make no claim about where data is stored.</span></li>
+			</ul>
+		</section>
+	</main>
+
+	<footer>
+		<span>Mandate · built at Junction 2026, Espoo · MIT licensed</span>
+		<nav><a href="/">Home</a><a href="https://app.mandate.kitchen/">Open the app</a><a href="https://github.com/iloos/junction-2026/blob/main/docs/CLAIMS.md">Full claim ledger</a></nav>
+	</footer>
+</div>
+</body>
+</html>
