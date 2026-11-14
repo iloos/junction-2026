@@ -16,7 +16,7 @@ _Lead, Sat 14 Nov late. Inputs: every lane's checkpoint (docs/lanes/*.md: core-d
   - The product card with verified Valio Aimo listings and photos.
   - Ops: Orders, Demand, rules counts, honest refusal causes.
   - The agent door: absolute links, pairing, refusals that name the failing requirement, one ranking preference across doors.
-  - Observability: persisted traces, request ids, JSON logs, Aiven OpenSearch for Postgres logs.
+  - Observability: persisted traces (Postgres, 7 days), request ids, JSON logs (Runtime keeps 24 h). Aiven refuses log shipping from the Runtime app to OpenSearch on our project (403 service_integration_not_allowed for both logs and external_opensearch_logs), so the user held it and is removing mandate-logs; claim no OpenSearch.
 - **Prod.**
   - b10cd43 is smoked: 11 passed, the only failures being the /agents prose and a fixed mobile test.
   - 494bd09 (batch 2, with migration 0005 applied) is deploying.
@@ -67,7 +67,6 @@ _Lead, Sat 14 Nov late. Inputs: every lane's checkpoint (docs/lanes/*.md: core-d
 
 ## Waiting on the user
 - PUBLIC_ORIGIN in the Aiven console.
-- The app → OpenSearch log integration (console).
 - The Nemotron endpoint (404).
 - SMOKE_KEY.
 - The history rewrite and placeholder prices before public.
