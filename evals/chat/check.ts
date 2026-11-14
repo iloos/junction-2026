@@ -62,6 +62,8 @@ export interface Observed {
 	step: ChatStep;
 	/** The scripted step this observation belongs to (a chef step may take several turns when the driver answers its clarifications). */
 	stepIndex?: number;
+	/** A human step's outcome: an act that fails would make the rest of the trial meaningless. */
+	human?: { ok: boolean; detail: string };
 	/** NDJSON events of a chef turn; empty for a human step. */
 	events: ChatEvent[];
 	task: TaskView | null;
@@ -108,6 +110,7 @@ export function checkStep(
 	const add = (key: string, pass: boolean, detail: string) =>
 		out.push({ key: `${i}.${key}`, pass, detail });
 	const chef = 'chef' in o.step;
+	if (o.human) add('humanAct', o.human.ok, o.human.detail);
 	const asked = o.events.filter((e) => e.type === 'clarify').map((e) => e.field ?? '?');
 
 	// Clarification: at most one question per turn, never a field the task already holds.
@@ -178,7 +181,14 @@ export function checkStep(
 	if (want.samePlan !== undefined) {
 		const a = primary(prev?.task ?? null);
 		const b = primary(t);
-		add('samePlan', want.samePlan === (Boolean(a) && a === b), `${a} → ${b}`);
+		// No plan on either side is the same plan only while the task waits on a clarification (asked before planning).
+		const waiting = !a && !b && prev?.task?.pending.kind === 'clarify';
+		const same = a ? a === b : waiting;
+		add(
+			'samePlan',
+			want.samePlan === same,
+			`${a ?? 'no plan'} → ${b ?? 'no plan'}${waiting ? ' (awaiting clarification)' : ''}`
+		);
 	}
 	const mine = new Set(t?.plans.map((p) => p.planId));
 	const receipts = o.receipts.filter((r) => mine.has(r.planId));
