@@ -166,7 +166,8 @@ export async function lookupFacts(
 			"Prefer the manufacturer's own product page, then wholesaler or retailer product pages for this exact product (same GTIN or same name and size). Report only facts stated on the pages; null or [] when not stated. Never mix in a sibling product.",
 		schema: FACTS_SCHEMA,
 		highlightsQuery: 'ainesosat allergeenit sisältää alkuperä nettopaino',
-		numResults: 5
+		numResults: 5,
+		empty: (c) => Object.values(c).every((v) => v === null || (Array.isArray(v) && !v.length))
 	});
 
 	const suggestions: Suggestion[] = [];
@@ -341,7 +342,8 @@ export async function findOutside(
 		query: `${need} resepti suurkeittiö isolle määrälle`,
 		systemPrompt: `A professional kitchen needs "${need}"${d.context ? ` (${d.context})` : ''} and its wholesaler has nothing deliverable. Find recipes that scale to a large batch, or ready-made alternatives. Report only what pages state.`,
 		schema: OUTSIDE_SCHEMA,
-		numResults: 5
+		numResults: 5,
+		empty: (c) => !c.options.some((o) => o && o.ingredients.length > 0)
 	});
 	const options: OutsideOption[] = [];
 	for (const [i, o] of (r.content?.options ?? []).entries()) {

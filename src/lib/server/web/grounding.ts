@@ -209,6 +209,7 @@ const keyOf = (x: Dish) =>
 /** Test hook. */
 export function resetGrounding() {
 	store.clear();
+	settledAt.clear();
 }
 
 /** What is known for each dish name now: done, pending, failed, or absent (never asked). */
@@ -221,15 +222,30 @@ export function groundingFor(dishes: Dish[]): Record<string, GroundingState> {
 	);
 }
 
+/** A failure or a "no cited recipe" verdict stands this long; after it, the next read or proposal asks again. */
+export const RETRY_AFTER_MS = 5 * 60_000;
+const settledAt = new Map<string, number>();
+const retryable = (s: GroundingState) =>
+	s.state === 'failed' || (s.state === 'done' && s.compared.length === 0);
+/** Known and still standing: pending, a verdict with sources, or a failure/empty verdict younger than the retry. */
+function standing(k: string, now = Date.now()): boolean {
+	const s = store.get(k);
+	if (!s) return false;
+	return !retryable(s) || now - (settledAt.get(k) ?? 0) < RETRY_AFTER_MS;
+}
+/** Some dish has no standing verdict (never asked, or a failure/empty verdict past its retry): worth starting. */
+export const needsGrounding = (dishes: Dish[], now = Date.now()) =>
+	dishes.some((x) => !standing(keyOf(x), now));
+
 /**
- * Starts grounding every dish not already known (two at a time) and returns at once. A failure is kept as `failed` for
- * this process so a refresh does not retry a paid call in a loop; a new process tries again.
+ * Starts grounding every dish without a standing verdict (two at a time) and returns at once. A failure or an empty
+ * verdict stands for `RETRY_AFTER_MS`, so a refresh does not retry a paid call in a loop, and a later read does.
  */
 export function startGrounding(
 	dishes: { name: string; ingredients: ModelIngredient[] }[],
 	d: GroundDeps
 ): Promise<void> {
-	const todo = dishes.filter((x) => !store.has(keyOf(x)));
+	const todo = dishes.filter((x) => !standing(keyOf(x)));
 	for (const x of todo) store.set(keyOf(x), { dishName: x.name, state: 'pending' });
 	const queue = [...todo];
 	const worker = async () => {
@@ -243,6 +259,7 @@ export function startGrounding(
 					error: String((e as Error)?.message ?? e).slice(0, 200)
 				});
 			}
+			settledAt.set(keyOf(x), Date.now());
 		}
 	};
 	return Promise.all([worker(), worker()]).then(() => {});

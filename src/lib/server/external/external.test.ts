@@ -1,7 +1,7 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ExternalCallTrace } from '$lib/core/contracts/task';
 import { createBreaker, resetBreakers } from './breaker';
-import { createExternalCall, RateLimited, resetExternalCache } from './call';
+import { createExternalCall, RateLimited, resetExternalCache, SHORT_LIVED_MS } from './call';
 import { createSpendLedger, LimitError } from './ledger';
 import { withExternalScope } from './scope';
 
@@ -92,5 +92,29 @@ describe('external call', () => {
 		expect(await call({ key: 'ok', purpose: 'offers' }, async () => ({ value: 1 }))).toMatchObject({
 			cache: 'live'
 		});
+	});
+});
+
+describe('short-lived answers', () => {
+	afterEach(() => vi.useRealTimers());
+	it('an empty answer is reused for minutes, not the day', async () => {
+		vi.useFakeTimers({ toFake: ['Date'] });
+		vi.setSystemTime(new Date('2026-11-14T10:00:00Z'));
+		const call = createExternalCall({ api: 'exa', name: 'exa-short' });
+		let sent = 0;
+		const req = {
+			key: 'empty',
+			purpose: 'find_outside',
+			maxAgeMs: 24 * 3_600_000,
+			shortLived: (v: { options: unknown[] }) => v.options.length === 0
+		};
+		const send = async () => ({ value: { options: sent++ ? ['recipe'] : [] } });
+		await call(req, send);
+		expect((await call(req, send)).cache).toBe('cache');
+		vi.setSystemTime(Date.now() + SHORT_LIVED_MS + 1000);
+		expect(await call(req, send)).toMatchObject({ cache: 'live', value: { options: ['recipe'] } });
+		vi.setSystemTime(Date.now() + 3_600_000);
+		expect((await call(req, send)).cache).toBe('cache'); // a found answer stands for the day
+		expect(sent).toBe(2);
 	});
 });

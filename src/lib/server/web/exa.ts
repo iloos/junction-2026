@@ -45,6 +45,8 @@ export interface StructuredQuery<T = unknown> {
 	includeDomains?: string[];
 	/** Stable id for the recorded answer the fixture adapter replays ("facts:460002"). */
 	key: string;
+	/** A parsed answer that found nothing worth keeping for the day (no option, no fact). */
+	empty?: (content: T) => boolean;
 }
 
 export interface FactSearch extends Web {
@@ -157,7 +159,15 @@ export function createExa(call: WebCall): FactSearch {
 							: { maxCharacters: 600 }
 					}
 				},
-				{ purpose: q.key, accept: (b) => shapeStructured(b, q.parse).content !== null }
+				{
+					purpose: q.key,
+					accept: (b) => shapeStructured(b, q.parse).content !== null,
+					// Nothing found is reused for minutes only: a later read asks Exa again.
+					shortLived: (b) => {
+						const c = shapeStructured(b, q.parse).content;
+						return c === null || (q.empty?.(c) ?? false);
+					}
+				}
 			);
 			return {
 				...shapeStructured(r.body, q.parse),
