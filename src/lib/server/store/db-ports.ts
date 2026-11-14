@@ -5,7 +5,9 @@
 import type { Kitchen, ServerEvent } from '$lib/core/contracts';
 import type { Catalog } from '$lib/core/ports';
 import { Kitchen as KitchenSchema } from '$lib/core/contracts';
+import { and, eq, inArray } from 'drizzle-orm';
 import { createFixtureDb } from '../db/pglite';
+import { simStock } from '../db/schema';
 import { createSimulator } from '../adapters/simulator/stock';
 import { scopedWorkspace, SimOverlay } from '../adapters/simulator/overlay';
 import { createFixturePorts } from './fixture-ports';
@@ -30,6 +32,67 @@ export function loadSeedEvents(): Record<string, EventSeed> {
 
 export function loadSeedKitchens(): Kitchen[] {
 	return seedKitchens.kitchens.map((k) => KitchenSchema.parse(k));
+}
+
+/**
+ * Available to promise: what a quote shows is the supplier's known stock minus what this run's commits already
+ * took (sim_stock), so a second kitchen quoting after the first committed sees the stock that is left, not
+ * Valio's number from before. Applies to known amounts only; unknown and unlimited supply is left as it is.
+ */
+export function afterCommits(
+	catalog: Catalog,
+	db: AnyDb,
+	runOf: (workspaceId: string) => string,
+	defaultWorkspace: string
+): Catalog {
+	return {
+		...catalog,
+		async offers(ids, deliverBy) {
+			const r = await catalog.offers(ids, deliverBy);
+			const known = r.offers.filter(
+				(o) => o.availability.kind === 'known' && o.availability.amount !== null
+			);
+			if (known.length === 0) return r;
+			const ws = scopedWorkspace() ?? defaultWorkspace;
+			const rows = await db
+				.select({ productId: simStock.productId, available: simStock.available })
+				.from(simStock)
+				.where(
+					and(
+						eq(simStock.workspaceId, ws),
+						eq(simStock.runId, runOf(ws)),
+						inArray(
+							simStock.productId,
+							known.map((o) => o.productId)
+						)
+					)
+				);
+			const left = new Map(rows.map((x) => [x.productId, x.available]));
+			return {
+				...r,
+				offers: r.offers.map((o) => {
+					const a = o.availability;
+					const rest = left.get(o.productId);
+					if (rest === undefined || rest === null || a.kind !== 'known' || a.amount === null)
+						return o;
+					if (rest >= a.amount) return o;
+					const taken = +(a.amount - rest).toFixed(3);
+					return {
+						...o,
+						availability: {
+							...a,
+							kind: rest <= 0 ? 'out' : 'known',
+							amount: Math.max(0, rest),
+							provenance: {
+								...a.provenance,
+								note: `${a.provenance.note ? `${a.provenance.note}; ` : ''}${a.amount} at the supplier, ${taken} already committed in this run`
+							}
+						}
+					};
+				})
+			};
+		}
+	};
 }
 
 export interface DbPortsOptions {
@@ -110,7 +173,9 @@ export async function createDbPorts(o: DbPortsOptions = {}) {
 	const today = () => scenarioDate(base.clock.now());
 	const ports: ServicePorts = {
 		...base,
+		catalog: afterCommits(base.catalog, db, (ws) => (live ? currentRun(ws) : runId), workspaceId),
 		store,
+		// Stock rows are seeded from the catalogue's own answer, never from an already-reduced one.
 		simulator: createSimulator(base.catalog, { today }),
 		events: loadSeedEvents(),
 		// Same database handle as the store: plan_event reads the proposals /request writes.
