@@ -34,6 +34,7 @@ _Lead, Sat 14 Nov late. Inputs: every lane's checkpoint (docs/lanes/*.md: core-d
   - the "Valio suggests" contract (K7);
   - a glance at da's substitutes.ts rebase.
 - **Conversation (B + E + 41, to merge into one session):**
+  - **First, from the user's prod test:** "i want a no meat meal but it should be very filling and nutritious. i also want to use a peach in the dinner" was answered on /request with "reads as a question, ask in the chat". It is the D20 `menu` kind: route it to brief → menu (requirement vegetarian, include peach, guidance "filling, nutritious") from both doors. Collapse the 8 warnings into one sentence; debug lines ("the model read ?, the rules 1 sales") go behind System.
   - **D15 stage 2:** chat calls the request pipeline for order readings. Today "50 eggs" differs between chat and /request.
   - RequestFlow cards in the transcript, and /request redirecting into chat.
   - The menu-v2 contract (A) and wiring (B), with pins persisted through MenuStore.
