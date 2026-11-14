@@ -34,6 +34,7 @@ The agent's limits can't be talked away and its "done" means a domain outcome: r
 
 ## Report
 - Sat ~03:30 · done: C, D, E, A (narrow seam), G suites · server tests, check, lint green · ready to merge: yes
+- Sat ~05:00 · done: F4, F25 seams, get_context handler, MCP instructions · stubbed: get_context not in the registry (Need 1), envelope initiatedBy (Need 2) · merge gate green · ready to merge: yes
 
 ## Handoff (Sat 14 Nov)
 
@@ -78,3 +79,16 @@ curl -X POST localhost:5177/api/agent/run -H 'authorization: Bearer fx-chef' -d 
 - No separate read-only evidence worker (E): facts plus per-intent tool lists plus the core gate bound the damage instead.
 - No phase menus inside an intent.
 - `seeded_event` may still call `commit_order` within the mandate (an LLM planner could commit eligible lines; the script never does).
+
+## Track E (Sat 14 Nov, branch lane/e-agent on main 91f034a)
+
+**Done**
+- F4: the routine intent reads the goal with `request/parse.parseRules` (qty, unit, date on the scenario clock), ranks search hits with `request/lookup.rankCandidates` and converts with `request/convert` into sales units; `place_order` lines carry the physical `amount`. Refused with a reason (clarify), never defaulted: no unit, no date, past date, several items, a comma-thousands quantity, qty out of range. Tests: `intent.test.ts` "F4 regression…", "refuses what it cannot honour…"; `seams.test.ts` "F4 regression: 4 kg butter tomorrow…" (end to end on PGlite: butter category 10500, ≥4 kg, deliverBy 2026-11-15) and three refusal trials (0 planner calls, 0 ops).
+- F25: `llm.generate` gets the run `signal`; `principalContext` sets `initiatedBy` + `kitchenIds`; `mayStartAgent` checks `agent:run` (ctx scopes, or the actor's role table); `bootstrapContext(source, principal, goal)` picks the plan by the request (named id → event → kitchen → shortage lines → only one; otherwise asks which); capped fact lists carry `truncated: {field: fullCount}`. Tests: `seams.test.ts` F25 block, `principal.test.ts` "F25: …".
+- get_context handler (`agent/get-context.ts`, `createGetContext(ports)`, T0 output schema, `meta.nextAction` our own words) + MCP `instructions` (`tools/mcp.ts mcpInstructions`, names get_context once the registry serves it). Tests: `get-context.test.ts`, `mcp.test.ts` "initialize returns instructions…".
+- `evals/agent/goals.json`: g2/g5 goals now state a unit and date ("3 packs kerma … by Monday").
+
+**Needs (lead)**
+1. Registry: move `get_context` from `tools-next.ts` into `toolSchemas` and wire `handlers.get_context = createGetContext(ports)` (in `core/services/handlers.ts` or the server handler map); add a `TITLES` entry in `tools/mcp.ts` (I can do that line once the name exists).
+2. core/services (`orders.ts`, `events.ts`, `substitutes.ts` `pending()` builders): copy `ctx.initiatedBy` onto `PendingOp` (`...(ctx.initiatedBy ? { initiatedBy: ctx.initiatedBy } : {})`). The run context already sets it; envelopes don't carry it yet.
+3. `src/routes/api/agent/run/[id]/cancel/+server.ts`: call `mayStartAgent(ctx)` (scopes) instead of `mayStartAgent(ctx.actor)`; the actor form still works via the role table.
