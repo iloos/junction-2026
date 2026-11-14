@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { OpEnvelope } from '$lib/core/contracts';
 import { applyOps, emptyState } from '$lib/core/state';
 import seeded from './fixtures/seeded-ops.ndjson?raw';
-import { buildProblems, dishName } from './problems';
+import { anomalyTitle, buildProblems, dishName, withoutHeldNote } from './problems';
 import { dueOf } from '$lib/core/mandate/due';
 import { pendingApprovalOf } from './cases';
 import { doorOf, storyOf } from './story';
@@ -166,5 +166,17 @@ describe('the story of a problem', () => {
 		expect(doorOf('mcp')).toBe('MCP');
 		expect(doorOf('rest')).toBe('API');
 		expect(doorOf('kitchen')).toBeUndefined();
+	});
+});
+
+describe('recall card words', () => {
+	const msg =
+		'Recall 11 Nov 2026 (Ruokavirasto): Muovisessa ensilusikassa kontaktimateriaalivirhe, contact material fault. Recalled: ensilusikka. No catalogue product matches. Nothing held.';
+	it('titles a recall by date, agency and item, not the whole message', () => {
+		expect(anomalyTitle(msg)).toBe('Recall 11 Nov 2026 (Ruokavirasto): ensilusikka');
+		expect(anomalyTitle('Demand spike at k-hotel')).toBe('Demand spike at k-hotel');
+	});
+	it('drops the message’s own "Nothing held." so the card says it once', () => {
+		expect(withoutHeldNote(msg)).toMatch(/No catalogue product matches\.$/);
 	});
 });
