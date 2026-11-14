@@ -83,6 +83,25 @@ async function request(go, text) {
 	return last.data;
 }
 
+/**
+ * Card tokens, so quantity, product and asked item read apart (the app's product token look):
+ * `{ qty }` a tabular quantity such as "10 × 1 l", `{ product }` a catalogue name, `{ item }` what was asked for.
+ */
+function packQty(line) {
+	const phys = line.view?.physical;
+	const n = line.qty.value;
+	const su = unit(line.qty.unit);
+	if (!phys || su === phys.unit) return `${num(n)} ${su}`;
+	return `${num(n)} × ${num(Math.round((phys.value / n) * 1000) / 1000)} ${phys.unit}`;
+}
+/** The asked line split into tokens from the parsed request: "10 l" · "lactose-free milk" · "for Friday". */
+function askOf(text, item) {
+	const qty = item.qty != null && item.unit ? `${num(item.qty)} ${item.unit}` : null;
+	const at = text.toLowerCase().indexOf(item.query.toLowerCase());
+	if (!qty || at < 0) return null;
+	return { qty, item: text.slice(at, at + item.query.length), rest: text.slice(at + item.query.length).trim() };
+}
+
 /** The seeded Christmas buffet in a fresh sandbox, started as the Kitchen's "Plan the event" does. */
 async function buffet(go) {
 	await go('/kitchen-api/snapshot');
@@ -109,98 +128,6 @@ const kitchenTool = (go, name, input, shown) => {
 
 const CASES = [
 	{
-		id: 'within-mandate',
-		claimable: true,
-		endpoints: ['GET /kitchen-api/snapshot', 'POST /kitchen-api/scenario {action:start}', 'POST /kitchen-api/tool/commit_order'],
-		async run() {
-			const go = visitor();
-			const { plan, view, eligible, shown } = await buffet(go);
-			need(eligible.length > 0, 'no line can be ordered now');
-			const waiting = plan.lines.filter((l) => l.view?.committable !== true && l.state === 'held').length;
-			const r = await kitchenTool(go, 'commit_order', {
-				planId: plan.id,
-				version: plan.version,
-				idempotencyKey: `record-within-${plan.id}-v${plan.version}`
-			}, shown);
-			need(r.status === 200 && r.json?.receiptId, `commit_order ${r.status} ${r.body.slice(0, 120)}`);
-			const ids = new Set(eligible.map((l) => l.id));
-			need(
-				r.json.committedLineIds.length === eligible.length && r.json.committedLineIds.every((id) => ids.has(id)),
-				'committed lines differ from the lines the Kitchen offers'
-			);
-			return {
-				via: 'Started in the Kitchen',
-				request: `Plan the event · ${view.title.replace(/^Christmas dinner buffet/, 'Christmas buffet')}`,
-				steps: [
-					{
-						icon: 'shield',
-						text: `${eligible.length} lines are inside the mandate, so they need no decision.`
-					},
-					{ icon: 'hold', text: `${waiting} lines wait for the chef, each with its reason.` },
-					{
-						icon: 'receipt',
-						text: `Ordered the ${r.json.committedLineIds.length} lines it can now, on 1 receipt. The rest still wait.`
-					}
-				],
-				outcome: { state: 'ordered', label: 'Ordered within your mandate', eur: eur(r.json.totalCents) },
-				link: `${BASE}/`
-			};
-		}
-	},
-	{
-		id: 'out-of-stock',
-		claimable: true,
-		endpoints: ['GET /kitchen-api/snapshot', 'POST /kitchen-api/scenario {action:start}'],
-		async run() {
-			const go = visitor();
-			await go('/kitchen-api/snapshot');
-			const s = await go('/kitchen-api/scenario', post({ action: 'start' }));
-			need(s.status === 200 && s.json?.plan, `scenario start ${s.status}`);
-			const { plan, view } = s.json;
-			const sub = plan.lines.find(
-				(l) => l.substituteFor && l.state === 'held' && /kinkku/i.test(l.productName ?? '')
-			);
-			need(sub, 'no held ham substitute in the plan');
-			const out = plan.lines.find(
-				(l) =>
-					l.productId === sub.substituteFor &&
-					l.state === 'unorderable' &&
-					l.reasons.includes('out')
-			);
-			need(out, 'the substituted product is not out of stock');
-			need(sub.offer?.availability?.kind === 'known', 'the substitute is not known stock');
-			const phys = sub.view.physical;
-			const held = sub.reasons.includes('new_sku')
-				? 'It is a new product for this kitchen, so it waits for the chef.'
-				: 'It waits for the chef.';
-			return {
-				via: 'Started in the Kitchen',
-				request: `Plan the event · ${view.title.replace(/^Christmas dinner buffet/, 'Christmas buffet')}`,
-				steps: [
-					{
-						icon: 'search',
-						text: `${out.productName} is out of stock at Valio.`
-					},
-					{
-						icon: 'swap',
-						text: `Proposed ${sub.productName}: ${num(sub.qty.value)} ${unit(sub.qty.unit)}, ${num(phys.value)} ${phys.unit}. A known-stock candidate: Valio states ${num(sub.offer.availability.amount)} in stock.`
-					},
-					{ icon: 'hold', text: held }
-				],
-				outcome: { state: 'held', label: 'Needs your approval', eur: eur(sub.lineCents) },
-				link: `${BASE}/`
-			};
-		}
-	},
-	{
-		id: 'contention-split',
-		claimable: false, // another kitchen takes stock → split (src/lib/server/store/contention.test.ts)
-		endpoints: ['POST /kitchen-api/scenario {action:contention}'],
-		async run() {
-			throw new Unrecordable('not claimable yet');
-		}
-	},
-	{
 		id: 'lactose-free',
 		claimable: true,
 		endpoints: ['POST /request/run'],
@@ -220,14 +147,17 @@ const CASES = [
 			need(line.offer?.availability?.kind === 'unknown', 'availability is not unknown');
 			return {
 				request: text,
+				ask: askOf(text, item),
 				steps: [
 					{
 						icon: 'search',
-						text: `Read as ${num(item.qty)} ${item.unit} of milk that must be lactose-free, for ${day(r.parsed.deliverBy)}.`
+						text: `Read as ${num(item.qty)} ${item.unit} of milk that must be lactose-free, for ${day(r.parsed.deliverBy)}.`,
+						parts: [{ t: 'Read as ' }, { qty: `${num(item.qty)} ${item.unit}` }, { t: ` of milk that must be lactose-free, for ${day(r.parsed.deliverBy)}.` }]
 					},
 					{
 						icon: 'check',
-						text: `Picked ${line.productName}, ${num(look.pick.conversion.salesQty)} ${unit(look.pick.salesUnit)}. ${look.rejectedCount} catalogue matches filtered out, ${look.shortlist.length} shortlisted.`
+						text: `Picked ${line.productName}, ${num(look.pick.conversion.salesQty)} ${unit(look.pick.salesUnit)}. ${look.rejectedCount} catalogue matches filtered out, ${look.shortlist.length} shortlisted.`,
+						parts: [{ t: 'Picked ' }, { qty: packQty(line) }, { product: line.productName }, { t: `. ${look.rejectedCount} catalogue matches filtered out, ${look.shortlist.length} shortlisted.` }]
 					},
 					{
 						icon: 'hold',
@@ -241,27 +171,34 @@ const CASES = [
 		}
 	},
 	{
-		id: 'cut-off',
+		id: 'within-mandate',
 		claimable: true,
-		endpoints: ['POST /request/run'],
+		endpoints: ['POST /request/run', 'POST /request/run {action:commit}'],
 		async run() {
-			const text = '4 kg lactose-free butter for tomorrow';
-			const r = await request(visitor(), text);
-			const look = r.lookup.items[0];
-			need(look.question && look.answer?.kind === 'date', 'no cut-off question');
-			need(r.order === null, 'something was ordered');
+			const go = visitor();
+			const text = '10 kg salmon fillet for Friday';
+			const r = await request(go, text);
 			const item = r.parsed.items[0];
+			const plan = r.order?.plan;
+			const line = plan?.lines?.[0];
+			need(line, 'nothing planned');
+			need(plan.lines.every((l) => l.state === 'eligible' && l.tier === 'act'), 'not inside the mandate');
+			const c = await go('/request/run', post({ action: 'commit', planId: plan.id, version: plan.version, attempt: 1 }));
+			need(c.status === 200 && c.json?.commit?.receiptId, `commit ${c.status}`);
+			const awaiting = c.json.commit.awaitingSupplier.length > 0;
 			return {
 				request: text,
+				ask: askOf(text, item),
 				steps: [
 					{
-						icon: 'search',
-						text: `Read as ${num(item.qty)} ${item.unit} of lactose-free butter for ${day(r.parsed.deliverBy)}.`
+						icon: 'check',
+						text: `Picked ${line.productName}, ${packQty(line)}, a product this kitchen already buys.`,
+						parts: [{ t: 'Picked ' }, { qty: packQty(line) }, { product: line.productName }, { t: ', a product this kitchen already buys.' }]
 					},
-					{ icon: 'clock', text: look.question },
-					{ icon: 'swap', text: `Offered: ${look.answer.label}.` }
+					{ icon: 'shield', text: 'Inside the mandate: under the caps, Valio states the stock, nothing to sign off.' },
+					{ icon: 'receipt', text: awaiting ? 'Ordered alone, on one receipt; awaiting the supplier.' : 'Ordered alone, on one receipt; supplier confirmed.' }
 				],
-				outcome: { state: 'caught', label: 'Nothing ordered' },
+				outcome: { state: 'ordered', label: 'Ordered within your mandate', eur: eur(c.json.commit.totalCents) },
 				link: `${BASE}/request`
 			};
 		}
@@ -330,7 +267,8 @@ const CASES = [
 				steps: [
 					{
 						icon: 'hold',
-						text: `Its order (${l.productName}, ${num(l.qty.value)} ${unit(l.qty.unit)}) is held for the chef.`
+						text: `Its order (${l.productName}, ${num(l.qty.value)} ${unit(l.qty.unit)}) is held for the chef.`,
+						parts: [{ t: 'Its order of ' }, { qty: `${num(l.qty.value)} ${unit(l.qty.unit)}` }, { product: l.productName }, { t: ' is held for the chef.' }]
 					},
 					{
 						icon: 'shield',
@@ -347,6 +285,130 @@ const CASES = [
 		}
 	},
 	{
+		id: 'cut-off',
+		claimable: true,
+		endpoints: ['POST /request/run'],
+		async run() {
+			const text = '4 kg lactose-free butter for tomorrow';
+			const r = await request(visitor(), text);
+			const look = r.lookup.items[0];
+			need(look.question && look.answer?.kind === 'date', 'no cut-off question');
+			need(r.order === null, 'something was ordered');
+			const item = r.parsed.items[0];
+			return {
+				request: text,
+				ask: askOf(text, r.parsed.items[0]),
+				steps: [
+					{
+						icon: 'search',
+						text: `Read as ${num(item.qty)} ${item.unit} of lactose-free butter for ${day(r.parsed.deliverBy)}.`
+					},
+					{ icon: 'clock', text: look.question },
+					{ icon: 'swap', text: `Offered: ${look.answer.label}.` }
+				],
+				outcome: { state: 'caught', label: 'Nothing ordered' },
+				link: `${BASE}/request`
+			};
+		}
+	},
+	{
+		id: 'one-receipt',
+		claimable: true,
+		endpoints: ['POST /request/run', 'POST /request/run {action:approve}', 'POST /request/run {action:commit} ×4'],
+		async run() {
+			const go = visitor();
+			const text = '10 l lactose-free milk for Friday';
+			const r = await request(go, text);
+			const plan = r.order?.plan;
+			const ap = r.order?.approval;
+			need(plan && ap?.state === 'pending', 'no pending approval');
+			const g = await go(
+				'/request/run',
+				post({ action: 'approve', approvalId: ap.id, planId: plan.id, planVersion: ap.planVersion, termsHash: ap.termsHash, decision: 'grant' })
+			);
+			need(g.status === 200, `approve ${g.status} ${g.body.slice(0, 120)}`);
+			const version = g.json?.plan?.version ?? g.json?.order?.plan?.version ?? plan.version;
+			const commits = await Promise.all(
+				[1, 2, 3, 4].map((attempt) => go('/request/run', post({ action: 'commit', planId: plan.id, version, attempt })))
+			);
+			const ok = commits.filter((c) => c.status === 200 && c.json?.commit?.receiptId);
+			need(ok.length === 4, `${4 - ok.length} of 4 commits failed: ${commits.map((c) => c.status).join(',')}`);
+			const receipts = new Set(ok.map((c) => c.json.commit.receiptId));
+			const keys = new Set(ok.map((c) => c.json.commit.idempotencyKey));
+			need(keys.size === 1, 'commits used different keys');
+			need(receipts.size === 1, `${receipts.size} receipts`);
+			const c = ok[0].json.commit;
+			const ask = askOf(text, r.parsed.items[0]);
+			const tail = `, approved by the chef, then sent ${ok.length} times at once`;
+			return {
+				request: `${text}${tail}`,
+				ask: ask && { ...ask, rest: `${ask.rest}${tail}` },
+				steps: [
+					{ icon: 'hold', text: 'The chef approves the exact terms on screen.' },
+					{ icon: 'receipt', text: `${ok.length} sends of the same order, with one key.` },
+					{ icon: 'check', text: `${receipts.size} receipt: ordered once, never twice.` }
+				],
+				outcome: { state: 'ordered', label: 'Ordered · 1 receipt', eur: eur(c.totalCents) },
+				link: `${BASE}/request`
+			};
+		}
+	},
+	{
+		id: 'out-of-stock',
+		claimable: true,
+		endpoints: ['GET /kitchen-api/snapshot', 'POST /kitchen-api/scenario {action:start}'],
+		async run() {
+			const go = visitor();
+			await go('/kitchen-api/snapshot');
+			const s = await go('/kitchen-api/scenario', post({ action: 'start' }));
+			need(s.status === 200 && s.json?.plan, `scenario start ${s.status}`);
+			const { plan, view } = s.json;
+			const sub = plan.lines.find(
+				(l) => l.substituteFor && l.state === 'held' && /kinkku/i.test(l.productName ?? '')
+			);
+			need(sub, 'no held ham substitute in the plan');
+			const out = plan.lines.find(
+				(l) =>
+					l.productId === sub.substituteFor &&
+					l.state === 'unorderable' &&
+					l.reasons.includes('out')
+			);
+			need(out, 'the substituted product is not out of stock');
+			need(sub.offer?.availability?.kind === 'known', 'the substitute is not known stock');
+			const phys = sub.view.physical;
+			const held = sub.reasons.includes('new_sku')
+				? 'It is a new product for this kitchen, so it waits for the chef.'
+				: 'It waits for the chef.';
+			return {
+				via: 'Started in the Kitchen',
+				request: `Plan the event · ${view.title.replace(/^Christmas dinner buffet/, 'Christmas buffet')}`,
+				steps: [
+					{
+						icon: 'search',
+						text: `${out.productName} is out of stock at Valio.`,
+						parts: [{ product: out.productName }, { t: ' is out of stock at Valio.' }]
+					},
+					{
+						icon: 'swap',
+						text: `Proposed ${sub.productName}: ${num(sub.qty.value)} ${unit(sub.qty.unit)}, ${num(phys.value)} ${phys.unit}. A known-stock candidate: Valio states ${num(sub.offer.availability.amount)} in stock.`,
+						parts: [{ t: 'Proposed ' }, { qty: packQty(sub) }, { product: sub.productName }, { t: `. A known-stock candidate: Valio states ${num(sub.offer.availability.amount)} in stock.` }]
+					},
+					{ icon: 'hold', text: held }
+				],
+				outcome: { state: 'held', label: 'Needs your approval', eur: eur(sub.lineCents) },
+				link: `${BASE}/`
+			};
+		}
+	},
+	{
+		id: 'contention-split',
+		claimable: false, // another kitchen takes stock → split (src/lib/server/store/contention.test.ts)
+		endpoints: ['POST /kitchen-api/scenario {action:contention}'],
+		async run() {
+			throw new Unrecordable('not claimable yet');
+		}
+	},
+	{
 		id: 'menu-recipes',
 		claimable: false, // menu dishes checked against cited recipes
 		endpoints: ['POST /request/menu'],
@@ -354,38 +416,6 @@ const CASES = [
 			throw new Unrecordable('not claimable yet');
 		}
 	},
-	{
-		id: 'one-receipt',
-		claimable: true,
-		endpoints: ['POST /kitchen-api/scenario {action:start}', 'POST /kitchen-api/tool/commit_order ×4'],
-		async run() {
-			const go = visitor();
-			const { plan, eligible, shown } = await buffet(go);
-			need(eligible.length > 0, 'no line can be ordered now');
-			const key = `record-retry-${plan.id}-v${plan.version}`;
-			const commits = await Promise.all(
-				[1, 2, 3, 4].map(() =>
-					kitchenTool(go, 'commit_order', { planId: plan.id, version: plan.version, idempotencyKey: key }, shown)
-				)
-			);
-			const ok = commits.filter((c) => c.status === 200 && c.json?.receiptId);
-			need(ok.length === 4, `${4 - ok.length} of 4 commits failed`);
-			const receipts = new Set(ok.map((c) => c.json.receiptId));
-			need(receipts.size === 1, `${receipts.size} receipts`);
-			const c = ok[0].json;
-			const n = c.committedLineIds.length;
-			return {
-				via: 'Started in the Kitchen',
-				request: `The same order sent ${ok.length} times at once`,
-				steps: [
-					{ icon: 'receipt', text: `${ok.length} sends of one order (${n} line${n === 1 ? '' : 's'}), with one key.` },
-					{ icon: 'check', text: `${receipts.size} receipt: ordered once, never twice.` }
-				],
-				outcome: { state: 'ordered', label: 'Ordered · 1 receipt', eur: eur(c.totalCents) },
-				link: `${BASE}/`
-			};
-		}
-	}
 ];
 
 // ---------------------------------------------------------------------------------------------------------------

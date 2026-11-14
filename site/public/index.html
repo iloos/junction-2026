@@ -43,6 +43,10 @@
 .case-ask { margin: 0; padding: 16px 18px 14px; border-bottom: 1px solid var(--rule); }
 .case-ask small { display: block; font: 500 12px/1.4 'IBM Plex Mono', ui-monospace, monospace; color: var(--ink-3); margin-bottom: 4px; }
 .case-ask b { font-weight: 600; font-size: 16px; line-height: 1.35; text-wrap: balance; }
+/* Product tokens: the quantity as its own tabular chip, the product name in ink, the asked item set apart. */
+.tok-qty { display: inline-block; font: 500 0.9em/1.35 'IBM Plex Mono', ui-monospace, monospace; font-variant-numeric: tabular-nums; color: var(--ink); background: var(--well); border: 1px solid var(--rule); border-radius: 5px; padding: 0 5px; white-space: nowrap; vertical-align: 0.05em; }
+.tok-prod { color: var(--ink); font-weight: 500; }
+.case-ask .tok-item { color: var(--accent-ink); }
 .case-steps { list-style: none; margin: 0; padding: 6px 18px; display: grid; flex: 1; align-content: start; }
 .case-steps li { display: grid; grid-template-columns: 26px 1fr; gap: 10px; padding: 8px 0; font-size: 14.5px; line-height: 1.45; color: var(--ink-2); }
 .case-steps li + li { border-top: 1px dashed var(--rule); }
@@ -426,17 +430,34 @@ function renderChain(data) {
 		return s;
 	};
 
+	/** A step's recorded parts: plain text, a tabular quantity token, or a product name. */
+	function tokens(parts) {
+		const span = el('span');
+		for (const p of parts) {
+			if (p.qty) span.append(el('span', 'tok-qty', p.qty), ' ');
+			else if (p.product) span.append(el('span', 'tok-prod', p.product));
+			else if (p.t) span.append(p.t);
+		}
+		return span;
+	}
+
 	function card(c, i, n) {
 		const a = el('article', 'case');
 		a.setAttribute('role', 'group');
 		a.setAttribute('aria-roledescription', 'slide');
 		a.setAttribute('aria-label', `${i + 1} of ${n}`);
 		const ask = el('p', 'case-ask');
-		ask.append(el('small', null, c.via || 'Asked'), el('b', null, c.request));
+		const asked = el('b');
+		if (c.ask) {
+			// Quantity, item and the rest of the request read apart (the app's product token look).
+			asked.append(el('span', 'tok-qty', c.ask.qty), ' ', el('span', 'tok-item', c.ask.item));
+			if (c.ask.rest) asked.append(' ' + c.ask.rest);
+		} else asked.textContent = c.request;
+		ask.append(el('small', null, c.via || 'Asked'), asked);
 		const steps = el('ol', 'case-steps');
 		for (const s of c.steps.slice(0, 3)) {
 			const li = el('li');
-			li.append(icon(s.icon), el('span', null, s.text));
+			li.append(icon(s.icon), s.parts ? tokens(s.parts) : el('span', null, s.text));
 			steps.append(li);
 		}
 		const out = el('div', 'case-out');
