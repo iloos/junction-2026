@@ -4,7 +4,7 @@ A purchasing agent for professional kitchens, built on Valio Aimo's catalogue fo
 It plans a kitchen's order from the menu, ranks substitutes when products run out, and orders on its own only inside limits the chef sets (the mandate).
 Anything outside those limits waits for a person. An approval covers the exact terms the person saw, and every decision is traced.
 
-**Live:** https://widely-many-scorpion.eur-1.aiven.app · MIT licensed
+**Live:** https://mandate.kitchen (the app: https://app.mandate.kitchen) · MIT licensed
 
 ## A 2-minute tour
 Each visitor gets a private sandbox, so nothing you do affects anyone else.
@@ -17,15 +17,15 @@ Each visitor gets a private sandbox, so nothing you do affects anyone else.
 6. **Connect your own agent** (`/agents`): get a key for your sandbox (below).
 
 ## Connect an agent over MCP
-Open `/agents` to mint a key bound to your sandbox. The page shows your URL; it looks like `https://widely-many-scorpion.eur-1.aiven.app/mcp/k/<your-key>`.
+Open `/agents` to mint a key bound to your sandbox. The page shows your URL; it looks like `https://app.mandate.kitchen/mcp/k/<your-key>`.
 
 ```sh
-claude mcp add --transport http mandate https://widely-many-scorpion.eur-1.aiven.app/mcp/k/<your-key>
+claude mcp add --transport http mandate https://app.mandate.kitchen/mcp/k/<your-key>
 ```
 
 Any MCP client that speaks Streamable HTTP:
 ```json
-{ "mcpServers": { "mandate": { "type": "http", "url": "https://widely-many-scorpion.eur-1.aiven.app/mcp/k/<your-key>" } } }
+{ "mcpServers": { "mandate": { "type": "http", "url": "https://app.mandate.kitchen/mcp/k/<your-key>" } } }
 ```
 
 Start with `get_context`. Your agent can read, plan and order within the mandate. It has no `approve` or `set_mandate` tool and gets 403 if it calls them over REST: only a person approves. The same tools are on REST at `/api/tools/<name>` (schema at `/api/openapi.json`).
