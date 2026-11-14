@@ -199,10 +199,13 @@ async function planOnly(s: Session) {
 	// restaurant's Wednesday, the central kitchen's school day.
 	const event = eventFor(s.kitchenId);
 	if (!event) throw new NoEvent(s.kitchenId);
-	const { plan } = (await must(s, 'plan_event', {
-		kitchenId: s.kitchenId,
-		eventId: event.id
-	})) as PlanOut;
+	// The kitchen's event door: the plan records it (Plan.origin, server-set).
+	const { plan } = (await must(
+		s,
+		'plan_event',
+		{ kitchenId: s.kitchenId, eventId: event.id },
+		{ ...chef(s), origin: 'event' }
+	)) as PlanOut;
 	return plan;
 }
 
