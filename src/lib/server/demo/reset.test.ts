@@ -1,8 +1,12 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { contextFor } from '$lib/server/auth';
 import { realHandlers } from '$lib/server/tools/handlers';
 import { serveTool } from '$lib/server/tools/serve';
-import { ensureRunLoaded } from './reset';
+import { ensureRunLoaded, onCurrentRun } from './reset';
+import { SCENARIO } from '$lib/core/scenario';
+import { createServerPorts } from '$lib/server/store/server-ports';
+import { loadSeedKitchens } from '$lib/server/store/db-ports';
+import { newRunId } from './run';
 import { resetSandbox } from './sandbox';
 import { newVisitorWorkspace } from './visitor-id';
 
@@ -50,4 +54,41 @@ describe('reset and idempotency', () => {
 		);
 		expect(got.ok).toBe(true);
 	}, 60_000);
+});
+
+describe('onCurrentRun', () => {
+	afterEach(() => vi.useRealTimers());
+
+	it('moves a key context onto a run another process started, within the refresh window', async () => {
+		const ws = newVisitorWorkspace();
+		const runA = await ensureRunLoaded(ws, { start: true });
+		const ctx = contextFor('kitchen_agent', 't', 'test', {}, ws);
+		expect(ctx.runId).toBe(runA);
+
+		// Another process resets the sandbox: a newer runs row this process has not set current.
+		await realHandlers();
+		const { store } = await createServerPorts();
+		const runB = newRunId(Date.now() + 1000);
+		await store.ensure({
+			workspaceId: ws,
+			runId: runB,
+			kitchens: loadSeedKitchens(),
+			simStart: SCENARIO.start
+		});
+
+		vi.useFakeTimers({ toFake: ['Date'] });
+		vi.setSystemTime(Date.now() + 6_000);
+		const moved = await onCurrentRun(ctx);
+		expect(moved.runId).toBe(runB);
+		// A pinned run (MANDATE_RUN) is left alone.
+		expect((await onCurrentRun(ctx, 'run-pinned')).runId).toBe(runA);
+	}, 60_000);
+
+	it('keeps an explicit run in a workspace with no runs row', async () => {
+		const ctx = {
+			...contextFor('kitchen_agent', 't', 'test', {}, 'ws-test-norun'),
+			runId: 'run-x'
+		};
+		expect((await onCurrentRun(ctx)).runId).toBe('run-x');
+	});
 });

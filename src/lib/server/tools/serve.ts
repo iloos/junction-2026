@@ -9,7 +9,6 @@ import {
 	type ToolOutput
 } from '$lib/core/contracts';
 import type { CallContext, ToolHandlers } from '$lib/core/ports';
-import { isVisitorWorkspace } from '$lib/server/demo/visitor-id';
 import { inWorkspace } from '$lib/server/adapters/simulator/overlay';
 import { presentMeta } from './present';
 
@@ -90,9 +89,9 @@ export async function serveTool(
 	hooks: ServeHooks = {}
 ): Promise<Served> {
 	if (!isToolName(name)) return fail(err('NOT_FOUND', `unknown tool ${name}`).error);
-	// A judge key resolves to its sandbox's current run; load that run first if this process hasn't yet.
-	if (isVisitorWorkspace(ctx.workspaceId))
-		ctx = await (await import('$lib/server/demo/reset')).onCurrentRun(ctx);
+	// A key resolves to its workspace's run synchronously; follow the newest run (a restart or another
+	// process's reset) so this call reads and writes the same run.
+	ctx = await (await import('$lib/server/demo/reset')).onCurrentRun(ctx);
 	const t0 = performance.now();
 	// Simulated scarcity is per workspace: quotes inside this call see only this workspace's overlay.
 	const scoped = ctx;
