@@ -8,6 +8,7 @@
 		ArrowDown,
 		ArrowUpRight,
 		Check,
+		ChevronRight,
 		LayoutGrid,
 		Hand,
 		LoaderCircle,
@@ -17,6 +18,8 @@
 		X
 	} from '@lucide/svelte';
 	import Board from '$lib/canvas/Board.svelte';
+	import ProductRow from '$lib/canvas/ProductRow.svelte';
+	import ProductToken from '$lib/ui/ProductToken.svelte';
 	import { projectCanvas, type CanvasItem } from '$lib/canvas/model';
 	import { KitchenStore } from '$lib/kitchen/kitchen.svelte';
 	import { call, TAB, ToolError } from '$lib/kitchen/api';
@@ -39,6 +42,7 @@
 	let filter = $state('all');
 	let diet = $state('all');
 	let compact = $state(false);
+	let filtersOpen = $state(true);
 	let notice = $state('');
 	let recommendError = $state('');
 	let refreshPending = $state(false);
@@ -71,6 +75,9 @@
 			.filter((g) => g.items.length) ?? []
 	);
 	const visibleCount = $derived(groups.reduce((n, g) => n + g.items.length, 0));
+	const activeFilters = $derived(
+		Number(filter !== 'all') + Number(diet !== 'all') + Number(compact)
+	);
 
 	function matches(i: CanvasItem) {
 		const text = [i.label, ...i.lines.map((l) => l.name)].join(' ').toLocaleLowerCase();
@@ -191,7 +198,16 @@
 	});
 	onMount(() => {
 		const clock = setInterval(() => k.tick(), 1000);
-		return () => clearInterval(clock);
+		const wide = window.matchMedia('(min-width: 768px)');
+		const syncFilters = () => {
+			filtersOpen = wide.matches;
+		};
+		syncFilters();
+		wide.addEventListener('change', syncFilters);
+		return () => {
+			clearInterval(clock);
+			wide.removeEventListener('change', syncFilters);
+		};
 	});
 
 	async function select(id: string) {
@@ -243,7 +259,7 @@
 		if (price) return `${money(price.cents)}/${price.per}`;
 		if (candidate.unit === 'KG' && candidate.perKgCents !== null)
 			return `${money(candidate.perKgCents)}/kg`;
-		return 'Pack price checked when choosing';
+		return 'Open product details for pack price';
 	}
 	async function recommend() {
 		if (k.readOnly || missingPlan || !item?.dish?.plannedLineId || !k.plan) return;
@@ -277,7 +293,7 @@
 <svelte:head><title>Basket canvas · Mandate</title></svelte:head>
 
 <div class="canvas-page">
-	<header class="mb-6 flex flex-wrap items-start justify-between gap-4">
+	<header class="canvas-heading mb-4 flex flex-wrap items-start justify-between gap-4">
 		<div class="min-w-0">
 			<a
 				href={graph ? resolve(`/?plan=${encodeURIComponent(graph.planId)}`) : resolve('/')}
@@ -289,12 +305,18 @@
 				{graph ? k.view?.title : 'Explore a plan, ingredient by ingredient.'}
 			</p>
 			{#if graph && k.view}<p class="mt-1 text-meta text-ink-3">
-					{k.snap?.kitchen.name} · {day(k.view.date)} · {k.view.guests} guests
+					{k.snap?.kitchen.name} · {day(k.view.date)}{k.view.title.includes(
+						`${k.view.guests} guests`
+					)
+						? ''
+						: ` · ${k.view.guests} guests`}
 				</p>{/if}
 		</div>
-		{#if graph && k.plan}<div class="text-right">
-				<span class="text-meta text-ink-2">Quoted basket · ex VAT</span>
-				<p class="mono mt-1 text-title tabular-nums">{money(k.plan.totalCents)}</p>
+		{#if graph && k.plan}<div class="canvas-quote text-right">
+				<div>
+					<span class="text-meta text-ink-2">Quoted basket · ex VAT</span>
+					<p class="mono mt-1 text-title tabular-nums">{money(k.plan.totalCents)}</p>
+				</div>
 				<a
 					class="mt-2 inline-flex items-center gap-1 text-meta text-accent-ink"
 					href={resolve(`/?plan=${encodeURIComponent(graph.planId)}#approval`)}
@@ -372,30 +394,40 @@
 					placeholder="Find ingredient or product"
 				/></label
 			>
-			<label class="filter"
-				><SlidersHorizontal size={16} /><span class="sr-only">Show ingredients</span><select
-					bind:value={filter}
-					><option value="all">All ingredients</option><option value="shortfall">Shortfalls</option
-					><option value="decision">Waits on you</option><option value="replacement"
-						>Replacements</option
-					></select
-				></label
-			>
-			<label class="filter"
-				><span class="sr-only">Product diet claims</span><select bind:value={diet}
-					><option value="all">Any diet record</option
-					>{#each Object.entries(CODE_WORDS) as [code, word] (code)}<option value={code}
-							>{word}</option
-						>{/each}</select
-				></label
-			>
-			<button class="btn ml-auto" aria-pressed={compact} onclick={() => (compact = !compact)}
-				><LayoutGrid size={16} /> Compact</button
-			>
+			<details class="filter-controls" bind:open={filtersOpen}>
+				<summary
+					><SlidersHorizontal size={16} /> View filters{activeFilters
+						? ` · ${activeFilters} active`
+						: ''}</summary
+				>
+				<div class="filter-options">
+					<label class="filter"
+						><span class="sr-only">Show ingredients</span><select bind:value={filter}
+							><option value="all">All ingredients</option><option value="shortfall"
+								>Shortfalls</option
+							><option value="decision">Waits on you</option><option value="replacement"
+								>Replacements</option
+							></select
+						></label
+					>
+					<label class="filter"
+						><span class="sr-only">Product diet claims</span><select bind:value={diet}
+							><option value="all">Any diet record</option
+							>{#each Object.entries(CODE_WORDS) as [code, word] (code)}<option value={code}
+									>{word}</option
+								>{/each}</select
+						></label
+					>
+					<button class="btn ml-auto" aria-pressed={compact} onclick={() => (compact = !compact)}
+						><LayoutGrid size={16} /> Compact</button
+					>
+				</div>
+			</details>
 		</div>
 		<p class="my-3 text-meta text-ink-2">
-			{visibleCount} of {graph.items.length} ingredients · Select an ingredient to follow its purchases.
-			Diet filters use declared product records.
+			{visibleCount} of {graph.items.length} ingredients · Select an ingredient.
+			{#if diet !== 'all'}
+				Diet filters use declared product records.{/if}
 		</p>
 		<div class="phone-views" aria-label="Canvas view">
 			<button class="btn" aria-pressed={!detailOpen} onclick={() => (detailOpen = false)}
@@ -409,9 +441,14 @@
 		</div>
 		<div class="workbench" class:details-open={detailOpen}>
 			<div class="board-area min-w-0">
-				{#if visibleCount}<Board {groups} {selected} {compact} onselect={select} />{:else}<div
-						class="bg-well p-6"
-					>
+				{#if visibleCount}<Board
+						{groups}
+						{selected}
+						{compact}
+						deliverBy={k.plan?.deliverBy}
+						changed={k.flash}
+						onselect={select}
+					/>{:else}<div class="bg-well p-6">
 						<h2 class="text-heading font-medium">No ingredients match</h2>
 						<p class="mt-2 text-ink-2">Try a different name or clear the filters.</p>
 						<button
@@ -430,8 +467,14 @@
 						{#each graph.unlinkedLines as line (line.id)}<div
 								class="mt-3 flex items-start justify-between gap-4"
 							>
-								<span>{line.name} <span class="mono text-meta">{qtyWords(line.qty)}</span></span
-								><span class="mono tabular-nums">{money(line.lineCents)}</span>
+								<ProductRow
+									productId={line.productId}
+									name={line.name}
+									cents={line.lineCents}
+									quantity={qtyWords(line.qty)}
+									deliverBy={k.plan?.deliverBy}
+									size={40}
+								/>
 							</div>{/each}
 					</section>
 				{/if}
@@ -484,16 +527,15 @@
 					</div>
 					{#each item.lines as line (line.id)}
 						<div class="purchase" class:retired={!item.currentLines.some((l) => l.id === line.id)}>
-							<div class="flex items-start justify-between gap-4">
-								<span class="font-medium">{readableName(line.name)}</span><span
-									class="mono shrink-0 tabular-nums">{money(line.lineCents)}</span
-								>
-							</div>
-							<p class="mono mt-1 text-meta">
-								{qtyWords(line.qty)}{line.physical
-									? ` · ${qty(line.physical.value, line.physical.unit)}`
-									: ''}
-							</p>
+							<ProductRow
+								productId={line.productId}
+								name={line.name}
+								cents={line.lineCents}
+								quantity={`${qtyWords(line.qty)}${line.physical ? ` · ${qty(line.physical.value, line.physical.unit)}` : ''}`}
+								deliverBy={k.plan?.deliverBy}
+								size={64}
+								eager
+							/>
 							<p class="mt-2 text-meta text-ink-2">
 								{line.state === 'committed'
 									? 'Ordered'
@@ -541,21 +583,42 @@
 							<p class="mt-2 text-meta text-ink-2">{item.dish.rescue.summary}</p>
 							{#each item.dish.rescue.candidates as candidate (candidate.productId)}
 								<details class="mt-3 border-t border-rule pt-3">
-									<summary class="cursor-pointer text-body"
-										><span class="font-medium">{readableName(candidate.name)}</span><span
-											class="mt-1 block text-meta text-ink-2"
-											>{candidate.chosen
-												? 'Current purchase'
-												: candidate.recommended
-													? 'Agent pick'
-													: 'Alternative'} · {candidate.availableText} · {comparisonPrice(
-												candidate
-											)}</span
+									<summary class="candidate-summary cursor-pointer text-body"
+										><ChevronRight size={16} class="candidate-chevron" /><span class="min-w-0"
+											><ProductRow
+												productId={candidate.productId}
+												name={candidate.name}
+												deliverBy={k.plan?.deliverBy}
+												inspect={false}
+											/><span class="mt-1 block text-meta text-ink-2"
+												>{candidate.chosen
+													? 'Current purchase'
+													: candidate.recommended
+														? 'Agent pick'
+														: 'Alternative'} · {candidate.availableText} · {comparisonPrice(
+													candidate
+												)}</span
+											></span
 										></summary
 									>
 									<p class="mt-3 text-meta text-ink-2">
 										{candidate.whatChanges ?? candidate.verdict}
 									</p>
+									{#if candidate.cautionNote}<p class="mt-2 text-meta text-signoff">
+											{candidate.cautionNote}
+										</p>{/if}
+									<div class="mt-3 text-meta">
+										<span class="text-ink-2"
+											>Product details:
+										</span>{#key `${candidate.productId}:${k.plan?.deliverBy ?? ''}`}<ProductToken
+												productId={candidate.productId}
+												name={candidate.name}
+												deliverBy={k.plan?.deliverBy}
+												wrap
+												class="underline decoration-rule-strong underline-offset-2 hover:decoration-accent [&>img]:hidden"
+												>{#snippet mark()}{/snippet}</ProductToken
+											>{/key}
+									</div>
 									{#if candidate.rejected.length}<p class="mt-2 text-meta text-out">
 											{candidate.rejected.map(reasonLong).join(' ')}
 										</p>{/if}
@@ -589,10 +652,14 @@
 							class="mt-6 border-t border-rule pt-4"
 							aria-label="Ingredient decisions"
 						>
-							<h3 class="mb-3 text-heading font-medium">Waits on you</h3>
+							<h3 class="mb-3 text-heading font-medium">Shared basket decisions</h3>
 							{#each itemDecisions as decision (decision.key)}<div
 									id={`canvas-decision-${decision.key}`}
 								>
+									<p class="mb-3 text-meta text-ink-2">
+										Includes this ingredient. Reviewing covers all {decision.lineIds.length} listed purchases
+										in this basket decision.
+									</p>
 									<DecisionCard
 										{decision}
 										{names}
@@ -639,6 +706,15 @@
 		border-top: 1px solid var(--color-rule);
 		border-bottom: 1px solid var(--color-rule);
 	}
+	.filter-controls > summary {
+		display: none;
+	}
+	.filter-options {
+		display: flex;
+		align-items: center;
+		flex-wrap: wrap;
+		gap: 12px;
+	}
 	.search,
 	.filter {
 		display: flex;
@@ -676,6 +752,22 @@
 		margin-top: 12px;
 		padding: 12px 0;
 		border-top: 1px solid var(--color-rule);
+	}
+	.candidate-summary {
+		display: grid;
+		grid-template-columns: 16px minmax(0, 1fr);
+		align-items: start;
+		gap: 8px;
+		list-style: none;
+	}
+	.candidate-summary::-webkit-details-marker {
+		display: none;
+	}
+	:global(.candidate-chevron) {
+		margin-top: 8px;
+	}
+	details[open] > .candidate-summary :global(.candidate-chevron) {
+		transform: rotate(90deg);
 	}
 	.retired {
 		color: var(--color-ink-3);
@@ -726,6 +818,39 @@
 		outline-offset: 3px;
 	}
 	@media (max-width: 767px) {
+		.canvas-heading {
+			gap: 12px;
+		}
+		.canvas-quote {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			gap: 16px;
+			width: 100%;
+			text-align: left;
+		}
+		.canvas-quote p {
+			font-size: var(--text-heading);
+			line-height: var(--text-heading--line-height);
+		}
+		.canvas-quote a {
+			max-width: 160px;
+			text-align: right;
+		}
+		.filter-controls {
+			width: 100%;
+		}
+		.filter-controls > summary {
+			display: flex;
+			align-items: center;
+			gap: 8px;
+			min-height: 40px;
+			color: var(--color-accent-ink);
+			cursor: pointer;
+		}
+		.filter-options {
+			padding-top: 12px;
+		}
 		.phone-views {
 			display: flex;
 			gap: 8px;

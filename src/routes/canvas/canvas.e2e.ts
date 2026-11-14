@@ -1,6 +1,6 @@
 import { mkdir } from 'node:fs/promises';
 import { resolve } from 'node:path';
-import { expect, test, type BrowserContext, type Page } from '@playwright/test';
+import { expect, test, type BrowserContext, type Locator, type Page } from '@playwright/test';
 import type { FixtureSnapshot } from '../../lib/kitchen/fixture-server';
 
 /** Run against an already-started local server with DATABASE_URL= and LLM_PROVIDER=fixture. */
@@ -609,4 +609,171 @@ test.describe('basket canvas, real fixture APIs', () => {
 		await expect(apply).toBeEnabled();
 		await capture(page, 'canvas-response-lost.png');
 	});
+
+	for (const width of [1440, 390]) {
+		test(`product photos keep truthful fixed slots and read-only inspection at ${width}px`, async ({
+			page,
+			context
+		}) => {
+			await page.setViewportSize({ width, height: width === 390 ? 844 : 1000 });
+			const snapshot = await seedPlan(context);
+			const sequence = await lastSequence(context);
+			const svg = (label: string, color: string) =>
+				`data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 96 96"><rect width="96" height="96" fill="#fff"/><rect x="22" y="10" width="52" height="76" rx="4" fill="${color}"/><rect x="27" y="36" width="42" height="28" fill="#fff"/><text x="48" y="54" text-anchor="middle" font-family="sans-serif" font-size="11">${label}</text></svg>`)}`;
+			const exactUrl = svg('EXACT', '#0c7772');
+			const approximateUrl = svg('SIMILAR', '#9c6c28');
+			const brokenUrl = `${BASE}/canvas-broken-photo.svg`;
+			const fixtures: Record<string, { imageUrl: string; match: string } | null> = {
+				'461210': { imageUrl: exactUrl, match: 'gtin' },
+				'476768': { imageUrl: approximateUrl, match: 'category' },
+				'463876': null,
+				'463804': { imageUrl: brokenUrl, match: 'gtin' }
+			};
+			for (const id of Object.keys(fixtures))
+				expect(snapshot.plan.lines.some((line) => line.productId === id)).toBe(true);
+			const batches: string[][] = [];
+			let brokenRequests = 0;
+			let release = () => {};
+			const ready = new Promise<void>((resolveReady) => (release = resolveReady));
+			await page.route('**/canvas-broken-photo.svg', async (route) => {
+				brokenRequests++;
+				await route.abort('failed');
+			});
+			await page.route('**/kitchen-api/thumbs?*', async (route) => {
+				const ids = new URL(route.request().url()).searchParams.get('ids')!.split(',');
+				batches.push(ids);
+				await ready;
+				await route.fulfill({
+					json: Object.fromEntries(ids.map((id) => [id, fixtures[id] ?? null]))
+				});
+			});
+			const writes: string[] = [];
+			page.on('request', (request) => {
+				if (request.method() === 'POST') writes.push(new URL(request.url()).pathname);
+			});
+			const photo = (scope: Page | Locator, id: string) =>
+				scope.locator(`[data-photo-product=${JSON.stringify(id)}]`).first();
+			try {
+				await openPlan(page, snapshot);
+				const board = page.getByRole('region', { name: 'Recipe and ingredient canvas' });
+				const initialSlots = new Map<string, { width: number; height: number }>();
+				for (const id of Object.keys(fixtures)) {
+					const slot = photo(board, id);
+					await expect(slot).toHaveAttribute('data-photo-state', 'loading');
+					const box = await slot.boundingBox();
+					expect(box).not.toBeNull();
+					expect(Math.round(box!.width)).toBe(32);
+					expect(Math.round(box!.height)).toBe(32);
+					initialSlots.set(id, { width: box!.width, height: box!.height });
+				}
+				release();
+				for (const [id, state] of [
+					['461210', 'ready'],
+					['476768', 'ready'],
+					['463876', 'missing'],
+					['463804', 'unavailable']
+				]) {
+					const slot = photo(board, id);
+					await slot.scrollIntoViewIfNeeded();
+					await expect(slot).toHaveAttribute('data-photo-state', state);
+					const box = await slot.boundingBox();
+					expect(box!.width).toBeCloseTo(initialSlots.get(id)!.width, 1);
+					expect(box!.height).toBeCloseTo(initialSlots.get(id)!.height, 1);
+				}
+				const exact = photo(board, '461210');
+				await expect(exact).toHaveAttribute('data-photo-match', 'gtin');
+				await expect(exact).toHaveAccessibleName(/Exact product photo/i);
+				await expect(exact.locator('img')).toHaveAttribute('src', exactUrl);
+				await expect
+					.poll(() =>
+						exact.locator('img').evaluate((image) => (image as HTMLImageElement).naturalWidth)
+					)
+					.toBeGreaterThan(0);
+				await expect(exact).not.toContainText(/pack may differ/i);
+				const approximate = photo(board, '476768');
+				await expect(approximate).toHaveAttribute('data-photo-match', 'category');
+				await expect(approximate).toHaveAccessibleName(/Pack may differ/i);
+				await expect(approximate.locator('img')).toHaveAttribute('src', approximateUrl);
+				await expect(photo(board, '463876')).toHaveAccessibleName(/No photo/i);
+				await expect(photo(board, '463876').locator('img')).toBeHidden();
+				await expect(photo(board, '463804')).toHaveAccessibleName(/Photo unavailable/i);
+				await expect(photo(board, '463804').locator('img')).toBeHidden();
+				expect(brokenRequests).toBeGreaterThan(0);
+				const requested = batches.flat();
+				expect(requested).toEqual(expect.arrayContaining(Object.keys(fixtures)));
+				expect(new Set(requested).size, 'a product is read once per page').toBe(requested.length);
+				expect(
+					batches.some((ids) => ids.length > 1),
+					'nearby photos share a batch'
+				).toBe(true);
+
+				const selected = await board
+					.locator('button[data-need-id][aria-pressed="true"]')
+					.getAttribute('data-need-id');
+				expect(selected).toBeTruthy();
+				const productRow = board.locator('[data-canvas-product="461210"]').first();
+				const productButton = productRow.getByRole('button').first();
+				expect(
+					await productButton.evaluate(
+						(button) => button.parentElement?.closest('button') === null
+					),
+					'the product trigger is outside the ingredient selection button'
+				).toBe(true);
+				const productRead = page.waitForResponse(
+					(response) => new URL(response.url()).pathname === '/kitchen-api/product/461210'
+				);
+				await productButton.click();
+				expect((await productRead).ok()).toBe(true);
+				await expect(page.getByText('Pack', { exact: true })).toBeVisible();
+				await expect(ingredient(page, selected!)).toHaveAttribute('aria-pressed', 'true');
+				await page.keyboard.press('Escape');
+				await expect(page.getByText('Pack', { exact: true })).toBeHidden();
+				await page.evaluate(() => window.scrollTo(0, 0));
+				if (width === 390) await capture(page, 'canvas-photos-mobile-board.png');
+
+				const ham = snapshot.plan.needs.find((need) => need.id === 'need:joulukinkku')!;
+				await ingredient(page, ham.id).click();
+				const inspectionPhoto = photo(inspector(page), '476768');
+				await inspectionPhoto.scrollIntoViewIfNeeded();
+				await expect(inspectionPhoto).toHaveAttribute('data-photo-state', 'ready');
+				await expect(inspectionPhoto).toHaveAccessibleName(/Pack may differ/i);
+				const inspectionBox = await inspectionPhoto.boundingBox();
+				expect(Math.round(inspectionBox!.width)).toBe(64);
+				expect(Math.round(inspectionBox!.height)).toBe(64);
+				const alternatives = inspector(page).getByRole('region', {
+					name: 'Ingredient alternatives'
+				});
+				const candidatePhoto = photo(alternatives, '476768');
+				await candidatePhoto.scrollIntoViewIfNeeded();
+				await expect(candidatePhoto).toHaveAttribute('data-photo-state', 'ready');
+				await expect(candidatePhoto).toHaveAccessibleName(/Pack may differ/i);
+				await expect(
+					alternatives.getByText('Pack may differ', { exact: true }).first()
+				).toBeVisible();
+				await expectNoPageOverflow(page);
+				const afterResponse = await context.request.get(
+					`${BASE}/kitchen-api/snapshot?plan=${encodeURIComponent(snapshot.plan.id)}&peek=1`
+				);
+				expect(afterResponse.ok()).toBe(true);
+				const after = (await afterResponse.json()) as FixtureSnapshot;
+				expect(after.plan.id).toBe(snapshot.plan.id);
+				expect(after.plan.version).toBe(snapshot.plan.version);
+				expect(after.plan.termsHash).toBe(snapshot.plan.termsHash);
+				expect(after.approval).toEqual(snapshot.approval);
+				expect(after.orders).toEqual(snapshot.orders);
+				expect(
+					await lastSequence(context),
+					'photos and product inspection append no purchasing operations'
+				).toBe(sequence);
+				expect(writes).toEqual([]);
+				await page.evaluate(() => window.scrollTo(0, 0));
+				await capture(
+					page,
+					width === 390 ? 'canvas-photos-mobile.png' : 'canvas-photos-desktop.png'
+				);
+			} finally {
+				release();
+			}
+		});
+	}
 });
