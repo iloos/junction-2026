@@ -253,20 +253,26 @@
 					<h3><i>4</i>Ordered</h3>
 					{#if o.ordered.length}
 						{#each o.ordered as ord (ord.orderId)}
-							<p class="lede">
-								{time(ord.at)} · {euro(ord.totalCents)}
-								<span class="sys-only mono">{ord.terms}</span>
-							</p>
-							<ul class="lines">
-								{#each ord.lines as l, i (i)}
-									<li data-status={l.status}>
-										<span>{l.name}</span>
-										<span>{l.qty}</span>
-										<span>{euro(l.cents)}</span>
-										<em>{STATUS[l.status]}</em>
-									</li>
-								{/each}
-							</ul>
+							<div class="confirmed">
+								<p class="badge">
+									Confirmed by the kitchen
+									<span>{time(ord.at)} · {euro(ord.totalCents)}</span>
+									<span class="sys-only mono">{ord.terms}</span>
+								</p>
+								<ul class="lines">
+									{#each ord.lines as l, i (i)}
+										<li data-status={l.status}>
+											<span>{l.name}</span>
+											<span>{l.qty}</span>
+											<span>{euro(l.cents)}</span>
+											<em>{STATUS[l.status]} · {l.allowedBy}</em>
+										</li>
+									{/each}
+								</ul>
+								<ol class="trail" aria-label="How this order came to be">
+									{#each ord.trail as t, i (i)}<li>{t}</li>{/each}
+								</ol>
+							</div>
 						{/each}
 					{:else}
 						<p class="lede">Not ordered yet.</p>
@@ -456,6 +462,33 @@
 	[data-state='denied'] p {
 		color: var(--blocked);
 	}
+	.confirmed {
+		padding: 12px 14px;
+		border: 1px solid color-mix(in oklab, var(--done) 45%, var(--line));
+		border-radius: 8px;
+	}
+	.badge {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: baseline;
+		gap: 4px 12px;
+		margin: 0 0 8px;
+		color: var(--done);
+		font-weight: 600;
+	}
+	.badge span {
+		color: var(--muted);
+		font-weight: 400;
+		font-size: 14px;
+	}
+	.trail {
+		margin: 10px 0 0;
+		padding-left: 18px;
+		color: var(--muted);
+		font-size: 14px;
+		display: grid;
+		gap: 2px;
+	}
 	.cards {
 		display: grid;
 		gap: 10px;
@@ -500,6 +533,9 @@
 		}
 		.changes li .tm {
 			grid-column: 1 / -1;
+		}
+		.changes li[data-state] {
+			grid-template-columns: 1fr;
 		}
 		.lines li {
 			grid-template-columns: minmax(0, 1fr) auto;

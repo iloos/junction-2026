@@ -50,6 +50,8 @@ export interface OrderedLine {
 	qty: SalesQty;
 	lineCents: number;
 	status: 'confirmed' | 'awaiting' | 'ordered';
+	/** What allowed it: the kitchen's mandate, or an approval and who granted it. */
+	authority: { kind: 'mandate' } | { kind: 'approval'; approvalId: string; by?: ActorKind };
 }
 
 export interface OrderStages {
@@ -81,6 +83,8 @@ export interface OrderStages {
 		at: string;
 		planVersion: number;
 		totalCents: number;
+		termsHash: string;
+		committedBy: ActorKind;
 		lines: OrderedLine[];
 	}[];
 	/** Lines held for a person now, and what they come to. */
@@ -303,7 +307,10 @@ export function orderStages(
 				at: env?.at ?? o.committedAt,
 				planVersion: o.planVersion,
 				totalCents: o.totalCents,
+				termsHash: o.termsHash,
+				committedBy: o.committedBy.kind,
 				lines: o.lines.map((l): OrderedLine => {
+					const auth = l.authority ?? o.authority;
 					const pl = plan.lines.find((x) => x.id === l.lineId);
 					return {
 						lineId: l.lineId,
@@ -315,7 +322,17 @@ export function orderStages(
 								? 'confirmed'
 								: awaiting.has(l.productId)
 									? 'awaiting'
-									: 'ordered'
+									: 'ordered',
+						authority:
+							auth === 'mandate'
+								? { kind: 'mandate' }
+								: {
+										kind: 'approval',
+										approvalId: auth.approvalId,
+										...(state.approvals[auth.approvalId]?.decidedBy
+											? { by: state.approvals[auth.approvalId].decidedBy!.kind }
+											: {})
+									}
 					};
 				})
 			};

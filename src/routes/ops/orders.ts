@@ -45,11 +45,15 @@ export interface OrderRow {
 		at: string;
 		totalCents: number;
 		terms: string;
+		/** The submission's trail, one sentence each: who asked, what changed, who signed, who placed it. */
+		trail: string[];
 		lines: {
 			name: string;
 			qty: string;
 			cents: number;
 			status: 'confirmed' | 'awaiting' | 'ordered';
+			/** "within the mandate" or "signed by the chef". */
+			allowedBy: string;
 		}[];
 	}[];
 }
@@ -187,13 +191,42 @@ export function orderRow(s: OrderStages, decisions: Decision[]): OrderRow {
 			orderId: o.orderId,
 			at: o.at,
 			totalCents: o.totalCents,
-			terms: `plan v${o.planVersion}`,
+			terms: `plan v${o.planVersion} · terms ${o.termsHash.slice(0, 8)}`,
+			trail: trailOf(s, o),
 			lines: o.lines.map((l) => ({
 				name: l.name,
 				qty: salesUnitWords(l.qty.value, l.qty.unit),
 				cents: l.lineCents,
-				status: l.status
+				status: l.status,
+				allowedBy:
+					l.authority.kind === 'mandate'
+						? 'within the mandate'
+						: `signed by ${l.authority.by ? WHO[l.authority.by] : 'a person'}`
 			}))
 		}))
 	};
+}
+
+/** The order as the kitchen confirmed it: who asked, what the agents changed, who signed what, who placed it. */
+function trailOf(s: OrderStages, o: OrderStages['ordered'][number]): string[] {
+	const cap = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
+	const out = [`Asked by ${WHO[s.createdBy]}.`];
+	const changes = s.proposed.changes.filter((c) => c.seq < o.seq);
+	out.push(
+		changes.length
+			? `${plural(changes.length, 'change')} on the way, each with its reason in Proposed.`
+			: 'Ordered as asked, with no changes.'
+	);
+	for (const a of s.signed)
+		if (a.state === 'granted' && a.seq <= o.seq)
+			out.push(
+				`${cap(a.decidedBy ? WHO[a.decidedBy] : 'someone')} signed ${plural(a.lines, 'line')} on the terms of plan version ${a.planVersion}.`
+			);
+	const mandate = o.lines.filter((l) => l.authority.kind === 'mandate').length;
+	if (mandate)
+		out.push(`${plural(mandate, 'line')} needed no signature: within the kitchen's mandate.`);
+	out.push(`Placed by ${WHO[o.committedBy]} at plan version ${o.planVersion}.`);
+	const awaiting = o.lines.filter((l) => l.status === 'awaiting').length;
+	if (awaiting) out.push(`${plural(awaiting, 'line')} still awaiting the supplier's confirmation.`);
+	return out;
 }
