@@ -33,6 +33,8 @@ const TRACE_RUN_CAP = 20;
 const POLL_MS = 2500;
 /** Consecutive EventSource errors before falling back to polling. */
 const MAX_SSE_ERRORS = 3;
+/** Minimum gap between two rebuilds of the board from the server (see `resync`). */
+const RESYNC_MS = 10_000;
 
 /**
  * Client side of /api/events: dedupes by seq, batches per animation frame, reduces ops with the
@@ -51,12 +53,16 @@ export class OpsStream {
 	heldSince: Record<string, string> = $state.raw({});
 	/** Agent runs, newest first; traces are live only (they have no seq and no catch-up). */
 	traces: TraceRun[] = $state.raw([]);
+	/** Wall ms the current run started, from the server (`ready` and `run` events): the clock's anchor. */
+	runStartedAt: number | null = $state(null);
 
 	private es: EventSource | null = null;
 	private queue: ServerEvent[] = [];
 	private frame = 0;
 	private errors = 0;
 	private pollTimer: ReturnType<typeof setTimeout> | null = null;
+	/** Last time the board was rebuilt after an op the reducer refused (at most one rebuild per RESYNC_MS). */
+	private resyncedAt = 0;
 	private stopped = false;
 
 	constructor(
@@ -92,13 +98,18 @@ export class OpsStream {
 		es.addEventListener('op', onEvent);
 		es.addEventListener('sim', onEvent);
 		es.addEventListener('trace', (m) => this.onTrace(JSON.parse((m as MessageEvent).data)));
-		es.addEventListener('ready', () => {
+		es.addEventListener('ready', (m) => {
 			this.errors = 0;
 			this.status = 'live';
+			const { startedAt } = JSON.parse((m as MessageEvent).data) as { startedAt?: number };
+			if (typeof startedAt === 'number') this.runStartedAt = startedAt;
 		});
 		es.addEventListener('run', (m) => {
-			const { runId } = JSON.parse((m as MessageEvent).data) as { runId: string };
-			this.resetTo(runId);
+			const { runId, startedAt } = JSON.parse((m as MessageEvent).data) as {
+				runId: string;
+				startedAt?: number;
+			};
+			this.resetTo(runId, startedAt);
 		});
 		es.addEventListener('catchup-error', (m) => {
 			this.catchupError = (JSON.parse((m as MessageEvent).data) as { message: string }).message;
@@ -132,8 +143,9 @@ export class OpsStream {
 		}
 	}
 
-	/** A fresh run started: clear the board and the log, keep the seq cursor. */
-	resetTo(runId: string): void {
+	/** A fresh run started: clear the board and the log, keep the seq cursor, re-anchor the clock. */
+	resetTo(runId: string, startedAt?: number): void {
+		if (typeof startedAt === 'number') this.runStartedAt = startedAt;
 		this.state = emptyState(this.workspaceId, runId);
 		this.log = [];
 		this.heldSince = {};
@@ -181,9 +193,9 @@ export class OpsStream {
 		let since = this.heldSince;
 		let batchAt: string | null = null;
 		const added: LogEntry[] = [];
+		let refused = false;
 		for (const e of batch) {
 			if (!('seq' in e) || e.seq <= this.last) continue;
-			this.last = e.seq;
 			const runId = e.kind === 'op' ? e.envelope.runId : e.runId;
 			if (runId !== state.runId) {
 				// A new run (reset or scenario restart): start from empty, keep the log.
@@ -191,11 +203,19 @@ export class OpsStream {
 				since = {};
 			}
 			if (e.kind === 'sim') {
+				this.last = e.seq;
 				added.push({ kind: 'sim', seq: e.seq, runId, event: e.event });
 				this.simClock = e.event.simAt;
 				continue;
 			}
 			const r = applyOps(state, [e.envelope]);
+			if (!r.ok && this.resync()) {
+				// The board has drifted from the server (an op it depends on never arrived): stop here and
+				// rebuild from the run's whole op log instead of skipping this one.
+				refused = true;
+				break;
+			}
+			this.last = e.seq;
 			if (r.ok) {
 				state = r.value;
 				batchAt = e.envelope.at;
@@ -208,13 +228,30 @@ export class OpsStream {
 					rejected: `${r.error.code}: ${r.error.message}`
 				});
 		}
-		if (!added.length) return;
+		if (refused || !added.length) return;
 		// One pass per batch (a frame's worth of events): first-held time = the batch's last op time.
 		if (batchAt) since = trackHeld(since, state, batchAt);
 		this.state = state;
 		this.heldSince = since;
 		this.log = [...added.reverse(), ...this.log].slice(0, LOG_CAP);
 		this.fresh = this.last;
+	}
+
+	/**
+	 * Rebuild the board from the server: empty state, cursor 0, a fresh catch-up of the current run. Returns false
+	 * (and the refused op is only logged) if a rebuild just happened, so a genuinely bad op can't loop.
+	 */
+	private resync(): boolean {
+		const now = Date.now();
+		if (now - this.resyncedAt < RESYNC_MS) return false;
+		this.resyncedAt = now;
+		this.queue = [];
+		this.last = 0;
+		this.resetTo(this.state.runId);
+		this.es?.close();
+		this.es = null;
+		if (!this.stopped) this.openSse();
+		return true;
 	}
 }
 

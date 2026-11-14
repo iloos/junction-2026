@@ -1,22 +1,5 @@
-/** Where the key-less /request page acts, and the inline answers it accepts. No I/O. */
-import { JUDGES_WORKSPACE, type Env } from '$lib/server/auth';
-import { presenterOpen } from '$lib/server/demo/presenter';
+/** The inline answers the key-less /request page accepts. No I/O. Its workspace comes from server/demo/visitor.ts. */
 import type { RequestAnswer } from '$lib/ui/request/types';
-
-/** Re-exported for callers that import the request module's helpers. */
-export { presenterOpen };
-
-export interface PageWorkspace {
-	id: string;
-	stage: boolean;
-}
-
-/** Stage run for the presenter, the judges' sandbox for everyone else. */
-export function pageWorkspace(env: Env, dev: boolean): PageWorkspace {
-	return presenterOpen(env, dev)
-		? { id: env.MANDATE_WORKSPACE || 'ws-demo', stage: true }
-		: { id: JUDGES_WORKSPACE, stage: false };
-}
 
 const UNITS = new Set(['l', 'kg', 'pcs', 'case', 'sales']);
 

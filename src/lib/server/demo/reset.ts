@@ -3,7 +3,8 @@ import { realHandlers } from '$lib/server/tools/handlers';
 import { createServerPorts } from '$lib/server/store/server-ports';
 import { loadSeedKitchens } from '$lib/server/store/db-ports';
 import { SYNTH_WORKSPACE } from '$lib/server/bus/synthetic';
-import { currentRun, newRunId, setCurrentRun } from './run';
+import { STRESS_WORKSPACE } from '$lib/server/bus/stress';
+import { currentRun, hasRun, loadCurrentRun, newRunId, setCurrentRun } from './run';
 
 export const DEMO_WORKSPACE = 'ws-demo';
 
@@ -13,11 +14,38 @@ async function ports() {
 	return createServerPorts();
 }
 
-/** Make sure this process knows the newest run of a workspace (server ports load it when they build). */
-export async function ensureRunLoaded(workspaceId: string): Promise<string> {
-	if (workspaceId === SYNTH_WORKSPACE) return currentRun(workspaceId);
-	await ports();
-	return currentRun(workspaceId);
+const g = globalThis as typeof globalThis & { __mandateRunLoads?: Map<string, Promise<string>> };
+const loads = (g.__mandateRunLoads ??= new Map());
+
+/**
+ * Make sure this process knows the newest run of a workspace, once per workspace. A sandbox that has no run
+ * yet (a new visitor) starts one now, so its scenario clock starts at the visitor's first visit rather than
+ * at process start.
+ */
+export function ensureRunLoaded(
+	workspaceId: string,
+	opts: { start?: boolean } = {}
+): Promise<string> {
+	if (workspaceId === SYNTH_WORKSPACE || workspaceId === STRESS_WORKSPACE)
+		return Promise.resolve(currentRun(workspaceId));
+	let p = loads.get(workspaceId);
+	if (!p) {
+		p = (async () => {
+			const { db } = await ports();
+			if (!hasRun(workspaceId)) await loadCurrentRun(db, workspaceId);
+			if (!hasRun(workspaceId) && opts.start) return (await resetDemoRun(workspaceId)).runId;
+			return currentRun(workspaceId);
+		})();
+		p.catch(() => loads.delete(workspaceId));
+		loads.set(workspaceId, p);
+		return p;
+	}
+	return p.then(() => currentRun(workspaceId));
+}
+
+/** Workspaces this process has loaded or started (bounded by the visitor cap in `visitor.ts`). */
+export function loadedWorkspaces(): number {
+	return loads.size;
 }
 
 /**
@@ -27,8 +55,9 @@ export async function ensureRunLoaded(workspaceId: string): Promise<string> {
 export async function resetDemoRun(
 	workspaceId: string
 ): Promise<{ runId: string; previous: string }> {
-	const previous = await ensureRunLoaded(workspaceId);
-	const { store } = await ports();
+	const { store, db } = await ports();
+	if (!hasRun(workspaceId)) await loadCurrentRun(db, workspaceId);
+	const previous = currentRun(workspaceId);
 	const runId = newRunId();
 	await store.ensure({
 		workspaceId,
@@ -40,7 +69,7 @@ export async function resetDemoRun(
 	return { runId, previous };
 }
 
-/** The demo reset every surface calls: /api/demo/reset, the /ops button and the kitchen's endpoint. */
+/** The stage reset (presenter only): /api/demo/reset and the /ops button in the stage workspace. */
 export function resetDemo(): Promise<{ runId: string; previous: string }> {
 	return resetDemoRun(DEMO_WORKSPACE);
 }

@@ -22,76 +22,78 @@ import seed from '../../../../fixtures/seeds/christmas-buffet-140.json';
 import { scenarioClock } from '$lib/core/scenario';
 import { currentRun, currentRunStartedAt } from '$lib/server/demo/run';
 import { resetDemoRun } from '$lib/server/demo/reset';
-import { resetSandbox, SANDBOX_WORKSPACE } from '$lib/server/demo/sandbox';
-import { dev } from '$app/environment';
-import { presenterOpen } from '$lib/server/demo/presenter';
-import { JUDGES_WORKSPACE } from '$lib/server/auth';
+import { isSandbox, resetSandbox } from '$lib/server/demo/sandbox';
 
 const EVENT_ID = 'event-xmas-140';
 /** The palvikinkku the ham rescue relies on (13 of 15 in stock): the contention preset takes 4 of them. */
 const CONTENDED = { productId: '476768', left: 11 };
 
 export interface Session {
-	/** Stage run (ws-demo) or the judges' sandbox (ws-judges); fixed for the session's life. */
+	/** The browser's room from demo/visitor.ts: its own sandbox, a shared one, or the stage. */
 	workspaceId: string;
 	kitchenId: string;
 	preset: PresetId;
 	contention: boolean;
 }
 
-/** Selection per browser session (cookie id). The simulator overlay itself is run-wide: see `contention`. */
+/**
+ * Selection per browser session (cookie id), in the workspace the visitor resolver chose for this request. A
+ * browser that moves to another room starts with a fresh selection there. The simulator overlay itself is
+ * process-wide: see `contention`. Bounded: the oldest selections are dropped past MAX_SESSIONS.
+ */
+const MAX_SESSIONS = 2000;
 const sessions = new Map<string, Session>();
-export function session(id: string): Session {
+export function session(id: string, workspaceId: string): Session {
 	let s = sessions.get(id);
-	if (!s) {
-		s = {
-			workspaceId: kitchenWorkspace(),
-			kitchenId: 'k-hotel',
-			preset: 'kitchen',
-			contention: false
-		};
-		sessions.set(id, s);
+	if (s && s.workspaceId === workspaceId) {
+		sessions.delete(id);
+		sessions.set(id, s); // most recently used last
+		return s;
 	}
+	s = { workspaceId, kitchenId: 'k-hotel', preset: 'kitchen', contention: false };
+	sessions.delete(id);
+	sessions.set(id, s);
+	if (sessions.size > MAX_SESSIONS) sessions.delete(sessions.keys().next().value!);
 	return s;
 }
 
 /** The commands the screen may send through the helper. Planning and resets go through `scenario`. */
 const ALLOWED = new Set(['get_plan', 'edit_line', 'explain_line', 'approve', 'commit_order']);
 
-/**
- * Which workspace a new kitchen session uses. Dev: the stage run. Production: public visitors get the judges'
- * sandbox; the stage run only when presenterOpen (dev, or DEMO_RESET_OPEN=1). KITCHEN_WORKSPACE overrides.
- */
-export function kitchenWorkspace(presenter = presenterOpen(env, dev)): string {
-	if (env.KITCHEN_WORKSPACE) return env.KITCHEN_WORKSPACE;
-	return presenter ? 'ws-demo' : JUDGES_WORKSPACE;
-}
-
 const chef = (s: Session) => contextFor('chef', 'kitchen-ui', 'kitchen', env, s.workspaceId);
 const agent = (s: Session) =>
 	contextFor('kitchen_agent', 'kitchen-agent', 'kitchen', env, s.workspaceId);
 
 /**
- * One kitchen request at a time. The snapshot plans and ranks with several tool calls against one plan version;
- * a chef edit landing in between would make those calls stale, so screen requests queue behind each other.
+ * One kitchen request at a time per workspace. The snapshot plans and ranks with several tool calls against
+ * one plan version; a chef edit landing in between would make those calls stale, so screen requests in the
+ * same workspace queue behind each other. Different sandboxes run side by side.
  */
-let queue: Promise<unknown> = Promise.resolve();
-function serial<T>(fn: () => Promise<T>): Promise<T> {
-	const next = queue.then(fn, fn);
-	queue = next.catch(() => undefined);
+const queues = new Map<string, Promise<unknown>>();
+function serial<T>(workspaceId: string, fn: () => Promise<T>): Promise<T> {
+	const next = (queues.get(workspaceId) ?? Promise.resolve()).then(fn, fn);
+	const tail = next.catch(() => undefined);
+	queues.set(workspaceId, tail);
+	// Forget an idle workspace's queue once nothing is waiting behind this call.
+	void tail.then(() => queues.get(workspaceId) === tail && queues.delete(workspaceId));
 	return next;
 }
 
 /** One allowlisted tool call as the chef, through the shared gate, and only on this session's plan. */
-export function callTool(sid: string, name: string, input: unknown): Promise<Served> {
-	return serial(async () => {
+export function callTool(
+	sid: string,
+	workspaceId: string,
+	name: string,
+	input: unknown
+): Promise<Served> {
+	return serial(workspaceId, async () => {
 		const deny = (message: string): Served => ({
 			ok: false,
 			status: 403,
 			error: { code: 'FORBIDDEN', message, retryable: false }
 		});
 		if (!ALLOWED.has(name)) return deny(`the kitchen screen does not send ${name}`);
-		const s = session(sid);
+		const s = session(sid, workspaceId);
 		const plan = await findPlan(s);
 		const i = (input ?? {}) as { planId?: string; approvalId?: string };
 		if (!plan) return deny('start the demo first');
@@ -183,8 +185,8 @@ function presetInput(kitchen: Kitchen, s: Session) {
 
 export type LiveSnapshot = FixtureSnapshot | { started: false; kitchenId: string };
 
-export function snapshot(sid: string): Promise<LiveSnapshot> {
-	return serial(() => buildSnapshot(session(sid)));
+export function snapshot(sid: string, workspaceId: string): Promise<LiveSnapshot> {
+	return serial(workspaceId, () => buildSnapshot(session(sid, workspaceId)));
 }
 
 async function buildSnapshot(s: Session): Promise<LiveSnapshot> {
@@ -362,10 +364,11 @@ export class Cooldown extends Error {
 
 export function scenario(
 	sid: string,
+	workspaceId: string,
 	action: string,
 	value: unknown
 ): Promise<LiveSnapshot | PlanProgress> {
-	return serial(() => applyScenario(session(sid), action, value));
+	return serial(workspaceId, () => applyScenario(session(sid, workspaceId), action, value));
 }
 
 async function applyScenario(
@@ -421,11 +424,11 @@ async function applyScenario(
 			});
 		await requote(s);
 	} else if (action === 'reset') {
-		// A fresh run server-side: no plan, orders or spend; the old run stays in the op log. The judges'
-		// sandbox goes through 9c's self-service reset (with its cooldown); the stage run is presenter-only.
-		if (s.workspaceId === SANDBOX_WORKSPACE) {
-			const r = await resetSandbox();
-			if (!r.ok) throw new Cooldown(r.retryInMs);
+		// A fresh run server-side: no plan, orders or spend; the old run stays in the op log. Sandboxes go
+		// through the self-service reset (cooldown per sandbox); the stage only reaches here for a presenter.
+		if (isSandbox(s.workspaceId)) {
+			const r = await resetSandbox(s.workspaceId);
+			if (!r.ok && 'retryInMs' in r) throw new Cooldown(r.retryInMs);
 		} else await resetDemoRun(s.workspaceId);
 		s.kitchenId = 'k-hotel';
 		s.preset = 'kitchen';

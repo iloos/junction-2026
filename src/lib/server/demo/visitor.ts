@@ -1,0 +1,115 @@
+/**
+ * Which workspace a browser acts in: the one resolver behind the kitchen, /request, /ops and the sandbox reset.
+ *
+ * - Every visitor gets their own sandbox, `ws-j-<id>` (cookie `mandate_visitor`), seeded lazily with the seed
+ *   kitchens and a fresh run on first use. Nobody else's edit, approval or reset reaches it.
+ * - A link can move the browser to another room (cookie `mandate_room`): `?ws=ws-judges` (the shared room),
+ *   `?ws=<a visitor id>` (someone's sandbox, shared on purpose by link), `?ws=mine` (back to your own), and
+ *   `?ws=ws-demo` (the stage) for presenters only.
+ * - Presenters (dev, DEMO_RESET_OPEN=1, or signed in on /ops) default to the stage.
+ * - At most MAX_VISITORS sandboxes are seeded per process; past that, new visitors share ws-judges.
+ */
+import type { Cookies } from '@sveltejs/kit';
+import { JUDGES_WORKSPACE } from '$lib/server/auth';
+import { isPresenter } from './presenter';
+import { ensureRunLoaded, DEMO_WORKSPACE } from './reset';
+import { isVisitorWorkspace, newVisitorWorkspace } from './visitor-id';
+
+type Env = Record<string, string | undefined>;
+
+export const VISITOR_COOKIE = 'mandate_visitor';
+export const ROOM_COOKIE = 'mandate_room';
+export const MAX_VISITORS = 300;
+const COOKIE_AGE_S = 60 * 60 * 24 * 14;
+
+/**
+ * own: this browser's sandbox · link: a visitor sandbox opened by link · shared: ws-judges ·
+ * stage: ws-demo (presenter) · full: the visitor cap was reached, so this browser shares ws-judges.
+ */
+export type RoomKind = 'own' | 'link' | 'shared' | 'stage' | 'full';
+
+export interface Visitor {
+	workspaceId: string;
+	/** This browser's own sandbox id (whether or not it's the current room). */
+	own: string;
+	kind: RoomKind;
+	presenter: boolean;
+}
+
+const g = globalThis as typeof globalThis & { __mandateVisitors?: Set<string> };
+const seeded = (g.__mandateVisitors ??= new Set());
+
+/** Sandboxes seeded in this process (for the cap and the load test). */
+export const visitorCount = () => seeded.size;
+
+const cookieOpts = { path: '/', httpOnly: true, sameSite: 'lax' as const, maxAge: COOKIE_AGE_S };
+
+/** A room a link may move this browser to, or null if it may not. */
+function roomFrom(param: string | null, presenter: boolean): string | null {
+	if (!param) return null;
+	if (param === 'mine' || param === 'own') return 'own';
+	if (param === JUDGES_WORKSPACE || isVisitorWorkspace(param)) return param;
+	if (param === DEMO_WORKSPACE && presenter) return param;
+	return null;
+}
+
+/**
+ * Resolve (and, on a page load with `?ws=`, change) this browser's workspace, then make sure that workspace
+ * has a current run. `follow`: honour `?ws=` (and the older `?workspace=`) on the URL; page loads pass it,
+ * API calls don't, so a stray query can't move a running screen.
+ */
+export async function visitorWorkspace(
+	event: { cookies: Cookies; url?: URL },
+	env: Env,
+	dev: boolean,
+	opts: { follow?: boolean } = {}
+): Promise<Visitor> {
+	const { cookies, url } = event;
+	const presenter = isPresenter(cookies, env, dev);
+
+	let own = cookies.get(VISITOR_COOKIE);
+	if (!isVisitorWorkspace(own)) {
+		own = newVisitorWorkspace();
+		cookies.set(VISITOR_COOKIE, own, cookieOpts);
+	}
+
+	if (opts.follow && url) {
+		const asked = roomFrom(
+			url.searchParams.get('ws') ?? url.searchParams.get('workspace'),
+			presenter
+		);
+		if (asked) cookies.set(ROOM_COOKIE, asked, cookieOpts);
+	}
+	const room = roomFrom(cookies.get(ROOM_COOKIE) ?? null, presenter);
+	const chosen = room === 'own' ? own : (room ?? (presenter ? DEMO_WORKSPACE : own));
+
+	let workspaceId = chosen;
+	let kind: RoomKind =
+		chosen === DEMO_WORKSPACE
+			? 'stage'
+			: chosen === JUDGES_WORKSPACE
+				? 'shared'
+				: chosen === own
+					? 'own'
+					: 'link';
+	if (isVisitorWorkspace(chosen) && !seeded.has(chosen)) {
+		if (seeded.size >= MAX_VISITORS) {
+			workspaceId = JUDGES_WORKSPACE;
+			kind = 'full';
+		} else seeded.add(chosen);
+	}
+
+	await ensureRunLoaded(workspaceId, { start: kind !== 'stage' });
+	return { workspaceId, own, kind, presenter };
+}
+
+/** Plain words for the room, for page headers. */
+export function roomLabel(v: Pick<Visitor, 'kind'>): string {
+	return {
+		own: 'Your sandbox',
+		link: 'A shared sandbox (opened by link)',
+		shared: "Judges' shared room",
+		stage: 'Stage run',
+		full: "Judges' shared room (sandboxes are full)"
+	}[v.kind];
+}

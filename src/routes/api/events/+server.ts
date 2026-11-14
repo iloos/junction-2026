@@ -7,13 +7,22 @@ import {
 	subscribe,
 	SYNTH_WORKSPACE
 } from '$lib/server/bus';
-import { currentRun } from '$lib/server/demo/run';
+import { currentRun, currentRunStartedAt } from '$lib/server/demo/run';
 import { ensureRunLoaded } from '$lib/server/demo/reset';
+import { isVisitorWorkspace } from '$lib/server/demo/visitor-id';
 import { dev } from '$app/environment';
 import type { RequestHandler } from './$types';
 
-/** Until CallContext gates the stream, production serves only the public workspaces. */
+/**
+ * Production serves the public rooms and visitor sandboxes. A sandbox id (`ws-j-` + 96 random bits) is the
+ * capability: whoever holds it (its own browser, or someone it was shared with by link) may read its stream.
+ */
 const PUBLIC_WORKSPACES = new Set(['ws-demo', 'ws-judges', SYNTH_WORKSPACE]);
+const readable = (ws: string) => PUBLIC_WORKSPACES.has(ws) || isVisitorWorkspace(ws);
+
+/** Catch-up reads pages of PAGE events until a short page, at most MAX_PAGES (then live takes over). */
+const PAGE = 1000;
+const MAX_PAGES = 20;
 
 /** Read-only until the agent lane's CallContext lands; then the workspace comes from the key. */
 const DEFAULT_WORKSPACE = 'ws-demo';
@@ -28,7 +37,7 @@ const RUN_CHECK_MS = 3_000;
  */
 export const GET: RequestHandler = async ({ url, request }) => {
 	const workspaceId = url.searchParams.get('workspace') || DEFAULT_WORKSPACE;
-	if (!dev && !PUBLIC_WORKSPACES.has(workspaceId))
+	if (!dev && !readable(workspaceId))
 		return json(
 			{ error: { code: 'FORBIDDEN', message: 'unknown workspace', retryable: false } },
 			{ status: 403 }
@@ -46,8 +55,23 @@ export const GET: RequestHandler = async ({ url, request }) => {
 	const followRun = workspaceId !== SYNTH_WORKSPACE && workspaceId !== STRESS_WORKSPACE;
 	let runId = followRun ? await ensureRunLoaded(workspaceId) : undefined;
 
+	/** Everything after `from` in the followed run, page by page. */
+	const catchUpAll = async (from: number) => {
+		const out: ServerEvent[] = [];
+		let cursor = from;
+		for (let i = 0; i < MAX_PAGES; i++) {
+			const page = await catchUp(workspaceId, cursor, PAGE, runId);
+			out.push(...page);
+			const top = page.reduce((m, e) => ('seq' in e ? Math.max(m, e.seq) : m), cursor);
+			if (page.length < PAGE || top === cursor) break;
+			cursor = top;
+		}
+		return out;
+	};
+	const startedAt = () => (followRun ? currentRunStartedAt(workspaceId) : undefined);
+
 	if (url.searchParams.get('mode') === 'poll') {
-		const events = await catchUp(workspaceId, after, 1000, runId);
+		const events = await catchUpAll(after);
 		const last = events.reduce((m, e) => ('seq' in e ? Math.max(m, e.seq) : m), after);
 		return json({ events, last }, { headers: { 'cache-control': 'no-store' } });
 	}
@@ -91,7 +115,7 @@ export const GET: RequestHandler = async ({ url, request }) => {
 				if (!followRun || currentRun(workspaceId) === runId) return;
 				runId = currentRun(workspaceId);
 				write(`event: run
-data: ${JSON.stringify({ workspaceId, runId })}
+data: ${JSON.stringify({ workspaceId, runId, startedAt: startedAt() })}
 
 `);
 			}, RUN_CHECK_MS);
@@ -110,13 +134,15 @@ data: ${JSON.stringify({ workspaceId, runId })}
 			request.signal.addEventListener('abort', cleanup);
 
 			write(`retry: 2000\n\n`);
-			catchUp(workspaceId, after, 1000, runId)
+			catchUpAll(after)
 				.then((events) => {
 					for (const e of events) send(e);
 					pending.sort((a, b) => ('seq' in a && 'seq' in b ? a.seq - b.seq : 0));
 					for (const e of pending.splice(0)) send(e);
 					live = true;
-					write(`event: ready\ndata: ${JSON.stringify({ workspaceId, runId, last })}\n\n`);
+					write(
+						`event: ready\ndata: ${JSON.stringify({ workspaceId, runId, last, startedAt: startedAt() })}\n\n`
+					);
 				})
 				.catch((err) => {
 					// Catch-up failed (e.g. the op log table is missing); stay subscribed for live events.
@@ -125,7 +151,9 @@ data: ${JSON.stringify({ workspaceId, runId })}
 					write(`event: catchup-error\ndata: ${JSON.stringify({ message })}\n\n`);
 					for (const e of pending.splice(0)) send(e);
 					live = true;
-					write(`event: ready\ndata: ${JSON.stringify({ workspaceId, runId, last })}\n\n`);
+					write(
+						`event: ready\ndata: ${JSON.stringify({ workspaceId, runId, last, startedAt: startedAt() })}\n\n`
+					);
 				});
 		},
 		cancel() {

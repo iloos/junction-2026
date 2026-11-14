@@ -10,7 +10,21 @@
 	import { buildCases, coverage } from './cases';
 	import { ACTOR, euro, lineIsHeld, opPlanId, opSummary, SIM_KIND } from './labels';
 
-	let { data } = $props();
+	let { data, form } = $props();
+
+	let judgeKey = $state<string | null>(null);
+	let judgeKeyNote = $state('Loading…');
+	async function loadJudgeKey() {
+		if (judgeKey) return;
+		try {
+			const r = await fetch('/api/demo/judge-key');
+			const b = await r.json();
+			if (r.ok) judgeKey = b.mcpUrl;
+			else judgeKeyNote = b?.error?.message ?? `No key (HTTP ${r.status}).`;
+		} catch (e) {
+			judgeKeyNote = e instanceof Error ? e.message : String(e);
+		}
+	}
 
 	// Workspace links reload the page (data-sveltekit-reload), so one stream per page load is enough.
 	// svelte-ignore state_referenced_locally
@@ -31,7 +45,11 @@
 	});
 	/** Simulator events carry their own time; otherwise the scenario clock ticking from the run start. */
 	const scenarioNow = $derived(
-		data.simulated ? stream.simClock : scenarioClock(anchor).at(wall).toISOString()
+		data.simulated
+			? stream.simClock
+			: scenarioClock(stream.runStartedAt ?? anchor)
+					.at(wall)
+					.toISOString()
 	);
 
 	const kitchenName = (id: string) => data.kitchens.find((k) => k.id === id)?.name ?? id;
@@ -163,20 +181,29 @@
 			<nav aria-label="Workspace">
 				<a
 					data-sveltekit-reload
-					href={resolve('/ops') + '?workspace=ws-demo'}
-					aria-current={data.workspace === 'ws-demo' ? 'page' : undefined}>Live kitchens</a
+					href={resolve('/ops') + '?ws=mine'}
+					aria-current={data.workspace === data.room.own ? 'page' : undefined}>Your sandbox</a
 				>
 				<a
 					data-sveltekit-reload
-					href={resolve('/ops') + `?workspace=${data.synthWorkspace}`}
+					href={resolve('/ops') + '?ws=ws-judges'}
+					aria-current={data.workspace === 'ws-judges' ? 'page' : undefined}>Shared room</a
+				>
+				<a
+					data-sveltekit-reload
+					href={resolve('/ops') + '?ws=ws-demo'}
+					aria-current={data.workspace === 'ws-demo' ? 'page' : undefined}>Stage</a
+				>
+				<a
+					data-sveltekit-reload
+					href={resolve('/ops') + `?ws=${data.synthWorkspace}`}
 					aria-current={data.simulated ? 'page' : undefined}>Simulated run</a
 				>
-				<a
-					data-sveltekit-reload
-					href={resolve('/ops') + '?workspace=ws-judges'}
-					aria-current={data.workspace === 'ws-judges' ? 'page' : undefined}>Judges' sandbox</a
-				>
 			</nav>
+			<p class="roomline" title="Workspace and run this screen reads">
+				{data.room.label}
+				<span class="mono">{data.workspace}{data.run ? ` · ${data.run}` : ''}</span>
+			</p>
 		</div>
 
 		<dl class="figures">
@@ -231,9 +258,44 @@
 					}}
 				>
 					<button class:armed={confirmReset}
-						>{confirmReset ? 'Click again to clear the stage' : 'Start a fresh run'}</button
+						>{confirmReset
+							? data.workspace === 'ws-demo'
+								? 'Click again to clear the stage'
+								: 'Click again to clear this sandbox'
+							: data.workspace === 'ws-demo'
+								? 'Start a fresh run'
+								: 'Start this sandbox over'}</button
 					>
 				</form>
+			{/if}
+			{#if form?.message}<p class="formmsg" role="status">{form.message}</p>{/if}
+			{#if data.presenterSession}
+				<form method="POST" action="?/signOut" use:enhance class="presenter">
+					<button>Presenter: sign out</button>
+				</form>
+			{:else if !data.presenter}
+				<details class="presenter">
+					<summary>Presenter</summary>
+					<form method="POST" action="?/signIn" use:enhance>
+						<label
+							><span>Chef or approver key</span>
+							<input name="key" type="password" autocomplete="off" required /></label
+						>
+						<button>Sign in</button>
+					</form>
+				</details>
+			{/if}
+			{#if data.judgeKeys}
+				<details class="presenter" ontoggle={loadJudgeKey}>
+					<summary>Agent key for this sandbox</summary>
+					{#if judgeKey}
+						<p class="keynote">
+							An MCP client with this URL acts as an outside agent in your sandbox (it can propose,
+							never approve):
+						</p>
+						<code class="mono">{judgeKey}</code>
+					{:else}<p class="keynote">{judgeKeyNote}</p>{/if}
+				</details>
 			{/if}
 		</div>
 	</header>
@@ -259,10 +321,8 @@
 				When a kitchen agent, a chef or an outside agent changes an order, it lands here as it
 				happens, with who did it and why anything was held.
 			</p>
-			<a
-				class="cta"
-				data-sveltekit-reload
-				href={resolve('/ops') + `?workspace=${data.synthWorkspace}`}>Watch a simulated run</a
+			<a class="cta" data-sveltekit-reload href={resolve('/ops') + `?ws=${data.synthWorkspace}`}
+				>Watch a simulated run</a
 			>
 		</section>
 	{:else}
@@ -276,7 +336,15 @@
 		</div>
 		<main>
 			{#if view === 'queue'}
-				<Queue {cases} kitchens={data.kitchens} now={caseNow} relative={!data.simulated} />
+				<Queue
+					{cases}
+					kitchens={data.kitchens}
+					now={caseNow}
+					relative={!data.simulated}
+					at={data.simulated
+						? undefined
+						: { ws: data.workspace, run: stream.state.runId || data.run }}
+				/>
 			{:else}
 				<section class="board" aria-label="Held lines by kitchen">
 					{#each columns as c (c.kitchen.id)}
@@ -570,6 +638,73 @@
 	.reset button.armed {
 		border-color: var(--sign-off);
 		color: var(--sign-off);
+	}
+	.roomline {
+		margin: 8px 0 0 12px;
+		color: var(--muted);
+		font-size: 15px;
+	}
+	.roomline .mono {
+		font-family: var(--mono);
+		color: var(--faint);
+		margin-left: 8px;
+		font-size: 14px;
+	}
+	.formmsg {
+		margin: 8px 0 0;
+		color: var(--sign-off);
+		font-size: 15px;
+	}
+	.presenter {
+		margin-top: 10px;
+		font-size: 15px;
+		color: var(--muted);
+	}
+	.presenter summary {
+		cursor: pointer;
+	}
+	.presenter form {
+		display: flex;
+		gap: 8px;
+		justify-content: flex-end;
+		align-items: end;
+		margin-top: 8px;
+	}
+	.presenter label {
+		display: grid;
+		gap: 4px;
+		text-align: left;
+	}
+	.presenter input {
+		background: var(--raise);
+		color: var(--text);
+		border: 1px solid var(--line);
+		border-radius: 6px;
+		padding: 5px 8px;
+		font: inherit;
+	}
+	.presenter button {
+		padding: 6px 14px;
+		border-radius: 6px;
+		border: 1px solid var(--line);
+		background: transparent;
+		color: var(--muted);
+		font: inherit;
+		cursor: pointer;
+	}
+	.keynote {
+		max-width: 340px;
+		margin: 8px 0 4px auto;
+		text-align: left;
+	}
+	.presenter code {
+		display: block;
+		max-width: 340px;
+		margin-left: auto;
+		word-break: break-all;
+		text-align: left;
+		color: var(--text);
+		font-size: 13px;
 	}
 	.count {
 		font-family: var(--mono);

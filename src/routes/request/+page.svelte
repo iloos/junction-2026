@@ -12,7 +12,6 @@
 		Repeat
 	} from '@lucide/svelte';
 	import { onMount } from 'svelte';
-	import { resolve } from '$app/paths';
 	import type { Plan } from '$lib/core/contracts';
 	import HoldButton from '$lib/ui/HoldButton.svelte';
 	import SourceTag from '$lib/ui/SourceTag.svelte';
@@ -23,7 +22,6 @@
 	import type {
 		ApprovalView,
 		CommitView,
-		EventView,
 		LookupView,
 		OrderView,
 		ParsedView,
@@ -79,8 +77,6 @@
 	let approval = $state.raw<ApprovalView | null>(null);
 	let commits = $state.raw<CommitView[]>([]);
 	let resultMessage = $state<string | null>(null);
-	/** Set when the words were an event brief: nothing was searched. */
-	let event = $state.raw<EventView | null>(null);
 	/** The last run stopped before placing because the order is unusually large. */
 	let needsConfirm = $state(false);
 
@@ -106,7 +102,6 @@
 		commits = [];
 		error = resultMessage = null;
 		needsConfirm = false;
-		event = null;
 	}
 
 	function approvalStatus(): Status {
@@ -126,7 +121,6 @@
 		if (e.step === 'result') {
 			resultMessage = e.data.message ?? null;
 			needsConfirm = e.data.needsConfirm === true;
-			event = e.data.event ?? null;
 			if (status.lookup === 'running') status.lookup = 'idle';
 			if (status.order === 'running') status.order = 'idle';
 			return;
@@ -259,8 +253,8 @@
 	}
 
 	function answerText(a: RequestAnswer): string {
-		const item = parsed?.items.find((i) => i.id === a.item);
-		const what = item?.product ?? item?.query ?? a.item;
+		const item = parsed?.items[a.item];
+		const what = item?.product ?? item?.query ?? `item ${a.item + 1}`;
 		const parts = [
 			a.qty !== undefined ? `${num(a.qty, 3)} ${a.unit ? (UNIT_WORDS[a.unit] ?? a.unit) : ''}` : '',
 			a.productId ? `product ${a.productId}` : ''
@@ -284,7 +278,7 @@
 			const res = await fetch('/api/demo/sandbox/reset', { method: 'POST' });
 			const b = await res.json().catch(() => null);
 			if (res.status === 429)
-				sandboxNote = `The sandbox was just reset. Try again in ${Math.ceil((b?.retryInMs ?? 0) / 1000)} s.`;
+				sandboxNote = `This sandbox was just reset. Try again in ${Math.ceil((b?.retryInMs ?? 0) / 1000)} s.`;
 			else if (!res.ok) sandboxNote = b?.error?.message ?? `Reset failed (HTTP ${res.status}).`;
 			else {
 				startOver();
@@ -345,12 +339,16 @@
 			class="inline-flex items-center gap-1.5"
 			title={data.workspace.stage
 				? 'Presenter mode: the stage run everyone watches on /ops.'
-				: 'Shared sandbox: every visitor orders, approves and commits here; it never touches the stage run.'}
+				: data.workspace.kind === 'own'
+					? 'Only this browser works here: other visitors and the stage run never see your orders, approvals or commits.'
+					: data.workspace.kind === 'link'
+						? 'A sandbox opened by link: everyone with the link works on the same plans.'
+						: 'Shared with every visitor in this room: their edits and resets reach you too.'}
 			><Building2
 				size={13}
 				class={data.workspace.stage ? 'text-accent' : 'text-propose'}
 				aria-hidden="true"
-			/>{data.workspace.stage ? 'Stage run' : "Judges' sandbox"}
+			/>{data.workspace.label}
 			<b class="mono font-medium text-ink">{data.workspace.id}</b></span
 		>
 		<span class="inline-flex items-center gap-1.5"
@@ -476,8 +474,8 @@
 								Model path not used: {parsed.parser.fallback}.</span
 							>{/if}
 					</p>
-					<ul class="mt-2 space-y-1.5" hidden={!!event}>
-						{#each parsed.items as it (it.id)}
+					<ul class="mt-2 space-y-1.5">
+						{#each parsed.items as it, i (i)}
 							<li class="flex flex-wrap items-baseline gap-x-2 gap-y-1 text-[15px]">
 								<b class="num font-semibold">{qtyText(it.qty, it.unit)}</b>
 								<span>{it.product ?? it.query}</span>
@@ -509,14 +507,11 @@
 							>
 						</p>
 					{/if}
-					<!-- An event brief has no items: item questions about it would be noise. -->
 					{@const asks = [
 						...parsed.ambiguities,
-						...(event
-							? []
-							: parsed.items.flatMap((i) =>
-									i.ambiguities.map((a) => `${i.product ?? i.query}: ${a}`)
-								)),
+						...parsed.items.flatMap((i) =>
+							i.ambiguities.map((a) => `${i.product ?? i.query}: ${a}`)
+						),
 						...parsed.notes
 					]}
 					{#if asks.length}
@@ -531,44 +526,6 @@
 									/>{a}
 								</li>{/each}
 						</ul>
-					{/if}
-					{#if event}
-						<div
-							class="mt-3 rounded-lg border border-accent/30 bg-accent-wash px-3 py-2.5 text-[14px] text-ink"
-							data-testid="event-brief"
-						>
-							<p class="font-medium">
-								Event planning: coming.
-								<span class="font-normal text-ink-2"
-									>This reads as an event to plan, not products to buy, so nothing was searched or
-									ordered.</span
-								>
-							</p>
-							<p class="mt-1 text-[13px] text-ink-2">
-								{[
-									event.occasion,
-									event.guests !== null ? `${event.guests} guests` : 'guests not given',
-									event.courses !== null ? `${event.courses} courses` : null,
-									event.deliverByText ? day(event.deliverBy) : 'no date given'
-								]
-									.filter(Boolean)
-									.join(' · ')}
-							</p>
-							{#if event.seeded}
-								<a
-									href={resolve('/')}
-									class="mt-2 inline-flex items-center gap-1 text-[13.5px] font-medium text-accent-ink underline"
-									>Open the planned {event.seeded.title} in the Kitchen <ArrowRight
-										size={14}
-										aria-hidden="true"
-									/></a
-								>
-							{:else}
-								<p class="mt-1 text-[13px] text-ink-2">
-									For now, name the products: “20 kg salmon fillets by Friday”.
-								</p>
-							{/if}
-						</div>
 					{/if}
 				{/if}
 			</Step>
@@ -958,7 +915,7 @@
 				{/if}
 			</Step>
 		</ol>
-		{#if resultMessage && !plan && !needsConfirm && !event}
+		{#if resultMessage && !plan && !needsConfirm}
 			<p class="-mt-2 ml-11 text-[13.5px] text-ink-2">{resultMessage}</p>
 		{/if}
 	{/if}

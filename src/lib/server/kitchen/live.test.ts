@@ -15,26 +15,27 @@ async function seq(workspaceId: string): Promise<number> {
 describe('kitchen snapshot is a read', () => {
 	it('appends zero ops over 20 snapshots, before and after start, under every preset', async () => {
 		const sid = `test-${Date.now()}`;
-		const first = await snapshot(sid);
+		const W = 'ws-demo';
+		const first = await snapshot(sid, W);
 		expect('started' in first && first.started === false).toBe(true);
 
-		const started = await scenario(sid, 'start', undefined);
+		const started = await scenario(sid, W, 'start', undefined);
 		expect('plan' in started).toBe(true);
-		const ws = 'plan' in started ? started.plan.workspaceId : 'ws-demo';
+		const ws = 'plan' in started ? started.plan.workspaceId : W;
 		const before = await seq(ws);
 
-		for (let i = 0; i < 20; i++) await snapshot(sid);
+		for (let i = 0; i < 20; i++) await snapshot(sid, W);
 		expect(await seq(ws)).toBe(before);
 
 		// Previewing other rules ranks without persisting.
 		for (const p of ['price', 'finnish', 'kitchen'] as const) {
-			await scenario(sid, 'preset', p);
-			await snapshot(sid);
+			await scenario(sid, W, 'preset', p);
+			await snapshot(sid, W);
 		}
 		expect(await seq(ws)).toBe(before);
 
 		// Starting again is idempotent: the plan exists and every outage already has a proposal.
-		await scenario(sid, 'start', undefined);
+		await scenario(sid, W, 'start', undefined);
 		expect(await seq(ws)).toBe(before);
 	}, 60_000);
 });
