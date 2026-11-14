@@ -73,8 +73,5 @@
 			"excludes": ["476768"]
 		}
 	},
-	"expectFail": {
-		"R6-diff": ["lastVoided"]
-	},
-	"notes": "R6 §5 / product direction: one perturbed task, scripted now; E runs the model policy on the same task later. 140 × 160 g = 22.4 kg → 30 kg in 10 kg lots. The diff is T0's get_plan lastVoided (not yet filled)."
+	"notes": "R6 §5 / product direction: one perturbed task, scripted now; E runs the model policy on the same task later. 140 × 160 g = 22.4 kg → 30 kg in 10 kg lots. The diff is T0's get_plan lastVoided."
 }

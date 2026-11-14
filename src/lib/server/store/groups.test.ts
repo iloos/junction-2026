@@ -132,5 +132,17 @@ describe('per-group approval', () => {
 		expect(live.every((x) => x.state === 'invalidated' || x.state === 'denied')).toBe(true);
 		const v = edited.lines.find((l) => l.id === line.id)!.view!;
 		expect(v.committable).toBe(false);
+
+		// The voided approval says what changed since it was shown (before → after).
+		const got = must(await h.get_plan(chef, { planId: plan.id }));
+		expect(got.lastVoided?.approvalId.startsWith(a.id)).toBe(true); // either group of the split approval
+		expect(got.lastVoided?.diff).toContainEqual(
+			expect.objectContaining({
+				lineId: line.id,
+				change: 'qty',
+				before: `${line.qty.value} ${line.qty.unit}`,
+				after: `${line.qty.value + 1} ${line.qty.unit}`
+			})
+		);
 	});
 });

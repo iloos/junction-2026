@@ -19,6 +19,7 @@ import {
 	type Receipt,
 	type Result,
 	type SalesQty,
+	type TermsDiff,
 	type ToolInput,
 	type ToolOutput
 } from '../contracts';
@@ -113,7 +114,19 @@ export async function quoteOps(
 			tier: t.held.tier,
 			state: 'pending',
 			requestedBy: ctx.actor,
-			expiresAt: new Date(ports.clock.now().getTime() + APPROVAL_TTL_MS).toISOString()
+			expiresAt: new Date(ports.clock.now().getTime() + APPROVAL_TTL_MS).toISOString(),
+			// What the approver is shown, kept so a voided approval can say what changed (lastVoided).
+			bound: {
+				lines: t.lines.map((l) => ({
+					lineId: l.id,
+					productId: l.productId,
+					...(l.productName ? { productName: l.productName } : {}),
+					qty: l.qty,
+					unitCents: l.offer?.price?.unitCents ?? null,
+					state: l.state
+				})),
+				needs: plan.needs.map((n) => ({ needId: n.id, amount: n.amount }))
+			}
 		};
 		ops.push(pending(ctx, { type: 'RecordApproval', approval }));
 	}
@@ -301,7 +314,11 @@ export async function getPlan(
 	const plan = state.plans[input.planId];
 	if (!plan) return err('NOT_FOUND', `plan ${input.planId}`);
 	const a = currentApproval(state, plan.id);
+	const voided = Object.values(state.approvals)
+		.filter((x) => x.planId === plan.id && x.state === 'invalidated' && x.bound)
+		.sort((x, y) => y.planVersion - x.planVersion || (x.id < y.id ? 1 : -1))[0];
 	return ok({
+		lastVoided: voided ? { approvalId: voided.id, diff: termsDiff(voided.bound!, plan) } : null,
 		plan,
 		approval: a
 			? {
@@ -502,6 +519,16 @@ export async function commitOrder(
 			input.lineIds ??
 			(grants.length ? [...new Set([...grants.flatMap((a) => a.lineIds), ...actIds])] : actIds)
 		).filter((id) => byId.get(id)?.state !== 'committed');
+		// Everything asked for is already bought (a concurrent commit with another key won): a conflict, not bad input.
+		const lost = input.lineIds
+			? input.lineIds.every((id) => byId.get(id)?.state === 'committed')
+			: plan.lines.some((l) => l.state === 'committed') &&
+				!plan.lines.some((l) => l.state === 'held' || l.state === 'eligible');
+		if (selected.length === 0 && lost)
+			return fail(
+				err('STALE_VERSION', 'these lines were already committed by another order; reload the plan')
+					.error
+			);
 		if (selected.length === 0)
 			return fail(
 				plan.lines.some((l) => l.state === 'held')
@@ -661,4 +688,77 @@ export async function commitOrder(
 			})
 		};
 	});
+}
+
+const qtyText = (q: { value: number; unit: string }) => `${q.value} ${q.unit}`;
+const priceText = (cents: number | null | undefined, unit: string) =>
+	cents == null ? 'no price' : `€${(cents / 100).toFixed(2)}/${unit}`;
+
+/**
+ * What changed between the terms an approval was shown and the plan now, line by line (by id), plus needs whose
+ * amount moved. A need change names the need id in `lineId`.
+ */
+export function termsDiff(bound: NonNullable<Approval['bound']>, plan: Plan): TermsDiff {
+	const out: TermsDiff = [];
+	const now = new Map(plan.lines.map((l) => [l.id, l]));
+	const was = new Map(bound.lines.map((l) => [l.lineId, l]));
+	for (const b of bound.lines) {
+		const l = now.get(b.lineId);
+		const name = {
+			productId: b.productId,
+			...(b.productName ? { productName: b.productName } : {})
+		};
+		if (!l) {
+			out.push({ lineId: b.lineId, ...name, change: 'removed', before: qtyText(b.qty) });
+			continue;
+		}
+		if (l.productId !== b.productId)
+			out.push({
+				lineId: b.lineId,
+				...name,
+				change: 'product',
+				before: b.productName ?? b.productId,
+				after: l.productName ?? l.productId
+			});
+		if (l.qty.value !== b.qty.value || l.qty.unit !== b.qty.unit)
+			out.push({
+				lineId: b.lineId,
+				...name,
+				change: 'qty',
+				before: qtyText(b.qty),
+				after: qtyText(l.qty)
+			});
+		const cents = l.offer?.price?.unitCents ?? null;
+		if (cents !== b.unitCents)
+			out.push({
+				lineId: b.lineId,
+				...name,
+				change: 'price',
+				before: priceText(b.unitCents, b.qty.unit),
+				after: priceText(cents, l.qty.unit)
+			});
+		if (l.state !== b.state)
+			out.push({ lineId: b.lineId, ...name, change: 'state', before: b.state, after: l.state });
+	}
+	for (const l of plan.lines)
+		if (!was.has(l.id))
+			out.push({
+				lineId: l.id,
+				productId: l.productId,
+				...(l.productName ? { productName: l.productName } : {}),
+				change: 'added',
+				after: qtyText(l.qty)
+			});
+	const needs = new Map(plan.needs.map((n) => [n.id, n]));
+	for (const b of bound.needs ?? []) {
+		const n = needs.get(b.needId);
+		if (n && (n.amount.value !== b.amount.value || n.amount.unit !== b.amount.unit))
+			out.push({
+				lineId: b.needId,
+				change: 'need',
+				before: `${b.amount.value} ${b.amount.unit}`,
+				after: `${n.amount.value} ${n.amount.unit}`
+			});
+	}
+	return out;
 }
