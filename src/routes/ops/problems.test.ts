@@ -1,12 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import type { OpEnvelope } from '$lib/core/contracts';
 import { applyOps, emptyState } from '$lib/core/state';
-import seeded from './fixtures/seeded-ops.json';
+import seeded from './fixtures/seeded-ops.ndjson?raw';
 import { buildProblems, dishName } from './problems';
 import { storyOf } from './story';
 
 /** The seeded Christmas run of a fresh visitor, as the op stream delivered it (bulky payloads trimmed). */
-const ops = seeded as unknown as OpEnvelope[];
+const ops = seeded
+	.trim()
+	.split(/\r?\n/)
+	.map((l) => JSON.parse(l) as OpEnvelope);
 const names: Record<string, string> = {
 	'462490': 'HK Christmas ham',
 	'476768': 'HK Palvikinkku',

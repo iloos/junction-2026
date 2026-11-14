@@ -109,6 +109,8 @@ export function opSummary(env: OpEnvelope, names: Names, plans: Record<string, P
 		case 'ProposeSubstitute': {
 			const forLine = op.lines[0]?.substituteFor;
 			const sub = op.lines[0]?.productId;
+			if (op.kind === 'make_in_house' && op.lines.length)
+				return `Planned it in house from ${op.lines.length} ingredient${op.lines.length === 1 ? '' : 's'}${forLine ? ` instead of ${name(names, forLine)}` : ''}`;
 			return sub
 				? `Proposed ${name(names, sub)}${forLine ? ` instead of ${name(names, forLine)}` : ''}`
 				: 'Found no substitute that qualifies';

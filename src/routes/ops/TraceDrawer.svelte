@@ -75,7 +75,7 @@
 	<button class="scrim" aria-label="Close agent traces" onclick={() => (open = false)}></button>
 	<aside class="drawer" aria-label="Agent traces" tabindex="-1" bind:this={panel}>
 		<header>
-			<h2>Agent traces</h2>
+			<h2>{op ? 'Technical detail' : 'Agent traces'}</h2>
 			<button class="close" onclick={() => (open = false)}>Close</button>
 		</header>
 		{#if op}
