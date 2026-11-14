@@ -1,0 +1,17 @@
+{
+	"id": "c5-dish-with-a-count",
+	"$comment": "A dish with a bare count, typed as an order ('10000 bolongese pasta', misspelt): the chat asks whether it is portions of the dish or packs, before anything is searched, and never falls through to 'not recognised'. Yes plans it as a dish: the event brief's next question (the day, the guests or the style). Nothing is drafted or bought on the way.",
+	"kitchen": "k-hotel",
+	"steps": [
+		{ "chef": { "text": "no but i want to order 10000 bolongese pasta" } },
+		{ "chef": { "answer": { "field": "dish", "value": "as-dish" } } }
+	],
+	"expect": {
+		"0": { "asks": "dish", "pending": "clarify", "receipts": 0 },
+		"1": {
+			"asks": ["date", "guests", "serviceStyle", "courses", "dietary", "budget"],
+			"pending": "clarify",
+			"receipts": 0
+		}
+	}
+}
