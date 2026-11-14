@@ -21,6 +21,7 @@ import { draftFromLine, isoWeek, tierLines, type DraftLine } from '../mandate/ti
 import type { CallContext, Ports, Tx } from '../ports';
 import type { WorkspaceState } from '../state';
 import { quoteOps, toLot } from './orders';
+import { resizeSubstitute } from './substitutes';
 import { AVAILABILITY_WORDING } from './wording';
 
 /** Ports plus the event seeds the server loaded (core reads no files). */
@@ -34,10 +35,10 @@ const pending = (ctx: CallContext, op: PendingOp['op']): PendingOp => ({
 	op
 });
 
-/** The delivery for an event lands the day before it. */
+/** The delivery for an event lands two days before it (demo scenario: Thu 10 Dec for Sat 12 Dec). */
 export function deliverByFor(eventDate: string): string {
 	const d = new Date(`${eventDate}T00:00:00Z`);
-	d.setUTCDate(d.getUTCDate() - 1);
+	d.setUTCDate(d.getUTCDate() - 2);
 	return d.toISOString().slice(0, 10);
 }
 
@@ -200,6 +201,20 @@ export async function editLine(
 			if (plan.lines.some((l) => l.needId === input.needId && l.state === 'committed'))
 				return { error: err('STALE_VERSION', 'a line of this need is already committed').error };
 			drafts = drafts.map((d) => (d.needId === input.needId ? (fresh.get(d.id) ?? d) : d));
+			// Substitutes serving this dish follow the new need (same yield/pack rules as when ranked).
+			const subs = drafts.filter(
+				(d) => d.needId === input.needId && d.substituteFor && !d.id.includes('-mih-')
+			);
+			if (need && need.amount.unit === 'kg' && subs.length) {
+				const servedKg = need.amount.value * (need.dish?.yield ?? 1);
+				const products = await ports.catalog.get(subs.map((d) => d.productId));
+				drafts = drafts.map((d) => {
+					const p = subs.includes(d) ? products.get(d.productId) : undefined;
+					const line = plan.lines.find((l) => l.id === d.id);
+					const qty = p && line ? resizeSubstitute(seed, before.label, servedKg, line, p) : null;
+					return qty ? { ...d, qty } : d;
+				});
+			}
 			changed = drafts.filter((d) => d.needId === input.needId).map((d) => d.id);
 			const dish = seed.dishes.find((x) => x.dish === before.label);
 			summary = `${before.label}: g/guest ${dish?.gServed ?? '?'} → ${input.patch.gramsPerGuest}`;

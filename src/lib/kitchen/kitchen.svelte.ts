@@ -1,6 +1,6 @@
 /* eslint-disable svelte/prefer-svelte-reactivity -- Maps and Sets here are built fresh and replaced wholesale ($state.raw), never mutated after. */
 import type { DomainError, Line } from '$lib/core/contracts';
-import { API_MODE, ToolError, call } from './api';
+import { apiMode, ToolError, call, type ApiMode } from './api';
 import type { PresetId } from './fixture-plan';
 import {
 	setContention as fxContention,
@@ -8,8 +8,8 @@ import {
 	setPreset as fxPreset,
 	reset as fxReset,
 	snapshot,
-	type FixtureSnapshot
-} from './fixture-server';
+	type Snapshot as FixtureSnapshot
+} from './backend';
 
 export interface ActivityItem {
 	id: number;
@@ -42,7 +42,8 @@ export class KitchenStore {
 	whyLineId = $state<string | null>(null);
 	whySteps = $state.raw<{ text: string; source: string; detail?: string }[]>([]);
 	lastCommit = $state.raw<CommitNote | null>(null);
-	readonly mode = API_MODE;
+	/** Live unless the server can't be reached (then the labelled offline fixture). */
+	mode = $state<ApiMode>(apiMode());
 	#seq = 0;
 	#flashTimer: ReturnType<typeof setTimeout> | undefined;
 
@@ -200,6 +201,7 @@ export class KitchenStore {
 			} else throw e;
 		} finally {
 			this.snap = await snapshot();
+			this.mode = apiMode();
 			this.#flashChanges(before, this.snap.plan.lines);
 			this.busy = false;
 		}
