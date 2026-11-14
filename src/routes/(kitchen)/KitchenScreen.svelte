@@ -66,6 +66,7 @@
 	import NothingPlanned from './NothingPlanned.svelte';
 	import UseElsewhere from '$lib/ui/UseElsewhere.svelte';
 	import ProductThumb from '$lib/ui/ProductThumb.svelte';
+	import { acceptAll, lineDecisions } from '$lib/kitchen/line-decisions';
 	import { menuTitle, splitNeed, startsDish } from '$lib/kitchen/menu-plan';
 	import {
 		readOwn,
@@ -398,7 +399,19 @@
 	const view = $derived(k.view);
 	const plan = $derived(k.plan);
 	const approval = $derived(snap?.approval ?? null);
-	const approvedIds = $derived(new Set(approval?.state === 'granted' ? approval.lineIds : []));
+	/** Each line's own decision (D23): a split approval keeps a decided line's own. */
+	const decisionsByLine = $derived(
+		lineDecisions(snap?.plan.lines ?? [], snap?.approvals, approval)
+	);
+	const approvedIds = $derived(
+		new Set([...decisionsByLine].filter(([, d]) => d.state === 'granted').map(([id]) => id))
+	);
+	/** The only bulk action: accept every pending line that may be accepted together. */
+	const all = $derived(acceptAll(snap?.plan.lines ?? [], decisionsByLine));
+	function decideOne(lineId: string, decision: 'grant' | 'deny') {
+		const d = decisionsByLine.get(lineId);
+		if (d) void k.decideLines([{ approval: d.approval, lineIds: [lineId] }], decision);
+	}
 
 	const whyLine = $derived(k.whyLineId ? (k.lineById.get(k.whyLineId) ?? null) : null);
 	const whyDish = $derived(view?.dishes.find((d) => d.lineIds.includes(k.whyLineId ?? '')) ?? null);
@@ -1133,6 +1146,15 @@
 					}
 				: undefined}
 			onwhy={() => k.openWhy(l.id)}
+			decide={decisionsByLine.get(l.id) && !k.readOnly
+				? {
+						...decisionsByLine.get(l.id)!,
+						cost: d ? `${d.nameFi} loses cover` : 'this line is not ordered',
+						busy: k.busy,
+						onaccept: () => decideOne(l.id, 'grant'),
+						onreject: () => decideOne(l.id, 'deny')
+					}
+				: undefined}
 			swap={k.mode === 'live' && plan && !k.readOnly
 				? {
 						planId: plan.id,
@@ -1321,6 +1343,31 @@
 							</details>
 						</h2>
 					</div>
+					{#if all.count || all.signOff}
+						<!-- The one bulk action (D23): every line that may be accepted together; sign-offs stay one by one. -->
+						<div
+							class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-lg border border-rule bg-sheet px-4 py-2.5"
+						>
+							<p class="min-w-0 flex-1 text-body text-ink">
+								{all.count + all.signOff}
+								{all.count + all.signOff === 1 ? 'line waits' : 'lines wait'} for you. Accept, reject
+								or swap each line below{#if all.signOff}<span class="text-signoff">
+										&nbsp;· {all.signOff}
+										{all.signOff === 1 ? 'needs' : 'need'} your sign-off one by one</span
+									>{/if}.
+							</p>
+							{#if all.count}
+								<button
+									type="button"
+									class="inline-flex h-9 items-center rounded-md bg-accent px-4 text-body font-medium whitespace-nowrap text-sheet hover:bg-accent-ink disabled:opacity-50"
+									disabled={k.busy || k.readOnly}
+									onclick={() => void k.decideLines([...all.byApproval.values()], 'grant')}
+									>Accept all {all.count} ·
+									<span class="mono ml-1">{money(all.cents)}</span></button
+								>
+							{/if}
+						</div>
+					{/if}
 					{#if contended}
 						<p
 							class="mt-2 flex items-start gap-2 rounded-lg border border-signoff/50 bg-signoff-wash px-4 py-2.5 text-body text-ink"
