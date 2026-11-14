@@ -1,7 +1,7 @@
 // Self-test for the checker and the scenario files: node --test evals/
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { applyExpectFail, checkExpect } from './check.ts';
+import { applyExpectFail, checkExpect, checkLate } from './check.ts';
 import { loadScenarios, loadSeeds, validate } from './run.ts';
 import type { EndState } from './types.ts';
 
@@ -133,4 +133,72 @@ test('expectFail turns a listed failure into a pass and flags one that now passe
 	assert.equal(out.find((x) => x.key === 'receipts')?.pass, false);
 	assert.equal(out.find((x) => x.key === 'expectFail.F5[lines]')?.pass, false);
 	assert.equal(out.find((x) => x.key === 'expectFail.F2[nope]')?.pass, false);
+});
+
+test('checkLate: a passed cut-off is caught, named and a next date offered', () => {
+	const want = { requested: '2026-12-08', offer: '2026-12-09' };
+	const fails = (seen: Parameters<typeof checkLate>[2]) =>
+		checkLate('x', want, seen)
+			.filter((r) => !r.pass)
+			.map((r) => r.key.replace('x.late.', ''));
+	const held = {
+		deliverBy: '2026-12-08',
+		lines: [{ state: 'unorderable', reasons: ['cutoff_passed'] }]
+	};
+	// Today's behaviour: held, but silent about why and what instead.
+	assert.deepEqual(fails({ plans: [held], committedFor: [], said: '', askedDate: false }), [
+		'namesCutoff',
+		'offersNext'
+	]);
+	// The wanted reply.
+	const good = 'The cut-off for Tuesday has passed; the earliest delivery is Wednesday 9 Dec.';
+	assert.deepEqual(fails({ plans: [held], committedFor: [], said: good, askedDate: false }), []);
+	assert.deepEqual(
+		fails({
+			plans: [],
+			committedFor: [],
+			said: 'Tilausaika umpeutui, keskiviikko käy',
+			askedDate: false
+		}),
+		[]
+	);
+	// A silent move to Wednesday, or a commit for Tuesday.
+	const moved = { deliverBy: '2026-12-09', lines: [{ state: 'eligible' }] };
+	assert.deepEqual(
+		fails({ plans: [moved], committedFor: [], said: 'Planned.', askedDate: false }),
+		['noSilentShift', 'namesCutoff']
+	);
+	assert.ok(
+		fails({ plans: [held], committedFor: ['2026-12-08'], said: good, askedDate: false }).includes(
+			'neverCommitted'
+		)
+	);
+	// Asking for the date is also right.
+	assert.deepEqual(fails({ plans: [], committedFor: [], said: 'Which day?', askedDate: true }), []);
+});
+
+test('checkLate reads a Finnish numeric date as the offer', () => {
+	const r = checkLate(
+		'x',
+		{ requested: '2026-12-08', offer: '2026-12-09' },
+		{
+			plans: [],
+			committedFor: [],
+			said: 'Tilausaika meni jo, toimitus aikaisintaan 9.12.',
+			askedDate: false
+		}
+	);
+	assert.deepEqual(
+		r.filter((x) => !x.pass).map((x) => x.key),
+		[]
+	);
+	const wrong = checkLate(
+		'x',
+		{ requested: '2026-12-08', offer: '2026-12-09' },
+		{ plans: [], committedFor: [], said: 'Tilausaika meni jo, toimitus 19.12.', askedDate: false }
+	);
+	assert.deepEqual(
+		wrong.filter((x) => !x.pass).map((x) => x.key),
+		['x.late.offersNext']
+	);
 });

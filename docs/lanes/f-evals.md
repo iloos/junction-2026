@@ -18,7 +18,8 @@
 |---|---|---|
 | A3-agent-cutoff | fidelity + paraphrase butter | E |
 | P1-clause-constraint, P2-fi-lexicon | `paraphrase/cases.json` | B (request) |
-| P3-agent-seeded-event | `paraphrase/cases.json` | E |
+| P3-agent-seeded-event, LATE-agent-words | `paraphrase/cases.json` | E |
+| LATE-request-words | `paraphrase/cases.json` | B |
 | R6-lineage | `r6-1-lineage` | menu track (A4/B) |
 | F12-ops coverage | `surfaces.test.ts` | 9c |
 | A4 held plan from a brief | `briefs/golden.json` | menu track |

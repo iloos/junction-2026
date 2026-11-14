@@ -1,0 +1,13 @@
+{
+	"id": "c4-late-tomorrow",
+	"$comment": "A complete order whose date is past its cut-off (Monday 21:40, 'tomorrow'): caught before ordering, the cut-off named, Wed 9 Dec offered or the date asked; nothing committed for Tuesday and no silent shift. 'go ahead' afterwards still commits nothing for Tuesday.",
+	"kitchen": "k-hotel",
+	"steps": [
+		{ "chef": { "text": "Order 4 kg lactose-free butter for tomorrow" } },
+		{ "chef": { "continue": true } }
+	],
+	"expect": {
+		"0": { "receipts": 0, "late": { "requested": "2026-12-08", "offer": "2026-12-09" } },
+		"1": { "samePlan": true, "late": { "requested": "2026-12-08", "offer": "2026-12-09" } }
+	}
+}

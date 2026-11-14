@@ -1,18 +1,14 @@
 {
 	"id": "c1-clarify-then-order",
-	"$comment": "Clarification: the amount is missing, so exactly one question about it; the answer fills the slot and the order goes on with the date and product the chef already typed.",
+	"$comment": "Clarification at the real scenario clock (Monday 21:40, after the 17:00 cut-off): no amount is given and 'tomorrow' is too late. The first turn asks one question (the amount or the date); each answer fills a slot and is never asked again. Tuesday is never ordered and never silently replaced: the agent either asks for the date or names the passed cut-off and offers Wed 9 Dec (Stock D-1).",
 	"kitchen": "k-hotel",
-	"steps": [
-		{ "chef": { "text": "I need lactose-free butter for tomorrow" } },
-		{ "chef": { "answer": { "field": "qty", "value": { "value": 4, "unit": "kg" } } } }
-	],
+	"steps": [{ "chef": { "text": "I need lactose-free butter for tomorrow" } }],
+	"answers": { "qty": { "value": 4, "unit": "kg" }, "date": "2026-12-09" },
 	"expect": {
 		"0": {
-			"asks": "qty",
-			"pending": "clarify",
-			"taskState": "awaiting_clarification",
-			"receipts": 0
-		},
-		"1": { "asks": null, "pending": ["decision", "none"], "receipts": 0 }
+			"asks": ["qty", "date"],
+			"receipts": 0,
+			"late": { "requested": "2026-12-08", "offer": "2026-12-09" }
+		}
 	}
 }

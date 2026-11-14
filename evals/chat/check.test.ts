@@ -135,3 +135,38 @@ test('checkTrial keys each step and applies per-step expectations', () => {
 	assert.deepEqual(failed(r), []);
 	assert.ok(r.some((x) => x.key === '1.taskState'));
 });
+
+test('late: every turn of a step counts; asking the date or naming the cut-off with Wednesday passes', () => {
+	const late = { requested: '2026-12-08', offer: '2026-12-09' };
+	const plans = [
+		{
+			id: 'p1',
+			deliverBy: '2026-12-08',
+			approval: null,
+			needs: [need('n1')],
+			lines: [{ state: 'unorderable', reasons: ['cutoff_passed'] }]
+		}
+	];
+	const silent = checkTrial([obs({ plans, events: [{ type: 'done', text: 'Planned.' }] })], {
+		0: { late }
+	});
+	assert.deepEqual(failed(silent), ['0.late.namesCutoff', '0.late.offersNext']);
+	const asked = obs({
+		stepIndex: 0,
+		events: [{ type: 'clarify', field: 'date', question: 'Which day?' }]
+	});
+	const then = obs({
+		stepIndex: 0,
+		step: { chef: { answer: { field: 'date', value: '2026-12-09' } } },
+		plans: [{ ...plans[0], deliverBy: '2026-12-09' }],
+		events: [{ type: 'done', text: 'Planned for Wednesday.' }]
+	});
+	assert.deepEqual(failed(checkTrial([asked, then], { 0: { late, asks: ['qty', 'date'] } })), []);
+	const said = obs({
+		plans,
+		events: [
+			{ type: 'done', text: 'The cut-off for Tuesday has passed; Wednesday 9 Dec is the earliest.' }
+		]
+	});
+	assert.deepEqual(failed(checkTrial([said], { 0: { late } })), []);
+});

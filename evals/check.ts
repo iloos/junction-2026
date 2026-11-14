@@ -373,3 +373,87 @@ export function checkExpect(expect: Record<string, unknown>, end: EndState): Che
 		CHECKERS[key] ? CHECKERS[key](want, end) : [fail(key, 'no checker for this expect key')]
 	);
 }
+
+/** A request whose date is past its cut-off ("for tomorrow" on Monday evening), and the date to offer instead. */
+export interface LateWant {
+	requested: string;
+	offer: string;
+}
+export interface LateSeen {
+	plans: { deliverBy: string; lines: { state: string; reasons?: string[] }[] }[];
+	/** Delivery date of each committed order's plan. */
+	committedFor: string[];
+	/** Everything the entry told the chef. */
+	said: string;
+	/** The entry asked for the date instead of planning. */
+	askedDate: boolean;
+}
+
+const CUTOFF_WORDS = /cut-?off|order(ing)? deadline|too late|tilausaika|määräaika|liian myöhään/i;
+const weekdayOf = (d: string) =>
+	new Date(`${d}T12:00:00Z`).toLocaleDateString('en-GB', { weekday: 'long', timeZone: 'UTC' });
+const FI_DAYS: Record<string, string> = {
+	Monday: 'maanantai',
+	Tuesday: 'tiistai',
+	Wednesday: 'keskiviikko',
+	Thursday: 'torstai',
+	Friday: 'perjantai',
+	Saturday: 'lauantai',
+	Sunday: 'sunnuntai'
+};
+
+/**
+ * A too-late date is caught before ordering: never committed for the requested date, never moved without saying so,
+ * the passed cut-off named in words, and the next feasible date offered (or the date asked). Keys `<prefix>.late.*`.
+ */
+export function checkLate(prefix: string, want: LateWant, seen: LateSeen): CheckResult[] {
+	const k = (s: string) => `${prefix}.late.${s}`;
+	const plan = seen.plans[seen.plans.length - 1];
+	const named = CUTOFF_WORDS.test(seen.said);
+	const day = weekdayOf(want.offer);
+	const [, m, d] = want.offer.split('-').map(Number);
+	const offerWords = new RegExp(
+		`${want.offer}|${day}|${FI_DAYS[day]}|(?<!\\d)${d}\\.\\s?${m}\\.|(?<!\\d)${d} (Dec|December|joulukuuta)`,
+		'i'
+	);
+	const out: CheckResult[] = [
+		{
+			key: k('neverCommitted'),
+			pass: !seen.committedFor.includes(want.requested),
+			detail: `committed for ${JSON.stringify(seen.committedFor)}`
+		}
+	];
+	const moved = Boolean(plan && plan.deliverBy !== want.requested);
+	out.push({
+		key: k('noSilentShift'),
+		pass: !moved || named || seen.askedDate,
+		detail: moved
+			? `moved to ${plan!.deliverBy}; cut-off ${named ? 'named' : 'not named'}`
+			: 'not moved'
+	});
+	const held =
+		plan?.deliverBy === want.requested &&
+		plan.lines.every((l) => l.state !== 'committed' && l.state !== 'eligible');
+	out.push({
+		key: k('caughtAtPlan'),
+		pass: seen.askedDate || moved || Boolean(held) || !plan,
+		detail: seen.askedDate
+			? 'asked the date'
+			: moved
+				? 'planned another date'
+				: held
+					? 'held'
+					: 'eligible for the passed date'
+	});
+	out.push({
+		key: k('namesCutoff'),
+		pass: seen.askedDate || named,
+		detail: named ? 'named' : `said: ${seen.said.slice(0, 160) || '(nothing)'}`
+	});
+	out.push({
+		key: k('offersNext'),
+		pass: seen.askedDate || offerWords.test(seen.said) || plan?.deliverBy === want.offer,
+		detail: `want ${want.offer} (${day}) offered or planned; plan ${plan?.deliverBy}`
+	});
+	return out;
+}
