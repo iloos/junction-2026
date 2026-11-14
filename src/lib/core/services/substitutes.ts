@@ -1,6 +1,7 @@
 /**
- * find_substitutes (PRODUCT ★3, D6 ranking). Candidate pool: Valio's own rules and same-category products from the
- * catalog, plus the event seed's hand-checked candidates and rescue options for that dish. Each candidate is sized
+ * find_substitutes (PRODUCT ★3, D6 ranking). Candidate pool: Valio's own rules, the event seed's hand-checked
+ * candidates and rescue options for that dish, and same-category catalog products only for dishes the seed does not
+ * know. Each candidate is sized
  * from the dish's served amount and its own yield and pack, checked by the shared validator, and ranked.
  *
  * Three things are kept apart (review round 3, finding 4):
@@ -130,13 +131,18 @@ export async function findSubstitutes(
 			fromValioRule: (prev?.fromValioRule ?? false) || e.fromValioRule
 		});
 	};
-	for (const c of await ports.catalog.candidates(line.productId, 12))
-		add({ productId: c.productId, fromValioRule: c.fromValioRule, yield: dish?.yield });
 	const seedIds = [
 		...((dish as Loose)?.candidates ?? []),
 		...(rescue?.alternatives ?? []),
 		...(rescue?.chosen?.productId ? [rescue.chosen] : [])
 	].map((c: Loose) => c.productId as string);
+	// A dish the event seed knows (hand-checked candidates or a rescue) takes only those and Valio's own rules.
+	// Same-category neighbours are the catalog's first ids in a broad group (a graham pie for a swede casserole,
+	// kidney for a ham), so they are a pool only where nobody has said what the dish can be.
+	const dishKnown = seedIds.length > 0 || rescue != null;
+	for (const c of await ports.catalog.candidates(line.productId, 12))
+		if (c.fromValioRule || !dishKnown)
+			add({ productId: c.productId, fromValioRule: c.fromValioRule, yield: dish?.yield });
 	for (const id of seedIds) add(seedEntryFor(seed, need?.label ?? '', line.productId, id));
 
 	const ids = [...pool.keys()];
