@@ -14,14 +14,32 @@ import { isAuthorityImperative, isQuestion } from '../classify';
 export type ProductAspect = 'recall' | 'origin' | 'allergens' | 'facts';
 
 export type Question =
-	{ kind: 'mandate' } | { kind: 'product'; aspect: ProductAspect; query: string };
+	| { kind: 'mandate' }
+	| {
+			kind: 'product';
+			aspect: ProductAspect;
+			query: string;
+			/** The product the chef picked from "Which one?": answer for exactly this one. */
+			productId?: string;
+	  };
 
 export interface AnswerStep {
 	tool: ToolName;
 	ok: boolean;
 	/** What the step found, in the chef's words. */
 	summary: string;
+	/**
+	 * Where it came from: the static catalogue and our rules (`rules`), a web call just now (`live`), an earlier
+	 * live answer or the stored recall watch (`cache`), a recorded real response in fixture mode (`replay`).
+	 */
+	source: 'rules' | 'live' | 'cache' | 'replay';
 }
+
+/** The web tools' own label at the start of their summary ("[cache] 2 web fact(s) ..."). */
+const webSource = (r: Served): AnswerStep['source'] => {
+	const m = r.ok ? /^\[(live|cache|replay)\]/.exec(r.value.meta?.summary ?? '') : null;
+	return (m?.[1] as AnswerStep['source'] | undefined) ?? 'live';
+};
 
 export interface Source {
 	url: string;
@@ -57,6 +75,21 @@ export interface Answer {
 	text: string;
 	/** Where the web part of the answer came from. Empty when the catalogue answered alone. */
 	sources: Source[];
+	/** More than one product matched: the chef picks one before anything is answered. */
+	choices?: { label: string; value: string }[];
+}
+
+/**
+ * A "Which one?" button's value: the aspect asked, the product picked and its catalogue name to find it by
+ * ("origin:464201:Arla täysmaito 1 l"); search finds products by name, not by id.
+ */
+export const choiceValue = (aspect: ProductAspect, p: Product) =>
+	`${aspect}:${p.productId}:${p.nameFi.slice(0, 120)}`;
+export function readChoice(
+	value: string
+): { aspect: ProductAspect; productId: string; name: string } | null {
+	const m = /^(recall|origin|allergens|facts):([\w-]{1,40}):(.{1,120})$/s.exec(value);
+	return m ? { aspect: m[1] as ProductAspect, productId: m[2], name: m[3] } : null;
 }
 
 /** The only tools an answer may call: all read scope. Checked before every call. */
@@ -77,7 +110,7 @@ const ASPECTS: [ProductAspect, RegExp][] = [
 	['recall', /\b(recall|recalls|recalled|withdrawn|takaisinve\w*|takaisinkutsu\w*)\b/i],
 	[
 		'origin',
-		/\b(origin|where (is|are|does|do) .+ (from|made|produced)|made in|produced in|country|alkuperä\w*|mistä)\b/i
+		/\b(origin|where (is|are|does|do) .+ (from|made|produced)|made in|produced in|country|finnish|domestic|swedish|imported|alkuperä\w*|mistä|kotimai\w*|suomalai\w*)\b/i
 	],
 	[
 		'allergens',
@@ -88,7 +121,7 @@ const ASPECTS: [ProductAspect, RegExp][] = [
 
 /** Words that are about the question, not the product; stripped to leave the product's name. */
 const NOT_PRODUCT =
-	/\b(is|are|was|the|a|an|our|my|this|that|any|there|does|do|has|have|it|its|of|in|on|for|from|with|me|about|tell|what|whats|what's|which|where|show|explain|please|can|you|check|still|ok|okay|safe|use|made|produced|country|origin|recall|recalls|recalled|withdrawn|allergen\w*|contain|contains|may|facts?|ingredients?|nutrition|onko|mikä|mitä|mistä|kerro|näytä|takaisinve\w*|takaisinkutsu\w*|alkuperä\w*|sisältää|tietoja|ainesosa\w*)\b/gi;
+	/\b(is|are|was|the|a|an|our|my|this|that|any|there|does|do|has|have|it|its|of|in|on|for|from|with|me|about|tell|what|whats|what's|which|where|show|explain|please|can|you|check|still|ok|okay|safe|use|made|produced|country|origin|finnish|domestic|swedish|imported|kotimai\w*|suomalai\w*|recall|recalls|recalled|withdrawn|allergen\w*|contain|contains|may|facts?|ingredients?|nutrition|onko|mikä|mitä|mistä|kerro|näytä|takaisinve\w*|takaisinkutsu\w*|alkuperä\w*|sisältää|tietoja|ainesosa\w*)\b/gi;
 
 /** A question this module answers, or null (the words go to the plan-based agent as before). */
 export function readQuestion(text: string): Question | null {
@@ -168,7 +201,9 @@ async function answerMandate(call: Call, kitchenId?: string): Promise<Answer> {
 	const r = await call('get_context', {});
 	if (!r.ok)
 		return {
-			steps: [{ tool: 'get_context', ok: false, summary: 'Could not read the mandate.' }],
+			steps: [
+				{ tool: 'get_context', ok: false, summary: 'Could not read the mandate.', source: 'rules' }
+			],
 			text: `I could not read the mandate: ${r.error.message}`,
 			sources: []
 		};
@@ -181,6 +216,7 @@ async function answerMandate(call: Call, kitchenId?: string): Promise<Answer> {
 			{
 				tool: 'get_context',
 				ok: true,
+				source: 'rules',
 				summary:
 					shown.length === 1
 						? `Read the mandate for ${shown[0].name}.`
@@ -227,71 +263,117 @@ const names = (p: Product) =>
 	[p.nameFi, p.nameEn, p.nameShort?.value].filter(Boolean).join(' ').toLowerCase();
 
 type Picked =
-	| { ok: true; product: Product; summary: string; text?: undefined }
-	| { ok: boolean; product?: undefined; summary: string; text: string };
+	| { ok: true; product: Product; summary: string }
+	| { ok: true; choices: Product[]; summary: string }
+	| { ok: boolean; summary: string; text: string };
+
+const named = (p: Product, w: string) => {
+	const n = new Set(words(`${names(p)} ${p.brand ?? ''}`));
+	return n.has(w) || (w.length >= 5 && [...n].some((x) => x.startsWith(w)));
+};
 
 /**
- * The one product a question is about. A word the request page knows ("butter", "voi") searches with its catalogue
- * word inside its categories, preferring its default variant, as /request resolves it. Otherwise a hit counts only
- * when every asked word is a whole word of its name, so "butter" never lands on butternut squash; when none is,
- * the chef is asked which product.
+ * The products a question is about. A word the request page knows ("milk", "voi") searches with its catalogue word
+ * inside its categories; a variant word ("whole" -> täysmaito) must be in the name; every other asked word (a brand,
+ * "Arla") must be a whole word of the name or brand, so "butter" never lands on butternut squash and "Arla whole milk"
+ * never on Valio semi-skimmed. The lexicon's default variant never picks: more than one match is the chef's choice.
  */
-async function pickProduct(call: Call, query: string): Promise<Picked> {
+async function pickProduct(call: Call, query: string, productId?: string): Promise<Picked> {
 	const asked = words(query);
 	const known = PRODUCTS.find((w) => asked.some((a) => w.forms.includes(a)));
-	const s = await call('search_products', { query: known?.search ?? query, limit: 20 });
-	if (!s.ok)
+	const variant = known?.variants?.find((v) => v.words.some((w) => asked.includes(w)));
+	const explicit = asked.filter(
+		(a) => !known?.forms.includes(a) && !variant?.words.includes(a) && a.length > 1
+	);
+	// A picked product is found by its own name (the query); otherwise the lexicon word and the words asked.
+	const searches = [
+		...new Set((productId ? [query] : [known?.search, query]).filter((q): q is string => !!q))
+	];
+	const found = new Map<string, Product>();
+	let failed: string | null = null;
+	for (const q of searches) {
+		const s = await call('search_products', { query: q, limit: 50 });
+		if (!s.ok) failed = s.error.message;
+		else for (const p of (s.value as { products: Product[] }).products) found.set(p.productId, p);
+	}
+	if (!found.size && failed)
 		return {
 			ok: false,
 			summary: 'The catalogue search failed.',
-			text: `I could not search the catalogue: ${s.error.message}`
+			text: `I could not search the catalogue: ${failed}`
 		};
-	let hits = (s.value as { products: Product[] }).products;
-	if (known) {
-		if (known.categories) hits = hits.filter((p) => known.categories!.includes(p.category));
-		const prefer = known.prefer?.token;
-		if (prefer)
-			hits = [...hits].sort((a, b) => +names(b).includes(prefer) - +names(a).includes(prefer));
-	} else {
-		const whole = hits.filter((p) => {
-			const n = new Set(words(names(p)));
-			return asked.every((a) => n.has(a) || [...n].some((w) => w.startsWith(a) && a.length >= 5));
-		});
-		if (!whole.length && hits.length)
-			return {
-				ok: true,
-				summary: `No product is named “${query}”; closest: ${hits.slice(0, 3).map(productName).join(', ')}.`,
-				text: `I'm not sure which product you mean by “${query}”. The closest catalogue names are ${hits
-					.slice(0, 3)
-					.map(productName)
-					.join(', ')}. Ask again with the product's name as the catalogue has it.`
-			};
-		hits = whole;
+	let hits = [...found.values()];
+	if (productId) {
+		const p = hits.find((x) => x.productId === productId);
+		return p
+			? { ok: true, product: p, summary: `Found ${productName(p)}.` }
+			: {
+					ok: true,
+					summary: 'That product is not in the catalogue any more.',
+					text: 'I could not find that product in the catalogue any more; ask again by its name.'
+				};
 	}
-	if (!hits.length)
-		return {
-			ok: true,
-			summary: `No catalogue product matches “${query}”.`,
-			text: `I found no product for “${query}” in the Valio catalogue. Name it as the catalogue does, for example “kermavaahto” or “voi”.`
-		};
-	const others =
-		hits.length > 1 ? ` (also matched: ${hits.slice(1, 3).map(productName).join(', ')})` : '';
-	return { ok: true, product: hits[0], summary: `Found ${productName(hits[0])}${others}.` };
+	if (known?.categories) hits = hits.filter((p) => known.categories!.includes(p.category));
+	if (variant) hits = hits.filter((p) => names(p).includes(variant.token));
+	const near = hits;
+	hits = hits.filter((p) => explicit.every((w) => named(p, w)));
+	if (!hits.length) {
+		const close = (near.length ? near : [...found.values()]).slice(0, 3).map(productName);
+		return close.length
+			? {
+					ok: true,
+					summary: `No product is named “${query}”; closest: ${close.join(', ')}.`,
+					text: `I'm not sure which product you mean by “${query}”. The closest catalogue names are ${close.join(', ')}. Ask again with the product's name as the catalogue has it.`
+				}
+			: {
+					ok: true,
+					summary: `No catalogue product matches “${query}”.`,
+					text: `I found no product for “${query}” in the Valio catalogue. Name it as the catalogue does, for example “kermavaahto” or “voi”.`
+				};
+	}
+	if (hits.length > 1)
+		return { ok: true, choices: hits, summary: `${hits.length} products match “${query}”.` };
+	return { ok: true, product: hits[0], summary: `Found ${productName(hits[0])}.` };
 }
+
+/** At most this many "Which one?" buttons; more matches ask for a closer name. */
+const MAX_CHOICES = 4;
 
 async function answerProduct(
 	call: Call,
 	q: Extract<Question, { kind: 'product' }>
 ): Promise<Answer> {
 	const steps: AnswerStep[] = [];
-	const picked = await pickProduct(call, q.query);
-	if (!picked.product) {
-		steps.push({ tool: 'search_products', ok: picked.ok, summary: picked.summary });
-		return { steps, text: picked.text, sources: [] };
+	const picked = await pickProduct(call, q.query, q.productId);
+	steps.push({ tool: 'search_products', ok: picked.ok, summary: picked.summary, source: 'rules' });
+	if ('text' in picked) return { steps, text: picked.text, sources: [] };
+	if ('choices' in picked) {
+		const c = picked.choices;
+		// One origin for every match is an answer for all of them; anything else is the chef's pick first.
+		const origins = new Set(c.map((x) => x.origin?.toUpperCase() ?? ''));
+		if (q.aspect === 'origin' && origins.size === 1 && !origins.has(''))
+			return {
+				steps,
+				text: `All ${c.length} matching products come from ${country([...origins][0])}, according to Valio's catalogue: ${c
+					.slice(0, 6)
+					.map(productName)
+					.join(', ')}${c.length > 6 ? ', …' : ''}.`,
+				sources: []
+			};
+		return {
+			steps,
+			text:
+				c.length > MAX_CHOICES
+					? `${c.length} products match “${q.query}”. Which one? The first ${MAX_CHOICES} are below; or name it more closely (brand, fat level, size).`
+					: `${c.length} products match “${q.query}”. Which one?`,
+			sources: [],
+			choices: c
+				.slice(0, MAX_CHOICES)
+				.map((x) => ({ label: productName(x), value: choiceValue(q.aspect, x) }))
+		};
 	}
 	const p = picked.product;
 	const name = productName(p);
-	steps.push({ tool: 'search_products', ok: true, summary: picked.summary });
 
 	if (q.aspect === 'recall') {
 		const r = await call('check_recall', { productId: p.productId });
@@ -299,7 +381,8 @@ async function answerProduct(
 			steps.push({
 				tool: 'check_recall',
 				ok: false,
-				summary: 'The recall watch could not be read.'
+				summary: 'The recall watch could not be read.',
+				source: 'cache'
 			});
 			return {
 				steps,
@@ -307,9 +390,14 @@ async function answerProduct(
 				sources: []
 			};
 		}
-		const notices = (
-			r.value as { notices: { url: string; title: string; match: string; seenAt: string }[] }
+		const all = (
+			r.value as {
+				notices: { url: string; title: string; match: string; seenAt: string; drill: boolean }[];
+			}
 		).notices;
+		// A drill is a rehearsal notice, never a recall: said as such, never counted.
+		const notices = all.filter((n) => !n.drill);
+		const drills = all.filter((n) => n.drill && n.match !== 'none');
 		const byGtin = notices.filter((n) => n.match === 'gtin');
 		const byName = notices.filter((n) => n.match === 'name');
 		const cite = (n: (typeof notices)[number]) =>
@@ -317,6 +405,8 @@ async function answerProduct(
 		steps.push({
 			tool: 'check_recall',
 			ok: true,
+			// The watch's notices are stored as the monitor read them; this call reads no network.
+			source: 'cache',
 			summary: byGtin.length
 				? `${byGtin.length} recall notice(s) cite its GTIN.`
 				: byName.length
@@ -329,9 +419,12 @@ async function answerProduct(
 			: byName.length
 				? `${cite(byName[0])}. It names a product like ${name} but not its GTIN, so it may be a different product; check the notice before using it.`
 				: `No recall found in the notices we monitor for ${name}.`;
+		const drill = drills.length
+			? ' (A recall drill also names it; drills are rehearsals, not recalls.)'
+			: '';
 		return {
 			steps,
-			text,
+			text: text + drill,
 			sources: [...byGtin, ...byName].map((n) => source(n.url, n.title))
 		};
 	}
@@ -375,7 +468,12 @@ async function answerProduct(
 				? `Valio's catalogue states no origin for ${name}.`
 				: '';
 	if (!f.ok) {
-		steps.push({ tool: 'lookup_facts', ok: false, summary: 'The web lookup did not answer.' });
+		steps.push({
+			tool: 'lookup_facts',
+			ok: false,
+			summary: 'The web lookup did not answer.',
+			source: 'live'
+		});
 		return {
 			steps,
 			text: `${silent} I could not look it up on the web: ${f.error.message}`.trim(),
@@ -395,6 +493,7 @@ async function answerProduct(
 	steps.push({
 		tool: 'lookup_facts',
 		ok: true,
+		source: webSource(f),
 		summary: facts.length
 			? `Found ${facts.length} sourced fact(s) on the web.`
 			: 'The web had nothing sourced.'

@@ -22,7 +22,7 @@ import { dayWords, ledgerSummary, readTask } from '$lib/server/tasks/outcome';
 import { explain } from './explain';
 import { answerInChat } from './question';
 import { outsideOptions, outsideSteps } from './outside';
-import { readQuestion } from '$lib/server/agent/intents/questions';
+import { readChoice, readQuestion } from '$lib/server/agent/intents/questions';
 import { understand } from './understand';
 import { applyBriefAnswers, draftBrief, nextQuestion, toEventBrief } from '$lib/server/menu/brief';
 import type { BriefAnswer, BriefField } from '$lib/ui/request/types';
@@ -279,6 +279,16 @@ export async function* runChatTurn(
 		canContinue: false
 	});
 	// The answer to "What would you like to do?": a question reads, the others say what to type.
+	// A pick from "Which one?" after a product question: answer for exactly that product, read-only, nothing saved.
+	const choice = input.answer?.field === 'product' ? readChoice(String(input.answer.value)) : null;
+	if (choice) {
+		yield* answerInChat(
+			{ kind: 'product', aspect: choice.aspect, query: choice.name, productId: choice.productId },
+			deps,
+			{ taskId: input.taskId ?? '', state: 'open', kitchenId: deps.kitchen.id }
+		);
+		return;
+	}
 	if (input.answer?.field === 'intent') {
 		const v = String(input.answer.value);
 		if (v === 'check')

@@ -15,7 +15,7 @@ const MAX_OPTIONS = 3;
 export const OUTSIDE_LABEL = 'For your information; not orderable here';
 
 export interface OutsideOptions {
-	steps: { summary: string; ok: boolean }[];
+	steps: { summary: string; ok: boolean; source: 'live' | 'cache' | 'replay' }[];
 	/** One sentence for the answer, or '' when nothing was found. */
 	text: string;
 	sources: Source[];
@@ -35,6 +35,7 @@ export async function outsideOptions(
 		if (!r.ok) {
 			steps.push({
 				ok: false,
+				source: 'live',
 				summary: `Looked outside the catalogue for ${need.label}: ${r.error.message}`
 			});
 			continue;
@@ -43,8 +44,11 @@ export async function outsideOptions(
 			0,
 			MAX_OPTIONS
 		);
+		// The tool's own label: a call just now, an earlier answer, or a recording (fixture mode).
+		const label = /^\[(live|cache|replay)\]/.exec(r.value.meta?.summary ?? '')?.[1];
 		steps.push({
 			ok: true,
+			source: (label as 'live' | 'cache' | 'replay' | undefined) ?? 'live',
 			summary: options.length
 				? `Found ${options.length} option(s) outside the catalogue for ${need.label} (${OUTSIDE_LABEL.toLowerCase()}).`
 				: `Found nothing outside the catalogue for ${need.label}.`
@@ -76,6 +80,6 @@ export function outsideSteps(taskId: string, after: number, o: OutsideOptions): 
 		tool: 'find_outside',
 		ok: s.ok,
 		summary: s.summary,
-		source: 'live'
+		source: s.source
 	}));
 }
