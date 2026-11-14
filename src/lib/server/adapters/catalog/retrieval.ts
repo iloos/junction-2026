@@ -190,7 +190,7 @@ function meetsDiet(p: RetrievalProduct, flag: string): boolean {
  * "luumu-vaniljakiisseli", "kylmäsavulohi tuorejuusto"). A resolve candidate with one the query does not name is out.
  */
 const OTHER_PRODUCT =
-	/(keitto|laatikko|piirakka|piiras|kastike|kastikkeessa|kiisseli|marmeladi|hillo|jogurtti|juusto|hummus|falafel|pihvi|kiusaus|pulla|pullat|sipsi|terriini|kierre|rieska|leipä|tortilla|panini|majoneesi|salaatti|ruutu|kuutio|sekoitus|seos|mix|pyree|sose|bowl|vuoka|pizza|lasagne|makkara|nakki|lenkki|pasteija|mureke|croquette|kroketti|lastu|muusi|ateria|annos|valmiste|leike|levite|smoothie|mehu|juoma|kakku|leivos|aine|tee|grilleri|pasta|sandwich|wrap|patonki|sämpylä|lettu|keksi|sipsit|puuro|rahka|mousse|vanukas)$/;
+	/(keitto|laatikko|piirakka|piiras|kastike|kastikkeessa|kiisseli|marmeladi|hillo|jogurtti|juusto|hummus|falafel|pihvi|kiusaus|pulla|pullat|sipsi|terriini|kierre|rieska|leipä|tortilla|panini|majoneesi|salaatti|ruutu|kuutio|sekoitus|seos|mix|pyree|sose|bowl|vuoka|pizza|lasagne|makkara|nakki|lenkki|pasteija|mureke|croquette|kroketti|lastu|muusi|ateria|annos|valmiste|leike|levite|smoothie|mehu|juoma|kakku|leivos|stabilointiaine|sakeuttamisaine|makeutusaine|väriaine|lisäaine|tee|grilleri|pasta|sandwich|wrap|patonki|sämpylä|lettu|keksi|sipsit|puuro|rahka|mousse|vanukas)$/;
 
 /**
  * Every content word of the query is in the candidate: the same word, a compound with it as head or modifier
@@ -229,6 +229,8 @@ export function foodKind(category: string): FoodKind {
 	return 'other';
 }
 const ANIMAL = new Set<FoodKind>(['fish', 'poultry', 'meat']);
+/** Animal products outside the meat and fish categories: honey (22150) and gelatine (22670) by category, else by name. */
+const NOT_VEGAN = /hunaja|liivate|gelatiini|gelatin/i;
 /** Diet flags that are about the dish, not a free-from label: no meat or fish (and for vegan, no milk or egg). */
 const PLANT_FLAGS = new Set(['VEGETARIAN', 'VEGAN']);
 /** Below this retrieval score a resolve candidate is too weak to pin. */
@@ -298,12 +300,13 @@ export class RetrievalIndex {
 	 * `diet` (e.g. ['LACTOSE'] for a lactose-free menu). Unresolved results say which bar was not cleared.
 	 */
 	resolve(raw: string, o: { limit?: number; diet?: string[] } = {}): Resolution {
-		// Plural fillets read as the fillet: "kirjolohifileet" is "kirjolohifilee".
-		// A recipe line reads as its ingredient: notes in brackets, the first of "A- tai B" alternatives and plural
-		// fillets ("kirjolohifileet") go; quantities and units are not content words anyway.
+		// A recipe line reads as its ingredient: notes in brackets go; of alternatives the named one stays ("voi tai
+		// margariini" is butter; the prefix form "vispi- tai kuohukermaa" is the full word, kuohukerma); plural fillets
+		// read as the fillet ("kirjolohifileet"). Quantities and units are not content words anyway.
 		const query = raw
 			.replace(/\([^)]*\)/g, ' ')
-			.replace(/\S+-?\s+tai\s+/gi, '')
+			.replace(/\S+-\s+tai\s+/gi, '')
+			.replace(/\s+tai\s+\S+/gi, '')
 			.replace(/fileet(?![a-zåäö])/gi, 'filee')
 			.replace(/\s+/g, ' ')
 			.trim();
@@ -335,7 +338,7 @@ export class RetrievalIndex {
 				reason: guarded.reason,
 				nearest: guarded.dropped
 					.slice(0, 3)
-					.map((c) => ({ productId: c.productId, failed: 'category' }))
+					.map((d) => ({ productId: d.c.productId, failed: d.failed }))
 			};
 		if (diet.size) {
 			const any = this.similar(t, new Set(), 3, { minLex: 0.5, diet: new Set(), strict: true });
@@ -368,7 +371,8 @@ export class RetrievalIndex {
 	 * Category guards on resolve candidates, from Valio's category codes:
 	 * - the query's kind is what its own name matches mostly are (products whose name has the query word itself or as
 	 *   the compound head): a fish query keeps fish, a seasoning query keeps seasoning and baking categories;
-	 * - a vegetarian or vegan dish keeps no meat, poultry or fish (vegan: no declared milk or egg either);
+	 * - a vegetarian or vegan dish keeps no meat, poultry or fish; vegan also no declared milk or egg and no honey or
+	 *   gelatine (an undeclared pick passes, and the proposer labels it "no allergen record — check");
 	 * - a candidate below MIN_RESOLVE_SCORE is not pinned.
 	 */
 	private guard(
@@ -376,47 +380,59 @@ export class RetrievalIndex {
 		pool: Candidate[],
 		plant: string[],
 		asked: string[] = []
-	): { kept: Candidate[]; dropped: Candidate[]; reason: string } {
-		const named = contentWords(query)
-			.filter((w) => !DIET_KEYS.some((k) => k.word.test(w)))
-			.map(baseForm);
+	): {
+		kept: Candidate[];
+		dropped: { c: Candidate; failed: 'category' | 'diet' | 'allergen' | 'match' }[];
+		reason: string;
+	} {
+		const named = contentWords(query).filter((w) => !DIET_KEYS.some((k) => k.word.test(w)));
 		const rows = pool.map((c) => ({ c, it: this.byId.get(c.productId)! })).filter((r) => r.it);
-		const headStrong = rows.filter((r) =>
-			named.every((q) => r.it.words.some((w) => w === q || (q.length >= 4 && w.endsWith(q))))
-		);
+		// A word as typed or in its base form ("kermaa" → "kerma"); "suklaa" stays a match as typed.
+		const has = (words: string[], q: string) =>
+			[q, baseForm(q)].some((x) => words.some((w) => w === x || (x.length >= 4 && w.endsWith(x))));
+		const headStrong = rows.filter((r) => named.every((q) => has(r.it.words, q)));
 		const base = headStrong.length ? headStrong : rows;
 		const count = new Map<FoodKind, number>();
 		for (const r of base) {
 			const k = foodKind(r.it.p.category);
 			count.set(k, (count.get(k) ?? 0) + 1);
 		}
+		// The kind to keep, in a fixed order: a spice term (a sixth of its own matches are seasoning; vanilla flavours far
+		// more yoghurts than it has pods) is seasoning; otherwise the animal kind with a majority, the largest share first.
+		const share = (k: FoodKind) => (count.get(k) ?? 0) / Math.max(1, base.length);
 		let want: FoodKind | null = null;
-		for (const [k, n] of count) {
-			if (k === 'other') continue;
-			// Seasoning wins with a sixth of the matches (vanilla flavours far more yoghurts than it has pods); a protein
-			// needs a majority.
-			const share = n / Math.max(1, base.length);
-			if ((k === 'seasoning' && share >= 0.15) || (ANIMAL.has(k) && share > 0.5)) want = k;
+		if (share('seasoning') >= 0.15) want = 'seasoning';
+		else {
+			const top = [...ANIMAL].sort((a, b) => share(b) - share(a))[0];
+			if (share(top) > 0.5) want = top;
 		}
 		const reasons: string[] = [];
 		const kept: Candidate[] = [];
-		const dropped: Candidate[] = [];
+		const dropped: { c: Candidate; failed: 'category' | 'diet' | 'allergen' | 'match' }[] = [];
+		const vegan = plant.includes('VEGAN');
 		for (const r of rows) {
 			const k = foodKind(r.it.p.category);
-			let why: string | null = null;
+			let why: [string, 'category' | 'diet' | 'allergen' | 'match'] | null = null;
 			if (want && k !== want)
-				why = `"${query}" is ${want}; this is ${k === 'other' ? 'another kind of product' : k}`;
+				why = [
+					`"${query}" is ${want}; this is ${k === 'other' ? 'another kind of product' : k}`,
+					'category'
+				];
 			else if (plant.length && ANIMAL.has(k))
-				why = `a ${plant.join('/').toLowerCase()} dish takes no ${k}`;
+				why = [`a ${plant.join('/').toLowerCase()} dish takes no ${k}`, 'diet'];
+			else if (vegan && r.it.p.allergens?.contains.some((a) => a === 'AM' || a === 'AE'))
+				why = ['a vegan dish takes no milk or egg', 'allergen'];
 			else if (
-				plant.includes('VEGAN') &&
-				r.it.p.allergens?.contains.some((a) => a === 'AM' || a === 'AE')
+				vegan &&
+				(r.it.p.category === '22150' ||
+					r.it.p.category === '22670' ||
+					NOT_VEGAN.test(r.it.p.nameFi))
 			)
-				why = 'a vegan dish takes no milk or egg';
-			else if ((r.c.score ?? 0) < MIN_RESOLVE_SCORE) why = 'the name matches too weakly';
+				why = ['a vegan dish takes no honey or gelatine', 'diet'];
+			else if ((r.c.score ?? 0) < MIN_RESOLVE_SCORE) why = ['the name matches too weakly', 'match'];
 			if (why) {
-				dropped.push(r.c);
-				if (!reasons.includes(why)) reasons.push(why);
+				dropped.push({ c: r.c, failed: why[1] });
+				if (!reasons.includes(why[0])) reasons.push(why[0]);
 			} else kept.push(r.c);
 		}
 		// A product sold as free-from (its name says so) that nobody asked for goes after the plain ones: gluten-free
@@ -439,6 +455,8 @@ export class RetrievalIndex {
 			(c) => foodKind(this.byId.get(c.productId)!.p.category) === 'meat' && !isColdCut(c)
 		);
 		const coldCut = (c: Candidate) => (wholeMeat && !coldCutAsked && isColdCut(c) ? 1 : 0);
+		// A vegan pick without an allergen record is kept in score order (fresh produce rarely has one); the proposer
+		// labels it "no allergen record — check" rather than calling it vegan.
 		kept.sort((a, b) => unasked(a) - unasked(b) || coldCut(a) - coldCut(b));
 		return {
 			kept,
