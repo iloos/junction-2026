@@ -48,6 +48,8 @@ export interface WhyEvidence {
 		gtinCited: boolean;
 		sources: { url: string; host: string; title?: string; quote?: string; gtinCited: boolean }[];
 	}[];
+	/** The product's public page with a matching barcode (Valio Aimo or Open Food Facts), when known. */
+	listing?: import('./listing').ProductListing | null;
 	/** Shown under the fields, always. */
 	disclaimer: string;
 	note: string;
@@ -303,15 +305,19 @@ export async function evidenceFor(
 	const { findingsFor, scopeOf, webClients } = await import('.');
 	const { busTrace } = await import('./watch');
 	const { lookupFacts } = await import('./lookup');
+	const { listingOf } = await import('../products');
 	const { exa } = webClients(env, busTrace(scopeOf(w), { lane: 'web' }), w.spendKey);
-	return factsEvidence(
-		await lookupFacts(input, {
+	const product = (await w.ports.catalog.get([input.productId])).get(input.productId);
+	const [facts, listing] = await Promise.all([
+		lookupFacts(input, {
 			exa,
 			catalog: w.ports.catalog,
 			findings: findingsFor(env),
 			workspaceId: w.ctx.workspaceId
-		})
-	);
+		}),
+		product ? listingOf(env, w.spendKey, product).catch(() => null) : Promise.resolve(null)
+	]);
+	return { ...factsEvidence(facts), listing };
 }
 
 /** An outside recipe for an unresolved need, held for sign-off, under the caller's web context. */

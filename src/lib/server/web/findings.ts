@@ -7,7 +7,7 @@ import { persistedMap } from './persist';
 
 export interface Finding {
 	id: string;
-	kind: 'recall' | 'facts' | 'outside';
+	kind: 'recall' | 'facts' | 'outside' | 'listing';
 	/** When it was found (wall clock). */
 	at: string;
 	title: string;
