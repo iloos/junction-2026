@@ -10,6 +10,7 @@
 		type Why
 	} from '$lib/core/stock';
 	import type { ShortageReplanned } from './room';
+	import { readableName } from '$lib/ui/format';
 
 	/**
 	 * Valio's view, ahead (D27): where stock will run short in the next two weeks, per product the kitchens use.
@@ -63,7 +64,7 @@
 		restock: 'restocked',
 		'short-ship': 'restock arrived short',
 		shortage: 'shortage',
-		scarce: 'kept close to need'
+		scarce: 'restocked only to the week’s need'
 	};
 	/** The few reasons that moved this product most, in words. */
 	function reasons(r: ProductForecast): string {
@@ -107,7 +108,7 @@
 		<p class="lede">
 			{#if short.length}
 				<b>{short.length}</b> of {rows.length} products the kitchens use may run short in the next two
-				weeks. First: <b>{short[0].name}</b> on {dayWords(short[0].shortOn!)}.
+				weeks. First: <b>{readableName(short[0].name)}</b> on {dayWords(short[0].shortOn!)}.
 			{:else}
 				None of the {rows.length} products the kitchens use runs short in the next two weeks.
 			{/if}
@@ -116,7 +117,7 @@
 			{#each shown as r (r.productId)}
 				{@const s = spark(r)}
 				<li class:short={r.shortOn}>
-					<span class="name">{r.name}</span>
+					<span class="name">{readableName(r.name)}</span>
 					<svg
 						viewBox="0 0 {W} {H}"
 						width={W}
