@@ -239,3 +239,11 @@ export function roomOrder(
 	const samples = kitchens.filter((k) => !k.copiedFrom && !totals[k.id]);
 	return { active: [...made, ...ordered], samples };
 }
+
+/** Stores that placed their first order between two totals: none before, at least one now. */
+export function firstOrders(
+	before: Record<string, { n: number }>,
+	after: Record<string, { n: number }>
+): string[] {
+	return Object.keys(after).filter((id) => after[id].n > 0 && !(before[id]?.n > 0));
+}

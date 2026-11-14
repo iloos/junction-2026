@@ -5,6 +5,7 @@ import {
 	orderFeed,
 	roomKitchens,
 	roomOrder,
+	firstOrders,
 	shortageCounts,
 	storesCreated,
 	storeTotals,
@@ -76,5 +77,10 @@ describe('room', () => {
 		const { active, samples } = roomOrder(all, { 'k-cafe': { n: 1, cents: 900 } });
 		expect(active.map((k) => k.id)).toEqual(['k-v-d4e5f6', 'k-v-a1b2c3', 'k-cafe']);
 		expect(samples.map((k) => k.id)).toEqual(['k-hotel']);
+	});
+
+	it('finds stores whose first order just landed', () => {
+		expect(firstOrders({ a: { n: 1 } }, { a: { n: 2 }, b: { n: 1 } })).toEqual(['b']);
+		expect(firstOrders({}, {})).toEqual([]);
 	});
 });
