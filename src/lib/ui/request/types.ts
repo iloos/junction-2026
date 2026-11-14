@@ -95,6 +95,8 @@ export interface LookupItemView {
 	question: string | null;
 	answer: AnswerSpec | null;
 	valioRules: ValioRuleView[];
+	/** Under a Rank by preference: what it picked instead of the kitchen default, and why, in one line. */
+	rankNote?: string;
 }
 
 export interface LookupView {

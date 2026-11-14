@@ -30,6 +30,7 @@ import { inWorkspace } from '$lib/server/adapters/simulator/overlay';
 import { ensureRunLoaded } from '$lib/server/demo/reset';
 import { approvalView, callTool, runRequest } from './run';
 import type { ParsedRequest } from './parse';
+import type { RankBy } from './rank-by';
 
 export { ToolFailed } from './run';
 export { readBriefAnswers } from '$lib/server/menu/brief';
@@ -101,6 +102,8 @@ type SubmitOptions = {
 	confirmLarge?: boolean;
 	/** The chef's chosen delivery date (a cut-off answer). */
 	deliverBy?: string;
+	/** A per-request ranking preference (Rank by). */
+	rankBy?: RankBy;
 	env: Env;
 	/** The page passes its workspace; the API passes the key's context instead. */
 	workspaceId?: string;
@@ -144,6 +147,7 @@ async function submitInScope(o: SubmitOptions): Promise<RequestResult> {
 		briefAnswers: o.briefAnswers,
 		confirmLarge: o.confirmLarge,
 		deliverBy: o.deliverBy,
+		rankBy: o.rankBy,
 		clock: (await ports()).ports.clock,
 		tasks: (await ports()).ports.tasks,
 		onEvent: o.onEvent,
