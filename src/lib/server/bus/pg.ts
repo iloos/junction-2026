@@ -61,9 +61,16 @@ export class PgTransport {
 export async function readOps(
 	workspaceId: string,
 	after: number,
-	limit = 1000
+	limit = 1000,
+	/** Only this run's ops; filtered before the limit so old runs can't crowd it out. */
+	runId?: string
 ): Promise<OpEnvelope[]> {
-	const rows = await sql()<{ envelope: OpEnvelope }[]>`
+	const rows = runId
+		? await sql()<{ envelope: OpEnvelope }[]>`
+		select envelope from ops
+		where workspace_id = ${workspaceId} and run_id = ${runId} and seq > ${after}
+		order by seq limit ${limit}`
+		: await sql()<{ envelope: OpEnvelope }[]>`
 		select envelope from ops
 		where workspace_id = ${workspaceId} and seq > ${after}
 		order by seq limit ${limit}`;

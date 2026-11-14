@@ -20,7 +20,12 @@ import { STRESS_WORKSPACE, stressEvents } from './stress';
 export { SYNTH_WORKSPACE } from './synthetic';
 export { STRESS_WORKSPACE } from './stress';
 
-type OpsReader = (workspaceId: string, after: number, limit: number) => Promise<OpEnvelope[]>;
+type OpsReader = (
+	workspaceId: string,
+	after: number,
+	limit: number,
+	runId?: string
+) => Promise<OpEnvelope[]>;
 
 interface BusState {
 	local: MemoryBus;
@@ -66,11 +71,17 @@ export async function publishSim(scope: Scope, event: SimEvent): Promise<void> {
 
 /** An OpsReader over any Drizzle db with our schema (PGlite or Postgres). */
 export function drizzleOpsReader(db: AnyDb): OpsReader {
-	return async (workspaceId, after, limit) => {
+	return async (workspaceId, after, limit, runId) => {
 		const rows = await db
 			.select({ envelope: schema.ops.envelope })
 			.from(schema.ops)
-			.where(and(eq(schema.ops.workspaceId, workspaceId), gt(schema.ops.seq, after)))
+			.where(
+				and(
+					eq(schema.ops.workspaceId, workspaceId),
+					gt(schema.ops.seq, after),
+					runId ? eq(schema.ops.runId, runId) : undefined
+				)
+			)
 			.orderBy(asc(schema.ops.seq))
 			.limit(limit);
 		return rows.map((r: { envelope: unknown }) => r.envelope as OpEnvelope);
@@ -82,14 +93,14 @@ export function setFixtureOpsReader(reader: OpsReader | null): void {
 	bus().fixtureReader = reader;
 }
 
-async function readOpEnvelopes(workspaceId: string, after: number, limit: number) {
+async function readOpEnvelopes(workspaceId: string, after: number, limit: number, runId?: string) {
 	const b = bus();
-	if (viaPg(workspaceId)) return readOps(workspaceId, after, limit);
+	if (viaPg(workspaceId)) return readOps(workspaceId, after, limit, runId);
 	if (b.fixtureReader && workspaceId !== SYNTH_WORKSPACE && workspaceId !== STRESS_WORKSPACE)
-		return b.fixtureReader(workspaceId, after, limit);
+		return b.fixtureReader(workspaceId, after, limit, runId);
 	return b.local
 		.after(workspaceId, after)
-		.flatMap((e) => (e.kind === 'op' ? [e.envelope] : []))
+		.flatMap((e) => (e.kind === 'op' && (!runId || e.envelope.runId === runId) ? [e.envelope] : []))
 		.slice(0, limit);
 }
 
@@ -101,9 +112,7 @@ export async function catchUp(
 	/** Only events of this run (the workspace's current run); all runs when omitted. */
 	runId?: string
 ): Promise<ServerEvent[]> {
-	const ops = (await readOpEnvelopes(workspaceId, after, limit)).filter(
-		(e) => !runId || e.runId === runId
-	);
+	const ops = await readOpEnvelopes(workspaceId, after, limit, runId);
 	const opEvents: ServerEvent[] = ops.map((envelope) => ({
 		kind: 'op',
 		seq: envelope.seq,
