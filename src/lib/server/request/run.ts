@@ -18,7 +18,10 @@ import { day, money } from '$lib/ui/format';
 import { canonicalJson, sha256Hex } from '$lib/core/hash';
 import type { CallContext, Clock, Llm, TaskStore, ToolHandlers } from '$lib/core/ports';
 import { taskForPlan } from './task';
-import { preferenceNote, preferenceOrder, type RankBy } from './rank-by';
+import { preferenceNote, preferenceOrder, priceBasis, type RankBy } from './rank-by';
+
+/** The sales quantity a candidate needs for the request (after lot rounding), 0 when it can't be sized. */
+const qtyOf = (r: Ranked) => (r.conversion?.ok ? r.conversion.salesQty : 0);
 import { serveTool } from '$lib/server/tools/serve';
 import type {
 	AnswerSpec,
@@ -304,10 +307,22 @@ async function lookupItems(
 			chosenAt >= 0
 				? preferenceNote(
 						rankBy,
-						{ product: short[chosenAt].product, offer: offers.get(views[chosenAt].productId) },
+						{
+							product: short[chosenAt].product,
+							offer: offers.get(views[chosenAt].productId),
+							qty: qtyOf(short[chosenAt])
+						},
 						defaultAt >= 0
-							? { product: short[defaultAt].product, offer: offers.get(views[defaultAt].productId) }
-							: null
+							? {
+									product: short[defaultAt].product,
+									offer: offers.get(views[defaultAt].productId),
+									qty: qtyOf(short[defaultAt])
+								}
+							: null,
+						priceBasis(
+							short.map((r) => ({ product: r.product, qty: qtyOf(r) })),
+							offers
+						)
 					)
 				: null;
 		let question: string | null = null;
