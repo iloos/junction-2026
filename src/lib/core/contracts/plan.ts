@@ -89,6 +89,18 @@ export const Need = z.object({
 	 * Absent on plans stored before this field existed: read as `dish` when `dish` is set, else `direct`.
 	 */
 	kind: z.enum(['dish', 'direct']).optional(),
+	/**
+	 * Requirement lineage for needs planned from a menu proposal: which revision, dish and ingredient this need serves.
+	 * Edits, substitutes and the Why chain follow these ids, never a label or an array position.
+	 */
+	source: z
+		.object({
+			proposalId: z.string(),
+			revision: z.int().nonnegative(),
+			dishId: z.string(),
+			ingredientId: z.string()
+		})
+		.optional(),
 	/** Demand after factors: demand + target stock − usable stock − confirmed inbound (D6). */
 	amount: Measure,
 	/** For event dishes: what the chef edits and how the need was derived (the Why drawer and the kitchen table read this). */
@@ -108,10 +120,10 @@ export type Need = z.infer<typeof Need>;
 
 /**
  * How sure the supply behind a candidate is (D8). Ranking is lexicographic on this tier first, then on the weighted
- * score: `confirmed` stock and `make_in_house` from confirmed ingredients beat `unknown` (Terminal, 999999) and
- * `none`. Unknown candidates stay visible and labelled; they are never recommended over confirmed ones.
+ * score: `known_stock` and `make_in_house` from known-stock ingredients beat `unknown_stock` (Terminal, 999999) and
+ * `none`. Named for observed stock before commitment: "confirmed" is reserved for receipt-backed supply. Unknown candidates stay visible and labelled; they are never recommended over confirmed ones.
  */
-export const SupplyTier = z.enum(['confirmed', 'make_in_house', 'unknown', 'none']);
+export const SupplyTier = z.enum(['known_stock', 'make_in_house', 'unknown_stock', 'none']);
 export type SupplyTier = z.infer<typeof SupplyTier>;
 
 /** One ranked candidate's score breakdown (D6 ranking). Missing values never score favourably. */
@@ -183,6 +195,14 @@ export const Line = z.object({
 	residual: Measure.optional(),
 	/** Present when this line replaces another product. */
 	substituteFor: ProductId.optional(),
+	/**
+	 * The fulfilment strategy this line belongs to. A need has one active strategy; its lines are AND (all of a
+	 * make-in-house recipe's ingredients are required), while different strategies are OR alternatives. Changing the
+	 * strategy supersedes its uncommitted lines and voids affected approvals. Absent on lines of older plans (= buy).
+	 */
+	strategy: z
+		.object({ id: z.string(), kind: z.enum(['buy', 'make_in_house', 'substitute']) })
+		.optional(),
 	score: ScoreBreakdown.optional(),
 	/** Read model, filled on tool outputs (see LineView). */
 	view: LineView.optional(),
@@ -254,6 +274,8 @@ export const Plan = z.object({
 	state: PlanState,
 	deliverBy: IsoDate,
 	eventId: z.string().optional(),
+	/** The chef-reviewed menu proposal revision this plan was built from. */
+	source: z.object({ proposalId: z.string(), revision: z.int().nonnegative() }).optional(),
 	needs: z.array(Need),
 	lines: z.array(Line),
 	totalCents: Cents.nullable(),
@@ -346,7 +368,13 @@ export const Receipt = z.object({
 	id: z.string(),
 	orderId: z.string(),
 	confirmed: z.array(
-		z.object({ productId: ProductId, qty: SalesQty, lotId: z.string().optional() })
+		z.object({
+			productId: ProductId,
+			qty: SalesQty,
+			lotId: z.string().optional(),
+			/** The immutable order line this confirms, so allocation joins by identity, never by product. */
+			lineId: z.string().optional()
+		})
 	),
 	/** Terminal (unknown-quantity) lines: ordered, not confirmed; they stay unconfirmed cover. */
 	awaitingSupplier: z.array(z.object({ productId: ProductId, qty: SalesQty })).default([]),

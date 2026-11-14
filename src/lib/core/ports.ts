@@ -6,6 +6,7 @@ import type {
 	Actor,
 	DomainError,
 	Kitchen,
+	MenuProposal,
 	Offer,
 	OpEnvelope,
 	PendingOp,
@@ -164,6 +165,24 @@ export interface CallContext {
 	initiatedBy?: Actor;
 	/** Kitchens this context may act for; absent = every kitchen in the workspace. */
 	kitchenIds?: readonly string[];
+}
+
+/**
+ * Menu proposals (Track B owns the adapter, `src/lib/server/menu/**`): stored per workspace and revision before any
+ * recoverable URL is returned. `review` records who accepted which revision (digest = termsHash-style hash of the
+ * canonical proposal); plan_event reads only reviewed revisions.
+ */
+export interface MenuStore {
+	get(workspaceId: string, id: string, revision: number): Promise<MenuProposal | null>;
+	latest(workspaceId: string, id: string): Promise<MenuProposal | null>;
+	put(workspaceId: string, proposal: MenuProposal): Promise<void>;
+	review(
+		workspaceId: string,
+		id: string,
+		revision: number,
+		by: Actor,
+		at: Date
+	): Promise<Result<MenuProposal>>;
 }
 
 /**

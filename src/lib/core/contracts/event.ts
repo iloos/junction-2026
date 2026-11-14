@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { Cents, IsoDate, ProductId, Provenance } from './primitives';
+import { Actor, Cents, IsoDate, IsoDateTime, ProductId, Provenance } from './primitives';
 
 /**
  * Open event requests ("5-course dinner for 50 on 20 December"). Three distinct stages, never collapsed:
@@ -104,6 +104,12 @@ export const MenuProposal = z.object({
 	status: MenuProposalStatus,
 	brief: EventBrief,
 	dishes: z.array(DishTemplate).min(1).max(15),
+	/**
+	 * The server's record of the chef review of this exact revision. Only the server writes it (a review command from
+	 * a chef session); `status: chef_reviewed` without it is not a review. Accepting a menu authorises using its
+	 * estimates for planning; it does not verify allergens, grant spending authority or make it a trusted recipe.
+	 */
+	review: z.object({ by: Actor, at: IsoDateTime, digest: z.string() }).optional(),
 	/** Requirements the proposal could not meet or questions still open, in our own words. */
 	open: z.array(z.object({ id: z.string(), text: z.string().max(300) })).default([]),
 	provenance: Provenance

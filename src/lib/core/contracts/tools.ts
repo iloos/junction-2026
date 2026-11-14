@@ -1,5 +1,4 @@
 import { z } from 'zod';
-import { MenuProposal } from './event';
 import { ApprovalState, Line, Plan, ScoreBreakdown, TermsDiff } from './plan';
 import { Offer, Product } from './product';
 import { IsoDate, KitchenId, Measure, ProductId, SalesQty } from './primitives';
@@ -48,22 +47,19 @@ const out = <S extends z.ZodRawShape>(shape: S) =>
 	z.object({ ...shape, meta: ResultMeta.optional() });
 
 /**
- * plan_event: a seeded event by id, or a chef-reviewed menu proposal (exactly one). The proposal is generated and
- * reviewed in the server's menu module; planning from it is deterministic and never calls a model.
+ * plan_event: a seeded event by id, or a menu proposal revision the server stored and a chef reviewed (exactly one).
+ * The caller names the revision; the server checks its stored review record (who, when, digest), so a client can't
+ * establish a chef review by sending a status. Planning from it is deterministic and never calls a model.
  */
 const PlanEventInput = z
 	.object({
 		kitchenId: KitchenId,
 		eventId: z.string().optional(),
-		proposal: MenuProposal.optional()
+		proposal: z.object({ id: z.string(), revision: z.int().nonnegative() }).optional()
 	})
 	.refine(
 		(v) => (v.eventId !== undefined) !== (v.proposal !== undefined),
-		'give either eventId or a menu proposal'
-	)
-	.refine(
-		(v) => v.proposal === undefined || v.proposal.status === 'chef_reviewed',
-		'only a chef-reviewed proposal can be planned'
+		'give either eventId or a reviewed menu proposal {id, revision}'
 	);
 
 export const toolSchemas = {
@@ -107,6 +103,8 @@ export const toolSchemas = {
 						/**
 						 * The physical amount behind `qty` when the caller asked in kg/l/pcs ("1 l milk"). It becomes a
 						 * `direct` need, so a substitute is sized to it (1 l → 2 × 0.5 l), not to the sales-unit count.
+						 * When given it is the demand authority: a `qty` that disagrees with the server's sizing of it
+						 * is INVALID_INPUT (with the computed quantity), never silently preferred either way.
 						 */
 						amount: Measure.optional()
 					})
