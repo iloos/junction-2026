@@ -31,7 +31,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 	const ctx: RequestContext = {
 		requestId,
 		method: event.request.method,
-		route: event.route.id ?? path
+		route: event.route?.id ?? path
 	};
 	const quiet = QUIET.test(path);
 	const t0 = performance.now();
