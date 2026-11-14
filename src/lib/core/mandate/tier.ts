@@ -7,6 +7,7 @@ import type {
 	Kitchen,
 	Line,
 	LineReason,
+	Need,
 	Offer,
 	PlanState,
 	Product,
@@ -33,7 +34,9 @@ export interface DraftLine {
 const STICKY: ReadonlySet<string> = new Set([
 	'allergen_change',
 	'substitute_breaks_preference',
-	'CAUTION.model_constraint'
+	'CAUTION.model_constraint',
+	/** Kept at 0 through re-quotes until someone sets a quantity again. */
+	'superseded'
 ]);
 
 /** A stored line back to a draft for re-quoting, keeping its sticky reasons. */
@@ -71,6 +74,17 @@ export interface TierInput {
 	expectedQty?: Map<string, { productId: string; value: number }>;
 	/** Lines already committed stay as they are and are not re-tiered. */
 	committed?: Line[];
+	/** The plan's needs: a line is validated against its need's hard requirements. */
+	needs?: readonly Need[];
+	/** The plan's delivery date: off the kitchen's receiving days, every line needs a sign-off. */
+	deliverBy?: string;
+}
+
+const WEEKDAYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'] as const;
+/** Whether the kitchen receives deliveries on this date (no calendar means any day). */
+export function receivesOn(kitchen: Pick<Kitchen, 'deliveryDays'>, date: string): boolean {
+	if (!kitchen.deliveryDays.length) return true;
+	return kitchen.deliveryDays.includes(WEEKDAYS[new Date(`${date}T12:00:00Z`).getUTCDay()]);
 }
 
 export interface TierResult {
@@ -84,6 +98,7 @@ export interface TierResult {
 
 const RANK: Record<Tier, number> = { act: 0, propose: 1, sign_off: 2 };
 const TIER_OF: Partial<Record<string, Tier>> = {
+	off_delivery_day: 'sign_off',
 	UNKNOWN_REQUIRED: 'propose',
 	INSUFFICIENT_STOCK: 'propose',
 	new_sku: 'propose',
@@ -155,7 +170,7 @@ export function tierLines(input: TierInput): TierResult {
 			return {
 				draft,
 				offer,
-				reasons: [],
+				reasons: (draft.extraReasons ?? []).filter((r) => r === 'superseded'),
 				orderable: false,
 				gap: false,
 				lineCents: null,
@@ -165,8 +180,12 @@ export function tierLines(input: TierInput): TierResult {
 		const need = input.expectedQty?.get(draft.id);
 		const findings = validateLine(kitchen, product, offer, draft.qty, {
 			substitute: Boolean(draft.substituteFor),
-			expectedQty: need?.productId === draft.productId ? need.value : undefined
+			expectedQty: need?.productId === draft.productId ? need.value : undefined,
+			requirements: input.needs?.find((n) => n.id === draft.needId)?.requirements
 		});
+		// The kitchen's calendar is a receiving constraint: another day is an explicit exception a person signs off.
+		if (input.deliverBy && !receivesOn(kitchen, input.deliverBy))
+			findings.push({ reason: 'off_delivery_day', effect: 'waive', tier: 'sign_off' });
 		const ruledOut = forbidden(findings);
 		// Ordering for this delivery has closed: nothing can buy it on these terms, approval or not (F9).
 		const closes = offer?.availability.closingTime;

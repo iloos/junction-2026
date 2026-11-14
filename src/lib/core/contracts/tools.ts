@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { ApprovalState, Line, Plan, ScoreBreakdown, TermsDiff } from './plan';
+import { ApprovalState, Line, NeedRequirements, Plan, ScoreBreakdown, TermsDiff } from './plan';
 import { Offer, Product } from './product';
 import { TaskLedger } from './task';
 import { EventBrief, MenuProposal } from './event';
@@ -146,7 +146,12 @@ export const toolSchemas = {
 						 * When given it is the demand authority: a `qty` that disagrees with the server's sizing of it
 						 * is INVALID_INPUT (with the computed quantity), never silently preferred either way.
 						 */
-						amount: Measure.optional()
+						amount: Measure.optional(),
+						/**
+						 * Hard requirements of this need ("lactose-free" → freeFrom LACTOSE). Needs `amount`: they are kept on
+						 * the direct need, so a substitute or a later edit can never drop them.
+						 */
+						requirements: NeedRequirements.optional()
 					})
 				)
 				.min(1)
@@ -164,7 +169,12 @@ export const toolSchemas = {
 			patch: z.object({
 				qty: z.number().nonnegative().optional(),
 				productId: ProductId.optional(),
-				gramsPerGuest: z.number().nonnegative().optional()
+				gramsPerGuest: z.number().nonnegative().optional(),
+				/**
+				 * A need edit in physical terms ("make it 20 l"): sets the need's amount and re-sizes every line serving it.
+				 * Must be in the need's dimension (kg↔l is INVALID_INPUT: no density is assumed); 0 means nothing to buy.
+				 */
+				amount: Measure.optional()
 			})
 		}),
 		output: out({ plan: Plan })

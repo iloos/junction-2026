@@ -15,6 +15,7 @@ import { createLlmRouter } from '$lib/server/adapters/llm/router';
 import { projectedTaskStore } from '$lib/server/tasks/project';
 import { drizzleTaskStore } from '$lib/server/tasks/store';
 import { scopeFor, withExternalScope } from '$lib/server/external/scope';
+import { inWorkspace } from '$lib/server/adapters/simulator/overlay';
 
 type AnyHandler = (ctx: CallContext, input: unknown) => Promise<Result<unknown>>;
 
@@ -94,7 +95,7 @@ export function realHandlers(): Promise<ToolHandlers> {
 				return webTools(env)[name](w, input);
 			};
 		// get_context reads the store and clock only; it lives with the agent door, not in core services.
-		return {
+		const all: Record<string, (ctx: CallContext, input: never) => Promise<unknown>> = {
 			...handlers,
 			get_context: createGetContext(b.ports),
 			// Menus come from Gemini when it is configured, else the team templates; a chef reviews either.
@@ -116,7 +117,15 @@ export function realHandlers(): Promise<ToolHandlers> {
 			lookup_facts: web('lookup_facts'),
 			find_outside: web('find_outside'),
 			check_recall: web('check_recall')
-		} as ToolHandlers;
+		};
+		// Every door (REST, MCP, the agent, /request) runs a call in its workspace's scope, so the simulator overlay
+		// and the stock a quote subtracts are that workspace's, never the default one's.
+		return Object.fromEntries(
+			Object.entries(all).map(([name, fn]) => [
+				name,
+				(ctx: CallContext, input: never) => inWorkspace(ctx.workspaceId, () => fn(ctx, input))
+			])
+		) as unknown as ToolHandlers;
 	});
 	real.catch(() => (real = null));
 	return real;

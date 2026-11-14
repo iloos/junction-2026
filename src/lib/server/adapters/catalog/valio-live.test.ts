@@ -165,3 +165,42 @@ describe.skipIf(!existsSync(join(DIR, 'normalized', 'products.json')))(
 		});
 	}
 );
+
+describe('one concurrency bound per adapter (R9-07)', () => {
+	const counting = () => {
+		const c = { active: 0, max: 0, calls: 0 };
+		const fetch = async () => {
+			c.calls++;
+			c.active++;
+			c.max = Math.max(c.max, c.active);
+			await new Promise((r) => setTimeout(r, 10));
+			c.active--;
+			return new Response(JSON.stringify({ products: [] }), {
+				status: 200,
+				headers: { 'content-type': 'application/json' }
+			});
+		};
+		return { c, fetch: fetch as typeof globalThis.fetch };
+	};
+
+	it('twelve callers on both endpoints never have more than four calls in flight', async () => {
+		const { c, fetch } = counting();
+		const live = createValioLive({ apiKey: 'fake', retries: 0, fetch });
+		await Promise.all(
+			Array.from({ length: 12 }, (_, i) =>
+				live.fetch(i % 2 ? 'availability' : 'price', [String(100000 + i)], '2026-12-10')
+			)
+		);
+		expect(c.calls).toBe(12);
+		expect(c.max).toBe(4);
+	});
+
+	it('identical misses in flight share one call', async () => {
+		const { c, fetch } = counting();
+		const live = createValioLive({ apiKey: 'fake', retries: 0, fetch });
+		await Promise.all(
+			Array.from({ length: 12 }, () => live.fetch('availability', ['100001'], '2026-12-10'))
+		);
+		expect(c.calls).toBe(1);
+	});
+});

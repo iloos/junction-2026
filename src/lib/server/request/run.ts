@@ -3,7 +3,15 @@
  * same scopes, validation and idempotency apply as for MCP and REST. Valio is touched only by
  * `quote`, and only for the shortlisted ids (plus Valio's own substitute rule for the pick).
  */
-import type { Kitchen, Measure, Offer, Product, ToolName, ToolOutput } from '$lib/core/contracts';
+import type {
+	Kitchen,
+	Measure,
+	NeedRequirements,
+	Offer,
+	Product,
+	ToolName,
+	ToolOutput
+} from '$lib/core/contracts';
 import { sizeDirect } from '$lib/core/demand/sizing';
 import { day, money } from '$lib/ui/format';
 import { canonicalJson, sha256Hex } from '$lib/core/hash';
@@ -444,10 +452,30 @@ export function applyAnswers(parsed: ParsedRequest, answers: RequestAnswer[]): P
  * direct need and a substitute is sized to it, as when the agent orders; the quantity is the server's own sizing of
  * that amount. Cases, packs and pieces the catalogue can't size go as the sales quantity alone.
  */
+/** The request's stated constraints as the need's hard requirements: core keeps them through substitutes and edits. */
+export function requirementsOf(constraints: readonly string[]): NeedRequirements | undefined {
+	const freeFrom = [
+		...(constraints.includes('lactose_free') ? ['LACTOSE'] : []),
+		...(constraints.includes('gluten_free') ? ['GLUTEN'] : [])
+	];
+	const r: NeedRequirements = {
+		...(freeFrom.length ? { freeFrom } : {}),
+		...(constraints.includes('finnish') ? { origin: 'fi' } : {}),
+		...(constraints.includes('organic') ? { labels: ['EU_ORGANIC_FARMING'] } : {})
+	};
+	return Object.keys(r).length ? r : undefined;
+}
+
 export function orderLine(
 	i: LookupItemView,
 	product: Product
-): { productId: string; qty: number; unit: string; amount?: Measure } {
+): {
+	productId: string;
+	qty: number;
+	unit: string;
+	amount?: Measure;
+	requirements?: NeedRequirements;
+} {
 	const base = {
 		productId: i.pick!.productId,
 		qty: (i.pick!.conversion as { salesQty: number }).salesQty,
@@ -457,7 +485,16 @@ export function orderLine(
 	if (qty === null || (unit !== 'kg' && unit !== 'l' && unit !== 'pcs')) return base;
 	const amount: Measure = { value: qty, unit };
 	const sized = sizeDirect(product, amount);
-	return sized ? { ...base, qty: sized.value, unit: sized.unit, amount } : base;
+	const requirements = requirementsOf(i.item.constraints);
+	return sized
+		? {
+				...base,
+				qty: sized.value,
+				unit: sized.unit,
+				amount,
+				...(requirements ? { requirements } : {})
+			}
+		: base;
 }
 
 /** The chef's chosen delivery date over the words' one, said in the request's notes; a past or bad date is ignored. */

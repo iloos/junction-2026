@@ -95,3 +95,22 @@ export function onScenario(a: Availability, deliverBy: string): Availability {
 		}
 	};
 }
+
+/**
+ * The earliest delivery date still orderable at `now` for a line whose order closes `LEAD_DAYS` before delivery at
+ * `closeTime` (Valio's time of day, default 17:00). The date a passed cut-off moves to: never one already closed.
+ */
+export function earliestDelivery(
+	now: Date,
+	logisticModel: keyof typeof LEAD_DAYS | null | undefined,
+	closeTime: string = DEFAULT_CLOSE
+): string {
+	const lead = LEAD_DAYS[logisticModel ?? 'Stock'];
+	let day = addDays(scenarioDate(now), lead);
+	for (let i = 0; i < 30; i++, day = addDays(day, 1)) {
+		const closes = addDays(day, -lead);
+		if (new Date(`${closes}T${closeTime}${helsinkiOffset(closes)}`).getTime() > now.getTime())
+			return day;
+	}
+	return day;
+}

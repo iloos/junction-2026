@@ -1496,6 +1496,10 @@
 			},
 			"lineCents": 20059,
 			"substituteFor": "462490",
+			"strategy": {
+				"id": "need:joulukinkku:sub:476768",
+				"kind": "substitute"
+			},
 			"provenance": {
 				"source": "valio_static",
 				"note": "substitute for 462490, rank 1 of 3"
@@ -1587,6 +1591,10 @@
 			},
 			"lineCents": 1398,
 			"substituteFor": "462482",
+			"strategy": {
+				"id": "need:lanttulaatikko:mih",
+				"kind": "make_in_house"
+			},
 			"provenance": {
 				"source": "team_estimate",
 				"ref": "fixtures/seeds/christmas-buffet-140.json",
@@ -1679,6 +1687,10 @@
 			},
 			"lineCents": 263,
 			"substituteFor": "462482",
+			"strategy": {
+				"id": "need:lanttulaatikko:mih",
+				"kind": "make_in_house"
+			},
 			"provenance": {
 				"source": "team_estimate",
 				"ref": "fixtures/seeds/christmas-buffet-140.json",
@@ -1770,6 +1782,10 @@
 			},
 			"lineCents": 103,
 			"substituteFor": "462482",
+			"strategy": {
+				"id": "need:lanttulaatikko:mih",
+				"kind": "make_in_house"
+			},
 			"provenance": {
 				"source": "team_estimate",
 				"ref": "fixtures/seeds/christmas-buffet-140.json",
@@ -1861,6 +1877,10 @@
 			},
 			"lineCents": 1187,
 			"substituteFor": "462482",
+			"strategy": {
+				"id": "need:lanttulaatikko:mih",
+				"kind": "make_in_house"
+			},
 			"provenance": {
 				"source": "team_estimate",
 				"ref": "fixtures/seeds/christmas-buffet-140.json",
@@ -1952,6 +1972,10 @@
 			},
 			"lineCents": 195,
 			"substituteFor": "462482",
+			"strategy": {
+				"id": "need:lanttulaatikko:mih",
+				"kind": "make_in_house"
+			},
 			"provenance": {
 				"source": "team_estimate",
 				"ref": "fixtures/seeds/christmas-buffet-140.json",
@@ -2043,6 +2067,10 @@
 			},
 			"lineCents": 3627,
 			"substituteFor": "473317",
+			"strategy": {
+				"id": "need:joulutorttu:mih",
+				"kind": "make_in_house"
+			},
 			"provenance": {
 				"source": "team_estimate",
 				"ref": "fixtures/seeds/christmas-buffet-140.json",
@@ -2134,6 +2162,10 @@
 			},
 			"lineCents": 1410,
 			"substituteFor": "473317",
+			"strategy": {
+				"id": "need:joulutorttu:mih",
+				"kind": "make_in_house"
+			},
 			"provenance": {
 				"source": "team_estimate",
 				"ref": "fixtures/seeds/christmas-buffet-140.json",
@@ -2181,7 +2213,7 @@
 				"needId": "need:joulukinkku",
 				"label": "Joulukinkku (Christmas ham)",
 				"required": {
-					"value": 27,
+					"value": 18.9,
 					"unit": "kg"
 				},
 				"supplierConfirmed": {
@@ -2193,7 +2225,7 @@
 					"unit": "kg"
 				},
 				"plannedKnown": {
-					"value": 27,
+					"value": 18.9,
 					"unit": "kg"
 				},
 				"plannedUnknown": {
@@ -2205,15 +2237,17 @@
 					"unit": "kg"
 				},
 				"excess": {
-					"value": 0.857,
+					"value": 0.6,
 					"unit": "kg"
 				},
+				"basis": "served",
+				"yield": 0.7,
 				"status": "planned",
 				"allocations": [
 					{
 						"lineId": "pl-run-1-c64330f1472b-need:joulukinkku-sub-476768",
 						"amount": {
-							"value": 27,
+							"value": 18.9,
 							"unit": "kg"
 						},
 						"bucket": "plannedKnown"
@@ -2221,7 +2255,7 @@
 					{
 						"lineId": "pl-run-1-c64330f1472b-need:joulukinkku-sub-476768",
 						"amount": {
-							"value": 0.857,
+							"value": 0.6,
 							"unit": "kg"
 						},
 						"bucket": "excess"
@@ -2232,7 +2266,7 @@
 				"needId": "need:graavilohi",
 				"label": "Graavilohi (cured salmon), cured in-house",
 				"required": {
-					"value": 11.529,
+					"value": 9.8,
 					"unit": "kg"
 				},
 				"supplierConfirmed": {
@@ -2244,7 +2278,7 @@
 					"unit": "kg"
 				},
 				"plannedKnown": {
-					"value": 11.529,
+					"value": 9.8,
 					"unit": "kg"
 				},
 				"plannedUnknown": {
@@ -2256,15 +2290,17 @@
 					"unit": "kg"
 				},
 				"excess": {
-					"value": 8.471,
+					"value": 7.2,
 					"unit": "kg"
 				},
+				"basis": "served",
+				"yield": 0.85,
 				"status": "planned",
 				"allocations": [
 					{
 						"lineId": "pl-run-1-c64330f1472b-need:graavilohi",
 						"amount": {
-							"value": 11.529,
+							"value": 9.8,
 							"unit": "kg"
 						},
 						"bucket": "plannedKnown"
@@ -2272,7 +2308,7 @@
 					{
 						"lineId": "pl-run-1-c64330f1472b-need:graavilohi",
 						"amount": {
-							"value": 8.471,
+							"value": 7.2,
 							"unit": "kg"
 						},
 						"bucket": "excess"
@@ -2704,7 +2740,7 @@
 				"needId": "need:keitetyt-perunat",
 				"label": "Keitetyt perunat (boiled potatoes)",
 				"required": {
-					"value": 18.421,
+					"value": 17.5,
 					"unit": "kg"
 				},
 				"supplierConfirmed": {
@@ -2716,7 +2752,7 @@
 					"unit": "kg"
 				},
 				"plannedKnown": {
-					"value": 18.421,
+					"value": 17.5,
 					"unit": "kg"
 				},
 				"plannedUnknown": {
@@ -2728,15 +2764,17 @@
 					"unit": "kg"
 				},
 				"excess": {
-					"value": 1.579,
+					"value": 1.5,
 					"unit": "kg"
 				},
+				"basis": "served",
+				"yield": 0.95,
 				"status": "planned",
 				"allocations": [
 					{
 						"lineId": "pl-run-1-c64330f1472b-need:keitetyt-perunat",
 						"amount": {
-							"value": 18.421,
+							"value": 17.5,
 							"unit": "kg"
 						},
 						"bucket": "plannedKnown"
@@ -2744,7 +2782,7 @@
 					{
 						"lineId": "pl-run-1-c64330f1472b-need:keitetyt-perunat",
 						"amount": {
-							"value": 1.579,
+							"value": 1.5,
 							"unit": "kg"
 						},
 						"bucket": "excess"

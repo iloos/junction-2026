@@ -31,5 +31,21 @@
 - A recipe's allocation appears on each ingredient line; sum the FulfilmentView buckets, never the allocations.
 - Under parallel gates PGlite hooks slow down; the server project's timeout is 120 s. Rerun before debugging a timeout.
 
-## Resume
+## Resume (14 Nov, before compaction)
+- **Branch:** `lane/a-atp`, cut from main 70c30e2 (main has since moved to e0c5bb5: rebase first). Commits: ATP 37da22a, Valio traces → caller's drawer ab302b6, `nextActionFor` f56b4d8, contract `FulfilmentView.basis`/`yield` d67f439 (accepted by the lead), served-basis fulfilment 13781f5, this brief. Gate was running on 13781f5 at compaction: rerun it after the rebase.
+- **Merged on main:** A3, A4 (menu proposal → plan, `Need.unresolved`), Valio live cache-through (`adapters/catalog/valio-live.ts`, half-open breaker, 15 min availability TTL).
+- **On this branch:**
+  - ATP: `afterCommits` in `store/db-ports.ts` lowers known amounts by the run's sim_stock, with a note "N already committed in this run".
+  - `realHandlers` wraps every call in `inWorkspace`; D's `withExternalScope` wraps outside it, and both stay.
+  - `core/mandate/next.ts` `nextActionFor(plan, now)`: change_date → find_substitute → resolve_rule → resolve_need → approve → commit → wait_for_supplier → done, plus `deadline` and `earliestDate`. `earliestDelivery` is in scenario.ts.
+  - Served basis: a dish need with a yield reports FulfilmentView in served kg (ham 18.9 kg served, not 27 kg raw).
+- **Next, in order:**
+  1. Rebase on main, gate, send the SHAs.
+  2. E switches its callers from `agent/next-action.ts` to core's. Their kinds map as: substitute→find_substitute, chef→approve, resolve→resolve_rule|resolve_need, await_supplier→wait_for_supplier.
+  3. Assess the mandate-change op. The Op union has none, yet the schema says mandate history lives in the op log, and `set_mandate` returns PROVIDER_UNAVAILABLE. Likely a `SetMandate{kitchenId, mandate, version}` op through applyOps with a Store method for kitchens. That needs a contract edit, so ask the lead.
+  4. `place_order` qty optional when amount is given: an approved contract change, as its own commit.
+  5. Read caching for `store.kitchens` and product docs.
+- **Handed off:** the "another kitchen" blame text is 1f's (`kitchen/live-view.ts` ~277/286). Rule sent: simulator provenance → simulated; ATP note → this run; else Valio stock. UIs label served amounts "kg served".
+- **Traps:** run dev and tests with `DATABASE_URL=` (the worktree `.env` is prod). The gate yields to the main checkout's gate. Never edit files while this worktree's gate runs.
+
 `git fetch && git checkout -b lane/a-<topic> main && pnpm i --frozen-lockfile` in the worktree (never link `node_modules`). Copy `.env` and `data/valio/` from the main checkout. `pnpm check`, then `DATABASE_URL= pnpm vitest run --project server`, then `pnpm gate`. Prod: https://widely-many-scorpion.eur-1.aiven.app; an MCP smoke as the judge key reads `MCP_KEYS` from `.env` via `node --env-file=.env`.

@@ -45,6 +45,12 @@ export const PolicyReason = z.enum([
 	'low_reliability',
 	'external_agent_needs_approval',
 	'cutoff_passed',
+	/** The product does not meet a hard requirement of the need it serves (lactose-free, origin, label): forbidden. */
+	'requirement_unmet',
+	/** The delivery date is not one of the kitchen's receiving days: held for a named approver to accept or reschedule. */
+	'off_delivery_day',
+	/** A substitute replaced this line's purchase: it stays visible at quantity 0 and is not bought. */
+	'superseded',
 	/** Gemini says the product may break a hard constraint the catalogue has no record of: held for a human. */
 	'CAUTION.model_constraint'
 ]);
@@ -82,6 +88,21 @@ export const ApprovalState = z.enum(['pending', 'granted', 'denied', 'expired', 
 export type ApprovalState = z.infer<typeof ApprovalState>;
 
 /** What a line is for: a dish/need on an event, or a direct request. */
+/**
+ * Hard requirements of one need, from the request ("lactose-free", "Finnish", "organic"). Every line serving the need
+ * must meet them: ranking rejects candidates that don't, and the validator forbids such a line at quote and commit.
+ * Kitchen-wide constraints still apply on top.
+ */
+export const NeedRequirements = z.object({
+	/** Free-from claims the product must carry (Product.freeFrom, e.g. LACTOSE, GLUTEN). */
+	freeFrom: z.array(z.string()).optional(),
+	/** Country of origin the product must have (ISO 3166-1 alpha-2, lower case as in the catalogue). */
+	origin: z.string().length(2).optional(),
+	/** Labels the product must carry (Product.labels, e.g. organic). */
+	labels: z.array(z.string()).optional()
+});
+export type NeedRequirements = z.infer<typeof NeedRequirements>;
+
 export const Need = z.object({
 	id: z.string(),
 	label: z.string(),
@@ -121,6 +142,8 @@ export const Need = z.object({
 	 * unknown). Shown to the chef as a gap, never dropped and never guessed.
 	 */
 	unresolved: z.string().max(300).optional(),
+	/** Hard requirements every line serving this need must meet. */
+	requirements: NeedRequirements.optional(),
 	provenance: Provenance
 });
 export type Need = z.infer<typeof Need>;
@@ -180,6 +203,8 @@ export const LineView = z.object({
 		'approve',
 		'commit',
 		'find_substitute',
+		/** Closed only because its cut-off passed: a later delivery date reopens it, a substitute would not. */
+		'change_date',
 		'wait_for_supplier',
 		'requote',
 		'resolve_rule'
@@ -246,6 +271,14 @@ export const FulfilmentView = z.object({
 	plannedUnknown: Measure,
 	unresolved: Measure,
 	excess: Measure,
+	/**
+	 * What the amounts measure. `served`: a dish need with a yield, in what reaches the plate (purchase × yield), so a
+	 * ready-cooked substitute and a raw original compare on what they serve (ham: 27 kg raw on the bone = 18.9 kg
+	 * served). `purchase` (or absent): the need's own unit as bought. UIs label served amounts "kg served".
+	 */
+	basis: z.enum(['served', 'purchase']).optional(),
+	/** The dish yield the served amounts were derived with (served = purchased × yield). */
+	yield: z.number().positive().optional(),
 	status: z.enum(['confirmed', 'awaiting_supplier', 'planned', 'partial', 'uncovered']),
 	/** Allocations behind the numbers, so the Why chain can show which line covers what. */
 	allocations: z.array(

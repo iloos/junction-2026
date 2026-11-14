@@ -217,12 +217,27 @@ async function persist(
 		.where(eq(schema.workspaces.id, ws));
 }
 
+function staleRun(workspaceId: string, runId: string, current: string): DomainError {
+	return {
+		code: 'STALE_VERSION',
+		sub: 'run',
+		message: `run ${runId} is no longer current for ${workspaceId} (now ${current}): reload and try again`,
+		retryable: true,
+		detail: { runId, current }
+	};
+}
+
 export interface DrizzleStoreOptions {
 	/** Which run `transact` and `load` operate on when the caller doesn't say (one active run per workspace). */
 	runOf: (workspaceId: string) => string;
 	now?: () => Date;
 	/** Called after each transaction commits, one op event per persisted op (the ops lane's bus). */
 	publish?: (workspaceId: string, events: ServerEvent[]) => void;
+	/**
+	 * The workspace's current run as the database says, read under the workspace lock (another instance may have
+	 * reset it). Given, a transaction whose run is no longer current is refused; absent, the in-process run is trusted.
+	 */
+	currentRunUnderLock?: (db: AnyDb, workspaceId: string) => Promise<string>;
 }
 
 export function createDrizzleStore(
@@ -295,10 +310,18 @@ export function createDrizzleStore(
 				const out = await db.transaction(async (raw) => {
 					const tdb = raw as unknown as AnyDb;
 					await tdb.execute(sql`select id from workspaces where id = ${workspaceId} for update`);
+					// The run fence (R9-08): under the lock, a write belongs to the current run or to nothing. A context
+					// built before a reset (old runId) or a process that missed another instance's reset is refused.
+					const current = opts.currentRunUnderLock
+						? await opts.currentRunUnderLock(tdb, workspaceId)
+						: runId;
+					if (current !== runId) throw new Rollback(staleRun(workspaceId, runId, current));
 					const state = await cachedLoad(tdb, workspaceId, runId);
 					const handle: TxHandle = { db: tdb, workspaceId, runId };
 					const r = await fn(handle as unknown as Tx, state);
 					if ('error' in r) throw new Rollback(r.error);
+					const stray = r.ops.find((p) => p.runId !== runId || p.workspaceId !== workspaceId);
+					if (stray) throw new Rollback(staleRun(workspaceId, stray.runId, runId));
 					const at = now().toISOString();
 					const envelopes: OpEnvelope[] = r.ops.map((p, i) => ({
 						...p,
