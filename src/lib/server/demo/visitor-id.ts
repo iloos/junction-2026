@@ -54,3 +54,22 @@ export function readVisitor(value: string | undefined, env: Env): string | null 
 	if (dot < 0 || !isVisitorWorkspace(ws)) return null;
 	return sameText(value.slice(dot + 1), hmac(cookieSecret(env), `vs|${ws}`)) ? ws : null;
 }
+
+/**
+ * A read-only calendar token for a visitor workspace: `cal_<ws>.<HMAC("cal|" + ws)>`. Calendar apps fetch by URL
+ * and the URL ends up in synced calendars, so it carries only this: it reads the feed and nothing else (not the
+ * visitor cookie, not a judge key that may plan and order).
+ */
+export function signCalendar(ws: string, env: Env): string {
+	return `cal_${ws}.${hmac(cookieSecret(env), `cal|${ws}`)}`;
+}
+
+/** The workspace a calendar token proves, or null. */
+export function readCalendar(token: string | null | undefined, env: Env): string | null {
+	if (!token?.startsWith('cal_')) return null;
+	const body = token.slice(4);
+	const dot = body.indexOf('.');
+	const ws = body.slice(0, dot);
+	if (dot < 0 || !isVisitorWorkspace(ws)) return null;
+	return sameText(body.slice(dot + 1), hmac(cookieSecret(env), `cal|${ws}`)) ? ws : null;
+}
