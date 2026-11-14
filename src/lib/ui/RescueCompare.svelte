@@ -166,7 +166,15 @@
 									<div class="font-medium {rej ? 'text-ink-2' : 'text-ink'}">
 										{readableName(c.name)}
 									</div>
-									<div class="mono text-micro text-ink-3">
+									{#if c.facts?.labels.length || c.facts?.words.length}
+										<div class="mt-0.5 flex flex-wrap items-center gap-1 text-micro text-ink-2">
+											{#each c.facts?.labels ?? [] as lb (lb)}
+												<span class="rounded-full border border-ok/40 px-1.5 text-ok">{lb}</span>
+											{/each}
+											{#each c.facts?.words ?? [] as w (w)}<span>{w}</span>{/each}
+										</div>
+									{/if}
+									<div class="sys-only mono text-micro text-ink-3">
 										{c.productId} · {c.origin ? c.origin.toUpperCase() : 'origin ?'}
 										{#if c.reliability !== undefined}· rel {c.reliability.toFixed(2)}{/if}
 										{#if c.co2PerKg !== undefined}· {num(c.co2PerKg, 1)} kg CO₂e/kg{/if}

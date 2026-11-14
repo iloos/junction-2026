@@ -389,6 +389,8 @@ async function buildSnapshot(s: Session): Promise<LiveSnapshot> {
 			origin: p.origin,
 			reliability: p.reliability,
 			co2PerKg: p.co2PerKg?.value,
+			co2Estimated: p.co2PerKg ? p.co2PerKg.provenance.source !== 'valio_static' : undefined,
+			labels: p.labels,
 			salesUnit: p.salesUnit,
 			offer: offers.find((o) => o.productId === id)
 		};
@@ -592,7 +594,11 @@ async function applyScenario(
 		await ensurePlan(s);
 	} else if (
 		action === 'preset' &&
-		(value === 'kitchen' || value === 'price' || value === 'finnish')
+		(value === 'kitchen' ||
+			value === 'price' ||
+			value === 'finnish' ||
+			value === 'carbon' ||
+			value === 'reliable')
 	)
 		s.preset = value;
 	else if (action === 'apply') await applyRules(s);
