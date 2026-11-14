@@ -23,7 +23,7 @@ function reasonsIn(v: unknown, out: string[] = []): string[] {
 
 describe('seeds and evals match the contracts', () => {
 	it('parses every seed kitchen', () => {
-		expect(z.array(Kitchen).parse(kitchens.kitchens)).toHaveLength(3);
+		expect(z.array(Kitchen).parse(kitchens.kitchens)).toHaveLength(7);
 	});
 
 	it('uses only contract reason codes in eval expectations', () => {
