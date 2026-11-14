@@ -1,0 +1,103 @@
+{
+	"$comment": "A café's Saturday–Sunday: 800 cups of coffee (guests = cups), milk or barista oat drink in some, butter for the pastries. A light event (fewer dishes than the three demo kitchens'). need = guests × share × gServed ÷ yield, rounded up to the pack or lot. Every number is a team estimate until a chef checks it. Prices and availability are quoted live by the app. Product ids reference the Valio catalogue; no Valio rows are copied here.",
+	"id": "event-cafe-weekend-800",
+	"title": "Weekend coffee, 800 cups",
+	"kitchenId": "k-cafe",
+	"date": "2026-12-19",
+	"guests": {
+		"estimate": 800,
+		"guarantee": null,
+		"guaranteeDueHoursBefore": 48,
+		"oversetPct": 0
+	},
+	"serviceStyle": "café weekend",
+	"provenance": {
+		"kind": "estimate",
+		"label": "team estimate, not yet reviewed by a chef",
+		"sources": [
+			{
+				"what": "profile, priorities and hard constraints",
+				"ref": "docs/research/horeca-profiles.md §2"
+			},
+			{
+				"what": "pack sizes and lot steps",
+				"ref": "Valio catalogue (data/valio/normalized/products.json)"
+			}
+		]
+	},
+	"dishes": [
+		{
+			"dish": "Suodatinkahvi (filter coffee)",
+			"dietCodes": ["VEG", "L", "G", "M"],
+			"gServed": 9,
+			"productId": "460588",
+			"productName": "Paulig Café Parisien kahvi suodatinjauhatus 12x400g",
+			"salesUnit": "KI",
+			"pack": {
+				"pieces": 12,
+				"netKg": 4.8
+			},
+			"needKg": 7.2,
+			"order": {
+				"qty": 2,
+				"unit": "KI",
+				"rounding": "18 pcs / 12 → 2 KI (24 pcs)"
+			}
+		},
+		{
+			"dish": "Kahvimaito (lactose-free coffee milk)",
+			"dietCodes": ["L", "G"],
+			"share": 0.6,
+			"gServed": 25,
+			"productId": "464237",
+			"productName": "Valio kahvimaito 1 l laktoositon UHT",
+			"salesUnit": "ST",
+			"pack": {
+				"netL": 1
+			},
+			"needL": 12.0,
+			"order": {
+				"qty": 12,
+				"unit": "ST",
+				"rounding": "12 l / 1 = 12 ST"
+			}
+		},
+		{
+			"dish": "Kauramaito (barista oat drink)",
+			"dietCodes": ["VEG", "L", "M"],
+			"share": 0.25,
+			"gServed": 30,
+			"productId": "469512",
+			"productName": "Elovena 1l kaurajuoma kahviin",
+			"salesUnit": "ST",
+			"pack": {
+				"netL": 1
+			},
+			"needL": 6.0,
+			"order": {
+				"qty": 6,
+				"unit": "ST",
+				"rounding": "6 l / 1 = 6 ST"
+			}
+		},
+		{
+			"dish": "Voi (butter for pastries)",
+			"dietCodes": ["L", "G"],
+			"share": 0.3,
+			"gServed": 5,
+			"productId": "463798",
+			"productName": "Valio voi 200 g normaalisuolainen",
+			"salesUnit": "KI",
+			"pack": {
+				"pieces": 20,
+				"netKg": 4
+			},
+			"needKg": 1.2,
+			"order": {
+				"qty": 1,
+				"unit": "KI",
+				"rounding": "6 pcs / 20 → 1 KI (20 pcs)"
+			}
+		}
+	]
+}

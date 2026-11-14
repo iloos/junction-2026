@@ -5,17 +5,18 @@ import { EVENT_SEEDS, eventFor } from './events';
 import { buildEvent, dishesFor, rulesFor } from './fixture-plan';
 
 describe('each kitchen has its own event', () => {
-	it('maps the three demo kitchens to their events, and no kitchen to two', () => {
+	it('maps every seeded kitchen to its own event, and no kitchen to two', () => {
 		expect(eventFor('k-hotel')?.id).toBe('event-xmas-140');
 		expect(eventFor('k-lounas')?.id).toBe('event-lounas-wed-320');
 		expect(eventFor('k-central')?.id).toBe('event-school-day-2000');
+		for (const k of ALL_KITCHENS) expect(eventFor(k.id), k.id).toBeDefined();
 		const owners = EVENT_SEEDS.map((e) => e.kitchenId);
 		expect(new Set(owners).size).toBe(owners.length);
 	});
 
-	it('offers only kitchens with an event on the kitchen screen; the control room keeps all seven', () => {
-		expect(KITCHENS.map((k) => k.id)).toEqual(['k-hotel', 'k-lounas', 'k-central']);
-		expect(ALL_KITCHENS).toHaveLength(7);
+	it('makes all seven kitchens joinable (D15), and a kitchen with no seeded event has none', () => {
+		expect(KITCHENS).toHaveLength(7);
+		expect(eventFor('k-joined-later')).toBeUndefined();
 	});
 
 	it.each(EVENT_SEEDS.map((e) => [e.id, e] as const))(
@@ -88,5 +89,15 @@ describe('the offline kitchen builds each kitchen its own event', () => {
 		expect(lunch.thisWeek).toEqual(lunch.normalWeek);
 		const hotel = build('k-hotel');
 		expect(hotel.thisWeek.cents).toBeGreaterThan(hotel.normalWeek.cents);
+	});
+});
+
+describe('a kitchen without a seeded event', () => {
+	it('is refused by the offline planner with a plain reason, not planned as someone else', async () => {
+		const { fixtureCall, setKitchen } = await import('./fixture-server');
+		await expect(
+			fixtureCall('plan_event', { kitchenId: 'k-joined-later', eventId: 'x' })
+		).rejects.toThrow(/no event to plan/);
+		await expect(setKitchen('k-joined-later')).rejects.toThrow(/no event to plan/);
 	});
 });

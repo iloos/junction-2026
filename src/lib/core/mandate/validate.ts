@@ -52,6 +52,13 @@ const named = (p: Product, code: string) =>
 		.split(/[^a-zåäö]+/)
 		.some((w) => w.startsWith(NAME_CLAIMS[code]));
 
+/**
+ * Diet labels a need may require, met by the catalogue's diet tags: a vegan product is also vegetarian. Nothing else
+ * meets them (no name guess: "kasvis" also names vegetable fat in meat dishes).
+ */
+const DIETS: Record<string, string[]> = { vegetarian: ['vegetarian', 'vegan'], vegan: ['vegan'] };
+const hasDiet = (p: Product, label: string) => (DIETS[label] ?? []).some((d) => p.diet.includes(d));
+
 /** The requirements a product does not meet, in words ("free from LACTOSE"); empty when it meets them all. */
 export function unmetRequirements(p: Product, r: NeedRequirements | undefined): string[] {
 	if (!r) return [];
@@ -61,7 +68,7 @@ export function unmetRequirements(p: Product, r: NeedRequirements | undefined): 
 			.map((x) => `free from ${x}`),
 		...(r.origin && p.origin !== r.origin ? [`origin ${r.origin.toUpperCase()}`] : []),
 		...(r.labels ?? [])
-			.filter((x) => !p.labels.includes(x) && !named(p, x))
+			.filter((x) => !p.labels.includes(x) && !hasDiet(p, x) && !named(p, x))
 			.map((x) => `label ${x}`)
 	];
 }

@@ -89,6 +89,9 @@
 		{
 			"dish": "Kasvis-perunavuoka (vegetable and potato bake, vegetarian main)",
 			"dietCodes": ["VEG", "G"],
+			"requirements": {
+				"labels": ["vegetarian"]
+			},
 			"share": 0.3,
 			"gServed": 200,
 			"yield": 1.0,

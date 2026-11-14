@@ -213,6 +213,12 @@ type Handler<N extends ToolName> = (input: ToolInput<N>) => Promise<ToolOutput<N
 
 const handlers: { [N in ToolName]?: Handler<N> } = {
 	plan_event: async (input) => {
+		// The offline kitchen plans seeded events only; a kitchen without one starts from the chat.
+		if (!eventFor(input.kitchenId))
+			fail(
+				'NOT_FOUND',
+				`${input.kitchenId} has no event to plan: its first plan comes from the chat`
+			);
 		if (input.kitchenId !== s.kitchen.id) {
 			s = initial(input.kitchenId);
 		}
@@ -446,6 +452,9 @@ export async function setPreset(preset: PresetId) {
 }
 
 export async function setKitchen(kitchenId: string) {
+	// Never stand in another kitchen's event: a kitchen without one starts from the chat.
+	if (!eventFor(kitchenId))
+		fail('NOT_FOUND', `${kitchenId} has no event to plan: its first plan comes from the chat`);
 	s = initial(kitchenId);
 	await rebuild(false);
 }

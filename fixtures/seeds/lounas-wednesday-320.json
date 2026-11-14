@@ -147,6 +147,9 @@
 		{
 			"dish": "Kasvispyörykät (vegetable balls)",
 			"dietCodes": ["VEG", "L"],
+			"requirements": {
+				"labels": ["vegetarian"]
+			},
 			"share": 0.15,
 			"gServed": 150,
 			"yield": 1.0,

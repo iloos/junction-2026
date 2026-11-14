@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { NeedRequirements } from '../contracts/plan';
 import { ProductId, UnitCode } from '../contracts/primitives';
 
 /**
@@ -36,6 +37,11 @@ export const SeedDish = z.looseObject({
 	share: z.number().positive().max(1).optional(),
 	/** Diet codes shown on the dish (L lactose-free, G gluten-free, M milk-free, VEG); informational. */
 	dietCodes: z.array(z.string()).optional(),
+	/**
+	 * Hard requirements of the need this entry plans (a vegetarian main stays vegetarian): any product that misses one,
+	 * the planned one or a substitute, is refused for the need, whoever approves.
+	 */
+	requirements: NeedRequirements.optional(),
 	perKgDish: PerKgDish.optional(),
 	productId: ProductId,
 	salesUnit: UnitCode,
