@@ -24,7 +24,7 @@ import { createContextDev, type RecallSource } from './contextdev';
 import { createExa, type FactSearch } from './exa';
 import { createFixtureFactSearch, createFixtureRecallSource } from './fixture';
 import { createFindings } from './findings';
-import { memoryIndex, normCompany, type CatalogIndex } from './recall';
+import { hasWords, memoryIndex, type CatalogIndex } from './recall';
 
 type Env = Record<string, string | undefined>;
 
@@ -99,7 +99,7 @@ export function catalogIndex(catalog: Catalog, db: AnyDb): CatalogIndex {
 			)) as unknown as { rows?: { doc: Product }[] } | { doc: Product }[];
 			return (Array.isArray(rows) ? rows : (rows.rows ?? []))
 				.map((r) => r.doc)
-				.filter((p) => normCompany(p.brand).includes(term) || normCompany(p.vendor).includes(term));
+				.filter((p) => hasWords(p.brand, term) || hasWords(p.vendor, term));
 		}
 	};
 }

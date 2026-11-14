@@ -281,6 +281,26 @@ export function ingredientTerms(text: string): string[] {
 	}
 	return out;
 }
+/**
+ * Catalogue hits ordered by stem length minus how late in the name the matching word starts, then name
+ * length: "Kieku Luomu kananmuna" before "Barilla Tagliatelle pasta, sisältää kananmunaa"
+ * and before "Atria Kanan Koipi".
+ */
+export function rankByWord(hits: Product[], terms: string[]): Product[] {
+	const score = (p: Product) => {
+		const words = p.nameFi.toLowerCase().split(/[\s,]+/);
+		for (const t of terms) {
+			const i = words.findIndex((w) => w.startsWith(t));
+			if (i >= 0) return Math.max(1, t.length * 10 - i * 15);
+		}
+		return 0;
+	};
+	return hits
+		.map((p) => ({ p, s: score(p) }))
+		.filter((x) => x.s > 0)
+		.sort((a, b) => b.s - a.s || a.p.nameFi.length - b.p.nameFi.length)
+		.map((x) => x.p);
+}
 const UNITS = new Set([
 	'esim',
 	'noin',
@@ -318,11 +338,12 @@ export async function findOutside(
 	for (const [i, o] of raw.entries()) {
 		const ingredients = [];
 		for (const text of o.ingredients ?? []) {
-			let hits: Product[] = [];
-			for (const term of ingredientTerms(text)) {
-				hits = await d.catalog.search(term, { limit: 3 });
-				if (hits.length) break;
-			}
+			// Every stem's hits, ranked together on the shortest stem (Finnish inflection).
+			const terms = ingredientTerms(text);
+			const pool = new Map<string, Product>();
+			for (const term of terms)
+				for (const p of await d.catalog.search(term, { limit: 40 })) pool.set(p.productId, p);
+			const hits = rankByWord([...pool.values()], terms).slice(0, 3);
 			ingredients.push({
 				text,
 				catalogue: hits.map((p) => ({ productId: p.productId, name: p.nameFi }))

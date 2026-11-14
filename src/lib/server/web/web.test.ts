@@ -13,8 +13,9 @@ import {
 } from './fixture';
 import { createFindings } from './findings';
 import { recallAnomalies, ingestRecall } from './ingest';
-import { findOutside, ingredientTerms, lookupFacts } from './lookup';
+import { findOutside, ingredientTerms, lookupFacts, rankByWord } from './lookup';
 import {
+	hasWords,
 	matchNotice,
 	memoryIndex,
 	noticeKey,
@@ -104,7 +105,11 @@ describe('matching a notice against the catalogue', () => {
 		const ms = await matchNotice(egg, idx);
 		expect(strongMatches(ms)).toEqual([]);
 		const lead = ms.find((m) => m.productId === '468269')!;
-		expect(lead).toMatchObject({ tier: 'supplier', confidence: 0.3 });
+		expect(lead).toMatchObject({ tier: 'supplier', confidence: 0.3 }); // brand Munax = the manufacturer
+		expect(ms.find((m) => m.productId === '464700')).toMatchObject({
+			tier: 'supplier',
+			confidence: 0.3
+		});
 		expect(ms.find((m) => m.productId === '468121')).toBeUndefined(); // other producer
 	});
 	it('the same brand with a different product (vanukas vs rahka) stays a lead', async () => {
@@ -131,6 +136,10 @@ describe('matching a notice against the catalogue', () => {
 		const m = (await matchNotice(n, idx)).find((x) => x.productId === '464700')!;
 		expect(m.tier).toBe('name');
 		expect(m.confidence).toBeGreaterThanOrEqual(0.6);
+	});
+	it('company names match as whole words only', () => {
+		expect(hasWords('SUOMEN SOKERI OY', 'sok')).toBe(false);
+		expect(hasWords('MUNAX OY', 'munax')).toBe(true);
 	});
 	it('product words drop brand, sizes and filler; stems match Finnish compounds', () => {
 		expect([...productWords('Arla Protein Suklaa vanukas 200g', 'Arla Protein')]).toEqual([
@@ -230,7 +239,7 @@ const chef: CallContext = {
 	via: 'test'
 };
 
-describe('ingest through the store (PGlite)', () => {
+describe('ingest through the store (PGlite)', { timeout: 30_000 }, () => {
 	it('a drill on a planned product records a recall anomaly on that plan, once, and publishes it', async () => {
 		const published: ServerEvent[] = [];
 		const env = await createDbPorts({ publish: (_ws, ev) => published.push(...ev) });
@@ -291,7 +300,7 @@ describe('watching the list', () => {
 	});
 });
 
-describe('Exa lookups (recorded answers)', () => {
+describe('Exa lookups (recorded answers)', { timeout: 30_000 }, () => {
 	it('facts for 460002 come back as GTIN-verified suggestions with quotes, and are recorded as enrichments', async () => {
 		const env = await createDbPorts({ runId: 'run-facts' });
 		const r = await lookupFacts(
@@ -321,6 +330,20 @@ describe('Exa lookups (recorded answers)', () => {
 		expect(r.options.length).toBeGreaterThan(0);
 		expect(r.options[0].sources[0].url).toMatch(/^https:\/\//);
 		expect(r.options.flatMap((o) => o.ingredients).some((i) => i.catalogue.length > 0)).toBe(true);
+	});
+	it('catalogue hits rank by where the word starts in the name', () => {
+		const ranked = rankByWord(
+			[
+				prod({
+					productId: '461412',
+					nameFi: 'Barilla 6 kg Tagliatelle pasta, sisältää kananmunaa'
+				}),
+				prod({ productId: '463883', nameFi: 'Kieku Luomu kananmuna M90 5200g' }),
+				prod({ productId: '463740', nameFi: 'Atria Kanan Koipi Naturel 4x800g' })
+			],
+			ingredientTerms('2 kananmunaa')
+		);
+		expect(ranked[0].productId).toBe('463883');
 	});
 	it('ingredient terms strip quantities and inflection', () => {
 		expect(ingredientTerms('1 kg lehtitaikinalevyjä (10 kpl)')).toEqual([

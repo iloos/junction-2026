@@ -167,6 +167,12 @@ export function normCompany(s: string | null | undefined): string {
 		.trim();
 }
 
+/** `term` appears in `name` as whole words ("sok" is not in "sokeri"). */
+export function hasWords(name: string | null | undefined, term: string): boolean {
+	if (!term) return false;
+	return ` ${normCompany(name)} `.includes(` ${term} `);
+}
+
 const SIZE = /^\d+([.,]\d+)?(g|kg|l|dl|cl|ml|kpl|x)?$/;
 const STOP = new Set(['ja', 'tai', 'with', 'and', 'the', 'laktoositon', 'lactose', 'free']);
 /** Product words: lower-case, no brand words, sizes or filler. */
@@ -226,7 +232,7 @@ export async function matchNotice(notice: RecallNotice, idx: CatalogIndex): Prom
 		const want = productWords(r.name, r.brand);
 		if (brand.length >= 3) {
 			for (const prod of await idx.byBrandOrVendor(brand, 400)) {
-				const brandOk = normCompany(prod.brand).includes(brand);
+				const brandOk = hasWords(prod.brand, brand);
 				if (!brandOk) continue;
 				const overlap = wordOverlap(want, productWords(prod.nameFi, prod.brand));
 				if (overlap === 0) continue;
@@ -242,17 +248,18 @@ export async function matchNotice(notice: RecallNotice, idx: CatalogIndex): Prom
 		}
 		for (const term of new Set([maker, brand].filter((t) => t.length >= 3))) {
 			for (const prod of await idx.byBrandOrVendor(term, 400)) {
-				if (best.has(prod.productId)) continue;
-				const viaVendor = normCompany(prod.vendor).includes(term);
+				const viaBrand = hasWords(prod.brand, term);
+				const viaVendor = hasWords(prod.vendor, term);
+				if (!viaBrand && !viaVendor) continue;
 				keep({
 					productId: prod.productId,
 					productName: prod.nameFi,
 					tier: 'supplier',
-					confidence: viaVendor ? 0.3 : 0.2,
+					confidence: viaBrand ? 0.3 : 0.25,
 					recalled: r,
-					why: viaVendor
-						? `same supplier (${prod.vendor}); different product`
-						: `same brand (${prod.brand}); different product`
+					why: viaBrand
+						? `same brand (${prod.brand}); different product`
+						: `same supplier (${prod.vendor}); different product`
 				});
 			}
 		}
@@ -276,9 +283,7 @@ export function memoryIndex(products: Iterable<Product>): CatalogIndex {
 		},
 		async byBrandOrVendor(term, limit = 400) {
 			const t = term.toLowerCase();
-			return all
-				.filter((p) => normCompany(p.brand).includes(t) || normCompany(p.vendor).includes(t))
-				.slice(0, limit);
+			return all.filter((p) => hasWords(p.brand, t) || hasWords(p.vendor, t)).slice(0, limit);
 		}
 	};
 }
