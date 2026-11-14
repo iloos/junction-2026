@@ -61,7 +61,7 @@ export function mcpInstructions(tools: readonly string[]): string {
  * remedy is another tool call; the rest (INVALID_INPUT, FORBIDDEN, ...) are fixed by changing the input.
  */
 export function errorNext(
-	code: ErrorCode,
+	{ code, sub }: { code: ErrorCode; sub?: string },
 	args: unknown
 ): { tool: ToolName; why: string; args?: Record<string, unknown> } | null {
 	const planId = (args as { planId?: unknown } | null)?.planId;
@@ -88,6 +88,14 @@ export function errorNext(
 				why: 'the line cannot be ordered as is; rank substitutes for it',
 				...ref
 			};
+		case 'FORBIDDEN':
+			return sub === 'approval_required'
+				? {
+						tool: 'get_plan',
+						why: 'the open lines wait for a chef (meta.approvalUrl); read the plan again once a chef has approved, then commit',
+						...ref
+					}
+				: null;
 		default:
 			return null;
 	}
@@ -117,7 +125,7 @@ export function buildMcpServer(ctx: CallContext, handlers: ToolHandlers): McpSer
 			async (args: unknown): Promise<CallToolResult> => {
 				const r = await serveTool(name, ctx, args, handlers);
 				if (!r.ok) {
-					const next = errorNext(r.error.code, args);
+					const next = errorNext(r.error, args);
 					return {
 						isError: true,
 						content: [
