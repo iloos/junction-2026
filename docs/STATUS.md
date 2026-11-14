@@ -2,7 +2,7 @@
 
 _The lead rewrites this at each checkpoint. It is the "now": what works, what's next, what bites._
 
-**Updated:** Sat 14 Nov ~12:00 (lead). **Convergence checkpoint:** lanes landed, repo cleaned, docs restructured. Live assignment: [DISPATCH.md](DISPATCH.md). Vocabulary: [concept/VOCABULARY.md](concept/VOCABULARY.md) (D10). History: [archive/](archive/README.md).
+**Updated:** Sat 14 Nov ~14:30 (lead). **Convergence checkpoint:** lanes landed, repo cleaned, docs restructured. Live assignment: [DISPATCH.md](DISPATCH.md). Vocabulary: [concept/VOCABULARY.md](concept/VOCABULARY.md) (D10). History: [archive/](archive/README.md).
 
 **Deployed:** https://widely-many-scorpion.eur-1.aiven.app (Aiven Runtime `mandate`, Aiven Postgres, TLS verified, Gemini live). Redeploy: merge to main → 9c redeploys → `scripts/deploy/warm.sh` + `scripts/deploy/smoke.sh` (with `SMOKE_KEY`: post-deploy race check, one receipt per key on Postgres). No redeploy in the last 30 min before judging.
 
@@ -14,12 +14,7 @@ _The lead rewrites this at each checkpoint. It is the "now": what works, what's 
 - Web: recall revisions per URL, per-run applications with retry, spend caps (429 with Retry-After), `lookup_facts` / `find_outside` / `check_recall` on MCP and REST. Context.dev monitor every 5 min.
 - Evidence: `pnpm gate` green (check, lint, unit ~420 server tests, evals incl. fidelity, surfaces, golden briefs); race smoke on prod Postgres (same key ×4 → one receipt; three keys → one receipt).
 
-**Open (in order):**
-1. A3: cut-off enforced at commit (F9) and view validity (F29), owner 8d.
-2. A4: plan from a chef-reviewed menu proposal, then the Postgres MenuStore + chef review on `/request` (8d + request agent).
-3. F12-ops: Ops coverage from FulfilmentView (9c). Evidence UI: web facts in the Why drawer (1f) and the recall card in Ops (9c).
-4. Code-audit cleanup in every lane (one pack-content rule, one lot rounding, one date helper, dead stubs, D10 copy).
-5. Then the user's next scopes: in-app agent chat, UI/UX pass, extension scopes.
+**Now (Sat ~14:30): Ring 2 fan-out.** Plan: [DISPATCH.md](DISPATCH.md) bottom section; reviews in [handoff/ring2/](handoff/ring2/); D11. T1 contracts on main (`contracts/task.ts`, `agent_tasks` 0003, `Plan.taskId`, Decide batch + probabilities, planned `get_outcome`/`propose_menu`). A3 (cut-off at commit) merged. Tracks: A 8d (A4, Valio live, ATP) · C 1f (shell + tokens → Kitchen task page → vis) · G 9c (Ops trust fix + explainer, Aiven state/infra; migration 0003 to apply after the PG move) · E agent (chat-safety fixes → task store → chat turn → dock) · B request (eval fixes, polish, menu → plan → task) · D sponsors (Gemini visible, ExternalCall, web state in PG, evidence) · F 91 (chat evals, paraphrase set, claim ledger). Outside review prompt for the user: [handoff/ring2/REVIEW-PROMPT-ROUND7.md](handoff/ring2/REVIEW-PROMPT-ROUND7.md) → `docs/review/ROUND7-*.md`.
 
 **Sessions:** lead junc26-18 (+ lead agents for request, web, agent) · 8d core · 9c ops/deploy · 1f kitchen UI · 91 evals and gate.
 
