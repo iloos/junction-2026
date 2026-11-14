@@ -5,6 +5,7 @@ import { scopeOf, webClients, webContext } from '$lib/server/web';
 import { supplierLeads } from '$lib/server/web/evidence';
 import { authed, providerFail } from '$lib/server/web/route';
 import { busTrace } from '$lib/server/web/watch';
+import { withCallScope } from '$lib/server/scope';
 import type { RequestHandler } from './$types';
 
 /**
@@ -14,19 +15,21 @@ import type { RequestHandler } from './$types';
 export const GET: RequestHandler = async ({ request, url }) => {
 	const ctx = authed(request, env, dev, 'web:leads');
 	if (ctx instanceof Response) return ctx;
-	try {
-		const w = await webContext(ctx);
-		const state = await w.ports.store.load(ctx.workspaceId, ctx.runId);
-		const planId = url.searchParams.get('planId');
-		const plans = Object.values(state.plans).filter((p) =>
-			planId ? p.id === planId : p.state !== 'committed'
-		);
-		const ids = [...new Set(plans.flatMap((p) => p.lines.map((l) => l.productId)))];
-		const products = ids.length ? await w.ports.catalog.get(ids) : new Map();
-		const vendors = [...products.values()].map((p) => p.vendor as string);
-		const { news } = webClients(env, busTrace(scopeOf(w), { lane: 'web' }), w.spendKey);
-		return json({ workspaceId: ctx.workspaceId, ...(await supplierLeads(vendors, news)) });
-	} catch (e) {
-		return providerFail(e);
-	}
+	return withCallScope(ctx, async () => {
+		try {
+			const w = await webContext(ctx);
+			const state = await w.ports.store.load(ctx.workspaceId, ctx.runId);
+			const planId = url.searchParams.get('planId');
+			const plans = Object.values(state.plans).filter((p) =>
+				planId ? p.id === planId : p.state !== 'committed'
+			);
+			const ids = [...new Set(plans.flatMap((p) => p.lines.map((l) => l.productId)))];
+			const products = ids.length ? await w.ports.catalog.get(ids) : new Map();
+			const vendors = [...products.values()].map((p) => p.vendor as string);
+			const { news } = webClients(env, busTrace(scopeOf(w), { lane: 'web' }), w.spendKey);
+			return json({ workspaceId: ctx.workspaceId, ...(await supplierLeads(vendors, news)) });
+		} catch (e) {
+			return providerFail(e);
+		}
+	});
 };
