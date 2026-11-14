@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { contextFor } from '$lib/server/auth';
 import { ensureRunLoaded } from '$lib/server/demo/reset';
-import { newVisitorWorkspace } from '$lib/server/demo/visitor-id';
+import {
+	newVisitorWorkspace,
+	readCalendar,
+	signCalendar,
+	signVisitor
+} from '$lib/server/demo/visitor-id';
 import { realHandlers } from '$lib/server/tools/handlers';
 import { serveTool } from '$lib/server/tools/serve';
 import { kitchenCalendar } from './calendar';
@@ -31,4 +36,16 @@ describe('kitchen calendar from a sandbox', () => {
 		expect(ics).not.toContain(ws);
 		expect(await kitchenCalendar(ws, 'k-nope')).toBeNull();
 	}, 60_000);
+
+	it('a calendar token reads one sandbox, and nothing else stands in for it', () => {
+		const env = { JUDGE_KEY_SECRET: 'a-test-secret-of-enough-length' };
+		const ws = newVisitorWorkspace();
+		const token = signCalendar(ws, env);
+		expect(readCalendar(token, env)).toBe(ws);
+		expect(readCalendar(token.slice(0, -2) + (token.endsWith('A') ? 'BB' : 'AA'), env)).toBeNull();
+		expect(readCalendar(`cal_${newVisitorWorkspace()}.${token.split('.')[1]}`, env)).toBeNull();
+		// The visitor cookie is not a calendar token, and a calendar token is not a cookie.
+		expect(readCalendar(`cal_${signVisitor(ws, env)}`, env)).toBeNull();
+		expect(readCalendar(token, { JUDGE_KEY_SECRET: 'another-secret-of-enough-length' })).toBeNull();
+	});
 });
