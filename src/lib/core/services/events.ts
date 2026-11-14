@@ -22,6 +22,7 @@ import { SCENARIO, addDays } from '../scenario';
 import {
 	makeInHouseQty,
 	menuDemand,
+	convertAmount,
 	menuDigest,
 	menuOverrides,
 	planEventDemand,
@@ -407,12 +408,30 @@ async function prepareEdit(
 			return err('INVALID_INPUT', `${before.label} is a dish: change its g/guest, not its amount`, {
 				detail: { needId: before.id, field: 'gramsPerGuest' }
 			});
-		if (amount.unit !== before.amount.unit)
+		if (amount.unit !== before.amount.unit) {
+			// Never applied silently: with this product's own density the refusal carries the converted amount for the
+			// caller to confirm ("20 kg is about 19.4 l; order that?"), without it a question for the unit.
+			const bought = plan.lines.find(
+				(l) => l.needId === before.id && l.state !== 'committed' && l.qty.value > 0
+			);
+			const product = bought
+				? (await ports.catalog.get([bought.productId])).get(bought.productId)
+				: undefined;
+			const c = convertAmount(amount.value, amount.unit, before.amount.unit, product);
+			const detail = {
+				needId: before.id,
+				needUnit: before.amount.unit,
+				given: amount.unit,
+				...(c.ok ? { converted: c.amount, source: c.note } : { why: c.reason })
+			};
 			return err(
 				'INVALID_INPUT',
-				`${before.label} is measured in ${before.amount.unit}; ${amount.value} ${amount.unit} can't be converted without a density. Say it in ${before.amount.unit}.`,
-				{ detail: { needId: before.id, needUnit: before.amount.unit, given: amount.unit } }
+				c.ok
+					? `${amount.value} ${amount.unit} of ${product?.nameFi ?? before.label} is about ${c.amount.value} ${c.amount.unit} (${c.note}). Confirm ${c.amount.value} ${c.amount.unit}?`
+					: `${before.label} is measured in ${before.amount.unit}, and ${c.note}. Say it in ${before.amount.unit}.`,
+				{ detail }
 			);
+		}
 		if (plan.lines.some((l) => l.needId === before.id && l.state === 'committed'))
 			return err('STALE_VERSION', 'a line of this need is already committed');
 		const mine = drafts.filter((d) => d.needId === before.id);

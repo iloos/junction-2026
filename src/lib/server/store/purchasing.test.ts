@@ -53,7 +53,16 @@ async function harness(o: { deliveryDays?: Kitchen['deliveryDays'] } = {}) {
 	const products = new Map([
 		['464201', milk('464201', 'Testi kevytmaito laktoositon 1 l', true)],
 		['470418', milk('470418', 'Testi kevytmaito 1 l', false)],
-		['470420', milk('470420', 'Testi rasvaton maito 1 l', true)]
+		['470420', milk('470420', 'Testi rasvaton maito 1 l', true)],
+		// Valio states both weight and content volume for this pack: its own density, 1.031 kg/l.
+		[
+			'464299',
+			Product.parse({
+				...milk('464299', 'Testi täysmaito 1 l', false),
+				netPerSalesUnit: { value: { value: 1.031, unit: 'kg' }, provenance: prov },
+				netVolumePerSalesUnit: { value: { value: 1, unit: 'l' }, provenance: prov }
+			})
+		]
 	]);
 	const kitchen = Kitchen.parse({
 		id: 'k-hotel',
@@ -286,10 +295,37 @@ describe('R9-03: an amount edit changes the need, in its own dimension', () => {
 			needId: p.needs[0].id,
 			patch: { amount: { value: 20, unit: 'kg' } }
 		});
+		// This pack states no volume beside its weight: a question for the unit, never a water guess.
 		expect(r.ok ? null : r.error).toMatchObject({
 			code: 'INVALID_INPUT',
-			detail: { needUnit: 'l', given: 'kg' }
+			detail: { needUnit: 'l', given: 'kg', why: 'no_density' }
 		});
+	});
+
+	it("with the pack's own weight and volume, the refusal offers the converted amount to confirm", async () => {
+		const { h } = await harness();
+		const p = must(
+			await h.place_order(ctx(), {
+				kitchenId: 'k-hotel',
+				deliverBy: '2026-12-10',
+				idempotencyKey: 'dense',
+				lines: [{ productId: '464299', qty: 4, unit: 'ST', amount: { value: 4, unit: 'kg' } }]
+			})
+		).plan;
+		const r = await h.edit_line(ctx('chef'), {
+			planId: p.id,
+			version: p.version,
+			needId: p.needs[0].id,
+			patch: { amount: { value: 20, unit: 'l' } }
+		});
+		expect(r.ok ? null : r.error).toMatchObject({
+			code: 'INVALID_INPUT',
+			detail: { needUnit: 'kg', given: 'l', converted: { value: 20.62, unit: 'kg' } }
+		});
+		expect(r.ok ? '' : r.error.message).toContain('Confirm 20.62 kg?');
+		// Nothing changed until the chef confirms.
+		const now = must(await h.get_plan(ctx('chef'), { planId: p.id })).plan;
+		expect(now.version).toBe(p.version);
 	});
 
 	it('4 l → 20 l moves the need and the purchase together', async () => {
