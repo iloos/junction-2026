@@ -17,7 +17,7 @@ One session or lead agent per track, in its own worktree and branch, editing onl
 | Evals, claims | 91 | PITCH/CLAIMS truth pass · README tour checked on prod · prod re-test per deploy · gate without `data/valio/` |
 | Agent door | junc26-da | `get_context` mandate, per-key limits, MCP hints · "Your agent's changes" on /agents (worktree `agent-door`, branch `agent-door-hardening`) |
 | Site + domain | junc26-d0 | `mandate.kitchen` static site (Cloudflare Worker, `site/`, untracked until placed) · `app.mandate.kitchen` = the app (Aiven custom domain) · claims checked against CLAIMS |
-| Valo basket | junc26-0d | `lane/valo-basket`; scope under review (Valio's booth webshop is production: no writes, no credentials) |
+| Valo basket | junc26-0d | `lane/valo-basket`: an approved order → an anonymous basket on VALO's public webshop API (no login, carts not orderable). **Held off main, live mode off**, until the user, the lead and Valio agree |
 | Design | design session | judge README draft · Wave 1 acceptance criteria · Wave 2 mocks (memory, forecast) |
 | Lead | lead | merges, gate, `withCallScope` at every door, dead stub code out, submission texts, ARCHITECTURE and CLAUDE.md refresh, five-second rule as a hard rule, archive stale docs |
 
