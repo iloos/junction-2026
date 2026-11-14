@@ -337,7 +337,7 @@
 						// ledger cards leave with it (they act on the old task).
 						if (taskId)
 							entries = entries.filter(
-								(x) => x.kind === 'chef' || !['decision', 'menu', 'ledger'].includes(x.e.type)
+								(x) => x.kind !== 'event' || !['decision', 'menu', 'ledger'].includes(x.e.type)
 							);
 						taskId = e.taskId;
 						remember(taskId);
