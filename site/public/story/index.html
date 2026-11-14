@@ -22,9 +22,12 @@
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
 <style>
 :root{
-  --bg:#0b0d0e; --bg2:#111416; --panel:#15191b; --line:#23292c; --line2:#2f373b;
-  --ink:#eef1ef; --ink2:#a7b0ad; --ink3:#8a9491;
-  --ok:#3fbf8a; --teal:#2bb3a6; --amber:#e8a93c; --red:#e2604f;
+  /* the app's dark theme, "cold-store navy" */
+  --bg:oklch(0.22 0.035 245); --bg2:oklch(0.255 0.04 245); --panel:oklch(0.255 0.04 245); --well:oklch(0.29 0.04 245);
+  --line:oklch(0.315 0.04 245); --line2:oklch(0.38 0.04 245);
+  --ink:oklch(0.94 0.012 240); --ink2:oklch(0.79 0.03 240); --ink3:oklch(0.69 0.035 240);
+  /* states: green within the mandate, amber needs approval, red refused, blue a person */
+  --ok:oklch(0.78 0.14 155); --teal:oklch(0.75 0.11 185); --amber:oklch(0.82 0.13 75); --red:oklch(0.72 0.15 28); --blue:oklch(0.76 0.1 250);
   --serif:'Instrument Serif', Georgia, serif; --sans:'IBM Plex Sans', system-ui, sans-serif; --mono:'IBM Plex Mono', ui-monospace, monospace;
   color-scheme:dark;
 }
@@ -54,9 +57,10 @@ a{color:inherit}
 
 /* slides */
 section{min-height:100vh;min-height:100svh;scroll-snap-align:start;padding:96px 8vw 72px;display:flex;flex-direction:column;justify-content:center;position:relative}
-h1,h2{font-family:var(--serif);font-weight:400;letter-spacing:-.01em;line-height:1.04;text-wrap:balance}
-h1{font-size:clamp(40px,5.4vw,84px);max-width:14ch}
-h2{font-size:clamp(30px,3.5vw,54px);max-width:24ch}
+h1,h2{font-family:var(--serif);font-weight:400;letter-spacing:-.01em;line-height:1.08;text-wrap:balance}
+h1{font-size:clamp(40px,4.7vw,74px);max-width:17ch}
+h1 em{font-style:italic;color:var(--teal)}
+h2{font-size:clamp(30px,3.5vw,54px);max-width:27ch}
 .lede{font-size:clamp(16px,1.35vw,20px);color:var(--ink2);max-width:46ch;margin-top:24px;text-wrap:pretty}
 .label{font:12px var(--mono);color:var(--ink3);margin-top:18px}
 .reveal{opacity:0;transform:translateY(18px);transition:opacity .8s ease,transform .8s ease}
@@ -66,45 +70,51 @@ h2{font-size:clamp(30px,3.5vw,54px);max-width:24ch}
 /* hero */
 #hero{display:grid;grid-template-columns:1.05fr 1fr;gap:5vw;align-items:center}
 #hero .ctas{display:flex;flex-wrap:wrap;gap:12px;margin-top:36px}
-.gatebox{position:relative;height:min(64vh,560px);border:1px solid var(--line);border-radius:18px;background:radial-gradient(120% 80% at 50% 0%,#152022 0%,var(--bg2) 60%);overflow:hidden}
+.gatebox{position:relative;height:min(64vh,560px);border:1px solid var(--line);border-radius:18px;background:radial-gradient(120% 80% at 50% 0%,color-mix(in oklab,var(--teal) 9%,var(--bg2)) 0%,var(--bg2) 60%);overflow:hidden}
 .gatebox canvas{position:absolute;inset:0;width:100%;height:100%}
 .gatebox .legend{position:absolute;left:18px;right:18px;bottom:14px;display:flex;flex-wrap:wrap;gap:6px 16px;font:12px var(--mono);color:var(--ink3)}
 .gatebox .legend b{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:0}
 .gatebox .tick{position:absolute;right:18px;top:14px;font:12px var(--mono);color:var(--ink3);text-align:right}
 
-/* problem */
-.bigrow{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:14px;overflow:hidden;margin-top:40px;max-width:980px}
-.bigrow>div{background:var(--bg);padding:26px 24px}
-.bigrow .n{font:400 44px/1.1 var(--serif)}
-.bigrow .l{color:var(--ink2);font-size:14px;margin-top:6px}
-.bigrow .n.red{color:var(--red)}.bigrow .n.amber{color:var(--amber)}
+.chip{font:12px var(--mono);padding:3px 9px;border-radius:999px;border:1px solid currentColor;white-space:nowrap}
+.chip.amber{color:var(--amber)}.chip.ok{color:var(--ok)}.chip.teal{color:var(--teal)}.chip.red{color:var(--red)}.chip.dim{color:var(--ink3)}
 
-/* flow */
-.three{display:grid;grid-template-columns:1fr 1fr 1fr;gap:18px;margin-top:44px}
-.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px;position:relative}
-.card h3{font:500 12px var(--mono);color:var(--ink3);letter-spacing:.06em;text-transform:uppercase;margin-bottom:14px;display:flex;justify-content:space-between}
-.msg{background:#1c2225;border-radius:12px 12px 12px 4px;padding:12px 14px;font-size:14px;margin-bottom:10px}
-.msg.me{background:#24302f;border-radius:12px 12px 4px 12px;margin-left:24px}
-.outcome{font:12px var(--mono);color:var(--teal);border-top:1px solid var(--line);padding-top:10px;margin-top:6px}
-.line{display:grid;grid-template-columns:1fr auto;gap:6px 10px;padding:10px 0;border-bottom:1px solid var(--line);font-size:14px}
-.line:last-of-type{border:0}
-.line s{color:var(--ink3)}
-.line .q{font:12px var(--mono);color:var(--ink2);text-align:right}
-.line .chip{grid-column:1/-1;justify-self:start}
-.chip{font:12px var(--mono);padding:2px 8px;border-radius:999px;border:1px solid currentColor;white-space:nowrap}
-.chip.amber{color:var(--amber)}.chip.ok{color:var(--ok)}.chip.teal{color:var(--teal)}.chip.dim{color:var(--ink3)}
-.decision{border:1px solid var(--amber);border-radius:12px;padding:14px;margin-top:4px}
-.decision .t{display:flex;justify-content:space-between;gap:10px;font-weight:500}
-.decision p{color:var(--ink2);font-size:13.5px;margin:6px 0 12px}
-.hold{height:38px;padding:0 18px;border-radius:999px;background:var(--ink);color:var(--bg);display:grid;place-items:center;font-weight:500;font-size:13.5px;position:relative;overflow:hidden}
-.hold::before{content:"";position:absolute;inset:0;background:var(--amber);transform:scaleX(0);transform-origin:left;animation:hold 3.2s ease-in-out infinite;opacity:.9}
-.hold span{position:relative}
-@keyframes hold{0%,20%{transform:scaleX(0)}70%,100%{transform:scaleX(1)}}
+/* start anywhere: event → menu → dish → item → order */
+.ladder{display:grid;grid-template-columns:repeat(5,1fr);gap:0;margin-top:44px;max-width:1180px;border:1px solid var(--line);border-radius:16px;background:var(--panel);overflow:hidden}
+.rung{padding:20px 20px 22px;border-left:1px solid var(--line);position:relative;display:flex;flex-direction:column;gap:6px}
+.rung:first-child{border-left:0}
+.rung .k{font:500 12px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--ink3);display:flex;align-items:center;gap:8px}
+.rung .k i{font-style:normal;display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;border:1px solid var(--line2);font-size:11px;letter-spacing:0;color:var(--ink2)}
+.rung .v{font:400 26px/1.15 var(--serif);color:var(--ink)}
+.rung .t{font-size:13.5px;color:var(--ink2);line-height:1.5}
+.rung.entry .k{color:var(--teal)}
+.rung.entry .k i{border-color:var(--teal);color:var(--teal)}
+.rung.done{background:color-mix(in oklab,var(--ok) 8%,var(--panel))}
+.rung.done .k{color:var(--ok)}
+.rung.done .k i{border-color:var(--ok);color:var(--ok)}
+.rung::after{content:"→";position:absolute;right:-8px;top:20px;font:13px var(--mono);color:var(--ink3);background:var(--panel);line-height:1;padding:2px 0;z-index:1}
+.rung:last-child::after{display:none}
+.direct{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 14px;margin-top:18px;max-width:1180px;font-size:15px;color:var(--ink2)}
+.direct q{font:400 22px/1.3 var(--serif);color:var(--ink);quotes:"“" "”"}
+.tally{display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:10px;font:12px var(--mono);color:var(--ink2)}
+.tally b{font-weight:500}
+.tally .ok{color:var(--ok)}.tally .amber{color:var(--amber)}
+
+/* when Valio can't supply it */
+.ways{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:40px;max-width:1240px}
+.way{background:var(--panel);border:1px solid color-mix(in oklab,var(--c) 32%,var(--line));border-radius:14px;padding:18px 18px 16px;display:flex;flex-direction:column;gap:10px}
+.way h3{font:400 25px/1.15 var(--serif);color:var(--ink);display:flex;align-items:center;gap:10px}
+.way h3::before{content:"";width:10px;height:10px;border-radius:2px;background:var(--c);flex:none}
+.way .ask{font:12.5px/1.5 var(--mono);color:var(--ink2)}
+.way .ask s{color:var(--ink3)}
+.way p{font-size:14px;line-height:1.55;color:var(--ink2)}
+.way p b{color:var(--ink);font-weight:500}
+.way .end{margin-top:auto;display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;justify-content:space-between;border-top:1px solid var(--line);padding-top:10px;font:12px var(--mono);color:var(--ink2)}
 
 /* mandate */
 .mandate{display:grid;grid-template-columns:1fr 64px 1fr;align-items:center;margin-top:52px}
-.words{font:400 clamp(22px,2.2vw,32px)/1.35 var(--serif)}
-.words mark{background:none;color:var(--ink);border-bottom:2px solid var(--c);padding-bottom:1px;transition:background .3s}
+.words{font:400 clamp(22px,2.2vw,32px)/1.5 var(--serif);text-wrap:pretty}
+.words mark{background:none;color:var(--ink);text-decoration:underline 2px var(--c);text-underline-offset:.24em;text-decoration-skip-ink:none;border-radius:3px;-webkit-box-decoration-break:clone;box-decoration-break:clone;transition:background .3s}
 .words mark.hot{background:color-mix(in oklab,var(--c) 22%,transparent)}
 .arrow{color:var(--ink3);text-align:center;font-size:28px}
 .rules{display:flex;flex-direction:column;gap:10px}
@@ -123,6 +133,12 @@ h2{font-size:clamp(30px,3.5vw,54px);max-width:24ch}
 .plabel{font:500 12px var(--mono);paint-order:stroke;stroke:var(--bg2);stroke-width:4px}
 .wire{stroke:var(--line2);fill:none;stroke-width:1.2}
 .scrollhint{display:none}
+.runs{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:16px}
+.run{display:flex;flex-direction:column;gap:6px;padding:14px 16px;border:1px solid color-mix(in oklab,var(--c) 32%,var(--line));border-radius:12px;background:var(--panel)}
+.run q{font:400 20px/1.3 var(--serif);color:var(--ink);quotes:"“" "”"}
+.run>span{font:12px var(--mono);color:var(--c);display:flex;align-items:center;gap:8px}
+.run>span::before{content:"";width:8px;height:8px;border-radius:2px;background:var(--c);flex:none}
+.recorded{font:12px var(--mono);color:var(--ink3);margin-top:12px}
 
 /* certainty */
 .cert{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-top:48px}
@@ -137,22 +153,22 @@ h2{font-size:clamp(30px,3.5vw,54px);max-width:24ch}
 .pt-tab{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;text-align:left;padding:12px 16px;border:1px solid var(--line);border-radius:12px;background:transparent;color:var(--ink2);cursor:pointer;transition:border-color .2s,background .2s;font:inherit}
 .pt-tab b{font:400 24px/1.1 var(--serif);color:var(--ink);display:block}
 .pt-tab small{font:12.5px var(--sans);color:var(--ink3)}
-.pt-tab .tag{font:12px var(--mono);padding:2px 8px;border-radius:999px;border:1px solid #24533f;color:var(--ok);white-space:nowrap}
+.pt-tab .tag{font:12px var(--mono);padding:2px 8px;border-radius:999px;border:1px solid color-mix(in oklab,var(--ok) 45%,transparent);color:var(--ok);white-space:nowrap}
 .pt-tab:hover{border-color:var(--line2)}
-.pt-tab[aria-selected="true"]{border-color:var(--teal);background:#122220}
+.pt-tab[aria-selected="true"]{border-color:var(--teal);background:color-mix(in oklab,var(--teal) 10%,var(--bg))}
 .pt-panel{border:1px solid var(--line);border-radius:16px;background:var(--panel);padding:22px 24px;min-height:420px}
 .pt-head{display:flex;justify-content:space-between;align-items:baseline;gap:16px;flex-wrap:wrap}
 .pt-head h3{font:400 34px/1.05 var(--serif)}
 .pt-head .role{font:12px var(--mono);color:var(--teal)}
 .pt-strip{display:flex;gap:4px;margin:16px 0 18px;flex-wrap:wrap}
 .pt-strip span{flex:1;min-width:64px;text-align:center;font:12px var(--mono);padding:7px 4px;border-radius:7px;border:1px solid var(--line);color:var(--ink3);transition:all .25s}
-.pt-strip span.on{border-color:var(--teal);color:var(--ink);background:#143029}
+.pt-strip span.on{border-color:var(--teal);color:var(--ink);background:color-mix(in oklab,var(--teal) 16%,var(--panel))}
 .pt-cols{display:grid;grid-template-columns:1fr 1fr;gap:20px}
 .pt-cols h4{font:500 12px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--ink3);margin-bottom:6px}
 .pt-cols p{font-size:14.5px;color:var(--ink2);line-height:1.6}
 .pt-cols b{color:var(--ink);font-weight:500}
 .pt-ex{margin-top:16px;border:1px solid var(--line);border-radius:12px;overflow:hidden}
-.pt-ex .bar{display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px 10px;font:12px var(--mono);color:var(--ink3);padding:8px 14px;border-bottom:1px solid var(--line);background:rgba(255,255,255,.02)}
+.pt-ex .bar{display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px 10px;font:12px var(--mono);color:var(--ink3);padding:8px 14px;border-bottom:1px solid var(--line);background:var(--well)}
 .pt-ex pre{margin:0;padding:12px 14px;font:12.5px/1.6 var(--mono);color:var(--ink);white-space:pre-wrap;overflow-wrap:anywhere}
 .pt-ex pre i{font-style:normal;color:var(--ink3)}
 .pt-ex pre em{font-style:normal;color:var(--ok)}
@@ -163,7 +179,7 @@ h2{font-size:clamp(30px,3.5vw,54px);max-width:24ch}
 /* proof */
 .proof{margin-top:40px;border-top:1px solid var(--line);max-width:1100px}
 .pr{display:grid;grid-template-columns:1.3fr 1fr 96px;gap:8px 24px;padding:16px 0;border-bottom:1px solid var(--line);align-items:baseline}
-.pr .c{font:400 22px/1.25 var(--serif)}
+.pr .c{font:400 22px/1.3 var(--serif)}
 .pr .e{font:12px var(--mono);color:var(--ink2)}
 .pr .chip{justify-self:end}
 .stats{display:flex;flex-wrap:wrap;gap:28px 56px;margin-top:36px}
@@ -176,14 +192,21 @@ h2{font-size:clamp(30px,3.5vw,54px);max-width:24ch}
 .key{margin-top:32px;display:flex;flex-wrap:wrap;border:1px solid var(--line2);border-radius:12px;overflow:hidden;font:13px var(--mono);max-width:100%}
 .key span{padding:14px 18px;color:var(--ink2);overflow-wrap:anywhere}
 .key a{padding:14px 18px;background:var(--panel);border-left:1px solid var(--line2);font-weight:500;text-decoration:none}
-.key a:hover{background:#1c2225}
+.key a:hover{background:var(--well)}
 .closebtns{display:flex;flex-wrap:wrap;gap:12px;margin-top:20px}
-.foot{position:absolute;bottom:28px;left:8vw;right:8vw;display:flex;flex-wrap:wrap;gap:6px 24px;justify-content:space-between;font:12px var(--mono);color:var(--ink3)}
+.foot{position:absolute;bottom:56px;left:8vw;right:8vw;display:flex;flex-wrap:wrap;gap:6px 24px;justify-content:space-between;font:12px var(--mono);color:var(--ink3)}
 
 @media (max-width:1100px){.top nav{gap:16px}}
 @media (max-width:900px){
   html{scroll-snap-type:y proximity}
-  #hero,.three,.mandate,.cert,.bigrow,.pt,.pt-cols{grid-template-columns:1fr}
+  #hero,.mandate,.cert,.pt,.pt-cols,.ways,.runs{grid-template-columns:1fr}
+  .ladder{grid-template-columns:1fr}
+  .rung{border-left:0;border-top:1px solid var(--line);display:grid;grid-template-columns:96px 1fr;column-gap:14px;row-gap:2px;padding:14px 16px}
+  .rung:first-child{border-top:0}
+  .rung .k{grid-row:span 2;align-self:start;padding-top:5px}
+  .rung .v{font-size:22px}
+  .rung::after{display:none}
+  .direct q{font-size:20px}
   .arrow{transform:rotate(90deg);margin:8px 0}
   .dots,.counter,.keys{display:none}
   section{min-height:auto;padding:92px 16px 56px}
@@ -214,14 +237,11 @@ h2{font-size:clamp(30px,3.5vw,54px);max-width:24ch}
   .btn.go .long{display:none}.btn.go .short{display:inline}
   h1{font-size:40px}
   .gatebox{height:300px}
-  .bigrow .n{font-size:38px}
-  .bigrow>div{padding:20px 18px}
 }
 @media (max-width:360px){.top nav a.opt{display:none}}
 @media (prefers-reduced-motion:reduce){
   html{scroll-behavior:auto}
   .reveal{opacity:1;transform:none;transition:none}
-  .hold::before{animation:none;transform:scaleX(.6)}
   .words mark,.rule,.pt-tab,.pt-strip span{transition:none}
 }
 </style>
@@ -247,59 +267,65 @@ h2{font-size:clamp(30px,3.5vw,54px);max-width:24ch}
 <!-- 1 HERO -->
 <section id="hero" aria-label="Mandate">
   <div>
-    <h1 class="reveal d1">A purchasing agent that stays inside the chef's limits.</h1>
-    <p class="lede reveal d2">Mandate plans a kitchen's orders from its menu and finds substitutes when Valio runs out of something. It orders on its own only within limits the chef wrote down. Anything else waits for the chef.</p>
+    <h1 class="reveal d1">Bring an event, a menu, a dish or one item. <em>Mandate sorts out the order.</em></h1>
+    <p class="lede reveal d2">It finds each product in Valio Aimo's catalogue and orders on its own only within the limits the chef sets. Anything else waits for the chef, with the reason.</p>
     <div class="ctas reveal d3">
-      <a class="btn primary" href="https://app.mandate.kitchen/">See the Christmas buffet</a>
-      <a class="btn" href="#close">Connect your own agent</a>
+      <a class="btn primary" href="https://app.mandate.kitchen/request">Try a request</a>
+      <a class="btn" href="https://app.mandate.kitchen/">See the Christmas buffet</a>
     </div>
   </div>
-  <div class="gatebox reveal d2" role="img" aria-label="Illustration: order lines from the kitchen, the chat, an outside agent and REST pass the same checks and end as a receipt, held for the chef, or refused with a reason.">
+  <div class="gatebox reveal d2" role="img" aria-label="Illustration: order lines from an event, a menu, a dish or a single item pass the same checks and end ordered within the mandate, waiting for the chef, or refused with a reason.">
     <canvas id="gatecv"></canvas>
     <div class="tick">illustration</div>
-    <div class="legend"><span><b style="background:var(--ok)"></b>ordered within the mandate</span><span><b style="background:var(--amber)"></b>held for the chef</span><span><b style="background:var(--red)"></b>refused, with the reason</span></div>
+    <div class="legend"><span><b style="background:var(--ok)"></b>ordered within the mandate</span><span><b style="background:var(--amber)"></b>waits for the chef</span><span><b style="background:var(--red)"></b>refused, with the reason</span></div>
   </div>
 </section>
 
-<!-- 2 PROBLEM -->
-<section id="problem" aria-label="The problem">
-  <h2 class="reveal d1">140 guests on Saturday, and Valio is out of the ham and the swede casserole.</h2>
-  <div class="bigrow reveal d2">
-    <div><div class="n">140</div><div class="l">guests at a Christmas buffet in a hotel kitchen</div></div>
-    <div><div class="n red">2</div><div class="l">products out of stock in Valio's own data</div></div>
-    <div><div class="n amber">17:00</div><div class="l">order cut-off, the day before delivery</div></div>
+<!-- 2 START ANYWHERE -->
+<section id="anywhere" aria-label="Start with what you have">
+  <h2 class="reveal d1">Start with what you have. Mandate works it down to the order.</h2>
+  <div class="ladder reveal d2">
+    <div class="rung entry"><div class="k"><i>1</i>An event</div><div class="v" data-s="chain.steps.#event.value">140 guests</div><div class="t" data-s="chain.steps.#event.text">Christmas dinner buffet on Sat 12 Dec.</div></div>
+    <div class="rung entry"><div class="k"><i>2</i>A menu</div><div class="v">12 dishes</div><div class="t">The booking's menu, or one proposed from your brief.</div></div>
+    <div class="rung entry"><div class="k"><i>3</i>A dish</div><div class="v" data-s="chain.steps.#dish.value">Rice porridge</div><div class="t">100 g a guest.</div></div>
+    <div class="rung entry"><div class="k"><i>4</i>One item</div><div class="v" data-s="chain.steps.#ingredient.value">1.68 kg rice</div><div class="t" data-s="chain.steps.#product.text">From Valio Aimo's catalogue: 2 bags × 1 kg, €4.60.</div></div>
+    <div class="rung done"><div class="k"><i>✓</i>The order</div><div class="v" data-s="chain.steps.#order.value">Supplier confirmed</div><div class="t" data-s="chain.steps.#order.text">Ordered with 2 other lines on one receipt.</div></div>
   </div>
-  <p class="lede reveal d3">In Valio's webshop today, the chef moves order templates to the cart by hand, and an out-of-stock product shows similar products with no reason. An agent can find another ham quickly. The hard part is knowing what it may buy without asking.</p>
-  <p class="label reveal d4">Demo scenario: the hotel and the booking are made up. The two outages are in Valio's challenge data.</p>
+  <p class="tally reveal d3"><span>The whole buffet:</span><b class="ok"><span data-s="chain.counts.orderedNow">3</span> lines ordered now</b><b class="amber"><span data-s="chain.counts.waiting">15</span> wait for the chef</b><span><span data-s="chain.counts.unknownQuantity">11</span> of them because Valio doesn't state a quantity</span></p>
+  <p class="direct reveal d3"><span>Or start at one item:</span><q data-s="cases.#within-mandate.request">10 kg salmon fillet for Friday</q><span>→ LOHIFILEE C-LEIKATTU 10KG,</span><span class="chip ok"><span data-s="cases.#within-mandate.outcome.label">Ordered within your mandate</span> · <span data-s="cases.#within-mandate.outcome.eur" data-f="eur">€141.10</span></span></p>
+  <p class="label reveal d4">Recorded from the app on Sat 14 Nov. The hotel and its booking are a demo scenario; Valio data is challenge mock data.</p>
 </section>
 
-<!-- 3 FLOW -->
-<section id="flow" aria-label="How a plan is made">
-  <h2 class="reveal d1">The chef asks. The agent plans and flags the exceptions.</h2>
-  <div class="three">
-    <div class="card reveal d2">
-      <h3>1 · The ask <span>chat</span></h3>
-      <div class="msg me">Plan the Christmas buffet for 140 on Saturday.</div>
-      <div class="msg">Use a substitute for joulukinkku · buy 6 new products · €532.31. 1 decision for a chef · nothing ordered. 14 kg still unresolved; 1 decision waits for you.</div>
-      <div class="outcome">↳ planned and held for the chef</div>
+<!-- 3 WHEN VALIO CAN'T -->
+<section id="fallback" aria-label="When Valio can't supply it">
+  <h2 class="reveal d1">When Valio can't supply something, Mandate doesn't drop it quietly.</h2>
+  <div class="ways">
+    <div class="way reveal d1" style="--c:var(--amber)">
+      <h3>Swap it</h3>
+      <div class="ask"><s>HK Viljaporsaan Juhlakinkku 6-8 kg</s> out of stock at Valio</div>
+      <p>Proposed <b>HK Palvikinkku viipaloitu 1,5 kg</b>: 13 packs, 19.5 kg. Valio states 15 in stock. A new product for this kitchen, so the chef decides.</p>
+      <div class="end"><span class="chip amber" data-s="cases.#out-of-stock.outcome.label">Needs your approval</span><span data-s="cases.#out-of-stock.outcome.eur" data-f="eur">€200.59</span></div>
     </div>
-    <div class="card reveal d3">
-      <h3>2 · The plan <span>lines</span></h3>
-      <div class="line"><div><s>HK whole Christmas ham</s> out<br>HK Palvikinkku viipaloitu 1,5 kg</div><div class="q">13 packs<br>€200.59</div><span class="chip teal">known-stock candidate</span></div>
-      <div class="line"><div>Atria Rosolli 2,5 kg</div><div class="q">6 packs<br>€78.18</div><span class="chip amber">stock unknown · not counted as cover</span></div>
-      <div class="outcome">↳ each line says how sure its supply is</div>
+    <div class="way reveal d2" style="--c:var(--amber)">
+      <h3>Make it in house</h3>
+      <div class="ask"><s>Lanttulaatikko</s> out of stock at Valio</div>
+      <p>Made in house from ingredients in Valio's catalogue. They bring <b>milk, egg and wheat</b>, so the allergen change is the chef's own decision.</p>
+      <div class="end"><span class="chip amber">the chef signs off</span><span>from the buffet plan</span></div>
     </div>
-    <div class="card reveal d4">
-      <h3>3 · The decision <span>chef</span></h3>
-      <div class="decision">
-        <div class="t"><span>Make lanttulaatikko in house</span></div>
-        <p>New ingredients, with milk, egg and wheat. An allergen change needs the chef's sign-off, in its own decision.</p>
-        <div class="hold"><span>Hold to sign off</span></div>
-      </div>
-      <div class="outcome">↳ the approval covers these exact terms; any edit voids it</div>
+    <div class="way reveal d3" style="--c:var(--blue)">
+      <h3>Move the day</h3>
+      <div class="ask">“<span data-s="cases.#cut-off.request">4 kg lactose-free butter for tomorrow</span>”</div>
+      <p>The cut-off for Tue 8 Dec has passed (17:00 Mon). <b>Offered: deliver Wed 9 Dec instead.</b> Never moved without asking.</p>
+      <div class="end"><span class="chip dim" data-s="cases.#cut-off.outcome.label">Nothing ordered</span><span>you pick the day</span></div>
+    </div>
+    <div class="way reveal d4" style="--c:var(--amber)">
+      <h3>Hold and say why</h3>
+      <div class="ask">“<span data-s="cases.#lactose-free.request">10 l lactose-free milk for Friday</span>”</div>
+      <p>Picked <b>Valio kevytmaito 1 l laktoositon UHT</b>, 10 packs. Valio doesn't state a quantity, so it asks before buying and never counts it as covered.</p>
+      <div class="end"><span class="chip amber" data-s="cases.#lactose-free.outcome.label">Needs your approval</span><span data-s="cases.#lactose-free.outcome.eur" data-f="eur">€15.60</span></div>
     </div>
   </div>
-  <p class="label reveal d4">Products and prices from Valio's challenge data. Recipes and amounts are team estimates. The chat turn is quoted from the app, shortened.</p>
+  <p class="label reveal d4">Recorded from the app on Sat 14 Nov; the in-house dish is from the demo buffet plan. Valio data is challenge mock data.</p>
 </section>
 
 <!-- 4 MANDATE -->
@@ -324,7 +350,12 @@ h2{font-size:clamp(30px,3.5vw,54px);max-width:24ch}
     <svg id="gatesvg" viewBox="0 0 1200 370" role="img" aria-label="The kitchen screen, the chat, an outside agent over MCP and REST all go through one gate and one state change. The outcome is applied with one receipt, held for the chef, or refused with its reason. Operations sees the same held lines."></svg>
   </div>
   <p class="scrollhint">Scroll the diagram sideways →</p>
-  <p class="lede reveal d3" style="max-width:62ch">The kitchen screen, the chat and an outside agent over MCP or REST use the same tools. An approval is tied to the exact lines and prices. Sending the same order twice returns the same receipt. An outside agent can plan but cannot approve.</p>
+  <div class="runs reveal d3">
+    <div class="run" style="--c:var(--ok)"><q data-s="cases.#within-mandate.request">10 kg salmon fillet for Friday</q><span>ordered within your mandate · <span data-s="cases.#within-mandate.outcome.eur" data-f="eur">€141.10</span></span></div>
+    <div class="run" style="--c:var(--ok)"><q>The approved milk order, sent 4 times</q><span>1 receipt: ordered once, never twice</span></div>
+    <div class="run" style="--c:var(--red)"><q>An outside agent approves its own order</q><span>refused · nothing changed</span></div>
+  </div>
+  <p class="recorded reveal d4">Recorded from the app on Sat 14 Nov. The kitchen screen, the chat and an outside agent over MCP or REST use the same tools; an outside agent can plan but cannot approve.</p>
 </section>
 
 <!-- 6 CERTAINTY -->
@@ -392,6 +423,15 @@ const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
  });
 })();
 
+// recorded values: fill the slots from /cases.json so the deck matches the app's last recording
+(()=>{
+ const slots=[...document.querySelectorAll('[data-s]')];if(!slots.length)return;
+ const eur=n=>'€'+Number(n).toFixed(2);
+ const at=(o,path)=>path.split('.').reduce((v,k)=>v==null?v:k[0]==='#'?(Array.isArray(v)?v.find(x=>x.id===k.slice(1)||x.key===k.slice(1)):undefined):v[k],o);
+ fetch('/cases.json').then(r=>r.ok?r.json():null).then(d=>{if(!d)return;
+  slots.forEach(el=>{const v=at(d,el.dataset.s);if(v==null||typeof v==='object')return;el.textContent=el.dataset.f==='eur'?eur(v):String(v)})}).catch(()=>{});
+})();
+
 // mandate: highlight the chef's words and the rule they become
 (()=>{
  const marks=[...document.querySelectorAll('#words mark')],rules=[...document.querySelectorAll('.rule')];let mi=0;
@@ -409,8 +449,8 @@ const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
  const C={ok:css('--ok'),am:css('--amber'),red:css('--red'),line:css('--line2'),ink3:css('--ink3'),ink:css('--ink')};
  const narrow=()=>W<520;
  const checks=()=>narrow()?['mandate','caps','terms','cut-off','stock']:['mandate','caps','exact terms','cut-off','stock'];
- const doors=()=>narrow()?['Kitchen','Chat','Agent','REST']:['Kitchen','Chat','Your agent','REST'];
- const names=['HK Palvikinkku 1,5 kg','Atria Rosolli 2,5 kg','Lanttu Britannia','Valio kevytmaito','Dansukker siirappi','Kalaneuvos kirjolohi'];
+ const doors=()=>['An event','A menu','A dish','One item'];
+ const names=['HK Palvikinkku viipaloitu 1,5 kg','LOHIFILEE C-LEIKATTU 10KG','Myllyn Paras Puuroriisi 1kg','Valio kevytmaito 1 l laktoositon UHT','Atria Rosolli 2,5 kg'];
  let parts=[],t=0;
  function spawn(x){const fate=Math.random();const f=fate<.62?'ok':fate<.9?'held':'ref';const failAt=f==='ok'?99:f==='held'?2+Math.floor(Math.random()*3):Math.floor(Math.random()*2)+1;
   parts.push({d:Math.floor(Math.random()*4),x:x||0,f,failAt,name:names[Math.floor(Math.random()*names.length)],sp:.0014+Math.random()*.0004})}
@@ -423,7 +463,7 @@ const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
   cx.strokeStyle=C.line;cx.beginPath();cx.moveTo(g.gx0,g.cy);cx.lineTo(g.gx1,g.cy);cx.stroke();
   ck.forEach((c,i)=>{const x=g.gx0+(g.gx1-g.gx0)*(i+.5)/ck.length;cx.strokeStyle=C.line;cx.beginPath();cx.moveTo(x,g.cy-30);cx.lineTo(x,g.cy+30);cx.stroke();
    cx.fillStyle=C.ink3;cx.textAlign='center';cx.fillText(c,x,i%2?g.cy+44:g.cy-42)});
-  const outs={ok:[g.R,H*.22,'receipt',C.ok],held:[g.R,H*.46,'held',C.am],ref:[g.R,H*.7,'refused',C.red]};
+  const outs={ok:[g.R,H*.22,'ordered',C.ok],held:[g.R,H*.46,'waits',C.am],ref:[g.R,H*.7,'refused',C.red]};
   Object.values(outs).forEach(([x,y,l,c])=>{cx.strokeStyle=C.line;cx.beginPath();cx.moveTo(g.gx1,g.cy);cx.bezierCurveTo(g.gx1+30,g.cy,x-40,y,x,y);cx.stroke();cx.fillStyle=c;cx.textAlign='left';cx.fillText(l,x+8,y)});
   parts.forEach(p=>{
    const dy=H*(.16+p.d*.16);
