@@ -109,7 +109,7 @@ function verdict(c: CandidateView): string {
 	if (c.kind === 'unknown') return 'Terminal: unknown quantity never counts as cover';
 	if (c.partial) return `Partial: covers ${f1(c.coverValue)} kg`;
 	if (c.tier === 'sign_off') return 'Known stock for the whole need · needs sign-off';
-	if (c.tier === 'propose') return 'Known stock for the whole need · one tap to approve';
+	if (c.tier === 'propose') return 'Known stock for the whole need · needs your approval';
 	return 'Known stock for the whole need · within your mandate';
 }
 

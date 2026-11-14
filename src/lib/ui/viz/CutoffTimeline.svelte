@@ -142,6 +142,10 @@
 			.attr('font-size', narrow ? 11.5 : 12.5)
 			.attr('font-weight', 500)
 			.attr('fill', 'var(--color-ink)')
+			// On a phone the name sits over the time axis: a halo in the card colour keeps it readable across pins.
+			.attr('stroke', narrow ? 'var(--color-sheet)' : null)
+			.attr('stroke-width', narrow ? 4 : null)
+			.attr('paint-order', 'stroke')
 			.text((d) => `${d.label} · ${d.count}`);
 		lane
 			.select('text.note')

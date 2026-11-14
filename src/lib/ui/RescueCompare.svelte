@@ -18,10 +18,15 @@
 	);
 
 	function tierText(t: string) {
-		return t === 'sign_off' ? 'Sign-off' : t === 'propose' ? 'One tap' : 'Within mandate';
+		return t === 'sign_off'
+			? 'Needs sign-off'
+			: t === 'propose'
+				? 'Needs approval'
+				: 'Within mandate';
 	}
 	function tierCls(t: string) {
-		return t === 'sign_off' ? 'text-signoff' : t === 'propose' ? 'text-propose' : 'text-ok';
+		// Authority, not supply: the blue authority hue when a human must act, neutral otherwise (D10).
+		return t === 'sign_off' || t === 'propose' ? 'text-auth' : 'text-ink-2';
 	}
 	// Phone: viable candidates in rank order, then the first few exclusions.
 	const viableCards = $derived(

@@ -418,7 +418,7 @@ function verdictFor(c: CandidateView): string {
 		return `Rejected: origin ${c.origin?.toUpperCase() ?? '?'}, your rules require FI`;
 	if (c.partial) return `Partial: covers ${f1(c.coverValue)} kg`;
 	if (c.tier === 'sign_off') return 'Known stock for the whole need · needs sign-off';
-	if (c.tier === 'propose') return 'Known stock for the whole need · one tap to approve';
+	if (c.tier === 'propose') return 'Known stock for the whole need · needs your approval';
 	return 'Known stock for the whole need · within your mandate';
 }
 
@@ -1024,7 +1024,7 @@ export function buildEvent(input: BuildInput): Built {
 			};
 		const why = line.reasons.filter((x) => x !== 'unknown').join(', ');
 		return {
-			text: `${line.tier === 'sign_off' ? 'Held for sign-off' : 'Proposed: one tap to approve'} (${why}). Your words: “${r.words}”`,
+			text: `${line.tier === 'sign_off' ? 'Held for sign-off' : 'Needs your approval'} (${why}). Your words: “${r.words}”`,
 			source: 'mandate'
 		};
 	}
