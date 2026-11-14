@@ -34,3 +34,47 @@ The agent's limits can't be talked away and its "done" means a domain outcome: r
 
 ## Report
 - Sat ~03:30 · done: C, D, E, A (narrow seam), G suites · server tests, check, lint green · ready to merge: yes
+
+## Handoff (Sat 14 Nov)
+
+**Owned paths · branch:** `src/lib/server/agent/**`, `src/routes/api/agent/**`, `evals/agent/**`, narrow changes in `src/lib/server/auth/**`. Branch `lane/agent2` (worktree `../junc26-lanes/agent2`, port 5177), level with main 5615a58 plus this commit. Needs 1–3 and 5–7 have landed on main; 4 and 8 are still open.
+
+**State:** green on main. `pnpm vitest run --project server src/lib/server/agent` passes 51/51; `pnpm eval:agent` passes 9/9 (goal trials 8, adversarial 10/10 in one test). Prod runs the **scripted** planner unless `AGENT_PLANNER=llm` (`agent/index.ts:137`), even with `LLM_PROVIDER=gemini`.
+
+**Non-obvious knowledge**
+- Run flow: `runRoutineAgent` → `runGoal`: `bootstrapContext` → `resolveIntent` → stop on `unsupported` (no planner call) → `runAgent` with `TOOLS_BY_INTENT ∩ toolsFor(ctx)` and the kitchen grant → `finalize` reads `get_plan` → `computeOutcome` → one `done` trace carrying `data.outcome`.
+- Stops come from one internal AbortController that both the deadline timer and the external signal feed. `guardHandlers` is the last check before any side effect. A tool that is already running is never raced: a commit is one transaction, so the trace stays truthful.
+- The planner sees `PlannerStep.facts` (`facts.ts`), never `StepRecord.value`. The trace drawer still gets the raw `summarize()`. Keep that split when adding tools: add a `case` to `toFacts`, otherwise the tool's result reduces to `undefined`.
+- The initiator is recorded only in `via` (`agent:<id> by <kind>:<id>`). Goal trials assert this exact string, so update them when `initiatedBy` gets written.
+- The /ops button runs as `system/ops-presenter` with `presenter: true`. HTTP starts need a chef key. Scopes are always the initiator's ∩ `kitchen_agent`, so `agent:run` never reaches the run itself.
+- `trial-harness.ts` gives each test a fresh PGlite with every op captured via `publish`. Use it for any new trial; don't use the global `createServerPorts`.
+- Goal trials rely on the catalogue: "kerma" → 460692 (eligible at k-lounas, so g2 is `fulfilled`). If search ranking changes (F18), g2/g5 and the adversarial over-cap case may need a new goal or product id. The over-cap case is qty 100 (above the €400 line cap, below the €10k hard limit).
+- `find_substitutes` applies its result by default (no `apply` given and no substitute yet). The fixture event script relies on that.
+
+**Open threads (track E in SYNTHESIS)**
+1. F25: pass `signal` into `llm.generate` in `llmPlanner` (`loop.ts:~501`); set `initiatedBy`/`kitchenIds` in `principalContext` and have the services write `OpEnvelope.initiatedBy`; make `mayStartAgent` check the `agent:run` scope; pick `currentPlan` by request, not just "event first" (`context.ts:37`); give facts a `truncated` flag.
+2. F4: the routine intent should use `request/parse` + `convert` for units and dates ("4 kg butter tomorrow"), and reject what it can't honour.
+3. F6: `get_context` read tool (wrapping `bootstrapContext`) plus MCP `instructions`; `/agents` page. Test: fresh client `tools/list → get_context → plan_event`.
+4. F12 (agent part): `computeOutcome` should read A's `FulfilmentView` once it lands (awaiting supplier ≠ confirmed; residuals), and should report every plan the run touched, not only the newest.
+5. `llm.for(job)` routing with `job` on every trace; a `requirements` intent calling `plan_event{brief}` from track B.
+
+**Traps**
+- `$env/dynamic/private` is not available in pure tests. Keep env out of `agent/*.ts`, except `index.ts`, which receives `env` as an argument.
+- Vitest hides `console.log` unless you pass `--silent=false --reporter=verbose`.
+- `bus/reader.test.ts` flaked once under full-suite load (5 s timeout); rerun before blaming a change.
+- The intent regex: `EVENT_WORDS` contains "dinner"/"lunch for", so any meal request is `unsupported` until the requirements intent exists. That is deliberate (never silently Christmas).
+- Over HTTP, cancel is hard to see in fixture mode: runs finish in ~1 s. Verify cancel with `stop.test.ts`, or with a live planner.
+
+**How to resume**
+```sh
+cd ../junc26-lanes/agent2 && git merge main && pnpm i
+DATABASE_URL= LLM_PROVIDER=fixture pnpm vitest run --project server src/lib/server/agent
+DATABASE_URL= LLM_PROVIDER=fixture pnpm eval:agent
+DATABASE_URL= pnpm vite dev --port 5177   # fx-chef / fx-approver keys work in dev
+curl -X POST localhost:5177/api/agent/run -H 'authorization: Bearer fx-chef' -d '{"goal":"Order 3 kerma for k-lounas"}'
+```
+
+**Only I know:** the review findings I left out on purpose:
+- No separate read-only evidence worker (E): facts plus per-intent tool lists plus the core gate bound the damage instead.
+- No phase menus inside an intent.
+- `seeded_event` may still call `commit_order` within the mandate (an LLM planner could commit eligible lines; the script never does).
