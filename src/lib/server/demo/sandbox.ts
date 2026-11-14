@@ -32,5 +32,25 @@ export async function resetSandbox(workspaceId: string, now = Date.now()): Promi
 	if (last.size > 500)
 		for (const [ws, t] of last) if (now - t > SANDBOX_COOLDOWN_MS) last.delete(ws);
 	const r = await resetDemoRun(workspaceId);
+	void seedSandboxRecalls(workspaceId, r.runId);
 	return { ok: true, ...r };
+}
+
+/**
+ * A new sandbox run gets the real recalls the monitor already read (stored notices, no network call), so a
+ * visitor's own workspace shows them too. Runs in the background; a failure leaves the run without them.
+ */
+export async function seedSandboxRecalls(workspaceId: string, runId: string): Promise<void> {
+	try {
+		const { prepareSandboxRecalls } = await import('$lib/server/web/sandbox');
+		await prepareSandboxRecalls(process.env, {
+			workspaceId,
+			runId,
+			actor: { kind: 'system', id: 'web:sandbox' },
+			scopes: [],
+			via: 'web:sandbox'
+		});
+	} catch (e) {
+		console.warn('[sandbox] stored recalls not applied', (e as Error)?.message ?? e);
+	}
 }
