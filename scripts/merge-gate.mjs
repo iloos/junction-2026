@@ -17,7 +17,13 @@ const STEPS = [
 	{ name: 'lint', cmd: ['pnpm', 'lint'] },
 	{
 		name: 'evals:self',
-		cmd: ['node', '--test', 'evals/check.test.ts', 'evals/chat/check.test.ts']
+		cmd: [
+			'node',
+			'--test',
+			'evals/check.test.ts',
+			'evals/chat/check.test.ts',
+			'evals/chat/free-check.test.ts'
+		]
 	},
 	// check passes on code that still fails to bundle (adapter-node, SSR imports): build it.
 	{ name: 'build', cmd: ['pnpm', 'build'], heavy: true },
