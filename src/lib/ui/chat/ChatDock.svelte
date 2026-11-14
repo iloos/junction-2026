@@ -54,7 +54,7 @@
 		notice?: string | null;
 	}
 	let {
-		kitchenId = 'k-hotel',
+		kitchenId,
 		open = $bindable(false),
 		pinned = true,
 		planId,
@@ -83,7 +83,7 @@
 	/** The dock's task is remembered per kitchen for this browser tab. */
 	// On a page with a plan the dock remembers the task for that plan only; the kitchen's newest task is the
 	// "earlier conversation".
-	const kitchenKey = () => `mandate.chat.task.${kitchenId}`;
+	const kitchenKey = () => `mandate.chat.task.${kitchenId ?? 'this-kitchen'}`;
 	const key = () => (planId ? `${kitchenKey()}.${planId}` : kitchenKey());
 	let taskId = $state<string | null>(null);
 	let entries = $state.raw<Entry[]>([]);
@@ -453,7 +453,8 @@
 					// The page's plan rides along: a remembered task with nothing of its own gives way to it.
 					...(taskId ? { taskId } : {}),
 					...(planId && !fresh ? { planId } : {}),
-					kitchenId
+					// No kitchen named: the server uses the visitor's own, never a default sample.
+					...(kitchenId ? { kitchenId } : {})
 				})
 			});
 			if (!res.ok || !res.body) {
