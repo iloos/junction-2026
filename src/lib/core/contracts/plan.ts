@@ -114,6 +114,11 @@ export const Need = z.object({
 			formula: z.string()
 		})
 		.optional(),
+	/**
+	 * Why nothing can be bought for this need yet (a menu ingredient with no product, or one whose pack content is
+	 * unknown). Shown to the chef as a gap, never dropped and never guessed.
+	 */
+	unresolved: z.string().max(300).optional(),
 	provenance: Provenance
 });
 export type Need = z.infer<typeof Need>;
