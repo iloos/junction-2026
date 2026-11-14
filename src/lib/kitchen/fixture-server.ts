@@ -379,6 +379,8 @@ export interface FixtureSnapshot {
 	plan: Plan;
 	view: EventView;
 	approval: Approval | null;
+	/** Every live decision on the plan's current version (a split approval keeps each line's own); absent on old reads. */
+	approvals?: Approval[];
 	lastInvalidated: Approval | null;
 	orders: CommitRecord[];
 	kitchen: Kitchen;
@@ -428,6 +430,9 @@ export async function snapshot(): Promise<FixtureSnapshot> {
 		plan: withFixtureView(s.built.plan, s.approvals),
 		view: s.built.view,
 		approval: current(),
+		approvals: s.approvals.filter(
+			(a) => a.planVersion === s.built!.plan.version && a.state !== 'invalidated'
+		),
 		lastInvalidated: invalid,
 		orders: [...s.orders.values()],
 		kitchen: s.kitchen,

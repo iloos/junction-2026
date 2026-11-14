@@ -2,10 +2,16 @@
  * Product photos for rows, batched: every thumb that mounts in the same tick asks once (/kitchen-api/thumbs), and
  * each product is read once per page. Offline there is no server: every thumb shows its placeholder.
  */
+/** S4's ProductPhoto, the fields a thumb draws. */
 export interface Thumb {
-	imageUrl: string;
-	/** How the photo was matched: 'gtin' is this exact product; anything else is the same family or category. */
-	match: string;
+	/** 'gtin' is this exact product; 'family' the same product in another pack; 'brand' its logo; 'category' an icon. */
+	match: 'gtin' | 'family' | 'brand' | 'category' | string;
+	/** Absent for a category icon. */
+	imageUrl?: string;
+	icon?: string;
+	/** Said on the image when not the product's own photo. */
+	label?: 'Pack may differ' | 'Brand image' | 'No photo' | null;
+	host?: string;
 }
 
 const known = new Map<string, Promise<Thumb | null>>();

@@ -847,7 +847,11 @@
 		if (!shell) return;
 		shell.labels = { source: valioSource, offline: k.mode === 'fixture' };
 		// The agent dock is scoped to this kitchen and the plan on screen.
-		shell.chat = { kitchenId: snap?.kitchen.id, planId: snap?.plan.id };
+		// Before the first plan there is no snapshot kitchen: the kitchen the visitor joined is the one the agent buys for.
+		shell.chat = {
+			kitchenId: snap?.kitchen.id ?? k.startKitchen ?? undefined,
+			planId: snap?.plan.id
+		};
 		shell.kitchen = k;
 		shell.sandbox = snap?.clock
 			? {

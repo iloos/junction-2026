@@ -187,7 +187,7 @@
 
 <!-- The purchasing agent on every page, scoped to what the page shows (shell.chat); it never approves. -->
 <ChatDock
-	kitchenId={shell.chat.kitchenId ?? 'k-hotel'}
+	kitchenId={shell.chat.kitchenId}
 	planId={shell.chat.planId}
 	pinned={false}
 	launcher={false}

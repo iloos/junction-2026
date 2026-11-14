@@ -631,6 +631,9 @@ async function snapshotBody(s: Session): Promise<FixtureSnapshot | NotStarted> {
 			previewRanking: s.preset !== 'kitchen'
 		}),
 		approval: current,
+		// Every live decision on this version, line by line: a split approval (approve with lineIds) keeps a granted or
+		// denied line's own approval, while `approval` moves on to the remainder.
+		approvals: approvals.filter((a) => a.planVersion === plan.version && a.state !== 'invalidated'),
 		lastInvalidated,
 		orders,
 		kitchen,

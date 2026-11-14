@@ -4,7 +4,16 @@
 	 * Basket, decision cards, dock cards, compare). Read as soon as the row nears the screen; never an empty slot: a
 	 * photo that isn't this exact product says "Pack may differ", and no photo shows a placeholder that says so.
 	 */
-	import { Package } from '@lucide/svelte';
+	import {
+		Beef,
+		CakeSlice,
+		Carrot,
+		Fish,
+		Milk,
+		Package,
+		Snowflake,
+		SquareSquare
+	} from '@lucide/svelte';
 	import { page } from '$app/state';
 	import { thumbFor, type Thumb } from './thumbs';
 
@@ -29,7 +38,7 @@
 	$effect(() => {
 		const id = productId;
 		if (imageUrl) {
-			thumb = { imageUrl, match: 'gtin' };
+			thumb = { imageUrl, match: 'gtin', label: null };
 			return;
 		}
 		if (offline || !el) {
@@ -59,13 +68,26 @@
 	});
 
 	const exact = $derived(thumb?.match === 'gtin');
+	/** Said on the image (and to assistive tech) whenever it isn't this exact product's own photo. */
 	const label = $derived(
-		thumb === null
+		thumb === null || (thumb && !thumb.imageUrl)
 			? 'No photo'
 			: thumb && !exact
-				? 'Photo of a similar product: pack may differ'
+				? (thumb.label ?? 'Pack may differ')
 				: ''
 	);
+	const ICONS: Record<string, typeof Package> = {
+		milk: Milk,
+		cheese: SquareSquare,
+		butter: SquareSquare,
+		fish: Fish,
+		meat: Beef,
+		produce: Carrot,
+		bakery: CakeSlice,
+		frozen: Snowflake,
+		product: Package
+	};
+	const Icon = $derived(ICONS[thumb?.icon ?? 'product'] ?? Package);
 </script>
 
 <span
@@ -74,7 +96,7 @@
 	style="width: {size}px; height: {size}px"
 	title={label || undefined}
 >
-	{#if thumb}
+	{#if thumb?.imageUrl}
 		<img
 			src={thumb.imageUrl}
 			alt=""
@@ -89,7 +111,7 @@
 			>
 		{/if}
 	{:else}
-		<Package size={Math.round(size * 0.45)} class="text-ink-3" aria-hidden="true" />
+		<Icon size={Math.round(size * 0.45)} class="text-ink-3" aria-hidden="true" />
 	{/if}
 	{#if label}<span class="sr-only">{label}</span>{/if}
 </span>
