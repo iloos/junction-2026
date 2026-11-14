@@ -20,6 +20,7 @@ export const LLM_JOBS = [
 	'menu.propose',
 	'explain',
 	'chat.understand',
+	'establishment.match',
 	'image.read'
 ] as const;
 export type LlmJob = (typeof LLM_JOBS)[number];
@@ -62,6 +63,13 @@ export const LLM_ROUTES: Record<LlmJob, LlmRoute> = {
 		model: GEMINI_LLM_MODEL,
 		thinking: 'minimal',
 		maxTokens: 400
+	},
+	// Mapping a chef's description to the nearest seeded kitchen (D15): one short JSON answer.
+	'establishment.match': {
+		provider: 'env',
+		model: GEMINI_LLM_MODEL,
+		thinking: 'minimal',
+		maxTokens: 300
 	},
 	// Pictures: NVIDIA Nemotron 3.5 Super VL on Verda, thinking off (adapters/llm/verda.ts).
 	'image.read': { provider: 'verda', model: VERDA_VISION_MODEL, maxTokens: 1500 }
