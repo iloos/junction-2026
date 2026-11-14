@@ -36,12 +36,21 @@ export const INTENT_KINDS = [
 ] as const;
 export type IntentKind = (typeof INTENT_KINDS)[number];
 
+/**
+ * The request parser's item as the routine agent keeps it: search words, constraints and variant, plus the words as
+ * typed, the diet asks and the brand, so its filter and its order lines carry the same requirements as /request.
+ */
+export type RoutineItem = Pick<
+	ParsedItem,
+	'product' | 'search' | 'constraints' | 'variant' | 'text' | 'diet' | 'brand'
+>;
+
 /** One product of a routine order: what was asked for, in a physical amount, as the request parser read it. */
 export interface RoutineLine {
 	query: string;
 	qty: number;
 	unit: ReqUnit;
-	item: Pick<ParsedItem, 'product' | 'search' | 'constraints' | 'variant'>;
+	item: RoutineItem;
 }
 
 /** A typed, supported reading of the goal, resolved deterministically before any model call. */
@@ -56,7 +65,7 @@ export type Intent =
 			qty: number;
 			unit: ReqUnit;
 			/** The request parser's reading of the item: search words, constraints, variant. */
-			item: Pick<ParsedItem, 'product' | 'search' | 'constraints' | 'variant'>;
+			item: RoutineItem;
 			/** On the scenario clock (Helsinki), from the goal's own words. */
 			deliverBy: string;
 			deliverByText: string;

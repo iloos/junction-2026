@@ -20,6 +20,7 @@ import { serveTool, toolsFor } from '$lib/server/tools/serve';
 import { errorFacts, toFacts, type Facts, type PlanFacts } from './facts';
 import {
 	orderable,
+	routineItem,
 	routineLines,
 	routineQueries,
 	type OfferFacts,
@@ -27,6 +28,7 @@ import {
 	type RoutineFacts
 } from './routine';
 import { SHORTLIST } from '$lib/server/request/lookup';
+import { orderLineFor } from '$lib/server/request/order-line';
 import type { AgentContext, GoalOutcome, Intent, RoutineLine } from './types';
 
 /**
@@ -822,15 +824,15 @@ export function scriptedPlanner(): Planner {
 							kitchenId: intent.kitchenId,
 							deliverBy: intent.deliverBy,
 							idempotencyKey: key,
-							lines: placed.map(({ l, f }) => ({
-								productId: f.productId,
-								qty: f.salesQty!,
-								unit: f.unit,
-								// The physical need behind the sales units, so a substitute is sized to it.
-								...(l.unit === 'kg' || l.unit === 'l' || l.unit === 'pcs'
-									? { amount: { value: l.qty, unit: l.unit } }
-									: {})
-							}))
+							// The same order line as /request: the physical need, the ask as stated and the hard
+							// requirements, so a substitute or commit is checked against what was asked.
+							lines: placed.map(({ l, f }) =>
+								orderLineFor(routineItem(l), {
+									productId: f.productId,
+									salesQty: f.salesQty!,
+									salesUnit: f.unit
+								})
+							)
 						},
 						why:
 							placed
