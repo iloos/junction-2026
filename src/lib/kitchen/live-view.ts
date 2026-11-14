@@ -119,8 +119,8 @@ function verdict(c: CandidateView): string {
 
 /**
  * What a candidate's reliability, carbon and labels say, only where they carry information: reliability in words
- * (nothing at Valio's default 1.00 or when unknown), carbon against the product it replaces (only when both are
- * the products' own figures, not estimates), and the labels it has. The raw numbers stay for the System layer.
+ * (nothing at Valio's default 1.00 or when unknown), carbon against the product it replaces when it differs by a
+ * tenth or more (marked when it is a product-group average), and the labels it has. The raw numbers stay for the System layer.
  */
 export function candidateFacts(
 	f: ProductFacts | undefined,
@@ -134,11 +134,12 @@ export function candidateFacts(
 	}
 	const a = f?.co2PerKg;
 	const b = original?.co2PerKg;
-	// Only the products' own figures compare: two category averages say nothing about these products.
-	if (a !== undefined && b !== undefined && b > 0 && !f?.co2Estimated && !original?.co2Estimated) {
+	// A difference under a tenth says nothing; averages compare product groups, not products, and say so.
+	if (a !== undefined && b !== undefined && b > 0) {
 		const d = (a - b) / b;
-		if (d <= -0.1) words.push('lower CO₂e than the original');
-		else if (d >= 0.1) words.push('higher CO₂e than the original');
+		const avg = f?.co2Estimated || original?.co2Estimated ? ' (group average)' : '';
+		if (d <= -0.1) words.push(`lower CO₂e than the original${avg}`);
+		else if (d >= 0.1) words.push(`higher CO₂e than the original${avg}`);
 	}
 	const labels: string[] = [];
 	if (f?.origin === 'FI') labels.push('Finnish');

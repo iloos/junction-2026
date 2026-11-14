@@ -389,7 +389,11 @@ async function buildSnapshot(s: Session): Promise<LiveSnapshot> {
 			origin: p.origin,
 			reliability: p.reliability,
 			co2PerKg: p.co2PerKg?.value,
-			co2Estimated: p.co2PerKg ? p.co2PerKg.provenance.source !== 'valio_static' : undefined,
+			// Valio's figure is a product-group average; anything else (category estimate, model) is an estimate too.
+			co2Estimated: p.co2PerKg
+				? p.co2PerKg.provenance.source !== 'valio_static' ||
+					/average/i.test(p.co2PerKg.provenance.note ?? '')
+				: undefined,
 			labels: p.labels,
 			salesUnit: p.salesUnit,
 			offer: offers.find((o) => o.productId === id)

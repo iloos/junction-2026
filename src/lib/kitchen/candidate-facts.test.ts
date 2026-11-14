@@ -21,8 +21,10 @@ describe('candidate facts say something or nothing', () => {
 		]);
 		expect(candidateFacts(f({ co2PerKg: 10.1 }), orig).words).toEqual([]);
 		expect(candidateFacts(f({ co2PerKg: 10.1 }), undefined).words).toEqual([]);
-		// Category averages compare nothing.
-		expect(candidateFacts(f({ co2PerKg: 6, co2Estimated: true }), orig).words).toEqual([]);
+		// Averages compare product groups and say so.
+		expect(candidateFacts(f({ co2PerKg: 6, co2Estimated: true }), orig).words).toEqual([
+			'lower CO₂e than the original (group average)'
+		]);
 	});
 	it('names the labels a product has', () => {
 		expect(
