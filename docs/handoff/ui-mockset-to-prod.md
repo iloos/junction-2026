@@ -42,6 +42,52 @@ Value = what a judge feels. Risk = chance of breaking the demo. Everything we wa
 | 16 | Usual order / rhythm (settledness, confidence-scaled projection) | concept | Needs order history; maths in `rhythm.html`. Natural basis for the standing order and the act tier | High (pitch, as next) | n/a | Pitch, labelled next; Wave 2 if the memory projection lands | — |
 | 17 | Demand at Valio scale (2,400 kitchens) | concept | Synthetic data | Medium (pitch) | n/a | Pitch only | — |
 
+## Wave 1 acceptance: what the screenshot must show
+Each lane verifies its own item with a Playwright screenshot of the production build on a fresh visitor (the seeded Christmas run), at **1440×900 and 390×844**, and attaches both to its report. "Must" items are checked by eye and, where noted, by a test. Values come from the read model; none are typed into copy.
+
+**#1 Per-dish status sentence** (Kitchen `/`, seeded run, no action taken)
+- Must: every dish row shows one icon and one sentence and no row-level bar; Joulukinkku reads as covered by known stock or "Covered if you approve"; Rosolli (supplier-delivered) reads "Valio hasn't said how many it has"; lanttulaatikko and joulutorttu read "Covered if you sign off".
+- Must: opening a dish's Why shows the needed-vs-buying comparison (the `CoverageRuler` moved there) with both amounts in kg.
+- Must not: "covered" on any unknown-stock line (VOCABULARY.md); text under 12 px in the sentence; horizontal overflow at 390 px.
+- Test: a unit test maps each `FulfilmentView` partition to its sentence, including unknown-only and excess cases.
+
+**#2 Chat turn from the five events** (Kitchen dock and `/agents/chat`; any turn that yields steps, a clarify and a decision; a recorded turn from the eval replay set is fine)
+- Must: steps collapse to one line "Worked N steps · X s" that expands to tool names with source and ms; a clarify shows tappable option chips and the answer appears as the chef's message; a decision renders as a compact `DecisionCard` with an "Open decision" link that scrolls the Kitchen to the full card; the turn ends with one outcome line from the ledger ("1 line changed · 1 decision added · nothing ordered").
+- Must not: an approve or sign-off control anywhere inside the chat; raw JSON; a typing indicator without an active step.
+- Test: an e2e or component test feeds a recorded NDJSON turn and asserts the five renderings.
+
+**#3 Ops case card, consequence first** (`/ops`, same visitor after the Kitchen loads)
+- Must: each case title states the consequence with product and count (e.g. "Ham: N packs short for M kitchens", from `cases.ts`); one line starting "Agents already" from the op log; € held and time to cut-off.
+- Must not: buttons for actions no tool performs; a case that stays open after its line was rescued or committed.
+
+**#4 "What happened to this case"** (`/ops`, select the ham case)
+- Must: a time-ordered list of the case's ops, each with an actor chip (Valio data, kitchen agent, chef, outside agent via MCP, monitor job), one sentence and its consequence; "Technical detail" opens the existing `TraceDrawer` on that op; op seq numbers match the engine room's log.
+- Must: after an outside agent's approve is refused (judge key, MCP), the refusal appears as its own step within one refresh.
+- Must not: generic sentences ("Op recorded"); a sentence for an op type `opSummary` can't describe (hide it and count it instead).
+
+**#5 Engine room tab** (`/ops`, System toggle on)
+- Must: swimlanes, run graph and trace drawer reachable under one "Engine room" tab; the default Ops view shows only cases and their story.
+- Must not: engine-room panels on the default Ops view.
+
+**#6 `/story`** (deck)
+- Must: nine slides that each fit one 1440×900 viewport and step with arrow keys; the partner panel switches on click and arrow keys; Exa reads "tools wired, no UI yet" and Context.dev "drill only"; illustrative examples are labelled; every number either links to CLAIMS.md evidence or is labelled scenario.
+- Must: `/` still opens the Kitchen, and an Ops deep link and an MCP `approvalUrl` still land on the exact plan.
+
+**#7 `/how`** (architecture)
+- Must: the map shows the server, the locked region of `store.transact`, the pure core, six port sockets each with its fallback, the tables and the event bus back to the open screens; the three scripted traces run and are labelled illustrative; the three state machines have arrows, edge labels and terminal states.
+- Must not: a box or table name that doesn't exist in the code (checked against ARCHITECTURE.md and `db/schema.ts`).
+
+**#8 "What changed" strip** (Kitchen, after the #2 turn, or after editing ham g/guest)
+- Must: a strip above the dishes with before → after for the touched need (kg and packs), €, and the decisions count; the touched rows highlight once; Dismiss removes it; a reload does not bring it back.
+- Must not: a change the plan doesn't contain (values from the ledger or `get_plan.lastVoided`).
+
+**#9 Product sheet, single workspace** (click HK Palvikinkku 476768 on Kitchen and on Ops)
+- Must: the same sheet on both surfaces: name, id, availability kind, price, the lines in this workspace that use it, the open case if any, links back to Kitchen and Ops; Escape closes it.
+- Must not: cross-kitchen counts in Wave 1 (they need the Wave 2 query).
+
+**#10 `/how/request`** (stretch)
+- Must: the four example requests each light their own path; every step carries a built or planned badge that matches STATUS.md; the questions-back step steps through one question at a time.
+
 ## Libraries
 - **Wave 1: none new.** `d3` 7.9 and `d3-transition` already ship; the static pages draw SVG in Svelte with `$state.raw` data, d3 for scales and shapes only (CLAUDE.md rule 4).
 - **Wave 2:** `d3-sankey` (small) for #14. **Post-hackathon:** `d3-dag` or `dagre` (~24 kB) if a menu drill needs a layered graph; `regl-scatterplot` for a 17.5k catalogue map. Not needed: `@xyflow/svelte` (the architecture map is static SVG); `elkjs` and `embedding-atlas` are over the 500 kB rule. Measure before adding.
