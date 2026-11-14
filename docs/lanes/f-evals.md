@@ -7,7 +7,7 @@
 - Acceptance: `pnpm gate` green on main; every open `expectFail` names an owner and a finding id; no eval repeats a unit test on the same path.
 
 ## State
-- **Gate** `pnpm gate` (`scripts/merge-gate.mjs`): check → lint → checker self-test → test:unit (one retry, reported FLAKY) → eval → eval:agent; stops on the first red; `--from` / `--only`. Forces `LLM_PROVIDER=fixture`. A machine-wide lock (`os.tmpdir()/junc26-merge-gate.lock`, pid + worktree, stale after a dead pid or 45 min) lets one gate run tests at a time.
+- **Gate** `pnpm gate` (`scripts/merge-gate.mjs`): check → lint → checker self-test → build → test:unit (one retry, reported FLAKY) → eval → eval:agent; stops on the first red; `--from` / `--only`; `--full` adds the two Playwright e2e specs on PGlite (DATABASE_URL blanked, throwaway JUDGE_KEY_SECRET), about 7 min in all. Forces `LLM_PROVIDER=fixture`. A machine-wide lock (`os.tmpdir()/junc26-merge-gate.lock`, pid + worktree, stale after a dead pid or 45 min) lets one gate run tests at a time.
 - **Suites** (all in `pnpm eval`, PGlite, no network): scenarios s1–s5, s7, r5-f9, r5-f10, r6-1…5 · fidelity (same order through REST, `/request`, agent; 5 cases) · surfaces (`get_plan` FulfilmentView vs kitchen dish status vs Ops coverage, 3 plan states) · golden briefs (2 open-event briefs through `/request`).
 - **Live planner** `pnpm eval:live` (opt-in, `AGENT_PLANNER=llm` + a provider): agent goals and fidelity cases × `LIVE_REPEATS`; safety asserts, task pass rate reported to `scratch/`. Smoke: g2 and 500 g butter pass live.
 - **Deploy race** `scripts/smoke-race.mjs`, run by `scripts/deploy/smoke.sh` when `SMOKE_KEY` is set (key `smoke:kitchen_agent:<key>:ws-smoke` in MCP_KEYS). Passed on prod Sat 14 Nov 05:51.
@@ -18,9 +18,7 @@
 |---|---|---|
 | F9 commit after cut-off | `r5-f9-cutoff-at-commit` | 8d |
 | R6-lineage | `r6-1-lineage` | menu track (A4/B) |
-| R6-diff `lastVoided` | `r6-5-perturbed-requirement` | 8d |
 | F12-ops coverage | `surfaces.test.ts` | 9c |
-| F4-pack 500 g → 4 kg | fidelity `butter-grams-weekday` | E |
 | A4 held plan from a brief | `briefs/golden.json` | menu track |
 
 - Review on/off comparison: waits for E's `REVIEW=1`; then the same trials both ways via `eval:live` (pass rate and tokens per arm).
@@ -28,7 +26,7 @@
 ## Traps
 - An `expectFail` entry hides any other mistake in the same expectation; probe today's state before writing one.
 - Expectations are properties (category, `notChosen`, `excludes`), never today's first search hit.
-- Gate gaps: `pnpm build` and the Playwright e2e (`*.e2e.ts`, 2 files) are not in the gate; the client (browser) project has no tests. `test:pg`, `test:live`, `eval:live` are opt-in by design. Evals also run inside `test:unit`, so they run twice per gate.
+- Gate gaps: e2e runs only with `--full`; the client (browser) project has no tests. `test:pg`, `test:live`, `eval:live` are opt-in by design. Evals also run inside `test:unit`, so they run twice per gate.
 - Running the app locally on PGlite: `pnpm build`, then `node build` with `DATABASE_URL` unset (the worktree `.env` points at Aiven).
 
 ## Resume
