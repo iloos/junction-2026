@@ -44,6 +44,7 @@ import {
 	recalledProducts
 } from '../mandate/tier';
 import { requirementsFromDiet } from '../mandate/meets';
+import { mergeRequirements } from '../mandate/validate';
 import type { CallContext, Ports, Tx } from '../ports';
 import type { WorkspaceState } from '../state';
 import { kitchenOf, pending, quoteOps, toLot } from './orders';
@@ -80,7 +81,10 @@ function demandLines(planId: string, seed: EventSeed, overrides: Record<string, 
 		// The editable g/guest and how the need follows from it (kitchen table + Why drawer).
 		const dish = seed.dishes.find((x) => x.dish === n.label);
 		// The dish's diet codes (L, M, G, VEG, VE) bind every product bought for it.
-		const req = requirementsFromDiet((dish?.dietCodes as string[] | undefined) ?? []);
+		const req = mergeRequirements(
+			withNote.requirements,
+			requirementsFromDiet((dish?.dietCodes as string[] | undefined) ?? [])
+		);
 		if (req) Object.assign(withNote, { requirements: req });
 		if (dish?.gServed === undefined) return withNote;
 		const g = overrides[n.id] ?? dish.gServed;

@@ -10,6 +10,7 @@ import type { CallContext, ToolHandlers } from '$lib/core/ports';
 import { createHandlers } from '$lib/core/services/handlers';
 import { createDbPorts } from './db-ports';
 import { loadCatalogue } from '../adapters/catalog/valio';
+import { meets } from '$lib/core/mandate/meets';
 
 const chef: CallContext = {
 	workspaceId: 'ws-demo',
@@ -29,9 +30,10 @@ const NEED = 'need:kasvispyorykat';
 /** Lagerblad Lihapyörykkä 16 g / 5.2 kg: the meatballs prod picked for the vegetable dish. */
 const MEATBALLS = '461848';
 const catalogue = loadCatalogue('data/valio');
+/** D16: not meat or fish by category, name or allergens; a diet tag is supporting evidence, not required. */
 const vegetarian = (id: string) => {
-	const diet = catalogue.get(id)?.diet ?? [];
-	return diet.includes('vegetarian') || diet.includes('vegan');
+	const p = catalogue.get(id);
+	return p !== undefined && meets(p, { diet: ['vegetarian'] }).verdict !== 'no';
 };
 
 let h: ToolHandlers;
@@ -47,7 +49,11 @@ const lunch = async (): Promise<Plan> =>
 describe('the lunch restaurant never buys meat for its vegetable balls', () => {
 	it('plans the vegetable balls as a vegetarian need', async () => {
 		const plan = await lunch();
-		expect(plan.needs.find((n) => n.id === NEED)?.requirements).toEqual({ labels: ['vegetarian'] });
+		// The seed's label and the dish's codes (VEG, L) compile into one requirement set (D16).
+		expect(plan.needs.find((n) => n.id === NEED)?.requirements).toMatchObject({
+			diet: ['vegetarian'],
+			freeFrom: ['LACTOSE']
+		});
 		expect(vegetarian(MEATBALLS)).toBe(false);
 	});
 
