@@ -25,6 +25,7 @@ import {
 } from './flow';
 import type { ProposeStep } from './proposal';
 import { memoryMenuStore } from './store';
+import { groundingFor, groundMenuInBackground } from '$lib/server/web/grounding';
 
 /** One process-wide fallback when the ports carry no MenuStore (a catalogue-only fixture). */
 let fallbackStore: ReturnType<typeof memoryMenuStore> | null = null;
@@ -62,16 +63,32 @@ export async function proposeFromRequest(o: {
 	const llm =
 		llmKind(o.env) === 'fixture' ? null : createLlmRouter(o.env, trace).for('menu.propose');
 	const d = await deps(o.workspaceId);
-	return ok(
-		await proposeForBrief(
-			{ ...d, llm },
-			{ kitchenId: o.kitchenId, brief, nonce: o.nonce, onStep: o.onStep }
-		)
+	const view = await proposeForBrief(
+		{ ...d, llm },
+		{ kitchenId: o.kitchenId, brief, nonce: o.nonce, onStep: o.onStep }
 	);
+	// Each dish's ingredients against cited web recipes, in the background: evidence for the chef, never applied.
+	await groundMenuInBackground(
+		o.env,
+		o.workspaceId,
+		view.proposal.dishes,
+		(await ports()).ports.catalog
+	).catch(() => {});
+	return ok(withGrounding(view));
+}
+
+/** The menu view with what is known so far about each dish's sourced recipes, keyed by dish id. */
+function withGrounding(view: MenuView): MenuView {
+	const known = groundingFor(view.proposal.dishes.map((x) => x.name));
+	const grounding = Object.fromEntries(
+		view.proposal.dishes.flatMap((x) => (known[x.name] ? [[x.id, known[x.name]]] : []))
+	);
+	return Object.keys(grounding).length ? { ...view, grounding } : view;
 }
 
 export async function readMenuFor(workspaceId: string, id: string): Promise<Result<MenuView>> {
-	return readMenu(await deps(workspaceId), id);
+	const r = await readMenu(await deps(workspaceId), id);
+	return r.ok ? ok(withGrounding(r.value)) : r;
 }
 
 export async function editMenuFor(o: {
