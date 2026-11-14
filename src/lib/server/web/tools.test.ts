@@ -1,5 +1,5 @@
 /**
- * The planned web tools (contracts/tools-next.ts) on fixtures: schema-valid outputs, the caller's
+ * The web tools (contracts/tools.ts) on fixtures: schema-valid outputs, the caller's
  * workspace (F19), read-only lookups, and caps surfacing as a wait-and-retry error.
  */
 import { describe, expect, it } from 'vitest';

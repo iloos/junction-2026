@@ -235,6 +235,29 @@ export function toFacts(tool: ToolName, value: unknown, intent?: Intent): Facts 
 				kitchens: Array.isArray(v.kitchens) ? v.kitchens.length : 0,
 				openPlans: Array.isArray(v.openPlans) ? v.openPlans.length : 0
 			};
+		// Web results are text from pages nobody on our side wrote: the planner gets counts and field
+		// codes only, never the values, titles or URLs (those stay in the trace and the UI).
+		case 'lookup_facts': {
+			const fs = Array.isArray(v.facts) ? v.facts.map(obj) : [];
+			return {
+				facts: fs.length,
+				fields: fs.slice(0, MAX_REASONS * 2).map((f) => code(f.field, 32) ?? ''),
+				gtinCited: fs.filter((f) => f.gtinCited === true).length,
+				cached: v.cached === true
+			};
+		}
+		case 'find_outside':
+			return { options: Array.isArray(v.options) ? v.options.length : 0 };
+		case 'check_recall': {
+			const ns = Array.isArray(v.notices) ? v.notices.map(obj) : [];
+			const real = ns.filter((n) => n.drill !== true);
+			return {
+				notices: ns.length,
+				gtin: real.filter((n) => n.match === 'gtin').length,
+				name: real.filter((n) => n.match === 'name').length,
+				drills: ns.filter((n) => n.drill === true && n.match !== 'none').length
+			};
+		}
 	}
 }
 

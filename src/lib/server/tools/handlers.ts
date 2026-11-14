@@ -1,5 +1,6 @@
 import { TOOL_NAMES, type DomainError, type Result, type ToolName } from '$lib/core/contracts';
-import type { CallContext, ToolHandlers } from '$lib/core/ports';
+import type { CallContext, ToolHandlers, WebExecutionContext } from '$lib/core/ports';
+import type { WebToolName } from '$lib/server/web/tools';
 import { createHandlers } from '$lib/core/services/handlers';
 import { createServerPorts } from '$lib/server/store/server-ports';
 import { createOps, drizzleOpsReader, publish, setFixtureOpsReader } from '$lib/server/bus';
@@ -67,8 +68,32 @@ export function realHandlers(): Promise<ToolHandlers> {
 			record: env.DECIDE_RECORD === '1'
 		});
 		const handlers = createHandlers({ ...b.ports, decide, ops: createOps() });
+		// The web tools run under the caller's WebExecutionContext (F19): its workspace and run, these
+		// ports, and its key id for the daily web spend. Loaded on first call: server/web imports this module.
+		const web =
+			(name: WebToolName) =>
+			async (ctx: CallContext, input: unknown): Promise<Result<unknown>> => {
+				const { webTools } = await import('$lib/server/web');
+				const w: WebExecutionContext = {
+					ctx,
+					ports: {
+						clock: b.ports.clock,
+						catalog: b.ports.catalog,
+						store: b.store,
+						web: b.ports.web
+					},
+					spendKey: ctx.actor.id
+				};
+				return webTools(env)[name](w, input);
+			};
 		// get_context reads the store and clock only; it lives with the agent door, not in core services.
-		return { ...handlers, get_context: createGetContext(b.ports) };
+		return {
+			...handlers,
+			get_context: createGetContext(b.ports),
+			lookup_facts: web('lookup_facts'),
+			find_outside: web('find_outside'),
+			check_recall: web('check_recall')
+		} as ToolHandlers;
 	});
 	real.catch(() => (real = null));
 	return real;

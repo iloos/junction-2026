@@ -22,7 +22,10 @@ const TITLES: Record<ToolName, string> = {
 	explain_line: 'Explain a line',
 	approve: 'Approve or deny',
 	commit_order: 'Commit an order',
-	set_mandate: 'Change the mandate'
+	set_mandate: 'Change the mandate',
+	lookup_facts: 'Look up product facts on the web (sourced)',
+	find_outside: 'Find options outside the catalogue (sourced)',
+	check_recall: 'Check recall notices for a product'
 };
 
 /**

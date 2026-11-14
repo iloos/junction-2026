@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { ApprovalState, Line, Plan, ScoreBreakdown, TermsDiff } from './plan';
 import { Offer, Product } from './product';
-import { IsoDate, KitchenId, Measure, ProductId, SalesQty } from './primitives';
+import { IsoDate, KitchenId, Measure, ProductId, Provenance, SalesQty } from './primitives';
 
 /**
  * One tool registry, exposed three ways: MCP (`/mcp`), REST (`/api/tools/<name>`) and OpenAPI (`/api/openapi.json`).
@@ -61,6 +61,17 @@ const PlanEventInput = z
 		(v) => (v.eventId !== undefined) !== (v.proposal !== undefined),
 		'give either eventId or a reviewed menu proposal {id, revision}'
 	);
+
+/** A web-sourced fact: never overwrites a catalogue fact; shown with its sources. */
+export const WebFact = z.object({
+	field: z.string(),
+	value: z.unknown(),
+	/** True only when a source cites this product's own GTIN (not a name match). */
+	gtinCited: z.boolean(),
+	sources: z.array(z.object({ url: z.string(), title: z.string().optional() })).max(10),
+	provenance: Provenance
+});
+export type WebFact = z.infer<typeof WebFact>;
 
 export const toolSchemas = {
 	get_context: {
@@ -292,6 +303,47 @@ export const toolSchemas = {
 			weights: z.record(z.string(), z.number()).optional()
 		}),
 		output: out({ mandateVersion: z.int() })
+	},
+	// Web tools (Track D): Exa and the Context.dev recall watch, read-only for the caller.
+	lookup_facts: {
+		scope: 'read',
+		description:
+			'Look up facts about a catalogue product on the web (Exa), with cited sources. Read-only: it records nothing on the plan or the product (catalogue facts win), and each uncached lookup counts against your daily web budget.',
+		input: z.object({ productId: ProductId, question: z.string().max(200).optional() }),
+		output: out({ facts: z.array(WebFact), cached: z.boolean() })
+	},
+	find_outside: {
+		scope: 'read',
+		description:
+			'Find options outside the Valio catalogue for an unresolved need, with sources. Never ordered: information for the chef.',
+		input: z.object({ need: z.string().max(200), amount: Measure.optional() }),
+		output: out({
+			options: z.array(
+				z.object({
+					title: z.string(),
+					url: z.string(),
+					note: z.string().optional(),
+					provenance: Provenance
+				})
+			)
+		})
+	},
+	check_recall: {
+		scope: 'read',
+		description:
+			'Check the watched recall notices (Context.dev monitor) against a product; says whether a notice cites it by GTIN or only by name.',
+		input: z.object({ productId: ProductId }),
+		output: out({
+			notices: z.array(
+				z.object({
+					url: z.string(),
+					title: z.string(),
+					match: z.enum(['gtin', 'name', 'none']),
+					drill: z.boolean(),
+					seenAt: z.string()
+				})
+			)
+		})
 	}
 } as const;
 
