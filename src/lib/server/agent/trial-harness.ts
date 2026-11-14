@@ -23,6 +23,10 @@ export async function trialWorkspace() {
 		}
 	});
 	env.overlay.clear();
+	// The trials' routine products in known stock: Valio states no quantity for these creams, butter or milk (≥999999 means
+	// unknown), which would hold every routine order for a chef and leave no commit path to test.
+	for (const productId of ['464699', '464411', '464249', '464201'])
+		env.overlay.setAvailability({ productId, amount: 5000, label: 'trial: known stock' });
 	const handlers: ToolHandlers = createHandlers(env.ports);
 	// Tasks on the same database (agent_tasks), read with their derived fields fresh, as the server wires them.
 	env.ports.tasks ??= projectedTaskStore(

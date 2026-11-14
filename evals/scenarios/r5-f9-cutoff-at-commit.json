@@ -52,10 +52,10 @@
 				"reasons": ["cutoff_passed"]
 			},
 			{
-				"productId": "464201",
+				"productId": "462150",
 				"state": "committed"
 			}
 		]
 	},
-	"notes": "F9: cut-off is shown but only approval expiry is enforced at commit. Compare against ports.clock (scenario clock). Whether the commit is partial or refused whole is A's call; this asserts only that no Terminal line commits after its cut-off."
+	"notes": "F9: cut-off is shown but only approval expiry is enforced at commit. Compare against ports.clock (scenario clock). Whether the commit is partial or refused whole is A's call; this asserts only that no Terminal line commits after its cut-off. The Stock line checked is the salmon (known stock, act tier): Valio states no stock for the milk (≥999999 = unknown), so it is held and its grant voids with the re-quote."
 }

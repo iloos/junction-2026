@@ -131,7 +131,9 @@ const allowedKitchen = (f: FulfilmentView): string[] =>
 		: f.status === 'partial'
 			? ['partial']
 			: f.plannedUnknown.value > 1e-9
-				? ['unknown']
+				? // A rescue from ingredients Valio states no stock for (D8 amendment) reads "rescued" with the rescue card
+					// saying so ("Valio doesn't state stock for 4 of 5 ingredients").
+					['unknown', 'rescued']
 				: ['ok', 'rescued'];
 
 describe('one plan, three surfaces (F12)', () => {

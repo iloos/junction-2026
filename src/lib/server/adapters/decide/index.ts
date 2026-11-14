@@ -228,6 +228,8 @@ export function createDecide(o: DecideOptions): Decide {
 	): Promise<(Answer | null)[]> {
 		// Question ids sent to Gemini are positional: caller ids may not match [A-Za-z0-9_-]{1,64}.
 		const questions = Object.fromEntries(qs.map((x, i) => [`q${i}`, toGeminiQuestion(x.q)]));
+		// No `store: false` here: the Decisions request (@google/genai 3.3 CreateDecisionRequest) takes only model,
+		// input and questions. The text calls (adapters/llm) set it on the Interactions API.
 		const body = { model: DECISION_MODEL, input: context, questions };
 		const attempt = () => withTimeout(client!.create(body), TIMEOUT_MS) as Promise<GeminiResponse>;
 		const r = await external<GeminiResponse>(

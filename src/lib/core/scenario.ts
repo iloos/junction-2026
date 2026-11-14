@@ -91,7 +91,8 @@ export function onScenario(a: Availability, deliverBy: string): Availability {
 		closingTime: `${day}T${time}${helsinkiOffset(day)}`,
 		provenance: {
 			...a.provenance,
-			note: `scenario dates: D-${lead} cut-off for ${a.logisticModel ?? 'Stock'} (Valio cache had ${was})`
+			// The earlier note (e.g. Valio's "≥999999 = availability unknown") stays after the date note.
+			note: `scenario dates: D-${lead} cut-off for ${a.logisticModel ?? 'Stock'} (Valio cache had ${was})${a.provenance.note ? `; ${a.provenance.note}` : ''}`
 		}
 	};
 }

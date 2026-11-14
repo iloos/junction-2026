@@ -51,7 +51,13 @@ describe('Valio catalog (fixture: cache only)', () => {
 			logisticModel: 'Terminal'
 		});
 		expect(kinds['462477']).toMatchObject({ kind: 'undeliverable' });
-		expect(kinds['464201']).toMatchObject({ kind: 'known', amount: null }); // unlimited sentinel
+		// Valio: ≥999999 means availability unknown (orderable, never counted as known stock), on Stock too.
+		expect(kinds['464201']).toMatchObject({
+			kind: 'unknown',
+			amount: null,
+			logisticModel: 'Stock'
+		});
+		expect(kinds['464201'].provenance.note).toContain('≥999999 = availability unknown');
 		expect(kinds['462150'].raw).toBeTruthy();
 	});
 

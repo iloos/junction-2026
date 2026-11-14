@@ -204,3 +204,45 @@ describe('one concurrency bound per adapter (R9-07)', () => {
 		expect(c.calls).toBe(1);
 	});
 });
+
+describe('a 429 pauses the whole adapter (Valio: blocked for 30 s)', () => {
+	it('no call and no retry inside the block, any endpoint; calls resume after it', async () => {
+		let t = 0;
+		let calls = 0;
+		let status = 429;
+		const fetch = (async () => {
+			calls++;
+			return new Response(JSON.stringify({ products: [{ productId: '1' }] }), {
+				status,
+				headers: { 'content-type': 'application/json' }
+			});
+		}) as typeof globalThis.fetch;
+		const live = createValioLive({ apiKey: 'k', fetch, retries: 2, backoffMs: 0, now: () => t });
+		expect(await live.fetch('price', ['1'], '2026-12-10')).toEqual([]);
+		expect(calls).toBe(1); // no retry into the block
+		expect(live.rateLimited()).toBe(true);
+		expect(live.breaker()).toBe('closed'); // a rate limit is not an outage
+		t = 29_000;
+		status = 200;
+		expect(await live.fetch('availability', ['2'], '2026-12-10')).toEqual([]);
+		expect(calls).toBe(1);
+		t = 30_001;
+		expect(await live.fetch('availability', ['2'], '2026-12-10')).toHaveLength(1);
+		expect(calls).toBe(2);
+	});
+
+	it('honours a longer Retry-After', async () => {
+		let t = 0;
+		const fetch = (async () =>
+			new Response('', {
+				status: 429,
+				headers: { 'retry-after': '45' }
+			})) as typeof globalThis.fetch;
+		const live = createValioLive({ apiKey: 'k', fetch, retries: 0, now: () => t });
+		await live.fetch('price', ['1'], '2026-12-10');
+		t = 40_000;
+		expect(live.rateLimited()).toBe(true);
+		t = 45_001;
+		expect(live.rateLimited()).toBe(false);
+	});
+});

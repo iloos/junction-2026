@@ -37,3 +37,15 @@ describe('netVolumePerSalesUnit', () => {
 		expect(vol(raw(null))).toBeUndefined();
 	});
 });
+
+describe('lot step (Valio: allowedLotSize 0.01 means 1)', () => {
+	const lot = (salesUnit: string, allowedLotSize: number) =>
+		normalizeProduct({ ...raw(null), salesUnit, baseUnit: salesUnit, allowedLotSize }).lotStep;
+	it('counted units step by whole units; KG keeps its 10 g step; real lots stay', () => {
+		expect(lot('ST', 0.01)).toBe(1);
+		expect(lot('KI', 0.01)).toBe(1);
+		expect(lot('KG', 0.01)).toBe(0.01);
+		expect(lot('KG', 1.5)).toBe(1.5);
+		expect(lot('KI', 2)).toBe(2);
+	});
+});

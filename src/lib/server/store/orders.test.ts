@@ -31,6 +31,8 @@ beforeEach(async () => {
 		publish: (_ws, evs) => published.push(...evs)
 	});
 	env.overlay.clear();
+	// Valio states no stock for this milk (≥999999 = unknown); these tests need a product in known stock.
+	env.overlay.setAvailability({ productId: '464201', amount: 5000, label: 'test: known stock' });
 	h = createHandlers(env.ports);
 });
 
