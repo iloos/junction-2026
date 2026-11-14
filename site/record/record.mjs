@@ -5,7 +5,8 @@
 // Besides the cards it records the landing's chain (kitchen → event → dish → ingredient → product → order): one line
 // of the seeded buffet, followed from the kitchen to its receipt, in its own sandbox.
 // Spend: at most one Gemini parse per /request/run call (3 here) plus the buffet plan's substitute ranking (once per
-// buffet start: 3 here). It only
+// buffet start: 3 here), and one chat turn for the plan panel (a Gemini parse, a substitute ranking, one explain
+// reply). It only
 // approves, orders or commits inside the sandboxes it creates, and never calls an admin or reset endpoint.
 import { writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -586,6 +587,163 @@ async function recordChain() {
 }
 
 // ---------------------------------------------------------------------------------------------------------------
+// The plan: one chat turn that plans the seeded Christmas buffet, for the /story "ask → plan → decision" panel. The
+// steps, reply and guard are the chat's own words; the lines come from the same plan read back through the Kitchen
+// snapshot. The chat only plans and holds: the record asserts nothing was ordered.
+
+const PLAN_ASK = 'Plan the Christmas buffet for 140 on Saturday.';
+const PLAN_ENDPOINTS = ['POST /api/chat/turn', 'GET /kitchen-api/snapshot?plan=<id>&peek=1'];
+
+/** Supply as VOCABULARY says it: 'confirmed' only with a receipt (none before an order), else what Valio states. */
+const supplyOf = (l) => {
+	const k = l.offer?.availability?.kind;
+	if (k === 'known') return 'known';
+	if (k === 'unknown') return 'unknown';
+	return 'none'; // out, undeliverable, or no offer
+};
+
+async function recordPlan() {
+	const go = visitor();
+	await go('/kitchen-api/snapshot');
+	const t = await go('/api/chat/turn', post({ text: PLAN_ASK, kitchenId: 'k-hotel' }));
+	need(t.status === 200, `/api/chat/turn ${t.status} ${t.body.slice(0, 120)}`);
+	const events = t.body
+		.trim()
+		.split('\n')
+		.map((l) => JSON.parse(l));
+	const steps = events.filter((e) => e.type === 'step');
+	const decision = events.find((e) => e.type === 'decision');
+	const ledger = events.find((e) => e.type === 'ledger')?.ledger;
+	const done = events.find((e) => e.type === 'done');
+	need(done?.state === 'awaiting_chef', `the turn ended ${done?.state ?? 'without done'}`);
+	need(steps.some((s) => s.tool === 'plan_event'), 'the chat did not plan the event');
+	need(decision?.planId && decision.groups?.length > 0, 'the turn has no decision groups');
+	need(ledger, 'the turn has no ledger');
+
+	const s = await go(`/kitchen-api/snapshot?plan=${encodeURIComponent(decision.planId)}&peek=1`);
+	need(s.status === 200 && s.json?.plan?.id === decision.planId, `snapshot of the chat's plan ${s.status}`);
+	const { plan, view } = s.json;
+	need(plan.version === decision.planVersion, `the plan moved on: v${plan.version}, decision on v${decision.planVersion}`);
+
+	// Nothing ordered: no receipt, nothing committed, no order on the Kitchen's list.
+	const ordered = (view.counts?.committed ?? 0) + (ledger.receiptIds?.length ?? 0) + (s.json.orders?.length ?? 0);
+	need(ordered === 0 && ledger.committedCents === 0, `the chat turn ordered something (${ordered})`);
+	need(ledger.decisionsLeft === decision.groups.length, `ledger says ${ledger.decisionsLeft} decisions, the card ${decision.groups.length}`);
+
+	const held = plan.lines.filter((l) => l.state === 'held');
+	const byId = new Map(plan.lines.map((l) => [l.id, l]));
+	const lineOf = (l, kind, extra = {}) => ({
+		kind,
+		...extra,
+		product: l.productName,
+		qty: packQty(l),
+		eur: eur(l.lineCents),
+		supply: supplyOf(l),
+		...(supplyOf(l) === 'known' ? { stated: l.offer.availability.amount } : {})
+	});
+
+	const ham = plan.lines.find((l) => l.substituteFor && /kinkku/i.test(l.productName ?? ''));
+	need(ham, 'no ham substitute in the chat plan');
+	const hamOut = plan.lines.find((l) => l.productId === ham.substituteFor && l.state === 'unorderable');
+	need(hamOut?.reasons.includes('out'), 'the substituted ham is not out of stock');
+	need(ham.state === 'held', `the ham substitute is ${ham.state}`);
+
+	const unknowns = held.filter((l) => l.reasons.includes('UNKNOWN_REQUIRED'));
+	// Prefer a line held only because Valio doesn't state a quantity, so the reason reads alone.
+	const unknown = unknowns.find((l) => l.reasons.length === 1) ?? unknowns[0];
+	need(unknown && supplyOf(unknown) === 'unknown', 'no line held for an unknown quantity');
+
+	const inHouse = plan.lines.find((l) => l.strategy?.kind === 'make_in_house');
+	const known = plan.lines.find((l) => l.state === 'eligible' && supplyOf(l) === 'known' && l.lineCents != null);
+	const third = inHouse ?? known;
+	need(third, 'no make-in-house or known-stock line');
+
+	// The decision group that holds the ham swap (the chat's plan has no make-in-house group unless one is planned).
+	const groupOf = (g) => decision.decisions?.find((d) => d.reason === g.reason) ?? {};
+	const dishOf = (l) => view.dishes.find((d) => d.needId === l.needId);
+	const groups = decision.groups.map((g) => {
+		const d = groupOf(g);
+		const lines = g.lineIds.map((id) => byId.get(id)).filter(Boolean);
+		need(lines.length === g.lineIds.length, `a decision line is not in the plan (${g.reason})`);
+		// Lines carry no allergen list; the dish's make-in-house card states the recipe's allergens.
+		const mihDishes = [...new Set(lines.filter((l) => l.strategy?.kind === 'make_in_house').map(dishOf))].filter(Boolean);
+		const allergens = mihDishes
+			.filter((x) => x.rescue?.make?.allergenNote)
+			.map((x) => ({ dish: x.nameFi ?? x.name, note: x.rescue.make.allergenNote }));
+		return {
+			title: d.title ?? null,
+			reason: g.reason,
+			why: d.why || null,
+			lines: g.lineIds.length,
+			eur: eur(g.totalCents),
+			lineReasons: [...new Set(lines.flatMap((l) => l.reasons))],
+			newProducts: lines.filter((l) => l.reasons.includes('new_sku')).length,
+			...(mihDishes.length
+				? { makeInHouse: mihDishes.map((x) => x.nameFi ?? x.name), ...(allergens.length ? { allergens } : {}) }
+				: {})
+		};
+	});
+	const mihGroup = groups.findIndex((g) => g.makeInHouse);
+	const pick = mihGroup >= 0 ? mihGroup : decision.groups.findIndex((g) => g.lineIds.includes(ham.id));
+	need(pick >= 0, 'the ham swap is in no decision group');
+
+	// The Kitchen's proposal for an out dish with no deliverable product: make it in house. A proposal on the
+	// dish card (view.dishes[].rescue.make), not a plan line, unless the chef accepts it.
+	const mihDish =
+		(inHouse && dishOf(inHouse)?.rescue?.make ? dishOf(inHouse) : null) ??
+		view.dishes.find((d) => d.rescue?.kind === 'make_in_house' && d.rescue.make);
+	const proposal = mihDish
+		? {
+				inPlan: plan.lines.some((l) => l.needId === mihDish.needId && l.strategy?.kind === 'make_in_house'),
+				dish: mihDish.nameFi ?? mihDish.name,
+				title: mihDish.rescue.make.title,
+				summary: mihDish.rescue.summary ?? null,
+				ingredients: mihDish.rescue.preview?.recommended?.length ?? mihDish.rescue.make.ingredients.length,
+				labour: mihDish.rescue.make.labourNote ?? null,
+				allergens: mihDish.rescue.make.allergenNote ?? null,
+				caveats: mihDish.rescue.make.caveats ?? [],
+				source: 'GET /kitchen-api/snapshot view.dishes[].rescue.make'
+			}
+		: null;
+
+	const explain = steps.find((x) => x.tool === 'explain');
+	const unresolved = ledger.needs
+		.filter((n) => n.unresolved?.value > 0)
+		.map((n) => ({ label: n.label, value: n.unresolved.value, unit: n.unresolved.unit }));
+
+	return {
+		ask: PLAN_ASK,
+		source: { app: BASE, endpoints: PLAN_ENDPOINTS },
+		event: {
+			title: view.title,
+			guests: view.guests,
+			date: day(view.date),
+			deliverBy: day(plan.deliverBy)
+		},
+		steps: steps.map((x) => ({ tool: x.tool, summary: x.summary, ...(x.source ? { source: x.source } : {}) })),
+		reply: done.text,
+		modelGuard: explain?.source === 'rules' && explain.detail ? explain.detail : null,
+		counts: {
+			dishes: new Set(view.dishes.map((x) => x.name.split(': ')[0])).size,
+			lines: plan.lines.length,
+			waiting: held.length,
+			decisions: decision.groups.length,
+			ordered
+		},
+		eur: eur(plan.totalCents),
+		unresolved: { needs: unresolved, source: 'chat ledger: needs[].unresolved' },
+		lines: [
+			lineOf(ham, 'swap', { was: hamOut.productName }),
+			lineOf(unknown, 'unknown'),
+			inHouse ? lineOf(inHouse, 'in-house', { dish: dishOf(inHouse)?.nameFi ?? dishOf(inHouse)?.name ?? null }) : lineOf(known, 'known')
+		],
+		decision: groups[pick],
+		decisions: groups,
+		makeInHouse: proposal
+	};
+}
+
+// ---------------------------------------------------------------------------------------------------------------
 
 const health = await fetch(`${BASE}/healthz`).then((r) => r.json());
 const cases = [];
@@ -619,10 +777,19 @@ try {
 	console.log(`FAIL  chain: ${e instanceof Unrecordable ? e.message : e.stack}`);
 }
 
+let plan = null;
+try {
+	plan = { recordedAt: new Date().toISOString(), appCommit: health.commit, ...(await recordPlan()) };
+	console.log(`ok    plan: ${plan.counts.lines} lines, ${plan.counts.waiting} waiting, ${plan.counts.decisions} decisions, ${plan.counts.ordered} ordered`);
+} catch (e) {
+	failed.push('plan');
+	console.log(`FAIL  plan: ${e instanceof Unrecordable ? e.message : e.stack}`);
+}
+
 writeFileSync(
 	OUT,
 	JSON.stringify(
-		{ recordedAt: new Date().toISOString(), appCommit: health.commit, chain, cases },
+		{ recordedAt: new Date().toISOString(), appCommit: health.commit, chain, plan, cases },
 		null,
 		'\t'
 	) + '\n'

@@ -68,6 +68,176 @@
 		],
 		"appCommit": "b2dfe9c1a94cd0ea0b51284cf504a53cb6589c3e"
 	},
+	"plan": {
+		"recordedAt": "2026-11-14T17:36:43.384Z",
+		"appCommit": "b10cd4385122a9d9859c1b6e3d6d7aee7fb25c56",
+		"ask": "Plan the Christmas buffet for 140 on Saturday.",
+		"source": {
+			"app": "https://app.mandate.kitchen",
+			"endpoints": [
+				"POST /api/chat/turn",
+				"GET /kitchen-api/snapshot?plan=<id>&peek=1"
+			]
+		},
+		"event": {
+			"title": "Christmas dinner buffet, 140 guests",
+			"guests": 140,
+			"date": "Sat 12 Dec",
+			"deliverBy": "Thu 10 Dec"
+		},
+		"steps": [
+			{
+				"tool": "understand",
+				"summary": "An event brief.",
+				"source": "live"
+			},
+			{
+				"tool": "plan_event",
+				"summary": "Drafted the order for Thu 10 Dec: 13 lines, €651.50; 7 wait for your approval."
+			},
+			{
+				"tool": "find_substitutes",
+				"summary": "Looked for substitutes for Thu 10 Dec: 14 lines, €852.09; 8 wait for your approval."
+			},
+			{
+				"tool": "find_substitutes",
+				"summary": "Looked for substitutes for Thu 10 Dec: 19 lines, €883.55; 13 wait for your approval."
+			},
+			{
+				"tool": "explain",
+				"summary": "Answered from the order's numbers.",
+				"source": "rules"
+			}
+		],
+		"reply": "For Thu 10 Dec: 92.82 kg + 10.5 l needed; 84.42 kg + 10.5 l planned, not yet submitted; 8.4 kg unresolved; no order placed yet; 3 decisions wait for you.",
+		"modelGuard": "template sentence (model reply not used: 1 need(s) are unresolved: name them as still open.)",
+		"counts": {
+			"dishes": 12,
+			"lines": 19,
+			"waiting": 13,
+			"decisions": 3,
+			"ordered": 0
+		},
+		"eur": 883.55,
+		"unresolved": {
+			"needs": [
+				{
+					"label": "Joulutorttu (prune star tart)",
+					"value": 8.4,
+					"unit": "kg"
+				}
+			],
+			"source": "chat ledger: needs[].unresolved"
+		},
+		"lines": [
+			{
+				"kind": "swap",
+				"was": "HK Viljaporsaan Juhlakinkku potkalla tuoresuolattu 6-8 kg",
+				"product": "HK Palvikinkku viipaloitu 1,5 kg",
+				"qty": "13 × 1.5 kg",
+				"eur": 200.59,
+				"supply": "known",
+				"stated": 15
+			},
+			{
+				"kind": "unknown",
+				"product": "Valio kevytmaito 1 l laktoositon UHT",
+				"qty": "11 × 1 l",
+				"eur": 17.16,
+				"supply": "unknown"
+			},
+			{
+				"kind": "in-house",
+				"dish": "Lanttulaatikko",
+				"product": "LANTTU BRITANNIA",
+				"qty": "5.95 kg",
+				"eur": 13.98,
+				"supply": "unknown"
+			}
+		],
+		"decision": {
+			"title": "Make lanttulaatikko in house · allergens change",
+			"reason": "New product · Allergen change",
+			"why": "A product this kitchen has not bought before. Your mandate says to ask first. The allergens change. The kitchen never delegates an allergen change.",
+			"lines": 5,
+			"eur": 31.46,
+			"lineReasons": [
+				"UNKNOWN_REQUIRED",
+				"new_sku",
+				"allergen_change"
+			],
+			"newProducts": 5,
+			"makeInHouse": [
+				"Lanttulaatikko"
+			],
+			"allergens": [
+				{
+					"dish": "Lanttulaatikko",
+					"note": "allergens: milk (lactose-free cream), egg, wheat; compare with the 462482 label before serving (the hotel never delegates an allergen change)"
+				}
+			]
+		},
+		"decisions": [
+			{
+				"title": "Use a substitute for joulukinkku · Buy 6 new products",
+				"reason": "New product",
+				"why": "A product this kitchen has not bought before. Your mandate says to ask first.",
+				"lines": 7,
+				"eur": 532.31,
+				"lineReasons": [
+					"UNKNOWN_REQUIRED",
+					"new_sku"
+				],
+				"newProducts": 7
+			},
+			{
+				"title": "Buy 1 new product",
+				"reason": "Held",
+				"why": null,
+				"lines": 1,
+				"eur": 17.16,
+				"lineReasons": [
+					"UNKNOWN_REQUIRED"
+				],
+				"newProducts": 0
+			},
+			{
+				"title": "Make lanttulaatikko in house · allergens change",
+				"reason": "New product · Allergen change",
+				"why": "A product this kitchen has not bought before. Your mandate says to ask first. The allergens change. The kitchen never delegates an allergen change.",
+				"lines": 5,
+				"eur": 31.46,
+				"lineReasons": [
+					"UNKNOWN_REQUIRED",
+					"new_sku",
+					"allergen_change"
+				],
+				"newProducts": 5,
+				"makeInHouse": [
+					"Lanttulaatikko"
+				],
+				"allergens": [
+					{
+						"dish": "Lanttulaatikko",
+						"note": "allergens: milk (lactose-free cream), egg, wheat; compare with the 462482 label before serving (the hotel never delegates an allergen change)"
+					}
+				]
+			}
+		],
+		"makeInHouse": {
+			"inPlan": true,
+			"dish": "Lanttulaatikko",
+			"title": "Make lanttulaatikko in house",
+			"summary": "No ready-made lanttulaatikko can be delivered. Make it from in-stock ingredients.",
+			"ingredients": 5,
+			"labour": "about 40 min prep + 2 h at 150 °C (team estimate) · Valio doesn't state stock for 4 of 5 ingredients",
+			"allergens": "allergens: milk (lactose-free cream), egg, wheat; compare with the 462482 label before serving (the hotel never delegates an allergen change)",
+			"caveats": [
+				"swede origin NL, not FI"
+			],
+			"source": "GET /kitchen-api/snapshot view.dishes[].rescue.make"
+		}
+	},
 	"cases": [
 		{
 			"id": "lactose-free",
