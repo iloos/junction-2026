@@ -450,7 +450,17 @@ export function scriptedPlanner(): Planner {
 							kitchenId: intent.kitchenId,
 							deliverBy: intent.deliverBy,
 							idempotencyKey: key,
-							lines: [{ productId: found.productId, qty: found.salesQty, unit: found.unit }]
+							lines: [
+								{
+									productId: found.productId,
+									qty: found.salesQty,
+									unit: found.unit,
+									// The physical need behind the sales units, so a substitute is sized to it.
+									...(intent.unit === 'kg' || intent.unit === 'l' || intent.unit === 'pcs'
+										? { amount: { value: intent.qty, unit: intent.unit } }
+										: {})
+								}
+							]
 						},
 						why: `${intent.qty} ${intent.unit} ${intent.query}: ${found.conversion}`
 					};

@@ -48,6 +48,11 @@ describe('suite: agent goal trials · F4 routine order via the request parser', 
 			expect(amount?.unit).toBe('kg');
 			expect(amount!.value).toBeGreaterThanOrEqual(4);
 			expect(line.qty.value).not.toBe(4); // a 4 kg case is one KI, not 4 of them
+			// The physical amount travels with the line as a direct need.
+			expect((place!.input as { lines: { amount?: unknown }[] }).lines[0].amount).toEqual({
+				value: 4,
+				unit: 'kg'
+			});
 			// The planner was told how the quantity was converted.
 			expect((place!.why ?? '').toLowerCase()).toMatch(/4 kg .*per/);
 		}
