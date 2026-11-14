@@ -63,22 +63,20 @@ export interface ChatDeps {
 }
 
 /**
- * The model plans each step, with two limits: when it fails (bad reply twice, provider down) the script takes that
- * step, and a routine order's basket is always the script's (the request parser's reading of the words, the
- * candidate that can arrive, the stated amounts), so the model can choose how to proceed but never what is bought.
+ * Who plans: a routine order is the script's end to end (the request parser's reading of the words, every
+ * candidate searched and quoted, the one that can still arrive, the stated amounts), so the same words give the same
+ * basket on every door and nothing is left unplaced. Every other goal is the model's, and when it fails (a bad reply
+ * twice, the provider down) the script takes that step.
  */
 export function withFallback(model: Planner, script: Planner): Planner {
 	return async (s, signal) => {
-		let a: Awaited<ReturnType<Planner>>;
+		if (s.intent?.kind === 'routine_order') return script(s, signal);
 		try {
-			a = await model(s, signal);
+			return await model(s, signal);
 		} catch (e) {
 			if (signal.aborted) throw e;
 			return script(s, signal);
 		}
-		if ('tool' in a && a.tool === 'place_order' && s.intent?.kind === 'routine_order')
-			return script(s, signal);
-		return a;
 	};
 }
 
@@ -490,7 +488,9 @@ export async function* runChatTurn(
 						signal,
 						onEvent,
 						slots,
-						planId: primary
+						planId: primary,
+						// A turn plans and drafts; buying waits for the chef's Continue (continue_task).
+						withhold: ['commit_order']
 					})
 			});
 			if (!started.ok) {
@@ -520,7 +520,12 @@ export async function* runChatTurn(
 				clarify = { kind: 'clarify', ...o.clarify };
 				break;
 			} else if (o && !o.planId) refusal ??= o.reason ?? o.nextAction;
-			if (o?.planId) touched.push(o.planId);
+			// An order the agent could not place says why (a passed cut-off, nothing in the catalogue), whatever plan
+			// the task already has.
+			const why = run.plannerSummary?.match(/^not ordered: (.*)$/s)?.[1];
+			if (why && !run.steps.some((x) => x.tool === 'place_order' && x.ok))
+				refusal = `Not ordered: ${why.replace(/\b(\d{4}-\d{2}-\d{2})\b/g, (d) => dayWords(d))}`;
+			else if (o?.planId) touched.push(o.planId);
 		}
 		planId = touched[0] ?? primary;
 		for (const id of touched.slice(1))

@@ -656,15 +656,19 @@ export function scriptedPlanner(): Planner {
 							const open = cands.filter((c) =>
 								orderable(offers.get(c.productId), intent.deliverBy, context?.now)
 							);
-							found[i] = pickRoutine(l, open) ?? found[i];
+							const pick = pickRoutine(l, open);
 							const quotedIds = cands.filter((c) => offers.has(c.productId));
-							// Every candidate's ordering for that day has closed: a date problem for this product.
+							// No candidate that can be bought is still open for that day: a date problem for this product,
+							// never a line bought past its cut-off.
 							if (
-								!open.length &&
-								quotedIds.length &&
-								quotedIds.every((c) => closed(offers.get(c.productId)))
+								!pick &&
+								((found[i] && closed(offers.get(found[i]!.productId))) ||
+									(!open.length &&
+										quotedIds.length &&
+										quotedIds.every((c) => closed(offers.get(c.productId)))))
 							)
 								closedFor.add(i);
+							found[i] = pick ?? found[i];
 						}
 						if (closedFor.size === lines.length)
 							return {

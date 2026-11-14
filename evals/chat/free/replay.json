@@ -1,482 +1,234 @@
 {
-	"8ebf494a9f22c6416098383c1db791d41f938a850e57dd285fa0d1ccb53771b2": {
+	"9a91ded6fcbd97a22ec7461a9b14bb50411a3ab66c90e399e22d4b427ba814e1": {
 		"text": "{\n  \"kind\": \"order\",\n  \"items\": [\n    {\n      \"product\": \"butter\",\n      \"amount\": 4,\n      \"unit\": \"kg\",\n      \"date\": \"Wednesday\",\n      \"constraints\": [\n        \"lactose_free\"\n      ]\n    }\n  ]\n}",
 		"model": "gemini-3.5-flash-lite",
 		"tokens": {
-			"in": 454,
+			"in": 461,
 			"out": 75
 		}
 	},
-	"bfefc254dbe66655067ad3bc90b71b09b2c4e15e7ebf3cbe3b19074bff002f00": {
-		"text": "{\"tool\": \"search_products\", \"input\": {\"query\": \"voi laktoositon\"}, \"why\": \"Search for lactose-free butter in the catalogue to find the correct product ID.\"}",
+	"591a39b5c9577a4c20b5d9cfef9dd73dc25741557ca77d6011fb50e473cc5d31": {
+		"text": "1 held line waits for a chef in the Kitchen screen for Wed 9 Dec, and 1 decision waits.",
 		"model": "gemini-3.5-flash-lite",
 		"tokens": {
-			"in": 1382,
-			"out": 42
-		}
-	},
-	"60bc8dbb8ffbbd334c7c7d43873a7af464ec547aa26527d211c89343a4d7d50c": {
-		"text": "{\"tool\":\"quote\",\"input\":{\"productIds\":[\"463437\",\"462421\",\"464076\"],\"deliverBy\":\"2026-12-09\"},\"why\":\"Check live price and availability for the lactose-free butter package options to determine the best fit for 4 kg.\"}",
-		"model": "gemini-3.5-flash-lite",
-		"tokens": {
-			"in": 1870,
-			"out": 72
-		}
-	},
-	"c9f05d8ec7b07c6a3ad128513c9406d8657c46440a688280a13502e4215b561d": {
-		"text": "{\"tool\":\"place_order\",\"input\":{\"kitchenId\":\"k-hotel\",\"deliverBy\":\"2026-12-09\",\"idempotencyKey\":\"order-lactose-free-butter-2026-12-09\",\"lines\":[{\"productId\":\"463437\",\"qty\":8,\"unit\":\"ST\",\"amount\":{\"value\":4,\"unit\":\"kg\",\"basis\":\"net\"}}]},\"why\":\"Place an order for 8 units of Valio Eila® voi 500 g laktoositon (product 463437), which equals the required 4 kg, for delivery on Wednesday, 2026-12-09.\"}",
-		"model": "gemini-3.5-flash-lite",
-		"tokens": {
-			"in": 2164,
-			"out": 151
-		}
-	},
-	"2ee4e8b1051e60fd798286c529d2e9d55aaa58d63a7cba5b78cdf23744cd7974": {
-		"text": "{\"done\":true,\"summary\":\"Planned and placed an order for 4 kg of lactose-free butter (8 units of Valio Eila® voi 500 g laktoositon, product 463437) for delivery on Wednesday, 2026-12-09. The plan is currently held awaiting chef approval as mandated.\"}",
-		"model": "gemini-3.5-flash-lite",
-		"tokens": {
-			"in": 2533,
-			"out": 79
-		}
-	},
-	"639999cb4d5bddc273e944335cae77d48bdf7881d0e5b5f82b9e54c8e7384a44": {
-		"text": "1 held line waits for your approval in the Kitchen screen.",
-		"model": "gemini-3.5-flash-lite",
-		"tokens": {
-			"in": 259,
-			"out": 12
-		}
-	},
-	"27994d1325bc81149943a0642782e9fd1e17365e5cbe0a74f588d33da34b956d": {
-		"text": "{\n  \"kind\": \"order\",\n  \"items\": [\n    {\n      \"product\": \"whipping cream\",\n      \"amount\": 2,\n      \"unit\": \"l\"\n    }\n  ]\n}",
-		"model": "gemini-3.5-flash-lite",
-		"tokens": {
-			"in": 450,
-			"out": 52
-		}
-	},
-	"29d6c0f780905c5a73ffc7820e7363bd40d6f7dd8af9df29a42cd775094f0e20": {
-		"text": "{\"tool\": \"search_products\", \"input\": {\"query\": \"kerma\"}, \"why\": \"Search for whipping cream product ID\"}",
-		"model": "gemini-3.5-flash-lite",
-		"tokens": {
-			"in": 1456,
-			"out": 29
-		}
-	},
-	"c6b4225c15c1e12469ba89c95ab5454224b162b963acded378245d6b4158e4d0": {
-		"text": "{\"tool\": \"search_products\", \"input\": {\"query\": \"kuohukerma\"}, \"why\": \"Search for a more suitable package size for whipping cream (kuohukerma) closer to 2 liters\"}",
-		"model": "gemini-3.5-flash-lite",
-		"tokens": {
-			"in": 1767,
-			"out": 48
-		}
-	},
-	"1e886909cb9565d075be67c0107a1f637891157b843a55b16449b4e8c3a88653": {
-		"text": "{\"tool\": \"place_order\", \"input\": {\"kitchenId\": \"k-hotel\", \"deliverBy\": \"2026-12-09\", \"idempotencyKey\": \"cream-2l-2026-12-09-v1\", \"lines\": [{\"productId\": \"464699\", \"qty\": 2, \"unit\": \"ST\", \"amount\": {\"value\": 1, \"unit\": \"l\", \"basis\": \"gross\"}}]}, \"why\": \"Place order for 2 liters of Valio organic whipping cream (1 l units, qty 2) for delivery on 2026-12-09\"}",
-		"model": "gemini-3.5-flash-lite",
-		"tokens": {
-			"in": 2485,
-			"out": 150
-		}
-	},
-	"334ef17e874e59646d0e6b101a8d60ddaf468c03a867182380aad83b06f444b6": {
-		"text": "{\"tool\": \"place_order\", \"input\": {\"kitchenId\": \"k-hotel\", \"deliverBy\": \"2026-12-09\", \"idempotencyKey\": \"cream-2l-2026-12-09-v2\", \"lines\": [{\"productId\": \"464699\", \"qty\": 2, \"unit\": \"ST\", \"amount\": {\"value\": 2, \"unit\": \"l\", \"basis\": \"gross\"}}]}, \"why\": \"Place order for 2 units (2 liters total) of Valio organic whipping cream (productId 464699)\"}",
-		"model": "gemini-3.5-flash-lite",
-		"tokens": {
-			"in": 2655,
-			"out": 142
-		}
-	},
-	"267373bde17deab1758a2ab4d19f47dcc43da4cf96c6932eead219ec202ac4c1": {
-		"text": "{\"tool\": \"get_plan\", \"input\": {\"planId\": \"pl-run-1-85fb11c141a4\"}, \"why\": \"Check the status of the placed order plan\"}",
-		"model": "gemini-3.5-flash-lite",
-		"tokens": {
-			"in": 2994,
-			"out": 47
-		}
-	},
-	"a6c00d1b774542661bf37d3b39cabdd8ae8619860e562b8df8108d1235aa8055": {
-		"text": "{\"done\":true,\"summary\":\"Planned order for 2 liters of Valio organic whipping cream (2 x 1l bottles, productId 464699) for delivery on 2026-12-09. The plan is currently held awaiting chef approval as mandated.\"}",
-		"model": "gemini-3.5-flash-lite",
-		"tokens": {
-			"in": 3291,
-			"out": 63
-		}
-	},
-	"d5f08102a22e40da6026e3a5fdfe2b94b327fdcdf68abe6436dbf8a8235ccf95": {
-		"text": "1 held line waits for your approval in the Kitchen screen.",
-		"model": "gemini-3.5-flash-lite",
-		"tokens": {
-			"in": 307,
-			"out": 12
-		}
-	},
-	"c487dfbe242bab4cd38b6396baa9b07df69b87837ebc82ef2b63c6bd77e5f13c": {
-		"text": "{\n  \"kind\": \"read\",\n  \"question\": \"What about the ham?\"\n}",
-		"model": "gemini-3.5-flash-lite",
-		"tokens": {
-			"in": 447,
-			"out": 22
-		}
-	},
-	"fe428b7e3364ceffb00f3b6ad62e614b64fc1accbae4e135f88e21157f9f6fcc": {
-		"text": "{\"tool\": \"get_plan\", \"input\": {\"planId\": \"pl-run-1-3c551f1ce79a\"}, \"why\": \"Inspect the current plan to check the status and details of the ham.\"}",
-		"model": "gemini-3.5-flash-lite",
-		"tokens": {
-			"in": 561,
-			"out": 53
-		}
-	},
-	"e52a4e3c3dff8cbbf53d163bfb783a3c50e21089d9ba33f86b3e3b1e34f22f68": {
-		"text": "{\"tool\": \"get_plan\", \"input\": {\"planId\": \"pl-run-1-85fb11c141a4\"}, \"why\": \"Inspect the other held plan to check if the ham is included there.\"}",
-		"model": "gemini-3.5-flash-lite",
-		"tokens": {
-			"in": 861,
-			"out": 53
-		}
-	},
-	"8ba1d673f717b13bf13cdc1e58866e2e35fa58bc895c23371a5f6e2c8afb3d15": {
-		"text": "{\"done\":true,\"summary\":\"Inspected both held purchasing plans (pl-run-1-3c551f1ce79a and pl-run-1-85fb11c141a4), neither of which contains ham. Both plans only contain dairy products (butter and cream) and remain held awaiting chef approval.\"}",
-		"model": "gemini-3.5-flash-lite",
-		"tokens": {
-			"in": 1163,
-			"out": 75
-		}
-	},
-	"15694efd8b161d3cbc4c8dc013e01ecf22fbc3343fff9c18f6a673098d110ff8": {
-		"text": "The facts do not mention ham.",
-		"model": "gemini-3.5-flash-lite",
-		"tokens": {
-			"in": 304,
-			"out": 7
-		}
-	},
-	"9510dd37c91a0f93ef9b2aabfb981e9e321514f6ce08997af28a65fe44974dd5": {
-		"text": "{\"kind\":\"read\",\"question\":\"how much have we spent this week\"}",
-		"model": "gemini-3.5-flash-lite",
-		"tokens": {
-			"in": 449,
-			"out": 15
-		}
-	},
-	"9472c20ef38a89012ed12b1621df8eb4deb038fcdd5908e5b43bce10676241d6": {
-		"text": "{\"done\":true,\"summary\":\"The user asked how much we have spent this week, but the available tools (get_plan and explain_line) only provide plan details and line reasoning without financial or cost breakdown information. Therefore, spending cannot be calculated with the current tools.\"}",
-		"model": "gemini-3.5-flash-lite",
-		"tokens": {
-			"in": 563,
-			"out": 57
-		}
-	},
-	"49a4fa179963a7a4ff4f0b40f04101c7685ec45d5bde52a71b0c66e52689d235": {
-		"text": "You have spent 0 euros this week. 1 held line is waiting for your approval in the Kitchen screen.",
-		"model": "gemini-3.5-flash-lite",
-		"tokens": {
-			"in": 306,
+			"in": 256,
 			"out": 23
 		}
 	},
-	"b88bf0ef6923bb0824cab25c7f2a0996002de8afd041ec1a1f3580a110a92db0": {
-		"text": "{\n  \"kind\": \"other\"\n}",
-		"model": "gemini-3.5-flash-lite",
-		"tokens": {
-			"in": 444,
-			"out": 11
-		}
-	},
-	"9711bceddb009b05b577f38b8eca3d71acace808cd8b7e8294e2a7fcb9aa45f7": {
-		"text": "{\n  \"kind\": \"order\",\n  \"items\": [\n    {\n      \"product\": \"perunoita\",\n      \"amount\": 10,\n      \"unit\": \"kg\",\n      \"date\": \"Friday\"\n    },\n    {\n      \"product\": \"maitoa\",\n      \"amount\": 5,\n      \"unit\": \"l\",\n      \"date\": \"Friday\"\n    }\n  ]\n}",
-		"model": "gemini-3.5-flash-lite",
-		"tokens": {
-			"in": 461,
-			"out": 100
-		}
-	},
-	"ba3d8a678c7190b5224aff4a6b0ae9899f8da6fb6a383fdc1d62c0290010a963": {
-		"text": "{\"tool\": \"search_products\", \"input\": {\"query\": \"peruna\"}, \"why\": \"Search catalogue for potatoes matching 'peruna'.\"}",
-		"model": "gemini-3.5-flash-lite",
-		"tokens": {
-			"in": 1372,
-			"out": 32
-		}
-	},
-	"9931dbb74975254e9d50948a98937473cd65ac6d7b52a4404c990ce474f650b9": {
-		"text": "{\"tool\": \"quote\", \"input\": {\"productIds\": [\"460078\", \"460549\", \"460478\"], \"deliverBy\": \"2026-12-11\"}, \"why\": \"Check live price and availability for potential potato products.\"}",
-		"model": "gemini-3.5-flash-lite",
-		"tokens": {
-			"in": 1719,
-			"out": 68
-		}
-	},
-	"25c1d7687ea220324845a8f8b900cec3331f975f014377eac3cbd2a6c06ee8cb": {
-		"text": "{\"tool\":\"place_order\",\"input\":{\"kitchenId\":\"k-hotel\",\"deliverBy\":\"2026-12-11\",\"idempotencyKey\":\"order-potatoes-20261211\",\"lines\":[{\"productId\":\"460078\",\"qty\":10,\"unit\":\"kg\",\"amount\":{\"value\":10,\"unit\":\"kg\",\"basis\":\"gross\"}}]},\"why\":\"Place order for 10 kg of PP PUIKULA PERUNA PESTY for Friday delivery.\"}",
-		"model": "gemini-3.5-flash-lite",
-		"tokens": {
-			"in": 1888,
-			"out": 111
-		}
-	},
-	"0cbda01e8748e4d5665b7fb8e30a2b3ada39bac0211e199ea04f0eba23a9eb1f": {
-		"text": "{\"tool\":\"place_order\",\"input\":{\"kitchenId\":\"k-hotel\",\"deliverBy\":\"2026-12-11\",\"idempotencyKey\":\"order-potatoes-20261211-v2\",\"lines\":[{\"productId\":\"460078\",\"qty\":10,\"unit\":\"KG\",\"amount\":{\"value\":10,\"unit\":\"kg\",\"basis\":\"gross\"}}]},\"why\":\"Place order for 10 kg of PP PUIKULA PERUNA PESTY using exact uppercase unit KG as expected by the catalog/validation.\"}",
-		"model": "gemini-3.5-flash-lite",
-		"tokens": {
-			"in": 2045,
-			"out": 123
-		}
-	},
-	"6a74a3390c4cf26271a31e79d9741997d41d121b4ec25787660f31e42311bffb": {
-		"text": "{\"done\":true,\"summary\":\"Planned and placed order for 10 kg of PP PUIKULA PERUNA PESTY (productId 460078) for delivery on 2026-12-11 under plan pl-run-1-5607e28fd662. The plan is currently held awaiting chef approval as per mandate.\"}",
-		"model": "gemini-3.5-flash-lite",
-		"tokens": {
-			"in": 2377,
-			"out": 84
-		}
-	},
-	"4ed39f787445ac33fdecda043df6eb61bc3c59210431aa268f9236356880a603": {
-		"text": "{\"tool\": \"search_products\", \"input\": {\"query\": \"maito\"}, \"why\": \"Find the product id for milk to fulfill the routine order\"}",
-		"model": "gemini-3.5-flash-lite",
-		"tokens": {
-			"in": 1437,
-			"out": 34
-		}
-	},
-	"dcb58f5159e65a700659d8f71d8053d086a0cad05434c355da61a2f632eeea89": {
-		"text": "{\"tool\": \"place_order\", \"input\": {\"kitchenId\": \"k-hotel\", \"deliverBy\": \"2026-12-11\", \"idempotencyKey\": \"order-milk-20261211-1\", \"lines\": [{\"productId\": \"460396\", \"qty\": 1, \"unit\": \"CS\", \"amount\": {\"value\": 10, \"unit\": \"l\", \"basis\": \"gross\"}}]}, \"why\": \"Place the order for milk as per the converted sales unit (1 CS of 10 l for the 5 l need).\"}}",
-		"model": "gemini-3.5-flash-lite",
-		"tokens": {
-			"in": 1570,
-			"out": 138
-		}
-	},
-	"b4a3d2e4d2f4664ca76f463f8a37838abc02c848925e9c174e6ad82c5cecb729": {
-		"text": "{\"tool\": \"quote\", \"input\": {\"productIds\": [\"460396\"], \"deliverBy\": \"2026-12-11\"}, \"why\": \"Check price and availability for the found milk product before placing the order\"}",
-		"model": "gemini-3.5-flash-lite",
-		"tokens": {
-			"in": 1602,
-			"out": 55
-		}
-	},
-	"af95637d1674e35fc92c1c3c4a5443e5083fd4587485745245834a9169f9df0b": {
-		"text": "{\"done\":true,\"summary\":\"Searched for milk and found product 460396 (Valio vapaan lehmän rasvaton maito 10 l), but availability is unknown for the requested date. Held lines wait for the chef per mandate.\"}",
-		"model": "gemini-3.5-flash-lite",
-		"tokens": {
-			"in": 1648,
-			"out": 59
-		}
-	},
-	"5f133ce165d7ac069ee147bc7e0101bcc000e7c55b23c438016862452843615f": {
-		"text": "{\n  \"kind\": \"read\",\n  \"question\": \"paljonko tämä maksaa?\"\n}",
-		"model": "gemini-3.5-flash-lite",
-		"tokens": {
-			"in": 449,
-			"out": 24
-		}
-	},
-	"375f6cd5d357504886417ae189bbcf5b7d7c6092a992d4bee9eaf14f020417d6": {
-		"text": "{\"tool\": \"get_plan\", \"input\": {\"planId\": \"pl-run-1-5607e28fd662\"}, \"why\": \"Check the plan lines and total cost to answer how much it costs.\"}",
-		"model": "gemini-3.5-flash-lite",
-		"tokens": {
-			"in": 532,
-			"out": 53
-		}
-	},
-	"266609408dee03e766733904555c42e3c2da57e3fd981f532e130a14d1f96cdd": {
-		"text": "{\"done\":true,\"summary\":\"Suunnitelman kokonaishinta on 9,30 euroa (930 senttiä) sisältäen 10 kg PP PUIKULA PERUNA PESTY -tuotetta. Suunnitelma on edelleen pidossa (held) odottamassa keittiömestarin hyväksyntää.\"}",
-		"model": "gemini-3.5-flash-lite",
-		"tokens": {
-			"in": 822,
-			"out": 79
-		}
-	},
-	"a4653a51f759d57cae789eab7198b29b3dba02a6e066987a52b5228d747ff1dc": {
-		"text": "Tämä maksaa 0 euroa. Yksi pidossa oleva rivi odottaa hyväksyntääsi Keittiö-näytöllä.",
-		"model": "gemini-3.5-flash-lite",
-		"tokens": {
-			"in": 254,
-			"out": 34
-		}
-	},
-	"37906bcff448b45cb57f51d8ce1b15558a6c19d971cb0e6810963d86ef9f0fa5": {
-		"text": "{\n  \"kind\": \"order\",\n  \"items\": [\n    {\n      \"product\": \"laktoositon maito\",\n      \"amount\": 2,\n      \"unit\": \"l\",\n      \"date\": \"tomorrow\",\n      \"constraints\": [\n        \"lactose_free\"\n      ]\n    }\n  ]\n}",
+	"bfba9007c22c2fbab2269ba6779ed25a88f42943a4db3f177410bb6c46693f2c": {
+		"text": "{\n  \"kind\": \"order\",\n  \"items\": [\n    {\n      \"product\": \"whipping cream\",\n      \"amount\": 2,\n      \"unit\": \"l\"\n    }\n  ]\n}",
 		"model": "gemini-3.5-flash-lite",
 		"tokens": {
 			"in": 457,
-			"out": 80
+			"out": 52
 		}
 	},
-	"ac767085a7bd0c78b8e2df62d9285f82e75f01c851a0c46074277db09815a9fd": {
-		"text": "{\n  \"kind\": \"order\",\n  \"items\": [\n    {\n      \"product\": \"salomn fillet\",\n      \"amount\": 30,\n      \"unit\": \"kg\",\n      \"date\": \"Friday\"\n    }\n  ]\n}",
+	"2b945617809948fb5c5ca2f47bb1a2b4686363c6bf9bf959259e28016d9911ea": {
+		"text": "1 held line is waiting for your approval in the Kitchen screen and you have 2 decisions left. Delivery is on Wed 9 Dec.",
 		"model": "gemini-3.5-flash-lite",
 		"tokens": {
-			"in": 452,
-			"out": 61
-		}
-	},
-	"17b85b8f511a624221c649b9ddf57ea7f875ecc7accbea04569b36579f0ff2ac": {
-		"text": "{\"tool\": \"search_products\", \"input\": {\"query\": \"salmon fillet\"}, \"why\": \"The typo 'salomn fillet' needs to be corrected by searching for the proper term 'salmon fillet' in the catalogue.\"}",
-		"model": "gemini-3.5-flash-lite",
-		"tokens": {
-			"in": 1390,
-			"out": 48
-		}
-	},
-	"8ce76d7f4362248f73f05b62f66a439d8636301ffe21361bdb1f834fc34e6ff7": {
-		"text": "{\"tool\": \"quote\", \"input\": {\"productIds\": [\"461915\", \"461916\"], \"deliverBy\": \"2026-12-11\"}, \"why\": \"Check live price and availability for standard D-trimmed and scaled salmon fillets (30 kg) to decide on the best option.\"}",
-		"model": "gemini-3.5-flash-lite",
-		"tokens": {
-			"in": 2013,
-			"out": 76
-		}
-	},
-	"a05e2e3e6ff2085679812a22095fbc5c39e04e43a1916e6652aa44cbb5bb33a4": {
-		"text": "{\"tool\": \"place_order\", \"input\": {\"kitchenId\": \"k-hotel\", \"deliverBy\": \"2026-12-11\", \"idempotencyKey\": \"salmon-fillet-30kg-20261211\", \"lines\": [{\"productId\": \"461915\", \"qty\": 30, \"unit\": \"KG\", \"amount\": {\"value\": 30, \"unit\": \"kg\", \"basis\": \"gross\"}}]}, \"why\": \"Place the order for 30 kg of Kalavapriikki lohifilee D-leikattu, ASC (product 461915) for Friday delivery.\"}",
-		"model": "gemini-3.5-flash-lite",
-		"tokens": {
-			"in": 2124,
-			"out": 155
-		}
-	},
-	"b9916e7fcdb71af0b194d00947dd52f6d468c487399bb6dd1091be6660b06c25": {
-		"text": "{\"tool\":\"get_plan\",\"input\":{\"planId\":\"pl-run-1-fb70c6e6bee8\"},\"why\":\"Check the current status and plan details to ensure the order is properly held for the chef.\"}",
-		"model": "gemini-3.5-flash-lite",
-		"tokens": {
-			"in": 2448,
-			"out": 50
-		}
-	},
-	"e7dc90db44e19efe72634fc9d9eae990587b83100dbaa7330f252a8b60248b01": {
-		"text": "{\"done\":true,\"summary\":\"Planned 30 kg of Kalavapriikki lohifilee D-leikattu, ASC (product 461915) for delivery on Friday 2026-12-11. The plan is currently held because the product requires chef approval (new SKU / missing price).\"}",
-		"model": "gemini-3.5-flash-lite",
-		"tokens": {
-			"in": 2689,
-			"out": 74
-		}
-	},
-	"ad151bb3ab03d669f38d85f102fb0ff83fc50b8c192c9c26abf0350c2db4743b": {
-		"text": "The required 30 kg Kalavapriikki lohifilee D-leikattu, ASC, n. 10 kg has supplier confirmed 0 kg and is waiting for your approval in the Kitchen screen.",
-		"model": "gemini-3.5-flash-lite",
-		"tokens": {
-			"in": 270,
-			"out": 46
-		}
-	},
-	"6471d8c951a154bc01eeb3bd5e152e26647c8878d9130c902f1cc3e914a209bd": {
-		"text": "{\n  \"kind\": \"order\",\n  \"items\": [\n    {\n      \"amount\": 20,\n      \"unit\": \"kg\"\n    }\n  ]\n}",
-		"model": "gemini-3.5-flash-lite",
-		"tokens": {
-			"in": 448,
-			"out": 43
-		}
-	},
-	"a19943da22a144cb98e55bf57e7b91eabe94f3b07881da58254b29880138c4a0": {
-		"text": "{\"kind\": \"adjust\", \"items\": [{\"product\": \"unspecified\"}], \"question\": \"make it 20 kg\"}",
-		"model": "gemini-3.5-flash-lite",
-		"tokens": {
-			"in": 472,
+			"in": 328,
 			"out": 28
 		}
 	},
-	"74ca271fb38bbcf232c3d655aee50798b92a4196295ee2c6a245d5e8cecdde7c": {
-		"text": "1 held line waits for your approval in the Kitchen screen.",
+	"62b87244d2d7a01f55e23087776dec6094c5d28ce7f11132009e98cef8202c4d": {
+		"text": "{\"kind\":\"read\",\"question\":\"What about the ham?\"}",
 		"model": "gemini-3.5-flash-lite",
 		"tokens": {
-			"in": 266,
-			"out": 12
-		}
-	},
-	"72923bc26730476961c7e4a5f179ea36028ccc7354c0c143382c427a382a7445": {
-		"text": "{\n  \"kind\": \"repair\",\n  \"items\": [\n    {\n      \"product\": \"trout\"\n    }\n  ]\n}",
-		"model": "gemini-3.5-flash-lite",
-		"tokens": {
-			"in": 447,
-			"out": 35
-		}
-	},
-	"d526f515c1e7895c69f112f0b1dd9156cc34ab221cad586915a4a927a4d0d862": {
-		"text": "{\"kind\":\"read\",\"question\":\"whats the status\"}",
-		"model": "gemini-3.5-flash-lite",
-		"tokens": {
-			"in": 445,
-			"out": 11
-		}
-	},
-	"d79b0d107ddb45db73d1c63b077177269c84f9e8052f296573d65653117073bb": {
-		"text": "{\"tool\": \"get_plan\", \"input\": {\"planId\": \"pl-run-1-eb13df5a913d\"}, \"why\": \"Inspect the current plan and its lines to check the status.\"}",
-		"model": "gemini-3.5-flash-lite",
-		"tokens": {
-			"in": 525,
-			"out": 50
-		}
-	},
-	"9a43051e8393ef276caad0e86640b1ef281328007a0e886554254ec77bcd284a": {
-		"text": "One held line is waiting for your approval in the Kitchen screen.",
-		"model": "gemini-3.5-flash-lite",
-		"tokens": {
-			"in": 263,
+			"in": 454,
 			"out": 13
 		}
 	},
-	"0827c09237cdc8e51d145b3b54f7231095bd9d53a58f7eb18e6089cf6b239ade": {
-		"text": "{\"kind\":\"authority\"}",
+	"fe428b7e3364ceffb00f3b6ad62e614b64fc1accbae4e135f88e21157f9f6fcc": {
+		"text": "{\"tool\": \"get_plan\", \"input\": {\"planId\": \"pl-run-1-113ea15ac1e5\"}, \"why\": \"Inspect the current plan to check the details and status of the ham.\"}",
 		"model": "gemini-3.5-flash-lite",
 		"tokens": {
-			"in": 445,
-			"out": 5
+			"in": 558,
+			"out": 52
 		}
 	},
-	"1c444c9715b7d5b4f4f17f09489ed98943b8cdd59d0fa3224aa9d88a6e6278b8": {
-		"text": "{\"tool\": \"search_products\", \"input\": {\"query\": \"salmon fillet\"}, \"why\": \"The search for 'salomn fillet' had a typo; searching with the correct spelling 'salmon fillet' to find the product ID.\"}",
+	"9b316ff46a8c16b92f2dff738e39976064b46525605754dfd5cf1d02ab5c5326": {
+		"text": "{\"done\": true, \"summary\": \"Inspected the current plan for Hotel Rautatientori; found only cream (Valio kuohukerma) in the plan lines, with no ham listed. The plan is held pending chef review.\"}",
 		"model": "gemini-3.5-flash-lite",
 		"tokens": {
-			"in": 1440,
-			"out": 50
+			"in": 854,
+			"out": 51
 		}
 	},
-	"cfb316fe83ab1106df5ee2aeab3233a64dc4562b3091fbefb63b7701ea4d2f54": {
-		"text": "{\"tool\": \"quote\", \"input\": {\"productIds\": [\"461915\", \"461916\", \"461814\", \"461871\", \"461884\", \"461885\", \"461903\", \"461907\"], \"deliverBy\": \"2026-12-11\"}, \"why\": \"Check live price and availability for the found salmon fillet products to select the best option.\"}",
+	"af312afa0c3d80ddcb7eb23dee94cf9557e24e15ab7df75554f397ef76b1c1ed": {
+		"text": "The ham is not listed in the current purchasing task. There are 2 decisions left, and 1 held line waits for your approval in the Kitchen screen for delivery on Wed 9 Dec.",
 		"model": "gemini-3.5-flash-lite",
 		"tokens": {
-			"in": 2065,
-			"out": 115
+			"in": 325,
+			"out": 39
 		}
 	},
-	"cac7a5eba867102a3559b52e299c52c8f1d0e6db1904ac80e53d0d3bb7b4e6a9": {
-		"text": "{\"tool\": \"place_order\", \"input\": {\"kitchenId\": \"k-hotel\", \"deliverBy\": \"2026-12-11\", \"idempotencyKey\": \"order-salmon-20261211\", \"lines\": [{\"productId\": \"461915\", \"qty\": 30, \"unit\": \"kg\", \"amount\": {\"value\": 30, \"unit\": \"kg\", \"basis\": \"gross\"}}]}, \"why\": \"Place order for 30 kg of Kalavapriikki lohifilee D-leikattu, ASC (product 461915) for Friday delivery.\"}",
+	"e7feaa8e2e966500809baf781ab55330c8aedb485c2b6f175b5b96218ef419f8": {
+		"text": "{\n  \"kind\": \"read\",\n  \"question\": \"How much have we spent this week?\"\n}",
 		"model": "gemini-3.5-flash-lite",
 		"tokens": {
-			"in": 2287,
-			"out": 149
+			"in": 456,
+			"out": 25
 		}
 	},
-	"28fa71a1f5e726691e33932239618059b4696dbfaa51520ff8fd0ab5c7cee1c0": {
-		"text": "{\"tool\": \"place_order\", \"input\": {\"deliverBy\": \"2026-12-11\", \"idempotencyKey\": \"order-salmon-20261211-v2\", \"kitchenId\": \"k-hotel\", \"lines\": [{\"amount\": {\"basis\": \"gross\", \"unit\": \"kg\", \"value\": 30}, \"productId\": \"461915\", \"qty\": 30, \"unit\": \"KG\"}]}, \"why\": \"Place order for 30 KG of Kalavapriikki lohifilee D-leikattu, ASC (product 461915) using the exact unit 'KG' matching the product specification.\"}",
+	"9472c20ef38a89012ed12b1621df8eb4deb038fcdd5908e5b43bce10676241d6": {
+		"text": "{\"done\": true, \"summary\": \"As a routine purchasing agent, I can inspect plans and explain lines, but I do not have access to financial ledger or spending history tools to calculate total money spent this week.\"}",
 		"model": "gemini-3.5-flash-lite",
 		"tokens": {
-			"in": 2459,
-			"out": 160
+			"in": 560,
+			"out": 45
 		}
 	},
-	"6bb8b39f5f20f2bae4647570641021804ec1df324505fcf99d9e68d84c7dba55": {
-		"text": "{\"done\":true,\"summary\":\"Placed the order plan for 30 KG of Kalavapriikki lohifilee D-leikattu, ASC (product 461915). The plan is currently held because the price is missing and it's a new SKU, waiting for the chef's approval/action.\"}",
+	"c8d522cffcc5945179db9a53e08998a7f51d8c2c2097a58bfa6b9db6341dfffa": {
+		"text": "You have spent 0 € this week. No items have been ordered or confirmed by the supplier yet. Delivery is scheduled for Wed 9 Dec.",
 		"model": "gemini-3.5-flash-lite",
 		"tokens": {
-			"in": 2791,
+			"in": 327,
+			"out": 30
+		}
+	},
+	"cdff51587e0df7a07157e1b04cc659f63005d5696e16b058143335739c68d2a3": {
+		"text": "{\n  \"kind\": \"read\",\n  \"question\": \"cancel that\"\n}",
+		"model": "gemini-3.5-flash-lite",
+		"tokens": {
+			"in": 451,
+			"out": 20
+		}
+	},
+	"2e97c09418b9bc2124f8cb0edef962c90a8ad07116bf66f1f642c88c4be6be3f": {
+		"text": "{\n  \"kind\": \"order\",\n  \"items\": [\n    {\n      \"product\": \"peruna\",\n      \"amount\": 10,\n      \"unit\": \"kg\",\n      \"date\": \"Friday\"\n    },\n    {\n      \"product\": \"maito\",\n      \"amount\": 5,\n      \"unit\": \"l\",\n      \"date\": \"Friday\"\n    }\n  ]\n}",
+		"model": "gemini-3.5-flash-lite",
+		"tokens": {
+			"in": 468,
+			"out": 99
+		}
+	},
+	"8ac430376108a7ae6534cd8205729cf49f4b111be592d18d109421b6cd974eff": {
+		"text": "Perjantaille 11 Dec tarvitaan 10 kg perunoita ja 5 l maitoa. Valintojasi odottaa 1 päätös, ja 2 pidätettyä riviä odottaa sinua Kitchen-näytöllä.",
+		"model": "gemini-3.5-flash-lite",
+		"tokens": {
+			"in": 335,
+			"out": 59
+		}
+	},
+	"16e048b8a8ba95c5060c95c05361d6baac555c8c13dda77f90816d9362c31c00": {
+		"text": "{\"kind\": \"read\", \"question\": \"paljonko tämä maksaa?\"}",
+		"model": "gemini-3.5-flash-lite",
+		"tokens": {
+			"in": 456,
+			"out": 18
+		}
+	},
+	"375f6cd5d357504886417ae189bbcf5b7d7c6092a992d4bee9eaf14f020417d6": {
+		"text": "{\"tool\": \"get_plan\", \"input\": {\"planId\": \"pl-run-1-c201d560a9e7\"}, \"why\": \"Inspect the plan to see the total cost of the items.\"}",
+		"model": "gemini-3.5-flash-lite",
+		"tokens": {
+			"in": 535,
+			"out": 52
+		}
+	},
+	"c432b12b880ae92d8dcd241fe6d16480f2d50d35bd2f4357229633a148481240": {
+		"text": "{\"done\":true,\"summary\":\"The total cost of the plan is 22.30 EUR (2230 cents). The plan contains 10 kg of potatoes (9.30 EUR) and 5 liters of lactose-free coffee milk (13.00 EUR), and it is currently held awaiting chef approval.\"}",
+		"model": "gemini-3.5-flash-lite",
+		"tokens": {
+			"in": 965,
 			"out": 72
 		}
 	},
-	"44b64bb010dd0d559b338ea864adde54c5c7b3b34f8ad47bbcfd6c1c873d075f": {
-		"text": "{\n  \"kind\": \"adjust\",\n  \"items\": []\n}",
+	"f60114d2ee71582f69b80d0575e25be5c48549719d482e6a2ed7bada388f8761": {
+		"text": "Hintoja ei ole annettu. Tilauksessa on 1 päätös odottamassa Kitchen-näytöllä. Toimituspäivä on pe 11. joulukuuta.",
 		"model": "gemini-3.5-flash-lite",
 		"tokens": {
-			"in": 470,
+			"in": 323,
+			"out": 42
+		}
+	},
+	"33323ddf07231dcb9525e0935e28635148c1d9fd138cdd749884aa8d4efa4648": {
+		"text": "{\n  \"kind\": \"order\",\n  \"items\": [\n    {\n      \"product\": \"laktoositon maito\",\n      \"amount\": 2,\n      \"unit\": \"l\",\n      \"date\": \"tomorrow\",\n      \"constraints\": [\n        \"lactose_free\"\n      ]\n    }\n  ]\n}",
+		"model": "gemini-3.5-flash-lite",
+		"tokens": {
+			"in": 464,
+			"out": 80
+		}
+	},
+	"ff62d85dafbecb083ba15fb1418f277a85f34f22dcef91530e1ad5af3123ed40": {
+		"text": "{\n  \"kind\": \"order\",\n  \"items\": [\n    {\n      \"product\": \"salmon fillet\",\n      \"amount\": 30,\n      \"unit\": \"kg\",\n      \"date\": \"Friday\"\n    }\n  ]\n}",
+		"model": "gemini-3.5-flash-lite",
+		"tokens": {
+			"in": 459,
+			"out": 60
+		}
+	},
+	"ca60430acb26e1d59e8f3ff19d4d9359729a59ef16a218789557ab06b5a2b524": {
+		"text": "The delivery day is Fri 11 Dec and there are 0 decisions left.",
+		"model": "gemini-3.5-flash-lite",
+		"tokens": {
+			"in": 257,
 			"out": 17
 		}
 	},
-	"504eab1b6b2059edefb70091722caef97b0f82e2236671e795876d44eb0e1624": {
-		"text": "{\n  \"done\": true,\n  \"summary\": \"Plan pl-run-1-eb13df5a913d is currently held because line pl-run-1-eb13df5a913d-l1 is held due to UNKNOWN_REQUIRED, price_missing, and new_sku. Awaiting chef review.\"\n}",
+	"656d471ae24511d247a67dae33a87d80dbd1f1ea8922c25f1f87d3fb12f12fbf": {
+		"text": "{\"kind\": \"adjust\"}",
 		"model": "gemini-3.5-flash-lite",
 		"tokens": {
-			"in": 762,
-			"out": 80
+			"in": 455,
+			"out": 6
+		}
+	},
+	"8aed79497bec095cdb810d3378fdbb4a660815fafb486fad46330af864b96502": {
+		"text": "LOHIFILEE C-LEIKATTU 10KG is planned at 20 kg. Delivery is on Fri 11 Dec. There are 0 decisions waiting.",
+		"model": "gemini-3.5-flash-lite",
+		"tokens": {
+			"in": 255,
+			"out": 39
+		}
+	},
+	"1f353eb10a8710636c97dba0239f0dfd7ccecac863c93afdfa49000dc5e26e21": {
+		"text": "{\n  \"kind\": \"repair\",\n  \"items\": [\n    {\n      \"product\": \"trout\"\n    }\n  ]\n}",
+		"model": "gemini-3.5-flash-lite",
+		"tokens": {
+			"in": 454,
+			"out": 35
+		}
+	},
+	"4a5de8d337bd04bf45dcb15fd556e73c81eaf4c8903eda051ce8d779cb6f66c1": {
+		"text": "{\n  \"kind\": \"read\",\n  \"question\": \"What is the status?\"\n}",
+		"model": "gemini-3.5-flash-lite",
+		"tokens": {
+			"in": 452,
+			"out": 22
+		}
+	},
+	"ae95ca88a81b0408a333a1ee80bb254f81c01370298a57613178f104bfa3c48a": {
+		"text": "{\"tool\": \"get_plan\", \"input\": {\"planId\": \"pl-run-1-7fae2615d765\"}, \"why\": \"Inspect current plan status and lines\"}",
+		"model": "gemini-3.5-flash-lite",
+		"tokens": {
+			"in": 528,
+			"out": 45
+		}
+	},
+	"f2913c766b28480d2bab0e8a108571e6e0c4caa4cc6c28d353e78581521aa240": {
+		"text": "{\"done\": true, \"summary\": \"The current plan pl-run-1-7fae2615d765 is in 'ready' state with one eligible line for LOHIFILEE C-LEIKATTU 10KG (20 KG, 28220 cents). No further action is needed as the plan is ready for the chef's review.\"}",
+		"model": "gemini-3.5-flash-lite",
+		"tokens": {
+			"in": 764,
+			"out": 86
+		}
+	},
+	"99506b85989e58e955d9f5fe60cfb189c23a499f7a49033db2f8c949bb8a8ada": {
+		"text": "0 kg are ordered for Fri 11 Dec. There are 0 decisions left, and 0 lines are waiting for your approval in the Kitchen screen.",
+		"model": "gemini-3.5-flash-lite",
+		"tokens": {
+			"in": 252,
+			"out": 32
+		}
+	},
+	"8176489c666824d0695d2683e2e9f88c8ab2356003cbd1169c31450c6a9751ac": {
+		"text": "{\n  \"kind\": \"authority\"\n}",
+		"model": "gemini-3.5-flash-lite",
+		"tokens": {
+			"in": 452,
+			"out": 11
 		}
 	}
 }

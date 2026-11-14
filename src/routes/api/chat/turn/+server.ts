@@ -61,16 +61,17 @@ export const POST: RequestHandler = async (event) => {
 	if (!kitchen) return bad('no kitchen in this workspace');
 	// Gemini reads, plans and words the chat whenever a provider is configured; the fixture keeps rules and script.
 	const live = (env.LLM_PROVIDER ?? 'fixture') !== 'fixture';
-	const router = createLlmRouter(env, (step, data) => {
-		if (step === 'error') console.warn('[chat] model', data);
-	});
-	const models = live
-		? {
-				understand: router.for('chat.understand'),
-				explain: router.for('explain'),
-				plan: router.for('agent.plan')
-			}
-		: undefined;
+	// Built inside the call scope with no trace of its own: model calls trace into the visitor's drawer and count
+	// against the visitor's caps.
+	const modelsFor = () => {
+		if (!live) return undefined;
+		const router = createLlmRouter(env);
+		return {
+			understand: router.for('chat.understand'),
+			explain: router.for('explain'),
+			plan: router.for('agent.plan')
+		};
+	};
 
 	const enc = new TextEncoder();
 	const stream = new ReadableStream<Uint8Array>({
@@ -84,7 +85,7 @@ export const POST: RequestHandler = async (event) => {
 					open = false;
 				}
 			};
-			// The turn runs in the workspace's scope (its scenario clock and simulated overlay).
+			// The turn runs in the caller's scope: its run, clock, simulated overlay and outside-call caps.
 			void withCallScope(ctx, async () => {
 				try {
 					const today = scenarioDate(b.ports.clock.now());
@@ -96,7 +97,7 @@ export const POST: RequestHandler = async (event) => {
 						kitchen,
 						today,
 						env,
-						models
+						models: modelsFor()
 					}))
 						push(e);
 				} catch (e) {

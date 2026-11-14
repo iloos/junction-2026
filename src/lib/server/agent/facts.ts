@@ -35,6 +35,12 @@ function code(v: unknown, max = 64): string | undefined {
 		.replace(/[^\w.:-]/g, '')
 		.slice(0, max);
 }
+/** A timestamp as UTC ISO (offsets kept by converting, never by stripping the sign). */
+function isoTime(v: unknown): string | undefined {
+	if (typeof v !== 'string') return undefined;
+	const t = Date.parse(v);
+	return Number.isNaN(t) ? undefined : new Date(t).toISOString();
+}
 function num(v: unknown): number | undefined {
 	return typeof v === 'number' && Number.isFinite(v) ? v : undefined;
 }
@@ -172,7 +178,7 @@ export function toFacts(tool: ToolName, value: unknown, intent?: Intent, input?:
 							availability: code(a.kind, 16),
 							logisticModel: code(a.logisticModel, 16),
 							availableDate: code(a.availableDate, 10),
-							closingTime: code(a.closingTime, 40)
+							closingTime: isoTime(a.closingTime)
 						};
 					}),
 					notFound: cap(v.notFound, 'notFound', cut).map((x) => code(x))
