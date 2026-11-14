@@ -74,6 +74,18 @@ export function lineView(l: Line, plan: Plan, approval: ApprovalLike | null): Li
 	const current = approval && approval.planVersion === plan.version ? approval : null;
 	if (l.state === 'eligible' && l.tier === 'act')
 		return { reviewable: false, committable: true, ...covered(qty), nextAction: 'commit' };
+	// A recalled line with a replacement is superseded: out of the approval, nothing to do.
+	if (
+		l.reasons.includes('recall') &&
+		plan.lines.some(
+			(x) =>
+				x.substituteFor === l.productId &&
+				x.needId === l.needId &&
+				x.state !== 'unorderable' &&
+				!x.reasons.includes('recall')
+		)
+	)
+		return { reviewable: false, committable: false, ...none, nextAction: 'none' };
 	// Held for a reason a human may accept.
 	const approved = current?.state === 'granted' && current.lineIds.includes(l.id);
 	return {
