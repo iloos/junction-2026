@@ -18,12 +18,21 @@
 @media (min-width: 900px) { .hero { grid-template-columns: 1.05fr 1fr; padding: 64px 0 80px; gap: 56px; } }
 
 /* Recorded cases: one card per case, recorded from the app by site/record/record.mjs. */
-.cases { min-width: 0; }
-.cases-track { display: grid; grid-auto-flow: column; grid-auto-columns: 100%; gap: 14px; overflow-x: auto; scroll-snap-type: x mandatory; scroll-padding-inline: 4px; overscroll-behavior-x: contain; scrollbar-width: none; padding: 4px 4px 14px; margin: -4px -4px 0; border-radius: 16px; }
-.cases-track::-webkit-scrollbar { display: none; }
-.cases-track:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-@media (max-width: 719px) { .cases-track { grid-auto-columns: calc(100% - 28px); } }
-.case { scroll-snap-align: start; display: flex; flex-direction: column; background: var(--sheet); border: 1px solid var(--rule); border-radius: 14px; box-shadow: 0 1px 0 var(--rule), 0 8px 18px -14px oklch(0.3 0.03 255 / 0.4); overflow: hidden; }
+.cases { min-width: 0; border-radius: 16px; }
+.cases:focus-visible { outline: 2px solid var(--accent); outline-offset: 6px; }
+/* The deck: the centre card in full, its neighbours fanned behind it like a hand of cards. It is clipped sideways
+   (with a small bleed that fades out) so the fan never covers the hero text and the page never scrolls sideways. On one-column
+   widths the bleed is the page gutter, so the neighbours' edges peek in from the screen edges. */
+.deck { --bleed: 20px; position: relative; margin-inline: calc(-1 * var(--bleed)); padding-inline: var(--bleed); overflow-x: clip; touch-action: pan-y; --fade: linear-gradient(90deg, transparent, #000 var(--bleed), #000 calc(100% - var(--bleed)), transparent); -webkit-mask-image: var(--fade); mask-image: var(--fade); user-select: none; -webkit-user-select: none; cursor: grab; }
+@media (max-width: 899px) { .deck { --bleed: 32px; } }
+@media (max-width: 719px) { .deck { --bleed: 16px; } }
+.deck.dragging { cursor: grabbing; }
+.deck a { -webkit-user-drag: none; }
+.case { position: absolute; top: 6px; left: 50%; display: flex; flex-direction: column; background: var(--sheet); border: 1px solid var(--rule); border-radius: 14px; box-shadow: 0 1px 0 var(--rule), 0 16px 32px -20px oklch(0.3 0.03 255 / 0.5); overflow: hidden; transform-origin: 50% 100%; will-change: transform; transition: transform 280ms cubic-bezier(0.3, 1.2, 0.5, 1), opacity 200ms ease-out; }
+.case::after { content: ''; position: absolute; inset: 0; background: var(--paper); opacity: var(--dim, 0); pointer-events: none; transition: opacity 240ms ease-out; }
+.deck.dragging .case, .deck.dragging .case::after { transition: none; }
+@media (prefers-reduced-motion: reduce) { .case, .case::after { transition: none; } }
+.vh { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
 .case-ask { margin: 0; padding: 16px 18px 14px; border-bottom: 1px solid var(--rule); }
 .case-ask small { display: block; font: 500 12px/1.4 'IBM Plex Mono', ui-monospace, monospace; color: var(--ink-3); margin-bottom: 4px; }
 .case-ask b { font-weight: 600; font-size: 16px; line-height: 1.35; text-wrap: balance; }
@@ -41,7 +50,7 @@
 .chip.ordered { color: var(--ok); border-color: var(--ok); }
 .case-eur { font: 500 16px/1 'IBM Plex Mono', ui-monospace, monospace; }
 .case-link { display: block; padding: 12px 18px 14px; font-size: 14.5px; font-weight: 500; color: var(--accent-ink); text-underline-offset: 3px; border-top: 1px solid var(--rule); }
-.cases-nav { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.cases-nav { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 6px; }
 .cases-dots { display: flex; gap: 2px; }
 .cases-dots button { width: 28px; height: 28px; padding: 0; border: 0; background: none; display: grid; place-items: center; cursor: pointer; border-radius: 6px; }
 .cases-dots button::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--rule-strong); }
@@ -140,8 +149,9 @@
 				<p class="note">Every visitor gets a private sandbox. Nothing is sent to Valio.</p>
 			</div>
 
-			<section class="cases" id="cases" aria-roledescription="carousel" aria-label="Cases recorded from the app" hidden>
-				<div class="cases-track" id="cases-track" tabindex="0" aria-live="polite"></div>
+			<section class="cases" id="cases" role="region" aria-roledescription="carousel" aria-label="Cases recorded from the app" tabindex="0" hidden>
+				<div class="deck" id="cases-track"></div>
+				<p class="vh" id="cases-live" aria-live="polite" aria-atomic="true"></p>
 				<div class="cases-nav">
 					<div class="cases-dots" id="cases-dots"></div>
 					<div class="cases-arrows">
@@ -318,17 +328,171 @@
 	}
 
 	let slides = [];
+	let labels = [];
 	let current = 0;
-	const offset = (k) => slides[k].offsetLeft - slides[0].offsetLeft;
-	function mark(i) {
-		current = i;
-		dots.querySelectorAll('button').forEach((b, k) => b.setAttribute('aria-current', String(k === i)));
-		prev.disabled = i === 0;
-		next.disabled = i === slides.length - 1;
+	let pos = 0; // fractional index of the card at the centre; equals `current` at rest
+	let geo = null;
+	const live = document.getElementById('cases-live');
+	const PAD_TOP = 6;
+	const PAD_BOTTOM = 34; // room for the fanned cards' lowered, rotated corners
+
+	// Slot k is where a card k places from the centre rests: x offset, scale, rotation (deg), drop, dim, opacity.
+	// Cards further out stack tighter behind; from slot 3 they are hidden.
+	function measure() {
+		const D = track.clientWidth;
+		const oneCol = !matchMedia('(min-width: 900px)').matches;
+		const bleed = parseFloat(getComputedStyle(track).paddingLeft) || 0;
+		const W = Math.round(oneCol ? Math.min(D * 0.85, 440) : Math.min(380, (D - 2 * bleed) * 0.8));
+		const R = Math.max(0, D / 2 - W / 2);
+		const vis1 = Math.min(R * 0.55, 64);
+		const vis2 = Math.min(R * 0.95, 104);
+		const at = (vis, s) => W / 2 + vis - (s * W) / 2;
+		const slots = [
+			{ x: 0, s: 1, r: 0, y: 0, dim: 0, o: 1 },
+			{ x: at(vis1, 0.88), s: 0.88, r: 4, y: 8, dim: 0.6, o: 1 },
+			{ x: at(vis2, 0.78), s: 0.78, r: 7, y: 18, dim: 0.76, o: 1 },
+			{ x: at(vis2, 0.7), s: 0.7, r: 9, y: 26, dim: 0.8, o: 0 }
+		];
+		for (const c of slides) {
+			c.style.width = `${W}px`;
+			c.style.marginLeft = `${-W / 2}px`;
+			c.style.height = '';
+		}
+		// Every card takes the tallest card's height, so the deck never jumps when a longer case comes to the centre.
+		const H = Math.max(...slides.map((c) => c.offsetHeight));
+		for (const c of slides) c.style.height = `${H}px`;
+		track.style.height = `${H + PAD_TOP + PAD_BOTTOM}px`;
+		geo = { W, slots, step: W * 0.5 };
 	}
-	function show(i) {
-		mark(Math.max(0, Math.min(slides.length - 1, i)));
-		track.scrollTo({ left: offset(current), behavior: reduced.matches ? 'auto' : 'smooth' });
+
+	function place(c, d) {
+		const a = Math.abs(d);
+		const sign = Math.sign(d);
+		let t;
+		if (reduced.matches) {
+			// Plain slide: a row of cards, no rotation or scale.
+			t = { x: a * (geo.W + 16), s: 1, r: 0, y: 0, dim: Math.min(a, 1) * 0.5, o: 1 };
+		} else {
+			const lo = Math.min(Math.floor(a), 3);
+			const hi = Math.min(lo + 1, 3);
+			const f = Math.min(a - lo, 1);
+			const A = geo.slots[lo];
+			const B = geo.slots[hi];
+			t = {};
+			for (const k of Object.keys(A)) t[k] = A[k] + (B[k] - A[k]) * f;
+		}
+		c.style.transform = `translateX(${sign * t.x}px) translateY(${t.y}px) rotate(${sign * t.r}deg) scale(${t.s})`;
+		c.style.opacity = String(t.o);
+		c.style.setProperty('--dim', t.dim.toFixed(3));
+		c.style.zIndex = String(100 - Math.round(a * 10));
+	}
+	function render() {
+		slides.forEach((c, k) => place(c, k - pos));
+	}
+
+	function settle(i, announce) {
+		current = Math.max(0, Math.min(slides.length - 1, i));
+		pos = current;
+		track.classList.remove('dragging');
+		render();
+		const hadFocus = slides.some((c, k) => k !== current && c.contains(document.activeElement));
+		slides.forEach((c, k) => {
+			const off = k !== current;
+			c.inert = off;
+			if (off) c.setAttribute('aria-hidden', 'true');
+			else c.removeAttribute('aria-hidden');
+		});
+		if (hadFocus) root.focus({ preventScroll: true });
+		dots.querySelectorAll('button').forEach((b, k) => b.setAttribute('aria-current', String(k === current)));
+		prev.disabled = current === 0;
+		next.disabled = current === slides.length - 1;
+		if (announce) live.textContent = `Case ${current + 1} of ${slides.length}: ${labels[current]}`;
+	}
+	const show = (i) => settle(i, true);
+
+	// Drag: the first ~8 px decide. A mostly vertical start is left to the page (touch-action: pan-y keeps vertical
+	// scrolling native); a horizontal one moves the deck with the pointer, then snaps to the nearest card, carried
+	// one card further by a flick.
+	function drag() {
+		let id = null;
+		let x0 = 0;
+		let y0 = 0;
+		let from = 0;
+		let mode = null; // null until decided, then 'x' or 'y'
+		let samples = [];
+		let swallowClick = false;
+		track.addEventListener('dragstart', (e) => e.preventDefault());
+		track.addEventListener('pointerdown', (e) => {
+			if (e.button !== 0 || id !== null) return;
+			id = e.pointerId;
+			x0 = e.clientX;
+			y0 = e.clientY;
+			from = pos;
+			mode = null;
+			swallowClick = false;
+			samples = [{ t: e.timeStamp, x: e.clientX }];
+		});
+		track.addEventListener('pointermove', (e) => {
+			if (e.pointerId !== id) return;
+			const dx = e.clientX - x0;
+			const dy = e.clientY - y0;
+			if (mode === null) {
+				if (Math.hypot(dx, dy) < 8) return;
+				mode = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y';
+				if (mode === 'y') return;
+				track.setPointerCapture(id);
+				track.classList.add('dragging');
+				swallowClick = true;
+			}
+			if (mode !== 'x') return;
+			const max = slides.length - 1;
+			let p = from - dx / geo.step;
+			if (p < 0) p *= 0.35; // resist past the ends
+			if (p > max) p = max + (p - max) * 0.35;
+			pos = p;
+			render();
+			samples.push({ t: e.timeStamp, x: e.clientX });
+			while (samples.length > 2 && e.timeStamp - samples[0].t > 100) samples.shift();
+		});
+		const end = (e) => {
+			if (e.pointerId !== id) return;
+			id = null;
+			if (mode !== 'x') return;
+			const a = samples[0];
+			const b = samples[samples.length - 1];
+			const v = b.t > a.t ? (b.x - a.x) / (b.t - a.t) : 0; // px per ms
+			const start = Math.round(from);
+			let to = Math.round(pos - (v * 120) / geo.step);
+			if (to === start && Math.abs(v) > 0.35) to = start - Math.sign(v);
+			show(Math.max(start - 2, Math.min(start + 2, to)));
+		};
+		track.addEventListener('pointerup', end);
+		track.addEventListener('pointercancel', end);
+		// A drag never clicks a link. A click on a side card brings it to the centre; inert cards pass the click
+		// through to the deck, so the card under the pointer is found by its box, nearest the centre first.
+		track.addEventListener(
+			'click',
+			(e) => {
+				if (swallowClick) {
+					swallowClick = false;
+					e.preventDefault();
+					e.stopPropagation();
+					return;
+				}
+				if (slides[current].contains(e.target)) return;
+				const hit = slides
+					.map((c, k) => ({ c, k }))
+					.filter(({ k }) => k !== current)
+					.sort((p, q) => Math.abs(p.k - current) - Math.abs(q.k - current))
+					.find(({ c }) => {
+						if (c.style.opacity === '0') return false;
+						const r = c.getBoundingClientRect();
+						return e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
+					});
+				if (hit) show(hit.k);
+			},
+			true
+		);
 	}
 
 	fetch('/cases.json', { cache: 'no-cache' })
@@ -337,6 +501,7 @@
 			const cases = (data.cases ?? []).filter((c) => c.request && c.steps?.length && c.outcome && c.link);
 			if (!cases.length) return;
 			slides = cases.map((c, i) => card(c, i, cases.length));
+			labels = cases.map((c) => c.request);
 			track.replaceChildren(...slides);
 			cases.forEach((c, i) => {
 				const b = el('button');
@@ -352,26 +517,30 @@
 			}
 			prev.addEventListener('click', () => show(current - 1));
 			next.addEventListener('click', () => show(current + 1));
-			track.addEventListener('keydown', (e) => {
+			root.addEventListener('keydown', (e) => {
 				const to = { ArrowLeft: current - 1, ArrowRight: current + 1, Home: 0, End: slides.length - 1 }[e.key];
 				if (to === undefined) return;
 				e.preventDefault();
 				show(to);
 			});
-			// A swipe or trackpad scroll moves the dots to the slide it settles on.
-			let t;
-			track.addEventListener('scroll', () => {
-				clearTimeout(t);
-				t = setTimeout(() => {
-					let best = 0;
-					slides.forEach((_, k) => {
-						if (Math.abs(offset(k) - track.scrollLeft) < Math.abs(offset(best) - track.scrollLeft)) best = k;
-					});
-					mark(best);
-				}, 80);
-			}, { passive: true });
 			root.hidden = false;
-			mark(0);
+			track.classList.add('dragging'); // the first paint lands without the spring
+			measure();
+			render();
+			requestAnimationFrame(() => settle(0, false));
+			drag();
+			let width = track.clientWidth;
+			new ResizeObserver(() => {
+				if (track.clientWidth === width) return;
+				width = track.clientWidth;
+				measure();
+				render();
+			}).observe(track);
+			document.fonts?.ready.then(() => {
+				measure();
+				render();
+			});
+			reduced.addEventListener('change', render);
 		})
 		.catch(() => {});
 })();
