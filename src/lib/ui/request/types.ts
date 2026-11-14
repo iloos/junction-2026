@@ -7,6 +7,8 @@ import type { Offer, Plan, Tier } from '$lib/core/contracts';
 export type ReqUnit = 'l' | 'kg' | 'pcs' | 'case' | 'sales';
 
 export interface ParsedItemView {
+	/** Stable item id; answers are keyed by it. */
+	id: string;
 	text: string;
 	query: string;
 	product: string | null;
@@ -14,13 +16,13 @@ export interface ParsedItemView {
 	qty: number | null;
 	unit: ReqUnit | null;
 	constraints: string[];
-	variant: { token: string; label: string } | null;
+	variant: { token: string; label: string; search?: string } | null;
 	ambiguities: string[];
 }
 
-/** The chef's inline answer to a question, by item index: a quantity, a product, or both. */
+/** The chef's inline answer to a question, by item id: a quantity, a product, or both. */
 export interface RequestAnswer {
-	item: number;
+	item: string;
 	qty?: number;
 	unit?: ReqUnit;
 	productId?: string;
@@ -28,10 +30,10 @@ export interface RequestAnswer {
 
 /** How a question can be answered inline. */
 export type AnswerSpec =
-	| { kind: 'qty'; item: number; units: ReqUnit[]; salesUnit?: string }
+	| { kind: 'qty'; item: string; units: ReqUnit[]; salesUnit?: string }
 	| {
 			kind: 'choice';
-			item: number;
+			item: string;
 			options: { label: string; detail: string; answer: RequestAnswer }[];
 			/** Also offer "give the amount instead" in these units. */
 			alsoQty?: { units: ReqUnit[] };
@@ -168,4 +170,18 @@ export interface RequestResult {
 	message?: string;
 	/** Set when the order is unusually large and was not placed: send again with confirmLarge. */
 	needsConfirm?: boolean;
+	/** Items still without a pick, and why; while any is listed nothing is placed. */
+	unplaced?: { id: string; query: string; reason: string }[];
+	/** Set when the words are an event to plan, not products to buy: nothing was searched. */
+	event?: EventView;
+}
+
+/** An open event brief: planning it from a menu is not built yet; a seeded event may match. */
+export interface EventView {
+	guests: number | null;
+	courses: number | null;
+	occasion: string;
+	deliverBy: string;
+	deliverByText: string | null;
+	seeded: { eventId: string; title: string } | null;
 }

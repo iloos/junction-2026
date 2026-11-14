@@ -23,6 +23,8 @@ A chef types a short purchase request ("1,000 L lactose-free milk by Monday") an
 
 ## Report
 - Sat 02:00–05:30 · rounds 1–5 merged (6a1a00b … 6ba72e5) · review 8c4cf37.
+- Sat 14 Nov · done: F3 (typed constraints unioned into the model item, flagged; `sameItem` compares constraints), answers keyed by stable item id, F7 guard (event brief → "Event planning: coming", or a link to the seeded Christmas buffet on k-hotel; nothing searched), F17 (salmon categories + fillet variant, "2 x 10 kg" = 20 kg, cover phrases are not quantities, month-name dates EN/FI, impossible dates refused, an unpicked item holds the whole order, skip reasons named, preview rounded to lot step), "Shared sandbox" tooltip · tests `fixes.test.ts` (18) · stubbed: menu module · needs: none · ready to merge yes.
+- Known: /request ranking ignores the kitchen's `weights` (hand-set scores in `lookup.ts`); ruling 1's `find_substitutes` route replaces them with the menu work. Open from F17: one date for many items. `src/lib/ui/request/types.ts` changed (`RequestAnswer.item` is now a string id; `EventView`, `unplaced`): request-lane types only.
 
 ## Handoff (Sat 14 Nov)
 
