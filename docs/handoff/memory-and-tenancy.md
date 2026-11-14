@@ -1,60 +1,62 @@
-# Kitchen memory and tenancy: steps toward a clean SaaS shape
+# History, memory and tenancy: the temporal shape of the system
 
-_Sat 14 Nov, design session. A proposal for the lead; not claimed as built. Builds on [concept/GROWTH.md](../concept/GROWTH.md) (entities, "authority comes from grants, never from data", "runs are for simulation") and the mockups `scratch/ux-mock/rhythm.html` (Usual order) and `engine.html` (Forecast)._
+_Sat 14 Nov, design session. A proposal for the lead; not claimed as built. Builds on [concept/GROWTH.md](../concept/GROWTH.md) ("authority comes from grants, never from data", "runs are for simulation") and the mockups `scratch/ux-mock/rhythm.html` (Usual order) and `engine.html` (Forecast). Memory here is not one feature: it is how the system keeps and uses time._
 
 ## Where we are
 - **Isolation is good.** Every record and op carries `workspaceId` + `runId` and a server-derived actor; tools pass one gate; keys are hashed and scoped; judge keys are bound to one visitor workspace.
-- **Memory is thin.** Per kitchen the system knows `Kitchen.usualProducts` (a seed list, 4 ids on `k-hotel`) and orders in the current run (`orderedBefore` in `core/mandate/tier.ts`). A sandbox reset starts a new run and forgets the rest. Chef corrections (ham 135 → 120 g per guest), declined substitutes and chosen candidates are in the op log but nothing reads them back.
+- **The record exists, little reads it back.** The op log holds plans, edits, offers, substitutes, approvals, commits, anomalies and enrichments with actor, door and seq. Per kitchen the system reads back only `Kitchen.usualProducts` (a seed list) and orders in the current run (`orderedBefore` in `core/mandate/tier.ts`). Chef corrections, declined substitutes and what people said in chat are not used again. A sandbox reset starts a new run and the past is out of reach.
 - **A run is both simulation and history.** GROWTH rule 5 wants them apart.
+- **One clock.** Records carry when they were written, not separately when they were true (a recall valid from 1 Dec but learned on 7 Dec).
 - **Tenancy is one level.** A workspace is a demo sandbox, not a tenant; `Kitchen` mixes the site and its policy; Organization, BuyerAccount and Membership exist only in GROWTH.md.
-- **Mandate changes are not ops.** The `Op` union has 8 types (CreatePlan, EditLine, RecordOffer, ProposeSubstitute, RecordApproval, CommitOrder, RecordAnomaly, RecordEnrichment); `kitchens.mandate_version` bumps outside it, although the schema comment says mandate history lives in the op log. Check `set_mandate` before relying on it.
+- **Mandate changes are not ops.** The `Op` union has 8 types; `kitchens.mandate_version` bumps outside it, although the schema comment says mandate history lives in the op log. Passed to core (8d).
 
-## Proposal
-### 1. Memory is a projection of the op log
-A pure function in `core/` (no new write path, so `applyOps` stays the only writer):
+## The shape: five layers over time
+| Layer | What it holds | Examples | Grants authority |
+|---|---|---|---|
+| **Record** | What happened. Immutable. | Ops; outside events: deliveries, short deliveries, recalls, price changes | No |
+| **Patterns** | What usually happens. Derived from the record, recomputed, never edited. | Usual order and how settled it is; supplier reliability per product; seasonality; how far ahead a kitchen plans; which substitutes kitchens accept | No |
+| **Knowledge** | What people told us. Each fact has a source and a scope. | "The school never serves pork" (chat); "120 g of ham per guest for buffets" (an edit); a supplier spec (document); a cited web fact | No |
+| **Commitments** | What was agreed. | Mandate versions, the standing order, approvals bound to terms | **Yes, only this layer** |
+| **Expectations** | What's coming. | Booked events, cut-offs, projected demand, Valio's Forecast | No |
 
-```
-kitchenMemory(ops: OpEnvelope[], kitchenId, asOf) → MemoryFact[]
-MemoryFact = { kind: 'usual_item' | 'correction' | 'preference' | 'rejection',
-               subject: productId | needId | dishId, value, sentence,
-               evidence: seq[], confidence: 0..1, firstSeen, lastSeen }
-```
-- `usual_item`: from committed lines across delivery dates, scored with the Usual order maths (comes back × steady amount × enough history, recency-weighted).
-- `correction`: an `EditLine` by the chef that changes g/guest or quantity on a need the agent sized.
-- `preference`: an `EditLine` that swaps to a lower-ranked candidate (the chef chose against the ranking).
-- `rejection`: a `RecordApproval` with `denied`, or a substitute replaced by the chef.
+Every fact keeps two times, **when it was true** and **when we learned it**. That gives honest answers to "as of when?", lets any screen show the plan as it was at an earlier version, and lets a summary say "what changed this week".
 
-Because it is derived, it is reproducible in evals, explainable (every fact names its ops) and costs no migration. Cache it per kitchen if it gets slow.
+Every fact has a **scope**: a person (this chef's habits), a kitchen, an organization (the hotel group's policy), or Valio-wide (collective patterns across kitchens, shown in aggregate).
 
-### 2. Learned facts never grant authority
-GROWTH rule 1 holds: a `usual_item` with high confidence is a **suggestion** to add the product to the standing order. Only the chef's `set_mandate` (a new mandate version) changes what the agent may do alone. `orderedBefore` keeps reading the mandate baseline, not memory. The UI says this in one line: "Learned from your orders. Add it to your standing order to let the agent order it alone."
+## How a fact moves
+Said or seen → **suggested** (with its source) → **confirmed** by a person → optionally made a rule through `set_mandate`. Nothing skips a step, and nothing below Commitments changes what the agent may do alone (GROWTH rule 1). People can see, correct and forget facts about themselves and their kitchen; forgetting matters most for person-scoped facts.
 
-### 3. One memory for every agent
-`get_context` returns a short memory summary (usual items with confidence, recent corrections, rejections) under the `read` scope, so the in-app agent and any MCP agent plan from the same facts. Corrections apply as defaults (ham at 120 g for buffets) and are shown as such ("using your 120 g from 7 Dec").
+## How agents use it
+Agents get the relevant slice, never the whole store. `get_context` (read scope) returns facts chosen by scope, subject and time window for the task at hand: for a buffet plan, the buffet corrections and the usual order; for a ham shortage, which substitutes this kitchen and similar kitchens accepted. Each fact used is cited in the agent's outcome ("using your 120 g from the last buffet"). The in-app agent and outside MCP agents read the same slice through the same gate.
 
-### 4. History outlives runs
-Keep runs for simulation. Mark ops and orders from a seeded or synthetic run as `simulation`, and let memory read only non-simulation history plus the current run. For the demo, a "seeded history" run can supply 16 labelled weeks so Usual order and Forecast have data.
+## Insights from history
+Summaries computed over the record and patterns, shown where they help a decision rather than on a dashboard of their own:
+- Kitchen: "Your usual order settled at about €2,900 a week; oat drink joined it this month."
+- Kitchen: "Valio short-delivered this product twice in six weeks; the agent now plans one pack of spare."
+- Valio: "Kitchens that lost whole ham mostly chose Palvikinkku; stock for it ran out first."
 
-### 5. Tenancy seams, types first
-Add contract types only: `Organization → KitchenSite → BuyerAccount`, and `Membership { principal, resource, permissions, expiresAt }` (GROWTH's grant list). Map today's records onto them: workspace stays the isolation key, a visitor sandbox is an organization with one site, `Kitchen` splits into `KitchenSite` and its `Mandate`. Keys resolve to a membership instead of a global actor kind when onboarding starts.
+## Data shape (a sketch, not a contract)
+- **Record:** the op log as is, plus outside events as ops (`RecordAnomaly` already covers recalls).
+- **Patterns:** pure functions over the record (`usualOrder`, `supplierReliability`, `acceptedSubstitutes`), cached per scope; never stored as truth.
+- **Knowledge:** `Fact { scope, subject, claim, source (op seq | chat turn | document | web), validFrom, validTo, learnedAt, confidence, status: suggested | confirmed | retracted }`.
+- **Commitments and Expectations:** today's mandate, approvals, events and plans; Forecast as the sum of projections with summed variance.
 
-### 6. Forecast reads the same memory
-Valio's Forecast is the sum over kitchens of ordered + planned + projected demand per product and delivery date, with variance summed across kitchens and a probability of running short against stated stock. Unknown-quantity supply gets no probability ("Valio hasn't said").
-
-## Order of work (nothing changes after Sun 06:00, so the demo parts land before it)
-**Wave 2 (~18:00 → ~02:00), if the lead pulls it in; each step is additive and pure or read-only:**
-1. `kitchenMemory` + tests on the seeded run (pure core).
-2. Memory summary in `get_context` (read scope).
-3. Seeded-history run, labelled "simulated history", so Usual order and Forecast have weeks to read.
+## What to do, in order of value (nothing changes after Sun 06:00)
+**For the demo, if the lead pulls it in.** Each step is additive and pure or read-only:
+1. Patterns over the current record: `usualOrder` and `acceptedSubstitutes` as pure functions with tests on the seeded run.
+2. The relevant slice in `get_context`, with facts cited in the agent's outcome line.
+3. A seeded history labelled "simulated history", so Usual order and Forecast have weeks to read.
 4. Forecast from summed projections (feeds ui-mockset-to-prod.md #13).
-5. Usual order panel: facts with evidence and "Suggest for standing order" → `set_mandate`.
+5. A "what we know about this kitchen" panel: facts with their source, "confirm" and "forget", and "suggest for the standing order" → `set_mandate`.
 
-**Post-hackathon:**
-6. Simulation flag on runs, history that outlives runs.
-7. Mandate changes as ops, if they aren't.
-8. Contract types for Organization / KitchenSite / BuyerAccount / Membership.
+**After the hackathon:**
+6. Facts from chat (suggested, confirmed by the chef) and from documents.
+7. Two times on every fact; "as of" views on every screen.
+8. History that outlives runs, with simulation runs flagged.
+9. Mandate changes as ops.
+10. Contract types for Organization / KitchenSite / BuyerAccount / Membership; person-scoped facts tied to memberships.
 
 ## Open questions
-- Does `set_mandate` write an op today, and should memory facts cite it?
-- How long should a correction last: per event type (buffets), per dish, or until changed?
-- Is a seeded 16-week history honest enough for the pitch if it is labelled "simulated history"?
+- How long should a correction last: for one event, for every event of its kind, or until changed?
+- Which collective patterns may one kitchen see about others (aggregate only, minimum group size)?
+- Is a seeded history honest enough for the pitch if it is labelled "simulated history"?

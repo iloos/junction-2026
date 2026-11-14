@@ -17,9 +17,9 @@ Rules that held up in review: every element readable in under 5 s (sentences and
 
 ## Moves, ranked
 Value = what a judge feels. Risk = chance of breaking the demo. Everything we want in the demo lands before **Sun 06:00**; after that nothing changes.
-- **Wave 1** (now → ~18:00): presentation-level, reuses shipped data and components.
-- **Wave 2** (~18:00 → ~02:00): needs a new read model or query; land behind the gate, deploy, rehearse.
-- **02:00 → 06:00**: no new parts; fixes, copy, video, rehearsal.
+- **Wave 1** (first): presentation-level, reuses shipped data and components.
+- **Wave 2** (next, once Wave 1 is deployed and checked): needs a new read model or query; land behind the gate, deploy, rehearse.
+- **Last stretch before 06:00**: no new parts; fixes, copy, video, rehearsal. The lead decides when it starts.
 - **Post-hackathon**: worth doing, not for this demo.
 
 | # | Mock part | Lands in (reuse) | Delta | Value | Risk | When | Lane |
