@@ -68,7 +68,7 @@
 		const [t, , , lead, mech] = Z[k];
 		zones.forEach((z) => z.setAttribute('aria-pressed', String(z.dataset.z === k)));
 		const back = pinned && resume ? '<button type="button" class="smap-back">Back to the ham line</button>' : '';
-		panel.innerHTML = `<div class="smap-ph"><h3>${t}</h3>${back}</div><p class="lead">${esc(lead)}</p><div class="mech">${mech.map(([c, h, test, st]) => `<div><b>${esc(c)}</b><span>${esc(h)} <code>${esc(test)}</code></span><span class="st ${st === 'live' ? 'live' : ''}">${st === 'live' ? 'seen live' : 'tested'}</span></div>`).join('')}</div>`;
+		panel.innerHTML = `<div class="smap-ph"><h3>${t}</h3>${back}</div><p class="lead">${esc(lead)}</p><div class="mech">${mech.map(([c, h, , st]) => `<div><b>${esc(c)}</b><span>${esc(h)}</span><span class="st ${st === 'live' ? 'live' : ''}">${st === 'live' ? 'seen live' : 'tested'}</span></div>`).join('')}</div><p class="mech-proof">Each claim with its test: <a href="/proof">Proof</a>.</p>`;
 		const b = panel.querySelector('.smap-back');
 		if (b) b.addEventListener('click', () => { pinned = false; zones.forEach((z) => z.setAttribute('aria-pressed', 'false')); resume(); });
 	}
