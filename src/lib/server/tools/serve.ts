@@ -4,17 +4,20 @@ import {
 	toolSchemas,
 	type DomainError,
 	type ErrorCode,
+	type ResultMeta,
 	type ToolName,
 	type ToolOutput
 } from '$lib/core/contracts';
 import type { CallContext, ToolHandlers } from '$lib/core/ports';
 import { isVisitorWorkspace } from '$lib/server/demo/visitor-id';
 import { inWorkspace } from '$lib/server/adapters/simulator/overlay';
+import { presentMeta } from './present';
 
 /**
  * The one gate every surface (REST, MCP, the routine agent) calls a tool through: input validated
  * against the registry schema, scope enforced from the server-derived context, handler called,
- * output validated. Handlers also check scope (ports.ts); this check makes a missing one harmless.
+ * output validated, then `meta` (ResultMeta, present.ts) added. Handlers also check scope (ports.ts);
+ * this check makes a missing one harmless.
  */
 
 export const HTTP_STATUS: Record<ErrorCode, number> = {
@@ -146,5 +149,14 @@ async function run<N extends ToolName>(
 			500
 		);
 	}
-	return { ok: true, status: 200, value: output.data as ToolOutput<ToolName> };
+	const value = output.data as ToolOutput<ToolName> & { meta?: ResultMeta };
+	// Our own summary and next step, unless the handler wrote one; never fatal to the call.
+	if (!value.meta)
+		try {
+			const meta = presentMeta(name, input.data, value);
+			if (meta) value.meta = meta;
+		} catch (e) {
+			console.error(`[tools] ${name}: meta failed`, e);
+		}
+	return { ok: true, status: 200, value };
 }
