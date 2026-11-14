@@ -1,8 +1,8 @@
 {
-	"recordedAt": "2026-11-14T17:05:28.557Z",
-	"appCommit": "b2dfe9c1a94cd0ea0b51284cf504a53cb6589c3e",
+	"recordedAt": "2026-11-14T18:42:49.962Z",
+	"appCommit": "4752d001f8eaf471f7940a5fe3985952f3cf6bbb",
 	"chain": {
-		"recordedAt": "2026-11-14T17:05:28.556Z",
+		"recordedAt": "2026-11-14T18:42:42.053Z",
 		"line": {
 			"dish": "Salmon soup",
 			"ingredient": "potatoes",
@@ -12,8 +12,8 @@
 			"per": "100 g"
 		},
 		"counts": {
-			"canOrderNow": 4,
-			"waiting": 5,
+			"canOrderNow": 3,
+			"waiting": 6,
 			"unknownQuantity": 5
 		},
 		"steps": [
@@ -62,15 +62,15 @@
 				"text": "Ordered on one receipt.",
 				"decides": {
 					"kind": "signoff",
-					"text": "4 lines can be ordered now · 5 wait for the chef · 5 of them because Valio doesn't state a quantity"
+					"text": "3 lines can be ordered now · 6 wait for the chef · 5 of them because Valio doesn't state a quantity"
 				}
 			}
 		],
-		"appCommit": "b2dfe9c1a94cd0ea0b51284cf504a53cb6589c3e"
+		"appCommit": "4752d001f8eaf471f7940a5fe3985952f3cf6bbb"
 	},
 	"plan": {
-		"recordedAt": "2026-11-14T17:36:43.384Z",
-		"appCommit": "b10cd4385122a9d9859c1b6e3d6d7aee7fb25c56",
+		"recordedAt": "2026-11-14T18:42:42.054Z",
+		"appCommit": "4752d001f8eaf471f7940a5fe3985952f3cf6bbb",
 		"ask": "Plan the Christmas buffet for 140 on Saturday.",
 		"source": {
 			"app": "https://app.mandate.kitchen",
@@ -106,11 +106,11 @@
 			{
 				"tool": "explain",
 				"summary": "Answered from the order's numbers.",
-				"source": "rules"
+				"source": "live"
 			}
 		],
-		"reply": "For Thu 10 Dec: 92.82 kg + 10.5 l needed; 84.42 kg + 10.5 l planned, not yet submitted; 8.4 kg unresolved; no order placed yet; 3 decisions wait for you.",
-		"modelGuard": "template sentence (model reply not used: 1 need(s) are unresolved: name them as still open.)",
+		"reply": "Delivery is on Thu 10 Dec and 3 decisions wait. There are 8.4 kg unresolved because 1 line can't be bought as planned: find a substitute. Waiting on you: Use a substitute for joulukinkku · Buy 6 new products (Aimo 2,5/1,25kg sinappisilli MSC, Aimo 2,5/1,25kg tomaattisilli MSC, Aimo 2,5/1,25kg lasimestarinsilli MSC and 4 more). A product this kitchen has not bought before. Your mandate says to ask first. Buy 1 new product (Valio kevytmaito 1 l laktoositon UHT). ",
+		"modelGuard": null,
 		"counts": {
 			"dishes": 12,
 			"lines": 19,
@@ -241,7 +241,7 @@
 	"cases": [
 		{
 			"id": "lactose-free",
-			"recordedAt": "2026-11-14T17:05:19.043Z",
+			"recordedAt": "2026-11-14T18:42:33.360Z",
 			"source": {
 				"app": "https://app.mandate.kitchen",
 				"endpoints": [
@@ -302,7 +302,7 @@
 		},
 		{
 			"id": "within-mandate",
-			"recordedAt": "2026-11-14T17:05:20.453Z",
+			"recordedAt": "2026-11-14T18:42:34.699Z",
 			"source": {
 				"app": "https://app.mandate.kitchen",
 				"endpoints": [
@@ -353,7 +353,7 @@
 		},
 		{
 			"id": "agent-cannot-approve",
-			"recordedAt": "2026-11-14T17:05:21.619Z",
+			"recordedAt": "2026-11-14T18:42:35.607Z",
 			"source": {
 				"app": "https://app.mandate.kitchen",
 				"endpoints": [
@@ -401,7 +401,7 @@
 		},
 		{
 			"id": "cut-off",
-			"recordedAt": "2026-11-14T17:05:23.135Z",
+			"recordedAt": "2026-11-14T18:42:36.708Z",
 			"source": {
 				"app": "https://app.mandate.kitchen",
 				"endpoints": [
@@ -421,7 +421,7 @@
 				},
 				{
 					"icon": "clock",
-					"text": "The cut-off for Tue 8 Dec has passed (17:00 Mon); earliest delivery is Wed 9 Dec."
+					"text": "Tue 8 Dec is past every match's cut-off (Stock, 17:00 Mon): earliest Wed 9 Dec."
 				},
 				{
 					"icon": "swap",
@@ -436,7 +436,7 @@
 		},
 		{
 			"id": "one-receipt",
-			"recordedAt": "2026-11-14T17:05:25.123Z",
+			"recordedAt": "2026-11-14T18:42:38.681Z",
 			"source": {
 				"app": "https://app.mandate.kitchen",
 				"endpoints": [
@@ -475,7 +475,7 @@
 		},
 		{
 			"id": "out-of-stock",
-			"recordedAt": "2026-11-14T17:05:27.127Z",
+			"recordedAt": "2026-11-14T18:42:40.282Z",
 			"source": {
 				"app": "https://app.mandate.kitchen",
 				"endpoints": [
@@ -567,5 +567,108 @@
 			},
 			"link": "https://app.mandate.kitchen/"
 		}
-	]
+	],
+	"sponsors": {
+		"recordedAt": "2026-11-14T18:43:11.688Z",
+		"appCommit": "4752d001f8eaf471f7940a5fe3985952f3cf6bbb",
+		"source": {
+			"app": "https://app.mandate.kitchen",
+			"endpoints": [
+				"GET /healthz",
+				"POST /api/web/recall {} (judge key)"
+			]
+		},
+		"db": {
+			"ok": true,
+			"latencyMs": 82,
+			"tls": "verified"
+		},
+		"services": {
+			"valio": {
+				"mode": "live",
+				"breaker": "closed",
+				"configured": true,
+				"last": {
+					"at": "2026-11-14T18:42:43.852Z",
+					"source": "live",
+					"ok": true,
+					"latencyMs": 60
+				},
+				"lastLive": {
+					"at": "2026-11-14T18:42:43.852Z",
+					"ok": true,
+					"ageS": 28
+				},
+				"recent": {
+					"live": 19
+				},
+				"liveMs": 60
+			},
+			"gemini": {
+				"mode": "live",
+				"breaker": "closed",
+				"configured": true,
+				"last": {
+					"at": "2026-11-14T18:42:51.429Z",
+					"source": "live",
+					"ok": true,
+					"latencyMs": 851
+				},
+				"lastLive": {
+					"at": "2026-11-14T18:42:51.429Z",
+					"ok": true,
+					"ageS": 20
+				},
+				"recent": {
+					"live": 50
+				},
+				"liveMs": 851
+			},
+			"exa": {
+				"mode": "live",
+				"breaker": "closed",
+				"configured": true,
+				"last": {
+					"at": "2026-11-14T18:39:48.902Z",
+					"source": "live",
+					"ok": true,
+					"latencyMs": 0
+				},
+				"lastLive": {
+					"at": "2026-11-14T18:39:48.902Z",
+					"ok": true,
+					"ageS": 203
+				},
+				"recent": {
+					"cache": 12,
+					"live": 6
+				},
+				"liveMs": null
+			},
+			"contextdev": {
+				"mode": "cache",
+				"breaker": "closed",
+				"configured": true,
+				"last": {
+					"at": "2026-11-14T18:43:11.486Z",
+					"source": "cache",
+					"ok": true,
+					"latencyMs": 0
+				},
+				"lastLive": null,
+				"recent": {
+					"cache": 3
+				},
+				"liveMs": null,
+				"recallList": {
+					"readAt": "2026-11-14T18:43:08.916Z",
+					"count": 102,
+					"newest": "2026-11-11",
+					"latencyMs": 111,
+					"endpoint": "POST /api/web/recall {}",
+					"source": "cache"
+				}
+			}
+		}
+	}
 }
