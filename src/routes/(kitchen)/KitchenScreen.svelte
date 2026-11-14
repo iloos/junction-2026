@@ -671,6 +671,9 @@
 		mode === 'live' &&
 			joinedAs === null &&
 			k.started === false &&
+			// A visitor who already has a kitchen of their own (made here, on another tab or device, or by their agent)
+			// is never asked again: the server's list says so (D26).
+			!k.kitchens.some((x) => x.mine) &&
 			!roomNotice &&
 			!page.url.searchParams.get('plan')
 	);
