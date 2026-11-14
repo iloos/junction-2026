@@ -49,7 +49,9 @@
 				"holiday": 1.0,
 				"schoolHoliday": 0,
 				"weather": 0
-			}
+			},
+			"$usualProducts": "Scenario: the normal week's products that the Christmas event also uses (salmon fillet, potatoes, lactose-free milk, porridge rice); team estimate, standing in for the kitchen's Valio order template.",
+			"usualProducts": ["462150", "475214", "464201", "466964"]
 		},
 		{
 			"id": "k-lounas",

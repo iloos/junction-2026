@@ -24,6 +24,7 @@ import { requestHash, sha256Hex, termsHash } from '../hash';
 import {
 	draftFromLine,
 	isoWeek,
+	orderedBefore,
 	recalledProducts,
 	tierLines,
 	type DraftLine,
@@ -49,14 +50,6 @@ function pending(ctx: CallContext, op: PendingOp['op'], idempotencyKey?: string)
 
 async function kitchenOf(ports: Ports, ctx: CallContext, id: string): Promise<Kitchen | null> {
 	return (await ports.store.kitchens(ctx.workspaceId)).find((k) => k.id === id) ?? null;
-}
-
-function orderedBefore(state: WorkspaceState, kitchenId: string): Set<string> {
-	return new Set(
-		Object.values(state.orders)
-			.filter((o) => o.kitchenId === kitchenId)
-			.flatMap((o) => o.lines.map((l) => l.productId))
-	);
 }
 
 /** Rounds a requested quantity up to the product's lot step (D6: allowedLotSize is a hard minimum and step). */
@@ -194,7 +187,7 @@ export async function placeOrder(
 			weekSpentCents: spent,
 			actor: ctx.actor.kind,
 			createdBy: ctx.actor.kind,
-			orderedBefore: orderedBefore(state, kitchen.id),
+			orderedBefore: orderedBefore(state, kitchen),
 			recalled: recalledProducts(state)
 		});
 		const plan0: Plan = {
@@ -347,7 +340,7 @@ export async function commitOrder(
 			weekSpentCents: spent,
 			actor: ctx.actor.kind,
 			createdBy: plan.createdBy.kind,
-			orderedBefore: orderedBefore(state, kitchen.id),
+			orderedBefore: orderedBefore(state, kitchen),
 			recalled: recalledProducts(state),
 			committed
 		});
@@ -385,11 +378,16 @@ export async function commitOrder(
 		const byId = new Map(plan.lines.map((l) => [l.id, l]));
 		const external =
 			ctx.actor.kind === 'external_agent' || plan.createdBy.kind === 'external_agent';
+		// A line the agent may commit alone: eligible, act tier, and not for an external caller.
+		const actAlone = (l: { state: string; tier?: string }) =>
+			!external && l.state === 'eligible' && l.tier === 'act';
+		const actIds = plan.lines
+			.filter((l) => l.state === 'eligible' && l.tier === 'act')
+			.map((l) => l.id);
+		// With a granted approval the commit buys what it covers plus the lines inside the mandate, so a plan with
+		// both is bought in one press and no in-mandate line is left behind.
 		const selected = (
-			input.lineIds ??
-			(granted
-				? granted.lineIds
-				: plan.lines.filter((l) => l.state === 'eligible' && l.tier === 'act').map((l) => l.id))
+			input.lineIds ?? (granted ? [...new Set([...granted.lineIds, ...actIds])] : actIds)
 		).filter((id) => byId.get(id)?.state !== 'committed');
 		if (selected.length === 0)
 			return fail(
@@ -430,7 +428,7 @@ export async function commitOrder(
 					).error
 				);
 		}
-		const inMandate = !external && lines.every((l) => l.state === 'eligible' && l.tier === 'act');
+		const inMandate = lines.every(actAlone);
 		const totalCents = lines.reduce((s, l) => s + l.lineCents!, 0);
 		let authority: Order['authority'];
 		if (inMandate) {
@@ -438,7 +436,7 @@ export async function commitOrder(
 				return fail(err('CAP_EXCEEDED', 'weekly cap', { sub: 'weekly' }).error);
 			authority = 'mandate';
 		} else {
-			if (!granted || !lines.every((l) => granted.lineIds.includes(l.id)))
+			if (!granted || !lines.every((l) => granted.lineIds.includes(l.id) || actAlone(l)))
 				return fail(
 					err('FORBIDDEN', 'these lines need a granted approval', { sub: 'approval_required' })
 						.error

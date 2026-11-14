@@ -46,9 +46,11 @@ describe('LineView on tool outputs', () => {
 			confirmedCover: { value: 0 },
 			nextAction: 'approve'
 		});
+		// Salmon is in the hotel's standing-order baseline, so it is not a new product: inside the mandate it needs
+		// no sign-off and goes straight to commit.
 		expect(at(plan, '462150').view).toMatchObject({
 			confirmedCover: { value: 20, unit: 'kg' },
-			nextAction: 'approve'
+			nextAction: 'commit'
 		});
 
 		const ham = at(plan, '462490');

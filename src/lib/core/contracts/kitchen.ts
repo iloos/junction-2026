@@ -64,6 +64,11 @@ export const Kitchen = z.object({
 		labels: z.array(z.string())
 	}),
 	mandate: Mandate,
-	factorSensitivity: z.record(z.string(), z.number().min(0).max(1))
+	factorSensitivity: z.record(z.string(), z.number().min(0).max(1)),
+	/**
+	 * The kitchen's standing-order baseline: products it orders in a normal week (scenario data until read from the
+	 * kitchen's Valio order template). Counts as ordered before for the never-delegate `new_sku` rule.
+	 */
+	usualProducts: z.array(ProductId).optional()
 });
 export type Kitchen = z.infer<typeof Kitchen>;
