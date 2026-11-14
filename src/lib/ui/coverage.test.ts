@@ -189,3 +189,26 @@ describe('lot step sentence', () => {
 		expect(lotSentence(undefined)).toBeNull();
 	});
 });
+
+describe('served basis', () => {
+	it('labels amounts on the served basis "kg served"', () => {
+		const v = f({
+			required: kg(18.9),
+			plannedKnown: kg(18.9),
+			excess: kg(0.6),
+			basis: 'served',
+			yield: 0.7
+		});
+		expect(neededVsBuying(v)).toEqual({
+			needed: '18.9 kg served',
+			buying: '19.5 kg served',
+			over: '0.6 kg served'
+		});
+		expect(coverageHeadline(v).text).toBe(
+			'18.9 kg served planned, known stock · +0.6 kg served over'
+		);
+		expect(dishStatus(f({ unresolved: kg(3), basis: 'served' })).text).toBe(
+			'3 kg served not covered'
+		);
+	});
+});

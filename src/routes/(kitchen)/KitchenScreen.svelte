@@ -815,8 +815,20 @@
 													? d.need.value
 													: fixed(d.need.value, d.need.value < 10 ? 2 : 1)}</span
 											>
-											{needUnit(d.need.unit)}
+											{needUnit(d.need.unit)}{coverage.get(d.needId)?.basis === 'served'
+												? ' to buy'
+												: ''}
 										</p>
+										{#if coverage.get(d.needId)?.basis === 'served'}
+											{@const fv = coverage.get(d.needId)!}
+											<!-- What reaches the plate (bought × yield): the amount rescues and cover are compared on. -->
+											<p class="text-meta text-ink-2">
+												<span class="mono"
+													>{fixed(fv.required.value, fv.required.value < 10 ? 2 : 1)}</span
+												>
+												{fv.required.unit} served
+											</p>
+										{/if}
 										{#if d.needFormula !== `${d.need.value} ${d.need.unit}`}<p
 												class="text-micro leading-snug text-ink-3"
 											>

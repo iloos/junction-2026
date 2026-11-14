@@ -4,7 +4,14 @@
 	 * mark; whatever packs add beyond the need spills past the mark, hatched. Data: FulfilmentView (server-derived).
 	 */
 	import type { FulfilmentView } from '$lib/core/contracts';
-	import { BUCKETS, EXCESS, coverageHeadline, coverageSentence, segments } from './coverage';
+	import {
+		BUCKETS,
+		EXCESS,
+		coverageHeadline,
+		coverageSentence,
+		needUnit,
+		segments
+	} from './coverage';
 
 	let { f, compact = false }: { f: FulfilmentView; compact?: boolean } = $props();
 
@@ -21,7 +28,7 @@
 			<span
 				class="seg {s.cls}"
 				style="width: {(s.width * 100).toFixed(2)}%"
-				title="{s.label}: {s.value} {f.required.unit} ({hint(s.key)})"
+				title="{s.label}: {s.value} {needUnit(f)} ({hint(s.key)})"
 			></span>
 		{/each}
 		<span class="mark" style="left: {(geo.requiredAt * 100).toFixed(2)}%" aria-hidden="true"></span>

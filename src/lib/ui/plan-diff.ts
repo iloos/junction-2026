@@ -3,6 +3,7 @@
  * (required amount), the touched lines (quantity, added, dropped), the plan total and the decisions left.
  */
 import type { Approval, Plan } from '$lib/core/contracts';
+import { needUnit } from './coverage';
 import { decisionsOf } from './decisions';
 
 export interface PlanDiff {
@@ -39,7 +40,7 @@ export function planDiff(
 						label: f.label,
 						before: o.required.value,
 						after: f.required.value,
-						unit: f.required.unit
+						unit: needUnit(f)
 					}
 				]
 			: [];
