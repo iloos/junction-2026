@@ -1,6 +1,6 @@
 import type { Llm } from '$lib/core/ports';
 import type { Env } from '$lib/server/auth';
-import { createLlm, GEMINI_LLM_MODEL, geminiKey, geminiLlm } from './index';
+import { createLlm, GEMINI_LLM_MODEL, geminiKey, geminiLlm, type ThinkingLevel } from './index';
 import { noTrace, type Trace } from './trace';
 
 /**
@@ -23,16 +23,34 @@ export interface LlmRoute {
 	provider: 'env' | 'gemini' | 'featherless';
 	/** Model id for the provider (Gemini only; Featherless reads FEATHERLESS_MODEL). */
 	model?: string;
-	/** Ceiling for this job, under the adapter's global ceiling. */
+	/** Ceiling for this job, under the adapter's global ceiling; includes thinking tokens. */
 	maxTokens: number;
+	/** Gemini thinking level; always set, since the model default (high) spends the budget on thoughts. */
+	thinking?: ThinkingLevel;
 }
 
+/**
+ * Measured per job on real inputs (docs/research/gemini-models.md): Flash-Lite at minimal thinking matched
+ * gemini-3.8-flash (low) and gemini-4-hydrogen (low) on parse, plan and explain at a third of the latency, so the
+ * interactive jobs stay on it. The menu proposal is the one job where Flash-Lite missed (8/10 vs 10/10 on the golden
+ * briefs), so it takes gemini-3.8-flash at low thinking with headroom for thoughts. 3.8-flash rejects `minimal`.
+ */
 export const LLM_ROUTES: Record<LlmJob, LlmRoute> = {
-	'agent.plan': { provider: 'env', model: GEMINI_LLM_MODEL, maxTokens: 600 },
-	'agent.review_rewrite': { provider: 'env', model: GEMINI_LLM_MODEL, maxTokens: 200 },
-	'request.parse': { provider: 'env', model: GEMINI_LLM_MODEL, maxTokens: 600 },
-	'menu.propose': { provider: 'env', model: GEMINI_LLM_MODEL, maxTokens: 1500 },
-	explain: { provider: 'env', model: GEMINI_LLM_MODEL, maxTokens: 400 }
+	'agent.plan': { provider: 'env', model: GEMINI_LLM_MODEL, thinking: 'minimal', maxTokens: 600 },
+	'agent.review_rewrite': {
+		provider: 'env',
+		model: GEMINI_LLM_MODEL,
+		thinking: 'minimal',
+		maxTokens: 200
+	},
+	'request.parse': {
+		provider: 'env',
+		model: GEMINI_LLM_MODEL,
+		thinking: 'minimal',
+		maxTokens: 600
+	},
+	'menu.propose': { provider: 'env', model: 'gemini-3.8-flash', thinking: 'low', maxTokens: 4000 },
+	explain: { provider: 'env', model: GEMINI_LLM_MODEL, thinking: 'minimal', maxTokens: 400 }
 };
 
 export interface LlmRouter {
@@ -60,7 +78,7 @@ export function createLlmRouter(
 			const gk = geminiKey(env);
 			const base =
 				provider === 'gemini' && gk
-					? geminiLlm(gk, jobTrace, route.model ?? GEMINI_LLM_MODEL)
+					? geminiLlm(gk, jobTrace, route.model ?? GEMINI_LLM_MODEL, route.thinking ?? 'minimal')
 					: createLlm({ ...env, LLM_PROVIDER: provider }, jobTrace);
 			const llm: Llm = {
 				generate: (req) =>
