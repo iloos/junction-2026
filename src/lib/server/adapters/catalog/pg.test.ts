@@ -58,7 +58,7 @@ async function seed(db: AnyDb, file: Catalog & { products: Map<string, Product> 
 describe.skipIf(!existsSync(join(DIR, 'normalized', 'products.json')))(
 	'Postgres catalog matches the file catalog',
 	() => {
-		const file = createValioCatalog({ dir: DIR });
+		const file = createValioCatalog({ dir: DIR, retrieval: 'id' });
 		let pg: Catalog;
 		let db: AnyDb;
 

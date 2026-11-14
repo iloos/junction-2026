@@ -93,3 +93,39 @@ describe('hybrid candidates', () => {
 		]);
 	});
 });
+
+describe('resolve (menu ingredient queries)', () => {
+	const all = [
+		p('1', 'Naudan jauheliha 17% 2 kg'),
+		p('2', 'Kuohukerma 1 l', { category: '10401', categoryGroup: '10' }),
+		p('3', 'Kevytmaito 1 l', { category: '10400', categoryGroup: '10' }),
+		p('4', 'Kevytmaito laktoositon 1 l', { category: '10400', categoryGroup: '10' })
+	];
+	const ix = new RetrievalIndex(all);
+
+	it('resolves a matching query, best first', () => {
+		const r = ix.resolve('naudan jauheliha');
+		expect(r.status).toBe('resolved');
+		if (r.status === 'resolved') expect(r.candidates[0].productId).toBe('1');
+	});
+
+	it('says which constraint failed when names match but the diet does not', () => {
+		const r = ix.resolve('kuohukerma', { diet: ['LACTOSE'] });
+		expect(r).toMatchObject({
+			status: 'unresolved',
+			reason: 'products match "kuohukerma" but none is lactose-free',
+			nearest: [{ productId: '2', failed: 'LACTOSE' }]
+		});
+		const ok = ix.resolve('laktoositon kevytmaito');
+		expect(ok.status === 'resolved' && ok.candidates.map((c) => c.productId)).toEqual(['4']);
+	});
+
+	it('stays unresolved instead of taking a weak substring hit', () => {
+		// "liha" is only part of the query: the mince is offered as nearest, never as the answer.
+		expect(ix.resolve('yksisarvisen liha')).toMatchObject({
+			status: 'unresolved',
+			nearest: [{ productId: '1', failed: 'match' }]
+		});
+		expect(ix.resolve('2 kg suomi')).toMatchObject({ status: 'unresolved' });
+	});
+});

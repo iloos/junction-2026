@@ -1,0 +1,105 @@
+{
+	"$comment": "Ingredient queries as a menu or request would send them (Finnish, as the request lexicon does). `accept` is a regex over the product's Finnish name for the product type the query means; `reject` excludes look-alikes (ready dishes, flavoured or processed items). `expectEmpty` queries name nothing in the catalogue and must stay unresolved. Written by session 1f, 14 Nov 2026; regex-judged, so a precision figure is approximate.",
+	"k": 5,
+	"queries": [
+		{ "q": "voi", "accept": "(^| )voi( |$)", "reject": "voileip|kaali|voitaikina|voitorttu" },
+		{
+			"q": "maito",
+			"accept": "maito",
+			"reject": "suklaa|kaakao|jauhe|kahvi|kaura|soija|manteli|kookos|juoma"
+		},
+		{
+			"q": "kuohukerma",
+			"accept": "kuohukerma|vispikerma",
+			"reject": "jäätelö|kakku|kastike|juusto"
+		},
+		{ "q": "ruokakerma", "accept": "ruokakerma", "reject": "juusto|sipuli|savujuusto|kastike" },
+		{ "q": "kananmuna", "accept": "kananmuna", "reject": "pasta|majonees|nuudeli|tagliatelle" },
+		{
+			"q": "peruna",
+			"accept": "peruna",
+			"reject": "lastu|sose|kiusaus|laatikko|salaatti|muusi|ranskalai|lohko|jauhe|rösti"
+		},
+		{ "q": "lanttu", "accept": "lanttu", "reject": "laatikko" },
+		{
+			"q": "naudan jauheliha",
+			"accept": "(naud|nauta).*jauhel|jauhel.*(naud|nauta)",
+			"reject": "kypsä|kastike|laatikko|vuoka|ruskistettu|paahdettu"
+		},
+		{
+			"q": "lohifilee",
+			"accept": "lohifilee|lohi.*filee",
+			"reject": "kirjolohi|savu|graavi|pasta|keitto|laatikko"
+		},
+		{
+			"q": "sipuli",
+			"accept": "sipuli",
+			"reject": "valkosipuli|kevätsipuli|marinoitu|paistettu|jauhe|rengas|keitto|kuivattu|paistosipuli"
+		},
+		{
+			"q": "porkkana",
+			"accept": "porkkana",
+			"reject": "laatikko|kakku|mehu|sose|raaste.*kaali|keitto"
+		},
+		{ "q": "vehnäjauho", "accept": "vehnäjauho", "reject": "gluteeniton|leipä" },
+		{
+			"q": "puuroriisi",
+			"accept": "puuroriisi|pyöreäjyväinen riisi",
+			"reject": "valmis|piirakka|puuro .*valmis"
+		},
+		{
+			"q": "tomaatti",
+			"accept": "tomaatti",
+			"reject": "kastike|murska|sose|ketsuppi|keitto|pyre|kuivattu|aurinko|tahna|pasta|säilyke|mehu"
+		},
+		{
+			"q": "kurkku",
+			"accept": "kurkku",
+			"reject": "suolakurkku|maustekurkku|etikka|säilyke|tzatziki"
+		},
+		{
+			"q": "sokeri",
+			"accept": "sokeri",
+			"reject": "sokeroitu|sokeriton|kakku|kuorrute|leivos|makeinen"
+		},
+		{
+			"q": "kinkku",
+			"accept": "kinkku",
+			"reject": "piirakka|pizza|kiusaus|kastike|makkara|sämpylä|patonki|leipä|toast"
+		},
+		{ "q": "sinappisilli", "accept": "sinappisilli", "reject": "" },
+		{
+			"q": "punajuuri",
+			"accept": "punajuuri",
+			"reject": "salaatti|mehu|rosolli|pikkelöity|etikka"
+		},
+		{
+			"q": "kaurajuoma",
+			"accept": "kaurajuoma",
+			"reject": "suklaa|kaakao|vanilja|mansikka|välipala"
+		},
+		{
+			"q": "maustamaton jogurtti",
+			"accept": "jogurtti",
+			"reject": "mansikka|vadelma|mustikka|vanilja|persikka|kreikkal.*hunaja"
+		},
+		{ "q": "emmental", "accept": "emmental", "reject": "" },
+		{
+			"q": "spagetti",
+			"accept": "spagetti|spaghetti",
+			"reject": "bolognese|kastike|lihavuoka|kurpitsa|mauste|vuoka|pata"
+		},
+		{
+			"q": "kahvi",
+			"accept": "kahvi",
+			"reject": "suodatinpaper|kerma|leivos|kakku|kahviin|kaurajuoma|kuppi|muki"
+		},
+		{
+			"q": "kanan rintafilee",
+			"accept": "(kanan|broilerin|kananpojan).*rintafilee|rintafilee",
+			"reject": "paneroitu|leivitetty|kypsä|grillattu|tempura|marinoitu"
+		},
+		{ "q": "yksisarvisen liha", "expectEmpty": true },
+		{ "q": "xyzzy kvanttikvarkki", "expectEmpty": true }
+	]
+}

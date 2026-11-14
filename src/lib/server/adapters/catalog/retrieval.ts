@@ -2,13 +2,17 @@
  * Substitute candidate retrieval shared by the file and Postgres catalogues, so both return the same pool in the
  * same order. Recall only: ranking, hard constraints and fit are judged later (core/rank, validator, Decide).
  *
- * Modes:
- * - `id` (default): Valio's rules, then the same category + temperature class + net unit in product-id order.
- * - `hybrid` (`CATALOG_RETRIEVAL=hybrid`): Valio's rules, then products whose Finnish/English name shares a content
+ * Candidate modes (`CATALOG_RETRIEVAL`):
+ * - `hybrid` (default): Valio's rules, then products whose Finnish/English name shares a content
  *   word with the target (Finnish compound heads count: "palvikinkku" matches "juhlakinkku" on "kinkku"), weighted by
  *   how rare the word is, with small bonuses for the same category and temperature class. A candidate must clear a
  *   minimum match; the same category alone is not enough. Dietary properties the target has (lactose-free,
  *   gluten-free) are kept as a hard filter.
+ * - `id` (escape hatch): Valio's rules, then the same category + temperature class + net unit in product-id order.
+ *
+ * Free-text search (`CATALOG_SEARCH`): `id` (default) is the substring AND match in product-id order; `hybrid` ranks
+ * by the same scoring with a minimum match. `resolve()` (menu ingredients) is always hybrid and says why a query
+ * stayed unresolved.
  */
 import type { Product, ProductId } from '$lib/core/contracts';
 
@@ -37,11 +41,38 @@ export type RetrievalProduct = Pick<
 	| 'dataQualityFlags'
 > & { netUnit?: string };
 
+const env = (k: string) => (typeof process !== 'undefined' ? process.env?.[k] : undefined);
+
+/** Substitute candidates: hybrid unless `CATALOG_RETRIEVAL=id`. */
 export function retrievalModeFromEnv(): RetrievalMode {
-	return (typeof process !== 'undefined' && process.env?.CATALOG_RETRIEVAL) === 'hybrid'
-		? 'hybrid'
-		: 'id';
+	return env('CATALOG_RETRIEVAL') === 'id' ? 'id' : 'hybrid';
 }
+
+/**
+ * Free-text search: substring unless `CATALOG_SEARCH=hybrid`. The request parser and the routine agent still pick
+ * from substring order (their tests pin those picks), so hybrid search is opt-in until they adopt it.
+ */
+export function searchModeFromEnv(): RetrievalMode {
+	return env('CATALOG_SEARCH') === 'hybrid' ? 'hybrid' : 'id';
+}
+
+/** A free-text ingredient query resolved against the catalogue, or the reason it could not be. */
+export type Resolution =
+	| { status: 'resolved'; query: string; candidates: { productId: ProductId; score: number }[] }
+	| {
+			status: 'unresolved';
+			query: string;
+			reason: string;
+			/** Closest products and what they failed (`match` = name too far; a diet flag = that property missing). */
+			nearest: { productId: ProductId; failed: string }[];
+	  };
+
+/** Resolution of menu ingredient queries; both catalogue adapters implement it (proposed for the Catalog port). */
+export interface Resolver {
+	resolve(query: string, opts?: { limit?: number; diet?: string[] }): Promise<Resolution>;
+}
+
+const DIET_WORD: Record<string, string> = { LACTOSE: 'lactose-free', GLUTEN: 'gluten-free' };
 
 /** Words that describe packaging, grade, origin or trade, not what the product is. */
 const STOP = new Set(
@@ -113,6 +144,8 @@ export function wordSim(a: string, b: string): number {
 	if (a === b) return 1;
 	const [s, l] = a.length <= b.length ? [a, b] : [b, a];
 	if (s.length >= 4 && l.endsWith(s)) return 0.8;
+	// A three-letter compound head still names the kind (meijerivoi is butter), as weaker evidence.
+	if (s.length === 3 && l.length >= 6 && l.endsWith(s)) return 0.6;
 	let suf = 0;
 	while (suf < s.length && a[a.length - 1 - suf] === b[b.length - 1 - suf]) suf++;
 	if (suf >= 5) return 0.6;
@@ -161,12 +194,89 @@ export class RetrievalIndex {
 		return Math.log(1 + this.items.length / (1 + (this.df.get(w) ?? 0)));
 	}
 
-	/** Non-rule candidates for `target`, best first (ties by product id). */
-	similar(target: RetrievalProduct, exclude: Set<ProductId>, limit: number): Candidate[] {
+	private queryTarget(query: string): RetrievalProduct {
+		return {
+			productId: '',
+			nameFi: query,
+			category: '',
+			categoryGroup: '',
+			temperatureClass: 'unknown',
+			isFood: true,
+			freeFrom: [],
+			dataQualityFlags: []
+		};
+	}
+
+	/**
+	 * Products matching a free-text query, best first. Only products that clear the minimum match are returned, so
+	 * an empty result means "unresolved", never "take the nearest substring hit" ("voi" is butter, not savoy cabbage).
+	 */
+	search(query: string, limit: number): ProductId[] {
+		return this.similar(this.queryTarget(query), new Set(), limit, { minLex: 0.5 }).map(
+			(c) => c.productId
+		);
+	}
+
+	/**
+	 * Resolve an ingredient query. Dietary requirements come from the query's words ("laktoositon kerma") and from
+	 * `diet` (e.g. ['LACTOSE'] for a lactose-free menu). Unresolved results say which bar was not cleared.
+	 */
+	resolve(query: string, o: { limit?: number; diet?: string[] } = {}): Resolution {
+		const t = this.queryTarget(query);
+		const limit = o.limit ?? 5;
+		if (contentWords(query).length === 0)
+			return {
+				status: 'unresolved',
+				query,
+				reason: 'the query has no product words (only sizes, origins or brand words)',
+				nearest: []
+			};
+		const diet = new Set([...dietOf(t, true), ...(o.diet ?? [])]);
+		const hits = this.similar(t, new Set(), limit, { minLex: 0.5, diet });
+		if (hits.length)
+			return {
+				status: 'resolved',
+				query,
+				candidates: hits.map((c) => ({ productId: c.productId, score: c.score ?? 0 }))
+			};
+		if (diet.size) {
+			const any = this.similar(t, new Set(), 3, { minLex: 0.5, diet: new Set() });
+			if (any.length) {
+				const need = [...diet].map((f) => DIET_WORD[f] ?? f).join(' and ');
+				return {
+					status: 'unresolved',
+					query,
+					reason: `products match "${query}" but none is ${need}`,
+					nearest: any.map((c) => ({ productId: c.productId, failed: [...diet].join(',') }))
+				};
+			}
+		}
+		const partial = this.similar(t, new Set(), 3, { minLex: 0.25, diet: new Set() });
+		return {
+			status: 'unresolved',
+			query,
+			reason: partial.length
+				? `no product name matches "${query}" closely enough; the nearest share only part of it`
+				: `no product name matches "${query}"`,
+			nearest: partial.map((c) => ({ productId: c.productId, failed: 'match' }))
+		};
+	}
+
+	/**
+	 * Non-rule candidates for `target`, best first (ties by product id). `minLex` is the minimum name match; `diet`
+	 * overrides the dietary properties taken from the target's name.
+	 */
+	similar(
+		target: RetrievalProduct,
+		exclude: Set<ProductId>,
+		limit: number,
+		o: { minLex?: number; diet?: Set<string> } = {}
+	): Candidate[] {
+		const minLex = o.minLex ?? 0.25;
 		const tWords = contentWords(`${target.nameFi} ${target.nameEn ?? ''}`, target.brand);
 		const weights = tWords.map((w) => this.idf(w));
 		const total = weights.reduce((a, b) => a + b, 0) || 1;
-		const diet = dietOf(target, true);
+		const diet = o.diet ?? dietOf(target, true);
 		const scored: { id: ProductId; score: number; reason: CandidateReason }[] = [];
 		for (const { p, words } of this.items) {
 			if (exclude.has(p.productId)) continue;
@@ -183,7 +293,7 @@ export class RetrievalIndex {
 				lex += best * weights[i];
 			}
 			lex /= total;
-			if (lex < 0.25) continue;
+			if (lex < minLex) continue;
 			let cov = 0;
 			let cTotal = 0;
 			for (const w of words) {
@@ -197,7 +307,7 @@ export class RetrievalIndex {
 			const extra = words.filter(
 				(w) => PROCESSED.test(w) && !tWords.some((t) => wordSim(t, w) >= 0.8)
 			).length;
-			const sameCat = p.category === target.category;
+			const sameCat = target.category !== '' && p.category === target.category;
 			if (diet.size > 0) {
 				const d = dietOf(p, false);
 				if ([...diet].some((f) => !d.has(f))) continue;
@@ -206,7 +316,11 @@ export class RetrievalIndex {
 				0.7 * lex +
 				0.3 * cov -
 				0.3 * Math.min(extra, 2) +
-				(sameCat ? 0.2 : p.categoryGroup === target.categoryGroup ? 0.08 : 0) +
+				(sameCat
+					? 0.2
+					: target.categoryGroup && p.categoryGroup === target.categoryGroup
+						? 0.08
+						: 0) +
 				(p.temperatureClass === target.temperatureClass ? 0.05 : 0);
 			scored.push({ id: p.productId, score, reason: sameCat && lex < 0.5 ? 'category' : 'name' });
 		}
