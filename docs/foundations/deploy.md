@@ -18,11 +18,11 @@ About $0.24/h in total. Plans were raised on Sat 14 Nov ~05:00 with the user's a
 - Postgres reachable → `{"db":"ok","latencyMs":31,"tls":"verified"}`, 200.
 - Postgres configured but failing → `{"db":"error","error":"..."}`, **503**.
 
-`EXPECT_DB=ok scripts/deploy/smoke.sh <url>` checks it. With `SMOKE_KEY` (the `ws-smoke` key, below) it also starts `ws-smoke` over and runs the commit race check `scripts/smoke-race.mjs`: 4 commits with one idempotency key must give one receipt, 3 with different keys exactly one.
+`EXPECT_DB=ok scripts/deploy/smoke.sh <url>` checks it. `SMOKE_UI=1` adds the prod UI checks (`evals/ui`: one scenario clock on every surface, the order summary across a reload, an agent's approval link; about 20 s headless). With `SMOKE_KEY` (the `ws-smoke` key, below) it also starts `ws-smoke` over and runs the commit race check `scripts/smoke-race.mjs`: 4 commits with one idempotency key must give one receipt, 3 with different keys exactly one.
 
 ```sh
 # From the main checkout; the key is read from .env without printing it
-SMOKE_KEY="$(grep -E '^SMOKE_KEY=' .env | cut -d= -f2-)" EXPECT_DB=ok scripts/deploy/smoke.sh https://widely-many-scorpion.eur-1.aiven.app
+SMOKE_KEY="$(grep -E '^SMOKE_KEY=' .env | cut -d= -f2-)" SMOKE_UI=1 EXPECT_DB=ok scripts/deploy/smoke.sh https://widely-many-scorpion.eur-1.aiven.app
 ```
 
 ## Database connection ([client.ts](../../src/lib/server/db/client.ts))
