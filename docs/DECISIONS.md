@@ -108,3 +108,20 @@ D8 preferred the seed's recipe over a product of unknown supply only when every 
 **Staged (user, same night):** stage 1 lands the current request and chat rework as they are (B: date control, edits, dish path, over-limit, personalisation on /request, with `interpretDish` and the pipeline exposed as server functions; E: chat bugs, calling `interpretDish`), plus the establishment picker and joinable kitchens. Stage 2, the merge (cards in chat, the home's three states, /request redirects), starts once B's and E's stage-1 work is on main. Ops and the landing page proceed in parallel.
 
 **Reopen if:** stage 2 isn't green and deployed by Sun 04:00. Then ship the picker plus the chat-first home, and keep /request linked from the chat cards.
+
+### D16 · One requirement vocabulary and one evaluator for every hard constraint (lead, 14 Nov night)
+**Choice:** the four layers stay as they are:
+- **authority:** the Mandate (caps, never-delegate, version);
+- **hard constraints:** kitchen-wide `Kitchen.constraints` plus per-need `Need.requirements`;
+- **soft preferences:** weights and ranking presets, which rank and never authorise;
+- **words:** the mandate's words, the establishment notes and what the chef says in chat. Words grant nothing until the chef confirms a rule.
+
+What changes is that hard constraints get **one vocabulary and one evaluator in core**:
+- `NeedRequirements` grows the missing terms: diet (vegetarian, vegan), excludes (meat, fish, pork, milk, gluten cereals), plus the existing freeFrom, origin and labels.
+- One pure `meets(product, requirements, kitchenConstraints) → { ok | unknown | no, why }` serves ranking, the validator (quote and commit), the request lookup filter, the substitutes and the UI's diet marks.
+- A dish's diet codes (G, L, VL, M, VEG, VE) compile into requirements on each of its needs.
+- An unknown answer (no allergen or diet record) is never "ok": it holds per the kitchen's `unknownCounts`.
+
+**Why:** today three places interpret diet separately: the UI marks (lib/ui/diet.ts), the request filter (server/request filterHits, B's meatContradiction) and the core requirements (freeFrom/origin/labels only). Dish diet codes are display-only, which is how a vegetarian dish was substituted with meatballs on prod. The authority model and the single commit gate are sound. The vocabulary under them was too narrow and was enforced at the edges.
+
+**Reopen if:** a constraint can't be stated as a product predicate (e.g. a per-order mix such as "75% beef"). Those stay as quantities on needs, not requirements.
