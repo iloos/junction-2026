@@ -145,10 +145,13 @@ export const LineView = z.object({
 	reviewable: z.boolean(),
 	/** Can be committed now: in the mandate, or covered by a granted approval, and nothing blocks it. */
 	committable: z.boolean(),
-	/** Quantity backed by known stock (sales units; kg for KG-sold products). */
-	confirmedCover: Measure,
+	/**
+	 * Quantity Valio states stock for (sales units; kg for KG-sold products). Known stock is not supplier-confirmed:
+	 * only a receipt confirms (FulfilmentView.supplierConfirmed) (D10).
+	 */
+	knownStockCover: Measure,
 	/** Quantity ordered or to be ordered whose supply is unknown (Terminal), never counted as cover. */
-	unconfirmedCover: Measure,
+	unknownStockCover: Measure,
 	/** What the line's sales quantity is physically (13 ST of ham ≈ 26 kg net), when the pack content is known. */
 	physical: Measure.optional(),
 	/** Price per sales unit, as Valio sells it (€/ST, €/KI, €/KG). */
