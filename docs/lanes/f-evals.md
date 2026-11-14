@@ -1,26 +1,35 @@
 # Lane: f-evals (Track F: evals and the merge gate)
 
-**Owner:** peer session (f-evals). **Branch:** `lane/f-evals`, worktree `junc26-lanes/f-evals`, port 5179.
-**Owned paths:** `evals/**`, `src/lib/server/evals/**`, `scripts/merge-gate.mjs` (and other merge-gate scripts).
-**Context:** SYNTHESIS F24, §5 Track F, §7; evals/README; R5 reviews (ROUND5-DATAFLOW-AND-CORRECTNESS, ROUND5-DOMAIN-AND-PERSISTENCE).
+**Branch:** `lane/f-evals` · **Worktree:** `../junc26-lanes/f-evals` · **Dev port:** 5179 · **Owner:** session 91
 
-## Tasks
-1. [x] Merge gate `node scripts/merge-gate.mjs`: check → lint → test:unit --run → eval → eval:agent, stops on first red, `--from <step>` / `--only a,b`. Forces `LLM_PROVIDER=fixture`.
-2. [x] Evals for shipped behaviour (s6–s11): hard ceiling / over_hard_limit, recall hold + void, usualProducts baseline / new_sku, scenario dates (cut-off Tue 8 Dec 15:00, delivery Thu 10 Dec), find_substitutes preview vs apply, sandbox reset.
-3. [x] R5 domain journeys (r5-*) as expected-fail evals tagged F5, F8, F9, F10, F11, F22.
-4. [x] Cross-entry intent fidelity (/request, REST place_order, agent → same basket); expected-fail until F3/F4.
-5. [x] Opt-in live-planner suite (AGENT_PLANNER=llm, 3 repeats).
-6. [x] pg race in deploy smoke: `scripts/smoke-race.mjs`, called by smoke.sh (9c, lane/g2) after resetting ws-smoke when SMOKE_KEY is set. Live once the user adds the MCP_KEYS smoke entry on Aiven.
-7. [x] Round-6 foundation evals r6-1…r6-5 (expectFail R6-lineage, R6-fulfilment, R6-units, R6-diff).
+## Dispatch
+- Track F (SYNTHESIS §5, §8). Owned: `evals/**` (except `evals/retrieval/**`, 1f), `src/lib/server/evals/**`, `scripts/merge-gate.mjs`, `scripts/smoke-race.mjs`.
+- Acceptance: `pnpm gate` green on main; every open `expectFail` names an owner and a finding id; no eval repeats a unit test on the same path.
 
-## Needs
-- 8d/A: fix `NEW-apply-wipe` (substitutes.ts:286: an apply that finds nothing deletes an existing rescue; s10) and `F32-total` (s6).
-- 9c/G: `F1-idem` (reset leaves idempotency rows; s11).
-- `package.json` (lead): add `"eval:live": "node --env-file=.env node_modules/vitest/vitest.mjs run --project server src/lib/server/evals/live-planner.test.ts"` (run with AGENT_PLANNER=llm LLM_PROVIDER=gemini).
-- `package.json` (lead): add `"gate": "node scripts/merge-gate.mjs"` so it is `pnpm gate`.
+## State
+- **Gate** `pnpm gate` (`scripts/merge-gate.mjs`): check → lint → checker self-test → test:unit (one retry, reported FLAKY) → eval → eval:agent; stops on the first red; `--from` / `--only`. Forces `LLM_PROVIDER=fixture`. A machine-wide lock (`os.tmpdir()/junc26-merge-gate.lock`, pid + worktree, stale after a dead pid or 45 min) lets one gate run tests at a time.
+- **Suites** (all in `pnpm eval`, PGlite, no network): scenarios s1–s5, s7, r5-f9, r5-f10, r6-1…5 · fidelity (same order through REST, `/request`, agent; 5 cases) · surfaces (`get_plan` FulfilmentView vs kitchen dish status vs Ops coverage, 3 plan states) · golden briefs (2 open-event briefs through `/request`).
+- **Live planner** `pnpm eval:live` (opt-in, `AGENT_PLANNER=llm` + a provider): agent goals and fidelity cases × `LIVE_REPEATS`; safety asserts, task pass rate reported to `scratch/`. Smoke: g2 and 500 g butter pass live.
+- **Deploy race** `scripts/smoke-race.mjs`, run by `scripts/deploy/smoke.sh` when `SMOKE_KEY` is set (key `smoke:kitchen_agent:<key>:ws-smoke` in MCP_KEYS). Passed on prod Sat 14 Nov 05:51.
+- Removed today as unit-test duplicates: s6, s8, s9, s10, s11, r5-f5, r5-f8, r5-f11, r5-f22 (covered by store tests ceiling, baseline, dates, rescue, reset, pool, authority, zero).
 
-## Report
-- Sat 14 Nov 04:19 · gate script done, green on ddf874c (~100 s) · stubbed none · needs pnpm gate alias · ready to merge yes
-- Sat 14 Nov · s6–s11 + expectFail + recall/reset adapter steps + gate retry/self-test; gate green on 91f034a · stubbed none · needs fixes above · ready to merge yes
-- Sat 14 Nov · r5 journeys (F5 F8 F9 F10 F11 F22) + r6-1…5, all reproduce as expectFail; gate green except main's own lint error in tools-next.ts · stubbed none · needs s4 edited with F5 · ready to merge yes
-- Sat 14 Nov · fidelity suite (5 cases), live-planner diagnostics (smoke: g2 and butter-grams pass live), gate lock · stubbed none · needs eval:live alias · ready to merge yes
+## Open
+| expectFail | where | owner |
+|---|---|---|
+| F9 commit after cut-off | `r5-f9-cutoff-at-commit` | 8d |
+| R6-lineage | `r6-1-lineage` | menu track (A4/B) |
+| R6-diff `lastVoided` | `r6-5-perturbed-requirement` | 8d |
+| F12-ops coverage | `surfaces.test.ts` | 9c |
+| F4-pack 500 g → 4 kg | fidelity `butter-grams-weekday` | E |
+| A4 held plan from a brief | `briefs/golden.json` | menu track |
+
+- Review on/off comparison: waits for E's `REVIEW=1`; then the same trials both ways via `eval:live` (pass rate and tokens per arm).
+
+## Traps
+- An `expectFail` entry hides any other mistake in the same expectation; probe today's state before writing one.
+- Expectations are properties (category, `notChosen`, `excludes`), never today's first search hit.
+- Gate gaps: `pnpm build` and the Playwright e2e (`*.e2e.ts`, 2 files) are not in the gate; the client (browser) project has no tests. `test:pg`, `test:live`, `eval:live` are opt-in by design. Evals also run inside `test:unit`, so they run twice per gate.
+- Running the app locally on PGlite: `pnpm build`, then `node build` with `DATABASE_URL` unset (the worktree `.env` points at Aiven).
+
+## Resume
+Rebase on main, `pnpm gate`. When a lane lands, its flipped `expectFail` keys go red: delete the entry (or ask the lane to) and check what else the merge needs an eval for.

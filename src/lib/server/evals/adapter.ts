@@ -3,8 +3,7 @@
  * (createHandlers), then the end state assembled from the op log. Histories (line/plan/approval states) come from
  * replaying the persisted ops through applyOps, so they show exactly what the store recorded.
  */
-import { and, asc, eq, ne } from 'drizzle-orm';
-import { clearIdempotency } from '$lib/server/demo/idempotency';
+import { and, asc, eq } from 'drizzle-orm';
 import {
 	SCOPES_BY_ACTOR,
 	toolSchemas,
@@ -36,7 +35,7 @@ type ProposeSubstituteOp = Extract<OpEnvelope['op'], { type: 'ProposeSubstitute'
 
 export async function playScenario(s: Scenario): Promise<EndState> {
 	const valioCallIds: string[] = [];
-	/** Ports for one run; `reset` builds the next run's on the same database, as the sandbox reset does. */
+	/** Ports for the scenario's run on a fresh PGlite, with every Valio offers call recorded. */
 	const open = async (o: Parameters<typeof createDbPorts>[0] = {}) => {
 		const e = await createDbPorts({ now: s.clock, ...o });
 		const offers = e.ports.catalog.offers.bind(e.ports.catalog);
@@ -50,11 +49,10 @@ export async function playScenario(s: Scenario): Promise<EndState> {
 		};
 		return e;
 	};
-	let env = await open();
+	const env = await open();
 	env.overlay.clear();
-	let ports = env.ports;
-	let h: ToolHandlers = createHandlers(ports);
-	let runs = 1;
+	const ports = env.ports;
+	const h: ToolHandlers = createHandlers(ports);
 	const ctx = (kind: Kind): CallContext => ({
 		workspaceId: env.workspaceId,
 		runId: env.runId,
@@ -143,11 +141,7 @@ export async function playScenario(s: Scenario): Promise<EndState> {
 					productIds: inp.productIds,
 					...(inp.deliverBy ? { deliverBy: inp.deliverBy } : {})
 				});
-				record(i, step, r, {
-					closingTimes: r.ok
-						? r.value.offers.flatMap((o) => o.availability.closingTime ?? [])
-						: undefined
-				});
+				record(i, step, r);
 				if (r.ok)
 					for (const id of r.value.notFound)
 						attempts.push({
@@ -226,8 +220,7 @@ export async function playScenario(s: Scenario): Promise<EndState> {
 					...(r.ok
 						? {
 								applied: r.value.applied,
-								chosen: r.value.chosen.map((l) => l.productId),
-								kind: r.value.kind
+								chosen: r.value.chosen.map((l) => l.productId)
 							}
 						: {})
 				});
@@ -288,16 +281,6 @@ export async function playScenario(s: Scenario): Promise<EndState> {
 				// Move the simulator clock (handlers read ports.clock on every call).
 				const t = new Date(inp.at);
 				ports.clock = { now: () => t };
-				break;
-			}
-			case 'reset': {
-				// A fresh run on the same database and workspace; the old run's ops stay for audit.
-				runs++;
-				await clearIdempotency(env.db, env.workspaceId); // as demo/reset.ts resetDemoRun does
-				env = await open({ db: env.db, runId: `run-eval-${runs}`, overlay: env.overlay });
-				ports = env.ports;
-				h = createHandlers(ports);
-				planKeys.clear();
 				break;
 			}
 			default:
@@ -371,7 +354,6 @@ export async function playScenario(s: Scenario): Promise<EndState> {
 				historyReasons: lineHistory.get(l.id)?.reasons,
 				pickable: l.state === 'eligible' || l.state === 'held',
 				substituteFor: l.substituteFor,
-				closingTime: l.offer?.availability.closingTime ?? undefined,
 				labels:
 					a?.provenance.source === 'simulator' ? [`simulated: ${a.provenance.note ?? ''}`] : []
 			};
@@ -487,12 +469,6 @@ export async function playScenario(s: Scenario): Promise<EndState> {
 				productIds: newest!.lines.filter((l) => ap.lineIds.includes(l.id)).map((l) => l.productId)
 			}
 		: null;
-	const previousRunOps = (
-		await env.db
-			.select({ seq: schema.ops.seq })
-			.from(schema.ops)
-			.where(and(eq(schema.ops.workspaceId, env.workspaceId), ne(schema.ops.runId, env.runId)))
-	).length;
 
 	return {
 		lines,
@@ -523,17 +499,6 @@ export async function playScenario(s: Scenario): Promise<EndState> {
 		recomputeMs,
 		approval,
 		fulfilment,
-		lastVoided,
-		orderLines: Object.values(final.orders).flatMap((o) =>
-			o.lines.map((l) => ({
-				productId: l.productId,
-				authority: !l.authority
-					? ('unrecorded' as const)
-					: l.authority === 'mandate'
-						? ('mandate' as const)
-						: ('approval' as const)
-			}))
-		),
-		previousRunOps
+		lastVoided
 	};
 }

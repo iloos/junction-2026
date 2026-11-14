@@ -1,0 +1,43 @@
+{
+	"$comment": "Golden open-event briefs through /request (runRequest, fixture parser): the chef's words, then each brief question answered from `answers` (by field), then the planning the menu track adds. Ends in a held plan where every course is present, every explicit diet is kept and every unresolved ingredient is visible. Plan keys are expectFail until A4 (proposal → review → plan_event{proposal}). Runner: src/lib/server/evals/briefs.test.ts.",
+	"briefs": [
+		{
+			"id": "five-star-five-course-50",
+			"kitchen": "k-hotel",
+			"text": "5-star 5-course dinner for 50",
+			"answers": {
+				"date": "2026-12-19",
+				"serviceStyle": "plated",
+				"courses": 5,
+				"dietary": ["lactose-free", "vegetarian:6"],
+				"budget": 0
+			},
+			"expect": {
+				"guests": 50,
+				"date": "2026-12-19",
+				"courses": 5,
+				"dietary": ["lactose-free", "vegetarian:6"],
+				"plan": { "dishesAtLeast": 5 }
+			},
+			"expectFail": { "A4": ["plan"] }
+		},
+		{
+			"id": "christmas-dinner-50-diets-typed",
+			"kitchen": "k-hotel",
+			"text": "Christmas dinner for 50 on 20 December, 4 lactose-free and 2 vegetarians",
+			"answers": {
+				"serviceStyle": "buffet",
+				"courses": 4,
+				"dietary": ["gluten-free"],
+				"budget": 0
+			},
+			"expect": {
+				"guests": 50,
+				"date": "2026-12-20",
+				"dietary": ["lactose-free", "vegetarian"],
+				"plan": { "dishesAtLeast": 4 }
+			},
+			"expectFail": { "A4": ["plan"] }
+		}
+	]
+}
