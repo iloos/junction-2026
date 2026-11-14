@@ -140,27 +140,54 @@ test('a reset in another tab brings this tab back to the start, without a reload
 });
 
 test('in a shared room the stream follows that room, not the own sandbox', async ({ browser }) => {
+	// D24: a visitor joins the room as their own store (no seeded event there). Tab A orders through the dock; tab B,
+	// the same browser on the same room, must show that order live, without a reload.
 	test.setTimeout(240_000);
 	const ctx = await browser.newContext();
 	const a = await ctx.newPage();
 	await enterKitchen(a, '/?ws=ws-judges');
-	const start = a.getByRole('button', { name: 'Plan the event' });
-	await a.locator('#task-h').or(start).first().waitFor({ timeout: 60_000 });
-	if (await start.isVisible()) await start.click();
-	await expect(a.locator('#task-h')).toBeVisible({ timeout: 120_000 });
 	const b = await ctx.newPage();
 	await enterKitchen(b, '/?ws=ws-judges');
-	await expect(b.locator('#task-h')).toBeVisible({ timeout: 120_000 });
 	await b.waitForTimeout(1500);
+	expect(
+		await b.getByText(/lactose-free milk|laktoositon/i).count(),
+		'tab B starts without the order'
+	).toBe(0);
 
+	const dock = a.locator('aside[aria-label="Agent chat"]');
+	await expect(async () => {
+		await a.getByRole('button', { name: 'Ask the agent' }).click();
+		await expect(dock).toBeVisible({ timeout: 1000 });
+	}).toPass({ timeout: 30_000 });
+	await dock.locator('textarea').fill('10 l lactose-free milk for Friday');
+	await dock.locator('textarea').press('Enter');
 	await a
-		.getByRole('button', { name: /^Show details:/ })
-		.nth(1)
-		.click();
-	await a
-		.getByRole('button', { name: /^More / })
-		.last()
-		.click();
-	await expect(b.getByText(/by you in another tab/i).first()).toBeVisible({ timeout: 20_000 });
+		.getByText(/^Working\b.*…$/)
+		.first()
+		.waitFor({ state: 'detached', timeout: 120_000 })
+		.catch(() => undefined);
+	const said = (await dock.innerText()).slice(-600);
+	const live = await b
+		.getByText(/lactose-free milk|laktoositon/i)
+		.first()
+		.waitFor({ timeout: 60_000 })
+		.then(() => true)
+		.catch(() => false);
+	// When the live update fails, a reload tells a stream fault (shows after reload) from a Kitchen that never shows
+	// the dock's plan at all (D23).
+	let afterReload: boolean | null = null;
+	if (!live) {
+		await b.reload();
+		afterReload = await b
+			.getByText(/lactose-free milk|laktoositon/i)
+			.first()
+			.waitFor({ timeout: 20_000 })
+			.then(() => true)
+			.catch(() => false);
+	}
+	expect(
+		live,
+		`tab B never showed tab A's order live (after a reload: ${afterReload}); tab A's dock ended: ${said}`
+	).toBe(true);
 	await ctx.close();
 });
