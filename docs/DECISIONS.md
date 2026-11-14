@@ -210,3 +210,12 @@ A visitor's own sandbox is a durable workspace, not a demo session. What they cr
 **Why:** the user: let people create something that stays, jump back into their workspace, make more baskets and order; it also makes the mobile link and the MCP link mean something.
 
 **Reopen if:** a deploy, a reset or the visitor cap loses a visitor's own kitchens, or one door shows kitchens another door doesn't.
+
+### D27 · A stock model inside the simulator, not a separate backend or a scraped copy of Valio (user + lead, 14 Nov 23:30)
+Valio's availability is a static snapshot (re-probe, valio-data.md), so every movement is ours. We add a pure stock model in core (`src/lib/core/stock/`): per product and delivery day, the level starts from Valio's own answer (cached, fetched only for products a plan needed), then moves by rules we can state: every kitchen's committed orders drain it, restocks arrive on the product's logistic rhythm (warehouse items on Valio's delivery days, supplier items with their lead time), and scenario events (a shortage spike, a festive demand bump from the forecast) shift it. Seeded and deterministic, so a demo replays the same; every level carries its source (Valio, simulated drain, simulated restock, scenario). It feeds Ops' forecast ("where stock will run short", moment 4) and, later, the contention overlay. Products never fetched get no invented level: they stay "no stock info".
+
+No separate service and no bulk scrape: Valio's brief says "query the APIs only when needed" (a judged criterion), and a second backend is a second deploy six hours before the freeze.
+
+**Why:** the user wants realistic stock that moves (restocks, shortage spikes, history) and a layer we control like a signal generator.
+
+**Reopen if:** the model needs data we can't get without bulk calls, or two lanes need to write stock rules at once.
