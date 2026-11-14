@@ -19,7 +19,7 @@ export interface ProposeMenuOutput {
 }
 
 export interface ProposeMenuDeps {
-	ports: { menus?: MenuStore; catalog: Pick<Catalog, 'resolve'>; clock: Clock };
+	ports: { menus?: MenuStore; catalog: Pick<Catalog, 'resolve' | 'get'>; clock: Clock };
 	/** The model for this caller, or null for the team templates. */
 	llm?: (ctx: CallContext) => Llm | null;
 }
