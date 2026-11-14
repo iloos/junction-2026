@@ -6,6 +6,11 @@
 import factorsSeed from '../../../fixtures/seeds/calendar-factors.json';
 import {
 	buildCalendar,
+	buildPlanEvents,
+	googleDecideUrl,
+	decideSummary,
+	deliverySummary,
+	type PlanDates,
 	calendarDays,
 	type CalendarDay,
 	type CalendarInput,
@@ -144,6 +149,67 @@ export async function kitchenDays(
 	const cap = day(new Date(startMs + (MAX_DAYS - 1) * 86_400_000));
 	const end = !to ? day(new Date(startMs + 20 * 86_400_000)) : to > cap ? cap : to;
 	return { now: c.now, from: start, to: end, days: calendarDays(c, start, end) };
+}
+
+/** The plan's own title: the event's name for an event plan, else "Order for <kitchen>". */
+function planTitle(plan: { eventId?: string }, kitchenName: string, ports: ServicePorts): string {
+	const seed = plan.eventId ? ports.events?.[plan.eventId] : undefined;
+	return seed?.title ?? `Order for ${kitchenName.replace(/\s*\(fictional\)\s*$/, '')}`;
+}
+
+/**
+ * One plan's dates (decide-by over its pending approval, same `dueOf` as the feed; its delivery day), or null when
+ * the plan is not in this workspace. With `origin`, the file and the Google link point back at the plan.
+ */
+export async function planDates(
+	workspaceId: string,
+	planId: string,
+	origin?: string,
+	now = new Date()
+): Promise<{
+	dates: PlanDates;
+	ics: string;
+	google: string | null;
+	decideTitle: string;
+	deliveryTitle: string;
+} | null> {
+	const runId = await ensureRunLoaded(workspaceId);
+	await realHandlers();
+	const { ports } = await createServerPorts();
+	return inWorkspace(workspaceId, async () => {
+		const state = await ports.store.load(workspaceId, runId);
+		const plan = state.plans[planId];
+		if (!plan) return null;
+		const kitchen = (await ports.store.kitchens(workspaceId)).find((k) => k.id === plan.kitchenId);
+		const kitchenName = kitchen?.name ?? plan.kitchenId;
+		const approval = Object.values(state.approvals).find(
+			(a) => a.planId === plan.id && a.state === 'pending'
+		);
+		let decide: PlanDates['decide'] = null;
+		if (approval) {
+			const viewed = await withPlanView(ports, plan, state, liveApprovals(state, plan.id));
+			const count = decisionsOf(viewed, approval).length;
+			if (count) decide = { due: dueOf(viewed, approval) ?? SCENARIO.cutoff, count };
+		}
+		const dates: PlanDates = {
+			kitchen: { id: plan.kitchenId, name: kitchenName },
+			plan: {
+				id: plan.id,
+				title: planTitle(plan, kitchenName, ports as ServicePorts),
+				deliverBy: plan.deliverBy
+			},
+			decide,
+			stamp: now.toISOString()
+		};
+		const planUrl = origin ? `${origin}/?plan=${encodeURIComponent(plan.id)}` : undefined;
+		return {
+			dates,
+			ics: buildPlanEvents(dates),
+			google: googleDecideUrl(dates, planUrl),
+			decideTitle: decideSummary(dates),
+			deliveryTitle: deliverySummary(dates)
+		};
+	});
 }
 
 export const ICS_HEADERS = {

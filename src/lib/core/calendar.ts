@@ -460,3 +460,102 @@ export function calendarDays(input: DaysInput, from: string, to: string): Calend
 	}
 	return out;
 }
+
+/* ---------------------------------------------------------------------------------------------------------------
+ * One plan's own dates as events the chef adds (not a subscription): when to decide, and when it is delivered.
+ * ------------------------------------------------------------------------------------------------------------- */
+
+export interface PlanDates {
+	kitchen: { id: string; name: string };
+	plan: { id: string; title: string; deliverBy: string };
+	/** The plan's decide-by time (dueOf over its pending approval) and how many decisions wait; null when none. */
+	decide: { due: string; count: number } | null;
+	/** DTSTAMP (ISO): when the file was made. */
+	stamp: string;
+}
+
+/** Minutes the decide-by event lasts, ending at the deadline; the alarm rings this long before it starts. */
+const DECIDE_MINUTES = 15;
+export const DECIDE_ALARM = '-PT2H';
+
+const plural = (n: number, one: string) => `${n} ${one}${n === 1 ? '' : 's'}`;
+
+/** "Decide by: Christmas dinner buffet, 140 guests (3 decisions)". */
+export function decideSummary(p: PlanDates): string {
+	return `Decide by: ${p.plan.title}${p.decide ? ` (${plural(p.decide.count, 'decision')})` : ''}`;
+}
+export const deliverySummary = (p: PlanDates) => `Delivery: ${p.plan.title}`;
+
+const DECIDE_DETAIL =
+	'Past this time, the lines waiting on you are not ordered for this delivery. Open the plan in Mandate to decide.';
+
+/** An iCalendar file with the plan's decide-by (alarm 2 h before) and its delivery day. */
+export function buildPlanEvents(p: PlanDates): string {
+	const stamp = stampValue(p.stamp);
+	const events: string[] = [];
+	if (p.decide) {
+		const start = new Date(
+			new Date(p.decide.due).getTime() - DECIDE_MINUTES * 60_000
+		).toISOString();
+		events.push(
+			'BEGIN:VEVENT',
+			`UID:${uid('plan-decide', p.kitchen.id, p.plan.id)}`,
+			`DTSTAMP:${stamp}`,
+			`DTSTART;TZID=${TZ}:${helsinkiLocal(start)}`,
+			`DURATION:PT${DECIDE_MINUTES}M`,
+			`SUMMARY:${escapeText(decideSummary(p))}`,
+			`DESCRIPTION:${escapeText(DECIDE_DETAIL)}`,
+			'BEGIN:VALARM',
+			'ACTION:DISPLAY',
+			`DESCRIPTION:${escapeText(decideSummary(p))}`,
+			`TRIGGER:${DECIDE_ALARM}`,
+			'END:VALARM',
+			'END:VEVENT'
+		);
+	}
+	const next = ymd(addDays(new Date(`${p.plan.deliverBy}T00:00:00Z`), 1));
+	events.push(
+		'BEGIN:VEVENT',
+		`UID:${uid('plan-delivery', p.kitchen.id, p.plan.id)}`,
+		`DTSTAMP:${stamp}`,
+		`DTSTART;VALUE=DATE:${dateValue(p.plan.deliverBy)}`,
+		`DTEND;VALUE=DATE:${dateValue(next)}`,
+		`SUMMARY:${escapeText(deliverySummary(p))}`,
+		`DESCRIPTION:${escapeText(`Valio delivery to ${p.kitchen.name}.`)}`,
+		'TRANSP:TRANSPARENT',
+		'END:VEVENT'
+	);
+	return (
+		[
+			'BEGIN:VCALENDAR',
+			'VERSION:2.0',
+			'PRODID:-//Mandate//Plan dates//EN',
+			'CALSCALE:GREGORIAN',
+			'METHOD:PUBLISH',
+			...VTIMEZONE,
+			...events,
+			'END:VCALENDAR'
+		]
+			.map(fold)
+			.join('\r\n') + '\r\n'
+	);
+}
+
+/**
+ * Google Calendar's "add event" link for the decide-by (one event, no subscription): opens Google's own form with
+ * the title, time and details filled; nothing is added until the person saves it.
+ */
+export function googleDecideUrl(p: PlanDates, planUrl?: string): string | null {
+	if (!p.decide) return null;
+	const end = new Date(p.decide.due);
+	const start = new Date(end.getTime() - DECIDE_MINUTES * 60_000);
+	const z = (d: Date) => d.toISOString().replace(/[-:]/g, '').slice(0, 15) + 'Z';
+	const q = new URLSearchParams({
+		action: 'TEMPLATE',
+		text: decideSummary(p),
+		dates: `${z(start)}/${z(end)}`,
+		details: planUrl ? `${DECIDE_DETAIL}\n${planUrl}` : DECIDE_DETAIL,
+		ctz: TZ
+	});
+	return `https://calendar.google.com/calendar/render?${q}`;
+}

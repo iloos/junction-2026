@@ -706,7 +706,9 @@
 					class="-mt-1.5 self-start text-meta text-ink-2 underline underline-offset-2 sm:hidden"
 					onclick={() => (mandateOpen = true)}>more</button
 				>{/if}
-			<span class="sm:ml-auto"><CalendarSubscribe kitchenId={snap.kitchen.id} /></span>
+			<span class="sm:ml-auto"
+				><CalendarSubscribe kitchenId={snap.kitchen.id} planId={plan?.id ?? null} /></span
+			>
 		{/if}
 	</div>
 </header>
