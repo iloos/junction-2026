@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { createDbPorts } from '../store/db-ports';
 import type { NewsSource } from './contextdev';
-import { factsEvidence, makeInHouse, supplierLeads } from './evidence';
+import { cleanQuote, factsEvidence, makeInHouse, supplierLeads } from './evidence';
+import { unresolved } from '$lib/ui/why-evidence';
 import { createFindings } from './findings';
 import { createFixtureFactSearch } from './fixture';
 import { lookupFacts } from './lookup';
@@ -80,5 +81,17 @@ describe('web evidence for the UI (recorded answers, no network)', { timeout: 30
 			searchNews: async () => ({ articles: [], cached: false })
 		});
 		expect(none).toMatchObject({ source: 'none', leads: [] });
+	});
+
+	it('quotes read as one line; an out or undeliverable line offers a web recipe', () => {
+		expect(
+			cleanQuote(`| Pakkauskoko | n. 6,5-8,5 kg |
+| --- | --- |
+### Ainesosat
+
+Tomaatti 51%`)
+		).toBe('Pakkauskoko · n. 6,5-8,5 kg · Ainesosat Tomaatti 51%');
+		expect(unresolved({ state: 'unorderable', reasons: ['out'] })).toBe(true);
+		expect(unresolved({ state: 'eligible', reasons: [] })).toBe(false);
 	});
 });

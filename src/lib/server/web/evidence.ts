@@ -62,6 +62,17 @@ const host = (u: string) => {
 	}
 };
 
+/** An Exa excerpt as one readable line: markdown table pipes, rules and headings dropped. */
+export const cleanQuote = (q: string) =>
+	q
+		.replace(/^#+\s*/gm, '')
+		.replace(/\|?\s*-{3,}\s*\|?/g, ' ')
+		.replace(/\s*\|\s*/g, ' · ')
+		.replace(/(\s*·\s*)+/g, ' · ')
+		.replace(/\s+/g, ' ')
+		.replace(/^\s*·\s*|\s*·\s*$/g, '')
+		.trim();
+
 export function factsEvidence(r: FactsResult): WhyEvidence {
 	const declared = r.catalogue.allergens;
 	const gap = declared === null || declared === undefined ? 'no_allergen_record' : null;
@@ -88,7 +99,7 @@ export function factsEvidence(r: FactsResult): WhyEvidence {
 					url: x.url,
 					host: host(x.url),
 					title: x.title,
-					quote: x.quote,
+					quote: x.quote && cleanQuote(x.quote),
 					gtinCited: x.gtinCited
 				}))
 			})),
@@ -281,4 +292,42 @@ export async function supplierLeads(
 		leads,
 		note: `News leads on this plan’s suppliers, for a person to read. A lead never holds a line or changes a plan.${failed ? ` ${failed} supplier(s) could not be searched.` : ''}`
 	};
+}
+
+/** The Why drawer's evidence for one product, run under the caller's web context (its cache, caps and trace). */
+export async function evidenceFor(
+	w: import('.').WebRun,
+	env: Record<string, string | undefined>,
+	input: { productId: string; question?: string }
+): Promise<WhyEvidence> {
+	const { findingsFor, scopeOf, webClients } = await import('.');
+	const { busTrace } = await import('./watch');
+	const { lookupFacts } = await import('./lookup');
+	const { exa } = webClients(env, busTrace(scopeOf(w), { lane: 'web' }), w.spendKey);
+	return factsEvidence(
+		await lookupFacts(input, {
+			exa,
+			catalog: w.ports.catalog,
+			findings: findingsFor(env),
+			workspaceId: w.ctx.workspaceId
+		})
+	);
+}
+
+/** An outside recipe for an unresolved need, held for sign-off, under the caller's web context. */
+export async function makeInHouseFor(
+	w: import('.').WebRun,
+	env: Record<string, string | undefined>,
+	input: { need: string; context?: string }
+): Promise<MakeInHouseProposal> {
+	const { findingsFor, scopeOf, webClients } = await import('.');
+	const { busTrace } = await import('./watch');
+	const { exa } = webClients(env, busTrace(scopeOf(w), { lane: 'web' }), w.spendKey);
+	return makeInHouse(input.need, {
+		exa,
+		catalog: w.ports.catalog,
+		findings: findingsFor(env),
+		workspaceId: w.ctx.workspaceId,
+		...(input.context ? { context: input.context } : {})
+	});
 }
