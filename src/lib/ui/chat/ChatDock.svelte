@@ -521,7 +521,7 @@
 								>Order it on the page <ArrowUpRight size={13} aria-hidden="true" /></a
 							>
 						</li>
-					{:else if x === last && !actedHere && (x.e.canContinue || x.e.state === 'awaiting_chef')}
+					{:else if x === last && !actedHere && x.e.canContinue}
 						<li class="flex flex-wrap gap-2">
 							<button
 								type="button"
@@ -529,9 +529,9 @@
 								disabled={busy}
 								onclick={() => turn({ continue: true }, 'Continue')}
 							>
-								{x.e.canContinue
-									? 'Continue: submit what may be ordered'
-									: 'I’ve decided: continue'}
+								{x.e.state === 'awaiting_chef'
+									? 'I’ve decided: continue'
+									: 'Continue: submit what may be ordered'}
 							</button>
 						</li>
 					{/if}
