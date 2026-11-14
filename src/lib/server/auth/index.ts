@@ -11,7 +11,8 @@ import type { CallContext } from '$lib/core/ports';
  * Key sources, all read from the server env:
  * - `MANDATE_KEY_CHEF`, `MANDATE_KEY_KITCHEN_AGENT`, `MANDATE_KEY_EXTERNAL_AGENT`, `MANDATE_KEY_APPROVER`
  * - `MCP_KEYS="label:actor:key,…"` for extra keys, e.g. one external_agent key per judge
- * - judge keys `<ws-j-id>.<hmac>` minted per visitor sandbox from `JUDGE_KEY_SECRET` (server/demo/judge-key.ts)
+ * - judge keys `jk_<ws-j-id>.<expiresEpochS>.<hmac>` minted per visitor sandbox from `JUDGE_KEY_SECRET`
+ *   (server/demo/judge-key.ts)
  * - `MANDATE_WORKSPACE` / `MANDATE_RUN` (default `ws-demo` / `run-1`)
  * - fixture keys (`fx-chef`, …, public in this repo) only in dev or with `MANDATE_FIXTURE_KEYS=1`
  */

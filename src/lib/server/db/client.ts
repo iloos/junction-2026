@@ -40,8 +40,28 @@ function connect(url: string) {
 		idle_timeout: 20,
 		connect_timeout: 10,
 		ssl: ca ? { ca, rejectUnauthorized: true } : 'require',
-		connection: { application_name: 'mandate' }
+		connection: { application_name: 'mandate' },
+		...(env.SQL_TRACE === '1' ? { debug: tally } : {})
 	});
+}
+
+/**
+ * Diagnostics, off unless SQL_TRACE=1: counts statements by their first words and prints the top ones every 10 s
+ * while queries arrive, to find chatty paths (round trips, not row counts, dominate a plan's latency).
+ */
+const counts = new Map<string, number>();
+let tallyTimer: ReturnType<typeof setTimeout> | null = null;
+function tally(_conn: number, query: string) {
+	const k = query.replace(/\s+/g, ' ').trim().slice(0, 90);
+	counts.set(k, (counts.get(k) ?? 0) + 1);
+	tallyTimer ??= setTimeout(() => {
+		tallyTimer = null;
+		const total = [...counts.values()].reduce((a, b) => a + b, 0);
+		console.log(`[sql] ${total} statements`);
+		for (const [q, n] of [...counts].sort((a, b) => b[1] - a[1]).slice(0, 12))
+			console.log(`[sql] ${String(n).padStart(5)}  ${q}`);
+		counts.clear();
+	}, 10_000);
 }
 
 type Sql = ReturnType<typeof postgres>;
