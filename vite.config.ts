@@ -39,6 +39,8 @@ export default defineConfig({
 				test: {
 					name: 'server',
 					environment: 'node',
+					// Many PGlite instances boot in parallel; the default 5 s is too tight under load.
+					testTimeout: 30_000,
 					include: ['src/**/*.{test,spec}.{js,ts}'],
 					exclude: ['src/**/*.svelte.{test,spec}.{js,ts}']
 				}
