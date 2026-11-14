@@ -348,7 +348,7 @@ journey(
 			await page
 				.getByText(/Ordered\s*·\s*\d+\s+lines?/)
 				.first()
-				.waitFor({ timeout: 60_000 });
+				.waitFor({ state: 'attached', timeout: 60_000 }); // on a phone it can sit in an unselected zone tab
 			const t = await page.locator('body').innerText();
 			const rc = t.match(/rc-[a-z0-9]+/);
 			if (rc) r.j.receipts.push(rc[0]);

@@ -122,7 +122,7 @@ export async function orderNow(page: Page) {
 	await page
 		.getByText(/Ordered\s*·\s*\d+\s+lines?/)
 		.first()
-		.waitFor({ timeout: 60_000 });
+		.waitFor({ state: 'attached', timeout: 60_000 }); // on a phone it can sit in an unselected zone tab
 }
 
 /** Opens the first line's Why drawer: the line rows sit inside each dish's details, collapsed by default. */
