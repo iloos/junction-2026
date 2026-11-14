@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Minus, Plus, LoaderCircle } from '@lucide/svelte';
+	import { Lock, Minus, Plus, LoaderCircle } from '@lucide/svelte';
 
 	interface Props {
 		value: number;
@@ -27,46 +27,58 @@
 </script>
 
 <div class="inline-flex flex-col items-end gap-0.5">
-	<div
-		class="inline-flex h-9 items-center rounded-md border bg-sheet {edited
-			? 'border-accent/60'
-			: 'border-rule-strong'} {locked ? 'opacity-70' : ''}"
-		aria-busy={pending !== undefined}
-	>
-		<button
-			type="button"
-			class="grid h-full w-9 place-items-center rounded-l-md text-ink-2 hover:bg-well hover:text-ink disabled:cursor-not-allowed disabled:hover:bg-transparent"
-			aria-label="Less {label}"
-			disabled={locked}
-			onclick={() => commit(shown - step)}><Minus size={14} /></button
+	{#if disabled && pending === undefined}
+		<!-- Locked (ordered, or not editable here): no controls to press, so it can't be mistaken for one. -->
+		<p
+			class="inline-flex h-9 items-center gap-1.5 rounded-md border border-dashed border-rule-strong bg-well px-2.5 text-ink-2"
+			aria-label="{label}: {shown} grams per guest, locked"
 		>
-		<input
-			class="mono h-full w-11 border-x border-rule bg-transparent text-center text-body text-ink outline-none focus:bg-accent-wash disabled:cursor-not-allowed"
-			inputmode="numeric"
-			aria-label="{label}, grams per guest"
-			disabled={locked}
-			bind:value={draft}
-			onkeydown={(e) => {
-				if (e.key === 'Enter') commit(Number(draft));
-				if (e.key === 'ArrowUp') {
-					e.preventDefault();
-					commit(value + 1);
-				}
-				if (e.key === 'ArrowDown') {
-					e.preventDefault();
-					commit(value - 1);
-				}
-			}}
-			onblur={() => commit(Number(draft))}
-		/>
-		<button
-			type="button"
-			class="grid h-full w-9 place-items-center rounded-r-md text-ink-2 hover:bg-well hover:text-ink disabled:cursor-not-allowed disabled:hover:bg-transparent"
-			aria-label="More {label}"
-			disabled={locked}
-			onclick={() => commit(shown + step)}><Plus size={14} /></button
+			<Lock size={13} aria-hidden="true" />
+			<span class="mono text-body text-ink">{shown}</span>
+			<span class="text-meta">g</span>
+		</p>
+	{:else}
+		<div
+			class="inline-flex h-9 items-center rounded-md border bg-sheet {edited
+				? 'border-accent/60'
+				: 'border-rule-strong'} {locked ? 'opacity-70' : ''}"
+			aria-busy={pending !== undefined}
 		>
-	</div>
+			<button
+				type="button"
+				class="grid h-full w-9 place-items-center rounded-l-md text-ink-2 hover:bg-well hover:text-ink disabled:cursor-not-allowed disabled:hover:bg-transparent"
+				aria-label="Less {label}"
+				disabled={locked}
+				onclick={() => commit(shown - step)}><Minus size={14} /></button
+			>
+			<input
+				class="mono h-full w-11 border-x border-rule bg-transparent text-center text-body text-ink outline-none focus:bg-accent-wash disabled:cursor-not-allowed"
+				inputmode="numeric"
+				aria-label="{label}, grams per guest"
+				disabled={locked}
+				bind:value={draft}
+				onkeydown={(e) => {
+					if (e.key === 'Enter') commit(Number(draft));
+					if (e.key === 'ArrowUp') {
+						e.preventDefault();
+						commit(value + 1);
+					}
+					if (e.key === 'ArrowDown') {
+						e.preventDefault();
+						commit(value - 1);
+					}
+				}}
+				onblur={() => commit(Number(draft))}
+			/>
+			<button
+				type="button"
+				class="grid h-full w-9 place-items-center rounded-r-md text-ink-2 hover:bg-well hover:text-ink disabled:cursor-not-allowed disabled:hover:bg-transparent"
+				aria-label="More {label}"
+				disabled={locked}
+				onclick={() => commit(shown + step)}><Plus size={14} /></button
+			>
+		</div>
+	{/if}
 	{#if pending !== undefined}
 		<span class="inline-flex items-center gap-1 text-micro text-accent-ink" role="status">
 			<LoaderCircle size={11} class="animate-spin" aria-hidden="true" /> recomputing

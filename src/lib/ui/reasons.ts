@@ -53,8 +53,8 @@ const TEXT: Record<string, { short: string; long: string }> = {
 	},
 	low_reliability: { short: 'Low reliability', long: "Valio's delivery reliability is low." },
 	external_agent_needs_approval: {
-		short: 'External agent',
-		long: 'Placed by an external agent: always needs a human approval.'
+		short: 'Outside agent',
+		long: 'Prepared by an outside agent: always needs a human approval.'
 	},
 	cutoff_passed: {
 		short: 'Cut-off passed',

@@ -308,7 +308,7 @@ export class KitchenStore {
 				replay ? 'retry' : 'commit',
 				replay
 					? `Retry with key ${key}: same receipt ${out.receiptId}, no second order`
-					: `${out.orderId} committed: ${out.committedLineIds.length} lines, receipt ${out.receiptId}`
+					: `${out.orderId} ordered: ${out.committedLineIds.length} lines, receipt ${out.receiptId}`
 			);
 		});
 	}

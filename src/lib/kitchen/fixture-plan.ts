@@ -666,7 +666,7 @@ export function buildEvent(input: BuildInput): Built {
 				why[lineId] = [
 					...baseWhy(p, part.note),
 					{
-						text: 'Committed: this line is part of a placed order and no longer changes',
+						text: 'Ordered: this line is part of a placed order and no longer changes',
 						source: 'simulator'
 					}
 				];
@@ -1016,7 +1016,7 @@ export function buildEvent(input: BuildInput): Built {
 	};
 
 	function tierStep(line: Line, r: Rules): WhyStep {
-		if (line.state === 'committed') return { text: 'Committed', source: 'simulator' };
+		if (line.state === 'committed') return { text: 'Ordered', source: 'simulator' };
 		if (line.tier === 'act' || !line.tier)
 			return {
 				text: `Within your mandate: ${money(line.lineCents ?? 0)} ≤ ${money(r.lineCapCents, { whole: true })} line cap, nothing on your never-delegate list. The agent may order it.`,
