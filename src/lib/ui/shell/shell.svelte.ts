@@ -27,6 +27,10 @@ export class Shell {
 	labels = $state<DataLabels | null>(null);
 	/** System layer: formulas, gates, hashes and op ids. `?system=1` turns it on. */
 	system = $state(false);
+	/** The agent dock, on every page; `?chat=1` opens it. */
+	chatOpen = $state(false);
+	/** What the agent is scoped to on this page: the kitchen and the plan on screen (Kitchen, Request, Ops). */
+	chat = $state<{ kitchenId?: string; planId?: string }>({});
 }
 
 const KEY = Symbol('shell');

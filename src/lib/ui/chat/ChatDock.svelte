@@ -29,13 +29,16 @@
 		planId?: string;
 		/** Open this task (a link to it); otherwise the task remembered for this kitchen. */
 		taskId?: string;
+		/** Its own floating "Ask the agent" button; off when the app shell opens the dock. */
+		launcher?: boolean;
 	}
 	let {
 		kitchenId = 'k-hotel',
 		open = $bindable(false),
 		pinned = true,
 		planId,
-		taskId: openTask
+		taskId: openTask,
+		launcher = true
 	}: Props = $props();
 
 	type Entry = { kind: 'chef'; text: string } | { kind: 'event'; e: ChatEvent };
@@ -205,7 +208,7 @@
 	class={[
 		'fixed right-4 bottom-4 z-30 flex items-center gap-2 rounded-full border border-rule-strong bg-sheet px-4 py-2 text-body font-medium shadow-md',
 		pinned && 'lg:hidden',
-		open && 'hidden'
+		(open || !launcher) && 'hidden'
 	]}
 	onclick={() => (open = true)}
 >
