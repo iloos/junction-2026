@@ -9,7 +9,8 @@
 	const NAV = [
 		{ href: resolve('/'), label: 'Kitchen', match: (p: string) => p === '/' || p === '/offline' },
 		{ href: resolve('/request'), label: 'Request', match: (p: string) => p.startsWith('/request') },
-		{ href: resolve('/ops'), label: 'Operations', match: (p: string) => p.startsWith('/ops') }
+		{ href: resolve('/ops'), label: 'Operations', match: (p: string) => p.startsWith('/ops') },
+		{ href: resolve('/agents'), label: 'Agents', match: (p: string) => p.startsWith('/agents') }
 	];
 </script>
 
