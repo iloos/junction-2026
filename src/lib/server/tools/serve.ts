@@ -8,6 +8,7 @@ import {
 	type ToolOutput
 } from '$lib/core/contracts';
 import type { CallContext, ToolHandlers } from '$lib/core/ports';
+import { isVisitorWorkspace } from '$lib/server/demo/visitor-id';
 
 /**
  * The one gate every surface (REST, MCP, the routine agent) calls a tool through: input validated
@@ -68,6 +69,9 @@ export async function serveTool(
 	hooks: ServeHooks = {}
 ): Promise<Served> {
 	if (!isToolName(name)) return fail(err('NOT_FOUND', `unknown tool ${name}`).error);
+	// A judge key resolves to its sandbox's current run; load that run first if this process hasn't yet.
+	if (isVisitorWorkspace(ctx.workspaceId))
+		ctx = await (await import('$lib/server/demo/reset')).onCurrentRun(ctx);
 	const t0 = performance.now();
 	const out = await run(name, ctx, rawInput, handlers);
 	hooks.onCall?.({

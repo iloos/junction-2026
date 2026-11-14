@@ -1,11 +1,13 @@
 /**
- * Which workspace a browser acts in: the one resolver behind the kitchen, /request, /ops and the sandbox reset.
+ * Which workspace a browser acts in (D9): the one resolver behind the kitchen, /request, /ops, the op stream
+ * and the sandbox reset.
  *
- * - Every visitor gets their own sandbox, `ws-j-<id>` (cookie `mandate_visitor`), seeded lazily with the seed
- *   kitchens and a fresh run on first use. Nobody else's edit, approval or reset reaches it.
- * - A link can move the browser to another room (cookie `mandate_room`): `?ws=ws-judges` (the shared room),
- *   `?ws=<a visitor id>` (someone's sandbox, shared on purpose by link), `?ws=mine` (back to your own), and
- *   `?ws=ws-demo` (the stage) for presenters only.
+ * - Every visitor gets their own sandbox, `ws-j-<id>`, from a signed cookie (`mandate_visitor`), seeded lazily
+ *   with the seed kitchens and a fresh run on first use. Only that browser reaches it: another visitor's id in
+ *   a link, a cookie or a query never selects it.
+ * - A link can move the browser between rooms (cookie `mandate_room`): `?ws=ws-judges` (the shared room),
+ *   `?ws=mine` (back to your own sandbox), and `?ws=ws-demo` (the stage) for presenters only. Any other value,
+ *   including a visitor id, is ignored.
  * - Presenters (dev, DEMO_RESET_OPEN=1, or signed in on /ops) default to the stage.
  * - At most MAX_VISITORS sandboxes are seeded per process; past that, new visitors share ws-judges.
  */
@@ -13,7 +15,7 @@ import type { Cookies } from '@sveltejs/kit';
 import { JUDGES_WORKSPACE } from '$lib/server/auth';
 import { isPresenter } from './presenter';
 import { ensureRunLoaded, DEMO_WORKSPACE } from './reset';
-import { isVisitorWorkspace, newVisitorWorkspace } from './visitor-id';
+import { newVisitorWorkspace, readVisitor, signVisitor } from './visitor-id';
 
 type Env = Record<string, string | undefined>;
 
@@ -22,11 +24,8 @@ export const ROOM_COOKIE = 'mandate_room';
 export const MAX_VISITORS = 300;
 const COOKIE_AGE_S = 60 * 60 * 24 * 14;
 
-/**
- * own: this browser's sandbox · link: a visitor sandbox opened by link · shared: ws-judges ·
- * stage: ws-demo (presenter) · full: the visitor cap was reached, so this browser shares ws-judges.
- */
-export type RoomKind = 'own' | 'link' | 'shared' | 'stage' | 'full';
+/** own: this browser's sandbox · shared: ws-judges · stage: ws-demo · full: cap reached, sharing ws-judges. */
+export type RoomKind = 'own' | 'shared' | 'stage' | 'full';
 
 export interface Visitor {
 	workspaceId: string;
@@ -44,19 +43,25 @@ export const visitorCount = () => seeded.size;
 
 const cookieOpts = { path: '/', httpOnly: true, sameSite: 'lax' as const, maxAge: COOKIE_AGE_S };
 
-/** A room a link may move this browser to, or null if it may not. */
-function roomFrom(param: string | null, presenter: boolean): string | null {
-	if (!param) return null;
-	if (param === 'mine' || param === 'own') return 'own';
-	if (param === JUDGES_WORKSPACE || isVisitorWorkspace(param)) return param;
-	if (param === DEMO_WORKSPACE && presenter) return param;
+type Room = 'own' | typeof JUDGES_WORKSPACE | typeof DEMO_WORKSPACE;
+
+/** A room a link or the room cookie may select, or null. */
+function roomFrom(value: string | null | undefined, presenter: boolean): Room | null {
+	if (value === 'mine' || value === 'own') return 'own';
+	if (value === JUDGES_WORKSPACE) return value;
+	if (value === DEMO_WORKSPACE && presenter) return value;
 	return null;
 }
 
+/** This browser's own sandbox from its signed cookie, without minting one (for read-only checks). */
+export function ownWorkspace(cookies: Cookies, env: Env): string | null {
+	return readVisitor(cookies.get(VISITOR_COOKIE), env);
+}
+
 /**
- * Resolve (and, on a page load with `?ws=`, change) this browser's workspace, then make sure that workspace
- * has a current run. `follow`: honour `?ws=` (and the older `?workspace=`) on the URL; page loads pass it,
- * API calls don't, so a stray query can't move a running screen.
+ * Resolve (and, on a page load with `?ws=`, change) this browser's workspace, then make sure that workspace has
+ * a current run. `follow`: honour `?ws=` (and the older `?workspace=`) on the URL; page loads pass it, API calls
+ * don't, so a stray query can't move a running screen.
  */
 export async function visitorWorkspace(
 	event: { cookies: Cookies; url?: URL },
@@ -67,10 +72,10 @@ export async function visitorWorkspace(
 	const { cookies, url } = event;
 	const presenter = isPresenter(cookies, env, dev);
 
-	let own = cookies.get(VISITOR_COOKIE);
-	if (!isVisitorWorkspace(own)) {
+	let own = ownWorkspace(cookies, env);
+	if (!own) {
 		own = newVisitorWorkspace();
-		cookies.set(VISITOR_COOKIE, own, cookieOpts);
+		cookies.set(VISITOR_COOKIE, signVisitor(own, env), cookieOpts);
 	}
 
 	if (opts.follow && url) {
@@ -80,19 +85,13 @@ export async function visitorWorkspace(
 		);
 		if (asked) cookies.set(ROOM_COOKIE, asked, cookieOpts);
 	}
-	const room = roomFrom(cookies.get(ROOM_COOKIE) ?? null, presenter);
+	const room = roomFrom(cookies.get(ROOM_COOKIE), presenter);
 	const chosen = room === 'own' ? own : (room ?? (presenter ? DEMO_WORKSPACE : own));
 
 	let workspaceId = chosen;
 	let kind: RoomKind =
-		chosen === DEMO_WORKSPACE
-			? 'stage'
-			: chosen === JUDGES_WORKSPACE
-				? 'shared'
-				: chosen === own
-					? 'own'
-					: 'link';
-	if (isVisitorWorkspace(chosen) && !seeded.has(chosen)) {
+		chosen === DEMO_WORKSPACE ? 'stage' : chosen === JUDGES_WORKSPACE ? 'shared' : 'own';
+	if (kind === 'own' && !seeded.has(chosen)) {
 		if (seeded.size >= MAX_VISITORS) {
 			workspaceId = JUDGES_WORKSPACE;
 			kind = 'full';
@@ -107,7 +106,6 @@ export async function visitorWorkspace(
 export function roomLabel(v: Pick<Visitor, 'kind'>): string {
 	return {
 		own: 'Your sandbox',
-		link: 'A shared sandbox (opened by link)',
 		shared: "Judges' shared room",
 		stage: 'Stage run',
 		full: "Judges' shared room (sandboxes are full)"

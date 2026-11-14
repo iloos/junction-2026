@@ -341,9 +341,7 @@
 				? 'Presenter mode: the stage run everyone watches on /ops.'
 				: data.workspace.kind === 'own'
 					? 'Only this browser works here: other visitors and the stage run never see your orders, approvals or commits.'
-					: data.workspace.kind === 'link'
-						? 'A sandbox opened by link: everyone with the link works on the same plans.'
-						: 'Shared with every visitor in this room: their edits and resets reach you too.'}
+					: 'Shared with every visitor in this room: their edits and resets reach you too.'}
 			><Building2
 				size={13}
 				class={data.workspace.stage ? 'text-accent' : 'text-propose'}

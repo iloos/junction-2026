@@ -9,16 +9,16 @@ import {
 } from '$lib/server/bus';
 import { currentRun, currentRunStartedAt } from '$lib/server/demo/run';
 import { ensureRunLoaded } from '$lib/server/demo/reset';
-import { isVisitorWorkspace } from '$lib/server/demo/visitor-id';
+import { ownWorkspace } from '$lib/server/demo/visitor';
+import { env } from '$env/dynamic/private';
 import { dev } from '$app/environment';
 import type { RequestHandler } from './$types';
 
 /**
- * Production serves the public rooms and visitor sandboxes. A sandbox id (`ws-j-` + 96 random bits) is the
- * capability: whoever holds it (its own browser, or someone it was shared with by link) may read its stream.
+ * Production serves the public rooms, and a visitor sandbox only to the browser whose signed cookie names it
+ * (D9): another visitor's id in the query reads nothing.
  */
 const PUBLIC_WORKSPACES = new Set(['ws-demo', 'ws-judges', SYNTH_WORKSPACE]);
-const readable = (ws: string) => PUBLIC_WORKSPACES.has(ws) || isVisitorWorkspace(ws);
 
 /** Catch-up reads pages of PAGE events until a short page, at most MAX_PAGES (then live takes over). */
 const PAGE = 1000;
@@ -35,9 +35,10 @@ const RUN_CHECK_MS = 3_000;
  *   so EventSource's automatic reconnect resumes from Last-Event-ID.
  * - `…&mode=poll` → JSON `{ events, last }` for clients that fall back to polling.
  */
-export const GET: RequestHandler = async ({ url, request }) => {
+export const GET: RequestHandler = async ({ url, request, cookies }) => {
 	const workspaceId = url.searchParams.get('workspace') || DEFAULT_WORKSPACE;
-	if (!dev && !readable(workspaceId))
+	const readable = PUBLIC_WORKSPACES.has(workspaceId) || workspaceId === ownWorkspace(cookies, env);
+	if (!dev && !readable)
 		return json(
 			{ error: { code: 'FORBIDDEN', message: 'unknown workspace', retryable: false } },
 			{ status: 403 }

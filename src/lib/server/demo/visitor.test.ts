@@ -29,14 +29,14 @@ describe('visitor workspace', () => {
 		expect(isVisitorWorkspace(va.workspaceId)).toBe(true);
 		expect(va.kind).toBe('own');
 		expect(vb.workspaceId).not.toBe(va.workspaceId);
-		expect(a.get(VISITOR_COOKIE)).toBe(va.workspaceId);
+		expect(a.get(VISITOR_COOKIE)?.startsWith(`${va.workspaceId}.`)).toBe(true);
 		expect((await visitorWorkspace({ cookies: a }, PROD, false)).workspaceId).toBe(va.workspaceId);
 		// The run starts now, so the scenario clock starts at the visit, not at process start.
 		expect(currentRun(va.workspaceId)).toMatch(/^run-/);
 		expect(currentRunStartedAt(va.workspaceId)).toBeGreaterThanOrEqual(t0);
 	}, 30_000);
 
-	it('moves rooms by link: shared room, another sandbox, back to mine; the stage only for presenters', async () => {
+	it('moves rooms by link: shared room and back to mine; never another sandbox; the stage only for presenters', async () => {
 		const a = browser();
 		const own = (await visitorWorkspace({ cookies: a }, PROD, false)).workspaceId;
 		const other = (await visitorWorkspace({ cookies: browser() }, PROD, false)).workspaceId;
@@ -46,14 +46,30 @@ describe('visitor workspace', () => {
 		expect(await go('?ws=ws-judges')).toMatchObject({ workspaceId: 'ws-judges', kind: 'shared' });
 		// Sticky: an API call without the query stays in the room.
 		expect((await visitorWorkspace({ cookies: a }, PROD, false)).workspaceId).toBe('ws-judges');
-		expect(await go(`?ws=${other}`)).toMatchObject({ workspaceId: other, kind: 'link' });
 		expect(await go('?ws=mine')).toMatchObject({ workspaceId: own, kind: 'own' });
+		expect((await go(`?ws=${other}`)).workspaceId).toBe(own);
 		expect((await go('?ws=ws-demo')).workspaceId).toBe(own);
 		expect((await go('?ws=ws-evil')).workspaceId).toBe(own);
 		// Without `follow` (API calls), the query is ignored.
 		expect(
 			(await visitorWorkspace({ cookies: a, url: at('?ws=ws-judges') }, PROD, false)).workspaceId
 		).toBe(own);
+	}, 30_000);
+
+	it('trusts only a signed cookie: a forged or edited visitor or room cookie selects nothing else', async () => {
+		const victim = browser();
+		const target = (await visitorWorkspace({ cookies: victim }, PROD, false)).workspaceId;
+		const forged = browser();
+		forged.set(VISITOR_COOKIE, target, {} as never); // the bare id, no signature
+		expect((await visitorWorkspace({ cookies: forged }, PROD, false)).workspaceId).not.toBe(target);
+		const edited = browser();
+		const signed = victim.get(VISITOR_COOKIE)!;
+		edited.set(VISITOR_COOKIE, signed.slice(0, -2) + 'xx', {} as never);
+		expect((await visitorWorkspace({ cookies: edited }, PROD, false)).workspaceId).not.toBe(target);
+		const room = browser();
+		room.set(ROOM_COOKIE, target, {} as never);
+		expect((await visitorWorkspace({ cookies: room }, PROD, false)).workspaceId).not.toBe(target);
+		expect(signed.startsWith(`${target}.`)).toBe(true);
 	}, 30_000);
 
 	it('defaults a signed-in presenter to the stage; dev keeps the stage as before', async () => {

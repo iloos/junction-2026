@@ -1,11 +1,64 @@
-/** Visitor workspace ids: `ws-j-` + 16 base64url chars (96 random bits), so an id is unguessable. */
-export const VISITOR_PREFIX = 'ws-j-';
-const VISITOR_RE = /^ws-j-[A-Za-z0-9_-]{16}$/;
+/**
+ * Visitor identity primitives (D9). A visitor workspace is `ws-j-` + 24 lowercase hex chars (96 random bits),
+ * and it reaches the server only inside a signed value: the id alone is never authorisation.
+ */
+import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
+import { VisitorWorkspaceId } from '$lib/core/contracts';
+
+type Env = Record<string, string | undefined>;
 
 export const isVisitorWorkspace = (ws: string | null | undefined): ws is string =>
-	!!ws && VISITOR_RE.test(ws);
+	!!ws && VisitorWorkspaceId.safeParse(ws).success;
 
 export function newVisitorWorkspace(): string {
-	const bytes = crypto.getRandomValues(new Uint8Array(12));
-	return VISITOR_PREFIX + Buffer.from(bytes).toString('base64url');
+	return 'ws-j-' + randomBytes(12).toString('hex');
+}
+
+/** Shorter secrets are treated as unset, so an env typo can't open the door. */
+const MIN_SECRET = 16;
+
+/** JUDGE_KEY_SECRET, or null when it is unset or too short. */
+export function judgeSecret(env: Env): string | null {
+	const s = env.JUDGE_KEY_SECRET?.trim();
+	return s && s.length >= MIN_SECRET ? s : null;
+}
+
+const g = globalThis as typeof globalThis & { __mandateCookieSecret?: string };
+let warned = false;
+
+/**
+ * The visitor cookie's signing secret: JUDGE_KEY_SECRET, or a random one for this process (dev, or a deploy
+ * without the secret: visitors then get a fresh sandbox after every restart, never someone else's).
+ */
+function cookieSecret(env: Env): string {
+	const s = judgeSecret(env);
+	if (s) return s;
+	if (!warned && process.env.NODE_ENV === 'production') {
+		warned = true;
+		console.warn('[visitor] JUDGE_KEY_SECRET unset: visitor cookies are signed per process');
+	}
+	return (g.__mandateCookieSecret ??= randomBytes(32).toString('hex'));
+}
+
+export const hmac = (secret: string, text: string) =>
+	createHmac('sha256', secret).update(text).digest('base64url');
+
+export function sameText(a: string, b: string): boolean {
+	const x = Buffer.from(a);
+	const y = Buffer.from(b);
+	return x.length === y.length && timingSafeEqual(x, y);
+}
+
+/** Cookie value for a visitor workspace: `<ws>.<HMAC("vs|" + ws)>`. */
+export function signVisitor(ws: string, env: Env): string {
+	return `${ws}.${hmac(cookieSecret(env), `vs|${ws}`)}`;
+}
+
+/** The visitor workspace a cookie value proves, or null if it's missing, malformed or forged. */
+export function readVisitor(value: string | undefined, env: Env): string | null {
+	if (!value) return null;
+	const dot = value.indexOf('.');
+	const ws = value.slice(0, dot);
+	if (dot < 0 || !isVisitorWorkspace(ws)) return null;
+	return sameText(value.slice(dot + 1), hmac(cookieSecret(env), `vs|${ws}`)) ? ws : null;
 }
