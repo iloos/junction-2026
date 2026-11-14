@@ -15,8 +15,11 @@ import type {
 } from '$lib/core/contracts';
 import { money } from '$lib/ui/format';
 import { CACHED_AT, CACHE_REF, SEED, product, type ProductFact } from './catalog';
+import { EVENT_SEED_BY_ID } from './events';
+import { needIdFor } from '$lib/core/demand/event';
 import {
 	NORMAL_WEEK,
+	normalWeekFor,
 	PRESETS,
 	rulesFor,
 	type CandidateView,
@@ -64,6 +67,8 @@ export interface Scenario {
 
 export interface BuildInput {
 	kitchen: Kitchen;
+	/** The event to plan; the hotel's Christmas buffet when absent. */
+	eventId?: string;
 	rules: Rules;
 	grams: Record<string, number>;
 	scenario: Scenario;
@@ -89,6 +94,10 @@ interface DishDef {
 	/** Lines: product and amount per guest-gram (kg of product per kg served, or pieces). */
 	parts: { productId: string; perServedKg: number; unit: MeasureUnit; note?: string }[];
 	rescueKey?: 'ham' | 'lanttu' | 'torttu';
+	/** Share of the guests served (a choice of mains, a special diet); all when absent. */
+	share?: number;
+	/** Grams per piece for a dish counted in pieces; the Christmas tart's 60 g when absent. */
+	pieceG?: number;
 }
 
 const DISHES: DishDef[] = [
@@ -200,6 +209,107 @@ const DISHES: DishDef[] = [
 ];
 
 const TART_G = 60;
+
+const XMAS_ID = SEED.id;
+
+const twoDaysBefore = (iso: string): string =>
+	new Date(Date.parse(`${iso}T12:00:00Z`) - 2 * 86_400_000).toISOString().slice(0, 10);
+
+interface SeedEntry {
+	dish: string;
+	gServed?: number;
+	yield?: number;
+	yieldNote?: string;
+	share?: number;
+	perKgDish?: Record<string, number>;
+	productId: string;
+	pack?: { pieces?: number; netKg?: number; netL?: number };
+}
+
+/** "Lohikeitto (salmon soup): cream" → Finnish "Lohikeitto", English "salmon soup: cream". */
+function namesOf(dish: string): { nameFi: string; name: string } {
+	const [head, ...rest] = dish.split(':');
+	const m = /^(.*?)\s*\((.*)\)\s*$/.exec(head.trim());
+	const suffix = rest.join(':').trim();
+	const nameFi = (m ? m[1] : head).trim();
+	const en = (m ? m[2] : head).trim();
+	return {
+		nameFi: suffix ? `${nameFi}: ${suffix}` : nameFi,
+		name: suffix ? `${en}: ${suffix}` : en
+	};
+}
+
+/**
+ * The dishes of an event. The Christmas buffet keeps its hand-written model (with its rescues); other events are
+ * read from their seed: one dish per entry, and a cooked dish (`perKgDish`) as one dish with its ingredient parts.
+ */
+export function dishesFor(eventId: string): DishDef[] {
+	if (eventId === XMAS_ID) return DISHES;
+	const seed = EVENT_SEED_BY_ID[eventId] as unknown as { dishes: SeedEntry[] } | undefined;
+	if (!seed) throw new Error(`no event ${eventId}`);
+	const family = (d: SeedEntry) => d.dish.split(':')[0].trim();
+	const out: DishDef[] = [];
+	for (const d of seed.dishes) {
+		if (d.gServed === undefined) continue; // a cooked dish's liquid: a part of its carrier below
+		const id = needIdFor(d.dish).replace(/^need:/, '');
+		const isPcs = d.pack?.pieces !== undefined && d.pack.netKg !== undefined;
+		const base = {
+			id,
+			...namesOf(d.dish),
+			gDefault: d.gServed,
+			yield: d.yield ?? 1,
+			yieldNote: d.yieldNote,
+			share: d.share
+		};
+		if (d.perKgDish) {
+			const kgKey = Object.keys(d.perKgDish).find((k) => k.endsWith('Kg'));
+			const lKey = Object.keys(d.perKgDish).find((k) => k.endsWith('L'));
+			const liquid = seed.dishes.find(
+				(x) => x !== d && family(x) === family(d) && x.gServed === undefined
+			);
+			out.push({
+				...base,
+				...namesOf(family(d)),
+				yield: 1,
+				parts: [
+					...(kgKey
+						? [
+								{
+									productId: d.productId,
+									perServedKg: d.perKgDish[kgKey],
+									unit: 'kg' as const,
+									note: `${d.perKgDish[kgKey]} kg per kg cooked`
+								}
+							]
+						: []),
+					...(lKey && liquid
+						? [
+								{
+									productId: liquid.productId,
+									perServedKg: d.perKgDish[lKey],
+									unit: 'l' as const,
+									note: `${d.perKgDish[lKey]} l per kg cooked`
+								}
+							]
+						: [])
+				]
+			});
+			continue;
+		}
+		out.push({
+			...base,
+			parts: [
+				{
+					productId: d.productId,
+					perServedKg: 1,
+					unit: isPcs ? 'pcs' : d.pack?.netL !== undefined ? 'l' : 'kg'
+				}
+			],
+			...(isPcs ? { pieceG: (d.pack!.netKg! / d.pack!.pieces!) * 1000 } : {})
+		});
+	}
+	return out;
+}
 
 // ───────────────────────────── helpers ─────────────────────────────
 
@@ -584,6 +694,9 @@ function settle(line: Line, holds: string[], rules: Rules): Line {
 export function buildEvent(input: BuildInput): Built {
 	const { rules, scenario, grams } = input;
 	const guests = scenario.guests;
+	const eventId = input.eventId ?? XMAS_ID;
+	const event = eventId === XMAS_ID ? SEED : EVENT_SEED_BY_ID[eventId];
+	const week = normalWeekFor(input.kitchen.id);
 	const lines: Line[] = [];
 	const dishes: DishView[] = [];
 	const why: Record<string, WhyStep[]> = {};
@@ -595,27 +708,32 @@ export function buildEvent(input: BuildInput): Built {
 		.map((k) => `${k} ${Math.round(w[k] * 100)}%`)
 		.join(' · ');
 
-	for (const d of DISHES) {
+	for (const d of dishesFor(eventId)) {
 		const g = grams[d.id] ?? d.gDefault;
 		const edited = g !== d.gDefault;
-		const servedKg = (guests * g) / 1000;
+		// The diners this dish serves: every guest, or its share (a choice of mains, a special diet).
+		const diners = guests * (d.share ?? 1);
+		const who = d.share ? `${Math.round(diners)} of ${guests}` : `${guests}`;
+		const pieceG = d.pieceG ?? TART_G;
+		const servedKg = (diners * g) / 1000;
 		const needId = `n-${d.id}`;
 		const dishLineIds: string[] = [];
 		const main = d.parts[0];
 		const mainP = product(main.productId);
 		const isPcs = main.unit === 'pcs';
-		const pieces = Math.ceil((guests * g) / TART_G - 1e-9);
+		const pieces = Math.ceil((diners * g) / pieceG - 1e-9);
 		const needKg = servedKg / d.yield;
+		const liquid = d.parts.length === 1 && main.unit === 'l';
 		const need: Measure = isPcs
 			? { value: pieces, unit: 'pcs' }
-			: { value: round2(needKg), unit: 'kg' };
+			: { value: round2(needKg), unit: liquid ? 'l' : 'kg' };
 		const needFormula = isPcs
-			? `${guests} guests × ${g} g ÷ ${TART_G} g = ${pieces} tarts`
+			? `${who} guests × ${g} g ÷ ${round2(pieceG)} g = ${pieces} ${d.pieceG ? 'pieces' : 'tarts'}`
 			: d.parts.length > 1
-				? `${guests} × ${g} g = ${f1(servedKg)} kg porridge`
+				? `${who} × ${g} g = ${f1(servedKg)} kg ${eventId === XMAS_ID ? 'porridge' : d.name}`
 				: d.yield < 1
-					? `${guests} × ${g} g ÷ ${d.yield} yield = ${f1(needKg)} kg`
-					: `${guests} × ${g} g = ${f2(needKg)} kg`;
+					? `${who} × ${g} g ÷ ${d.yield} yield = ${f1(needKg)} kg`
+					: `${who} × ${g} ${liquid ? 'ml' : 'g'} = ${f2(needKg)} ${liquid ? 'l' : 'kg'}`;
 		needs.push({
 			id: needId,
 			label: `${d.nameFi} (${d.name})`,
@@ -625,7 +743,7 @@ export function buildEvent(input: BuildInput): Built {
 
 		const baseWhy = (p: ProductFact, partNote?: string): WhyStep[] => [
 			{
-				text: `${d.nameFi} is on the menu for ${guests} guests, ${SEED.serviceStyle}`,
+				text: `${d.nameFi} is on the menu for ${who} guests, ${event.serviceStyle}`,
 				source: 'seed',
 				detail: 'Booking is scenario data'
 			},
@@ -853,7 +971,7 @@ export function buildEvent(input: BuildInput): Built {
 						: ['473482', '464273', '468013'];
 				const cands = rankCandidates(
 					readyIds,
-					isPcs ? pieces * (TART_G / 1000) : needKg,
+					isPcs ? pieces * (pieceG / 1000) : needKg,
 					1,
 					rules,
 					scenario
@@ -912,7 +1030,7 @@ export function buildEvent(input: BuildInput): Built {
 			}
 		}
 
-		const usual = NORMAL_WEEK.usual[mainP.productId];
+		const usual = week.usual[mainP.productId];
 		const dishLines = lines.filter((l) => dishLineIds.includes(l.id));
 		dishes.push({
 			id: d.id,
@@ -967,22 +1085,29 @@ export function buildEvent(input: BuildInput): Built {
 		.filter((l) => l.state !== 'rejected')
 		.reduce((s, l) => s + (l.lineCents ?? 0), 0);
 	const newLines = finalLines.filter(
-		(l) => l.state !== 'rejected' && !NORMAL_WEEK.usual[l.productId]
+		(l) => l.state !== 'rejected' && !week.usual[l.productId]
 	).length;
 	const eventKg = dishes.reduce(
-		(s, d) => s + (d.need.unit === 'pcs' ? (d.need.value * TART_G) / 1000 : d.need.value),
+		(s, d) =>
+			s +
+			(d.need.unit === 'pcs'
+				? (d.need.value * TART_G) / 1000
+				: d.need.unit === 'kg'
+					? d.need.value
+					: 0),
 		0
 	);
 
 	const plan: Plan = {
 		workspaceId: 'ws-demo',
 		runId: 'run-fixture',
-		id: 'plan-xmas-140',
+		id: eventId === XMAS_ID ? 'plan-xmas-140' : `plan-${eventId.replace(/^event-/, '')}`,
 		kitchenId: input.kitchen.id,
 		version: input.version,
 		state: committedN && !held && !eligible ? 'committed' : held ? 'held' : 'ready',
-		deliverBy: '2026-12-10',
-		eventId: SEED.id,
+		// Delivered two days before the event, as the server plans it (core/services/events deliverByFor).
+		deliverBy: eventId === XMAS_ID ? '2026-12-10' : twoDaysBefore(event.date),
+		eventId: event.id,
 		needs,
 		lines: finalLines,
 		totalCents: eventCents,
@@ -993,15 +1118,18 @@ export function buildEvent(input: BuildInput): Built {
 	return {
 		plan,
 		view: {
-			eventId: SEED.id,
-			title: SEED.title,
-			date: SEED.date,
+			eventId: event.id,
+			title: event.title,
+			date: event.date,
 			guests,
-			serviceStyle: SEED.serviceStyle,
+			serviceStyle: event.serviceStyle,
 			dishes,
 			why,
-			normalWeek: { cents: NORMAL_WEEK.cents, lines: NORMAL_WEEK.lines },
-			thisWeek: { cents: NORMAL_WEEK.cents + eventCents, lines: NORMAL_WEEK.lines + newLines },
+			normalWeek: { cents: week.cents, lines: week.lines },
+			// An ordinary day is already in the normal week; an extra event adds to it.
+			thisWeek: week.eventInWeek
+				? { cents: week.cents, lines: week.lines }
+				: { cents: week.cents + eventCents, lines: week.lines + newLines },
 			eventKg: round2(eventKg),
 			planReasons,
 			weekSpentCents: scenario.weekSpentCents,

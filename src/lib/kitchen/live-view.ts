@@ -14,7 +14,7 @@ import type {
 	ToolOutput
 } from '$lib/core/contracts';
 import {
-	NORMAL_WEEK,
+	normalWeekFor,
 	type CandidateView,
 	type DishStatus,
 	type DishView,
@@ -302,6 +302,7 @@ function shortCause(l: Line | undefined): { short: string; long: string } {
 
 export function buildLiveView(input: LiveInput): EventView {
 	const { plan, facts } = input;
+	const week = normalWeekFor(plan.kitchenId);
 	const dishes: DishView[] = plan.needs.map((need) => {
 		const { nameFi, name } = names(need.label);
 		const dishLines = plan.lines.filter((l) => l.needId === need.id);
@@ -377,7 +378,7 @@ export function buildLiveView(input: LiveInput): EventView {
 			};
 		}
 
-		const usual = planned ? NORMAL_WEEK.usual[planned.productId] : undefined;
+		const usual = planned ? week.usual[planned.productId] : undefined;
 		const priceCents = planned?.offer?.price?.unitCents ?? 0;
 		return {
 			id: need.id.replace(/^need:/, ''),
@@ -407,7 +408,7 @@ export function buildLiveView(input: LiveInput): EventView {
 
 	const live = plan.lines.filter((l) => l.state !== 'unorderable' && l.state !== 'rejected');
 	const eventCents = live.reduce((s, l) => s + (l.lineCents ?? 0), 0);
-	const newLines = live.filter((l) => !NORMAL_WEEK.usual[l.productId]).length;
+	const newLines = live.filter((l) => !week.usual[l.productId]).length;
 	const planReasons = [
 		...new Set(
 			plan.lines.flatMap((l) =>
@@ -423,8 +424,11 @@ export function buildLiveView(input: LiveInput): EventView {
 		serviceStyle: input.seed.serviceStyle,
 		dishes,
 		why: {},
-		normalWeek: { cents: NORMAL_WEEK.cents, lines: NORMAL_WEEK.lines },
-		thisWeek: { cents: NORMAL_WEEK.cents + eventCents, lines: NORMAL_WEEK.lines + newLines },
+		normalWeek: { cents: week.cents, lines: week.lines },
+		// An ordinary day is already in the normal week; an extra event adds to it.
+		thisWeek: week.eventInWeek
+			? { cents: week.cents, lines: week.lines }
+			: { cents: week.cents + eventCents, lines: week.lines + newLines },
 		eventKg: r2(plan.needs.reduce((s, n) => s + (n.amount.unit === 'kg' ? n.amount.value : 0), 0)),
 		planReasons,
 		weekSpentCents: input.weekSpentCents,

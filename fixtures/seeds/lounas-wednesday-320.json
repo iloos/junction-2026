@@ -1,0 +1,242 @@
+{
+	"$comment": "One menu week's Wednesday lunch buffet for ~320 covers at a price-led lunch restaurant. Three mains to choose from (share = part of the covers who take it) plus salad for all. gServed = grams (or ml) served per diner; yield = served ÷ purchased; need = covers × share × gServed ÷ yield, rounded up to the pack or lot. Every number is a team estimate until a chef checks it; provenance says so. Prices (catalogPrice ex VAT) and availability are copied from the local mock-API cache (14 Nov) where it had them; the rest are quoted live by the app. Product ids reference the Valio catalogue; no Valio rows are copied here.",
+	"id": "event-lounas-wed-320",
+	"title": "Wednesday lunch buffet, 320 covers",
+	"kitchenId": "k-lounas",
+	"date": "2026-12-16",
+	"guests": {
+		"estimate": 320,
+		"guarantee": null,
+		"guaranteeDueHoursBefore": 24,
+		"oversetPct": 0
+	},
+	"serviceStyle": "lunch buffet",
+	"provenance": {
+		"kind": "estimate",
+		"label": "team estimate, not yet reviewed by a chef",
+		"sources": [
+			{
+				"what": "profile, priorities and hard constraints",
+				"ref": "docs/research/horeca-profiles.md §2"
+			},
+			{
+				"what": "published lunch menus list portion grams and diet codes (e.g. soup 110 g, G, M)",
+				"ref": "docs/research/horeca-profiles.md §4 (Jamix menu service)"
+			},
+			{
+				"what": "pack sizes and lot steps",
+				"ref": "Valio catalogue (data/valio/normalized/products.json)"
+			}
+		]
+	},
+	"dishes": [
+		{
+			"dish": "Lohikeitto (salmon soup): salmon",
+			"dietCodes": ["L", "G"],
+			"share": 0.35,
+			"gServed": 70,
+			"yield": 0.95,
+			"yieldNote": "skinless strips, simmered (team estimate)",
+			"productId": "461871",
+			"productName": "Kalavapriikki Lohifilee suikale, ASC",
+			"salesUnit": "KG",
+			"lotStep": 3,
+			"needKg": 8.25,
+			"order": {
+				"qty": 9,
+				"unit": "KG",
+				"rounding": "8.25 kg → 3 × 3 kg lot = 9 kg"
+			}
+		},
+		{
+			"dish": "Lohikeitto (salmon soup): cream",
+			"dietCodes": ["L", "G"],
+			"share": 0.35,
+			"gServed": 40,
+			"productId": "464249",
+			"productName": "Valio ruokakerma 15 % 1 l UHT laktoositon",
+			"salesUnit": "ST",
+			"pack": {
+				"netL": 1
+			},
+			"needL": 4.48,
+			"order": {
+				"qty": 5,
+				"unit": "ST",
+				"rounding": "4.48 l / 1 = 4.48 → 5 ST"
+			},
+			"priceCents": 263,
+			"lineCents": 1315,
+			"availability": {
+				"amount": 999999,
+				"kind": "unknown",
+				"logisticModel": "Stock"
+			}
+		},
+		{
+			"dish": "Lohikeitto (salmon soup): potatoes",
+			"dietCodes": ["L", "G"],
+			"share": 0.35,
+			"gServed": 100,
+			"yield": 0.95,
+			"yieldNote": "peeled portion potatoes, diced (team estimate)",
+			"productId": "475214",
+			"productName": "SPL Raaka annosperuna veitsikuorittu 10kg",
+			"salesUnit": "ST",
+			"pack": {
+				"netKg": 10
+			},
+			"needKg": 11.79,
+			"order": {
+				"qty": 2,
+				"unit": "ST",
+				"rounding": "11.79 kg / 10 = 1.18 → 2 ST"
+			},
+			"priceCents": 791,
+			"lineCents": 1582,
+			"availability": {
+				"amount": 1029.0,
+				"kind": "known",
+				"logisticModel": "Stock"
+			}
+		},
+		{
+			"dish": "Lihapullat (meatballs)",
+			"dietCodes": ["L", "G"],
+			"share": 0.5,
+			"gServed": 150,
+			"yield": 1.0,
+			"yieldNote": "fried, frozen: heated only",
+			"productId": "461810",
+			"productName": "Lagerblad Foods Jättilihapulla 50g/ 5 kg kypsä pakaste",
+			"salesUnit": "KI",
+			"pack": {
+				"netKg": 5
+			},
+			"needKg": 24.0,
+			"order": {
+				"qty": 5,
+				"unit": "KI",
+				"rounding": "24 kg / 5 = 4.8 → 5 KI"
+			}
+		},
+		{
+			"dish": "Ruskea kastike (brown sauce)",
+			"dietCodes": ["L", "G"],
+			"share": 0.5,
+			"gServed": 70,
+			"yield": 1.0,
+			"productId": "465109",
+			"productName": "Mestari Forsman Kermainen Ruskeakastike 2,5kg",
+			"salesUnit": "BAG",
+			"pack": {
+				"netKg": 2.5
+			},
+			"needKg": 11.2,
+			"order": {
+				"qty": 5,
+				"unit": "BAG",
+				"rounding": "11.2 kg / 2.5 = 4.48 → 5 BAG"
+			},
+			"availability": {
+				"amount": 999999,
+				"kind": "unknown",
+				"logisticModel": "Terminal"
+			}
+		},
+		{
+			"dish": "Kasvispyörykät (vegetable balls)",
+			"dietCodes": ["VEG", "L"],
+			"share": 0.15,
+			"gServed": 150,
+			"yield": 1.0,
+			"yieldNote": "fried, frozen: heated only",
+			"productId": "463847",
+			"productName": "Lagerblad Foods Kasvispyörykkä 30 g / 5 kg kypsä pakaste",
+			"salesUnit": "KI",
+			"pack": {
+				"netKg": 5
+			},
+			"needKg": 7.2,
+			"order": {
+				"qty": 2,
+				"unit": "KI",
+				"rounding": "7.2 kg / 5 = 1.44 → 2 KI"
+			},
+			"availability": {
+				"amount": 0,
+				"kind": "undeliverable",
+				"logisticModel": null
+			}
+		},
+		{
+			"dish": "Perunamuusi (mashed potato): flakes",
+			"dietCodes": ["L", "G"],
+			"share": 0.65,
+			"gServed": 200,
+			"perKgDish": {
+				"flakesKg": 0.17,
+				"milkL": 0.4
+			},
+			"productId": "461745",
+			"productName": "Mestari Perunahiutale 10 kg",
+			"salesUnit": "SK",
+			"pack": {
+				"netKg": 10
+			},
+			"needKg": 7.07,
+			"order": {
+				"qty": 1,
+				"unit": "SK",
+				"rounding": "7.07 kg / 10 = 0.71 → 1 SK"
+			}
+		},
+		{
+			"dish": "Perunamuusi (mashed potato): milk",
+			"dietCodes": ["L", "G"],
+			"share": 0.65,
+			"productId": "464201",
+			"productName": "Valio kevytmaito 1 l laktoositon UHT",
+			"salesUnit": "ST",
+			"pack": {
+				"netL": 1
+			},
+			"needL": 16.64,
+			"order": {
+				"qty": 17,
+				"unit": "ST",
+				"rounding": "16.64 l / 1 = 16.64 → 17 ST"
+			},
+			"priceCents": 156,
+			"lineCents": 2652,
+			"availability": {
+				"amount": 999999,
+				"kind": "unknown",
+				"logisticModel": "Stock"
+			}
+		},
+		{
+			"dish": "Jäävuorisalaatti (iceberg salad)",
+			"dietCodes": ["VEG", "L", "G", "M"],
+			"gServed": 40,
+			"yield": 1.0,
+			"productId": "467149",
+			"productName": "SallaCarte Amerikansalaattisuikale 1 kg",
+			"salesUnit": "ST",
+			"pack": {
+				"netKg": 1
+			},
+			"needKg": 12.8,
+			"order": {
+				"qty": 13,
+				"unit": "ST",
+				"rounding": "12.8 kg / 1 = 12.8 → 13 ST"
+			},
+			"availability": {
+				"amount": 2835.0,
+				"kind": "known",
+				"logisticModel": "Stock"
+			}
+		}
+	]
+}

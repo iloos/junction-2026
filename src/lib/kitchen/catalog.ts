@@ -1,9 +1,11 @@
 import buffet from '../../../fixtures/seeds/christmas-buffet-140.json';
 import kitchensSeed from '../../../fixtures/seeds/kitchens.json';
 import { Kitchen, type AvailabilityKind, type MeasureUnit } from '$lib/core/contracts';
+import { EVENT_SEEDS, hasEvent } from './events';
 
 /**
- * Product facts for the hero event, read from fixtures/seeds/christmas-buffet-140.json.
+ * Product facts for the kitchens' events, read from their seeds (lib/kitchen/events.ts); the hero event is
+ * fixtures/seeds/christmas-buffet-140.json.
  * The seed holds prices (catalogPrice ex VAT, cached 14 Nov) and availability as the Valio mock returned it.
  * This is the fixture side of the data seam; the real API returns the same facts through `quote`.
  */
@@ -12,7 +14,10 @@ export const SEED = buffet;
 export const CACHED_AT = '2026-11-14T10:00:00+02:00';
 export const CACHE_REF = 'valio mock, cache tag support-seeds / hero-preflight';
 
-export const KITCHENS: Kitchen[] = kitchensSeed.kitchens.map((k) => Kitchen.parse(k));
+/** Every seeded kitchen (the control room shows them all). */
+export const ALL_KITCHENS: Kitchen[] = kitchensSeed.kitchens.map((k) => Kitchen.parse(k));
+/** The kitchens the kitchen screen offers: the ones with an event to plan. */
+export const KITCHENS: Kitchen[] = ALL_KITCHENS.filter((k) => hasEvent(k.id));
 
 export type CategoryGroup = 'meat' | 'fish' | 'milk' | 'other';
 
@@ -74,13 +79,25 @@ const GROUPS: Record<string, CategoryGroup> = {
 	'463928': 'fish',
 	'464201': 'milk',
 	'464249': 'milk',
-	'471247': 'milk'
+	'471247': 'milk',
+	// Lunch and school-day events.
+	'461871': 'fish',
+	'461810': 'meat',
+	'469477': 'milk',
+	'463437': 'milk'
 };
 
 /** Facts the seed doesn't carry but the catalogue does (team-checked). */
 const EXTRA: Record<string, Partial<ProductFact>> = {
 	// Valio lactose-free milk: Finnish dairy.
 	'464201': { origin: 'fi' },
+	// Lunch and school-day products: origin from the Valio catalogue (countryOfOrigin FI).
+	'461871': { origin: 'fi' },
+	'461810': { origin: 'fi' },
+	'462016': { origin: 'fi' },
+	'469477': { origin: 'fi' },
+	'463437': { origin: 'fi' },
+	'464249': { origin: 'fi' },
 	// Whole ham sold per KG on the bone; the seed gives the 7 kg lot.
 	'462490': { origin: 'fi' },
 	'476648': { perUnit: 1 },
@@ -146,10 +163,11 @@ function toFact(r: RawProduct): ProductFact {
 
 function collect(): Record<string, ProductFact> {
 	const raws: RawProduct[] = [];
-	for (const d of buffet.dishes as unknown as (RawProduct & { candidates?: RawProduct[] })[]) {
-		raws.push(d);
-		for (const c of d.candidates ?? []) raws.push(c);
-	}
+	for (const e of EVENT_SEEDS)
+		for (const d of e.dishes as unknown as (RawProduct & { candidates?: RawProduct[] })[]) {
+			raws.push(d);
+			for (const c of d.candidates ?? []) raws.push(c);
+		}
 	const r = buffet.rescue as unknown as Record<
 		string,
 		{ chosen?: RawProduct & { ingredients?: RawProduct[] }; alternatives?: RawProduct[] }

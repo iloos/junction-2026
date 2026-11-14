@@ -18,7 +18,7 @@ import { serveTool, type Served } from '$lib/server/tools/serve';
 import { rulesFor, type PresetId } from '$lib/kitchen/fixture-plan';
 import type { CommitRecord, FixtureSnapshot, PlanOrigin } from '$lib/kitchen/fixture-server';
 import { buildLiveView, type ProductFacts, type SubstitutesOut } from '$lib/kitchen/live-view';
-import seed from '../../../../fixtures/seeds/christmas-buffet-140.json';
+import { EVENT_SEED_BY_ID, eventFor } from '$lib/kitchen/events';
 import { scenarioClock } from '$lib/core/scenario';
 import { currentRun, currentRunStartedAt } from '$lib/server/demo/run';
 import { reloadRunNow, resetDemoRun } from '$lib/server/demo/reset';
@@ -27,7 +27,6 @@ import { inWorkspace } from '$lib/server/adapters/simulator/overlay';
 import { rescueContention } from '$lib/core/services/contention';
 import { catchUp } from '$lib/server/bus';
 
-const EVENT_ID = 'event-xmas-140';
 /** The palvikinkku the ham rescue relies on (13 of 15 in stock): the contention preset takes 4 of them. */
 const CONTENDED = { productId: '476768', left: 11, taken: 4 };
 
@@ -158,8 +157,12 @@ async function findPlan(s: Session) {
 	const linked = s.planId ? ws.plans[s.planId] : undefined;
 	if (linked && linked.kitchenId === s.kitchenId) return linked;
 	return (
-		Object.values(ws.plans).find((p) => p.kitchenId === s.kitchenId && p.eventId === EVENT_ID) ??
-		null
+		Object.values(ws.plans).find(
+			(p) =>
+				p.kitchenId === s.kitchenId &&
+				p.eventId !== undefined &&
+				p.eventId === eventFor(s.kitchenId)?.id
+		) ?? null
 	);
 }
 
@@ -179,9 +182,13 @@ type PlanOut = { plan: import('$lib/core/contracts').Plan };
 /** Plans the event, then lets the kitchen agent propose a rescue for every real outage that has none yet. */
 /** The first half of `start`: plan the event (menu × guests → needs → lines). Idempotent. */
 async function planOnly(s: Session) {
+	// Each kitchen plans its own event (lib/kitchen/events.ts): the hotel's Christmas buffet, the lunch
+	// restaurant's Wednesday, the central kitchen's school day.
+	const event = eventFor(s.kitchenId);
+	if (!event) throw new Error(`${s.kitchenId} has no event to plan`);
 	const { plan } = (await must(s, 'plan_event', {
 		kitchenId: s.kitchenId,
-		eventId: EVENT_ID
+		eventId: event.id
 	})) as PlanOut;
 	return plan;
 }
@@ -321,6 +328,20 @@ function originOf(actor: string, via: string, plan: Plan): PlanOrigin {
 	return 'kitchen';
 }
 
+/** The header facts for a plan: its seeded event's when it has one, else named by what it buys. */
+function seedViewOf(plan: Plan) {
+	const event = plan.eventId ? EVENT_SEED_BY_ID[plan.eventId] : undefined;
+	return event
+		? {
+				title: event.title,
+				date: event.date,
+				guests: event.guests.estimate,
+				serviceStyle: event.serviceStyle,
+				rescue: event.rescue
+			}
+		: { title: titleOf(plan), date: plan.deliverBy, guests: 0, serviceStyle: '' };
+}
+
 /** A plan that is not the seeded event (an agent's order, a menu): named by what it buys. */
 function titleOf(plan: Plan): string {
 	const labels = plan.needs.map((n) => n.label);
@@ -447,7 +468,7 @@ async function buildSnapshot(s: Session): Promise<LiveSnapshot> {
 		.filter((p) => p.kitchenId === kitchen.id && p.id !== plan.id && p.lines.length > 0)
 		.map((p) => ({
 			id: p.id,
-			title: p.eventId === EVENT_ID ? seed.title : titleOf(p),
+			title: (p.eventId && EVENT_SEED_BY_ID[p.eventId]?.title) || titleOf(p),
 			open: p.lines.filter((l) => !['committed', 'rejected', 'unorderable'].includes(l.state))
 				.length,
 			ordered: p.lines.filter((l) => l.state === 'committed').length
@@ -460,16 +481,7 @@ async function buildSnapshot(s: Session): Promise<LiveSnapshot> {
 			plan,
 			rescues,
 			facts,
-			seed:
-				plan.eventId === EVENT_ID
-					? {
-							title: seed.title,
-							date: seed.date,
-							guests: seed.guests.estimate,
-							serviceStyle: seed.serviceStyle,
-							rescue: (seed as { rescue?: Record<string, unknown> }).rescue
-						}
-					: { title: titleOf(plan), date: plan.deliverBy, guests: 0, serviceStyle: '' },
+			seed: seedViewOf(plan),
 			rules,
 			weekSpentCents: spent.ok ? spent.value.value : 0,
 			previewRanking: s.preset !== 'kitchen'

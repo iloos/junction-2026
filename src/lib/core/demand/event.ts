@@ -79,17 +79,20 @@ export function planEventDemand(
 	const gServedOf = (d: SeedDish): number | undefined =>
 		overrides[d.dish] ?? overrides[needIdFor(d.dish)] ?? d.gServed;
 
+	// The diners an entry serves: everyone, or its share (a choice of mains, a special diet).
+	const dinersOf = (d: SeedDish): number => guests * (d.share ?? 1);
+
 	const cooked = new Map<string, CookedDish>();
 	for (const d of seed.dishes) {
 		const g = gServedOf(d);
 		if (d.perKgDish && g !== undefined)
-			cooked.set(familyOf(d.dish), { kg: (guests * g) / 1000, perKg: d.perKgDish });
+			cooked.set(familyOf(d.dish), { kg: (dinersOf(d) * g) / 1000, perKg: d.perKgDish });
 	}
 
 	const needs: Need[] = [];
 	const lines: DraftLine[] = [];
 	for (const d of seed.dishes) {
-		const amount = needAmountFor(d, guests, gServedOf(d), cooked.get(familyOf(d.dish)));
+		const amount = needAmountFor(d, dinersOf(d), gServedOf(d), cooked.get(familyOf(d.dish)));
 		const id = needIdFor(d.dish);
 		needs.push({ id, label: d.dish, amount, provenance });
 		lines.push({

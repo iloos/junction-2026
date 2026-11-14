@@ -12,6 +12,7 @@ import type {
 	Weights
 } from '$lib/core/contracts';
 import { KITCHENS } from './catalog';
+import { EVENT_SEED_BY_ID } from './events';
 
 export type PresetId = 'kitchen' | 'price' | 'finnish' | 'carbon' | 'reliable';
 
@@ -252,3 +253,41 @@ export const NORMAL_WEEK = {
 		})
 	) as Record<string, { qty: number; unit: string }>
 };
+
+export interface NormalWeek {
+	cents: number;
+	lines: number;
+	usual: Record<string, { qty: number; unit: string }>;
+	/**
+	 * True when the event is an ordinary day inside the normal week (a lunch Wednesday, a school day): this week is
+	 * the normal week. False for an extra event on top of it (the hotel's Christmas buffet).
+	 */
+	eventInWeek: boolean;
+}
+
+/** An ordinary day's event: its products are the kitchen's usual ones, at the amounts that day orders. */
+function regularDay(eventId: string, cents: number, lines: number): NormalWeek {
+	const e = EVENT_SEED_BY_ID[eventId] as unknown as {
+		dishes: { productId: string; order?: { qty: number; unit: string } }[];
+	};
+	const usual: NormalWeek['usual'] = {};
+	for (const d of e.dishes)
+		if (d.order) {
+			const u = usual[d.productId];
+			usual[d.productId] = { qty: (u?.qty ?? 0) + d.order.qty, unit: d.order.unit };
+		}
+	return { cents, lines, usual, eventInWeek: true };
+}
+
+/**
+ * Each kitchen's normal week for the "this week" comparison. Team estimates (scenario): the hotel's as above; the
+ * lunch restaurant 320 covers × 5 days × €2.60 food cost; the central kitchen 2,000 meals × 5 days × €1.75.
+ */
+const NORMAL_WEEKS: Record<string, NormalWeek> = {
+	'k-hotel': { ...NORMAL_WEEK, eventInWeek: false },
+	'k-lounas': regularDay('event-lounas-wed-320', 416_000, 38),
+	'k-central': regularDay('event-school-day-2000', 1_750_000, 32)
+};
+
+export const normalWeekFor = (kitchenId: string): NormalWeek =>
+	NORMAL_WEEKS[kitchenId] ?? { ...NORMAL_WEEK, eventInWeek: false };
