@@ -380,6 +380,9 @@ export const stubHandlers: ToolHandlers = {
 	async get_context() {
 		return err('NOT_FOUND', 'get_context needs the server store');
 	},
+	async propose_menu() {
+		return err('PROVIDER_UNAVAILABLE', 'propose_menu is served by the real handlers only');
+	},
 	async get_outcome() {
 		return err('PROVIDER_UNAVAILABLE', 'get_outcome is served by the real handlers only');
 	},

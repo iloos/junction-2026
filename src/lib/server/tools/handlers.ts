@@ -10,6 +10,8 @@ import { env } from '$env/dynamic/private';
 import { createDecide } from '$lib/server/adapters/decide';
 import { createGetContext } from '$lib/server/agent/get-context';
 import { createGetOutcome } from '$lib/server/tasks/outcome';
+import { proposeMenuHandler } from '$lib/server/menu/tool';
+import { createLlmRouter } from '$lib/server/adapters/llm/router';
 import { projectedTaskStore } from '$lib/server/tasks/project';
 import { drizzleTaskStore } from '$lib/server/tasks/store';
 import { scopeFor, withExternalScope } from '$lib/server/external/scope';
@@ -72,6 +74,7 @@ export function realHandlers(): Promise<ToolHandlers> {
 			record: env.DECIDE_RECORD === '1'
 		});
 		const handlers = createHandlers({ ...b.ports, decide, ops: createOps() });
+		const menuLlm = createLlmRouter(env);
 		// The web tools run under the caller's WebExecutionContext (F19): its workspace and run, these
 		// ports, and its key id for the daily web spend. Loaded on first call: server/web imports this module.
 		const web =
@@ -94,6 +97,14 @@ export function realHandlers(): Promise<ToolHandlers> {
 		return {
 			...handlers,
 			get_context: createGetContext(b.ports),
+			// Menus come from Gemini when it is configured, else the team templates; a chef reviews either.
+			propose_menu: proposeMenuHandler({
+				ports: b.ports,
+				llm: () =>
+					(process.env.VITEST ? 'fixture' : (env.LLM_PROVIDER ?? 'fixture')) === 'fixture'
+						? null
+						: menuLlm.for('menu.propose')
+			}),
 			// Ledgers are recomputed from the plans on every read, never taken from a stored task.
 			get_outcome: createGetOutcome(
 				{

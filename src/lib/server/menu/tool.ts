@@ -1,16 +1,16 @@
 /**
- * The planned `propose_menu` tool's handler (contracts/tools-next.ts): a brief in, a stored menu proposal (revision 0)
+ * The `propose_menu` tool's handler: a brief in, a stored menu proposal (revision 0)
  * and the rubric's issues out. It plans and buys nothing; a chef reviews the menu before plan_event can use it, so the
- * result points there. Registered by the lead when the tool moves into `toolSchemas`.
+ * result points there.
  */
 import type { z } from 'zod';
 import { err, ok, type MenuProposal, type Result } from '$lib/core/contracts';
-import { plannedToolSchemas } from '$lib/core/contracts/tools-next';
+import { toolSchemas } from '$lib/core/contracts';
 import type { CallContext, Catalog, Clock, Llm, MenuStore } from '$lib/core/ports';
 import { proposeMenu } from './proposal';
 import type { Issue } from './rubric';
 
-type Input = (typeof plannedToolSchemas)['propose_menu']['input'];
+type Input = (typeof toolSchemas)['propose_menu']['input'];
 
 export interface ProposeMenuOutput {
 	proposal: MenuProposal;
@@ -28,7 +28,7 @@ export function proposeMenuHandler(d: ProposeMenuDeps) {
 	return async (ctx: CallContext, raw: unknown): Promise<Result<ProposeMenuOutput>> => {
 		if (!ctx.scopes.includes('plan'))
 			return err('FORBIDDEN', 'propose_menu needs the plan scope', { sub: 'scope' });
-		const parsed = plannedToolSchemas.propose_menu.input.safeParse(raw);
+		const parsed = toolSchemas.propose_menu.input.safeParse(raw);
 		if (!parsed.success)
 			return err(
 				'INVALID_INPUT',

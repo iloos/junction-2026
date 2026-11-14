@@ -248,6 +248,20 @@ export function toFacts(tool: ToolName, value: unknown, intent?: Intent): Facts 
 				decisionsLeft: num(l.decisionsLeft)
 			};
 		}
+		case 'propose_menu': {
+			const pr = obj(v.proposal);
+			const dishes = Array.isArray(pr.dishes) ? pr.dishes.map(obj) : [];
+			const issues = Array.isArray(v.issues) ? v.issues.map(obj) : [];
+			return {
+				proposalId: code(pr.id),
+				revision: num(pr.revision),
+				dishes: dishes.length,
+				unresolved: dishes
+					.flatMap((d) => (Array.isArray(d.ingredients) ? d.ingredients.map(obj) : []))
+					.filter((i) => i.unresolved !== undefined).length,
+				blocks: issues.filter((i) => i.severity === 'block').length
+			};
+		}
 		case 'get_context':
 			return {
 				kitchens: Array.isArray(v.kitchens) ? v.kitchens.length : 0,

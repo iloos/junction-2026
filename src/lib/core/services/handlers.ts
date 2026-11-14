@@ -36,11 +36,11 @@ const unavailable =
 
 /**
  * Served outside core and composed in server/tools/handlers.ts: get_context by the agent door
- * (server/agent/get-context.ts), get_outcome by server/tasks (it reads the task store), the web tools by server/web
- * (they need web adapters, not core ports).
+ * (server/agent/get-context.ts), get_outcome by server/tasks (it reads the task store), propose_menu by
+ * server/menu (it needs a model), the web tools by server/web (they need web adapters, not core ports).
  */
 type ServedElsewhere =
-	'get_context' | 'get_outcome' | 'lookup_facts' | 'find_outside' | 'check_recall';
+	'get_context' | 'get_outcome' | 'propose_menu' | 'lookup_facts' | 'find_outside' | 'check_recall';
 const IMPLS: { [N in Exclude<ToolName, ServedElsewhere>]: Impl<N> } = {
 	search_products: searchProducts,
 	quote,

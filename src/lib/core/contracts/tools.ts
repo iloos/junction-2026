@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { ApprovalState, Line, Plan, ScoreBreakdown, TermsDiff } from './plan';
 import { Offer, Product } from './product';
 import { TaskLedger } from './task';
+import { EventBrief, MenuProposal } from './event';
 import { IsoDate, KitchenId, Measure, ProductId, Provenance, SalesQty } from './primitives';
 
 /**
@@ -345,6 +346,18 @@ export const toolSchemas = {
 					drill: z.boolean(),
 					seenAt: z.string()
 				})
+			)
+		})
+	},
+	propose_menu: {
+		scope: 'plan',
+		description:
+			'Propose a menu for an event brief: dishes with ingredient amounts per guest, each ingredient resolved to a catalogue product or left visibly unresolved. Estimates are labelled; a chef reviews the menu before it can be planned.',
+		input: z.object({ kitchenId: z.string(), brief: EventBrief }),
+		output: out({
+			proposal: MenuProposal,
+			issues: z.array(
+				z.object({ id: z.string(), severity: z.enum(['block', 'warn']), text: z.string() })
 			)
 		})
 	},
