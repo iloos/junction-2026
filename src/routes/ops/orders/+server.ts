@@ -1,9 +1,8 @@
 import { json } from '@sveltejs/kit';
 import { dev } from '$app/environment';
 import { env } from '$env/dynamic/private';
-import { allOrderStages } from '$lib/core/services/stages';
 import { isMemoryOnly } from '$lib/server/bus';
-import { readRunOps } from '$lib/server/demo/run-ops';
+import { runStages } from '$lib/server/demo/run-ops';
 import { mayRead } from '$lib/server/demo/visitor';
 import { decisionsOf } from '$lib/ui/decisions';
 import { orderRow } from '../orders';
@@ -18,9 +17,9 @@ export const GET: RequestHandler = async ({ url, cookies }) => {
 	if (!ws || (!dev && !mayRead(ws, cookies, env)))
 		return json({ error: { code: 'FORBIDDEN', message: 'unknown workspace' } }, { status: 403 });
 	if (isMemoryOnly(ws)) return json({ orders: [] });
-	const stages = allOrderStages(await readRunOps(ws));
+	const { stages, truncated } = await runStages(ws);
 	return json(
-		{ orders: stages.map((s) => orderRow(s, decisionsOf(s.plan, s.pending))) },
+		{ orders: stages.map((s) => orderRow(s, decisionsOf(s.plan, s.pending))), truncated },
 		{ headers: { 'cache-control': 'no-store' } }
 	);
 };

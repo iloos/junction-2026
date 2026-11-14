@@ -1,9 +1,8 @@
 import { json } from '@sveltejs/kit';
 import { dev } from '$app/environment';
 import { env } from '$env/dynamic/private';
-import { allOrderStages } from '$lib/core/services/stages';
 import { isMemoryOnly } from '$lib/server/bus';
-import { readRunOps } from '$lib/server/demo/run-ops';
+import { runStages } from '$lib/server/demo/run-ops';
 import { mayRead } from '$lib/server/demo/visitor';
 import { createServerPorts } from '$lib/server/store/server-ports';
 import { demandByDay } from '../demand';
@@ -18,9 +17,12 @@ export const GET: RequestHandler = async ({ url, cookies }) => {
 	if (!ws || (!dev && !mayRead(ws, cookies, env)))
 		return json({ error: { code: 'FORBIDDEN', message: 'unknown workspace' } }, { status: 403 });
 	if (isMemoryOnly(ws)) return json({ days: [] });
-	const stages = allOrderStages(await readRunOps(ws));
+	const { stages, truncated } = await runStages(ws);
 	const { ports } = await createServerPorts();
 	const kitchens = await ports.store.kitchens(ws).catch(() => []);
 	const nameOf = (id: string) => kitchens.find((k) => k.id === id)?.name ?? id;
-	return json({ days: demandByDay(stages, nameOf) }, { headers: { 'cache-control': 'no-store' } });
+	return json(
+		{ days: demandByDay(stages, nameOf), truncated },
+		{ headers: { 'cache-control': 'no-store' } }
+	);
 };
