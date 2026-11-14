@@ -163,6 +163,8 @@ type HeroLine = {
 	offer?: { price?: { unitCents?: number } };
 };
 const HERO = 'a no-meat dinner for 120 with a peach dessert';
+/** The answer a visitor taps for each brief question the dock asks: the later day, a buffet. Recorded in the notes. */
+const ANSWER = /^(Sat\b|Saturday|Buffet$)/;
 
 /**
  * The hero journey (SESSIONS "The hero journey", user 23:40), refereed: words → menu → "plan it" → every ingredient a
@@ -180,14 +182,16 @@ journey(
 		await r.step('ask the agent for the dinner', () => say(r, page, HERO));
 		await r.step('answer what it asks, then "plan it"', async () => {
 			const dock = await openDock(page);
-			for (let i = 0; i < 3; i++) {
-				const chip = dock.getByRole('button', { name: /^(Sat|Saturday|Fri|Friday)\b/ }).last();
+			let asked = 0;
+			for (let i = 0; i < 4; i++) {
+				const chip = dock.getByRole('button', { name: ANSWER }).last();
 				// Answered chips stay on screen, disabled: only an open question has an enabled one.
 				if (
 					!(await chip.isVisible().catch(() => false)) ||
 					!(await chip.isEnabled().catch(() => false))
 				)
 					break;
+				r.note(`answered${++asked}`, await chip.innerText());
 				await chip.click({ timeout: 5_000 });
 				await page.waitForTimeout(1500);
 				await page
@@ -549,7 +553,7 @@ journey('j9', 'Public site: landing, how, proof, story', async (r, page) => {
 
 // ---------- D23 / D24 (lead, 14 Nov 23:00) ----------
 
-type SnapLine = { productId: string; qty?: number; unit?: string; state: string };
+type SnapLine = { productId: string; qty?: { value: number; unit: string }; state: string };
 /** The plan a door just made: the last plan link on its page (dock card or /request result), else the session's plan. */
 async function basket(page: Page) {
 	const href = await page
@@ -568,7 +572,7 @@ async function basket(page: Page) {
 		plan: snap.plan?.id ?? null,
 		lines: (snap.plan?.lines ?? [])
 			.filter((l) => !['rejected', 'superseded'].includes(l.state))
-			.map((l) => `${l.productId} × ${l.qty ?? '?'} ${l.unit ?? ''}`.trim())
+			.map((l) => `${l.productId} × ${l.qty?.value ?? '?'} ${l.qty?.unit ?? ''}`.trim())
 			.sort()
 	};
 }
