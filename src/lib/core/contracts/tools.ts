@@ -102,7 +102,7 @@ export const toolSchemas = {
 	get_context: {
 		scope: 'read',
 		description:
-			'Start here: who you are, which kitchens and events you may plan for, your scopes, the scenario date and cut-off, and the open plans with their next action.',
+			'Start here: who you are, which kitchens and events you may plan for (with each kitchen’s usual order for its next receiving day), your scopes, the scenario date and cut-off, and the open plans with their next action.',
 		input: z.object({}),
 		output: out({
 			actor: z.object({ kind: z.string(), id: z.string() }),
@@ -130,7 +130,32 @@ export const toolSchemas = {
 						neverDelegate: z.array(z.string()),
 						allergenFreeFrom: z.array(z.string()),
 						tenderListOnly: z.boolean()
-					})
+					}),
+					/**
+					 * The usual order for the kitchen's next receiving day, detected from its order history (D14). Labelled
+					 * "simulated history" until Valio supplies real history. A suggestion: it grants nothing, and planning
+					 * it goes through place_order like any other order.
+					 */
+					usual: z
+						.object({
+							label: z.string(),
+							deliveryDate: IsoDate,
+							sentence: z.string(),
+							lines: z.array(
+								z.object({
+									productId: ProductId,
+									qty: z.number().nonnegative(),
+									unit: z.string(),
+									score: z.number().min(0).max(1),
+									sentence: z.string()
+								})
+							),
+							joined: z.array(
+								z.object({ productId: ProductId, dueOnDay: z.boolean(), sentence: z.string() })
+							),
+							dropped: z.array(z.object({ productId: ProductId, sentence: z.string() }))
+						})
+						.optional()
 				})
 			),
 			openPlans: z.array(
