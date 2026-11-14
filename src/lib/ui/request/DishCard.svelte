@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { ChefHat, Package, Check, CircleHelp, OctagonX, Lightbulb } from '@lucide/svelte';
 	import { money, num, readableName } from '$lib/ui/format';
-	import { useShell } from '$lib/ui/shell/shell.svelte';
+	import ProductToken from '$lib/ui/ProductToken.svelte';
 	import type { DishInterpretation } from './types';
 
 	/**
@@ -21,7 +21,6 @@
 		onpacks: () => void;
 	}
 	let { dish, choice, choiceFrom, busy, onchoose, onportions, onpacks }: Props = $props();
-	const shell = useShell();
 	let editing = $state(false);
 	let portions = $state('');
 	const value = $derived(Number(portions.replace(/[\s,]/g, '')));
@@ -156,9 +155,11 @@
 								<span class="text-ink">{l.label}</span>
 								<span class="num text-ink-2">· {num(l.kg, 1)} kg</span>
 								{#if l.product}<span class="block text-ink-2"
-										>{readableName(l.product.name)}{#if shell?.system}<span class="mono text-ink-3">
-												{l.product.productId}</span
-											>{/if} · {money(l.lineCents)}{l.stock ? ` · ${l.stock}` : ''}</span
+										><ProductToken
+											productId={l.product.productId}
+											name={l.product.name}
+											qty={l.salesQty !== null ? { count: l.salesQty } : undefined}
+										/> · {money(l.lineCents)}{l.stock ? ` · ${l.stock}` : ''}</span
 									>{:else}<span class="block text-out">no product: {l.missing}</span>{/if}
 								{#each l.filtered as f (f.name)}<span class="block text-ink-3"
 										>Turned down {readableName(f.name)}: {f.reason}</span

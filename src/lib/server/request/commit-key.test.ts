@@ -14,11 +14,14 @@ describe('one command identity for a Request commit', () => {
 		]
 	};
 
-	it('commits the eligible line now; the held one only once its approval is granted', () => {
+	it('names the eligible line now; after it is ordered the set is the same (a retry), a grant adds the remainder', () => {
 		expect(committableLines(plan, null)).toEqual(['a']);
 		expect(committableLines(plan, { state: 'pending', lineIds: ['b'] })).toEqual(['a']);
 		const after = { lines: [{ id: 'a', state: 'committed' }, ...plan.lines.slice(1)] };
-		expect(committableLines(after, { state: 'granted', lineIds: ['b'] })).toEqual(['b']);
+		// A retry after the first commit succeeded: the same lines, so the same key.
+		expect(committableLines(after, { state: 'pending', lineIds: ['b'] })).toEqual(['a']);
+		// The remainder approved later: a new set, so a new command.
+		expect(committableLines(after, { state: 'granted', lineIds: ['b'] })).toEqual(['a', 'b']);
 	});
 
 	it('same plan, version, terms and lines: same key; a remainder or new terms: a new key', async () => {

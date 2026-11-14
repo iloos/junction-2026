@@ -8,7 +8,7 @@
  * Callers without a workspace (tests, scripts) act in the judges' shared room.
  */
 import type { Kitchen } from '$lib/core/contracts';
-import type { CallContext } from '$lib/core/ports';
+import type { CallContext, ToolHandlers } from '$lib/core/ports';
 import { createDecide } from '$lib/server/adapters/decide';
 import { createLlmRouter } from '$lib/server/adapters/llm/router';
 import { traceEvent, type Trace } from '$lib/server/adapters/llm/trace';
@@ -34,7 +34,7 @@ import type { RankBy } from './rank-by';
 
 export { ToolFailed } from './run';
 import { ToolFailed } from './run';
-import { canonicalJson, sha256Hex } from '$lib/core/hash';
+import { commandKey } from '$lib/core/command';
 export { readBriefAnswers } from '$lib/server/menu/brief';
 export { readAnswers } from './workspace';
 
@@ -187,8 +187,10 @@ export async function approveRequest(o: {
 }
 
 /**
- * The lines a commit from Request means now: every eligible line plus every open line a granted approval covers
- * (what commit_order commits by default), named exactly.
+ * The lines a commit from Request means: every eligible line, every open line a granted approval covers, and every
+ * line of the plan already ordered. The ordered ones keep the set stable across a retry, so a retry after a success
+ * names the same lines, gets the same key and replays the receipt; commit_order buys only the open ones. A remainder
+ * approved later adds lines, so it is a new command.
  */
 export function committableLines(
 	plan: { lines: { id: string; state: string }[] },
@@ -197,26 +199,27 @@ export function committableLines(
 	const granted = approval?.state === 'granted' ? new Set(approval.lineIds) : new Set<string>();
 	const open = new Set(['proposed', 'eligible', 'held']);
 	return plan.lines
-		.filter((l) => l.state === 'eligible' || (granted.has(l.id) && open.has(l.state)))
+		.filter(
+			(l) =>
+				l.state === 'eligible' ||
+				l.state === 'committed' ||
+				(granted.has(l.id) && open.has(l.state))
+		)
 		.map((l) => l.id)
 		.sort();
 }
 
 /**
- * The one command identity for a commit from Request: plan, version, accepted terms and the exact lines. A transport
- * retry (same lines) is the same key and replays the receipt; a remainder approved later is a new command. Swapped
- * for core's commandKey (D18) when it lands, here only.
+ * A commit from Request under core's one command identity (D18): plan, version, accepted terms and the exact lines.
+ * A transport retry (same lines) replays the receipt; a remainder approved later is a new command.
  */
-export async function commitKey(
+export function commitKey(
 	planId: string,
 	version: number,
 	termsHash: string | null,
 	lineIds: readonly string[]
 ): Promise<string> {
-	const h = await sha256Hex(
-		canonicalJson({ planId, version, termsHash, lineIds: [...lineIds].sort() })
-	);
-	return `rq-commit-${h.slice(0, 24)}`;
+	return commandKey({ planId, version, termsHash, lineIds });
 }
 
 export async function commitRequest(o: {
@@ -233,20 +236,38 @@ export async function commitRequest(o: {
 	approval: ApprovalView | null;
 }> {
 	const a = await actors(o.env, o.workspaceId);
-	const before = await approvalView(handlers, a.chef, o.planId);
+	return commitWith(handlers, a.chef, o);
+}
+
+/**
+ * One commit from Request as `chef`: the intended lines (committableLines, or the retry's own), keyed by core's
+ * commandKey over the plan, version, accepted terms and those lines, so any number of concurrent or repeated sends
+ * of the same command get one receipt.
+ */
+export async function commitWith(
+	h: ToolHandlers,
+	chef: CallContext,
+	o: { planId: string; version: number; attempt: number; lineIds?: string[] }
+): Promise<{
+	commit: CommitView;
+	plan: Awaited<ReturnType<typeof approvalView>>['plan'];
+	approval: ApprovalView | null;
+}> {
+	const before = await approvalView(h, chef, o.planId);
 	const lineIds = o.lineIds?.length
 		? [...o.lineIds]
 		: committableLines(before.plan, before.approval);
 	if (!lineIds.length)
 		throw new ToolFailed('commit_order', 'FORBIDDEN', 'no line can be committed now');
-	const idempotencyKey = await commitKey(o.planId, o.version, before.plan.termsHash, lineIds);
-	const r = await callTool(handlers, a.chef, 'commit_order', {
+	const terms = before.approval?.termsHash ?? before.plan.termsHash;
+	const idempotencyKey = await commitKey(o.planId, o.version, terms, lineIds);
+	const r = await callTool(h, chef, 'commit_order', {
 		planId: o.planId,
 		version: o.version,
 		idempotencyKey,
 		lineIds
 	});
-	const view = await approvalView(handlers, a.chef, o.planId);
+	const view = await approvalView(h, chef, o.planId);
 	return {
 		commit: { ...r, idempotencyKey, version: o.version, attempt: o.attempt, lineIds },
 		...view

@@ -119,6 +119,8 @@ export interface ValioRuleView {
 }
 
 export interface LookupItemView {
+	/** Held with a question: need_rounding_large = the smallest order is far over the ask. */
+	hold?: 'need_rounding_large';
 	item: ParsedItemView;
 	searches: { query: string; hits: number }[];
 	shortlist: CandidateView[];

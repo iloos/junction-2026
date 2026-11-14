@@ -12,6 +12,8 @@ export interface RequestAnswer {
 	productId?: string;
 	/** Why the product is pinned, when the server pinned it (a dish line); never read from a request body. */
 	why?: string;
+	/** The chef took an order far over the ask (need_rounding_large) knowingly. */
+	acceptRounding?: boolean;
 }
 
 const UNITS = new Set(['l', 'kg', 'pcs', 'case', 'sales']);
@@ -22,7 +24,7 @@ export function readAnswers(raw: unknown): RequestAnswer[] {
 	const out: RequestAnswer[] = [];
 	for (const a of raw.slice(0, 12)) {
 		if (!a || typeof a !== 'object') continue;
-		const { item, qty, unit, productId } = a as Record<string, unknown>;
+		const { item, qty, unit, productId, acceptRounding } = a as Record<string, unknown>;
 		// Item ids are what the parser gives: product key or typed words, constraints, variant, "~n".
 		if (typeof item !== 'string' || !/^[\p{L}\d._~-]{1,80}$/u.test(item)) continue;
 		const ans: RequestAnswer = { item };
@@ -37,6 +39,7 @@ export function readAnswers(raw: unknown): RequestAnswer[] {
 			ans.unit = unit as RequestAnswer['unit'];
 		}
 		if (typeof productId === 'string' && /^\d{6}$/.test(productId)) ans.productId = productId;
+		if (acceptRounding === true && ans.productId) ans.acceptRounding = true;
 		if (ans.qty !== undefined || ans.productId) out.push(ans);
 	}
 	return out;

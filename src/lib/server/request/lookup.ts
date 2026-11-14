@@ -3,8 +3,10 @@
  * pick the first deliverable, priced, convertible candidate. Ranking is deterministic and explained;
  * constraints the chef stated are hard filters, defaults ("semi-skimmed") are preferences and say so.
  */
-import type { Offer, Product } from '$lib/core/contracts';
+import type { NeedRequirements, Offer, Product } from '$lib/core/contracts';
+import { meets } from '$lib/core/mandate/meets';
 import { toLot } from '$lib/core/services/orders';
+import { num } from '$lib/ui/format';
 import { convert, type Conversion } from './convert';
 import { PRODUCTS } from './lexicon';
 import { askOf, clashWith } from './checks';
@@ -34,7 +36,27 @@ export interface Ranked {
 	score: number;
 	reasons: string[];
 	conversion: Conversion | null;
+	/** What the smallest order buys over the ask (2 = twice as much), when both are physical; null when unknown. */
+	overshoot?: number | null;
 }
+
+/** An order more than this many times the ask is held with a question (need_rounding_large), never placed silently. */
+export const ROUNDING_LIMIT = 2;
+
+/** The smallest order's physical amount over the ask (after lot rounding), when both are in kg or l. */
+export function overshoot(
+	item: Pick<ParsedItem, 'qty' | 'unit'>,
+	c: Conversion | null
+): number | null {
+	if (!c?.ok || !c.perSalesUnit || item.qty === null || item.qty <= 0) return null;
+	if (item.unit !== 'kg' && item.unit !== 'l') return null;
+	if (c.perSalesUnit.unit !== item.unit) return null;
+	return (c.salesQty * c.perSalesUnit.value) / item.qty;
+}
+
+/** How well the smallest order fits the ask, lower first: within a quarter is a fit; unknown sits between. */
+const fitRank = (o: number | null | undefined) =>
+	o === null || o === undefined ? 0.5 : o <= 1.25 ? 0 : Math.log2(o);
 
 export interface Rejected {
 	productId: string;
@@ -48,22 +70,31 @@ const tokens = (name: string) =>
 		.split(/[^\p{L}\d]+/u)
 		.filter(Boolean);
 
-function constraintFails(item: ParsedItem, p: Product): string | null {
-	const t = tokens(p.nameFi);
-	for (const c of item.constraints) {
-		if (c === 'lactose_free' && !(p.freeFrom.includes('LACTOSE') || t.includes('laktoositon')))
-			return 'not lactose-free';
-		if (
-			c === 'organic' &&
-			!(p.labels.includes('EU_ORGANIC_FARMING') || t.some((w) => w.startsWith('luomu')))
-		)
-			return 'not organic';
-		if (c === 'finnish' && p.origin !== 'fi')
-			return `origin ${p.origin?.toUpperCase() ?? 'unknown'}, not Finnish`;
-		if (c === 'gluten_free' && !(p.freeFrom.includes('GLUTEN') || t.includes('gluteeniton')))
-			return 'not gluten-free';
-	}
-	return null;
+/**
+ * The item's stated requirements (lactose-free, organic, Finnish, gluten-free) judged by core's one evaluator (D16).
+ * Unknown is not ok: a product with no record either way is passed over with the reason.
+ */
+function requirementFails(item: ParsedItem, p: Product): string | null {
+	const req = requirementsOf(item.constraints);
+	if (!req) return null;
+	const m = meets(p, req);
+	if (m.verdict === 'ok') return null;
+	const f = m.failing[0];
+	return m.verdict === 'no' ? `not ${f.text}: ${f.why}` : `${f.text} not stated: ${f.why}`;
+}
+
+/** The request's stated constraints as D16 requirements. */
+export function requirementsOf(constraints: readonly string[]): NeedRequirements | undefined {
+	const freeFrom = [
+		...(constraints.includes('lactose_free') ? ['LACTOSE'] : []),
+		...(constraints.includes('gluten_free') ? ['GLUTEN'] : [])
+	];
+	const r: NeedRequirements = {
+		...(freeFrom.length ? { freeFrom } : {}),
+		...(constraints.includes('finnish') ? { origin: 'fi' } : {}),
+		...(constraints.includes('organic') ? { labels: ['EU_ORGANIC_FARMING'] } : {})
+	};
+	return Object.keys(r).length ? r : undefined;
 }
 
 /**
@@ -105,7 +136,7 @@ export function filterHits(
 			reject(`${p.brand ? `brand ${p.brand}` : 'no brand stated'}, you asked for ${item.brand}`);
 			continue;
 		}
-		const fail = constraintFails(item, p);
+		const fail = requirementFails(item, p);
 		if (fail) {
 			reject(fail);
 			continue;
@@ -140,9 +171,19 @@ export function filterHits(
 			reasons.push(`can't convert: ${conversion.reason}`);
 		}
 		if (p.reliability !== undefined) score += p.reliability * 0.5;
-		ranked.push({ product: p, score: +score.toFixed(3), reasons, conversion });
+		const over = overshoot(item, conversion);
+		if (over !== null && over > 1.25)
+			reasons.push(`the smallest order is ${num(over, 1)}× what you asked`);
+		ranked.push({ product: p, score: +score.toFixed(3), reasons, conversion, overshoot: over });
 	}
-	ranked.sort((a, b) => b.score - a.score || (a.product.productId < b.product.productId ? -1 : 1));
+	// The candidate whose smallest order best fits the ask comes first; the scores (and the kitchen's weights) order
+	// the rest.
+	ranked.sort(
+		(a, b) =>
+			fitRank(a.overshoot) - fitRank(b.overshoot) ||
+			b.score - a.score ||
+			(a.product.productId < b.product.productId ? -1 : 1)
+	);
 	return { ranked, rejected };
 }
 

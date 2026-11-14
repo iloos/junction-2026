@@ -119,7 +119,20 @@ const FILLER = new Set([
 	'tarvitsen',
 	'tarvitsemme',
 	'kiitos',
-	'tarvis'
+	'tarvis',
+	// Determiners and pronouns: grammar, never part of what to buy.
+	'all',
+	'your',
+	'yours',
+	'my',
+	'our',
+	'any',
+	'these',
+	'those',
+	'this',
+	'that',
+	'would',
+	'like'
 ]);
 
 /** Short everyday words that follow a number without being a unit ("50 on Friday", "2 ja 3"). */
@@ -731,7 +744,9 @@ export async function parseRequest(text: string, o: ParseOptions): Promise<Parse
 		const parsed = LlmOut.safeParse(JSON.parse(raw));
 		if (!parsed.success) return rulesOut(`the model's JSON did not match the schema`);
 		const read = parsed.data.items.map(fromLlmItem);
-		if (read.length === 0) return rulesOut('the model found no item');
+		// A question or a change may name no item; an order with none is the rules' to read.
+		if (read.length === 0 && parsed.data.intent === 'order')
+			return rulesOut('the model found no item');
 		const used = new Set<string>();
 		const pairs = read.map((m) => {
 			const r = matchRules(m, rules.items, used, read.length === 1);

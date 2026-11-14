@@ -24,6 +24,7 @@
 	import MenuReview from './MenuReview.svelte';
 	import DeliveryDays from './DeliveryDays.svelte';
 	import DishCard from './DishCard.svelte';
+	import ProductToken from '$lib/ui/ProductToken.svelte';
 	import ItemEdit from './ItemEdit.svelte';
 	import OverLimit from './OverLimit.svelte';
 	import { loadPrefs, savePrefs, type RequestPrefs } from './prefs';
@@ -53,7 +54,8 @@
 		unitWord,
 		TIER_WORDS,
 		tierWords,
-		UNIT_WORDS
+		UNIT_WORDS,
+		measureWords
 	} from './words';
 	import { availText } from '$lib/kitchen/live-view';
 
@@ -1139,9 +1141,14 @@
 								{@const o = it.pick.offer}
 								<div class="px-3 py-2.5">
 									<p class="flex flex-wrap items-baseline gap-x-2 text-heading font-medium">
-										{readableName(it.pick.name)}{#if shell?.system}<span
-												class="mono text-meta font-normal text-ink-3">{it.pick.productId}</span
-											>{/if}
+										<ProductToken
+											productId={it.pick.productId}
+											name={it.pick.name}
+											qty={it.pick.amount
+												? { amount: it.pick.amount.value, unit: it.pick.amount.unit }
+												: { count: it.pick.conversion.salesQty }}
+											deliverBy={parsed?.deliverBy}
+										/>
 									</p>
 									<dl class="mt-1.5 grid grid-cols-[6.5rem_1fr] gap-x-2 gap-y-1 text-body">
 										<dt class="text-ink-3">Why this one</dt>
@@ -1276,7 +1283,22 @@
 							<div class="flex flex-wrap items-start justify-between gap-x-3 gap-y-1">
 								<div class="min-w-0">
 									<p class="text-heading font-medium">
-										{readableName(l.productName ?? names.get(l.productId) ?? l.productId)}
+										<ProductToken
+											productId={l.productId}
+											name={l.productName ?? names.get(l.productId) ?? 'a Valio product'}
+											qty={{
+												count: l.qty.value,
+												...(l.view?.physical && l.qty.value > 0
+													? {
+															pack: measureWords(
+																l.view.physical.value / l.qty.value,
+																l.view.physical.unit
+															)
+														}
+													: {})
+											}}
+											deliverBy={plan.deliverBy}
+										/>
 									</p>
 									<p class="num text-body text-ink-2">
 										{quantityWords(l.qty.value, l.qty.unit, l.view?.physical)} × {money(

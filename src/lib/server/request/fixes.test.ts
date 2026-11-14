@@ -661,3 +661,56 @@ describe('R11-02: packs and cases keep their hard requirements', () => {
 		expect(plan.lines[0].needId).toBe(plan.needs[0].id);
 	});
 });
+
+describe('need_rounding_large: the smallest order far over the ask holds with a question', () => {
+	it('"250 ml milk": no 1 l pack is placed silently; taking it knowingly orders it', async () => {
+		const { h, ctx, kitchen } = await setup();
+		const base = {
+			handlers: h,
+			ctx,
+			today: '2026-12-07',
+			kitchen,
+			now: new Date('2026-12-07T09:00:00+02:00'),
+			nonce: 'ml250'
+		};
+		const r = await runRequest('250 ml milk Thursday', base);
+		const it0 = r.lookup!.items[0];
+		expect(r.order).toBeNull();
+		expect(it0.hold).toBe('need_rounding_large');
+		expect(it0.question).toMatch(
+			/^The smallest you can order of .+ \(\d+(\.\d)?× what you asked\)/
+		);
+		expect(it0.answer?.kind).toBe('choice');
+		const take = (it0.answer as { options: { answer: { productId?: string } }[] }).options[0]
+			.answer;
+		const again = await runRequest('250 ml milk Thursday', {
+			...base,
+			answers: [{ item: it0.item.id, productId: take.productId, acceptRounding: true }]
+		});
+		expect(again.order).toBeTruthy();
+	});
+
+	it('the shortlist puts the best-fitting smallest order first', () => {
+		const item = parseRules('2 kg butter', TODAY).items[0];
+		const pack = (id: string, kg: number, unit = 'ST') =>
+			({
+				productId: id,
+				nameFi: `Voi ${kg} kg normaalisuolainen`,
+				category: '10500',
+				salesUnit: unit,
+				baseUnit: unit,
+				packs: [],
+				lotStep: 1,
+				netPerSalesUnit: {
+					value: { value: kg, unit: 'kg' },
+					provenance: { source: 'valio_static' }
+				},
+				freeFrom: [],
+				labels: [],
+				diet: []
+			}) as unknown as Product;
+		const { ranked } = filterHits(item, [pack('big', 10), pack('fit', 0.5)]);
+		expect(ranked[0].product.productId).toBe('fit');
+		expect(ranked[1].overshoot).toBe(5);
+	});
+});
