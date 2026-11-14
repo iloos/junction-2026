@@ -196,7 +196,7 @@ const CASES = [
 						parts: [{ t: 'Picked ' }, { qty: packQty(line) }, { product: line.productName }, { t: ', a product this kitchen already buys.' }]
 					},
 					{ icon: 'shield', text: 'Inside the mandate: under the caps, Valio states the stock, nothing to sign off.' },
-					{ icon: 'receipt', text: awaiting ? 'Ordered alone, on one receipt; awaiting the supplier.' : 'Ordered alone, on one receipt; supplier confirmed.' }
+					{ icon: 'receipt', text: awaiting ? 'Ordered with no approval needed, on one receipt; awaiting the supplier.' : 'Ordered with no approval needed, on one receipt; supplier confirmed.' }
 				],
 				outcome: { state: 'ordered', label: 'Ordered within your mandate', eur: eur(c.json.commit.totalCents) },
 				link: `${BASE}/request`
@@ -339,12 +339,13 @@ const CASES = [
 			need(receipts.size === 1, `${receipts.size} receipts`);
 			const c = ok[0].json.commit;
 			const ask = askOf(text, r.parsed.items[0]);
-			const tail = `, approved by the chef, then sent ${ok.length} times at once`;
 			return {
-				request: `${text}${tail}`,
-				ask: ask && { ...ask, rest: `${ask.rest}${tail}` },
+				// Only the request was typed; what happened after it goes in the label above it.
+				via: `Asked · approved by the chef · sent ${ok.length} times at once`,
+				request: text,
+				ask,
 				steps: [
-					{ icon: 'hold', text: 'The chef approves the exact terms on screen.' },
+					{ icon: 'hold', text: 'The chef approves the exact terms (Approve on the request page).' },
 					{ icon: 'receipt', text: `${ok.length} sends of the same order, with one key.` },
 					{ icon: 'check', text: `${receipts.size} receipt: ordered once, never twice.` }
 				],

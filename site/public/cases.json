@@ -169,7 +169,7 @@
 				},
 				{
 					"icon": "receipt",
-					"text": "Ordered alone, on one receipt; supplier confirmed."
+					"text": "Ordered with no approval needed, on one receipt; supplier confirmed."
 				}
 			],
 			"outcome": {
@@ -273,16 +273,16 @@
 					"POST /request/run {action:commit} ×4"
 				]
 			},
-			"request": "10 l lactose-free milk for Friday, approved by the chef, then sent 4 times at once",
+			"request": "10 l lactose-free milk for Friday",
 			"ask": {
 				"qty": "10 l",
 				"item": "lactose-free milk",
-				"rest": "for Friday, approved by the chef, then sent 4 times at once"
+				"rest": "for Friday"
 			},
 			"steps": [
 				{
 					"icon": "hold",
-					"text": "The chef approves the exact terms on screen."
+					"text": "The chef approves the exact terms (Approve on the request page)."
 				},
 				{
 					"icon": "receipt",
@@ -298,7 +298,8 @@
 				"label": "Ordered · 1 receipt",
 				"eur": 15.6
 			},
-			"link": "https://app.mandate.kitchen/request"
+			"link": "https://app.mandate.kitchen/request",
+			"via": "Asked · approved by the chef · sent 4 times at once"
 		},
 		{
 			"id": "out-of-stock",
