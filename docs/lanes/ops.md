@@ -3,42 +3,39 @@
 ## Dispatch
 
 - **Track:** G: sandboxes, Operations, deploy, Aiven. Session 9c.
-- **Branch / worktree:** `lane/g9` (g6, g7, g8 are on main) in `../junc26-lanes/ops`. Dev port 5176, run with `DATABASE_URL=` blank (dev uses PGlite anyway unless `DEV_USE_REMOTE_DB=1`).
+- **Branch / worktree:** `lane/g15` (g6–g14 are on main) in `../junc26-lanes/ops`. Dev port 5176, run with `DATABASE_URL=` blank (dev uses PGlite anyway unless `DEV_USE_REMOTE_DB=1`).
 - **Owned paths:**
   - `src/lib/server/demo/**`, `src/lib/server/bus/**`, `src/lib/server/db/client.ts`
   - `src/routes/ops/**`, `src/routes/api/events/**`, `src/routes/api/demo/**`, `src/routes/healthz/**`
   - `Dockerfile`, `scripts/deploy/**`, `docs/foundations/deploy.md`
 - **Acceptance:** `pnpm gate` green. For anything touching sandboxes, `src/routes/ops/visitor-gate.e2e.ts` green on a production build. For UI, Playwright screenshots at 1440 and 390.
 
-## State
+## State (checkpoint, Sat evening)
 
-- **Prod:** `mandate` runs main (`/healthz` reports `commit` and, with g7, per-service state). Plan `startup-100-2048`; Postgres `pg-1dfeeeed` is `startup-4` in `aws-eu-central-1`; staging `mandate-staging` builds branch `staging`. About $0.24/h.
-- **Smoke:** green with `SMOKE_UI=1` on every deploy today. The race check needs `SMOKE_KEY`, which this session's permission guard won't read from `.env`; the lead or the user runs it.
-- **On main (g6):**
-  - Ops opens on **Problems** (`problems.ts`, `ProblemCard`): one card per cause across kitchens, consequence first ("Christmas ham: 28 kg short for 1 kitchen"), "Agents already …" from the op log, € waiting, time to cut-off, only the kitchen link as a button.
-  - **Story** per problem (`story.ts`, `StoryPanel`): its ops in seq order with a chip, one sentence and the consequence; ops without a sentence are counted, never vague. "Technical detail" opens the op in `TraceDrawer`.
-  - **Engine room** tab (timeline, op log, agent traces) only with the System toggle.
-  - **RecordRefusal** op: the gate records FORBIDDEN for outside and kitchen agents (REST and MCP, including tools the MCP server doesn't list), one per caller, tool and plan per 60 s; shown as a red story step.
-  - M2 (`onCurrentRun` always follows the newest run), R9-09 (bus delivers in order per workspace), R9-10 (NOTIFY limit in bytes; publish failures logged).
-  - Words: "Ordered", "Order refused", days not ISO dates.
-- **On main (g7, g8):** service status (`external/status.ts`, `/healthz` `services[]`, `ServiceStatus` in the Ops header), RecordRefusal caps, ids behind System, days not ISO dates, privacy (5,000 sandboxes per process, `roomNotice` on every shared room), the outside agent's door from `via` (MCP or API).
-- **`lane/g9`** (pushed, not merged): kitchen calendar feed. `core/calendar.ts` (RFC 5545, Finnish holidays), `/kitchen-api/calendar.ics?kitchen=` (cookie), `/api/calendar/<kitchen>.ics?token=` (read-only `cal_` token from `/api/demo/calendar-link`).
-- **Earlier:** per-visitor signed sandboxes, judge keys, presenter session (`?presenter=1`), stale-run fix, dev DB guard, `/ops/views`, `/healthz` commit.
+- **Prod:** main `b10cd43`, smoke 11 passed; the only failures are `/agents` raw ids (da) and R11-14 now passing (91 drops its expected-fail). Plan `startup-100-2048`; Postgres `pg-1dfeeeed` `startup-4`; staging `mandate-staging` on branch `staging`.
+- **On main, from this lane:**
+  - Ops: Problems + story, Orders (four stages, approve in place, "Confirmed by the kitchen"), Demand (Valio's view), "Through the rules" counts, Engine room, service status strip.
+  - RecordRefusal (gate refusals in the op log, MCP and REST), `/healthz` `services[]`, body limits (`hooks.server.ts`), calendar feed + `cal_` token, privacy room notice, visitor cap 5,000.
+  - Stream: in-order delivery with gap repair that only skips a seq the log proves absent (R9-09, R10, R11-06).
+  - Stages: one replay, cached per run and cursor (R11-12); typed causes, never "out of stock" for a rule (R11-11); `dueOf` everywhere.
+- **`lane/g15` @ `6b09e27`** (pushed, not merged): `Plan.origin` (server-set door, `3b1d8e0`) and the kitchen basket (`core/services/basket.ts`, `GET /kitchen-api/basket`, `6b09e27`).
 
 ## Next, in order
 
-1. Lead merges g9; deploy; check `/healthz` `services[]` on prod (91's `evals/ui/services.e2e.ts` asserts Valio live).
-2. ~~Visitor gate on a production build~~: green on g9, after updating it to plan through `/kitchen-api/scenario` and open the Queue tab.
-3. Story wording on a run with grants, denials, commits, edits and a recall (only the seeded run plus a refusal is tested), then #11 stakes chart.
+1. Lead merges g15; deploy; check `/kitchen-api/basket` on prod.
+2. `origin: 'usual'` in U's `planUsual` (`src/lib/server/patterns/route.ts`: `{ ...contextFor('chef', ...), origin: 'usual' }`) once `7b37e83` is on main.
+3. "Sponsors, last hour" panel in the Engine room from O's `/api/ops/traces/summary` (calls, p50/p95, error rate, cache hits per source), and the trace drawer prepending `&as=events` history (contract: `docs/lanes/o-obs.md`, needs migration 0005).
+4. R11-07a with 1f: re-run 91's probe (`src/lib/server/evals/adversarial-r11.test.ts`) after 1f's resync (`daf76af`) and say why it still fails, if it does.
+5. Ops brief from d0's brainstorm with the user, when d0 sends it.
 
-**NEEDS from others:** 1f and B render `room.notice` / `workspace.notice` where people type; 1f mounts the calendar subscribe link (`/api/demo/calendar-link?kitchen=` → `.webcal`); the lead mounts `ServiceStatus` in the shell for the System layer; the race smoke needs `SMOKE_KEY` (the user or the lead runs it).
+**NEEDS from others (doors for `CallContext.origin`):** /request `request` (B, `src/lib/server/request`), chat `chat` (E, `/api/chat/*`), MCP/REST outside agents `agent` (lead, `server/auth` `resolveKey`/`contextFor`), menu → plan `menu` (B/menu-v2). Each is one line where the door builds its ctx. 1f and B render `room.notice`; c3 builds the Basket view on the type sent.
 
-## Self-review (Ring 4 checkpoint)
+## Self-review (checkpoint)
 
-- **Solid:** Problems and stories are a pure projection, tested on the captured seeded run. RecordRefusal is tested over MCP (unlisted tool) and REST, with the dedupe window and an unchanged plan version. Bus ordering (R9-09) and byte limit (R9-10) have tests that fail on the old code. Every deploy today smoked green with `SMOKE_UI=1`.
-- **Fragile:** the service status is per process and resets on deploy (every service `idle` until called), and Valio offers served from stored Postgres rows leave no trace. Problems group across kitchens, but the seeded run has one kitchen, so multi-kitchen titles ("for N kitchens") are untested on real data.
-- **Untested:** the race smoke since 3684d29 (no `SMOKE_KEY` in this session); story sentences for granted, denied and voided approvals, commits, edits and recalls on real ops; the calendar in a real calendar app.
-- **One hour before the freeze:** walk prod Ops through approve → order → a recall drill and fix any sentence that reads wrong, and get the race smoke run with the key.
+- **Solid:** the projections (problems, stages, demand, basket, gate counts) are pure and tested on captured real runs plus a 10× case; one replay serves Orders, Demand and the basket. RecordRefusal, origin and body limits have tests through the real gate. Every deploy today was smoked.
+- **Fragile:** service status is per process (idle after a deploy until called). `Plan.origin` exists only on new plans, so older plans fall back to createdBy/eventId/via. The basket's week budget counts only this run's orders (the commit lock counts the DB's budget rows, which survive a reset).
+- **Untested:** the race smoke since 3684d29 (no `SMOKE_KEY` in this session); the basket and Orders on a run with many kitchens and days on prod; the gap-repair resync path against a live Postgres outage.
+- **Found on prod, not mine:** `/request` "250 ml milk" rounds up to a 5 l case with no question (B); `/agents` raw tool names (da).
 
 ## Deploy and roll back
 
@@ -63,8 +60,9 @@
 
 ## Resume
 
-- **Worktree:** branch `lane/g9` (head in `git log -1`; g6–g8 merged); `pnpm i`; `.env` and `data/valio/` copied from the main checkout.
-- **Checks:** `pnpm check && pnpm lint && pnpm test:unit --run`, then `pnpm gate` before handing a SHA.
-- **Production build without Aiven:** `pnpm build && scripts/deploy/serve-fixture.sh` (:4177; the test chef key is in the script). Then `GATE_URL=http://localhost:4177 npx playwright test -c scripts/deploy/pw-gate.config.ts`.
-- **Prod UI checks:** `KITCHEN_URL=<url> npx playwright test -c evals/ui/pw-prod.config.ts`, from the worktree root.
-- **Load against prod:** `node scripts/deploy/visitors.mjs <url> 10`. With 10 at once each plan takes about 3.6–3.9 s.
+- **Worktree:** `../junc26-lanes/ops`, branch `lane/g15` (head in `git log -1`); `pnpm i`; `.env` and `data/valio/` copied from the main checkout. Dev server: `DATABASE_URL= pnpm dev --port 5176 --strictPort`.
+- **Checks (gate rule from Sat 19:00):** `pnpm check && pnpm lint` plus targeted tests (`npx vitest run src/routes/ops src/lib/core/services src/lib/server/bus src/lib/server/demo src/lib/server/tools`), then send the SHA. The lead runs the only full gate.
+- **Deploy:** `aiven_application_redeploy` (junction26jq / mandate, branch main) → wait for `/healthz` `commit` → `scripts/deploy/warm.sh` → `SMOKE_UI=1 EXPECT_DB=ok scripts/deploy/smoke.sh <url>` from the main checkout (no `SMOKE_KEY` here: the race check needs the lead or the user).
+- **Scripts in `scratch/`** (gitignored): `ops-sweep.mjs` (raw-id rules over every Ops tab), `orders-shot.mjs`/`demand-shot.mjs` (screenshots with an ordered plan), `events-check.mjs`, `veg-check.mjs`, `behaviour-check.mjs`, `request-check.mjs`.
+- **Fixtures:** `src/routes/ops/fixtures/seeded-ops.ndjson` (the seeded Christmas run), `src/lib/core/services/fixtures/ordered-ops.ndjson` (an outside agent's by-line order, refused once, signed, placed).
+- **Production build without Aiven:** `pnpm build && scripts/deploy/serve-fixture.sh` (:4177), then `GATE_URL=http://localhost:4177 npx playwright test -c scripts/deploy/pw-gate.config.ts` (visitor gate).
