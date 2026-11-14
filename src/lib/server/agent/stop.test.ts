@@ -154,7 +154,7 @@ describe('deadline and cancel (finding C)', () => {
 		const w = await trialWorkspace();
 		const stop = new AbortController();
 		const script = scriptedPlanner();
-		// The scripted routine order: search → place → commit. Stop arrives while it decides on the commit.
+		// The scripted routine order: search → quote → place → commit. Stop arrives while it decides on the commit.
 		const planner: Planner = async (s, signal) => {
 			const a = await script(s, signal);
 			if ('tool' in a && a.tool === 'commit_order') stop.abort();
@@ -169,7 +169,7 @@ describe('deadline and cancel (finding C)', () => {
 			signal: stop.signal
 		});
 		expect(run.stopped).toBe('cancelled');
-		expect(run.steps.map((s) => s.tool)).toEqual(['search_products', 'place_order']);
+		expect(run.steps.map((s) => s.tool)).toEqual(['search_products', 'quote', 'place_order']);
 		expect(w.ops.some((o) => o.op.type === 'CommitOrder')).toBe(false);
 		expect(Object.keys((await w.state()).orders)).toHaveLength(0);
 		// The plan stays inspectable; the outcome says what is left, not "done".
@@ -195,4 +195,47 @@ describe('stop agent vs stop watching (finding C)', () => {
 		expect(run.steps).toHaveLength(0);
 		expect(agentRunning()).toBeNull();
 	}, 60_000);
+});
+
+describe('runs per workspace (review §ranked 1)', () => {
+	it('two workspaces run at once; cancel from another workspace reads as not running', async () => {
+		const { startAgentRun, cancelAgentRun, agentRunning } = await import('./runs');
+		const { buildRunPrincipal } = await import('./principal');
+		const p = (ws: string, id: string) =>
+			buildRunPrincipal({
+				initiator: {
+					actor: { kind: 'chef', id: ws },
+					workspaceId: ws,
+					runId: 'r',
+					scopes: ['read', 'plan', 'order', 'agent:run']
+				},
+				agentRunId: id
+			})!;
+		// A run that waits for its cancel, so both are in progress together.
+		const hold = (o: { signal: AbortSignal }) =>
+			new Promise<import('./loop').AgentRun>((resolve) =>
+				o.signal.addEventListener('abort', () =>
+					resolve({ steps: [], summary: 'x', stopped: 'cancelled' })
+				)
+			);
+		const a = startAgentRun({ env: {}, principal: p('ws-a', 'agent-a'), run: hold });
+		const b = startAgentRun({ env: {}, principal: p('ws-b', 'agent-b'), run: hold });
+		expect(a.ok && b.ok).toBe(true);
+		expect(startAgentRun({ env: {}, principal: p('ws-a', 'agent-a2'), run: hold })).toEqual({
+			ok: false,
+			busyWith: 'agent-a'
+		});
+		expect(cancelAgentRun('agent-a', { kind: 'chef', id: 'ws-b' }, 'ws-b')).toEqual({
+			ok: false,
+			reason: 'not_running'
+		});
+		expect(agentRunning('ws-a')).toBe('agent-a');
+		const c = cancelAgentRun('agent-a', { kind: 'chef', id: 'ws-a' }, 'ws-a');
+		expect(c.ok).toBe(true);
+		if (c.ok) await c.done;
+		expect(agentRunning('ws-a')).toBeNull();
+		expect(agentRunning('ws-b')).toBe('agent-b');
+		const d = cancelAgentRun('agent-b', { kind: 'chef', id: 'ws-b' }, 'ws-b');
+		if (d.ok) await d.done;
+	});
 });

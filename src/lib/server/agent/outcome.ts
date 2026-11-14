@@ -1,5 +1,6 @@
 import type { Plan, ToolOutput } from '$lib/core/contracts';
-import type { GoalOutcome, IntentKind, NeedRef } from './types';
+import { nextActionFor } from './next-action';
+import type { Clarify, GoalOutcome, IntentKind, NeedRef } from './types';
 
 type Approval = ToolOutput<'get_plan'>['approval'];
 
@@ -54,16 +55,12 @@ export function computeOutcome(o: {
 	// The plan's FulfilmentView (A2) is the exact partition: only receipt-backed quantity is supplier
 	// confirmed (D10); any unresolved quantity is a residual. Without a view, line states decide.
 	const fulfilment = new Map((plan.view?.fulfilment ?? []).map((f) => [f.needId, f]));
-	let awaitingSupplier = 0;
 	for (const g of groups) {
 		const f = fulfilment.get(g.ref.needId);
 		if (f) {
 			if (f.unresolved.value > 0 || f.status === 'uncovered') base.unresolvedNeeds.push(g.ref);
 			else if (f.status === 'confirmed') base.confirmedNeeds.push(g.ref);
-			else {
-				base.unconfirmedNeeds.push(g.ref);
-				if (f.status === 'awaiting_supplier') awaitingSupplier++;
-			}
+			else base.unconfirmedNeeds.push(g.ref);
 			continue;
 		}
 		const active = g.lines.filter((l) => ACTIVE.has(l.state));
@@ -74,60 +71,30 @@ export function computeOutcome(o: {
 	if (o.approval && o.approval.state === 'pending') base.approvalIds.push(o.approval.id);
 
 	const held = plan.lines.filter((l) => l.state === 'held');
-	const eligible = plan.lines.filter((l) => l.state === 'eligible');
 	const unresolved = base.unresolvedNeeds.length;
 	const covered = base.confirmedNeeds.length + base.unconfirmedNeeds.length;
 	const waits = held.length > 0 || base.approvalIds.length > 0;
-	const heldWhy = [...new Set(held.flatMap((l) => l.reasons))].join(', ');
+	// The words come from the one next-action rule; the status from the partition above.
+	const next = nextActionFor(plan, { approvalPending: base.approvalIds.length > 0 }).text;
 
 	if (o.intent === 'inspect')
 		return {
 			...base,
 			status: 'fulfilled',
-			nextAction: waits
-				? `Plan ${plan.id} v${plan.version}: ${held.length} held line(s) wait for the chef${heldWhy ? ` (${heldWhy})` : ''}.`
-				: `Plan ${plan.id} v${plan.version} is ${plan.state}.`
+			nextAction: `Plan ${plan.id} v${plan.version}: ${next}`
 		};
-	if (unresolved)
-		return {
-			...base,
-			status: covered ? 'partial' : 'blocked',
-			nextAction:
-				`${unresolved} need(s) have no orderable line: ${base.unresolvedNeeds
-					.map((n) => n.label)
-					.slice(0, 5)
-					.join(', ')}. ` +
-				'Find a substitute or edit the need.' +
-				(waits ? ` ${held.length} held line(s) also wait for the chef.` : '')
-		};
-	if (waits)
-		return {
-			...base,
-			status: 'awaiting_user',
-			nextAction:
-				`The chef decides ${held.length} held line(s)${heldWhy ? ` (${heldWhy})` : ''}` +
-				(base.approvalIds.length ? ` on approval ${base.approvalIds[0]}` : '') +
-				(eligible.length ? `; ${eligible.length} eligible line(s) can be committed now.` : '.')
-		};
-	if (base.unconfirmedNeeds.length)
-		return {
-			...base,
-			status: 'partial',
-			nextAction: eligible.length
-				? `${eligible.length} eligible line(s) are within the mandate and not committed yet: commit them.`
-				: `${awaitingSupplier || base.unconfirmedNeeds.length} need(s) are ordered, awaiting supplier confirmation.`
-		};
-	return {
-		...base,
-		status: 'fulfilled',
-		nextAction: fulfilment.size
-			? `Every need of plan ${plan.id} is supplier confirmed.`
-			: `Every need of plan ${plan.id} is covered by committed lines.`
-	};
+	if (unresolved) return { ...base, status: covered ? 'partial' : 'blocked', nextAction: next };
+	if (waits) return { ...base, status: 'awaiting_user', nextAction: next };
+	if (base.unconfirmedNeeds.length) return { ...base, status: 'partial', nextAction: next };
+	return { ...base, status: 'fulfilled', nextAction: next };
 }
 
-/** Outcome of a goal that never reached the planner. */
-export function unsupportedOutcome(reason: string, clarify = false): GoalOutcome {
+/** Outcome of a goal that never reached the planner: a refusal, or one detail to ask the chef for. */
+export function unsupportedOutcome(
+	reason: string,
+	extra: { clarify?: Clarify; brief?: GoalOutcome['brief'] } = {}
+): GoalOutcome {
+	const clarify = extra.clarify;
 	return {
 		status: clarify ? 'awaiting_user' : 'unsupported',
 		intent: 'unsupported',
@@ -138,8 +105,12 @@ export function unsupportedOutcome(reason: string, clarify = false): GoalOutcome
 		unresolvedNeeds: [],
 		approvalIds: [],
 		nextAction: clarify
-			? reason
-			: 'Nothing was done. Rephrase as a supported request or do it by hand.',
-		reason
+			? clarify.question
+			: extra.brief
+				? 'Use New request to get a menu proposal for this brief; nothing was planned.'
+				: 'Nothing was done. Rephrase as a supported request or do it by hand.',
+		reason,
+		...(clarify ? { clarify } : {}),
+		...(extra.brief ? { brief: extra.brief } : {})
 	};
 }

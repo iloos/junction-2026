@@ -10,7 +10,8 @@ import type { CallContext, Llm, ToolHandlers } from '$lib/core/ports';
 import { traceEvent, type TraceStep } from '$lib/server/adapters/llm/trace';
 import { serveTool, toolsFor } from '$lib/server/tools/serve';
 import { errorFacts, toFacts, type Facts, type PlanFacts } from './facts';
-import { pickRoutine, type RoutineFacts } from './routine';
+import { nextActionFor } from './next-action';
+import { orderable, pickRoutine, type OfferFacts, type RoutineFacts } from './routine';
 import type { AgentContext, GoalOutcome, Intent } from './types';
 
 /**
@@ -403,7 +404,7 @@ function planSummary(plan: PlanFacts): string {
 	return (
 		`Plan ${plan.id} v${plan.version}: ${plan.lines.length} lines, total €${((plan.totalCents ?? 0) / 100).toFixed(2)}. ` +
 		`${held.length} held for the chef (${[...new Set(held.flatMap((l) => l.reasons))].join(', ') || 'none'}); ` +
-		`${unorderable.length} unorderable with no replacement chosen yet.`
+		`${unorderable.length} unorderable with no replacement chosen yet. Next: ${nextActionFor(plan).text}`
 	);
 }
 
@@ -452,7 +453,7 @@ export function matchNeed(
  * commit what the mandate allows. Shortage repair: get_plan → substitutes. Inspect: get_plan.
  */
 export function scriptedPlanner(): Planner {
-	return async ({ history, tools, intent }) => {
+	return async ({ history, tools, intent, context }) => {
 		if (!intent || intent.kind === 'unsupported')
 			return { done: true, summary: 'no supported intent to act on' };
 		const last = history.at(-1);
@@ -543,18 +544,42 @@ export function scriptedPlanner(): Planner {
 						.slice(0, 120);
 				const searches = history.filter((h) => h.tool === 'search_products');
 				const queries = intent.item.search.length ? intent.item.search : [intent.query];
-				const found = pickRoutine(
-					intent,
-					searches.flatMap((h) =>
-						h.ok ? ((h.facts as RoutineFacts | undefined)?.products ?? []) : []
-					)
+				const candidates = searches.flatMap((h) =>
+					h.ok ? ((h.facts as RoutineFacts | undefined)?.products ?? []) : []
 				);
+				let found = pickRoutine(intent, candidates);
 				if (!found && searches.length < Math.min(queries.length, 2))
 					return {
 						tool: 'search_products',
 						input: { query: queries[searches.length], limit: 50 },
 						why: `find "${intent.query}" in the catalogue`
 					};
+				// Quote the convertible candidates once and order one that can still arrive by the date.
+				if (found && !has('place_order') && tools.includes('quote')) {
+					const quoted = history.find((h) => h.tool === 'quote' && h.ok);
+					if (!has('quote')) {
+						const ids = [
+							...new Set(candidates.filter((c) => c.salesQty !== null).map((c) => c.productId))
+						].slice(0, 8);
+						return {
+							tool: 'quote',
+							input: { productIds: ids, deliverBy: intent.deliverBy },
+							why: `check which of ${ids.length} candidate(s) can arrive by ${intent.deliverBy}`
+						};
+					}
+					if (quoted) {
+						const offers = new Map(
+							(
+								((quoted.facts as { offers?: OfferFacts[] } | undefined)?.offers ??
+									[]) as OfferFacts[]
+							).map((o) => [o.productId, o])
+						);
+						const open = candidates.filter((c) =>
+							orderable(offers.get(c.productId), intent.deliverBy, context?.now)
+						);
+						found = pickRoutine(intent, open) ?? found;
+					}
+				}
 				if (!has('place_order')) {
 					if (!found) {
 						const first = searches

@@ -1,4 +1,5 @@
 import type { Actor, ToolName } from '$lib/core/contracts';
+import type { ClarifyField } from '$lib/core/contracts/task';
 import type { ParsedItem } from '$lib/server/request/parse';
 import type { ReqUnit } from '$lib/server/request/lexicon';
 
@@ -64,9 +65,24 @@ export type Intent =
 			dish: string;
 			gramsPerGuest: number;
 	  }
-	| { kind: 'unsupported'; reason: string };
+	| {
+			kind: 'unsupported';
+			reason: string;
+			/** Set when the words are an event brief that is not the seeded event (it needs a menu proposal). */
+			brief?: { occasion: string; guests: number | null; courses: number | null };
+	  };
 
-export type PlanPick = 'named' | 'event' | 'kitchen' | 'shortage' | 'only';
+/** One detail the chef can give to make a refused goal runnable: a typed field with up to six chip answers. */
+export interface Clarify {
+	field: ClarifyField;
+	question: string;
+	options: { label: string; value: string }[];
+}
+
+/** Answered clarifications by field; each fills only its own field of the intent. */
+export type Slots = Partial<Record<ClarifyField, string | number>>;
+
+export type PlanPick = 'task' | 'named' | 'event' | 'kitchen' | 'shortage' | 'only';
 
 /** What the planner may read about its situation without a tool call (the context bootstrap). */
 export interface AgentContext {
@@ -92,6 +108,8 @@ export interface AgentContext {
 	defaultKitchenId?: string;
 	/** Scenario "today" (YYYY-MM-DD) used for default delivery dates. */
 	today: string;
+	/** Scenario-clock now (ISO), when the source knows it: offer cut-offs are compared with it. */
+	now?: string;
 }
 
 export type GoalStatus = 'fulfilled' | 'partial' | 'awaiting_user' | 'blocked' | 'unsupported';
@@ -123,6 +141,10 @@ export interface GoalOutcome {
 	approvalIds: string[];
 	nextAction: string;
 	reason?: string;
+	/** The one detail the chef can give to make the goal runnable. */
+	clarify?: Clarify;
+	/** The words were an event brief, not the seeded event. */
+	brief?: { occasion: string; guests: number | null; courses: number | null };
 }
 
 /** Tools each intent may use. Checked before every dispatch, on top of the scope gate. */

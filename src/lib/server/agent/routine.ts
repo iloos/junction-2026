@@ -101,3 +101,25 @@ export function pickRoutine(
 		null
 	);
 }
+
+/** A quoted offer as the planner's facts carry it. */
+export interface OfferFacts {
+	productId?: string;
+	unitCents?: number;
+	availability?: string;
+	logisticModel?: string;
+	availableDate?: string;
+	closingTime?: string;
+}
+
+/**
+ * Whether an offer can be bought for `deliverBy` as of `now`: priced, not out/blocked/undeliverable, available by the
+ * date, and its order cut-off not passed (the gate refuses those at commit, A3). Unknown fields don't rule it out.
+ */
+export function orderable(o: OfferFacts | undefined, deliverBy: string, now?: string): boolean {
+	if (!o || o.unitCents === undefined) return false;
+	if (['out', 'blocked', 'undeliverable'].includes(o.availability ?? '')) return false;
+	if (o.availableDate && o.availableDate > deliverBy) return false;
+	if (now && o.closingTime && Date.parse(o.closingTime) <= Date.parse(now)) return false;
+	return true;
+}

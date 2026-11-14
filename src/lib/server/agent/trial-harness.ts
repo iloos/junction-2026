@@ -24,7 +24,8 @@ export async function trialWorkspace() {
 	const source: ContextSource = {
 		kitchens: (ws) => env.ports.store.kitchens(ws),
 		plans: async (ws, run) => Object.values((await env.ports.store.load(ws, run)).plans),
-		today: () => '2026-11-14'
+		today: () => '2026-11-14',
+		now: () => env.ports.clock.now().toISOString()
 	};
 	const ctx = (kind: ActorKind, id = `${kind}-1`): CallContext => ({
 		workspaceId: env.workspaceId,

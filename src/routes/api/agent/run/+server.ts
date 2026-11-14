@@ -9,7 +9,7 @@ import type { RequestHandler } from './$types';
 /**
  * POST /api/agent/run `{ goal? }` with a Bearer key → NDJSON: one `trace` ServerEvent per line, then
  * `{ "kind": "result", "id", "run": AgentRun }` (the run carries its GoalOutcome). Traces also go to the
- * bus, so /ops shows the run live. 409 when a run is already going (one at a time per process).
+ * bus, so /ops shows the run live. 409 when a run is already going in this workspace (one at a time per workspace).
  *
  * Starting the agent delegates purchasing work, so it needs `agent:run` (chef keys only). The run acts as
  * the routine agent with the intersection of the starter's and the agent's scopes, and every op it writes
@@ -59,7 +59,10 @@ export const POST: RequestHandler = async ({ request }) => {
 			{
 				error: {
 					code: 'DUPLICATE',
-					message: `agent run ${started.busyWith} is in progress`,
+					message:
+						started.busyWith === 'capacity'
+							? 'the agent is at capacity; try again shortly'
+							: `agent run ${started.busyWith} is in progress`,
 					retryable: true
 				}
 			},

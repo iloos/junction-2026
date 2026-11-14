@@ -46,7 +46,10 @@ export async function runGoal(o: {
 	const deadlineMs = Math.max(0, Math.min(o.deadlineMs ?? 60_000, left));
 
 	if (intent.kind === 'unsupported') {
-		const outcome = unsupportedOutcome(intent.reason, intent.clarify);
+		const outcome = unsupportedOutcome(intent.reason, {
+			...(intent.clarify ? { clarify: intent.clarify } : {}),
+			...(intent.brief ? { brief: intent.brief } : {})
+		});
 		const summary = `${outcome.status}: ${intent.reason}`;
 		const emit = (step: 'step' | 'done', data: Record<string, unknown>) =>
 			o.onEvent?.(traceEvent(ctx, step, { actor: ctx.actor.id, ...data }));
@@ -127,7 +130,8 @@ export async function serverContextSource(): Promise<ContextSource> {
 		// The /request page's kitchen, so "4 kg butter tomorrow" works the same here.
 		defaultKitchenId: 'k-hotel',
 		today: () =>
-			new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Helsinki' }).format(b.ports.clock.now())
+			new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Helsinki' }).format(b.ports.clock.now()),
+		now: () => b.ports.clock.now().toISOString()
 	};
 }
 

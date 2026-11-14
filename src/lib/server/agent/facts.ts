@@ -152,10 +152,14 @@ export function toFacts(tool: ToolName, value: unknown, intent?: Intent): Facts 
 				{
 					offers: cap(v.offers, 'offers', cut).map((x) => {
 						const o = obj(x);
+						const a = obj(o.availability);
 						return {
 							productId: code(o.productId),
 							unitCents: num(obj(o.price).unitCents),
-							availability: code(obj(o.availability).kind, 16)
+							availability: code(a.kind, 16),
+							logisticModel: code(a.logisticModel, 16),
+							availableDate: code(a.availableDate, 10),
+							closingTime: code(a.closingTime, 40)
 						};
 					}),
 					notFound: cap(v.notFound, 'notFound', cut).map((x) => code(x))

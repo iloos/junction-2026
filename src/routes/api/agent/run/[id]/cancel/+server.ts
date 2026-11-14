@@ -9,7 +9,7 @@ import type { RequestHandler } from './$types';
 /**
  * POST /api/agent/run/<id>/cancel with a chef key → 202 `{ id, cancelled: true, run }` once the loop has
  * stopped (no tool starts after the abort; a tool already running finishes and is in the run). 404 when that
- * run is not the one in progress. Approver and agent keys may not stop runs.
+ * run is not in progress in the caller's workspace. Approver and agent keys may not stop runs.
  */
 export const POST: RequestHandler = async ({ request, params }) => {
 	const ctx = resolveRequest(request, env, { dev, via: 'rest' });
@@ -25,7 +25,7 @@ export const POST: RequestHandler = async ({ request, params }) => {
 			},
 			403
 		);
-	const r = cancelAgentRun(params.id, ctx.actor);
+	const r = cancelAgentRun(params.id, ctx.actor, ctx.workspaceId);
 	if (!r.ok)
 		return json(
 			{
