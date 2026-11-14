@@ -29,7 +29,7 @@
 	} from './turn-view';
 	import { planOf } from '$lib/ui/shell/plan-events.svelte';
 	import type { OpEnvelope } from '$lib/core/contracts';
-	import { useShell } from '$lib/ui/shell/shell.svelte';
+	import { RAIL, useShell } from '$lib/ui/shell/shell.svelte';
 
 	/**
 	 * The chat dock: a right-hand column on desktop, a bottom sheet on a phone, scoped to one procurement task. It
@@ -268,6 +268,21 @@
 		if (add.length) entries = [...entries, ...add];
 	}
 
+	/** Drag the rail's left edge: the width follows the pointer, kept within the rail's limits. */
+	function startResize(e: PointerEvent) {
+		if (!shell) return;
+		const el = e.currentTarget as HTMLElement;
+		el.setPointerCapture(e.pointerId);
+		const move = (m: PointerEvent) => shell.setRailWidth(window.innerWidth - m.clientX);
+		const up = () => {
+			el.removeEventListener('pointermove', move);
+			el.removeEventListener('pointerup', up);
+		};
+		el.addEventListener('pointermove', move);
+		el.addEventListener('pointerup', up);
+		e.preventDefault();
+	}
+
 	/** The plan the task works on, from its newest ledger or decision. */
 	const taskPlan = $derived.by(() => {
 		for (let j = entries.length - 1; j >= 0; j--) {
@@ -395,12 +410,34 @@
 
 <aside
 	class={[
-		'fixed inset-x-0 bottom-0 z-40 flex max-h-[75dvh] flex-col rounded-t-xl border-t border-rule-strong bg-sheet shadow-lg lg:inset-x-auto lg:top-11 lg:right-0 lg:bottom-0 lg:max-h-none lg:w-96 lg:rounded-none lg:border-t-0 lg:border-l lg:shadow-none',
+		'fixed inset-x-0 bottom-0 z-40 flex max-h-[75dvh] flex-col rounded-t-xl border-t border-rule-strong bg-sheet shadow-lg lg:inset-x-auto lg:top-11 lg:right-0 lg:bottom-0 lg:max-h-none lg:w-[var(--rail-w)] lg:rounded-none lg:border-t-0 lg:border-l lg:shadow-none',
 		!open && (pinned ? 'max-lg:hidden' : 'hidden'),
 		!pinned && 'lg:shadow-[-12px_0_32px_-16px_oklch(0.2_0.02_255/0.35)]'
 	]}
 	aria-label="Agent chat"
+	style="--rail-w: {shell?.railWidth ?? 384}px"
 >
+	<!-- The rail's left edge: drag it, or use the arrow keys, to make the rail wider or narrower (desktop). -->
+	<!-- A focusable separator is the WAI-ARIA window splitter: interactive by design. -->
+	<!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_noninteractive_element_interactions -->
+	<div
+		class="absolute inset-y-0 -left-1 z-10 hidden w-2 cursor-col-resize hover:bg-accent/20 focus-visible:bg-accent/30 focus-visible:outline-none lg:block"
+		role="separator"
+		aria-orientation="vertical"
+		aria-label="Resize the agent rail"
+		aria-valuemin={RAIL.min}
+		aria-valuemax={RAIL.max}
+		aria-valuenow={shell?.railWidth ?? RAIL.default}
+		tabindex="0"
+		onpointerdown={startResize}
+		onkeydown={(e) => {
+			if (!shell) return;
+			if (e.key === 'ArrowLeft') shell.setRailWidth(shell.railWidth + 16);
+			else if (e.key === 'ArrowRight') shell.setRailWidth(shell.railWidth - 16);
+			else return;
+			e.preventDefault();
+		}}
+	></div>
 	<header class="flex items-center gap-2 border-b border-rule px-4 py-3">
 		<Bot size={18} class="text-accent" />
 		<div class="min-w-0 flex-1">
@@ -425,6 +462,14 @@
 		>
 	</header>
 
+	{#if shell?.railHeader}
+		<!-- The page's own decisions, once, at the top of the rail: the same cards and command as the page. -->
+		<div
+			class="max-h-[55%] shrink-0 overflow-y-auto border-b border-rule bg-paper px-3 py-3 max-lg:max-h-[45%]"
+		>
+			{@render shell.railHeader()}
+		</div>
+	{/if}
 	<ol
 		bind:this={list}
 		class="flex-1 space-y-3 overflow-y-auto px-4 py-3 text-body"
@@ -554,7 +599,12 @@
 						Object.entries(x.e.names).map(([id, n]) => [id, readableName(n)])
 					)}
 					{@const here = x.e.planId === planId}
-					{#if x === lastDecision && !here && ownSnap}
+					{#if here && shell?.railHeader}
+						<li class="text-meta text-ink-2">
+							{x.e.decisions.length}
+							{x.e.decisions.length === 1 ? 'decision waits' : 'decisions wait'} above.
+						</li>
+					{:else if x === lastDecision && !here && ownSnap}
 						<!-- D13: the chef decides here, with the page's own card and command. -->
 						<li class="space-y-2" aria-label="Decide here">
 							{#each liveDecisions as d (d.key)}

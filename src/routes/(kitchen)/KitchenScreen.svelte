@@ -42,7 +42,7 @@
 	import { reasonShort } from '$lib/ui/reasons';
 	import RescueCompare from '$lib/ui/RescueCompare.svelte';
 	import RulesPanel from './RulesPanel.svelte';
-	import ApprovalPanel from './ApprovalPanel.svelte';
+	import ApprovalPanel, { type Shortfall } from './ApprovalPanel.svelte';
 	import CutoffTimeline from '$lib/ui/viz/CutoffTimeline.svelte';
 
 	import type { ApiMode } from '$lib/kitchen/api';
@@ -342,28 +342,65 @@
 	});
 
 	/** Plain-words list of what the order still does not cover (residuals and unconfirmed supply). */
-	const shortfalls = $derived.by(() => {
-		// The server's coverage partition is the one definition (F12/F15); the dish-level fallback is for plans
-		// without a read model.
-		if (coverage.size) {
-			const out: string[] = [];
-			const label = (id: string) => view?.dishes.find((d) => d.needId === id)?.nameFi ?? id;
-			const m = (v: number, u: string) => `${num(v, v < 10 ? 2 : 1)} ${u}`;
-			for (const f of coverage.values()) {
-				if (f.unresolved.value > 0)
-					out.push(`${label(f.needId)}: ${m(f.unresolved.value, f.unresolved.unit)} not covered`);
-				if (f.plannedUnknown.value > 0)
-					out.push(
-						`${label(f.needId)}: ${m(f.plannedUnknown.value, f.plannedUnknown.unit)} planned, but the supplier states no quantity, so it is not cover`
-					);
-			}
-			return out;
+	/**
+	 * What the order still won't cover, grouped by why, each group one sentence with its items as chips: lines on
+	 * stock Valio doesn't state (and, when they are all one-tap approvals, the tap), then needs nothing covers.
+	 * From the server's coverage partition (F12/F15) and the lines' own supply certainty.
+	 */
+	const shortfalls = $derived.by((): Shortfall[] => {
+		const out: Shortfall[] = [];
+		const lines = (plan?.lines ?? []).filter(
+			(l) =>
+				l.state !== 'committed' &&
+				l.state !== 'rejected' &&
+				l.state !== 'unorderable' &&
+				l.qty.value > 0 &&
+				(l.view?.unknownStockCover.value ?? 0) > 0
+		);
+		if (lines.length) {
+			const pending = new Set(approval?.state === 'pending' ? approval.lineIds : []);
+			const oneTap = lines.every((l) => pending.has(l.id) && l.tier === 'propose');
+			const n = lines.length;
+			out.push({
+				kind: 'unstated',
+				sentence: `${n} ${n === 1 ? 'line' : 'lines'} ${
+					oneTap
+						? 'wait for one tap'
+						: lines.every((l) => l.view?.committable)
+							? n === 1
+								? 'is approved, not ordered yet'
+								: 'are approved, not ordered yet'
+							: 'wait for a decision'
+				}: Valio doesn't state a quantity, so ${n === 1 ? 'it is' : 'they are'} not counted as cover`,
+				items: lines.map((l) => ({
+					id: l.id,
+					name: names.get(l.productId) ?? l.productId,
+					qty: `${num(l.qty.value)} ${l.qty.unit}`
+				})),
+				approve: oneTap ? lines.map((l) => l.id) : undefined
+			});
 		}
-		const out: string[] = [];
-		for (const d of view?.dishes ?? []) {
-			if (d.rescue?.residual) out.push(`${d.nameFi}: ${d.rescue.residual.text}`);
-			else if (d.status === 'shortfall') out.push(`${d.nameFi}: no option qualifies`);
-		}
+		const label = (id: string) => view?.dishes.find((d) => d.needId === id)?.nameFi ?? id;
+		const m = (v: number, u: string) => `${num(v, v < 10 ? 2 : 1)} ${u}`;
+		const missing = [...coverage.values()].filter((f) => f.unresolved.value > 0);
+		if (missing.length)
+			out.push({
+				kind: 'uncovered',
+				sentence: `${missing.length} ${missing.length === 1 ? 'need has' : 'needs have'} nothing covering part of it`,
+				items: missing.map((f) => ({
+					id: f.needId,
+					name: label(f.needId),
+					qty: m(f.unresolved.value, f.unresolved.unit)
+				}))
+			});
+		if (!coverage.size)
+			for (const d of view?.dishes ?? [])
+				if (d.rescue?.residual || d.status === 'shortfall')
+					out.push({
+						kind: 'uncovered',
+						sentence: `${d.nameFi}: ${d.rescue?.residual?.text ?? 'no option qualifies'}`,
+						items: []
+					});
 		return out;
 	});
 
@@ -491,6 +528,19 @@
 
 	// The shell shows the sandbox (workspace, run, clock, start over) and where the data comes from.
 	const shell = useShell();
+	/**
+	 * With the agent open and decisions waiting, the Decide panel lives at the top of the agent rail (the same panel
+	 * and command), once, instead of beside the plan as well.
+	 */
+	const inRail = $derived(!!shell?.chatOpen && decisions.length > 0);
+	$effect(() => {
+		if (!shell) return;
+		shell.railHeader = inRail && k.plan && k.snap ? decidePanel : null;
+		return () => {
+			if (shell.railHeader === decidePanel) shell.railHeader = null;
+		};
+	});
+
 	$effect(() => {
 		if (!shell) return;
 		shell.labels = { source: valioSource, offline: k.mode === 'fixture' };
@@ -741,7 +791,9 @@
 		/>
 	{/snippet}
 	<main
-		class="mx-auto grid max-w-[1440px] grid-cols-1 gap-6 px-4 pt-5 pb-32 md:px-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:pb-10"
+		class="mx-auto grid max-w-[1440px] grid-cols-1 gap-6 px-4 pt-5 pb-32 md:px-6 lg:pb-10 {shell?.chatOpen
+			? '2xl:grid-cols-[minmax(0,1fr)_360px]'
+			: 'lg:grid-cols-[minmax(0,1fr)_360px]'}"
 	>
 		<div class="min-w-0">
 			<!-- The task: decisions left, by when, cover by certainty; the event as a diff of a normal week -->
@@ -1213,28 +1265,18 @@
 			</section>
 		</div>
 
-		<aside class="space-y-4 lg:sticky lg:top-4 lg:self-start" aria-label="Rules and approval">
-			<div class={active === 'decide' ? '' : 'max-lg:hidden'}>
-				<ApprovalPanel
-					part="decide"
-					{plan}
-					{approval}
-					lastInvalidated={snap.lastInvalidated &&
-					snap.lastInvalidated.planVersion >= (k.firstVersion ?? Infinity)
-						? snap.lastInvalidated
-						: null}
-					changes={k.changes}
-					{shortfalls}
-					orders={snap.orders}
-					lastCommit={k.lastCommit}
-					{names}
-					busy={k.busy}
-					onapprove={(ids) => k.approve('grant', ids)}
-					ondeny={(ids) => k.approve('deny', ids)}
-					oncommit={() => k.commit()}
-					onretry={() => k.retryCommit()}
-				/>
-			</div>
+		<!-- With the agent rail open the page is narrower: the panels go under the plan until there is room again. -->
+		<aside
+			class="space-y-4 {shell?.chatOpen
+				? 'lg:grid lg:grid-cols-2 lg:gap-4 lg:space-y-0 2xl:sticky 2xl:top-4 2xl:block 2xl:space-y-4 2xl:self-start'
+				: 'lg:sticky lg:top-4 lg:self-start'}"
+			aria-label="Rules and approval"
+		>
+			{#if !inRail}
+				<div class={active === 'decide' ? '' : 'max-lg:hidden'}>
+					{@render decidePanel()}
+				</div>
+			{/if}
 			<div class="space-y-4 {active === 'order' ? '' : 'max-lg:hidden'}">
 				<ApprovalPanel
 					part="order"
@@ -1342,3 +1384,28 @@
 		onclose={() => k.closeWhy()}
 	/>
 {/if}
+
+<!-- The Decide panel: beside the plan, or at the top of the agent rail while the agent is open (one place). -->
+{#snippet decidePanel()}
+	{#if plan && snap}
+		<ApprovalPanel
+			part="decide"
+			{plan}
+			{approval}
+			lastInvalidated={snap.lastInvalidated &&
+			snap.lastInvalidated.planVersion >= (k.firstVersion ?? Infinity)
+				? snap.lastInvalidated
+				: null}
+			changes={k.changes}
+			{shortfalls}
+			orders={snap.orders}
+			lastCommit={k.lastCommit}
+			{names}
+			busy={k.busy}
+			onapprove={(ids) => k.approve('grant', ids)}
+			ondeny={(ids) => k.approve('deny', ids)}
+			oncommit={() => k.commit()}
+			onretry={() => k.retryCommit()}
+		/>
+	{/if}
+{/snippet}
