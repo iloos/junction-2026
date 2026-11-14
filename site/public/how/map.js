@@ -24,7 +24,7 @@
 				['Each visitor has a sandbox', 'A signed cookie or judge key binds every call to its own workspace.', 'server/demo/*.test.ts', 'tested'],
 				['Outside agents are metered', '120 calls, 30 writes and 20 quotes a minute per key.', 'server/tools/key-limits.ts', 'tested'],
 			]],
-		rules: ['Pure rules', 'plain code', ['Demand: guests × amount ÷ yield', 'Ranking: known stock first', 'Mandate: act, ask, or refuse', 'One state change: applyOps'],
+		rules: ['Pure rules', 'plain code', ['Demand: guests × amount ÷ yield', 'Ranking: known stock first', 'Mandate: act, ask, or refuse', 'One logged way to change state'],
 			'The decisions are plain code you can read. No model and no network call decides what may be ordered; a model can only add a hold.',
 			[
 				['No part packs', 'Every need is rounded up to Valio\'s lot step.', 'eval s3', 'tested'],
