@@ -1,5 +1,6 @@
 import { json } from '@sveltejs/kit';
 import { SCOPES_BY_ACTOR, toolSchemas, type ToolName } from '$lib/core/contracts';
+import { advertised } from '$lib/server/tools/serve';
 import { KEY_LIMITS_PER_MINUTE } from '$lib/server/tools/key-limits';
 import { MCP_PROMPTS, MCP_RESOURCES } from '$lib/server/tools/mcp-extras';
 import { TITLES } from '$lib/server/tools/mcp';
@@ -13,8 +14,8 @@ import type { RequestHandler } from './$types';
 export const GET: RequestHandler = ({ url }) => {
 	const origin = url.origin;
 	const scopes = [...SCOPES_BY_ACTOR.external_agent];
-	const tools = (Object.keys(toolSchemas) as ToolName[]).filter((n) =>
-		(scopes as string[]).includes(toolSchemas[n].scope)
+	const tools = (Object.keys(toolSchemas) as ToolName[]).filter(
+		(n) => advertised(n) && (scopes as string[]).includes(toolSchemas[n].scope)
 	);
 	return json(
 		{
