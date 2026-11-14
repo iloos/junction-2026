@@ -48,6 +48,10 @@
 	const theme = $derived(page.url.pathname.startsWith('/ops') ? 'dark' : undefined);
 
 	$effect(() => shell.loadRailWidth());
+	// The event stream follows the room the page shows (a shared or stage room), else the own sandbox.
+	$effect(() =>
+		shell.events.follow((page.data as { room?: { workspaceId?: string } }).room?.workspaceId)
+	);
 	$effect(() => {
 		const html = document.documentElement;
 		if (shell.system) html.dataset.system = '';

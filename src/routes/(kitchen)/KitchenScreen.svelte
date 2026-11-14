@@ -34,7 +34,8 @@
 	import CalendarSubscribe from '$lib/ui/CalendarSubscribe.svelte';
 	import AgentMark from '$lib/ui/AgentMark.svelte';
 	import { planDiff } from '$lib/ui/plan-diff';
-	import { planOf } from '$lib/ui/shell/plan-events.svelte';
+	import { planOf, productOf } from '$lib/ui/shell/plan-events.svelte';
+	import { TAB } from '$lib/kitchen/api';
 	import { describeOps } from '$lib/ui/chat/turn-view';
 	import { dishGate } from '$lib/ui/coverage';
 	import { whyChain } from '$lib/ui/why-chain';
@@ -157,22 +158,43 @@
 	// agent) re-reads it once per burst, and What changed says who made it. The page's own commands re-read anyway.
 	$effect(() => {
 		if (!shell || k.mode !== 'live') return;
-		return shell.events.subscribe((ops) => {
+		return shell.events.subscribe(({ ops, resync, newRun }) => {
+			// Started over elsewhere: this tab's plan belongs to the old run; open the kitchen afresh.
+			if (newRun) {
+				void k.reopen();
+				return;
+			}
 			const here = k.plan?.id;
-			const mine = ops.filter((o) => here && planOf(o.op) === here && !/^kitchen\b/.test(o.via));
-			if (!mine.length) return;
+			const products = new Set((k.plan?.lines ?? []).map((l) => l.productId));
+			// This tab's own commands re-read already; another tab's Kitchen commands count as changes.
+			const own = (via: string) => via === 'kitchen' || via === `kitchen#${TAB}`;
+			const touches = (o: (typeof ops)[number]) => {
+				const p = planOf(o.op);
+				if (p) return p === here;
+				const pr = productOf(o.op);
+				return pr !== null && products.has(pr);
+			};
+			const mine = ops.filter((o) => here && touches(o) && !own(o.via));
+			if (!mine.length) {
+				// The stream (re)opened or the run changed: re-read once, quietly.
+				if (resync && !k.busy) void k.retry();
+				return;
+			}
 			const by = mine.some((o) => /^dock\b/.test(o.via))
 				? 'dock'
-				: mine.some((o) => /^(chat|task)\b/.test(o.via))
-					? 'agent'
-					: 'outside';
+				: mine.some((o) => /^kitchen#/.test(o.via))
+					? 'tab'
+					: mine.some((o) => /^(chat|task)\b/.test(o.via))
+						? 'agent'
+						: 'outside';
 			void k.refreshFrom(by, describeOps(mine));
 		});
 	});
 	const CHANGE_BY = {
 		dock: 'by you in the agent dock',
+		tab: 'by you in another tab',
 		agent: 'by the agent in chat',
-		outside: 'by an outside agent'
+		outside: 'from outside this screen'
 	} as const;
 
 	/** Diet marks from each product's own record (lib/ui/diet): the line, its dish, the whole order. */

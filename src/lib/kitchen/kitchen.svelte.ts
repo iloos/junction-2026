@@ -13,6 +13,9 @@ export interface ActivityItem {
 	version: number;
 }
 
+/** Where a change to the plan on screen came from, when it wasn't this screen. */
+export type ChangeBy = 'dock' | 'tab' | 'agent' | 'outside';
+
 /** The event a kitchen would plan, as the not-started snapshot names it. */
 export interface StartEvent {
 	id: string;
@@ -210,13 +213,22 @@ export class KitchenStore {
 		await this.#run(async () => {});
 	}
 
+	/** The sandbox was started over elsewhere: drop this tab's plan and read the kitchen as the new run has it. */
+	async reopen() {
+		this.focusedPlan = null;
+		this.changeFrom = null;
+		this.outsideNote = null;
+		this.lastCommit = null;
+		await this.retry();
+	}
+
 	/** Who made the latest change shown in What changed, when it wasn't this screen. */
-	changeBy = $state<'dock' | 'agent' | 'outside' | null>(null);
-	#by: 'dock' | 'agent' | 'outside' | null = null;
+	changeBy = $state<ChangeBy | null>(null);
+	#by: ChangeBy | null = null;
 	/** The plan changed elsewhere (the dock, the agent, an outside agent): re-read it and say who changed it. */
 	/** What was done to this plan elsewhere, in one line (an approval, an order), until dismissed. */
-	outsideNote = $state<{ by: 'dock' | 'agent' | 'outside'; text: string } | null>(null);
-	async refreshFrom(by: 'dock' | 'agent' | 'outside', text?: string | null) {
+	outsideNote = $state<{ by: ChangeBy; text: string } | null>(null);
+	async refreshFrom(by: ChangeBy, text?: string | null) {
 		if (text) this.outsideNote = { by, text };
 		if (this.busy) return;
 		this.#by = by;

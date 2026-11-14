@@ -225,7 +225,7 @@
 	);
 	$effect(() => {
 		if (!shell || !taskId) return;
-		return shell.events.subscribe((ops) => void outside(ops));
+		return shell.events.subscribe((b) => void outside(b.ops, b.resync));
 	});
 	/** The newest event of a type, to append only what changed. */
 	const lastOfType = (t: string) =>
@@ -244,12 +244,13 @@
 						: JSON.stringify(x);
 		return key(prev) === key(e);
 	};
-	async function outside(ops: OpEnvelope[]) {
+	async function outside(ops: OpEnvelope[], resync = false) {
 		const mine = ops.filter((o) => {
 			const p = planOf(o.op);
 			return p !== null && taskPlans.has(p) && !fromChat(o);
 		});
-		if (!mine.length || busy) return;
+		// Nothing of this task's, but the stream reopened or the run changed: re-read quietly, no line.
+		if ((!mine.length && !resync) || busy) return;
 		const id = taskId;
 		const line = describeOps(mine);
 		void own?.retry();

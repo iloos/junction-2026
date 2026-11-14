@@ -107,6 +107,9 @@ export function describeOps(ops: readonly OpEnvelope[]): string | null {
 			);
 		} else parts.push(`The order didn't go through: ${op.outcome.error.message}`);
 	}
+	for (const { op } of ops)
+		if (op.type === 'RecordAnomaly' && op.anomaly.kind === 'recall')
+			parts.push('A recall touches this plan: check the affected line before ordering.');
 	if (!parts.length && edited) parts.push('The plan changed in the Kitchen.');
 	return parts.length ? [...new Set(parts)].join(' ') : null;
 }
