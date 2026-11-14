@@ -41,7 +41,24 @@ export interface Catalog {
 		productId: ProductId,
 		limit?: number
 	): Promise<{ productId: ProductId; fromValioRule: boolean }[]>;
+	/**
+	 * Resolve a menu ingredient query to products, or say why nothing qualifies (never the top substring hit).
+	 * `diet` flags are hard: a product missing one is `nearest` with that flag as the failure. Optional so fixture
+	 * catalogues without it still type-check; the menu module treats a missing resolver as unresolved.
+	 */
+	resolve?(query: string, opts?: { limit?: number; diet?: string[] }): Promise<Resolution>;
 }
+
+export type Resolution =
+	| { status: 'resolved'; query: string; candidates: { productId: ProductId; score: number }[] }
+	| {
+			status: 'unresolved';
+			query: string;
+			/** Our own words: "no product words", "products match X but none is lactose-free", … */
+			reason: string;
+			/** Closest products and what they failed (`match` = name too far; a diet flag = that property missing). */
+			nearest: { productId: ProductId; failed: string }[];
+	  };
 
 /** Simulator: stock truth and scenario overlays (contention, split delivery, cut-off). */
 export interface Simulator {

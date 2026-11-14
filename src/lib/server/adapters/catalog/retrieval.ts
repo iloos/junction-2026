@@ -57,15 +57,8 @@ export function searchModeFromEnv(): RetrievalMode {
 }
 
 /** A free-text ingredient query resolved against the catalogue, or the reason it could not be. */
-export type Resolution =
-	| { status: 'resolved'; query: string; candidates: { productId: ProductId; score: number }[] }
-	| {
-			status: 'unresolved';
-			query: string;
-			reason: string;
-			/** Closest products and what they failed (`match` = name too far; a diet flag = that property missing). */
-			nearest: { productId: ProductId; failed: string }[];
-	  };
+export type { Resolution } from '$lib/core/ports';
+import type { Resolution } from '$lib/core/ports';
 
 /** Resolution of menu ingredient queries; both catalogue adapters implement it (proposed for the Catalog port). */
 export interface Resolver {
