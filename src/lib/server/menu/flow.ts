@@ -8,6 +8,7 @@ import {
 	MenuProposal,
 	ok,
 	type Actor,
+	type DishIngredient,
 	type EventBrief,
 	type MenuProposal as MenuProposalT,
 	type Plan,
@@ -24,7 +25,16 @@ import type {
 import { serveTool } from '$lib/server/tools/serve';
 import { kitchenUrl, taskForPlan } from '$lib/server/request/task';
 export { kitchenUrl };
-import { proposeMenu, type ProposeStep } from './proposal';
+import { slug } from '$lib/server/request/parse';
+import {
+	breaksFlags,
+	menuFlags,
+	plantDiet,
+	proposeMenu,
+	resolveIngredient,
+	type ProposeStep
+} from './proposal';
+import { rememberPin } from './resolve';
 import { blocks, reviewProposal, type Issue } from './rubric';
 
 export interface MenuDeps {
@@ -136,7 +146,25 @@ export type MenuChange =
 	| { kind: 'removeIngredient'; ingredientId: string }
 	| { kind: 'removeDish'; dishId: string }
 	/** Keep a rubric shortfall (diet, courses, dishes) as an open item the chef accepts knowingly. */
-	| { kind: 'keepOpen'; issueId: string; text: string };
+	| { kind: 'keepOpen'; issueId: string; text: string }
+	/**
+	 * This ingredient is this product. Remembered for the kitchen: its next proposals use it first. Refused when the
+	 * product breaks a whole-menu diet flag (a pin never overrides the brief).
+	 */
+	| { kind: 'pin'; ingredientId: string; productId: string }
+	/** A new ingredient on a dish, resolved like a proposed one (or left visibly unresolved). */
+	| {
+			kind: 'addIngredient';
+			dishId: string;
+			label: string;
+			query: string;
+			amountPerCover: number;
+			unit: 'g' | 'ml' | 'pcs';
+	  };
+
+/** Who a revision's changes are from: a chef (the default, from the review page) or an agent. */
+const pinSource = (by?: Actor): 'chef' | 'agent' => (!by || by.kind === 'chef' ? 'chef' : 'agent');
+const who = (by?: Actor) => (pinSource(by) === 'chef' ? 'chef' : `agent ${by!.id}`);
 
 /** The latest revision, or why the chef's edit or review cannot apply to the revision they saw. */
 async function current(d: MenuDeps, id: string, revision: number): Promise<Result<MenuProposalT>> {
@@ -171,7 +199,15 @@ export function editAmounts(
  */
 export async function editMenu(
 	d: MenuDeps,
-	o: { id: string; revision: number; changes: MenuChange[] }
+	o: {
+		id: string;
+		revision: number;
+		changes: MenuChange[];
+		/** Who changes it; absent = the chef on the review page. */
+		by?: Actor;
+		/** The changer's own words for why, kept on the revision as theirs (grants nothing). */
+		reasoning?: string;
+	}
 ): Promise<Result<MenuView>> {
 	const c = await current(d, o.id, o.revision);
 	if (!c.ok) return c;
@@ -181,8 +217,23 @@ export async function editMenu(
 	for (const ch of o.changes) {
 		if ('ingredientId' in ch && !ingredients.has(ch.ingredientId))
 			return err('INVALID_INPUT', `no ingredient ${ch.ingredientId} on menu ${o.id}`);
-		if (ch.kind === 'removeDish' && !dishIds.has(ch.dishId))
+		if ((ch.kind === 'removeDish' || ch.kind === 'addIngredient') && !dishIds.has(ch.dishId))
 			return err('INVALID_INPUT', `no dish ${ch.dishId} on menu ${o.id}`);
+		if (
+			ch.kind === 'addIngredient' &&
+			(!ch.label.trim() ||
+				ch.label.length > 120 ||
+				!ch.query.trim() ||
+				ch.query.length > 120 ||
+				!['g', 'ml', 'pcs'].includes(ch.unit) ||
+				!Number.isFinite(ch.amountPerCover) ||
+				ch.amountPerCover <= 0 ||
+				ch.amountPerCover > 2000)
+		)
+			return err(
+				'INVALID_INPUT',
+				`${ch.label || 'new ingredient'}: a label and query of 1–120 characters, unit g/ml/pcs, and 0–2000 per guest`
+			);
 		if (
 			ch.kind === 'amount' &&
 			(!Number.isFinite(ch.amountPerCover) || ch.amountPerCover < 0 || ch.amountPerCover > 2000)
@@ -193,6 +244,64 @@ export async function editMenu(
 	}
 	const at = d.now().toISOString();
 	const did: string[] = [];
+	const flags = menuFlags(p.brief);
+
+	// Pins: the product exists and breaks no whole-menu diet flag.
+	const pinIds = [...new Set(o.changes.flatMap((ch) => (ch.kind === 'pin' ? [ch.productId] : [])))];
+	const pinned = pinIds.length ? await d.catalog.get(pinIds) : new Map();
+	for (const id of pinIds)
+		if (!pinned.has(id)) return err('INVALID_INPUT', `no product ${id} in the catalogue`);
+	const breaking = await breaksFlags(d.catalog, pinIds, flags);
+	if (breaking.size) {
+		const id = [...breaking][0];
+		return err(
+			'INVALID_INPUT',
+			`${pinned.get(id)?.nameFi ?? id} doesn't meet this menu's ${p.brief.dietary.filter((x) => !x.includes(':')).join(', ')}`
+		);
+	}
+	const pinFor = new Map(
+		o.changes.flatMap((ch) => (ch.kind === 'pin' ? [[ch.ingredientId, ch.productId] as const] : []))
+	);
+
+	// Added ingredients: resolved like proposed ones, with an id unique on the menu.
+	const taken = new Set(ingredients);
+	const added = new Map<string, DishIngredient[]>();
+	for (const ch of o.changes) {
+		if (ch.kind !== 'addIngredient') continue;
+		const dish = p.dishes.find((x) => x.id === ch.dishId)!;
+		const base = `${dish.id}.${slug(ch.label, 24)}`.slice(0, 60);
+		let id = base;
+		for (let k = 2; taken.has(id); k++) id = `${base}-${k}`;
+		taken.add(id);
+		const r = await resolveIngredient(
+			d.catalog,
+			ch.query,
+			flags,
+			plantDiet(p.brief, dish.claimedCompatible)
+		);
+		const common = {
+			id,
+			label: ch.label.trim(),
+			amountPerCover: ch.amountPerCover,
+			unit: ch.unit
+		};
+		const provenance = {
+			source: 'user' as const,
+			at,
+			ref: ch.query.trim(),
+			note: `added by ${who(o.by)}`
+		};
+		const ing: DishIngredient =
+			r?.status === 'resolved' && r.candidates.length
+				? { ...common, productId: r.candidates[0].productId, provenance }
+				: {
+						...common,
+						unresolved: r?.status === 'unresolved' ? r.reason : 'no catalogue resolver',
+						provenance
+					};
+		added.set(dish.id, [...(added.get(dish.id) ?? []), ing]);
+		did.push(`added ${ch.label.trim()} to ${dish.name}`);
+	}
 	const removedDishes = new Set(
 		o.changes.flatMap((ch) => (ch.kind === 'removeDish' ? [ch.dishId] : []))
 	);
@@ -224,7 +333,25 @@ export async function editMenu(
 							}
 						};
 					}
+					const pin = pinFor.get(i.id);
+					if (pin && pin !== next.productId) {
+						const name = pinned.get(pin)?.nameFi ?? pin;
+						did.push(`${i.label} pinned to ${name}`);
+						// eslint-disable-next-line @typescript-eslint/no-unused-vars
+						const { productId, query, unresolved, ...restIng } = next;
+						next = {
+							...restIng,
+							productId: pin,
+							provenance: {
+								source: 'user' as const,
+								at,
+								ref: i.provenance.ref ?? i.label,
+								note: `${who(o.by)} pinned ${name} (was ${productId ? `product ${productId}` : 'without a product'})`
+							}
+						};
+					}
 					if (
+						!pin &&
 						next.productId &&
 						o.changes.some((x) => x.kind === 'unresolve' && x.ingredientId === i.id)
 					) {
@@ -237,9 +364,12 @@ export async function editMenu(
 					}
 					return next;
 				})
+				.concat(added.get(dish.id) ?? [])
 		}))
 		// A dish whose every ingredient was removed is removed with them.
 		.filter((dish) => dish.ingredients.length > 0);
+	const full = dishes.find((x) => x.ingredients.length > 20);
+	if (full) return err('INVALID_INPUT', `${full.name} would have more than 20 ingredients`);
 	for (const id of removedDishes) did.push(`dish ${id} removed`);
 	for (const id of removedIngredients) did.push(`ingredient ${id} removed`);
 	const open = [...p.open];
@@ -262,10 +392,24 @@ export async function editMenu(
 			source: 'user',
 			at,
 			...(p.provenance.ref ? { ref: p.provenance.ref } : {}),
-			note: `chef changed revision ${p.revision}: ${did.join('; ')}`.slice(0, 500)
+			note: `${who(o.by)} changed revision ${p.revision}: ${did.join('; ')}${o.reasoning?.trim() ? `. In their words: "${o.reasoning.trim().slice(0, 300)}"` : ''}`.slice(
+				0,
+				800
+			)
 		}
 	});
 	await d.store.put(d.workspaceId, next);
+	// The kitchen's next proposals start from what was pinned here.
+	for (const dish of next.dishes)
+		for (const i of dish.ingredients)
+			if (i.productId && pinFor.get(i.id) === i.productId)
+				rememberPin(
+					d.workspaceId,
+					p.kitchenId,
+					[i.provenance.ref ?? '', i.label],
+					i.productId,
+					pinSource(o.by)
+				);
 	return ok(await menuView(d, next, p));
 }
 

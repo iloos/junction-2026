@@ -41,7 +41,7 @@ const BREAKS: Record<string, string[]> = {
  * A pinned product whose allergen record contains what the brief excludes is resolved again under the diet, and stays
  * unresolved if nothing qualifies: a wrong pin is worse than a visible gap.
  */
-async function resolveIngredient(
+export async function resolveIngredient(
 	catalog: Pick<Catalog, 'resolve' | 'get'>,
 	query: string,
 	flags: string[],
@@ -81,6 +81,15 @@ export async function breaksFlags(
 		})
 	);
 }
+
+/** A whole-menu vegetarian/vegan requirement, or a dish offered as one, keeps meat and fish out of its picks. */
+export const plantDiet = (brief: Pick<EventBrief, 'dietary'>, claims: string[]) => [
+	...new Set(
+		[...brief.dietary.filter((x) => !x.includes(':')), ...claims]
+			.map(dietBase)
+			.flatMap((b) => (b === 'vegan' ? ['VEGAN'] : b === 'vegetarian' ? ['VEGETARIAN'] : []))
+	)
+];
 
 /** The brief's whole-menu diet requirements the resolver enforces, as product flags. */
 export const menuFlags = (brief: Pick<EventBrief, 'dietary'>) =>
@@ -475,14 +484,7 @@ export async function proposeMenu(d: ProposeDeps): Promise<Proposed> {
 		det: Resolution | null;
 		pool: string[];
 	}[] = [];
-	// A whole-menu vegetarian/vegan requirement, or a dish offered as one, keeps meat and fish out of its picks.
-	const plantFor = (claims: string[]) => [
-		...new Set(
-			[...d.brief.dietary.filter((x) => !x.includes(':')), ...claims]
-				.map(dietBase)
-				.flatMap((b) => (b === 'vegan' ? ['VEGAN'] : b === 'vegetarian' ? ['VEGETARIAN'] : []))
-		)
-	];
+	const plantFor = (claims: string[]) => plantDiet(d.brief, claims);
 	for (const [di, dish] of menu.dishes.entries()) {
 		const ingIds = idsFor(
 			dish.ingredients.map((i) => i.label),
