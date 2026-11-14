@@ -85,10 +85,12 @@
 						<dd class="text-ink">{c.availableText}</dd>
 						<dt class="text-ink-3">Price</dt>
 						<dd class="mono text-ink">{c.perKgCents ? `${money(c.perKgCents)} / kg` : '—'}</dd>
-						<dt class="text-ink-3">Covers</dt>
-						<dd class="mono {c.partial ? 'text-signoff' : 'text-ink'}">
-							{rej || c.kind === 'unknown' ? '0 kg (not cover)' : `${fixed(c.coverValue)} kg`}
-						</dd>
+						{#if rej || c.kind === 'unknown' || c.chosen}
+							<dt class="text-ink-3">Covers</dt>
+							<dd class="mono {c.partial ? 'text-signoff' : 'text-ink'}">
+								{rej || c.kind === 'unknown' ? '0 kg (not cover)' : `${fixed(c.coverValue)} kg`}
+							</dd>
+						{/if}
 					</dl>
 					<p
 						class="mt-1.5 text-[12.5px] {rej

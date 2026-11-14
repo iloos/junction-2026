@@ -126,7 +126,7 @@
 
 	function draw(el: SVGSVGElement, data: Row[], w: number) {
 		const labelW = Math.min(300, Math.max(170, w * 0.36));
-		const tailW = 150;
+		const tailW = 56;
 		const barW = Math.max(80, w - labelW - tailW - 24);
 		const maxTotal = Math.max(0.5, ...data.map((d) => d.total));
 		const x = scaleLinear().domain([0, maxTotal]).range([0, barW]);
@@ -207,13 +207,13 @@
 			.text((d) => clip(d.sub, labelW - 36, 5.9));
 		g.select<SVGRectElement>('rect.track')
 			.attr('x', labelW)
-			.attr('y', 17)
+			.attr('y', 7)
 			.attr('height', 10)
 			.attr('width', barW)
 			.attr('fill', (d) => (d.rejected ? 'transparent' : 'var(--color-well)'));
 
 		g.select<SVGGElement>('g.segs')
-			.attr('transform', `translate(${labelW},17)`)
+			.attr('transform', `translate(${labelW},7)`)
 			.selectAll<SVGRectElement, Seg>('rect')
 			.data(
 				(d) => d.segs,
@@ -237,7 +237,7 @@
 			.attr('width', (s) => Math.max(0, x(s.x1) - x(s.x0)));
 
 		g.select<SVGTextElement>('text.total')
-			.attr('y', 26)
+			.attr('y', 16)
 			.attr('font-family', 'var(--font-mono)')
 			.attr('font-size', 12.5)
 			.attr('fill', 'var(--color-ink)')
@@ -249,7 +249,7 @@
 
 		// Chips: exclusions for losers, flags for the order / the recommendation.
 		g.select<SVGGElement>('g.chips')
-			.attr('transform', (d) => `translate(${d.rejected ? labelW : labelW + barW + 44},12)`)
+			.attr('transform', (d) => `translate(${labelW},${d.rejected ? 12 : 22})`)
 			.each(function (d) {
 				const items = [
 					...d.flags.map((f) => ({ text: f, kind: f === 'In your order' ? 'order' : 'pick' })),
@@ -268,8 +268,8 @@
 					.data(placed, (p) => p.text)
 					.join((enter) => {
 						const c = enter.append('g').attr('class', 'chip');
-						c.append('rect').attr('rx', 9).attr('height', 19);
-						c.append('text').attr('y', 13.5).attr('font-size', 11);
+						c.append('rect').attr('rx', 9).attr('height', 18);
+						c.append('text').attr('y', 12.5).attr('font-size', 11);
 						return c;
 					})
 					.attr('transform', (p) => `translate(${p.x},0)`);

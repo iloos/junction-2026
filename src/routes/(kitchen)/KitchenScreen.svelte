@@ -15,6 +15,7 @@
 	import RescuePanel from './RescuePanel.svelte';
 	import RulesPanel from './RulesPanel.svelte';
 	import ApprovalPanel from './ApprovalPanel.svelte';
+	import CutoffTimeline from '$lib/ui/viz/CutoffTimeline.svelte';
 
 	import type { ApiMode } from '$lib/kitchen/api';
 
@@ -138,6 +139,22 @@
 				`${unknown} lines with no stated supplier quantity: ordered, but not confirmed cover`
 			);
 		return out;
+	});
+
+	/** Open lines by supply kind, for the cut-off timeline. */
+	const openLines = $derived.by(() => {
+		let stock = 0;
+		let terminal = 0;
+		for (const l of plan?.lines ?? []) {
+			if (l.state !== 'held' && l.state !== 'eligible') continue;
+			if (
+				l.offer?.availability.logisticModel === 'Terminal' ||
+				l.offer?.availability.kind === 'unknown'
+			)
+				terminal++;
+			else stock++;
+		}
+		return { stock, terminal };
 	});
 
 	function linesOf(d: DishView): Line[] {
@@ -398,6 +415,15 @@
 					</p>
 				{/if}
 			</section>
+
+			<div class="mt-5">
+				<CutoffTimeline
+					now={k.now}
+					stock={openLines.stock}
+					terminal={openLines.terminal}
+					committed={openLines.stock + openLines.terminal === 0 && view.counts.committed > 0}
+				/>
+			</div>
 
 			<!-- Dish table -->
 			<section aria-labelledby="dishes-h" class="mt-6">
