@@ -9,6 +9,7 @@ import type { AnyDb } from '$lib/server/store/drizzle-store';
 import { env } from '$env/dynamic/private';
 import { createDecide } from '$lib/server/adapters/decide';
 import { createGetContext } from '$lib/server/agent/get-context';
+import { scopeFor, withExternalScope } from '$lib/server/external/scope';
 
 type AnyHandler = (ctx: CallContext, input: unknown) => Promise<Result<unknown>>;
 
@@ -102,8 +103,12 @@ export function realHandlers(): Promise<ToolHandlers> {
 const lazyReal = Object.fromEntries(
 	TOOL_NAMES.map((n) => [
 		n,
+		// Outside calls made for this tool (Gemini ranking, web lookups) trace into the caller's workspace and are
+		// charged to it.
 		async (ctx: CallContext, input: unknown) =>
-			((await realHandlers())[n] as AnyHandler)(ctx, input)
+			withExternalScope(scopeFor(ctx), async () =>
+				((await realHandlers())[n] as AnyHandler)(ctx, input)
+			)
 	])
 ) as unknown as ToolHandlers;
 
