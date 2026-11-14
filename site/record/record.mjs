@@ -537,7 +537,8 @@ async function recordChain() {
 			{
 				key: 'event',
 				title: 'The event',
-				value: count ? count[1] : `${view.guests} guests`,
+				// VOCABULARY: never "covers"; the head count in the words the kitchen uses for that service.
+				value: `${num(view.guests)} ${/lunch|lounas/i.test(view.title) ? 'lunches' : /school|meal|koulu/i.test(view.title) ? 'meals' : 'guests'}`,
 				text: `${count ? view.title.slice(0, count.index) : view.title} on ${day(view.date)}.`
 			},
 			{

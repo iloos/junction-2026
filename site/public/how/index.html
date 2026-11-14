@@ -528,7 +528,7 @@ h3 { margin: 0; font: 600 18px/1.25 var(--display); }
 					<tr><th scope="row">A yes covers the exact price, quantity and date</th><td data-h="How">Terms hash, plan version, mandate version and expiry; the order re-checks them.</td><td class="t" data-h="Test">gate.test.ts · view.test.ts · eval s4</td></tr>
 					<tr><th scope="row">A voided approval shows what changed</th><td data-h="How">The plan keeps the difference from the terms that were approved.</td><td class="t" data-h="Test">eval r6-5</td></tr>
 					<tr><th scope="row">An allergen change never rides with routine lines</th><td data-h="How">One approval per reason group; the rest is re-bound.</td><td class="t" data-h="Test">server/store/groups.test.ts</td></tr>
-					<tr><th scope="row">Unknown supply never counts as cover</th><td data-h="How">Valio's “no quantity” figure is unknown supply, and known stock ranks first.</td><td class="t" data-h="Test">fulfilment.test.ts · pool.test.ts</td></tr>
+					<tr><th scope="row">Unknown supply never counts as cover</th><td data-h="How">Valio's “no quantity” figure is unknown supply, and known stock ranks first.</td><td class="t" data-h="Test">fulfilment.test.ts · server/store/pool.test.ts</td></tr>
 					<tr><th scope="row">Every ordered line names what allowed it</th><td data-h="How">The mandate or a named approval. An outside agent's line always needs the approval.</td><td class="t" data-h="Test">server/store/authority.test.ts</td></tr>
 					<tr><th scope="row">A model's caution can only add a hold</th><td data-h="How">Model cautions are reasons that hold a line.</td><td class="t" data-h="Test">core/services/substitutes.ts</td></tr>
 					<tr><th scope="row">Product text can't steer the agent</th><td data-h="How">The planner gets typed, length-bounded facts.</td><td class="t" data-h="Test">facts.test.ts · adversarial.test.ts</td></tr>
@@ -777,7 +777,7 @@ h3 { margin: 0; font: 600 18px/1.25 var(--display); }
 	}
 
 	function renderChain(box, chain) {
-		box.replaceChildren(el('p', 'label', 'Recorded case: one line from kitchen to order'));
+		box.replaceChildren(el('p', 'label', 'Recorded case: a seeded event, from need to order line (no menu step)'));
 		const dl = el('dl');
 		for (const s of chain.steps) {
 			if (!s || typeof s.key !== 'string') continue;
