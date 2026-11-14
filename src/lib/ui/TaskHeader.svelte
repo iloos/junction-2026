@@ -6,7 +6,7 @@
 	 */
 	import type { Snippet } from 'svelte';
 	import { Popover } from 'bits-ui';
-	import { Ban, Lock, ListTodo, X } from '@lucide/svelte';
+	import { Ban, ChevronDown, Lock, ListTodo, X } from '@lucide/svelte';
 	import type { FulfilmentView } from '$lib/core/contracts';
 
 	import { BUCKETS, needTally } from './coverage';
@@ -43,9 +43,12 @@
 		oncancel?: (id: string) => Promise<boolean>;
 		/** Title, sentence and cover only: the page's action bar carries the decisions and the order (D29). */
 		compact?: boolean;
+		/** The group's collapse control (D30): the header owns it, with aria-expanded and aria-controls. */
+		collapse?: { expanded: boolean; controls: string; ontoggle: () => void };
 	}
 	let {
 		compact = false,
+		collapse,
 		title,
 		meta,
 		decisions,
@@ -87,7 +90,26 @@
 
 <section aria-labelledby="task-h" class="rounded-lg border border-rule bg-sheet">
 	<div class="px-4 pt-3.5 md:px-5">
-		<h1 id="task-h" class="text-title font-semibold tracking-[-0.01em] text-ink">{title}</h1>
+		<div class="flex items-start gap-2">
+			<h1 id="task-h" class="min-w-0 flex-1 text-title font-semibold tracking-[-0.01em] text-ink">
+				{title}
+			</h1>
+			{#if collapse}
+				<button
+					type="button"
+					aria-expanded={collapse.expanded}
+					aria-controls={collapse.controls}
+					aria-label={collapse.expanded ? `Collapse ${title}` : `Expand ${title}`}
+					class="grid size-8 shrink-0 place-items-center rounded-md text-ink-2 hover:bg-well hover:text-ink"
+					onclick={collapse.ontoggle}
+					><ChevronDown
+						size={16}
+						class="transition-transform {collapse.expanded ? '' : '-rotate-90'}"
+						aria-hidden="true"
+					/></button
+				>
+			{/if}
+		</div>
 		{#if meta}<p class="text-meta text-ink-2">{meta}</p>{/if}
 		{#if others.length}
 			<nav
