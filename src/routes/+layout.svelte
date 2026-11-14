@@ -9,20 +9,38 @@
 	import SandboxMenu from '$lib/ui/shell/SandboxMenu.svelte';
 	import SystemToggle from '$lib/ui/shell/SystemToggle.svelte';
 	import { provideShell } from '$lib/ui/shell/shell.svelte';
+	import ChatDock from '$lib/ui/chat/ChatDock.svelte';
+	import { Bot } from '@lucide/svelte';
 
 	let { children } = $props();
 
 	const NAV = [
-		{ href: resolve('/'), label: 'Kitchen', match: (p: string) => p === '/' || p === '/offline' },
+		{
+			href: resolve('/'),
+			label: 'Kitchen',
+			short: undefined as string | undefined,
+			match: (p: string) => p === '/' || p === '/offline'
+		},
 		{ href: resolve('/request'), label: 'Request', match: (p: string) => p.startsWith('/request') },
-		{ href: resolve('/ops'), label: 'Operations', match: (p: string) => p.startsWith('/ops') },
-		{ href: resolve('/agents'), label: 'Agents', match: (p: string) => p.startsWith('/agents') }
+		{
+			href: resolve('/ops'),
+			label: 'Operations',
+			short: 'Ops',
+			match: (p: string) => p.startsWith('/ops')
+		},
+		{
+			href: resolve('/agents'),
+			label: 'Agent API',
+			short: 'API',
+			match: (p: string) => p.startsWith('/agents')
+		}
 	];
 
 	const shell = provideShell();
 	// A link with ?system=1 turns the System layer on; navigating without it keeps the visitor's choice.
 	$effect.pre(() => {
 		if (page.url.searchParams.get('system') === '1') shell.system = true;
+		if (page.url.searchParams.get('chat') === '1') shell.chatOpen = true;
 	});
 
 	/** Ops is read on a wall screen: the same tokens, dark. */
@@ -96,8 +114,8 @@
 							class="flex items-center border-b-2 px-1.5 sm:px-2 {current
 								? 'border-accent font-medium text-ink'
 								: 'border-transparent text-ink-2 hover:text-ink'}"
-							>{#if item.label === 'Operations'}<span class="sm:hidden">Ops</span><span
-									class="hidden sm:inline">Operations</span
+							>{#if item.short}<span class="sm:hidden">{item.short}</span><span
+									class="hidden sm:inline">{item.label}</span
 								>{:else}{item.label}{/if}</a
 						>
 					</li>
@@ -108,7 +126,28 @@
 			<LabelPill labels={shell.labels} />
 			{#if shell.sandbox}<SandboxMenu sandbox={shell.sandbox} />{/if}
 			<SystemToggle on={shell.system} ontoggle={toggleSystem} />
+			<button
+				type="button"
+				class="inline-flex h-7 items-center gap-1.5 rounded-full px-2.5 text-meta font-medium {shell.chatOpen
+					? 'bg-ink text-sheet'
+					: 'bg-accent text-sheet hover:bg-accent-ink'}"
+				aria-pressed={shell.chatOpen}
+				aria-label="Ask the agent"
+				onclick={() => (shell.chatOpen = !shell.chatOpen)}
+			>
+				<Bot size={14} aria-hidden="true" />
+				<span class="hidden sm:inline">Agent</span>
+			</button>
 		</div>
 	</div>
 </header>
 {@render children()}
+
+<!-- The purchasing agent on every page, scoped to what the page shows (shell.chat); it never approves. -->
+<ChatDock
+	kitchenId={shell.chat.kitchenId ?? 'k-hotel'}
+	planId={shell.chat.planId}
+	pinned={false}
+	launcher={false}
+	bind:open={shell.chatOpen}
+/>

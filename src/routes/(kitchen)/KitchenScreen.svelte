@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount, tick, untrack } from 'svelte';
 	import { resolve } from '$app/paths';
+	import { page } from '$app/state';
 	import { ChevronDown, Play, CloudOff, LoaderCircle } from '@lucide/svelte';
 	import { KitchenStore } from '$lib/kitchen/kitchen.svelte';
 	import { KITCHENS, PRODUCTS } from '$lib/kitchen/catalog';
@@ -8,7 +9,6 @@
 	import type { Line } from '$lib/core/contracts';
 	import { useShell } from '$lib/ui/shell/shell.svelte';
 	import TaskHeader from '$lib/ui/TaskHeader.svelte';
-	import ChatDock from '$lib/ui/chat/ChatDock.svelte';
 	import LineRow from '$lib/ui/LineRow.svelte';
 	import StrategyCard from '$lib/ui/StrategyCard.svelte';
 	import { decisionCount, decisionsDue, decisionsOf } from '$lib/ui/decisions';
@@ -69,10 +69,21 @@
 			?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 	}
 
+	/**
+	 * An approval link names the plan: open it (in this browser's sandbox), not the kitchen's event plan. Also on
+	 * client navigation (a chat card linking here while the Kitchen is open), but only when the link changes, so a
+	 * later kitchen switch is not undone.
+	 */
+	let linkedSeen: string | null = null;
+	$effect(() => {
+		const linked = page.url.searchParams.get('plan');
+		if (!linked || linked === linkedSeen) return;
+		linkedSeen = linked;
+		untrack(() => void k.load(linked).then(honourDeepLink));
+	});
+
 	onMount(() => {
-		// An approval link names the plan: open it (in this browser's sandbox), not the kitchen's event plan.
-		const linked = new URL(location.href).searchParams.get('plan') ?? undefined;
-		k.load(linked).then(honourDeepLink);
+		if (!new URL(location.href).searchParams.get('plan')) k.load().then(honourDeepLink);
 		const t = setInterval(() => k.tick(), 1000);
 		return () => clearInterval(t);
 	});
@@ -101,7 +112,6 @@
 	] as const;
 	type Zone = (typeof ZONES)[number]['id'];
 	let zone = $state<Zone | null>(null);
-	let chatOpen = $state(false);
 	function show(z: Zone) {
 		zone = z;
 		document.getElementById('zones')?.scrollIntoView({ block: 'start', behavior: 'smooth' });
@@ -272,6 +282,8 @@
 	$effect(() => {
 		if (!shell) return;
 		shell.labels = { source: valioSource, offline: k.mode === 'fixture' };
+		// The agent dock is scoped to this kitchen and the plan on screen.
+		shell.chat = { kitchenId: snap?.kitchen.id, planId: snap?.plan.id };
 		shell.sandbox = snap?.clock
 			? {
 					workspace: snap.clock.workspaceId ?? 'ws-demo',
@@ -284,6 +296,7 @@
 		return () => {
 			shell.labels = null;
 			shell.sandbox = null;
+			shell.chat = {};
 		};
 	});
 
@@ -810,7 +823,7 @@
 	{#if decisions.length && active !== 'decide'}
 		<button
 			type="button"
-			class="fixed inset-x-3 bottom-16 z-30 flex h-12 items-center justify-between rounded-lg bg-ink px-4 text-body font-medium text-sheet shadow-[0_8px_24px_-8px_oklch(0.2_0.02_255/0.5)] lg:hidden"
+			class="fixed inset-x-3 bottom-3 z-30 flex h-12 items-center justify-between rounded-lg bg-ink px-4 text-body font-medium text-sheet shadow-[0_8px_24px_-8px_oklch(0.2_0.02_255/0.5)] lg:hidden"
 			onclick={() => show('decide')}
 		>
 			<span>{decisionCount(decisions.length)} before {storyTime(decisionsDue(plan, approval))}</span
@@ -818,10 +831,6 @@
 			<span>Review</span>
 		</button>
 	{/if}
-
-	<!-- The agent, scoped to this kitchen: plans and orders within the mandate, never approves (links to Decide).
-	     On desktop it opens over the Decide/Order column, so the dish table keeps its width. -->
-	<ChatDock kitchenId={snap.kitchen.id} pinned={false} bind:open={chatOpen} />
 
 	<WhyDrawer
 		open={!!whyLine}

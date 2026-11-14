@@ -469,9 +469,15 @@
 			busy,
 			onReset: resetSandbox
 		};
+		// The agent dock follows this request: its kitchen, and the plan it produced once there is one.
+		shell.chat = {
+			kitchenId: order?.plan.kitchenId ?? (kitchenId || undefined),
+			planId: order?.plan.id
+		};
 		return () => {
 			shell.labels = null;
 			shell.sandbox = null;
+			shell.chat = {};
 		};
 	});
 	/** Offers are dated on the scenario clock, so a cut-off before its now has passed. */
