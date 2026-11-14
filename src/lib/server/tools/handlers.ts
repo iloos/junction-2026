@@ -5,7 +5,8 @@ import { createServerPorts } from '$lib/server/store/server-ports';
 import { createOps, drizzleOpsReader, publish, setFixtureOpsReader } from '$lib/server/bus';
 import { dbMode } from '$lib/server/db/client';
 import type { AnyDb } from '$lib/server/store/drizzle-store';
-import { stubHandlers } from './stub-handlers';
+import { env } from '$env/dynamic/private';
+import { createDecide } from '$lib/server/adapters/decide';
 
 type AnyHandler = (ctx: CallContext, input: unknown) => Promise<Result<unknown>>;
 
@@ -57,7 +58,14 @@ export function realHandlers(): Promise<ToolHandlers> {
 	real ??= createServerPorts({ publish: (ws, ev) => void publish(ws, ev) }).then((b) => {
 		// Fixture mode: the event stream catches up from the same PGlite the tools write to.
 		if (dbMode() === 'fixture') setFixtureOpsReader(drizzleOpsReader(b.db as unknown as AnyDb));
-		return createHandlers({ ...b.ports, ops: createOps() });
+		// Gemini Decisions (live unless LLM_PROVIDER=fixture) with recorded replay, then rules.
+		const decide = createDecide({
+			// Tests never call Gemini: replay and rules only.
+			env: process.env.VITEST ? { ...env, LLM_PROVIDER: 'fixture' } : env,
+			replayPath: 'src/lib/server/adapters/decide/replay.json',
+			record: env.DECIDE_RECORD === '1'
+		});
+		return createHandlers({ ...b.ports, decide, ops: createOps() });
 	});
 	real.catch(() => (real = null));
 	return real;
@@ -71,5 +79,8 @@ const lazyReal = Object.fromEntries(
 	])
 ) as unknown as ToolHandlers;
 
-/** The handlers every surface serves (REST, MCP, the routine agent). */
-export const handlers: ToolHandlers = withStubFallback(lazyReal, stubHandlers);
+/**
+ * The handlers every surface serves (REST, MCP, the routine agent). No stub fallback: every tool is real,
+ * and an unimplemented one (set_mandate) fails explicitly instead of answering from an in-memory stub.
+ */
+export const handlers: ToolHandlers = lazyReal;

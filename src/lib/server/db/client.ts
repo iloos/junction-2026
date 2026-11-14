@@ -49,6 +49,10 @@ const g = globalThis as typeof globalThis & { __mandateSql?: Sql };
 
 /** One pool per process, kept across Vite HMR reloads so dev does not leak connections. */
 export function sql(): Sql {
+	if (process.env.VITEST && process.env.MANDATE_TEST_PG !== '1')
+		throw new Error(
+			'Postgres is off in the ordinary test suite (set MANDATE_TEST_PG=1 for test:pg).'
+		);
 	const url = env.DATABASE_URL;
 	if (!url) throw new Error('DATABASE_URL is not set (fixture mode has no Postgres).');
 	return (g.__mandateSql ??= connect(url));
