@@ -708,6 +708,13 @@
 		dish = { packs: true };
 		void run({ from: 'request' });
 	}
+	/** "gemini-3.5-flash-lite" → "Gemini 3.5 Flash-Lite". */
+	const modelName = (id: string) =>
+		id
+			.split('-')
+			.map((w) => (/^\d/.test(w) ? w : w[0].toUpperCase() + w.slice(1)))
+			.join(' ')
+			.replace(/Flash Lite/, 'Flash-Lite');
 	/** An amount scaled down: whole units for packs, pieces and cases, tenths for kg and l. */
 	function scaled(q: number, unit: string | null, factor: number): number {
 		const step = unit === 'kg' || unit === 'l' ? 10 : 1;
@@ -786,12 +793,16 @@
 			{/snippet}
 			{#if parsed}
 				<p class="text-meta text-ink-3">
-					{#if parsed.parser.kind === 'rules'}Parsed by rules: deterministic, no model call.{:else}Parsed
-						by {parsed.parser.model} ·
-						{#if shell?.system}<span class="mono"
-								>{parsed.parser.tokens?.in ?? 0} in / {parsed.parser.tokens?.out ?? 0} out · {parsed
-									.parser.latencyMs} ms</span
-							>;{/if} dates from the sim clock.{/if}
+					{#if parsed.parser.kind === 'rules'}{parsed.parser.model === 'your edit'
+							? 'Your edit · the words were not read again'
+							: 'Rules · no model call'}{:else}{modelName(parsed.parser.model)} · {parsed.parser
+							.tokens?.in
+							? 'live'
+							: 'cached'}<span class={shell?.system ? '' : 'hidden sm:inline'}
+							>{parsed.parser.tokens?.in
+								? ` · ${num(parsed.parser.tokens.in)} → ${num(parsed.parser.tokens.out)} tokens`
+								: ''} · {num(parsed.parser.latencyMs)} ms</span
+						>{/if}
 					{#if parsed.parser.fallback}<span class="text-signoff">
 							Model path not used: {parsed.parser.fallback}.</span
 						>{/if}
