@@ -11,24 +11,27 @@
 	/>
 </svelte:head>
 
-<div class="ops-root">{@render children()}</div>
+<div class="ops-root" data-theme="dark" data-scale="wall">{@render children()}</div>
 
 <style>
-	/* Control room: dark, read at three metres. Cold-store navy rather than black; tiers are words + colour + mark. */
+	/*
+	 * Control room: the shared tokens (routes/layout.css) in their dark theme, sized for a wall (+4 px). The short
+	 * names below are what every Ops component reads; each one is a shared token, so Ops and the kitchen agree.
+	 */
 	.ops-root {
-		--bg: #0f1e2c;
-		--panel: #142636;
-		--raise: #1a3044;
-		--line: #284256;
-		--text: #e4ecf2;
-		--muted: #93a9bb;
-		--faint: #5f7a8f;
-		--act: #a7b8c6;
-		--propose: #5aa9ff;
-		--sign-off: #f5b544;
-		--blocked: #ff6b5e;
-		--done: #3cc7b4;
-		--outside: #c8a2ff;
+		--bg: var(--color-paper);
+		--panel: var(--color-sheet);
+		--raise: var(--color-well);
+		--line: var(--color-rule);
+		--text: var(--color-ink);
+		--muted: var(--color-ink-2);
+		--faint: var(--color-ink-3);
+		--act: var(--color-ink-2);
+		--propose: var(--color-auth);
+		--sign-off: var(--color-signoff);
+		--blocked: var(--color-out);
+		--done: var(--color-sup-confirmed);
+		--outside: var(--color-undeliv);
 		--hatch: repeating-linear-gradient(
 			-45deg,
 			rgb(255 255 255 / 0.045) 0 6px,
@@ -42,8 +45,8 @@
 		background: var(--bg);
 		color: var(--text);
 		font-family: var(--sans);
-		font-size: 18px;
-		line-height: 1.4;
+		font-size: var(--text-body);
+		line-height: var(--text-body--line-height);
 		font-variant-numeric: tabular-nums;
 		color-scheme: dark;
 	}
