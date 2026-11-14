@@ -2,6 +2,8 @@ import { SCOPES_BY_ACTOR, type ActorKind, type OpEnvelope } from '$lib/core/cont
 import type { CallContext, ToolHandlers } from '$lib/core/ports';
 import { createHandlers } from '$lib/core/services/handlers';
 import { createDbPorts } from '$lib/server/store/db-ports';
+import type { AnyDb } from '$lib/server/store/drizzle-store';
+import { drizzleTaskStore } from '$lib/server/tasks/store';
 import type { ContextSource } from './context';
 import { buildRunPrincipal } from './principal';
 import type { RunPrincipal } from './types';
@@ -20,6 +22,8 @@ export async function trialWorkspace() {
 		}
 	});
 	env.overlay.clear();
+	// Tasks on the same database (agent_tasks), as the server wires them.
+	env.ports.tasks ??= drizzleTaskStore(env.db as unknown as AnyDb);
 	const handlers: ToolHandlers = createHandlers(env.ports);
 	const source: ContextSource = {
 		kitchens: (ws) => env.ports.store.kitchens(ws),
