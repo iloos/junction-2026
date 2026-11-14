@@ -17,6 +17,8 @@ COPY --from=build /app/package.json ./
 # Read at runtime: SQL migrations (drizzle migrate) and demo seeds.
 COPY --from=build /app/drizzle ./drizzle
 COPY --from=build /app/fixtures ./fixtures
+# Recorded Gemini Decisions answers: the replay step between live calls and the rules fallback.
+COPY --from=build /app/src/lib/server/adapters/decide/replay.json ./src/lib/server/adapters/decide/replay.json
 # The deployed commit, for /healthz ("unknown" when the build context had no .git).
 COPY --from=build /app/COMMIT ./COMMIT
 EXPOSE 3000

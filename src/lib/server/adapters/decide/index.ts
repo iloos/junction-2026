@@ -147,7 +147,9 @@ export function loadReplay(path?: string): ReplayBook {
 	if (!path) return {};
 	try {
 		return JSON.parse(readFileSync(path, 'utf8')) as ReplayBook;
-	} catch {
+	} catch (e) {
+		// Without the book, decisions fall back to the rules; say so once instead of failing quietly.
+		console.warn(`[decide] replay book not loaded from ${path}: ${(e as Error).message}`);
 		return {};
 	}
 }
