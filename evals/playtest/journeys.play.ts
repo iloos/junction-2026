@@ -1,5 +1,6 @@
 import { expect, type Page } from '@playwright/test';
 import { BASE, journey, isMobile, type Recorder } from './harness';
+import { approveAll as approveAllShared, orderNow } from '../ui/flow';
 
 /**
  * The four north-star moments (docs/handoff/ring6/RESTART.md) and the nine Round 12 journeys
@@ -72,7 +73,33 @@ async function say(r: Recorder, page: Page, text: string) {
 
 async function requestPage(page: Page, text: string) {
 	await page.goto(`${BASE}/request`);
-	await page.locator('#req').fill(text);
+	const form = page.locator('#req');
+	const composer = page.locator('#chat-text');
+	await form.or(composer).first().waitFor({ timeout: 30_000 });
+	if (!(await form.isVisible().catch(() => false))) {
+		// From wave K (D23 UI) /request is the conversation, full width: the same composer as the dock.
+		const before = await page
+			.locator('main')
+			.innerText()
+			.catch(() => '');
+		await composer.fill(text);
+		await page.getByRole('button', { name: 'Send' }).first().click();
+		await page.waitForTimeout(1500);
+		await page
+			.getByText(/^Working\b.*…$/)
+			.first()
+			.waitFor({ state: 'detached', timeout: 180_000 })
+			.catch(() => undefined);
+		const after = await page
+			.locator('main')
+			.innerText()
+			.catch(() => '');
+		if (after.length <= before.length + text.length)
+			throw new Error('the conversation gave no answer');
+		await page.waitForTimeout(1500);
+		return;
+	}
+	await form.fill(text);
 	await page.getByRole('button', { name: /Find and price/ }).click();
 	await page
 		.getByText(
@@ -84,27 +111,9 @@ async function requestPage(page: Page, text: string) {
 }
 
 async function approveAll(page: Page) {
-	let lines = 0;
-	for (let round = 0; round < 6; round++) {
-		const review = page.getByRole('button', { name: /^Review \d+ lines?/ }).first();
-		const confirm = page.getByRole('button', { name: /Confirm exact terms/ }).first();
-		const hold = page.getByRole('button', { name: /Hold to sign off \d+ lines?/ }).first();
-		if (await review.isVisible().catch(() => false)) {
-			lines += Number(((await review.innerText()).match(/(\d+)/) ?? [])[1] ?? 0);
-			await review.click();
-			await confirm.click();
-		} else if (await hold.isVisible().catch(() => false)) {
-			lines += Number(((await hold.innerText()).match(/(\d+) lines?/) ?? [])[1] ?? 0);
-			const b = (await hold.boundingBox())!;
-			await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2);
-			await page.mouse.down();
-			await page.waitForTimeout(4000);
-			await page.mouse.up();
-		} else break;
-		await page.waitForLoadState('networkidle').catch(() => {});
-		await page.waitForTimeout(1000);
-	}
-	if (!lines) throw new Error('no Review / Hold to sign off control found');
+	const lines = await approveAllShared(page);
+	if (!lines)
+		throw new Error('no Accept all / Accept these / Review / Hold to sign off control found');
 	return lines;
 }
 
@@ -365,7 +374,7 @@ journey(
 			await page
 				.getByText(/Ordered\s*·\s*\d+\s+lines?/)
 				.first()
-				.waitFor({ timeout: 60_000 });
+				.waitFor({ state: 'attached', timeout: 60_000 }); // on a phone it can sit in an unselected zone tab
 			const t = await page.locator('body').innerText();
 			const rc = t.match(/rc-[a-z0-9]+/);
 			if (rc) r.j.receipts.push(rc[0]);
@@ -759,18 +768,9 @@ journey(
 							// Approve on the page (the dock closed so the Decide rail shows), then order.
 							const close = p.getByRole('button', { name: 'Close chat' });
 							if (await close.isVisible().catch(() => false)) await close.click();
-							const all = p.getByRole('button', { name: /^Accept all/ }).first();
-							if (await all.isVisible().catch(() => false)) await all.click();
-							else await approveAll(p).catch(() => 0);
+							await approveAll(p).catch(() => 0);
 							await p.waitForTimeout(1500);
-							await p
-								.getByRole('button', { name: /^(Order \d+ lines? now|Order the|Place order)/ })
-								.first()
-								.click({ timeout: 20_000 });
-							await p
-								.getByText(/Ordered\s*·\s*\d+\s+lines?/)
-								.first()
-								.waitFor({ timeout: 60_000 });
+							await orderNow(p);
 						},
 						{ beat: false }
 					);
