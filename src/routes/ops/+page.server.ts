@@ -96,6 +96,8 @@ export const load: PageServerLoad = async (event) => {
 		presenter,
 		/** Signed in with a key (as opposed to presenter actions open for everyone in dev). */
 		presenterSession: presenter && !presenterOpen(env, dev),
+		/** The sign-in form is for the stage operator only: shown with `?presenter=1`, hidden from visitors. */
+		showPresenterSignIn: event.url.searchParams.get('presenter') === '1',
 		judgeKeys: judgeKeysOn(env) && v.kind === 'own' && !viewOnly,
 		kitchens,
 		names,

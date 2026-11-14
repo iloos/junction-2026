@@ -514,3 +514,72 @@ export function syntheticRun(opts: {
 		return { kind: 'op', seq, envelope };
 	});
 }
+
+/** What each simulated agent is doing, for its run's title in the trace drawer. */
+const SIM_GOALS: Record<string, string> = {
+	'agent:k-hotel': 'Simulated: the hotel kitchen agent plans and orders its buffet',
+	'agent:k-lounas': "Simulated: the lunch restaurant's agent runs its weekly order",
+	'ext:judge-claude': 'Simulated: an outside agent orders for the central kitchen'
+};
+
+/**
+ * Trace events for one op of the simulated run, so the trace drawer and its run graph show the simulated agents
+ * at work: a planned step before the op and the tool's result after it. Only agent ops get traces; people's
+ * ops don't. Every trace names its run `sim:<actor>` and carries `simulated: true`.
+ */
+export function simTraces(
+	env: OpEnvelope,
+	n: number
+): { before: ServerEvent[]; after: ServerEvent[] } {
+	if (env.actor.kind !== 'kitchen_agent' && env.actor.kind !== 'external_agent')
+		return { before: [], after: [] };
+	const scope = { workspaceId: env.workspaceId, runId: env.runId };
+	const agentRun = `sim:${env.actor.id}`;
+	const goal = SIM_GOALS[env.actor.id] ?? 'Simulated agent run';
+	const tool = env.via.split(':').pop() ?? env.via;
+	const failed = env.op.type === 'CommitOrder' && env.op.outcome.result === 'failed';
+	const why: Record<string, string> = {
+		CreatePlan: 'draft the order from the week’s needs',
+		RecordOffer: 'get live terms and check every line against the mandate',
+		ProposeSubstitute: 'an item is out: find a substitute within the rules',
+		RecordApproval: 'ask a person for the lines it may not order alone',
+		CommitOrder: 'commit what the mandate and approvals allow'
+	};
+	const trace = (step: 'step' | 'tool', data: Record<string, unknown>): ServerEvent => ({
+		kind: 'trace',
+		...scope,
+		at: env.at,
+		step,
+		data: { agentRun, goal, simulated: true, ...data }
+	});
+	return {
+		before: [trace('step', { n, tool, why: why[env.op.type] ?? '' })],
+		after: [
+			trace('tool', {
+				tool,
+				ok: !failed,
+				ms: 40 + ((env.seq * 37) % 160),
+				...(failed && env.op.type === 'CommitOrder' && env.op.outcome.result === 'failed'
+					? { code: env.op.outcome.error.code }
+					: {})
+			})
+		]
+	};
+}
+
+/** The closing trace of each simulated agent's run, after the script's last op. */
+export function simDone(scope: { workspaceId: string; runId: string }, at: string): ServerEvent[] {
+	return Object.entries(SIM_GOALS).map(([id, goal]) => ({
+		kind: 'trace' as const,
+		...scope,
+		at,
+		step: 'done' as const,
+		data: {
+			agentRun: `sim:${id}`,
+			goal,
+			simulated: true,
+			stopped: 'done',
+			summary: 'Simulated run: scripted steps, real catalogue products, invented quantities.'
+		}
+	}));
+}

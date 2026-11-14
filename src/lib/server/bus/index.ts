@@ -14,7 +14,7 @@ import * as schema from '$lib/server/db/schema';
 import type { AnyDb } from '$lib/server/store/drizzle-store';
 import { hasSeq, MemoryBus } from './memory';
 import { PgTransport, readOps } from './pg';
-import { SYNTH_WORKSPACE, syntheticRun } from './synthetic';
+import { simDone, simTraces, SYNTH_WORKSPACE, syntheticRun } from './synthetic';
 import { STRESS_WORKSPACE, stressEvents } from './stress';
 
 export { SYNTH_WORKSPACE } from './synthetic';
@@ -158,15 +158,28 @@ function startSynthetic(): void {
 			wall: (i) => new Date(t0 + i * STEP_MS)
 		});
 		let i = 0;
+		const steps = new Map<string, number>();
 		const tick = () => {
 			if (!b.local.listenerCount(SYNTH_WORKSPACE)) {
 				b.synth.timer = null;
 				return;
 			}
 			if (i < events.length) {
-				b.local.deliver(SYNTH_WORKSPACE, [events[i++]]);
+				const e = events[i++];
+				// Agent ops come with their simulated trace: the planned step before, the tool result after.
+				if (e.kind === 'op') {
+					const id = e.envelope.actor.id;
+					steps.set(id, (steps.get(id) ?? 0) + 1);
+					const t = simTraces(e.envelope, steps.get(id)!);
+					b.local.deliver(SYNTH_WORKSPACE, [...t.before, e, ...t.after]);
+				} else b.local.deliver(SYNTH_WORKSPACE, [e]);
 				b.synth.timer = setTimeout(tick, STEP_MS);
-			} else b.synth.timer = setTimeout(play, LOOP_PAUSE_MS);
+			} else {
+				const last = events.at(-1);
+				if (last && last.kind === 'op')
+					b.local.deliver(SYNTH_WORKSPACE, simDone(last.envelope, new Date().toISOString()));
+				b.synth.timer = setTimeout(play, LOOP_PAUSE_MS);
+			}
 		};
 		b.synth.timer = setTimeout(tick, 400);
 	};
