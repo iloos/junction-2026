@@ -28,6 +28,13 @@ export interface ParsedItemView {
 	unitToken?: string;
 	/** A brand the words named, required at lookup. */
 	brand?: string;
+	/** How much was asked, as a kind (D20): exact, a range, as much as available, for N people, or unknown. */
+	amount?:
+		| { kind: 'exact' }
+		| { kind: 'range'; min: number; max: number }
+		| { kind: 'max_available' }
+		| { kind: 'for_people'; n: number }
+		| { kind: 'unknown' };
 }
 
 /** How a question can be answered inline. */
