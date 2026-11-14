@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { ApprovalState, Line, Plan, ScoreBreakdown, TermsDiff } from './plan';
 import { Offer, Product } from './product';
+import { TaskLedger } from './task';
 import { IsoDate, KitchenId, Measure, ProductId, Provenance, SalesQty } from './primitives';
 
 /**
@@ -346,6 +347,18 @@ export const toolSchemas = {
 				})
 			)
 		})
+	},
+	get_outcome: {
+		scope: 'read',
+		description:
+			"What is true for a plan or task now, in numbers: per need supplier confirmed / awaiting supplier / planned / unresolved, money committed, receipts, decisions left and the next action. Use it to report outcomes; don't infer them.",
+		input: z
+			.object({ planId: z.string().optional(), taskId: z.string().optional() })
+			.refine(
+				(v) => (v.planId === undefined) !== (v.taskId === undefined),
+				'give planId or taskId'
+			),
+		output: out({ ledger: TaskLedger })
 	}
 } as const;
 

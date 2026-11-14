@@ -19,6 +19,7 @@ export const TITLES: Record<ToolName, string> = {
 	edit_line: 'Edit a line or need',
 	find_substitutes: 'Find substitutes',
 	get_plan: 'Get a plan',
+	get_outcome: 'Get the outcome in numbers',
 	explain_line: 'Explain a line',
 	approve: 'Approve or deny',
 	commit_order: 'Commit an order',

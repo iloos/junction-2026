@@ -9,6 +9,8 @@ import type { AnyDb } from '$lib/server/store/drizzle-store';
 import { env } from '$env/dynamic/private';
 import { createDecide } from '$lib/server/adapters/decide';
 import { createGetContext } from '$lib/server/agent/get-context';
+import { createGetOutcome } from '$lib/server/tasks/outcome';
+import { projectedTaskStore } from '$lib/server/tasks/project';
 import { scopeFor, withExternalScope } from '$lib/server/external/scope';
 
 type AnyHandler = (ctx: CallContext, input: unknown) => Promise<Result<unknown>>;
@@ -91,6 +93,14 @@ export function realHandlers(): Promise<ToolHandlers> {
 		return {
 			...handlers,
 			get_context: createGetContext(b.ports),
+			// Ledgers are recomputed from the plans on every read, never taken from a stored task.
+			get_outcome: createGetOutcome(
+				{
+					...b.ports,
+					tasks: b.ports.tasks && projectedTaskStore(b.ports.tasks, b.ports, handlers)
+				},
+				handlers
+			),
 			lookup_facts: web('lookup_facts'),
 			find_outside: web('find_outside'),
 			check_recall: web('check_recall')

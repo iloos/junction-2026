@@ -239,6 +239,15 @@ export function toFacts(tool: ToolName, value: unknown, intent?: Intent): Facts 
 			return { state: code(v.state) };
 		case 'set_mandate':
 			return { mandateVersion: num(v.mandateVersion) };
+		case 'get_outcome': {
+			const l = obj(v.ledger);
+			return {
+				needs: Array.isArray(l.needs) ? l.needs.length : 0,
+				committedCents: num(l.committedCents),
+				receipts: Array.isArray(l.receiptIds) ? l.receiptIds.length : 0,
+				decisionsLeft: num(l.decisionsLeft)
+			};
+		}
 		case 'get_context':
 			return {
 				kitchens: Array.isArray(v.kitchens) ? v.kitchens.length : 0,

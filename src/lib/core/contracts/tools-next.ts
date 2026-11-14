@@ -1,6 +1,5 @@
 import { z } from 'zod';
 import { EventBrief, MenuProposal } from './event';
-import { TaskLedger } from './task';
 import { ResultMeta } from './tools';
 
 /**
@@ -8,18 +7,6 @@ import { ResultMeta } from './tools';
  * that lands its handler, so the registry never advertises a tool that can't run.
  */
 export const plannedToolSchemas = {
-	get_outcome: {
-		scope: 'read',
-		description:
-			"What is true for a plan or task now, in numbers: per need supplier confirmed / awaiting supplier / planned / unresolved, money committed, receipts, decisions left and the next action. Use it to report outcomes; don't infer them.",
-		input: z
-			.object({ planId: z.string().optional(), taskId: z.string().optional() })
-			.refine(
-				(v) => (v.planId === undefined) !== (v.taskId === undefined),
-				'give planId or taskId'
-			),
-		output: z.object({ ledger: TaskLedger, meta: ResultMeta.optional() })
-	},
 	propose_menu: {
 		scope: 'plan',
 		description:
