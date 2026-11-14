@@ -146,3 +146,14 @@ What changes is that hard constraints get **one vocabulary and one evaluator in 
 **Why:** Round 11 showed the core checks authority faithfully, but trusts what entries construct. The request parser turned an unknown "ml" into sales units (R11-01). Pack requests carried no need, so they lost their requirements (R11-02). Request built its own commit key and replayed an old receipt (R11-03). Chat and the loop had the same class of bug in Round 10. Patching each entry hasn't converged; the invariants have to live where every entry passes.
 
 **Reopen if:** a legitimate order deliberately buys well over the ask, e.g. stocking up. That needs an explicit "more than asked" reason on the line, chosen by the chef. The rule itself doesn't loosen.
+
+### D19 · Retrieval upgrade (pgvector hybrid + Modal reranker) is one post-freeze step, taken together (user + lead, 14 Nov night)
+**Choice:** not before the freeze. Retrieval stays lexical plus the name normaliser, and safety stays with hard predicates (D16 `meets()` over `facets()`). After the freeze, if taken, it is one step:
+1. Gemini embeddings over the catalogue into the existing `products` embedding column, with pgvector and an HNSW index on the Aiven Postgres.
+2. Hybrid retrieval in the Postgres catalogue adapter (lexical top-k + vector top-k, reciprocal rank fusion).
+3. A multilingual cross-encoder reranker (e.g. bge-reranker-v2-m3) on Modal GPU, re-scoring the top ~50 substitute candidates.
+It ships only if the substitute recall@12 (70% today) and the retrieval evals improve and the unsafe-ok rate stays 0. Vectors and the reranker only widen and order candidates that already passed `meets()`; they never decide what is allowed.
+
+**Why:** similarity is the right tool for coverage (cross-category, paraphrase, English → Finnish), not for safety (meatballs embed next to vegetable balls). Modal earns its place for the GPU-shaped reranker, not for the embeddings. Reranking alone is a thin sponsor story, so it's only worth it with the hybrid step and a measured gain.
+
+**Reopen if:** a measured run before the freeze shows a large recall gain cheaply. CLAIMS keeps "never pgvector" until it ships.

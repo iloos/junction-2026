@@ -60,6 +60,7 @@ _Lead-kept. Every steer the user gave since Ring 4, with its owner and state. `[
 | W3 | Quantity tokens on the case cards | d0 | [x] live |
 | W4 | Re-record the chain on the lunch or school event once it's on prod | d0 | [ ] after deploy |
 | W5 | Kafka on Aiven via Debezium, as pitch "next" | lead (PITCH Next) | [p] |
+| W7 | Retrieval upgrade: pgvector hybrid + Modal reranker, together, post-freeze, measured (D19) | lead | [p] |
 | W6 | Margin-aware suggestions; Exa monitors for web-wide watch | lead (PITCH Next) | [p] |
 
 ## Review and process

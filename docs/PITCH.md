@@ -76,6 +76,7 @@ Every claim's observed status and verdict: [CLAIMS.md](CLAIMS.md).
 - **Valio's systems subscribe to the op log (Aiven Kafka + Debezium).** The op log stays the source of truth. Aiven's Debezium connector streams it into Kafka topics, so Valio's ERP, warehouse, forecasting and recall systems can subscribe to held lines, orders and shortfalls with no app change and no dual writes.
 - **Usual orders across many kitchens** (D14): detected standing orders make demand dependable for Valio; the app has detection over a simulated history.
 - **Margin-aware suggestions**: the "Valio suggests" slot ranks by a stated reason today; with Valio's margin data it could weigh margin, still inside the mandate and never the default.
+- **Hybrid retrieval with a GPU reranker** (D19): pgvector on Aiven plus a multilingual reranker on Modal, to widen substitute coverage; safety stays with hard product checks.
 - **Exa monitors for web-wide watch** (supplier and recall news before the official list), next to Context.dev's page monitor.
 
 ## Framing we can say truthfully (docs/research/agentic-commerce.md)
