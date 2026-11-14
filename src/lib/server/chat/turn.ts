@@ -439,7 +439,9 @@ async function* turnLines(
 	let expected: number | null;
 	let remembered: Task | null = null;
 	if (input.taskId) {
-		const t = await store.get(deps.workspaceId, input.taskId);
+		// A task from before a reset (another run of this room) is gone too: never reopened (OM-9).
+		const got = await store.get(deps.workspaceId, input.taskId);
+		const t = got && got.runId === deps.ctx.runId ? got : null;
 		if (!t && input.text === undefined) {
 			// An answer or a continue for a conversation this sandbox no longer has (reset, another browser).
 			yield fail(
@@ -1351,7 +1353,9 @@ export async function planView(
  */
 export async function taskView(taskId: string, deps: ChatDeps): Promise<ChatEvent[]> {
 	const store = storeOf(deps.ports);
-	const t = await store.get(deps.workspaceId, taskId);
+	const got = await store.get(deps.workspaceId, taskId);
+	// A task of an earlier run (a reset since) is not this room's any more.
+	const t = got && got.runId === deps.ctx.runId ? got : null;
 	if (!t)
 		return [
 			{ type: 'done', taskId, state: 'failed', text: `No task ${taskId} here.`, canContinue: false }

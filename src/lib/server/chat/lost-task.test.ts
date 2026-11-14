@@ -50,3 +50,18 @@ describe('a remembered task that is gone', () => {
 		}
 	});
 });
+
+describe('OM-9: a task from before a reset is gone', () => {
+	it('the same task id under a new run starts fresh', { timeout: 120_000 }, async () => {
+		const deps = await setup();
+		const first = await chatTurn({ text: '50 eggs for friday' }, deps);
+		const old = first.at(-1)!.taskId;
+		const after = { ...deps, ctx: { ...deps.ctx, runId: 'run-after-reset' } };
+		const out = await chatTurn({ taskId: old, continue: true }, after);
+		expect(
+			out.at(-1)?.type === 'done' && out.at(-1)?.type === 'done'
+				? (out.at(-1) as { text: string }).text
+				: ''
+		).toMatch(/no longer here/);
+	});
+});
