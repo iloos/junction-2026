@@ -300,9 +300,10 @@ export async function findSubstitutes(
 	});
 	const base = { kind, candidates, labourNote, residual, saved };
 
-	// Preview, nothing to propose, or nothing would change: the plan stays as it is. An empty proposal never writes
-	// (it would bump the version without covering the dish, and a caller that retries on a version change loops).
-	if (!apply || (drafts.length === 0 && saved.length === 0) || sameLines(drafts, saved))
+	// Preview, nothing to propose, or nothing would change: the plan stays as it is. An empty proposal never writes:
+	// it would delete the saved rescue (and void its approval) without covering the dish, or bump the version for
+	// nothing, and a caller that retries on a version change loops.
+	if (!apply || drafts.length === 0 || sameLines(drafts, saved))
 		return ok({ ...base, plan: plan0, chosen: drafts.map(proposedOf), applied: false });
 
 	// Prepare outside the transaction: the open lines after the swap, and their catalogue data.
