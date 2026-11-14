@@ -7,7 +7,8 @@ import { day as dayLabel, money, storyTime } from './format';
 import { salesUnitWords } from './request/words';
 
 export type BasketStage = 'proposed' | 'held' | 'approved' | 'ordered';
-export type SourceKind = 'event' | 'usual' | 'request' | 'chat' | 'outside_agent' | 'kitchen';
+/** Where a plan came from: `Plan.origin`, set by the server at each entry (never a tool input). */
+export type SourceKind = 'event' | 'usual' | 'request' | 'chat' | 'agent' | 'menu';
 
 export interface BasketSource {
 	planId: string;
@@ -72,8 +73,8 @@ const KIND_WORDS: Record<SourceKind, string> = {
 	usual: 'Usual order',
 	request: 'Request',
 	chat: 'Asked in chat',
-	outside_agent: 'Outside agent',
-	kitchen: 'Kitchen'
+	agent: 'Outside agent',
+	menu: 'Menu'
 };
 
 const WEEKDAY = new Intl.DateTimeFormat('en-GB', { weekday: 'long', timeZone: 'UTC' });
@@ -82,7 +83,7 @@ const WEEKDAY = new Intl.DateTimeFormat('en-GB', { weekday: 'long', timeZone: 'U
 export function sourceChip(s: BasketSource, date?: string): string {
 	if (s.label) return s.label;
 	if (s.kind === 'usual' && date) return `Usual ${WEEKDAY.format(new Date(`${date}T12:00:00Z`))}`;
-	if (s.kind === 'chat' || s.kind === 'outside_agent') return KIND_WORDS[s.kind];
+	if (s.kind === 'chat' || s.kind === 'agent') return KIND_WORDS[s.kind];
 	// Long titles ("Christmas dinner buffet, 140 guests") are cut at the first comma for the chip.
 	const short = s.title.split(/,|·/)[0].trim();
 	return short.length > 28 ? `${short.slice(0, 27)}…` : short || KIND_WORDS[s.kind];

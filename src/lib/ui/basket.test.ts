@@ -84,6 +84,9 @@ describe('basket words', () => {
 		expect(sourceChip({ ...day.sources[0], kind: 'chat', title: '3 cases Valio milk' })).toBe(
 			'Asked in chat'
 		);
+		expect(sourceChip({ ...day.sources[0], kind: 'agent', title: 'Weekly dairy' })).toBe(
+			'Outside agent'
+		);
 		expect(sourceChip({ ...day.sources[0], label: 'Buffet' })).toBe('Buffet');
 	});
 
