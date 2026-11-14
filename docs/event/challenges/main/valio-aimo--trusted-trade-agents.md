@@ -153,3 +153,14 @@ Valio Aimo® was created in 2021 as a bold leap forward by Valio—transforming 
 
 - https://junction26.valioaimo.fi/
 - https://www.valioaimo.fi/
+
+## Flyer and mentor answers (recorded 14 Nov by Track F)
+**Flyer (judging):** working end-to-end demo 30 · solving the problem and user need 20 · autonomy and controls 20 · robustness to exception situations 15 · openness and credible path toward production 15. "It is not a chatbot." Bonus: compare more than price (reliability, sustainability labels). "Query the APIs only when needed."
+
+**Valio mentor (Tommi), official answers on the event Discord, Sat 14 Nov:**
+- Availability ≥ 999999 = availability unknown; orders of any quantity are allowed.
+- Empty availability = not available.
+- `closingTime` = the cut-off for `availableDate`.
+- `allowedLotSize` 0.01 → treat as 1.
+- HTTP 429 → a 30 s block.
+- Approval: "Currently there are no approval gates… In agentic scenario a human approval would be required… maybe that could be dropped in the future if reliability is good enough."

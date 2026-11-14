@@ -5,6 +5,8 @@ _Working doc, not final copy. Lead-owned until a pitch owner exists. Claims only
 ## One-breath opener
 "140 guests on Saturday. The ham and the swede casserole are out. What can an agent actually promise this kitchen, and what must it refuse?"
 
+**The problem, in Valio's words** (Valio Aimo mentor, official answer on the event Discord, Sat 14 Nov): "Currently there are no approval gates… In agentic scenario a human approval would be required… maybe that could be dropped in the future if reliability is good enough." Our mandate tiers are that approval gate: what the agent may do alone, what a chef approves, what nobody can. Earned autonomy is their "dropped in the future": the mandate widens as the record shows it can be trusted, line type by line type, never all at once.
+
 ## Table demo (2:00)
 | Time | Beat | What they see | Label on screen | Status |
 |---|---|---|---|---|
@@ -23,7 +25,7 @@ Valio's own example ("1,000 L lactose-free milk by Monday") runs as its own rout
 0–20 the problem · 20–105 the Christmas journey · 105–135 an outside agent on the judge's own key plans in the judge's sandbox and cannot approve · 135–160 Operations shows why kitchens are held · 160–180 the 4-week hotel pilot (targets, not results) and close.
 
 ## Labels (always visible)
-"Valio challenge mock: fetched T / cached T" · booking, stock-on-hand, recipes and the December clock = **scenario** · order = **local simulated commitment** · salmon contention and shifted cut-offs = **simulated** overlays · the "normal week" a plan is diffed against is a **team estimate** · Valio's huge "unlimited" stock figure is an **assumption**. Check each label is on screen before the video (the normal-week and assumption labels were missing at the last review). Salmon and trout share carbon 4.9: don't promise a carbon flip there. No product images.
+"Valio challenge mock: fetched T / cached T" · booking, stock-on-hand, recipes and the December clock = **scenario** · order = **local simulated commitment** · salmon contention and shifted cut-offs = **simulated** overlays · the "normal week" a plan is diffed against is a **team estimate** · Valio's huge "unlimited" stock figure (≥ 999999) means **availability unknown**, confirmed by Valio on 14 Nov: say "Valio doesn't state a quantity", never "unlimited" or "in stock". Check each label is on screen before the video (the normal-week label was missing at the last review; the "unlimited" figure must read as unknown once 8d's mapping fix lands). Salmon and trout share carbon 4.9: don't promise a carbon flip there. No product images.
 
 ## Provable now (claim → evidence on main)
 | Claim we say out loud | Backed by |
@@ -33,7 +35,7 @@ Valio's own example ("1,000 L lactose-free milk by Monday") runs as its own rout
 | No double orders | eval s1 (retry → the same receipt), s5 (`DUPLICATE` on a reused key with another payload); Postgres race `pg-race.test.ts` via `pnpm test:pg` (opt-in, on Aiven) and `scripts/smoke-race.mjs` after each deploy |
 | Never auto-orders over its caps, even split | eval s5 (`CAP_EXCEEDED.weekly` on a split second order) |
 | Below a lot step is unorderable | eval s3 |
-| Unknown supply never counts as cover, and known stock ranks first (D8) | `core/rank/rank.ts`; `server/store/pool.test.ts` (lanttulaatikko made in house, Terminal `462157` ranked below); `FulfilmentView` partition (`core/mandate/fulfilment.test.ts`) |
+| Unknown supply never counts as cover, and known stock ranks first (D8). Valio confirmed the semantics (Discord, 14 Nov): an availability of 999999 or more means **unknown**, orderable in any quantity; empty means not available | `core/rank/rank.ts`; `server/store/pool.test.ts` (lanttulaatikko made in house, Terminal `462157` ranked below); `FulfilmentView` partition (`core/mandate/fulfilment.test.ts`) |
 | Each committed line names what allowed it: the mandate or a specific approval | `server/store/authority.test.ts` |
 | Edit after a rescue resizes the substitute and re-plans; any edit voids the approval | `server/store/rescue.test.ts` (resize, replace, commit only the new product); `core/state.test.ts` (approval invalidated on edit) |
 | Physical amounts, not pack counts: 10 L of milk is sized in litres | `server/store/direct.test.ts`; `fixtures/views/milk-direct.json` |

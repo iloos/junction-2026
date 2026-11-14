@@ -65,7 +65,7 @@ Each beat is said only after it is seen on the deployed app, with a screenshot i
 | The other side | the same held lines in Ops, in the visitor's own workspace, by cause | **prod `70c30e2`:** grouped by cause in `ws-j-…` (`ops-1-held.png`); avoid the count tiles until `a5ca1f5` deploys |
 | An event from words | brief → menu → plan on `/request` | **prod `7f1db5a`:** 50-guest menu → "Planned: 16 needs, 14 lines", picks fixed (`obs2/m1-planned.png`) |
 | Chat | an order in words, a held line, "approve it" refused | **prod `70c30e2`:** `chat-1-order.png`, `chat-2-approve.png` |
-| Labels | scenario, local simulated commitment, simulated overlays, team estimate, assumption | scenario, team estimate, Valio cached/live, model estimate seen this pass; "assumption" and "local simulated commitment" not yet found on screen |
+| Labels | scenario, local simulated commitment, simulated overlays, team estimate; ≥ 999999 availability as unknown (Valio confirmed 14 Nov; no longer an assumption) | scenario, team estimate, Valio cached/live, model estimate seen; prod `7b3daf1` still shows "unlimited · Stock" (e.g. `464201`) and counts such lines as known stock until 8d's mapping fix deploys; "local simulated commitment" not yet found on screen |
 
 ## Wording traps
 - Never "confirmed" for anything without a receipt; Terminal lines are "ordered, awaiting supplier" (D10).
