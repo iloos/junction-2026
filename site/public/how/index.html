@@ -20,7 +20,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="/site.css" />
-<link rel="stylesheet" href="/how/map.css" />
+<link rel="stylesheet" href="/how/map.css">
 <style>
 :root { --display: 'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif; --mono-f: 'IBM Plex Mono', ui-monospace, monospace; }
 .brand svg { border-radius: 6px; box-shadow: 0 0 0 1px color-mix(in oklab, var(--ink) 14%, transparent); }
@@ -34,7 +34,7 @@ h3 { margin: 0; font: 600 18px/1.25 var(--display); }
 .cite { display: block; margin-top: 3px; font: 400 12px/1.5 var(--mono-f); color: var(--ink-3); overflow-wrap: anywhere; }
 .cite code { font-size: 12px; background: none; border: 0; padding: 0; color: var(--ink-2); }
 .label { font: 500 12px/1.3 var(--mono-f); color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.06em; margin: 0 0 10px; }
-.lead { font-size: 18px; line-height: 1.5; color: var(--ink); margin: 0 0 28px; max-width: 36em; text-wrap: pretty; }
+.slead { font-size: 18px; line-height: 1.5; color: var(--ink); margin: 0 0 28px; max-width: 36em; text-wrap: pretty; }
 .note2 { margin: 16px 0 0; font-size: 14px; color: var(--ink-2); max-width: 46em; }
 .note2 b { color: var(--ink); font-weight: 500; }
 .src { margin: 14px 0 0; font-size: 13px; color: var(--ink-3); }
@@ -59,13 +59,13 @@ h3 { margin: 0; font: 600 18px/1.25 var(--display); }
 [data-system-map]:empty { display: none; }
 
 /* Chips: the landing's case chips */
-.chip { display: inline-flex; align-items: center; gap: 6px; min-height: 26px; padding: 0 8px; border-radius: 6px; border: 1px solid; font-size: 13px; font-weight: 500; white-space: nowrap; background: var(--sheet); }
-.chip .ic { width: 14px; height: 14px; stroke-width: 2; }
-.chip.held { color: var(--auth); border-color: var(--auth); border-style: dashed; }
-.chip.within { color: var(--ink-2); border-color: var(--rule-strong); }
-.chip.refused { color: var(--out); border-color: var(--out); }
-.chip.caught { color: var(--warn); border-color: var(--warn); }
-.chip.ordered { color: var(--ok); border-color: var(--ok); }
+.mchip { display: inline-flex; align-items: center; gap: 6px; min-height: 26px; padding: 0 8px; border-radius: 6px; border: 1px solid; font-size: 13px; font-weight: 500; white-space: nowrap; background: var(--sheet); }
+.mchip .ic { width: 14px; height: 14px; stroke-width: 2; }
+.mchip.held { color: var(--auth); border-color: var(--auth); border-style: dashed; }
+.mchip.within { color: var(--ink-2); border-color: var(--rule-strong); }
+.mchip.refused { color: var(--out); border-color: var(--out); }
+.mchip.caught { color: var(--warn); border-color: var(--warn); }
+.mchip.ordered { color: var(--ok); border-color: var(--ok); }
 
 /* Cards */
 .cards { display: grid; gap: 12px; }
@@ -140,10 +140,10 @@ h3 { margin: 0; font: 600 18px/1.25 var(--display); }
 .steps li::before { content: counter(s); width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; font: 500 12px/1 var(--mono-f); color: var(--accent-ink); border: 1px solid var(--accent); margin-top: 1px; }
 .steps .lim { color: var(--ink-3); font-size: 13.5px; }
 .side { display: grid; gap: 12px; min-width: 0; }
-.live { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; }
-.live a { display: inline-flex; align-items: center; gap: 7px; min-height: 40px; padding: 0 14px; border-radius: 10px; border: 1px solid var(--rule); background: var(--paper); font-size: 14.5px; font-weight: 500; text-decoration: none; color: var(--accent-ink); transition: background 0.12s ease, border-color 0.12s ease; }
-.live a:hover { border-color: var(--accent); background: var(--accent-wash); }
-.live a .ic { width: 16px; height: 16px; }
+.golive { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; }
+.golive a { display: inline-flex; align-items: center; gap: 7px; min-height: 40px; padding: 0 14px; border-radius: 10px; border: 1px solid var(--rule); background: var(--paper); font-size: 14.5px; font-weight: 500; text-decoration: none; color: var(--accent-ink); transition: background 0.12s ease, border-color 0.12s ease; }
+.golive a:hover { border-color: var(--accent); background: var(--accent-wash); }
+.golive a .ic { width: 16px; height: 16px; }
 .limit { margin: 0; padding: 12px 14px; border: 1px solid color-mix(in oklab, var(--warn) 45%, transparent); background: var(--warn-wash); border-radius: 10px; font-size: 14px; color: var(--ink); }
 
 /* A recorded case from /cases.json */
@@ -162,7 +162,7 @@ h3 { margin: 0; font: 600 18px/1.25 var(--display); }
 .ex dt { font: 500 12px/1.6 var(--mono-f); color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.04em; }
 .ex dd { margin: 0; color: var(--ink-2); overflow-wrap: anywhere; }
 .ex dd b { display: block; color: var(--ink); font-weight: 500; }
-.ex dd .chip { margin-top: 4px; white-space: normal; height: auto; padding: 3px 8px; }
+.ex dd .mchip { margin-top: 4px; white-space: normal; height: auto; padding: 3px 8px; }
 
 /* Tables: trust, partners */
 .tbl { width: 100%; border-collapse: collapse; font-size: 14.5px; }
@@ -173,11 +173,11 @@ h3 { margin: 0; font: 600 18px/1.25 var(--display); }
 .tbl td.t { font: 400 12.5px/1.5 var(--mono-f); color: var(--ink-3); overflow-wrap: anywhere; }
 .tbl td.t code { font-size: 12.5px; background: none; border: 0; padding: 0; color: var(--ink-2); }
 .tbl tr.dim th, .tbl tr.dim td { opacity: 0.78; }
-.st { display: inline-block; white-space: nowrap; font: 500 12px/1 var(--display); padding: 5px 8px; border-radius: 999px; }
-.st.live { background: var(--ok-wash); color: var(--ok); }
-.st.test { background: var(--auth-wash); color: var(--auth); }
-.st.wired { background: var(--warn-wash); color: var(--warn); }
-.st.off { background: var(--well); color: var(--ink-2); }
+.pill { display: inline-block; white-space: nowrap; font: 500 12px/1 var(--display); padding: 5px 8px; border-radius: 999px; }
+.pill.pl-live { background: var(--ok-wash); color: var(--ok); }
+.pill.pl-test { background: var(--auth-wash); color: var(--auth); }
+.pill.pl-wired { background: var(--warn-wash); color: var(--warn); }
+.pill.pl-off { background: var(--well); color: var(--ink-2); }
 @media (max-width: 760px) {
 	.tbl thead { display: none; }
 	.tbl tr { display: grid; grid-template-columns: minmax(0, 1fr); padding: 12px 0; border-top: 1px solid var(--rule); gap: 4px; }
@@ -198,8 +198,8 @@ h3 { margin: 0; font: 600 18px/1.25 var(--display); }
 @media (max-width: 899px) { .svgw svg { min-width: 520px; } }
 .smleg { display: flex; gap: 10px 22px; flex-wrap: wrap; margin-top: 6px; font-size: 13.5px; color: var(--ink-2); }
 .smleg i { display: inline-block; width: 22px; height: 12px; border: 1.5px solid; border-radius: 6px; margin-right: 8px; vertical-align: -1px; }
-.hint { display: none; font: 12px var(--mono-f); color: var(--ink-3); margin: 0; }
-@media (max-width: 899px) { .hint { display: block; } }
+.smhint { display: none; font: 12px var(--mono-f); color: var(--ink-3); margin: 0; }
+@media (max-width: 899px) { .smhint { display: block; } }
 
 /* What Valio sees */
 .oplog { margin-top: 12px; }
@@ -221,7 +221,7 @@ h3 { margin: 0; font: 600 18px/1.25 var(--display); }
 .col li { padding: 10px 0; border-top: 1px solid var(--rule); font-size: 14.5px; line-height: 1.45; color: var(--ink-2); }
 .col li b { color: var(--ink); font-weight: 500; }
 
-@media (prefers-reduced-motion: reduce) { .toc a, .live a, .tab { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .toc a, .golive a, .tab { transition: none; } }
 </style>
 </head>
 <body>
@@ -268,12 +268,13 @@ h3 { margin: 0; font: 600 18px/1.25 var(--display); }
 			<h1 id="h-intro">From a kitchen's rules to one Valio order</h1>
 			<p class="lede">Mandate is a purchasing agent for a kitchen. It orders from Valio on its own only what the kitchen's mandate allows, and a person decides the rest.</p>
 			<p class="outcomes">Every line it prepares either
-				<span class="chip within"><svg class="ic" aria-hidden="true"><use href="#i-shield"/></svg>goes through</span>
-				<span class="chip held"><svg class="ic" aria-hidden="true"><use href="#i-hold"/></svg>is held for a person</span>or
-				<span class="chip refused"><svg class="ic" aria-hidden="true"><use href="#i-no"/></svg>is refused</span>
+				<span class="mchip within"><svg class="ic" aria-hidden="true"><use href="#i-shield"/></svg>goes through</span>
+				<span class="mchip held"><svg class="ic" aria-hidden="true"><use href="#i-hold"/></svg>is held for a person</span>or
+				<span class="mchip refused"><svg class="ic" aria-hidden="true"><use href="#i-no"/></svg>is refused</span>
 			</p>
 			<nav aria-label="On this page">
 				<ul class="toc">
+					<li><a href="#map">The system map</a></li>
 					<li><a href="#rules">The kitchen's rules</a></li>
 					<li><a href="#agent">The agent</a></li>
 					<li><a href="#flows">Five flows</a></li>
@@ -285,14 +286,13 @@ h3 { margin: 0; font: 600 18px/1.25 var(--display); }
 			</nav>
 		</section>
 
-		<div data-system-map></div>
-		<script src="/how/map.js" defer></script>
+		<section data-system-map id="map"></section>
 
 		<!-- The kitchen's rules -->
 		<section class="band" id="rules" aria-labelledby="h-rules">
 			<p class="eyebrow">The kitchen's rules</p>
 			<h2 id="h-rules">Each kitchen's own rules decide what the agent may buy</h2>
-			<p class="lead">Preferences put products in order, requirements rule products out, and the mandate says what the agent may buy without asking.</p>
+			<p class="slead">Preferences put products in order, requirements rule products out, and the mandate says what the agent may buy without asking.</p>
 			<div class="cards c3">
 				<div class="card">
 					<div class="hd"><svg class="ic" aria-hidden="true"><use href="#i-rank"/></svg><h3>Preferences</h3></div>
@@ -389,7 +389,7 @@ h3 { margin: 0; font: 600 18px/1.25 var(--display); }
 		<section class="band" id="agent" aria-labelledby="h-agent">
 			<p class="eyebrow">The agent</p>
 			<h2 id="h-agent">The agent prepares the order and leaves the approval to the chef</h2>
-			<p class="lead">It reads what the kitchen asks for, works in a few bounded steps, and stops at a decision the chef must make.</p>
+			<p class="slead">It reads what the kitchen asks for, works in a few bounded steps, and stops at a decision the chef must make.</p>
 			<ul class="facts">
 				<li><span class="ico"><svg class="ic" aria-hidden="true"><use href="#i-steps"/></svg></span><b>Six kinds of ask, sorted by rules before any model</b><span class="d">A routine order, the seeded event, a shortage repair, a change to a need, a question about a plan, or something it doesn't do.</span><span class="cite">server/agent/intent.ts</span></li>
 				<li><span class="ico"><svg class="ic" aria-hidden="true"><use href="#i-clock"/></svg></span><b>At most 8 steps</b><span class="d">Each run has a step limit, a deadline and a cancel button.</span><span class="cite">server/agent/loop.ts · runs.ts</span></li>
@@ -405,7 +405,7 @@ h3 { margin: 0; font: 600 18px/1.25 var(--display); }
 		<section class="band" id="flows" aria-labelledby="h-flows">
 			<p class="eyebrow">Five flows</p>
 			<h2 id="h-flows">Five ways an order moves through Mandate</h2>
-			<p class="lead">Each flow is a short list of steps with the code that runs it, and a case recorded from the live app where we have one.</p>
+			<p class="slead">Each flow is a short list of steps with the code that runs it, and a case recorded from the live app where we have one.</p>
 
 			<div class="tabs">
 				<div class="tablist" role="tablist" aria-label="Flows">
@@ -432,7 +432,7 @@ h3 { margin: 0; font: 600 18px/1.25 var(--display); }
 						<div class="side">
 							<div class="ex" data-case="within-mandate" hidden></div>
 							<div class="ex" data-case="lactose-free" hidden></div>
-							<p class="live"><a href="https://app.mandate.kitchen/request">Try it: Request <svg class="ic" aria-hidden="true"><use href="#i-out"/></svg></a></p>
+							<p class="golive"><a href="https://app.mandate.kitchen/request">Try it: Request <svg class="ic" aria-hidden="true"><use href="#i-out"/></svg></a></p>
 						</div>
 					</section>
 
@@ -451,7 +451,7 @@ h3 { margin: 0; font: 600 18px/1.25 var(--display); }
 						<div class="side">
 							<div class="ex" data-chain hidden></div>
 							<p class="limit">We don't yet claim the right product for every menu dish: each line is shown to the chef for review.</p>
-							<p class="live"><a href="https://app.mandate.kitchen/request">Try it: Request <svg class="ic" aria-hidden="true"><use href="#i-out"/></svg></a><a href="https://app.mandate.kitchen/">The buffet in the Kitchen <svg class="ic" aria-hidden="true"><use href="#i-out"/></svg></a></p>
+							<p class="golive"><a href="https://app.mandate.kitchen/request">Try it: Request <svg class="ic" aria-hidden="true"><use href="#i-out"/></svg></a><a href="https://app.mandate.kitchen/">The buffet in the Kitchen <svg class="ic" aria-hidden="true"><use href="#i-out"/></svg></a></p>
 						</div>
 					</section>
 
@@ -470,7 +470,7 @@ h3 { margin: 0; font: 600 18px/1.25 var(--display); }
 						</ol>
 						<div class="side">
 							<div class="ex" data-case="out-of-stock" hidden></div>
-							<p class="live"><a href="https://app.mandate.kitchen/">Try it: Kitchen <svg class="ic" aria-hidden="true"><use href="#i-out"/></svg></a></p>
+							<p class="golive"><a href="https://app.mandate.kitchen/">Try it: Kitchen <svg class="ic" aria-hidden="true"><use href="#i-out"/></svg></a></p>
 						</div>
 					</section>
 
@@ -488,7 +488,7 @@ h3 { margin: 0; font: 600 18px/1.25 var(--display); }
 						<div class="side">
 							<div class="ex" data-case="agent-cannot-approve" hidden></div>
 							<p class="note2">Each key is metered: 120 calls, 30 writes and 20 quotes a minute.<span class="cite">server/tools/key-limits.ts</span></p>
-							<p class="live"><a href="https://app.mandate.kitchen/agents">Connect yours: Agents <svg class="ic" aria-hidden="true"><use href="#i-out"/></svg></a></p>
+							<p class="golive"><a href="https://app.mandate.kitchen/agents">Connect yours: Agents <svg class="ic" aria-hidden="true"><use href="#i-out"/></svg></a></p>
 						</div>
 					</section>
 
@@ -505,7 +505,7 @@ h3 { margin: 0; font: 600 18px/1.25 var(--display); }
 						</ol>
 						<div class="side">
 							<div class="ex" data-case="one-receipt" hidden></div>
-							<p class="live"><a href="https://app.mandate.kitchen/">Approve and order: Kitchen <svg class="ic" aria-hidden="true"><use href="#i-out"/></svg></a></p>
+							<p class="golive"><a href="https://app.mandate.kitchen/">Approve and order: Kitchen <svg class="ic" aria-hidden="true"><use href="#i-out"/></svg></a></p>
 						</div>
 					</section>
 				</div>
@@ -516,7 +516,7 @@ h3 { margin: 0; font: 600 18px/1.25 var(--display); }
 		<section class="band" id="trust" aria-labelledby="h-trust">
 			<p class="eyebrow">Checks behind each claim</p>
 			<h2 id="h-trust">Every claim has a mechanism and a test you can run</h2>
-			<p class="lead">Each row says what we claim, how the code makes it true, and the test that fails if it stops being true.</p>
+			<p class="slead">Each row says what we claim, how the code makes it true, and the test that fails if it stops being true.</p>
 			<table class="tbl">
 				<thead><tr><th scope="col">Claim</th><th scope="col">How</th><th scope="col">Test</th></tr></thead>
 				<tbody>
@@ -543,7 +543,7 @@ h3 { margin: 0; font: 600 18px/1.25 var(--display); }
 
 			<div class="sm">
 				<h3>The three state machines</h3>
-				<p class="hint">Each diagram scrolls sideways.</p>
+				<p class="smhint">Each diagram scrolls sideways.</p>
 				<div class="smc"><div class="svgw"><svg viewBox="0 0 540 190" id="smPlan" role="img" aria-label="Plan states: draft, quoted, ready or held, committed"></svg></div><div><h4>Plan</h4><p>Green is the usual path. Any edit sends the plan back to draft and clears its terms, so an earlier approval no longer applies.</p></div></div>
 				<div class="smc"><div class="svgw"><svg viewBox="0 0 540 190" id="smLine" role="img" aria-label="Line states: proposed, eligible, held, rejected, unorderable, committed"></svg></div><div><h4>Line</h4><p>A line inside the mandate is ordered without asking. Any other line waits for the chef with its reasons. A line below Valio's lot step can't be ordered at all.</p></div></div>
 				<div class="smc"><div class="svgw"><svg viewBox="0 0 540 190" id="smAppr" role="img" aria-label="Approval states: pending, granted, denied, invalidated, expired"></svg></div><div><h4>Approval</h4><p>An approval is tied to the plan version, the exact terms, the mandate version and an expiry. If any of them changes, the order is refused.</p></div></div>
@@ -556,7 +556,7 @@ h3 { margin: 0; font: 600 18px/1.25 var(--display); }
 		<section class="band" id="ops" aria-labelledby="h-ops">
 			<p class="eyebrow">What Valio sees</p>
 			<h2 id="h-ops">Valio's control room shows every held line, by cause, across kitchens</h2>
-			<p class="lead">Ops reads the same records the kitchens write, so Valio sees why a line is waiting and can open the exact kitchen plan.</p>
+			<p class="slead">Ops reads the same records the kitchens write, so Valio sees why a line is waiting and can open the exact kitchen plan.</p>
 			<div class="cards c3">
 				<div class="card"><div class="hd"><svg class="ic" aria-hidden="true"><use href="#i-hold"/></svg><h3>Problems</h3></div><p>Held lines and recall cases grouped by cause, biggest first, each with what happened.</p><span class="cite">routes/ops/ProblemCard.svelte · core/services/cause.ts</span></div>
 				<div class="card"><div class="hd"><svg class="ic" aria-hidden="true"><use href="#i-order"/></svg><h3>Orders</h3></div><p>Each order in four stages read from the op log: what was asked, what was proposed and why, who signed, what was ordered.</p><span class="cite">routes/ops/OrdersTab.svelte · core/services/stages.ts</span></div>
@@ -574,26 +574,26 @@ h3 { margin: 0; font: 600 18px/1.25 var(--display); }
 				<span class="cite">core/contracts/ops.ts · server/bus/{pg,memory,ordered}.ts · /api/events</span>
 			</div>
 			<p class="note2"><b>On main, not yet live:</b> Ops naming the Kitchen page and the agent dock as the doors a change came through, and the typed reason for each line that can't be ordered.</p>
-			<p class="live" style="margin-top:18px"><a href="https://app.mandate.kitchen/ops">Open Ops <svg class="ic" aria-hidden="true"><use href="#i-out"/></svg></a></p>
+			<p class="golive" style="margin-top:18px"><a href="https://app.mandate.kitchen/ops">Open Ops <svg class="ic" aria-hidden="true"><use href="#i-out"/></svg></a></p>
 		</section>
 
 		<!-- Partners -->
 		<section class="band" id="partners" aria-labelledby="h-partners">
 			<p class="eyebrow">Partners and fallbacks</p>
 			<h2 id="h-partners">Each partner does one job, and each has a fallback</h2>
-			<p class="lead">Every outside service sits behind a port, so a dead API or Wi-Fi drops to a fallback that the screen labels.</p>
+			<p class="slead">Every outside service sits behind a port, so a dead API or Wi-Fi drops to a fallback that the screen labels. The Partners zone of the <a href="#map">system map</a> shows the same five; this table adds each one's status.</p>
 			<table class="tbl">
 				<thead><tr><th scope="col">Partner</th><th scope="col">Job</th><th scope="col">Fallback</th><th scope="col">Status</th></tr></thead>
 				<tbody>
-					<tr><th scope="row">Valio Aimo</th><td data-h="Job">The catalogue of 17,546 products; live price and availability for shortlisted products only, at most 200 per call, availability fetched again after 15 minutes.</td><td data-h="Fallback">The cached offer, labelled with its age; the file catalogue; scenario stock.</td><td><span class="st live">Seen live</span></td></tr>
-					<tr><th scope="row">Gemini 3.5 Flash-Lite</th><td data-h="Job">Reads product requests and chat messages, and writes the chat's reply from the ledger. The agent planner job is opt-in and off on the live app.</td><td data-h="Fallback">The rules parser, the rules classifier, the ledger's own text.</td><td><span class="st live">Seen live</span></td></tr>
-					<tr><th scope="row">Gemini 3.8 Flash</th><td data-h="Job">Proposes a menu from a brief; every amount is an estimate.</td><td data-h="Fallback">The team's dish templates.</td><td><span class="st live">Seen live</span></td></tr>
-					<tr><th scope="row">Gemini Decisions</th><td data-h="Job">Ranks substitutes as one input to the kitchen's ranking; it never approves.</td><td data-h="Fallback">A recorded replay, then rules.</td><td><span class="st test">Tested, one live call</span></td></tr>
-					<tr><th scope="row">Aiven</th><td data-h="Job">Runs the app as one container; Postgres holds every table and pushes live updates to Ops.</td><td data-h="Fallback">PGlite with the same migrations, for tests and offline.</td><td><span class="st live">Seen live</span></td></tr>
-					<tr><th scope="row">Exa</th><td data-h="Job">Cited product facts in the Why drawer: net content, origin, ingredients. Options outside the catalogue.</td><td data-h="Fallback">Recorded responses, under daily caps.</td><td><span class="st live">Seen live, Why drawer</span></td></tr>
-					<tr><th scope="row">Context.dev</th><td data-h="Job">Checks the recall list every 5 minutes and matches each notice against the catalogue. A matching product's line is held.</td><td data-h="Fallback">Recorded notices; a drill, labelled as one.</td><td><span class="st live">Seen live, no real recall matched</span></td></tr>
-					<tr class="dim"><th scope="row">Featherless (Gemma)</th><td data-h="Job">An optional open-model provider in the router. No job uses it.</td><td data-h="Fallback">Not needed.</td><td><span class="st off">Optional, unused</span></td></tr>
-					<tr class="dim"><th scope="row">NVIDIA Nemotron VL on Verda</th><td data-h="Job">Reading a photo of a prep list or delivery note.</td><td data-h="Fallback">The tool stays hidden until it is switched on.</td><td><span class="st wired">Wired, not live</span></td></tr>
+					<tr><th scope="row">Valio Aimo</th><td data-h="Job">The catalogue of 17,546 products; live price and availability for shortlisted products only, at most 200 per call, availability fetched again after 15 minutes.</td><td data-h="Fallback">The cached offer, labelled with its age; the file catalogue; scenario stock.</td><td><span class="pill pl-live">Seen live</span></td></tr>
+					<tr><th scope="row">Gemini 3.5 Flash-Lite</th><td data-h="Job">Reads product requests and chat messages, and writes the chat's reply from the ledger. The agent planner job is opt-in and off on the live app.</td><td data-h="Fallback">The rules parser, the rules classifier, the ledger's own text.</td><td><span class="pill pl-live">Seen live</span></td></tr>
+					<tr><th scope="row">Gemini 3.8 Flash</th><td data-h="Job">Proposes a menu from a brief; every amount is an estimate.</td><td data-h="Fallback">The team's dish templates.</td><td><span class="pill pl-live">Seen live</span></td></tr>
+					<tr><th scope="row">Gemini Decisions</th><td data-h="Job">Ranks substitutes as one input to the kitchen's ranking; it never approves.</td><td data-h="Fallback">A recorded replay, then rules.</td><td><span class="pill pl-test">Tested, one live call</span></td></tr>
+					<tr><th scope="row">Aiven</th><td data-h="Job">Runs the app as one container; Postgres holds every table and pushes live updates to Ops.</td><td data-h="Fallback">PGlite with the same migrations, for tests and offline.</td><td><span class="pill pl-live">Seen live</span></td></tr>
+					<tr><th scope="row">Exa</th><td data-h="Job">Cited product facts in the Why drawer: net content, origin, ingredients. Options outside the catalogue.</td><td data-h="Fallback">Recorded responses, under daily caps.</td><td><span class="pill pl-live">Seen live, Why drawer</span></td></tr>
+					<tr><th scope="row">Context.dev</th><td data-h="Job">Checks the recall list every 5 minutes and matches each notice against the catalogue. A matching product's line is held.</td><td data-h="Fallback">Recorded notices; a drill, labelled as one.</td><td><span class="pill pl-live">Seen live, no real recall matched</span></td></tr>
+					<tr class="dim"><th scope="row">Featherless (Gemma)</th><td data-h="Job">An optional open-model provider in the router. No job uses it.</td><td data-h="Fallback">Not needed.</td><td><span class="pill pl-off">Optional, unused</span></td></tr>
+					<tr class="dim"><th scope="row">NVIDIA Nemotron VL on Verda</th><td data-h="Job">Reading a photo of a prep list or delivery note.</td><td data-h="Fallback">The tool stays hidden until it is switched on.</td><td><span class="pill pl-wired">Wired, not live</span></td></tr>
 				</tbody>
 			</table>
 			<p class="note2">Every web call goes through a response cache, daily caps per key and per instance, and a breaker. LLM calls log their model, tokens and latency; only some sponsor calls reach the Ops trace drawer so far.<span class="cite">server/external/{call,ledger,breaker}.ts · server/adapters/llm/trace.ts</span></p>
@@ -603,12 +603,12 @@ h3 { margin: 0; font: 600 18px/1.25 var(--display); }
 		<section class="band" id="status" aria-labelledby="h-status">
 			<p class="eyebrow">Built, simulated, planned</p>
 			<h2 id="h-status">What is real today, what is simulated, and what is next</h2>
-			<p class="lead">Everything on this page falls in one of three columns, and the app labels the simulated parts on screen.</p>
+			<p class="slead">Everything on this page falls in one of three columns, and the app labels the simulated parts on screen.</p>
 			<div class="status">
 				<div class="col">
 					<h3><span class="ico ok"><svg class="ic" aria-hidden="true"><use href="#i-go"/></svg></span>Built</h3>
 					<p>In the code, with how far we've checked it.</p>
-					<h4><span class="st live">Seen on the live app</span></h4>
+					<h4><span class="pill pl-live">Seen on the live app</span></h4>
 					<ul>
 						<li>Approve, order and one receipt in the Kitchen</li>
 						<li>The same order sent 4 times with one key: one receipt</li>
@@ -619,14 +619,14 @@ h3 { margin: 0; font: 600 18px/1.25 var(--display); }
 						<li>Recall cases in Ops; no real recall has matched an order</li>
 						<li>A late date caught on Request, the next day offered</li>
 					</ul>
-					<h4><span class="st test">Tested, not yet seen live</span></h4>
+					<h4><span class="pill pl-test">Tested, not yet seen live</span></h4>
 					<ul>
 						<li>Approval bound to terms, hard limit, caps when split, lot step, unknown supply never cover, per-line authority, reason groups, cut-off at commit, rescue resize, vegetarian kept</li>
 						<li>An outside agent's stale order refused over MCP</li>
 						<li>Gemini Decisions in the ranking</li>
 						<li>Re-rescue when another kitchen takes the stock</li>
 					</ul>
-					<h4><span class="st wired">Wired, to rehearse before we claim it</span></h4>
+					<h4><span class="pill pl-wired">Wired, to rehearse before we claim it</span></h4>
 					<ul>
 						<li>Void-on-edit in the app's screens, rank presets and the ranked rescue on the live app</li>
 						<li>Usual orders, from a simulated history, with no week view yet</li>
@@ -752,7 +752,7 @@ h3 { margin: 0; font: 600 18px/1.25 var(--display); }
 	const KIND = { rule: 'within', signoff: 'held', unknown: 'held' };
 	const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
 	const use = (id) => { const s = document.createElementNS(NS, 'svg'); s.setAttribute('class', 'ic'); s.setAttribute('aria-hidden', 'true'); const u = document.createElementNS(NS, 'use'); u.setAttribute('href', '#' + id); s.append(u); return s; };
-	const chip = (state, text) => { const k = ICON[state] ? state : 'within'; const c = el('span', `chip ${k}`); c.append(use(ICON[k]), document.createTextNode(text || WORD[k])); return c; };
+	const chip = (state, text) => { const k = ICON[state] ? state : 'within'; const c = el('span', `mchip ${k}`); c.append(use(ICON[k]), document.createTextNode(text || WORD[k])); return c; };
 	const day = (iso) => { const d = new Date(iso); return isNaN(d) ? '' : d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'Europe/Helsinki' }); };
 	const stamp = (iso) => { const d = day(iso); return 'Recorded from the app' + (d ? ` on ${d}` : '') + '.'; };
 	const eur = (n) => (typeof n === 'number' ? new Intl.NumberFormat('en-IE', { style: 'currency', currency: 'EUR' }).format(n) : '');
@@ -819,5 +819,6 @@ h3 { margin: 0; font: 600 18px/1.25 var(--display); }
 		.catch(() => {});
 })();
 </script>
+<script src="/how/map.js" defer></script>
 </body>
 </html>
