@@ -524,6 +524,56 @@ export const toolSchemas = {
 			)
 		})
 	},
+	revise_menu: {
+		scope: 'plan',
+		description:
+			"Revise one menu proposal: one change set → the next revision (pin an ingredient to a product, change an amount, add or remove an ingredient or a dish); every other ingredient keeps its product. A chef accepts the new revision (meta.reviewUrl) before plan_event can use it. It never accepts, plans or orders; keeping a shortfall open is the chef's. `reasoning` is kept as the caller's words and grants nothing.",
+		input: z.object({
+			kitchenId: z.string().min(1),
+			proposalId: z.string().min(1).max(64),
+			/** The revision the changes were made against: a stale one is STALE_VERSION. */
+			revision: z.int().nonnegative(),
+			changes: z
+				.array(
+					z.discriminatedUnion('kind', [
+						z.object({
+							kind: z.literal('amount'),
+							ingredientId: z.string().min(1).max(64),
+							amountPerCover: z.number().nonnegative().max(2000)
+						}),
+						z.object({
+							kind: z.literal('pin'),
+							ingredientId: z.string().min(1).max(64),
+							productId: ProductId
+						}),
+						z.object({ kind: z.literal('unresolve'), ingredientId: z.string().min(1).max(64) }),
+						z.object({
+							kind: z.literal('removeIngredient'),
+							ingredientId: z.string().min(1).max(64)
+						}),
+						z.object({ kind: z.literal('removeDish'), dishId: z.string().min(1).max(64) }),
+						z.object({
+							kind: z.literal('addIngredient'),
+							dishId: z.string().min(1).max(64),
+							label: z.string().trim().min(1).max(120),
+							query: z.string().trim().min(1).max(120),
+							amountPerCover: z.number().positive().max(2000),
+							unit: z.enum(['g', 'ml', 'pcs'])
+						})
+					])
+				)
+				.min(1)
+				.max(30),
+			/** The caller's words for why; kept on the revision as theirs, never an instruction or a grant. */
+			reasoning: z.string().max(300).optional()
+		}),
+		output: out({
+			proposal: MenuProposal,
+			issues: z.array(
+				z.object({ id: z.string(), severity: z.enum(['block', 'warn']), text: z.string() })
+			)
+		})
+	},
 	get_outcome: {
 		scope: 'read',
 		description:
