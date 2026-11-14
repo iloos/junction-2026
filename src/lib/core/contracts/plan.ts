@@ -47,6 +47,10 @@ export const PolicyReason = z.enum([
 	'cutoff_passed',
 	/** The product does not meet a hard requirement of the need it serves (lactose-free, origin, label): forbidden. */
 	'requirement_unmet',
+	/** A person accepted the best try: this line breaks the order's origin requirement only. Sign-off, in the terms. */
+	'requirement_relaxed.origin',
+	/** A person accepted the best try: this line lacks a required label only. Sign-off, in the terms. */
+	'requirement_relaxed.labels',
 	/** The delivery date is not one of the kitchen's receiving days: held for a named approver to accept or reschedule. */
 	'off_delivery_day',
 	/** A substitute replaced this line's purchase: it stays visible at quantity 0 and is not bought. */
@@ -323,6 +327,11 @@ export const Plan = z.object({
 	taskId: z.string().optional(),
 	/** The chef-reviewed menu proposal revision this plan was built from. */
 	source: z.object({ proposalId: z.string(), revision: z.int().nonnegative() }).optional(),
+	/**
+	 * Order-scope hard requirements ("everything Finnish", "all organic"): they apply to every line beside each need's
+	 * own, and only ever tighten (a kitchen rule is never loosened by an order or a line).
+	 */
+	requirements: NeedRequirements.optional(),
 	needs: z.array(Need),
 	lines: z.array(Line),
 	totalCents: Cents.nullable(),

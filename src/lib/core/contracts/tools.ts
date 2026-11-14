@@ -57,7 +57,9 @@ const PlanEventInput = z
 	.object({
 		kitchenId: KitchenId,
 		eventId: z.string().optional(),
-		proposal: z.object({ id: z.string(), revision: z.int().nonnegative() }).optional()
+		proposal: z.object({ id: z.string(), revision: z.int().nonnegative() }).optional(),
+		/** Order-scope hard requirements for every need of the plan (they only tighten). */
+		requirements: NeedRequirements.optional()
 	})
 	.refine(
 		(v) => (v.eventId !== undefined) !== (v.proposal !== undefined),
@@ -174,6 +176,8 @@ export const toolSchemas = {
 			kitchenId: KitchenId,
 			deliverBy: IsoDate,
 			idempotencyKey: z.string().min(1).max(128),
+			/** Order-scope hard requirements for every line ("everything Finnish"); they only tighten. */
+			requirements: NeedRequirements.optional(),
 			lines: z
 				.array(
 					z.object({
@@ -214,7 +218,12 @@ export const toolSchemas = {
 				 * A need edit in physical terms ("make it 20 l"): sets the need's amount and re-sizes every line serving it.
 				 * Must be in the need's dimension (kg↔l is INVALID_INPUT: no density is assumed); 0 means nothing to buy.
 				 */
-				amount: Measure.optional()
+				amount: Measure.optional(),
+				/**
+				 * A person accepts a best try: this line may break that one requirement (never freeFrom: allergens have no
+				 * best try). Held for sign-off with requirement_relaxed.<rule>; refused for agents, who may only tighten.
+				 */
+				relax: z.enum(['origin', 'labels']).optional()
 			})
 		}),
 		output: out({ plan: Plan })
@@ -257,11 +266,15 @@ export const toolSchemas = {
 					/** How it relates to the planned product (describes only: never changes ranking or tiers). */
 					kind: SubstituteKind.optional(),
 					/** One line from the attribute diff, e.g. "sliced, 1.5 kg packs". */
-					whatChanges: z.string().max(200).optional()
+					whatChanges: z.string().max(200).optional(),
+					/** Nothing meets every strict requirement: this is the nearest product that breaks only this one. */
+					bestTry: z.object({ relaxes: z.enum(['origin', 'labels']) }).optional()
 				})
 			),
 			labourNote: z.string().optional(),
-			residual: Measure.optional()
+			residual: Measure.optional(),
+			/** Why the pick is not what the kitchen prefers, in words ("no Finnish in stock: picked Swedish"). */
+			fallback: z.string().max(200).optional()
 		})
 	},
 	get_plan: {
