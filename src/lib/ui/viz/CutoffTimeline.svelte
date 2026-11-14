@@ -139,8 +139,8 @@
 			.text((d) => `${d.label} · ${d.count}`);
 		lane
 			.select('text.note')
-			.attr('x', t ? x(t) + 6 : M.left)
-			.attr('y', 30)
+			.attr('x', x(cutoff) + 8)
+			.attr('y', 13)
 			.attr('font-size', 10.5)
 			.attr('fill', 'var(--color-ink-3)')
 			.text((d) => (d.count ? d.note : 'none open'));

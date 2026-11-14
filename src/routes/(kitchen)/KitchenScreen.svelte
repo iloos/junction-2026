@@ -232,7 +232,8 @@
 				disabled={k.busy}
 				onclick={() => k.reset()}
 			>
-				<RotateCcw size={13} aria-hidden="true" /> Reset demo
+				<RotateCcw size={13} aria-hidden="true" />
+				{snap?.clock?.workspaceId === 'ws-judges' ? 'Start over (sandbox)' : 'Reset demo'}
 			</button>
 		</div>
 	</div>

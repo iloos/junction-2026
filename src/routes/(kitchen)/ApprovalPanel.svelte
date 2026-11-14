@@ -70,6 +70,10 @@
 	);
 	const committedN = $derived(plan.lines.filter((l) => l.state === 'committed').length);
 	const pending = $derived(approval?.state === 'pending');
+	/** The approval's lines have been bought: show the ordered state, not "approved, not yet ordered". */
+	const ordered = $derived(
+		approvalLines.length > 0 && approvalLines.every((l) => l.state === 'committed')
+	);
 	const granted = $derived(approval?.state === 'granted');
 	const showVoid = $derived(
 		lastInvalidated && pending && !lastInvalidated.reason?.includes('committed')
@@ -160,7 +164,14 @@
 	{#if approval}
 		<div class="px-4 pt-3">
 			<p class="flex items-center gap-1.5 text-[13.5px] text-ink">
-				{#if granted}
+				{#if ordered}
+					<CircleCheck size={16} class="text-accent" aria-hidden="true" />
+					<span
+						><b class="font-medium">Ordered</b> · {approvalLines.length} approved lines{lastCommit
+							? `, receipt ${lastCommit.receiptId}`
+							: ''}. Supplier confirmation is on the receipt below.</span
+					>
+				{:else if granted}
 					<CircleCheck size={16} class="text-ok" aria-hidden="true" />
 					<span
 						><b class="font-medium">You approved these terms</b> · {approvalLines.length} lines. Approved
@@ -186,7 +197,9 @@
 			<ul class="mt-2.5 space-y-3">
 				{#each grouped as [key, g] (key)}
 					<li>
-						<p class="text-[12px] font-medium text-ink">Why it needs you: {key.toLowerCase()}</p>
+						<p class="text-[12px] font-medium text-ink">
+							{ordered ? 'Approved because' : 'Why it needs you'}: {key.toLowerCase()}
+						</p>
 						<p class="text-[11.5px] leading-snug text-ink-3">
 							{g.reasons.map(reasonLong).join(' ')}
 						</p>
@@ -224,8 +237,10 @@
 			<dd class="mono text-right font-medium text-ink">{money(plan.totalCents)}</dd>
 			<dt class="text-ink-2">Delivery</dt>
 			<dd class="text-right text-ink">{day(plan.deliverBy)}</dd>
-			<dt class="text-ink-2">Approval valid until</dt>
-			<dd class="text-right text-ink">{storyTime(approval.expiresAt)}</dd>
+			{#if !ordered}
+				<dt class="text-ink-2">Approval valid until</dt>
+				<dd class="text-right text-ink">{storyTime(approval.expiresAt)}</dd>
+			{/if}
 		</dl>
 		{#if shortfalls.length}
 			<div class="mx-4 mt-2.5 rounded-md bg-well px-3 py-2 text-[12px] leading-snug text-ink">
