@@ -201,6 +201,20 @@ journey(
 					.catch(() => undefined);
 			}
 			await say(r, page, 'plan it');
+			// The first "plan it" can return the menu card to review ("Review it, then say plan it"); the second plans it.
+			for (let i = 0; i < 2; i++) {
+				if (await dock.locator('a[href*="plan="]').count()) break;
+				if (
+					!(await dock
+						.getByText(/say "plan it"|Review the menu/)
+						.last()
+						.isVisible()
+						.catch(() => false))
+				)
+					break;
+				r.note(`menuReviewed${i + 1}`, true);
+				await say(r, page, 'plan it');
+			}
 		});
 		await r.step('a plan exists (a plan link in the dock)', async () => {
 			const dock = await openDock(page);
@@ -832,11 +846,31 @@ journey(
 journey('f1', 'The dock keeps the ask: "4 kg lactose-free butter tomorrow"', async (r, page) => {
 	const ASK = '4 kg lactose-free butter tomorrow';
 	await r.step('home', () => home(page));
-	await r.step('ask in the dock', () => say(r, page, ASK));
+	await r.step('ask in the dock', async () => {
+		await say(r, page, ASK);
+		// Tomorrow's cut-off may have passed: the dock asks for a day. Take the earliest it offers, as a visitor would.
+		const dock = await openDock(page);
+		const day = dock.getByRole('button', { name: /^(Mon|Tue|Wed|Thu|Fri|Sat) \d+ \w+$/ }).first();
+		if ((await day.isVisible().catch(() => false)) && (await day.isEnabled().catch(() => false))) {
+			r.note('answeredDay', await day.innerText());
+			await day.click({ timeout: 5_000 });
+			await page.waitForTimeout(1500);
+			await page
+				.getByText(/^Working( · step \d+)?…/)
+				.first()
+				.waitFor({ state: 'detached', timeout: 180_000 })
+				.catch(() => undefined);
+			await page.waitForTimeout(1500);
+			r.j.chat.push({
+				said: `(tapped ${r.j.notes.answeredDay})`,
+				reply: (await dock.innerText()).slice(-3000)
+			});
+		}
+	});
 	await r.step(
 		'the reply keeps 4 kg and lactose-free',
 		async () => {
-			const reply = r.j.chat.at(-1)?.reply ?? '';
+			const reply = r.j.chat.map((c) => c.reply).join(' ');
 			if (/\b40\s*kg\b/i.test(reply)) throw new Error('the reply says 40 kg');
 			if (!/lactose|laktoosi/i.test(reply)) throw new Error('the reply drops lactose-free');
 		},
