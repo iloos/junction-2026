@@ -21,7 +21,14 @@
 	import { gatePaths } from './gate';
 	import { storyOf } from './story';
 	import type { OpEnvelope } from '$lib/core/contracts';
-	import { buildCases, coverage, kitchenHref, openDecisions, openLines } from './cases';
+	import {
+		buildCases,
+		coverage,
+		kitchenHref,
+		openDecisions,
+		openLines,
+		withApprovals
+	} from './cases';
 	import { buildProblems, type Problem } from './problems';
 	import { ACTOR, euro, opPlanId, opSummary, SIM_KIND, viaLabel, type Names } from './labels';
 	import { useShell } from '$lib/ui/shell/shell.svelte';
@@ -174,7 +181,8 @@
 			const plansWithViews = Object.fromEntries(
 				Object.entries(stream.state.plans).map(([id, p]) => [id, withView(p)])
 			);
-			const withViews = { ...stream.state, plans: plansWithViews };
+			// Approved lines read as approved (withApprovals), as the decision tiles count them.
+			const withViews = withApprovals({ ...stream.state, plans: plansWithViews });
 			cases = buildCases(withViews, names, stream.heldSince);
 			problems = buildProblems(withViews, names, opsInOrder());
 			queueTimer = setTimeout(run, QUEUE_MS);
@@ -345,7 +353,11 @@
 			</nav>
 			<p class="roomline" title="Workspace and run this screen reads">
 				{data.room.label}
-				<span class="mono sys-only">{data.workspace}{data.run ? ` · ${data.run}` : ''}</span>
+				<span class="mono sys-only"
+					>{data.workspace}{stream.state.runId || data.run
+						? ` · ${stream.state.runId || data.run}`
+						: ''}</span
+				>
 			</p>
 			{#if data.room.notice}<p class="room-notice" role="note">{data.room.notice}</p>{/if}
 		</div>
@@ -551,15 +563,20 @@
 					<GatePanel g={gatePaths(stream.state)} />
 				</div>
 			{:else if view === 'orders'}
-				<OrdersTab
-					ws={data.workspace}
-					{kitchens}
-					version={stream.last}
-					href={(planId, kitchenId) =>
-						data.simulated ? null : kitchenHref({ planId, kitchenId }, linkAt)}
-				/>
+				<!-- A reset (here or in another tab) starts a new run with the seq cursor kept: remount to refetch. -->
+				{#key stream.state.runId}
+					<OrdersTab
+						ws={data.workspace}
+						{kitchens}
+						version={stream.last}
+						href={(planId, kitchenId) =>
+							data.simulated ? null : kitchenHref({ planId, kitchenId }, linkAt)}
+					/>
+				{/key}
 			{:else if view === 'demand'}
-				<DemandTab ws={data.workspace} version={stream.last} />
+				{#key stream.state.runId}
+					<DemandTab ws={data.workspace} version={stream.last} />
+				{/key}
 			{:else if view === 'queue'}
 				<Queue
 					{cases}
