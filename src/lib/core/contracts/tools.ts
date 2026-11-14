@@ -1,5 +1,13 @@
 import { z } from 'zod';
-import { ApprovalState, Line, NeedRequirements, Plan, ScoreBreakdown, TermsDiff } from './plan';
+import {
+	ApprovalState,
+	Line,
+	NeedAsk,
+	NeedRequirements,
+	Plan,
+	ScoreBreakdown,
+	TermsDiff
+} from './plan';
 import { Offer, Product, SubstituteKind } from './product';
 import { TaskLedger } from './task';
 import { EventBrief, MenuProposal } from './event';
@@ -192,10 +200,15 @@ export const toolSchemas = {
 						 */
 						amount: Measure.optional(),
 						/**
-						 * Hard requirements of this need ("lactose-free" → freeFrom LACTOSE). Needs `amount`: they are kept on
-						 * the direct need, so a substitute or a later edit can never drop them.
+						 * Hard requirements of this need ("lactose-free" → freeFrom LACTOSE). Kept on the line's need (direct
+						 * with `amount`, else a `sales`-kind need in sales units), so no substitute or edit can drop them.
 						 */
-						requirements: NeedRequirements.optional()
+						requirements: NeedRequirements.optional(),
+						/**
+						 * D18: the ask as stated (words, qty, unit or {unknown: token}). Every line makes a need: without
+						 * `amount` it is a `sales`-kind need for `qty` sales units carrying the ask and the requirements.
+						 */
+						ask: NeedAsk.optional()
 					})
 				)
 				.min(1)

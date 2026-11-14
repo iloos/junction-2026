@@ -49,6 +49,10 @@ export const PolicyReason = z.enum([
 	'requirement_unmet',
 	/** No record says whether the product meets a requirement (diet, allergens): held or rejected per unknownCounts. */
 	'requirement_unknown',
+	/** D18: the line buys more than its need by over one lot step (250 ml asked, 250 l bought): forbidden. */
+	'exceeds_need',
+	/** D18: the need's amount is physical but this product's content per unit is unknown: held for a person. */
+	'need_size_unknown',
 	/** A person accepted the best try: this line breaks the order's origin requirement only. Sign-off, in the terms. */
 	'requirement_relaxed.origin',
 	/** A person accepted the best try: this line lacks a required label only. Sign-off, in the terms. */
@@ -142,6 +146,18 @@ export const RequirementCheck = z.object({
 export type RequirementCheck = z.infer<typeof RequirementCheck>;
 export type NeedRequirements = z.infer<typeof NeedRequirements>;
 
+/** The ask behind a need, as stated (D18). */
+export const NeedAsk = z.object({
+	/** The words it came from ("250 ml laktoositonta maitoa", "4 packs lactose-free milk"). */
+	words: z.string().max(300).optional(),
+	qty: z.number().nonnegative().nullable(),
+	unit: z.union([
+		z.enum(['g', 'kg', 'ml', 'cl', 'dl', 'l', 'pcs', 'pack', 'case', 'sales_unit']),
+		z.object({ unknown: z.string().max(40) })
+	])
+});
+export type NeedAsk = z.infer<typeof NeedAsk>;
+
 export const Need = z.object({
 	id: z.string(),
 	label: z.string(),
@@ -150,7 +166,13 @@ export const Need = z.object({
 	 * ("1 l lactose-free milk"); substitutes are sized to `amount`, not to the original product's sales units.
 	 * Absent on plans stored before this field existed: read as `dish` when `dish` is set, else `direct`.
 	 */
-	kind: z.enum(['dish', 'direct']).optional(),
+	kind: z.enum(['dish', 'direct', 'sales']).optional(),
+	/**
+	 * D18: the ask as stated, so no entry can turn it into something else. `sales`-kind needs (packs, cases, the
+	 * product's sales units, content per unit unknown) carry the asked count here; their `amount` is that count in
+	 * `pcs` of sales units. An explicit unit nobody recognises stays `{ unknown: token }`: the entry asks first.
+	 */
+	ask: NeedAsk.optional(),
 	/**
 	 * Requirement lineage for needs planned from a menu proposal: which revision, dish and ingredient this need serves.
 	 * Edits, substitutes and the Why chain follow these ids, never a label or an array position.
