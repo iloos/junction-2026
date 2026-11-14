@@ -380,6 +380,16 @@ export const stubHandlers: ToolHandlers = {
 	async get_context() {
 		return err('NOT_FOUND', 'get_context needs the server store');
 	},
+	// The web tools need the web adapters and the findings on file; served by the real handlers only.
+	async lookup_facts() {
+		return err('PROVIDER_UNAVAILABLE', 'lookup_facts is served by the real handlers only');
+	},
+	async find_outside() {
+		return err('PROVIDER_UNAVAILABLE', 'find_outside is served by the real handlers only');
+	},
+	async check_recall() {
+		return err('PROVIDER_UNAVAILABLE', 'check_recall is served by the real handlers only');
+	},
 	async search_products(ctx, { query, limit }) {
 		const f = forbidden(ctx, 'read');
 		if (f) return f;

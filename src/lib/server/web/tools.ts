@@ -1,15 +1,21 @@
 /**
- * Handlers for the planned web tools (`contracts/tools-next.ts`): `lookup_facts`, `find_outside`,
- * `check_recall`. Each runs under a `WebExecutionContext` (the caller's workspace, run and spend key),
- * validates its input and output against the planned schema, and returns a `Result`. The lead moves the
- * schemas into the registry and points the tool layer at `createWebTools(env)`.
+ * Handlers for the web tools in the registry: `lookup_facts`, `find_outside`, `check_recall`. Each runs
+ * under a `WebExecutionContext` (the caller's workspace, run and spend key), validates its input and
+ * output against `toolSchemas`, and returns a `Result`. `tools/handlers.ts` serves them on every surface.
  * - lookup_facts and find_outside call Exa (cached; uncached calls count against the caller's daily cap)
  *   and record nothing on the plan or the product.
  * - check_recall reads the watched notices already on file; it never calls the network.
  */
-import type { z } from 'zod';
-import { err, ok, type DomainError, type Result } from '$lib/core/contracts';
-import { plannedToolSchemas, type WebFact } from '$lib/core/contracts/tools-next';
+import {
+	err,
+	ok,
+	toolSchemas,
+	type DomainError,
+	type Result,
+	type ToolInput,
+	type ToolOutput,
+	type WebFact
+} from '$lib/core/contracts';
 import type { WebExecutionContext } from '$lib/core/ports';
 import type { RecallSource } from './contextdev';
 import type { FactSearch } from './exa';
@@ -18,12 +24,8 @@ import type { RecallFindingData } from './ingest';
 import { findOutside, lookupFacts } from './lookup';
 import { WebLimitError } from './spend';
 
-type In<N extends keyof typeof plannedToolSchemas> = z.infer<
-	(typeof plannedToolSchemas)[N]['input']
->;
-type Out<N extends keyof typeof plannedToolSchemas> = z.infer<
-	(typeof plannedToolSchemas)[N]['output']
->;
+type In<N extends WebToolName> = ToolInput<N>;
+type Out<N extends WebToolName> = ToolOutput<N>;
 export type WebToolName = 'lookup_facts' | 'find_outside' | 'check_recall';
 
 export interface WebToolDeps {
@@ -48,7 +50,7 @@ export function webError(e: unknown): { ok: false; error: DomainError } {
 }
 
 function checked<N extends WebToolName>(name: N, value: Out<N>): Result<Out<N>> {
-	const p = plannedToolSchemas[name].output.safeParse(value);
+	const p = toolSchemas[name].output.safeParse(value);
 	return p.success
 		? ok(p.data as Out<N>)
 		: err('INTERNAL', `${name} output: ${p.error.issues[0]?.message ?? 'invalid'}`);
@@ -58,7 +60,7 @@ function input<N extends WebToolName>(
 	name: N,
 	raw: unknown
 ): In<N> | { ok: false; error: DomainError } {
-	const p = plannedToolSchemas[name].input.safeParse(raw ?? {});
+	const p = toolSchemas[name].input.safeParse(raw ?? {});
 	return p.success
 		? (p.data as In<N>)
 		: err(

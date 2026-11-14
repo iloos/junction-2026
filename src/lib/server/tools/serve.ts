@@ -56,7 +56,24 @@ export interface ServeHooks {
 	}) => void;
 }
 
-function fail(error: DomainError, status = HTTP_STATUS[error.code]): Served<never> {
+/**
+ * A web call refused by a daily cap or a provider's rate limit is PROVIDER_UNAVAILABLE with sub
+ * `rate_limit` | `daily_cap` and `detail.retryAfter` (seconds): HTTP 429, so a client waits instead of
+ * retrying at once. REST adds `Retry-After`.
+ */
+export const isWebLimit = (e: DomainError) =>
+	e.code === 'PROVIDER_UNAVAILABLE' && (e.sub === 'rate_limit' || e.sub === 'daily_cap');
+
+/** Seconds to wait before retrying, when the error says. */
+export function retryAfterOf(e: DomainError): number | undefined {
+	const s = (e.detail as { retryAfter?: unknown } | undefined)?.retryAfter;
+	return typeof s === 'number' && Number.isFinite(s) && s > 0 ? Math.ceil(s) : undefined;
+}
+
+function fail(
+	error: DomainError,
+	status = isWebLimit(error) ? 429 : HTTP_STATUS[error.code]
+): Served<never> {
 	return { ok: false, status, error };
 }
 

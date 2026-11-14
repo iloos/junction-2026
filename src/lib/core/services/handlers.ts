@@ -32,8 +32,12 @@ const notYet =
 	async () =>
 		err('PROVIDER_UNAVAILABLE', `not implemented yet (core-db ${slice})`);
 
-/** get_context is served by the agent door (server/agent/get-context.ts), composed in server/tools/handlers.ts. */
-const IMPLS: { [N in Exclude<ToolName, 'get_context'>]: Impl<N> } = {
+/**
+ * Served outside core and composed in server/tools/handlers.ts: get_context by the agent door
+ * (server/agent/get-context.ts), the web tools by server/web (they need web adapters, not core ports).
+ */
+type ServedElsewhere = 'get_context' | 'lookup_facts' | 'find_outside' | 'check_recall';
+const IMPLS: { [N in Exclude<ToolName, ServedElsewhere>]: Impl<N> } = {
 	search_products: searchProducts,
 	quote,
 	plan_event: planEvent,
