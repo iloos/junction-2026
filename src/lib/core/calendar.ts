@@ -4,6 +4,7 @@
  * are a static list: they say deliveries may shift, never what Valio's schedule is. Pure: no clock, no I/O.
  */
 
+import { LEAD_DAYS } from './scenario';
 export type Weekday = 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun';
 
 export interface CalendarInput {
@@ -16,6 +17,8 @@ export interface CalendarInput {
 	window: { from: string; to: string };
 	/** DTSTAMP for every event (ISO): when the feed was produced. */
 	stamp: string;
+	/** Demand factors (calendar-factors.json): events and school holidays are listed as festivities. */
+	factors?: DayFactor[];
 }
 
 export interface Holiday {
@@ -241,6 +244,26 @@ export function buildCalendar(c: CalendarInput): string {
 			'TRANSP:TRANSPARENT'
 		]);
 
+	for (const f of c.factors ?? []) {
+		if (f.kind !== 'event' && f.kind !== 'schoolHoliday') continue;
+		const days: string[][] = [];
+		for (let d = f.from; d <= f.to; d = ymd(addDays(new Date(`${d}T00:00:00Z`), 1)))
+			if (
+				d >= c.window.from &&
+				d <= c.window.to &&
+				(!f.weekdays || f.weekdays.includes(weekdayOf(d)))
+			)
+				days.push(f.weekdays ? [d, d] : [d, f.to > c.window.to ? c.window.to : f.to]);
+		const spans = f.weekdays ? days : days.slice(0, 1);
+		for (const [from, until] of spans)
+			event(uid('factor', f.id, from), [
+				...allDay(from, until),
+				`SUMMARY:${escapeText(f.name)}`,
+				`DESCRIPTION:${escapeText(`${factorDetail(f)}. Deliveries are not affected.`)}`,
+				'TRANSP:TRANSPARENT'
+			]);
+	}
+
 	const lines = [
 		'BEGIN:VCALENDAR',
 		'VERSION:2.0',
@@ -254,4 +277,186 @@ export function buildCalendar(c: CalendarInput): string {
 		'END:VCALENDAR'
 	];
 	return lines.map(fold).join('\r\n') + '\r\n';
+}
+
+/* ---------------------------------------------------------------------------------------------------------------
+ * Days for a picker: the same facts as the feed, one record per date. Pure: `now` comes in, nothing is read.
+ * ------------------------------------------------------------------------------------------------------------- */
+
+export type LogisticModel = keyof typeof LEAD_DAYS;
+
+/** A demand factor from fixtures/seeds/calendar-factors.json (only the fields the picker reads). */
+export interface DayFactor {
+	id: string;
+	name: string;
+	kind: string;
+	from: string;
+	to: string;
+	weekdays?: string[];
+	value: number;
+	valueKind: string;
+	appliesTo?: string[];
+}
+
+export interface DaysInput extends Pick<CalendarInput, 'kitchen' | 'decisions' | 'deliveries'> {
+	/** The scenario's "now" (ISO): cut-offs at or before it have passed. */
+	now: string;
+	/** Valio's time of day each model's order closes ("HH:MM"); default 17:00. */
+	closeTimes?: Partial<Record<LogisticModel, string>>;
+	/** Valio's own cut-off for a delivery date and model (an offer's closingTime). Wins over LEAD_DAYS. */
+	offerCutoffs?: { date: string; model: LogisticModel; at: string }[];
+	/** Days with no delivery beyond the computed public holidays (e.g. the factors file's holiday list). */
+	closedDays?: { date: string; name: string }[];
+	/** Demand factors; only events and school holidays become marks (months are too broad to help pick a day). */
+	factors?: DayFactor[];
+	/** The kitchen's own events (a booking, a buffet). */
+	events?: { id: string; date: string; title: string }[];
+}
+
+export type DayStatus = 'open' | 'stock_only' | 'passed' | 'holiday' | 'not_receiving';
+
+export interface DayMark {
+	kind: 'holiday' | 'eve' | 'festivity' | 'event' | 'delivery' | 'decision';
+	label: string;
+	detail?: string;
+	/** A team estimate, not data: the UI says so. */
+	estimate?: boolean;
+	/** ISO instant, for decisions. */
+	at?: string;
+}
+
+export interface CalendarDay {
+	date: string;
+	weekday: Weekday;
+	/** The kitchen takes deliveries on this weekday. */
+	receiving: boolean;
+	/** Whether this day can be a delivery date now; `stock_only` = Terminal's cut-off passed, Stock's has not. */
+	status: DayStatus;
+	/** Short words for any status but open. */
+	reason?: string;
+	/** For a holiday on a receiving day: the previous delivery day, which takes its order. */
+	movedTo?: string;
+	/** When the order for delivery on this day closes, per logistic model (empty when there is no delivery). */
+	orderBy: { model: LogisticModel; at: string; passed: boolean }[];
+	marks: DayMark[];
+}
+
+const WEEKDAYS: Weekday[] = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+const weekdayOf = (date: string): Weekday => WEEKDAYS[new Date(`${date}T00:00:00Z`).getUTCDay()];
+const shift = (date: string, n: number) => ymd(addDays(new Date(`${date}T00:00:00Z`), n));
+const MODELS: LogisticModel[] = ['Stock', 'Terminal'];
+
+/** The instant of a Helsinki wall time ("YYYY-MM-DD", "HH:MM"), as ISO with its offset. */
+export function helsinkiInstant(date: string, time: string): string {
+	const offset =
+		new Intl.DateTimeFormat('en-US', { timeZone: TZ, timeZoneName: 'longOffset' })
+			.formatToParts(new Date(`${date}T12:00:00Z`))
+			.find((p) => p.type === 'timeZoneName')
+			?.value.replace('GMT', '') || '+02:00';
+	return `${date}T${time.slice(0, 5)}:00${offset}`;
+}
+
+/** The Helsinki calendar date of an instant. */
+export const helsinkiDate = (iso: string) =>
+	new Intl.DateTimeFormat('en-CA', { timeZone: TZ }).format(new Date(iso));
+
+const APPLIES: Record<string, string> = {
+	breakfastCovers: 'breakfast covers',
+	lunchCovers: 'lunch covers',
+	bistroCovers: 'bistro covers',
+	mealsPerDay: 'meals'
+};
+
+function factorDetail(f: DayFactor): string {
+	const what = (f.appliesTo ?? []).map((a) => APPLIES[a] ?? a).join(', ') || 'demand';
+	const effect =
+		f.value === 0
+			? `no ${what}`
+			: `${f.value > 1 ? '+' : '−'}${Math.round(Math.abs(f.value - 1) * 100)}% ${what}`;
+	return f.valueKind === 'estimate' ? `${effect} (team estimate)` : effect;
+}
+
+/**
+ * One record per date in [from, to] (YYYY-MM-DD, inclusive): whether a delivery can land on it now, when its order
+ * closes per logistic model (Valio's offer cut-off where known, else LEAD_DAYS at Valio's time of day), holidays
+ * (no delivery; the order moves to the previous delivery day), festivities and the kitchen's own dates.
+ */
+export function calendarDays(input: DaysInput, from: string, to: string): CalendarDay[] {
+	const now = new Date(input.now).getTime();
+	const today = helsinkiDate(input.now);
+	const receivingDays = new Set(input.kitchen.deliveryDays);
+	const holidays = holidaysIn(shift(from, -14), to);
+	const closed = new Map<string, string>();
+	for (const h of holidays) if (h.kind === 'public_holiday') closed.set(h.date, h.name);
+	for (const c of input.closedDays ?? [])
+		if (!closed.has(c.date)) closed.set(c.date, c.name.replace(/\s*\(.*\)$/, ''));
+	const isDelivery = (d: string) => receivingDays.has(weekdayOf(d)) && !closed.has(d);
+	const offer = new Map((input.offerCutoffs ?? []).map((o) => [`${o.date}|${o.model}`, o.at]));
+	const festivities = (input.factors ?? []).filter(
+		(f) => f.kind === 'event' || f.kind === 'schoolHoliday'
+	);
+
+	const out: CalendarDay[] = [];
+	for (let date = from; date <= to; date = shift(date, 1)) {
+		const weekday = weekdayOf(date);
+		const receiving = receivingDays.has(weekday);
+		const holidayName = closed.get(date);
+		const marks: DayMark[] = [];
+
+		if (holidayName) marks.push({ kind: 'holiday', label: holidayName, detail: 'No delivery' });
+		for (const h of holidays)
+			if (h.date === date && h.kind === 'eve' && !holidayName)
+				marks.push({ kind: 'eve', label: h.name, detail: 'Most places close early' });
+		for (const f of festivities)
+			if (f.from <= date && date <= f.to && (!f.weekdays || f.weekdays.includes(weekday)))
+				marks.push({
+					kind: 'festivity',
+					label: f.name,
+					detail: factorDetail(f),
+					...(f.valueKind === 'estimate' ? { estimate: true } : {})
+				});
+		for (const e of input.events ?? [])
+			if (e.date === date) marks.push({ kind: 'event', label: e.title });
+		for (const p of input.deliveries)
+			if (p.date === date) marks.push({ kind: 'delivery', label: p.title });
+		for (const d of input.decisions)
+			if (helsinkiDate(d.due) === date)
+				marks.push({
+					kind: 'decision',
+					label: `Decide: ${d.title}`,
+					...(d.detail ? { detail: d.detail } : {}),
+					at: d.due
+				});
+
+		const day: CalendarDay = { date, weekday, receiving, status: 'open', orderBy: [], marks };
+		if (!receiving) {
+			day.status = 'not_receiving';
+			day.reason = 'No delivery';
+		} else if (holidayName) {
+			day.status = 'holiday';
+			day.reason = 'Holiday: no delivery';
+			for (let d = shift(date, -1), i = 0; i < 14; d = shift(d, -1), i++)
+				if (isDelivery(d)) {
+					day.movedTo = d;
+					break;
+				}
+		} else {
+			day.orderBy = MODELS.map((model) => {
+				const at =
+					offer.get(`${date}|${model}`) ??
+					helsinkiInstant(shift(date, -LEAD_DAYS[model]), input.closeTimes?.[model] ?? '17:00');
+				return { model, at, passed: new Date(at).getTime() <= now };
+			});
+			const passed = day.orderBy.filter((o) => o.passed).length;
+			if (date <= today || passed === day.orderBy.length) {
+				day.status = 'passed';
+				day.reason = date < today ? 'In the past' : 'Ordering closed';
+			} else if (passed) {
+				day.status = 'stock_only';
+				day.reason = 'Stock items only';
+			}
+		}
+		out.push(day);
+	}
+	return out;
 }

@@ -9,7 +9,7 @@ import {
 } from '$lib/server/demo/visitor-id';
 import { realHandlers } from '$lib/server/tools/handlers';
 import { serveTool } from '$lib/server/tools/serve';
-import { kitchenCalendar } from './calendar';
+import { kitchenCalendar, kitchenDays, MAX_DAYS } from './calendar';
 
 describe('kitchen calendar from a sandbox', () => {
 	it("lists the plan's delivery and the kitchen's receiving days; unknown kitchens get nothing", async () => {
@@ -35,6 +35,18 @@ describe('kitchen calendar from a sandbox', () => {
 		// No personal data: no workspace or run ids, no actor names.
 		expect(ics).not.toContain(ws);
 		expect(await kitchenCalendar(ws, 'k-nope')).toBeNull();
+
+		// The picker reads the same input: three weeks from the scenario's today, the order's day marked.
+		const out = (await kitchenDays(ws, 'k-lounas'))!;
+		expect(out.from).toBe('2026-12-07');
+		expect(out.days).toHaveLength(21);
+		const wed = out.days.find((d) => d.date === '2026-12-09')!;
+		expect(wed.marks.some((m) => m.kind === 'delivery')).toBe(true);
+		expect(wed.orderBy.map((o) => o.model)).toEqual(['Stock', 'Terminal']);
+		expect(out.days.find((d) => d.date === '2026-12-07')?.status).not.toBe('open');
+		const capped = (await kitchenDays(ws, 'k-lounas', '2026-12-01', '2027-12-31'))!;
+		expect(capped.days).toHaveLength(MAX_DAYS);
+		expect(await kitchenDays(ws, 'k-nope')).toBeNull();
 	}, 60_000);
 
 	it('a calendar token reads one sandbox, and nothing else stands in for it', () => {
