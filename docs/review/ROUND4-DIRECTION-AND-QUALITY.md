@@ -2,6 +2,8 @@
 
 14 November 2026. Consolidated review by the primary reviewer and three specialist subagents. Main changed from `c834e98` to `451a713` during the sweep; overlapping findings were rechecked. This is a proposed direction and executor handoff, not an edit to lead-owned PLAN/DECISIONS or application code. No secrets, private recordings or shared-database mutations were used. The browser access host was unavailable: UX findings are source-based, not a rendered visual or accessibility certification.
 
+**Latest handoff update (`92e019d`):** the lead has already converted the specialist findings into [owned Ring 0 tasks and later seams](../reviews/round4-triage.md). Presenter gating and a judge sandbox also landed in `9aa01d4`; treat earlier authority observations as snapshot findings and verify the remaining Kitchen helper/delegation boundaries, rather than redoing those changes. [D7](../DECISIONS.md#L59) now focuses sponsor work on Valio, Gemini, Aiven, Context.dev and Exa, with Modal/Gemma convenient extensions and the other entries parked. The broader capability roadmap below remains valid; it is not a request to restart parked prize implementations.
+
 **User priority incorporated:** nationwide venue discovery and honest demand simulation first; usable ordering for arbitrary kitchens follows. Keep the larger platform ambition. Improve the depth and interaction of its pillars rather than accumulating sponsor features or declaring every route “done.”
 
 ## The decision
