@@ -293,14 +293,25 @@ journey(
 			await inDock.waitFor({ timeout: 10_000 }).catch(() => undefined);
 			if (!(await inDock.isVisible().catch(() => false))) {
 				// The dock's "Decide · N decisions before …" bar may be a collapsed toggle: open it as a visitor would.
+				const show = dock.getByRole('button', { name: /^Show\b/ }).first();
 				const bar = dock.getByText(/^Decide\b/).first();
-				if (await bar.isVisible().catch(() => false)) {
-					await bar.click({ timeout: 5_000 }).catch(() => undefined);
+				const toggle = (await show.isVisible().catch(() => false)) ? show : bar;
+				if (await toggle.isVisible().catch(() => false)) {
+					await toggle.click({ timeout: 5_000 }).catch(() => undefined);
 					r.note('openedDecideBar', true);
 					await inDock.waitFor({ timeout: 5_000 }).catch(() => undefined);
 				}
 			}
 			const viaDock = await inDock.isVisible().catch(() => false);
+			// S2 508db7d: beside the open dock the page keeps "Accept all N · €X" for the plan's decisions.
+			const acceptAll = page.getByRole('button', { name: /^Accept all/ }).first();
+			if (!viaDock && (await acceptAll.isVisible().catch(() => false))) {
+				r.note('approvedOn', 'page: Accept all, dock open');
+				await acceptAll.click();
+				await page.waitForTimeout(2000);
+				r.note('approvedDecisions', 'all');
+				return;
+			}
 			if (!viaDock) {
 				// Hero finding when this fires: the dock is open on the plan, says the decisions "wait above", and neither
 				// the dock nor the page offers a Review. Close the dock (the page's Decide rail returns) to go on.
