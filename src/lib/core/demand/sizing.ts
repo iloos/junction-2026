@@ -48,6 +48,20 @@ export function sizeFor(
 	};
 }
 
+/** Served kg that `qty` of a product covers: the inverse of sizeFor (pack or catch-weight kg × yield). */
+export function servedKgOf(
+	p: Product | undefined,
+	entry: PoolEntry,
+	qty: Line['qty']
+): number | null {
+	const kgPerUnit =
+		qty.unit === 'KG'
+			? 1
+			: (entry.pack?.netKg ??
+				(p?.netPerSalesUnit?.value.unit === 'kg' ? p.netPerSalesUnit.value.value : null));
+	return kgPerUnit == null ? null : +(qty.value * kgPerUnit * (entry.yield ?? 1)).toFixed(4);
+}
+
 /** The pool entry the seed gives for a product serving this dish (yield and pack as hand-checked). */
 export function seedEntryFor(
 	seed: EventSeed | undefined,

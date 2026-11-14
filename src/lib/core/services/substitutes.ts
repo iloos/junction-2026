@@ -176,10 +176,23 @@ const sameLines = (a: { productId: string; qty: { value: number } }[], b: typeof
 	a.length === b.length &&
 	a.every((x) => b.some((y) => y.productId === x.productId && y.qty.value === x.qty.value));
 
+/** How a server-side rescue narrows the tool's search (never on the wire). */
+export interface RescueOptions {
+	/** Lines that stay in the rescue as given (a contended substitute cut to what is left); the new candidate covers the rest. */
+	keep?: DraftLine[];
+	/** Served kg the kept lines (or the cut original) already cover: the candidate is sized to the remainder. */
+	coveredServedKg?: number;
+	/** Products not to rank: the contended product, whatever is left of it is in `keep`. */
+	exclude?: string[];
+	/** Why this rescue ran, added to the new line's provenance. */
+	note?: string;
+}
+
 export async function findSubstitutes(
 	ports: ServicePorts,
 	ctx: CallContext,
-	input: ToolInput<'find_substitutes'>
+	input: ToolInput<'find_substitutes'>,
+	opts: RescueOptions = {}
 ): Promise<Result<ToolOutput<'find_substitutes'>>> {
 	const kitchens = await ports.store.kitchens(ctx.workspaceId);
 	const pre = await ports.store.load(ctx.workspaceId, ctx.runId);
@@ -204,12 +217,14 @@ export async function findSubstitutes(
 	const dish: SeedDish | undefined = seed?.dishes.find((d) => d.dish === need?.label);
 	const rescue = rescueFor(seed, line.productId);
 	const servedKg =
-		need && need.amount.unit === 'kg' ? need.amount.value * (dish?.yield ?? 1) : null;
+		need && need.amount.unit === 'kg'
+			? Math.max(0, need.amount.value * (dish?.yield ?? 1) - (opts.coveredServedKg ?? 0))
+			: null;
 
 	// Pool: catalog (Valio rules first, then same category) + the seed's candidates and rescue products.
 	const pool = new Map<string, PoolEntry>();
 	const add = (e: PoolEntry) => {
-		if (e.productId === line.productId) return;
+		if (e.productId === line.productId || opts.exclude?.includes(e.productId)) return;
 		const prev = pool.get(e.productId);
 		pool.set(e.productId, {
 			...prev,
@@ -405,7 +420,7 @@ export async function findSubstitutes(
 				...(flagged.has(best.productId) ? { extraReasons: [MODEL_CAUTION] } : {}),
 				provenance: {
 					source: 'valio_static',
-					note: `substitute for ${line.productId}, rank 1 of ${ranked.filter((r) => r.rank).length}`
+					note: `substitute for ${line.productId}, rank 1 of ${ranked.filter((r) => r.rank).length}${opts.note ? `; ${opts.note}` : ''}`
 				}
 			}
 		];
@@ -428,6 +443,11 @@ export async function findSubstitutes(
 			}
 		}));
 	} else kind = 'none';
+	// A split: what is left of the contended product stays, the candidate covers the rest.
+	if (opts.keep?.length && kind !== 'make_in_house') {
+		drafts = [...opts.keep, ...drafts];
+		if (kind === 'none') kind = 'product';
+	}
 	const residual = kind === 'none' && need ? need.amount : undefined;
 	const proposedOf = (d: DraftLine): Line => ({
 		...d,
