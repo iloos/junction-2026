@@ -36,6 +36,50 @@ import { prefetch, requote, type ServicePorts } from './events';
 /* eslint-disable @typescript-eslint/no-explicit-any -- seed candidate/rescue entries are loose JSON */
 type Loose = any;
 
+/** How many top-ranked survivors get a recipe-fit question (each one Decide call, in parallel). */
+const FIT_TOP_N = 3;
+const FIT_TIMEOUT_MS = 4000;
+
+type Fit = { score: number; source: string; model?: string; latencyMs?: number };
+
+async function recipeFit(
+	ports: ServicePorts,
+	q: { dish: string; original: string; candidates: { productId: string; name: string }[] }
+): Promise<Map<string, Fit>> {
+	const out = new Map<string, Fit>();
+	await Promise.all(
+		q.candidates.map(async (c) => {
+			let timer: ReturnType<typeof setTimeout> | undefined;
+			try {
+				const d = await Promise.race([
+					ports.decide.score({
+						question: `How well does "${c.name}" work for the dish "${q.dish}" on a Finnish Christmas buffet, in place of "${q.original}"?`,
+						rubric:
+							'4 = the same dish, guests would not notice; 3 = a close variant; 2 = acceptable with a note; 1 = a different dish; 0 = unsuitable',
+						context: `Dish: ${q.dish}. Planned product: ${q.original}. Candidate: ${c.name}.`,
+						max: 4
+					}),
+					new Promise<never>(
+						(_, reject) =>
+							(timer = setTimeout(() => reject(new Error('fit timeout')), FIT_TIMEOUT_MS))
+					)
+				]);
+				out.set(c.productId, {
+					score: Math.max(0, Math.min(4, d.value)),
+					source: d.source,
+					model: d.model,
+					latencyMs: d.latencyMs
+				});
+			} catch {
+				// No fit for this candidate: it is ranked on the criteria alone.
+			} finally {
+				clearTimeout(timer);
+			}
+		})
+	);
+	return out;
+}
+
 function unsizedReason(o: { availability: { kind: string } } | undefined): string {
 	const k = o?.availability.kind;
 	return k === 'out' || k === 'undeliverable' || k === 'blocked' ? k : 'UNKNOWN_REQUIRED';
@@ -117,6 +161,36 @@ export async function findSubstitutes(
 		products,
 		offers: new Map(offers.map((o) => [o.productId, o]))
 	});
+	// Recipe fit (0–4) from Decide for the top survivors, then rank again with it (D6 w_fit). Outside the lock;
+	// a provider failure leaves the deterministic ranking in place.
+	const fit = await recipeFit(ports, {
+		dish: need?.label ?? line.productId,
+		original: line.productName ?? line.productId,
+		candidates: ranked
+			.filter((r) => r.rank !== null)
+			.sort((a, b) => a.rank! - b.rank!)
+			.slice(0, FIT_TOP_N)
+			.map((r) => ({
+				productId: r.productId,
+				name: products.get(r.productId)?.nameFi ?? r.productId
+			}))
+	});
+	if (fit.size)
+		ranked.splice(
+			0,
+			ranked.length,
+			...rankCandidates({
+				kitchen: rankKitchen,
+				candidates: [...sized].map(([productId, qty]) => ({
+					productId,
+					fromValioRule: pool.get(productId)!.fromValioRule,
+					qty: qty.value
+				})),
+				products,
+				offers: new Map(offers.map((o) => [o.productId, o])),
+				fit
+			})
+		);
 	if (input.requireOrigin) {
 		for (const r of ranked)
 			if (r.rank !== null && products.get(r.productId)?.origin !== input.requireOrigin) {
@@ -196,8 +270,9 @@ export async function findSubstitutes(
 	});
 	const base = { kind, candidates, labourNote, residual, saved };
 
-	// Preview, or nothing would change: the plan stays as it is.
-	if (!apply || sameLines(drafts, saved))
+	// Preview, nothing to propose, or nothing would change: the plan stays as it is. An empty proposal never writes
+	// (it would bump the version without covering the dish, and a caller that retries on a version change loops).
+	if (!apply || (drafts.length === 0 && saved.length === 0) || sameLines(drafts, saved))
 		return ok({ ...base, plan: plan0, chosen: drafts.map(proposedOf), applied: false });
 
 	// Prepare outside the transaction: the open lines after the swap, and their catalogue data.

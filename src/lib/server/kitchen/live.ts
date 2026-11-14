@@ -130,9 +130,10 @@ async function ensurePlan(s: Session) {
 		kitchenId: s.kitchenId,
 		eventId: EVENT_ID
 	})) as PlanOut;
-	// Each outage gets one proposal attempt: a kitchen whose rules reject every proposal must not loop.
+	// Each outage is tried at most once per call, and the loop is capped: a dish with no qualifying substitute
+	// stays a stated shortfall instead of being retried (a retry loop once wrote ~1,000 empty proposals).
 	const tried = new Set<string>();
-	for (let i = 0; i < 8; i++) {
+	for (let i = 0; i < 10; i++) {
 		const covered = new Set(plan.lines.map((l) => l.substituteFor).filter(Boolean));
 		const out = plan.lines.find(
 			(l) =>
@@ -149,8 +150,7 @@ async function ensurePlan(s: Session) {
 			{ planId: plan.id, version: plan.version, lineId: out.id },
 			agent(s)
 		)) as SubstitutesOut;
-		if (r.plan.version === plan.version) return plan; // nothing proposed: stop instead of looping
-		plan = r.plan;
+		if (r.applied) plan = r.plan;
 	}
 	return plan;
 }
