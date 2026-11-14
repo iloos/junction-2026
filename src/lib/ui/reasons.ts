@@ -51,6 +51,10 @@ const TEXT: Record<string, { short: string; long: string }> = {
 		short: "Doesn't meet the requirement",
 		long: "It doesn't meet a requirement of the dish it is for (for example lactose-free): it can't be ordered for it."
 	},
+	requirement_unknown: {
+		short: 'Requirement not confirmed',
+		long: "The product's record doesn't confirm a requirement of the dish (for example lactose-free); a chef checks it before it is ordered."
+	},
 	need_rounding_large: {
 		short: 'Far over the need',
 		long: 'The smallest pack is many times what the dish needs; nothing is ordered until you confirm it.'
