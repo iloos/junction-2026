@@ -73,3 +73,42 @@ describe('absolute links (D17: links point, only the human grants)', () => {
 		expect(text).not.toContain('internal.aiven.app');
 	});
 });
+
+describe('menu review link', () => {
+	it('propose_menu carries meta.reviewUrl to that exact revision, beside the handler’s own summary', async () => {
+		const { SCOPES_BY_ACTOR } = await import('$lib/core/contracts');
+		const { createDbPorts } = await import('../store/db-ports');
+		const { goldenBrief } = await import('../menu/golden');
+		const { memoryMenuStore } = await import('../menu/store');
+		const { proposeMenuHandler } = await import('../menu/tool');
+		const { serveTool } = await import('./serve');
+		const env = await createDbPorts();
+		const h = {
+			...stubHandlers,
+			propose_menu: proposeMenuHandler({ ports: { ...env.ports, menus: memoryMenuStore() } })
+		} as ToolHandlers;
+		const r = await serveTool(
+			'propose_menu',
+			{
+				workspaceId: 'ws-t',
+				runId: 'r',
+				actor: { kind: 'external_agent', id: 'k' },
+				scopes: SCOPES_BY_ACTOR.external_agent,
+				via: 'test'
+			},
+			{ kitchenId: 'k-hotel', brief: goldenBrief('christmas') },
+			h
+		);
+		expect(r.ok).toBe(true);
+		if (!r.ok) return;
+		const v = r.value as {
+			proposal: { id: string; revision: number };
+			meta?: Record<string, string>;
+		};
+		expect(v.meta?.reviewUrl).toBe(`/request?menu=${encodeURIComponent(v.proposal.id)}&rev=0`);
+		expect(v.meta?.summary).toMatch(/nothing was planned or ordered/);
+		expect(absolutize(v, 'https://app.mandate.kitchen').meta?.reviewUrl).toMatch(
+			/^https:\/\/app\.mandate\.kitchen\/request\?menu=/
+		);
+	});
+});

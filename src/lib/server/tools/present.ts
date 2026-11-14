@@ -24,6 +24,30 @@ export function approvalUrl(plan: Pick<Plan, 'kitchenId' | 'id' | 'version'>): s
 	return `/?${q}`;
 }
 
+/**
+ * Deep link to one menu proposal revision for the chef's review (the /request menu card; the home's `?menu=` link
+ * replaces it when D15 serves one). Accepting still needs a chef session there.
+ */
+export function menuReviewUrl(p: { id: string; revision: number }): string {
+	const q = new URLSearchParams({ menu: p.id, rev: String(p.revision) });
+	return `/request?${q}`;
+}
+
+/**
+ * Links every result of this tool carries, whoever wrote its meta (a handler's own meta keeps its summary): a menu
+ * proposal's review link. Places to go, never authority (D17).
+ */
+export function withLinks(tool: ToolName, value: { meta?: ResultMeta }): void {
+	if (tool !== 'propose_menu') return;
+	const p = (value as { proposal?: { id?: unknown; revision?: unknown } }).proposal;
+	if (typeof p?.id !== 'string' || typeof p.revision !== 'number') return;
+	value.meta = {
+		summary: value.meta?.summary ?? 'Menu proposed: a chef reviews it before it can be planned.',
+		...value.meta,
+		reviewUrl: menuReviewUrl({ id: p.id, revision: p.revision })
+	};
+}
+
 function planMeta(plan: Plan, approvalPending: boolean): ResultMeta {
 	const n = (s: string) => plan.lines.filter((l) => l.state === s).length;
 	const held = n('held');

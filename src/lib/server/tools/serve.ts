@@ -11,7 +11,7 @@ import {
 import type { CallContext, ToolHandlers } from '$lib/core/ports';
 import { inWorkspace } from '$lib/server/adapters/simulator/overlay';
 import { isMetered, takeKeyCall } from './key-limits';
-import { presentMeta } from './present';
+import { presentMeta, withLinks } from './present';
 import { isRecordedRefusal, recordRefusal } from './refusals';
 
 /**
@@ -194,5 +194,6 @@ async function run<N extends ToolName>(
 		} catch (e) {
 			console.error(`[tools] ${name}: meta failed`, e);
 		}
+	withLinks(name, value);
 	return { ok: true, status: 200, value };
 }
