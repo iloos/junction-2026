@@ -141,3 +141,28 @@ describe('brief title', () => {
 		expect(d.title).toBe('Christmas dinner for 50 on Saturday 12 December, buffet');
 	});
 });
+
+describe('moment 2: the words of a menu ask', () => {
+	const today = '2026-12-07';
+	it('"a no-meat dinner for 120 with a peach dessert" is vegetarian for 120', () => {
+		const d = draftBrief('a no-meat dinner for 120 with a peach dessert', today);
+		expect(d).toMatchObject({ guests: 120, dietary: ['vegetarian'] });
+	});
+	it('a typed answer that is not a diet leaves the dietary question open', () => {
+		const d = draftBrief('dinner for 40 on Saturday, buffet', today);
+		expect(
+			applyBriefAnswers(d, [{ id: 'brief.dietary', value: 'no budget' }], today).dietary
+		).toBeNull();
+		expect(applyBriefAnswers(d, [{ id: 'brief.dietary', value: 'none' }], today).dietary).toEqual(
+			[]
+		);
+		expect(
+			applyBriefAnswers(d, [{ id: 'brief.dietary', value: 'gluten free please' }], today).dietary
+		).toEqual(['gluten-free']);
+	});
+	it('the day chips say the day in words', () => {
+		const q = nextQuestion(draftBrief('dinner for 40', today), today)!;
+		expect(q.field).toBe('date');
+		expect(q.chips.map((c) => c.label)).toEqual(['Fri 11 Dec', 'Sat 12 Dec']);
+	});
+});
