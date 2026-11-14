@@ -174,7 +174,7 @@ export async function chat(page: Page, text: string) {
 	await page.getByRole('button', { name: 'Send' }).click();
 	await page.waitForTimeout(1500);
 	await page
-		.getByText(/^Working( · step \d+)?…/)
+		.getByText(/^Working\b.*…$/)
 		.first()
 		.waitFor({ state: 'detached', timeout: 180_000 })
 		.catch(() => undefined);
