@@ -10,6 +10,7 @@ import { createSimulator } from '../adapters/simulator/stock';
 import { scopedWorkspace, SimOverlay } from '../adapters/simulator/overlay';
 import { createFixturePorts } from './fixture-ports';
 import { createDrizzleStore, type AnyDb } from './drizzle-store';
+import { drizzleMenuStore } from '../menu/pg';
 import seedKitchens from '../../../../fixtures/seeds/kitchens.json';
 import buffetSeed from '../../../../fixtures/seeds/christmas-buffet-140.json';
 import { EventSeed } from '$lib/core/demand';
@@ -111,7 +112,9 @@ export async function createDbPorts(o: DbPortsOptions = {}) {
 		...base,
 		store,
 		simulator: createSimulator(base.catalog, { today }),
-		events: loadSeedEvents()
+		events: loadSeedEvents(),
+		// Same database handle as the store: plan_event reads the proposals /request writes.
+		menus: drizzleMenuStore(db as AnyDb)
 	};
 	return { ports, store, db, overlay: base.overlay, workspaceId, runId };
 }

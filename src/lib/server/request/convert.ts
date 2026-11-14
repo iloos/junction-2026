@@ -35,7 +35,6 @@ export type Conversion =
 	  }
 	| { ok: false; reason: string };
 
-
 /** The stated content of one sales unit: what the name says first, Valio net weight last. */
 function bestContent(p: Product): Content | null {
 	const all = (['kg', 'l'] as const)
