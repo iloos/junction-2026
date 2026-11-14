@@ -8,7 +8,9 @@ import { env } from '$env/dynamic/private';
 import { publish as busPublish } from '$lib/server/bus';
 import { createPgCatalog } from '../adapters/catalog/pg';
 import { createValioLive } from '../adapters/catalog/valio-live';
-import { logTrace } from '../adapters/llm/trace';
+import { noTrace } from '../adapters/llm/trace';
+import { reportExternal } from '../external/call';
+import { currentScope } from '../external/scope';
 import { SimOverlay } from '../adapters/simulator/overlay';
 import { createPgDb, dbMode } from '../db/client';
 import { createDbPorts } from './db-ports';
@@ -38,7 +40,14 @@ async function build(): Promise<Built> {
 			? createValioLive({
 					apiKey: env.VALIO_API_KEY,
 					baseUrl: env.VALIO_BASE_URL || undefined,
-					onCall: (t) => logTrace({ source: t.api, model: t.purpose, ...t })
+					// Into the caller's trace drawer (the tool call's external scope), in the shared trace shape.
+					onCall: (t) => {
+						const scope = currentScope();
+						reportExternal(scope?.trace ?? noTrace, 'tool', {
+							...t,
+							workspaceId: scope?.workspaceId
+						});
+					}
 				})
 			: undefined;
 	return createDbPorts({
