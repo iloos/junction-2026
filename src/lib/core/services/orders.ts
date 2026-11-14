@@ -24,6 +24,7 @@ import { requestHash, sha256Hex, termsHash } from '../hash';
 import {
 	draftFromLine,
 	isoWeek,
+	recalledProducts,
 	tierLines,
 	type DraftLine,
 	type TierResult
@@ -193,7 +194,8 @@ export async function placeOrder(
 			weekSpentCents: spent,
 			actor: ctx.actor.kind,
 			createdBy: ctx.actor.kind,
-			orderedBefore: orderedBefore(state, kitchen.id)
+			orderedBefore: orderedBefore(state, kitchen.id),
+			recalled: recalledProducts(state)
 		});
 		const plan0: Plan = {
 			workspaceId: ctx.workspaceId,
@@ -346,6 +348,7 @@ export async function commitOrder(
 			actor: ctx.actor.kind,
 			createdBy: plan.createdBy.kind,
 			orderedBefore: orderedBefore(state, kitchen.id),
+			recalled: recalledProducts(state),
 			committed
 		});
 		const fresh = await termsHash({ deliverBy: plan.deliverBy, lines: t.termsLines });

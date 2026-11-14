@@ -56,6 +56,8 @@ export interface TierInput {
 	createdBy: ActorKind;
 	/** Products this kitchen has committed before (for never-delegate `new_sku`). */
 	orderedBefore: Set<string>;
+	/** Products named by a recall notice (from state.anomalies): their lines are held for sign-off. */
+	recalled?: Set<string>;
 	/** Lines already committed stay as they are and are not re-tiered. */
 	committed?: Line[];
 }
@@ -81,6 +83,7 @@ const TIER_OF: Partial<Record<string, Tier>> = {
 	origin_required: 'sign_off',
 	external_agent_needs_approval: 'sign_off',
 	allergen_trace: 'sign_off',
+	recall: 'sign_off',
 	price_missing: 'propose',
 	allergen_change: 'sign_off'
 };
@@ -88,6 +91,17 @@ const tierOf = (r: LineReason): Tier =>
 	r.startsWith('CAP_EXCEEDED') ? 'sign_off' : (TIER_OF[r] ?? 'propose');
 const maxTier = (rs: LineReason[]): Tier =>
 	rs.map(tierOf).reduce<Tier>((a, b) => (RANK[b] > RANK[a] ? b : a), 'act');
+
+/** Products under a recall notice in this workspace run. */
+export function recalledProducts(state: {
+	anomalies: Record<string, { kind: string; productId?: string }>;
+}): Set<string> {
+	return new Set(
+		Object.values(state.anomalies)
+			.filter((a) => a.kind === 'recall' && a.productId)
+			.map((a) => a.productId!)
+	);
+}
 
 export function tierLines(input: TierInput): TierResult {
 	const { kitchen, offers, products } = input;
@@ -128,6 +142,7 @@ export function tierLines(input: TierInput): TierResult {
 		if (product?.reliability !== undefined && product.reliability < 0.7)
 			reasons.push('low_reliability');
 		if (lineCents !== null && lineCents > m.lineCapCents) reasons.push('CAP_EXCEEDED.line');
+		if (input.recalled?.has(draft.productId)) reasons.push('recall');
 		reasons.push(...(draft.extraReasons ?? []));
 		return { draft, offer, reasons, orderable: true, gap, lineCents };
 	});

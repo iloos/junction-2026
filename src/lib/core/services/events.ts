@@ -27,7 +27,13 @@ import {
 	sizeFor,
 	type EventSeed
 } from '../demand';
-import { draftFromLine, isoWeek, tierLines, type DraftLine } from '../mandate/tier';
+import {
+	draftFromLine,
+	isoWeek,
+	tierLines,
+	type DraftLine,
+	recalledProducts
+} from '../mandate/tier';
 import type { CallContext, Ports, Tx } from '../ports';
 import type { WorkspaceState } from '../state';
 import { quoteOps, toLot } from './orders';
@@ -154,6 +160,7 @@ export async function requote(
 		actor: ctx.actor.kind,
 		createdBy: plan.createdBy.kind,
 		orderedBefore: orderedBefore(state, kitchen.id),
+		recalled: recalledProducts(state),
 		committed: plan.lines.filter((l) => l.state === 'committed')
 	});
 	return quoteOps(ctx, ports, plan, kitchen, t, pre.offers);

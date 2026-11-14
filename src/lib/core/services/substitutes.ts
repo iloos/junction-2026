@@ -28,7 +28,7 @@ import {
 	type PoolEntry,
 	type SeedDish
 } from '../demand';
-import { draftFromLine, type DraftLine } from '../mandate/tier';
+import { draftFromLine, recalledProducts, type DraftLine } from '../mandate/tier';
 import { rankCandidates } from '../rank/rank';
 import type { CallContext } from '../ports';
 import { prefetch, requote, type ServicePorts } from './events';
@@ -97,6 +97,7 @@ export async function findSubstitutes(
 	const kitchens = await ports.store.kitchens(ctx.workspaceId);
 	const pre = await ports.store.load(ctx.workspaceId, ctx.runId);
 	const plan0 = pre.plans[input.planId];
+	const recalled = recalledProducts(pre);
 	const line = plan0?.lines.find((l) => l.id === input.lineId);
 	if (!plan0 || !line) return err('NOT_FOUND', `line ${input.lineId}`);
 	if (plan0.version !== input.version)
@@ -159,7 +160,8 @@ export async function findSubstitutes(
 			qty: qty.value
 		})),
 		products,
-		offers: new Map(offers.map((o) => [o.productId, o]))
+		offers: new Map(offers.map((o) => [o.productId, o])),
+		recalled
 	});
 	// Recipe fit (0–4) from Decide for the top survivors, then rank again with it (D6 w_fit). Outside the lock;
 	// a provider failure leaves the deterministic ranking in place.
@@ -188,6 +190,7 @@ export async function findSubstitutes(
 				})),
 				products,
 				offers: new Map(offers.map((o) => [o.productId, o])),
+				recalled,
 				fit
 			})
 		);

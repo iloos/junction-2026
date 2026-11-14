@@ -80,7 +80,8 @@ export function lineView(l: Line, plan: Plan, approval: ApprovalLike | null): Li
 		reviewable: true,
 		committable: approved,
 		...covered(qty),
-		nextAction: approved ? 'commit' : 'approve'
+		// A recalled product: approving stays possible (a human may judge the batch unaffected); replacing is the default.
+		nextAction: approved ? 'commit' : l.reasons.includes('recall') ? 'find_substitute' : 'approve'
 	};
 }
 
