@@ -6,7 +6,18 @@
 import type { Line, Plan } from '$lib/core/contracts';
 import { SCENARIO } from '$lib/core/scenario';
 import type { WorkspaceState } from '$lib/core/state';
+import { decisionsOf, type Decision } from '$lib/ui/decisions';
 import { productName, reasonText, type Names } from './labels';
+
+/** The plan's pending approval, if any (the one decisions are counted from). */
+export function pendingApprovalOf(s: WorkspaceState, planId: string) {
+	return Object.values(s.approvals).find((a) => a.planId === planId && a.state === 'pending');
+}
+
+/** Decisions waiting for a person across plans, the way the kitchen counts them. */
+export function openDecisions(s: WorkspaceState, plans: Plan[]): Decision[] {
+	return plans.flatMap((p) => decisionsOf(p, pendingApprovalOf(s, p.id)));
+}
 
 export type Owner = 'Chef' | 'Approver' | 'Kitchen agent' | 'Operations';
 export type Tone = 'blocked' | 'sign_off' | 'propose' | 'act';
@@ -104,13 +115,23 @@ export function buildCases(
 	for (const a of Object.values(s.approvals))
 		if (a.state === 'pending') for (const id of a.lineIds) pendingLines.add(lineKey(a.planId, id));
 
-	// One case per cause in a plan: the same state and the same reasons, however many lines share them.
+	// Lines in a pending approval are cases per decision, exactly as the kitchen counts them (decisionsOf):
+	// one reason group of the approval, in the same words. Other open lines group by state and reasons.
+	const decisionOf = new Map<string, Decision>();
+	for (const plan of Object.values(s.plans))
+		for (const d of decisionsOf(plan, pendingApprovalOf(s, plan.id)))
+			for (const id of d.lineIds) decisionOf.set(lineKey(plan.id, id), d);
+
 	const groups = new Map<string, Case>();
 	for (const plan of Object.values(s.plans))
 		for (const l of openLines(plan)) {
 			const shape = shapeOf(l, pendingLines.has(lineKey(plan.id, l.id)));
-			const causes = l.reasons.map(reasonText);
-			const key = `${plan.id}|${shape.state}|${[...causes].sort().join(',')}`;
+			const d = l.state === 'held' ? decisionOf.get(lineKey(plan.id, l.id)) : undefined;
+			const causes = d ? d.reason.split(' · ') : l.reasons.map(reasonText);
+			const key = d
+				? `${plan.id}|decision|${d.key}`
+				: `${plan.id}|${shape.state}|${[...causes].sort().join(',')}`;
+			if (d && d.signOff) Object.assign(shape, shapeOf({ ...l, tier: 'sign_off' }, true));
 			const name = productName(names, l.productId);
 			const replaces = l.substituteFor ? `, replaces ${productName(names, l.substituteFor)}` : '';
 			const detail = `${l.qty.value} ${l.qty.unit}${replaces}`;

@@ -1,5 +1,14 @@
-import type { ActorKind, Line, OpEnvelope, SimEvent, Tier } from '$lib/core/contracts';
+import type {
+	ActorKind,
+	Approval,
+	Line,
+	OpEnvelope,
+	Plan,
+	SimEvent,
+	Tier
+} from '$lib/core/contracts';
 import { reasonShort } from '$lib/ui/reasons';
+import { decisionsOf } from '$lib/ui/decisions';
 
 export const euro = (cents: number | null | undefined) =>
 	cents == null
@@ -62,8 +71,22 @@ export function lineIsHeld(l: Line): boolean {
 	return l.state === 'held' || l.state === 'unorderable';
 }
 
-/** One plain sentence per op for the log. */
-export function opSummary(env: OpEnvelope, names: Names): string {
+const lines = (n: number) => `${n} line${n === 1 ? '' : 's'}`;
+const decisions = (n: number) => `${n} decision${n === 1 ? '' : 's'}`;
+
+/** Decisions among held lines, grouped by reason the way the kitchen groups an approval (decisionsOf). */
+function decisionCount(plan: Plan | undefined, held: Line[]): number {
+	if (!held.length) return 0;
+	const p = { ...(plan ?? ({ needs: [] } as unknown as Plan)), lines: held } as Plan;
+	const pending = { state: 'pending', lineIds: held.map((l) => l.id) } as unknown as Approval;
+	return decisionsOf(p, pending).length;
+}
+
+/**
+ * One plain sentence per op for the log and the timeline, in the kitchen's words: held lines are counted as
+ * decisions (reason groups), not as raw lines. `plans` (the current plans) lets an approval name its decisions.
+ */
+export function opSummary(env: OpEnvelope, names: Names, plans: Record<string, Plan> = {}): string {
 	const op = env.op;
 	switch (op.type) {
 		case 'CreatePlan':
@@ -71,8 +94,15 @@ export function opSummary(env: OpEnvelope, names: Names): string {
 		case 'EditLine':
 			return op.summary;
 		case 'RecordOffer': {
-			const held = op.lines.filter(lineIsHeld).length;
-			return `Quoted ${euro(op.totalCents)} on live terms${held ? `, ${held} held` : ', all within the mandate'}`;
+			const held = op.lines.filter((l) => l.state === 'held');
+			const cannot = op.lines.filter((l) => l.state === 'unorderable').length;
+			const parts = [
+				held.length
+					? `${decisions(decisionCount(plans[op.planId], held))} for a person (${lines(held.length)})`
+					: '',
+				cannot ? `${cannot} can't be ordered` : ''
+			].filter(Boolean);
+			return `Quoted ${euro(op.totalCents)} on live terms${parts.length ? `: ${parts.join(', ')}` : ', all within the mandate'}`;
 		}
 		case 'ProposeSubstitute': {
 			const forLine = op.lines[0]?.substituteFor;
@@ -83,11 +113,15 @@ export function opSummary(env: OpEnvelope, names: Names): string {
 		}
 		case 'RecordApproval': {
 			const a = op.approval;
-			const n = `${a.lineIds.length} line${a.lineIds.length === 1 ? '' : 's'}`;
-			if (a.state === 'pending')
+			const n = lines(a.lineIds.length);
+			if (a.state === 'pending') {
+				const plan = plans[a.planId];
+				const d = plan ? decisionsOf(plan, a).length : 0;
+				const what = d ? `${decisions(d)} (${n})` : n;
 				return a.tier === 'sign_off'
-					? `Asked a named approver to sign off ${n}`
-					: `Asked the chef to confirm ${n}`;
+					? `Asked a named approver for ${what}`
+					: `Asked the chef for ${what}`;
+			}
 			if (a.state === 'granted')
 				return `${a.decidedBy ? ACTOR[a.decidedBy.kind] : 'Someone'} approved ${n}`;
 			return `Approval ${a.state}${a.reason ? `: ${a.reason}` : ''}`;

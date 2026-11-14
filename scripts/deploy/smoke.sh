@@ -3,6 +3,8 @@
 # Usage: scripts/deploy/smoke.sh https://mandate-xxx.aivencloud.app   (default http://localhost:3000)
 # With SMOKE_KEY (a kitchen_agent key bound to its own workspace in MCP_KEYS, e.g. `smoke:kitchen_agent:<key>:ws-smoke`),
 # it also starts that workspace over and runs the commit race check (scripts/smoke-race.mjs) against the container.
+# With SMOKE_UI=1 it then runs the prod UI checks (evals/ui: one clock on every surface, the order summary, an
+# approval link), about 20 s in a headless browser, no local server.
 set -eu
 BASE="${1:-http://localhost:3000}"
 EXPECT_DB="${EXPECT_DB:-}"
@@ -18,5 +20,9 @@ if [ -n "${SMOKE_KEY:-}" ]; then
 	code=$(curl -sS -o /dev/null --max-time 30 -w '%{http_code}' -X POST -H "Authorization: Bearer $SMOKE_KEY" "$BASE/api/demo/reset")
 	[ "$code" = "200" ] || { echo "FAIL: smoke workspace reset returned $code"; exit 1; }
 	node "$(dirname "$0")/../smoke-race.mjs" "$BASE" || { echo "FAIL: commit race"; exit 1; }
+fi
+if [ "${SMOKE_UI:-}" = "1" ]; then
+	(cd "$(dirname "$0")/../.." && KITCHEN_URL="$BASE" npx playwright test -c evals/ui/pw-prod.config.ts) ||
+		{ echo "FAIL: prod UI checks"; exit 1; }
 fi
 echo OK
