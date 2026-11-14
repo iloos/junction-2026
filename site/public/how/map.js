@@ -9,8 +9,8 @@
 
 	// [title, side note, parts, lead, mechanisms: [claim, how, test, status]]
 	const Z = {
-		doors: ['Doors', 'who asks', ['Kitchen screen: the chef', 'Chat: the in-app agent', 'Your agent: MCP or REST', 'Operations: Valio'],
-			'Four ways in. Each acts as someone, and that decides what it may do. Only a person in the kitchen approves.',
+		doors: ['Doors', 'who asks', ['Kitchen screen: the chef', 'Request page: the chef', 'Chat: the in-app agent', 'Your agent: MCP or REST'],
+			'Four ways in. Each acts as someone, and that decides what it may do. Only a person in the kitchen approves; Operations at Valio sees the held lines but cannot grant.',
 			[
 				['The chef approves exact terms', 'On the Kitchen screen or the chat\'s decision card, hold to confirm.', 'server/store/gate.test.ts', 'tested'],
 				['The in-app agent plans and orders inside the mandate', 'It asks at most one question; "approve it" in chat is refused.', 'evals/chat', 'tested'],
