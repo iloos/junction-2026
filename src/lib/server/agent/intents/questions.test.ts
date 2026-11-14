@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
+import { ok, Product } from '$lib/core/contracts';
 import type { ToolHandlers } from '$lib/core/ports';
 import { createGetContext } from '../get-context';
 import { trialWorkspace } from '../trial-harness';
-import { answerQuestion, readQuestion } from './questions';
+import { answerQuestion, readChoice, readQuestion } from './questions';
 
 describe('readQuestion', () => {
 	it.each([
@@ -95,5 +96,131 @@ describe('answerQuestion', () => {
 		);
 		expect(a.text).toContain('no product');
 		expect(a.sources).toEqual([]);
+	});
+});
+
+/** Two real catalogue products relabelled as the round-10 probe's milks: Valio semi-skimmed (FI), Arla whole (SE). */
+async function milks() {
+	const w = await trialWorkspace();
+	const ctx = w.ctx('kitchen_agent');
+	const s = await w.handlers.search_products(ctx, { query: 'maito', limit: 2 });
+	if (!s.ok) throw new Error(s.error.message);
+	const [a, b] = s.value.products;
+	const products = [
+		Product.parse({
+			...a,
+			nameFi: 'Valio kevytmaito 1 l',
+			nameEn: 'Valio semi-skimmed milk',
+			brand: 'Valio',
+			category: '10400',
+			origin: 'fi'
+		}),
+		Product.parse({
+			...b,
+			nameFi: 'Arla täysmaito 1 l',
+			nameEn: 'Arla whole milk',
+			brand: 'Arla',
+			category: '10400',
+			origin: 'se'
+		})
+	];
+	const handlers = {
+		...w.handlers,
+		search_products: async () => ok({ products })
+	} as ToolHandlers;
+	return { w, ctx, handlers, products };
+}
+
+describe('R10-15: a named product is that product, or the chef picks', () => {
+	it(
+		'“Is the Arla whole milk Finnish?” answers for Arla whole milk (Sweden), never the default',
+		{ timeout: 60_000 },
+		async () => {
+			const { ctx, handlers } = await milks();
+			const q = readQuestion('Is the Arla whole milk Finnish?');
+			expect(q).toMatchObject({ kind: 'product', aspect: 'origin' });
+			const a = await answerQuestion(q!, ctx, handlers);
+			expect(a.text).toContain('Arla whole milk');
+			expect(a.text).toContain('Sweden');
+			expect(a.text).not.toContain('semi-skimmed');
+		}
+	);
+
+	it(
+		'“Where is the milk from?” asks which one before answering, and answers the pick',
+		{ timeout: 60_000 },
+		async () => {
+			const { ctx, handlers, products } = await milks();
+			const a = await answerQuestion(readQuestion('Where is the milk from?')!, ctx, handlers);
+			expect(a.text).toContain('Which one?');
+			expect(a.text).not.toMatch(/comes from/);
+			expect(a.choices?.map((c) => c.label)).toEqual([
+				'Valio semi-skimmed milk',
+				'Arla whole milk'
+			]);
+			const pick = readChoice(a.choices![1].value)!;
+			expect(pick).toMatchObject({ aspect: 'origin', productId: products[1].productId });
+			const b = await answerQuestion(
+				{ kind: 'product', aspect: pick.aspect, query: pick.name, productId: pick.productId },
+				ctx,
+				handlers
+			);
+			expect(b.text).toBe("Arla whole milk comes from Sweden, according to Valio's catalogue.");
+		}
+	);
+
+	it(
+		'answers for every match at once when they all share an origin',
+		{ timeout: 60_000 },
+		async () => {
+			const { ctx, handlers, products } = await milks();
+			const same = products.map((p) => ({ ...p, origin: 'fi' }));
+			const a = await answerQuestion(readQuestion('Where is the milk from?')!, ctx, {
+				...handlers,
+				search_products: async () => ok({ products: same })
+			} as ToolHandlers);
+			expect(a.text).toMatch(/^All 2 matching products come from Finland/);
+			expect(a.choices).toBeUndefined();
+		}
+	);
+
+	it('never reports a drill as a recall', { timeout: 60_000 }, async () => {
+		const { ctx, handlers } = await milks();
+		const a = await answerQuestion(
+			{ kind: 'product', aspect: 'recall', query: 'Arla whole milk' },
+			ctx,
+			{
+				...handlers,
+				check_recall: async () =>
+					ok({
+						notices: [
+							{
+								url: 'https://www.ruokavirasto.fi/drill',
+								title: 'Drill: milk recall',
+								match: 'gtin' as const,
+								drill: true,
+								seenAt: '2026-12-07T10:00:00Z'
+							}
+						]
+					})
+			} as ToolHandlers
+		);
+		expect(a.text).toMatch(/^No recall found in the notices we monitor/);
+		expect(a.text).toContain('drill');
+		expect(a.steps.find((s) => s.tool === 'check_recall')?.source).toBe('cache');
+	});
+
+	it('labels a web fact with its real source, not always live', { timeout: 60_000 }, async () => {
+		const { ctx, handlers } = await milks();
+		const a = await answerQuestion(
+			{ kind: 'product', aspect: 'facts', query: 'Arla whole milk' },
+			ctx,
+			{
+				...handlers,
+				lookup_facts: async () =>
+					ok({ facts: [], cached: false, meta: { summary: '[replay] No recorded answer.' } })
+			} as ToolHandlers
+		);
+		expect(a.steps.find((s) => s.tool === 'lookup_facts')?.source).toBe('replay');
 	});
 });

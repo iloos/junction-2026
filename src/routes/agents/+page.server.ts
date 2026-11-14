@@ -1,6 +1,7 @@
 import { dev } from '$app/environment';
 import { env } from '$env/dynamic/private';
-import { SCOPES_BY_ACTOR, toolSchemas, type Op } from '$lib/core/contracts';
+import { SCOPES_BY_ACTOR, toolSchemas, type Op, type OpEnvelope } from '$lib/core/contracts';
+import { opSummary, type Names } from '../ops/labels';
 import { catchUp } from '$lib/server/bus';
 import { currentRun } from '$lib/server/demo/run';
 import { judgeKeyExpiry, judgeKeyFor, judgeKeysOn, judgeLabel } from '$lib/server/demo/judge-key';
@@ -54,10 +55,7 @@ export const load: PageServerLoad = async (event) => {
 		prompts: MCP_PROMPTS,
 		kitchenUrl: `${origin}/`,
 		instructions: mcpInstructions(tools.map((t) => t.name)),
-		tools,
-		withheld: (Object.keys(toolSchemas) as (keyof typeof toolSchemas)[])
-			.filter((n) => !tools.some((t) => t.name === n))
-			.map((n) => ({ name: n, scope: toolSchemas[n].scope }))
+		tools
 	};
 };
 
@@ -69,15 +67,14 @@ async function yourCalls(workspaceId: string) {
 	try {
 		const events = await catchUp(workspaceId, 0, 1000, currentRun(workspaceId));
 		const label = judgeLabel(workspaceId);
+		const ours = events.flatMap((e) =>
+			e.kind === 'op' && e.envelope.actor.kind === 'external_agent' && e.envelope.actor.id === label
+				? [e.envelope]
+				: []
+		);
+		const names = namesIn(ours);
 		return (
-			events
-				.flatMap((e) =>
-					e.kind === 'op' &&
-					e.envelope.actor.kind === 'external_agent' &&
-					e.envelope.actor.id === label
-						? [e.envelope]
-						: []
-				)
+			ours
 				// A commit the gate refused is logged twice (the failed order and the refusal); the refusal says it.
 				.filter(
 					(o) =>
@@ -89,7 +86,7 @@ async function yourCalls(workspaceId: string) {
 				)
 				.slice(-20)
 				.reverse()
-				.map((o) => ({ seq: o.seq, at: o.at, ...opWords(o.op) }))
+				.map((o) => ({ seq: o.seq, at: o.at, text: opSummary(o, names), tone: toneOf(o.op) }))
 		);
 	} catch {
 		return [];
@@ -108,80 +105,35 @@ async function lastSeq(workspaceId: string) {
 
 type Tone = 'plan' | 'order' | 'refused' | 'note';
 
-const euros = (cents: number) =>
-	(cents / 100).toLocaleString('en-GB', { style: 'currency', currency: 'EUR' });
-const lines = (n: number) => `${n} line${n === 1 ? '' : 's'}`;
-const day = (iso: string) =>
-	new Date(`${iso}T12:00:00Z`).toLocaleDateString('en-GB', {
-		weekday: 'short',
-		day: 'numeric',
-		month: 'short',
-		timeZone: 'Europe/Helsinki'
-	});
-
-/** One op in the words a chef reads (VOCABULARY): no op names, no ids. */
-function opWords(op: Op): { text: string; tone: Tone } {
+/** The icon a change gets on the panel; its sentence is /ops' own (`opSummary`), so op words have one source. */
+function toneOf(op: Op): Tone {
 	switch (op.type) {
-		case 'CreatePlan':
-			return {
-				tone: 'plan',
-				text: `Started a plan ${op.plan.eventId ? 'for the event' : 'for an order'}, delivery ${day(op.plan.deliverBy)}.`
-			};
-		case 'EditLine':
-			return { tone: 'plan', text: `Changed the plan: ${op.summary}.` };
-		case 'RecordOffer': {
-			const held = op.lines.filter((l) => l.state === 'held').length;
-			return {
-				tone: 'plan',
-				text:
-					`Got Valio's live prices: ${euros(op.totalCents)} in all` +
-					(held ? `; ${lines(held)} wait for a chef.` : '; the mandate allows every line.')
-			};
-		}
-		case 'ProposeSubstitute': {
-			if (op.kind === 'make_in_house')
-				return { tone: 'plan', text: 'Proposed making it in house from orderable ingredients.' };
-			const pick = op.lines[0];
-			return pick
-				? {
-						tone: 'plan',
-						text: `Proposed ${pick.productName ?? 'a substitute'} instead, out of ${op.candidates.length} weighed.`
-					}
-				: {
-						tone: 'note',
-						text: `Looked for a substitute; none of ${op.candidates.length} qualified.`
-					};
-		}
 		case 'CommitOrder':
-			return op.outcome.result === 'committed'
-				? {
-						tone: 'order',
-						text: `Placed an order: ${lines(op.outcome.order.lines.length)}, ${euros(op.outcome.order.totalCents)}.`
-					}
-				: { tone: 'refused', text: `Tried to place an order: ${op.outcome.error.message}.` };
+			return op.outcome.result === 'committed' ? 'order' : 'refused';
 		case 'RecordRefusal':
-			return {
-				tone: 'refused',
-				text:
-					op.tool === 'approve'
-						? 'Tried to approve: refused. Only a chef approves.'
-						: op.tool === 'set_mandate'
-							? 'Tried to change the mandate: refused. Only a chef changes it.'
-							: op.sub === 'approval_required'
-								? 'Tried to order lines that wait for a chef: refused until a chef approves.'
-								: 'Asked for something the mandate does not allow: refused.'
-			};
+			return 'refused';
 		case 'RecordAnomaly':
-			return { tone: 'note', text: `Flagged: ${op.anomaly.message}` };
 		case 'RecordEnrichment':
-			return { tone: 'note', text: 'Noted a product fact, as a suggestion with its source.' };
-		case 'RecordApproval': {
-			const n = lines(op.approval.lineIds.length);
-			return op.approval.state === 'pending'
-				? { tone: 'note', text: `Asked a chef to approve ${n} the mandate holds.` }
-				: { tone: 'note', text: `The approval for ${n} is now ${op.approval.state}.` };
-		}
+		case 'RecordApproval':
+			return 'note';
+		default:
+			return 'plan';
 	}
+}
+
+/** Product names the ops carry on their lines, for `opSummary` (no catalogue read). */
+function namesIn(ops: OpEnvelope[]): Names {
+	const names: Names = {};
+	for (const { op } of ops) {
+		const lines =
+			op.type === 'CreatePlan'
+				? op.plan.lines
+				: op.type === 'RecordOffer' || op.type === 'ProposeSubstitute'
+					? op.lines
+					: [];
+		for (const l of lines) if (l.productName) names[l.productId] = l.productName;
+	}
+	return names;
 }
 
 /** Copy-paste client configuration for the MCP URL: Claude Code, Claude Desktop (through mcp-remote) and generic. */

@@ -19,8 +19,8 @@ export type ChatEvent =
 			detail?: string;
 			/** Server-measured duration of the step. */
 			ms?: number;
-			/** Where a reading or an answer came from: a live model, a recording, the fixture, or the rules. */
-			source?: 'live' | 'replay' | 'fixture' | 'rules';
+			/** Where a reading or an answer came from: a live call, an earlier answer or stored data, a recording, the fixture, or the rules. */
+			source?: 'live' | 'cache' | 'replay' | 'fixture' | 'rules';
 			/** Kitchen deep link to the plan or line the step touched. */
 			href?: string;
 			/** What a commit did (commit_order steps). */

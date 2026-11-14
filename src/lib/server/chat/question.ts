@@ -11,8 +11,6 @@ import { buildRunPrincipal, principalContext } from '$lib/server/agent/principal
 import { newAgentRunId } from '$lib/server/agent/runs';
 import type { ChatEvent } from '$lib/ui/chat/types';
 
-const WEB_TOOLS = new Set(['check_recall', 'lookup_facts']);
-
 export async function* answerInChat(
 	q: Question,
 	deps: { ctx: CallContext; handlers: ToolHandlers },
@@ -47,8 +45,17 @@ export async function* answerInChat(
 			tool: s.tool,
 			ok: s.ok,
 			summary: s.summary,
-			source: WEB_TOOLS.has(s.tool) ? 'live' : 'rules',
+			source: s.source,
 			ms
+		};
+	// More than one product matched: the chef picks before anything is answered.
+	if (a.choices?.length)
+		yield {
+			type: 'clarify',
+			taskId: at.taskId,
+			field: 'product',
+			question: 'Which one?',
+			options: a.choices
 		};
 	yield {
 		type: 'done',

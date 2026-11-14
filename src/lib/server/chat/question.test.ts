@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { ok, Product } from '$lib/core/contracts';
 import type { ToolHandlers } from '$lib/core/ports';
 import { scenarioDate } from '$lib/core/scenario';
 import { createGetContext } from '../agent/get-context';
@@ -83,6 +84,45 @@ describe('chat: questions about the mandate and one product', () => {
 				type: 'done',
 				text: expect.stringContaining('recalled')
 			});
+		}
+	);
+});
+
+describe('chat: "Which one?" before a product answer', () => {
+	it(
+		'asks with product buttons, then answers the pick without saving a task',
+		{ timeout: 60_000 },
+		async () => {
+			const { w, deps } = await setup();
+			const s = await w.handlers.search_products(deps.ctx, { query: 'maito', limit: 2 });
+			if (!s.ok) throw new Error(s.error.message);
+			const products = s.value.products.map((p, i) =>
+				Product.parse({
+					...p,
+					nameFi: i ? 'Arla täysmaito 1 l' : 'Valio kevytmaito 1 l',
+					nameEn: i ? 'Arla whole milk' : 'Valio semi-skimmed milk',
+					category: '10400',
+					origin: i ? 'se' : 'fi'
+				})
+			);
+			const d = {
+				...deps,
+				handlers: {
+					...deps.handlers,
+					search_products: async () => ok({ products })
+				} as ToolHandlers
+			};
+			const first = await chatTurn({ text: 'Where is the milk from?' }, d);
+			const ask = first.find((e) => e.type === 'clarify');
+			expect(ask).toMatchObject({ field: 'product', question: 'Which one?' });
+			if (ask?.type !== 'clarify') return;
+			const next = await chatTurn({ answer: { field: 'product', value: ask.options[1].value } }, d);
+			expect(next.at(-1)).toMatchObject({
+				type: 'done',
+				text: "Arla whole milk comes from Sweden, according to Valio's catalogue."
+			});
+			expect(w.ops).toHaveLength(0);
+			expect(await w.env.ports.tasks!.list(w.env.workspaceId)).toEqual([]);
 		}
 	);
 });

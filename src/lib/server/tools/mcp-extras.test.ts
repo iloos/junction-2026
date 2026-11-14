@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { ok } from '$lib/core/contracts';
 import type { ToolHandlers } from '$lib/core/ports';
+import { dueOf } from '$lib/core/mandate/due';
+import { createGetContext } from '../agent/get-context';
+import { trialWorkspace } from '../agent/trial-harness';
+import { FIDELITY_NOW } from '../evals/fidelity';
 import { createMcpEndpoint } from './mcp';
+import { localTime, openDecisions } from './mcp-extras';
 import { stubHandlers } from './stub-handlers';
 
 const context = {
@@ -102,4 +107,42 @@ describe('MCP resources and prompts', () => {
 		expect(body).toContain('deliveryDays');
 		expect(body).toContain('Never try to approve');
 	});
+});
+
+describe('decisions://open on a real plan', () => {
+	it(
+		'gives each plan its own due time from dueOf, in Helsinki words and ISO, never the scenario cut-off',
+		{ timeout: 120_000 },
+		async () => {
+			const w = await trialWorkspace();
+			w.env.ports.clock = { now: () => FIDELITY_NOW };
+			const handlers = {
+				...w.handlers,
+				get_context: createGetContext(w.env.ports)
+			} as ToolHandlers;
+			const ctx = w.ctx('external_agent');
+			const planned = await w.handlers.plan_event(ctx, {
+				kitchenId: 'k-hotel',
+				eventId: 'event-xmas-140'
+			});
+			if (!planned.ok) throw new Error(planned.error.message);
+			const body = await openDecisions(ctx, handlers);
+			const got = await handlers.get_plan(ctx, { planId: planned.value.plan.id });
+			if (!got.ok) throw new Error(got.error.message);
+			const v = got.value;
+			const due = dueOf(
+				v.plan,
+				v.approval ? { lineIds: v.approval.lineIds, expiresAt: v.approval.expiresAt ?? '' } : null,
+				undefined,
+				FIDELITY_NOW
+			);
+			expect(body).not.toContain('Order cut-off');
+			// A planned event has open lines with Valio cut-offs, so something is due.
+			expect(due).toBeTruthy();
+			if (!due) return;
+			expect(body).toContain(`(${due})`);
+			expect(body).toContain(`Due ${localTime(due)}`);
+			expect(localTime(due)).toMatch(/^\w{3} \d{1,2} \w{3} \d{2}:\d{2} Helsinki$/);
+		}
+	);
 });
