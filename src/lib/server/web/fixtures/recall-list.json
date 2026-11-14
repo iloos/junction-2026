@@ -1,0 +1,87 @@
+{
+	"_source": "Context.dev POST /web/scrape formats.json, recorded 2026-11-14 (spike)",
+	"url": "https://www.ruokavirasto.fi/elintarvikkeet/ohjeita-kuluttajille/takaisinvedot/",
+	"fetchedAt": "2026-11-14T01:05:00.000Z",
+	"recalls": [
+		{
+			"date": "2026-11-11",
+			"title": "Muovisessa ensilusikassa kontaktimateriaalivirhe",
+			"url": "https://www.ruokavirasto.fi/elintarvikkeet/ohjeita-kuluttajille/takaisinvedot-2023-/muovisessa-ensilusikassa-kontaktimateriaalivirhe/"
+		},
+		{
+			"date": "2026-10-27",
+			"title": "Pakastetussa chilissä kadmiumylitys",
+			"url": "https://www.ruokavirasto.fi/elintarvikkeet/ohjeita-kuluttajille/takaisinvedot-2023-/pakastetussa-chilissa-kadmiumylitys/"
+		},
+		{
+			"date": "2026-10-26",
+			"title": "Proteiinivanukkaissa mahdollisesti lasinsiruja",
+			"url": "https://www.ruokavirasto.fi/elintarvikkeet/ohjeita-kuluttajille/takaisinvedot-2023-/proteiinivanukkaissa-mahdollisesti-lasinsiruja/"
+		},
+		{
+			"date": "2026-10-09",
+			"title": "Kananmunien takaisinveto",
+			"url": "https://www.ruokavirasto.fi/elintarvikkeet/ohjeita-kuluttajille/takaisinvedot-2023-/kananmunien-takaisinveto2/"
+		},
+		{
+			"date": "2026-10-06",
+			"title": "Täytetyn patongin ainesosaluettelo virheellinen, allergeenivaara",
+			"url": "https://www.ruokavirasto.fi/elintarvikkeet/ohjeita-kuluttajille/takaisinvedot-2023-/taytetyn-patongin-ainesosaluettelo-virheellinen-allergeenivaara/"
+		},
+		{
+			"date": "2026-10-01",
+			"title": "Proteiiniriisipuurossa mahdollisesti gluteenijäämiä",
+			"url": "https://www.ruokavirasto.fi/elintarvikkeet/ohjeita-kuluttajille/takaisinvedot-2023-/proteiiniriisipuurossa-mahdollisesti-gluteenijaamia/"
+		},
+		{
+			"date": "2026-09-25",
+			"title": "B3-vitamiinivalmisteissa liikaa nikotiinihappoa tai inositoliheksanikotinaattia",
+			"url": "https://www.ruokavirasto.fi/elintarvikkeet/ohjeita-kuluttajille/takaisinvedot-2023-/b3-vitamiinivalmisteissa-liikaa-nikotiinihappoa-tai-inositoliheksanikotinaattia/"
+		},
+		{
+			"date": "2026-09-17",
+			"title": "Jäähilejuomissa liikaa glyserolia (E 422)",
+			"url": "https://www.ruokavirasto.fi/elintarvikkeet/ohjeita-kuluttajille/takaisinvedot-2023-/jaahilejuomissa-liikaa-glyserolia-e-422/"
+		},
+		{
+			"date": "2026-09-04",
+			"title": "Hasselpähkinälevitteen pakkauksessa vääränkieliset merkinnät",
+			"url": "https://www.ruokavirasto.fi/elintarvikkeet/ohjeita-kuluttajille/takaisinvedot-2023-/hasselpahkinalevitteen-pakkauksessa-vaarankieliset-merkinnat/"
+		},
+		{
+			"date": "2026-08-28",
+			"title": "Vegaaninen raaste saattaa sisältää maitoa",
+			"url": "https://www.ruokavirasto.fi/elintarvikkeet/ohjeita-kuluttajille/takaisinvedot-2023-/vegaaninen-raaste-saattaa-sisaltaa-maitoa/"
+		},
+		{
+			"date": "2026-08-19",
+			"title": "Kananmunien takaisinveto",
+			"url": "https://www.ruokavirasto.fi/elintarvikkeet/ohjeita-kuluttajille/takaisinvedot-2023-/kananmunien-takaisinveto/"
+		},
+		{
+			"date": "2026-08-05",
+			"title": "Rucolassa torjunta-ainejäämiä",
+			"url": "https://www.ruokavirasto.fi/elintarvikkeet/ohjeita-kuluttajille/takaisinvedot-2023-/rucolassa-torjunta-ainejaamia/"
+		},
+		{
+			"date": "2026-08-03",
+			"title": "Riisipuurossa mahdollisesti allergeenivaara",
+			"url": "https://www.ruokavirasto.fi/elintarvikkeet/ohjeita-kuluttajille/takaisinvedot-2023-/riisipuurossa-mahdollisesti-allergeenivaara/"
+		},
+		{
+			"date": "2026-06-30",
+			"title": "Mikroruoka-keitossa säilyvyysongelma",
+			"url": "https://www.ruokavirasto.fi/elintarvikkeet/ohjeita-kuluttajille/takaisinvedot-2023-/mikroruoka-keitossa-sailyvyysongelma/"
+		},
+		{
+			"date": "2026-06-26",
+			"title": "Kebabissa todettu sianlihaa",
+			"url": "https://www.ruokavirasto.fi/elintarvikkeet/ohjeita-kuluttajille/takaisinvedot-2023-/kebabissa-todettu-sianlihaa/"
+		},
+		{
+			"date": "2026-06-25",
+			"title": "Valurautapannusta saattaa irrota ruokaan metalleja",
+			"url": "https://www.ruokavirasto.fi/elintarvikkeet/ohjeita-kuluttajille/takaisinvedot-2023-/valurautapannusta-saattaa-irrota-ruokaan-metalleja/"
+		}
+	]
+}
