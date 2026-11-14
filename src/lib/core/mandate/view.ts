@@ -27,14 +27,14 @@ const DETAIL: Partial<Record<string, Detail>> = {
 /** Facts that are missing or not true now: held, never approvable (validator effect `gap`). */
 const GAPS = new Set<LineReason>(['price_missing', 'INSUFFICIENT_STOCK', 'qty_implausible']);
 /** Rule-outs a different product fixes (find a substitute) rather than a rule change. */
-const SUPPLY = new Set<string>([
-	'out',
-	'undeliverable',
-	'blocked',
-	'BELOW_LOT',
-	'NOT_FOUND',
-	'cutoff_passed'
-]);
+const SUPPLY = new Set<string>(['out', 'undeliverable', 'blocked', 'BELOW_LOT', 'NOT_FOUND']);
+/** Reasons that close a line whatever the date: with one of these, a passed cut-off is not the fix. */
+const CLOSED_ANYWAY = new Set<string>(['out', 'undeliverable', 'blocked', 'recall', 'NOT_FOUND']);
+
+/** A line closed only by its passed cut-off: the next step is a later delivery date, not another product. */
+export function lateOnly(reasons: readonly string[]): boolean {
+	return reasons.includes('cutoff_passed') && !reasons.some((r) => CLOSED_ANYWAY.has(r));
+}
 
 function measure(l: Line, value: number): Measure {
 	return { value, unit: l.qty.unit === 'KG' ? 'kg' : 'pcs' };
@@ -79,7 +79,13 @@ export function lineView(
 			committable: false,
 			...none,
 			blockedReason: { code, effect: 'forbid', detail: DETAIL[code] },
-			nextAction: replaced ? 'none' : SUPPLY.has(code) ? 'find_substitute' : 'resolve_rule'
+			nextAction: replaced
+				? 'none'
+				: lateOnly(l.reasons)
+					? 'change_date'
+					: SUPPLY.has(code)
+						? 'find_substitute'
+						: 'resolve_rule'
 		};
 	}
 	const gap = l.reasons.find((r) => GAPS.has(r));

@@ -7,13 +7,14 @@
  *   resolve_rule     a fact gap or a rule a human must settle (price missing, unit, qty implausible)
  *   resolve_need     a need with no line that can cover it (an unresolved menu ingredient, an uncovered amount)
  *   approve          held lines waiting for a person
- *   commit           lines that may be ordered now
+ *   commit           lines that may be ordered now, held lines a person approved included
  *   wait_for_supplier committed lines the supplier has not confirmed
  *   done
  * `deadline` is the earliest cut-off among lines still to approve or commit: the time the text says to act before.
  */
 import type { Line, Plan } from '../contracts';
 import { earliestDelivery, LEAD_DAYS, SCENARIO } from '../scenario';
+import { lateOnly } from './view';
 
 export type NextActionKind =
 	| 'change_date'
@@ -36,9 +37,6 @@ export interface NextAction {
 	/** Plain words with counts, e.g. "2 lines need an approval before Tue 15:00". */
 	text: string;
 }
-
-/** Reasons that close a line whatever the date: a later delivery would not reopen it. */
-const CLOSED_ANYWAY = new Set(['out', 'undeliverable', 'blocked', 'recall', 'NOT_FOUND']);
 
 const tz = { timeZone: SCENARIO.timeZone } as const;
 /** "Wed 9 Dec" for a calendar date. */
@@ -65,9 +63,9 @@ const codes = (l: Line) => [
 	...(l.view?.blockedReason ? [l.view.blockedReason.code] : [])
 ];
 
+/** Closed only by a passed cut-off: the line view says so, or its reasons do (asOf closes eligible lines too). */
 function closedByCutoff(l: Line): boolean {
-	const c = codes(l);
-	return c.includes('cutoff_passed') && !c.some((r) => CLOSED_ANYWAY.has(r));
+	return l.view?.nextAction === 'change_date' || lateOnly(codes(l));
 }
 
 export function nextActionFor(plan: Plan, now: Date): NextAction {

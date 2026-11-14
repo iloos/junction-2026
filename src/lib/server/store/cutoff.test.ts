@@ -66,7 +66,7 @@ describe('cut-off at commit', () => {
 			expect(shown).toMatchObject({
 				committable: false,
 				blockedReason: { code: 'cutoff_passed' },
-				nextAction: 'find_substitute'
+				nextAction: 'change_date'
 			});
 			const r = await commit(plan.id, plan.version, `c-${when}`);
 			expect(r.ok ? null : r.error).toMatchObject({

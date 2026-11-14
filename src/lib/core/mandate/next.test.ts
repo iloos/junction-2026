@@ -83,6 +83,24 @@ describe('nextActionFor', () => {
 		expect(a.text).toContain('(Tue 15:00)');
 	});
 
+	it('an eligible line the clock closed (view only, no reason) asks for a later date', () => {
+		const closed = line('a', {
+			view: {
+				reviewable: false,
+				committable: false,
+				nextAction: 'change_date',
+				blockedReason: { code: 'cutoff_passed', effect: 'forbid' }
+			} as View
+		});
+		expect(nextActionFor(plan([closed]), WED_0900).action).toBe('change_date');
+	});
+
+	it('a held line a person approved is ready to commit, not waiting for a chef', () => {
+		const approved = line('a', { state: 'held', tier: 'review', next: 'commit' });
+		const a = nextActionFor(plan([approved]), MON_2140);
+		expect(a).toMatchObject({ action: 'commit', lineIds: ['a'] });
+	});
+
 	it('a line that is out stays a substitute case even past its cut-off', () => {
 		const out = line('a', { next: 'find_substitute', reasons: ['out', 'cutoff_passed'] });
 		expect(nextActionFor(plan([out]), WED_0900).action).toBe('find_substitute');

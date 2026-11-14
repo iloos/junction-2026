@@ -180,6 +180,8 @@ export const LineView = z.object({
 		'approve',
 		'commit',
 		'find_substitute',
+		/** Closed only because its cut-off passed: a later delivery date reopens it, a substitute would not. */
+		'change_date',
 		'wait_for_supplier',
 		'requote',
 		'resolve_rule'

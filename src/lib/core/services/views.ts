@@ -110,7 +110,7 @@ export function factsFor(
 }
 
 /**
- * F29: `committable` holds only as of now on the scenario clock. A line whose cut-off has passed is closed; a held
+ * F29: `committable` holds only as of now on the scenario clock. A line whose cut-off has passed is closed until a later date is chosen; a held
  * line whose only grants have expired needs approving again.
  */
 function asOf(
@@ -128,7 +128,7 @@ function asOf(
 			reviewable: false,
 			committable: false,
 			blockedReason: { code: 'cutoff_passed', effect: 'forbid' },
-			nextAction: 'find_substitute'
+			nextAction: 'change_date'
 		};
 	if (view.committable && !(l.state === 'eligible' && l.tier === 'act')) {
 		const grants = approvals.filter(
