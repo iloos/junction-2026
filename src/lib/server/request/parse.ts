@@ -15,6 +15,8 @@ import {
 	PRODUCTS,
 	UNITS,
 	UNKNOWN_UNITS,
+	brandIn,
+	esc,
 	type ConstraintKey,
 	type ProductWord,
 	type ReqUnit
@@ -43,6 +45,8 @@ export interface ParsedItem {
 	ambiguities: string[];
 	/** An explicit unit the request can't order in ("oz"): the amount is asked again, never guessed. */
 	unitToken?: string;
+	/** A brand the words named ("Arla"): required at lookup. */
+	brand?: string;
 }
 
 export interface ParsedRequest {
@@ -248,6 +252,9 @@ export function parseItem(chunk: string, finnish: boolean): Omit<ParsedItem, 'id
 		covers = cv[0].trim();
 		s = s.replace(cv[0], ' ');
 	}
+	// A named brand is kept on the item (and required at lookup), never left as a stray word.
+	const brand = brandIn(s);
+	if (brand) s = s.replace(new RegExp(esc(brand.toLowerCase()), 'u'), ' ');
 	const mp = s.match(MULTIPACK);
 	if (mp) {
 		const u = unitOf(mp[3]);
@@ -378,11 +385,13 @@ export function parseItem(chunk: string, finnish: boolean): Omit<ParsedItem, 'id
 		.filter(Boolean)
 		.join(' ');
 
+	const search = buildSearch(product ? product.search : leftovers.join(' '), constraints, variant);
 	return {
 		text: chunk.trim(),
-		query,
+		query: brand ? `${brand} ${query}` : query,
 		product: product?.key ?? null,
-		search: buildSearch(product ? product.search : leftovers.join(' '), constraints, variant),
+		search: brand && search.length ? [`${brand.toLowerCase()} ${search[0]}`, ...search] : search,
+		...(brand ? { brand } : {}),
 		qty,
 		unit,
 		constraints,
@@ -588,6 +597,20 @@ function reconcile(
 				...r.ambiguities.filter((a) => a.includes(r.unitToken!))
 			]
 		};
+	if (r?.brand && !m.brand)
+		m = {
+			...m,
+			brand: r.brand,
+			query: m.query.toLowerCase().includes(r.brand.toLowerCase())
+				? m.query
+				: `${r.brand} ${m.query}`,
+			search: [`${r.brand.toLowerCase()} ${m.search[0] ?? ''}`.trim(), ...m.search],
+			ambiguities: [
+				...m.ambiguities,
+				`the model dropped the brand ${r.brand}: kept from your words`
+			]
+		};
+	if (r?.variant && !m.variant) m = { ...m, variant: r.variant };
 	const typed = r?.constraints ?? constraintsIn(m.query);
 	const dropped = typed.filter((c) => !m.constraints.includes(c));
 	if (!dropped.length) return r ? { ...m, id: r.id } : m;

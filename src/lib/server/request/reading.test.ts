@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { filterHits } from './lookup';
 import { parseRules } from './parse';
 import { readingOf, reviewReading, statedAmounts } from './reading';
 
@@ -67,5 +68,59 @@ describe("checkpoint 'request.reading': the reading against the words", () => {
 	it('a date or a cover count is not an amount; "50 on Friday" is no unit', async () => {
 		expect((await judge('200 kg potatoes Friday')).kind).toBe('pass');
 		expect(statedAmounts('dinner for 50 on Friday')).toEqual([]);
+	});
+});
+
+describe('brand and variant: "10 l Arla whole milk" is not just "milk"', () => {
+	it('the rules keep Arla and whole, and the reading passes', async () => {
+		const [i] = parseRules('10 l Arla whole milk', TODAY).items;
+		expect(i).toMatchObject({ qty: 10, unit: 'l', product: 'milk', brand: 'Arla' });
+		expect(i.variant?.token).toBe('täysmaito');
+		expect(i.search[0]).toMatch(/^arla /);
+		expect((await judge('10 l Arla whole milk')).kind).toBe('pass');
+	});
+	it('a reading that dropped the brand or the variant blocks', async () => {
+		const base = {
+			id: 'milk',
+			query: 'milk',
+			qty: 10,
+			unit: 'l',
+			product: 'milk',
+			requirements: []
+		};
+		const noBrand = await reviewReading('10 l Arla whole milk', {
+			items: [{ ...base, variant: 'täysmaito' }]
+		});
+		expect(noBrand.kind === 'block' && noBrand.reason).toMatch(/names Arla, but no item keeps it/);
+		const noVariant = await reviewReading('10 l Arla whole milk', {
+			items: [{ ...base, brand: 'Arla', variant: null }]
+		});
+		expect(noVariant.kind === 'block' && noVariant.reason).toMatch(/says "whole milk"/);
+	});
+	it('the lookup requires the brand', () => {
+		// No amount: the filter alone, no pack sizing.
+		const [item] = parseRules('Arla whole milk', TODAY).items;
+		const { ranked, rejected } = filterHits(item, [
+			{
+				productId: '1',
+				nameFi: 'Valio täysmaito 1 l',
+				brand: 'Valio',
+				category: '10400',
+				diet: [],
+				freeFrom: [],
+				labels: []
+			} as never,
+			{
+				productId: '2',
+				nameFi: 'Arla täysmaito 1 l',
+				brand: 'Arla',
+				category: '10400',
+				diet: [],
+				freeFrom: [],
+				labels: []
+			} as never
+		]);
+		expect(ranked.map((r) => r.product.productId)).toEqual(['2']);
+		expect(rejected[0].reason).toBe('brand Valio, you asked for Arla');
 	});
 });

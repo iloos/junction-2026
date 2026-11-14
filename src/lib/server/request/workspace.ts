@@ -2,7 +2,7 @@
 import type { ReqUnit } from './lexicon';
 import type { ParsedItem } from './parse';
 import { buildSearch, slug } from './parse';
-import { CONSTRAINTS, type ConstraintKey } from './lexicon';
+import { BRANDS, CONSTRAINTS, type ConstraintKey } from './lexicon';
 
 /** The chef's inline answer to a question, by item id: a quantity, a product, or both. */
 export interface RequestAnswer {
@@ -83,7 +83,12 @@ export function readItems(raw: unknown): ParsedItem[] | undefined {
 				? buildSearch(String(r.search.at(-1)).slice(0, 60), constraints)
 				: buildSearch(query, constraints);
 		const id = typeof r.id === 'string' && /^[\p{L}\d._~-]{1,80}$/u.test(r.id) ? r.id : slug(query);
+		const brand =
+			typeof r.brand === 'string'
+				? BRANDS.find((b) => b.toLowerCase() === (r.brand as string).toLowerCase())
+				: undefined;
 		out.push({
+			...(brand ? { brand } : {}),
 			id,
 			text: query,
 			query,

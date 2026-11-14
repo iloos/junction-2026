@@ -101,6 +101,10 @@ export function filterHits(
 			reject(near ? `"${near}", not ${lex.search}` : `name does not say ${lex.search}`);
 			continue;
 		}
+		if (item.brand && !(p.brand ?? '').toLowerCase().startsWith(item.brand.toLowerCase())) {
+			reject(`${p.brand ? `brand ${p.brand}` : 'no brand stated'}, you asked for ${item.brand}`);
+			continue;
+		}
 		const fail = constraintFails(item, p);
 		if (fail) {
 			reject(fail);

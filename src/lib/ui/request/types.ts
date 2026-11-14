@@ -26,6 +26,8 @@ export interface ParsedItemView {
 	ambiguities: string[];
 	/** An explicit unit the request can't order in ("oz"). */
 	unitToken?: string;
+	/** A brand the words named, required at lookup. */
+	brand?: string;
 }
 
 /** How a question can be answered inline. */
