@@ -302,7 +302,13 @@ export async function runRequest(text: string, d: RequestDeps): Promise<RequestR
 	const picks = lookup.items.filter((i) => i.pick);
 	emit({
 		step: 'lookup',
-		status: picks.length === 0 ? 'blocked' : picks.length < lookup.items.length ? 'warn' : 'done',
+		status:
+			picks.length === 0
+				? 'blocked'
+				: picks.length < lookup.items.length ||
+					  picks.some((i) => i.pick?.conversion?.ok && i.pick.conversion.warnings.length)
+					? 'warn'
+					: 'done',
 		ms: ms(),
 		data: lookup
 	});

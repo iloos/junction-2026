@@ -10,6 +10,7 @@
 		Check,
 		Repeat
 	} from '@lucide/svelte';
+	import { onMount } from 'svelte';
 	import type { Plan } from '$lib/core/contracts';
 	import HoldButton from '$lib/ui/HoldButton.svelte';
 	import SourceTag from '$lib/ui/SourceTag.svelte';
@@ -52,6 +53,9 @@
 	const newNonce = () => (crypto.randomUUID?.() ?? String(Math.random())).slice(0, 12);
 	let nonce = $state(newNonce());
 	let busy = $state(false);
+	/** Until hydration the form would submit natively and lose the text. */
+	let ready = $state(false);
+	onMount(() => (ready = true));
 	let error = $state<string | null>(null);
 
 	let status = $state<Record<'request' | 'lookup' | 'order' | 'approval', Status>>({
@@ -327,11 +331,13 @@
 				}
 			}}></textarea>
 		<div class="flex items-center justify-between gap-2 px-1 pt-1">
-			<span class="px-1.5 text-[12px] text-ink-3">English or Finnish. Quantity, product, day.</span>
+			<span class="hidden px-1.5 text-[12px] text-ink-3 sm:inline"
+				>English or Finnish. Quantity, product, day.</span
+			>
 			<button
 				type="submit"
-				disabled={busy}
-				class="inline-flex h-10 items-center gap-1.5 rounded-lg bg-accent px-4 text-[14px] font-medium text-sheet hover:bg-accent-ink disabled:opacity-50"
+				disabled={busy || !ready}
+				class="ml-auto inline-flex h-10 items-center gap-1.5 rounded-lg bg-accent px-4 text-[14px] font-medium whitespace-nowrap text-sheet hover:bg-accent-ink disabled:opacity-50"
 			>
 				Find and price <ArrowRight size={16} aria-hidden="true" />
 			</button>
@@ -343,7 +349,7 @@
 		{#each EXAMPLES as ex (ex)}
 			<button
 				type="button"
-				disabled={busy}
+				disabled={busy || !ready}
 				onclick={() => submit(ex)}
 				class="h-8 rounded-full border border-rule-strong bg-sheet px-3 text-[13px] text-ink-2 hover:border-accent/50 hover:text-accent-ink disabled:opacity-50"
 				>{ex}</button
