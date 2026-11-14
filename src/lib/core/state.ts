@@ -254,6 +254,37 @@ export function applyOps(state: WorkspaceState, ops: OpEnvelope[]): Result<Works
 			}
 			case 'RecordAnomaly': {
 				s = { ...s, anomalies: { ...s.anomalies, [op.anomaly.id]: op.anomaly } };
+				const pid = op.anomaly.productId;
+				if (op.anomaly.kind === 'recall' && pid) {
+					// Every uncommitted line of the recalled product is held for sign-off and its approval voided.
+					const plans = { ...s.plans };
+					let approvals = s.approvals;
+					for (const plan of Object.values(s.plans)) {
+						const hit = plan.lines.some(
+							(l) => l.productId === pid && l.state !== 'committed' && l.state !== 'unorderable'
+						);
+						if (!hit) continue;
+						plans[plan.id] = {
+							...plan,
+							version: plan.version + 1,
+							state: 'held',
+							lines: plan.lines.map((l) =>
+								l.productId === pid && l.state !== 'committed' && l.state !== 'unorderable'
+									? {
+											...l,
+											state: 'held' as const,
+											tier: 'sign_off' as const,
+											reasons: l.reasons.includes('recall')
+												? l.reasons
+												: [...l.reasons, 'recall' as const]
+										}
+									: l
+							)
+						};
+						approvals = invalidateApprovals({ ...s, approvals }, plan.id);
+					}
+					s = { ...s, plans, approvals };
+				}
 				break;
 			}
 			case 'RecordEnrichment': {

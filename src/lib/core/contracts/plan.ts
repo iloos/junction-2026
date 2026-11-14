@@ -33,6 +33,8 @@ export const PolicyReason = z.enum([
 	'unit_mismatch',
 	/** No price: a fact gap, never approvable or committable. */
 	'price_missing',
+	/** A recall notice names this product: held for a human, find a substitute. */
+	'recall',
 	'low_reliability',
 	'external_agent_needs_approval',
 	'cutoff_passed'

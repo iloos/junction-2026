@@ -15,6 +15,8 @@ export interface RankInput {
 	offers: Map<string, Offer>;
 	/** Recipe-fit 0–4 from Decide, when it answered. */
 	fit?: Map<string, { score: number; source: string; model?: string; latencyMs?: number }>;
+	/** Products under a recall notice: never recommended. */
+	recalled?: Set<string>;
 	/** Weight of the fit term relative to the criteria (D6 w_fit). */
 	fitWeight?: number;
 }
@@ -69,7 +71,10 @@ export function rankCandidates(input: RankInput): Ranked[] {
 		c,
 		p: products.get(c.productId),
 		o: offers.get(c.productId),
-		reasons: exclusions(kitchen, products.get(c.productId), offers.get(c.productId), c.qty)
+		reasons: [
+			...exclusions(kitchen, products.get(c.productId), offers.get(c.productId), c.qty),
+			...(input.recalled?.has(c.productId) ? (['recall'] as LineReason[]) : [])
+		]
 	}));
 	const valid = checked.filter((x) => x.reasons.length === 0);
 	const prices = valid
