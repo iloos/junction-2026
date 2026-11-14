@@ -83,7 +83,7 @@ describe('golden event briefs', () => {
 			results.push({
 				key: 'event',
 				pass: Boolean(d),
-				detail: d ? 'classified as an event' : r.message
+				detail: d ? 'classified as an event' : (r.message ?? 'not an event')
 			});
 			if (d) {
 				results.push({
@@ -119,7 +119,7 @@ describe('golden event briefs', () => {
 			if (!plan) p.push('no plan');
 			else {
 				if (plan.state !== 'held') p.push(`state ${plan.state}`);
-				const dishes = new Set(plan.needs.map((n) => n.dish?.name ?? n.label)).size;
+				const dishes = new Set(plan.needs.map((n) => n.label)).size;
 				if (dishes < b.expect.plan.dishesAtLeast)
 					p.push(`${dishes} dishes < ${b.expect.plan.dishesAtLeast}`);
 				const text = JSON.stringify(plan);
