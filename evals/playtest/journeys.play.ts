@@ -65,7 +65,8 @@ async function say(r: Recorder, page: Page, text: string) {
 		.catch(() => undefined);
 	await page.waitForTimeout(1500);
 	const after = await dock.innerText();
-	const reply = after.startsWith(before) ? after.slice(before.length) : after;
+	const at = after.lastIndexOf(text);
+	const reply = at >= 0 ? after.slice(at + text.length) : after.slice(before.length);
 	r.j.chat.push({ said: text, reply: reply.trim().slice(0, 4000) });
 }
 
@@ -74,7 +75,9 @@ async function requestPage(page: Page, text: string) {
 	await page.locator('#req').fill(text);
 	await page.getByRole('button', { name: /Find and price/ }).click();
 	await page
-		.getByText(/Prepared by the kitchen agent|Nothing was ordered|Event brief|nothing quoted|Menu/)
+		.getByText(
+			/Prepared by the kitchen agent|Nothing was ordered|Event brief|nothing quoted|Menu|needs you|How much/
+		)
 		.first()
 		.waitFor({ timeout: 90_000 });
 	await page.waitForTimeout(1500);
@@ -120,7 +123,7 @@ journey('m1', 'A shortage hits and every kitchen re-plans', async (r, page) => {
 	if (!(await r.step('plan the hotel event', () => planEvent(page)))) return;
 	await r.step('a shortage hits (scenario shortage, else contention)', async () => {
 		let res = await page.request.post(`${BASE}/kitchen-api/scenario`, {
-			data: { action: 'shortage' }
+			data: { action: 'shortage', value: {} }
 		});
 		r.note('shortageAction', res.status());
 		if (!res.ok()) {
@@ -130,6 +133,8 @@ journey('m1', 'A shortage hits and every kitchen re-plans', async (r, page) => {
 			r.note('contentionAction', res.status());
 		}
 		if (!res.ok()) throw new Error(`scenario ${res.status()} ${(await res.text()).slice(0, 200)}`);
+		const body = (await res.json().catch(() => ({}))) as { shortage?: unknown };
+		if (body.shortage) r.note('shortage', body.shortage);
 		await page.waitForTimeout(4000);
 	});
 	await r.step('the kitchen shows what changed', async () => {
@@ -148,16 +153,163 @@ journey('m1', 'A shortage hits and every kitchen re-plans', async (r, page) => {
 	});
 });
 
-journey('m2', 'Words become a costed plan, step by step', async (r, page) => {
-	await r.step('home', () => home(page));
-	await r.step('ask the agent for the dinner', () =>
-		say(r, page, 'a no-meat dinner for 120 with a peach dessert')
-	);
-	await r.step('plan it', () => say(r, page, 'plan it'));
-	await r.step('the same words on /request', () =>
-		requestPage(page, 'a no-meat dinner for 120 with a peach dessert')
-	);
-});
+type HeroLine = {
+	id: string;
+	productId?: string;
+	productName?: string;
+	state: string;
+	reasons?: string[];
+	lineCents?: number;
+	offer?: { price?: { unitCents?: number } };
+};
+const HERO = 'a no-meat dinner for 120 with a peach dessert';
+
+/**
+ * The hero journey (SESSIONS "The hero journey", user 23:40), refereed: words → menu → "plan it" → every ingredient a
+ * real product with a price or an honest label → every held line in exactly one decision → approve in the dock →
+ * ordered with a receipt → the order on Ops. Each acceptance clause is its own step, so RUN.md names the first broken
+ * clause. Runs after every deploy.
+ */
+journey(
+	'm2',
+	'HERO: words become a costed plan, approved in the dock, ordered, on Ops',
+	async (r, page) => {
+		let planId: string | null = null;
+		let lines: HeroLine[] = [];
+		await r.step('home', () => home(page));
+		await r.step('ask the agent for the dinner', () => say(r, page, HERO));
+		await r.step('answer what it asks, then "plan it"', async () => {
+			const dock = await openDock(page);
+			for (let i = 0; i < 3; i++) {
+				const chip = dock.getByRole('button', { name: /^(Sat|Saturday|Fri|Friday)\b/ }).last();
+				// Answered chips stay on screen, disabled: only an open question has an enabled one.
+				if (
+					!(await chip.isVisible().catch(() => false)) ||
+					!(await chip.isEnabled().catch(() => false))
+				)
+					break;
+				await chip.click({ timeout: 5_000 });
+				await page.waitForTimeout(1500);
+				await page
+					.getByText(/^Working( · step \d+)?…/)
+					.first()
+					.waitFor({ state: 'detached', timeout: 180_000 })
+					.catch(() => undefined);
+			}
+			await say(r, page, 'plan it');
+		});
+		await r.step('a plan exists (a plan link in the dock)', async () => {
+			const dock = await openDock(page);
+			const href = await dock
+				.locator('a[href*="plan="]')
+				.last()
+				.getAttribute('href', { timeout: 120_000 });
+			planId = href ? new URL(href, BASE).searchParams.get('plan') : null;
+			if (!planId) throw new Error('no plan link after "plan it"');
+			const snap = (await (
+				await page.request.get(`${BASE}/kitchen-api/snapshot?plan=${planId}&peek=1`)
+			).json()) as { plan?: { lines?: HeroLine[]; totalCents?: number } };
+			lines = snap.plan?.lines ?? [];
+			r.note('plan', {
+				planId,
+				totalCents: snap.plan?.totalCents,
+				lines: lines.map((l) => ({
+					product: l.productName,
+					state: l.state,
+					reasons: l.reasons,
+					unitCents: l.offer?.price?.unitCents ?? null
+				}))
+			});
+			if (!lines.length) throw new Error('the plan has no lines');
+		});
+		if (!planId) return;
+		await r.step(
+			'every ingredient: a real product with a price, or an honest label',
+			async () => {
+				const bad = lines.filter(
+					(l) =>
+						!['rejected', 'superseded'].includes(l.state) &&
+						!(l.productId && (l.offer?.price?.unitCents ?? 0) > 0) &&
+						!(l.reasons ?? []).length
+				);
+				if (bad.length)
+					throw new Error(
+						`${bad.length} lines with neither a price nor a reason: ${bad.map((l) => l.id.split('-need:')[1] ?? l.id).join(', ')}`
+					);
+			},
+			{ beat: false }
+		);
+		await r.step('every held line sits in exactly one decision (Kitchen)', async () => {
+			await page.goto(`${BASE}/?plan=${planId}`);
+			await page.waitForLoadState('networkidle').catch(() => {});
+			const held = lines.filter((l) => l.state === 'held').length;
+			let inDecisions = 0;
+			for (const b of await page
+				.getByRole('button', { name: /^(Review|Hold to sign off) \d+ lines?/ })
+				.all())
+				if (await b.isVisible().catch(() => false))
+					inDecisions += Number(((await b.innerText()).match(/(\d+) lines?/) ?? [])[1] ?? 0);
+			r.note('decisionCover', { held, inDecisions });
+			if (held !== inDecisions)
+				throw new Error(`${held} held lines, ${inDecisions} lines across the decisions`);
+		});
+		await r.step('approve in the dock', async () => {
+			const dock = await openDock(page);
+			const here = dock.getByLabel('Decide here');
+			await here.waitFor({ timeout: 60_000 });
+			for (let i = 0; i < 6; i++) {
+				const review = here.getByRole('button', { name: /^Review \d+ lines?/ }).first();
+				const hold = here.getByRole('button', { name: /Hold to sign off/ }).first();
+				if (await review.isVisible().catch(() => false)) {
+					await review.click();
+					await here.getByRole('button', { name: 'Confirm exact terms' }).click();
+				} else if (await hold.isVisible().catch(() => false)) {
+					const b = (await hold.boundingBox())!;
+					await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2);
+					await page.mouse.down();
+					await page.waitForTimeout(4000);
+					await page.mouse.up();
+				} else break;
+				await page.waitForTimeout(1500);
+			}
+		});
+		await r.step('ordered, with a receipt', async () => {
+			const dock = await openDock(page);
+			const order = dock.getByRole('button', { name: /^Order/ }).first();
+			await order.click({ timeout: 30_000 });
+			await dock
+				.getByText(/Ordered\s*·\s*\d+\s+lines?/)
+				.first()
+				.waitFor({ timeout: 60_000 });
+			const t = await dock.innerText();
+			const rc = t.match(/rc-[a-z0-9]+/);
+			if (rc) r.j.receipts.push(rc[0]);
+		});
+		await r.step('the order shows on Ops', async () => {
+			await page.goto(`${BASE}/ops`);
+			await page.waitForTimeout(4000);
+			const orders = page
+				.getByRole('tab', { name: /Orders/ })
+				.or(page.getByRole('link', { name: /^Orders/ }));
+			if (
+				await orders
+					.first()
+					.isVisible()
+					.catch(() => false)
+			)
+				await orders.first().click();
+			await page.waitForTimeout(2500);
+			const text = await page.locator('body').innerText();
+			const named = lines
+				.filter((l) => l.state !== 'unorderable' && l.productName)
+				.some((l) => text.includes(l.productName!.slice(0, 20)));
+			r.note('opsNamesAProduct', named);
+			if (!named) throw new Error("Ops names none of the plan's products");
+		});
+		await r.step('the same words on /request', () => requestPage(page, HERO));
+	},
+	420_000
+);
 
 journey('m3', 'An outside agent overreaches and is stopped', async (r, page) => {
 	let auth: Awaited<ReturnType<typeof judgeAuth>> | undefined;
@@ -182,7 +334,7 @@ journey('m3', 'An outside agent overreaches and is stopped', async (r, page) => 
 					kitchenId: 'k-hotel',
 					deliverBy: '2026-12-11',
 					idempotencyKey: `playtest-${Date.now()}`,
-					lines: [{ productId: '464201', qty: 60, unit: 'ST' }]
+					lines: [{ productId: '464201', qty: 600, unit: 'ST' }] // ≈ €936: over the €800 line cap
 				}
 			});
 			const body = (await res.json()) as { plan?: { id: string; state: string }; meta?: unknown };
@@ -398,8 +550,18 @@ journey('j9', 'Public site: landing, how, proof, story', async (r, page) => {
 // ---------- D23 / D24 (lead, 14 Nov 23:00) ----------
 
 type SnapLine = { productId: string; qty?: number; unit?: string; state: string };
+/** The plan a door just made: the last plan link on its page (dock card or /request result), else the session's plan. */
 async function basket(page: Page) {
-	const snap = (await (await page.request.get(`${BASE}/kitchen-api/snapshot`)).json()) as {
+	const href = await page
+		.locator('a[href*="plan="]')
+		.last()
+		.getAttribute('href', { timeout: 5_000 })
+		.catch(() => null);
+	const planId = href ? new URL(href, BASE).searchParams.get('plan') : null;
+	const url = planId
+		? `${BASE}/kitchen-api/snapshot?plan=${encodeURIComponent(planId)}&peek=1`
+		: `${BASE}/kitchen-api/snapshot`;
+	const snap = (await (await page.request.get(url)).json()) as {
 		plan?: { id?: string; lines?: SnapLine[] };
 	};
 	return {
@@ -425,9 +587,15 @@ journey(
 		const other = await page.context().browser()!.newContext({ viewport: page.viewportSize()! });
 		const p2 = await other.newPage();
 		try {
-			await r.step('/request: the same ask (fresh visitor)', () => requestPage(p2, SAME_ASK), {
-				beat: false
-			});
+			await r.step(
+				'/request: the same ask (fresh visitor)',
+				async () => {
+					await home(p2);
+					await requestPage(p2, SAME_ASK);
+					await p2.screenshot({ path: `${r.dir}/request-door-result.png`, fullPage: true });
+				},
+				{ beat: false }
+			);
 			await r.step('/request: the basket on the Kitchen', async () => {
 				r.note('requestBasket', await basket(p2));
 				await home(p2);
@@ -512,3 +680,196 @@ journey(
 	},
 	420_000
 );
+
+// ---------- D26: a visitor's workspace persists (S1 create_kitchen e2842bd/ff8c1a0) ----------
+
+journey(
+	'p1',
+	'Your own kitchen persists: new tab, start over, a paired phone, your agent key',
+	async (r, page) => {
+		const origin = { origin: BASE };
+		const name = `Playtest Persist ${Date.now().toString(36)}`;
+		let kitchenId = '';
+		let planId = '';
+		const has = async (p: Page, what: string) =>
+			(await p.locator('body').innerText()).includes(what);
+
+		await r.step('first look', () => home(page, r));
+		if (
+			!(await r.step(
+				'create my kitchen',
+				async () => {
+					const res = await page.request.post(`${BASE}/kitchen-api/kitchen`, {
+						headers: origin,
+						data: { name, city: 'Espoo', description: 'a small bistro, lunch for 40' }
+					});
+					const body = (await res.json().catch(() => ({}))) as { kitchen?: { kitchenId: string } };
+					r.note('create', { status: res.status(), body });
+					if (!body.kitchen?.kitchenId) throw new Error(`create_kitchen ${res.status()}`);
+					kitchenId = body.kitchen.kitchenId;
+					const j = await page.request.post(`${BASE}/kitchen-api/scenario`, {
+						headers: origin,
+						data: { action: 'join', value: kitchenId }
+					});
+					if (!j.ok()) throw new Error(`join ${j.status()}`);
+				},
+				{ beat: false }
+			))
+		)
+			return;
+		await r.step('a first basket in my kitchen', async () => {
+			const res = await page.request.post(`${BASE}/kitchen-api/tool/place_order`, {
+				headers: origin,
+				data: {
+					kitchenId,
+					deliverBy: '2026-12-11',
+					idempotencyKey: `persist-${kitchenId}`,
+					lines: [{ productId: '464201', qty: 10, unit: 'ST' }]
+				}
+			});
+			const body = (await res.json().catch(() => ({}))) as { plan?: { id: string } };
+			r.note('placeOrder', { status: res.status(), plan: body.plan?.id });
+			if (!body.plan?.id) throw new Error(`place_order ${res.status()}`);
+			planId = body.plan.id;
+			await page.goto(`${BASE}/?plan=${planId}`);
+			await page.waitForLoadState('networkidle').catch(() => {});
+		});
+		const state = await page.context().storageState();
+		const browser = page.context().browser()!;
+
+		const again = await browser.newContext({ storageState: state, viewport: page.viewportSize()! });
+		try {
+			const p = await again.newPage();
+			await r.step(
+				'the same browser later (new tab, same cookie): kitchen and basket still there',
+				async () => {
+					await p.goto(`${BASE}/`);
+					await p.waitForLoadState('networkidle').catch(() => {});
+					await p.screenshot({ path: `${r.dir}/later-tab.png`, fullPage: true });
+					const snap = await p.request.get(`${BASE}/kitchen-api/snapshot?plan=${planId}&peek=1`);
+					if (!snap.ok()) throw new Error(`basket gone: snapshot ${snap.status()}`);
+					if (!(await has(p, name))) throw new Error('kitchen not named on the Kitchen page');
+				},
+				{ beat: false }
+			);
+			await r.step(
+				'start over, then my kitchen is still mine',
+				async () => {
+					const reset = await p.request.post(`${BASE}/kitchen-api/scenario`, {
+						headers: origin,
+						data: { action: 'reset' }
+					});
+					r.note('reset', reset.status());
+					const j = await p.request.post(`${BASE}/kitchen-api/scenario`, {
+						headers: origin,
+						data: { action: 'join', value: kitchenId }
+					});
+					r.note('joinAfterReset', j.status());
+					if (!j.ok()) throw new Error(`join after reset ${j.status()}`);
+					await p.goto(`${BASE}/`);
+					await p.screenshot({ path: `${r.dir}/after-reset.png`, fullPage: true });
+					if (!(await has(p, name))) throw new Error('kitchen not named after start over');
+				},
+				{ beat: false }
+			);
+		} finally {
+			await again.close();
+		}
+
+		await r.step(
+			'pair a phone: it sees my kitchen',
+			async () => {
+				const res = await page.request.post(`${BASE}/pair/new`, { headers: origin });
+				const body = (await res.json().catch(() => ({}))) as { link?: string };
+				r.note('pair', { status: res.status() });
+				if (!body.link) throw new Error(`pair ${res.status()}`);
+				const phone = await browser.newContext({
+					viewport: { width: 390, height: 844 },
+					isMobile: true,
+					hasTouch: true
+				});
+				try {
+					const ph = await phone.newPage();
+					await ph.goto(body.link.replace(/^https?:\/\/[^/]+/, BASE));
+					await ph.waitForLoadState('networkidle').catch(() => {});
+					await ph.goto(`${BASE}/`);
+					await ph.waitForLoadState('networkidle').catch(() => {});
+					await ph.screenshot({ path: `${r.dir}/phone.png`, fullPage: true });
+					if (!(await has(ph, name))) throw new Error('the paired phone does not show my kitchen');
+				} finally {
+					await phone.close();
+				}
+			},
+			{ beat: false }
+		);
+
+		await r.step(
+			'my agent key: get_context lists my kitchen',
+			async () => {
+				const k = await page.request.get(`${BASE}/api/demo/judge-key`);
+				const key = ((await k.json().catch(() => ({}))) as { key?: string }).key;
+				if (!key) throw new Error(`judge key ${k.status()}`);
+				const ctx = await page.request.post(`${BASE}/api/tools/get_context`, {
+					headers: { authorization: `Bearer ${key}` },
+					data: {}
+				});
+				const text = await ctx.text();
+				r.note('getContextHasKitchen', text.includes(kitchenId));
+				if (!text.includes(kitchenId)) throw new Error('get_context does not list my kitchen');
+			},
+			{ beat: false }
+		);
+	},
+	300_000
+);
+
+// ---------- F1 (docs/review/INDEPENDENT-REPO-2026-11-14.md §1): the model must not rewrite the ask ----------
+
+journey('f1', 'The dock keeps the ask: "4 kg lactose-free butter tomorrow"', async (r, page) => {
+	const ASK = '4 kg lactose-free butter tomorrow';
+	await r.step('home', () => home(page));
+	await r.step('ask in the dock', () => say(r, page, ASK));
+	await r.step(
+		'the reply keeps 4 kg and lactose-free',
+		async () => {
+			const reply = r.j.chat.at(-1)?.reply ?? '';
+			if (/\b40\s*kg\b/i.test(reply)) throw new Error('the reply says 40 kg');
+			if (!/lactose|laktoosi/i.test(reply)) throw new Error('the reply drops lactose-free');
+		},
+		{ beat: false }
+	);
+	await r.step(
+		'the plan buys about 4 kg of lactose-free butter',
+		async () => {
+			const dock = await openDock(page);
+			const href = await dock
+				.locator('a[href*="plan="]')
+				.last()
+				.getAttribute('href', { timeout: 30_000 });
+			const planId = href ? new URL(href, BASE).searchParams.get('plan') : null;
+			if (!planId) throw new Error('no plan link: the ask did not reach a plan');
+			const snap = (await (
+				await page.request.get(`${BASE}/kitchen-api/snapshot?plan=${planId}&peek=1`)
+			).json()) as {
+				plan?: {
+					lines?: { productName?: string; qty?: { value: number; unit: string }; state: string }[];
+				};
+			};
+			const lines = (snap.plan?.lines ?? []).filter(
+				(l) => !['rejected', 'superseded'].includes(l.state)
+			);
+			r.note(
+				'lines',
+				lines.map((l) => `${l.productName} × ${l.qty?.value} ${l.qty?.unit} (${l.state})`)
+			);
+			const butter = lines.filter((l) => /voi|butter/i.test(l.productName ?? ''));
+			if (!butter.length) throw new Error('no butter line');
+			const notLf = butter.filter((l) => !/laktoositon|lactose/i.test(l.productName ?? ''));
+			if (notLf.length)
+				throw new Error(`not lactose-free: ${notLf.map((l) => l.productName).join(', ')}`);
+			const kg = butter.find((l) => l.qty?.unit === 'KG')?.qty?.value;
+			if (kg !== undefined && kg > 8) throw new Error(`${kg} kg planned for a 4 kg ask`);
+		},
+		{ beat: false }
+	);
+});

@@ -27,5 +27,6 @@ The only plan. Markers: `[x]` done · `[~]` in progress · `[ ]` todo · `[!]` b
   - [ ] Trim hallway quotes in `docs/research/mcpcon.md`
   - [ ] No Valio dataset files committed (only `fixtures/seeds/` samples); confirm redistribution of the samples
   - [ ] `.env.example` names only; no keys in docs, fixtures or tests
+  - [ ] A clean public clone runs the fixture path (independent review F11): a small licensed or synthetic public catalogue (offers, allergens, units, an outage, recipes) that `store/fixture-ports.ts` falls back to when `data/valio/` is absent, plus one clean-clone smoke (`pnpm build && node build` with `LLM_PROVIDER=fixture`, one journey); private-catalogue retrieval evals stay opt-in (S5 with S1)
 - [ ] Rehearse the 3:00 pitch ×5; QR card for the peer-review table (Sun 10:30)
 - [ ] Demo safety: phone hotspot; `pnpm build && node build` with `LLM_PROVIDER=fixture`; a recorded demo video on the laptop
