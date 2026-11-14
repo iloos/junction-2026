@@ -96,3 +96,12 @@
 - **Aiven:** project `junction26jq`; prod app `mandate` (https://widely-many-scorpion.eur-1.aiven.app); staging `mandate-staging` (branch `staging`); Postgres `pg-1dfeeeed`; rollback branch `rollback`.
 - **`.env` keys (names only; copy the file from the main checkout, never print it):** `DATABASE_URL` (blank for dev), `SMOKE_KEY`, `JUDGE_KEY_SECRET`, `VALIO_API_KEY`, `GEMINI_API_KEY`, `EXA_API_KEY`, `CONTEXT_DEV_API_KEY`, `LLM_PROVIDER`, `VISITOR_CAP`, `PUBLIC_ORIGIN` (set in the Aiven console: env updates replace the whole list).
 - **Scratch checks for this checkpoint:** `node scratch/live-tabs.mjs <url>` (cross-tab live order + reset follow), `node scratch/a9f-checks.mjs <url> <outdir>` (Start over, bill grid, calendar).
+
+## Report (ring 6, S4)
+- Sat 22:20 · deployed main 2a26437 (user OK), warm OK · ready yes
+- Sat 22:40 · R12-09: Ops loads stored traces; Engine room "Outside calls, last hour" with byMode/liveOk · 4b68af6 · merged wave A
+- Sat 23:10 · D24 Room view (join code via publicOrigin, stores sorted and folded, orders arriving, shortage per store; reads S1's 'notice' events) · 76fe47f · merged wave B
+- Sat 23:40 · deployed 8844465 (wave A) and 0eaa1b2 (wave B), warm OK; the user allows deploys on the lead's "gate green" from now on
+- Sun 00:00 · Ops follows a reset in another tab (Orders/Demand keyed on run); S5 P1 KPI vs cards (withApprovals) · ready yes
+- Sun 00:30 · D27 stock model in src/lib/core/stock (10 tests, 10x) + Forecast tab; Flow tab (sankey, no new dep); op/seq numbers System-only · fb9080a · ready yes
+- Sun 00:45 · wave C deploy e88ff05: Aiven registry push failed ("authentication required"), retried · needs: plan bump only with the user's OK (load: ~1.1 s per concurrent planner on 1 vCPU; code is the lever)
