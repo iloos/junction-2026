@@ -11,6 +11,7 @@
 	import {
 		STAGE_WORDS,
 		budgetSentence,
+		cannotOrderSentence,
 		budgetShares,
 		dayAction,
 		dayHeadline,
@@ -145,6 +146,11 @@
 			</div>
 		</div>
 
+		{#if basket?.truncated}
+			<p class="text-meta text-ink-3">
+				This sandbox has a long history; older plans may be missing here.
+			</p>
+		{/if}
 		{#if failed}
 			<p class="rounded-md border border-rule p-3 text-body text-ink-2" role="alert">
 				The basket didn't load. The plan on its own still works from its tab.
@@ -199,11 +205,8 @@
 								<span class="text-meta text-ink-2">{budgetSentence(d)}</span>
 							</div>
 						{/if}
-						{#if d.counts.cannotOrder}
-							<p class="text-meta text-ink-3">
-								{d.counts.cannotOrder} line{d.counts.cannotOrder === 1 ? '' : 's'} can't be ordered for
-								this day (left out).
-							</p>
+						{#if cannotOrderSentence(d)}
+							<p class="text-meta text-ink-3">{cannotOrderSentence(d)}</p>
 						{/if}
 					</header>
 

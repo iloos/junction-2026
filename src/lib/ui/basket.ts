@@ -3,7 +3,7 @@
  * event plan, the usual order, chat, an outside agent), and what each line waits on. Pure; the Basket comes from
  * /kitchen-api/basket (9c's basketFor). The types mirror 9c's contract until core/services/basket.ts lands.
  */
-import { day as dayLabel, money, storyTime } from './format';
+import { day as dayLabel, money, readableName, storyTime } from './format';
 import { salesUnitWords } from './request/words';
 
 export type BasketStage = 'proposed' | 'held' | 'approved' | 'ordered';
@@ -56,6 +56,8 @@ export interface BasketDay {
 export interface Basket {
 	kitchenId: string;
 	days: BasketDay[];
+	/** The run was too long to read whole; the basket may miss older plans. */
+	truncated?: boolean;
 }
 
 /** The order a chef reads stages in: what needs them first, what is done last. */
@@ -79,14 +81,26 @@ const KIND_WORDS: Record<SourceKind, string> = {
 
 const WEEKDAY = new Intl.DateTimeFormat('en-GB', { weekday: 'long', timeZone: 'UTC' });
 
-/** The chip a line's source shows: short words a chef recognises ("Christmas buffet", "Usual Thursday"). */
+/**
+ * The chip a line's source shows: the specific words a chef recognises ("Christmas dinner buffet", "Usual
+ * Thursday"), else the server's generic label ("From chat").
+ */
 export function sourceChip(s: BasketSource, date?: string): string {
-	if (s.label) return s.label;
 	if (s.kind === 'usual' && date) return `Usual ${WEEKDAY.format(new Date(`${date}T12:00:00Z`))}`;
-	if (s.kind === 'chat' || s.kind === 'agent') return KIND_WORDS[s.kind];
+	if (s.kind === 'agent') return KIND_WORDS.agent;
 	// Long titles ("Christmas dinner buffet, 140 guests") are cut at the first comma for the chip.
 	const short = s.title.split(/,|·/)[0].trim();
-	return short.length > 28 ? `${short.slice(0, 27)}…` : short || KIND_WORDS[s.kind];
+	if (short && short.length <= 28) return short;
+	return s.label || (short ? `${short.slice(0, 27)}…` : KIND_WORDS[s.kind]);
+}
+
+/** "3 can't be ordered for this day: Joulutorttu, …" or null. */
+export function cannotOrderSentence(d: BasketDay): string | null {
+	const n = d.counts.cannotOrder;
+	if (!n) return null;
+	const names = (d.cannotOrderNames ?? []).map((x) => readableName(x));
+	const shown = names.slice(0, 3).join(', ');
+	return `${n} can't be ordered for this day${shown ? `: ${shown}${names.length > 3 ? ', …' : ''}` : ''}.`;
 }
 
 const centsOf = (lines: readonly BasketLine[]) => lines.reduce((s, l) => s + (l.lineCents ?? 0), 0);

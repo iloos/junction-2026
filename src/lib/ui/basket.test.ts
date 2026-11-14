@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
 	budgetSentence,
+	cannotOrderSentence,
 	budgetShares,
 	dayAction,
 	dayHeadline,
@@ -82,12 +83,20 @@ describe('basket words', () => {
 		expect(sourceChip(day.sources[0], day.date)).toBe('Christmas dinner buffet');
 		expect(sourceChip(day.sources[1], day.date)).toBe('Usual Thursday');
 		expect(sourceChip({ ...day.sources[0], kind: 'chat', title: '3 cases Valio milk' })).toBe(
-			'Asked in chat'
+			'3 cases Valio milk'
 		);
+		expect(
+			sourceChip({
+				...day.sources[0],
+				kind: 'chat',
+				title: 'Lactose-free milk for the whole week and extra cream',
+				label: 'From chat'
+			})
+		).toBe('From chat');
 		expect(sourceChip({ ...day.sources[0], kind: 'agent', title: 'Weekly dairy' })).toBe(
 			'Outside agent'
 		);
-		expect(sourceChip({ ...day.sources[0], label: 'Buffet' })).toBe('Buffet');
+		expect(sourceChip({ ...day.sources[0], label: 'Event' })).toBe('Christmas dinner buffet');
 	});
 
 	it('groups by source, waiting lines first', () => {
@@ -111,6 +120,17 @@ describe('basket words', () => {
 		expect(
 			dayAction({ ...day, counts: { ...day.counts, decisions: 0, orderableNow: 0 } })
 		).toBeNull();
+	});
+
+	it("names what can't be ordered", () => {
+		expect(cannotOrderSentence(day)).toBeNull();
+		expect(
+			cannotOrderSentence({
+				...day,
+				counts: { ...day.counts, cannotOrder: 2 },
+				cannotOrderNames: ['VAASAN JOULUTORTTU 40X60G', 'Lanttulaatikko']
+			})
+		).toMatch(/^2 can't be ordered for this day: /);
 	});
 
 	it('reads the week budget', () => {
