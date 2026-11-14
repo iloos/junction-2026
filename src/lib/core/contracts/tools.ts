@@ -88,12 +88,22 @@ export const toolSchemas = {
 			/** Rank under these weights instead of the kitchen's (the "Same shortage. Your rules." beat); not persisted. */
 			weights: z.record(z.string(), z.number().min(0)).optional(),
 			/** Extra origin requirement for this ranking only, e.g. "fi". */
-			requireOrigin: z.string().length(2).optional()
+			requireOrigin: z.string().length(2).optional(),
+			/**
+			 * Apply the recommendation to the plan: replaces the dish's current substitute and voids the approval.
+			 * Default: apply when the dish has no substitute yet and no per-call rules are given; otherwise preview.
+			 */
+			apply: z.boolean().optional()
 		}),
 		output: z.object({
 			plan: Plan,
 			kind: z.enum(['product', 'make_in_house', 'none']),
+			/** The current recommendation under the rules used (never a rejected candidate). */
 			chosen: z.array(Line),
+			/** Whether this call changed the plan. */
+			applied: z.boolean(),
+			/** The dish's substitute lines on the plan before this call (unchanged by a preview). */
+			saved: z.array(Line),
 			candidates: z.array(
 				z.object({
 					productId: ProductId,

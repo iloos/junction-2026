@@ -556,7 +556,15 @@ export const stubHandlers: ToolHandlers = {
 		const pick = (it?.subs ?? [])
 			.map((pid) => CATALOGUE.get(pid)!)
 			.find((c) => c.availability.kind === 'known' || c.availability.kind === 'unlimited');
-		if (!pick) return ok({ plan, kind: 'none' as const, chosen: [], candidates: [] });
+		if (!pick)
+			return ok({
+				plan,
+				kind: 'none' as const,
+				chosen: [],
+				applied: false,
+				saved: [],
+				candidates: []
+			});
 		const need = plan.needs.find((n) => n.id === line.needId);
 		const seedOrder = (
 			buffet.rescue as unknown as Record<
@@ -589,6 +597,8 @@ export const stubHandlers: ToolHandlers = {
 			plan: next,
 			kind: 'product' as const,
 			chosen: picked ? [picked] : [],
+			applied: true,
+			saved: [],
 			candidates: []
 		});
 	},

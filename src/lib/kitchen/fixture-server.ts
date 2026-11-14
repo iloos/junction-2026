@@ -230,6 +230,8 @@ const handlers: { [N in ToolName]?: Handler<N> } = {
 			plan: s.built.plan,
 			kind: chosen ? ('product' as const) : ('none' as const),
 			chosen: chosen ? [chosen] : [],
+			applied: false,
+			saved: chosen ? [chosen] : [],
 			candidates: []
 		};
 	},
