@@ -4,7 +4,7 @@ import { expect, test, type BrowserContext, type Page } from '@playwright/test';
  * Track G integration gate (D9): browser A, browser B, an outside agent holding A's judge key, and a fresh
  * browser opening A's deep link. Each visitor works in its own sandbox; no cookie, query, key or link reaches
  * another's. Needs a production build (dev opens everything) with JUDGE_KEY_SECRET set:
- *   GATE_URL=http://localhost:4177 npx playwright test -c scratch/pw-gate.config.ts
+ *   GATE_URL=http://localhost:4177 npx playwright test -c scripts/deploy/pw-gate.config.ts
  */
 const BASE = process.env.GATE_URL ?? 'http://localhost:4173';
 

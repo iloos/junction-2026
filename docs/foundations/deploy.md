@@ -2,97 +2,125 @@
 
 One container (`adapter-node`, [Dockerfile](../../Dockerfile)) on **Aiven Runtime**, Postgres on the free Aiven service `pg-1dfeeeed` (D3). Fallback: a Verda CPU VM.
 
-## Health
+## Health and smoke
+
 `GET /healthz` returns `{ ok, db, ... }`:
+
 - no `DATABASE_URL` → `{"db":"fixture"}`, 200 (fixture mode).
 - Postgres reachable → `{"db":"ok","latencyMs":31,"tls":"verified"}`, 200.
 - Postgres configured but failing → `{"db":"error","error":"..."}`, **503**.
 
-Smoke test any instance: `EXPECT_DB=ok scripts/deploy/smoke.sh https://<url>`.
+`EXPECT_DB=ok scripts/deploy/smoke.sh <url>` checks it. With `SMOKE_KEY` (the `ws-smoke` key, below) it also starts `ws-smoke` over and runs the commit race check `scripts/smoke-race.mjs`: 4 commits with one idempotency key must give one receipt, 3 with different keys exactly one.
+
+```sh
+# From the main checkout; the key is read from .env without printing it
+SMOKE_KEY="$(grep -E '^SMOKE_KEY=' .env | cut -d= -f2-)" EXPECT_DB=ok scripts/deploy/smoke.sh https://widely-many-scorpion.eur-1.aiven.app
+```
 
 ## Database connection ([client.ts](../../src/lib/server/db/client.ts))
-- `postgres` 4.x, **max 3 connections** per process (the free plan has 15 in total, shared by every instance, dev server and lane).
+
+- `postgres` 4.x, **max 3 connections** per process plus one `LISTEN` connection for the op stream. The free plan has 15 in total, shared by every instance, dev server and lane, so stop dev servers you no longer use.
 - One pool per process, kept on `globalThis` across Vite HMR.
-- TLS verified against the Aiven project CA, taken from `PROJECT_CA_CERT` (base64, injected by Aiven Runtime) or `PG_CA_CERT` (path or PEM; locally `certs/aiven-ca.pem`). `?sslmode=` is stripped from the URL because it would override the CA and skip verification. A wrong CA fails with "self-signed certificate in certificate chain" (tested).
-- `createPgDb()` is Drizzle over that pool and runs `drizzle/` migrations: the Aiven counterpart of `createFixtureDb()`.
-- The image carries `build/`, prod `node_modules/`, `drizzle/` (migrations) and `fixtures/` (seeds).
+- TLS verified against the Aiven project CA, taken from `PROJECT_CA_CERT` (base64, injected by Aiven Runtime) or `PG_CA_CERT` (path or PEM; locally `certs/aiven-ca.pem`). `?sslmode=` is stripped from the URL because it would override the CA and skip verification. A wrong CA fails with "self-signed certificate in certificate chain".
+- `SQL_TRACE=1` prints the most frequent statements every 10 s while queries arrive (diagnostics, off by default).
+- Migrations run by `pnpm db:migrate` from the main checkout, never at request time. The image carries `build/`, prod `node_modules/`, `drizzle/` and `fixtures/`.
 
 ## Local
+
 ```sh
 pnpm build && node --env-file=.env build          # Postgres mode on :3000
-pnpm build && node build                           # fixture mode
+pnpm build && node build                           # fixture mode (node build does not read .env)
 scripts/deploy/local-container.sh 3000             # image + Aiven PG, as Runtime runs it (needs Docker)
 ```
-Container facts (tested on fc98e0c): Postgres mode uses ~170 MiB and serves `/healthz` (verified TLS), `/api/tools/quote` and `/api/events` from Aiven. **Fixture mode in a container** needs the gitignored Valio cache mounted *writable* (the catalogue writes `data/valio/normalized/`): `docker run -u root -v "$PWD/data/valio:/app/data/valio" …`, and uses ~850 MiB, so it does not fit the 512 MB Runtime plan. The deployed app is Postgres mode only.
 
-## Aiven Runtime (live)
-**URL: https://widely-many-scorpion.eur-1.aiven.app** (service `mandate`, project `junction26jq`, `startup-20-512`, `aws-eu-central-1`, ~$0.0164/h catalog price). GitHub is connected to the Aiven org (integration `vcs5f404a66b3d`, repo id `1456805781`).
+Fixture mode in a container needs the gitignored Valio cache mounted writable (`docker run -u root -v "$PWD/data/valio:/app/data/valio" …`) and uses ~850 MiB, so the deployed app is Postgres mode only (~170 MiB).
 
-How it was created (once, via the Aiven MCP `aiven_application_create`):
-- project `junction26jq`, service `mandate`, repo `https://github.com/iloos/junction-2026`, branch `main`, port `3000`, Dockerfile `Dockerfile`, build path `.`
-- integration: `pg-1dfeeeed` → `connection_string` as `DATABASE_URL` (the platform also injects `PROJECT_CA_CERT`)
-- env: `NODE_ENV=production`, `LLM_PROVIDER=fixture`; add API keys as `secret` kind only when a live provider is switched on.
-- Tool routes (`/api/tools/*`, `/mcp`) accept the keys under Production rules below.
+## Aiven Runtime
 
-**Redeploy after a merge** (lead):
-1. `git push origin main`
+**URL: https://widely-many-scorpion.eur-1.aiven.app**: service `mandate`, project `junction26jq`, `aws-eu-central-1`, plan `startup-20-512` ($0.0164/h catalog price). Built by Aiven from GitHub `main` (`iloos/junction-2026`, VCS integration `vcs5f404a66b3d`, repo id `1456805781`), port 3000, `Dockerfile`. Integration `pg-1dfeeeed` → `DATABASE_URL`; the platform injects `PROJECT_CA_CERT`.
+
+**Redeploy after a merge:**
+
+1. `git push origin main`.
 2. Aiven MCP `aiven_application_redeploy` (project `junction26jq`, service `mandate`), or the console's Redeploy button.
-3. `EXPECT_DB=ok scripts/deploy/smoke.sh https://<mandate url>`
+3. Wait until `aiven_service_get` shows `application_deployment_commit_sha` = the pushed SHA and `COMPLETED`. Expect about a minute of 302/307 to Aiven's status page while the container switches.
+4. `scripts/deploy/warm.sh <url>`, then the smoke above.
 
-Env changes go through `aiven_service_update` (`user_config.application.environment_variables`), not a rebuild.
+**Rule: no redeploy in the last 30 minutes before judging or recording.** A redeploy redirects to the status page for about a minute, restarts every in-memory run pointer and kitchen session, and its first requests are cold.
 
-## Production rules
-- **Keys** (Aiven env, kind `secret`; values also in the main checkout's `.env`, never printed): `MANDATE_KEY_CHEF`, `MANDATE_KEY_KITCHEN_AGENT`, `MANDATE_KEY_APPROVER`, `MANDATE_KEY_EXTERNAL_AGENT` act in the stage workspace `ws-demo`. `MCP_KEYS` = `label:actor:key[:workspace]`, comma-separated; judge entries default to the sandbox `ws-judges`, created with the seed kitchens on first use. Public fixture keys (`MANDATE_FIXTURE_KEYS`) stay off.
-- **`GEMINI_STUDIO_API_KEY`** is pasted into the Aiven console by the user (agents never read `.env` values).
-- **Env updates replace the whole list.** `aiven_service_update` with `environment_variables` drops anything not re-sent, including `PROJECT_CA_CERT` (base64 of `certs/aiven-ca.pem`) and the console-added Gemini key. Prefer adding a single variable in the console.
-- **Visitors (D9, `server/demo/visitor.ts`).** Every browser gets its own sandbox `ws-j-<24 hex>` from a signed cookie (`mandate_visitor`, HMAC with `JUDGE_KEY_SECRET`), seeded lazily with a fresh run; kitchen, /request, /ops, `/api/events` and the sandbox reset all resolve through `visitorWorkspace()`. Links move a browser only between `?ws=mine`, `?ws=ws-judges` (the shared room) and `?ws=ws-demo` (presenters only); another visitor's id in a link, cookie or query selects nothing. Cap: 300 sandboxes per process, then new visitors share `ws-judges`.
-- **`JUDGE_KEY_SECRET`** (secret, ≥16 chars, added in the console): signs visitor cookies and judge keys. Without it, cookies are signed per process (visitors get a fresh sandbox after each restart) and judge keys are off (`/api/demo/judge-key` answers 503). Changing it gives every visitor a new sandbox. `JUDGE_KEY_EXPIRES` (ISO) overrides the key expiry, default 2026-11-16 00:00 Helsinki.
-- **Judge keys** `jk_<ws>.<exp>.<hmac>`: `GET /api/demo/judge-key` (cookie) returns the key and `mcpUrl` for the browser's own sandbox; /ops shows it under "Agent key for this sandbox". The key acts as an external agent (no approve) in that sandbox's current run.
-- **Presenter session.** On /ops, "Presenter" takes the chef or approver key once and sets a signed httpOnly cookie (12 h, ends if the key rotates); the browser then defaults to the stage and gets Run / Stop / Reset. `DEMO_RESET_OPEN=1` opens these for everyone and stays unset on prod (rules: `server/demo/presenter.ts`).
-  - `POST /api/demo/reset` (chef or approver key): starts a fresh `ws-demo` run. A key bound to another workspace in MCP_KEYS (e.g. the smoke's `smoke:kitchen_agent:<key>:ws-smoke`) resets that workspace instead; external agents never.
-  - Deploy smoke with the race check: `SMOKE_KEY=<smoke key> EXPECT_DB=ok scripts/deploy/smoke.sh <url>` resets ws-smoke, then runs `scripts/smoke-race.mjs` (4 same-key commits → one receipt; 3 different-key commits → one).
-  - `POST /api/demo/sandbox/reset` (no key; the browser's cookie): starts that browser's room over (its own sandbox or `ws-judges`), 20 s cooldown per sandbox (429 with `retryInMs`), 403 for the stage. Each reset also clears that workspace's idempotency rows. Server function: `resetSandbox()` in `server/demo/sandbox.ts`.
-  - `POST /api/agent/run` (**chef key only**, needs `agent:run`): runs the routine agent; NDJSON traces, 409 while a run is going. Its ops name the starter.
-  - `POST /api/agent/run/<id>/cancel` (chef key only): stops that run; 202 `{ id, cancelled, run }` once the loop has stopped, 404 if it isn't the run in progress.
-- **Web routes** (`/api/web/*`):
-  - `POST contextdev`: Context.dev monitor webhook, no key; needs a valid `X-Context-Signature` for `CONTEXT_DEV_WEBHOOK_SECRET` (or `x-mandate-webhook-secret` from our scripts), else 401. Answers 202; anomalies arrive on the op stream.
-  - `POST replay` (chef or approver key): plays a recorded real Ruokavirasto recall into the current run, labelled as a replay (or DRILL with `drillProductId`).
-  - `POST recall`, `POST facts`, `POST outside`, `GET findings` (any key): read a recall notice, look up missing product facts, find outside recipes/alternatives, list findings.
-  - Env: `EXA_API_KEY`, `CONTEXT_DEV_API_KEY`, `CONTEXT_DEV_WEBHOOK_SECRET` (secrets) and `WEB_PROVIDER=live`, `WEB_CACHE_DIR=/tmp/web-cache` are added in the console.
-- **`/api/events`** serves `ws-demo`, `ws-judges` and `ws-synth` to anyone, and a visitor sandbox only to the browser whose signed cookie names it.
-- **Scenario clock:** `src/lib/core/scenario.ts`; the served app ticks it from each run's start. Reset re-anchors it.
+**Plan changes** go through `aiven_service_update` with only `plan` set. Never send `user_config` for a plan change.
+
+## Environment (Aiven console)
+
+**An env update replaces the whole list.** `aiven_service_update` with `environment_variables` drops every variable not re-sent, including `PROJECT_CA_CERT` and the console-added secrets. Add or edit one variable at a time in the console. Agents never read `.env` values; the user pastes secrets.
+
+| Variable | Kind | What |
+|---|---|---|
+| `NODE_ENV` | variable | `production` |
+| `LLM_PROVIDER` | variable | model provider for request parsing and agent decisions |
+| `GEMINI_STUDIO_API_KEY` | secret | Gemini |
+| `MANDATE_KEY_CHEF`, `_KITCHEN_AGENT`, `_APPROVER`, `_EXTERNAL_AGENT` | secret | keys that act in the stage `ws-demo` |
+| `MCP_KEYS` | secret | `label:actor:key[:workspace]`, comma-separated; an entry without a workspace acts in `ws-judges`. Holds `smoke:kitchen_agent:<key>:ws-smoke` for the smoke. |
+| `JUDGE_KEY_SECRET` | secret | ≥16 chars; signs visitor cookies and judge keys. Unset: cookies are signed per process (a fresh sandbox after each restart) and judge keys answer 503. Changing it gives every visitor a new sandbox. |
+| `JUDGE_KEY_EXPIRES` | variable, optional | ISO time judge keys expire; default 2026-11-16 00:00 Helsinki |
+| `EXA_API_KEY`, `CONTEXT_DEV_API_KEY`, `CONTEXT_DEV_WEBHOOK_SECRET` | secret | web lookups and the recall webhook |
+| `WEB_PROVIDER`, `WEB_CACHE_DIR` | variable | `live`, `/tmp/web-cache` |
+| `WEB_CAP_PER_KEY`, `WEB_CAP_GLOBAL`, `WEB_RECALL_WORKSPACES` | variable, optional | web spend caps (defaults 40 / 600) and recall workspaces (default `ws-demo`) |
+| `DEMO_RESET_OPEN` | never set on prod | opens presenter actions to everyone (dev does this by itself) |
+
+## Workspaces and rooms
+
+| Workspace | Who | Reset |
+|---|---|---|
+| `ws-j-<24 hex>` | one per browser, from the signed `mandate_visitor` cookie; seeded with a fresh run on first use | "Start over" (no key, 20 s cooldown per sandbox) |
+| `ws-judges` | shared room (`?ws=ws-judges`); also where new visitors go past 300 sandboxes per process | same as a sandbox |
+| `ws-demo` | the stage: presenters only (`?ws=ws-demo` after signing in on /ops) | presenter on /ops, or `POST /api/demo/reset` with the chef or approver key |
+| `ws-smoke` | the deploy smoke's `MCP_KEYS` key | `POST /api/demo/reset` with that key |
+| `ws-synth` | the simulated run on /ops (memory only) | restarts by itself |
+| `ws-stress` | dev-only load test (`/ops?ws=ws-stress&copies=50`) | n/a |
+
+The resolver is `server/demo/visitor.ts`. Another visitor's id in a link, cookie or query selects nothing. `/api/events` serves `ws-demo`, `ws-judges` and `ws-synth` to anyone, and a sandbox only to its own browser.
+
+## Keyed endpoints
 
 ```sh
-# Reset the stage before a demo (reads the key from .env without printing it)
+# Start the stage over before a demo (reads the key from .env without printing it)
 curl -s -X POST -H "Authorization: Bearer $(grep -E '^MANDATE_KEY_CHEF=' .env | cut -d= -f2-)" https://widely-many-scorpion.eur-1.aiven.app/api/demo/reset
 ```
 
+- `POST /api/demo/reset`: starts a fresh run of the key's workspace. Chef or approver keys may reset the stage. A key bound to another workspace may reset only that one. Outside agents never may.
+- `POST /api/demo/sandbox/reset` (no key, the browser's cookie): starts that browser's room over; 429 `{ retryInMs }` during the cooldown, 403 for the stage. Every reset also clears that workspace's idempotency rows.
+- `GET /api/demo/judge-key` (cookie): `{ workspaceId, key, mcpUrl }` for the browser's own sandbox. The key `jk_<ws>.<exp>.<hmac>` acts as an outside agent (never approves) on that sandbox's current run.
+- /ops "Presenter" takes the chef or approver key once and sets a signed httpOnly cookie (12 h; it ends when the key rotates). That browser then defaults to the stage and gets Run, Stop and Reset.
+- `POST /api/agent/run` and `POST /api/agent/run/<id>/cancel`: chef key only.
+- `/api/web/*`: `POST contextdev` takes the Context.dev webhook (signature checked against `CONTEXT_DEV_WEBHOOK_SECRET`, else 401); `POST replay` needs a chef or approver key; `recall`, `facts`, `outside` and `findings` take any key.
+
+## Warm up before judging
+
+`scripts/deploy/warm.sh <url>` waits out the status-page redirect, then walks one visitor's first minute (pages, a sandbox seed, the kitchen snapshot, the op stream) and prints each time. A cold container answers its first `/healthz` in about 7 s (container wake + first Postgres connect + TLS); warm calls take 0.2–0.4 s from Helsinki.
+
 ## Aiven evidence (for the submission)
-_Checked Sat 14 Nov ~03:00 against the live service; each line says how._
+
+Checked against the live service; each line says how.
 
 | Claim | Evidence |
 |---|---|
-| The app runs on **Aiven Runtime** | Service `mandate` (`startup-20-512`, aws-eu-central-1), built from `main` by Aiven from the Dockerfile; live at https://widely-many-scorpion.eur-1.aiven.app; `scripts/deploy/smoke.sh` passes on fb58016. |
-| Data lives in **Aiven for PostgreSQL** with verified TLS | `pg-1dfeeeed`, PostgreSQL 18.7; `/healthz` returns `"tls":"verified"` (the client checks the project CA from `PROJECT_CA_CERT`; a wrong CA is rejected with "self-signed certificate in certificate chain", tested locally). Pool capped at 3 connections for the free plan's 15. |
-| Schema by migration | Drizzle migration `0000_init` applied (`drizzle.__drizzle_migrations` = 1 row), run by `pnpm db:migrate`, never at request time; it creates the `vector` extension (pgvector 0.8.7). |
-| Real catalogue seeded | `products` holds **17,546** Valio products (`select count(*)`). Embeddings are not populated yet (0 rows), so no vector-search claim. |
-| Live op stream on **LISTEN/NOTIFY** | Every committed op and agent trace is published with `NOTIFY mandate_events` and fanned out from one `LISTEN` connection per process to SSE (`/api/events`). On prod, an SSE client on `ws-demo` received the routine agent's 8 trace events live while `POST /api/agent/run` ran (1.56 s). |
-| Reset keeps the audit trail | `POST /api/demo/reset` starts a new run; old runs stay in `ops` (run-1's 15 ops are still there after three resets), and the stream, tools and /ops follow only the current run. |
-| Catch-up survives history | With 1,116 ops of earlier runs (PGlite, same schema), /ops goes live in 0.87 s showing only the current run's 12 ops; `bus/catchup.test.ts` covers 1,100 old ops + a fresh run (the run filter sits in SQL, before the limit). |
-| Holds at 10× | `ws-stress` (dev) interleaves N synthetic runs at 250 events/s into /ops at 1920×1080: 10× (190 events) 1 long task of 76 ms, 61 fps idle; 50× (950 events, 200 queue rows) 2 long tasks (103 ms total), 20.5 MB heap, 62 fps idle. |
-| No catalogue or model call holds a database lock | `store/prepare.test.ts` fails on any catalogue call made inside a store transaction across the full journey and three concurrent commands; it passes (0). The author's commit (4c553fd) reports 21 such calls on the previous code. |
-
-## Warm up before judging
-**Rule: no redeploy in the last 30 minutes before judging or recording.** A redeploy redirects to Aiven's status page for about a minute, restarts every in-memory run pointer and kitchen session, and its first requests are cold. Merge earlier, or wait until after.
-
-`scripts/deploy/warm.sh <url>` waits out the status-page redirect, then walks one visitor's first minute (pages, a sandbox seed, the kitchen snapshot, the op stream) and prints each time.
-A container that has just started, or has sat idle, answers its first request slowly: the first `/healthz` after a deploy took **7.3 s** (container wake + first Postgres connect + TLS), the first `quote` 0.85 s; warm calls are 0.2–0.4 s from Helsinki. Aiven's proxy also redirects to its status page (302/307) for about a minute while a redeploy switches containers. Before judging or recording: open `/`, `/ops` and `/request` once, run one `quote`, and run `EXPECT_DB=ok scripts/deploy/smoke.sh <url>`; don't redeploy in the last half hour.
-
-Measured on 39ef642 (fresh sandbox, Chromium, from Helsinki): page ready 1.9 s; **Plan the event 7.1 s** = `POST /kitchen-api/scenario` 4.7 s + a follow-up `GET /kitchen-api/snapshot` 1.8 s + 0.5 s client; `/request` 1.0–1.7 s (≈0.75 s Gemini parse); `place_order` 0.3–0.4 s.
+| The app runs on **Aiven Runtime** | Service `mandate`, built from `main` by Aiven from the Dockerfile; `smoke.sh` passes on every deploy. |
+| Data lives in **Aiven for PostgreSQL** with verified TLS | `pg-1dfeeeed`, PostgreSQL 18.7; `/healthz` returns `"tls":"verified"`. A wrong CA is rejected (tested locally). |
+| Schema by migration | Drizzle migrations through `0002`, run by `pnpm db:migrate`; `0000` creates the `vector` extension (pgvector 0.8.7). |
+| Real catalogue | `products` holds **17,546** Valio products. Embeddings are not populated, so no vector-search claim. |
+| **No double orders** on Postgres | `smoke.sh` with `SMOKE_KEY` on f2052ca: 4 concurrent commits with one idempotency key → one receipt; 3 with different keys → one receipt, two refused. |
+| Live op stream on **LISTEN/NOTIFY** | Committed ops and agent traces are published with `NOTIFY mandate_events` and fanned out from one `LISTEN` per process to SSE. An SSE client received the routine agent's 8 trace events live during a 1.56 s run. |
+| One sandbox per visitor | `src/routes/ops/visitor-gate.e2e.ts` passes against prod (68cb2d8): two browsers, an outside agent on one visitor's key, and a stranger opening that visitor's link each stay in their own sandbox; forged cookies select nothing. |
+| 30 visitors at once | `scripts/deploy/visitors.mjs <url> 30` on 68cb2d8: 30 sandboxes, 0 errors, `/healthz` never failed (max 3.3 s). Planning ran one at a time on the 512 MB plan (2.6 s alone, ~76 s each with 30 at once). |
+| Reset keeps the audit trail | A reset starts a new run; old runs' ops stay in `ops`, and the stream, tools and /ops follow only the current run. |
 
 ## Verda VM (plan B)
-`CPU.4V.16G` at $0.048/h (catalog; €200 balance). Ubuntu 24.04 + Docker, the same image, Caddy in front for HTTPS on `<ip>.sslip.io`. Billed create: needs the user's yes.
+
+`CPU.4V.16G` at $0.048/h (catalog; €200 balance). Ubuntu 24.04 + Docker, the same image, Caddy in front for HTTPS on `<ip>.sslip.io`. A billed create needs the user's yes.
 
 ## Traps
-- Docker Desktop on this machine can wedge (engine 500 on `_ping`, `wsl -l` hangs); the fix is `wsl --shutdown` + restart Docker Desktop, which interrupts anything else using WSL.
+
+- Docker Desktop on this machine can wedge (engine 500 on `_ping`, `wsl -l` hangs). The fix is `wsl --shutdown` and a restart of Docker Desktop, which interrupts anything else using WSL.
 - Never print `DATABASE_URL`; driver errors carry the host only.
+- Stopping a local `node build` with `Stop-Process` kills it hard, so `--cpu-prof` never writes. Profile from inside the process (`node:inspector/promises`) instead.
