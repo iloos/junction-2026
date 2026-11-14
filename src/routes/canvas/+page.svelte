@@ -9,6 +9,7 @@
 		ArrowUpRight,
 		Check,
 		LayoutGrid,
+		Hand,
 		LoaderCircle,
 		MessageCircle,
 		Search,
@@ -18,7 +19,7 @@
 	import Board from '$lib/canvas/Board.svelte';
 	import { projectCanvas, type CanvasItem } from '$lib/canvas/model';
 	import { KitchenStore } from '$lib/kitchen/kitchen.svelte';
-	import { TAB } from '$lib/kitchen/api';
+	import { call, TAB, ToolError } from '$lib/kitchen/api';
 	import { errorWords } from '$lib/kitchen/error-words';
 	import { useShell } from '$lib/ui/shell/shell.svelte';
 	import { planOf, productOf } from '$lib/ui/shell/plan-events.svelte';
@@ -39,6 +40,7 @@
 	let diet = $state('all');
 	let compact = $state(false);
 	let notice = $state('');
+	let recommendError = $state('');
 	let refreshPending = $state(false);
 	let reopenPending = $state(false);
 	let seenPlan = '';
@@ -69,9 +71,6 @@
 			.filter((g) => g.items.length) ?? []
 	);
 	const visibleCount = $derived(groups.reduce((n, g) => n + g.items.length, 0));
-	const kitchenHref = $derived(
-		k.plan && !missingPlan ? `/?plan=${encodeURIComponent(k.plan.id)}` : '/'
-	);
 
 	function matches(i: CanvasItem) {
 		const text = [i.label, ...i.lines.map((l) => l.name)].join(' ').toLocaleLowerCase();
@@ -155,12 +154,11 @@
 		if (!request || request.at === locatedAt || request.planId !== graph?.planId) return;
 		locatedAt = request.at;
 		if (request.zone === 'order') {
-			void goto(`${resolve('/')}${kitchenHref.slice(1)}#order`);
+			void goto(resolve(`/?plan=${encodeURIComponent(graph.planId)}#order`));
 			return;
 		}
 		const decision = pending.find((d) => d.key === request.decision) ?? pending[0];
-		const target = graph.items.find((i) => i.lines.some((l) => decision?.lineIds.includes(l.id)));
-		if (target) untrack(() => void select(target.id));
+		if (decision) untrack(() => void focusDecision(decision.key));
 	});
 	$effect(() => {
 		if (!shell) return;
@@ -198,6 +196,7 @@
 
 	async function select(id: string) {
 		selected = id;
+		recommendError = '';
 		detailOpen = true;
 		await tick();
 		if (window.matchMedia('(max-width: 767px)').matches) {
@@ -214,6 +213,19 @@
 		await tick();
 		if (id)
 			document.querySelector<HTMLButtonElement>(`[data-need-id="${CSS.escape(id)}"]`)?.focus();
+	}
+	async function focusDecision(key?: string) {
+		const decision = pending.find((d) => d.key === key) ?? pending[0];
+		const target = graph?.items.find((i) => i.lines.some((l) => decision?.lineIds.includes(l.id)));
+		if (!target || !decision) {
+			await goto(resolve(`/?plan=${encodeURIComponent(graph?.planId ?? '')}#approval`));
+			return;
+		}
+		await select(target.id);
+		await tick();
+		const card = document.getElementById(`canvas-decision-${decision.key}`);
+		card?.scrollIntoView({ block: 'start', behavior: 'instant' });
+		card?.querySelector<HTMLButtonElement>('button')?.focus({ preventScroll: true });
 	}
 	function ask(option?: CandidateView, replace = false) {
 		if (!shell || !item) return;
@@ -233,6 +245,33 @@
 			return `${money(candidate.perKgCents)}/kg`;
 		return 'Pack price checked when choosing';
 	}
+	async function recommend() {
+		if (k.readOnly || missingPlan || !item?.dish?.plannedLineId || !k.plan) return;
+		const input = {
+			planId: k.plan.id,
+			version: k.plan.version,
+			lineId: item.dish.plannedLineId,
+			apply: true
+		};
+		k.busy = true;
+		recommendError = '';
+		notice = '';
+		try {
+			const result = await call(k.mode, 'find_substitutes', input, k.rendered);
+			notice = result.applied
+				? 'Recommendation applied. Review the updated purchases and any decisions.'
+				: result.kind === 'none'
+					? 'No qualifying replacement found. The basket is unchanged.'
+					: 'The basket already uses this recommendation. No changes were made.';
+		} catch (e) {
+			recommendError =
+				e instanceof ToolError && e.error.code !== 'PROVIDER_UNAVAILABLE'
+					? errorWords(e.error)
+					: 'The replacement response could not be confirmed. Review the refreshed basket before retrying.';
+		} finally {
+			await k.retry();
+		}
+	}
 </script>
 
 <svelte:head><title>Basket canvas · Mandate</title></svelte:head>
@@ -241,7 +280,7 @@
 	<header class="mb-6 flex flex-wrap items-start justify-between gap-4">
 		<div class="min-w-0">
 			<a
-				href={`${resolve('/')}${kitchenHref.slice(1)}`}
+				href={graph ? resolve(`/?plan=${encodeURIComponent(graph.planId)}`) : resolve('/')}
 				class="mb-3 inline-flex items-center gap-1 text-meta text-accent-ink"
 				><ArrowLeft size={14} /> Kitchen</a
 			>
@@ -258,16 +297,33 @@
 				<p class="mono mt-1 text-title tabular-nums">{money(k.plan.totalCents)}</p>
 				<a
 					class="mt-2 inline-flex items-center gap-1 text-meta text-accent-ink"
-					href={`${resolve('/')}${kitchenHref.slice(1)}#approval`}
+					href={resolve(`/?plan=${encodeURIComponent(graph.planId)}#approval`)}
 					>Review and order in Kitchen <ArrowUpRight size={14} /></a
 				>
 			</div>{/if}
 	</header>
+	{#if graph && pending.length}
+		<div
+			class="mb-4 flex items-start justify-between gap-4 border-t border-b border-rule py-3"
+			aria-label="Basket decisions"
+		>
+			<div>
+				<p class="flex items-center gap-2 text-meta text-signoff">
+					<Hand size={16} />Waits on you · {pending.length}
+					{pending.length === 1 ? 'decision' : 'decisions'}
+				</p>
+				<p class="mt-1 font-medium">{pending[0].title}</p>
+			</div>
+			<button class="btn shrink-0" disabled={k.readOnly} onclick={() => focusDecision()}
+				>Review decision</button
+			>
+		</div>
+	{/if}
 
 	{#if notice}<p class="mb-4 flex items-start gap-2 text-meta text-accent-ink" role="status">
 			<Check class="shrink-0" size={16} />{notice}
 		</p>{/if}
-	{#if k.stale || k.error}
+	{#if k.stale || k.error || recommendError}
 		<div
 			role="alert"
 			class="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-out p-4"
@@ -275,12 +331,13 @@
 			<p>
 				{k.stale
 					? 'Could not refresh this basket. The last view is read-only.'
-					: errorWords(k.error!)}
+					: recommendError || errorWords(k.error!)}
 			</p>
 			<button
 				class="btn"
 				disabled={k.busy}
 				onclick={() => {
+					recommendError = '';
 					void k.retry();
 				}}>Refresh basket</button
 			>
@@ -517,11 +574,14 @@
 							{#if item.lines.every((l) => l.state !== 'committed')}<button
 									class="btn btn-primary mt-4"
 									disabled={k.readOnly}
-									onclick={() => ask(undefined, true)}>Ask agent to replace</button
+									onclick={recommend}>Apply agent recommendation</button
+								>
+								<button class="btn mt-3" onclick={() => ask(undefined, true)}
+									>Ask agent to replace</button
 								>
 								<p class="mt-2 text-meta text-ink-2">
-									Opens a draft for your review. The agent sizes the replacement through the
-									existing plan tools; any approval still waits on you.
+									A changed recommendation re-quotes the plan and voids its previous approval.
+									Asking the agent opens a draft for your review.
 								</p>{/if}
 						</section>
 					{/if}
@@ -530,15 +590,19 @@
 							aria-label="Ingredient decisions"
 						>
 							<h3 class="mb-3 text-heading font-medium">Waits on you</h3>
-							{#each itemDecisions as decision (decision.key)}<DecisionCard
-									{decision}
-									{names}
-									busy={k.readOnly}
-									onapprove={(ids) => k.approve('grant', ids)}
-									onkeep={(ids) => k.approve('deny', ids)}
-									deliverBy={k.plan?.deliverBy}
-									now={k.now}
-								/>{/each}
+							{#each itemDecisions as decision (decision.key)}<div
+									id={`canvas-decision-${decision.key}`}
+								>
+									<DecisionCard
+										{decision}
+										{names}
+										busy={k.readOnly}
+										onapprove={(ids) => k.approve('grant', ids)}
+										onkeep={(ids) => k.approve('deny', ids)}
+										deliverBy={k.plan?.deliverBy}
+										now={k.now}
+									/>
+								</div>{/each}
 						</section>{/if}
 				{:else}<div class="py-8">
 						<h2 class="text-heading font-medium">Follow an ingredient</h2>

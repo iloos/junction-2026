@@ -4,7 +4,7 @@ import { expect, test, type BrowserContext, type Page } from '@playwright/test';
 import type { FixtureSnapshot } from '../../lib/kitchen/fixture-server';
 
 /** Run against an already-started local server with DATABASE_URL= and LLM_PROVIDER=fixture. */
-const BASE = process.env.KITCHEN_URL ?? 'http://localhost:5198';
+const BASE = process.env.KITCHEN_URL ?? 'http://localhost:4173';
 const cards = (page: Page) => page.locator('button[data-need-id]');
 const ingredient = (page: Page, id: string) =>
 	page.locator(`button[data-need-id=${JSON.stringify(id)}]`);
@@ -281,6 +281,7 @@ test.describe('basket canvas, real fixture APIs', () => {
 			expect(page.url()).toBe(originalUrl);
 			await expect(cards(page)).toHaveCount(snapshot.plan.needs.length);
 			await expectNoPageOverflow(page);
+			await expect(grams).toBeEnabled();
 			expect(errors).toEqual([]);
 			await capture(page, 'canvas-desktop.png');
 		} finally {
@@ -367,6 +368,119 @@ test.describe('basket canvas, real fixture APIs', () => {
 		expect(unsent, 'opening a question draft must not send it').toEqual([]);
 	});
 
+	test('applying a replacement updates purchases and repeating it preserves exact approval terms', async ({
+		page,
+		context
+	}) => {
+		await page.setViewportSize({ width: 1440, height: 1000 });
+		const initial = await context.request.get(`${BASE}/kitchen-api/snapshot`);
+		expect(initial.ok()).toBe(true);
+		await scenario(context, 'join', 'k-hotel');
+		await scenario(context, 'plan');
+		const unrescued = await context.request.get(`${BASE}/kitchen-api/snapshot`);
+		expect(unrescued.ok()).toBe(true);
+		const before = (await unrescued.json()) as FixtureSnapshot;
+		const dish = before.view.dishes.find((item) => item.id === 'joulukinkku')!;
+		const need = before.plan.needs.find((item) => item.id === dish.needId)!;
+		expect(
+			before.plan.lines.filter((line) => line.needId === need.id && line.substituteFor)
+		).toHaveLength(0);
+		await openPlan(page, before);
+		await ingredient(page, need.id).click();
+		const apply = inspector(page).getByRole('button', {
+			name: 'Apply agent recommendation',
+			exact: true
+		});
+		const applyResponse = () =>
+			page.waitForResponse(
+				(response) =>
+					new URL(response.url()).pathname === '/kitchen-api/tool/find_substitutes' &&
+					response.request().method() === 'POST'
+			);
+		const firstAnswer = applyResponse();
+		await apply.click();
+		const first = await firstAnswer;
+		expect(first.ok(), await first.text()).toBe(true);
+		const applied = (await first.json()) as { applied: boolean; plan: FixtureSnapshot['plan'] };
+		expect(applied.applied).toBe(true);
+		expect(applied.plan.id).toBe(before.plan.id);
+		expect(applied.plan.version).toBeGreaterThan(before.plan.version);
+		expect(
+			applied.plan.lines.some(
+				(line) => line.needId === need.id && line.substituteFor && line.qty.value > 0
+			)
+		).toBe(true);
+		await expect(
+			page.getByText('Recommendation applied. Review the updated purchases and any decisions.', {
+				exact: true
+			})
+		).toBeVisible();
+		await expect(
+			inspector(page).getByRole('region', { name: 'Ingredient decisions' })
+		).toBeVisible();
+		await expect(ingredient(page, need.id)).toHaveAttribute('aria-pressed', 'true');
+		await expect(apply).toBeEnabled();
+
+		const currentResponse = await context.request.get(
+			`${BASE}/kitchen-api/snapshot?plan=${encodeURIComponent(before.plan.id)}&peek=1`
+		);
+		expect(currentResponse.ok()).toBe(true);
+		const current = (await currentResponse.json()) as FixtureSnapshot;
+		expect(current.approval?.state).toBe('pending');
+		const repeatedAnswer = applyResponse();
+		await apply.click();
+		const repeated = await repeatedAnswer;
+		expect(repeated.ok(), await repeated.text()).toBe(true);
+		const unchanged = (await repeated.json()) as {
+			applied: boolean;
+			plan: FixtureSnapshot['plan'];
+		};
+		expect(unchanged.applied).toBe(false);
+		expect(unchanged.plan.version).toBe(current.plan.version);
+		await expect(
+			page.getByText('The basket already uses this recommendation. No changes were made.', {
+				exact: true
+			})
+		).toBeVisible();
+		await expect(apply).toBeEnabled();
+		const repeatedSnapshot = await context.request.get(
+			`${BASE}/kitchen-api/snapshot?plan=${encodeURIComponent(before.plan.id)}&peek=1`
+		);
+		expect(repeatedSnapshot.ok()).toBe(true);
+		const stable = (await repeatedSnapshot.json()) as FixtureSnapshot;
+		expect(stable.plan.version).toBe(current.plan.version);
+		expect(stable.plan.termsHash).toBe(current.plan.termsHash);
+		expect(stable.approval).toEqual(current.approval);
+
+		const decision = inspector(page).getByRole('region', { name: 'Ingredient decisions' });
+		await decision
+			.getByRole('button', { name: /^Review \d+ lines?/ })
+			.first()
+			.click();
+		const approvalAnswer = page.waitForResponse(
+			(response) =>
+				new URL(response.url()).pathname === '/kitchen-api/tool/approve' &&
+				response.request().method() === 'POST'
+		);
+		await decision.getByRole('button', { name: 'Confirm exact terms', exact: true }).click();
+		const approval = await approvalAnswer;
+		expect(approval.ok(), await approval.text()).toBe(true);
+		expect(approval.request().postDataJSON()).toMatchObject({
+			planVersion: stable.plan.version,
+			termsHash: stable.plan.termsHash,
+			decision: 'grant'
+		});
+		expect(await approval.json()).toMatchObject({ state: 'granted' });
+		const approved = await context.request.get(
+			`${BASE}/kitchen-api/snapshot?plan=${encodeURIComponent(before.plan.id)}&peek=1`
+		);
+		expect(approved.ok()).toBe(true);
+		expect(
+			((await approved.json()) as FixtureSnapshot).orders,
+			'approval alone must not order'
+		).toEqual([]);
+	});
+
 	test('390px outline keeps the selected inspector reachable without page overflow', async ({
 		page,
 		context
@@ -405,8 +519,94 @@ test.describe('basket canvas, real fixture APIs', () => {
 		await expect(
 			inspector(page).getByRole('heading', { name: need.label, exact: true })
 		).toBeInViewport();
+		await expect(
+			inspector(page).getByRole('textbox', { name: `${need.label}, grams per guest`, exact: true })
+		).toBeEnabled();
 		await page.evaluate(() => window.scrollTo(0, 0));
 		expect(errors).toEqual([]);
 		await capture(page, 'canvas-mobile.png');
+	});
+
+	test('a lost replacement response refreshes the saved change without retrying or ordering', async ({
+		page,
+		context
+	}) => {
+		await page.setViewportSize({ width: 1440, height: 1000 });
+		const initial = await context.request.get(`${BASE}/kitchen-api/snapshot`);
+		expect(initial.ok()).toBe(true);
+		await scenario(context, 'join', 'k-hotel');
+		await scenario(context, 'plan');
+		const unrescued = await context.request.get(`${BASE}/kitchen-api/snapshot`);
+		expect(unrescued.ok()).toBe(true);
+		const before = (await unrescued.json()) as FixtureSnapshot;
+		const dish = before.view.dishes.find((item) => item.id === 'joulukinkku')!;
+		const need = before.plan.needs.find((item) => item.id === dish.needId)!;
+		expect(before.plan.lines.some((line) => line.needId === need.id && line.substituteFor)).toBe(
+			false
+		);
+		await openPlan(page, before);
+		await ingredient(page, need.id).click();
+
+		const serverAnswers: { status: number; applied: boolean; plan: FixtureSnapshot['plan'] }[] = [];
+		const unintended: string[] = [];
+		page.on('request', (request) => {
+			const path = new URL(request.url()).pathname;
+			if (request.method() === 'POST' && /\/kitchen-api\/tool\/(approve|commit_order)$/.test(path))
+				unintended.push(path);
+		});
+		await page.route('**/kitchen-api/tool/find_substitutes', async (route) => {
+			if (route.request().method() !== 'POST') return route.continue();
+			// The real server applies the tool; only its response to the browser is lost.
+			const response = await route.fetch();
+			const body = (await response.json()) as { applied: boolean; plan: FixtureSnapshot['plan'] };
+			serverAnswers.push({ status: response.status(), ...body });
+			await route.abort('failed');
+		});
+		const apply = inspector(page).getByRole('button', {
+			name: 'Apply agent recommendation',
+			exact: true
+		});
+		await apply.click();
+		const alert = page.getByRole('alert');
+		await expect(alert).toContainText(
+			'The replacement response could not be confirmed. Review the refreshed basket before retrying.'
+		);
+		await expect(alert).not.toContainText(/nothing changed|unchanged|no changes were made/i);
+		await expect(ingredient(page, need.id)).toContainText('Replacement planned');
+		await expect(inspector(page)).toContainText('replaces');
+		await expect(ingredient(page, need.id)).toHaveAttribute('aria-pressed', 'true');
+		await expect(apply).toBeEnabled();
+		expect(serverAnswers).toHaveLength(1);
+		expect(serverAnswers[0].status).toBe(200);
+		expect(serverAnswers[0].applied).toBe(true);
+		expect(serverAnswers[0].plan.version).toBeGreaterThan(before.plan.version);
+
+		// Give the event-stream refresh and a clock tick a chance to reveal an unwanted automatic retry.
+		await page.waitForTimeout(1_000);
+		expect(
+			serverAnswers,
+			'a lost response must not automatically repeat the mutation'
+		).toHaveLength(1);
+		expect(unintended, 'an uncertain recommendation must not approve or order').toEqual([]);
+		const refreshed = await context.request.get(
+			`${BASE}/kitchen-api/snapshot?plan=${encodeURIComponent(before.plan.id)}&peek=1`
+		);
+		expect(refreshed.ok()).toBe(true);
+		const saved = (await refreshed.json()) as FixtureSnapshot;
+		expect(saved.plan.id).toBe(before.plan.id);
+		expect(saved.plan.version).toBe(serverAnswers[0].plan.version);
+		expect(
+			saved.plan.lines.some(
+				(line) => line.needId === need.id && line.substituteFor && line.qty.value > 0
+			)
+		).toBe(true);
+		expect(saved.approval?.state).toBe('pending');
+		expect(saved.orders).toEqual([]);
+		await page.evaluate(() => window.scrollTo(0, 0));
+		await expect(alert).toContainText(
+			'The replacement response could not be confirmed. Review the refreshed basket before retrying.'
+		);
+		await expect(apply).toBeEnabled();
+		await capture(page, 'canvas-response-lost.png');
 	});
 });
