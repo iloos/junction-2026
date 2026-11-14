@@ -381,7 +381,9 @@ export async function commitOrder(
 		// A line the agent may commit alone: eligible, act tier, and not for an external caller.
 		const actAlone = (l: { state: string; tier?: string }) =>
 			!external && l.state === 'eligible' && l.tier === 'act';
-		const actIds = plan.lines.filter((l) => l.state === 'eligible' && l.tier === 'act').map((l) => l.id);
+		const actIds = plan.lines
+			.filter((l) => l.state === 'eligible' && l.tier === 'act')
+			.map((l) => l.id);
 		// With a granted approval the commit buys what it covers plus the lines inside the mandate, so a plan with
 		// both is bought in one press and no in-mandate line is left behind.
 		const selected = (
