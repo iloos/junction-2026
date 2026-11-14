@@ -368,7 +368,7 @@ h3 { margin: 0; font: 600 18px/1.25 var(--display); }
 					<text class="t" x="262" y="210">The mandate's checks</text>
 					<circle class="bul" cx="265" cy="226" r="2.5"/><text class="s" x="276" y="230">Limits and caps</text>
 					<circle class="bul" cx="265" cy="244" r="2.5"/><text class="s" x="276" y="248">Approvals bound to the exact terms</text>
-					<circle class="bul" cx="265" cy="262" r="2.5"/><text class="s" x="276" y="266">One order per key</text>
+					<circle class="bul" cx="265" cy="262" r="2.5"/><text class="s" x="276" y="266">One receipt per key</text>
 					<path class="ln" marker-end="url(#ahw)" d="M395 279V291"/>
 					<rect class="st" x="246" y="292" width="298" height="48" rx="10"/>
 					<text class="t" x="262" y="312">One state change</text>
@@ -449,7 +449,7 @@ h3 { margin: 0; font: 600 18px/1.25 var(--display); }
 					<text class="t" x="28" y="474">The mandate's checks</text>
 					<circle class="bul" cx="31" cy="490" r="2.5"/><text class="s" x="42" y="494">Limits and caps</text>
 					<circle class="bul" cx="31" cy="508" r="2.5"/><text class="s" x="42" y="512">Approvals bound to the exact terms</text>
-					<circle class="bul" cx="31" cy="526" r="2.5"/><text class="s" x="42" y="530">One order per key</text>
+					<circle class="bul" cx="31" cy="526" r="2.5"/><text class="s" x="42" y="530">One receipt per key</text>
 					<path class="ln" marker-end="url(#ahn)" d="M179 545V557"/>
 					<rect class="st" x="12" y="558" width="334" height="52" rx="10"/>
 					<text class="t" x="28" y="580">One state change</text>
@@ -475,7 +475,7 @@ h3 { margin: 0; font: 600 18px/1.25 var(--display); }
 					<text class="s" x="204" y="937">every 5 minutes</text>
 				</svg>
 			</div>
-			<p class="vh" id="arch-alt">Architecture diagram. Four ways in: the Kitchen screen and the Request page, used by the chef; the chat, used by the in-app agent; and your own agent over MCP or REST. All four pass one gate. First it works out who is asking from the caller's key or signed cookie, never from the request body. Then it reads the request and looks up the products: Gemini reads requests and menus and scores how well a substitute fits; Valio Aimo gives the catalogue and live price and stock; Exa gives product facts and public listings. Then the mandate's checks: limits and caps, approvals bound to the exact terms, and one order per key. Then one state change, written to the op log with who asked. Each line ends one of three ways: ordered within the mandate, waits for the chef, or refused with the reason. The op log is in Aiven Postgres and streams live to every open screen, including Operations, which also shows recall cases from the recall list that Context.dev checks every 5 minutes.</p>
+			<p class="vh" id="arch-alt">Architecture diagram. Four ways in: the Kitchen screen and the Request page, used by the chef; the chat, used by the in-app agent; and your own agent over MCP or REST. All four pass one gate. First it works out who is asking from the caller's key or signed cookie, never from the request body. Then it reads the request and looks up the products: Gemini reads requests and menus and scores how well a substitute fits; Valio Aimo gives the catalogue and live price and stock; Exa gives product facts and public listings. Then the mandate's checks: limits and caps, approvals bound to the exact terms, and one receipt per key. Then one state change, written to the op log with who asked. Each line ends one of three ways: ordered within the mandate, waits for the chef, or refused with the reason. The op log is in Aiven Postgres and streams live to every open screen, including Operations, which also shows recall cases from the recall list that Context.dev checks every 5 minutes.</p>
 			<p class="archcap">Every request, from any of the four ways in, passes the same checks before anything is ordered, and every change is written to one log in Postgres.</p>
 		</section>
 
