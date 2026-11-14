@@ -270,6 +270,12 @@ section.s .sub.big { font-size: clamp(20px, 1.8vw, 24px); line-height: 1.35; col
 .fix > .chip { justify-self: start; }
 @media (min-width: 900px) { .fix > .chip { justify-self: end; } }
 
+.fix .out { display: grid; gap: 6px; justify-items: start; }
+.fix .reason { font-size: 13.5px; color: var(--ink-2); }
+.ba .ptok { display: inline; }
+.ba .ptok .q { margin-right: 8px; }
+@media (min-width: 900px) { .fix .out { justify-items: end; text-align: right; } .fix { grid-template-columns: 170px minmax(0, 1fr) 16px minmax(0, 1.15fr) 200px; } }
+
 /* the checks: the request's product reads as one line, chip then name */
 .req .ptok { display: block; line-height: 1.5; }
 .req .ptok .q { margin-right: 8px; }
@@ -490,26 +496,22 @@ section.s .sub.big { font-size: clamp(20px, 1.8vw, 24px); line-height: 1.35; col
 		<div class="fix">
 			<h3>Swap it</h3>
 			<div class="ba"><span class="before"><s>HK Viljaporsaan Juhlakinkku 6-8 kg</s> out of stock</span><svg class="arrow" viewBox="0 0 18 18" aria-hidden="true"><path d="M3 9h11m-4-4 4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="after"><span class="ptok"><span class="q" data-s="cases.#out-of-stock.steps.1.parts.1.qty">13 × 1.5 kg</span><span class="pname">HK Palvikinkku viipaloitu 1,5 kg</span></span></span></div>
-			<span class="chip wait" data-s="cases.#out-of-stock.outcome.label">Needs your approval</span>
-			<details><summary>Why</summary><p data-s="cases.#out-of-stock.steps.1.text">Proposed HK Palvikinkku viipaloitu 1,5 kg: 13 packs, 19.5 kg. A known-stock candidate: Valio states 15 in stock.</p><p data-s="cases.#out-of-stock.steps.2.text">It is a new product for this kitchen, so it waits for the chef.</p></details>
+			<div class="out"><span class="chip wait" data-s="cases.#out-of-stock.outcome.label">Needs your approval</span><span class="reason">New product for this kitchen</span></div>
 		</div>
 		<div class="fix">
 			<h3>Make it in house</h3>
 			<div class="ba"><span class="before"><s>Lanttulaatikko</s> out of stock</span><svg class="arrow" viewBox="0 0 18 18" aria-hidden="true"><path d="M3 9h11m-4-4 4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="after">Made from ingredients in Valio's catalogue</span></div>
-			<span class="chip wait">The chef signs off</span>
-			<details><summary>Why</summary><p>The ingredients bring milk, egg and wheat, so the allergen change is the chef's own decision. From the demo buffet plan.</p></details>
+			<div class="out"><span class="chip wait">The chef signs off</span><span class="reason">Adds milk, egg and wheat</span></div>
 		</div>
 		<div class="fix">
 			<h3>Move the day</h3>
 			<div class="ba"><span class="before">“<span data-s="cases.#cut-off.request">4 kg lactose-free butter for tomorrow</span>”, past the cut-off</span><svg class="arrow" viewBox="0 0 18 18" aria-hidden="true"><path d="M3 9h11m-4-4 4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="after" data-s="cases.#cut-off.steps.2.text">Offered: Deliver Wed 9 Dec instead.</span></div>
-			<span class="chip" data-s="cases.#cut-off.outcome.label">Nothing ordered</span>
-			<details><summary>Why</summary><p data-s="cases.#cut-off.steps.1.text">The cut-off for Tue 8 Dec has passed (17:00 Mon); earliest delivery is Wed 9 Dec.</p><p>The day is never moved without asking: the chef picks it.</p></details>
+			<div class="out"><span class="chip" data-s="cases.#cut-off.outcome.label">Nothing ordered</span><span class="reason">Cut-off passed (17:00 Mon)</span></div>
 		</div>
 		<div class="fix">
 			<h3>Hold it</h3>
 			<div class="ba"><span class="before">“<span data-s="cases.#lactose-free.request">10 l lactose-free milk for Friday</span>”</span><svg class="arrow" viewBox="0 0 18 18" aria-hidden="true"><path d="M3 9h11m-4-4 4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="after"><span class="ptok"><span class="q">10 × 1 l</span><span class="pname">Valio kevytmaito 1 l laktoositon UHT</span></span></span></div>
-			<span class="chip wait" data-s="cases.#lactose-free.outcome.label">Needs your approval</span>
-			<details><summary>Why</summary><p>Valio doesn't state a quantity, so it asks before buying and doesn't count it as covered until the supplier confirms.</p></details>
+			<div class="out"><span class="chip wait" data-s="cases.#lactose-free.outcome.label">Needs your approval</span><span class="reason">Valio states no quantity</span></div>
 		</div>
 	</div>
 	<p class="foot-note">Recorded from the app on Sat 14 Nov; the demo kitchen's clock is Mon 7 Dec. The in-house dish is from the demo buffet plan. Valio data is challenge mock data.</p>
