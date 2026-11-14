@@ -3,6 +3,7 @@ import { toolSchemas, type ErrorCode, type ToolName } from '$lib/core/contracts'
 import type { CallContext, ToolHandlers } from '$lib/core/ports';
 import { resolveRequest, type Env } from '$lib/server/auth';
 import { CORS, unauthorized, withCors } from './http';
+import { absolutize, publicOrigin } from './present';
 import { registerExtras } from './mcp-extras';
 import { isToolName, offered, serveTool, toolsFor } from './serve';
 
@@ -104,7 +105,12 @@ export function errorNext(
 	}
 }
 
-export function buildMcpServer(ctx: CallContext, handlers: ToolHandlers): McpServer {
+/** `origin`: where the result's links point (publicOrigin); paths stay paths without it. */
+export function buildMcpServer(
+	ctx: CallContext,
+	handlers: ToolHandlers,
+	origin?: string
+): McpServer {
 	const server = new McpServer(
 		{ name: 'mandate', version: '0.1.0' },
 		{ instructions: mcpInstructions(toolsFor(ctx)) }
@@ -139,7 +145,7 @@ export function buildMcpServer(ctx: CallContext, handlers: ToolHandlers): McpSer
 						]
 					};
 				}
-				const value = r.value as Record<string, unknown>;
+				const value = (origin ? absolutize(r.value, origin) : r.value) as Record<string, unknown>;
 				return {
 					content: [{ type: 'text', text: JSON.stringify(value) }],
 					structuredContent: value
@@ -153,7 +159,12 @@ export function buildMcpServer(ctx: CallContext, handlers: ToolHandlers): McpSer
 
 export function createMcpEndpoint(handlers: ToolHandlers, opts: { env: Env; dev: boolean }) {
 	const mcp = createMcpHandler(
-		({ authInfo }) => buildMcpServer(authInfo?.extra?.ctx as CallContext, handlers),
+		({ authInfo }) =>
+			buildMcpServer(
+				authInfo?.extra?.ctx as CallContext,
+				handlers,
+				authInfo?.extra?.origin as string | undefined
+			),
 		{ responseMode: 'json', onerror: (e) => console.error('[mcp]', e.message) }
 	);
 	return async (request: Request, pathKey?: string): Promise<Response> => {
@@ -180,7 +191,7 @@ export function createMcpEndpoint(handlers: ToolHandlers, opts: { env: Env; dev:
 				token: 'redacted',
 				clientId: ctx.actor.id,
 				scopes: [...ctx.scopes],
-				extra: { ctx }
+				extra: { ctx, origin: publicOrigin(opts.env, request.url) }
 			},
 			...(parsedBody !== undefined ? { parsedBody } : {})
 		});

@@ -141,3 +141,28 @@ export function presentMeta(
 			return undefined;
 	}
 }
+
+/**
+ * The origin links are made absolute with: PUBLIC_ORIGIN (the app's public host, e.g. https://app.mandate.kitchen;
+ * behind the platform the request may arrive on an internal host), else the request's own origin.
+ */
+export function publicOrigin(env: Record<string, string | undefined>, requestUrl: string): string {
+	const set = env.PUBLIC_ORIGIN?.trim().replace(/\/+$/, '');
+	if (set && /^https?:\/\//.test(set)) return set;
+	return new URL(requestUrl).origin;
+}
+
+/**
+ * A tool result as an outside agent receives it: every `meta` link (approvalUrl, reviewUrl, …) that is a path becomes
+ * an absolute URL on `origin`, so a human can open it on any device. present.ts builds paths; the doors (MCP, REST)
+ * make them absolute. A link points somewhere; it never carries authority (D17).
+ */
+export function absolutize<T>(value: T, origin: string): T {
+	const v = value as { meta?: Record<string, unknown> } | null;
+	if (!v || typeof v !== 'object' || !v.meta) return value;
+	const meta = { ...v.meta };
+	for (const [k, x] of Object.entries(meta))
+		if (k.endsWith('Url') && typeof x === 'string' && x.startsWith('/') && !x.startsWith('//'))
+			meta[k] = `${origin}${x}`;
+	return { ...(value as object), meta } as T;
+}
