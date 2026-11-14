@@ -211,8 +211,8 @@
 								{#if g.matchedSources.length}
 									Matches {g.matchedSources.length} sourced recipe{g.matchedSources.length === 1
 										? ''
-										: 's'} ({g.matchedSources.map((s) => s.host).join(', ')})
-									{#each g.matchedSources as s (s.url)}<SourceChip
+										: 's'} ({[...new Set(g.matchedSources.map((s) => s.host))].join(', ')})
+									{#each g.matchedSources as s, si (si)}<SourceChip
 											api="exa"
 											cache={g.source}
 											at={g.at}
@@ -225,7 +225,7 @@
 										: ''}
 								{/if}
 							</span>
-							{#each g.modelOnly as m (m)}
+							{#each g.modelOnly as m, mi (mi)}
 								<span class="flex items-center gap-1 text-signoff"
 									><CircleHelp size={12} aria-hidden="true" />the model added {m}, which no source
 									has</span

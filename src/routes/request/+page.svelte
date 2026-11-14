@@ -74,7 +74,47 @@
 	let busy = $state(false);
 	/** Until hydration the form would submit natively and lose the text. */
 	let ready = $state(false);
-	onMount(() => (ready = true));
+	onMount(() => {
+		ready = true;
+		void openLinkedMenu();
+	});
+
+	/**
+	 * A menu the chat proposed opens here for the chef's review: /request?menu=<id>&rev=<revision>. It is read from this
+	 * browser's own workspace; a menu from another room or from before a reset is not there, and the page says so.
+	 */
+	let linkedMenu = $state<{ id: string; rev: number | null; note: string | null } | null>(null);
+	async function openLinkedMenu() {
+		const q = new URL(location.href).searchParams;
+		const id = q.get('menu');
+		if (!id) return;
+		const rev = q.get('rev') !== null && /^\d+$/.test(q.get('rev')!) ? Number(q.get('rev')) : null;
+		linkedMenu = { id, rev, note: null };
+		try {
+			const res = await fetch('/request/menu', {
+				method: 'POST',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ action: 'read', id })
+			});
+			if (!res.ok) {
+				linkedMenu = {
+					id,
+					rev,
+					note: "This menu isn't in this sandbox: it was proposed in another room or before a reset. Ask the chat to propose it again here."
+				};
+				return;
+			}
+			menu = (await res.json()) as MenuView;
+			if (rev !== null && menu.proposal.revision !== rev)
+				linkedMenu = {
+					id,
+					rev,
+					note: `The chat linked revision ${rev}; this is the latest, revision ${menu.proposal.revision}.`
+				};
+		} catch (e) {
+			linkedMenu = { id, rev, note: e instanceof Error ? e.message : String(e) };
+		}
+	}
 	let error = $state<string | null>(null);
 
 	let status = $state<Record<'request' | 'lookup' | 'order' | 'approval', Status>>({
@@ -455,7 +495,8 @@
 			revision: menu.proposal.revision
 		});
 		// The event is planned: request, lookup, order and approval are all answered by the plan in the Kitchen.
-		if (menuPlan) status = { request: 'done', lookup: 'done', order: 'done', approval: 'done' };
+		if (menuPlan && event)
+			status = { request: 'done', lookup: 'done', order: 'done', approval: 'done' };
 	}
 
 	/** The chef took the first open delivery date after a cut-off: same words, that date, said in the notes. */
@@ -700,6 +741,27 @@
 		>
 			<TriangleAlert size={16} class="mt-0.5 shrink-0" aria-hidden="true" />{error}
 		</p>
+	{/if}
+
+	{#if linkedMenu && status.request === 'idle'}
+		<section class="mt-8" aria-label="Menu from the chat" data-testid="linked-menu">
+			<h2 class="text-heading font-semibold">Menu from the chat</h2>
+			{#if linkedMenu.note}<p class="mt-1 text-body text-ink-2" role="status">
+					{linkedMenu.note}
+				</p>{/if}
+			{#if menu}
+				<MenuReview
+					view={menu}
+					busy={busy || menuBusy}
+					plan={menuPlan}
+					onchange={editMenu}
+					onaccept={acceptMenu}
+					onplan={planMenu}
+				/>
+			{:else if !linkedMenu.note}
+				<p class="mt-1 text-body text-ink-3">Opening the menu…</p>
+			{/if}
+		</section>
 	{/if}
 
 	{#if status.request !== 'idle'}
