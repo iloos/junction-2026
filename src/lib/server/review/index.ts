@@ -98,6 +98,7 @@ export async function review<I, O, F>(
 
 	deps.trace?.('decision', {
 		kind: 'review',
+		job: `review.${cp.id}`,
 		checkpoint: cp.id,
 		verdict: verdict.kind,
 		findings: findings.map((f) => f.message),

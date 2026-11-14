@@ -1,7 +1,7 @@
 import type { Plan, ServerEvent, ToolOutput } from '$lib/core/contracts';
 import type { Llm, ToolHandlers } from '$lib/core/ports';
 import { createDecide } from '$lib/server/adapters/decide';
-import { createLlm } from '$lib/server/adapters/llm';
+import { createLlmRouter } from '$lib/server/adapters/llm/router';
 import { traceEvent } from '$lib/server/adapters/llm/trace';
 import { contextFor, type Env } from '$lib/server/auth';
 import { createServerPorts } from '$lib/server/store/server-ports';
@@ -154,7 +154,8 @@ export async function runRoutineAgent(o: {
 		})!;
 	const ctx = principalContext(principal);
 	const fixture = (o.env.LLM_PROVIDER ?? 'fixture') === 'fixture' || o.env.AGENT_PLANNER !== 'llm';
-	const llm = createLlm(o.env, (step, data) => o.onEvent?.(traceEvent(ctx, step, data)));
+	const router = createLlmRouter(o.env, (step, data) => o.onEvent?.(traceEvent(ctx, step, data)));
+	const llm = router.for('agent.plan');
 	return runGoal({
 		goal: o.goal,
 		principal,
@@ -175,7 +176,7 @@ export async function runRoutineAgent(o: {
 							}),
 							budget: new ReviewBudget(3)
 						},
-						...(fixture ? {} : { llm })
+						...(fixture ? {} : { llm: router.for('agent.review_rewrite') })
 					}
 				}
 			: {})
