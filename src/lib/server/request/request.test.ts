@@ -7,6 +7,7 @@ import { convert, contentPerSalesUnit } from './convert';
 import { findDate } from './dates';
 import { parseRequest, parseRules } from './parse';
 import { approvalView, callTool, runRequest } from './run';
+import { commitWith } from './index';
 
 const TODAY = '2026-11-14'; // Saturday, the demo clock
 
@@ -374,6 +375,49 @@ describe('request flow on the PGlite fixture', () => {
 		});
 		expect(c1.totalCents).toBe(156000);
 		expect(c2.receiptId).toBe(c1.receiptId);
+	}, 60_000);
+
+	it("Request's own commit: 4 concurrent sends and a later retry get one receipt", async () => {
+		const env = await createDbPorts({ now: `${TODAY}T12:00:00+02:00` });
+		env.overlay.clear();
+		const h = createHandlers(env.ports);
+		const ctx = (kind: keyof typeof SCOPES_BY_ACTOR, id: string): CallContext => ({
+			workspaceId: env.workspaceId,
+			runId: env.runId,
+			actor: { kind, id },
+			scopes: SCOPES_BY_ACTOR[kind],
+			via: 'test'
+		});
+		const kitchen = (await env.store.kitchens(env.workspaceId)).find((k) => k.id === 'k-hotel')!;
+		const r = await runRequest('1,000 L lactose-free milk by Monday', {
+			handlers: h,
+			ctx: ctx('kitchen_agent', 'request-agent'),
+			today: TODAY,
+			kitchen,
+			nonce: 'conc'
+		});
+		const plan = r.order!.plan;
+		const ap = r.order!.approval!;
+		await callTool(h, ctx('approver', 'head-chef'), 'approve', {
+			approvalId: ap.id,
+			planVersion: ap.planVersion,
+			termsHash: ap.termsHash,
+			decision: 'grant'
+		});
+		const chef = ctx('chef', 'chef');
+		const sends = await Promise.all(
+			[1, 2, 3, 4].map((attempt) =>
+				commitWith(h, chef, { planId: plan.id, version: plan.version, attempt })
+			)
+		);
+		const receipts = new Set(sends.map((s) => s.commit.receiptId));
+		expect(receipts.size).toBe(1);
+		expect(new Set(sends.map((s) => s.commit.idempotencyKey)).size).toBe(1);
+		expect(sends[0].commit.idempotencyKey).toMatch(/^cmd-/);
+		// A retry after the success computes the same lines, so it replays rather than being refused.
+		const later = await commitWith(h, chef, { planId: plan.id, version: plan.version, attempt: 5 });
+		expect(later.commit.receiptId).toBe(sends[0].commit.receiptId);
+		expect(later.plan.lines.every((l) => l.state === 'committed')).toBe(true);
 	}, 60_000);
 
 	it('asks instead of ordering when the quantity is missing, and quotes nothing', async () => {
