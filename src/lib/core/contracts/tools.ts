@@ -34,11 +34,12 @@ export const SCOPES_BY_ACTOR = {
 const PlanRef = z.object({ planId: z.string(), version: z.int().nonnegative() });
 
 /**
- * A ranking preference for one call ("cheapest", "lowest carbon", "prefer Finnish", "most reliable"): it reweights the
+ * A ranking preference for one call ("cheapest", "lowest carbon", "prefer Finnish", "most reliable"; `kitchen` = the
+ * kitchen's own weights, the /request page's names): it reweights the
  * order candidates are shown or picked in, never a line's tier or authority, and is never persisted. Requiring an
  * origin stays a mandate rule only a chef sets.
  */
-export const RankBy = z.enum(['default', 'price', 'carbon', 'finnish', 'reliability']);
+export const RankBy = z.enum(['kitchen', 'price', 'carbon', 'finnish', 'reliability']);
 export type RankBy = z.infer<typeof RankBy>;
 
 /**
