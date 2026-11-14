@@ -1,43 +1,247 @@
 {
-	"recordedAt": "2026-11-14T12:29:55.152Z",
-	"appCommit": "e9ec36c00819399188dde3276d63f704582985f1",
-	"cases": [
-		{
-			"id": "out-of-stock",
-			"recordedAt": "2026-11-14T12:29:50.275Z",
-			"source": {
-				"app": "https://app.mandate.kitchen",
-				"endpoints": [
-					"GET /kitchen-api/snapshot",
-					"POST /kitchen-api/scenario {action:start}"
-				]
+	"recordedAt": "2026-11-14T17:05:28.557Z",
+	"appCommit": "b2dfe9c1a94cd0ea0b51284cf504a53cb6589c3e",
+	"chain": {
+		"recordedAt": "2026-11-14T17:05:28.556Z",
+		"line": {
+			"dish": "Salmon soup",
+			"ingredient": "potatoes",
+			"product": "SPL Raaka annosperuna veitsikuorittu 10kg",
+			"eur": 15.82,
+			"dishes": 6,
+			"per": "100 g"
+		},
+		"counts": {
+			"canOrderNow": 4,
+			"waiting": 5,
+			"unknownQuantity": 5
+		},
+		"steps": [
+			{
+				"key": "kitchen",
+				"title": "The kitchen",
+				"value": "Lounas Ruoholahti",
+				"text": "A fictional lunch restaurant in Helsinki. The agent may order alone up to €400 a line."
 			},
-			"via": "Started in the Kitchen",
-			"request": "Plan the event · Christmas buffet, 140 guests",
-			"steps": [
+			{
+				"key": "event",
+				"title": "The event",
+				"value": "320 lunches",
+				"text": "Wednesday lunch buffet on Wed 16 Dec."
+			},
+			{
+				"key": "dish",
+				"title": "The dish",
+				"value": "Salmon soup",
+				"text": "One of 6 dishes on the menu, 100 g a guest.",
+				"decides": {
+					"kind": "unknown",
+					"text": "Its cream waits for one tap: Valio doesn't state a quantity."
+				}
+			},
+			{
+				"key": "ingredient",
+				"title": "The ingredient",
+				"value": "11.79 kg potatoes",
+				"text": "Potatoes for 320 guests at 100 g of salmon soup each."
+			},
+			{
+				"key": "product",
+				"title": "The product",
+				"value": "SPL Raaka annosperuna veitsikuorittu 10kg",
+				"text": "From Valio Aimo's catalogue: 2 packs × 10 kg, €15.82.",
+				"decides": {
+					"kind": "rule",
+					"text": "Inside the mandate: ordered without asking."
+				}
+			},
+			{
+				"key": "order",
+				"title": "The order",
+				"value": "Supplier confirmed",
+				"text": "Ordered on one receipt.",
+				"decides": {
+					"kind": "signoff",
+					"text": "4 lines can be ordered now · 5 wait for the chef · 5 of them because Valio doesn't state a quantity"
+				}
+			}
+		],
+		"appCommit": "b2dfe9c1a94cd0ea0b51284cf504a53cb6589c3e"
+	},
+	"plan": {
+		"recordedAt": "2026-11-14T17:36:43.384Z",
+		"appCommit": "b10cd4385122a9d9859c1b6e3d6d7aee7fb25c56",
+		"ask": "Plan the Christmas buffet for 140 on Saturday.",
+		"source": {
+			"app": "https://app.mandate.kitchen",
+			"endpoints": [
+				"POST /api/chat/turn",
+				"GET /kitchen-api/snapshot?plan=<id>&peek=1"
+			]
+		},
+		"event": {
+			"title": "Christmas dinner buffet, 140 guests",
+			"guests": 140,
+			"date": "Sat 12 Dec",
+			"deliverBy": "Thu 10 Dec"
+		},
+		"steps": [
+			{
+				"tool": "understand",
+				"summary": "An event brief.",
+				"source": "live"
+			},
+			{
+				"tool": "plan_event",
+				"summary": "Drafted the order for Thu 10 Dec: 13 lines, €651.50; 7 wait for your approval."
+			},
+			{
+				"tool": "find_substitutes",
+				"summary": "Looked for substitutes for Thu 10 Dec: 14 lines, €852.09; 8 wait for your approval."
+			},
+			{
+				"tool": "find_substitutes",
+				"summary": "Looked for substitutes for Thu 10 Dec: 19 lines, €883.55; 13 wait for your approval."
+			},
+			{
+				"tool": "explain",
+				"summary": "Answered from the order's numbers.",
+				"source": "rules"
+			}
+		],
+		"reply": "For Thu 10 Dec: 92.82 kg + 10.5 l needed; 84.42 kg + 10.5 l planned, not yet submitted; 8.4 kg unresolved; no order placed yet; 3 decisions wait for you.",
+		"modelGuard": "template sentence (model reply not used: 1 need(s) are unresolved: name them as still open.)",
+		"counts": {
+			"dishes": 12,
+			"lines": 19,
+			"waiting": 13,
+			"decisions": 3,
+			"ordered": 0
+		},
+		"eur": 883.55,
+		"unresolved": {
+			"needs": [
 				{
-					"icon": "search",
-					"text": "HK Viljaporsaan Juhlakinkku potkalla tuoresuolattu 6-8 kg is out of stock at Valio."
-				},
-				{
-					"icon": "swap",
-					"text": "Proposed HK Palvikinkku viipaloitu 1,5 kg: 13 packs, 19.5 kg. A known-stock candidate: Valio states 15 in stock."
-				},
-				{
-					"icon": "hold",
-					"text": "It is a new product for this kitchen, so it waits for the chef."
+					"label": "Joulutorttu (prune star tart)",
+					"value": 8.4,
+					"unit": "kg"
 				}
 			],
-			"outcome": {
-				"state": "held",
-				"label": "Needs your approval",
-				"eur": 200.59
-			},
-			"link": "https://app.mandate.kitchen/"
+			"source": "chat ledger: needs[].unresolved"
 		},
+		"lines": [
+			{
+				"kind": "swap",
+				"was": "HK Viljaporsaan Juhlakinkku potkalla tuoresuolattu 6-8 kg",
+				"product": "HK Palvikinkku viipaloitu 1,5 kg",
+				"qty": "13 × 1.5 kg",
+				"eur": 200.59,
+				"supply": "known",
+				"stated": 15
+			},
+			{
+				"kind": "unknown",
+				"product": "Valio kevytmaito 1 l laktoositon UHT",
+				"qty": "11 × 1 l",
+				"eur": 17.16,
+				"supply": "unknown"
+			},
+			{
+				"kind": "in-house",
+				"dish": "Lanttulaatikko",
+				"product": "LANTTU BRITANNIA",
+				"qty": "5.95 kg",
+				"eur": 13.98,
+				"supply": "unknown"
+			}
+		],
+		"decision": {
+			"title": "Make lanttulaatikko in house · allergens change",
+			"reason": "New product · Allergen change",
+			"why": "A product this kitchen has not bought before. Your mandate says to ask first. The allergens change. The kitchen never delegates an allergen change.",
+			"lines": 5,
+			"eur": 31.46,
+			"lineReasons": [
+				"UNKNOWN_REQUIRED",
+				"new_sku",
+				"allergen_change"
+			],
+			"newProducts": 5,
+			"makeInHouse": [
+				"Lanttulaatikko"
+			],
+			"allergens": [
+				{
+					"dish": "Lanttulaatikko",
+					"note": "allergens: milk (lactose-free cream), egg, wheat; compare with the 462482 label before serving (the hotel never delegates an allergen change)"
+				}
+			]
+		},
+		"decisions": [
+			{
+				"title": "Use a substitute for joulukinkku · Buy 6 new products",
+				"reason": "New product",
+				"why": "A product this kitchen has not bought before. Your mandate says to ask first.",
+				"lines": 7,
+				"eur": 532.31,
+				"lineReasons": [
+					"UNKNOWN_REQUIRED",
+					"new_sku"
+				],
+				"newProducts": 7
+			},
+			{
+				"title": "Buy 1 new product",
+				"reason": "Held",
+				"why": null,
+				"lines": 1,
+				"eur": 17.16,
+				"lineReasons": [
+					"UNKNOWN_REQUIRED"
+				],
+				"newProducts": 0
+			},
+			{
+				"title": "Make lanttulaatikko in house · allergens change",
+				"reason": "New product · Allergen change",
+				"why": "A product this kitchen has not bought before. Your mandate says to ask first. The allergens change. The kitchen never delegates an allergen change.",
+				"lines": 5,
+				"eur": 31.46,
+				"lineReasons": [
+					"UNKNOWN_REQUIRED",
+					"new_sku",
+					"allergen_change"
+				],
+				"newProducts": 5,
+				"makeInHouse": [
+					"Lanttulaatikko"
+				],
+				"allergens": [
+					{
+						"dish": "Lanttulaatikko",
+						"note": "allergens: milk (lactose-free cream), egg, wheat; compare with the 462482 label before serving (the hotel never delegates an allergen change)"
+					}
+				]
+			}
+		],
+		"makeInHouse": {
+			"inPlan": true,
+			"dish": "Lanttulaatikko",
+			"title": "Make lanttulaatikko in house",
+			"summary": "No ready-made lanttulaatikko can be delivered. Make it from in-stock ingredients.",
+			"ingredients": 5,
+			"labour": "about 40 min prep + 2 h at 150 °C (team estimate) · Valio doesn't state stock for 4 of 5 ingredients",
+			"allergens": "allergens: milk (lactose-free cream), egg, wheat; compare with the 462482 label before serving (the hotel never delegates an allergen change)",
+			"caveats": [
+				"swede origin NL, not FI"
+			],
+			"source": "GET /kitchen-api/snapshot view.dishes[].rescue.make"
+		}
+	},
+	"cases": [
 		{
 			"id": "lactose-free",
-			"recordedAt": "2026-11-14T12:29:51.460Z",
+			"recordedAt": "2026-11-14T17:05:19.043Z",
 			"source": {
 				"app": "https://app.mandate.kitchen",
 				"endpoints": [
@@ -45,30 +249,159 @@
 				]
 			},
 			"request": "10 l lactose-free milk for Friday",
+			"ask": {
+				"qty": "10 l",
+				"item": "lactose-free milk",
+				"rest": "for Friday"
+			},
 			"steps": [
 				{
 					"icon": "search",
-					"text": "Read as 10 l of milk that must be lactose-free, for Fri 11 Dec."
+					"text": "Read as 10 l of milk that must be lactose-free, for Fri 11 Dec.",
+					"parts": [
+						{
+							"t": "Read as "
+						},
+						{
+							"qty": "10 l"
+						},
+						{
+							"t": " of milk that must be lactose-free, for Fri 11 Dec."
+						}
+					]
 				},
 				{
 					"icon": "check",
-					"text": "Picked Valio kevytmaito 1 l laktoositon UHT, 10 packs. 78 catalogue matches filtered out, 5 shortlisted."
+					"text": "Picked Valio kevytmaito 1 l laktoositon UHT, 10 packs. 78 catalogue matches filtered out, 5 shortlisted.",
+					"parts": [
+						{
+							"t": "Picked "
+						},
+						{
+							"qty": "10 × 1 l"
+						},
+						{
+							"product": "Valio kevytmaito 1 l laktoositon UHT"
+						},
+						{
+							"t": ". 78 catalogue matches filtered out, 5 shortlisted."
+						}
+					]
 				},
 				{
-					"icon": "shield",
-					"text": "Inside the mandate, so it can be ordered without asking."
+					"icon": "hold",
+					"text": "Valio doesn't state a quantity: your mandate asks before buying it."
 				}
 			],
 			"outcome": {
-				"state": "within",
-				"label": "Within your mandate",
+				"state": "held",
+				"label": "Needs your approval",
 				"eur": 15.6
 			},
 			"link": "https://app.mandate.kitchen/request"
 		},
 		{
+			"id": "within-mandate",
+			"recordedAt": "2026-11-14T17:05:20.453Z",
+			"source": {
+				"app": "https://app.mandate.kitchen",
+				"endpoints": [
+					"POST /request/run",
+					"POST /request/run {action:commit}"
+				]
+			},
+			"request": "10 kg salmon fillet for Friday",
+			"ask": {
+				"qty": "10 kg",
+				"item": "salmon fillet",
+				"rest": "for Friday"
+			},
+			"steps": [
+				{
+					"icon": "check",
+					"text": "Picked LOHIFILEE C-LEIKATTU 10KG, 10 kg, a product this kitchen already buys.",
+					"parts": [
+						{
+							"t": "Picked "
+						},
+						{
+							"qty": "10 kg"
+						},
+						{
+							"product": "LOHIFILEE C-LEIKATTU 10KG"
+						},
+						{
+							"t": ", a product this kitchen already buys."
+						}
+					]
+				},
+				{
+					"icon": "shield",
+					"text": "Inside the mandate: under the caps, Valio states the stock, nothing to sign off."
+				},
+				{
+					"icon": "receipt",
+					"text": "Ordered with no approval needed, on one receipt; supplier confirmed."
+				}
+			],
+			"outcome": {
+				"state": "ordered",
+				"label": "Ordered within your mandate",
+				"eur": 141.1
+			},
+			"link": "https://app.mandate.kitchen/request"
+		},
+		{
+			"id": "agent-cannot-approve",
+			"recordedAt": "2026-11-14T17:05:21.619Z",
+			"source": {
+				"app": "https://app.mandate.kitchen",
+				"endpoints": [
+					"GET /api/demo/judge-key",
+					"POST /api/tools/place_order",
+					"POST /api/tools/approve",
+					"POST /mcp/k/<key> tools/list",
+					"GET /api/events?mode=poll"
+				]
+			},
+			"request": "An outside agent tries to approve its own order",
+			"steps": [
+				{
+					"icon": "hold",
+					"text": "Its order (Valio kevytmaito 1 l laktoositon UHT, 30 packs) is held for the chef.",
+					"parts": [
+						{
+							"t": "Its order of "
+						},
+						{
+							"qty": "30 packs"
+						},
+						{
+							"product": "Valio kevytmaito 1 l laktoositon UHT"
+						},
+						{
+							"t": " is held for the chef."
+						}
+					]
+				},
+				{
+					"icon": "shield",
+					"text": "It called approve itself: refused (403). Ops logs the attempt; nothing changed."
+				},
+				{
+					"icon": "check",
+					"text": "Over MCP its key gets 15 tools, none of them approve."
+				}
+			],
+			"outcome": {
+				"state": "refused",
+				"label": "Refused"
+			},
+			"link": "https://app.mandate.kitchen/agents"
+		},
+		{
 			"id": "cut-off",
-			"recordedAt": "2026-11-14T12:29:52.903Z",
+			"recordedAt": "2026-11-14T17:05:23.135Z",
 			"source": {
 				"app": "https://app.mandate.kitchen",
 				"endpoints": [
@@ -76,6 +409,11 @@
 				]
 			},
 			"request": "4 kg lactose-free butter for tomorrow",
+			"ask": {
+				"qty": "4 kg",
+				"item": "lactose-free butter",
+				"rest": "for tomorrow"
+			},
 			"steps": [
 				{
 					"icon": "search",
@@ -97,58 +435,35 @@
 			"link": "https://app.mandate.kitchen/request"
 		},
 		{
-			"id": "agent-cannot-approve",
-			"recordedAt": "2026-11-14T12:29:53.741Z",
-			"source": {
-				"app": "https://app.mandate.kitchen",
-				"endpoints": [
-					"GET /api/demo/judge-key",
-					"POST /api/tools/place_order",
-					"POST /api/tools/approve",
-					"POST /mcp/k/<key> tools/list",
-					"GET /api/events?mode=poll"
-				]
-			},
-			"request": "An outside agent tries to approve its own order",
-			"steps": [
-				{
-					"icon": "hold",
-					"text": "Its order (Valio kevytmaito 1 l laktoositon UHT, 30 packs) is held for the chef."
-				},
-				{
-					"icon": "shield",
-					"text": "It called approve itself: refused (403). Ops logs the attempt; nothing changed."
-				},
-				{
-					"icon": "check",
-					"text": "Over MCP its key gets 15 tools, none of them approve."
-				}
-			],
-			"outcome": {
-				"state": "refused",
-				"label": "Refused"
-			},
-			"link": "https://app.mandate.kitchen/agents"
-		},
-		{
 			"id": "one-receipt",
-			"recordedAt": "2026-11-14T12:29:55.152Z",
+			"recordedAt": "2026-11-14T17:05:25.123Z",
 			"source": {
 				"app": "https://app.mandate.kitchen",
 				"endpoints": [
 					"POST /request/run",
+					"POST /request/run {action:approve}",
 					"POST /request/run {action:commit} ×4"
 				]
 			},
-			"request": "10 l lactose-free milk for Friday, then the order sent 4 times at once",
+			"via": "Asked · approved by the chef · sent 4 times at once",
+			"request": "10 l lactose-free milk for Friday",
+			"ask": {
+				"qty": "10 l",
+				"item": "lactose-free milk",
+				"rest": "for Friday"
+			},
 			"steps": [
+				{
+					"icon": "hold",
+					"text": "The chef approves the exact terms (Approve on the request page)."
+				},
 				{
 					"icon": "receipt",
 					"text": "4 sends of the same order, with one key."
 				},
 				{
 					"icon": "check",
-					"text": "1 receipt for 1 line: ordered once, never twice."
+					"text": "1 receipt: ordered once, never twice."
 				}
 			],
 			"outcome": {
@@ -157,6 +472,100 @@
 				"eur": 15.6
 			},
 			"link": "https://app.mandate.kitchen/request"
+		},
+		{
+			"id": "out-of-stock",
+			"recordedAt": "2026-11-14T17:05:27.127Z",
+			"source": {
+				"app": "https://app.mandate.kitchen",
+				"endpoints": [
+					"GET /kitchen-api/snapshot",
+					"POST /kitchen-api/scenario {action:start}",
+					"POST /kitchen-api/tool/approve (lineIds)",
+					"POST /kitchen-api/tool/commit_order (lineIds)"
+				]
+			},
+			"trace": {
+				"need": {
+					"label": "Joulukinkku (Christmas ham)",
+					"value": 27,
+					"unit": "kg",
+					"perGuestG": 135,
+					"guests": 140,
+					"servedKg": 18.9
+				},
+				"bought": {
+					"value": 19.5,
+					"unit": "kg"
+				},
+				"pack": {
+					"qty": "13 × 1.5 kg",
+					"product": "HK Palvikinkku viipaloitu 1,5 kg",
+					"replaces": "HK Viljaporsaan Juhlakinkku potkalla tuoresuolattu 6-8 kg"
+				},
+				"line": {
+					"eur": 200.59,
+					"state": "held",
+					"reasons": [
+						"new_sku"
+					],
+					"label": "Needs your approval"
+				},
+				"decision": {
+					"state": "granted",
+					"by": "the chef",
+					"label": "Approved by the chef"
+				},
+				"receipt": {
+					"state": "supplier confirmed",
+					"label": "Supplier confirmed",
+					"eur": 200.59
+				}
+			},
+			"via": "Started in the Kitchen",
+			"request": "Plan the event · Christmas buffet, 140 guests",
+			"steps": [
+				{
+					"icon": "search",
+					"text": "HK Viljaporsaan Juhlakinkku potkalla tuoresuolattu 6-8 kg is out of stock at Valio.",
+					"parts": [
+						{
+							"product": "HK Viljaporsaan Juhlakinkku potkalla tuoresuolattu 6-8 kg"
+						},
+						{
+							"t": " is out of stock at Valio."
+						}
+					]
+				},
+				{
+					"icon": "swap",
+					"text": "Proposed HK Palvikinkku viipaloitu 1,5 kg: 13 packs, 19.5 kg. A known-stock candidate: Valio states 15 in stock.",
+					"parts": [
+						{
+							"t": "Proposed "
+						},
+						{
+							"qty": "13 × 1.5 kg"
+						},
+						{
+							"product": "HK Palvikinkku viipaloitu 1,5 kg"
+						},
+						{
+							"t": ". A known-stock candidate: Valio states 15 in stock."
+						}
+					]
+				},
+				{
+					"icon": "hold",
+					"text": "It is a new product for this kitchen, so it waits for the chef."
+				}
+			],
+			"outcome": {
+				"state": "held",
+				"label": "Needs your approval",
+				"eur": 200.59
+			},
+			"link": "https://app.mandate.kitchen/"
 		}
 	]
 }
