@@ -1,10 +1,44 @@
 {
-	"recordedAt": "2026-11-14T12:29:55.152Z",
-	"appCommit": "e9ec36c00819399188dde3276d63f704582985f1",
+	"recordedAt": "2026-11-14T13:55:02.366Z",
+	"appCommit": "2c28b4b692bca639d3ae9edc7059cbaeb9fe187d",
 	"cases": [
 		{
+			"id": "within-mandate",
+			"recordedAt": "2026-11-14T13:54:55.184Z",
+			"source": {
+				"app": "https://app.mandate.kitchen",
+				"endpoints": [
+					"GET /kitchen-api/snapshot",
+					"POST /kitchen-api/scenario {action:start}",
+					"POST /kitchen-api/tool/commit_order"
+				]
+			},
+			"via": "Started in the Kitchen",
+			"request": "Plan the event · Christmas buffet, 140 guests",
+			"steps": [
+				{
+					"icon": "shield",
+					"text": "3 lines are inside the mandate, so they need no decision."
+				},
+				{
+					"icon": "hold",
+					"text": "15 lines wait for the chef, each with its reason."
+				},
+				{
+					"icon": "receipt",
+					"text": "Ordered the 3 lines it can now, on 1 receipt. The rest still wait."
+				}
+			],
+			"outcome": {
+				"state": "ordered",
+				"label": "Ordered within your mandate",
+				"eur": 302.62
+			},
+			"link": "https://app.mandate.kitchen/"
+		},
+		{
 			"id": "out-of-stock",
-			"recordedAt": "2026-11-14T12:29:50.275Z",
+			"recordedAt": "2026-11-14T13:54:56.579Z",
 			"source": {
 				"app": "https://app.mandate.kitchen",
 				"endpoints": [
@@ -37,7 +71,7 @@
 		},
 		{
 			"id": "lactose-free",
-			"recordedAt": "2026-11-14T12:29:51.460Z",
+			"recordedAt": "2026-11-14T13:54:57.957Z",
 			"source": {
 				"app": "https://app.mandate.kitchen",
 				"endpoints": [
@@ -55,20 +89,20 @@
 					"text": "Picked Valio kevytmaito 1 l laktoositon UHT, 10 packs. 78 catalogue matches filtered out, 5 shortlisted."
 				},
 				{
-					"icon": "shield",
-					"text": "Inside the mandate, so it can be ordered without asking."
+					"icon": "hold",
+					"text": "Valio doesn't state a quantity: your mandate asks before buying it."
 				}
 			],
 			"outcome": {
-				"state": "within",
-				"label": "Within your mandate",
+				"state": "held",
+				"label": "Needs your approval",
 				"eur": 15.6
 			},
 			"link": "https://app.mandate.kitchen/request"
 		},
 		{
 			"id": "cut-off",
-			"recordedAt": "2026-11-14T12:29:52.903Z",
+			"recordedAt": "2026-11-14T13:54:59.412Z",
 			"source": {
 				"app": "https://app.mandate.kitchen",
 				"endpoints": [
@@ -98,7 +132,7 @@
 		},
 		{
 			"id": "agent-cannot-approve",
-			"recordedAt": "2026-11-14T12:29:53.741Z",
+			"recordedAt": "2026-11-14T13:55:00.538Z",
 			"source": {
 				"app": "https://app.mandate.kitchen",
 				"endpoints": [
@@ -132,31 +166,32 @@
 		},
 		{
 			"id": "one-receipt",
-			"recordedAt": "2026-11-14T12:29:55.152Z",
+			"recordedAt": "2026-11-14T13:55:02.366Z",
 			"source": {
 				"app": "https://app.mandate.kitchen",
 				"endpoints": [
-					"POST /request/run",
-					"POST /request/run {action:commit} ×4"
+					"POST /kitchen-api/scenario {action:start}",
+					"POST /kitchen-api/tool/commit_order ×4"
 				]
 			},
-			"request": "10 l lactose-free milk for Friday, then the order sent 4 times at once",
+			"via": "Started in the Kitchen",
+			"request": "The same order sent 4 times at once",
 			"steps": [
 				{
 					"icon": "receipt",
-					"text": "4 sends of the same order, with one key."
+					"text": "4 sends of one order (3 lines), with one key."
 				},
 				{
 					"icon": "check",
-					"text": "1 receipt for 1 line: ordered once, never twice."
+					"text": "1 receipt: ordered once, never twice."
 				}
 			],
 			"outcome": {
 				"state": "ordered",
 				"label": "Ordered · 1 receipt",
-				"eur": 15.6
+				"eur": 302.62
 			},
-			"link": "https://app.mandate.kitchen/request"
+			"link": "https://app.mandate.kitchen/"
 		}
 	]
 }

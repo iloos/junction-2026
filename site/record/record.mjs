@@ -80,10 +80,70 @@ async function request(go, text) {
 	return last.data;
 }
 
+/** The seeded Christmas buffet in a fresh sandbox, started as the Kitchen's "Plan the event" does. */
+async function buffet(go) {
+	await go('/kitchen-api/snapshot');
+	const s = await go('/kitchen-api/scenario', post({ action: 'start' }));
+	need(s.status === 200 && s.json?.plan, `scenario start ${s.status}`);
+	const { plan, view, clock } = s.json;
+	need(clock?.runId, 'scenario start has no run id');
+	// The Kitchen's own rule for "Order the N lines you can now" (ApprovalPanel: view.committable).
+	const eligible = plan.lines.filter((l) => l.view?.committable === true);
+	// What the Kitchen sends with each tool call: the run, plan and version the screen shows.
+	const shown = { runId: clock.runId, planId: plan.id, version: plan.version };
+	return { plan, view, eligible, shown };
+}
+
+/** One Kitchen tool call, as the chef's screen makes it (with the x-kitchen-view header). */
+const kitchenTool = (go, name, input, shown) => {
+	const init = post(input);
+	init.headers['x-kitchen-view'] = JSON.stringify(shown);
+	return go(`/kitchen-api/tool/${name}`, init);
+};
+
 // ---------------------------------------------------------------------------------------------------------------
 // Cases. `claimable: false` keeps a case off the page until docs/CLAIMS.md says it may be said.
 
 const CASES = [
+	{
+		id: 'within-mandate',
+		claimable: true,
+		endpoints: ['GET /kitchen-api/snapshot', 'POST /kitchen-api/scenario {action:start}', 'POST /kitchen-api/tool/commit_order'],
+		async run() {
+			const go = visitor();
+			const { plan, view, eligible, shown } = await buffet(go);
+			need(eligible.length > 0, 'no line can be ordered now');
+			const waiting = plan.lines.filter((l) => l.view?.committable !== true && l.state === 'held').length;
+			const r = await kitchenTool(go, 'commit_order', {
+				planId: plan.id,
+				version: plan.version,
+				idempotencyKey: `record-within-${plan.id}-v${plan.version}`
+			}, shown);
+			need(r.status === 200 && r.json?.receiptId, `commit_order ${r.status} ${r.body.slice(0, 120)}`);
+			const ids = new Set(eligible.map((l) => l.id));
+			need(
+				r.json.committedLineIds.length === eligible.length && r.json.committedLineIds.every((id) => ids.has(id)),
+				'committed lines differ from the lines the Kitchen offers'
+			);
+			return {
+				via: 'Started in the Kitchen',
+				request: `Plan the event · ${view.title.replace(/^Christmas dinner buffet/, 'Christmas buffet')}`,
+				steps: [
+					{
+						icon: 'shield',
+						text: `${eligible.length} lines are inside the mandate, so they need no decision.`
+					},
+					{ icon: 'hold', text: `${waiting} lines wait for the chef, each with its reason.` },
+					{
+						icon: 'receipt',
+						text: `Ordered the ${r.json.committedLineIds.length} lines it can now, on 1 receipt. The rest still wait.`
+					}
+				],
+				outcome: { state: 'ordered', label: 'Ordered within your mandate', eur: eur(r.json.totalCents) },
+				link: `${BASE}/`
+			};
+		}
+	},
 	{
 		id: 'out-of-stock',
 		claimable: true,
@@ -153,7 +213,8 @@ const CASES = [
 				r.order.plan.lines.every((l) => /laktoositon/i.test(l.productName)),
 				'a planned line is not lactose-free'
 			);
-			need(line.state === 'eligible' && line.tier === 'act', `line is ${line.state}/${line.tier}`);
+			need(line.state === 'held' && line.reasons.includes('UNKNOWN_REQUIRED'), `line is ${line.state} ${line.reasons}`);
+			need(line.offer?.availability?.kind === 'unknown', 'availability is not unknown');
 			return {
 				request: text,
 				steps: [
@@ -166,11 +227,12 @@ const CASES = [
 						text: `Picked ${line.productName}, ${num(look.pick.conversion.salesQty)} ${unit(look.pick.salesUnit)}. ${look.rejectedCount} catalogue matches filtered out, ${look.shortlist.length} shortlisted.`
 					},
 					{
-						icon: 'shield',
-						text: 'Inside the mandate, so it can be ordered without asking.'
+						icon: 'hold',
+						// The app's own words for UNKNOWN_REQUIRED (src/lib/ui/reasons.ts).
+						text: "Valio doesn't state a quantity: your mandate asks before buying it."
 					}
 				],
-				outcome: { state: 'within', label: 'Within your mandate', eur: eur(r.order.plan.totalCents) },
+				outcome: { state: 'held', label: 'Needs your approval', eur: eur(r.order.plan.totalCents) },
 				link: `${BASE}/request`
 			};
 		}
@@ -292,46 +354,32 @@ const CASES = [
 	{
 		id: 'one-receipt',
 		claimable: true,
-		endpoints: ['POST /request/run', 'POST /request/run {action:commit} ×4'],
+		endpoints: ['POST /kitchen-api/scenario {action:start}', 'POST /kitchen-api/tool/commit_order ×4'],
 		async run() {
 			const go = visitor();
-			const text = '10 l lactose-free milk for Friday';
-			const r = await request(go, text);
-			const plan = r.order?.plan;
-			need(plan && plan.lines.every((l) => l.state === 'eligible'), 'plan not committable');
+			const { plan, eligible, shown } = await buffet(go);
+			need(eligible.length > 0, 'no line can be ordered now');
+			const key = `record-retry-${plan.id}-v${plan.version}`;
 			const commits = await Promise.all(
-				[1, 2, 3, 4].map((attempt) =>
-					go(
-						'/request/run',
-						post({ action: 'commit', planId: plan.id, version: plan.version, attempt })
-					)
+				[1, 2, 3, 4].map(() =>
+					kitchenTool(go, 'commit_order', { planId: plan.id, version: plan.version, idempotencyKey: key }, shown)
 				)
 			);
-			const ok = commits.filter((c) => c.status === 200 && c.json?.commit?.receiptId);
+			const ok = commits.filter((c) => c.status === 200 && c.json?.receiptId);
 			need(ok.length === 4, `${4 - ok.length} of 4 commits failed`);
-			const receipts = new Set(ok.map((c) => c.json.commit.receiptId));
-			const keys = new Set(ok.map((c) => c.json.commit.idempotencyKey));
-			need(keys.size === 1, 'commits used different keys');
+			const receipts = new Set(ok.map((c) => c.json.receiptId));
 			need(receipts.size === 1, `${receipts.size} receipts`);
-			const c = ok[0].json.commit;
+			const c = ok[0].json;
+			const n = c.committedLineIds.length;
 			return {
-				request: `${text}, then the order sent ${ok.length} times at once`,
+				via: 'Started in the Kitchen',
+				request: `The same order sent ${ok.length} times at once`,
 				steps: [
-					{
-						icon: 'receipt',
-						text: `${ok.length} sends of the same order, with one key.`
-					},
-					{
-						icon: 'check',
-						text: `${receipts.size} receipt for ${c.committedLineIds.length} line${c.committedLineIds.length === 1 ? '' : 's'}: ordered once, never twice.`
-					}
+					{ icon: 'receipt', text: `${ok.length} sends of one order (${n} line${n === 1 ? '' : 's'}), with one key.` },
+					{ icon: 'check', text: `${receipts.size} receipt: ordered once, never twice.` }
 				],
-				outcome: {
-					state: 'ordered',
-					label: 'Ordered · 1 receipt',
-					eur: eur(c.totalCents)
-				},
-				link: `${BASE}/request`
+				outcome: { state: 'ordered', label: 'Ordered · 1 receipt', eur: eur(c.totalCents) },
+				link: `${BASE}/`
 			};
 		}
 	}
