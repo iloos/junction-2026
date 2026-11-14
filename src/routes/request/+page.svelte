@@ -21,6 +21,7 @@
 	import Step from '$lib/ui/request/Step.svelte';
 	import Answer from '$lib/ui/request/Answer.svelte';
 	import BriefAsk from '$lib/ui/request/BriefAsk.svelte';
+	import MenuReview from '$lib/ui/request/MenuReview.svelte';
 	import type {
 		ApprovalView,
 		BriefAnswer,
@@ -28,6 +29,8 @@
 		CommitView,
 		EventView,
 		LookupView,
+		MenuPlanResult,
+		MenuView,
 		OrderView,
 		ParsedView,
 		RequestEvent,
@@ -115,6 +118,8 @@
 		error = resultMessage = null;
 		needsConfirm = false;
 		event = null;
+		menu = null;
+		menuPlan = null;
 	}
 
 	function approvalStatus(): Status {
@@ -135,6 +140,8 @@
 			resultMessage = e.data.message ?? null;
 			needsConfirm = e.data.needsConfirm === true;
 			event = e.data.event ?? null;
+			// A complete brief goes straight to a menu proposal: the chef reviews it next.
+			if (event?.draft && !event.question) void propose();
 			if (status.lookup === 'running') status.lookup = 'idle';
 			if (status.order === 'running') status.order = 'idle';
 			return;
@@ -296,6 +303,62 @@
 			a.productId ? `product ${a.productId}` : ''
 		].filter(Boolean);
 		return `${what}: ${parts.join(', ')}`;
+	}
+
+	/** The menu proposed from a complete brief, and where planning it stands. */
+	let menu = $state.raw<MenuView | null>(null);
+	let menuPlan = $state.raw<MenuPlanResult | null>(null);
+	let menuBusy = $state(false);
+
+	async function menuCall<T>(body: Record<string, unknown>): Promise<T | null> {
+		menuBusy = true;
+		error = null;
+		try {
+			const res = await fetch('/request/menu', {
+				method: 'POST',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify(body)
+			});
+			const b = await res.json();
+			if (!res.ok)
+				throw new Error(b?.error ? `${b.error.code}: ${b.error.message}` : `HTTP ${res.status}`);
+			return b as T;
+		} catch (e) {
+			error = e instanceof Error ? e.message : String(e);
+			return null;
+		} finally {
+			menuBusy = false;
+		}
+	}
+	async function propose() {
+		menu = await menuCall<MenuView>({ action: 'propose', text, kitchenId, briefAnswers, nonce });
+	}
+	async function editMenu(edits: { ingredientId: string; amountPerCover: number }[]) {
+		if (!menu) return;
+		const r = await menuCall<MenuView>({
+			action: 'edit',
+			id: menu.proposal.id,
+			revision: menu.proposal.revision,
+			edits
+		});
+		if (r) menu = r;
+	}
+	async function acceptMenu() {
+		if (!menu) return;
+		const r = await menuCall<MenuView>({
+			action: 'accept',
+			id: menu.proposal.id,
+			revision: menu.proposal.revision
+		});
+		if (r) menu = r;
+	}
+	async function planMenu() {
+		if (!menu) return;
+		menuPlan = await menuCall<MenuPlanResult>({
+			action: 'plan',
+			id: menu.proposal.id,
+			revision: menu.proposal.revision
+		});
 	}
 
 	/** The chef took the first open delivery date after a cut-off: same words, that date, said in the notes. */
@@ -665,7 +728,10 @@
 								{/key}
 							{:else if event.draft}
 								<p class="mt-2 text-body font-medium text-ink">
-									Brief complete. Menu proposal: next.
+									Brief complete.
+									<span class="font-normal text-ink-2"
+										>{menu ? 'Review the menu below.' : 'Proposing a menu…'}</span
+									>
 								</p>
 							{/if}
 							{#if event.seeded}
@@ -679,6 +745,16 @@
 								>
 							{/if}
 						</div>
+						{#if menu}
+							<MenuReview
+								view={menu}
+								busy={busy || menuBusy}
+								plan={menuPlan}
+								onedit={editMenu}
+								onaccept={acceptMenu}
+								onplan={planMenu}
+							/>
+						{/if}
 					{/if}
 				{/if}
 			</Step>

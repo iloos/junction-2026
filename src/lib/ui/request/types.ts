@@ -230,3 +230,5 @@ export interface BriefQuestion {
 	/** Chips may be combined (dietary): the page sends the chosen values together. */
 	multi?: boolean;
 }
+
+export type { MenuPlanResult, MenuView } from '$lib/server/menu/flow';

@@ -61,7 +61,7 @@
 			type="button"
 			disabled={busy || !ondate}
 			onclick={() => ondate?.(spec.date)}
-			class="mt-2 inline-flex h-9 items-center gap-1.5 rounded-md bg-accent px-3 text-[13px] font-medium text-sheet disabled:opacity-40"
+			class="mt-2 inline-flex h-9 items-center gap-1.5 rounded-md bg-accent px-3 text-body font-medium text-sheet disabled:opacity-40"
 			data-testid="cutoff-date">{spec.label} <CornerDownLeft size={14} aria-hidden="true" /></button
 		>
 	{/if}

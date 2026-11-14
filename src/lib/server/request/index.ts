@@ -49,7 +49,7 @@ export async function actors(env: Env, workspaceId: string) {
 }
 
 /** Ports built once per process; handlers first so the store is wired to the ops bus. */
-async function ports() {
+export async function ports() {
 	await realHandlers();
 	return createServerPorts();
 }
