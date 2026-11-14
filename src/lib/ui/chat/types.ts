@@ -56,6 +56,11 @@ export type ChatEvent =
 
 export interface ChatTurnInput {
 	taskId?: string;
+	/**
+	 * The plan the screen has open. Without a taskId, the turn joins the task that holds this plan (or starts one on
+	 * it, without planning again), so a question is answered about that plan.
+	 */
+	planId?: string;
 	text?: string;
 	answer?: { field: ClarifyField; value: unknown };
 	continue?: true;

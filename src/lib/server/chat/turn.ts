@@ -150,7 +150,8 @@ export async function* runChatTurn(
 		return;
 	}
 
-	// The task this turn is about: the caller's (in this workspace only), or a new one from the words.
+	// The task this turn is about: the caller's (in this workspace only), the one holding the plan the screen has
+	// open, or a new one from the words.
 	let task: Task;
 	let expected: number | null;
 	if (input.taskId) {
@@ -161,6 +162,31 @@ export async function* runChatTurn(
 		}
 		task = t;
 		expected = t.version;
+	} else if (input.planId) {
+		// get_plan under the chef's context scopes the plan to this workspace and run.
+		const r = await deps.handlers.get_plan(deps.ctx, { planId: input.planId });
+		if (!r.ok) {
+			yield fail('', "I can't see that plan from here.");
+			return;
+		}
+		const plan = r.value.plan;
+		const held = (
+			await store.list(deps.workspaceId, { kitchenId: plan.kitchenId, limit: 200 })
+		).find((t) => t.plans.some((p) => p.planId === plan.id));
+		if (held) {
+			task = held;
+			expected = held.version;
+		} else {
+			const text = input.text?.trim() || `Plan ${plan.id}`;
+			task = {
+				...blankTask(deps, text),
+				kitchenId: plan.kitchenId,
+				title: `Plan ${plan.id}`,
+				requirement: { planId: plan.id },
+				plans: [{ planId: plan.id, versionSeen: plan.version, role: 'primary' }]
+			};
+			expected = null;
+		}
 	} else {
 		const text = input.text?.trim() ?? '';
 		if (!text) {
@@ -170,7 +196,8 @@ export async function* runChatTurn(
 		task = blankTask(deps, text);
 		expected = null;
 	}
-
+	/** The task existed before this turn's words (a follow-up), rather than being started by them. */
+	const followUp = !!input.taskId || !!input.planId;
 	const principal = buildRunPrincipal({
 		initiator: deps.ctx,
 		agentRunId: newAgentRunId(),
@@ -214,7 +241,7 @@ export async function* runChatTurn(
 		let slots: Slots = { ...(task.slots as Slots) };
 		const answer =
 			input.answer ??
-			(input.taskId && task.pending.kind === 'clarify' && input.text
+			(followUp && task.pending.kind === 'clarify' && input.text
 				? { field: task.pending.field, value: input.text }
 				: undefined);
 		if (answer) {
@@ -229,7 +256,7 @@ export async function* runChatTurn(
 				return;
 			}
 			slots = { ...slots, ...filled };
-		} else if (input.taskId && input.text) {
+		} else if (followUp && input.text) {
 			// A follow-up question on the task's plan; the task's requirement stays as it was.
 			goal = input.text.trim();
 			slots = {};
@@ -269,7 +296,7 @@ export async function* runChatTurn(
 			clarify = { kind: 'clarify', ...o.clarify };
 		} else if (o && !o.planId) refusal = o.reason ?? o.nextAction;
 		planId = o?.planId ?? primary;
-		if (!(input.taskId && input.text && !answer)) task.slots = slots;
+		if (!(followUp && input.text && !answer)) task.slots = slots;
 	}
 
 	for (const e of stepEvents(task.id, steps)) yield e;
