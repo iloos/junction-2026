@@ -3,7 +3,15 @@ import type { Approval, Line, Plan } from '$lib/core/contracts';
 import { decisionCount, decisionsDue, decisionsOf, titleOf } from './decisions';
 
 const line = (id: string, reasons: string[], tier: Line['tier'], cents: number, needId: string) =>
-	({ id, reasons, tier, lineCents: cents, needId, state: 'held' }) as unknown as Line;
+	({
+		id,
+		reasons,
+		tier,
+		lineCents: cents,
+		needId,
+		state: 'held',
+		qty: { value: 1, unit: 'ST' }
+	}) as unknown as Line;
 
 const plan = {
 	needs: [
@@ -92,6 +100,7 @@ describe('one deadline rule', () => {
 			{
 				id: 'a',
 				state: 'held',
+				qty: { value: 1, unit: 'ST' },
 				reasons: ['new_sku'],
 				tier: 'propose',
 				offer: { availability: { closingTime: '2026-12-08T13:00:00.000Z' } }
@@ -99,6 +108,7 @@ describe('one deadline rule', () => {
 			{
 				id: 'b',
 				state: 'committed',
+				qty: { value: 1, unit: 'ST' },
 				reasons: [],
 				tier: 'act',
 				offer: { availability: { closingTime: '2026-12-07T10:00:00.000Z' } }
