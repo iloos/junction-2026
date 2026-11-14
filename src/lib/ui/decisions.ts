@@ -24,6 +24,8 @@ export interface Decision {
 	signOff: boolean;
 	/** What happens if the chef keeps these held, in our words. */
 	consequence: string;
+	/** When this decision is due (decisionsDue over its own lines). */
+	due: string;
 	/** The approval's terms: shown on the card's seal, voided by any edit. */
 	approvalId: string;
 	planVersion: number;
@@ -61,6 +63,7 @@ export function decisionsOf(plan: Plan, approval: Approval | null | undefined): 
 			lines: g.lines,
 			totalCents: g.lines.reduce((s, l) => s + (l.lineCents ?? 0), 0),
 			signOff: g.signOff,
+			due: decisionsDue(plan, approval, g.lines),
 			consequence: consequenceOf(needs, g.lines.length),
 			approvalId: approval.id,
 			planVersion: approval.planVersion,
@@ -127,11 +130,24 @@ function consequenceOf(needs: string[], n: number): string {
 }
 
 /**
- * When the decisions are due: the plan view's validity (earliest of the approval's expiry and the offers' cut-off),
- * else the approval's expiry, else the scenario's order cut-off.
+ * When decisions are due: the earliest binding time among the approval's expiry, the order cut-off of every open
+ * line it covers (Valio's closingTime) and the plan view's validity; the scenario's cut-off when none is known. An
+ * approval valid until 21:40 is still due at a 15:00 cut-off: past it, nothing it approves can be ordered.
  */
-export function decisionsDue(plan: Plan | null | undefined, approval?: Approval | null): string {
-	return plan?.view?.validUntil ?? approval?.expiresAt ?? SCENARIO.cutoff;
+export function decisionsDue(
+	plan: Plan | null | undefined,
+	approval?: Approval | null,
+	lines?: readonly Line[]
+): string {
+	const ids = new Set(approval?.lineIds ?? []);
+	const covered = lines ?? plan?.lines.filter((l) => ids.has(l.id)) ?? [];
+	const times = [
+		approval?.expiresAt,
+		plan?.view?.validUntil,
+		...covered.filter((l) => l.state !== 'committed').map((l) => l.offer?.availability.closingTime)
+	].filter((t): t is string => !!t);
+	if (!times.length) return SCENARIO.cutoff;
+	return times.reduce((a, b) => (new Date(b).getTime() < new Date(a).getTime() ? b : a));
 }
 
 /** "2 decisions" / "1 decision" / "No decisions". */

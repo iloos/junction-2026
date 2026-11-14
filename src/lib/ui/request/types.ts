@@ -138,6 +138,8 @@ export interface OrderView {
 		weeklyCapCents: number;
 		hardLimitCents: number;
 		mandateVersion: number;
+		/** Receiving days (mon…sun), for an off-delivery-day hold. */
+		deliveryDays?: string[];
 	};
 	deliveryNote: string | null;
 	/** The procurement task this order belongs to (null id: no task store yet) and the plan in the Kitchen. */

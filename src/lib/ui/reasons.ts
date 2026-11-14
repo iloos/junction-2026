@@ -43,6 +43,18 @@ const TEXT: Record<string, { short: string; long: string }> = {
 		short: 'Allergens differ',
 		long: 'The allergen set may differ from the planned product. The kitchen never delegates an allergen change.'
 	},
+	off_delivery_day: {
+		short: 'Not a delivery day',
+		long: "This kitchen doesn't take deliveries on that day: a named approver accepts the day or moves the delivery."
+	},
+	requirement_unmet: {
+		short: "Doesn't meet the requirement",
+		long: "It doesn't meet a requirement of the dish it is for (for example lactose-free): it can't be ordered for it."
+	},
+	superseded: {
+		short: 'Replaced, not bought',
+		long: 'A substitute replaced this product; it stays in the plan at 0 so you can see what changed, and is not bought.'
+	},
 	'CAUTION.model_constraint': {
 		short: 'Model caution',
 		long: 'Gemini judged this product may break one of your hard constraints, and the catalogue has no record to settle it. A model answer is evidence, not a rule: check the pack, then sign off.'

@@ -44,6 +44,7 @@
 		reasonWords,
 		unitWord,
 		TIER_WORDS,
+		tierWords,
 		UNIT_WORDS
 	} from '$lib/ui/request/words';
 	import type { PageProps } from './$types';
@@ -1073,7 +1074,7 @@
 								{#if l.reasons.length}
 									<ul class="mt-1.5 space-y-0.5 text-body text-ink-2">
 										{#each l.reasons as r (r)}<li>
-												· {reasonWords(r, l, plan.totalCents, caps)}
+												· {reasonWords(r, l, plan.totalCents, caps, order.kitchen)}
 											</li>{/each}
 									</ul>
 								{/if}
@@ -1092,9 +1093,15 @@
 							/>{order.deliveryNote}
 						</p>{/if}
 					{#if approval}
+						{@const tw = tierWords(
+							approval.tier,
+							plan.lines
+								.filter((l) => (approval?.lineIds ?? []).includes(l.id))
+								.flatMap((l) => l.reasons)
+						)}
 						<p class="mt-2 text-body">
-							<b class="font-medium">{TIER_WORDS[approval.tier].title}.</b>
-							<span class="text-ink-2">{TIER_WORDS[approval.tier].body}</span>
+							<b class="font-medium">{tw.title}.</b>
+							<span class="text-ink-2">{tw.body}</span>
 						</p>
 					{:else if plan.lines.some((l) => l.reasons.includes('over_hard_limit'))}
 						<p class="mt-2 text-body">

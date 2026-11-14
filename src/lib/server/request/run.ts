@@ -677,7 +677,8 @@ export async function runRequest(text: string, d: RequestDeps): Promise<RequestR
 				orderCapCents: d.kitchen.mandate.orderCapCents,
 				weeklyCapCents: d.kitchen.mandate.weeklyCapCents,
 				hardLimitCents: hardLimitCents(d.kitchen.mandate),
-				mandateVersion: d.kitchen.mandate.version
+				mandateVersion: d.kitchen.mandate.version,
+				deliveryDays: [...d.kitchen.deliveryDays]
 			},
 			deliveryNote: d.kitchen.deliveryDays.includes(dow)
 				? null

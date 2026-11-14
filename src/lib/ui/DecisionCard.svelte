@@ -15,7 +15,7 @@
 		decision: Decision;
 		/** Product names by id. */
 		names: Map<string, string>;
-		/** ISO time the decision is due (decisionsDue). */
+		/** Fallback due time for decisions recorded before they carried their own (decisionsDue). */
 		due?: string;
 		busy?: boolean;
 		/** Lines whose terms changed since the chef last saw them (highlighted). */
@@ -40,6 +40,8 @@
 		readonly = false,
 		compact = false
 	}: Props = $props();
+	/** One rule everywhere: the decision's own due time (decisionsDue over its lines). */
+	const when = $derived(d.due ?? due);
 
 	const SHOW = 4;
 	let all = $state(false);
@@ -116,10 +118,10 @@
 
 		<p class="mt-2 text-meta text-ink-2">{d.consequence}</p>
 	{/if}
-	{#if due}
+	{#if when}
 		<p class="mt-1 flex items-center gap-1.5 text-meta text-ink-2">
 			<Clock3 size={13} aria-hidden="true" /> Decide before
-			<span class="mono text-ink">{storyTime(due)}</span>
+			<span class="mono text-ink">{storyTime(when)}</span>
 		</p>
 	{/if}
 	<p class="sys-only mono mt-1 text-micro text-ink-3">
