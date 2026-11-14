@@ -235,3 +235,15 @@ The agent's own suggestions never cross the product kind (D16, the sorbet fix); 
 **Why:** the user: clean affordance to navigate, specify and steer new alternatives; the agent can't be 100% right, because preference is subjective and people swap illogically.
 
 **Reopen if:** the panel's pick and the tool's pick differ for the same steer, or a chef's choice bypasses a hard rule.
+
+### D29 · One list of lines, one action bar: the Decide rail and the Order panel's lists go (user + lead, 15 Nov 01:20)
+The plan page lists every line once. Today the same lines appear in the table, again in the Decide cards (squeezed into a narrow rail) and again under the Order panel's "Still not covered", each with its own bulk button. The target:
+- **Header:** a short plan title (never a concatenation of lines), the delivery day, and one sentence: "5 items · €269.43 · 2 need you before Wed 9 Dec, 08:50".
+- **One sticky action bar** (top on desktop, bottom on phones): "Accept all N · €X", "M need your sign-off one by one", and "Order K lines now · €Y" as the primary once nothing waits.
+- **The table carries the decisions:** lines that wait are grouped under one header per reason ("New products: your rules say ask first · 4 lines · €211.71 · Accept these 4"); every line has its chip menu (Accept · Reject · Swap · Why) and its amount.
+- **No right rail on the plan page:** the chat dock uses that space when open. Totals live in the bar; the audit detail (what the approval is bound to) goes behind System.
+- **Images load once with the plan** and never shift a row.
+
+**Why:** the user: Decide is congested and duplicates the line items; the right rail is too long; images pop in.
+
+**Reopen if:** a decision that needs a reason (an allergen change, the hard limit) loses its explanation once it's no longer a card.
