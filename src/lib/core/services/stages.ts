@@ -37,6 +37,7 @@ export interface SignedStep {
 	state: Approval['state'];
 	tier: Approval['tier'];
 	lines: number;
+	lineIds: string[];
 	planVersion: number;
 	termsHash: string;
 	requestedBy: ActorKind;
@@ -285,6 +286,7 @@ export function orderStages(
 				state: a.state,
 				tier: a.tier,
 				lines: a.lineIds.length,
+				lineIds: a.lineIds,
 				planVersion: a.planVersion,
 				termsHash: a.termsHash,
 				requestedBy: a.requestedBy.kind,
