@@ -87,7 +87,7 @@ const CASES = [
 	{
 		id: 'out-of-stock',
 		claimable: true,
-		endpoints: ['POST /kitchen-api/scenario {action:start}'],
+		endpoints: ['GET /kitchen-api/snapshot', 'POST /kitchen-api/scenario {action:start}'],
 		async run() {
 			const go = visitor();
 			await go('/kitchen-api/snapshot');
@@ -111,7 +111,8 @@ const CASES = [
 				? 'It is a new product for this kitchen, so it waits for the chef.'
 				: 'It waits for the chef.';
 			return {
-				request: `Plan the ${view.title.replace(/^Christmas dinner buffet/, 'Christmas buffet')}`,
+				via: 'Started in the Kitchen',
+				request: `Plan the event · ${view.title.replace(/^Christmas dinner buffet/, 'Christmas buffet')}`,
 				steps: [
 					{
 						icon: 'search',
@@ -119,7 +120,7 @@ const CASES = [
 					},
 					{
 						icon: 'swap',
-						text: `Swapped to ${sub.productName}: ${num(sub.qty.value)} ${unit(sub.qty.unit)}, ${num(phys.value)} ${phys.unit}. A known-stock candidate: Valio states ${num(sub.offer.availability.amount)} in stock.`
+						text: `Proposed ${sub.productName}: ${num(sub.qty.value)} ${unit(sub.qty.unit)}, ${num(phys.value)} ${phys.unit}. A known-stock candidate: Valio states ${num(sub.offer.availability.amount)} in stock.`
 					},
 					{ icon: 'hold', text: held }
 				],
@@ -162,7 +163,7 @@ const CASES = [
 					},
 					{
 						icon: 'check',
-						text: `Picked ${line.productName}, ${num(look.pick.conversion.salesQty)} ${unit(look.pick.salesUnit)}. ${look.rejectedCount} other matches set aside, each with a reason.`
+						text: `Picked ${line.productName}, ${num(look.pick.conversion.salesQty)} ${unit(look.pick.salesUnit)}. ${look.rejectedCount} catalogue matches filtered out, ${look.shortlist.length} shortlisted.`
 					},
 					{
 						icon: 'shield',
@@ -328,7 +329,7 @@ const CASES = [
 				],
 				outcome: {
 					state: 'ordered',
-					label: awaiting ? 'Ordered, awaiting supplier' : 'Ordered, supplier confirmed',
+					label: 'Ordered · 1 receipt',
 					eur: eur(c.totalCents)
 				},
 				link: `${BASE}/request`

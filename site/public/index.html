@@ -299,7 +299,7 @@
 		a.setAttribute('aria-roledescription', 'slide');
 		a.setAttribute('aria-label', `${i + 1} of ${n}`);
 		const ask = el('p', 'case-ask');
-		ask.append(el('small', null, 'Asked'), el('b', null, c.request));
+		ask.append(el('small', null, c.via || 'Asked'), el('b', null, c.request));
 		const steps = el('ol', 'case-steps');
 		for (const s of c.steps.slice(0, 3)) {
 			const li = el('li');
@@ -348,7 +348,7 @@
 			const when = new Date(data.recordedAt);
 			if (!isNaN(when)) {
 				const day = when.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'Europe/Helsinki' });
-				document.getElementById('cases-when').textContent = `Recorded from the app on ${day}.`;
+				document.getElementById('cases-when').textContent = `Recorded from the app on ${day}` + (data.appCommit ? `, version ${String(data.appCommit).slice(0, 7)}.` : '.');
 			}
 			prev.addEventListener('click', () => show(current - 1));
 			next.addEventListener('click', () => show(current + 1));
