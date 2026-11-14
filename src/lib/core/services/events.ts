@@ -238,7 +238,8 @@ export async function planEvent(
 			lines: [],
 			totalCents: null,
 			termsHash: null,
-			createdBy: ctx.actor
+			createdBy: ctx.actor,
+			...(ctx.origin ? { origin: ctx.origin } : {})
 		};
 		const q = await requote(ports, ctx, tx, state, plan0, kitchen, drafts, pre);
 		return { ops: [pending(ctx, { type: 'CreatePlan', plan: plan0 }), ...q.ops], value: q.plan };
@@ -362,7 +363,8 @@ async function planProposal(
 			lines: [],
 			totalCents: null,
 			termsHash: null,
-			createdBy: ctx.actor
+			createdBy: ctx.actor,
+			...(ctx.origin ? { origin: ctx.origin } : {})
 		};
 		const q = await requote(ports, ctx, tx, state, plan0, kitchen, drafts, pre);
 		return { ops: [pending(ctx, { type: 'CreatePlan', plan: plan0 }), ...q.ops], value: q.plan };

@@ -273,6 +273,7 @@ export async function placeOrder(
 			totalCents: null,
 			termsHash: null,
 			createdBy: ctx.actor,
+			...(ctx.origin ? { origin: ctx.origin } : {}),
 			idempotencyKey: input.idempotencyKey
 		};
 		const q = await quoteOps(ctx, ports, plan0, kitchen, t, offers);

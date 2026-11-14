@@ -310,6 +310,14 @@ export const PlanView = z.object({
 });
 export type PlanView = z.infer<typeof PlanView>;
 
+/**
+ * Which door started a plan, set by the server where that door builds its call context (never a tool input, so no
+ * caller labels its own order): the kitchen's event plan, a usual order, /request, chat, an outside agent (MCP or
+ * REST), or a reviewed menu. Absent on plans stored before it existed.
+ */
+export const PlanOrigin = z.enum(['event', 'usual', 'request', 'chat', 'agent', 'menu']);
+export type PlanOrigin = z.infer<typeof PlanOrigin>;
+
 export const Plan = z.object({
 	...Scope.shape,
 	id: z.string(),
@@ -329,6 +337,8 @@ export const Plan = z.object({
 	/** sha-256 over the canonical serialisation of the quoted lines (see core/hash.ts). */
 	termsHash: z.string().nullable(),
 	createdBy: Actor,
+	/** Which door started it (server-set; see PlanOrigin). */
+	origin: PlanOrigin.optional(),
 	idempotencyKey: z.string().optional(),
 	/** Read model, filled on tool outputs (see PlanView). */
 	view: PlanView.optional()

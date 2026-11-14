@@ -11,6 +11,7 @@ import type {
 	Offer,
 	OpEnvelope,
 	PendingOp,
+	PlanOrigin,
 	Product,
 	ProductId,
 	Result,
@@ -193,6 +194,8 @@ export interface CallContext {
 	initiatedBy?: Actor;
 	/** Kitchens this context may act for; absent = every kitchen in the workspace. */
 	kitchenIds?: readonly string[];
+	/** The door this call came through, set by the server; new plans record it (Plan.origin). Never request-supplied. */
+	origin?: PlanOrigin;
 }
 
 /**
