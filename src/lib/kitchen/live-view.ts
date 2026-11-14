@@ -224,6 +224,30 @@ function seedRescueFor(input: LiveInput, productId: string): LooseRescue {
 	return key ? r[key] : undefined;
 }
 
+/**
+ * Why a substitute is short, told from its offer rather than assumed: the simulator overlay (another kitchen,
+ * simulated), this run's own earlier orders (ATP), or simply Valio's stock.
+ */
+function shortCause(l: Line | undefined): { short: string; long: string } {
+	const a = l?.offer?.availability;
+	const unit = l?.qty.unit ?? '';
+	const need = l?.qty.value;
+	if (a?.provenance.source === 'simulator')
+		return {
+			short: 'taken by another kitchen, simulated',
+			long: 'another kitchen took stock (simulated)'
+		};
+	if (a?.provenance.note?.includes('already committed in this run'))
+		return {
+			short: 'the rest is already ordered in this run',
+			long: 'part of the stock is already ordered in this run'
+		};
+	return {
+		short: `Valio's stock`,
+		long: `Valio has only ${a?.amount ?? '?'} ${unit} in stock; ${need ?? '?'} needed`
+	};
+}
+
 export function buildLiveView(input: LiveInput): EventView {
 	const { plan, facts } = input;
 	const dishes: DishView[] = plan.needs.map((need) => {
@@ -257,6 +281,7 @@ export function buildLiveView(input: LiveInput): EventView {
 			const kind = out.kind;
 			const short = productSub?.reasons.includes('INSUFFICIENT_STOCK');
 			const left = productSub?.offer?.availability.amount;
+			const why = shortCause(productSub);
 			rescue = {
 				forLineId: planned!.id,
 				kind,
@@ -278,7 +303,7 @@ export function buildLiveView(input: LiveInput): EventView {
 							? {
 									value: served.value,
 									unit: served.unit,
-									text: `Only ${left ?? '?'} ${productSub.qty.unit} left of the ${productSub.qty.value} needed (simulated contention): held until covered or replaced`
+									text: `Only ${left ?? '?'} ${productSub.qty.unit} left of the ${productSub.qty.value} needed (${why.short}): held until covered or replaced`
 								}
 							: undefined,
 				summary:
@@ -287,7 +312,7 @@ export function buildLiveView(input: LiveInput): EventView {
 						: kind === 'none'
 							? `Nothing qualifies under your rules. ${nameFi} is a shortfall.`
 							: short
-								? `${productSub?.productName ?? productSub?.productId} no longer covers the need: stock was taken by another kitchen.`
+								? `${productSub?.productName ?? productSub?.productId} no longer covers the need: ${why.long}.`
 								: productSub && hasUnknown(productSub)
 									? `${productSub.productName ?? productSub.productId} is the pick under these rules, but Valio states no quantity for it: ${f1(served.value)} ${served.unit} stays unconfirmed, not cover.`
 									: `${productSub?.productName ?? productSub?.productId} has known stock for the full ${f1(served.value)} ${served.unit} served (planned, not reserved).`

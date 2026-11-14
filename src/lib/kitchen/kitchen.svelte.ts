@@ -334,6 +334,7 @@ export class KitchenStore {
 			if ('plan' in next) {
 				this.started = true;
 				this.snap = next;
+				this.#receiptFrom(next);
 				rendered.view =
 					this.mode === 'live' && next.clock
 						? { runId: next.clock.runId, planId: next.plan.id, version: next.plan.version }
@@ -355,6 +356,29 @@ export class KitchenStore {
 		} finally {
 			this.busy = false;
 		}
+	}
+
+	/**
+	 * The receipt survives a reload: when this page has none (or one from another plan or run), it is rebuilt
+	 * from the plan's newest stored order, so "Ordered", the receipt and "send the same order again" stay.
+	 */
+	#receiptFrom(s: Snapshot) {
+		const last = s.orders.at(-1);
+		if (!last) {
+			this.lastCommit = null;
+			return;
+		}
+		if (this.lastCommit && s.orders.some((o) => o.output.orderId === this.lastCommit!.orderId))
+			return;
+		this.lastCommit = {
+			key: last.key ?? '',
+			orderId: last.output.orderId,
+			receiptId: last.output.receiptId,
+			totalCents: last.output.totalCents,
+			lines: last.output.committedLineIds.length,
+			awaiting: last.output.awaitingSupplier.length,
+			replayed: false
+		};
 	}
 
 	#remember(s: Snapshot) {

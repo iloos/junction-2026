@@ -79,7 +79,14 @@ function demandLines(planId: string, seed: EventSeed, overrides: Record<string, 
 		if (dish?.gServed === undefined) return withNote;
 		const g = overrides[n.id] ?? dish.gServed;
 		const y = dish.yield ?? 1;
-		const formula = `${g} g × ${guests}${y !== 1 ? ` ÷ ${y.toFixed(2)}` : ''} = ${n.amount.value.toFixed(1)} ${n.amount.unit}`;
+		const amount = `${n.amount.value.toFixed(n.amount.value < 10 ? 2 : 1)} ${n.amount.unit}`;
+		// A cooked dish (rice porridge): g/guest sizes the dish, and the ingredient is a share of it per kg.
+		const perKg = dish.perKgDish
+			? Object.entries(dish.perKgDish).find(([k]) => k.endsWith('Kg'))
+			: undefined;
+		const formula = perKg
+			? `${g} g dish × ${guests} = ${((g * guests) / 1000).toFixed(1)} kg cooked × ${perKg[1]} = ${amount}`
+			: `${g} g × ${guests}${y !== 1 ? ` ÷ ${y.toFixed(2)}` : ''} = ${amount}`;
 		return {
 			...withNote,
 			dish: { gServed: g, defaultGServed: dish.gServed, guests, yield: y, formula }

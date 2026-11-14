@@ -15,7 +15,7 @@ const euros = (s: string) => Number(s.replace(/[€\s,]/g, ''));
  * Known open defects by BUGS.md id, as `expectFail` in the evals: a listed check that fails is annotated, not red; a
  * listed check that passes is red ("looks fixed: delete it here"), so the list never hides a fix. Empty = all enforced.
  */
-const KNOWN = new Set(['BUG-5', 'BUG-6', 'BUG-9']);
+const KNOWN = new Set<string>([]);
 
 const seen = new Map<string, { pass: boolean; detail: string }[]>();
 function check(id: string, pass: boolean, detail: string) {
@@ -97,24 +97,30 @@ test('the order summary counts what was approved, adds up, and survives a reload
 		.waitFor({ timeout: 30_000 });
 	const panel = await page.locator('body').innerText();
 
-	// #5: the summary names every approved line, and its parts add up to the order total.
-	// A stated count must be the lines signed off (the wording may name no count at all).
-	const said = panel.match(/Ordered\s*·\s*(\d+)\s+approved lines/)?.[1];
-	if (said)
-		check(
-			'BUG-5',
-			Number(said) === approved,
-			`"${said} approved lines" for ${approved} signed off`
-		);
-	const these = panel.match(/These lines\s+(€[\d,.]+)/)?.[1];
-	const within = panel.match(/Within your mandate already\s+(€[\d,.]+)/)?.[1];
-	const total = panel.match(/Order total, ex VAT\s+(€[\d,.]+)/)?.[1];
-	if (these && within && total)
-		check(
-			'BUG-5',
-			Math.abs(euros(these) + euros(within) - euros(total)) < 0.01,
-			`${these} + ${within} vs ${total}`
-		);
+	// #5: the order summary counts what was ordered, from the receipt, and the money rows add up to the total.
+	const said = panel.match(/Ordered\s*·\s*(\d+)\s+lines/)?.[1];
+	const confirmed = Number(panel.match(/(\d+)\s+lines? supplier confirmed/)?.[1] ?? 0);
+	const awaiting = Number(panel.match(/(\d+)\s+awaiting the supplier/)?.[1] ?? 0);
+	check(
+		'BUG-5',
+		said !== undefined && Number(said) === confirmed + awaiting,
+		`"Ordered · ${said} lines" vs receipt ${confirmed} confirmed + ${awaiting} awaiting`
+	);
+	check('BUG-5', Number(said) >= approved, `${said} ordered lines for ${approved} signed off`);
+	const money = await page
+		.locator('dl[aria-label^="Where the plan"]')
+		.innerText()
+		.catch(() => '');
+	const rows = [...money.matchAll(/^(.+?)\s+(€[\d,.]+)$/gm)].map(
+		(m) => [m[1].trim(), euros(m[2])] as const
+	);
+	const total = rows.find(([l]) => /^Plan total/.test(l))?.[1];
+	const parts = rows.filter(([l]) => !/^Plan total/.test(l)).reduce((a, [, v]) => a + v, 0);
+	check(
+		'BUG-5',
+		total !== undefined && Math.abs(parts - total) < 0.01,
+		`money rows ${parts.toFixed(2)} vs plan total ${total}`
+	);
 	const receipt = panel.match(/receipt (rc-[a-z0-9]+)/)?.[1];
 	expect(receipt).toBeTruthy();
 
