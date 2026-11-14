@@ -109,6 +109,17 @@ function proposalFor(log: OpEnvelope[], planId: string, productId: string) {
 	return undefined;
 }
 
+/** A recall's short title from its message: "Recall 11 Nov 2026 (Ruokavirasto): ensilusikka". */
+export function anomalyTitle(message: string): string {
+	const m = /^(Recall [^:]+):.*?Recalled: ([^.]+)\./.exec(message);
+	return m ? `${m[1]}: ${m[2]}` : message;
+}
+
+/** The message without its own closing "Nothing held." (the card adds its sentence once). */
+export function withoutHeldNote(message: string): string {
+	return message.replace(/\s*Nothing (is )?held( because of it)?\.?\s*$/, '');
+}
+
 export function buildProblems(
 	s: WorkspaceState,
 	names: Names,
@@ -320,6 +331,7 @@ export function buildProblems(
 	}
 
 	// 3. Anomalies (recalls, demand spikes). One that holds nothing is quiet and sorts last.
+	// The message already ends in "Nothing held." for recalls; the card says it once, in its own words.
 	const heldProducts = new Set(
 		plans.flatMap((p) =>
 			p.lines.filter((l) => l.state === 'held' || l.state === 'unorderable').map((l) => l.productId)
@@ -334,10 +346,10 @@ export function buildProblems(
 			tone: holds ? 'blocked' : 'quiet',
 			title: a.productId
 				? `${a.kind === 'recall' ? 'Recall notice' : dishName(a.kind.replaceAll('_', ' '))}: ${productName(names, a.productId)}`
-				: a.message,
+				: anomalyTitle(a.message),
 			detail: holds
-				? `${a.message} Lines with this product are held until someone checks.`
-				: `${a.message} Nothing is held because of it.`,
+				? `${withoutHeldNote(a.message)} Lines with this product are held until someone checks.`
+				: `${withoutHeldNote(a.message)} Nothing is held because of it.`,
 			already: null,
 			waits: 'operations',
 			heldCents: 0,
