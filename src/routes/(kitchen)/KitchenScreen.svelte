@@ -143,6 +143,13 @@
 			</select>
 		</label>
 		<div class="ml-auto flex items-center gap-4 text-[12.5px] text-ink-2">
+			{#if snap?.clock}
+				<span
+					class="mono rounded-sm bg-well px-1.5 py-0.5 text-[11.5px] text-ink-2"
+					title="Workspace and run this screen reads and writes"
+					>{snap.clock.workspaceId ?? 'ws-demo'} · {snap.clock.runId}</span
+				>
+			{/if}
 			<span
 				><span class="mono text-ink">{k.now ? storyTime(k.now) : '—'}</span> · simulated clock</span
 			>

@@ -21,13 +21,16 @@ import { buildLiveView, type ProductFacts, type SubstitutesOut } from '$lib/kitc
 import seed from '../../../../fixtures/seeds/christmas-buffet-140.json';
 import { scenarioClock } from '$lib/core/scenario';
 import { currentRun, currentRunStartedAt } from '$lib/server/demo/run';
-import { resetDemo } from '$lib/server/demo/reset';
+import { resetDemoRun } from '$lib/server/demo/reset';
+import { dev } from '$app/environment';
 
 const EVENT_ID = 'event-xmas-140';
 /** The palvikinkku the ham rescue relies on (13 of 15 in stock): the contention preset takes 4 of them. */
 const CONTENDED = { productId: '476768', left: 11 };
 
 export interface Session {
+	/** Stage run (ws-demo) or the judges' sandbox (ws-judges); fixed for the session's life. */
+	workspaceId: string;
 	kitchenId: string;
 	preset: PresetId;
 	contention: boolean;
@@ -35,10 +38,15 @@ export interface Session {
 
 /** Selection per browser session (cookie id). The simulator overlay itself is run-wide: see `contention`. */
 const sessions = new Map<string, Session>();
-export function session(id: string): Session {
+export function session(id: string, presenter = false): Session {
 	let s = sessions.get(id);
 	if (!s) {
-		s = { kitchenId: 'k-hotel', preset: 'kitchen', contention: false };
+		s = {
+			workspaceId: kitchenWorkspace(presenter),
+			kitchenId: 'k-hotel',
+			preset: 'kitchen',
+			contention: false
+		};
 		sessions.set(id, s);
 	}
 	return s;
@@ -47,8 +55,18 @@ export function session(id: string): Session {
 /** The commands the screen may send through the helper. Planning and resets go through `scenario`. */
 const ALLOWED = new Set(['get_plan', 'edit_line', 'explain_line', 'approve', 'commit_order']);
 
-const chef = () => contextFor('chef', 'kitchen-ui', 'kitchen', env);
-const agent = () => contextFor('kitchen_agent', 'kitchen-agent', 'kitchen', env);
+/**
+ * Which workspace a new kitchen session uses. Dev: the stage run. Production: public visitors get the judges'
+ * sandbox; the stage run only when the presenter rule says so (the route passes it in). KITCHEN_WORKSPACE overrides.
+ */
+export function kitchenWorkspace(presenter: boolean): string {
+	if (env.KITCHEN_WORKSPACE) return env.KITCHEN_WORKSPACE;
+	return dev || presenter ? 'ws-demo' : 'ws-judges';
+}
+
+const chef = (s: Session) => contextFor('chef', 'kitchen-ui', 'kitchen', env, s.workspaceId);
+const agent = (s: Session) =>
+	contextFor('kitchen_agent', 'kitchen-agent', 'kitchen', env, s.workspaceId);
 
 /**
  * One kitchen request at a time. The snapshot plans and ranks with several tool calls against one plan version;
@@ -70,20 +88,21 @@ export function callTool(sid: string, name: string, input: unknown): Promise<Ser
 			error: { code: 'FORBIDDEN', message, retryable: false }
 		});
 		if (!ALLOWED.has(name)) return deny(`the kitchen screen does not send ${name}`);
-		const plan = await findPlan(session(sid));
+		const s = session(sid);
+		const plan = await findPlan(s);
 		const i = (input ?? {}) as { planId?: string; approvalId?: string };
 		if (!plan) return deny('start the demo first');
 		if (i.planId !== undefined && i.planId !== plan.id)
 			return deny("that plan is not this session's kitchen plan");
 		if (name === 'approve' && !(i.approvalId ?? '').includes(plan.id))
 			return deny("that approval is not for this session's plan");
-		return serveTool(name, chef(), input, handlers);
+		return serveTool(name, chef(s), input, handlers);
 	});
 }
 
 /** The session kitchen's event plan if it exists: a read, never a planning call. */
 async function findPlan(s: Session) {
-	const ctx = chef();
+	const ctx = chef(s);
 	const b = await createServerPorts();
 	const ws = await b.ports.store.load(ctx.workspaceId, ctx.runId);
 	return (
@@ -93,9 +112,10 @@ async function findPlan(s: Session) {
 }
 
 async function must<N extends ToolName>(
+	s: Session,
 	name: N,
 	input: ToolInput<N>,
-	ctx = chef()
+	ctx = chef(s)
 ): Promise<unknown> {
 	const r = await serveTool(name, ctx, input, handlers);
 	if (!r.ok) throw new Error(`${name}: ${r.error.code} ${r.error.message}`);
@@ -106,7 +126,7 @@ type PlanOut = { plan: import('$lib/core/contracts').Plan };
 
 /** Plans the event, then lets the kitchen agent propose a rescue for every real outage that has none yet. */
 async function ensurePlan(s: Session) {
-	let { plan } = (await must('plan_event', {
+	let { plan } = (await must(s, 'plan_event', {
 		kitchenId: s.kitchenId,
 		eventId: EVENT_ID
 	})) as PlanOut;
@@ -124,9 +144,10 @@ async function ensurePlan(s: Session) {
 		if (!out) return plan;
 		tried.add(out.id);
 		const r = (await must(
+			s,
 			'find_substitutes',
 			{ planId: plan.id, version: plan.version, lineId: out.id },
-			agent()
+			agent(s)
 		)) as SubstitutesOut;
 		if (r.plan.version === plan.version) return plan; // nothing proposed: stop instead of looping
 		plan = r.plan;
@@ -150,18 +171,18 @@ export function snapshot(sid: string): Promise<LiveSnapshot> {
 }
 
 async function buildSnapshot(s: Session): Promise<LiveSnapshot> {
-	const ctx = chef();
+	const ctx = chef(s);
 	const planned = await findPlan(s);
 	if (!planned) return { started: false, kitchenId: s.kitchenId };
 	const b = await createServerPorts();
 	const kitchens = await b.ports.store.kitchens(ctx.workspaceId);
 	const kitchen = kitchens.find((k) => k.id === s.kitchenId) ?? kitchens[0];
-	const { plan } = (await must('get_plan', { planId: planned.id })) as PlanOut;
+	const { plan } = (await must(s, 'get_plan', { planId: planned.id })) as PlanOut;
 
 	// Rankings under the active rules preset (previews: nothing is persisted).
 	const rescues: Record<string, SubstitutesOut> = {};
 	for (const l of plan.lines.filter((x) => x.state === 'unorderable' && !x.substituteFor))
-		rescues[l.id] = (await must('find_substitutes', {
+		rescues[l.id] = (await must(s, 'find_substitutes', {
 			planId: plan.id,
 			version: plan.version,
 			lineId: l.id,
@@ -257,7 +278,8 @@ async function buildSnapshot(s: Session): Promise<LiveSnapshot> {
 		mandateVersion: kitchen.mandate.version,
 		clock: {
 			nowIso: scenarioClock(currentRunStartedAt(ctx.workspaceId)).at(Date.now()).toISOString(),
-			runId: currentRun(ctx.workspaceId)
+			runId: currentRun(ctx.workspaceId),
+			workspaceId: ctx.workspaceId
 		}
 	};
 }
@@ -270,7 +292,7 @@ async function requote(s: Session) {
 		(n) => n.dish && !plan.lines.some((l) => l.needId === n.id && l.state === 'committed')
 	);
 	if (!need?.dish) return;
-	await must('edit_line', {
+	await must(s, 'edit_line', {
 		planId: plan.id,
 		version: plan.version,
 		needId: need.id,
@@ -302,7 +324,8 @@ async function applyScenario(s: Session, action: string, value: unknown): Promis
 			// A kitchen whose plan can't be built must not strand the screen: go back and say why.
 			Object.assign(s, before);
 			throw new Error(
-				`could not open ${value}: ${e instanceof Error ? e.message : String(e)}; staying on ${before.kitchenId}`
+				`could not open ${value}: ${e instanceof Error ? e.message : String(e)}; staying on ${before.kitchenId}`,
+				{ cause: e }
 			);
 		}
 	} else if (action === 'contention') {
@@ -318,7 +341,7 @@ async function applyScenario(s: Session, action: string, value: unknown): Promis
 		await requote(s);
 	} else if (action === 'reset') {
 		// A fresh run server-side (9c): no plan, orders or spend; the old run stays in the op log.
-		await resetDemo();
+		await resetDemoRun(s.workspaceId);
 		s.kitchenId = 'k-hotel';
 		s.preset = 'kitchen';
 		s.contention = false;

@@ -333,7 +333,7 @@ export interface FixtureSnapshot {
 	contention: boolean;
 	mandateVersion: number;
 	/** The scenario clock's reading when the snapshot was made (SCENARIO.start + time since the run started). */
-	clock: { nowIso: string; runId: string };
+	clock: { nowIso: string; runId: string; workspaceId?: string };
 }
 
 /** The fixture's run starts when the module loads (or on reset), like a server run. */
@@ -355,7 +355,8 @@ export async function snapshot(): Promise<FixtureSnapshot> {
 		mandateVersion: s.mandateVersion,
 		clock: {
 			nowIso: scenarioClock(runStartedAt).at(Date.now()).toISOString(),
-			runId: 'run-fixture'
+			runId: 'run-fixture',
+			workspaceId: 'browser fixture'
 		}
 	};
 }
