@@ -124,6 +124,8 @@ export async function serverContextSource(): Promise<ContextSource> {
 	return {
 		kitchens: (ws) => b.ports.store.kitchens(ws),
 		plans: async (ws, run) => Object.values((await b.ports.store.load(ws, run)).plans),
+		// The /request page's kitchen, so "4 kg butter tomorrow" works the same here.
+		defaultKitchenId: 'k-hotel',
 		today: () =>
 			new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Helsinki' }).format(b.ports.clock.now())
 	};

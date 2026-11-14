@@ -10,7 +10,7 @@ import type { CallContext, Llm, ToolHandlers } from '$lib/core/ports';
 import { traceEvent, type TraceStep } from '$lib/server/adapters/llm/trace';
 import { serveTool, toolsFor } from '$lib/server/tools/serve';
 import { errorFacts, toFacts, type Facts, type PlanFacts } from './facts';
-import type { RoutineFacts } from './routine';
+import { pickRoutine, type RoutineFacts } from './routine';
 import type { AgentContext, GoalOutcome, Intent } from './types';
 
 /**
@@ -531,9 +531,12 @@ export function scriptedPlanner(): Planner {
 						.slice(0, 120);
 				const searches = history.filter((h) => h.tool === 'search_products');
 				const queries = intent.item.search.length ? intent.item.search : [intent.query];
-				const found = searches
-					.flatMap((h) => (h.ok ? ((h.facts as RoutineFacts | undefined)?.products ?? []) : []))
-					.find((p) => p.salesQty !== null);
+				const found = pickRoutine(
+					intent,
+					searches.flatMap((h) =>
+						h.ok ? ((h.facts as RoutineFacts | undefined)?.products ?? []) : []
+					)
+				);
 				if (!found && searches.length < Math.min(queries.length, 2))
 					return {
 						tool: 'search_products',
@@ -561,7 +564,7 @@ export function scriptedPlanner(): Planner {
 							lines: [
 								{
 									productId: found.productId,
-									qty: found.salesQty,
+									qty: found.salesQty!,
 									unit: found.unit,
 									// The physical need behind the sales units, so a substitute is sized to it.
 									...(intent.unit === 'kg' || intent.unit === 'l' || intent.unit === 'pcs'

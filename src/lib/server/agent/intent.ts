@@ -38,6 +38,17 @@ function noPlan(c: AgentContext, none: string): Resolved {
 	return ask(`Which plan? Name its id, event or kitchen: ${list}.`);
 }
 
+/** "4 kg butter tomorrow": no order verb, but an item with a quantity in a stated unit reads as an order. */
+function statesAnAmount(goal: string, today: string): boolean {
+	const text = goal.replace(/\b(?:for|at|to)\s+k-[a-z]+\b/gi, ' ').replace(KITCHEN, ' ');
+	return parseRules(text, today).items.some(
+		(i) =>
+			i.qty !== null &&
+			(i.product !== null || i.search.length > 0) &&
+			!i.ambiguities.some((a) => a.startsWith('no unit given'))
+	);
+}
+
 const ask = (reason: string): Resolved => ({ kind: 'unsupported', reason, clarify: true });
 
 /**
@@ -57,7 +68,7 @@ function routineOrder(
 	const items = parsed.items;
 	if (!items.some((i) => i.qty !== null || i.product)) return null;
 
-	const kitchenId = named ?? (kitchens.length === 1 ? kitchens[0] : undefined);
+	const kitchenId = named ?? (kitchens.length === 1 ? kitchens[0] : c.defaultKitchenId);
 	if (!kitchenId) return ask(`Which kitchen should I order for (${kitchens.join(', ')})?`);
 	if (items.length > 1)
 		return ask(
@@ -173,7 +184,7 @@ export function resolveIntent(goalRaw: string, c: AgentContext): Resolved {
 		return { kind: 'shortage_repair', planId: c.currentPlan.id };
 	}
 
-	if (ORDER.test(goal)) {
+	if (ORDER.test(goal) || statesAnAmount(goal, c.today)) {
 		const r = routineOrder(goal, c, named, kitchens);
 		if (r) return r;
 	}

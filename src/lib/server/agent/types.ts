@@ -91,6 +91,8 @@ export interface AgentContext {
 	openPlans: { id: string; kitchenId: string; eventId?: string; state: string }[];
 	supportedEvents: { id: string; kitchenId: string; title: string }[];
 	supportedIntents: readonly IntentKind[];
+	/** The kitchen an order without one goes to, when the surface has a default and the run may act for it. */
+	defaultKitchenId?: string;
 	/** Scenario "today" (YYYY-MM-DD) used for default delivery dates. */
 	today: string;
 }
