@@ -1,7 +1,7 @@
 {
-	"$comment": "One menu week's Wednesday lunch buffet for ~320 covers at a price-led lunch restaurant. Three mains to choose from (share = part of the covers who take it) plus salad for all. gServed = grams (or ml) served per diner; yield = served ÷ purchased; need = covers × share × gServed ÷ yield, rounded up to the pack or lot. Every number is a team estimate until a chef checks it; provenance says so. Prices (catalogPrice ex VAT) and availability are copied from the local mock-API cache (14 Nov) where it had them; the rest are quoted live by the app. Product ids reference the Valio catalogue; no Valio rows are copied here.",
+	"$comment": "One menu week's Wednesday lunch buffet for ~320 lunches at a price-led lunch restaurant. Three mains to choose from (share = part of the guests who take it) plus salad for all. gServed = grams (or ml) served per diner; yield = served ÷ purchased; need = lunches × share × gServed ÷ yield, rounded up to the pack or lot. Every number is a team estimate until a chef checks it; provenance says so. Prices (catalogPrice ex VAT) and availability are copied from the local mock-API cache (14 Nov) where it had them; the rest are quoted live by the app. Product ids reference the Valio catalogue; no Valio rows are copied here.",
 	"id": "event-lounas-wed-320",
-	"title": "Wednesday lunch buffet, 320 covers",
+	"title": "Wednesday lunch buffet, 320 lunches",
 	"kitchenId": "k-lounas",
 	"date": "2026-12-16",
 	"guests": {

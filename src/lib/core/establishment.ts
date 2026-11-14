@@ -17,10 +17,10 @@ const KIND_WORDS: Record<string, string> = {
 
 const SIZE_WORDS: Record<string, string> = {
 	breakfastCovers: 'breakfasts',
-	bistroCovers: 'bistro covers',
+	bistroCovers: 'bistro guests',
 	lunchCovers: 'lunches a day',
 	dinnerCovers: 'dinners',
-	restaurantCovers: 'restaurant covers',
+	restaurantCovers: 'restaurant guests',
 	mealsPerDay: 'meals a day',
 	residents: 'residents',
 	coffeesPerDay: 'coffees a day',
@@ -53,7 +53,7 @@ export interface EstablishmentCard {
 	name: string;
 	type: string;
 	city: string;
-	/** "Deliveries Mon–Sat · 300 breakfasts, 80 bistro covers". */
+	/** "Deliveries Mon–Sat · 300 breakfasts, 80 bistro guests". */
 	rhythm: string;
 	/** The two heaviest ranking weights, as words: "Reliable delivery first, then price". */
 	prefers: string;

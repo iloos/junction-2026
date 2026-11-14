@@ -1,5 +1,5 @@
 /**
- * Demand from a chef-reviewed menu proposal (A4): one need per dish ingredient, guests × amount per cover ÷ yield, in
+ * Demand from a chef-reviewed menu proposal (A4): one need per dish ingredient, guests × amount per guest ÷ yield, in
  * kg, l or pieces. Each need carries its lineage (proposal, revision, dish, ingredient), so edits, substitutes and the
  * Why chain address it by id, never by label or position; two dishes with the same name stay two needs. Pure and
  * deterministic: no model, no catalogue. An ingredient without a product stays a need with its reason, never dropped.
@@ -38,7 +38,7 @@ const PER: Record<'g' | 'ml' | 'pcs', { unit: Need['amount']['unit']; factor: nu
 
 const round3 = (x: number) => Math.round(x * 1000) / 1000;
 
-/** A plan's chef edits of amounts per cover, by need id (where the need's amount differs from the proposal's). */
+/** A plan's chef edits of amounts per guest, by need id (where the need's amount differs from the proposal's). */
 export function menuOverrides(needs: readonly Need[]): Record<string, number> {
 	const out: Record<string, number> = {};
 	for (const n of needs)
@@ -46,7 +46,7 @@ export function menuOverrides(needs: readonly Need[]): Record<string, number> {
 	return out;
 }
 
-/** `overrides` are chef edits of an ingredient's amount per cover, by need id. */
+/** `overrides` are chef edits of an ingredient's amount per guest, by need id. */
 export function menuDemand(p: MenuProposal, overrides: Record<string, number> = {}): MenuNeed[] {
 	const guests = p.brief.guests;
 	const out: MenuNeed[] = [];

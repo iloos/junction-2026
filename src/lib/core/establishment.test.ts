@@ -17,7 +17,7 @@ describe('establishment cards', () => {
 		expect(card('k-hotel')).toMatchObject({
 			name: 'Hotel Rautatientori',
 			type: 'City hotel',
-			rhythm: 'Deliveries Mon–Sat · 300 breakfasts, 80 bistro covers',
+			rhythm: 'Deliveries Mon–Sat · 300 breakfasts, 80 bistro guests',
 			prefers: 'Reliable delivery first, then price'
 		});
 		expect(card('k-cafe').rhythm).toBe('Deliveries Mon–Sat · 40 seats, 400 coffees a day');

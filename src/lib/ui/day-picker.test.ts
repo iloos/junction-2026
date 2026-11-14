@@ -66,7 +66,7 @@ describe('day picker words', () => {
 		const decide = at('2026-12-08').marks.find((m) => m.kind === 'decision')!;
 		expect(markLine(decide)).toBe('Decide before Tue 8 Dec, 15:00: New product (7 lines)');
 		const fest = at('2026-12-11').marks.find((m) => m.kind === 'festivity')!;
-		expect(markLine(fest)).toBe('Pikkujoulu weekends: +10% bistro covers (team estimate)');
+		expect(markLine(fest)).toBe('Pikkujoulu weekends: +10% bistro guests (team estimate)');
 	});
 
 	it('lays days out in Monday-first weeks', () => {

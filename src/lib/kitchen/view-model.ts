@@ -286,8 +286,8 @@ function regularDay(eventId: string, cents: number, lines: number): NormalWeek {
 
 /**
  * Each kitchen's normal week for the "this week" comparison. Team estimates (scenario): the hotel's as above; the
- * lunch restaurant 320 covers × 5 days × €2.60 food cost; the central kitchen 2,000 meals × 5 days × €1.75; the
- * à la carte restaurant 120 covers × 5 dinners × €8; the care home 140 residents × 7 days × €7; the café about €2,000;
+ * lunch restaurant 320 lunches × 5 days × €2.60 food cost; the central kitchen 2,000 meals × 5 days × €1.75; the
+ * à la carte restaurant 120 guests × 5 dinners × €8; the care home 140 residents × 7 days × €7; the café about €2,000;
  * the ski hotel about €30,000 in season. Their light events are ordinary days of that week.
  */
 const NORMAL_WEEKS: Record<string, NormalWeek> = {

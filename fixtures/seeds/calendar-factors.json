@@ -1,5 +1,5 @@
 {
-	"$comment": "Demand factors with a source each (horeca-profiles.md §3 and §5). A factor multiplies covers for the kitchens whose factorSensitivity for that kind is > 0 (applied as 1 + (value − 1) × sensitivity), clamped to [0.5, 2.0]. kind 'data' = taken from the cited source; 'estimate' = team estimate, and the 'why' panel must say 'team estimate'. A factor without a source stays at 1.0.",
+	"$comment": "Demand factors with a source each (horeca-profiles.md §3 and §5). A factor multiplies meals (guests) for the kitchens whose factorSensitivity for that kind is > 0 (applied as 1 + (value − 1) × sensitivity), clamped to [0.5, 2.0]. kind 'data' = taken from the cited source; 'estimate' = team estimate, and the 'why' panel must say 'team estimate'. A factor without a source stays at 1.0.",
 	"timezone": "Europe/Helsinki",
 	"clamp": [0.5, 2.0],
 	"holidays": {
@@ -85,7 +85,7 @@
 				"url": "https://pxdata.stat.fi/PxWeb/pxweb/en/StatFin/StatFin__matk/statfin_matk_pxt_11lm.px/",
 				"fetchedAt": "2026-11-14"
 			},
-			"note": "relative to a January base week; use only if the kitchen's base covers are January-calibrated"
+			"note": "relative to a January base week; use only if the kitchen's base meals a day are January-calibrated"
 		},
 		{
 			"id": "independence-day-2026",

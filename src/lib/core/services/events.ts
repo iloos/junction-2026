@@ -728,7 +728,7 @@ export async function explainLine(
 			if (dish?.yield && dish.yield !== 1)
 				steps.push({ text: `÷ yield ${dish.yield}`, source: 'team_estimate' });
 		} else if (need.source && need.dish) {
-			// A menu need: the chef-reviewed amount per cover (an estimate unless the chef changed it) × guests ÷ yield.
+			// A menu need: the chef-reviewed amount per guest (an estimate unless the chef changed it) × guests ÷ yield.
 			steps.push({ text: need.dish.formula, source: need.provenance.source });
 		}
 		steps.push({
