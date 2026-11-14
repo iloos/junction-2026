@@ -6,6 +6,7 @@
  */
 import type { Product } from '$lib/core/contracts';
 import type { ReqUnit } from './lexicon';
+import { num } from '$lib/ui/format';
 
 export type Dim = 'l' | 'kg';
 
@@ -32,9 +33,6 @@ export type Conversion =
 
 const VOLUME: Record<string, number> = { l: 1, dl: 0.1, cl: 0.01, ml: 0.001 };
 const MASS: Record<string, number> = { kg: 1, g: 0.001 };
-
-const fmt = (n: number, max = 3) =>
-	new Intl.NumberFormat('en-IE', { maximumFractionDigits: max }).format(n);
 
 interface NameMeasure {
 	value: number;
@@ -112,7 +110,7 @@ export function contentPerSalesUnit(p: Product, dim: Dim): Content | { error: st
 		) {
 			// "4x5 kg" with a KI of 4: the name describes the case, so one ${p.baseUnit} is 5 kg.
 			const value = +(m.value * perSales).toFixed(6);
-			const why = `KI = ${m.times} × ${fmt(m.value)} ${dim}, so one ${p.salesUnit} = ${fmt(value)} ${dim}`;
+			const why = `KI = ${m.times} × ${num(m.value, 3)} ${dim}, so one ${p.salesUnit} = ${num(value, 3)} ${dim}`;
 			const close = (a: number, b: number) => Math.abs(a - b) / b <= 0.1;
 			if (net === null || close(net, value))
 				return { value, unit: dim, source: 'name', text: `${why} (from the name)` };
@@ -121,26 +119,26 @@ export function contentPerSalesUnit(p: Product, dim: Dim): Content | { error: st
 					value,
 					unit: dim,
 					source: 'name',
-					text: `${why}; Valio's net weight (${fmt(net)} ${dim}) is the whole case`
+					text: `${why}; Valio's net weight (${num(net, 3)} ${dim}) is the whole case`
 				};
 			return {
-				error: `the name says ${fmt(value)} ${dim} per ${p.salesUnit} but Valio's net weight says ${fmt(net)} ${dim}`
+				error: `the name says ${num(value, 3)} ${dim} per ${p.salesUnit} but Valio's net weight says ${num(net, 3)} ${dim}`
 			};
 		}
 		if (m.times !== null) {
 			if (perSales !== null && perSales === m.times && perSales !== 1)
 				readings.push({
 					value: m.value * m.times,
-					why: `${p.salesUnit} = ${m.times} × ${fmt(m.value)} ${dim}`
+					why: `${p.salesUnit} = ${m.times} × ${num(m.value, 3)} ${dim}`
 				});
 			else if (perSales === 1) {
 				readings.push({ value: m.value * m.times, why: `one ${p.salesUnit} = ${m.raw}` });
-				readings.push({ value: m.value, why: `one ${p.salesUnit} = ${fmt(m.value)} ${dim}` });
+				readings.push({ value: m.value, why: `one ${p.salesUnit} = ${num(m.value, 3)} ${dim}` });
 			}
 		} else if (lead !== null && perSales !== null && (perSales === lead || perSales === 1)) {
 			readings.push({
 				value: m.value * lead,
-				why: `${p.salesUnit} = ${lead} × ${fmt(m.value)} ${dim}`
+				why: `${p.salesUnit} = ${lead} × ${num(m.value, 3)} ${dim}`
 			});
 		} else if (perSales !== null) {
 			readings.push({
@@ -160,7 +158,7 @@ export function contentPerSalesUnit(p: Product, dim: Dim): Content | { error: st
 			const match = readings.find((r) => Math.abs(r.value - net) / net <= 0.1);
 			if (!match)
 				return {
-					error: `the name says ${readings.map((r) => `${fmt(r.value)} ${dim}`).join(' or ')} per ${p.salesUnit} but Valio's net weight says ${fmt(net)} ${dim}`
+					error: `the name says ${readings.map((r) => `${num(r.value, 3)} ${dim}`).join(' or ')} per ${p.salesUnit} but Valio's net weight says ${num(net, 3)} ${dim}`
 				};
 			return {
 				value: +match.value.toFixed(6),
@@ -171,7 +169,7 @@ export function contentPerSalesUnit(p: Product, dim: Dim): Content | { error: st
 		}
 		if (readings.length > 1)
 			return {
-				error: `"${m.raw}" could mean ${readings.map((r) => `${fmt(r.value)} ${dim}`).join(' or ')} per ${p.salesUnit}`
+				error: `"${m.raw}" could mean ${readings.map((r) => `${num(r.value, 3)} ${dim}`).join(' or ')} per ${p.salesUnit}`
 			};
 		return {
 			value: +readings[0].value.toFixed(6),
@@ -186,7 +184,7 @@ export function contentPerSalesUnit(p: Product, dim: Dim): Content | { error: st
 			value: net,
 			unit: dim,
 			source: 'net',
-			text: `Valio net weight ${fmt(net)} ${dim} per ${p.salesUnit}`
+			text: `Valio net weight ${num(net, 3)} ${dim} per ${p.salesUnit}`
 		};
 	return {
 		error: `neither the name nor Valio's data says how much ${dim === 'l' ? 'volume' : 'weight'} is in one ${p.salesUnit}`
@@ -203,10 +201,10 @@ function bestContent(p: Product): Content | null {
 
 const small = (v: number, dim: Dim) =>
 	dim === 'kg' && v < 1
-		? `${fmt(v * 1000)} g`
+		? `${num(v * 1000, 3)} g`
 		: dim === 'l' && v < 1
-			? `${fmt(v * 10)} dl`
-			: `${fmt(v)} ${dim}`;
+			? `${num(v * 10, 3)} dl`
+			: `${num(v, 3)} ${dim}`;
 
 /**
  * N cases of a product, worked out once: how many sales units, what one case holds and what the
@@ -256,9 +254,10 @@ export function caseBreakdown(p: Product, cases: number): CaseBreakdown | { erro
 
 /** "2 × (20 × 500 g) = 20 kg": the headline of a case answer card. */
 export function caseHeadline(b: CaseBreakdown): string {
-	if (!b.perCase) return `${fmt(b.cases)} cases, size not stated`;
-	const one = b.perCase.count > 1 ? `${fmt(b.perCase.count)} × ${b.perCase.each}` : b.perCase.total;
-	return `${fmt(b.cases)} × (${one}) = ${b.orderTotal}`;
+	if (!b.perCase) return `${num(b.cases, 3)} cases, size not stated`;
+	const one =
+		b.perCase.count > 1 ? `${num(b.perCase.count, 3)} × ${b.perCase.each}` : b.perCase.total;
+	return `${num(b.cases, 3)} × (${one}) = ${b.orderTotal}`;
 }
 
 /** What one case (KI) holds, e.g. "20 × 200 g = 4 kg". */
@@ -266,7 +265,7 @@ export function caseDescription(p: Product): string | null {
 	const b = caseBreakdown(p, 1);
 	if ('error' in b || !b.perCase) return null;
 	return b.perCase.count > 1
-		? `${fmt(b.perCase.count)} × ${b.perCase.each} = ${b.perCase.total}`
+		? `${num(b.perCase.count, 3)} × ${b.perCase.each} = ${b.perCase.total}`
 		: `${b.perCase.total} per case`;
 }
 
@@ -277,7 +276,9 @@ function caseNote(p: Product, salesQty: number): string {
 	const perSales = baseUnitsPerSales(p);
 	if (!ki || !perSales) return '';
 	const cases = (salesQty * perSales) / ki.baseUnits;
-	return Number.isInteger(+cases.toFixed(6)) ? ` (= ${fmt(cases)} KI)` : ` (≈ ${fmt(cases, 1)} KI)`;
+	return Number.isInteger(+cases.toFixed(6))
+		? ` (= ${num(cases, 3)} KI)`
+		: ` (≈ ${num(cases, 1)} KI)`;
 }
 
 /** Converts a request quantity into the product's sales units. Rounds up to whole sales units and says so. */
@@ -289,7 +290,7 @@ export function convert(qty: number, unit: ReqUnit, p: Product): Conversion {
 			ok: true,
 			salesQty: qty,
 			salesUnit: su,
-			explain: `${fmt(qty)} ${su} as asked${caseNote(p, qty)}`,
+			explain: `${num(qty, 3)} ${su} as asked${caseNote(p, qty)}`,
 			exact: true,
 			perSalesUnit: null,
 			warnings: [`no unit in the request: read as ${su}, the product's sales unit`]
@@ -305,8 +306,8 @@ export function convert(qty: number, unit: ReqUnit, p: Product): Conversion {
 		);
 		const explain =
 			su === 'KI'
-				? `${fmt(qty)} cases = ${fmt(b.salesQty)} KI`
-				: `${fmt(qty)} KI × ${fmt(b.salesPerCase)} ${su} per KI = ${fmt(b.salesQty)} ${su}`;
+				? `${num(qty, 3)} cases = ${num(b.salesQty, 3)} KI`
+				: `${num(qty, 3)} KI × ${num(b.salesPerCase, 3)} ${su} per KI = ${num(b.salesQty, 3)} ${su}`;
 		return {
 			ok: true,
 			salesQty: b.salesQty,
@@ -325,7 +326,7 @@ export function convert(qty: number, unit: ReqUnit, p: Product): Conversion {
 				ok: true,
 				salesQty: qty,
 				salesUnit: su,
-				explain: `${fmt(qty)} pcs = ${fmt(qty)} ${su}${caseNote(p, qty)}`,
+				explain: `${num(qty, 3)} pcs = ${num(qty, 3)} ${su}${caseNote(p, qty)}`,
 				exact: true,
 				perSalesUnit: null,
 				warnings
@@ -336,7 +337,7 @@ export function convert(qty: number, unit: ReqUnit, p: Product): Conversion {
 				ok: true,
 				salesQty,
 				salesUnit: su,
-				explain: `${fmt(qty)} ${p.baseUnit} ÷ ${fmt(perSales)} per ${su} = ${fmt(salesQty)} ${su}${salesQty * perSales !== qty ? ` (rounded up from ${fmt(qty / perSales, 2)})` : ''}`,
+				explain: `${num(qty, 3)} ${p.baseUnit} ÷ ${num(perSales, 3)} per ${su} = ${num(salesQty, 3)} ${su}${salesQty * perSales !== qty ? ` (rounded up from ${num(qty / perSales, 2)})` : ''}`,
 				exact: salesQty * perSales === qty,
 				perSalesUnit: null,
 				warnings
@@ -358,14 +359,14 @@ export function convert(qty: number, unit: ReqUnit, p: Product): Conversion {
 			ok: true,
 			salesQty: qty,
 			salesUnit: su,
-			explain: `${fmt(qty)} kg, sold per kg`,
+			explain: `${num(qty, 3)} kg, sold per kg`,
 			exact: true,
 			perSalesUnit: c,
 			warnings
 		};
 	const explain =
-		`${fmt(qty)} ${unit} ÷ ${fmt(c.value)} ${unit} per ${su} = ${fmt(salesQty)} ${su}` +
-		(exact ? '' : ` (rounded up from ${fmt(raw, 2)})`) +
+		`${num(qty, 3)} ${unit} ÷ ${num(c.value, 3)} ${unit} per ${su} = ${num(salesQty, 3)} ${su}` +
+		(exact ? '' : ` (rounded up from ${num(raw, 2)})`) +
 		caseNote(p, salesQty);
 	if (c.source === 'net') warnings.push(`content from Valio's net weight, not the name`);
 	return { ok: true, salesQty, salesUnit: su, explain, exact, perSalesUnit: c, warnings };
