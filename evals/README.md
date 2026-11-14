@@ -102,9 +102,7 @@ The runner reports pass/fail per key, so a partial build shows exactly which gua
 |---|---|---|---|
 | F9 | `r5-f9-cutoff-at-commit` | core (8d) | a commit after a line's cut-off still commits it |
 | R6-lineage | `r6-1-lineage` | menu track (A4/B) | `plan_event{proposal}`; need ids that carry the ingredient id |
-| R6-diff | `r6-5-perturbed-requirement` | core (8d) | `get_plan` `lastVoided` (TermsDiff) |
 | F12-ops | `surfaces.test.ts` | Ops (9c) | Ops counts coverage from line states instead of reading `plan.view.fulfilment` |
-| F4-pack | fidelity `butter-grams-weekday` | agent (E) | the scripted planner buys one 4 kg case for 500 g |
 | A4 | `briefs/golden.json` (both) | menu track (A4) | proposal → review → `plan_event{proposal}` → held plan |
 
-F4-pack and F12-ops are sub-cases of SYNTHESIS F4 and F12; R6-* are ROUND6-FOUNDATIONS §1–5.
+F12-ops is a sub-case of SYNTHESIS F12; R6-* are ROUND6-FOUNDATIONS §1–5.

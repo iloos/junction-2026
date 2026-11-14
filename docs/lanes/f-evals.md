@@ -18,9 +18,7 @@
 |---|---|---|
 | F9 commit after cut-off | `r5-f9-cutoff-at-commit` | 8d |
 | R6-lineage | `r6-1-lineage` | menu track (A4/B) |
-| R6-diff `lastVoided` | `r6-5-perturbed-requirement` | 8d |
 | F12-ops coverage | `surfaces.test.ts` | 9c |
-| F4-pack 500 g → 4 kg | fidelity `butter-grams-weekday` | E |
 | A4 held plan from a brief | `briefs/golden.json` | menu track |
 
 - Review on/off comparison: waits for E's `REVIEW=1`; then the same trials both ways via `eval:live` (pass rate and tokens per arm).
