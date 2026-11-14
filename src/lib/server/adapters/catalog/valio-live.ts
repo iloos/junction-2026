@@ -28,6 +28,8 @@ export interface ValioLiveOptions {
 	/** Retries per batch after the first attempt (default 2); backoff base in ms (default 2000). */
 	retries?: number;
 	backoffMs?: number;
+	/** HTTP calls in flight at once for this adapter, across endpoints and callers (default 4). */
+	concurrency?: number;
 	now?: () => number;
 }
 
@@ -43,18 +45,21 @@ export type BreakerState = 'closed' | 'open' | 'half_open';
 const chunk = <T>(xs: T[], n: number) =>
 	Array.from({ length: Math.ceil(xs.length / n) }, (_, i) => xs.slice(i * n, i * n + n));
 
-async function pool<T, R>(items: T[], limit: number, fn: (t: T) => Promise<R>): Promise<R[]> {
-	const out: R[] = new Array(items.length);
-	let next = 0;
-	await Promise.all(
-		Array.from({ length: Math.min(limit, items.length) }, async () => {
-			while (next < items.length) {
-				const i = next++;
-				out[i] = await fn(items[i]);
-			}
-		})
-	);
-	return out;
+/** At most `limit` holders at once, across every caller that shares it; waiters go first in, first out. */
+function semaphore(limit: number) {
+	let active = 0;
+	const waiting: (() => void)[] = [];
+	return async function run<R>(fn: () => Promise<R>): Promise<R> {
+		if (active >= limit) await new Promise<void>((r) => waiting.push(r));
+		else active++;
+		try {
+			return await fn();
+		} finally {
+			const next = waiting.shift();
+			if (next) next();
+			else active--;
+		}
+	};
 }
 
 export function createValioLive(o: ValioLiveOptions) {
@@ -66,6 +71,9 @@ export function createValioLive(o: ValioLiveOptions) {
 	const coolDown = o.coolDownMs ?? 60_000;
 	const retries = o.retries ?? 2;
 	const backoff = o.backoffMs ?? 2000;
+	const slot = semaphore(o.concurrency ?? 4);
+	/** Identical batches already on the wire: a second caller waits for the same answer. */
+	const inFlight = new Map<string, Promise<ValioEntry[]>>();
 	let failures = 0;
 	let openedAt: number | null = null;
 	let trial = false;
@@ -98,26 +106,28 @@ export function createValioLive(o: ValioLiveOptions) {
 			if (!admit()) return [];
 			const t0 = now();
 			try {
-				const res = await doFetch(`${base}/api/${ep}`, {
-					method: 'POST',
-					headers: { 'content-type': 'application/json', 'X-API-Key': o.apiKey },
-					body: JSON.stringify({ customer, requestedDate: date, products: ids }),
-					// A hung call counts as a failure (retry, then the breaker), never a stuck request.
-					signal: AbortSignal.timeout(o.timeoutMs ?? 10_000)
-				});
-				if (res.status === 429 || res.status === 403 || res.status >= 500)
-					throw new Error(`HTTP ${res.status}`);
-				const body = res.ok ? await res.json() : null;
+				const res = await slot(() =>
+					doFetch(`${base}/api/${ep}`, {
+						method: 'POST',
+						headers: { 'content-type': 'application/json', 'X-API-Key': o.apiKey },
+						body: JSON.stringify({ customer, requestedDate: date, products: ids }),
+						// A hung call counts as a failure (retry, then the breaker), never a stuck request.
+						signal: AbortSignal.timeout(o.timeoutMs ?? 10_000)
+					}).then(async (r) => ({ r, body: r.ok ? await r.json() : null }))
+				);
+				const { body } = res;
+				if (res.r.status === 429 || res.r.status === 403 || res.r.status >= 500)
+					throw new Error(`HTTP ${res.r.status}`);
 				const at = new Date(now()).toISOString();
 				succeeded();
 				o.onCall?.({
 					api: 'valio',
 					purpose: `offers.${ep}`,
 					cache: 'live',
-					ok: res.ok,
+					ok: res.r.ok,
 					latencyMs: now() - t0,
 					costUnits: ids.length,
-					...(res.ok ? {} : { error: `HTTP ${res.status}` })
+					...(res.r.ok ? {} : { error: `HTTP ${res.r.status}` })
 				});
 				return ((body?.products ?? []) as Raw[])
 					.filter((e) => e?.productId !== undefined && e?.productId !== null)
@@ -147,7 +157,16 @@ export function createValioLive(o: ValioLiveOptions) {
 		async fetch(ep: ValioEndpoint, ids: string[], date: string): Promise<ValioEntry[]> {
 			const unique = [...new Set(ids)];
 			if (unique.length === 0) return [];
-			return (await pool(chunk(unique, 200), 4, (part) => batch(ep, part, date))).flat();
+			const parts = chunk(unique.sort(), 200).map((part) => {
+				const key = `${ep}|${date}|${part.join(',')}`;
+				let p = inFlight.get(key);
+				if (!p) {
+					p = batch(ep, part, date).finally(() => inFlight.delete(key));
+					inFlight.set(key, p);
+				}
+				return p;
+			});
+			return (await Promise.all(parts)).flat();
 		}
 	};
 }
