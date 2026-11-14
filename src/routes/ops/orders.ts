@@ -30,7 +30,7 @@ export interface OrderRow {
 	};
 	proposed: {
 		/** `valio` for what Valio's answers changed (outages), else who changed it. */
-		changes: { seq: number; at: string; actor: ActorKind | 'valio'; text: string }[];
+		changes: { seq: number; at: string; actor: ActorKind | 'valio' | 'rules'; text: string }[];
 		unchanged: number;
 	};
 	signed: { seq: number; at: string; text: string; state: string; terms: string }[];
@@ -166,7 +166,7 @@ export function orderRow(s: OrderStages, decisions: Decision[]): OrderRow {
 			changes: s.proposed.changes.map((c) => ({
 				seq: c.seq,
 				at: c.at,
-				actor: c.kind === 'out' || c.kind === 'undeliverable' ? ('valio' as const) : c.actor,
+				actor: c.by === 'valio' ? ('valio' as const) : c.by ? ('rules' as const) : c.actor,
 				text: c.text
 			})),
 			unchanged: s.proposed.unchanged

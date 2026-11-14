@@ -10,6 +10,7 @@ import type { WorkspaceState } from '$lib/core/state';
 import { decisionsOf } from '$lib/ui/decisions';
 import { salesUnitWords } from '$lib/ui/request/words';
 import { pendingApprovalOf } from './cases';
+import { causeOf } from '$lib/core/services/cause';
 import { dueOf } from '$lib/core/mandate/due';
 import { productName, reasonText, type Names } from './labels';
 
@@ -145,7 +146,9 @@ export function buildProblems(
 			first.plan.needs.find((n) => n.id === first.u.needId)?.label ?? productName(names, productId);
 		const dish = dishName(dishLabel);
 		const phrase = dishPhrase(dishLabel);
-		const undeliverable = first.u.reasons.includes('undeliverable');
+		// Why it can't be ordered, from its typed reasons: a Valio shortage, or a rule (never shown as stock).
+		const cause = causeOf(first.u);
+		const undeliverable = cause.reason === 'undeliverable';
 		const units = new Set(hits.map((h) => h.u.qty.unit));
 		const amount =
 			units.size === 1
@@ -157,7 +160,9 @@ export function buildProblems(
 		const k = new Set(hits.map((h) => h.plan.kitchenId)).size;
 		const title = undeliverable
 			? `${dish}: ${amount ? `${amount} can't be delivered` : "can't be delivered"} for ${kitchens(k)}`
-			: `${dish}: ${amount ? `${amount} short` : 'out of stock'} for ${kitchens(k)}`;
+			: cause.shortage
+				? `${dish}: ${amount ? `${amount} short` : 'out of stock'} for ${kitchens(k)}`
+				: `${dish}: the product ${cause.text}, for ${kitchens(k)}`;
 
 		const held = hits.flatMap((h) =>
 			h.rescue.filter((l) => l.state === 'held').map((l) => ({ h, l }))
@@ -168,8 +173,8 @@ export function buildProblems(
 		const tone: ProblemTone = !held.length ? 'blocked' : anySignOff ? 'sign_off' : 'propose';
 
 		const what = `${productName(names, productId)} (${productId}) ${
-			undeliverable ? "can't be delivered by the date the kitchens need" : 'is out at Valio'
-		}.`;
+			undeliverable ? "can't be delivered by the date the kitchens need" : cause.text
+		}${cause.by === 'kitchen' ? ": the kitchen's own rule, not Valio's stock" : ''}.`;
 		const consequence = held.length
 			? `Unless ${WAITS_WORDS[waits]} decides, ${k === 1 ? 'the kitchen goes' : `${k} kitchens go`} without ${phrase}.`
 			: `No substitute qualifies yet: ${k === 1 ? 'the kitchen goes' : `${k} kitchens go`} without ${phrase}.`;

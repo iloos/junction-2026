@@ -16,6 +16,7 @@ import type {
 	SalesQty
 } from '../contracts';
 import { applyOps, emptyState, type WorkspaceState } from '../state';
+import { causeOf, type CauseBy } from './cause';
 
 export type Origin = 'chat' | 'request' | 'outside_agent' | 'event' | 'kitchen';
 
@@ -24,7 +25,16 @@ export interface StageChange {
 	at: string;
 	actor: ActorKind;
 	kind:
-		'out' | 'undeliverable' | 'substitute' | 'make_in_house' | 'no_substitute' | 'edit' | 'recall';
+		| 'out'
+		| 'undeliverable'
+		| 'rule'
+		| 'substitute'
+		| 'make_in_house'
+		| 'no_substitute'
+		| 'edit'
+		| 'recall';
+	/** For a line that can't be ordered: who imposed it (Valio, the kitchen's rules, the order). */
+	by?: CauseBy;
 	/** One plain sentence: what changed and why. */
 	text: string;
 	lineIds: string[];
@@ -183,8 +193,8 @@ export function orderStages(
 		if (!firstLined && plan.lines.length) firstLined = plan;
 		const at = env.at;
 		const actor = env.actor.kind;
-		const add = (kind: StageChange['kind'], text: string, lineIds: string[]) =>
-			changes.push({ seq: env.seq, at, actor, kind, text, lineIds });
+		const add = (kind: StageChange['kind'], text: string, lineIds: string[], by?: CauseBy) =>
+			changes.push({ seq: env.seq, at, actor, kind, text, lineIds, ...(by ? { by } : {}) });
 		const op = env.op;
 		switch (op.type) {
 			case 'CreatePlan':
@@ -196,13 +206,15 @@ export function orderStages(
 				const prev = new Map((before?.lines ?? []).map((l) => [l.id, l]));
 				for (const l of plan.lines) {
 					if (l.state !== 'unorderable' || prev.get(l.id)?.state === 'unorderable') continue;
-					const late = l.reasons.includes('undeliverable');
+					// The cause from the line's typed reasons, and who imposed it: never a kitchen rule as stock.
+					const c = causeOf(l);
 					add(
-						late ? 'undeliverable' : 'out',
-						late
+						c.reason === 'undeliverable' ? 'undeliverable' : c.shortage ? 'out' : 'rule',
+						c.reason === 'undeliverable'
 							? `${name(l)} can't be delivered by ${dayText(plan.deliverBy)}, Valio says.`
-							: `${name(l)} is out of stock at Valio.`,
-						[l.id]
+							: `${name(l)} ${c.text}.`,
+						[l.id],
+						c.by
 					);
 				}
 				break;

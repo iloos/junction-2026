@@ -104,6 +104,7 @@
 	} as const;
 	const CHIP = {
 		valio: 'Valio data',
+		rules: 'Kitchen rules',
 		chef: 'Chef',
 		approver: 'Approver',
 		kitchen_agent: 'Kitchen agent',
