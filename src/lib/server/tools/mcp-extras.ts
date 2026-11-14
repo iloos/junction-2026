@@ -6,6 +6,8 @@
  */
 import { McpServer, ResourceTemplate } from '@modelcontextprotocol/server';
 import { z } from 'zod';
+import type { ToolOutput } from '$lib/core/contracts';
+import { dueOf } from '$lib/core/mandate/due';
 import type { CallContext, ToolHandlers } from '$lib/core/ports';
 import { mandateSentence } from '$lib/server/agent/intents/questions';
 import { serveTool } from './serve';
@@ -58,6 +60,19 @@ async function context(ctx: CallContext, handlers: ToolHandlers): Promise<Contex
 	return r.ok ? (r.value as unknown as Context) : null;
 }
 
+/** "Tue 8 Dec 17:00 Helsinki": a due time on the kitchen's own clock. */
+export const localTime = (iso: string) =>
+	`${new Date(iso)
+		.toLocaleString('en-GB', {
+			weekday: 'short',
+			day: 'numeric',
+			month: 'short',
+			hour: '2-digit',
+			minute: '2-digit',
+			timeZone: 'Europe/Helsinki'
+		})
+		.replace(',', '')} Helsinki`;
+
 const text = (uri: string, body: string) => ({
 	contents: [{ uri, mimeType: 'text/plain', text: body }]
 });
@@ -73,6 +88,39 @@ const STATE_WORDS: Record<string, string> = {
 	approved: 'approved, not yet ordered',
 	partially_committed: 'partly ordered'
 };
+
+/**
+ * decisions://open: each open plan in this sandbox with what it waits for and when it is due, from core's one rule
+ * (dueOf: the approval's expiry, the view's validity, Valio's cut-off per line), never the scenario's fixed cut-off.
+ */
+export async function openDecisions(ctx: CallContext, handlers: ToolHandlers): Promise<string> {
+	const c = await context(ctx, handlers);
+	const plans = c?.openPlans ?? [];
+	const now = c ? new Date(c.scenario.now) : undefined;
+	// Each plan's own due time from core's one rule (dueOf: the approval's expiry, the view's validity, Valio's
+	// cut-off per line), never the scenario's fixed cut-off.
+	const rows = await Promise.all(
+		plans.map(async (p) => {
+			const r = await serveTool('get_plan', ctx, { planId: p.planId }, handlers);
+			const v = r.ok ? (r.value as ToolOutput<'get_plan'>) : null;
+			// get_plan's approval may lack an expiry; dueOf skips an empty time.
+			const approval = v?.approval
+				? { lineIds: v.approval.lineIds, expiresAt: v.approval.expiresAt ?? '' }
+				: null;
+			const due = v ? dueOf(v.plan, approval, undefined, now) : null;
+			return (
+				`- A plan ${STATE_WORDS[p.state] ?? p.state}: ${p.nextAction}` +
+				(due ? ` Due ${localTime(due)} (${due}).` : '') +
+				` (planId ${p.planId}, version ${p.version})`
+			);
+		})
+	);
+	const body = rows.length
+		? rows.join('\n') +
+			'\n\nHeld lines wait for a chef, who approves in the Kitchen screen; you cannot approve. Call get_plan for details.'
+		: 'Nothing is open: no plan in this sandbox waits for anything.';
+	return body;
+}
 
 /** Register the resources and prompts a caller with read scope may use. */
 export function registerExtras(server: McpServer, ctx: CallContext, handlers: ToolHandlers): void {
@@ -117,20 +165,7 @@ export function registerExtras(server: McpServer, ctx: CallContext, handlers: To
 			description: MCP_RESOURCES[1].description,
 			mimeType: 'text/plain'
 		},
-		async (uri) => {
-			const c = await context(ctx, handlers);
-			const plans = c?.openPlans ?? [];
-			const body = plans.length
-				? plans
-						.map(
-							(p) =>
-								`- A plan ${STATE_WORDS[p.state] ?? p.state}: ${p.nextAction} (planId ${p.planId}, version ${p.version})`
-						)
-						.join('\n') +
-					'\n\nHeld lines wait for a chef, who approves in the Kitchen screen; you cannot approve. Call get_plan for details.'
-				: 'Nothing is open: no plan in this sandbox waits for anything.';
-			return text(uri.href, `Order cut-off: ${c?.scenario.cutoff ?? 'unknown'}.\n${body}`);
-		}
+		async (uri) => text(uri.href, await openDecisions(ctx, handlers))
 	);
 
 	if (ctx.scopes.includes('plan'))
@@ -163,7 +198,7 @@ export function registerExtras(server: McpServer, ctx: CallContext, handlers: To
 			say(
 				[
 					'Check what is still open before the order cut-off.',
-					'1. Call get_context: note scenario.cutoff and the open plans with their next action (or read decisions://open).',
+					'1. Read decisions://open (or call get_context, then get_plan for each open plan): each plan says what it waits for and when it is due. Due times are per plan: the approval’s expiry and Valio’s own cut-off for its lines.',
 					'2. For each open plan, call get_plan and say in one line what it waits for: a chef’s approval, a substitute, a quote, or a commit.',
 					'3. Say which of these can still be done before the cut-off, and which need a chef. Do not commit or approve anything; this is a check.'
 				].join('\n')
