@@ -625,21 +625,37 @@ describe('suite: adversarial (round 7: the purchase the chef asked for)', () => 
 		);
 	});
 
-	probe('R7-05', 'candidates the model scores 0/4 for fit are not chosen as eligible', async () => {
-		const { ports, h, place } = await r7();
-		ports.catalog.candidates = async () =>
-			['470418', '470419'].map((productId) => ({ productId, fromValioRule: true }));
-		const p = await place('fit');
-		const r = must(
-			await h.find_substitutes(rctx(), {
+	// Policy (lead): a model never overrides deterministic eligibility; a 0/4 fit is a visible caution that holds
+	// the line for a chef's sign-off and is never committed within the mandate.
+	probe(
+		'R7-05',
+		'a substitute the model scores 0/4 for fit is held with a caution, never auto-committed',
+		async () => {
+			const { ports, h, place } = await r7();
+			ports.catalog.candidates = async () =>
+				['470418', '470419'].map((productId) => ({ productId, fromValioRule: true }));
+			const p = await place('fit');
+			const r = must(
+				await h.find_substitutes(rctx(), {
+					planId: p.id,
+					version: p.version,
+					lineId: p.lines[0].id,
+					apply: true
+				})
+			);
+			const ids = r.chosen.map((c: any) => c.id);
+			const lines = r.plan.lines.filter((l: any) => ids.includes(l.id));
+			for (const l of lines)
+				expect((l.reasons ?? []).some((x: string) => x.startsWith('CAUTION.'))).toBe(true);
+			const c = await h.commit_order(rctx(), {
 				planId: p.id,
-				version: p.version,
-				lineId: p.lines[0].id,
-				apply: true
-			})
-		);
-		expect(r.chosen.filter((c: any) => c.state === 'eligible')).toHaveLength(0);
-	});
+				version: r.plan.version,
+				idempotencyKey: 'fit-commit'
+			});
+			const committed = c.ok ? c.value.committedLineIds : [];
+			expect(committed.filter((id: string) => ids.includes(id))).toEqual([]);
+		}
+	);
 
 	probe('R7-11', 'a one-unit receipt confirms one unit, not the whole ten-unit line', async () => {
 		const { h, place, state, products } = await r7();
