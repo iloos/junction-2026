@@ -47,6 +47,7 @@
 	/** Ops is read on a wall screen: the same tokens, dark. */
 	const theme = $derived(page.url.pathname.startsWith('/ops') ? 'dark' : undefined);
 
+	$effect(() => shell.loadRailWidth());
 	$effect(() => {
 		const html = document.documentElement;
 		if (shell.system) html.dataset.system = '';
@@ -141,7 +142,10 @@
 		<div class="mx-auto max-w-[1440px]"><ServiceStatus /></div>
 	</div>
 {/if}
-{@render children()}
+<!-- The agent rail pushes the page aside on desktop instead of covering it; its width is --rail-w. -->
+<div class={shell.chatOpen ? 'lg:pr-[var(--rail-w)]' : ''} style="--rail-w: {shell.railWidth}px">
+	{@render children()}
+</div>
 
 <!-- The purchasing agent on every page, scoped to what the page shows (shell.chat); it never approves. -->
 <ChatDock
