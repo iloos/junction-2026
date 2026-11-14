@@ -35,8 +35,14 @@ Find and hand-check one **Stock** (not Terminal) alternative for the ham and for
 |---|---|
 | Approval is bound to exact terms | eval s4 (price change voids approval) |
 | No double orders | eval s1 retry → 1 receipt; concurrency test on Postgres |
-| Never over the cap, even split | eval s5 |
+| Never **auto-orders** over its cap, even split (sign-off above caps is allowed by design) | eval s5 |
 | Below a lot step is unorderable | eval s3 |
+
+## Framing we can say truthfully (docs/research/agentic-commerce.md)
+- "Our mandate is what Google's agent payments protocol (AP2) calls an open mandate; our approval is a closed mandate bound to the exact terms by a hash; the approval surface is not an agent, and every check runs in deterministic code." Don't claim AP2/ACP compliance, payments or signatures.
+- "Outside agents get the same tools over MCP and REST, and can never approve: that needs the chef."
+- Numbers (cite on a slide, docs/research/pitch-numbers-and-viz.md): Finnish food services waste ~61 Mkg of edible food a year (Luke); ~1 plate in 6 on a serving line is never eaten (Luke field study); EU law requires a 30% per-person cut by 2030; public kitchens serve ~380 M meals a year; buyers beat the algorithm only where they know something it doesn't (Kesavan & Kushwaha 2020), so we ask only at the exceptions.
+- **Do not claim** (round-3 review): an enforceable mandate until the P0s (duplicate lineIds, null price, hard-constraint validator) are fixed; the co-planning edit-after-rescue beat until finding 4 is fixed; Finnish online-order or fill-rate figures (none found).
 
 ## Q&A crib
 - Why won't Valio's own A.I.mo do this? (We're the exception layer and the open agent gate it can adopt.)
