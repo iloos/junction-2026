@@ -4,13 +4,7 @@
  * (packs, recipe ratios, substitute yields, receipts) are gathered here from the seed, the catalogue and the state.
  */
 import type { Approval, Line, MeasureUnit, Plan, PlanView, Product } from '../contracts';
-import {
-	contentPerSalesUnit,
-	rescueFor,
-	seedEntryFor,
-	type EventSeed,
-	type SeedPack
-} from '../demand';
+import { contentValue, rescueFor, seedEntryFor, type EventSeed, type SeedPack } from '../demand';
 import {
 	physicalOf,
 	planFulfilment,
@@ -95,7 +89,7 @@ export function factsFor(
 			const p = products.get(l.productId);
 			const units: MeasureUnit[] = [...(want ? [want] : []), 'kg', 'l'];
 			for (const unit of units) {
-				const value = p ? contentPerSalesUnit(p, unit) : null;
+				const value = p ? contentValue(p, unit) : null;
 				if (value) return { value, unit };
 			}
 			return undefined;

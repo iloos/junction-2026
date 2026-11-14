@@ -4,7 +4,7 @@ import { writeFileSync } from 'node:fs';
 import { SCOPES_BY_ACTOR } from '$lib/core/contracts';
 import type { CallContext, ToolHandlers } from '$lib/core/ports';
 import { createHandlers } from '$lib/core/services/handlers';
-import { contentPerSalesUnit } from '$lib/core/demand/sizing';
+import { contentValue } from '$lib/core/demand/sizing';
 import * as schema from '../db/schema';
 import { createDbPorts } from './db-ports';
 
@@ -94,7 +94,7 @@ describe('direct needs', () => {
 		const sized = r.candidates.filter((c) => c.rank !== null);
 		expect(sized.length).toBeGreaterThan(0);
 		for (const l of r.chosen) {
-			const litres = contentPerSalesUnit(products.get(l.productId)!, 'l')!;
+			const litres = contentValue(products.get(l.productId)!, 'l')!;
 			expect(l.qty.value * litres).toBeGreaterThanOrEqual(10 - 1e-9);
 		}
 	});
@@ -119,5 +119,11 @@ describe('direct needs', () => {
 				kind: 'chef',
 				id: 'chef-7'
 			});
+	});
+
+	it('reads content cross-checked with the pack hierarchy: "4x5 kg" in a KI of 4 is 5 kg per unit', async () => {
+		const p = (await env.ports.catalog.get(['464076'])).get('464076')!;
+		expect(p.nameFi).toMatch(/4x5 kg/);
+		expect(contentValue(p, 'kg')).toBe(5);
 	});
 });

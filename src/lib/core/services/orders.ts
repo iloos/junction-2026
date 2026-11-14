@@ -34,7 +34,7 @@ import {
 	type TierResult
 } from '../mandate/tier';
 import type { CallContext, Ports, Tx } from '../ports';
-import { seedNeedQty, sizeDirect, type EventSeed } from '../demand';
+import { roundToLots, seedNeedQty, sizeDirect, type EventSeed } from '../demand';
 import type { WorkspaceState } from '../state';
 
 const APPROVAL_TTL_MS = 24 * 3600 * 1000;
@@ -70,8 +70,7 @@ export function toLot(qty: number, unit: string, p: Product): DraftLine['qty'] {
 	if (qty <= 0) return { value: 0, unit };
 	const step = p.lotStep;
 	if (step <= 0.01) return { value: qty, unit };
-	const lots = Math.max(1, Math.ceil(qty / step - 1e-9));
-	const value = +(lots * step).toFixed(3);
+	const { lots, value } = roundToLots(qty, step);
 	return value === qty
 		? { value, unit }
 		: {

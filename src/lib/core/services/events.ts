@@ -17,7 +17,7 @@ import {
 	type ToolOutput
 } from '../contracts';
 import { sha256Hex } from '../hash';
-import { SCENARIO } from '../scenario';
+import { SCENARIO, addDays } from '../scenario';
 import {
 	makeInHouseQty,
 	planEventDemand,
@@ -46,9 +46,7 @@ export type ServicePorts = Ports & { events?: Record<string, EventSeed> };
 /** The delivery for an event: the scenario's delivery for the scenario's event, otherwise two days before it. */
 export function deliverByFor(eventDate: string): string {
 	if (eventDate === SCENARIO.event) return SCENARIO.delivery;
-	const d = new Date(`${eventDate}T00:00:00Z`);
-	d.setUTCDate(d.getUTCDate() - 2);
-	return d.toISOString().slice(0, 10);
+	return addDays(eventDate, -2);
 }
 
 /** g/guest overrides are kept on the need's provenance so a later edit or explain can rebuild the numbers. */

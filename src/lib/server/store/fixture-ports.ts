@@ -43,7 +43,6 @@ export function createFixturePorts(o: FixturePortsOptions = {}): Ports & { overl
 		},
 		llm: { generate: unavailable('llm') },
 		web: { search: unavailable('web') },
-		jobs: { enqueue: unavailable('jobs') },
 		store: {
 			transact: unavailable('store'),
 			load: unavailable('store'),

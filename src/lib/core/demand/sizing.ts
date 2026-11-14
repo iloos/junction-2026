@@ -4,7 +4,8 @@
  */
 import type { Line, Measure, MeasureUnit, Product, SalesQty } from '../contracts';
 import type { EventSeed } from './event-seed';
-import { roundToSales } from './rounding';
+import { contentPerSalesUnit } from './content';
+import { roundToLots, roundToSales } from './rounding';
 
 /* eslint-disable @typescript-eslint/no-explicit-any -- seed candidate/rescue entries are loose JSON */
 type Loose = any;
@@ -91,26 +92,14 @@ export function makeInHouseQty(ingredient: Loose, needKg: number): Line['qty'] {
 	};
 }
 
-const PRINTED: Record<'kg' | 'l', { re: RegExp; factor: Record<string, number> }> = {
-	l: { re: /(\d+(?:[.,]\d+)?)\s*(l|dl|cl|ml)\b/i, factor: { l: 1, dl: 0.1, cl: 0.01, ml: 0.001 } },
-	kg: { re: /(\d+(?:[.,]\d+)?)\s*(kg|g)\b/i, factor: { kg: 1, g: 0.001 } }
-};
-
 /**
- * Physical content of one sales unit in `unit`, when the catalogue states it: the net content when it is in that unit,
- * else the amount printed in the name ("1 l", "5 dl", "200 g") per base unit × base units per sales unit (a KI of
- * 20 × 200 g butter is 4 kg; of 5 × 1 l juice, 5 l). Null when unknown: content is never guessed.
+ * Content of one sales unit as a number in `unit` (kg or l), from the cross-checked reading in content.ts; null when
+ * it is unknown, ambiguous or contradicted (and for pieces, which no catalogue field states).
  */
-export function contentPerSalesUnit(p: Product, unit: MeasureUnit): number | null {
-	const net = p.netPerSalesUnit?.value;
-	if (net && net.unit === unit) return net.value;
+export function contentValue(p: Product, unit: MeasureUnit): number | null {
 	if (unit === 'pcs') return null;
-	const printed = PRINTED[unit];
-	const m = (p.nameFi ?? '').match(printed.re);
-	if (!m) return null;
-	const perBase = Number(m[1].replace(',', '.')) * printed.factor[m[2].toLowerCase()];
-	const base = p.packs.find((x) => x.unit === p.salesUnit)?.baseUnits ?? 1;
-	return perBase > 0 ? +(perBase * base).toFixed(4) : null;
+	const c = contentPerSalesUnit(p, unit);
+	return 'error' in c ? null : c.value;
 }
 
 /**
@@ -119,17 +108,15 @@ export function contentPerSalesUnit(p: Product, unit: MeasureUnit): number | nul
  * product's content in that unit is unknown: it can't be sized, never guessed.
  */
 export function sizeDirect(p: Product, amount: Measure): SalesQty | null {
-	const lots = (units: number) => {
-		const step = p.lotStep > 0.01 ? p.lotStep : p.salesUnit === 'KG' ? 0.01 : 1;
-		return +(Math.ceil(units / step - 1e-9) * step).toFixed(3);
-	};
+	const lots = (units: number) =>
+		roundToLots(units, p.lotStep > 0.01 ? p.lotStep : p.salesUnit === 'KG' ? 0.01 : 1).value;
 	if (amount.value <= 0) return { value: 0, unit: p.salesUnit, rounding: 'nothing asked for' };
 	if (p.salesUnit === 'KG') {
 		if (amount.unit !== 'kg') return null;
 		const value = lots(amount.value);
 		return { value, unit: 'KG', rounding: `${amount.value} kg → ${value} KG` };
 	}
-	const content = contentPerSalesUnit(p, amount.unit);
+	const content = contentValue(p, amount.unit);
 	if (!content) return null;
 	const value = lots(amount.value / content);
 	return {
