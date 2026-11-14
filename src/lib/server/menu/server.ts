@@ -25,7 +25,8 @@ import {
 } from './flow';
 import type { ProposeStep } from './proposal';
 import { memoryMenuStore } from './store';
-import { groundingFor, groundMenuInBackground } from '$lib/server/web/grounding';
+import { groundingFor, groundMenuInBackground, needsGrounding } from '$lib/server/web/grounding';
+import { env } from '$env/dynamic/private';
 
 /** One process-wide fallback when the ports carry no MenuStore (a catalogue-only fixture). */
 let fallbackStore: ReturnType<typeof memoryMenuStore> | null = null;
@@ -88,7 +89,16 @@ function withGrounding(view: MenuView): MenuView {
 
 export async function readMenuFor(workspaceId: string, id: string): Promise<Result<MenuView>> {
 	const r = await readMenu(await deps(workspaceId), id);
-	return r.ok ? ok(withGrounding(r.value)) : r;
+	if (!r.ok) return r;
+	// A dish whose grounding failed or found nothing is asked again once its short retry has passed.
+	if (llmKind(env) !== 'fixture' && needsGrounding(r.value.proposal.dishes))
+		await groundMenuInBackground(
+			env,
+			workspaceId,
+			r.value.proposal.dishes,
+			(await ports()).ports.catalog
+		).catch(() => {});
+	return ok(withGrounding(r.value));
 }
 
 export async function editMenuFor(o: {

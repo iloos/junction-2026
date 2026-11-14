@@ -47,6 +47,8 @@ export interface CallOptions {
 	maxAgeMs?: number;
 	/** Cache the 2xx body only when this holds (e.g. the extraction succeeded). Default: always. */
 	accept?: (body: unknown) => boolean;
+	/** A 2xx that found nothing: cached for minutes, not the day, so a later read asks again. */
+	shortLived?: (body: unknown) => boolean;
 	method?: 'GET' | 'POST' | 'PATCH';
 	/** What the call is for, shown in the trace ("recall list", "facts 460002"). */
 	purpose?: string;
@@ -120,6 +122,7 @@ export function createWebHttp(o: WebHttpOptions) {
 				purpose: c.purpose ?? path,
 				maxAgeMs: c.maxAgeMs ?? DEFAULT_MAX_AGE_MS,
 				accept: c.accept ? (s) => c.accept!(s.body) : undefined,
+				shortLived: c.shortLived ? (s) => c.shortLived!(s.body) : undefined,
 				detail: { path }
 			},
 			async () => {

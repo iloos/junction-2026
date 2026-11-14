@@ -55,6 +55,8 @@ export interface CallRequest<T> {
 	maxAgeMs?: number;
 	/** Cache the answer only when this holds (e.g. the extraction succeeded). Default: always. */
 	accept?: (v: T) => boolean;
+	/** An accepted answer that should not stand for the day (nothing found): reused for `SHORT_LIVED_MS` only. */
+	shortLived?: (v: T) => boolean;
 	/** Extra trace fields (status, path, question count). */
 	detail?: Record<string, unknown>;
 }
@@ -82,7 +84,12 @@ export interface CacheEntry {
 	at: string;
 	value: unknown;
 	costUnits?: number;
+	/** A shorter life than the caller's max age (an empty answer); kept in memory only. */
+	maxAgeMs?: number;
 }
+
+/** How long an empty or unhelpful answer is reused before the next read asks again. */
+export const SHORT_LIVED_MS = 5 * 60_000;
 type Entry = CacheEntry;
 
 /** A shared response cache behind memory (Postgres `web_cache`): survives a redeploy, shared by instances. */
@@ -158,7 +165,11 @@ export function createExternalCall(o: ExternalCallOptions) {
 			);
 			return { value: e.value as T, cache: 'cache', stale, latencyMs: 0, at: e.at };
 		};
-		if (maxAge > 0 && entry && Date.now() - Date.parse(entry.at) <= maxAge)
+		if (
+			maxAge > 0 &&
+			entry &&
+			Date.now() - Date.parse(entry.at) <= Math.min(maxAge, entry.maxAgeMs ?? maxAge)
+		)
 			return fromCache(entry, false);
 
 		const wait = breaker.acquire();
@@ -191,8 +202,11 @@ export function createExternalCall(o: ExternalCallOptions) {
 				{ ...base, cache: 'live', ok: true, latencyMs, costUnits: r.costUnits, model: r.model },
 				{ ...req.detail, ...r.detail }
 			);
-			if (!req.accept || req.accept(r.value))
-				if (o.cache !== false) writeCache(k, { at, value: r.value, costUnits: r.costUnits });
+			if ((!req.accept || req.accept(r.value)) && o.cache !== false) {
+				if (req.shortLived?.(r.value))
+					mem.set(k, { at, value: r.value, costUnits: r.costUnits, maxAgeMs: SHORT_LIVED_MS });
+				else writeCache(k, { at, value: r.value, costUnits: r.costUnits });
+			}
 			return { value: r.value, cache: 'live', stale: false, latencyMs, at, costUnits: r.costUnits };
 		} catch (e) {
 			const latencyMs = Math.round(performance.now() - t0);
