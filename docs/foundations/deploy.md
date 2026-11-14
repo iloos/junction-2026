@@ -1,6 +1,14 @@
 # Deploy
 
-One container (`adapter-node`, [Dockerfile](../../Dockerfile)) on **Aiven Runtime**, Postgres on the free Aiven service `pg-1dfeeeed` (D3). Fallback: a Verda CPU VM.
+One container (`adapter-node`, [Dockerfile](../../Dockerfile)) on **Aiven Runtime**, Postgres on the Aiven service `pg-1dfeeeed`, both in `aws-eu-central-1` (D3). A staging copy builds from the `staging` branch. Fallback: a Verda CPU VM.
+
+| Service | Plan | $/h (catalog) | What |
+|---|---|---|---|
+| `mandate` | `startup-100-2048` (1 vCPU, 2 GB) | 0.0685 | prod, https://widely-many-scorpion.eur-1.aiven.app |
+| `mandate-staging` | `startup-20-512` | 0.0164 | staging, https://ideally-expert-wolf.eur-1.aiven.app |
+| `pg-1dfeeeed` | `startup-4` (2 vCPU, 4 GB, 100 connections, PgBouncer on :24911) | 0.158 | Postgres 18.7, shared by prod and staging |
+
+About $0.24/h in total. Plans were raised on Sat 14 Nov ~05:00 with the user's approval (budget ~$50 to Sun 14:00).
 
 ## Health and smoke
 
@@ -19,7 +27,7 @@ SMOKE_KEY="$(grep -E '^SMOKE_KEY=' .env | cut -d= -f2-)" EXPECT_DB=ok scripts/de
 
 ## Database connection ([client.ts](../../src/lib/server/db/client.ts))
 
-- `postgres` 4.x, **max 3 connections** per process plus one `LISTEN` connection for the op stream. The free plan has 15 in total, shared by every instance, dev server and lane, so stop dev servers you no longer use.
+- `postgres` 4.x, **max 3 connections** per process plus one `LISTEN` connection for the op stream. The plan allows 100, shared by prod, staging, dev servers and lanes.
 - One pool per process, kept on `globalThis` across Vite HMR.
 - TLS verified against the Aiven project CA, taken from `PROJECT_CA_CERT` (base64, injected by Aiven Runtime) or `PG_CA_CERT` (path or PEM; locally `certs/aiven-ca.pem`). `?sslmode=` is stripped from the URL because it would override the CA and skip verification. A wrong CA fails with "self-signed certificate in certificate chain".
 - `SQL_TRACE=1` prints the most frequent statements every 10 s while queries arrive (diagnostics, off by default).
@@ -37,18 +45,18 @@ Fixture mode in a container needs the gitignored Valio cache mounted writable (`
 
 ## Aiven Runtime
 
-**URL: https://widely-many-scorpion.eur-1.aiven.app**: service `mandate`, project `junction26jq`, `aws-eu-central-1`, plan `startup-20-512` ($0.0164/h catalog price). Built by Aiven from GitHub `main` (`iloos/junction-2026`, VCS integration `vcs5f404a66b3d`, repo id `1456805781`), port 3000, `Dockerfile`. Integration `pg-1dfeeeed` → `DATABASE_URL`; the platform injects `PROJECT_CA_CERT`.
+Both apps build from GitHub (`iloos/junction-2026`, VCS integration `vcs5f404a66b3d`, repo id `1456805781`) with the `Dockerfile` on port 3000. Integration `pg-1dfeeeed` → `DATABASE_URL`; `PROJECT_CA_CERT` holds the project CA. Prod builds the branch or tag it was last redeployed with (`aiven_service_get` → `user_config.application.source.branch`). Any env change in the console also rebuilds from that branch.
 
-**Redeploy after a merge:**
+**Promote: staging → verify → prod.**
 
-1. `git push origin main`.
-2. Aiven MCP `aiven_application_redeploy` (project `junction26jq`, service `mandate`), or the console's Redeploy button.
-3. Wait until `aiven_service_get` shows `application_deployment_commit_sha` = the pushed SHA and `COMPLETED`. Expect about a minute of 302/307 to Aiven's status page while the container switches.
-4. `scripts/deploy/warm.sh <url>`, then the smoke above.
+1. `git push origin <sha>:staging`, then `aiven_application_redeploy` on `mandate-staging`.
+2. Verify on staging: `warm.sh`, `smoke.sh`, and the visitor gate (`GATE_URL=<staging url> npx playwright test -c scripts/deploy/pw-gate.config.ts`). Staging has no secrets (fixture model, no presenter or judge keys; visitor cookies are signed per process). It shares the database, so it only ever writes its own visitors' sandboxes.
+3. Prod: `aiven_application_redeploy` on `mandate` with `branch` set to `main` or a tag (e.g. `ring1-clean`). A tag build reports no `application_deployment_commit_sha`.
+4. Wait for the new container, not just `COMPLETED`: the runtime log shows a new `Listening on http://0.0.0.0:3000`. Expect about a minute of 302/307 to the status page while the container switches. Then run `warm.sh` and the smoke with `SMOKE_KEY`.
 
 **Rule: no redeploy in the last 30 minutes before judging or recording.** A redeploy redirects to the status page for about a minute, restarts every in-memory run pointer and kitchen session, and its first requests are cold.
 
-**Plan changes** go through `aiven_service_update` with only `plan` set. Never send `user_config` for a plan change.
+**Plan changes** go through `aiven_service_update` with only `plan` (and `cloud` for a move) set. Never send `user_config` for a plan change. Moving Postgres between clouds is online: on Sat 14 Nov the DigitalOcean → AWS move took 5 minutes, with one redirect seen by prod's health check and the same host, port and CA afterwards.
 
 ## Environment (Aiven console)
 
@@ -113,6 +121,7 @@ Checked against the live service; each line says how.
 | Live op stream on **LISTEN/NOTIFY** | Committed ops and agent traces are published with `NOTIFY mandate_events` and fanned out from one `LISTEN` per process to SSE. An SSE client received the routine agent's 8 trace events live during a 1.56 s run. |
 | One sandbox per visitor | `src/routes/ops/visitor-gate.e2e.ts` passes against prod (68cb2d8): two browsers, an outside agent on one visitor's key, and a stranger opening that visitor's link each stay in their own sandbox; forged cookies select nothing. |
 | 30 visitors at once | `scripts/deploy/visitors.mjs <url> 30` on 68cb2d8: 30 sandboxes, 0 errors, `/healthz` never failed (max 3.3 s). Planning ran one at a time on the 512 MB plan (2.6 s alone, ~76 s each with 30 at once). |
+| 10 visitors plan at once | `visitors.mjs <url> 10`, each planning the event. 0.2 vCPU app, Postgres on DigitalOcean: ~26 s each. **1 vCPU app (`startup-100-2048`): 3.6 s each**, one alone 0.7 s. Postgres moved to AWS `startup-4`: 3.8 s (same; the app's CPU was the limit). |
 | Reset keeps the audit trail | A reset starts a new run; old runs' ops stay in `ops`, and the stream, tools and /ops follow only the current run. |
 
 ## Verda VM (plan B)
