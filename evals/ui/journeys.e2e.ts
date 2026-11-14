@@ -238,7 +238,9 @@ test('/request: lactose-free milk, the passed cut-off, the off day', async ({ pa
 	expect.soft(milk).toMatch(/Valio doesn.t state a quantity/);
 	await request(page, '4 kg lactose-free butter for tomorrow');
 	const late = await record(page, 'b6-late');
-	expect.soft(late).toMatch(/cut-off for Tue 8 Dec has passed/);
+	// B's wording varies ("The cut-off for Tue 8 Dec has passed", "Tue 8 Dec is past this product's cut-off"): the property is
+	// that the passed cut-off is named for that day.
+	expect.soft(late).toMatch(/cut-off for Tue 8 Dec has passed|Tue 8 Dec is past [^.]*cut-off/);
 	expect.soft(late).toMatch(/Wed 9 Dec/);
 	await request(page, '10 l milk for Thursday', 'Lounas Ruoholahti (fictional)');
 	const off = await record(page, 'b6-offday');
