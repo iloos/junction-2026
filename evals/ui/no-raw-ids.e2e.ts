@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { BASE, openWhy } from './flow';
+import { BASE, openWhy, enterKitchen } from './flow';
 
 /**
  * CLAUDE.md rule 12 (five-second UI): no raw ids, op names, reason codes or ISO dates on a judge-facing page outside
@@ -59,7 +59,7 @@ async function sweep(page: Page, where: string) {
 }
 
 async function kitchen(page: Page, w: number) {
-	await page.goto(`${BASE}/`);
+	await enterKitchen(page, '/');
 	const start = page.getByRole('button', { name: /Plan the event/ });
 	await start.waitFor({ timeout: 30_000 }).catch(() => undefined);
 	await sweep(page, `/ pre-plan ${w}`);
@@ -115,7 +115,7 @@ async function agents(page: Page, w: number) {
 }
 
 async function dock(page: Page, w: number) {
-	await page.goto(`${BASE}/`);
+	await enterKitchen(page, '/');
 	await page.getByText('Menu → need → order').waitFor({ state: 'attached', timeout: 120_000 });
 	await page.getByRole('button', { name: 'Ask the agent' }).click();
 	const box = page.locator('aside[aria-label="Agent chat"] textarea');

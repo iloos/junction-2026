@@ -8,9 +8,44 @@ import { expect, type Page } from '@playwright/test';
  */
 export const BASE = process.env.KITCHEN_URL ?? 'http://localhost:4173';
 
+/**
+ * Opens the Kitchen at `path` as the visitor would. A fresh sandbox first shows the establishment picker ("Who are you
+ * cooking for?", c3); this picks the hotel there and waits for the Kitchen, so every spec starts from the same canvas.
+ * A visitor who already chose (or a build without the picker) goes straight on.
+ */
+export async function enterKitchen(page: Page, path = '/', kitchenId = 'k-hotel') {
+	await page.goto(`${BASE}${path}`);
+	const picker = page.getByTestId('establishment-picker');
+	const views = page.getByRole('navigation', { name: 'Kitchen view' });
+	const canvas = page.locator('#task-h').or(page.getByRole('button', { name: /^Plan the event/ }));
+	await picker.or(views).or(canvas).first().waitFor({ timeout: 60_000 });
+	if (await picker.isVisible().catch(() => false)) {
+		await picker.locator(`[data-kitchen-id="${kitchenId}"]`).click();
+		await picker.waitFor({ state: 'hidden', timeout: 60_000 });
+		await views.or(canvas).first().waitFor({ timeout: 60_000 });
+	}
+	await eventView(page);
+	await page.waitForLoadState('networkidle').catch(() => undefined);
+}
+
+/**
+ * The Kitchen opens on the Basket (c3) and doesn't remember the view across a reload; the event canvas these specs
+ * check is the second tab, labelled with the remembered plan's title. Opens it when it is there.
+ */
+export async function eventView(page: Page) {
+	const event = page.getByRole('navigation', { name: 'Kitchen view' }).getByRole('button').nth(1);
+	if (!(await event.isVisible().catch(() => false))) return;
+	if ((await event.getAttribute('aria-pressed')) !== 'true') await event.click();
+	await page
+		.locator('#task-h')
+		.or(page.getByRole('button', { name: /^Plan the event/ }))
+		.first()
+		.waitFor({ timeout: 60_000 });
+}
+
 /** The seeded buffet planned in this visitor's sandbox, on the Kitchen canvas. */
 export async function planBuffet(page: Page) {
-	await page.goto(`${BASE}/`);
+	await enterKitchen(page);
 	const start = page.getByRole('button', { name: 'Plan the event', exact: true });
 	await page.locator('#task-h').or(start).first().waitFor({ timeout: 60_000 });
 	if (await start.isVisible()) await start.click();

@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { enterKitchen, eventView } from './flow';
 
 /**
  * D13: the chef may approve from the agent dock when the plan is not on the page. The dock's decision card uses the
@@ -47,7 +48,7 @@ test('a dock approval on another plan never switches the plan the Kitchen page s
 	page
 }) => {
 	test.setTimeout(180_000);
-	await page.goto(`${BASE}/`);
+	await enterKitchen(page, '/');
 	const start = page.getByRole('button', { name: 'Plan the event' });
 	await page.locator('#task-h').or(start).first().waitFor({ timeout: 60_000 });
 	if (await start.isVisible()) await start.click();
@@ -75,6 +76,11 @@ test('a dock approval on another plan never switches the plan the Kitchen page s
 	// A reload straight after the dock's order still opens the buffet (the dock never moves the remembered plan);
 	// then the page's own next command and a fresh read still act on, and show, the buffet.
 	await page.reload();
+	await expect(
+		page.getByRole('navigation', { name: 'Kitchen view' }).getByRole('button').nth(1),
+		'the remembered plan is still the buffet'
+	).toContainText('Christmas', { timeout: 60_000 });
+	await eventView(page);
 	await expect(title).toContainText('Christmas', { timeout: 60_000 });
 	if (await dock.isVisible()) await dock.getByRole('button', { name: 'Close chat' }).click();
 	await page.getByRole('button', { name: /^Show details: Graavilohi/ }).click();
@@ -82,5 +88,10 @@ test('a dock approval on another plan never switches the plan the Kitchen page s
 	await page.waitForTimeout(3000);
 	await expect(title).toContainText('Christmas');
 	await page.reload();
+	await expect(
+		page.getByRole('navigation', { name: 'Kitchen view' }).getByRole('button').nth(1),
+		'the remembered plan is still the buffet'
+	).toContainText('Christmas', { timeout: 60_000 });
+	await eventView(page);
 	await expect(title).toContainText('Christmas', { timeout: 60_000 });
 });

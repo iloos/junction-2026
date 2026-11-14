@@ -2,7 +2,16 @@ import { expect, test, type APIRequestContext, type Page } from '@playwright/tes
 import { execSync } from 'node:child_process';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { approveAll, BASE, chat, openWhy, planBuffet, receipt, request } from './flow';
+import {
+	approveAll,
+	BASE,
+	chat,
+	openWhy,
+	planBuffet,
+	receipt,
+	request,
+	enterKitchen
+} from './flow';
 
 /**
  * The claims journeys: every demo beat and every "say it" row in docs/CLAIMS.md that needs a prod observation, run
@@ -55,7 +64,7 @@ const note = (name: string, body: unknown) =>
 	writeFileSync(join(OUT, `${name}.json`), JSON.stringify(body, null, '\t'));
 
 async function judgeKey(page: Page) {
-	await page.goto(`${BASE}/?ws=mine`);
+	await enterKitchen(page, '/?ws=mine');
 	const k = await page.request.get(`${BASE}/api/demo/judge-key`);
 	expect(k.status(), 'judge key').toBe(200);
 	return { authorization: `Bearer ${((await k.json()) as { key: string }).key}` };
@@ -358,7 +367,7 @@ test('an outside agent: held, refused, logged in Ops, metered, and 16 tools', as
 test('the kitchen calendar feed', async ({ page }) => {
 	test.setTimeout(180_000);
 	await planBuffet(page);
-	await page.goto(`${BASE}/?ws=mine`);
+	await enterKitchen(page, '/?ws=mine');
 	const link = await page.request.get(`${BASE}/api/demo/calendar-link?kitchen=k-hotel`);
 	const { url } = (await link.json()) as { url: string };
 	const ics = await (await page.request.get(url)).text();
@@ -411,7 +420,7 @@ test("a vegetarian dish's rescue never orders meat (the lunch buffet's vegetable
 	page
 }) => {
 	test.setTimeout(180_000);
-	await page.goto(`${BASE}/`);
+	await enterKitchen(page, '/');
 	const r = await page.request.post(`${BASE}/kitchen-api/scenario`, {
 		data: { action: 'kitchen', value: 'k-lounas' },
 		headers: { origin: BASE }
