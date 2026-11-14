@@ -283,7 +283,9 @@
 		>
 			<b class="font-medium">Opened from Operations</b>
 			<span class="text-ink-2"
-				>{snap.kitchen.name.replace(' (fictional)', '')} · need {fromOps.need}</span
+				>{snap.kitchen.name.replace(' (fictional)', '')} · {view?.dishes.find(
+					(d) => d.needId === fromOps!.need
+				)?.nameFi ?? fromOps.need}</span
 			>
 			{#if fromOps.plan && fromOps.plan !== snap.plan.id}
 				<span class="text-signoff"
