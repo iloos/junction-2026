@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { createDocument } from 'zod-openapi';
 import { DomainError, TOOL_NAMES, toolSchemas, type ToolName } from '$lib/core/contracts';
+import { advertised } from './serve';
 import { HTTP_STATUS } from './serve';
 
 const DomainErrorBody = z.object({ error: DomainError }).meta({ id: 'ErrorBody' });
@@ -10,7 +11,7 @@ export function openApiDocument(serverUrl?: string) {
 	const errorBody = { content: { 'application/json': { schema: DomainErrorBody } } };
 	const statuses = [...new Set([...Object.values(HTTP_STATUS), 401, 500])].sort();
 	const paths = Object.fromEntries(
-		TOOL_NAMES.map((name: ToolName) => {
+		TOOL_NAMES.filter(advertised).map((name: ToolName) => {
 			const t = toolSchemas[name];
 			return [
 				`/api/tools/${name}`,

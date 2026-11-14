@@ -45,9 +45,18 @@ export function isToolName(name: string): name is ToolName {
 }
 
 /** Tools the caller may see and call. The MCP tool list and the agent's menu are built from this. */
+/**
+ * Tools listed to outside agents (MCP tools/list, OpenAPI). A tool whose provider isn't live is not advertised, so an
+ * agent never discovers a tool that can't run: `read_image` needs the vision endpoint (VISION_LIVE=1).
+ */
+export function advertised(name: ToolName): boolean {
+	if (name === 'read_image') return process.env.VISION_LIVE === '1';
+	return true;
+}
+
 export function toolsFor(ctx: CallContext): ToolName[] {
-	return (Object.keys(toolSchemas) as ToolName[]).filter((n) =>
-		ctx.scopes.includes(toolSchemas[n].scope)
+	return (Object.keys(toolSchemas) as ToolName[]).filter(
+		(n) => advertised(n) && ctx.scopes.includes(toolSchemas[n].scope)
 	);
 }
 
