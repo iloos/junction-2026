@@ -196,3 +196,10 @@ A QR or link puts a visitor in the shared room (`ws-judges`) as **their own stor
 **Why:** the user: an IRL demo where others sign on as their own store and we see the orders come in on Ops. It shows the machinery a cart can't: many kitchens, one stock, one gate.
 
 **Reopen if:** room load breaks the provider caps or one visitor can act on another's store.
+
+### D25 · The picker leads with "Your own kitchen"; the seeded kitchens are sample profiles (user + lead, 14 Nov 23:20)
+"Who are you cooking for?" offers **Your own kitchen** first: a name and an optional one-line description make a new, blank kitchen (default rules the chef can edit, no history, no booking), through the same `create_kitchen` as D24 with no profile to copy. Below it, under "Or try a sample kitchen", the seven seeded kitchens, labelled as sample profiles with simulated history. In the room (D24) the same card makes the visitor's store. Choosing still plans nothing; a blank kitchen's home says what to do first (tell the agent what you need, or set a usual order).
+
+**Why:** the user: the seeded kitchens are mock profiles; a blank kitchen of your own could even be the default.
+
+**Reopen if:** a blank kitchen's first screen is empty or dead-ends, or judges skip the samples and never see prediction from history.
