@@ -112,9 +112,9 @@ export async function serverContextSource(): Promise<ContextSource> {
 
 /**
  * Runs the routine agent for the demo workspace. Without a principal it runs as the /ops presenter
- * button (a labelled system initiator). `LLM_PROVIDER=fixture` (the default) plays the deterministic
- * script with no network; otherwise the configured model plans each step, and its calls are traced
- * through the same `onEvent` callback as the tool steps.
+ * button (a labelled system initiator). The deterministic script plans unless `AGENT_PLANNER=llm` and a
+ * model is configured (`LLM_PROVIDER` not fixture); then the model plans each step, traced through the same
+ * `onEvent` callback as the tool steps. Gemini decisions and request parsing follow `LLM_PROVIDER` alone.
  */
 export async function runRoutineAgent(o: {
 	goal: string;
@@ -134,7 +134,7 @@ export async function runRoutineAgent(o: {
 			presenter: true
 		})!;
 	const ctx = principalContext(principal);
-	const fixture = (o.env.LLM_PROVIDER ?? 'fixture') === 'fixture';
+	const fixture = (o.env.LLM_PROVIDER ?? 'fixture') === 'fixture' || o.env.AGENT_PLANNER !== 'llm';
 	const llm = createLlm(o.env, (step, data) => o.onEvent?.(traceEvent(ctx, step, data)));
 	return runGoal({
 		goal: o.goal,
