@@ -69,6 +69,7 @@ const TEXT: Record<string, { short: string; long: string }> = {
 		long: "This order would take the week's spend over the weekly cap."
 	},
 	BELOW_LOT: { short: 'Below lot', long: "Below Valio's minimum lot: cannot be ordered." },
+	price_missing: { short: 'No price', long: 'Valio returned no price for this product.' },
 	partial: {
 		short: 'Partial cover',
 		long: 'Covers only part of the need; the rest is stated as a shortfall.'

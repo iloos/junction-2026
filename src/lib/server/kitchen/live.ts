@@ -23,6 +23,8 @@ import { scenarioClock } from '$lib/core/scenario';
 import { currentRun, currentRunStartedAt } from '$lib/server/demo/run';
 import { resetDemoRun } from '$lib/server/demo/reset';
 import { dev } from '$app/environment';
+import { presenterOpen } from '$lib/server/demo/presenter';
+import { JUDGES_WORKSPACE } from '$lib/server/auth';
 
 const EVENT_ID = 'event-xmas-140';
 /** The palvikinkku the ham rescue relies on (13 of 15 in stock): the contention preset takes 4 of them. */
@@ -38,11 +40,11 @@ export interface Session {
 
 /** Selection per browser session (cookie id). The simulator overlay itself is run-wide: see `contention`. */
 const sessions = new Map<string, Session>();
-export function session(id: string, presenter = false): Session {
+export function session(id: string): Session {
 	let s = sessions.get(id);
 	if (!s) {
 		s = {
-			workspaceId: kitchenWorkspace(presenter),
+			workspaceId: kitchenWorkspace(),
 			kitchenId: 'k-hotel',
 			preset: 'kitchen',
 			contention: false
@@ -57,11 +59,11 @@ const ALLOWED = new Set(['get_plan', 'edit_line', 'explain_line', 'approve', 'co
 
 /**
  * Which workspace a new kitchen session uses. Dev: the stage run. Production: public visitors get the judges'
- * sandbox; the stage run only when the presenter rule says so (the route passes it in). KITCHEN_WORKSPACE overrides.
+ * sandbox; the stage run only when presenterOpen (dev, or DEMO_RESET_OPEN=1). KITCHEN_WORKSPACE overrides.
  */
-export function kitchenWorkspace(presenter: boolean): string {
+export function kitchenWorkspace(presenter = presenterOpen(env, dev)): string {
 	if (env.KITCHEN_WORKSPACE) return env.KITCHEN_WORKSPACE;
-	return dev || presenter ? 'ws-demo' : 'ws-judges';
+	return presenter ? 'ws-demo' : JUDGES_WORKSPACE;
 }
 
 const chef = (s: Session) => contextFor('chef', 'kitchen-ui', 'kitchen', env, s.workspaceId);
