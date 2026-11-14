@@ -97,10 +97,12 @@ describe('another kitchen takes 4 palvikinkku', () => {
 		expect(['planned', 'confirmed', 'awaiting_supplier']).toContain(f.status);
 
 		expect(f.excess.value).toBeLessThan(1.8); // under one 1.8 kg lot of the new product
-		// The new product breaks "meat: Finnish preferred": held in a sign-off group, not bought on the agent's word.
+		// Known stock first: the next candidate Valio states stock for (Vataja maalaiskinkku), held as a new product
+		// for the chef, never bought on the agent's word.
 		const newLine = now.plan.lines.find((l) => l.id === added.id)!;
-		expect(newLine).toMatchObject({ state: 'held', tier: 'sign_off' });
-		expect(newLine.reasons).toContain('substitute_breaks_preference');
+		expect(newLine.state).toBe('held');
+		expect(newLine.offer?.availability.kind).toBe('known');
+		expect(newLine.reasons).toContain('new_sku');
 		expect(now.approval?.state).toBe('pending');
 		// The earlier approval voided, with the diff; nothing is committed.
 		expect(granted?.state).toBe('granted');

@@ -27,6 +27,8 @@ const setNow = (iso: string) => (env.ports.clock = { now: () => new Date(iso) })
 beforeEach(async () => {
 	env = await createDbPorts();
 	env.overlay.clear();
+	// Valio states no stock for this milk (≥999999 = unknown); these tests need a product in known stock.
+	env.overlay.setAvailability({ productId: '464201', amount: 5000, label: 'test: known stock' });
 	h = createHandlers(env.ports);
 	setNow('2026-12-07T21:40:00+02:00');
 });

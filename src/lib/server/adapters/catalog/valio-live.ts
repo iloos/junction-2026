@@ -74,6 +74,13 @@ export function createValioLive(o: ValioLiveOptions) {
 	const slot = semaphore(o.concurrency ?? 4);
 	/** Identical batches already on the wire: a second caller waits for the same answer. */
 	const inFlight = new Map<string, Promise<ValioEntry[]>>();
+	/**
+	 * Valio: "Hitting the limit returns 429 and you are blocked for 30 seconds." Until then no call goes out (callers
+	 * serve the cache) and nothing retries inside the block; a 429 is a rate limit, not an outage, so the breaker
+	 * does not count it.
+	 */
+	let blockedUntil = 0;
+	const RATE_BLOCK_MS = 30_000;
 	let failures = 0;
 	let openedAt: number | null = null;
 	let trial = false;
@@ -103,6 +110,7 @@ export function createValioLive(o: ValioLiveOptions) {
 
 	async function batch(ep: ValioEndpoint, ids: string[], date: string): Promise<ValioEntry[]> {
 		for (let attempt = 0; attempt <= retries; attempt++) {
+			if (now() < blockedUntil) return [];
 			if (!admit()) return [];
 			const t0 = now();
 			try {
@@ -116,8 +124,24 @@ export function createValioLive(o: ValioLiveOptions) {
 					}).then(async (r) => ({ r, body: r.ok ? await r.json() : null }))
 				);
 				const { body } = res;
-				if (res.r.status === 429 || res.r.status === 403 || res.r.status >= 500)
-					throw new Error(`HTTP ${res.r.status}`);
+				if (res.r.status === 429) {
+					const after = Number(res.r.headers.get('retry-after'));
+					const wait = Math.max(RATE_BLOCK_MS, Number.isFinite(after) ? after * 1000 : 0);
+					blockedUntil = now() + wait;
+					// The half-open trial (if this was one) is over without a verdict on Valio's health.
+					trial = false;
+					o.onCall?.({
+						api: 'valio',
+						purpose: `offers.${ep}`,
+						cache: 'live',
+						ok: false,
+						latencyMs: now() - t0,
+						costUnits: ids.length,
+						error: `HTTP 429: rate limited, paused ${Math.round(wait / 1000)} s`
+					});
+					return [];
+				}
+				if (res.r.status === 403 || res.r.status >= 500) throw new Error(`HTTP ${res.r.status}`);
 				const at = new Date(now()).toISOString();
 				succeeded();
 				o.onCall?.({
@@ -153,6 +177,8 @@ export function createValioLive(o: ValioLiveOptions) {
 	return {
 		customer,
 		breaker: state,
+		/** Whether a 429 has paused every call (until Valio's block ends). */
+		rateLimited: () => now() < blockedUntil,
 		/** Entries Valio returned for these ids (fewer when it failed or the breaker is open). */
 		async fetch(ep: ValioEndpoint, ids: string[], date: string): Promise<ValioEntry[]> {
 			const unique = [...new Set(ids)];

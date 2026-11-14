@@ -33,7 +33,7 @@ _Sat 14 Nov 00:30 (Helsinki), full probe of the static files and ~55 live calls.
 
 **Temperature classes (inferred from median min/max °C):** 8 ambient 10–22 (10,053), 7 frozen −25…−18 (3,152), 4 chilled 4–8 (1,803; dairy), 3 chilled 2–6 (1,673; meat products, ready food), 2 chilled 2–4 (324; fresh meat, salad), 1 fresh 0–3 (240; fresh fish, fresh meat), 5 produce 2–7 (221), 6 and 9 (≤10 each), null 61.
 
-**Units.** Sales unit: KI case 8,005, ST piece 5,607, KG 1,068, PAK 880, BAG 697, then RAS/PRK/BOT/SK/CS… (17 codes, no translations). Base = sales for 62%. `units[]` gives the hierarchy (KI p50 6 base units, KRS layer p50 60, PAL p50 288, max 56,000). `allowedLotSize` is 0.01 for 96%; the 4% that differ are almost all **KG catch-weight items with a minimum step of 1.5–15 kg** (whole fish, meat). Weight: `unitConversions.netWeight` exists for only **56%** (base level 46%; the menu-spike's "82%" counted the block, not the value). Adding sizes parsed from names and KG-sold items, **89%** can be given a weight or volume.
+**Units.** Sales unit: KI case 8,005, ST piece 5,607, KG 1,068, PAK 880, BAG 697, then RAS/PRK/BOT/SK/CS… (17 codes, no translations). Base = sales for 62%. `units[]` gives the hierarchy (KI p50 6 base units, KRS layer p50 60, PAL p50 288, max 56,000). `allowedLotSize` is 0.01 for 96% (**Valio: "0.01: treat as 1… 0.01 crates is not possible"**: counted units step by 1; KG keeps 0.01, a 10 g weighing step for 396 KG items); the 4% that differ are almost all **KG catch-weight items with a minimum step of 1.5–15 kg** (whole fish, meat). Weight: `unitConversions.netWeight` exists for only **56%** (base level 46%; the menu-spike's "82%" counted the block, not the value). Adding sizes parsed from names and KG-sold items, **89%** can be given a weight or volume.
 
 **Data quality to design around:**
 - Name size vs base-unit net weight disagree for **11% of 6,013 checkable products** (multipacks, "n. 42×120 g", disposables with kg ratings). Price confirms some: "Valio Eila voi 4x5 kg" costs €37.33 per ST, so ST is one 5 kg block, not 20 kg.
@@ -63,7 +63,7 @@ Base `https://junction26.valioaimo.fi`, header `X-API-Key`, Cloudflare in front.
 |---|---|---|
 | Terminal, amount 999999 | 42% | supplier-delivered, quantity unknown (documented) |
 | Stock, real amount | 31% | p10 4, p50 38, p90 430 sales units; **479 products below 10** (real shortages at kitchen scale) |
-| Stock, amount ≥ 1e8 (9999999999, 2499999999, 555555555…) | 8% | "unlimited" sentinel divided by a unit factor **(?)**. Treat ≥ 1e6 as unlimited |
+| Stock, amount ≥ 1e8 (9999999999, 2499999999, 555555555…) | 8% | **Valio (14 Nov): ≥ 999999 = availability unknown, any quantity may be ordered.** Normalised to `unknown` (never known stock, never cover) whatever the logistic model |
 | Stock, amount 0 (no availableDate) | 2% | out of stock now |
 | `scheduleLines: []`, no logisticModel, no closingTime | **18%** | cannot be delivered on any date. Includes Christmas foods (Lanttulaatikko, Rosolli) and Valio's own substitute 464440 |
 | salesBlock true | 3 products | Laskiaispulla (Shrove buns) with availableDate 30 Dec: seasonal block |
@@ -75,7 +75,7 @@ Base `https://junction26.valioaimo.fi`, header `X-API-Key`, Cloudflare in front.
 
 ## 4. Limits
 Ramp through the cache helper, distinct keys, 200 ids per call: concurrency 1 (3 calls) p50 166 ms; 2 (4) 118 ms; 4 (8) 154 ms; 8 (16) 172 ms, all 200. 1,000 ids: price 310 ms / 699 kB, availability 257 ms / 202 kB. **No rate-limit headers** (only Cloudflare `CF-RAY`, `Cache-Control: no-store`), no 429 seen. Rate limits are "undisclosed"; blocking would most likely show as 429 or a Cloudflare 403/1015 page **(?)**.
-**App settings:** max 4 concurrent, ≤ 200 ids per call (1,000 allowed but unneeded), at most ~2 req/s sustained, exponential backoff from 2 s with jitter on 429/403/5xx and a circuit breaker that falls back to the cache/simulator after 3 failures. Only query ids that are on an order or a shortlist (Valio's rule).
+**Valio (14 Nov):** "Hitting the limit returns 429 and you are blocked for 30 seconds; a few hundred calls per minute is OK." On a 429 the adapter pauses every call for ≥ 30 s (or Retry-After), serves the cache meanwhile and never retries inside the block. **App settings:** max 4 concurrent (one bound per adapter, across callers), ≤ 200 ids per call (1,000 allowed but unneeded), at most ~2 req/s sustained, exponential backoff from 2 s with jitter on 429/403/5xx and a circuit breaker that falls back to the cache/simulator after 3 failures. Only query ids that are on an order or a shortlist (Valio's rule).
 
 ## 5. Cache (what the CatalogPort adapter mirrors)
 `valio_cache.call(endpoint, customer, requestedDate, ids, refresh=False)`:
@@ -120,7 +120,7 @@ Ramp through the cache helper, distinct keys, 200 ids per call: concurrency 1 (3
 ## Decisions for ARCHITECTURE
 1. **Static catalogue is the truth for search and ranking; the API is called only for shortlisted ids** at quote and order time, through a cache-through CatalogPort (per-product keys, 4 concurrent, ≤200 ids per call, backoff + breaker to fixture).
 2. **The simulator owns time and scarcity.** It starts from cached real responses and overlays scenario events (split delivery for the milk, salmon shortfall, cut-off countdown). Every value in the UI says whether it came from Valio live, the cache, or the simulator.
-3. Treat `availableAmount ≥ 1e6` as unlimited, `[]` as undeliverable, `0` as out of stock, Terminal as "unknown quantity, longer lead time".
+3. Treat `availableAmount ≥ 999999` as unknown (Valio confirmed: orderable in any quantity, availability not stated), `[]` as undeliverable (Valio: "empty = not available"), `0` as out of stock, Terminal as "unknown quantity, longer lead time".
 4. Validate ids against the catalogue before calling (unknown ids masquerade as undeliverable).
 5. Substitutes: Valio's `substitutions` first (shown as "Valio's rule"), then same category + temperature class + comparison unit, then LLM rerank by the kitchen's weights.
 6. Carbon is a group average: show it as such, rank across groups, never claim per-product precision.
@@ -136,3 +136,10 @@ Ramp through the cache helper, distinct keys, 200 ids per call: concurrency 1 (3
 6. Are the `substitutions` rules what Aimo actually offers customers today? Are there more?
 7. What rate limit should we stay under, and how does blocking show?
 8. Real numbers for the pitch: share of lines short-shipped, typical cut-offs and delivery days for a Helsinki hotel.
+
+## Valio's answers (challenge Discord, 14 Nov)
+- Availability ≥ 999999: availability unknown, any quantity may be ordered (typically Terminal products Valio does not stock). Normalised to `unknown`. Unknown-stock lines go through `UNKNOWN_REQUIRED` (propose: the chef taps once), as Terminal ones always did.
+- `allowedLotSize` 0.01 means 1 for counted units.
+- Rate limit: 429, blocked 30 s; a few hundred calls per minute is fine.
+- Empty schedule = not available (undeliverable).
+- Weight ↔ volume: `unitConversions.volume` is a content volume only in LTR/MLT/CLT (5,075 records hold grams there, 1,320 pieces); with a net weight and 0.3–2 kg/l it gives 939 products their own density (`netVolumePerSalesUnit`).

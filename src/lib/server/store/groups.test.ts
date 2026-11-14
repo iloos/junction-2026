@@ -25,6 +25,10 @@ let env: Awaited<ReturnType<typeof createDbPorts>>;
 beforeEach(async () => {
 	env = await createDbPorts();
 	env.overlay.clear();
+	// Valio states no stock for this milk (≥999999 = unknown); these tests need a product in known stock.
+	env.overlay.setAvailability({ productId: '464201', amount: 5000, label: 'test: known stock' });
+	// One herring in known stock, so a group held only as a new product (no UNKNOWN_REQUIRED) exists.
+	env.overlay.setAvailability({ productId: '463876', amount: 50, label: 'test: known stock' });
 	h = createHandlers(env.ports);
 });
 

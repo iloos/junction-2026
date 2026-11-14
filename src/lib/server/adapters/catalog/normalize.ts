@@ -12,10 +12,11 @@ type Raw = any;
 const NON_FOOD = new Set(['20', '30', '32', '63', '64', '67', '77', '90']);
 /** packagingMarkedLabel ids that are temperature words, not labels. */
 const TEMPERATURE_WORDS = /temperature|frozen|chilled|ambient/i;
-/** Availability amounts at or above this are Valio's "unlimited" sentinel (an assumption, D6). */
-export const UNLIMITED_AT = 1e6;
-/** Terminal (supplier-delivered) amount meaning "quantity unknown". */
-export const TERMINAL_UNKNOWN = 999999;
+/**
+ * Valio (challenge Discord, 14 Nov): "Availability ≥ 999999 means that we do not know the availability, and our current
+ * logic allows ordering any quantity." Whatever the logistic model: orderable, but never counted as known stock.
+ */
+export const UNKNOWN_AT = 999999;
 
 const TEMPERATURE_CLASS: Record<number, Product['temperatureClass']> = {
 	1: 'fresh',
@@ -67,7 +68,7 @@ function netPerSalesUnit(raw: Raw): Product['netPerSalesUnit'] {
 }
 
 /** Bump when normalizeProduct's output changes: a cached normalised catalogue of another version is rebuilt. */
-export const NORMALIZE_VERSION = '2';
+export const NORMALIZE_VERSION = '3';
 
 const LITRES: Record<string, number> = { LTR: 1, DLT: 0.1, CLT: 0.01, MLT: 0.001 };
 const KILOS: Record<string, number> = { KGM: 1, GRM: 0.001 };
@@ -115,7 +116,10 @@ export function normalizeProduct(
 	if (/POISTO|VANHA/i.test(nameFi)) flags.push('old_flagged_name');
 	if (!raw.synkkaData?.unitConversions) flags.push('thin_record');
 	const co2 = extra.co2?.get(id);
-	const lotStep = Number(raw.allowedLotSize) || 0.01;
+	// Valio: "allowedLotSize 0.01: treat as 1… 0.01 crates is not possible." Counted units (ST, KI, PAK…) step by
+	// whole units; KG keeps 0.01, a real 10 g weighing step (396 KG items have it; catch-weight lots are larger).
+	const allowed = Number(raw.allowedLotSize) || 0.01;
+	const lotStep = raw.salesUnit !== 'KG' && allowed <= 0.01 ? 1 : allowed;
 	return {
 		productId: id,
 		gtin: raw.salesUnitGtin ?? raw.synkkaData?.gtin ?? undefined,
@@ -182,10 +186,17 @@ export function normalizeAvailability(entry: Raw, provenance: Provenance): Avail
 	if (!line) return { ...base, kind: 'undeliverable', amount: null };
 	if (entry.salesBlock || line.salesBlock) return { ...base, kind: 'blocked', amount: null };
 	const amount = Number(line.availableAmount);
-	if (entry.logisticModel === 'Terminal' && amount === TERMINAL_UNKNOWN)
-		return { ...base, kind: 'unknown', amount: null };
+	if (amount >= UNKNOWN_AT)
+		return {
+			...base,
+			kind: 'unknown',
+			amount: null,
+			provenance: {
+				...provenance,
+				note: `${provenance.note ? `${provenance.note}; ` : ''}Valio: ≥999999 = availability unknown`
+			}
+		};
 	if (amount <= 0) return { ...base, kind: 'out', amount: 0 };
-	if (amount >= UNLIMITED_AT) return { ...base, kind: 'known', amount: null };
 	return { ...base, kind: 'known', amount };
 }
 
