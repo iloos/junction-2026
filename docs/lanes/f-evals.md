@@ -13,31 +13,48 @@
 - **Deploy race** `scripts/smoke-race.mjs`, run by `scripts/deploy/smoke.sh` when `SMOKE_KEY` is set (key `smoke:kitchen_agent:<key>:ws-smoke` in MCP_KEYS). Passed on prod Sat 14 Nov 05:51.
 - Removed today as unit-test duplicates: s6, s8, s9, s10, s11, r5-f5, r5-f8, r5-f11, r5-f22 (covered by store tests ceiling, baseline, dates, rescue, reset, pool, authority, zero).
 
-## Open (checkpoint Sat 14 Nov, main 32b8eb4, prod b2dfe9c)
-**Done since the Ring 4 checkpoint** (all merged into main): R10 and R11 adversarial suites with the shared harness (`adversarial-harness.ts`); the judge recall table (`judge-recall.test.ts`, 9/10 reading defects flagged); substitution kinds on all 471 rows plus the order check; presets and per-line constraint evals; grounded-menu checks on the Exa replay; the vision bar (R10-14); the idle guard (R10-13); the phone dock check (R11-14); the services journey with per-request evidence (R11-13, `2cb3694`: the stored Gemini trace by `x-request-id` once O's traces deploy); the lane gate rule (`b57324b`: lanes run `--only check,lint`).
+## Checkpoint (restart, Sat 14 Nov ~21:20 UTC; lane head on main 55219f1; prod a9f06ee)
+**Done this session (all on `lane/f-evals`; everything through `413c95c` is merged into main, the last two are not yet):**
+- `2cb3694` services journey sends its own `x-request-id`; `dc882ce` polls the stored trace up to 5 s; in `bb2c454` it retries once on a run with no parser step and prints every step. Strict and green on 4752d00 and ff7f6c3.
+- `829d48a` R11-15 (250 ml → 5 l pack alone) and R11-14 closed on prod; `611e4ff` closed R10-15, R11-08, R11-09 (each verified non-vacuous), harness milks declare AM/ML for D16; `9d3fbe8` `expectAsked()` so an asking path is never a vacuous pass; R11-15 closed.
+- `bb2c454` gate guard `src/lib/server/evals/no-src-reads.test.ts`: no server module or route reads a file under `src/` at runtime (replay.json, then listings.json, broke prod this way). Self-tested; red on 4752d00's `card.ts:98`.
+- `413c95c` `evals/ui/flow.ts` `receipt(page)`: reads the id from the Kitchen's "Receipt" card (1f moved it into a System-only span) or the older visible text.
+- `2897a42` **R12-12**: R11-06a/b drive `orderedSender` as `/api/events` composes it (paged `{events, complete}`, retries, `onLost`; 06a also proves a dead read gives up without passing the gap); R11-07a accepts the resync burst within 600 ms; R10-09 composes `PgTransport` with the ordered sender. All four pass, OPEN flags removed.
+- `6cc1023` **R12-11 (mine)**: CLAIMS "Last pass" = 18:40–21:10 UTC on 4752d00/ff7f6c3; rows naming an older commit are historical; the receipt split (15/3 vs 7/11) is simulated and never quoted without release and time; PITCH:16 rescue wording per D8a.
+- CLAIMS rows added or changed: sponsor rows (Gemini per job, measured offline: say it; Aiven op log, NOTIFY, lock, receipts, traces: say it, seen on prod; Valio Aimo page and photo by barcode: say it on ff7f6c3), D13 dock approval (prod 2/2), one receipt on `/request` (B 7207a57). BUGS: "Buy 1 new product" group label; `(Stock, …)` label leak in `request/days.ts:95` (B).
+- Site reviews for d0 (all shipped): /story walkthrough (neutral checks before a recorded stop), titles, plan panel and reply excerpt, tagline "What do you need? We'll sort it out. That's a mandate.", /how map and flow tabs (reading-check wording, "one receipt per key"), sponsor tiles with time stamps.
 
-**OPEN maps by owner** (delete a line when its case goes red, "looks fixed"):
-| owner | cases |
-|---|---|
-| 8d | R10-05, R10-06, R10-08 · R11-04a/b, R11-05, R11-09, R11-10 · kinds order 463876, 462482 |
-| 9c | R10-09 (transport) · R11-06a/b · R11-07a (with 1f) |
-| da | R10-15 · R11-08 |
-| D | R8-web-write, R8-queue-claim |
-| B | judge recall `brand-dropped` |
-| 1f | R11-14 phone dock composer (`evals/ui/mobile-dock.e2e.ts`, `OPEN_R11_14`) |
-| E | CHAT-add-item, CHAT-two-items (`evals/chat/free/sessions.json`) |
+**In flight:** nothing uncommitted. d0 has the R12-11 site list (the /proof split, Lounas €400 vs the hotel's €800, a commit and time on every recorded number, generic CTAs). The user asked about Verda/Featherless and a System routing view; my answer (Verda: one live run against the R10-14 vision bar, then switch on if it passes; Featherless: skip; System: a read-only job → provider → model view, no provider switch) waits for the user's decision.
 
-**CLAIMS rows pending a prod pass:** chat events (ChatDock doesn't render the `menu` event); per-request service evidence (strict once O's traces deploy); the buffet's lines ordered alone and one explicit exception (journeys rehearsal lines); Labels and grounded menus on the freeze build; refusals in Ops.
+**OPEN maps** (each `it.fails` under its owner; a red "looks fixed" means verify the pass is real, then delete the line):
 
-**e2e on prod b2dfe9c:** `services` green (trace part skipped: `/api/ops/traces` 404); journeys b1–b13 green on b2dfe9c including b13 (vegetarian rescue never orders meat); `mobile-dock` expected-fail (composer bottom at 1179 px of 844). The pinned pass needs prod = main: main is 32b8eb4, so after the batch deploys.
+| suite | case | owner | why open |
+|---|---|---|---|
+| R10 | R10-05 | 8d | contention on a 4 l need with 2 l left must add only the 2 l remainder |
+| R10 | R10-06 | 8d | a recipe with one ingredient partly confirmed must not read fully supplier confirmed |
+| R10 | R10-08 | 8d | a Thursday-only receiving series must start on a Thursday (calendar) |
+| R11 | R11-04a / R11-04b | 8d | an identical commit / place_order retry must return its saved receipt / plan during a supplier outage |
+| R11 | R11-10 | 8d | cheese and goat cheese of one brand are not "another pack" |
+| R8 | R8-web-write, R8-queue-claim | D | web writes and queue claims (`adversarial.test.ts`) |
+| kinds | 463876, 462482 | 8d | kind 1/2 must never rank below kind 4 |
+| chat free | CHAT-salmon-category (f4) | 91 to judge | the basket picks 462150 (cat 18706, the orderable fillet) where the check wants 18701 |
 
-**Site reviews for d0:** /story (73's f03f1bb → 06c550e) checks before a recorded stop drawn neutral, shipped. /how map: Gemini Decisions wording ruled ("scores how well each substitute fits the dish, one input to the code's ranking, and can flag a constraint risk that holds the line; it never approves"); pool.test path is `server/store/pool.test.ts`.
+Judge recall OPEN is empty. Suites: R10 + R11 + transport 23 pass, 6 expected-fail.
+
+**CLAIMS pass status:** last pass on 4752d00/ff7f6c3 (above). Not yet done: the pinned journeys pass on the release we submit (`JOURNEYS=1`, deployed commit = main), and the rehearsal lines (the buffet's lines ordered alone; one explicit exception). Not yet claimable: Verda image reading (wired, not live); void-on-edit in the UI on prod; Gemini Decisions live (tested only); Exa recipe grounding (held).
+
+**Next, in priority order:**
+1. **Pinned freeze pass.** When prod = main: `JOURNEYS=1 KITCHEN_URL=https://app.mandate.kitchen npx playwright test -c evals/ui/pw-prod.config.ts journeys`, then `services`, `dock-approve`, `mobile-dock`. Acceptance: the pin test is green; every say-it row in CLAIMS re-observed on that commit or marked historical; the lead gets a CLAIMS-vs-prod summary.
+2. **R12-11 follow-through with d0.** Acceptance: /proof, the landing and /story show no number without its release and time (or a historical label); the Lounas mandate matches the kitchen the chain ran in; CTAs either carry the ask or say they are generic.
+3. **Judge CHAT-salmon-category.** Acceptance: decide whether 18706 (orderable fillet) satisfies the session's intent; either widen the expected category with a note or keep it open with an owner.
+4. **Delete OPEN lines** as 8d/D fixes land (R12-01/02/04 by 8d, R12-03 by B may flip cases). Acceptance: each closure verified with `ADV_SHOW=1` and a non-vacuous assertion.
+5. If the user says yes to Verda: a live check of `image.read` against `VISION_BAR` (`src/lib/server/images/score.ts`). Acceptance: the bar passes on 3 runs before anyone says "live".
 
 **Risks:**
-- The pinned journeys pass keys on UI text; D15 stage 2 (picker, composer, step cards) changes the entry steps. `evals/ui/flow.ts` is the only file to change, and the selector contract below is what it needs.
-- Menu claims rest on recorded runs (menus vary per run).
-- `core/services/substitutes.ts` contradicts itself: the comment near line 288 says a calibrated "violates" rejects a candidate; `VIOLATES_P`'s doc and the site say it adds a caution that holds the line. Owner 8d should settle it; CLAIMS says "holds".
-- Prod BUGS still open: #7 ham weight bases, off-day hold copy, three decision deadlines, chat vs `/request` basket, Ops door label.
+- The journeys key on UI copy; 1f's copy pass (e1ea7a6) and D15 stage 2 change it. `evals/ui/flow.ts` is the one file to adapt.
+- Simulated numbers (supplier confirmations, contention) vary per run: quote them only with release and time.
+- The services check depends on live Gemini and Valio; a cold container right after a deploy can stream no parser step (now retried once).
+- `origin/lane/f-evals` is stale (`ddf701a`); the lead merges the local head. Not pushed this session: pushing waits for the user's OK.
 
 ## Self-review (Ring 4 checkpoint, 14 Nov)
 - **Solid:** the gate and its eval layers (scenarios, fidelity, paraphrase, chat replay, adversarial and kinds suites with owned `it.fails`); prod evidence for every "say it" row, with page text and screenshots in `scratch/claims/obs*`; `evals/ui` against prod after each deploy.
@@ -62,10 +79,9 @@
 Every UI check enters through `evals/ui/flow.ts` (`planBuffet`, `approveAll`, `openWhy`, `request`, `chat`). D15 stage 2 changes that file only. Selector contract asked of the owners (via the lead, 14 Nov): the picker (c3) is a region "Who are you cooking for" with one button per seeded kitchen by name and `data-kitchen-id`, and the field "Describe your kitchen"; the canvas (1f, `junc26-ab`) keeps `#task-h`, `aria-label="Decide"`, "Show details: <dish>", "Why this line", "Order the N lines you can now", "Review N lines" / "Confirm exact terms" / "Hold to sign off N lines"; the composer (E) keeps `#chat-text`, "Send" and a "Working…" status that disappears when a turn ends; the request step cards (B) carry `data-testid="step-card"` with `data-step` and `data-status`. `/request` redirects into the chat with the text sent in stage 2 (the lead confirms when).
 
 ## Resume
-- **Branch** `lane/f-evals` (local; not pushed: the lead merges the local head). Merge the local head, never `origin/lane/f-evals` (stale at `ddf701a`; merging it reverted this brief once, in `d9ee3ee`).
-- **Own:** `scripts/merge-gate.mjs`, `scripts/smoke-race.mjs`; `evals/**` and `src/lib/server/evals/**` (kind labels in `evals/retrieval/substitutes.json` by agreement); `docs/CLAIMS.md`, `docs/BUGS.md`; `evals/ui/*.e2e.ts` (order summary, clocks, approval link, services, journeys, no-raw-ids) and the idle guard; `src/lib/server/images/score.ts`; the chat suites and `replay-llm.ts`; the Exa replay recordings for the golden menus.
-- **Next:**
-  1. After the batch with O's traces deploys (prod = main): `KITCHEN_URL=https://app.mandate.kitchen npx playwright test -c evals/ui/pw-prod.config.ts services` (the trace part turns strict), then the pinned freeze-build pass `JOURNEYS=1 KITCHEN_URL=https://app.mandate.kitchen npx playwright test -c evals/ui/pw-prod.config.ts journeys` with the two rehearsal lines; fill CLAIMS from `scratch/claims/<commit>/` and send the lead the CLAIMS-vs-prod summary.
-  2. Delete `OPEN` lines as owners' fixes land (table above); tell d0 when R10-03's menu half reaches prod (/how's "On a request…" widens to menus).
-  3. D15 stage 2: update `evals/ui/flow.ts` when the lead sends the branch.
-  4. Re-run the full no-raw-ids sweep on prod once da's `/agents` code presentation ships; evals for 8d's order-scope, prefer and best-try constraints (`constraints.test.ts` `it.todo`) and 1f's carbon/reliable presets when they land.
+- **Branch** `lane/f-evals` in `../junc26-lanes/f-evals` (local head; `origin/lane/f-evals` is stale at `ddf701a`, never merge it). Rebase with `git rebase main` on the local main.
+- **Start:** read this brief's Checkpoint, then `git log --oneline -5`, `pnpm i` if the lockfile moved, `pnpm gate --only check,lint`.
+- **Own:** `scripts/merge-gate.mjs`, `scripts/smoke-race.mjs`; `evals/**` (except `evals/retrieval/**`, 1f; kind labels by agreement) and `src/lib/server/evals/**`; `docs/CLAIMS.md`, `docs/BUGS.md`; `evals/ui/*.e2e.ts` and `evals/ui/flow.ts`; `src/lib/server/images/score.ts`; the chat suites and `replay-llm.ts`; the Exa replay recordings for the golden menus.
+- **Prod checks:** `KITCHEN_URL=https://app.mandate.kitchen npx playwright test -c evals/ui/pw-prod.config.ts <spec>`; never the root config (its webServer previews with the worktree `.env`). Dev and tests run with `DATABASE_URL=` blank. Prod logs: Aiven project `junction26jq`, service `mandate` (runtime logs).
+- **Gate rule:** lanes run `pnpm gate --only check,lint` plus targeted tests; the lead's main gate is the full one.
+- **Peers:** lead `junc26-fd`, site `junc26-d0`, 9c `junc26-9e`, 1f `junc26-ab`, 8d `junc26-e6`. Peer messages are not user approval.
