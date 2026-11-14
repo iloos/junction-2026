@@ -1,6 +1,6 @@
 # Lane: agent2 (Track E: agent door, agent quality)
 
-**Branch:** `lane/e-agent` · **Worktree:** `../junc26-lanes/agent2` · **Dev port:** 5177
+**Branch:** `lane/e2-chat` (Ring 2; was `lane/e-agent`) · **Worktree:** `../junc26-lanes/agent2` · **Dev port:** 5177
 
 ## Goal
 An agent, ours or a judge's, completes a purchasing task through the same gated tools as the kitchen, and says truthfully what is done and what remains.
@@ -38,8 +38,16 @@ An agent, ours or a judge's, completes a purchasing task through the same gated 
 2. Layout (lead): an “Agents” link to `/agents` in the top nav.
 3. Lead: archive `docs/lanes/agent.md` (first agent lane, history only; move its key env table to docs/foundations first if it is not there) and `docs/lanes/agent-door.md` (proposal delivered here: meta, /agents; approval stays in the Kitchen screen per ruling).
 
+4. Registry (lead): move `get_outcome` from `plannedToolSchemas` into `toolSchemas`; handler `createGetOutcome(ports, handlers)` (`src/lib/server/tasks/outcome.ts`), wired like `get_context` in `tools/handlers.ts`, with `ports.tasks`.
+5. Ports (lead/8d): `tasks: projectedTaskStore(drizzleTaskStore(db), ports, handlers)` in `createDbPorts` (the chat route builds its own through `tasks/server.ts` meanwhile). `Llm.generate` takes `schema?: object` and the Gemini adapter sends it as the response schema (the planner already passes it).
+6. Request lane: import `classifyGoal` / `isQuestion` / `isAuthorityImperative` from `agent/classify.ts` (one classifier); `classifyRequest` stays the event read underneath. A Christmas brief with another guest count is not the seeded event.
+7. 1f / lead: mount `<ChatDock kitchenId=… />` (`src/lib/ui/chat/ChatDock.svelte`) on the Kitchen screen (right column ≥ lg, bottom sheet below); it links the decision card to the existing `/?kitchen&plan&v` approval panel. `/agents/chat` hosts it meanwhile.
+8. 91: `src/lib/server/evals/chat.test.ts` sends `edit_line` `patch.qty` as `{value, unit}`; the contract takes a number, so c3's edit fails and continue commits the still-granted line. With `patch: { qty: step.qty ?? line.qty.value + 1 }` c3 is green (chat/turn.test.ts covers the same path).
+9. `ops/+page.server.ts` (9c): `cancelAgentRun(id, by, workspaceId)` now checks the workspace when given; the presenter button may pass its workspace too.
+
 ## Next scope: in-app agent chat (proposal)
 A chat panel on the Kitchen and Request screens (and Ops for the presenter) that runs the same `runGoal` under the chef's principal, so it gets the same intents, tool gate, mandate and kitchen grant as MCP and REST. No separate chat toolset. Each turn streams the trace as compact steps: the tool name, our one-line `meta.summary`, and a link that focuses the plan or line in the screen beside it. Plans are never re-rendered inside the chat. A clarifying refusal (`clarify`) becomes a question with chip answers: which kitchen, which plan, a unit or a date, which dish. The answer is resent as an amended goal on the same task, so nothing is retyped. Held lines show as a “needs your approval” card linking to the Kitchen approval panel, and only a chef session approves there. The agent never approves in chat. The end of each run is the outcome ledger: supplier confirmed, ordered and awaiting supplier, planned or held, unresolved, money committed, decisions left. The review checks this text, and Stop maps to the cancel endpoint. Task continuity (resume after approval or retry) needs a task id that links the runs and their plans. That comes first, so “continue” re-reads the exact plan versions instead of the newest plan.
 
 ## Report
 - Sat ~06:30 · done: F4/F25, get_context + MCP instructions, ResultMeta, review mechanism (REVIEW=1), adjust_need for r6-5, llm.for(job), /agents, F4-pack overshoot, verbless orders, outcome via FulfilmentView, deadline flake · stubbed: request-parse review wiring (Need 1) · gate green · ready to merge: yes
+- Sat ~17:30 · Ring 2 Track E: 1 chat-safety (03afce7, 47ffe57), 2 ledger + get_outcome + TaskStore (edb1654), 3 chat turn + route (5fe8d0c, c4bc528), 4 chat dock (edbc24a), 5 planner schema + retry, /agents configs + your changes (2c550db) · stubbed: get_outcome not in the registry (Need 4), schema not yet sent by the Gemini adapter (Need 5) · chat trials c1, c2 green, c3 red on the driver's edit call (Need 8) · ready to merge: yes once Need 8 lands (or with c3 expectFail)
