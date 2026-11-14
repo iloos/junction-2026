@@ -183,7 +183,7 @@
 					out.push(`${label(f.needId)}: ${m(f.unresolved.value, f.unresolved.unit)} not covered`);
 				if (f.plannedUnknown.value > 0)
 					out.push(
-						`${label(f.needId)}: ${m(f.plannedUnknown.value, f.plannedUnknown.unit)} on stock the supplier states no quantity for: ordered, not cover`
+						`${label(f.needId)}: ${m(f.plannedUnknown.value, f.plannedUnknown.unit)} planned, but the supplier states no quantity, so it is not cover`
 					);
 			}
 			return out;
