@@ -798,6 +798,8 @@ async function recordSponsors() {
 			last: s.last ?? null,
 			lastLive: s.lastLive ?? null,
 			recent: s.recent ?? {},
+			// The last 24 hours from the stored traces (survives restarts, all workspaces, counts only): `/healthz` `day`.
+			day: h.day?.[name] ?? null,
 			// The latency of the latest call when that call was sent live and answered with a timed latency; otherwise none
 			// (a live call logged without its timing reports 0 ms, which is not a measurement).
 			liveMs: s.last?.source === 'live' && s.last.ok && s.last.latencyMs > 0 ? s.last.latencyMs : null

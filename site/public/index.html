@@ -528,7 +528,11 @@ function renderPartners(data) {
 		const n = (s.recent?.live ?? 0) + (s.recent?.cache ?? 0), callsWord = n === 1 ? 'call' : 'calls';
 		if (s.liveMs != null) return measure(`${s.liveMs} ms`, `last live ${label} call, at ${when(s.last.at)}`, recent ? `${recent} ${callsWord} in the 15 minutes before` : null);
 		if (recent) return measure(recent, `${label} ${callsWord} in the 15 minutes before ${at}`, null);
-		return measure(`No ${label} call yet`, `since the app last started, at ${at}`, null, true);
+		// The 24 hours before the recording, from the app's stored traces: these survive a restart of the app.
+		const day = s.day;
+		if (day?.live) return measure(`${day.live} live`, `${label} calls in the 24 hours before ${at}`, day.cache ? `plus ${day.cache} answered from cache` : null);
+		if (day?.calls) return measure(`${day.calls}`, `${label} calls in the 24 hours before ${at}`, null);
+		return measure(`No ${label} call yet`, `in the 24 hours before ${at}`, null, true);
 	};
 	const put = (key, ...ms) => {
 		const box = document.querySelector(`[data-partner="${key}"] .measures`);
