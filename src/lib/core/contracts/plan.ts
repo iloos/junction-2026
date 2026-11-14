@@ -246,6 +246,14 @@ export const FulfilmentView = z.object({
 	plannedUnknown: Measure,
 	unresolved: Measure,
 	excess: Measure,
+	/**
+	 * What the amounts measure. `served`: a dish need with a yield, in what reaches the plate (purchase × yield), so a
+	 * ready-cooked substitute and a raw original compare on what they serve (ham: 27 kg raw on the bone = 18.9 kg
+	 * served). `purchase` (or absent): the need's own unit as bought. UIs label served amounts "kg served".
+	 */
+	basis: z.enum(['served', 'purchase']).optional(),
+	/** The dish yield the served amounts were derived with (served = purchased × yield). */
+	yield: z.number().positive().optional(),
 	status: z.enum(['confirmed', 'awaiting_supplier', 'planned', 'partial', 'uncovered']),
 	/** Allocations behind the numbers, so the Why chain can show which line covers what. */
 	allocations: z.array(
