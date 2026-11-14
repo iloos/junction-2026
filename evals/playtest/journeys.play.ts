@@ -65,11 +65,8 @@ async function say(r: Recorder, page: Page, text: string) {
 
 async function requestPage(page: Page, text: string) {
 	await page.goto(`${BASE}/request`);
-	await page.locator('#req, textarea').first().fill(text);
-	await page
-		.getByRole('button', { name: /Find and price|Send|Ask/ })
-		.first()
-		.click();
+	await page.locator('#req').fill(text);
+	await page.getByRole('button', { name: /Find and price/ }).click();
 	await page
 		.getByText(/Prepared by the kitchen agent|Nothing was ordered|Event brief|nothing quoted|Menu/)
 		.first()
