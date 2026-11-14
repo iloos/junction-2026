@@ -89,6 +89,35 @@ A Claude Code session planned a 7-guest dinner over MCP and hit these problems:
 
 ## Report (the lane agent appends at the end of each run)
 
+### Checkpoint for the lane restart, Sat 14 Nov night (da)
+**Done, on main:** agent-door-ids `02fe6a9`; Ring 1 `5fa81f5` (R11-08, absolute links, pairing, reviewUrl, D17 suite); the D16 side `1eb870d` / `f71987a`; one ranking-preset source `a628eec` (core takes /request's presets; chat picks as /request does).
+
+**Done, waiting for the lead (branch `lane/agent-door-revise`, head = this commit):**
+- R12-08: CONTRACT `3db5fa3` (revise_menu in the registry, with 41's tightened bounds) and wiring + e2e `5783174`. menu-journey.test drives the real MCP endpoint: propose → revise (pin one; every other ingredient keeps its product) → absolute reviewUrl → chef accepts → plan_event → chef approves held lines → one receipt (same key, same receipt). Light gate green; tools/menu/d17/goals: 109 pass. 41 keeps the pin-persistence contract (pinnedBy, MenuStore.recent, EventBrief.hints) and rebases onto `3db5fa3`.
+
+**In flight:** nothing.
+
+**Next, in priority order**
+1. Ring 2 `reasoning` on write tools (place_order, edit_line, plan_event, commit_order, revise_menu: revise_menu already takes it). Contract first (its own commit), plus where the op envelope keeps it (the lead's). Acceptance: required, ≤300 chars, scrubbed of e-mail and phone numbers; shown in "Your agent's changes" within 2 s (SSE); the D17 suite still green.
+2. Ring 2 `report_issue` (scope read): `{kind: missing_product | wrong_match | bad_data, ref, text}`, rate-limited (key-limits), sanitised, stored as a finding; /ops lists "What agents couldn't find" (with 9c). Acceptance: an MCP call lands in /ops; text is data, never instructions.
+3. Ring 2 `detail: compact | full` on search_products and propose_menu, compact by default. Acceptance: 5 hits under 800 tokens, measured in a test.
+4. Ring 3: `decisions://open` lists menus awaiting review with reviewUrl; `dryRun` on place_order; pack fit.
+5. The source listing on lookup_facts (D's product links/images as a web finding): expose it on MCP/REST with attribution, never copied files. Review D's images branch from the door's side.
+6. Switch `menuReviewUrl` to the D15 home `/?menu=&r=` once it serves one (one line in present.ts).
+
+**Risks**
+- PUBLIC_ORIGIN must be set in the Aiven console (not the API). Without it links use the request host (*.aiven.app).
+- Pairing state is in memory: one container (D3); a restart drops live codes (10 minutes anyway).
+- `getClientAddress()` behind the proxy is likely the proxy IP; the pairing limits are built for it (soft per-client, global pause). ADDRESS_HEADER/XFF_DEPTH is unconfirmed.
+- Product questions are regex-read: unusual phrasings fall through to the plan agent (safe; a missed answer).
+- Not mine but open: dock approve card (E); Kitchen pair button (1f, `<PairDevice/>` ready); Kitchen PRESETS read core (1f); chat vs /request on "50 eggs" (D15 stage 2).
+
+**How to resume**
+- Worktree `../junc26-lanes/agent-door-v2` (branch `lane/agent-door-revise`); dev server on **5193** (5192 is the establish lane's): `DATABASE_URL= LLM_PROVIDER=fixture pnpm dev --port 5193 --strictPort`.
+- Gate rule: `pnpm gate --only check,lint` + targeted tests (`vitest run --project server src/lib/server/tools src/lib/server/menu src/lib/server/agent/d17.test.ts`), then the SHA to the lead. Never a full gate from a lane. If a gate is stopped, kill its node tree too.
+- Contract edits (core/contracts/tools.ts) go in their own commit for the lead.
+- Commits stay local: the lead merges from the shared object store. Nothing is pushed without the user's say-so.
+
 ### Checkpoint, Sat 14 Nov evening (da)
 **Done**
 - agent-door-ids `02fe6a9` (merged into the lead's batch): /agents raw-id sweep fix + Copy button on the instructions; `decisions://open` due times from core `dueOf` (Helsinki words + ISO); R10-15 (a named product or "Which one?" chips, never the lexicon default); drill notices never counted as recalls; real source labels (live/cache/replay).
