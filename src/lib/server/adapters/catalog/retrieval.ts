@@ -163,7 +163,17 @@ export function wordSim(a: string, b: string): number {
 }
 
 /** A word without its inflection or derivational ending (-ys/-us/-e, partitive): the stem two forms share. */
+const stems = new Map<string, string>();
 export function derivationStem(w: string): string {
+	let s = stems.get(w);
+	if (s === undefined) {
+		s = stemOf(w);
+		if (stems.size >= 200_000) stems.clear();
+		stems.set(w, s);
+	}
+	return s;
+}
+function stemOf(w: string): string {
 	const b = baseForm(w);
 	if (b.length >= 7 && /(ys|us|ös)$/.test(b)) return b.slice(0, -2);
 	if (b.length >= 6 && /[^aeiouyäö]e$/.test(b)) return b.slice(0, -1);
@@ -487,11 +497,37 @@ export class RetrievalIndex {
 	 * Non-rule candidates for `target`, best first (ties by product id). `minLex` is the minimum name match; `diet`
 	 * overrides the dietary properties taken from the target's name.
 	 */
+	/**
+	 * Similarity scans the whole index, and every visitor planning the same event asks for the same targets; the
+	 * index never changes after it is built, so an answer is kept per (target, excluded ids, limit, options).
+	 */
+	private similarCache = new Map<string, Candidate[]>();
 	similar(
 		target: RetrievalProduct,
 		exclude: Set<ProductId>,
 		limit: number,
 		o: { minLex?: number; diet?: Set<string>; strict?: boolean } = {}
+	): Candidate[] {
+		const key = JSON.stringify([
+			target,
+			[...exclude].sort(),
+			limit,
+			o.minLex ?? null,
+			o.diet ? [...o.diet].sort() : null,
+			o.strict ?? false
+		]);
+		const hit = this.similarCache.get(key);
+		if (hit) return hit.map((c) => ({ ...c }));
+		const out = this.similarScan(target, exclude, limit, o);
+		if (this.similarCache.size >= 5000) this.similarCache.clear();
+		this.similarCache.set(key, out);
+		return out.map((c) => ({ ...c }));
+	}
+	private similarScan(
+		target: RetrievalProduct,
+		exclude: Set<ProductId>,
+		limit: number,
+		o: { minLex?: number; diet?: Set<string>; strict?: boolean }
 	): Candidate[] {
 		const minLex = o.minLex ?? 0.25;
 		const tWords = contentWords(`${target.nameFi} ${target.nameEn ?? ''}`, target.brand);

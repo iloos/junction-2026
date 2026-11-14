@@ -2,6 +2,7 @@ import { z } from 'zod';
 import type { Llm } from '$lib/core/ports';
 import { classifyGoal, type GoalClass } from '$lib/server/agent/classify';
 import { withoutKitchen } from '$lib/server/agent/intent';
+import { parseRules, type ParsedItem } from '$lib/server/request/parse';
 
 /**
  * What a chef's chat message asks for, read by Gemini (job `chat.understand`) under a response schema, with the
@@ -109,6 +110,38 @@ export function itemWords(i: NonNullable<Understanding['items']>[number]): strin
 		.trim();
 }
 
+/**
+ * What a rewrite of an order changes against the chef's words, or null when it is the same purchase. Both are read by
+ * the same rules parser and matched one to one: item count, then per item the product, amount and unit, every stated
+ * requirement, diet and brand; and a delivery day the words state. A changed or invented amount, a dropped
+ * "lactose-free", a missing, extra or swapped item each name what changed.
+ */
+export function reconcile(words: string, rewrite: string, today: string): string | null {
+	const a = parseRules(words, today);
+	const b = parseRules(rewrite, today);
+	if (a.items.length !== b.items.length)
+		return `the number of items (${a.items.length} → ${b.items.length})`;
+	const key = (i: ParsedItem) => i.product ?? i.search[0] ?? i.query;
+	const left = [...b.items];
+	for (const x of a.items) {
+		// The same product, else the item in the same place (unknown words the model spelt better).
+		const at = left.findIndex((y) => key(y) === key(x));
+		const y = at >= 0 ? left.splice(at, 1)[0] : x.product === null ? left.shift() : undefined;
+		if (!y) return `the products (${x.query} is missing)`;
+		const name = x.query || key(x);
+		if (x.qty !== y.qty) return `the amount of ${name} (${x.qty ?? 'none'} → ${y.qty ?? 'none'})`;
+		if (x.qty !== null && x.unit !== y.unit) return `the unit of ${name} (${x.unit} → ${y.unit})`;
+		const lostReq = x.constraints.filter((c) => !y.constraints.includes(c));
+		if (lostReq.length) return `the requirements of ${name} (${lostReq.join(', ')} dropped)`;
+		const lostDiet = (x.diet ?? []).filter((d) => !(y.diet ?? []).includes(d));
+		if (lostDiet.length) return `the diet of ${name} (${lostDiet.join(', ')} dropped)`;
+		if (x.brand && x.brand !== y.brand) return `the brand of ${name} (${x.brand} dropped)`;
+	}
+	if (a.deliverBySource === 'request' && a.deliverBy !== b.deliverBy)
+		return `the delivery day (${a.deliverBy} → ${b.deliverBy})`;
+	return null;
+}
+
 export async function understand(
 	text: string,
 	o: {
@@ -197,9 +230,16 @@ export async function understand(
 		else {
 			// One order: the products joined, the delivery day said once at the end.
 			const date = u.items.find((i) => i.date)?.date;
-			goal = [u.items.map((i) => itemWords({ ...i, date: undefined })).join(' and '), date ?? '']
+			const rewrite = [
+				u.items.map((i) => itemWords({ ...i, date: undefined })).join(' and '),
+				date ?? ''
+			]
 				.join(' ')
 				.trim();
+			// The model's rewrite runs only when it reads as the same purchase as the chef's words, item by item.
+			const changed = reconcile(withoutKitchen(words), rewrite, o.today);
+			if (changed) guard = `the model's reading changed ${changed}: the chef's words run`;
+			else goal = rewrite;
 		}
 	}
 	return {

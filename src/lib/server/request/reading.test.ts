@@ -128,3 +128,14 @@ describe('brand and variant: "10 l Arla whole milk" is not just "milk"', () => {
 		expect(rejected[0].reason).toBe('brand Valio, you asked for Arla');
 	});
 });
+
+describe('F6: one item per stated amount', () => {
+	it('a reading with only potatoes for "2 kg potatoes and 2 kg carrots" is blocked', async () => {
+		const text = '2 kg potatoes and 2 kg carrots tomorrow';
+		const full = parseRules(text, '2026-12-07');
+		const lost = { ...full, items: full.items.slice(0, 1) };
+		const v = await reviewReading(text, readingOf(lost));
+		expect(v.kind).toBe('block');
+		expect((await reviewReading(text, readingOf(full))).kind).not.toBe('block');
+	});
+});

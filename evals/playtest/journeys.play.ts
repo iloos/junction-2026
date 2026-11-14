@@ -59,7 +59,7 @@ async function say(r: Recorder, page: Page, text: string) {
 	await dock.getByRole('button', { name: 'Send' }).click();
 	await page.waitForTimeout(1500);
 	await page
-		.getByText(/^Working( · step \d+)?…/)
+		.getByText(/^Working\b.*…$/)
 		.first()
 		.waitFor({ state: 'detached', timeout: 180_000 })
 		.catch(() => undefined);
@@ -195,7 +195,7 @@ journey(
 				await chip.click({ timeout: 5_000 });
 				await page.waitForTimeout(1500);
 				await page
-					.getByText(/^Working( · step \d+)?…/)
+					.getByText(/^Working\b.*…$/)
 					.first()
 					.waitFor({ state: 'detached', timeout: 180_000 })
 					.catch(() => undefined);
@@ -498,6 +498,14 @@ journey('j4', 'Diet and hard requirements', async (r, page) => {
 journey('j5', 'Usual order and history', async (r, page) => {
 	await r.step('home', () => home(page));
 	await r.step('find the usual order', async () => {
+		if (
+			await page
+				.getByText(/usual (Mon|Tue|Wed|Thu|Fri|Sat|Sun)\w* order|usual is ready/i)
+				.first()
+				.isVisible()
+				.catch(() => false)
+		)
+			return;
 		await page
 			.getByRole('link', { name: /usual/i })
 			.or(page.getByRole('button', { name: /usual/i }))
@@ -736,8 +744,12 @@ journey(
 		)
 			return;
 		await r.step('a first basket in my kitchen', async () => {
-			const res = await page.request.post(`${BASE}/kitchen-api/tool/place_order`, {
-				headers: origin,
+			// The Kitchen screen never sends place_order: the visitor's own agent key does (the agent door).
+			const k = await page.request.get(`${BASE}/api/demo/judge-key`);
+			const key = ((await k.json().catch(() => ({}))) as { key?: string }).key;
+			if (!key) throw new Error(`judge key ${k.status()}`);
+			const res = await page.request.post(`${BASE}/api/tools/place_order`, {
+				headers: { authorization: `Bearer ${key}` },
 				data: {
 					kitchenId,
 					deliverBy: '2026-12-11',
@@ -746,7 +758,11 @@ journey(
 				}
 			});
 			const body = (await res.json().catch(() => ({}))) as { plan?: { id: string } };
-			r.note('placeOrder', { status: res.status(), plan: body.plan?.id });
+			r.note('placeOrder', {
+				status: res.status(),
+				plan: body.plan?.id,
+				error: res.ok() ? undefined : (await res.text()).slice(0, 300)
+			});
 			if (!body.plan?.id) throw new Error(`place_order ${res.status()}`);
 			planId = body.plan.id;
 			await page.goto(`${BASE}/?plan=${planId}`);
@@ -856,7 +872,7 @@ journey('f1', 'The dock keeps the ask: "4 kg lactose-free butter tomorrow"', asy
 			await day.click({ timeout: 5_000 });
 			await page.waitForTimeout(1500);
 			await page
-				.getByText(/^Working( · step \d+)?…/)
+				.getByText(/^Working\b.*…$/)
 				.first()
 				.waitFor({ state: 'detached', timeout: 180_000 })
 				.catch(() => undefined);

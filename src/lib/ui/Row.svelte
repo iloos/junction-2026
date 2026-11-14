@@ -5,9 +5,9 @@
 	 */
 	export const ROW_TRACKS =
 		'grid grid-cols-[5rem_minmax(0,1fr)_6rem] gap-x-3 sm:grid-cols-[5rem_minmax(0,1fr)_6rem_minmax(0,auto)]';
-	/** The same tracks with an icon-sized lead (a ledger entry): the text gets the width. */
+	/** The same tracks with a lead sized to its content (an icon or a photo): the text gets the width. */
 	export const ROW_TRACKS_ICON =
-		'grid grid-cols-[1.25rem_minmax(0,1fr)_auto] gap-x-3 sm:grid-cols-[1.25rem_minmax(0,1fr)_6rem_minmax(0,auto)]';
+		'grid grid-cols-[auto_minmax(0,1fr)_auto] gap-x-3 sm:grid-cols-[auto_minmax(0,1fr)_6rem_minmax(0,auto)]';
 </script>
 
 <script lang="ts">

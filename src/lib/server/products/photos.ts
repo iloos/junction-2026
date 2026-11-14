@@ -133,6 +133,13 @@ export function pageFactsSuggestions(l: ProductListing): Suggestion[] {
 	return out;
 }
 
+/**
+ * Prefetch spends from its own key and stops early: per workspace 24 calls a day per API, and none once the instance
+ * has sent 300 calls of that API today (of the 1000 global default), so warming photos for a full room never takes
+ * the budget that live lookups, the recall monitor and judges need.
+ */
+export const PREFETCH_LIMITS = { perKey: 24, global: 300 } as const;
+
 /** Products already warmed in this process, so a re-plan doesn't repeat them. */
 const warmed = new Set<string>();
 const WARM_CAP = 2000;
@@ -147,9 +154,9 @@ export async function warmPhotos(
 	products: readonly Product[],
 	max = 12
 ): Promise<number> {
-	const find = listingFinder(env, spendKey);
+	const find = listingFinder(env, spendKey, PREFETCH_LIMITS);
 	if (!find) return 0;
-	const brand = brandLookup(env, spendKey);
+	const brand = brandLookup(env, spendKey, PREFETCH_LIMITS);
 	const findings = findingsFor(env);
 	let n = 0;
 	for (const p of products) {

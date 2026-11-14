@@ -1,0 +1,15 @@
+# "One of many" audit, 15 Nov 00:30
+
+_Lead subagent, read-only. The class of mistake: a projection, session, store or URL holds ONE of something the domain has MANY of (or keeps it per browser when it is per tab, kitchen or plan), so state is silently dropped, overwritten or attributed to the wrong owner. Found after `live.ts` snapshot exposed one `approval` while approvals split per line. No P0: the core reducer and gate hold (per-line commit authority, `liveApprovals`, the approve split, receipts per order)._
+
+| Id | Sev | Where | Defect → failure | Fix | Owner |
+|---|---|---|---|---|---|
+| OM-1 | P1 | `server/kitchen/live.ts:200-202` | Kitchen writes with `via` ≠ 'kitchen' (always, since `x-kitchen-tab`) build the chef ctx without `asVisitor` → approve, commit or grams edits on a visitor's own kitchen are refused `store_owner` | wrap in `asVisitor(…, s)` | S1 |
+| OM-2 | P1 | `KitchenScreen.svelte:850`, `+layout.svelte:190`, `/api/chat/turn:48-51` | `shell.chat.kitchenId` is unset before the first plan, the layout falls back to `k-hotel` → "Tell the agent what you need" on your own blank kitchen plans on k-hotel | `snap?.kitchen.id ?? k.startKitchen`; the layout never defaults to k-hotel | S2 |
+| OM-3 | P1 | `live.ts:95-108`, `kitchen/backend.ts:93-102` | Kitchen choice lives on the cookie session, and `plan`/`rescue`/`start` send no kitchen → tab B switching kitchen makes tab A plan the other kitchen's event | send `kitchenId` with plan/rescue/start and the unpinned snapshot; act on a session copy | S1 |
+| OM-4 | P1 | `live.ts:682, 813-820` | Rules preset per browser → Apply in tab A uses tab B's preset (or the reset default) and voids A's approval | send the preset with `apply`, or keep it per plan | S1 |
+| OM-5 | P1 | `live.ts:690-693` | `ordered(l.id)` compares `substituteFor` (a ProductId) to a line id → after a partial commit with a rescue, Apply throws STALE_VERSION half way | `ordered(l.productId)` (and needId) | S1 |
+| OM-6 | P2 | `core/services/orders.ts:594`, `state.ts:181`; readers `ops/cases.ts:15`, `stages.ts:402`, `calendar.ts:74,185`, `ops/+page.svelte:271` | A same-terms re-quote leaves the older version's approval pending; readers take the first pending → wrong approvalId and due date, double counts | `RecordOffer` invalidates older-version approvals (core); readers use `liveApprovals` | S1 core, S4 readers |
+| OM-7 | P2 | `live.ts:850-856`, `:754` | Contention flag per browser over a per-workspace overlay; a shortage clears contention stock while the flag says on | read the flag from the overlay; clear only your own override | S4 |
+| OM-8 | P2 (suspected) | `agent/runs.ts:25-63` | One agent run per workspace → in the shared room one visitor's turn makes another's fail "agent busy" | key by `workspace\|visitor` (or task) | S3 |
+| OM-9 | P2 (suspected) | `ChatDock.svelte:86-87`; `live.ts:740` | Dock task keys not scoped by workspace/run → a moved or reset tab reopens a lost task; shortage ids from a process counter repeat after restart | add `workspaceId\|runId` to keys; random or run-scoped ids | S3 (dock), S1 (ids) |

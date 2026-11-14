@@ -138,7 +138,9 @@ export const requestReadingCheckpoint: Checkpoint<{ text: string }, Reading, nul
 		const out: Finding[] = [];
 		const body = output.dateText ? input.text.replace(output.dateText, ' ') : input.text;
 
-		// 1. Every number with a unit is an item's quantity with the same magnitude; an unknown unit asks.
+		// 1. Every number with a unit is an item's quantity with the same magnitude, one item per amount (two "2 kg"
+		// asks need two items, never one counted twice); an unknown unit asks.
+		const claimed = new Set<number>();
 		for (const s of statedAmounts(body)) {
 			if (s.unknown) {
 				// Answered since (the chef gave the amount in a unit we order in): not asked again.
@@ -149,10 +151,11 @@ export const requestReadingCheckpoint: Checkpoint<{ text: string }, Reading, nul
 				});
 				continue;
 			}
-			const kept = output.items.some(
-				(i) => i.qty !== null && i.unit === s.unit && close(i.qty, s.value)
+			const at = output.items.findIndex(
+				(i, k) => !claimed.has(k) && i.qty !== null && i.unit === s.unit && close(i.qty, s.value)
 			);
-			if (!kept)
+			if (at >= 0) claimed.add(at);
+			else
 				out.push({
 					severity: 'block',
 					message: `"${s.text}" is ${num(s.value, 3)} ${s.unit}, but no item was read as that amount (${output.items.map((i) => `${i.qty ?? '?'} ${i.unit ?? ''} ${i.query}`).join('; ')}). How much should I order?`
