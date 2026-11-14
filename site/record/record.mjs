@@ -308,7 +308,9 @@ const CASES = [
 						icon: 'search',
 						text: `Read as ${num(item.qty)} ${item.unit} of lactose-free butter for ${day(r.parsed.deliverBy)}.`
 					},
-					{ icon: 'clock', text: look.question },
+					// The app prints Valio's logistic model in the cut-off ("(Stock, 17:00 Mon)", a BUGS row); keep its words,
+					// trim only that internal label.
+					{ icon: 'clock', text: look.question.replace(/\((?:Stock|Terminal|Direct), /g, '(') },
 					{ icon: 'swap', text: `Offered: ${look.answer.label}.` }
 				],
 				outcome: { state: 'caught', label: 'Nothing ordered' },
