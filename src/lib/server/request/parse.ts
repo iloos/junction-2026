@@ -47,7 +47,22 @@ export interface ParsedItem {
 	unitToken?: string;
 	/** A brand the words named ("Arla"): required at lookup. */
 	brand?: string;
+	/** How much, as a kind (D20); `exact` when qty and unit say it. */
+	amount?: HowMuch;
+	/** What the item is: a product to buy, or a dish to serve (portions). */
+	what?: 'product' | 'dish';
 }
+
+/**
+ * How much, as the reading's general shape (D20): exact (qty and unit), a range, as much as is available, enough
+ * for N people, or unknown (ask). Code handles each kind once; no phrase has its own branch.
+ */
+export type HowMuch =
+	| { kind: 'exact' }
+	| { kind: 'range'; min: number; max: number }
+	| { kind: 'max_available' }
+	| { kind: 'for_people'; n: number }
+	| { kind: 'unknown' };
 
 export interface ParsedRequest {
 	text: string;
@@ -57,6 +72,8 @@ export interface ParsedRequest {
 	deliverBySource: 'request' | 'default';
 	/** The chef chose this date on the page (date control or a cut-off answer), over the words' one. */
 	deliverByChosen?: boolean;
+	/** What the request is (D20): an order, a question, or a change to something already open. */
+	intent?: 'order' | 'question' | 'change';
 	/** A dish with a count: how it was read, both ways to serve it, and which one the items are. */
 	dish?: import('./dish').DishInterpretation;
 	dishChoice?: 'ready' | 'raw';
@@ -71,6 +88,8 @@ export interface ParsedRequest {
 		tokens?: { in: number; out: number };
 		/** Set when the model path failed and the rules answered instead. */
 		fallback?: string;
+		/** The first model, when its reading was unsure and a stronger one read the words again. */
+		escalatedFrom?: string;
 	};
 }
 
@@ -377,6 +396,14 @@ export function parseItem(chunk: string, finnish: boolean): Omit<ParsedItem, 'id
 		ambiguities.push(`no unit given: read as ${qty} of the product's own sales unit`);
 	}
 
+	const people = covers ? Number(covers.replace(/[^\d]/g, '')) : 0;
+	const amount: HowMuch =
+		qty !== null
+			? { kind: 'exact' }
+			: people > 0
+				? { kind: 'for_people', n: people }
+				: { kind: 'unknown' };
+
 	const query = [
 		...CONSTRAINTS.filter((c) => constraints.includes(c.key)).map((c) => c.label),
 		variant?.label,
@@ -392,6 +419,7 @@ export function parseItem(chunk: string, finnish: boolean): Omit<ParsedItem, 'id
 		product: product?.key ?? null,
 		search: brand && search.length ? [`${brand.toLowerCase()} ${search[0]}`, ...search] : search,
 		...(brand ? { brand } : {}),
+		amount,
 		qty,
 		unit,
 		constraints,
@@ -469,29 +497,47 @@ export function parseRules(text: string, today: string): Omit<ParsedRequest, 'pa
 
 /* ── Model path ─────────────────────────────────────────────────────────── */
 
+const LlmAmount = z.discriminatedUnion('kind', [
+	z.object({ kind: z.literal('exact') }),
+	z.object({ kind: z.literal('range'), min: z.number().positive(), max: z.number().positive() }),
+	z.object({ kind: z.literal('max_available') }),
+	z.object({ kind: z.literal('for_people'), n: z.number().int().positive().max(100000) }),
+	z.object({ kind: z.literal('unknown') })
+]);
 const LlmItem = z.object({
 	query: z.string().min(1),
+	what: z.enum(['product', 'dish']).default('product'),
+	amount: LlmAmount.optional(),
 	qty: z.number().positive().nullable(),
 	unit: z.enum(['l', 'kg', 'pcs', 'case', 'sales']).nullable(),
 	constraints: z.array(z.string()).default([]),
 	searchFi: z.array(z.string()).default([]),
-	variant: z.string().nullable().optional()
+	variant: z.string().nullable().optional(),
+	brand: z.string().nullable().optional()
 });
 const LlmOut = z.object({
+	intent: z.enum(['order', 'question', 'change']).default('order'),
 	items: z.array(LlmItem).max(12),
 	deliverBy: z.string().nullable().optional(),
 	ambiguities: z.array(z.string()).default([])
 });
 
-const SYSTEM = `You turn a professional kitchen's purchase request (English or Finnish) into JSON for a Finnish food wholesaler's catalogue.
-Return only JSON: {"items":[{"query":string,"qty":number|null,"unit":"l"|"kg"|"pcs"|"case"|"sales"|null,"constraints":string[],"searchFi":string[],"variant":string|null}],"deliverBy":"YYYY-MM-DD"|null,"ambiguities":string[]}.
-- qty in the unit given; convert dl→l and g→kg. "case"/"laatikko"/"KI" = case. No unit: "sales". No quantity: null.
-- constraints from: lactose_free, organic, finnish, gluten_free.
-- searchFi: 1-3 Finnish catalogue words for the product, base form (maito, peruna, voi, kerma, laktoositon).
-- variant: a named product variant (e.g. "whole", "skimmed", "unsalted") or null.
-- A dish with a count and no unit ("10000 bolognese pasta", "200 portions of lasagne") is portions to serve, not packs: one item, query the dish name, qty the count, unit "sales"; the server prices the dish itself.
-- A ratio of one ingredient ("half beef, the other half mixed", "half only cow and other half half") describes that ingredient's composition: never a separate item, never an ambiguity.
-- Never invent a quantity, product or date. Put anything unclear in ambiguities.`;
+const SYSTEM = `You read a professional kitchen's purchase request (English or Finnish) into a general shape, as JSON, for a Finnish food wholesaler's catalogue.
+Return only JSON: {"intent":"order"|"question"|"change","items":[{"query":string,"what":"product"|"dish","amount":{"kind":"exact"}|{"kind":"range","min":number,"max":number}|{"kind":"max_available"}|{"kind":"for_people","n":number}|{"kind":"unknown"},"qty":number|null,"unit":"l"|"kg"|"pcs"|"case"|"sales"|null,"constraints":string[],"searchFi":string[],"variant":string|null,"brand":string|null}],"deliverBy":"YYYY-MM-DD"|null,"ambiguities":string[]}.
+- intent: "order" to buy; "question" when they only ask something; "change" when they change an order already made.
+- what: "product" to buy as sold; "dish" when they name a dish to serve (its count is portions).
+- amount says how much as a kind; qty and unit are set only for "exact" (convert dl/cl/ml to l, g to kg; "case"/"laatikko" = case; packs or no unit = "sales"). For a range put the bounds in min and max (same unit in "unit").
+- constraints from: lactose_free, organic, finnish, gluten_free. searchFi: 1-3 Finnish catalogue words in base form. variant: a named variant or null. brand: a named brand or null.
+- A ratio of one ingredient describes that ingredient: never a separate item.
+- Never invent a quantity, product or date. Put anything unclear in ambiguities.
+Examples (the shape, not the words to match):
+"3 kg carrots and two crates of tomatoes Friday" → items: carrots exact qty 3 unit kg; tomatoes exact qty 2 unit case.
+"as much smoked ham as you can send" → ham, amount max_available, qty null.
+"kahvikermaa noin 5–8 litraa" → coffee cream, amount range min 5 max 8, unit l.
+"rice for 120 people" → rice, amount for_people n 120.
+"80 annosta lihakeittoa" → what dish, query "lihakeitto", amount for_people n 80.
+"do you have gluten-free oats?" → intent question.
+"make tomorrow's cream order 4 litres instead" → intent change.`;
 
 function constraintKey(s: string): ConstraintKey | null {
 	const k = s.toLowerCase().replace(/[\s-]+/g, '_');
@@ -513,7 +559,25 @@ function fromLlmItem(it: z.infer<typeof LlmItem>): Omit<ParsedItem, 'id'> {
 		...it.query.toLowerCase().split(/\s+/)
 	]);
 	const ambiguities: string[] = [];
-	if (it.qty === null) ambiguities.push('no quantity given: how much?');
+	const amount: HowMuch =
+		it.amount?.kind === 'range'
+			? {
+					kind: 'range',
+					min: Math.min(it.amount.min, it.amount.max),
+					max: Math.max(it.amount.min, it.amount.max)
+				}
+			: it.amount && it.amount.kind !== 'exact'
+				? it.amount
+				: it.qty !== null
+					? { kind: 'exact' }
+					: { kind: 'unknown' };
+	// A range is ordered at its top and says so; the other kinds carry no quantity of their own.
+	const qty = amount.kind === 'range' ? amount.max : amount.kind === 'exact' ? it.qty : null;
+	if (amount.kind === 'unknown') ambiguities.push('no quantity given: how much?');
+	if (amount.kind === 'range')
+		ambiguities.push(
+			`a range (${amount.min}–${amount.max}): read as ${amount.max}, the top; change it if less will do`
+		);
 	if (!product)
 		ambiguities.push(
 			`"${it.query}" is not in my word list: searched with the model's Finnish words`
@@ -528,11 +592,14 @@ function fromLlmItem(it: z.infer<typeof LlmItem>): Omit<ParsedItem, 'id'> {
 		query: it.query,
 		product: product?.key ?? null,
 		search,
-		qty: it.qty,
-		unit: it.qty === null ? null : (it.unit ?? 'sales'),
+		qty,
+		unit: qty === null ? null : (it.unit ?? 'sales'),
 		constraints,
 		variant,
-		ambiguities
+		ambiguities,
+		amount,
+		what: it.what,
+		...(it.brand ? { brand: it.brand } : {})
 	};
 }
 
@@ -708,6 +775,7 @@ export async function parseRequest(text: string, o: ParseOptions): Promise<Parse
 		return {
 			...rules,
 			items,
+			intent: parsed.data.intent,
 			deliverBy,
 			deliverBySource,
 			ambiguities,

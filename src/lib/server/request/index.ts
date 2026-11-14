@@ -127,7 +127,9 @@ async function submitInScope(o: SubmitOptions): Promise<RequestResult> {
 		void publish(ctx.workspaceId, [
 			traceEvent(ctx, step, { actor: ctx.actor.id, purpose: 'request.parse', ...data })
 		]);
-	const llm = kind === 'fixture' ? null : createLlmRouter(o.env, trace).for('request.parse');
+	const router = kind === 'fixture' ? null : createLlmRouter(o.env, trace);
+	const llm = router?.for('request.parse') ?? null;
+	const escalate = router?.for('request.parse.escalate') ?? null;
 	// Shipped dark: REVIEW=1 reviews the parse (model scoring only when Decide is live).
 	const review: ReviewDeps | undefined = reviewEnabled(o.env)
 		? {
@@ -146,6 +148,7 @@ async function submitInScope(o: SubmitOptions): Promise<RequestResult> {
 		today: await simToday(ctx.workspaceId),
 		kitchen,
 		llm,
+		escalate,
 		llmKind: kind,
 		nonce: o.nonce,
 		place: o.place,

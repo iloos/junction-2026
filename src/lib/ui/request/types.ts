@@ -32,7 +32,19 @@ export interface ParsedItemView {
 
 /** How a question can be answered inline. */
 export type AnswerSpec =
-	| { kind: 'qty'; item: string; units: ReqUnit[]; salesUnit?: string }
+	| {
+			kind: 'qty';
+			item: string;
+			/** The item's own unit first (never litres for a solid). */
+			units: ReqUnit[];
+			salesUnit?: string;
+			/** A ready amount to confirm in one tap ("as much as available": the most one product holds). */
+			prefill?: { qty: number; unit: ReqUnit };
+			/** The product the prefill is about; the answer pins it. */
+			productId?: string;
+			/** The confirm button's words, e.g. "Order 200 kg". */
+			confirm?: string;
+	  }
 	| {
 			kind: 'choice';
 			item: string;
@@ -58,12 +70,16 @@ export interface ParsedView {
 	ambiguities: string[];
 	/** Inline answers applied on top of the words. */
 	answered?: RequestAnswer[];
+	/** What the request is (D20): an order, a question, or a change to something already open. */
+	intent?: 'order' | 'question' | 'change';
 	parser: {
 		kind: 'rules' | 'gemini' | 'featherless' | 'fixture';
 		model: string;
 		latencyMs: number;
 		tokens?: { in: number; out: number };
 		fallback?: string;
+		/** The first model, when a stronger one read the words again. */
+		escalatedFrom?: string;
 	};
 }
 

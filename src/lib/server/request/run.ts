@@ -14,7 +14,7 @@ import type {
 } from '$lib/core/contracts';
 import { sizeDirect } from '$lib/core/demand/sizing';
 import { addDays } from '$lib/core/scenario';
-import { day, money } from '$lib/ui/format';
+import { day, money, num } from '$lib/ui/format';
 import { canonicalJson, sha256Hex } from '$lib/core/hash';
 import type { CallContext, Clock, Llm, TaskStore, ToolHandlers } from '$lib/core/ports';
 import { taskForPlan } from './task';
@@ -55,6 +55,7 @@ import {
 import { parseRequest, parseRules, type ParsedRequest } from './parse';
 import { dishItems, interpretDish, type DishInterpretation } from './dish';
 import { readingOf, reviewReading } from './reading';
+import { howMuchWords, maxAvailable, unitsFor } from './amount';
 import { requestParseCheckpoint, withReview, type ReviewDeps } from '$lib/server/review';
 import { classifyRequest } from './classify';
 import { applyBriefAnswers, draftBrief, nextQuestion } from '../menu/brief';
@@ -89,6 +90,8 @@ export interface RequestDeps {
 	today: string;
 	kitchen: Kitchen;
 	llm?: Llm | null;
+	/** The stronger model a doubtful first reading is escalated to (D12 cascade); absent: no second pass. */
+	escalate?: Llm | null;
 	llmKind?: ParsedRequest['parser']['kind'];
 	/** Makes two submissions of the same words distinct orders; the same nonce replays the same plan. */
 	nonce?: string;
@@ -237,7 +240,7 @@ async function lookupItems(
 	// substitute rules for each item's leading candidate.
 	const want = new Set<string>();
 	for (const p of prepared) {
-		if (p.item.qty === null) continue;
+		if (p.item.qty === null && p.item.amount?.kind !== 'max_available') continue;
 		for (const r of p.ranked.slice(0, SHORTLIST)) want.add(r.product.productId);
 		for (const s of p.ranked[0]?.product.valioSubstitutes ?? []) want.add(s);
 	}
@@ -338,8 +341,24 @@ async function lookupItems(
 			closed.length > 0 &&
 			!short.some((r) => !unpickable(offers.get(r.product.productId), r.conversion, now));
 		if (p.item.qty === null) {
-			question = `How much ${p.item.query}?`;
-			answer = { kind: 'qty', item: idx, units: ['l', 'kg', 'pcs', 'case'] };
+			// No exact amount: asked once per kind of the reading's shape (D20).
+			const a = p.item.amount;
+			if (a?.kind === 'max_available') {
+				const m = maxAvailable(
+					p.item,
+					short.map((r) => ({ product: r.product, offer: offers.get(r.product.productId) })),
+					d.kitchen
+				);
+				question = m.question;
+				answer = m.answer;
+			} else {
+				const units = unitsFor(short.map((r) => r.product));
+				question =
+					a?.kind === 'for_people'
+						? `${howMuchWords(p.item.query, units).replace(/\?$/, '')} for ${num(a.n)} people?`
+						: howMuchWords(p.item.query, units);
+				answer = { kind: 'qty', item: idx, units };
+			}
 		} else if (!pick && allClosed) {
 			// Ordering for this date has closed: say why, offer the first date that is open for every item (and a
 			// receiving day), so the button's day is the day that results. Never moved silently.
@@ -543,6 +562,7 @@ export function applyAnswers(parsed: ParsedRequest, answers: RequestAnswer[]): P
 			// An answered amount replaces the words' one; an unknown unit token stays to say what was answered.
 			next.qty = a.qty;
 			next.unit = a.unit;
+			next.amount = { kind: 'exact' };
 			next.ambiguities = next.ambiguities.filter((x) => !/^no (quantity|unit) given/.test(x));
 		}
 		return next;
@@ -651,6 +671,38 @@ function edited(text: string, d: RequestDeps): ParsedRequest {
 	};
 }
 
+/** How unsure a reading is: the reading check's verdict, the model's own doubts, and amounts it could not read. */
+async function doubt(text: string, r: ParsedRequest): Promise<number> {
+	const v = await reviewReading(text, readingOf(r));
+	return (
+		(v.kind === 'block' ? 4 : v.kind === 'revise' ? 2 : 0) +
+		r.ambiguities.filter((a) => a.startsWith('model:')).length +
+		r.items.filter((i) => (i.amount?.kind ?? 'unknown') === 'unknown' && i.qty === null).length +
+		(r.parser.fallback ? 2 : 0)
+	);
+}
+
+/**
+ * The D12 cascade: the first model's reading, when unsure, is read once more by the stronger escalate model; the
+ * surer reading is kept (the escalated one on a tie) and the step says which model answered. Rules-only readings
+ * (no model) are never escalated.
+ */
+async function escalated(
+	text: string,
+	first: ParsedRequest,
+	d: RequestDeps
+): Promise<ParsedRequest> {
+	if (first.parser.kind === 'rules' && !first.parser.fallback) return first;
+	const before = await doubt(text, first);
+	if (before === 0) return first;
+	const second = await parseRequest(text, { today: d.today, llm: d.escalate, llmKind: d.llmKind });
+	if (second.parser.kind === 'rules') return first;
+	const after = await doubt(text, second);
+	return after <= before
+		? { ...second, parser: { ...second.parser, escalatedFrom: first.parser.model } }
+		: first;
+}
+
 /** Runs the request flow and reports each step as it finishes. */
 export async function runRequest(text: string, d: RequestDeps): Promise<RequestResult> {
 	const emit = (e: RequestEvent) => d.onEvent?.(e);
@@ -678,14 +730,36 @@ export async function runRequest(text: string, d: RequestDeps): Promise<RequestR
 			read = { ...read, ambiguities: [...read.ambiguities, `review: ${r.verdict.feedback}`] };
 		if (r.verdict.kind === 'block') reviewBlock = r.verdict.reason;
 	} else read = d.items?.length ? edited(text, d) : await parse();
+	if (!d.items?.length && d.escalate) read = await escalated(text, read, d);
 	let parsed = withDate(applyAnswers(read, d.answers ?? []), d.deliverBy, d.today);
+	// A question or a change to something open is not an order: nothing is searched or placed (D20).
+	if (parsed.intent === 'question' || parsed.intent === 'change') {
+		emit({ step: 'request', status: 'blocked', ms: ms(), data: parsed as ParsedView });
+		return {
+			parsed: parsed as ParsedView,
+			lookup: null,
+			order: null,
+			message:
+				parsed.intent === 'question'
+					? 'This reads as a question, not an order: nothing was searched or ordered. Ask it in the chat.'
+					: 'This reads as a change to an order already made: nothing new was ordered. Change it on the plan in the Kitchen.'
+		};
+	}
 	// A dish with a count is portions to serve: priced ready-made and from raw, and the kitchen's way is ordered.
 	let dish: DishInterpretation | null = null;
 	let readingBlock: string | null = null;
 	if (!d.dish?.packs && !d.items?.length && !reviewBlock) {
+		// The words, or the reading's dish item (what: dish, for N people) when the words name no count we read.
+		const modelDish = parsed.items.find(
+			(i) => i.what === 'dish' && i.amount?.kind === 'for_people'
+		);
+		const base =
+			modelDish && modelDish.amount?.kind === 'for_people'
+				? `${modelDish.amount.n} portions ${modelDish.query} ${text}`
+				: text;
 		const words = d.dish?.portions
-			? text.replace(/\d{1,3}(?:[ ,]\d{3})+|\d+(?:[.,]\d+)?/, String(d.dish.portions))
-			: text;
+			? base.replace(/\d{1,3}(?:[ ,]\d{3})+|\d+(?:[.,]\d+)?/, String(d.dish.portions))
+			: base;
 		dish = await interpretDish(words, {
 			handlers: d.handlers,
 			ctx: d.ctx,

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { CornerDownLeft } from '@lucide/svelte';
 	import type { AnswerSpec, ReqUnit, RequestAnswer } from './types';
+	import { salesUnitWords } from './words';
 
 	/** Answer a lookup question in place: pick an offered option, type an amount, or take the open date. */
 	interface Props {
@@ -26,15 +27,19 @@
 				? (spec.alsoQty?.units ?? ([] as ReqUnit[]))
 				: ([] as ReqUnit[])
 	);
-	let qty = $state('');
-	let unit = $state<ReqUnit | ''>('');
+	// A prefilled amount ("as much as available") is ready to confirm; the chef may still change it.
+	const pre = (() => (spec.kind === 'qty' ? spec.prefill : undefined))();
+	let qty = $state(pre ? String(pre.qty) : '');
+	let unit = $state<ReqUnit | ''>(pre?.unit ?? '');
 	const chosenUnit = $derived<ReqUnit>(unit || units[0]);
 	const value = $derived(Number(qty.replace(',', '.')));
 	const valid = $derived(Number.isFinite(value) && value > 0 && value <= 1e6);
 
 	function send(e: SubmitEvent) {
 		e.preventDefault();
-		if (valid) onanswer({ item: spec.item, qty: value, unit: chosenUnit });
+		if (!valid) return;
+		const pin = spec.kind === 'qty' && spec.productId ? { productId: spec.productId } : {};
+		onanswer({ item: spec.item, qty: value, unit: chosenUnit, ...pin });
 	}
 </script>
 
@@ -78,7 +83,9 @@
 				class="num h-9 w-24 rounded-md border border-rule-strong bg-sheet px-2 text-body"
 			/>
 			{#if spec.kind === 'qty' && spec.salesUnit}
-				<span class="text-body text-ink-2">{spec.salesUnit}</span>
+				<span class="text-body text-ink-2"
+					>{salesUnitWords(2, spec.salesUnit).replace(/^2 /, '')}</span
+				>
 			{:else}
 				<select
 					value={chosenUnit}
@@ -94,7 +101,10 @@
 				disabled={busy || !valid}
 				class="inline-flex h-9 items-center gap-1.5 rounded-md bg-accent px-3 text-body font-medium text-sheet disabled:opacity-40"
 			>
-				Use this <CornerDownLeft size={14} aria-hidden="true" />
+				{spec.kind === 'qty' && spec.confirm && pre && value === pre.qty && chosenUnit === pre.unit
+					? spec.confirm
+					: 'Use this'}
+				<CornerDownLeft size={14} aria-hidden="true" />
 			</button>
 		</form>
 	{/if}
