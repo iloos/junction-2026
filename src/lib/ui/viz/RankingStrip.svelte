@@ -6,6 +6,8 @@
 	 * d3 gets plain rows keyed by product id; the chart has an explicit height.
 	 */
 	import { select, scaleLinear, easeCubicOut } from 'd3';
+	// Registers selection.transition(); the d3 bundle's side effect is tree-shaken out of production builds.
+	import 'd3-transition';
 	import type { CandidateView } from '$lib/kitchen/fixture-plan';
 	import { reasonShort } from '$lib/ui/reasons';
 
