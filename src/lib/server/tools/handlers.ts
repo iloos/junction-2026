@@ -1,4 +1,4 @@
-import { TOOL_NAMES, type DomainError, type Result, type ToolName } from '$lib/core/contracts';
+import { TOOL_NAMES, type Result } from '$lib/core/contracts';
 import type { CallContext, ToolHandlers, WebExecutionContext } from '$lib/core/ports';
 import type { WebToolName } from '$lib/server/web/tools';
 import { createHandlers } from '$lib/core/services/handlers';
@@ -19,45 +19,6 @@ import { scopeFor, withExternalScope } from '$lib/server/external/scope';
 import { inWorkspace } from '$lib/server/adapters/simulator/overlay';
 
 type AnyHandler = (ctx: CallContext, input: unknown) => Promise<Result<unknown>>;
-
-/** core-db marks unfinished slices with this message; those tools fall back to the stub. */
-export function isNotImplemented(e: DomainError): boolean {
-	return e.code === 'PROVIDER_UNAVAILABLE' && e.message.startsWith('not implemented yet');
-}
-
-/** A call that names a stub-made plan or approval must stay in the stub (the real store has no such row). */
-function refersToStub(input: unknown): boolean {
-	if (!input || typeof input !== 'object') return false;
-	const { planId, approvalId } = input as { planId?: unknown; approvalId?: unknown };
-	return (
-		(typeof planId === 'string' && planId.startsWith('stub-')) ||
-		(typeof approvalId === 'string' && approvalId.startsWith('stub-'))
-	);
-}
-
-/**
- * Real handlers first; a tool whose core-db slice has not landed is answered by the stub, so each
- * tool flips to the real path on its own as slices merge. Stubbed answers are logged once per tool.
- */
-export function withStubFallback(real: ToolHandlers, stub: ToolHandlers): ToolHandlers {
-	const warned = new Set<ToolName>();
-	const out = {} as Record<ToolName, AnyHandler>;
-	for (const name of TOOL_NAMES) {
-		const r = real[name] as AnyHandler;
-		const s = stub[name] as AnyHandler;
-		out[name] = async (ctx, input) => {
-			if (refersToStub(input)) return s(ctx, input);
-			const res = await r(ctx, input);
-			if (res.ok || !isNotImplemented(res.error)) return res;
-			if (!warned.has(name)) {
-				warned.add(name);
-				console.warn(`[tools] ${name}: real handler not implemented yet, serving the STUB`);
-			}
-			return s(ctx, input);
-		};
-	}
-	return out as unknown as ToolHandlers;
-}
 
 /**
  * One process-wide store: Aiven Postgres when DATABASE_URL is set, otherwise PGlite in memory with the seed
