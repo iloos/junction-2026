@@ -22,6 +22,7 @@ import seed from '../../../../fixtures/seeds/christmas-buffet-140.json';
 import { scenarioClock } from '$lib/core/scenario';
 import { currentRun, currentRunStartedAt } from '$lib/server/demo/run';
 import { resetDemoRun } from '$lib/server/demo/reset';
+import { resetSandbox, SANDBOX_WORKSPACE } from '$lib/server/demo/sandbox';
 import { dev } from '$app/environment';
 import { presenterOpen } from '$lib/server/demo/presenter';
 import { JUDGES_WORKSPACE } from '$lib/server/auth';
@@ -127,11 +128,25 @@ async function must<N extends ToolName>(
 type PlanOut = { plan: import('$lib/core/contracts').Plan };
 
 /** Plans the event, then lets the kitchen agent propose a rescue for every real outage that has none yet. */
-async function ensurePlan(s: Session) {
-	let { plan } = (await must(s, 'plan_event', {
+/** The first half of `start`: plan the event (menu × guests → needs → lines). Idempotent. */
+async function planOnly(s: Session) {
+	const { plan } = (await must(s, 'plan_event', {
 		kitchenId: s.kitchenId,
 		eventId: EVENT_ID
 	})) as PlanOut;
+	return plan;
+}
+
+/** Counts for the start screen's progress: real numbers from the plan just made. */
+export interface PlanProgress {
+	planned: true;
+	dishes: number;
+	lines: number;
+	outages: number;
+}
+
+async function ensurePlan(s: Session) {
+	let plan = await planOnly(s);
 	// Each outage is tried at most once per call, and the loop is capped: a dish with no qualifying substitute
 	// stays a stated shortfall instead of being retried (a retry loop once wrote ~1,000 empty proposals).
 	const tried = new Set<string>();
@@ -330,13 +345,40 @@ async function applyRules(s: Session) {
 	}
 }
 
-export function scenario(sid: string, action: string, value: unknown): Promise<LiveSnapshot> {
+/** The sandbox was just started over by someone; the reset can run again after `retryInMs`. */
+export class Cooldown extends Error {
+	constructor(public retryInMs: number) {
+		super(`The sandbox was just started over. Try again in ${Math.ceil(retryInMs / 1000)} s.`);
+	}
+}
+
+export function scenario(
+	sid: string,
+	action: string,
+	value: unknown
+): Promise<LiveSnapshot | PlanProgress> {
 	return serial(() => applyScenario(session(sid), action, value));
 }
 
-async function applyScenario(s: Session, action: string, value: unknown): Promise<LiveSnapshot> {
+async function applyScenario(
+	s: Session,
+	action: string,
+	value: unknown
+): Promise<LiveSnapshot | PlanProgress> {
 	const b = await createServerPorts();
 	if (action === 'start') {
+		await ensurePlan(s);
+	} else if (action === 'plan') {
+		// Step 1 of 2 of a visible start: the plan only, answered with counts (no snapshot, so it is quick).
+		const plan = await planOnly(s);
+		return {
+			planned: true,
+			dishes: plan.needs.length,
+			lines: plan.lines.length,
+			outages: plan.lines.filter((l) => l.state === 'unorderable' && !l.substituteFor).length
+		};
+	} else if (action === 'rescue') {
+		// Step 2 of 2: the kitchen agent proposes rescues; answered with the full snapshot.
 		await ensurePlan(s);
 	} else if (
 		action === 'preset' &&
@@ -371,8 +413,12 @@ async function applyScenario(s: Session, action: string, value: unknown): Promis
 			});
 		await requote(s);
 	} else if (action === 'reset') {
-		// A fresh run server-side (9c): no plan, orders or spend; the old run stays in the op log.
-		await resetDemoRun(s.workspaceId);
+		// A fresh run server-side: no plan, orders or spend; the old run stays in the op log. The judges'
+		// sandbox goes through 9c's self-service reset (with its cooldown); the stage run is presenter-only.
+		if (s.workspaceId === SANDBOX_WORKSPACE) {
+			const r = await resetSandbox();
+			if (!r.ok) throw new Cooldown(r.retryInMs);
+		} else await resetDemoRun(s.workspaceId);
 		s.kitchenId = 'k-hotel';
 		s.preset = 'kitchen';
 		s.contention = false;

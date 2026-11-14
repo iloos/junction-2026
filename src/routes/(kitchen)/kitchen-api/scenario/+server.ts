@@ -1,5 +1,5 @@
 import { json } from '@sveltejs/kit';
-import { scenario } from '$lib/server/kitchen/live';
+import { Cooldown, scenario } from '$lib/server/kitchen/live';
 import { sid } from '$lib/server/kitchen/sid';
 import type { RequestHandler } from './$types';
 
@@ -9,6 +9,18 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 	try {
 		return json(await scenario(sid(cookies), body.action ?? '', body.value));
 	} catch (e) {
+		if (e instanceof Cooldown)
+			return json(
+				{
+					error: {
+						code: 'PROVIDER_UNAVAILABLE',
+						message: e.message,
+						retryable: true,
+						detail: { retryInMs: e.retryInMs }
+					}
+				},
+				{ status: 429 }
+			);
 		const message = e instanceof Error ? e.message : String(e);
 		return json({ error: { code: 'INVALID_INPUT', message, retryable: false } }, { status: 400 });
 	}
