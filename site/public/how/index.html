@@ -257,7 +257,7 @@ footer a{color:var(--ink2)}
 
   <h2 id="who">Who may do what</h2>
   <p class="take">Only the chef can approve. Agents, ours or yours, can read, plan and order inside the mandate, and a refused call is written to the log.</p>
-  <p class="lede">The caller's identity comes from its key or the signed visitor cookie, never from the request body. The scopes per caller are one table in the code, and the core refuses an approval from an outside agent even if a scope slipped.</p>
+  <p class="lede">The caller's identity comes from its key or the signed visitor cookie, never from the request body. The scopes per caller are one table in the code: an outside agent has no approve scope. Behind that, the core refuses an approval granted by an outside agent and needs a chef's grant before it commits an outside agent's order.</p>
   <div class="who" role="table" aria-label="Scopes per caller">
     <div class="r" role="row"><span class="h" role="columnheader">Caller</span><span class="h" role="columnheader">Read</span><span class="h" role="columnheader">Plan</span><span class="h" role="columnheader">Order</span><span class="h" role="columnheader">Approve</span></div>
     <div class="r" role="row"><span role="cell"><b>Chef</b><small>Kitchen screen</small></span><span class="y" role="cell">yes</span><span class="y" role="cell">yes</span><span class="y" role="cell">yes</span><span class="y" role="cell">yes</span></div>
