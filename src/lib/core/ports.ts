@@ -11,6 +11,7 @@ import type {
 	Offer,
 	OpEnvelope,
 	PendingOp,
+	PlanOrigin,
 	Product,
 	ProductId,
 	Result,
@@ -199,6 +200,8 @@ export interface CallContext {
 	 * lock (a read beside it would wait on that lock). Set by the server, never from a request.
 	 */
 	fence?: (tx: Tx) => Promise<string | null>;
+	/** The door this call came through, set by the server; new plans record it (Plan.origin). Never request-supplied. */
+	origin?: PlanOrigin;
 }
 
 /**
