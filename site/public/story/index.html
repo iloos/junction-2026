@@ -235,7 +235,7 @@ section.s:last-of-type { padding-bottom: 120px; }
 				<div class="end"><span class="chip out" data-s="cases.#agent-cannot-approve.outcome.label">Refused</span><span class="why">Nothing changed</span></div>
 			</div>
 		</div>
-		<p class="ledger-note">Three requests recorded from the app on <span data-s="recordedAt" data-f="day">Sat 14 Nov</span>. Valio data is challenge mock data.</p>
+		<p class="ledger-note">Three requests recorded from the app on <span data-s="recordedAt" data-f="day">Sat 14 Nov</span>; the demo kitchen's clock is Mon 7 Dec. Valio data is challenge mock data.</p>
 	</div>
 </section>
 
@@ -335,7 +335,7 @@ section.s:last-of-type { padding-bottom: 120px; }
 			<details><summary>Why it waits</summary><p>Picked Valio kevytmaito 1 l laktoositon UHT, 10 packs. Valio doesn't state a quantity, so it asks before buying and doesn't count it as covered until the supplier confirms.</p></details>
 		</div>
 	</div>
-	<p class="foot-note">Recorded from the app on Sat 14 Nov; the in-house dish is from the demo buffet plan. Valio data is challenge mock data.</p>
+	<p class="foot-note">Recorded from the app on Sat 14 Nov; the demo kitchen's clock is Mon 7 Dec. The in-house dish is from the demo buffet plan. Valio data is challenge mock data.</p>
 </section>
 
 <!-- 5 · The mandate -->
@@ -399,12 +399,13 @@ const CHECKS = [
 	['Cut-off and pack size', 'No order after Valio\'s closing time, and no part packs.'],
 	['Stock Valio states', 'Stock Valio doesn\'t state is never counted as covered.'],
 ];
-// Which recorded case stops where. stop -1 = passes every check; why = the recorded step that says so.
+// Which recorded case stops where. stop -1 = passes every check; passed = checks the recording backs as passed
+// (the chef sent it, so "Who is asking" passed); why = the recorded step that says so.
 const RUN = [
 	{ id: 'within-mandate', door: 'From the kitchen', stop: -1, why: 1 },
-	{ id: 'out-of-stock', door: 'From the Christmas buffet plan', stop: 1, why: 2, text: 'Ham substitute for the buffet', line: 1 },
-	{ id: 'cut-off', door: 'From the request page', stop: 3, why: 1 },
-	{ id: 'lactose-free', door: 'From the request page', stop: 4, why: 2 },
+	{ id: 'out-of-stock', door: 'From the Christmas buffet plan', stop: 1, passed: [0], why: 2, text: 'Ham substitute for the buffet', line: 1 },
+	{ id: 'cut-off', door: 'From the request page', stop: 3, passed: [0], why: 1 },
+	{ id: 'lactose-free', door: 'From the request page', stop: 4, passed: [0], why: 2 },
 	{ id: 'agent-cannot-approve', door: 'An outside agent over MCP', stop: 0, why: 1 },
 ];
 const TIER = { ordered: ['ok', 'var(--ok)'], held: ['wait', 'var(--warn)'], caught: ['wait', 'var(--warn)'], refused: ['out', 'var(--out)'] };
@@ -451,8 +452,9 @@ function buildChecks(d) {
 		const [cls, col] = TIER[r.c.outcome.state] || ['', 'var(--ink-3)'];
 		cks.forEach((el, k) => {
 			// Ticks only where the recording says every check passed; otherwise only the recorded stop is marked.
-			el.classList.toggle('pass', r.stop < 0 && k < shownChecks);
-			el.classList.toggle('seen', r.stop >= 0 && k < Math.min(shownChecks, passes));
+			const backed = r.stop < 0 || (r.passed || []).includes(k);
+			el.classList.toggle('pass', backed && k < Math.min(shownChecks, passes));
+			el.classList.toggle('seen', !backed && k < Math.min(shownChecks, passes));
 			const stop = reachedStop && k === r.stop;
 			el.classList.toggle('stop', stop);
 			el.style.setProperty('--c', col);
