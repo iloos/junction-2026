@@ -53,6 +53,8 @@ export const PolicyReason = z.enum([
 	'exceeds_need',
 	/** D18: the need's amount is physical but this product's content per unit is unknown: held for a person. */
 	'need_size_unknown',
+	/** Lot rounding buys more than twice the ask (250 ml as a 5 l case): held for a person, since it may be the only pack. */
+	'need_rounding_large',
 	/** A person accepted the best try: this line breaks the order's origin requirement only. Sign-off, in the terms. */
 	'requirement_relaxed.origin',
 	/** A person accepted the best try: this line lacks a required label only. Sign-off, in the terms. */
