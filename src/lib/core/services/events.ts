@@ -132,6 +132,7 @@ export async function requote(
 		week: isoWeek(plan.deliverBy)
 	});
 	const t = tierLines({
+		now: ports.clock.now(),
 		kitchen,
 		lines: drafts,
 		offers: new Map(pre.offers.map((o) => [o.productId, o])),

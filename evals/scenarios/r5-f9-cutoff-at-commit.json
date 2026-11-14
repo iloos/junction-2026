@@ -57,8 +57,5 @@
 			}
 		]
 	},
-	"expectFail": {
-		"F9": ["lines[463860]", "lines[461210]"]
-	},
 	"notes": "F9: cut-off is shown but only approval expiry is enforced at commit. Compare against ports.clock (scenario clock). Whether the commit is partial or refused whole is A's call; this asserts only that no Terminal line commits after its cut-off."
 }

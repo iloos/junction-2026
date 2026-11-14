@@ -272,7 +272,7 @@ describe('unit conversion', () => {
 
 describe('request flow on the PGlite fixture', () => {
 	it('milk example → 1,000 ST of 464201, sign-off over line and order caps; approve, commit, retry = same receipt', async () => {
-		const env = await createDbPorts();
+		const env = await createDbPorts({ now: `${TODAY}T12:00:00+02:00` });
 		env.overlay.clear();
 		const quoted: string[][] = [];
 		const offers = env.ports.catalog.offers.bind(env.ports.catalog);
@@ -377,7 +377,7 @@ describe('request flow on the PGlite fixture', () => {
 	}, 60_000);
 
 	it('asks instead of ordering when the quantity is missing, and quotes nothing', async () => {
-		const env = await createDbPorts();
+		const env = await createDbPorts({ now: `${TODAY}T12:00:00+02:00` });
 		const quoted: string[][] = [];
 		const offers = env.ports.catalog.offers.bind(env.ports.catalog);
 		env.ports.catalog = {

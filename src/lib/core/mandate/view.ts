@@ -27,7 +27,14 @@ const DETAIL: Partial<Record<string, Detail>> = {
 /** Facts that are missing or not true now: held, never approvable (validator effect `gap`). */
 const GAPS = new Set<LineReason>(['price_missing', 'INSUFFICIENT_STOCK', 'qty_implausible']);
 /** Rule-outs a different product fixes (find a substitute) rather than a rule change. */
-const SUPPLY = new Set<string>(['out', 'undeliverable', 'blocked', 'BELOW_LOT', 'NOT_FOUND']);
+const SUPPLY = new Set<string>([
+	'out',
+	'undeliverable',
+	'blocked',
+	'BELOW_LOT',
+	'NOT_FOUND',
+	'cutoff_passed'
+]);
 
 function measure(l: Line, value: number): Measure {
 	return { value, unit: l.qty.unit === 'KG' ? 'kg' : 'pcs' };

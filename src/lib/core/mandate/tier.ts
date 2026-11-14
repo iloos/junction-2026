@@ -58,6 +58,8 @@ export interface TierInput {
 	orderedBefore: Set<string>;
 	/** Products named by a recall notice (from state.anomalies): their lines are held for sign-off. */
 	recalled?: Set<string>;
+	/** Scenario-clock now: a line whose offer cut-off has passed is forbidden (cutoff_passed). */
+	now?: Date;
 	/** What a line serving a dish needs, by line id (seedNeedQty): beyond 20× it the quantity is a gap. */
 	expectedQty?: Map<string, { productId: string; value: number }>;
 	/** Lines already committed stay as they are and are not re-tiered. */
@@ -158,6 +160,10 @@ export function tierLines(input: TierInput): TierResult {
 			expectedQty: need?.productId === draft.productId ? need.value : undefined
 		});
 		const ruledOut = forbidden(findings);
+		// Ordering for this delivery has closed: nothing can buy it on these terms, approval or not (F9).
+		const closes = offer?.availability.closingTime;
+		if (input.now && closes && new Date(closes).getTime() <= input.now.getTime())
+			ruledOut.push({ reason: 'cutoff_passed', effect: 'forbid' });
 		if (ruledOut.length) {
 			// Over the hard limit the line's cost is known and is the point: the plan reports it (F32).
 			const over = ruledOut.some((f) => f.reason === 'over_hard_limit') && offer?.price;
