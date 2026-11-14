@@ -69,7 +69,11 @@ export function errorNext(
 	switch (code) {
 		case 'STALE_VERSION':
 		case 'TERMS_CHANGED':
-			return { tool: 'get_plan', why: 'the plan or its terms changed; read the new version and retry with it', ...ref };
+			return {
+				tool: 'get_plan',
+				why: 'the plan or its terms changed; read the new version and retry with it',
+				...ref
+			};
 		case 'CAP_EXCEEDED':
 		case 'UNKNOWN_REQUIRED':
 			return {
@@ -79,7 +83,11 @@ export function errorNext(
 			};
 		case 'INSUFFICIENT_STOCK':
 		case 'BELOW_LOT':
-			return { tool: 'find_substitutes', why: 'the line cannot be ordered as is; rank substitutes for it', ...ref };
+			return {
+				tool: 'find_substitutes',
+				why: 'the line cannot be ordered as is; rank substitutes for it',
+				...ref
+			};
 		default:
 			return null;
 	}
@@ -113,7 +121,10 @@ export function buildMcpServer(ctx: CallContext, handlers: ToolHandlers): McpSer
 					return {
 						isError: true,
 						content: [
-							{ type: 'text', text: JSON.stringify(next ? { error: r.error, next } : { error: r.error }) }
+							{
+								type: 'text',
+								text: JSON.stringify(next ? { error: r.error, next } : { error: r.error })
+							}
 						]
 					};
 				}

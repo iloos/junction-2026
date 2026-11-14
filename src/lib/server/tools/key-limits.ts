@@ -61,7 +61,8 @@ export function takeKeyCall(
 	for (const { kept } of lists) kept.push(now);
 	// Idle actors carry no information; keep the map small.
 	if (seen.size > 2000)
-		for (const [id, ts] of seen) if (!ts.length || now - ts[ts.length - 1] >= WINDOW_MS) seen.delete(id);
+		for (const [id, ts] of seen)
+			if (!ts.length || now - ts[ts.length - 1] >= WINDOW_MS) seen.delete(id);
 	return null;
 }
 
