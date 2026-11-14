@@ -333,8 +333,12 @@ describe('request flow on the PGlite fixture', () => {
 			tier: 'sign_off',
 			planVersion: plan.version,
 			termsHash: plan.termsHash,
-			totalCents: 156000
+			totalCents: 156000,
+			mandateVersion: kitchen.mandate.version,
+			requestedBy: 'kitchen_agent:request-agent',
+			decidedBy: null
 		});
+		expect(Date.parse(ap.expiresAt ?? '')).not.toBeNaN();
 
 		// Same words, same nonce → the same plan (idempotent), not a second order.
 		const again = await runRequest('1,000 L lactose-free milk by Monday', {

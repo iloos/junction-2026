@@ -48,13 +48,6 @@ export async function callTool<N extends ToolName>(
 	return r.value as ToolOutput<N>;
 }
 
-export interface ApprovalRecord {
-	mandateVersion: number;
-	expiresAt: string;
-	requestedBy: string;
-	decidedBy?: string;
-}
-
 export interface RequestDeps {
 	handlers: ToolHandlers;
 	/** Who places the order (kitchen_agent for the page; the key's actor for the API). */
@@ -70,8 +63,6 @@ export interface RequestDeps {
 	place?: boolean;
 	/** The chef's inline answers to earlier questions, by item index. */
 	answers?: RequestAnswer[];
-	/** Fallback for approval fields get_plan leaves out (mandate version, expiry, who). */
-	approvalRecord?: (id: string) => Promise<ApprovalRecord | null>;
 	onEvent?: (e: RequestEvent) => void;
 }
 
@@ -281,19 +272,16 @@ export async function idempotencyKeyFor(
 	return `rq-${(await sha256Hex(canonicalJson({ kitchenId, deliverBy, lines, nonce }))).slice(0, 20)}`;
 }
 
-/** get_plan's approval plus the fields it does not carry, read from the approval record. */
+/** get_plan's plan and approval, with the approval's total and who asked and decided. */
 export async function approvalView(
 	handlers: ToolHandlers,
 	ctx: CallContext,
-	planId: string,
-	record?: RequestDeps['approvalRecord']
+	planId: string
 ): Promise<{ plan: ToolOutput<'get_plan'>['plan']; approval: ApprovalView | null }> {
 	const g = await callTool(handlers, ctx, 'get_plan', { planId });
 	const a = g.approval;
 	if (!a) return { plan: g.plan, approval: null };
 	const who = (x?: { kind: string; id: string }) => (x ? `${x.kind}:${x.id}` : undefined);
-	const fromTool = a.mandateVersion !== undefined && a.expiresAt !== undefined;
-	const rec = fromTool || !record ? null : await record(a.id);
 	const ids = new Set(a.lineIds);
 	return {
 		plan: g.plan,
@@ -307,10 +295,10 @@ export async function approvalView(
 			totalCents: g.plan.lines
 				.filter((l) => ids.has(l.id))
 				.reduce((s, l) => s + (l.lineCents ?? 0), 0),
-			mandateVersion: a.mandateVersion ?? rec?.mandateVersion ?? null,
-			expiresAt: a.expiresAt ?? rec?.expiresAt ?? null,
-			requestedBy: who(a.requestedBy) ?? rec?.requestedBy ?? null,
-			decidedBy: who(a.decidedBy) ?? rec?.decidedBy ?? null
+			mandateVersion: a.mandateVersion ?? null,
+			expiresAt: a.expiresAt ?? null,
+			requestedBy: who(a.requestedBy) ?? null,
+			decidedBy: who(a.decidedBy) ?? null
 		}
 	};
 }
@@ -403,12 +391,7 @@ export async function runRequest(text: string, d: RequestDeps): Promise<RequestR
 			idempotencyKey,
 			lines
 		});
-		const { plan, approval } = await approvalView(
-			d.handlers,
-			d.ctx,
-			placed.plan.id,
-			d.approvalRecord
-		);
+		const { plan, approval } = await approvalView(d.handlers, d.ctx, placed.plan.id);
 		const dow = DAY_KEYS[weekdayOf(parsed.deliverBy)];
 		const order: OrderView = {
 			idempotencyKey,
