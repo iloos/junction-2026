@@ -1,6 +1,6 @@
 import type { Product } from '$lib/core/contracts';
 import { rankCandidates } from '$lib/server/request/lookup';
-import type { ParsedItem } from '$lib/server/request/parse';
+import { baseId, type ParsedItem } from '$lib/server/request/parse';
 import { shortText } from './facts';
 import type { Intent } from './types';
 
@@ -33,7 +33,7 @@ export interface RoutineFacts {
 
 /** The request parser's item for a routine intent, so ranking and conversion are the request page's own. */
 export function routineItem(i: RoutineIntent): ParsedItem {
-	return {
+	const item = {
 		text: i.query,
 		query: i.query,
 		product: i.item.product,
@@ -44,6 +44,7 @@ export function routineItem(i: RoutineIntent): ParsedItem {
 		variant: i.item.variant,
 		ambiguities: []
 	};
+	return { ...item, id: baseId(item) };
 }
 
 /**

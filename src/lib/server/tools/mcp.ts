@@ -11,6 +11,7 @@ import { serveTool, toolsFor } from './serve';
  * `approve` or `set_mandate` at all (eval s5). Every call goes through `serveTool`, like REST.
  */
 const TITLES: Record<ToolName, string> = {
+	get_context: 'Start here: context and next actions',
 	search_products: 'Search products',
 	quote: 'Quote live terms',
 	plan_event: 'Plan an event',

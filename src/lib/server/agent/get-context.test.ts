@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { plannedToolSchemas } from '$lib/core/contracts/tools-next';
+import { toolSchemas } from '$lib/core/contracts';
 import { createGetContext } from './get-context';
 import { runGoal, scriptedPlanner } from './index';
 import { trialWorkspace } from './trial-harness';
@@ -16,7 +16,7 @@ describe('get_context (F6)', () => {
 			const r = await handler(w.ctx('external_agent'), {});
 			expect(r.ok).toBe(true);
 			if (!r.ok) return;
-			expect(plannedToolSchemas.get_context.output.safeParse(r.value).success).toBe(true);
+			expect(toolSchemas.get_context.output.safeParse(r.value).success).toBe(true);
 			expect(r.value.scopes).not.toContain('approve');
 			const hotel = r.value.kitchens.find((k) => k.id === 'k-hotel');
 			expect(hotel?.events.map((e) => e.id)).toContain('event-xmas-140');

@@ -14,7 +14,7 @@ import type { RequestHandler } from './$types';
 export const POST: RequestHandler = async ({ request, params }) => {
 	const ctx = resolveRequest(request, env, { dev, via: 'rest' });
 	if (!ctx) return unauthorized();
-	if (!mayStartAgent(ctx.actor))
+	if (!mayStartAgent(ctx))
 		return json(
 			{
 				error: {

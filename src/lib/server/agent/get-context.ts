@@ -1,11 +1,11 @@
 import type { z } from 'zod';
 import { ok, type Plan, type ResultMeta, type Result } from '$lib/core/contracts';
-import { plannedToolSchemas } from '$lib/core/contracts/tools-next';
+import { toolSchemas } from '$lib/core/contracts';
 import type { CallContext, Ports } from '$lib/core/ports';
 import { SCENARIO } from '$lib/core/scenario';
 import { SUPPORTED_EVENTS } from './context';
 
-export type GetContextOutput = z.infer<(typeof plannedToolSchemas)['get_context']['output']>;
+export type GetContextOutput = z.infer<(typeof toolSchemas)['get_context']['output']>;
 export type GetContextHandler = (
 	ctx: CallContext,
 	input: unknown

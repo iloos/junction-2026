@@ -7,6 +7,7 @@ import { dbMode } from '$lib/server/db/client';
 import type { AnyDb } from '$lib/server/store/drizzle-store';
 import { env } from '$env/dynamic/private';
 import { createDecide } from '$lib/server/adapters/decide';
+import { createGetContext } from '$lib/server/agent/get-context';
 
 type AnyHandler = (ctx: CallContext, input: unknown) => Promise<Result<unknown>>;
 
@@ -65,7 +66,9 @@ export function realHandlers(): Promise<ToolHandlers> {
 			replayPath: 'src/lib/server/adapters/decide/replay.json',
 			record: env.DECIDE_RECORD === '1'
 		});
-		return createHandlers({ ...b.ports, decide, ops: createOps() });
+		const handlers = createHandlers({ ...b.ports, decide, ops: createOps() });
+		// get_context reads the store and clock only; it lives with the agent door, not in core services.
+		return { ...handlers, get_context: createGetContext(b.ports) };
 	});
 	real.catch(() => (real = null));
 	return real;

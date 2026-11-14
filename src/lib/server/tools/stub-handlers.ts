@@ -376,6 +376,10 @@ const fail = (e: { ok: false; error: DomainError }) => e;
 // ---------- handlers ----------
 
 export const stubHandlers: ToolHandlers = {
+	// The offline stub has no store to describe; get_context is served by the real handlers only.
+	async get_context() {
+		return err('NOT_FOUND', 'get_context needs the server store');
+	},
 	async search_products(ctx, { query, limit }) {
 		const f = forbidden(ctx, 'read');
 		if (f) return f;

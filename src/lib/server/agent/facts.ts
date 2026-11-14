@@ -230,6 +230,11 @@ export function toFacts(tool: ToolName, value: unknown, intent?: Intent): Facts 
 			return { state: code(v.state) };
 		case 'set_mandate':
 			return { mandateVersion: num(v.mandateVersion) };
+		case 'get_context':
+			return {
+				kitchens: Array.isArray(v.kitchens) ? v.kitchens.length : 0,
+				openPlans: Array.isArray(v.openPlans) ? v.openPlans.length : 0
+			};
 	}
 }
 

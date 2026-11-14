@@ -18,6 +18,8 @@ export default defineConfig({
 	],
 	test: {
 		expect: { requireAssertions: true },
+		// Several worktrees run the suite at once on one machine; each PGlite worker holds ~0.9 GB. VITEST_MAX_WORKERS overrides.
+		maxWorkers: Number(process.env.VITEST_MAX_WORKERS ?? 4),
 		passWithNoTests: true,
 		projects: [
 			{

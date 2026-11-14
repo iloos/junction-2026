@@ -32,7 +32,8 @@ const notYet =
 	async () =>
 		err('PROVIDER_UNAVAILABLE', `not implemented yet (core-db ${slice})`);
 
-const IMPLS: { [N in ToolName]: Impl<N> } = {
+/** get_context is served by the agent door (server/agent/get-context.ts), composed in server/tools/handlers.ts. */
+const IMPLS: { [N in Exclude<ToolName, 'get_context'>]: Impl<N> } = {
 	search_products: searchProducts,
 	quote,
 	plan_event: planEvent,
@@ -79,7 +80,9 @@ export function createHandlers(ports: ServicePorts): ToolHandlers {
 	>;
 	for (const name of Object.keys(toolSchemas) as ToolName[]) {
 		const schema = toolSchemas[name];
-		const impl = IMPLS[name] as Impl<ToolName>;
+		const impl =
+			((IMPLS as Partial<Record<ToolName, Impl<ToolName>>>)[name] as Impl<ToolName> | undefined) ??
+			notYet('agent door');
 		out[name] = async (ctx, input) => {
 			if (!ctx.scopes.includes(schema.scope))
 				return err('FORBIDDEN', `${ctx.actor.kind} lacks scope "${schema.scope}" for ${name}`, {

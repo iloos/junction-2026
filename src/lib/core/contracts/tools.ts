@@ -63,6 +63,33 @@ const PlanEventInput = z
 	);
 
 export const toolSchemas = {
+	get_context: {
+		scope: 'read',
+		description:
+			'Start here: who you are, which kitchens and events you may plan for, your scopes, the scenario date and cut-off, and the open plans with their next action.',
+		input: z.object({}),
+		output: out({
+			actor: z.object({ kind: z.string(), id: z.string() }),
+			scopes: z.array(z.string()),
+			workspaceId: z.string(),
+			scenario: z.object({ now: z.string(), cutoff: z.string(), delivery: z.string() }),
+			kitchens: z.array(
+				z.object({
+					id: KitchenId,
+					name: z.string(),
+					events: z.array(z.object({ id: z.string(), title: z.string() }))
+				})
+			),
+			openPlans: z.array(
+				z.object({
+					planId: z.string(),
+					version: z.int(),
+					state: z.string(),
+					nextAction: z.string()
+				})
+			)
+		})
+	},
 	search_products: {
 		scope: 'read',
 		description: 'Search the static catalogue (no Valio call). Returns products with provenance.',

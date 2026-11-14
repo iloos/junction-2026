@@ -3,7 +3,7 @@ import { KitchenId, Measure, ProductId, Provenance } from './primitives';
 import { ResultMeta } from './tools';
 
 /**
- * Tools agreed at T0 whose handlers are being built in Track D (web) and Track E (agent door). The lead moves each
+ * Tools agreed at T0 whose handlers are being built in Track D (web). The lead moves each
  * into `toolSchemas` in the same merge that lands its handler, so the registry never lists a tool that can't run.
  * Same shape rules as `toolSchemas`: scope, our own description, input, output with optional `meta`.
  */
@@ -20,34 +20,6 @@ export const WebFact = z.object({
 export type WebFact = z.infer<typeof WebFact>;
 
 export const plannedToolSchemas = {
-	get_context: {
-		scope: 'read',
-		description:
-			'Start here: who you are, which kitchens and events you may plan for, your scopes, the scenario date and cut-off, and the open plans with their next action.',
-		input: z.object({}),
-		output: z.object({
-			actor: z.object({ kind: z.string(), id: z.string() }),
-			scopes: z.array(z.string()),
-			workspaceId: z.string(),
-			scenario: z.object({ now: z.string(), cutoff: z.string(), delivery: z.string() }),
-			kitchens: z.array(
-				z.object({
-					id: KitchenId,
-					name: z.string(),
-					events: z.array(z.object({ id: z.string(), title: z.string() }))
-				})
-			),
-			openPlans: z.array(
-				z.object({
-					planId: z.string(),
-					version: z.int(),
-					state: z.string(),
-					nextAction: z.string()
-				})
-			),
-			meta: ResultMeta.optional()
-		})
-	},
 	lookup_facts: {
 		scope: 'read',
 		description:
