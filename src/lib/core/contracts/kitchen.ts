@@ -50,7 +50,9 @@ export const Kitchen = z.object({
 		allergens: z.object({
 			freeFrom: z.array(z.string()),
 			/** What to do when a product has no allergen record. */
-			unknownCounts: z.enum(['hold', 'reject'])
+			unknownCounts: z.enum(['hold', 'reject']),
+			/** What to do when a product may contain (traces of) an excluded allergen. Default hold. */
+			traces: z.enum(['hold', 'reject']).optional()
 		}),
 		tenderListOnly: z.boolean(),
 		tenderList: z.array(ProductId).optional(),

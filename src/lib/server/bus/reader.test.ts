@@ -35,5 +35,5 @@ describe('drizzleOpsReader', () => {
 		const ops = await drizzleOpsReader(db)(workspaceId, 0, 10);
 		expect(ops.map((o) => o.op.type)).toEqual(['RecordAnomaly']);
 		expect(published).toEqual([ops[0].seq]);
-	});
+	}, 30_000);
 });

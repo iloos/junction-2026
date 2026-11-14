@@ -122,7 +122,11 @@ export const toolSchemas = {
 					planVersion: z.int(),
 					termsHash: z.string(),
 					lineIds: z.array(z.string()),
-					tier: z.enum(['act', 'propose', 'sign_off'])
+					tier: z.enum(['act', 'propose', 'sign_off']),
+					mandateVersion: z.int().optional(),
+					expiresAt: z.string().optional(),
+					requestedBy: z.object({ kind: z.string(), id: z.string() }).optional(),
+					decidedBy: z.object({ kind: z.string(), id: z.string() }).optional()
 				})
 				.nullable()
 		})
@@ -155,7 +159,10 @@ export const toolSchemas = {
 		input: PlanRef.extend({
 			idempotencyKey: z.string().min(1).max(128),
 			/** Default: every eligible line plus every line covered by a granted approval. */
-			lineIds: z.array(z.string()).optional()
+			lineIds: z
+				.array(z.string())
+				.refine((ids) => new Set(ids).size === ids.length, 'lineIds must be unique')
+				.optional()
 		}),
 		output: z.object({
 			orderId: z.string(),

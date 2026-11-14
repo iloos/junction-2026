@@ -52,7 +52,7 @@ export interface DbPortsOptions {
 export async function createDbPorts(o: DbPortsOptions = {}) {
 	const workspaceId = o.workspaceId ?? DEMO_WORKSPACE;
 	const runId = o.runId ?? DEMO_RUN;
-	const now = o.now ?? '2026-11-14T12:00:00+02:00';
+	const now = o.now ?? SCENARIO.start;
 	const db = o.db ?? ((await createFixtureDb()).db as unknown as AnyDb);
 	const overlay = o.overlay ?? new SimOverlay();
 	const base = createFixturePorts({ now, overlay, catalog: o.catalog });
