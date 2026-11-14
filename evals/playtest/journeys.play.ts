@@ -285,35 +285,75 @@ journey(
 			if (held !== inDecisions)
 				throw new Error(`${held} held lines, ${inDecisions} lines across the decisions`);
 		});
-		await r.step('approve in the dock', async () => {
+		await r.step('approve (dock, or the page when the dock defers to it)', async () => {
 			const dock = await openDock(page);
-			const here = dock.getByLabel('Decide here');
-			await here.waitFor({ timeout: 60_000 });
+			// The dock's decisions sit under "Decide", one Review button each; on the plan's own Kitchen page the dock
+			// says "decisions wait above" and the page holds them. Either is the chef's act (D13); note which.
+			const inDock = dock.getByRole('button', { name: /^Review\b|Hold to sign off/ }).first();
+			await inDock.waitFor({ timeout: 10_000 }).catch(() => undefined);
+			if (!(await inDock.isVisible().catch(() => false))) {
+				// The dock's "Decide · N decisions before …" bar may be a collapsed toggle: open it as a visitor would.
+				const bar = dock.getByText(/^Decide\b/).first();
+				if (await bar.isVisible().catch(() => false)) {
+					await bar.click({ timeout: 5_000 }).catch(() => undefined);
+					r.note('openedDecideBar', true);
+					await inDock.waitFor({ timeout: 5_000 }).catch(() => undefined);
+				}
+			}
+			const viaDock = await inDock.isVisible().catch(() => false);
+			if (!viaDock) {
+				// Hero finding when this fires: the dock is open on the plan, says the decisions "wait above", and neither
+				// the dock nor the page offers a Review. Close the dock (the page's Decide rail returns) to go on.
+				r.note('noApproveWithDockOpen', true);
+				await dock
+					.getByRole('button', { name: /Close chat|Minimi[sz]e|Hide/i })
+					.first()
+					.click({ timeout: 5_000 })
+					.catch(() => page.keyboard.press('Escape'));
+				await page.waitForTimeout(1000);
+			}
+			r.note('approvedOn', viaDock ? 'dock' : 'page');
+			const here = viaDock ? dock : page.locator('body');
+			await here
+				.getByRole('button', { name: /^Review\b|Hold to sign off/ })
+				.first()
+				.waitFor({ timeout: 30_000 });
+			let approved = 0;
 			for (let i = 0; i < 6; i++) {
-				const review = here.getByRole('button', { name: /^Review \d+ lines?/ }).first();
+				const review = here.getByRole('button', { name: /^Review\b/ }).first();
 				const hold = here.getByRole('button', { name: /Hold to sign off/ }).first();
 				if (await review.isVisible().catch(() => false)) {
 					await review.click();
-					await here.getByRole('button', { name: 'Confirm exact terms' }).click();
+					await here
+						.getByRole('button', { name: /Confirm exact terms/ })
+						.first()
+						.click();
+					approved++;
 				} else if (await hold.isVisible().catch(() => false)) {
 					const b = (await hold.boundingBox())!;
 					await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2);
 					await page.mouse.down();
 					await page.waitForTimeout(4000);
 					await page.mouse.up();
+					approved++;
 				} else break;
 				await page.waitForTimeout(1500);
 			}
+			r.note('approvedDecisions', approved);
+			if (!approved) throw new Error('no decision approved in the dock');
 		});
 		await r.step('ordered, with a receipt', async () => {
 			const dock = await openDock(page);
-			const order = dock.getByRole('button', { name: /^Order/ }).first();
+			const inDock = dock.getByRole('button', { name: /^Order/ }).first();
+			const order = (await inDock.isVisible().catch(() => false))
+				? inDock
+				: page.getByRole('button', { name: /^(Order|Place order)/ }).first();
 			await order.click({ timeout: 30_000 });
-			await dock
+			await page
 				.getByText(/Ordered\s*·\s*\d+\s+lines?/)
 				.first()
 				.waitFor({ timeout: 60_000 });
-			const t = await dock.innerText();
+			const t = await page.locator('body').innerText();
 			const rc = t.match(/rc-[a-z0-9]+/);
 			if (rc) r.j.receipts.push(rc[0]);
 		});
