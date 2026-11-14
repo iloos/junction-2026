@@ -524,7 +524,7 @@
 		"unknownQuantityLines": ["463860", "461210", "462455"]
 	},
 	"rescue": {
-		"$comment": "Hero preflight (14 Nov, cache tag hero-preflight): one Stock option with known availability per real outage, hand-checked against the catalogue (pack, lot step, origin, ingredients) and the live mock (price, availability). Money in integer cents ex VAT. Recipes and yields are team estimates. A Stock amount is live at fetch time and can be contended in the simulator.",
+		"$comment": "Hero preflight (14 Nov, cache tag hero-preflight): one Stock option with known availability per real outage, hand-checked against the catalogue (pack, lot step, origin, ingredients) and the live mock (price, availability). Money in integer cents ex VAT. Recipes and yields are team estimates. A Stock amount is live at fetch time and can be contended in the simulator. Make-in-house ingredients carry `per` (amount per kg of dish need, unit `perUnit`) and `pack` (amount per sales unit), so they resize with the need.",
 		"whole-ham-462490": {
 			"need": {
 				"gServed": 135,
@@ -673,7 +673,10 @@
 							"amount": 9999999999,
 							"logisticModel": "Stock"
 						},
-						"note": "Finnish swede 460687 is undeliverable; peeled 462931 and 462982 are Terminal"
+						"note": "Finnish swede 460687 is undeliverable; peeled 462931 and 462982 are Terminal",
+						"per": 1.0625,
+						"pack": 1,
+						"perUnit": "kg"
 					},
 					{
 						"productId": "464249",
@@ -692,7 +695,10 @@
 							"kind": "known",
 							"amount": 9999999999,
 							"logisticModel": "Stock"
-						}
+						},
+						"per": 0.09,
+						"pack": 1,
+						"perUnit": "l"
 					},
 					{
 						"productId": "460613",
@@ -711,7 +717,10 @@
 							"kind": "known",
 							"amount": 219,
 							"logisticModel": "Stock"
-						}
+						},
+						"per": 0.02,
+						"pack": 0.3,
+						"perUnit": "kg"
 					},
 					{
 						"productId": "467464",
@@ -731,7 +740,10 @@
 							"amount": 9999999999,
 							"logisticModel": "Stock"
 						},
-						"note": "case of 90; the other 84 go to the breakfast par"
+						"note": "case of 90; the other 84 go to the breakfast par",
+						"per": 1,
+						"pack": 90,
+						"perUnit": "eggs"
 					},
 					{
 						"productId": "461314",
@@ -750,7 +762,10 @@
 							"kind": "known",
 							"amount": 9999999999,
 							"logisticModel": "Stock"
-						}
+						},
+						"per": 0.035,
+						"pack": 0.7,
+						"perUnit": "kg"
 					}
 				],
 				"totalCents": 3158,
@@ -801,7 +816,10 @@
 							"kind": "known",
 							"amount": 32,
 							"logisticModel": "Stock"
-						}
+						},
+						"per": 0.75,
+						"pack": 0.5,
+						"perUnit": "kg"
 					},
 					{
 						"productId": "461378",
@@ -820,7 +838,10 @@
 							"kind": "known",
 							"amount": 462,
 							"logisticModel": "Stock"
-						}
+						},
+						"per": 0.25,
+						"pack": 1,
+						"perUnit": "l"
 					}
 				],
 				"totalCents": 5037,
