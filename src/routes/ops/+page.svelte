@@ -543,6 +543,7 @@
 
 	.status {
 		text-align: right;
+		min-width: 250px;
 	}
 	.pill {
 		display: inline-flex;
@@ -654,10 +655,11 @@
 		font-size: 15px;
 	}
 	.roomline .mono {
+		display: block;
+		white-space: nowrap;
 		font-family: var(--mono);
 		color: var(--faint);
-		margin-left: 8px;
-		font-size: 14px;
+		font-size: 13px;
 	}
 	.formmsg {
 		margin: 8px 0 0;

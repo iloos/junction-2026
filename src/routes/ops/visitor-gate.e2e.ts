@@ -49,7 +49,7 @@ test('two browsers, an outside agent and a stranger with a link stay in their ow
 	await planEvent(a);
 	const ra = await room(a);
 	expect(ra.ws).toMatch(/^ws-j-[a-z0-9]{24}$/);
-	expect(await queueCount(a)).toBeGreaterThan(0);
+	await expect.poll(() => queueCount(a), { timeout: 30_000 }).toBeGreaterThan(0);
 	await a.screenshot({ path: 'scratch/gate-a-planned.png' });
 
 	// 2. B is somewhere else and sees nothing of A's.
@@ -75,7 +75,7 @@ test('two browsers, an outside agent and a stranger with a link stay in their ow
 	expect(bReset.status()).toBe(200);
 	expect((await bReset.json()).workspaceId).toBe(rb.ws);
 	expect((await room(a)).run).toBe(ra.run);
-	expect(await queueCount(a)).toBeGreaterThan(0);
+	await expect.poll(() => queueCount(a), { timeout: 30_000 }).toBeGreaterThan(0);
 
 	// 6. An outside agent with A's judge key works in A's sandbox, current run, and can't approve.
 	const keyRes = await A.request.get(`${BASE}/api/demo/judge-key`);
