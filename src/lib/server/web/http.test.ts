@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { createContextDev } from './contextdev';
 import { createExa, shapeStructured } from './exa';
 import { createWebHttp, DEFAULT_MAX_AGE_MS, resetWebHttp } from './http';
-import { enrichmentValue, FactsContent, mentionsGtin, OutsideContent } from './lookup';
+import { FactsContent, mentionsGtin, OutsideContent } from './lookup';
 import { providerFail } from './route';
 import { createSpendLedger, spendLimits, WebLimitError } from './spend';
 
@@ -139,22 +139,10 @@ describe('F28 Exa runtime schema', () => {
 		});
 	});
 
-	it('gtinCited is a whole-number text match, and the enrichment keeps `verified` as an alias', () => {
+	it('gtinCited is a whole-number text match', () => {
 		expect(mentionsGtin('ean 6416796729140 tuote', '6416796729140')).toBe(true);
 		expect(mentionsGtin('id 96416796729140', '6416796729140')).toBe(false);
 		expect(mentionsGtin('x', undefined)).toBe(false);
-		const v = enrichmentValue({
-			value: ['maito'],
-			gtinCited: true,
-			sources: [{ url: 'https://a.fi', gtinCited: true }]
-		});
-		expect(v).toEqual({
-			value: ['maito'],
-			gtinCited: true,
-			verified: 'gtin',
-			sources: ['https://a.fi']
-		});
-		expect(enrichmentValue({ value: 1, gtinCited: false, sources: [] }).verified).toBe('name');
 	});
 });
 
@@ -196,10 +184,10 @@ describe('spend caps', () => {
 	});
 
 	it('limits come from the env with safe defaults', () => {
-		expect(spendLimits({})).toEqual({ perKey: 40, global: 600 });
+		expect(spendLimits({})).toEqual({ perKey: 40, global: 1000 });
 		expect(spendLimits({ WEB_CAP_PER_KEY: '5', WEB_CAP_GLOBAL: 'x' })).toEqual({
 			perKey: 5,
-			global: 600
+			global: 1000
 		});
 	});
 
@@ -231,7 +219,9 @@ describe('Context.dev 429', { timeout: 15_000 }, () => {
 		const res = providerFail(again);
 		expect(res.status).toBe(429);
 		expect(res.headers.get('retry-after')).toBe(String(again.retryAfterS));
-		expect(await res.json()).toMatchObject({ error: { code: 'RATE_LIMITED', retryable: true } });
+		expect(await res.json()).toMatchObject({
+			error: { code: 'PROVIDER_UNAVAILABLE', sub: 'rate_limit', retryable: true }
+		});
 	});
 
 	it('serves an older cached answer, marked stale, while rate-limited', async () => {

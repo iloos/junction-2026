@@ -6,8 +6,8 @@
  *   ingredient mapped back to catalogue products the kitchen can order.
  */
 import { z } from 'zod';
-import type { Actor, PendingOp, Product } from '$lib/core/contracts';
-import type { Catalog, Store } from '$lib/core/ports';
+import type { Product } from '$lib/core/contracts';
+import type { Catalog } from '$lib/core/ports';
 import type { FactSearch, Grounding, ExaResult } from './exa';
 import type { Findings } from './findings';
 
@@ -35,32 +35,10 @@ export interface Suggestion {
 	sources: Source[];
 }
 
-/**
- * The `web.<field>` enrichment value. `verified` is a compatibility alias of `gtinCited` for readers
- * written before the rename ('gtin' = gtinCited); nothing here is a verified fact (D6).
- */
-export interface WebEnrichmentValue {
-	value: unknown;
-	gtinCited: boolean;
-	verified: 'gtin' | 'name';
-	sources: string[];
-}
-
-export function enrichmentValue(
-	s: Pick<Suggestion, 'value' | 'gtinCited' | 'sources'>
-): WebEnrichmentValue {
-	return {
-		value: s.value,
-		gtinCited: s.gtinCited,
-		verified: s.gtinCited ? 'gtin' : 'name',
-		sources: s.sources.map((x) => x.url)
-	};
-}
-
 export interface FactsResult {
 	key: string;
-	productId?: string;
-	productName?: string;
+	productId: string;
+	productName: string;
 	gtin?: string;
 	query: string;
 	/** What the catalogue says already, so the UI can show "catalogue: unknown → web suggests …". */
@@ -72,8 +50,6 @@ export interface FactsResult {
 	cached: boolean;
 	latencyMs: number;
 	costUsd?: number;
-	/** Seqs of the RecordEnrichment ops written, when a product and a store were given. */
-	recorded: number[];
 	note: string;
 }
 
@@ -161,31 +137,26 @@ export interface LookupDeps {
 	exa: FactSearch;
 	catalog: Catalog;
 	findings: Findings;
-	/** With a store and scope, suggestions are written as RecordEnrichment ops in the current run. */
-	store?: Store;
 	/** The caller's workspace: its findings are filed there, not shown to other workspaces. */
 	workspaceId?: string;
-	scope?: { workspaceId: string; runId: string };
-	actor?: Actor;
-	via?: string;
 }
 
+/**
+ * Web suggestions for one catalogue product's facts. Read-only: it records nothing on the plan or the
+ * product (catalogue facts win, D6); the finding is filed for the caller's workspace.
+ */
+
 export async function lookupFacts(
-	input: { productId?: string; query?: string; question?: string },
+	input: { productId: string; question?: string },
 	d: LookupDeps
 ): Promise<FactsResult> {
-	const product = input.productId
-		? (await d.catalog.get([input.productId])).get(input.productId)
-		: undefined;
-	if (input.productId && !product) throw new Error(`unknown product ${input.productId}`);
-	const name = product?.nameFi ?? input.query ?? '';
-	if (!name.trim()) throw new Error('give a productId or a query');
-	const gtin = product?.gtin;
+	const product = (await d.catalog.get([input.productId])).get(input.productId);
+	if (!product) throw new Error(`unknown product ${input.productId}`);
+	const name = product.nameFi;
+	const gtin = product.gtin;
 	const question = input.question?.trim().slice(0, 200);
 	const query = `${name}${gtin ? ` ${gtin}` : ''} ${question || 'ainesosat allergeenit'}`;
-	const key =
-		(product ? `facts:${product.productId}` : `facts:q:${slug(name)}`) +
-		(question ? `:${slug(question)}` : '');
+	const key = `facts:${product.productId}${question ? `:${slug(question)}` : ''}`;
 
 	const r = await d.exa.structured({
 		key,
@@ -220,50 +191,13 @@ export async function lookupFacts(
 		});
 	}
 
-	let recorded: number[] = [];
-	if (product && d.store && d.scope && suggestions.length) {
-		const actor = d.actor ?? { kind: 'system', id: 'web:exa' };
-		const scope = d.scope;
-		const res = await d.store.transact(scope.workspaceId, async (_tx, state) => {
-			const have = state.enrichments[product.productId] ?? {};
-			const ops: PendingOp[] = suggestions
-				.filter((s) => {
-					const prev = have[`web.${s.field}`];
-					return (
-						!prev ||
-						JSON.stringify((prev.value as { value?: unknown })?.value) !== JSON.stringify(s.value)
-					);
-				})
-				.map((s) => ({
-					workspaceId: scope.workspaceId,
-					runId: state.runId,
-					actor,
-					via: d.via ?? 'web:exa',
-					op: {
-						type: 'RecordEnrichment',
-						productId: product.productId,
-						field: `web.${s.field}`,
-						value: enrichmentValue(s),
-						provenance: {
-							source: 'web',
-							ref: s.sources[0].url,
-							at: r.at,
-							note: `Exa search (outputSchema); suggestion, not a catalogue fact; ${s.gtinCited ? 'a cited page mentions this GTIN' : 'matched by name only'}`
-						}
-					}
-				}));
-			return { ops, value: null };
-		});
-		if (res.ok) recorded = res.value.ops.map((e) => e.seq);
-	}
-
 	const out: FactsResult = {
 		key,
-		productId: product?.productId,
-		productName: product?.nameFi,
+		productId: product.productId,
+		productName: product.nameFi,
 		gtin,
 		query,
-		catalogue: product ? catalogueFacts(product) : {},
+		catalogue: catalogueFacts(product),
 		suggestions,
 		results: r.results,
 		mode: d.exa.mode,
@@ -271,7 +205,6 @@ export async function lookupFacts(
 		cached: r.cached,
 		latencyMs: r.latencyMs,
 		costUsd: r.costUsd,
-		recorded,
 		note: suggestions.length
 			? 'Suggestions from the web with their sources. A source supports a field, never safety or supply; each stays a suggestion for a person to review, and catalogue facts are never overwritten.'
 			: d.exa.mode === 'fixture'
@@ -285,7 +218,6 @@ export async function lookupFacts(
 		at: new Date().toISOString(),
 		title: `Facts for ${name}`,
 		sources: [...new Set(suggestions.flatMap((s) => s.sources.map((x) => x.url)))],
-		ops: recorded.length && d.scope ? [{ runId: d.scope.runId, seqs: recorded }] : [],
 		data: { suggestions, catalogue: out.catalogue, query }
 	});
 	return out;

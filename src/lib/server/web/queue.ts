@@ -3,8 +3,7 @@
  * 202, removed only when the read and ingest succeed. A crash, a redeploy or a failed read leaves the
  * item here, and the next webhook (`change.detected` or the monitor's `run.completed`) picks it up.
  */
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname } from 'node:path';
+import { persistedMap } from './persist';
 
 export interface WorkItem {
 	/** `list` (re-read the recall list) or `notice:<url>`. */
@@ -21,22 +20,9 @@ export interface WorkItem {
 /** After this many failed attempts an item stays visible but is no longer retried. */
 export const MAX_ATTEMPTS = 6;
 
-const g = globalThis as typeof globalThis & { __webQueue?: Map<string, WorkItem> };
-
 export function createWorkQueue(file?: string, fresh = false) {
-	const map: Map<string, WorkItem> = fresh ? new Map() : (g.__webQueue ??= new Map());
-	if (file && existsSync(file) && map.size === 0) {
-		try {
-			for (const w of JSON.parse(readFileSync(file, 'utf8')) as WorkItem[]) map.set(w.id, w);
-		} catch {
-			// A corrupt queue starts empty; the next run.completed re-reads the list anyway.
-		}
-	}
-	const flush = () => {
-		if (!file) return;
-		mkdirSync(dirname(file), { recursive: true });
-		writeFileSync(file, JSON.stringify([...map.values()], null, 1));
-	};
+	// A lost queue starts empty; the next run.completed re-reads the list anyway.
+	const { map, flush } = persistedMap<WorkItem>('__webQueue', file, (w) => w.id, fresh);
 	return {
 		/** Adds work (idempotent per id: a second change for the same list or notice is one item). */
 		add(w: Omit<WorkItem, 'id' | 'attempts' | 'at'> & { at?: string }) {

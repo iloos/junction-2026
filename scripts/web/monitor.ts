@@ -102,5 +102,7 @@ if (cmd === 'create') {
 	});
 	console.log(res.status, await res.text());
 } else {
-	console.log('usage: monitor.ts create <appBaseUrl> [everyMinutes] | list | ping <appBaseUrl>');
+	console.log(
+		'usage: monitor.ts create <appBaseUrl> [everyMinutes] | list | ping <appBaseUrl> | cadence <monitorId> <everyMinutes>'
+	);
 }

@@ -22,7 +22,7 @@ import type { FactSearch } from './exa';
 import type { Findings } from './findings';
 import type { RecallFindingData } from './ingest';
 import { findOutside, lookupFacts } from './lookup';
-import { WebLimitError } from './spend';
+import { webError } from './spend';
 
 type In<N extends WebToolName> = ToolInput<N>;
 type Out<N extends WebToolName> = ToolOutput<N>;
@@ -36,18 +36,6 @@ export interface WebToolDeps {
 
 /** Notices with no match listed after the matching ones, at most this many. */
 export const MAX_UNMATCHED = 10;
-
-/** A cap or a provider rate limit as a domain error the caller can wait out. */
-export function webError(e: unknown): { ok: false; error: DomainError } {
-	if (e instanceof WebLimitError)
-		return err('PROVIDER_UNAVAILABLE', e.message, {
-			sub: e.reason === 'rate-limit' ? 'rate_limit' : 'daily_cap',
-			detail: { api: e.api, retryAfter: e.retryAfterS }
-		});
-	const msg = e instanceof Error ? e.message : String(e);
-	if (/^unknown product/.test(msg)) return err('NOT_FOUND', msg);
-	return err('PROVIDER_UNAVAILABLE', msg);
-}
 
 function checked<N extends WebToolName>(name: N, value: Out<N>): Result<Out<N>> {
 	const p = toolSchemas[name].output.safeParse(value);

@@ -6,9 +6,9 @@
  * spend guard first; after a 429 the API cools down and a stale cached answer is served when one exists.
  */
 import { createHash } from 'node:crypto';
-import { mkdirSync, readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { logTrace, noTrace, type Trace } from '../adapters/llm/trace';
+import { readJson, writeJson } from './persist';
 import { WebLimitError, type SpendGuard } from './spend';
 
 export type WebApi = 'context.dev' | 'exa';
@@ -92,7 +92,6 @@ export class WebError extends Error {
 export function createWebHttp(o: WebHttpOptions) {
 	const doFetch = o.fetch ?? fetch;
 	const trace = o.trace ?? noTrace;
-	if (o.cacheDir) mkdirSync(o.cacheDir, { recursive: true });
 
 	const keyOf = (method: string, path: string, body: unknown) =>
 		createHash('sha256')
@@ -103,20 +102,14 @@ export function createWebHttp(o: WebHttpOptions) {
 	function readCache(key: string): Entry | undefined {
 		const hit = mem.get(key);
 		if (hit || !o.cacheDir) return hit;
-		const f = join(o.cacheDir, `${key}.json`);
-		if (!existsSync(f)) return undefined;
-		try {
-			const e = JSON.parse(readFileSync(f, 'utf8')) as Entry;
-			mem.set(key, e);
-			return e;
-		} catch {
-			return undefined;
-		}
+		const e = readJson<Entry | undefined>(join(o.cacheDir, `${key}.json`), undefined);
+		if (e) mem.set(key, e);
+		return e;
 	}
 
 	function writeCache(key: string, e: Entry) {
 		mem.set(key, e);
-		if (o.cacheDir) writeFileSync(join(o.cacheDir, `${key}.json`), JSON.stringify(e));
+		if (o.cacheDir) writeJson(join(o.cacheDir, `${key}.json`), e);
 	}
 
 	return async function call<T>(

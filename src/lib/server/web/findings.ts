@@ -3,8 +3,7 @@
  * `facts:<productId>`, `outside:<slug>`). The op log carries the same findings as ops; this file is what
  * a reload reads until the store has an enrichments/anomalies projection of its own.
  */
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname } from 'node:path';
+import { persistedMap } from './persist';
 
 export interface Finding {
 	id: string;
@@ -24,23 +23,10 @@ export interface Finding {
 	data: unknown;
 }
 
-const g = globalThis as typeof globalThis & { __webFindings?: Map<string, Finding> };
-
 /** `fresh` gives a private map (tests); otherwise one map per process, shared by every route. */
 export function createFindings(file?: string, fresh = false) {
-	const map: Map<string, Finding> = fresh ? new Map() : (g.__webFindings ??= new Map());
-	if (file && existsSync(file) && map.size === 0) {
-		try {
-			for (const f of JSON.parse(readFileSync(file, 'utf8')) as Finding[]) map.set(f.id, f);
-		} catch {
-			// A corrupt file starts empty; the op log still has every finding.
-		}
-	}
-	const flush = () => {
-		if (!file) return;
-		mkdirSync(dirname(file), { recursive: true });
-		writeFileSync(file, JSON.stringify([...map.values()], null, 1));
-	};
+	// A lost file starts empty; the op log still has every recorded finding.
+	const { map, flush } = persistedMap<Finding>('__webFindings', file, (f) => f.id, fresh);
 	return {
 		get: (id: string) => map.get(id),
 		/** Newest first; with `workspaceId`, only public findings and that workspace's own. */

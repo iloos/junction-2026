@@ -4,8 +4,7 @@
  * applying it is per target, so a new run or another workspace gets it from the stored read without a
  * second paid call, and an amended notice is an update only for targets that saw the earlier revision.
  */
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname } from 'node:path';
+import { persistedMap } from './persist';
 
 export interface Application {
 	key: string;
@@ -29,26 +28,9 @@ export const MAX_APPLY_ATTEMPTS = 5;
 type Target = { workspaceId: string; runId: string };
 const keyOf = (t: Target, findingId: string) => `${t.workspaceId}/${t.runId}/${findingId}`;
 
-const g = globalThis as typeof globalThis & { __webApplications?: Map<string, Application> };
-
 export function createApplications(file?: string, fresh = false) {
-	const map: Map<string, Application> = fresh ? new Map() : (g.__webApplications ??= new Map());
-	if (file && existsSync(file) && map.size === 0) {
-		try {
-			for (const a of JSON.parse(readFileSync(file, 'utf8')) as Application[]) map.set(a.key, a);
-		} catch {
-			// A corrupt ledger starts empty: re-applying is idempotent per run (anomaly ids).
-		}
-	}
-	const flush = () => {
-		if (!file) return;
-		try {
-			mkdirSync(dirname(file), { recursive: true });
-			writeFileSync(file, JSON.stringify([...map.values()]));
-		} catch {
-			// Memory is enough for this process.
-		}
-	};
+	// A lost ledger starts empty: re-applying is idempotent per run (anomaly ids).
+	const { map, flush } = persistedMap<Application>('__webApplications', file, (a) => a.key, fresh);
 	return {
 		get: (t: Target, findingId: string) => map.get(keyOf(t, findingId)),
 		applied(t: Target, findingId: string, revision: string, seqs: number[], at: string) {

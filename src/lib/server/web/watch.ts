@@ -13,7 +13,7 @@ import type { Findings } from './findings';
 import { createApplications, MAX_APPLY_ATTEMPTS } from './applications';
 import { ingestRecall, type IngestDeps, type IngestResult, type RecallFindingData } from './ingest';
 import type { WorkQueue } from './queue';
-import { noticeIdentity, noticeKey, RECALL_LIST_URL } from './recall';
+import { noticeIdentity, noticeKey } from './recall';
 
 /** At most this many notices are read per pass (credits, and the stage). */
 export const MAX_NEW_PER_CHANGE = 3;
@@ -204,12 +204,6 @@ export async function applyKnown(d: DrainDeps | IngestDeps, skip = new Set<strin
 
 const errorText = (e: unknown) => String((e as Error)?.message ?? e);
 
-/** `change.detected`: queue the change, then work the queue. */
-export async function handleChange(body: ChangeDetected, d: DrainDeps): Promise<DrainResult> {
-	enqueueChange(body, d.queue);
-	return drain(d);
-}
-
 /**
  * Plays a recorded real notice into the current run, labelled "Replay of the <date> recall". With
  * `drillGtin` the notice is re-targeted at a catalogue product so a hold can be shown on stage;
@@ -235,5 +229,3 @@ export async function replayRecorded(
 	};
 	return ingestRecall(notice, { ...deps, via: o.drillGtin ? 'web:replay-drill' : 'web:replay' });
 }
-
-export { RECALL_LIST_URL };
