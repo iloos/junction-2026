@@ -34,7 +34,7 @@ export async function runGoal(o: {
 }): Promise<AgentRun> {
 	const p = o.principal;
 	const ctx = principalContext(p);
-	const context = await bootstrapContext(o.source, p);
+	const context = await bootstrapContext(o.source, p, o.goal);
 	const intent = resolveIntent(o.goal, context);
 	const intro = { intent, initiatedBy: p.initiatedBy, agentRun: p.agentRunId };
 	const left = Date.parse(p.expiresAt) - Date.now();

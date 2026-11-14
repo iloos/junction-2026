@@ -1,6 +1,6 @@
 import { SCOPES_BY_ACTOR, type Actor } from '$lib/core/contracts';
 import type { CallContext } from '$lib/core/ports';
-import { AGENT_RUN_ACTORS, type RunPrincipal } from './types';
+import type { RunPrincipal } from './types';
 
 /** The routine agent's own identity; it never holds more than this role, whoever starts it. */
 export const SERVICE_ACTOR: Actor = { kind: 'kitchen_agent', id: 'routine-agent' };
@@ -11,8 +11,15 @@ export const RUN_TTL_MS = 5 * 60_000;
 /** The key-less presenter button on /ops (dev, or DEMO_RESET_OPEN=1): a system initiator, labelled. */
 export const PRESENTER: Actor = { kind: 'system', id: 'ops-presenter' };
 
-export function mayStartAgent(actor: Actor): boolean {
-	return AGENT_RUN_ACTORS.includes(actor.kind);
+/**
+ * Starting a run delegates purchasing work, so it takes the `agent:run` scope. A call context is checked
+ * by the scopes its credential holds (a narrowed chef key without `agent:run` may not start runs); a bare
+ * actor falls back to its role's scopes.
+ */
+export function mayStartAgent(who: Actor | Pick<CallContext, 'scopes'>): boolean {
+	const scopes: readonly string[] =
+		'scopes' in who ? who.scopes : (SCOPES_BY_ACTOR[who.kind] as readonly string[]);
+	return scopes.includes('agent:run');
 }
 
 /** Initiator ∩ service actor. Never the union: starting the agent cannot add a right the starter lacks. */
@@ -33,7 +40,7 @@ export function buildRunPrincipal(o: {
 	/** The presenter button is allowed by its own gate (dev or DEMO_RESET_OPEN); keys need `agent:run`. */
 	presenter?: boolean;
 }): RunPrincipal | null {
-	if (!o.presenter && !mayStartAgent(o.initiator.actor)) return null;
+	if (!o.presenter && !mayStartAgent(o.initiator)) return null;
 	return {
 		initiatedBy: o.initiator.actor,
 		serviceActor: SERVICE_ACTOR,
@@ -47,8 +54,9 @@ export function buildRunPrincipal(o: {
 }
 
 /**
- * The context every tool call of the run uses. Ops record `actor` = the service actor and `via` names the
- * run and the initiator, so the op log keeps both until the envelope has an `initiatedBy` field.
+ * The context every tool call of the run uses. Ops record `actor` = the service actor; `initiatedBy` names
+ * who started the run (services copy it onto each op envelope) and `via` repeats both for readers of the
+ * op log that only show `via`. `kitchenIds` carries the run's kitchen grant to the services.
  */
 export function principalContext(p: RunPrincipal): CallContext {
 	return {
@@ -56,6 +64,8 @@ export function principalContext(p: RunPrincipal): CallContext {
 		runId: p.runId,
 		actor: p.serviceActor,
 		scopes: p.scopes,
-		via: `agent:${p.agentRunId} by ${p.initiatedBy.kind}:${p.initiatedBy.id}`
+		via: `agent:${p.agentRunId} by ${p.initiatedBy.kind}:${p.initiatedBy.id}`,
+		initiatedBy: p.initiatedBy,
+		...(p.kitchenIds ? { kitchenIds: p.kitchenIds } : {})
 	};
 }

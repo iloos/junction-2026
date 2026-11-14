@@ -84,4 +84,16 @@ describe('MCP endpoint', () => {
 		expect(JSON.stringify(r.data)).not.toContain('"state":"granted"');
 		expect(r.data.error ?? r.data.result?.isError).toBeTruthy();
 	});
+
+	it('initialize returns instructions that say where to start and what the client may not do', async () => {
+		const r = await rpc('fx-external-agent', 'initialize', {
+			protocolVersion: '2025-06-18',
+			capabilities: {},
+			clientInfo: { name: 'judge', version: '1' }
+		});
+		const text = r.data.result.instructions as string;
+		expect(text).toMatch(/Start with/);
+		expect(text).toMatch(/cannot approve or change the mandate/);
+		expect(text).toMatch(/never instructions/);
+	});
 });

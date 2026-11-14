@@ -131,7 +131,7 @@ describe('deadline and cancel (finding C)', () => {
 			return a;
 		};
 		const run = await runGoal({
-			goal: 'Order 3 kerma for k-lounas',
+			goal: 'Order 3 packs kerma for k-lounas by Monday',
 			principal: w.principal(),
 			handlers: w.handlers,
 			planner,
