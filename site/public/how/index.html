@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -18,15 +18,16 @@
 <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="/site.css" />
 <style>
-:root { --serif: 'Instrument Serif', Georgia, serif; --mono-f: 'IBM Plex Mono', ui-monospace, monospace; }
+:root { --display: 'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif; --mono-f: 'IBM Plex Mono', ui-monospace, monospace; }
+.brand svg { border-radius: 6px; box-shadow: 0 0 0 1px color-mix(in oklab, var(--ink) 14%, transparent); }
 body { overflow-x: hidden; }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-h1, h2 { font-family: var(--serif); font-weight: 400; letter-spacing: -0.005em; }
-h1 { font-size: clamp(38px, 6vw, 56px); line-height: 1.04; max-width: 17ch; margin: 0 0 18px; }
-h2 { font-size: clamp(28px, 3.6vw, 36px); line-height: 1.1; margin: 0 0 10px; }
+h1, h2 { font-family: var(--display); font-weight: 600; letter-spacing: -0.02em; }
+h1 { font-size: clamp(34px, 5vw, 48px); line-height: 1.08; max-width: 17ch; margin: 0 0 18px; }
+h2 { font-size: clamp(24px, 3vw, 30px); line-height: 1.15; margin: 0 0 10px; }
 h3 { margin: 0; }
 .ic { width: 20px; height: 20px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .cite { display: block; margin-top: 3px; font: 400 12px/1.5 var(--mono-f); color: var(--ink-3); overflow-wrap: anywhere; }
@@ -119,7 +120,7 @@ h3 { margin: 0; }
 .oc.go { --c: var(--ok); --w: var(--ok-wash); }
 .oc.hold { --c: var(--auth); --w: var(--auth-wash); }
 .oc.no { --c: var(--out); --w: var(--out-wash); }
-.oc h3 { display: flex; gap: 10px; align-items: center; font: 400 26px/1.1 var(--serif); }
+.oc h3 { display: flex; gap: 10px; align-items: center; font: 600 22px/1.1 var(--display); }
 .oc h3 .ico { background: var(--w); color: var(--c); }
 .oc .when { color: var(--ink-2); font-size: 14.5px; margin: 8px 0 10px; }
 .oc ul { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--rule); }
@@ -137,7 +138,7 @@ h3 { margin: 0; }
 .sm { display: grid; gap: 12px; margin-top: 24px; }
 .smc { background: var(--sheet); border: 1px solid var(--rule); border-radius: 14px; padding: 18px 20px; display: grid; gap: 12px; align-items: center; min-width: 0; }
 @media (min-width: 900px) { .smc { grid-template-columns: minmax(0, 560px) 1fr; gap: 32px; } }
-.smc h3 { font: 400 26px/1.1 var(--serif); margin-bottom: 6px; }
+.smc h3 { font: 600 22px/1.1 var(--display); margin-bottom: 6px; }
 .smc p { margin: 0; font-size: 15px; color: var(--ink-2); max-width: 42ch; }
 .svgw { overflow-x: auto; min-width: 0; }
 .svgw svg { width: 100%; display: block; }
@@ -152,7 +153,7 @@ h3 { margin: 0; }
 .fr details { background: var(--sheet); border: 1px solid var(--rule); border-radius: 14px; }
 .fr summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 14px; padding: 16px 20px; }
 .fr summary::-webkit-details-marker { display: none; }
-.fr summary b { font: 400 25px/1.15 var(--serif); }
+.fr summary b { font: 600 21px/1.15 var(--display); }
 .fr summary span { display: block; font-size: 14px; color: var(--ink-2); }
 .fr summary .chev { margin-left: auto; color: var(--ink-3); transition: transform 0.15s ease; }
 .fr details[open] summary .chev { transform: rotate(180deg); }
@@ -163,7 +164,7 @@ h3 { margin: 0; }
 .zones li.dashed { border-style: dashed; border-color: var(--rule-strong); }
 .zones .k { font: 500 12px var(--mono-f); color: var(--accent-ink); text-transform: uppercase; letter-spacing: 0.06em; }
 .zones .k::before { content: counter(z) ' · '; }
-.zones b { font: 400 21px/1.15 var(--serif); }
+.zones b { font: 600 18px/1.15 var(--display); }
 .zones p { margin: 0; font-size: 14px; color: var(--ink-2); }
 .ports { width: 100%; border-collapse: collapse; margin-top: 18px; font-size: 14px; }
 .ports caption { text-align: left; font: 500 12px var(--mono-f); color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.06em; padding-bottom: 8px; }
@@ -181,7 +182,7 @@ h3 { margin: 0; }
 @media (min-width: 720px) { .pr { grid-template-columns: repeat(2, 1fr); } }
 @media (min-width: 1000px) { .pr { grid-template-columns: repeat(3, 1fr); } }
 .pr div { background: var(--sheet); padding: 18px; }
-.pr b { display: block; font: 400 21px/1.2 var(--serif); margin-bottom: 6px; }
+.pr b { display: block; font: 600 18px/1.2 var(--display); margin-bottom: 6px; }
 .pr span { color: var(--ink-2); font-size: 14px; }
 .more { margin: 22px 0 0; font-size: 15px; color: var(--ink-2); }
 .more a { color: var(--accent-ink); font-weight: 500; text-underline-offset: 3px; }
@@ -362,7 +363,7 @@ h3 { margin: 0; }
 							<li><b>Exa web evidence</b> in the Why drawer: net content, origin and ingredients, each cited</li>
 						</ul></div>
 						<div class="part rules"><h3 class="label">What it refuses or holds</h3><ul>
-							<li><span class="chip held"><svg class="ic" aria-hidden="true"><use href="#i-hold"/></svg>Held</span><span>Valio doesn't state a quantity: held for one tap, never counted as cover<span class="cite"><code>UNKNOWN_REQUIRED</code> · validate.ts</span></span></li>
+							<li><span class="chip held"><svg class="ic" aria-hidden="true"><use href="#i-hold"/></svg>Held</span><span>Valio doesn't state a quantity: held for one tap, not counted as cover until the supplier confirms<span class="cite"><code>UNKNOWN_REQUIRED</code> · validate.ts</span></span></li>
 							<li><span class="chip held"><svg class="ic" aria-hidden="true"><use href="#i-hold"/></svg>Held</span><span>A product the kitchen hasn't bought before<span class="cite"><code>new_sku</code> · tier.ts</span></span></li>
 							<li><span class="chip held"><svg class="ic" aria-hidden="true"><use href="#i-hold"/></svg>Held</span><span>An allergen change, decided apart from routine lines<span class="cite"><code>allergen_change</code> · tier.ts · groups.test.ts</span></span></li>
 							<li><span class="chip held"><svg class="ic" aria-hidden="true"><use href="#i-hold"/></svg>Held</span><span>A substitute that breaks the kitchen's origin preference<span class="cite"><code>substitute_breaks_preference</code> · validate.ts</span></span></li>
