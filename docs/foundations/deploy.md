@@ -47,6 +47,7 @@ Env changes go through `aiven_service_update` (`user_config.application.environm
 - **Env updates replace the whole list.** `aiven_service_update` with `environment_variables` drops anything not re-sent, including `PROJECT_CA_CERT` (base64 of `certs/aiven-ca.pem`) and the console-added Gemini key. Prefer adding a single variable in the console.
 - **Presenter actions need a key on prod.** The key-less /ops buttons (run, stop, reset) appear only in dev or with `DEMO_RESET_OPEN=1`, which stays unset on prod (one rule: `server/demo/presenter.ts`).
   - `POST /api/demo/reset` (chef or approver key): starts a fresh `ws-demo` run.
+  - `POST /api/demo/sandbox/reset` (no key, 20 s cooldown, 429 with `retryInMs` meanwhile): starts the judges' sandbox `ws-judges` over; it can never reach `ws-demo`. Server function: `resetSandbox()` in `server/demo/sandbox.ts`.
   - `POST /api/agent/run` (**chef key only**, needs `agent:run`): runs the routine agent; NDJSON traces, 409 while a run is going. Its ops name the starter.
   - `POST /api/agent/run/<id>/cancel` (chef key only): stops that run; 202 `{ id, cancelled, run }` once the loop has stopped, 404 if it isn't the run in progress.
 - **Web routes** (`/api/web/*`):
