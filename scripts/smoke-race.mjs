@@ -1,7 +1,8 @@
 // Post-deploy concurrency smoke: races commits through the deployed REST API, so it proves the real container on the
 // real Postgres, not just the code (pnpm test:pg proves the code against DATABASE_URL).
 //   SMOKE_KEY=<kitchen_agent key> node scripts/smoke-race.mjs https://<app>   (default http://localhost:5173, key fx-kitchen-agent)
-// Use a key bound to a throwaway workspace, never the stage run: each run places two small in-mandate orders
+// The deploy smoke (scripts/deploy/smoke.sh) runs this when SMOKE_KEY is set, after resetting ws-smoke: the key is an
+// MCP_KEYS entry `smoke:kitchen_agent:<key>:ws-smoke`, never the stage run. Each run places two small in-mandate orders
 // (2 × 1 l lactose-free milk, a k-hotel usual product, so the act tier commits without a human).
 //  1. one plan, one idempotency key, 4 commits at once → every answer is the same receipt;
 //  2. one plan, 3 different keys at once → exactly one receipt, the others refused, every line committed once.
