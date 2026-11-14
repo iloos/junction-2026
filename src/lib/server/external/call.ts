@@ -13,7 +13,7 @@ import { logTrace, noTrace, type Trace, type TraceStep } from '../adapters/llm/t
 import { breakerFor, type Breaker } from './breaker';
 import { LimitError, type SpendGuard } from './ledger';
 import { readJson, writeJson } from './persist';
-import { currentScope } from './scope';
+import { currentScope, type ExternalScope } from './scope';
 
 export type ExternalApi = ExternalCallTrace['api'];
 
@@ -35,8 +35,8 @@ export interface ExternalCallOptions {
 	cache?: boolean;
 	/** Directory for the response cache; memory only when absent. */
 	cacheDir?: string;
-	/** Charged before every network call. */
-	guard?: SpendGuard;
+	/** Charged before every network call; a function picks the guard for the caller's scope. */
+	guard?: SpendGuard | ((scope: ExternalScope | undefined) => SpendGuard | undefined);
 	/** Where traces go. Default: the caller's scope (`withExternalScope`), else nowhere. */
 	trace?: Trace;
 	step?: TraceStep;
@@ -159,7 +159,7 @@ export function createExternalCall(o: ExternalCallOptions) {
 			throw new LimitError('rate-limit', name, wait);
 		}
 		try {
-			o.guard?.charge(name);
+			(typeof o.guard === 'function' ? o.guard(scope) : o.guard)?.charge(name);
 		} catch (e) {
 			breaker.success(); // nothing was sent: release a half-open probe slot
 			throw e;
