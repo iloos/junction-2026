@@ -142,6 +142,8 @@ export interface OrderView {
 		deliveryDays?: string[];
 	};
 	deliveryNote: string | null;
+	/** The kitchen's next receiving day after an off-day date, offered as a one-tap change. */
+	nextDeliveryDay?: string | null;
 	/** The procurement task this order belongs to (null id: no task store yet) and the plan in the Kitchen. */
 	task: TaskLink;
 }

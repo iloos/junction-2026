@@ -13,6 +13,7 @@ import type {
 	ToolOutput
 } from '$lib/core/contracts';
 import { sizeDirect } from '$lib/core/demand/sizing';
+import { addDays } from '$lib/core/scenario';
 import { day, money } from '$lib/ui/format';
 import { canonicalJson, sha256Hex } from '$lib/core/hash';
 import type { CallContext, Clock, Llm, TaskStore, ToolHandlers } from '$lib/core/ports';
@@ -111,6 +112,15 @@ export interface RequestDeps {
 
 /** The request's one "now": the override, else the workspace's store clock. */
 const nowOf = (d: Pick<RequestDeps, 'now' | 'clock'>): Date | undefined => d.now ?? d.clock?.now();
+
+/** The first day after `date` the kitchen takes deliveries on, within two weeks. */
+export function nextReceivingDay(date: string, days: readonly string[]): string | null {
+	for (let k = 1; k <= 14; k++) {
+		const d = addDays(date, k);
+		if (days.includes(DAY_KEYS[weekdayOf(d)])) return d;
+	}
+	return null;
+}
 
 const cap = (s: string) => s[0].toUpperCase() + s.slice(1);
 
@@ -683,6 +693,9 @@ export async function runRequest(text: string, d: RequestDeps): Promise<RequestR
 			deliveryNote: d.kitchen.deliveryDays.includes(dow)
 				? null
 				: `${d.kitchen.name} takes deliveries on ${d.kitchen.deliveryDays.map(cap).join(', ')}; ${day(parsed.deliverBy)} is not one of them`,
+			nextDeliveryDay: d.kitchen.deliveryDays.includes(dow)
+				? null
+				: nextReceivingDay(parsed.deliverBy, d.kitchen.deliveryDays),
 			task: await taskForPlan({
 				tasks: d.tasks,
 				ctx: d.ctx,
@@ -717,7 +730,7 @@ export async function runRequest(text: string, d: RequestDeps): Promise<RequestR
 			parsed: parsedView,
 			lookup,
 			order,
-			message: 'This order is now in your Kitchen plan.'
+			message: 'This plan is now in your Kitchen; nothing is placed until it is committed.'
 		};
 	} catch (e) {
 		const message = e instanceof Error ? e.message : String(e);
