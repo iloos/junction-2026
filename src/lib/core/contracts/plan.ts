@@ -100,12 +100,20 @@ export type ApprovalState = z.infer<typeof ApprovalState>;
  * Kitchen-wide constraints still apply on top.
  */
 export const NeedRequirements = z.object({
-	/** Free-from claims the product must carry (Product.freeFrom, e.g. LACTOSE, GLUTEN). */
+	/**
+	 * Free-from requirements (LACTOSE, GLUTEN, MILK): met by the product's free-from claim, or by a declared allergen
+	 * record without the matching allergen (iceberg lettuce is lactose-free without saying so).
+	 */
 	freeFrom: z.array(z.string()).optional(),
 	/** Country of origin the product must have (ISO 3166-1 alpha-2, lower case as in the catalogue). */
 	origin: z.string().length(2).optional(),
 	/** Labels the product must carry (Product.labels, e.g. organic). */
-	labels: z.array(z.string()).optional()
+	labels: z.array(z.string()).optional(),
+	/**
+	 * Diet the product must suit (a dish's VEG / VE code, a request's "vegetarian"): no meat or fish, and for vegan no
+	 * milk or egg either. From the product's diet record, else its allergens, category and name. Never relaxed.
+	 */
+	diet: z.array(z.enum(['vegetarian', 'vegan'])).optional()
 });
 export type NeedRequirements = z.infer<typeof NeedRequirements>;
 
