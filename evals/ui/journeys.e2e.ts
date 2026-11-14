@@ -405,3 +405,40 @@ test('the kitchen calendar feed', async ({ page }) => {
 	const anon = await page.request.get(url.replace(/token=[^&]+/, 'token=forged'));
 	expect.soft(anon.status(), 'a forged token reads nothing').toBeGreaterThanOrEqual(400);
 });
+
+test('the agent card and the MCP resources and prompts', async ({ page }) => {
+	test.setTimeout(120_000);
+	const card = await page.request.get(`${BASE}/.well-known/agent.json`);
+	const auth = await judgeKey(page);
+	const key = auth.authorization.slice('Bearer '.length);
+	const headers = {
+		accept: 'application/json, text/event-stream',
+		'content-type': 'application/json'
+	};
+	const rpc = async (id: number, method: string, params: object = {}) =>
+		(
+			await page.request.post(`${BASE}/mcp/k/${key}`, {
+				headers,
+				data: { jsonrpc: '2.0', id, method, params }
+			})
+		).text();
+	await rpc(1, 'initialize', {
+		protocolVersion: '2025-06-18',
+		capabilities: {},
+		clientInfo: { name: 'f-evals-journeys', version: '1' }
+	});
+	const resources = [...(await rpc(2, 'resources/list')).matchAll(/"uri":"([^"]+)"/g)].map(
+		(m) => m[1]
+	);
+	const prompts = await rpc(3, 'prompts/list');
+	note('b12-mcp', { card: card.status(), resources, prompts: prompts.slice(0, 2000) });
+	expect.soft(card.status(), 'agent card').toBe(200);
+	expect.soft(resources).toContain('decisions://open');
+	expect
+		.soft(
+			resources.some((u) => u.startsWith('mandate://')),
+			'a mandate resource'
+		)
+		.toBe(true);
+	expect.soft(prompts).toMatch(/plan_event_in_mandate/);
+});
