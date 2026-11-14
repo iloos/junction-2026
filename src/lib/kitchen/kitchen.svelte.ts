@@ -259,6 +259,21 @@ export class KitchenStore {
 		this.pendingGrams = rest;
 	}
 
+	/** One line's amount, in its sales units (D23's per-line control); 0 drops it from the order. */
+	async setLineQty(lineId: string, qty: number) {
+		const line = this.plan?.lines.find((l) => l.id === lineId);
+		if (!line || !this.plan || qty === line.qty.value || qty < 0 || this.readOnly) return;
+		await this.#run(async () => {
+			await this.#call('edit_line', {
+				planId: this.plan!.id,
+				version: this.plan!.version,
+				lineId,
+				patch: { qty }
+			});
+			this.#log('edit', `Line amount: ${line.qty.value} → ${qty}`);
+		});
+	}
+
 	async setPreset(preset: PresetId) {
 		if (this.snap?.preset === preset || this.readOnly) return;
 		await this.#run(async () => {

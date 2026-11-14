@@ -1159,6 +1159,9 @@
 					}
 				: undefined}
 			swapOpen={swapAsk === l.id}
+			onqty={k.readOnly || l.strategy?.kind === 'make_in_house'
+				? undefined
+				: (q) => void k.setLineQty(l.id, q)}
 			swap={k.mode === 'live' && plan && !k.readOnly
 				? {
 						planId: plan.id,
