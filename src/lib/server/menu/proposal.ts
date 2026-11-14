@@ -10,6 +10,7 @@
 import { z } from 'zod';
 import {
 	MenuProposal,
+	type Actor,
 	type Course,
 	type DishIngredient,
 	type DishTemplate,
@@ -21,7 +22,7 @@ import { canonicalJson, sha256Hex } from '$lib/core/hash';
 import type { Catalog, Llm, MenuStore, Resolution } from '$lib/core/ports';
 import { slug } from '../request/parse';
 import { chooseProducts, type Choice, type ChoiceItem } from './choose';
-import { candidatePool, pinnedFor, rememberPin, type PinSource } from './resolve';
+import { candidatePool, kitchenPins, pinnedFor, RECENT_MENUS, type PinSource } from './resolve';
 import { dietBase, reviewProposal, type Issue } from './rubric';
 
 /** Brief requirements the catalogue resolver can enforce, as its product flags. */
@@ -109,7 +110,7 @@ async function usablePin(
 }
 
 /** A caller's hint for an ingredient: its words name the hint's ingredient, or the hint names them. */
-function hintFor(hints: ProposeDeps['hints'], words: string[]): string | undefined {
+function hintFor(hints: EventBrief['hints'], words: string[]): string | undefined {
 	const ws = words.map((w) => w.trim().toLowerCase()).filter(Boolean);
 	return hints?.find((h) => {
 		const n = h.ingredient.trim().toLowerCase();
@@ -392,8 +393,8 @@ export interface ProposeDeps {
 	now: Date;
 	/** Absent: the fixture templates. */
 	llm?: Llm | null;
-	/** Products the caller already knows for an ingredient; tried before the resolver, never past a diet flag. */
-	hints?: { ingredient: string; productId: string }[];
+	/** Who asks: a hint's product is remembered as their pin (a chef's, else an agent's). Absent = a chef. */
+	by?: Actor;
 	/** Makes two proposals for the same brief distinct; the same nonce returns the stored one. */
 	nonce?: string;
 	/** Progress for a waiting page: the dishes once written, then products matched so far. */
@@ -468,6 +469,8 @@ export async function proposeMenu(d: ProposeDeps): Promise<Proposed> {
 	const at = d.now.toISOString();
 	// A whole-menu requirement checks every pick; a counted one ("lactose-free:4") is met by some dishes.
 	const flags = menuFlags(d.brief);
+	const settled = kitchenPins(await d.store.recent(d.workspaceId, d.kitchenId, RECENT_MENUS));
+	const hintBy: PinSource = !d.by || d.by.kind === 'chef' ? 'chef' : 'agent';
 	const dishIds = idsFor(
 		menu.dishes.map((x) => x.name),
 		'd-'
@@ -480,7 +483,7 @@ export async function proposeMenu(d: ProposeDeps): Promise<Proposed> {
 		i: LlmMenu['dishes'][number]['ingredients'][number];
 		dish: string;
 		plant: string[];
-		pin?: { productId: string; how: string };
+		pin?: { productId: string; how: string; by: PinSource };
 		det: Resolution | null;
 		pool: string[];
 	}[] = [];
@@ -494,12 +497,12 @@ export async function proposeMenu(d: ProposeDeps): Promise<Proposed> {
 			d.onStep?.({ step: 'products', done: done++, total });
 			const words = [i.query, i.label];
 			const plant = plantFor(dish.claimedCompatible);
-			const hint = await usablePin(d.catalog, hintFor(d.hints, words), flags);
-			const kept = pinnedFor(d.workspaceId, d.kitchenId, words);
+			const hint = await usablePin(d.catalog, hintFor(d.brief.hints, words), flags);
+			const kept = pinnedFor(settled, words);
 			const pin = hint
-				? { productId: hint, how: PIN_WORDS.hint }
+				? { productId: hint, how: PIN_WORDS.hint, by: hintBy }
 				: kept && (await usablePin(d.catalog, kept.productId, flags))
-					? { productId: kept.productId, how: PIN_WORDS[kept.by] }
+					? { productId: kept.productId, how: PIN_WORDS[kept.by], by: kept.by }
 					: undefined;
 			const one = (q: string) => resolveIngredient(d.catalog, q, flags, plant);
 			const det = pin ? null : await one(i.query);
@@ -553,12 +556,13 @@ export async function proposeMenu(d: ProposeDeps): Promise<Proposed> {
 		let productId: string | undefined;
 		let how = '';
 		let unresolved: string | undefined;
-		if (w.pin) ({ productId, how } = w.pin);
+		let pinnedBy: PinSource | undefined;
+		if (w.pin) ({ productId, how, by: pinnedBy } = w.pin);
 		else if (c) {
 			if (c.productId) {
 				productId = c.productId;
 				how = `chosen from ${w.pool.length} candidates: ${c.reason}`;
-				rememberPin(d.workspaceId, d.kitchenId, [w.i.query, w.i.label], c.productId, 'model');
+				pinnedBy = 'model';
 			} else unresolved = `none of ${w.pool.length} candidates is ${w.i.label}: ${c.reason}`;
 		} else if (w.det?.status === 'resolved' && w.det.candidates.length) {
 			productId = w.det.candidates[0].productId;
@@ -574,6 +578,7 @@ export async function proposeMenu(d: ProposeDeps): Promise<Proposed> {
 			ing = {
 				...base,
 				productId,
+				...(pinnedBy ? { pinnedBy } : {}),
 				provenance: {
 					source,
 					at,
@@ -584,7 +589,12 @@ export async function proposeMenu(d: ProposeDeps): Promise<Proposed> {
 					)
 				}
 			};
-		} else ing = { ...base, unresolved, provenance: { source, at, ref: w.i.query } };
+		} else
+			ing = {
+				...base,
+				unresolved: (unresolved ?? 'no product').slice(0, 200),
+				provenance: { source, at, ref: w.i.query }
+			};
 		dishes[w.di].ingredients.push(ing);
 	}
 

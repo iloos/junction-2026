@@ -1,9 +1,10 @@
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { afterEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
+import type { MenuProposal } from '$lib/core/contracts';
 import { createValioCatalog } from '../adapters/catalog/valio';
 import { normaliseCourses, type LlmMenu } from './proposal';
-import { candidatePool, clearPins, pinnedFor, queryVariants, rememberPin } from './resolve';
+import { candidatePool, kitchenPins, pinnedFor, queryVariants } from './resolve';
 
 describe('query variants', () => {
 	it('tries the query, the model’s alternatives and a bracketed trade name, in order and without repeats', () => {
@@ -15,20 +16,51 @@ describe('query variants', () => {
 	});
 });
 
-describe('what a kitchen settled', () => {
-	afterEach(clearPins);
-	it('finds a pin by any of its words, only in the same workspace and kitchen', () => {
-		rememberPin('ws-1', 'k-a', ['porsaankylki', 'Pork belly'], '468362', 'chef');
-		expect(pinnedFor('ws-1', 'k-a', ['pork belly'])).toEqual({ productId: '468362', by: 'chef' });
-		expect(pinnedFor('ws-1', 'k-b', ['porsaankylki'])).toBeUndefined();
-		expect(pinnedFor('ws-2', 'k-a', ['porsaankylki'])).toBeUndefined();
+describe('what a kitchen settled (read from its recent menus)', () => {
+	/** A menu with one ingredient per entry: [words, label, productId?, pinnedBy?, chef turned it down?]. */
+	const menu = (
+		...ings: [string, string, string | undefined, ('chef' | 'agent' | 'model')?, boolean?][]
+	) =>
+		({
+			dishes: [
+				{
+					ingredients: ings.map(([ref, label, productId, pinnedBy, down]) => ({
+						id: label,
+						label,
+						amountPerCover: 1,
+						unit: 'g',
+						...(productId ? { productId } : { unresolved: 'x' }),
+						...(pinnedBy ? { pinnedBy } : {}),
+						provenance: { source: down ? 'user' : 'llm', ref }
+					}))
+				}
+			]
+		}) as unknown as MenuProposal;
+
+	it('finds a pin by its search words or its label; a plain catalogue match is remembered nowhere', () => {
+		const pins = kitchenPins([
+			menu(['porsaankylki', 'Pork belly', '468362', 'chef'], ['peruna', 'Potato', '111'])
+		]);
+		expect(pinnedFor(pins, ['pork belly'])).toEqual({ productId: '468362', by: 'chef' });
+		expect(pinnedFor(pins, ['PORSAANKYLKI'])).toEqual({ productId: '468362', by: 'chef' });
+		expect(pinnedFor(pins, ['peruna'])).toBeUndefined();
 	});
-	it('a model’s choice never replaces a chef’s or agent’s pin; a person’s pin replaces anything', () => {
-		rememberPin('ws', 'k', ['sipuli'], 'chef-pick', 'chef');
-		rememberPin('ws', 'k', ['sipuli'], 'model-pick', 'model');
-		expect(pinnedFor('ws', 'k', ['sipuli'])?.productId).toBe('chef-pick');
-		rememberPin('ws', 'k', ['sipuli'], 'agent-pick', 'agent');
-		expect(pinnedFor('ws', 'k', ['sipuli'])?.productId).toBe('agent-pick');
+
+	it('a person’s pin beats a newer model pick; the newest of equals wins', () => {
+		const newest = menu(['sipuli', 'Onion', 'model-new', 'model']);
+		const older = menu(['sipuli', 'Onion', 'agent-old', 'agent']);
+		const oldest = menu(['sipuli', 'Onion', 'chef-oldest', 'chef']);
+		expect(pinnedFor(kitchenPins([newest, older, oldest]), ['sipuli'])?.productId).toBe(
+			'agent-old'
+		);
+		expect(pinnedFor(kitchenPins([newest]), ['sipuli'])?.productId).toBe('model-new');
+	});
+
+	it('a product the chef turned down later is no longer reused', () => {
+		const later = menu(['sipuli', 'Onion', undefined, undefined, true]);
+		const earlier = menu(['sipuli', 'Onion', 'chef-pick', 'chef']);
+		expect(pinnedFor(kitchenPins([later, earlier]), ['sipuli'])).toBeUndefined();
+		expect(pinnedFor(kitchenPins([earlier, later]), ['sipuli'])?.productId).toBe('chef-pick');
 	});
 });
 

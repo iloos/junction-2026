@@ -227,6 +227,8 @@ export interface MenuStore {
 	get(workspaceId: string, id: string, revision: number): Promise<MenuProposal | null>;
 	latest(workspaceId: string, id: string): Promise<MenuProposal | null>;
 	put(workspaceId: string, proposal: MenuProposal): Promise<void>;
+	/** The latest revision of this kitchen's most recent proposals, newest first (what the kitchen settled on). */
+	recent(workspaceId: string, kitchenId: string, limit: number): Promise<MenuProposal[]>;
 	review(
 		workspaceId: string,
 		id: string,

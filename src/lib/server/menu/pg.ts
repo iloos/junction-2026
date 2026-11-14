@@ -42,6 +42,25 @@ export function drizzleMenuStore(db: AnyDb): MenuStore {
 				.limit(1);
 			return r ? toProposal(r) : null;
 		},
+		async recent(ws, kitchenId, limit) {
+			if (limit <= 0) return [];
+			// Newest rows first; the first row seen per proposal is its latest revision (revisions only grow).
+			const rows = await db
+				.select()
+				.from(menuProposals)
+				.where(and(eq(menuProposals.workspaceId, ws), eq(menuProposals.kitchenId, kitchenId)))
+				.orderBy(desc(menuProposals.createdAt), desc(menuProposals.revision))
+				.limit(Math.min(400, limit * 8));
+			const seen = new Set<string>();
+			const out: MenuProposalT[] = [];
+			for (const r of rows) {
+				if (seen.has(r.id)) continue;
+				seen.add(r.id);
+				out.push(toProposal(r));
+				if (out.length >= limit) break;
+			}
+			return out;
+		},
 		async put(ws, proposal) {
 			const p = MenuProposal.parse(proposal);
 			if (p.status !== 'proposed' || p.review)

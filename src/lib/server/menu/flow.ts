@@ -34,7 +34,6 @@ import {
 	resolveIngredient,
 	type ProposeStep
 } from './proposal';
-import { rememberPin } from './resolve';
 import { blocks, reviewProposal, type Issue } from './rubric';
 
 export interface MenuDeps {
@@ -339,9 +338,11 @@ export async function editMenu(
 						did.push(`${i.label} pinned to ${name}`);
 						// eslint-disable-next-line @typescript-eslint/no-unused-vars
 						const { productId, query, unresolved, ...restIng } = next;
+						// The kitchen's next proposals start from it (read back through MenuStore.recent).
 						next = {
 							...restIng,
 							productId: pin,
+							pinnedBy: pinSource(o.by),
 							provenance: {
 								source: 'user' as const,
 								at,
@@ -356,10 +357,18 @@ export async function editMenu(
 						o.changes.some((x) => x.kind === 'unresolve' && x.ingredientId === i.id)
 					) {
 						did.push(`${i.label} product dropped`);
-						const { productId, ...restIng } = next;
+						// A turned-down product is no longer the kitchen's pick for these words (kitchenPins reads this).
+						// eslint-disable-next-line @typescript-eslint/no-unused-vars
+						const { productId, pinnedBy, ...restIng } = next;
 						next = {
 							...restIng,
-							unresolved: `the chef turned down product ${productId}; find the right one before ordering`
+							unresolved: `the ${who(o.by)} turned down product ${productId}; find the right one before ordering`,
+							provenance: {
+								source: 'user' as const,
+								at,
+								ref: i.provenance.ref ?? i.label,
+								note: `${who(o.by)} turned down product ${productId}`
+							}
 						};
 					}
 					return next;
@@ -399,17 +408,6 @@ export async function editMenu(
 		}
 	});
 	await d.store.put(d.workspaceId, next);
-	// The kitchen's next proposals start from what was pinned here.
-	for (const dish of next.dishes)
-		for (const i of dish.ingredients)
-			if (i.productId && pinFor.get(i.id) === i.productId)
-				rememberPin(
-					d.workspaceId,
-					p.kitchenId,
-					[i.provenance.ref ?? '', i.label],
-					i.productId,
-					pinSource(o.by)
-				);
 	return ok(await menuView(d, next, p));
 }
 

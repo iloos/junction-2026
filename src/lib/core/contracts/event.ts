@@ -43,6 +43,14 @@ export const EventBrief = z.object({
 	/** Food budget for the event, ex VAT. Advisory: the mandate's caps still decide. */
 	budgetCents: Cents.optional(),
 	notes: z.string().max(2000).optional(),
+	/**
+	 * Products the caller already knows for an ingredient ("ribs" → 462201). Tried before the catalogue search; never
+	 * past the brief's diet. A hint, not an order: the chef still accepts the menu.
+	 */
+	hints: z
+		.array(z.object({ ingredient: z.string().trim().min(1).max(120), productId: ProductId }))
+		.max(30)
+		.optional(),
 	/** The raw request text and who answered the questions. */
 	provenance: Provenance
 });
@@ -67,6 +75,12 @@ export const DishIngredient = z
 		unit: z.enum(['g', 'ml', 'pcs']),
 		/** Served ÷ purchased, (0, 1]. Absent = assumed 1, and the Why chain says it is an assumption. */
 		yield: z.number().gt(0).max(1).optional(),
+		/**
+		 * Who settled this product: a chef or an agent pinned it, or the menu's chooser picked it from candidates. The
+		 * kitchen's next proposals start from it (a person's pin before a model's pick). Absent: the catalogue search's
+		 * own best match, remembered nowhere.
+		 */
+		pinnedBy: z.enum(['chef', 'agent', 'model']).optional(),
 		provenance: Provenance
 	})
 	.refine(

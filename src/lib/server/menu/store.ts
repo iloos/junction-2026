@@ -43,6 +43,17 @@ export function memoryMenuStore(): MenuStore {
 		async latest(ws, id) {
 			return copy(data.get(ws)?.get(id)?.at(-1));
 		},
+		async recent(ws, kitchenId, limit) {
+			const latest = [...(data.get(ws)?.values() ?? [])]
+				.map((revs) => revs.at(-1)!)
+				.filter((p) => p?.kitchenId === kitchenId);
+			// Newest first by when the latest revision was written (its provenance time), then insertion order.
+			return latest
+				.map((p, i) => ({ p, i }))
+				.sort((a, b) => b.p.provenance.at?.localeCompare(a.p.provenance.at ?? '') || b.i - a.i)
+				.slice(0, Math.max(0, limit))
+				.map(({ p }) => structuredClone(p));
+		},
 		async put(ws, proposal) {
 			const p = MenuProposal.parse(proposal);
 			if (p.status !== 'proposed' || p.review)
