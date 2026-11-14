@@ -20,6 +20,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="/site.css" />
+<script src="/name.js"></script>
 <link rel="stylesheet" href="/how/map.css">
 <style>
 :root { --display: 'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif; --mono-f: 'IBM Plex Mono', ui-monospace, monospace; }
@@ -150,7 +151,10 @@ h3 { margin: 0; font: 600 18px/1.25 var(--display); }
 .ex { background: var(--well); border: 1px solid var(--rule); border-radius: 12px; padding: 14px 16px; display: grid; gap: 8px; min-width: 0; }
 .ex[hidden] { display: none; }
 .ex .label { margin: 0; color: var(--accent-ink); }
-.ex .ask { font: 500 15.5px/1.4 var(--mono-f); color: var(--ink); overflow-wrap: anywhere; }
+.ex .ask { font: 500 15.5px/1.45 var(--display); color: var(--ink); overflow-wrap: anywhere; }
+/* Only the quantity is mono: "10 kg" as a tabular token; product names read in the body face. */
+.tq { display: inline-block; font: 500 0.9em/1.35 var(--mono-f); font-variant-numeric: tabular-nums; color: var(--ink); background: var(--well); border: 1px solid var(--rule); border-radius: 5px; padding: 0 5px; white-space: nowrap; }
+.tp { color: var(--ink); font-weight: 500; }
 .ex ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
 .ex ol li { position: relative; padding-left: 16px; font-size: 14.5px; line-height: 1.45; color: var(--ink-2); overflow-wrap: anywhere; }
 .ex ol li::before { content: ''; position: absolute; left: 2px; top: 9px; width: 5px; height: 5px; border-radius: 50%; background: var(--rule-strong); }
@@ -759,10 +763,27 @@ h3 { margin: 0; font: 600 18px/1.25 var(--display); }
 
 	function renderCase(box, c) {
 		box.replaceChildren(el('p', 'label', 'Recorded case'));
-		if (c.request) box.append(el(c.ask ? 'span' : 'b', c.ask ? 'ask' : null, c.ask ? `“${c.request}”` : c.request));
+		const rn = (n) => (window.readableName ? readableName(n) : n);
+		const names = (c.steps || []).flatMap((s) => (s && s.parts ? s.parts.map((p) => p.product).filter(Boolean) : []));
+		if (c.ask && c.ask.qty) {
+			const a = el('span', 'ask');
+			a.append('“', el('span', 'tq', c.ask.qty), ' ', c.ask.item, c.ask.rest ? ' ' + c.ask.rest : '', '”');
+			box.append(a);
+		} else if (c.request) box.append(el('b', null, c.request));
 		if (Array.isArray(c.steps) && c.steps.length) {
 			const ol = el('ol');
-			for (const s of c.steps) if (s && s.text) ol.append(el('li', null, s.text));
+			for (const s of c.steps) {
+				if (!s) continue;
+				const li = el('li');
+				if (Array.isArray(s.parts)) {
+					for (const p of s.parts) {
+						if (p.qty) li.append(el('span', 'tq', p.qty), ' ');
+						else if (p.product) li.append(el('span', 'tp', rn(p.product)));
+						else if (p.t) li.append(p.t);
+					}
+				} else if (s.text) li.textContent = window.readableIn ? readableIn(s.text, names) : s.text;
+				ol.append(li);
+			}
 			box.append(ol);
 		}
 		if (c.outcome) {
@@ -784,7 +805,7 @@ h3 { margin: 0; font: 600 18px/1.25 var(--display); }
 			const row = el('div');
 			row.append(el('dt', null, s.key));
 			const dd = el('dd');
-			if (s.value != null && s.value !== '') dd.append(el('b', null, String(s.value)));
+			if (s.value != null && s.value !== '') dd.append(el('b', null, s.key === 'product' && window.readableName ? readableName(String(s.value)) : String(s.value)));
 			if (s.text) dd.append(document.createTextNode(s.text));
 			if (s.decides && s.decides.text) { dd.append(el('br')); dd.append(chip(KIND[s.decides.kind] || s.decides.kind, s.decides.text)); }
 			row.append(dd);
@@ -811,7 +832,7 @@ h3 { margin: 0; font: 600 18px/1.25 var(--display); }
 				const k = chain.steps.find((s) => s && s.key === 'kitchen');
 				const rec = document.querySelector('[data-kitchen-rec]');
 				if (k && rec && k.value && k.text) {
-					rec.replaceChildren(el('b', null, String(k.value)), document.createTextNode(': ' + k.text), el('small', null, stamp(chain.recordedAt)));
+					rec.replaceChildren(el('b', null, k.key === 'product' && window.readableName ? readableName(String(k.value)) : String(k.value)), document.createTextNode(': ' + k.text), el('small', null, stamp(chain.recordedAt)));
 					rec.hidden = false;
 				}
 			}

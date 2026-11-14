@@ -20,6 +20,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="/site.css" />
+<script src="/name.js"></script>
 <style>
 .hero { display: grid; gap: 40px; padding: 40px 0 56px; align-items: center; }
 @media (min-width: 900px) { .hero { grid-template-columns: 1.05fr 1fr; padding: 24px 0 24px; gap: 56px; } }
@@ -359,7 +360,7 @@ function renderChain(data) {
 		node.append(icon(s.key));
 		const body = el('div', 'link-body');
 		body.append(el('h3', null, s.title));
-		if (s.value) body.append(el('b', 'val', s.value));
+		if (s.value) body.append(el('b', 'val', s.key === 'product' && window.readableName ? readableName(s.value) : s.value));
 		body.append(el('p', null, s.text));
 		// The plan-wide counts go in the tally under the row; a step's own marker sits on the step.
 		if (s.decides && s.decides.kind !== 'signoff') {
@@ -435,7 +436,7 @@ function renderChain(data) {
 		const span = el('span');
 		for (const p of parts) {
 			if (p.qty) span.append(el('span', 'tok-qty', p.qty), ' ');
-			else if (p.product) span.append(el('span', 'tok-prod', p.product));
+			else if (p.product) span.append(el('span', 'tok-prod', window.readableName ? readableName(p.product) : p.product));
 			else if (p.t) span.append(p.t);
 		}
 		return span;
