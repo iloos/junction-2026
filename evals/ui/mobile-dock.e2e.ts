@@ -35,4 +35,3 @@ test('R11-14 the dock composer stays on screen on a phone with decisions open', 
 	await composer.click({ timeout: 5_000 });
 	await expect(composer).toBeFocused();
 });
-
