@@ -105,7 +105,7 @@ describe('suite: agent goal trials · F25 seams', () => {
 
 			const ask = await play(w, 'Show me the plan status', 'agent-c');
 			expect(ask.outcome).toMatchObject({ intent: 'unsupported', status: 'awaiting_user' });
-			expect(ask.outcome?.nextAction ?? '').toMatch(/Which plan\?/);
+			expect(ask.outcome?.nextAction ?? '').toMatch(/^Which plan/);
 
 			const byKitchen = await play(w, 'Show me the plan status for k-lounas', 'agent-d');
 			expect(byKitchen.outcome).toMatchObject({ intent: 'inspect', planId: butter.id });

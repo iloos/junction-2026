@@ -1,0 +1,9 @@
+{
+	"id": "c8-no-catalogue-match",
+	"$comment": "Nothing in the catalogue by the name the chef used: the turn says so with what was searched and the ways on (another name, a similar product, the dish path). Nothing is drafted, nothing is bought, and the turn never ends on its steps alone.",
+	"kitchen": "k-hotel",
+	"steps": [{ "chef": { "text": "4 kg flurbleberry jam for Thursday" } }],
+	"expect": {
+		"0": { "pending": "none", "receipts": 0 }
+	}
+}

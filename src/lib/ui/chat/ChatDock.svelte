@@ -81,7 +81,10 @@
 	}
 
 	/** The dock's task is remembered per kitchen for this browser tab. */
-	const key = () => `mandate.chat.task.${kitchenId}`;
+	// On a page with a plan the dock remembers the task for that plan only; the kitchen's newest task is the
+	// "earlier conversation".
+	const kitchenKey = () => `mandate.chat.task.${kitchenId}`;
+	const key = () => (planId ? `${kitchenKey()}.${planId}` : kitchenKey());
 	let taskId = $state<string | null>(null);
 	let entries = $state.raw<Entry[]>([]);
 	/** After "New task": the next turn starts its own task instead of joining the plan on screen. */
@@ -90,17 +93,24 @@
 	let busy = $state(false);
 	let error = $state<string | null>(null);
 
-	function read(): string | null {
+	/** The page plan's name, for the header before the plan has a task. */
+	let planTitle = $state('');
+	/** The kitchen's newest task when the dock is on another plan's: offered, never opened by itself. */
+	let earlier = $state<string | null>(null);
+
+	function read(k = key()): string | null {
 		try {
-			return typeof sessionStorage === 'undefined' ? null : sessionStorage.getItem(key());
+			return typeof sessionStorage === 'undefined' ? null : sessionStorage.getItem(k);
 		} catch {
 			return null;
 		}
 	}
 	function remember(id: string | null) {
 		try {
-			if (id) sessionStorage.setItem(key(), id);
-			else sessionStorage.removeItem(key());
+			if (id) {
+				sessionStorage.setItem(key(), id);
+				sessionStorage.setItem(kitchenKey(), id);
+			} else sessionStorage.removeItem(key());
 		} catch {
 			/* storage blocked: the task lives for this page only */
 		}
@@ -112,15 +122,50 @@
 	 */
 	let loadedFor: string | null = null;
 	$effect(() => {
-		const k = `${kitchenId}:${openTask ?? ''}`;
+		const k = `${kitchenId}:${planId ?? ''}:${openTask ?? ''}`;
 		if (!open && !pinned) return;
 		if (loadedFor === k) return;
 		loadedFor = k;
-		taskId = openTask ?? read();
-		if (openTask) remember(openTask);
-		entries = [];
-		if (taskId) void restore(taskId);
+		untrack(() => {
+			taskId = openTask ?? read();
+			if (openTask) remember(openTask);
+			entries = [];
+			planTitle = '';
+			fresh = false;
+			const before = read(kitchenKey());
+			earlier = planId && !openTask && before && before !== taskId ? before : null;
+			if (taskId) void restore(taskId);
+			else if (planId) void forPlan(planId);
+		});
 	});
+
+	/** A dock opened on a page's plan: the task that holds it, or none yet (the header names the plan). */
+	async function forPlan(id: string) {
+		try {
+			const res = await fetch(`/api/chat/task?planId=${encodeURIComponent(id)}`);
+			if (!res.ok) return;
+			const v = (await res.json()) as { taskId: string | null; title: string; events: ChatEvent[] };
+			if (planId !== id || taskId) return;
+			planTitle = v.title;
+			if (v.taskId) {
+				taskId = v.taskId;
+				remember(v.taskId);
+				entries = v.events.map((e) => ({ kind: 'event', e }));
+			}
+		} catch {
+			/* offline: the next turn joins the plan's task */
+		}
+	}
+
+	/** The kitchen's earlier conversation, opened on request. */
+	function openEarlier() {
+		if (!earlier) return;
+		taskId = earlier;
+		earlier = null;
+		fresh = true;
+		entries = [];
+		void restore(taskId);
+	}
 
 	async function restore(id: string) {
 		try {
@@ -338,7 +383,7 @@
 		const l = entries.findLast((x) => x.kind === 'event' && x.e.type === 'ledger');
 		const labels =
 			l?.kind === 'event' && l.e.type === 'ledger' ? l.e.ledger.needs.map((n) => n.label) : [];
-		return labels.length ? labels.slice(0, 3).join(', ') : 'Your task';
+		return labels.length ? labels.slice(0, 3).join(', ') : planTitle || 'Your task';
 	});
 	const doneLine = $derived(last?.kind === 'event' && last.e.type === 'done' ? last.e : undefined);
 
@@ -353,7 +398,9 @@
 				headers: { 'content-type': 'application/json' },
 				body: JSON.stringify({
 					...body,
-					...(taskId ? { taskId } : planId && !fresh ? { planId } : {}),
+					// The page's plan rides along: a remembered task with nothing of its own gives way to it.
+					...(taskId ? { taskId } : {}),
+					...(planId && !fresh ? { planId } : {}),
 					kitchenId
 				})
 			});
@@ -479,9 +526,16 @@
 		<div class="min-w-0 flex-1">
 			<p class="text-body font-semibold">Purchasing agent</p>
 			<p class="truncate text-meta text-ink-3">
-				{#if taskId}{taskTitle}<span class="sys-only mono"> · {taskId}</span>{:else}Plans and orders
-					within your mandate. Never approves.{/if}
+				{#if taskId}{taskTitle}<span class="sys-only mono">
+						· {taskId}</span
+					>{:else if planTitle}{planTitle}{:else}Plans and orders within your mandate. Never
+					approves.{/if}
 			</p>
+			{#if earlier}
+				<button type="button" class="text-micro text-accent-ink underline" onclick={openEarlier}
+					>Earlier conversation</button
+				>
+			{/if}
 		</div>
 		<button
 			type="button"

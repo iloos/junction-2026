@@ -18,6 +18,7 @@ import type { Slots } from '$lib/server/agent/types';
 import type { Env } from '$lib/server/auth';
 import { UNITS } from '$lib/server/request/lexicon';
 import { parseRules } from '$lib/server/request/parse';
+import { readingOf, reviewReading } from '$lib/server/request/reading';
 import { dayWords, ledgerSummary, readTask } from '$lib/server/tasks/outcome';
 import { explain } from './explain';
 import { answerInChat } from './question';
@@ -37,6 +38,7 @@ import type { ChatEvent, ChatTurnInput } from '$lib/ui/chat/types';
 import { decisionsDue, decisionsOf } from '$lib/ui/decisions';
 import type { ReceiptView } from '$lib/ui/Receipt.svelte';
 import { interpretDish, type InterpretDish } from './dish';
+import { planName } from '$lib/server/agent/plan-name';
 
 /**
  * One chat turn on a procurement task, in process: the third door onto `runGoal` (after MCP and REST), under the
@@ -268,7 +270,99 @@ function blankTask(deps: ChatDeps, text: string): Task {
 	};
 }
 
+/**
+ * A chat turn's lines, as the dock and the route stream them. Every line is in our words (no plan, task or
+ * approval ids, no date codes), and every turn ends with something the chef can read and act on: an answer, a
+ * question with its answers, a card, or what could not be done and the way on. A turn that would end on its steps
+ * alone gets that sentence from its last step, and the miss is logged as a bug.
+ */
 export async function* runChatTurn(
+	turnInput: ChatTurnInput,
+	deps: ChatDeps
+): AsyncGenerator<ChatEvent, void, undefined> {
+	let said = false;
+	let taskId = turnInput.taskId ?? '';
+	let state: TaskState = 'open';
+	let lastStep: Extract<ChatEvent, { type: 'step' }> | null = null;
+	/** The words of a closing line the dock would not show (a waiting task's). */
+	let hidden = '';
+	for await (const raw of turnLines(turnInput, deps)) {
+		const e = await scrubEvent(raw, deps);
+		if (e.taskId) taskId = e.taskId;
+		if (e.type === 'step') lastStep = e;
+		if (e.type === 'done') {
+			state = e.state;
+			hidden = e.text.trim();
+		}
+		if (
+			e.type === 'clarify' ||
+			e.type === 'menu' ||
+			e.type === 'decision' ||
+			(e.type === 'done' && e.state !== 'awaiting_clarification' && e.text.trim())
+		)
+			said = true;
+		yield e;
+	}
+	if (said) return;
+	// A question still open on the task: asked again on its card, with what this turn said (the dock shows a waiting
+	// task's words only on the card).
+	const open = taskId ? await storeOf(deps.ports).get(deps.workspaceId, taskId) : null;
+	if (open?.pending.kind === 'clarify') {
+		const q = open.pending;
+		const asked =
+			hidden && !hidden.includes(q.question) ? `${hidden} ${q.question}` : hidden || q.question;
+		yield { type: 'clarify', taskId, field: q.field, question: asked, options: q.options };
+		yield {
+			type: 'done',
+			taskId,
+			state: 'awaiting_clarification',
+			text: asked,
+			canContinue: false
+		};
+		return;
+	}
+	console.error('[chat] a turn ended without a message; said from its last step', {
+		taskId,
+		lastStep: lastStep?.tool ?? null
+	});
+	yield {
+		type: 'done',
+		taskId,
+		state: state === 'awaiting_clarification' ? 'open' : state,
+		text:
+			hidden ||
+			(lastStep
+				? `I couldn't finish this: ${lastStep.summary.replace(/^Not done: /, '')} Tell me the product and the amount again, or ask what is open.`
+				: 'I could not act on that. Tell me what you need, for example "4 kg lactose-free butter for Friday", or ask what is open.'),
+		canContinue: false
+	};
+}
+
+/** Our words for every line a chef reads: ids become what they are, date codes become days. */
+async function scrubEvent(e: ChatEvent, deps: ChatDeps): Promise<ChatEvent> {
+	const words = async (t: string) =>
+		(await scrub(t, deps)).replace(/\b(20\d{2}-\d{2}-\d{2})(T[\d:.]+Z?)?\b/g, (_, d: string) =>
+			dayWords(d)
+		);
+	switch (e.type) {
+		case 'step':
+			return { ...e, summary: await words(e.summary) };
+		case 'clarify':
+			return {
+				...e,
+				question: await words(e.question),
+				options: await Promise.all(
+					e.options.map(async (o) => ({ ...o, label: await words(o.label) }))
+				)
+			};
+		case 'done':
+			return { ...e, text: await words(e.text) };
+		default:
+			return e;
+	}
+}
+
+async function* turnLines(
 	turnInput: ChatTurnInput,
 	deps: ChatDeps
 ): AsyncGenerator<ChatEvent, void, undefined> {
@@ -325,14 +419,25 @@ export async function* runChatTurn(
 	// open, or a new one from the words.
 	let task: Task;
 	let expected: number | null;
+	let remembered: Task | null = null;
 	if (input.taskId) {
 		const t = await store.get(deps.workspaceId, input.taskId);
 		if (!t) {
 			yield fail(input.taskId, `No task ${input.taskId} here.`);
 			return;
 		}
-		task = t;
-		expected = t.version;
+		remembered = t;
+	}
+	// The plan on screen wins over a remembered task that has nothing of its own (no plan, no open question): the
+	// dock answers for what the chef is looking at.
+	const idle =
+		!!remembered &&
+		!!input.planId &&
+		!remembered.plans.length &&
+		remembered.pending.kind !== 'clarify';
+	if (remembered && !idle) {
+		task = remembered;
+		expected = remembered.version;
 	} else if (input.planId) {
 		// get_plan under the chef's context scopes the plan to this workspace and run.
 		const r = await deps.handlers.get_plan(deps.ctx, { planId: input.planId });
@@ -348,11 +453,11 @@ export async function* runChatTurn(
 			task = held;
 			expected = held.version;
 		} else {
-			const text = input.text?.trim() || `Plan ${plan.id}`;
+			const text = input.text?.trim() || planName(plan, SUPPORTED_EVENTS);
 			task = {
 				...blankTask(deps, text),
 				kitchenId: plan.kitchenId,
-				title: `Order for ${dayWords(plan.deliverBy)}`,
+				title: planName(plan, SUPPORTED_EVENTS),
 				requirement: { planId: plan.id },
 				plans: [{ planId: plan.id, versionSeen: plan.version, role: 'primary' }]
 			};
@@ -550,6 +655,15 @@ export async function* runChatTurn(
 		task = { ...blankTask(deps, words!), kitchenId: task.kitchenId };
 		expected = null;
 	}
+	// The words said portions ("300 portions of lasagne"): the dish is planned like an event brief, nothing to ask.
+	if (dish?.said)
+		task.requirement = {
+			...task.requirement,
+			kind: 'event',
+			brief: `${dish.dish[0].toUpperCase()}${dish.dish.slice(1)} for ${dish.portions} guests`
+		};
+	/** Portions or packs is the chef's call when the words did not say. */
+	const dishAsk = dish && !dish.said ? dish : null;
 	// A cancelled task is a fence: no Continue, answer, resize or addition acts on it (a stale button in another tab
 	// included); questions still read it, and a request of its own starts a new task above.
 	if (
@@ -657,6 +771,8 @@ export async function* runChatTurn(
 	let steps: StepRecord[];
 	let clarify: Extract<Task['pending'], { kind: 'clarify' }> | null = null;
 	let refusal: string | null = null;
+	/** This turn answered the open question: it is closed, whatever the run did next. */
+	let answered = false;
 	let planId: string | undefined = primary;
 	let run: AgentRun | null = null;
 	/** A menu proposal shown this turn (the event flow). */
@@ -670,12 +786,28 @@ export async function* runChatTurn(
 	// An event brief ("7-course meal for 3") is the chat's own flow: ask what the brief lacks, propose a menu, and plan
 	// it once a chef has reviewed it. The seeded buffet keeps the agent's own plan_event path.
 	const eventFlow =
-		!dish &&
+		!dishAsk &&
 		(task.requirement.kind === 'event' ||
 			(!followUp &&
 				!!words &&
 				(u?.kind === 'event' || reading?.kind === 'event') &&
 				!isSeededEvent(words)));
+	// An order's reading is judged against the chef's words, as /request judges it: a block (a unit we can't order
+	// in, a number read wrong) is the question to the chef, asked before anything is searched.
+	let readingBlock: string | null = null;
+	if (
+		!eventFlow &&
+		!dishAsk &&
+		words &&
+		!answering &&
+		!input.answer &&
+		!resize &&
+		!addition &&
+		(u?.kind === 'order' || (!u && reading?.kind === 'order'))
+	) {
+		const v = await reviewReading(words, readingOf(parseRules(withoutKitchen(words), deps.today)));
+		if (v.kind === 'block') readingBlock = v.reason;
+	}
 	if (eventFlow && task.requirement.kind !== 'event')
 		task.requirement = { ...task.requirement, kind: 'event' };
 
@@ -697,14 +829,18 @@ export async function* runChatTurn(
 		expected = reserved.value.version;
 	}
 
-	if (dish) {
+	if (readingBlock) {
 		steps = [];
-		const n = dish.portions.toLocaleString('en-US');
+		refusal = readingBlock;
+	} else if (dishAsk) {
+		steps = [];
+		const n = dishAsk.portions.toLocaleString('en-US');
 		clarify = {
 			kind: 'clarify',
 			field: 'dish',
 			question:
-				dish.question ?? `That reads like a dish, not a product: ${n} portions of ${dish.dish}?`,
+				dishAsk.question ??
+				`That reads like a dish, not a product: ${n} portions of ${dishAsk.dish}?`,
 			options: [
 				{ label: 'Yes, plan it as a dish', value: 'as-dish' },
 				{ label: `No, ${n} packs`, value: 'as-packs' }
@@ -799,6 +935,7 @@ export async function* runChatTurn(
 				? { field: task.pending.field, value: input.text }
 				: undefined);
 		if (answer) {
+			answered = true;
 			const field = ClarifyField.safeParse(answer.field);
 			if (!field.success) {
 				yield fail(task.id, `I can't use an answer for ${String(answer.field)}.`, task.state);
@@ -891,9 +1028,13 @@ export async function* runChatTurn(
 				.find((x) => x.tool === 'place_order' && x.ok)
 				?.why.match(/; not ordered: (.*)$/)?.[1];
 			if (left) refusal = `Not ordered: ${left}.`;
-			if (why && !run.steps.some((x) => x.tool === 'place_order' && x.ok))
-				refusal = `Not ordered: ${why.replace(/\b(\d{4}-\d{2}-\d{2})\b/g, (d) => dayWords(d))}`;
-			else if (o?.planId) touched.push(o.planId);
+			if (why && !run.steps.some((x) => x.tool === 'place_order' && x.ok)) {
+				// Nothing in the catalogue by that name: said with what was searched, and the ways on.
+				const none = why.match(/no catalogue product matches "([^"]+)"/)?.[1];
+				refusal = none
+					? `I couldn't find “${none}” in Valio's catalogue, so there is nothing to buy yet. Try another name for it (the brand, or the Finnish word), name a similar product, or describe the dish and I will plan it.`
+					: `Not ordered: ${why.replace(/\b(\d{4}-\d{2}-\d{2})\b/g, (d) => dayWords(d))}`;
+			} else if (o?.planId) touched.push(o.planId);
 		}
 		// Words read as an order that the request parser could not turn into a product and an amount: say so, and the
 		// way on, never "not recognised" after the reading said order.
@@ -1014,7 +1155,7 @@ export async function* runChatTurn(
 		text = refusal ?? run?.outcome?.nextAction ?? 'Nothing was done.';
 		// A side question while this task waits for an answer leaves that question open.
 		// The dock shows a waiting task's answer on its question card, so the card is sent again with both.
-		if (followUp && task.pending.kind === 'clarify') {
+		if (followUp && !answered && task.pending.kind === 'clarify') {
 			const q = task.pending;
 			text = `${text} Still open: ${q.question}`;
 			yield {
@@ -1108,6 +1249,24 @@ function decisionEvent(task: Task, read: TaskRead): ChatEvent | null {
 }
 
 /**
+ * The dock opening on a page's plan: the task that holds it (its cards as they are now), or none yet, with the plan's
+ * name for the header. A remembered task about something else is never shown here.
+ */
+export async function planView(
+	planId: string,
+	deps: ChatDeps
+): Promise<{ taskId: string | null; title: string; events: ChatEvent[] }> {
+	const r = await deps.handlers.get_plan(deps.ctx, { planId });
+	if (!r.ok) return { taskId: null, title: '', events: [] };
+	const plan = r.value.plan;
+	const held = (
+		await storeOf(deps.ports).list(deps.workspaceId, { kitchenId: plan.kitchenId, limit: 200 })
+	).find((t) => t.plans.some((p) => p.planId === plan.id));
+	const title = held?.title || planName(plan, SUPPORTED_EVENTS);
+	return { taskId: held?.id ?? null, title, events: held ? await taskView(held.id, deps) : [] };
+}
+
+/**
  * A task as it stands now, as the lines a turn ends with (clarify | decision, ledger, done), without running
  * anything: the dock calls it when it opens on a remembered task, so its cards come from the plans as they are, not
  * from what the last turn saw.
@@ -1126,16 +1285,8 @@ export async function taskView(taskId: string, deps: ChatDeps): Promise<ChatEven
 		out.push({ type: 'done', taskId, state: t.state, text: q.question, canContinue: false });
 		return out;
 	}
-	if (!t.plans.length)
-		return [
-			{
-				type: 'done',
-				taskId,
-				state: t.state,
-				text: 'Nothing is planned on this task yet.',
-				canContinue: false
-			}
-		];
+	// Nothing planned and nothing asked: there is nothing to show (the next turn says what it does).
+	if (!t.plans.length) return [];
 	const read = await readTask(
 		deps.ctx,
 		deps.ports,
@@ -1423,7 +1574,8 @@ async function eventTurn(
 	const q = nextQuestion(draft, deps.today);
 	if (q) {
 		const options = q.chips.slice(0, 6).map((c) => ({
-			label: c.label.slice(0, 80),
+			// A day in words ("Fri 11 Dec"), never a date code.
+			label: c.label.replace(/\b(\d{4}-\d{2}-\d{2})\b/g, (d) => dayWords(d)).slice(0, 80),
 			value: JSON.stringify(c.answer.value).slice(0, 200)
 		}));
 		return {

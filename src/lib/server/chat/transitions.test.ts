@@ -429,6 +429,48 @@ describe('suite: chat transitions (round 10)', () => {
 		expect(out.at(-1)).toMatchObject({ text: expect.stringMatching(/cancelled/) });
 	});
 
+	it('the plan on screen scopes the dock: "where do we stand?" answers for it, in words', async () => {
+		const s = await setup();
+		const p1 = await s.place(['100001'], 'one');
+		await s.place(['100002'], 'two');
+		// A remembered task with nothing of its own (no plan, no question) and the page's plan beside it.
+		const stale = await s.task([]);
+		const out = await chatTurn(
+			{ taskId: stale.id, planId: p1.id, text: 'where do we stand?' },
+			s.deps
+		);
+		// What the chef reads: the closing words, the step lines and any question.
+		const said = out
+			.map((e) =>
+				e.type === 'done'
+					? e.text
+					: e.type === 'step'
+						? e.summary
+						: e.type === 'clarify'
+							? `${e.question} ${e.options.map((o) => o.label).join(' ')}`
+							: ''
+			)
+			.join(' ');
+		expect(out.some((e) => e.type === 'clarify' && e.field === 'plan')).toBe(false);
+		expect(said).not.toMatch(/pl-run-|Nothing is planned/);
+		const done = out.at(-1);
+		expect(done?.type === 'done' && done.text.length > 0).toBe(true);
+		expect(out.find((e) => e.taskId)?.taskId).not.toBe(stale.id);
+	});
+
+	it('a plan picked by the chef is asked in words, never by id', async () => {
+		const s = await setup();
+		await s.place(['100001'], 'one');
+		await s.place(['100002'], 'two');
+		const out = await chatTurn({ text: 'show me the plan status' }, s.deps);
+		const ask = out.find((e) => e.type === 'clarify');
+		if (ask?.type === 'clarify') {
+			expect(ask.question).not.toMatch(/pl-|k-hotel/);
+			for (const o of ask.options) expect(o.label).not.toMatch(/pl-|\d{4}-\d{2}-\d{2}/);
+		}
+		expect(JSON.stringify(out.filter((e) => e.type === 'done'))).not.toMatch(/pl-run-/);
+	});
+
 	it('R10-10: the agent loop gives different line subsets of one version different commands', async () => {
 		const s = await setup();
 		const p = await s.place(['100001', '100003']);

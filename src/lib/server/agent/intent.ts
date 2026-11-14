@@ -1,7 +1,7 @@
 import type { Availability } from '$lib/core/contracts';
 import type { ClarifyField } from '$lib/core/contracts/task';
 import { onScenario } from '$lib/core/scenario';
-import { addDays, findDate, realDate, weekdayName } from '$lib/server/request/dates';
+import { addDays, findDate, realDate } from '$lib/server/request/dates';
 import type { ReqUnit } from '$lib/server/request/lexicon';
 import { parseRules } from '$lib/server/request/parse';
 import { classifyGoal, perGuestIn } from './classify';
@@ -52,7 +52,8 @@ function dateOptions(today: string, start = addDays(today, 1)): Clarify['options
 	return [0, 1, 2, 3, 4].map((n) => {
 		const d = addDays(start, n);
 		return {
-			label: `${d === addDays(today, 1) ? 'Tomorrow' : weekdayName(d)} ${d.slice(5)}`,
+			// In words ("Thu 10 Dec"), never a date code.
+			label: d === addDays(today, 1) ? `Tomorrow, ${dayLabel(d)}` : dayLabel(d),
 			value: d
 		};
 	});
@@ -113,16 +114,13 @@ function noPlan(c: AgentContext, none: string): Resolved {
 	// No plan open at all: nothing to pick, so say so rather than ask an unanswerable question.
 	if (!c.openPlans.length) return refuse(none);
 	if (c.openPlans.length < 2) return ask('plan', none);
-	const list = c.openPlans
-		.map((p) => `${p.id} (${p.kitchenId}${p.eventId ? `, ${p.eventId}` : ''})`)
-		.join(', ');
+	// The choices in words (the event and its day, or what the order buys); the id is only the chip's value.
 	return ask(
 		'plan',
-		`Which plan? Name its id, event or kitchen: ${list}.`,
-		c.openPlans.map((p) => ({
-			label: `${p.id} · ${p.kitchenId}${p.eventId ? ` · ${p.eventId}` : ''}`,
-			value: p.id
-		}))
+		'Which plan do you mean?',
+		c.openPlans
+			.slice(0, 6)
+			.map((p) => ({ label: (p.name ?? 'An open order').slice(0, 80), value: p.id }))
 	);
 }
 

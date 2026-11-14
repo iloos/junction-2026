@@ -1,0 +1,10 @@
+{
+	"id": "c7-date-chip-then-order",
+	"$comment": "An answered question carries the order on: the chef gives product and amount, the chat asks the day, the chef picks a day chip, and the same turn searches, quotes and drafts (or says why it could not). Never a step trace with no reply, never a wait for 'continue'.",
+	"kitchen": "k-hotel",
+	"steps": [{ "chef": { "text": "4 kg lactose-free butter" } }],
+	"answers": { "date": "2026-12-10" },
+	"expect": {
+		"0": { "pending": ["decision", "none"], "receipts": 0 }
+	}
+}
