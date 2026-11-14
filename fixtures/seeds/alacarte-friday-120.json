@@ -1,0 +1,102 @@
+{
+	"$comment": "Friday dinner at an independent à la carte restaurant: the salmon main most guests order, its sauce and potatoes, and butter for the bread. A light event (fewer dishes than the three demo kitchens'). need = guests × share × gServed ÷ yield, rounded up to the pack or lot. Every number is a team estimate until a chef checks it. Prices and availability are quoted live by the app. Product ids reference the Valio catalogue; no Valio rows are copied here.",
+	"id": "event-alacarte-fri-120",
+	"title": "Friday dinner, 120 covers",
+	"kitchenId": "k-alacarte",
+	"date": "2026-12-18",
+	"guests": {
+		"estimate": 120,
+		"guarantee": null,
+		"guaranteeDueHoursBefore": 48,
+		"oversetPct": 0
+	},
+	"serviceStyle": "à la carte dinner",
+	"provenance": {
+		"kind": "estimate",
+		"label": "team estimate, not yet reviewed by a chef",
+		"sources": [
+			{
+				"what": "profile, priorities and hard constraints",
+				"ref": "docs/research/horeca-profiles.md §2"
+			},
+			{
+				"what": "pack sizes and lot steps",
+				"ref": "Valio catalogue (data/valio/normalized/products.json)"
+			}
+		]
+	},
+	"dishes": [
+		{
+			"dish": "Paistettu lohi (pan-fried salmon)",
+			"dietCodes": ["L", "G"],
+			"share": 0.55,
+			"gServed": 160,
+			"yield": 0.85,
+			"yieldNote": "fillet strips → pan-fried portions (team estimate)",
+			"productId": "461871",
+			"productName": "Kalavapriikki Lohifilee suikale, ASC",
+			"salesUnit": "KG",
+			"lotStep": 3,
+			"needKg": 12.42,
+			"order": {
+				"qty": 15,
+				"unit": "KG",
+				"rounding": "12.42 kg → 5 × 3 kg lot = 15 kg"
+			}
+		},
+		{
+			"dish": "Kermakastike (cream sauce)",
+			"dietCodes": ["L", "G"],
+			"share": 0.55,
+			"gServed": 40,
+			"productId": "464249",
+			"productName": "Valio ruokakerma 15 % 1 l UHT laktoositon",
+			"salesUnit": "ST",
+			"pack": {
+				"netL": 1
+			},
+			"needL": 2.64,
+			"order": {
+				"qty": 3,
+				"unit": "ST",
+				"rounding": "2.64 l / 1 = 2.64 → 3 ST"
+			}
+		},
+		{
+			"dish": "Uudet perunat (potatoes)",
+			"dietCodes": ["VEG", "L", "G", "M"],
+			"share": 0.8,
+			"gServed": 150,
+			"yield": 0.95,
+			"productId": "475214",
+			"productName": "SPL Raaka annosperuna veitsikuorittu 10kg",
+			"salesUnit": "ST",
+			"pack": {
+				"netKg": 10
+			},
+			"needKg": 15.16,
+			"order": {
+				"qty": 2,
+				"unit": "ST",
+				"rounding": "15.16 kg / 10 = 1.52 → 2 ST"
+			}
+		},
+		{
+			"dish": "Voi leivälle (butter for the bread)",
+			"dietCodes": ["L", "G"],
+			"gServed": 10,
+			"productId": "463437",
+			"productName": "Valio Eila® voi 500 g laktoositon",
+			"salesUnit": "ST",
+			"pack": {
+				"netKg": 0.5
+			},
+			"needKg": 1.2,
+			"order": {
+				"qty": 3,
+				"unit": "ST",
+				"rounding": "1.2 kg / 0.5 = 2.4 → 3 ST"
+			}
+		}
+	]
+}

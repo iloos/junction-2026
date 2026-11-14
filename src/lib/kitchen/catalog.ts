@@ -1,7 +1,7 @@
 import buffet from '../../../fixtures/seeds/christmas-buffet-140.json';
 import kitchensSeed from '../../../fixtures/seeds/kitchens.json';
 import { Kitchen, type AvailabilityKind, type MeasureUnit } from '$lib/core/contracts';
-import { EVENT_SEEDS, hasEvent } from './events';
+import { EVENT_SEEDS } from './events';
 
 /**
  * Product facts for the kitchens' events, read from their seeds (lib/kitchen/events.ts); the hero event is
@@ -14,10 +14,10 @@ export const SEED = buffet;
 export const CACHED_AT = '2026-11-14T10:00:00+02:00';
 export const CACHE_REF = 'valio mock, cache tag support-seeds / hero-preflight';
 
-/** Every seeded kitchen (the control room shows them all). */
-export const ALL_KITCHENS: Kitchen[] = kitchensSeed.kitchens.map((k) => Kitchen.parse(k));
-/** The kitchens the kitchen screen offers: the ones with an event to plan. */
-export const KITCHENS: Kitchen[] = ALL_KITCHENS.filter((k) => hasEvent(k.id));
+/** Every seeded kitchen: all of them are joinable (D15), whether or not they have a seeded event. */
+export const KITCHENS: Kitchen[] = kitchensSeed.kitchens.map((k) => Kitchen.parse(k));
+/** Same list; kept for callers that mean "every kitchen" explicitly. */
+export const ALL_KITCHENS: Kitchen[] = KITCHENS;
 
 export type CategoryGroup = 'meat' | 'fish' | 'milk' | 'other';
 

@@ -1,0 +1,100 @@
+{
+	"$comment": "One week's dairy and bread for a care home of 140 residents (gServed is per resident per week). The house menu is lactose-free and every product must have an allergen record. A light event (fewer dishes than the three demo kitchens'). need = guests × share × gServed ÷ yield, rounded up to the pack or lot. Every number is a team estimate until a chef checks it. Prices and availability are quoted live by the app. Product ids reference the Valio catalogue; no Valio rows are copied here.",
+	"id": "event-carehome-week-140",
+	"title": "Week's dairy and bread, 140 residents",
+	"kitchenId": "k-carehome",
+	"date": "2026-12-21",
+	"guests": {
+		"estimate": 140,
+		"guarantee": null,
+		"guaranteeDueHoursBefore": 48,
+		"oversetPct": 0
+	},
+	"serviceStyle": "care home weekly menu",
+	"provenance": {
+		"kind": "estimate",
+		"label": "team estimate, not yet reviewed by a chef",
+		"sources": [
+			{
+				"what": "profile, priorities and hard constraints",
+				"ref": "docs/research/horeca-profiles.md §2"
+			},
+			{
+				"what": "pack sizes and lot steps",
+				"ref": "Valio catalogue (data/valio/normalized/products.json)"
+			}
+		]
+	},
+	"dishes": [
+		{
+			"dish": "Laktoositon maito (lactose-free milk)",
+			"dietCodes": ["L", "G"],
+			"gServed": 2800,
+			"productId": "464201",
+			"productName": "Valio kevytmaito 1 l laktoositon UHT",
+			"salesUnit": "ST",
+			"pack": {
+				"netL": 1
+			},
+			"needL": 392.0,
+			"order": {
+				"qty": 392,
+				"unit": "ST",
+				"rounding": "392 l / 1 = 392 ST"
+			}
+		},
+		{
+			"dish": "Jogurtti (lactose-free yoghurt)",
+			"dietCodes": ["L", "G"],
+			"gServed": 700,
+			"productId": "462718",
+			"productName": "Valio turkkilainen jogurtti 2 kg laktoositon",
+			"salesUnit": "ST",
+			"pack": {
+				"netKg": 2
+			},
+			"needKg": 98.0,
+			"order": {
+				"qty": 49,
+				"unit": "ST",
+				"rounding": "98 kg / 2 = 49 ST"
+			}
+		},
+		{
+			"dish": "Rahka (lactose-free quark)",
+			"dietCodes": ["L", "G"],
+			"gServed": 400,
+			"productId": "461571",
+			"productName": "Valio Keittiön maustettu rahka 200 g vanilja laktoositon",
+			"salesUnit": "KI",
+			"pack": {
+				"pieces": 12,
+				"netKg": 2.4
+			},
+			"needKg": 56.0,
+			"order": {
+				"qty": 24,
+				"unit": "KI",
+				"rounding": "280 pcs / 12 → 24 KI (288 pcs)"
+			}
+		},
+		{
+			"dish": "Ruisleipä (rye bread)",
+			"dietCodes": ["L", "M"],
+			"gServed": 595,
+			"productId": "461578",
+			"productName": "Vaasan Iso Ruisruutu 45x85g",
+			"salesUnit": "CS",
+			"pack": {
+				"pieces": 45,
+				"netKg": 3.825
+			},
+			"needKg": 83.3,
+			"order": {
+				"qty": 22,
+				"unit": "CS",
+				"rounding": "980 pcs / 45 → 22 CS (990 pcs)"
+			}
+		}
+	]
+}

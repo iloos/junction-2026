@@ -9,7 +9,23 @@ import * as fx from './fixture-server';
 import type { FixtureSnapshot } from './fixture-server';
 
 export type Snapshot = FixtureSnapshot;
-export type MaybeStarted = Snapshot | { started: false; kitchenId: string };
+/**
+ * Before a kitchen has a plan. `event` names its seeded event to plan; null when it has none and its first plan
+ * comes from the chat (D15), so the screen offers no "plan the event" step.
+ */
+export type MaybeStarted =
+	| Snapshot
+	| {
+			started: false;
+			kitchenId: string;
+			event?: {
+				id: string;
+				title: string;
+				date: string;
+				guests: number;
+				serviceStyle: string;
+			} | null;
+	  };
 
 /** The current snapshot; with `planId`, opens that plan (an approval link) instead of the kitchen's event plan. */
 export async function snapshot(

@@ -1,0 +1,100 @@
+{
+	"$comment": "The ski hotel's season-opening Sunday breakfast for 550 guests, ordered on Friday's delivery (two deliveries a week). A light event (fewer dishes than the three demo kitchens'). need = guests × share × gServed ÷ yield, rounded up to the pack or lot. Every number is a team estimate until a chef checks it. Prices and availability are quoted live by the app. Product ids reference the Valio catalogue; no Valio rows are copied here.",
+	"id": "event-skiresort-opening-550",
+	"title": "Season opening breakfast, 550 guests",
+	"kitchenId": "k-skiresort",
+	"date": "2026-12-20",
+	"guests": {
+		"estimate": 550,
+		"guarantee": null,
+		"guaranteeDueHoursBefore": 48,
+		"oversetPct": 0
+	},
+	"serviceStyle": "breakfast buffet",
+	"provenance": {
+		"kind": "estimate",
+		"label": "team estimate, not yet reviewed by a chef",
+		"sources": [
+			{
+				"what": "profile, priorities and hard constraints",
+				"ref": "docs/research/horeca-profiles.md §2"
+			},
+			{
+				"what": "pack sizes and lot steps",
+				"ref": "Valio catalogue (data/valio/normalized/products.json)"
+			}
+		]
+	},
+	"dishes": [
+		{
+			"dish": "Kananmuna (eggs)",
+			"dietCodes": ["L", "G", "M"],
+			"share": 0.7,
+			"gServed": 60,
+			"productId": "463982",
+			"productName": "Kieku Vapaan kanan muna L180 12300g",
+			"salesUnit": "KI",
+			"pack": {
+				"netKg": 12.3
+			},
+			"needKg": 23.1,
+			"order": {
+				"qty": 2,
+				"unit": "KI",
+				"rounding": "23.1 kg / 12.3 = 1.88 → 2 KI"
+			}
+		},
+		{
+			"dish": "Laktoositon maito (lactose-free milk)",
+			"dietCodes": ["L", "G"],
+			"gServed": 200,
+			"productId": "464201",
+			"productName": "Valio kevytmaito 1 l laktoositon UHT",
+			"salesUnit": "ST",
+			"pack": {
+				"netL": 1
+			},
+			"needL": 110.0,
+			"order": {
+				"qty": 110,
+				"unit": "ST",
+				"rounding": "110 l / 1 = 110 ST"
+			}
+		},
+		{
+			"dish": "Juustoviipaleet (cheese slices)",
+			"dietCodes": ["L", "G"],
+			"gServed": 20,
+			"productId": "462584",
+			"productName": "Valio Oltermanni® e900 g viipale",
+			"salesUnit": "ST",
+			"pack": {
+				"netKg": 0.9
+			},
+			"needKg": 11.0,
+			"order": {
+				"qty": 13,
+				"unit": "ST",
+				"rounding": "11 kg / 0.9 = 12.22 → 13 ST"
+			}
+		},
+		{
+			"dish": "Ruisleipä (rye bread)",
+			"dietCodes": ["L", "M"],
+			"gServed": 76,
+			"productId": "461747",
+			"productName": "Vaasan Pieni Ruisruutu 100x38g",
+			"salesUnit": "KI",
+			"pack": {
+				"pieces": 100,
+				"netKg": 3.8
+			},
+			"needKg": 41.8,
+			"order": {
+				"qty": 11,
+				"unit": "KI",
+				"rounding": "1100 pcs / 100 → 11 KI (1100 pcs)"
+			}
+		}
+	]
+}

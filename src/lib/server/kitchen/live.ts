@@ -149,21 +149,26 @@ export function callTool(
 	});
 }
 
-/** The plan opened by link if any, else the session kitchen's event plan if it exists: a read, never planning. */
+/**
+ * The plan opened by link if any, else the session kitchen's event plan, else (a kitchen with no seeded event,
+ * whose plans come from the chat or an agent) its latest plan with lines: a read, never planning.
+ */
 async function findPlan(s: Session) {
 	const ctx = chef(s);
 	const b = await createServerPorts();
 	const ws = await b.ports.store.load(ctx.workspaceId, ctx.runId);
 	const linked = s.planId ? ws.plans[s.planId] : undefined;
 	if (linked && linked.kitchenId === s.kitchenId) return linked;
-	return (
-		Object.values(ws.plans).find(
-			(p) =>
-				p.kitchenId === s.kitchenId &&
-				p.eventId !== undefined &&
-				p.eventId === eventFor(s.kitchenId)?.id
-		) ?? null
+	const event = eventFor(s.kitchenId);
+	if (event)
+		return (
+			Object.values(ws.plans).find((p) => p.kitchenId === s.kitchenId && p.eventId === event.id) ??
+			null
+		);
+	const mine = Object.values(ws.plans).filter(
+		(p) => p.kitchenId === s.kitchenId && p.lines.length > 0
 	);
+	return mine.at(-1) ?? null;
 }
 
 async function must<N extends ToolName>(
@@ -185,7 +190,7 @@ async function planOnly(s: Session) {
 	// Each kitchen plans its own event (lib/kitchen/events.ts): the hotel's Christmas buffet, the lunch
 	// restaurant's Wednesday, the central kitchen's school day.
 	const event = eventFor(s.kitchenId);
-	if (!event) throw new Error(`${s.kitchenId} has no event to plan`);
+	if (!event) throw new NoEvent(s.kitchenId);
 	const { plan } = (await must(s, 'plan_event', {
 		kitchenId: s.kitchenId,
 		eventId: event.id
@@ -237,7 +242,38 @@ function presetInput(kitchen: Kitchen, s: Session) {
 	};
 }
 
-export type LiveSnapshot = FixtureSnapshot | { started: false; kitchenId: string };
+/** Planning asked of a kitchen that has no seeded event: its first plan comes from the chat (D15). */
+export class NoEvent extends Error {
+	constructor(kitchenId: string) {
+		super(`${kitchenId} has no event to plan: its first plan comes from the chat`);
+	}
+}
+
+/** Before a kitchen has a plan: whether it has a seeded event to plan, and which (null: start from the chat). */
+export interface NotStarted {
+	started: false;
+	kitchenId: string;
+	event: { id: string; title: string; date: string; guests: number; serviceStyle: string } | null;
+}
+
+export type LiveSnapshot = FixtureSnapshot | NotStarted;
+
+function notStarted(kitchenId: string): NotStarted {
+	const e = eventFor(kitchenId);
+	return {
+		started: false,
+		kitchenId,
+		event: e
+			? {
+					id: e.id,
+					title: e.title,
+					date: e.date,
+					guests: e.guests.estimate,
+					serviceStyle: e.serviceStyle
+				}
+			: null
+	};
+}
 
 export function snapshot(sid: string, workspaceId: string): Promise<LiveSnapshot> {
 	return serial(workspaceId, () => buildSnapshot(session(sid, workspaceId)));
@@ -363,7 +399,7 @@ function titleOf(plan: Plan): string {
 async function buildSnapshot(s: Session): Promise<LiveSnapshot> {
 	const ctx = chef(s);
 	const planned = await findPlan(s);
-	if (!planned) return { started: false, kitchenId: s.kitchenId };
+	if (!planned) return notStarted(s.kitchenId);
 	const b = await createServerPorts();
 	const kitchens = await b.ports.store.kitchens(ctx.workspaceId);
 	const kitchen = kitchens.find((k) => k.id === s.kitchenId) ?? kitchens[0];
@@ -619,12 +655,16 @@ async function applyScenario(
 		s.preset = value;
 	else if (action === 'apply') await applyRules(s);
 	else if (action === 'kitchen' && typeof value === 'string') {
+		// Only a kitchen this workspace has: the switch no longer plans an event, so nothing else would refuse it.
+		const known = await b.ports.store.kitchens(chef(s).workspaceId);
+		if (!known.some((k) => k.id === value)) throw new Error(`no kitchen ${value}`);
 		const before = { ...s };
 		s.kitchenId = value;
 		s.planId = null;
 		s.preset = 'kitchen';
 		try {
-			if (!(await findPlan(s))) await ensurePlan(s);
+			// A kitchen with a seeded event plans it on arrival; one without waits for its first plan from the chat.
+			if (!(await findPlan(s)) && eventFor(s.kitchenId)) await ensurePlan(s);
 			return await buildSnapshot(s);
 		} catch (e) {
 			// A kitchen whose plan can't be built must not strand the screen: go back and say why.
