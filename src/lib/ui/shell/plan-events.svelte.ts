@@ -28,6 +28,8 @@ export function planOf(op: OpEnvelope['op']): string | null {
 const BURST_MS = 400;
 
 export class PlanEvents {
+	// Callbacks, not state anything renders: a plain Set on purpose.
+	// eslint-disable-next-line svelte/prefer-svelte-reactivity
 	#listeners = new Set<Listener>();
 	#es: EventSource | null = null;
 	#last = 0;
