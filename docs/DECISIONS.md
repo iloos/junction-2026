@@ -96,3 +96,13 @@ D8 preferred the seed's recipe over a product of unknown supply only when every 
 **Why:** recurring orders make demand dependable for Valio and routine ordering one tap for the kitchen (booth notes). Detection over a short window is honest and cheap. Explicit period settings serve kitchens whose rhythm detection misses.
 
 **Reopen if:** Valio supplies real order history (then it replaces the seed), or detection proves unstable on a 12-week window.
+
+### D15 · One entry: join as an establishment, then chat-first, then the Kitchen as a canvas (user, 14 Nov night)
+**Choice:** the app's flow is one shape, built before the freeze:
+1. **Join as an establishment.** The first screen in a fresh sandbox asks who you are cooking for. Pick one of the seeded kitchens (hotel, lunch restaurant, school kitchen, à la carte, care home, café, ski resort), each with its profile, rules and preferences, or describe your kitchen in a sentence. The description maps to the nearest profile (rules in the fixture path, Gemini when live), stays visible, and is editable as the kitchen's notes. It changes no rule without the chef.
+2. **Chat-first home.** One composer is the entry, with chips suited to the profile. The request pipeline (parse → lookup → order) runs inside the agent: its steps show as cards in the chat (B's step cards), with the date control and edit-in-place inside the card. A dish with a count goes down the dish path (ready-made vs from raw, ratio reasoning). `/request` as a page is retired and redirects to the home with the text; `/request/menu` stays as an API.
+3. **The Kitchen is the canvas.** When the first plan exists, the Kitchen view (the basket) opens as the main area and the chat docks into the right rail (Decide at the top of the rail). Edits on either side show on the other.
+
+**Why:** today the demo lands on one hard-coded Christmas buffet, and request, chat and Kitchen are three doors to one job. One path from who-you-are, to what-you-need, to the basket is the clean shape the user asked for.
+
+**Reopen if:** the merge isn't green and deployed by Sun 04:00. Then ship the picker plus the chat-first home, and keep /request linked from the chat cards.
