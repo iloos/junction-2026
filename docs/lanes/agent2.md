@@ -35,6 +35,7 @@ The agent's limits can't be talked away and its "done" means a domain outcome: r
 ## Report
 - Sat ~03:30 · done: C, D, E, A (narrow seam), G suites · server tests, check, lint green · ready to merge: yes
 - Sat ~05:00 · done: F4, F25 seams, get_context handler, MCP instructions · stubbed: get_context not in the registry (Need 1), envelope initiatedBy (Need 2) · merge gate green · ready to merge: yes
+- Sat ~06:00 · done: ResultMeta (present.ts), review/ (outcome text + request parse, REVIEW=1), adjust_need for r6-5, llm.for(job), /agents · stubbed: request parse not wired to review (Need), Agents nav link (Need) · merge gate green · ready to merge: yes
 
 ## Handoff (Sat 14 Nov)
 
@@ -92,3 +93,8 @@ curl -X POST localhost:5177/api/agent/run -H 'authorization: Bearer fx-chef' -d 
 1. Registry: move `get_context` from `tools-next.ts` into `toolSchemas` and wire `handlers.get_context = createGetContext(ports)` (in `core/services/handlers.ts` or the server handler map); add a `TITLES` entry in `tools/mcp.ts` (I can do that line once the name exists).
 2. core/services (`orders.ts`, `events.ts`, `substitutes.ts` `pending()` builders): copy `ctx.initiatedBy` onto `PendingOp` (`...(ctx.initiatedBy ? { initiatedBy: ctx.initiatedBy } : {})`). The run context already sets it; envelopes don't carry it yet.
 3. `src/routes/api/agent/run/[id]/cancel/+server.ts`: call `mayStartAgent(ctx)` (scopes) instead of `mayStartAgent(ctx.actor)`; the actor form still works via the role table.
+
+**Needs (Sat ~06:00)**
+4. Request lane: wrap `parseRequest` in `withReview(requestParseCheckpoint, …)` behind `REVIEW=1` (producer retry = the model parse with the critique appended), and take its model through `createLlmRouter(env, trace).for('request.parse')`.
+5. Layout (lead): an "Agents" link to `/agents` in the top nav.
+6. 8d: copy `ctx.initiatedBy` onto `PendingOp` (already agreed, A2).
