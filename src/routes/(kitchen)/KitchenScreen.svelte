@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount, tick } from 'svelte';
+	import { onMount, tick, untrack } from 'svelte';
 	import { resolve } from '$app/paths';
 	import { ChevronDown, Play, CloudOff, LoaderCircle } from '@lucide/svelte';
 	import { KitchenStore } from '$lib/kitchen/kitchen.svelte';
@@ -89,18 +89,18 @@
 		return first && toggled[first] === undefined ? { ...toggled, [first]: true } : toggled;
 	});
 
-	// The phone's sticky "needs you" bar steps aside once the approval card itself is on screen.
-	let approvalInView = $state(false);
-	$effect(() => {
-		if (!snap) return;
-		const el = document.getElementById('approval');
-		if (!el) return;
-		const io = new IntersectionObserver(([e]) => (approvalInView = e.isIntersecting), {
-			threshold: 0.15
-		});
-		io.observe(el);
-		return () => io.disconnect();
-	});
+	/** Phone zones (Decide / Plan / Order); desktop shows all three. Decide first while anything needs the chef. */
+	const ZONES = [
+		{ id: 'decide', label: 'Decide' },
+		{ id: 'plan', label: 'Plan' },
+		{ id: 'order', label: 'Order' }
+	] as const;
+	type Zone = (typeof ZONES)[number]['id'];
+	let zone = $state<Zone | null>(null);
+	function show(z: Zone) {
+		zone = z;
+		document.getElementById('zones')?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+	}
 
 	const snap = $derived(k.snap);
 	const view = $derived(k.view);
@@ -197,6 +197,14 @@
 	const orderable = $derived.by(() => {
 		const ls = (plan?.lines ?? []).filter((l) => l.view?.committable === true);
 		return { lines: ls.length, cents: ls.reduce((a, l) => a + (l.lineCents ?? 0), 0) };
+	});
+	/** The next step leads: decide while anything needs the chef, then order (and its receipt), else the plan. */
+	const active = $derived<Zone>(
+		zone ?? (decisions.length ? 'decide' : orderable.lines || k.lastCommit ? 'order' : 'plan')
+	);
+	// Deciding the last decision moves the phone on to the next step instead of an empty Decide tab.
+	$effect(() => {
+		if (decisions.length === 0 && untrack(() => zone) === 'decide') zone = null;
 	});
 	/** Once every orderable line is ordered, the header becomes the order's state. */
 	const orderedState = $derived.by(() => {
@@ -464,11 +472,12 @@
 					ordered={orderedState}
 				>
 					{#snippet action()}
-						{#if decisions.length}
-							<a
-								href="#approval"
-								class="inline-flex h-10 items-center gap-1.5 rounded-md bg-ink px-4 text-body font-medium text-sheet hover:bg-ink-2"
-								>Review {decisions.length === 1 ? 'the decision' : 'decisions'}</a
+						{#if decisions.length && active !== 'decide'}
+							<button
+								type="button"
+								class="inline-flex h-10 items-center gap-1.5 rounded-md bg-ink px-4 text-body font-medium text-sheet hover:bg-ink-2 lg:hidden"
+								onclick={() => show('decide')}
+								>Review {decisions.length === 1 ? 'the decision' : 'decisions'}</button
 							>
 						{/if}
 					{/snippet}
@@ -517,17 +526,33 @@
 				{/if}
 			</section>
 
-			<div class="mt-5">
-				<CutoffTimeline
-					now={k.now}
-					stock={openLines.stock}
-					terminal={openLines.terminal}
-					committed={openLines.stock + openLines.terminal === 0 && view.counts.committed > 0}
-				/>
+			<!-- Phone: one zone at a time, Decide first while anything needs the chef -->
+			<div
+				id="zones"
+				role="tablist"
+				aria-label="Task zones"
+				class="sticky top-0 z-20 -mx-4 mt-4 flex border-b border-rule bg-paper/95 px-4 backdrop-blur lg:hidden"
+			>
+				{#each ZONES as z (z.id)}
+					<button
+						type="button"
+						role="tab"
+						aria-selected={active === z.id}
+						class="flex h-11 flex-1 items-center justify-center gap-1.5 border-b-2 text-body {active ===
+						z.id
+							? 'border-ink font-semibold text-ink'
+							: 'border-transparent text-ink-2'}"
+						onclick={() => show(z.id)}
+						>{z.label}{#if z.id === 'decide' && decisions.length}<span
+								class="mono grid size-5 place-items-center rounded-full bg-auth text-micro text-sheet"
+								>{decisions.length}</span
+							>{/if}</button
+					>
+				{/each}
 			</div>
 
-			<!-- Dish table -->
-			<section aria-labelledby="dishes-h" class="mt-6">
+			<!-- Plan: dish → need → order -->
+			<section aria-labelledby="dishes-h" class="mt-6 {active === 'plan' ? '' : 'max-lg:hidden'}">
 				<div class="flex items-baseline justify-between gap-4">
 					<h2 id="dishes-h" class="text-heading font-semibold text-ink">Menu → need → order</h2>
 					<p class="hidden text-meta text-ink-3 md:block">
@@ -571,7 +596,7 @@
 										original={d.gDefault}
 										label={d.nameFi}
 										pending={k.pendingGrams[d.id]}
-										disabled={k.readOnly || !d.editable}
+										disabled={k.readOnly || !d.editable || !!orderedState}
 										onchange={(g) => k.setGrams(d.id, g)}
 									/>
 									<div class="min-w-0 pt-1">
@@ -661,40 +686,71 @@
 		</div>
 
 		<aside class="space-y-4 lg:sticky lg:top-4 lg:self-start" aria-label="Rules and approval">
-			<ApprovalPanel
-				{plan}
-				{approval}
-				lastInvalidated={snap.lastInvalidated &&
-				snap.lastInvalidated.planVersion >= (k.firstVersion ?? Infinity)
-					? snap.lastInvalidated
-					: null}
-				changes={k.changes}
-				{shortfalls}
-				orders={snap.orders}
-				lastCommit={k.lastCommit}
-				{names}
-				busy={k.busy}
-				onapprove={(ids) => k.approve('grant', ids)}
-				ondeny={(ids) => k.approve('deny', ids)}
-				oncommit={() => k.commit()}
-				onretry={() => k.retryCommit()}
-			/>
-			<RulesPanel
-				rules={snap.rules}
-				preset={snap.preset}
-				contention={snap.contention}
-				busy={k.busy}
-				previews={view.dishes
-					.filter((d) => d.rescue?.preview?.differs)
-					.map((d) => ({
-						dish: d.nameFi,
-						recommended: d.rescue!.preview!.recommended,
-						saved: d.rescue!.preview!.saved
-					}))}
-				onapply={() => k.applyRules()}
-				onpreset={(p) => k.setPreset(p)}
-				oncontention={(on) => k.setContention(on)}
-			/>
+			<div class={active === 'decide' ? '' : 'max-lg:hidden'}>
+				<ApprovalPanel
+					part="decide"
+					{plan}
+					{approval}
+					lastInvalidated={snap.lastInvalidated &&
+					snap.lastInvalidated.planVersion >= (k.firstVersion ?? Infinity)
+						? snap.lastInvalidated
+						: null}
+					changes={k.changes}
+					{shortfalls}
+					orders={snap.orders}
+					lastCommit={k.lastCommit}
+					{names}
+					busy={k.busy}
+					onapprove={(ids) => k.approve('grant', ids)}
+					ondeny={(ids) => k.approve('deny', ids)}
+					oncommit={() => k.commit()}
+					onretry={() => k.retryCommit()}
+				/>
+			</div>
+			<div class="space-y-4 {active === 'order' ? '' : 'max-lg:hidden'}">
+				<ApprovalPanel
+					part="order"
+					{plan}
+					{approval}
+					lastInvalidated={null}
+					changes={k.changes}
+					{shortfalls}
+					orders={snap.orders}
+					lastCommit={k.lastCommit}
+					{names}
+					busy={k.busy}
+					onapprove={(ids) => k.approve('grant', ids)}
+					ondeny={(ids) => k.approve('deny', ids)}
+					oncommit={() => k.commit()}
+					onretry={() => k.retryCommit()}
+				/>
+				<div>
+					<CutoffTimeline
+						now={k.now}
+						stock={openLines.stock}
+						terminal={openLines.terminal}
+						committed={openLines.stock + openLines.terminal === 0 && view.counts.committed > 0}
+					/>
+				</div>
+			</div>
+			<div class={active === 'plan' ? '' : 'max-lg:hidden'}>
+				<RulesPanel
+					rules={snap.rules}
+					preset={snap.preset}
+					contention={snap.contention}
+					busy={k.busy}
+					previews={view.dishes
+						.filter((d) => d.rescue?.preview?.differs)
+						.map((d) => ({
+							dish: d.nameFi,
+							recommended: d.rescue!.preview!.recommended,
+							saved: d.rescue!.preview!.saved
+						}))}
+					onapply={() => k.applyRules()}
+					onpreset={(p) => k.setPreset(p)}
+					oncontention={(on) => k.setContention(on)}
+				/>
+			</div>
 			{#if k.error}
 				{#if k.error.detail?.retryInMs}
 					<p class="rounded-md bg-well px-3 py-2 text-meta text-ink" role="status">
@@ -708,7 +764,12 @@
 				{/if}
 			{/if}
 			{#if k.activity.length}
-				<section aria-labelledby="log-h" class="rounded-lg border border-rule bg-sheet px-4 py-3">
+				<section
+					aria-labelledby="log-h"
+					class="{active === 'order'
+						? ''
+						: 'max-lg:hidden'} rounded-lg border border-rule bg-sheet px-4 py-3"
+				>
 					<h2 id="log-h" class="text-body font-semibold text-ink">What happened</h2>
 					<ol class="mt-1.5 space-y-1 text-meta text-ink-2">
 						{#each k.activity as a (a.id)}
@@ -729,15 +790,16 @@
 		</aside>
 	</main>
 
-	{#if decisions.length && !approvalInView}
-		<a
-			href="#approval"
+	{#if decisions.length && active !== 'decide'}
+		<button
+			type="button"
 			class="fixed inset-x-3 bottom-3 z-30 flex h-12 items-center justify-between rounded-lg bg-ink px-4 text-body font-medium text-sheet shadow-[0_8px_24px_-8px_oklch(0.2_0.02_255/0.5)] lg:hidden"
+			onclick={() => show('decide')}
 		>
 			<span>{decisionCount(decisions.length)} before {storyTime(decisionsDue(plan, approval))}</span
 			>
 			<span>Review</span>
-		</a>
+		</button>
 	{/if}
 
 	<WhyDrawer
