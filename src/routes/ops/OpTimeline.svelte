@@ -72,6 +72,8 @@
 				return op.outcome.result === 'committed' ? 'commit' : 'refused';
 			case 'RecordAnomaly':
 				return 'anomaly';
+			case 'RecordRefusal':
+				return 'refused';
 			default:
 				return 'other';
 		}

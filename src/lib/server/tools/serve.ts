@@ -9,9 +9,9 @@ import {
 	type ToolOutput
 } from '$lib/core/contracts';
 import type { CallContext, ToolHandlers } from '$lib/core/ports';
-import { isVisitorWorkspace } from '$lib/server/demo/visitor-id';
 import { inWorkspace } from '$lib/server/adapters/simulator/overlay';
 import { presentMeta } from './present';
+import { isRecordedRefusal, recordRefusal } from './refusals';
 
 /**
  * The one gate every surface (REST, MCP, the routine agent) calls a tool through: input validated
@@ -90,13 +90,16 @@ export async function serveTool(
 	hooks: ServeHooks = {}
 ): Promise<Served> {
 	if (!isToolName(name)) return fail(err('NOT_FOUND', `unknown tool ${name}`).error);
-	// A judge key resolves to its sandbox's current run; load that run first if this process hasn't yet.
-	if (isVisitorWorkspace(ctx.workspaceId))
-		ctx = await (await import('$lib/server/demo/reset')).onCurrentRun(ctx);
+	// A key resolves to its workspace's run synchronously; follow the newest run (a restart or another
+	// process's reset) so this call reads and writes the same run.
+	ctx = await (await import('$lib/server/demo/reset')).onCurrentRun(ctx);
 	const t0 = performance.now();
 	// Simulated scarcity is per workspace: quotes inside this call see only this workspace's overlay.
 	const scoped = ctx;
 	const out = await inWorkspace(scoped.workspaceId, () => run(name, scoped, rawInput, handlers));
+	// An agent refused by the gate is a trust event: it goes in the op log (refusals.ts).
+	if (!out.ok && isRecordedRefusal(ctx, out.error))
+		await recordRefusal(ctx, name, rawInput, out.error);
 	hooks.onCall?.({
 		tool: name,
 		ctx,

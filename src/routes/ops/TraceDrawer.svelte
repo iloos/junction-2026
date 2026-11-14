@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import type { OpEnvelope } from '$lib/core/contracts';
 	import type { TraceRun } from './stream.svelte';
-	import { reasonText, toolText } from './labels';
+	import { ACTOR, reasonText, toolText } from './labels';
 	import RunGraph from './RunGraph.svelte';
 
 	/** Each run opens on its graph; Calls is the step list, Raw the trace events as sent. */
@@ -17,8 +18,22 @@
 	let {
 		runs,
 		open = $bindable(false),
-		canRun
-	}: { runs: TraceRun[]; open?: boolean; canRun: boolean } = $props();
+		canRun,
+		op = $bindable(null)
+	}: {
+		runs: TraceRun[];
+		open?: boolean;
+		canRun: boolean;
+		/** An op to show first (a story step's "Technical detail"); cleared on close. */
+		op?: OpEnvelope | null;
+	} = $props();
+
+	/** The op as stored, without the bulky raw Valio payloads and the candidate list. */
+	const opJson = (env: OpEnvelope) =>
+		JSON.stringify(env, (k, v) => (k === 'raw' || k === 'candidates' ? `[${k} omitted]` : v), 2);
+	$effect(() => {
+		if (!open) op = null;
+	});
 
 	let starting = $state(false);
 	let message = $state('');
@@ -60,9 +75,33 @@
 	<button class="scrim" aria-label="Close agent traces" onclick={() => (open = false)}></button>
 	<aside class="drawer" aria-label="Agent traces" tabindex="-1" bind:this={panel}>
 		<header>
-			<h2>Agent traces</h2>
+			<h2>{op ? 'Technical detail' : 'Agent traces'}</h2>
 			<button class="close" onclick={() => (open = false)}>Close</button>
 		</header>
+		{#if op}
+			<section class="op-block" aria-label="Op {op.seq}">
+				<h3>Op {op.seq}: {op.op.type}</h3>
+				<dl>
+					<div>
+						<dt>Actor</dt>
+						<dd>{ACTOR[op.actor.kind]} <span class="mono">{op.actor.id}</span></dd>
+					</div>
+					<div>
+						<dt>Door</dt>
+						<dd class="mono">{op.via}</dd>
+					</div>
+					<div>
+						<dt>At</dt>
+						<dd class="mono">{op.at}</dd>
+					</div>
+					<div>
+						<dt>Run</dt>
+						<dd class="mono">{op.runId}</dd>
+					</div>
+				</dl>
+				<pre class="raw">{opJson(op)}</pre>
+			</section>
+		{/if}
 		<p class="lede">
 			Every step the kitchen agent takes and every model call it makes, with timing and tokens. Live
 			only: runs that started before you opened this page are not shown.
@@ -424,6 +463,29 @@
 		background: var(--raise);
 		color: var(--text);
 		border-color: var(--muted);
+	}
+	.op-block {
+		margin: 0 0 20px;
+		padding-bottom: 16px;
+		border-bottom: 1px solid var(--line);
+	}
+	.op-block h3 {
+		margin: 0 0 8px;
+		font-size: 18px;
+	}
+	.op-block dl {
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 6px 16px;
+		margin: 0 0 10px;
+		font-size: 14px;
+	}
+	.op-block dt {
+		color: var(--muted);
+	}
+	.op-block dd {
+		margin: 0;
+		overflow-wrap: anywhere;
 	}
 	.raw {
 		margin: 12px 0 0;

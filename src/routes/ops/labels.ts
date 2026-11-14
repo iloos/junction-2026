@@ -45,7 +45,7 @@ export const TOOL: Record<string, string> = {
 	get_plan: 'Read the plan',
 	explain_line: 'Explained a line',
 	approve: 'Approved',
-	commit_order: 'Committed the order',
+	commit_order: 'Ordered',
 	set_mandate: 'Changed the mandate',
 	lookup_facts: 'Looked up product facts',
 	find_outside: 'Searched outside sources',
@@ -90,7 +90,9 @@ export function opSummary(env: OpEnvelope, names: Names, plans: Record<string, P
 	const op = env.op;
 	switch (op.type) {
 		case 'CreatePlan':
-			return `Drafted an order with ${op.plan.lines.length} lines for delivery ${op.plan.deliverBy}`;
+			return op.plan.lines.length
+				? `Drafted an order of ${lines(op.plan.lines.length)} for delivery ${op.plan.deliverBy}`
+				: `Started an order for delivery ${op.plan.deliverBy}`;
 		case 'EditLine':
 			return op.summary;
 		case 'RecordOffer': {
@@ -107,6 +109,8 @@ export function opSummary(env: OpEnvelope, names: Names, plans: Record<string, P
 		case 'ProposeSubstitute': {
 			const forLine = op.lines[0]?.substituteFor;
 			const sub = op.lines[0]?.productId;
+			if (op.kind === 'make_in_house' && op.lines.length)
+				return `Planned it in house from ${op.lines.length} ingredient${op.lines.length === 1 ? '' : 's'}${forLine ? ` instead of ${name(names, forLine)}` : ''}`;
 			return sub
 				? `Proposed ${name(names, sub)}${forLine ? ` instead of ${name(names, forLine)}` : ''}`
 				: 'Found no substitute that qualifies';
@@ -128,15 +132,29 @@ export function opSummary(env: OpEnvelope, names: Names, plans: Record<string, P
 		}
 		case 'CommitOrder': {
 			const o = op.outcome;
-			if (o.result === 'failed') return `Commit refused (${o.error.code}): ${o.error.message}`;
+			if (o.result === 'failed') return `Order refused (${o.error.code}): ${o.error.message}`;
 			const confirmed = o.receipt.confirmed.length;
-			return `Committed ${euro(o.order.totalCents)}, supplier confirmed ${confirmed} of ${o.order.lines.length} lines`;
+			return `Ordered ${euro(o.order.totalCents)}, supplier confirmed ${confirmed} of ${o.order.lines.length} lines`;
 		}
 		case 'RecordAnomaly':
 			return op.anomaly.message;
 		case 'RecordEnrichment':
 			return `Added ${op.field} for ${name(names, op.productId)} (${op.provenance.source})`;
+		case 'RecordRefusal':
+			return `${refusalWhat(env.actor.kind, op.tool)}. Refused (${op.code}); nothing changed`;
 	}
+}
+
+/** "An outside agent tried to approve on the chef's behalf", for the log and the story. */
+export function refusalWhat(actor: ActorKind, tool: string): string {
+	const who = actor === 'external_agent' ? 'An outside agent' : 'The kitchen agent';
+	const what: Record<string, string> = {
+		approve: "tried to approve on the chef's behalf",
+		set_mandate: "tried to change the kitchen's mandate",
+		commit_order: 'tried to commit an order it may not commit',
+		place_order: 'tried to place an order it may not place'
+	};
+	return `${who} ${what[tool] ?? `tried to ${toolText(tool).toLowerCase()} without the right`}`;
 }
 
 export function opPlanId(env: OpEnvelope): string | undefined {

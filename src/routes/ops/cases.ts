@@ -198,7 +198,7 @@ export function buildCases(
 			kitchenId: plan.kitchenId,
 			planId: plan.id,
 			version: plan.version,
-			title: 'Commit refused',
+			title: 'Order refused',
 			lines: [],
 			causes: [reasonText(f.code)],
 			state: 'Refused',
@@ -238,7 +238,10 @@ export function coverage(plans: Plan[]): { covered: number; total: number } | nu
  * Where the kitchen shows this case: the exact workspace, run, plan, version and need. `ws` moves the
  * kitchen into the same room (server/demo/visitor.ts); a link from an older run finds no such plan there.
  */
-export function kitchenHref(c: Case, at?: { ws: string; run: string | null }): string | null {
+export function kitchenHref(
+	c: Pick<Case, 'kitchenId' | 'planId' | 'version' | 'needId'>,
+	at?: { ws: string; run: string | null }
+): string | null {
 	if (!c.planId) return null;
 	const q = new URLSearchParams();
 	if (at) {

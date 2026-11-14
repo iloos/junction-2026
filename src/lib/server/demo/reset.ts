@@ -5,7 +5,6 @@ import { realHandlers } from '$lib/server/tools/handlers';
 import { createServerPorts } from '$lib/server/store/server-ports';
 import { loadSeedKitchens } from '$lib/server/store/db-ports';
 import { isMemoryOnly } from '$lib/server/bus';
-import { isVisitorWorkspace } from './visitor-id';
 import { currentRun, hasRun, loadCurrentRun, newRunId, setCurrentRun } from './run';
 
 import { DEMO_WORKSPACE } from './workspaces';
@@ -119,11 +118,18 @@ export function resetDemo(): Promise<{ runId: string; previous: string }> {
 
 /**
  * A key-derived context on the workspace's current run. A key resolves synchronously (auth reads `currentRun`),
- * so a sandbox this process hasn't loaded yet (a judge key used right after a restart) would get the default
- * run: load it first, then re-read the run.
+ * so its run can be stale: a sandbox this process hasn't loaded yet (a judge key right after a restart) gets the
+ * default run, and a workspace another process has reset still carries the old one. Every call re-reads the
+ * run through `ensureRunLoaded` (memoised, refreshed at most every RUN_REFRESH_MS), so reads and writes land on
+ * the same run. `MANDATE_RUN` pins the run and is left alone; memory-only workspaces carry their own runs.
  */
-export async function onCurrentRun(ctx: CallContext): Promise<CallContext> {
-	if (!isVisitorWorkspace(ctx.workspaceId) || hasRun(ctx.workspaceId)) return ctx;
+export async function onCurrentRun(
+	ctx: CallContext,
+	pinned: string | undefined = process.env.MANDATE_RUN
+): Promise<CallContext> {
+	if (pinned || isMemoryOnly(ctx.workspaceId)) return ctx;
 	const runId = await ensureRunLoaded(ctx.workspaceId);
+	// No runs row (a test or script workspace on an explicit run): its own run is the only one.
+	if (!hasRun(ctx.workspaceId)) return ctx;
 	return runId === ctx.runId ? ctx : { ...ctx, runId };
 }

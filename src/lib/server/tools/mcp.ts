@@ -3,7 +3,7 @@ import { toolSchemas, type ToolName } from '$lib/core/contracts';
 import type { CallContext, ToolHandlers } from '$lib/core/ports';
 import { resolveRequest, type Env } from '$lib/server/auth';
 import { CORS, unauthorized, withCors } from './http';
-import { serveTool, toolsFor } from './serve';
+import { isToolName, serveTool, toolsFor } from './serve';
 
 /**
  * Stateless MCP (streamable HTTP, SDK v2): a fresh server per request, built for the caller's context.
@@ -95,6 +95,7 @@ export function createMcpEndpoint(handlers: ToolHandlers, opts: { env: Env; dev:
 		if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
 		const ctx = resolveRequest(request, opts.env, { dev: opts.dev, via: 'mcp', pathKey });
 		if (!ctx) return unauthorized();
+		if (request.method === 'POST') await gateUnlisted(request.clone(), ctx, handlers);
 		const res = await mcp.fetch(request, {
 			authInfo: {
 				token: 'redacted',
@@ -105,4 +106,24 @@ export function createMcpEndpoint(handlers: ToolHandlers, opts: { env: Env; dev:
 		});
 		return withCors(res);
 	};
+}
+
+/**
+ * A `tools/call` for a real tool this caller may not use (an outside agent calling `approve`) never reaches the
+ * gate: the server doesn't list it, so the SDK answers "not found". Send it through the gate anyway, so the
+ * refusal lands in the op log (refusals.ts) exactly as it would on REST; the client still gets the SDK's reply.
+ */
+async function gateUnlisted(request: Request, ctx: CallContext, handlers: ToolHandlers) {
+	let body: unknown;
+	try {
+		body = await request.json();
+	} catch {
+		return;
+	}
+	for (const m of Array.isArray(body) ? body : [body]) {
+		const msg = m as { method?: unknown; params?: { name?: unknown; arguments?: unknown } };
+		const name = msg?.method === 'tools/call' ? msg.params?.name : undefined;
+		if (typeof name !== 'string' || !isToolName(name) || toolsFor(ctx).includes(name)) continue;
+		await serveTool(name, ctx, msg.params?.arguments ?? {}, handlers);
+	}
 }
