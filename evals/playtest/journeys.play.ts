@@ -391,3 +391,121 @@ journey('j9', 'Public site: landing, how, proof, story', async (r, page) => {
 			await page.waitForLoadState('networkidle').catch(() => {});
 		});
 });
+
+// ---------- D23 / D24 (lead, 14 Nov 23:00) ----------
+
+type SnapLine = { productId: string; qty?: number; unit?: string; state: string };
+async function basket(page: Page) {
+	const snap = (await (await page.request.get(`${BASE}/kitchen-api/snapshot`)).json()) as {
+		plan?: { id?: string; lines?: SnapLine[] };
+	};
+	return {
+		plan: snap.plan?.id ?? null,
+		lines: (snap.plan?.lines ?? [])
+			.filter((l) => !['rejected', 'superseded'].includes(l.state))
+			.map((l) => `${l.productId} × ${l.qty ?? '?'} ${l.unit ?? ''}`.trim())
+			.sort()
+	};
+}
+
+const SAME_ASK = '20 l lactose-free milk and 5 kg butter for friday';
+
+journey(
+	'd23',
+	'One ask, two doors: the dock and /request end in the same basket',
+	async (r, page) => {
+		await r.step('dock: the ask', async () => (await home(page), await say(r, page, SAME_ASK)));
+		await r.step('dock: the basket on the Kitchen', async () => {
+			r.note('dockBasket', await basket(page));
+			await home(page);
+		});
+		const other = await page.context().browser()!.newContext({ viewport: page.viewportSize()! });
+		const p2 = await other.newPage();
+		try {
+			await r.step('/request: the same ask (fresh visitor)', () => requestPage(p2, SAME_ASK), {
+				beat: false
+			});
+			await r.step('/request: the basket on the Kitchen', async () => {
+				r.note('requestBasket', await basket(p2));
+				await home(p2);
+				await p2.screenshot({ path: `${r.dir}/request-door-kitchen.png`, fullPage: true });
+			});
+			await r.step(
+				'both doors give the same basket (D23 reopen test)',
+				async () => {
+					const a = JSON.stringify((r.j.notes.dockBasket as { lines: string[] }).lines);
+					const b = JSON.stringify((r.j.notes.requestBasket as { lines: string[] }).lines);
+					if (a !== b) throw new Error(`dock ${a} vs /request ${b}`);
+					if (a === '[]') throw new Error('both baskets empty');
+				},
+				{ beat: false }
+			);
+		} finally {
+			await other.close();
+		}
+	}
+);
+
+/** D24: three visitors join the shared room as three stores, each orders, Ops shows all three. Writes to ws-judges. */
+journey(
+	'r1',
+	'Room: three stores order, Ops shows them live',
+	async (r, page) => {
+		const browser = page.context().browser()!;
+		const ops = page;
+		await r.step('Ops on the big screen joins the room', async () => {
+			await ops.goto(`${BASE}/ops?ws=ws-judges`);
+			await ops.waitForTimeout(3000);
+		});
+		const stores = ['Playtest Bistro', 'Playtest Canteen', 'Playtest Hotel'];
+		const ctxs = await Promise.all(
+			stores.map(() => browser.newContext({ viewport: page.viewportSize()! }))
+		);
+		try {
+			await Promise.all(
+				stores.map(async (name, i) => {
+					const p = await ctxs[i].newPage();
+					// Only a visitor that became its own store orders: never write into the room's seeded kitchens.
+					const joined = await r.step(
+						`${name}: joins the room as its own store`,
+						async () => {
+							await p.goto(`${BASE}/?ws=ws-judges`);
+							await p.waitForLoadState('networkidle').catch(() => {});
+							const field = p.getByLabel(/store name|kitchen name|your name|name/i).first();
+							if (!(await field.isVisible().catch(() => false)))
+								throw new Error('no store-name field on joining the room (D24 store creation)');
+							await field.fill(name);
+							await p
+								.getByRole('button', { name: /join|start|create|continue/i })
+								.first()
+								.click();
+							await p.waitForLoadState('networkidle').catch(() => {});
+						},
+						{ beat: false }
+					);
+					await p.screenshot({ path: `${r.dir}/store-${i + 1}-joined.png`, fullPage: true });
+					if (!joined) return;
+					await r.step(
+						`${name}: orders`,
+						async () => {
+							await say(r, p, '10 l milk for friday, order it');
+							await approveAll(p).catch(() => 0);
+						},
+						{ beat: false }
+					);
+					await p.screenshot({ path: `${r.dir}/store-${i + 1}-ordered.png`, fullPage: true });
+				})
+			);
+		} finally {
+			await Promise.all(ctxs.map((c) => c.close()));
+		}
+		await r.step('Ops shows all three stores', async () => {
+			await ops.waitForTimeout(3000);
+			const text = await ops.locator('body').innerText();
+			const seen = stores.filter((s) => text.includes(s));
+			r.note('opsSeesStores', seen);
+			if (seen.length < 3) throw new Error(`Ops names ${seen.length}/3 stores: ${seen.join(', ')}`);
+		});
+	},
+	420_000
+);
