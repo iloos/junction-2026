@@ -6,7 +6,8 @@ import type { ServicePorts } from '$lib/core/services/events';
 import { liveApprovals } from '$lib/core/services/orders';
 import { withPlanView } from '$lib/core/services/views';
 import { hardLimitCents } from '$lib/core/mandate/validate';
-import { SCENARIO } from '$lib/core/scenario';
+import { SCENARIO, scenarioDate } from '$lib/core/scenario';
+import { usualSlice } from '$lib/server/patterns/usual';
 import { SUPPORTED_EVENTS } from './context';
 import { nextFor } from './next';
 
@@ -21,7 +22,8 @@ export const planNextAction = (p: Plan, now?: Date): string => nextFor(p, now).t
 
 /**
  * `get_context`: the first call of a fresh client. Who the caller is, its scopes, the kitchens it may act
- * for with their seeded events, the scenario date and cut-off, and its open plans with a next action.
+ * for with their seeded events and the next receiving day's usual order (simulated history), the scenario date and
+ * cut-off, and its open plans with a next action.
  * Read-only; kitchens outside `ctx.kitchenIds` are left out.
  */
 export function createGetContext(ports: ServicePorts): GetContextHandler {
@@ -61,7 +63,8 @@ export function createGetContext(ports: ServicePorts): GetContextHandler {
 					neverDelegate: [...k.mandate.neverDelegate],
 					allergenFreeFrom: [...k.constraints.allergens.freeFrom],
 					tenderListOnly: k.constraints.tenderListOnly
-				}
+				},
+				usual: usualSlice(k, scenarioDate(ports.clock.now()))
 			})),
 			// Read with their views (as get_plan returns them), so core's rule sees each line's state as of now.
 			openPlans: await Promise.all(
