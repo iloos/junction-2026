@@ -77,8 +77,5 @@
 			}
 		]
 	},
-	"expectFail": {
-		"F10": ["lines[464440]"]
-	},
 	"notes": "F10 (R5 journey 1): Valio's own substitute rule 464201 → 464440 (lactose-free semi-skimmed 1 l → 0.5 l). The review's repro bought 1 × 0.5 l with no residual."
 }

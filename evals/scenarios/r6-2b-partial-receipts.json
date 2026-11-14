@@ -66,8 +66,5 @@
 			}
 		]
 	},
-	"expectFail": {
-		"R6-fulfilment": ["fulfilment"]
-	},
 	"notes": "R6 §3 (A2): receipts join through order-line identity; a retry or a second partial receipt can't double-count. Salmon need 11.53 kg (lot rounding buys 20 kg; the 8.47 kg is excess, never cover)."
 }

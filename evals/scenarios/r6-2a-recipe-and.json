@@ -44,8 +44,5 @@
 			}
 		]
 	},
-	"expectFail": {
-		"R6-fulfilment": ["fulfilment"]
-	},
 	"notes": "R6 §3 (A2): required recipe components are AND; supported portions are bounded by the scarcest ingredient. The filling (461378) is simulated out from the start; whether the rescue then proposes the recipe or nothing, the tarts must stay visibly unresolved."
 }

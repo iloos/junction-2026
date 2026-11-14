@@ -38,8 +38,5 @@
 		],
 		"receipts": 0
 	},
-	"expectFail": {
-		"R6-units": ["attempts[0]"]
-	},
 	"notes": "R6 §2 (A2): the physical requirement is the demand authority; inconsistent dual inputs are rejected."
 }

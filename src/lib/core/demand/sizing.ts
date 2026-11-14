@@ -91,21 +91,24 @@ export function makeInHouseQty(ingredient: Loose, needKg: number): Line['qty'] {
 	};
 }
 
-const VOLUME = /(\d+(?:[.,]\d+)?)\s*(l|dl|cl|ml)\b/i;
-const TO_L: Record<string, number> = { l: 1, dl: 0.1, cl: 0.01, ml: 0.001 };
+const PRINTED: Record<'kg' | 'l', { re: RegExp; factor: Record<string, number> }> = {
+	l: { re: /(\d+(?:[.,]\d+)?)\s*(l|dl|cl|ml)\b/i, factor: { l: 1, dl: 0.1, cl: 0.01, ml: 0.001 } },
+	kg: { re: /(\d+(?:[.,]\d+)?)\s*(kg|g)\b/i, factor: { kg: 1, g: 0.001 } }
+};
 
 /**
  * Physical content of one sales unit in `unit`, when the catalogue states it: the net content when it is in that unit,
- * else (litres) the volume printed in the name ("1 l", "5 dl") per base unit × base units per sales unit (a KI of
- * 5 × 1 l juice is 5 l). Null when unknown: content is never guessed.
+ * else the amount printed in the name ("1 l", "5 dl", "200 g") per base unit × base units per sales unit (a KI of
+ * 20 × 200 g butter is 4 kg; of 5 × 1 l juice, 5 l). Null when unknown: content is never guessed.
  */
 export function contentPerSalesUnit(p: Product, unit: MeasureUnit): number | null {
 	const net = p.netPerSalesUnit?.value;
 	if (net && net.unit === unit) return net.value;
-	if (unit !== 'l') return null;
-	const m = (p.nameFi ?? '').match(VOLUME);
+	if (unit === 'pcs') return null;
+	const printed = PRINTED[unit];
+	const m = (p.nameFi ?? '').match(printed.re);
 	if (!m) return null;
-	const perBase = Number(m[1].replace(',', '.')) * TO_L[m[2].toLowerCase()];
+	const perBase = Number(m[1].replace(',', '.')) * printed.factor[m[2].toLowerCase()];
 	const base = p.packs.find((x) => x.unit === p.salesUnit)?.baseUnits ?? 1;
 	return perBase > 0 ? +(perBase * base).toFixed(4) : null;
 }
