@@ -797,10 +797,12 @@
 			<span class="sr-only md:not-sr-only">Kitchen</span>
 			<select
 				class="h-8 rounded-md border border-rule-strong bg-sheet px-2 text-body font-medium text-ink"
-				value={snap?.kitchen.id ?? 'k-hotel'}
-				disabled={k.readOnly || !snap}
-				onchange={(e) => k.setKitchen(e.currentTarget.value)}
+				value={needsJoin ? '' : (snap?.kitchen.id ?? 'k-hotel')}
+				disabled={k.readOnly || (!snap && !needsJoin)}
+				onchange={(e) =>
+					needsJoin ? choose(e.currentTarget.value) : k.setKitchen(e.currentTarget.value)}
 			>
+				{#if needsJoin}<option value="" disabled>Choose a kitchen</option>{/if}
 				{#each KITCHENS as kit (kit.id)}
 					<option value={kit.id}>{kit.name.replace(' (fictional)', '')}</option>
 				{/each}
