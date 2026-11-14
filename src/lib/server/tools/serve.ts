@@ -11,6 +11,7 @@ import {
 import type { CallContext, ToolHandlers } from '$lib/core/ports';
 import { inWorkspace } from '$lib/server/adapters/simulator/overlay';
 import { presentMeta } from './present';
+import { isRecordedRefusal, recordRefusal } from './refusals';
 
 /**
  * The one gate every surface (REST, MCP, the routine agent) calls a tool through: input validated
@@ -96,6 +97,9 @@ export async function serveTool(
 	// Simulated scarcity is per workspace: quotes inside this call see only this workspace's overlay.
 	const scoped = ctx;
 	const out = await inWorkspace(scoped.workspaceId, () => run(name, scoped, rawInput, handlers));
+	// An agent refused by the gate is a trust event: it goes in the op log (refusals.ts).
+	if (!out.ok && isRecordedRefusal(ctx, out.error))
+		await recordRefusal(ctx, name, rawInput, out.error);
 	hooks.onCall?.({
 		tool: name,
 		ctx,
