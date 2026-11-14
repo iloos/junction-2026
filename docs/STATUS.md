@@ -2,7 +2,7 @@
 
 _The lead rewrites this at each checkpoint. It is the "now": what works, what's next, what bites._
 
-**Updated:** Sat 14 Nov evening (lead). **Convergence checkpoint:** lanes landed, repo cleaned, docs restructured. Live assignment: [DISPATCH.md](DISPATCH.md) (Ring 3). Vocabulary: [concept/VOCABULARY.md](concept/VOCABULARY.md) (D10). History: [archive/](archive/README.md).
+**Updated:** Sat 14 Nov, Ring 4 (lead). **Convergence checkpoint:** lanes landed, repo cleaned, docs restructured. Live assignment: [DISPATCH.md](DISPATCH.md) (Ring 3). Vocabulary: [concept/VOCABULARY.md](concept/VOCABULARY.md) (D10). History: [archive/](archive/README.md).
 
 **Deployed:** https://app.mandate.kitchen, landing https://mandate.kitchen (Cloudflare Worker, `site/`); fallback https://widely-many-scorpion.eur-1.aiven.app (Aiven Runtime `mandate` startup-100-2048, Postgres startup-4 on AWS Frankfurt with PgBouncer, TLS verified, Gemini live). Prod runs `70c30e2`; migrations through 0004 applied; rollback branch `rollback` = `f3591fd`. 10 concurrent visitors planning the event: p50 3.6 s (p95 4.0), alone 0.6 s, 0 errors. Staging: `mandate-staging` https://ideally-expert-wolf.eur-1.aiven.app builds the `staging` branch (fixture model, shared DB). ~$0.24/h. Redeploy: merge to main → 9c redeploys → `scripts/deploy/warm.sh` + `scripts/deploy/smoke.sh` (with `SMOKE_KEY`: post-deploy race check, one receipt per key on Postgres). No redeploy in the last 30 min before judging.
 
@@ -14,7 +14,7 @@ _The lead rewrites this at each checkpoint. It is the "now": what works, what's 
 - Web: recall revisions per URL, per-run applications with retry, spend caps (429 with Retry-After), `lookup_facts` / `find_outside` / `check_recall` on MCP and REST. Context.dev monitor every 5 min.
 - Evidence: `pnpm gate` green (check, lint, unit ~420 server tests, evals incl. fidelity, surfaces, golden briefs); race smoke on prod Postgres (same key ×4 → one receipt; three keys → one receipt).
 
-**Now (Sat evening): Ring 3, landing.** Five read-only reviews (code, agent + sponsors, UX, docs + criteria, product) are in [handoff/ring3/](handoff/ring3/); the plan is [SYNTHESIS](handoff/ring3/SYNTHESIS.md) and the tracks are in [DISPATCH](DISPATCH.md). The trust core holds under every review; the work is the seams (one call scope, one next-action rule, server-owned keys), the hero moment acting (another kitchen takes the ham → the agent splits and asks for sign-off), the open-menu resolver, visible wording and counts, and the truth pass on docs before the video. Prod runs `70c30e2` (chat v2 with Gemini understanding, the Kitchen task page, web evidence in Why); 91's prod UI checks run in every smoke. Valio rubric self-score ≈ 3.4/5.
+**Now (Sat evening): Ring 4 checkpoint, landing.** Plan: [handoff/ring4/SYNTHESIS.md](handoff/ring4/SYNTHESIS.md) (reviews alongside); Ring 3 context in [handoff/ring3/](handoff/ring3/). Prod `6af9c1b` at https://app.mandate.kitchen (fallback the aiven.app URL); public site https://mandate.kitchen. Guarantees hold (adversarial suite: 2 open, D's web durability). Valio's answers are applied (≥999999 = unknown, lot 1, 429 pause; D6 amendment, D8a). Next: M1 dock plan pin (1f), the Ops Orders tab (9c), substitute kinds + one dueOf (8d), web routes through the gate (D), the docs truth pass and CLAIMS rows, then the video on the freeze build.
 
 **Sessions:** lead junc26-18 (+ lead agents for request, web, agent) · 8d core · 9c ops/deploy · 1f kitchen UI · 91 evals and gate.
 
