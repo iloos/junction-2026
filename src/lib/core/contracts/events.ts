@@ -100,6 +100,12 @@ export type ShortageReplanned = z.infer<typeof ShortageReplanned>;
 export const ServerEvent = z.discriminatedUnion('kind', [
 	z.object({ kind: z.literal('op'), seq: z.int().positive(), envelope: OpEnvelope }),
 	z.object({ kind: z.literal('sim'), seq: z.int().positive(), ...Scope.shape, event: SimEvent }),
+	/**
+	 * A room or shortage notice in a real workspace (kitchen.created, shortage.replanned). Not in the op log, so it has
+	 * no seq: it goes out live only, like a trace, and what it announces is readable on load (the kitchens table, the
+	 * re-planned plans and their anomalies).
+	 */
+	z.object({ kind: z.literal('notice'), ...Scope.shape, at: IsoDateTime, event: SimEvent }),
 	/** Agent trace steps (model, tokens, latency, tool calls): CLAUDE.md rule 7. Not part of state. */
 	z.object({
 		kind: z.literal('trace'),
