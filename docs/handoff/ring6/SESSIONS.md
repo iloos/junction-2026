@@ -13,6 +13,9 @@ The user wants one coherent flow from asking to managing items, in chat or on th
 - **S4** builds the room view on Ops (all stores, live orders, presenter shortage, a QR to join) before the sankey.
 - **S5** adds a room journey to the playtest: three browsers, three stores, orders visible on Ops.
 
+## The hero journey (user, 23:40): words → a costed, rule-checked plan the chef can act on
+The user's call: moment 2 is the wow, because it shows the whole machine working. Acceptance, on prod at 1440 and 390, chat or /request: "a no-meat dinner for 120 with a peach dessert" → menu card → "plan it" → every ingredient has a real Valio product with a price or an honest label → **every held line sits in exactly one decision the chef can approve in the dock or on the page** → approve → ordered, receipt, the order shows on Ops. Owners: S3 drives it end to end; S1 fixes core (decision groups for every held line, produce and dairy diet facts); S2 makes the plan readable on the Kitchen; S4 shows it arrive on Ops; S5's playtest m2 is the referee and runs it after every deploy. Nothing else in a lane outranks a hero-journey blocker.
+
 ## How every lane works tonight
 - Start: `Use the lane skill. Your brief is docs/handoff/ring6/SESSIONS.md, section <Sx>; resume details in docs/lanes/<brief>.md.`
 - First 5 min: in your worktree, `git fetch` is not needed (shared object store); bring your branch to main (`git merge --ff-only main` or the rebase named below), `pnpm i --frozen-lockfile`, `pnpm gate --only check,lint`.
