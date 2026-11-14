@@ -44,12 +44,14 @@ export const DEFAULT_KITCHEN = 'k-hotel';
  * The page's actors in one workspace: the kitchen agent places, the head chef approves (approver),
  * the chef commits. The workspace is created on first use (seed kitchens) before its run is read.
  */
-export async function actors(env: Env, workspaceId: string) {
+export async function actors(env: Env, workspaceId: string, visitor?: string) {
 	await (await ports()).store.kitchens(workspaceId);
+	// The browser's own visitor rides on every context: an owned kitchen takes writes only from its owner (D24).
+	const as = (c: CallContext): CallContext => (visitor ? { ...c, visitor } : c);
 	return {
-		agent: contextFor('kitchen_agent', 'request-agent', 'request', env, workspaceId),
-		approver: contextFor('approver', 'head-chef', 'request', env, workspaceId),
-		chef: contextFor('chef', 'chef', 'request', env, workspaceId)
+		agent: as(contextFor('kitchen_agent', 'request-agent', 'request', env, workspaceId)),
+		approver: as(contextFor('approver', 'head-chef', 'request', env, workspaceId)),
+		chef: as(contextFor('chef', 'chef', 'request', env, workspaceId))
 	};
 }
 
@@ -90,7 +92,7 @@ export function llmKind(env: Env): ParsedRequest['parser']['kind'] {
 
 /** A request runs in its caller's workspace: its clock, run and plans, never another room's. */
 export async function submitRequest(o: SubmitOptions): Promise<RequestResult> {
-	const ctx = o.ctx ?? (await actors(o.env, o.workspaceId ?? JUDGES_WORKSPACE)).agent;
+	const ctx = o.ctx ?? (await actors(o.env, o.workspaceId ?? JUDGES_WORKSPACE, o.visitor)).agent;
 	return inScope(ctx.workspaceId, () => submitInScope({ ...o, ctx }));
 }
 
@@ -113,12 +115,14 @@ type SubmitOptions = {
 	env: Env;
 	/** The page passes its workspace; the API passes the key's context instead. */
 	workspaceId?: string;
+	/** The browser's hashed visitor (visitorKey), for kitchens it owns. */
+	visitor?: string;
 	ctx?: CallContext;
 	onEvent?: (e: RequestEvent) => void;
 };
 
 async function submitInScope(o: SubmitOptions): Promise<RequestResult> {
-	const ctx = o.ctx ?? (await actors(o.env, o.workspaceId ?? JUDGES_WORKSPACE)).agent;
+	const ctx = o.ctx ?? (await actors(o.env, o.workspaceId ?? JUDGES_WORKSPACE, o.visitor)).agent;
 	const all = await kitchens(ctx);
 	const kitchen = all.find((k) => k.id === (o.kitchenId || DEFAULT_KITCHEN));
 	if (!kitchen) throw new Error(`unknown kitchen ${o.kitchenId}`);
@@ -169,13 +173,14 @@ async function submitInScope(o: SubmitOptions): Promise<RequestResult> {
 export async function approveRequest(o: {
 	env: Env;
 	workspaceId: string;
+	visitor?: string;
 	approvalId: string;
 	planId: string;
 	planVersion: number;
 	termsHash: string;
 	decision: 'grant' | 'deny';
 }) {
-	const a = await actors(o.env, o.workspaceId);
+	const a = await actors(o.env, o.workspaceId, o.visitor);
 	const r = await callTool(handlers, a.approver, 'approve', {
 		approvalId: o.approvalId,
 		planVersion: o.planVersion,
@@ -225,6 +230,7 @@ export function commitKey(
 export async function commitRequest(o: {
 	env: Env;
 	workspaceId: string;
+	visitor?: string;
 	planId: string;
 	version: number;
 	attempt: number;
@@ -235,7 +241,7 @@ export async function commitRequest(o: {
 	plan: Awaited<ReturnType<typeof approvalView>>['plan'];
 	approval: ApprovalView | null;
 }> {
-	const a = await actors(o.env, o.workspaceId);
+	const a = await actors(o.env, o.workspaceId, o.visitor);
 	return commitWith(handlers, a.chef, o);
 }
 

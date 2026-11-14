@@ -217,6 +217,41 @@ export function dietTagsIn(text: string): string[] {
 	return [...new Set(DIET_WORDS.filter(([w]) => hasWord(text, w)).map(([, t]) => t))];
 }
 
+/**
+ * What a plant-based ask for a dairy noun can be instead: the noun's own kind never fits "vegan milk", the plant
+ * alternative of the same use does. A near miss of the kind, never another kind ("vegan milk" is never a sorbet),
+ * and always asked as one labelled question before it is ordered.
+ */
+export const PLANT_ALT: Record<
+	string,
+	{ name: string; categories: string[]; re: RegExp; search: string[] }
+> = {
+	milk: {
+		name: 'plant drink',
+		categories: ['10402'],
+		re: /juoma/i,
+		search: ['kaurajuoma', 'soijajuoma', 'mantelijuoma']
+	},
+	butter: {
+		name: 'vegetable spread',
+		categories: ['10515', '10516', '10518'],
+		re: /margariini|kasvirasva|levite/i,
+		search: ['kasvirasvalevite', 'margariini']
+	},
+	yoghurt: {
+		name: 'plant-based yoghurt',
+		categories: ['10413'],
+		re: /soija|kaura|kasvi/i,
+		search: ['soijavalmiste', 'kauravalmiste']
+	},
+	cream: {
+		name: 'plant-based cream',
+		categories: ['10401', '10402'],
+		re: /(kaura|soija|kasvi|kookos)\p{L}*(kerma|ruoanvalmiste|cuisine)|kookosmaito/iu,
+		search: ['kaurakerma', 'soijakerma', 'kookosmaito']
+	}
+};
+
 /** Diet asks this service cannot check against a product at all (no record to read): the reading stops. */
 export const DIET_UNCHECKABLE = ['halal', 'kosher'];
 
