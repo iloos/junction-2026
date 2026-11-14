@@ -40,7 +40,12 @@ export const ResultMeta = z.object({
 		})
 		.optional(),
 	/** Deep link to the exact plan in the Kitchen screen, for a human approver. */
-	approvalUrl: z.string().optional()
+	approvalUrl: z.string().optional(),
+	/**
+	 * Deep link to a menu proposal's exact revision, for the chef to review and accept. Like approvalUrl it only
+	 * points: accepting is the chef's act on their own device, never a tool call (D17).
+	 */
+	reviewUrl: z.string().optional()
 });
 export type ResultMeta = z.infer<typeof ResultMeta>;
 
