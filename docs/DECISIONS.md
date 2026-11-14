@@ -84,3 +84,15 @@ The chat dock shows the same DecisionCard as the Kitchen, and a human chef can a
 
 ### D8a · Make in house from ingredients Valio states no stock for (lead + 8d, 14 Nov; amends D8)
 D8 preferred the seed's recipe over a product of unknown supply only when every ingredient was known stock. Valio confirmed that availability ≥ 999999 means orderable in any quantity with availability unknown, and four of the five lanttulaatikko ingredients carry it. So **a recipe whose ingredients are all orderable (known stock, or ≥999999-unknown; none out, blocked or undeliverable) beats a product no better than unknown supply**; a known-stock product still beats any recipe, and an all-known recipe is still the strongest rescue. The line says so ("Valio doesn't state stock for 4 of 5 ingredients"), reads unknown supply (never cover) and is held at propose. Reopen if Valio states stock for those ingredients, or a recipe from unknown ingredients is shown to fail more often than the product it replaced.
+
+### D14 · Order history and usual orders: per kitchen, a window of days to months, patterns detected (user, 14 Nov evening)
+**Choice:**
+- Order history is per kitchen (client).
+- The window is the kitchen's to set in days, weeks or months. The default is 12 weeks and the range tops out at a few months: beyond that, history only says how settled a pattern is.
+- Patterns are detected, not configured. Per product, find the period it recurs on (weekly per weekday, every n days, or monthly) and how settled it is (seen k of the last n periods, quantity spread). The result is a "usual order" per delivery day.
+- A usual order is a suggestion until the chef confirms it. Confirmed, it becomes a plan through the normal path (`applyOps`), with top-ups on top. It grants nothing on its own: a standing order is a commitment only through the mandate (memory-and-tenancy, GROWTH rule 1).
+- The mock has no real history, so it uses a seeded history per kitchen, generated from the kitchen's profile rhythm (horeca-profiles §3) and labelled "simulated history" wherever it shows.
+
+**Why:** recurring orders make demand dependable for Valio and routine ordering one tap for the kitchen (booth notes). Detection over a short window is honest and cheap. Explicit period settings serve kitchens whose rhythm detection misses.
+
+**Reopen if:** Valio supplies real order history (then it replaces the seed), or detection proves unstable on a 12-week window.
