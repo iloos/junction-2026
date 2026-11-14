@@ -352,19 +352,19 @@
 		}
 	},
 	"ad151bb3ab03d669f38d85f102fb0ff83fc50b8c192c9c26abf0350c2db4743b": {
-		"text": "The held line is waiting for your approval in the Kitchen screen.",
+		"text": "The required 30 kg Kalavapriikki lohifilee D-leikattu, ASC, n. 10 kg has supplier confirmed 0 kg and is waiting for your approval in the Kitchen screen.",
 		"model": "gemini-3.5-flash-lite",
 		"tokens": {
 			"in": 270,
-			"out": 13
+			"out": 46
 		}
 	},
 	"6471d8c951a154bc01eeb3bd5e152e26647c8878d9130c902f1cc3e914a209bd": {
-		"text": "{\n  \"kind\": \"order\",\n  \"items\": [\n    {\n      \"amount\": 20,\n      \"product\": \"\",\n      \"unit\": \"kg\"\n    }\n  ]\n}",
+		"text": "{\n  \"kind\": \"order\",\n  \"items\": [\n    {\n      \"amount\": 20,\n      \"unit\": \"kg\"\n    }\n  ]\n}",
 		"model": "gemini-3.5-flash-lite",
 		"tokens": {
 			"in": 448,
-			"out": 49
+			"out": 43
 		}
 	},
 	"a19943da22a144cb98e55bf57e7b91eabe94f3b07881da58254b29880138c4a0": {
@@ -392,35 +392,91 @@
 		}
 	},
 	"d526f515c1e7895c69f112f0b1dd9156cc34ab221cad586915a4a927a4d0d862": {
-		"text": "{\n  \"kind\": \"read\",\n  \"question\": \"whats the status\"\n}",
-		"model": "gemini-3.5-flash-lite",
-		"tokens": {
-			"in": 445,
-			"out": 21
-		}
-	},
-	"d79b0d107ddb45db73d1c63b077177269c84f9e8052f296573d65653117073bb": {
-		"text": "{\"done\":true,\"summary\":\"The current purchasing plan pl-run-1-fb70c6e6bee8 is held waiting for the chef's review, in accordance with the mandate that purchasing agents never approve plans.\"}",
-		"model": "gemini-3.5-flash-lite",
-		"tokens": {
-			"in": 522,
-			"out": 49
-		}
-	},
-	"9a43051e8393ef276caad0e86640b1ef281328007a0e886554254ec77bcd284a": {
-		"text": "The 30 kg Kalavapriikki lohifilee D-leikattu, ASC, n. 10 kg is waiting for your approval in the Kitchen screen.",
-		"model": "gemini-3.5-flash-lite",
-		"tokens": {
-			"in": 263,
-			"out": 38
-		}
-	},
-	"0827c09237cdc8e51d145b3b54f7231095bd9d53a58f7eb18e6089cf6b239ade": {
-		"text": "{\n  \"kind\": \"authority\"\n}",
+		"text": "{\"kind\":\"read\",\"question\":\"whats the status\"}",
 		"model": "gemini-3.5-flash-lite",
 		"tokens": {
 			"in": 445,
 			"out": 11
+		}
+	},
+	"d79b0d107ddb45db73d1c63b077177269c84f9e8052f296573d65653117073bb": {
+		"text": "{\"tool\": \"get_plan\", \"input\": {\"planId\": \"pl-run-1-eb13df5a913d\"}, \"why\": \"Inspect the current plan and its lines to check the status.\"}",
+		"model": "gemini-3.5-flash-lite",
+		"tokens": {
+			"in": 525,
+			"out": 50
+		}
+	},
+	"9a43051e8393ef276caad0e86640b1ef281328007a0e886554254ec77bcd284a": {
+		"text": "One held line is waiting for your approval in the Kitchen screen.",
+		"model": "gemini-3.5-flash-lite",
+		"tokens": {
+			"in": 263,
+			"out": 13
+		}
+	},
+	"0827c09237cdc8e51d145b3b54f7231095bd9d53a58f7eb18e6089cf6b239ade": {
+		"text": "{\"kind\":\"authority\"}",
+		"model": "gemini-3.5-flash-lite",
+		"tokens": {
+			"in": 445,
+			"out": 5
+		}
+	},
+	"1c444c9715b7d5b4f4f17f09489ed98943b8cdd59d0fa3224aa9d88a6e6278b8": {
+		"text": "{\"tool\": \"search_products\", \"input\": {\"query\": \"salmon fillet\"}, \"why\": \"The search for 'salomn fillet' had a typo; searching with the correct spelling 'salmon fillet' to find the product ID.\"}",
+		"model": "gemini-3.5-flash-lite",
+		"tokens": {
+			"in": 1440,
+			"out": 50
+		}
+	},
+	"cfb316fe83ab1106df5ee2aeab3233a64dc4562b3091fbefb63b7701ea4d2f54": {
+		"text": "{\"tool\": \"quote\", \"input\": {\"productIds\": [\"461915\", \"461916\", \"461814\", \"461871\", \"461884\", \"461885\", \"461903\", \"461907\"], \"deliverBy\": \"2026-12-11\"}, \"why\": \"Check live price and availability for the found salmon fillet products to select the best option.\"}",
+		"model": "gemini-3.5-flash-lite",
+		"tokens": {
+			"in": 2065,
+			"out": 115
+		}
+	},
+	"cac7a5eba867102a3559b52e299c52c8f1d0e6db1904ac80e53d0d3bb7b4e6a9": {
+		"text": "{\"tool\": \"place_order\", \"input\": {\"kitchenId\": \"k-hotel\", \"deliverBy\": \"2026-12-11\", \"idempotencyKey\": \"order-salmon-20261211\", \"lines\": [{\"productId\": \"461915\", \"qty\": 30, \"unit\": \"kg\", \"amount\": {\"value\": 30, \"unit\": \"kg\", \"basis\": \"gross\"}}]}, \"why\": \"Place order for 30 kg of Kalavapriikki lohifilee D-leikattu, ASC (product 461915) for Friday delivery.\"}",
+		"model": "gemini-3.5-flash-lite",
+		"tokens": {
+			"in": 2287,
+			"out": 149
+		}
+	},
+	"28fa71a1f5e726691e33932239618059b4696dbfaa51520ff8fd0ab5c7cee1c0": {
+		"text": "{\"tool\": \"place_order\", \"input\": {\"deliverBy\": \"2026-12-11\", \"idempotencyKey\": \"order-salmon-20261211-v2\", \"kitchenId\": \"k-hotel\", \"lines\": [{\"amount\": {\"basis\": \"gross\", \"unit\": \"kg\", \"value\": 30}, \"productId\": \"461915\", \"qty\": 30, \"unit\": \"KG\"}]}, \"why\": \"Place order for 30 KG of Kalavapriikki lohifilee D-leikattu, ASC (product 461915) using the exact unit 'KG' matching the product specification.\"}",
+		"model": "gemini-3.5-flash-lite",
+		"tokens": {
+			"in": 2459,
+			"out": 160
+		}
+	},
+	"6bb8b39f5f20f2bae4647570641021804ec1df324505fcf99d9e68d84c7dba55": {
+		"text": "{\"done\":true,\"summary\":\"Placed the order plan for 30 KG of Kalavapriikki lohifilee D-leikattu, ASC (product 461915). The plan is currently held because the price is missing and it's a new SKU, waiting for the chef's approval/action.\"}",
+		"model": "gemini-3.5-flash-lite",
+		"tokens": {
+			"in": 2791,
+			"out": 72
+		}
+	},
+	"44b64bb010dd0d559b338ea864adde54c5c7b3b34f8ad47bbcfd6c1c873d075f": {
+		"text": "{\n  \"kind\": \"adjust\",\n  \"items\": []\n}",
+		"model": "gemini-3.5-flash-lite",
+		"tokens": {
+			"in": 470,
+			"out": 17
+		}
+	},
+	"504eab1b6b2059edefb70091722caef97b0f82e2236671e795876d44eb0e1624": {
+		"text": "{\n  \"done\": true,\n  \"summary\": \"Plan pl-run-1-eb13df5a913d is currently held because line pl-run-1-eb13df5a913d-l1 is held due to UNKNOWN_REQUIRED, price_missing, and new_sku. Awaiting chef review.\"\n}",
+		"model": "gemini-3.5-flash-lite",
+		"tokens": {
+			"in": 762,
+			"out": 80
 		}
 	}
 }
