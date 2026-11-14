@@ -128,19 +128,9 @@
 					"fi#1.request.late.offersNext",
 					"fi#2.request.late.namesCutoff",
 					"fi#2.request.late.offersNext"
-				],
-				"LATE-agent-words": [
-					"en#1.agent.late.namesCutoff",
-					"en#1.agent.late.offersNext",
-					"en#2.agent.late.namesCutoff",
-					"en#2.agent.late.offersNext",
-					"fi#1.agent.late.namesCutoff",
-					"fi#1.agent.late.offersNext",
-					"fi#2.agent.late.namesCutoff",
-					"fi#2.agent.late.offersNext"
 				]
 			},
-			"$expectFailNote": "Today the line is held unorderable with reason cutoff_passed (no commit, no shift), but /request says nothing in words and offers no date (B), and the agent says 'no orderable line, find a substitute', which points at the product instead of the date (E)."
+			"$expectFailNote": "Today the line is held unorderable with reason cutoff_passed (no commit, no shift), but /request says nothing in words and offers no date (B)."
 		}
 	]
 }

@@ -140,6 +140,14 @@ describe('one nextActionFor(plan) (review §ranked 4)', () => {
 		expect(nextActionFor(plan(['committed']), { approvalPending: true }).kind).toBe('chef');
 		expect(nextActionFor(plan(['committed'])).kind).toBe('done');
 	});
+	it('a passed cut-off is a date problem, never a substitute search', () => {
+		const p = plan(['unorderable'], { deliverBy: '2026-12-08' } as Partial<Plan>);
+		(p.lines[0] as unknown as { reasons: string[] }).reasons = ['cutoff_passed'];
+		const n = nextActionFor(p);
+		expect(n.kind).toBe('date');
+		expect(n.tool).toBeUndefined();
+		expect(n.text).toMatch(/cut-off .* has passed/);
+	});
 	it('an eligible line past its cut-off is not offered for commit', () => {
 		const p = plan(['eligible']);
 		(p.lines[0] as unknown as { view: unknown }).view = { committable: false };
@@ -155,7 +163,9 @@ describe('a delivery date past its cut-off is asked about, never shifted', () =>
 			unit: 'kg'
 		});
 		expect(r.clarify).toMatchObject({ field: 'date' });
-		expect(r.clarify?.question).toMatch(/closed at 17:00 on 2026-12-07/);
+		expect(r.clarify?.question).toMatch(
+			/The cut-off for Tue 8 Dec has passed \(17:00 Mon\); earliest is Wed 9 Dec/
+		);
 		expect(r.clarify?.options[0].value).toBe('2026-12-09');
 		expect(
 			resolveIntent('I need lactose-free butter for k-hotel tomorrow', late, {

@@ -81,6 +81,27 @@ export function earliestOpen(today: string, now: string): string {
 	return d;
 }
 
+/** "Tue 8 Dec" for a calendar date. */
+export const dayLabel = (iso: string) =>
+	new Date(`${iso}T12:00:00Z`).toLocaleDateString('en-GB', {
+		weekday: 'short',
+		day: 'numeric',
+		month: 'short',
+		timeZone: 'UTC'
+	});
+
+/** Our words for a passed cut-off: the requested day, when ordering closed, and the earliest day still open. */
+export function cutoffPassed(deliverBy: string, closes: string, earliest: string): string {
+	const local = new Date(closes);
+	const at = local.toLocaleTimeString('en-GB', {
+		hour: '2-digit',
+		minute: '2-digit',
+		timeZone: 'Europe/Helsinki'
+	});
+	const on = local.toLocaleDateString('en-GB', { weekday: 'short', timeZone: 'Europe/Helsinki' });
+	return `The cut-off for ${dayLabel(deliverBy)} has passed (${at} ${on}); earliest is ${dayLabel(earliest)}. Which day should it arrive?`;
+}
+
 /** No plan picked: either none is open, or the request does not say which of several. */
 function noPlan(c: AgentContext, none: string): Resolved {
 	if (c.openPlans.length < 2) return ask('plan', none);
@@ -186,11 +207,7 @@ function routineOrder(
 		const closes = stockCutoff(deliverBy);
 		if (Date.parse(closes) <= Date.parse(c.now)) {
 			const first = earliestOpen(c.today, c.now);
-			return ask(
-				'date',
-				`Ordering for ${weekdayName(deliverBy)} ${deliverBy} closed at ${closes.slice(11, 16)} on ${closes.slice(0, 10)} (Valio's cut-off). The earliest delivery still open is ${weekdayName(first)} ${first}. Which day?`,
-				dateOptions(c.today, first)
-			);
+			return ask('date', cutoffPassed(deliverBy, closes, first), dateOptions(c.today, first));
 		}
 	}
 

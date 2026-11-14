@@ -176,6 +176,19 @@ export async function* runChatTurn(
 
 	if (input.continue) {
 		if (!primary) {
+			// Still waiting for an answer: ask the open question again rather than act.
+			if (task.pending.kind === 'clarify') {
+				const q = task.pending;
+				yield {
+					type: 'clarify',
+					taskId: task.id,
+					field: q.field,
+					question: q.question,
+					options: q.options
+				};
+				yield fail(task.id, q.question, task.state);
+				return;
+			}
 			yield fail(task.id, 'Nothing to continue: this task has no plan yet.', task.state);
 			return;
 		}

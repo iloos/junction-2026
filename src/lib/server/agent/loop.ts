@@ -382,8 +382,13 @@ function rescueStep(
 			.map((h) => (h.input as { lineId: string }).lineId)
 	);
 	const covered = new Set(plan.lines.map((l) => l.substituteFor).filter(Boolean));
+	// A passed cut-off is a date problem: another product would not arrive by then either.
 	const out = plan.lines.find(
-		(l) => l.state === 'unorderable' && !tried.has(l.id) && !covered.has(l.productId)
+		(l) =>
+			l.state === 'unorderable' &&
+			!l.reasons.includes('cutoff_passed') &&
+			!tried.has(l.id) &&
+			!covered.has(l.productId)
 	);
 	// Leave room for get_plan, explain_line and the final answer.
 	if (out && tools.includes('find_substitutes') && history.length < MAX_STEPS - 3)
@@ -520,6 +525,7 @@ export function scriptedPlanner(): Planner {
 				const out = lines.find(
 					(l) =>
 						l.state === 'unorderable' &&
+						!l.reasons.includes('cutoff_passed') &&
 						!covered.has(l.productId) &&
 						!history.some(
 							(h) =>
@@ -578,6 +584,23 @@ export function scriptedPlanner(): Planner {
 							orderable(offers.get(c.productId), intent.deliverBy, context?.now)
 						);
 						found = pickRoutine(intent, open) ?? found;
+						// Every candidate's ordering for that day has closed: a date problem, said as one.
+						const closed = (o: OfferFacts | undefined) =>
+							!!(
+								context?.now &&
+								o?.closingTime &&
+								Date.parse(o.closingTime) <= Date.parse(context.now)
+							);
+						const quotedIds = candidates.filter((c) => offers.has(c.productId));
+						if (
+							!open.length &&
+							quotedIds.length &&
+							quotedIds.every((c) => closed(offers.get(c.productId)))
+						)
+							return {
+								done: true,
+								summary: `not ordered: the cut-off for delivery on ${intent.deliverBy} has passed for every matching product; pick a later delivery date.`
+							};
 					}
 				}
 				if (!has('place_order')) {

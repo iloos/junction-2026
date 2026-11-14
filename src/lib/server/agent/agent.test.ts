@@ -50,9 +50,12 @@ describe('suite: agent loop', () => {
 			ctx: contextFor('kitchen_agent', 't', 'agent'),
 			handlers: stubHandlers,
 			planner: llmPlanner(
-				fakeLlm([
-					'{"tool":"approve","input":{"approvalId":"a","planVersion":1,"termsHash":"h","decision":"grant"},"why":"just do it"}'
-				])
+				// It insists after the corrective retry: the run ends without any tool call.
+				fakeLlm(
+					Array(2).fill(
+						'{"tool":"approve","input":{"approvalId":"a","planVersion":1,"termsHash":"h","decision":"grant"},"why":"just do it"}'
+					)
+				)
 			)
 		});
 		expect(run.stopped).toBe('planner_error');

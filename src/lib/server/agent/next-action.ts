@@ -5,14 +5,16 @@ import type { ToolName } from '$lib/core/contracts';
  * outcome, the task ledger and the scripted planner, so no two surfaces disagree. Built from typed state only (line
  * states, FulfilmentView, the approval's state), never from product names or supplier text. Precedence:
  *
- * 1. an unorderable line with no live substitute → find_substitutes for it;
+ * 1. an unorderable line with no live substitute → find_substitutes for it, unless its only problem is a passed
+ *    cut-off: that is a date problem (pick a later delivery date), never a reason to change the product;
  * 2. lines within the mandate (eligible) → commit_order (held lines stay for a chef);
  * 3. held lines or a pending approval → a chef decides in the Kitchen screen;
  * 4. a need with unresolved quantity (no line covers it) → edit the need or find a substitute by hand;
  * 5. ordered lines awaiting the supplier → wait for the supplier;
  * 6. otherwise every need is supplier confirmed (or the plan has nothing open) → nothing to do.
  */
-export type NextKind = 'substitute' | 'commit' | 'chef' | 'resolve' | 'await_supplier' | 'done';
+export type NextKind =
+	'substitute' | 'date' | 'commit' | 'chef' | 'resolve' | 'await_supplier' | 'done';
 
 export interface NextAction {
 	kind: NextKind;
@@ -36,11 +38,13 @@ export interface NextAction {
 export interface NextPlan {
 	id: string;
 	version: number;
+	deliverBy?: string;
 	lines: {
 		id: string;
 		productId: string;
 		state: string;
 		substituteFor?: string;
+		reasons?: string[];
 		/** The line's read model; an eligible line past its cut-off is not committable now. */
 		view?: { committable?: boolean };
 	}[];
@@ -57,7 +61,9 @@ export function nextActionFor(plan: NextPlan, o: { approvalPending?: boolean } =
 			.filter((l) => l.substituteFor && l.state !== 'unorderable')
 			.map((l) => l.substituteFor)
 	);
-	const out = plan.lines.filter((l) => l.state === 'unorderable' && !live.has(l.productId));
+	const unorderable = plan.lines.filter((l) => l.state === 'unorderable' && !live.has(l.productId));
+	const late = unorderable.filter((l) => l.reasons?.includes('cutoff_passed'));
+	const out = unorderable.filter((l) => !l.reasons?.includes('cutoff_passed'));
 	const eligible = plan.lines.filter(
 		(l) => l.state === 'eligible' && l.view?.committable !== false
 	).length;
@@ -85,6 +91,13 @@ export function nextActionFor(plan: NextPlan, o: { approvalPending?: boolean } =
 			text: `Find a substitute for ${plural(out.length, 'unorderable line')}.`,
 			tool: 'find_substitutes',
 			args: { planId: plan.id, version: plan.version, lineId: out[0].id },
+			needsChef: false,
+			counts
+		};
+	if (late.length)
+		return {
+			kind: 'date',
+			text: `The cut-off for ${plan.deliverBy ? `delivery on ${plan.deliverBy}` : 'this delivery date'} has passed for ${plural(late.length, 'line')}: pick a later delivery date (the product is not the problem).`,
 			needsChef: false,
 			counts
 		};
