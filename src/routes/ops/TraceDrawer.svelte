@@ -2,6 +2,17 @@
 	import { enhance } from '$app/forms';
 	import type { TraceRun } from './stream.svelte';
 	import { reasonText, toolText } from './labels';
+	import RunGraph from './RunGraph.svelte';
+
+	/** Each run opens on its graph; Calls is the step list, Raw the trace events as sent. */
+	const TABS = [
+		{ id: 'graph', label: 'Run graph' },
+		{ id: 'calls', label: 'Calls' },
+		{ id: 'raw', label: 'Raw' }
+	] as const;
+	type Tab = (typeof TABS)[number]['id'];
+	let tabs = $state<Record<string, Tab>>({});
+	const tabOf = (id: string): Tab => tabs[id] ?? 'graph';
 
 	let {
 		runs,
@@ -108,48 +119,63 @@
 						</p>
 					{/if}
 				</header>
-				<ol>
-					{#each run.steps as s, i (i)}
-						{#if s.step === 'step'}
-							<li class="plan">
-								<span class="n">{num(s.data.n)}</span>
-								<div>
-									<p><b>{toolText(str(s.data.tool))}</b></p>
-									<p class="why">{str(s.data.why)}</p>
-								</div>
-							</li>
-						{:else if s.step === 'tool'}
-							<li class="result" class:bad={s.data.ok === false}>
-								<span class="n"></span>
-								<p>
-									{s.data.ok === false ? `Failed: ${reasonText(str(s.data.code))}` : 'Done'}
-									<span class="mono">{num(s.data.ms)} ms</span>
-									{#if str(s.data.result)}<details class="digest">
-											<summary>Raw result</summary><code>{str(s.data.result)}</code>
-										</details>{/if}
-								</p>
-							</li>
-						{:else if s.step === 'error'}
-							<li class="result bad">
-								<span class="n"></span>
-								<p>{str(s.data.error)}</p>
-							</li>
-						{:else}
-							<li class="model">
-								<span class="n"></span>
-								<p>
-									<span>Model call</span>
-									<span class="mono">{str(s.data.model) || str(s.data.source) || s.step}</span>
-									{#if num(s.data.tokensIn) !== null}
-										<span>{num(s.data.tokensIn)} in, {num(s.data.tokensOut)} out</span>
-									{/if}
-									{#if num(s.data.latencyMs) !== null}<span>{num(s.data.latencyMs)} ms</span>{/if}
-									{#if str(s.data.error)}<span class="err">{str(s.data.error)}</span>{/if}
-								</p>
-							</li>
-						{/if}
+				<div class="tabs" role="tablist" aria-label="View of this run">
+					{#each TABS as t (t.id)}
+						<button
+							role="tab"
+							aria-selected={tabOf(run.id) === t.id}
+							onclick={() => (tabs = { ...tabs, [run.id]: t.id })}>{t.label}</button
+						>
 					{/each}
-				</ol>
+				</div>
+				{#if tabOf(run.id) === 'graph'}
+					<RunGraph {run} />
+				{:else if tabOf(run.id) === 'raw'}
+					<pre class="raw">{JSON.stringify(run.steps, null, 2)}</pre>
+				{:else}
+					<ol>
+						{#each run.steps as s, i (i)}
+							{#if s.step === 'step'}
+								<li class="plan">
+									<span class="n">{num(s.data.n)}</span>
+									<div>
+										<p><b>{toolText(str(s.data.tool))}</b></p>
+										<p class="why">{str(s.data.why)}</p>
+									</div>
+								</li>
+							{:else if s.step === 'tool'}
+								<li class="result" class:bad={s.data.ok === false}>
+									<span class="n"></span>
+									<p>
+										{s.data.ok === false ? `Failed: ${reasonText(str(s.data.code))}` : 'Done'}
+										<span class="mono">{num(s.data.ms)} ms</span>
+										{#if str(s.data.result)}<details class="digest">
+												<summary>Raw result</summary><code>{str(s.data.result)}</code>
+											</details>{/if}
+									</p>
+								</li>
+							{:else if s.step === 'error'}
+								<li class="result bad">
+									<span class="n"></span>
+									<p>{str(s.data.error)}</p>
+								</li>
+							{:else}
+								<li class="model">
+									<span class="n"></span>
+									<p>
+										<span>Model call</span>
+										<span class="mono">{str(s.data.model) || str(s.data.source) || s.step}</span>
+										{#if num(s.data.tokensIn) !== null}
+											<span>{num(s.data.tokensIn)} in, {num(s.data.tokensOut)} out</span>
+										{/if}
+										{#if num(s.data.latencyMs) !== null}<span>{num(s.data.latencyMs)} ms</span>{/if}
+										{#if str(s.data.error)}<span class="err">{str(s.data.error)}</span>{/if}
+									</p>
+								</li>
+							{/if}
+						{/each}
+					</ol>
+				{/if}
 				{#if run.done?.summary}<p class="summary">{run.done.summary}</p>{/if}
 			</section>
 		{:else}
@@ -378,5 +404,35 @@
 	}
 	.none {
 		color: var(--muted);
+	}
+	.tabs {
+		display: flex;
+		gap: 4px;
+		margin-top: 10px;
+	}
+	.tabs button {
+		background: transparent;
+		border: 1px solid var(--line);
+		color: var(--muted);
+		border-radius: 999px;
+		padding: 3px 12px;
+		font: inherit;
+		font-size: 15px;
+		cursor: pointer;
+	}
+	.tabs button[aria-selected='true'] {
+		background: var(--raise);
+		color: var(--text);
+		border-color: var(--muted);
+	}
+	.raw {
+		margin: 12px 0 0;
+		max-height: 420px;
+		overflow: auto;
+		font-family: var(--mono);
+		font-size: 12px;
+		color: var(--muted);
+		white-space: pre-wrap;
+		word-break: break-word;
 	}
 </style>
