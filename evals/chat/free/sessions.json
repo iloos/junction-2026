@@ -106,11 +106,7 @@
 						"kind": ["refuse"]
 					}
 				}
-			],
-			"expectFail": {
-				"CHAT-milk-like-request": ["0.items[1]"]
-			},
-			"$expectFailNote": "CHAT-milk-like-request (91 to judge): chat now picks exactly as /request does (same words, same basket). For '5 l maitoa' at Friday /request asks which milk ('milk still needs an answer') and buys nothing, so the chat orders the potatoes and says 'Not ordered: 5 l milk … say which one' instead of guessing a milk."
+			]
 		},
 		{
 			"id": "f3-mixed-late",

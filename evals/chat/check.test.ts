@@ -52,6 +52,16 @@ test('clarification: one question, never a held field again', () => {
 	assert.deepEqual(failed(checkStep(1, again, null, { asks: 'qty' })), ['1.asks']);
 });
 
+test('a negated order ("Not ordered: …") is not a claim of an order', () => {
+	const not = obs({
+		events: [{ type: 'done', text: "Not ordered: 2 kg of sauce can't be put in packs." }]
+	});
+	assert.deepEqual(
+		failed(checkStep(0, not, null)).filter((k) => k.includes('orderedClaim')),
+		[]
+	);
+});
+
 test('a turn ends with something to read, in our words', () => {
 	const steps = obs({ events: [{ type: 'step', summary: 'Found 0 matching products.' }] });
 	assert.deepEqual(failed(checkStep(0, steps, null)), ['0.saysSomething']);

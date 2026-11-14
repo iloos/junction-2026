@@ -92,6 +92,8 @@ export interface StepExpect {
 }
 
 const ORDERED = /\b(ordered|committed|placed the order|tilattu|tilasin|tilaus tehty)\b/i;
+const NEGATED =
+	/\b(?:not|nothing (?:was|is|has been)|never|no longer)\s+(?:yet\s+|been\s+)?(?:ordered|committed|tilattu)\b/gi;
 const CONFIRMED = /\b(supplier[- ]confirmed|confirmed by (the )?supplier|vahvistettu)\b/i;
 const eq = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
 const primary = (t: TaskView | null) => t?.plans.find((p) => p.role === 'primary')?.planId;
@@ -236,7 +238,8 @@ export function checkLedger(i: number, o: Observed): CheckResult[] {
 		.join(' | ');
 	const mine = new Set(t?.plans.map((p) => p.planId));
 	const receipts = o.receipts.filter((r) => mine.has(r.planId));
-	const said = done.match(ORDERED)?.[0];
+	// A negated claim ("Not ordered: …", "nothing was ordered") says the opposite: it is not a claim of an order.
+	const said = done.replace(NEGATED, ' ').match(ORDERED)?.[0];
 	if (said)
 		add(
 			'orderedClaim',

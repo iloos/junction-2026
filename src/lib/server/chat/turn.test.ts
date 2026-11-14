@@ -401,15 +401,20 @@ describe('suite: chat v2 · several products in one message', () => {
 			expect(out.some((e) => e.type === 'clarify')).toBe(false);
 			const taskId = out.at(-1)!.taskId;
 			const task = await w.env.ports.tasks!.get(w.env.workspaceId, taskId);
-			// One plan for the one delivery day; milk has no product /request would pick either, so it is said, not
-			// dropped and not guessed.
+			// One plan for the one delivery day, both products on it (the request pipeline now picks a milk, as
+			// /request does). Both are new to this kitchen, so they wait for the chef, and the answer says which and why.
 			expect(task?.plans.map((p) => p.role)).toEqual(['primary']);
 			const plans = Object.values((await w.state()).plans);
 			expect(plans.map((p) => p.deliverBy)).toEqual(['2026-12-11']);
-			expect(out.at(-1)).toMatchObject({ text: expect.stringMatching(/Not ordered: 5 l milk/) });
 			const ledger = out.find((e) => e.type === 'ledger');
 			if (ledger?.type !== 'ledger') throw new Error('no ledger');
-			expect(ledger.ledger.needs.map((n) => n.required)).toEqual([{ value: 10, unit: 'kg' }]);
+			expect(ledger.ledger.needs.map((n) => n.required)).toEqual([
+				{ value: 10, unit: 'kg' },
+				{ value: 5, unit: 'l' }
+			]);
+			const done = out.at(-1);
+			expect(done?.type === 'done' && done.text).toMatch(/Waiting on you: .*peruna.*maito/i);
+			expect(done?.type === 'done' && done.text).toMatch(/not bought before/);
 		}
 	);
 });
