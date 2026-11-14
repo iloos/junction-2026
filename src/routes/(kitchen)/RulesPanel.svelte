@@ -64,6 +64,15 @@
 		<p class="mt-2 text-[12.5px] text-ink-2">{PRESETS[preset].hint}</p>
 	</fieldset>
 
+	{#if !previews.length && preset !== 'kitchen'}
+		<p
+			class="mx-4 mt-3 rounded-md bg-well px-3 py-2 text-[12.5px] leading-snug text-ink-2"
+			role="status"
+		>
+			Your order already follows {PRESETS[preset].label.toLowerCase()}: these rules pick the same
+			rescues.
+		</p>
+	{/if}
 	{#if previews.length}
 		<div
 			class="mx-4 mt-3 rounded-md border border-propose/30 bg-propose-wash px-3 py-2.5"

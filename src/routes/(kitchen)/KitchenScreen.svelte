@@ -28,7 +28,15 @@
 		return () => clearInterval(t);
 	});
 
-	const names = new Map(Object.values(PRODUCTS).map((p) => [p.productId, p.name]));
+	// Names from the server's lines first, the fixture catalogue as a fallback.
+	const names = $derived(
+		new Map([
+			...Object.values(PRODUCTS).map((p) => [p.productId, p.name] as const),
+			...(k.plan?.lines ?? [])
+				.filter((l) => l.productName)
+				.map((l) => [l.productId, l.productName!] as const)
+		])
+	);
 	let toggled = $state<Record<string, boolean>>({});
 	// The first real outage opens by default; the chef's own toggles win after that.
 	const open = $derived.by(() => {

@@ -287,7 +287,9 @@ export function buildLiveView(input: LiveInput): EventView {
 							? `Nothing qualifies under your rules. ${nameFi} is a shortfall.`
 							: short
 								? `${productSub?.productName ?? productSub?.productId} no longer covers the need: stock was taken by another kitchen.`
-								: `${productSub?.productName ?? productSub?.productId} covers the full ${f1(served.value)} ${served.unit}.`
+								: productSub && hasUnknown(productSub)
+									? `${productSub.productName ?? productSub.productId} is the pick under these rules, but Valio states no quantity for it: ${f1(served.value)} ${served.unit} stays unconfirmed, not cover.`
+									: `${productSub?.productName ?? productSub?.productId} covers the full ${f1(served.value)} ${served.unit}.`
 			};
 		}
 

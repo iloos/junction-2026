@@ -38,6 +38,8 @@
 		id: string;
 		name: string;
 		sub: string;
+		/** Recipe fit with its source, or "fit not scored". */
+		fit: string;
 		rank: number | null;
 		total: number;
 		segs: Seg[];
@@ -60,6 +62,18 @@
 			.filter((c) => !c.rejected.length)
 			.sort((a, b) => (a.rank ?? 99) - (b.rank ?? 99));
 		const rejected = candidates.filter((c) => c.rejected.length);
+		// Recipe fit (0–4) for the top candidates: from Gemini when available, else a labelled rule estimate.
+		const fitText = (c: CandidateView) => {
+			const f = c.score?.fit;
+			if (!f) return c.rank && c.rank <= 3 ? 'fit not scored' : '';
+			const how =
+				f.provenance.source === 'llm'
+					? 'Gemini'
+					: /rules/.test(`${f.provenance.ref ?? ''} ${f.provenance.note ?? ''}`)
+						? 'rule estimate, model unavailable'
+						: f.provenance.source.replace('_', ' ');
+			return `fit ${f.score}/4 · ${how}`;
+		};
 		const toRow = (c: CandidateView): Row => {
 			let x = 0;
 			const segs: Seg[] = [];
@@ -86,6 +100,7 @@
 				id: c.productId,
 				name: c.name,
 				sub: `${c.productId} · ${c.origin ? c.origin.toUpperCase() : 'origin ?'} · ${c.availableText}`,
+				fit: c.rejected.length ? '' : fitText(c),
 				rank: c.rank,
 				total: c.score?.total ?? 0,
 				segs,
@@ -238,7 +253,8 @@
 			.each(function (d) {
 				const items = [
 					...d.flags.map((f) => ({ text: f, kind: f === 'In your order' ? 'order' : 'pick' })),
-					...d.chips.map((c) => ({ text: c, kind: d.rejected ? 'out' : 'warn' }))
+					...d.chips.map((c) => ({ text: c, kind: d.rejected ? 'out' : 'warn' })),
+					...(d.fit ? [{ text: d.fit, kind: 'info' }] : [])
 				];
 				let cx = 0;
 				const placed = items.map((it) => {
@@ -261,7 +277,8 @@
 					order: 'var(--color-accent)',
 					pick: 'var(--color-propose)',
 					out: 'var(--color-out)',
-					warn: 'var(--color-signoff)'
+					warn: 'var(--color-signoff)',
+					info: 'var(--color-ink-2)'
 				};
 				chip
 					.select('rect')
