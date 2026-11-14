@@ -80,13 +80,22 @@ export async function readTask(
 	});
 }
 
+/** "Wed 9 Dec" for a delivery date. */
+export const dayWords = (iso: string) =>
+	new Date(`${iso}T12:00:00Z`).toLocaleDateString('en-GB', {
+		weekday: 'short',
+		day: 'numeric',
+		month: 'short',
+		timeZone: 'UTC'
+	});
+
 const fmt = (n: number) => (Math.round(n * 100) / 100).toLocaleString('en-IE');
 
 /**
  * One line from the ledger's numbers, D10 words: "ordered" only with a receipt (never as a negation either), "supplier confirmed" only for a
  * receipt-backed quantity.
  */
-export function ledgerSummary(l: TaskLedger): string {
+export function ledgerSummary(l: TaskLedger, o: { deliverBy?: string } = {}): string {
 	const parts: string[] = [];
 	// Quantities add up per unit only: "4 kg + 2 l needed", never "6 needed".
 	const units = [...new Set(l.needs.map((n) => n.required.unit))];
@@ -122,6 +131,12 @@ export function ledgerSummary(l: TaskLedger): string {
 			`ordered for €${(l.committedCents / 100).toFixed(2)} (${l.receiptIds.length} receipt${l.receiptIds.length === 1 ? '' : 's'})`
 		);
 	else parts.push('no order placed yet');
-	if (l.decisionsLeft) parts.push(`${l.decisionsLeft} decision(s) for a chef`);
-	return `${parts.join('; ')}. ${l.nextAction}`.slice(0, 400);
+	if (l.decisionsLeft)
+		parts.push(
+			`${l.decisionsLeft} ${l.decisionsLeft === 1 ? 'decision waits' : 'decisions wait'} for you`
+		);
+	const day = o.deliverBy ? `For ${dayWords(o.deliverBy)}: ` : '';
+	const text = `${day}${parts.join('; ')}.`;
+	// The next action only when it adds something the parts don't already say.
+	return (l.decisionsLeft ? text : `${text} ${l.nextAction}`).slice(0, 400);
 }

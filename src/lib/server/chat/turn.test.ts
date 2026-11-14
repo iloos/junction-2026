@@ -344,14 +344,14 @@ describe('suite: chat v2 · understanding, grounded answers, model planning with
 			const steps = out.filter((e) => e.type === 'step');
 			expect(steps[0]).toMatchObject({
 				tool: 'understand',
-				summary: expect.stringMatching(/via Gemini/)
+				detail: expect.stringMatching(/via Gemini/)
 			});
 			expect(steps.map((s) => s.type === 'step' && s.tool)).toContain('place_order');
 			const ledger = out.find((e) => e.type === 'ledger');
 			if (ledger?.type !== 'ledger') throw new Error('no ledger');
 			expect(ledger.ledger.needs[0].required).toEqual({ value: 4, unit: 'kg' });
 			const ex = steps.find((s) => s.type === 'step' && s.tool === 'explain');
-			expect(ex?.type === 'step' && ex.summary).toMatch(/via Gemini · \d+ ms|template/);
+			expect(ex?.type === 'step' && ex.detail).toMatch(/via Gemini · \d+ ms|template/);
 		}
 	);
 
@@ -372,7 +372,7 @@ describe('suite: chat v2 · understanding, grounded answers, model planning with
 			const done = out.at(-1);
 			expect(done?.type === 'done' && done.text).toMatch(/no order placed yet/);
 			const ex = out.find((e) => e.type === 'step' && e.tool === 'explain');
-			expect(ex?.type === 'step' && ex.summary).toMatch(/model reply not used/);
+			expect(ex?.type === 'step' && ex.detail).toMatch(/model reply not used/);
 		}
 	);
 
@@ -441,7 +441,8 @@ describe('suite: chat turns · tasks opened elsewhere', () => {
 			expect(isTaskId(link.taskId)).toBe(true);
 			const out = await chatTurn({ taskId: link.taskId!, text: 'what is still open?' }, deps);
 			expect(out.at(-1)).toMatchObject({ type: 'done', taskId: link.taskId });
-			expect(out.at(-1)?.type === 'done' && out.at(-1)?.state).not.toBe('failed');
+			const last = out.at(-1);
+			expect(last?.type === 'done' ? last.state : 'none').not.toBe('failed');
 			expect((await taskView(link.taskId!, deps)).at(-1)?.type).toBe('done');
 		}
 	);

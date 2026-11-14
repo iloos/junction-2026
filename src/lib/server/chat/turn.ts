@@ -18,12 +18,12 @@ import type { Slots } from '$lib/server/agent/types';
 import type { Env } from '$lib/server/auth';
 import { UNITS } from '$lib/server/request/lexicon';
 import { parseRules } from '$lib/server/request/parse';
-import { ledgerSummary, readTask } from '$lib/server/tasks/outcome';
+import { dayWords, ledgerSummary, readTask } from '$lib/server/tasks/outcome';
 import { explain } from './explain';
 import { understand } from './understand';
 import { project } from '$lib/server/tasks/project';
 import { memoryTaskStore } from '$lib/server/tasks/store';
-import { approvalUrl, presentMeta } from '$lib/server/tools/present';
+import { approvalUrl } from '$lib/server/tools/present';
 import { serveTool } from '$lib/server/tools/serve';
 import type { ChatEvent, ChatTurnInput } from '$lib/ui/chat/types';
 import { decisionsDue, decisionsOf } from '$lib/ui/decisions';
@@ -62,15 +62,23 @@ export interface ChatDeps {
 	models?: { understand?: Llm | null; explain?: Llm | null; plan?: Llm | null };
 }
 
-/** The model plans each step; when it fails (bad reply twice, provider down) the script takes that step. */
+/**
+ * The model plans each step, with two limits: when it fails (bad reply twice, provider down) the script takes that
+ * step, and a routine order's basket is always the script's (the request parser's reading of the words, the
+ * candidate that can arrive, the stated amounts), so the model can choose how to proceed but never what is bought.
+ */
 export function withFallback(model: Planner, script: Planner): Planner {
 	return async (s, signal) => {
+		let a: Awaited<ReturnType<Planner>>;
 		try {
-			return await model(s, signal);
+			a = await model(s, signal);
 		} catch (e) {
 			if (signal.aborted) throw e;
 			return script(s, signal);
 		}
+		if ('tool' in a && a.tool === 'place_order' && s.intent?.kind === 'routine_order')
+			return script(s, signal);
+		return a;
 	};
 }
 
@@ -116,8 +124,8 @@ function stepEvents(taskId: string, steps: StepRecord[]): ChatEvent[] {
 	return steps.map((s) => {
 		const plan = s.ok ? (s.value as { plan?: Plan } | undefined)?.plan : undefined;
 		const summary = s.ok
-			? (presentMeta(s.tool, s.input, s.value)?.summary ?? `${s.tool} done.`)
-			: `${s.tool} refused: ${s.error?.message ?? s.error?.code ?? 'error'}`;
+			? stepWords(s)
+			: `Not done: ${(s.error?.message ?? s.error?.code ?? 'error').replace(/\b(pl-run|task|ap|rc|t)-[\w-]+/g, 'the plan')}`;
 		return {
 			type: 'step',
 			taskId,
@@ -129,6 +137,77 @@ function stepEvents(taskId: string, steps: StepRecord[]): ChatEvent[] {
 			...(s.ok && s.tool === 'commit_order' ? { receipt: receiptView(s) } : {})
 		};
 	});
+}
+
+const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
+const euros = (c: number | null | undefined) => (c == null ? '' : `€${(c / 100).toFixed(2)}`);
+
+/** A step in the chef's words: what happened, never an id or a count of needs. */
+function stepWords(s: StepRecord): string {
+	const v = (s.value ?? {}) as Record<string, unknown>;
+	const plan = v.plan as Plan | undefined;
+	switch (s.tool) {
+		case 'search_products':
+			return `Found ${plural(((v.products as unknown[]) ?? []).length, 'matching product')}.`;
+		case 'quote': {
+			const offers = (v.offers ?? []) as { price?: unknown; availability: { kind: string } }[];
+			const ok = offers.filter(
+				(o) => o.price && !['out', 'blocked', 'undeliverable'].includes(o.availability.kind)
+			).length;
+			return `Checked price and delivery: ${ok} of ${offers.length} can be bought.`;
+		}
+		case 'place_order':
+		case 'plan_event':
+		case 'edit_line':
+		case 'find_substitutes': {
+			if (!plan) return 'Done.';
+			const held = plan.lines.filter((l) => l.state === 'held').length;
+			const verb =
+				s.tool === 'edit_line'
+					? 'Changed the order'
+					: s.tool === 'find_substitutes'
+						? 'Looked for substitutes'
+						: 'Drafted the order';
+			return (
+				`${verb} for ${dayWords(plan.deliverBy)}: ${plural(plan.lines.length, 'line')}` +
+				(plan.totalCents ? `, ${euros(plan.totalCents)}` : '') +
+				(held ? `; ${held} ${held === 1 ? 'waits' : 'wait'} for your approval.` : '.')
+			);
+		}
+		case 'get_plan':
+			return plan ? `Read the order for ${dayWords(plan.deliverBy)}.` : 'Read the order.';
+		case 'commit_order': {
+			const n = ((v.committedLineIds as unknown[]) ?? []).length;
+			const waiting = ((v.awaitingSupplier as unknown[]) ?? []).length;
+			return `Ordered ${plural(n, 'line')} for ${euros(v.totalCents as number)}: ${n - waiting} supplier confirmed, ${waiting} awaiting the supplier.`;
+		}
+		case 'explain_line':
+			return 'Explained a line.';
+		default:
+			return 'Done.';
+	}
+}
+
+/** What the message was read as, in plain words. */
+function understoodWords(u: { kind: string }, goal: string): string {
+	switch (u.kind) {
+		case 'order':
+			return `Understood an order: ${goal}.`;
+		case 'read':
+			return 'Understood a question about your order.';
+		case 'event':
+			return 'Understood an event brief.';
+		case 'adjust':
+			return 'Understood a change to a dish.';
+		case 'repair':
+			return 'Understood: find substitutes for what is short.';
+		case 'authority':
+			return 'Understood a request only a chef can make.';
+		case 'smalltalk':
+			return 'Understood a greeting.';
+		default:
+			return 'Could not tell what you need.';
+	}
 }
 
 function receiptView(s: StepRecord): ReceiptView {
@@ -295,10 +374,10 @@ export async function* runChatTurn(
 			n: 0,
 			tool: 'understand',
 			ok: true,
-			summary:
-				`Read as ${u!.kind}${u!.items?.length ? `: ${understood.goal}` : ''}` +
-				(understood.source === 'gemini' ? ` · via Gemini · ${understood.ms} ms` : ' · by rules') +
-				(understood.guard ? ` (${understood.guard})` : '')
+			summary: understoodWords(u!, understood.goal),
+			detail:
+				(understood.source === 'gemini' ? `via Gemini · ${understood.ms} ms` : 'read by rules') +
+				(understood.guard ? ` · ${understood.guard}` : '')
 		};
 	if (u?.kind === 'smalltalk' && !followUp) {
 		yield {
@@ -382,11 +461,10 @@ export async function* runChatTurn(
 		}
 
 		if (followUp && input.text && !answer) goals = [goal];
-		const planner =
+		const model =
 			deps.planner ??
-			((deps.models?.plan ?? deps.llm)
-				? withFallback(llmPlanner((deps.models?.plan ?? deps.llm)!), scriptedPlanner())
-				: scriptedPlanner());
+			((deps.models?.plan ?? deps.llm) ? llmPlanner((deps.models?.plan ?? deps.llm)!) : null);
+		const planner = model ? withFallback(model, scriptedPlanner()) : scriptedPlanner();
 		steps = [];
 		const touched: string[] = [];
 		for (const g of goals) {
@@ -498,7 +576,7 @@ export async function* runChatTurn(
 		const ledger = read.value.ledger;
 		const card = decisionEvent(task, read.value);
 		if (card) yield card;
-		const summary = ledgerSummary(ledger);
+		const summary = ledgerSummary(ledger, { deliverBy: read.value.plans[0]?.deliverBy });
 		yield { type: 'ledger', taskId: task.id, ledger, summary };
 		let answer = summary;
 		const explainer = deps.models?.explain ?? deps.llm;
@@ -508,7 +586,7 @@ export async function* runChatTurn(
 				words ?? (input.continue ? 'What happened with my order?' : 'Where does this stand?'),
 				ledger,
 				summary,
-				{ llm: explainer }
+				{ llm: explainer, deliverBy: read.value.plans[0]?.deliverBy }
 			);
 			answer = ex.text;
 			yield {
@@ -516,11 +594,12 @@ export async function* runChatTurn(
 				taskId: task.id,
 				n: steps.length + 1,
 				tool: 'explain',
-				ok: ex.source === 'gemini',
-				summary:
+				ok: true,
+				summary: "Answered from the order's numbers.",
+				detail:
 					ex.source === 'gemini'
-						? `Answer written from the ledger · via Gemini · ${ex.ms} ms`
-						: `Answer from the ledger template${ex.rejected ? ` (model reply not used: ${ex.rejected})` : ''}`
+						? `via Gemini · ${ex.ms} ms`
+						: `template sentence${ex.rejected ? ` (model reply not used: ${ex.rejected})` : ''}`
 			};
 		}
 		text = refusal ? `${refusal} ${summary}` : answer;
@@ -624,7 +703,7 @@ export async function taskView(taskId: string, deps: ChatDeps): Promise<ChatEven
 	const p = project(t, read.value);
 	const card = decisionEvent(p.task, read.value);
 	if (card) out.push(card);
-	const summary = ledgerSummary(read.value.ledger);
+	const summary = ledgerSummary(read.value.ledger, { deliverBy: read.value.plans[0]?.deliverBy });
 	out.push({ type: 'ledger', taskId, ledger: read.value.ledger, summary });
 	out.push({
 		type: 'done',

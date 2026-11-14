@@ -13,8 +13,10 @@ export type ChatEvent =
 			n: number;
 			tool: string;
 			ok: boolean;
-			/** Our one-line summary of the result (ResultMeta), or the refusal. */
+			/** What happened, in the chef's words (no ids). */
 			summary: string;
+			/** Folded detail: which model, how long, a guard that applied. */
+			detail?: string;
 			/** Kitchen deep link to the plan or line the step touched. */
 			href?: string;
 			/** What a commit did (commit_order steps). */
