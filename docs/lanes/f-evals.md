@@ -14,15 +14,7 @@
 - Removed today as unit-test duplicates: s6, s8, s9, s10, s11, r5-f5, r5-f8, r5-f11, r5-f22 (covered by store tests ceiling, baseline, dates, rescue, reset, pool, authority, zero).
 
 ## Open
-| expectFail | where | owner |
-|---|---|---|
-| A3-agent-cutoff | fidelity + paraphrase butter | E |
-| P1-clause-constraint, P2-fi-lexicon | `paraphrase/cases.json` | B (request) |
-| P3-agent-seeded-event, LATE-agent-words | `paraphrase/cases.json` | E |
-| LATE-request-words | `paraphrase/cases.json` | B |
-| R6-lineage | `r6-1-lineage` | menu track (A4/B) |
-| F12-ops coverage | `surfaces.test.ts` | 9c |
-| A4 held plan from a brief | `briefs/golden.json` | menu track |
+No open `expectFail` (all retired by their lanes). Prod defects: `docs/BUGS.md` (bug bash of 825874d; re-test after each deploy, mark fixed with the /healthz commit).
 
 - Claim ledger `docs/CLAIMS.md` (owned): first pass done, deployed two-browser + MCP journey recorded on ab3a557; rerun before the 22:00 video with prod screenshots per demo beat.
 - Review on/off comparison: waits for E's `REVIEW=1`; then the same trials both ways via `eval:live` (pass rate and tokens per arm).

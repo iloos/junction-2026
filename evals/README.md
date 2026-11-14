@@ -6,6 +6,7 @@ Every eval plays through the **same gate the app uses** (tool handlers on PGlite
 |---|---|---|---|
 | `scenarios/` | one journey per JSON file: s1–s5 and s7 (product stories), r5-f9, r5-f10 and r6-1…r6-5 (one per review finding) | `src/lib/server/evals/evals.test.ts` with `check.ts`; `node evals/run.ts` validates the files alone | `pnpm eval` |
 | `fidelity/cases.json` | the same words through `/request`, the agent and REST `place_order` must give the same basket (properties, not first hits) | `src/lib/server/evals/fidelity.test.ts` | `pnpm eval` |
+| `ui/*.e2e.ts` | judge journeys on the real screen (Playwright): Kitchen order summary counts and sums vs the order, receipt after reload, `g × guests = kg` arithmetic, an agent's approval link opens something approvable. Open defects by BUGS.md id in `KNOWN` (expected-fail; red once fixed) | `evals/ui/kitchen-order.e2e.ts` | `pnpm gate --full` (`KNOWN` tracks main); against prod: `KITCHEN_URL=<prod> npx playwright test -c evals/ui/pw-prod.config.ts` (no local server, so the worktree `.env` is never read) |
 | `chat/trials/*.json` | multi-turn chat sessions (chef turns + human approve/edit between): one question per missing field and never again, the chat never approves, "go ahead" continues the same plan with one receipt per key, an edit's voided approval is seen, the task ledger equals get_plan + receipts and the closing text claims nothing beyond it. Checks in `chat/check.ts` (self-tested in evals:self) | `src/lib/server/evals/chat.test.ts` (skipped until `src/lib/server/chat/turn.ts` exports `runChatTurn`) | `pnpm eval` |
 | `paraphrase/cases.json` | English and Finnish phrasings per intent through `/request` and the agent: an order gives its fidelity case's basket, an event is read as a brief and buys nothing, a read question writes no plan | `src/lib/server/evals/paraphrase.test.ts` | `pnpm eval` |
 | (in code) | one plan, three surfaces: `get_plan` FulfilmentView, the kitchen dish status and the Ops coverage count agree per need | `src/lib/server/evals/surfaces.test.ts` | `pnpm eval` |
@@ -100,15 +101,4 @@ Vocabulary follows [D6](../docs/DECISIONS.md) and [VOCABULARY](../docs/concept/V
 The runner reports pass/fail per key, so a partial build shows exactly which guarantee holds. The fidelity cases, the paraphrase intents and the briefs take the same `expectFail` per case; `surfaces.test.ts` keeps its list in code.
 
 ### Open gaps
-| id | where | owner | what is missing |
-|---|---|---|---|
-| A3-agent-cutoff | fidelity `butter-4kg-tomorrow`, paraphrase `order-butter-tomorrow` | agent (E) | the agent picks a Terminal product that cannot deliver tomorrow; A3 rightly refuses it |
-| P1-clause-constraint | paraphrase `order-lactose-free-milk` | request parser (B) | a constraint between product and date ("2 l milk, lactose free, for Thursday") is dropped |
-| P2-fi-lexicon | paraphrase `order-cream-friday` | request lexicon (B) | "vispikermaa" is unknown; nominative "laktoositon" is not read as lactose_free |
-| LATE-request-words, LATE-agent-words | paraphrase `late-tomorrow` | request (B), agent (E) | Monday 21:40 "tomorrow": held unorderable (`cutoff_passed`), but neither says the cut-off passed nor offers Wed 9 Dec |
-| P3-agent-seeded-event | paraphrase `event-brief` | agent classifier (E) | "Christmas dinner for 50" makes the agent plan the seeded buffet for 140 |
-| R6-lineage | `r6-1-lineage` | menu track (A4/B) | `plan_event{proposal}`; need ids that carry the ingredient id |
-| F12-ops | `surfaces.test.ts` | Ops (9c) | Ops counts coverage from line states instead of reading `plan.view.fulfilment` |
-| A4 | `briefs/golden.json` (both) | menu track (A4) | proposal → review → `plan_event{proposal}` → held plan |
-
-F12-ops is a sub-case of SYNTHESIS F12; R6-* are ROUND6-FOUNDATIONS §1–5.
+None: every `expectFail` has been retired (A3-agent-cutoff, P1–P3, LATE-*, R6-lineage, F12-ops, A4 fixed by their lanes). A new gap gets a row here with its id, file, owner and what is missing. Prod defects found by hand are tracked in [docs/BUGS.md](../docs/BUGS.md) until they have a regression check.
