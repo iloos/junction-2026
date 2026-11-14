@@ -3,7 +3,7 @@ import type { AvailabilityKind } from '../contracts';
 
 export const AVAILABILITY_WORDING: Record<AvailabilityKind, string> = {
 	known: 'in stock',
-	unknown: 'quantity unknown (supplier-delivered)',
+	unknown: "Valio doesn't state a quantity",
 	out: 'out of stock',
 	undeliverable: 'not deliverable',
 	blocked: 'not orderable yet (seasonal block)'
