@@ -28,6 +28,8 @@
 		orderable?: { lines: number; cents: number };
 		/** Set once the order is placed: the header becomes the order's state. */
 		ordered?: { confirmed: number; awaiting: number; cents: number } | null;
+		/** Lines not ordered and still orderable or decidable (a partial order keeps them open). */
+		openLines?: number;
 		action?: Snippet;
 		/** The kitchen's other plans in this sandbox, each with a link that opens it here. */
 		others?: { id: string; title: string; open: number; ordered: number; href: string }[];
@@ -42,6 +44,7 @@
 		cannot = 0,
 		orderable,
 		ordered = null,
+		openLines = 0,
 		action,
 		others = []
 	}: Props = $props();
@@ -94,7 +97,21 @@
 		class="mt-3 flex flex-col gap-3 border-t border-rule px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between md:px-5"
 	>
 		<div class="min-w-0">
-			{#if ordered}
+			{#if ordered && (decisions > 0 || openLines > 0)}
+				<!-- A partial order: what went, and what still needs the chef; only ordered lines are locked. -->
+				<p class="text-display font-semibold tracking-[-0.015em] text-ink">
+					<span class="mono">{ordered.confirmed + ordered.awaiting}</span>
+					{ordered.confirmed + ordered.awaiting === 1 ? 'line' : 'lines'} ordered
+					<span class="text-ink-2">·</span>
+					{decisions > 0 ? `${decisionCount(decisions)} left` : `${openLines} open`}
+				</p>
+				<p class="mt-1 text-body text-ink-2">
+					<span class="mono text-ink">{money(ordered.cents)}</span> ordered:
+					<span class="mono text-ink">{ordered.confirmed}</span> supplier confirmed,
+					<span class="mono text-ink">{ordered.awaiting}</span> awaiting the supplier. Ordered lines are
+					locked; the rest can still change.
+				</p>
+			{:else if ordered}
 				<p class="flex items-center gap-2 text-display font-semibold tracking-[-0.015em] text-ink">
 					<Lock size={22} aria-hidden="true" /> Ordered
 				</p>

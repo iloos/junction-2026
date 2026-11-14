@@ -294,7 +294,7 @@
 	const orderedState = $derived.by(() => {
 		const done = (plan?.lines ?? []).filter((l) => l.state === 'committed');
 		const orders = snap?.orders ?? [];
-		if (!done.length || orderable.lines > 0 || !orders.length) return null;
+		if (!done.length || !orders.length) return null;
 		// Every order on the plan (in-mandate lines may have gone first, approved ones later), from the receipts.
 		const lines = orders.reduce((a, o) => a + o.output.committedLineIds.length, 0);
 		const awaiting = orders.reduce((a, o) => a + o.output.awaitingSupplier.length, 0);
@@ -629,6 +629,9 @@
 					cannot={needsYou.cannot}
 					{orderable}
 					ordered={orderedState}
+					openLines={(plan?.lines ?? []).filter(
+						(l) => !['committed', 'rejected', 'unorderable'].includes(l.state) && l.qty.value > 0
+					).length}
 					others={(snap?.others ?? []).map((o) => ({
 						...o,
 						href: `${resolve('/')}?kitchen=${snap!.kitchen.id}&plan=${o.id}`
@@ -815,7 +818,9 @@
 											original={d.gDefault}
 											label={d.nameFi}
 											pending={k.pendingGrams[d.id]}
-											disabled={k.readOnly || !d.editable || !!orderedState}
+											disabled={k.readOnly ||
+												!d.editable ||
+												lines.some((l) => l.state === 'committed')}
 											onchange={(g) => k.setGrams(d.id, g)}
 										/>{/if}
 									<div class="min-w-0 pt-1">
