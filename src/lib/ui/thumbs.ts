@@ -40,3 +40,13 @@ export function thumbFor(productId: string): Promise<Thumb | null> {
 	}
 	return p;
 }
+
+/** Read the photos for a plan's products in one batch as soon as its snapshot arrives: every row then reads the cache. */
+export function prefetchThumbs(productIds: Iterable<string>): void {
+	for (const id of new Set(productIds)) void thumbFor(id);
+}
+
+/** A photo already read (or null when known to have none); undefined while unknown. Lets a row paint it at once. */
+export function knownThumb(productId: string): Promise<Thumb | null> | undefined {
+	return known.get(productId);
+}

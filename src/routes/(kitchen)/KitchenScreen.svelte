@@ -69,6 +69,7 @@
 	import ProductThumb from '$lib/ui/ProductThumb.svelte';
 	import { acceptAll, lineDecisions } from '$lib/kitchen/line-decisions';
 	import type { ShortageNotice } from '$lib/ui/ledger';
+	import { prefetchThumbs } from '$lib/ui/thumbs';
 	import { menuTitle, splitNeed, startsDish } from '$lib/kitchen/menu-plan';
 	import {
 		readOwn,
@@ -252,6 +253,11 @@
 						: 'outside';
 			void k.refreshFrom(by, describeOps(mine));
 		});
+	});
+	// Every row, the Decide panel and the swap panel read one photo cache, filled in one batch when the plan arrives.
+	$effect(() => {
+		const ids = snap?.plan.lines.map((l) => l.productId);
+		if (ids?.length && k.mode === 'live') prefetchThumbs(ids);
 	});
 	// Moment 1: a shortage re-planned this kitchen elsewhere (Ops' presenter, another tab). The plan re-reads, What
 	// changed says why in words, and the changed rows flash; a kitchen the shortage left alone stays quiet.

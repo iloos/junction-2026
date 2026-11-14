@@ -72,8 +72,6 @@
 			}
 		);
 	});
-	// A thumbnail only from a page whose barcode matched: the page's own photo or the card's once it is open.
-	const thumb = $derived(imageUrl ?? card?.listing?.imageUrl);
 	const shownMarks = $derived(marks ?? (card ? marksOf(card.diet) : undefined));
 
 	// A phone gets a bottom sheet; anything wider a popover beside the token.
@@ -97,8 +95,10 @@
 </script>
 
 {#snippet token()}
-	{#if thumb}<img
-			src={thumb}
+	<!-- Only a photo the page passed: one that arrives with the card (opened later) would shift the row. Rows show
+	     their photo in ProductThumb's fixed slot; the card shows it large. -->
+	{#if imageUrl}<img
+			src={imageUrl}
 			alt=""
 			loading="lazy"
 			class="size-6 shrink-0 rounded-[4px] border border-rule bg-sheet object-contain"

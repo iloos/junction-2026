@@ -33,6 +33,8 @@
 
 	let thumb = $state<Thumb | null | undefined>(undefined);
 	let el = $state<HTMLElement | null>(null);
+	/** The image fades in once decoded; the slot is its fixed size from first paint, so nothing shifts. */
+	let loaded = $state(false);
 	const offline = $derived(page.url.pathname.startsWith('/offline'));
 
 	$effect(() => {
@@ -102,7 +104,12 @@
 			alt=""
 			loading={eager ? 'eager' : 'lazy'}
 			decoding="async"
-			class="size-full bg-sheet object-contain {exact ? '' : 'opacity-80'}"
+			class="size-full bg-sheet object-contain transition-opacity duration-300 {loaded
+				? exact
+					? 'opacity-100'
+					: 'opacity-80'
+				: 'opacity-0'}"
+			onload={() => (loaded = true)}
 		/>
 		{#if !exact}
 			<span
