@@ -223,3 +223,15 @@ No separate service and no bulk scrape: Valio's brief says "query the APIs only 
 **D27 addendum (user, 14 Nov 23:55): the target shape is a Valio twin, held until the app is stable.** The stock model becomes the engine of a "Valio twin": an adapter behind the CatalogPort that answers in Valio's own availability format, so the app can't tell it from Valio, and that Ops controls like a signal generator (demand level, restock cadence and size, short-shipment rate, scenario events, reset to Valio's snapshot). Restocking is balanced against demand by a **scarcity target** (how many of the products in play sit near or below what the kitchens need), not topped up freely, because plentiful stock leaves nothing to match, swap or contend for. Tonight: S4 builds the pure model with the scarcity target as a parameter and feeds the Forecast; the twin adapter and the control panel wait until the hero journey is green on prod.
 
 **D27 addendum 2 (user, 15 Nov 00:00): an incident deck for the twin, also held.** The twin can draw seeded incidents, each a named story over a set of products: a drought (a produce category scarcer and dearer for two weeks), a supplier going bankrupt (that vendor's products undeliverable), a strike (deliveries a day late), a festive rush (demand up). Each incident is data (which products, what changes to stock, price and dates, how long) plus one or two sentences of story, templated or written by Flash-Lite, and always shown as **Simulated incident**, never as news. Firing one runs the shortage cascade over every product it touches, so every kitchen re-plans inside its own rules. Real recalls stay real (Context.dev) and are never mixed into the deck.
+
+### D28 · Alternatives are steerable and the chef always has the last word (user + lead, 15 Nov 00:00)
+Every line's "Swap" opens one compare panel, the same on the page, in the dock and as a tool (`find_substitutes`):
+- **The agent's pick plus a few alternatives**, each with one reason (cheaper per kg, Finnish, in stock, bigger pack) and its supply and price per kg/l on one row.
+- **Steer chips** that re-run the search: cheaper · Finnish · organic · in stock only · bigger/smaller pack · same brand · different kind. A free-text box ("something for a vegan dessert instead") re-searches with the chef's words.
+- **Browse all**: search the catalogue from the panel and pick anything.
+- **The chef's pick wins, even an illogical one** ("no ham? then salmon"). It is labelled "your choice" and still passes the hard rules (allergens, the never-delegate list, caps); a soft requirement it breaks is named, not blocked. The choice is remembered as a preference for that kitchen.
+The agent's own suggestions never cross the product kind (D16, the sorbet fix); only the chef may cross it.
+
+**Why:** the user: clean affordance to navigate, specify and steer new alternatives; the agent can't be 100% right, because preference is subjective and people swap illogically.
+
+**Reopen if:** the panel's pick and the tool's pick differ for the same steer, or a chef's choice bypasses a hard rule.
