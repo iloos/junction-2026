@@ -29,7 +29,7 @@ import { PgTransport } from '$lib/server/bus/pg';
 import { MemoryBus } from '$lib/server/bus/memory';
 
 /** Open defects: id → owner (9c = runtime/transport). Delete a line when its case goes red ("looks fixed"). */
-const OPEN: Record<string, string> = { 'R9-09': '9c', 'R9-10': '9c' };
+const OPEN: Record<string, string> = {};
 function probe(id: string, title: string, fn: () => Promise<void>) {
 	const owner = OPEN[id];
 	if (owner && !process.env.ADV_SHOW) it.fails(`${id} [open · ${owner}] ${title}`, fn);

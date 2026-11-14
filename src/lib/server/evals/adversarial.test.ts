@@ -37,7 +37,6 @@ import { coverage } from '../../../routes/ops/cases';
  * with that deletion). Owners: E = agent/chat, 8d = core, 9c = runtime/transport, D = web, lead = contracts.
  */
 const OPEN: Record<string, string> = {
-	'R9-08': '9c',
 	'R7-03': '8d',
 	'R7-05': '8d',
 	'R7-11': '8d',
