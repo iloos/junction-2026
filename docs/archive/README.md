@@ -39,3 +39,6 @@ History, kept for the record. Nothing here is current: the live docs are [STATUS
 | foundations/modal.md | Modal batch/swarm plan | Parked by D7 |
 | foundations/s-pankki.md | S-Pankki brief and dataset | Parked by D7 |
 | STACK-scaffold.md | Fri-night scaffold recipe (Kit 2 via `sv@0.17.1`) | Scaffold done; [STACK.md](../STACK.md) |
+| DISPATCH-ring1-2.md | Ring 1 tracks and the Ring 2 plan | [DISPATCH.md](../DISPATCH.md) (Ring 3) and [handoff/ring3/SYNTHESIS.md](../handoff/ring3/SYNTHESIS.md) |
+| handoff/ring2/ | Four Ring 2 design reviews and the round 7 review prompt | Ring 3 reviews in [handoff/ring3/](../handoff/ring3/) |
+| lanes/b-retrieval.md | Retrieval lane brief | Merged; resolve now lives with the request/menu work |
