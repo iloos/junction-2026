@@ -247,3 +247,13 @@ The plan page lists every line once. Today the same lines appear in the table, a
 **Why:** the user: Decide is congested and duplicates the line items; the right rail is too long; images pop in.
 
 **Reopen if:** a decision that needs a reason (an allergen change, the hard limit) loses its explanation once it's no longer a card.
+
+### D22 · The chef approves from any door they're in; an outside agent asks the chef, it never approves alone (user + lead, 15 Nov 01:30)
+- **In-app chat:** the chef typing in their own dock is the chef (D13). "Approve all", "accept the salmon", "reject the herring" act on the lines the agent just showed, on the shown version (D21), through the same `approve` tool. Lines that need sign-off (an allergen change, never-delegate, the hard limit) show a Confirm-exact-terms card in the dock; a typed yes alone doesn't sign them off. The chat never says "only the chef approves, on the page" to the chef.
+- **MCP / REST, the chef's own client:** a key bound to the chef (paired from /agents, not a judge's outside-agent key) may ask for approval with an MCP elicitation that shows the exact terms (lines, total, reasons); an explicit yes from the client approves those terms, recorded as "approved by the chef via <client>". If the client can't elicit, the agent gets the approval link (D17). Never-delegate lines still need the app.
+- **Outside agents** (judge keys, any key not bound to the chef) still can't approve; their only path is the link for a human. That is moment 3.
+- Risk, stated: we can't prove a human answered an elicitation; the chef's own key is the chef's delegation, so a leaked key can approve routine held lines (never the never-delegate ones). Keys are revocable on /agents.
+
+**Why:** the user: we should be able to manage this from the agent; MCP can prompt the user for an explicit yes to an explicit ask.
+
+**Reopen if:** an elicitation approves terms other than the ones it showed, or a non-chef key reaches approve.
