@@ -1,5 +1,5 @@
 {
-	"$comment": "Recipes for each profile's simulated order history (D14). The mock has no real order history, so src/lib/core/patterns/history.ts generates one per kitchen from these recipes with a seeded PRNG: same kitchen, same date, same history. Every generated line is labelled 'simulated history'; it is never written to the op log or a database. Rhythms follow docs/research/horeca-profiles.md §2–3: P1 daily breakfast staples plus a bistro mix, P2 Mon–Fri lunch (deliveries Mon/Wed/Fri, Friday lower), P3 school weeks with the autumn break 12–16 Oct near zero. Quantities are team estimates sized to the seeded kitchens (300 breakfasts, 320 lunches, 2,000 meals a day). Product ids come from fixtures/seeds/christmas-buffet-140.json, fixtures/seeds/kitchens.json (P3's tender list) and evals/retrieval/substitutes.json; names are kept only for readability, units and lot steps are the catalogue's.",
+	"$comment": "Recipes for each profile's simulated order history (D14). The mock has no real order history, so src/lib/core/patterns/history.ts generates one per kitchen from these recipes with a seeded PRNG: same kitchen, same date, same history. Every generated line is labelled 'simulated history'; it is never written to the op log or a database. Rhythms follow docs/research/horeca-profiles.md §2–3: P1 daily breakfast staples plus a bistro mix, P2 Mon–Fri lunch (deliveries Mon/Wed/Fri, Friday lower), P3 school weeks with the autumn break 12–16 Oct near zero; P4 à la carte Tue–Sat with a heavier Thu/Fri delivery for the weekend; P5 care home every week of the year, lactose-free and soft, almost never missed; P6 café small daily dairy, Saturday higher; P8 ski hotel two deliveries a week, Friday carrying the weekend, a quarter of the volume until the season opens. Quantities are team estimates sized to the seeded kitchens (300 breakfasts, 320 lunches, 2,000 meals a day). Product ids come from fixtures/seeds/christmas-buffet-140.json, fixtures/seeds/kitchens.json (P3's tender list) and evals/retrieval/substitutes.json; names are kept only for readability, units and lot steps are the catalogue's.",
 	"label": "simulated history",
 	"weeks": 16,
 	"profiles": {
@@ -339,6 +339,247 @@
 					"days": ["fri"],
 					"untilDaysAgo": 37,
 					"note": "dropped: now made in house"
+				}
+			]
+		},
+		"P4": {
+			"noise": 0.15,
+			"missRate": 0.05,
+			"dayFactor": {
+				"thu": 1.2,
+				"fri": 1.3
+			},
+			"items": [
+				{
+					"productId": "462150",
+					"name": "LOHIFILEE C-LEIKATTU 10KG",
+					"unit": "KG",
+					"lotStep": 10,
+					"qty": 10,
+					"days": ["tue", "fri"],
+					"note": "fish mains: the weekend delivery is the big one"
+				},
+				{
+					"productId": "475214",
+					"name": "SPL Raaka annosperuna veitsikuorittu 10kg",
+					"unit": "ST",
+					"lotStep": 1,
+					"qty": 2,
+					"days": ["tue", "thu", "sat"],
+					"note": "potatoes for every service"
+				},
+				{
+					"productId": "464249",
+					"name": "Valio ruokakerma 15 % 1 l UHT laktoositon",
+					"unit": "ST",
+					"lotStep": 1,
+					"qty": 8,
+					"days": ["tue", "fri"],
+					"note": "sauces"
+				},
+				{
+					"productId": "464205",
+					"name": "Valio voi 4x5 kg suolaamaton",
+					"unit": "KI",
+					"lotStep": 1,
+					"qty": 1,
+					"monthlyOn": 1,
+					"note": "monthly butter block"
+				},
+				{
+					"productId": "471247",
+					"name": "Valio kypsä lanttulaatikko 2,8 kg laktoositon",
+					"unit": "KI",
+					"lotStep": 1,
+					"qty": 2,
+					"days": ["thu"],
+					"sinceDaysAgo": 21,
+					"note": "seasonal side: swede casserole joined for the pikkujoulu weekends"
+				}
+			]
+		},
+		"P5": {
+			"noise": 0.06,
+			"missRate": 0.01,
+			"items": [
+				{
+					"productId": "464201",
+					"name": "Valio kevytmaito 1 l laktoositon UHT",
+					"unit": "ST",
+					"lotStep": 1,
+					"qty": 130,
+					"days": ["mon", "wed", "fri"],
+					"note": "lactose-free milk, every day of the year"
+				},
+				{
+					"productId": "462718",
+					"name": "Valio turkkilainen jogurtti 2 kg laktoositon",
+					"unit": "ST",
+					"lotStep": 1,
+					"qty": 12,
+					"days": ["mon", "thu"],
+					"note": "lactose-free yoghurt"
+				},
+				{
+					"productId": "461571",
+					"name": "Valio Keittiön maustettu rahka 200 g vanilja laktoositon",
+					"unit": "KI",
+					"lotStep": 1,
+					"qty": 4,
+					"days": ["mon", "thu"],
+					"note": "lactose-free quark: soft dessert"
+				},
+				{
+					"productId": "461578",
+					"name": "Vaasan Iso Ruisruutu 45x85g",
+					"unit": "CS",
+					"lotStep": 1,
+					"qty": 4,
+					"days": ["mon", "wed", "fri"],
+					"note": "rye bread (lactose-free)"
+				},
+				{
+					"productId": "471247",
+					"name": "Valio kypsä lanttulaatikko 2,8 kg laktoositon",
+					"unit": "KI",
+					"lotStep": 1,
+					"qty": 6,
+					"days": ["tue", "fri"],
+					"note": "soft, texture-modified side: lactose-free swede casserole"
+				},
+				{
+					"productId": "464249",
+					"name": "Valio ruokakerma 15 % 1 l UHT laktoositon",
+					"unit": "ST",
+					"lotStep": 1,
+					"qty": 10,
+					"days": ["tue"],
+					"note": "lactose-free cream for soups and purées"
+				},
+				{
+					"productId": "463437",
+					"name": "Valio Eila® voi 500 g laktoositon",
+					"unit": "ST",
+					"lotStep": 1,
+					"qty": 8,
+					"days": ["mon"],
+					"note": "lactose-free butter"
+				}
+			]
+		},
+		"P6": {
+			"noise": 0.15,
+			"missRate": 0.03,
+			"dayFactor": {
+				"sat": 1.3
+			},
+			"items": [
+				{
+					"productId": "464237",
+					"name": "Valio kahvimaito 1 l laktoositon UHT",
+					"unit": "ST",
+					"lotStep": 1,
+					"qty": 8,
+					"days": ["mon", "tue", "wed", "thu", "fri", "sat"],
+					"note": "small daily coffee milk"
+				},
+				{
+					"productId": "469512",
+					"name": "Elovena 1l kaurajuoma kahviin",
+					"unit": "ST",
+					"lotStep": 1,
+					"qty": 4,
+					"days": ["mon", "tue", "wed", "thu", "fri", "sat"],
+					"note": "barista oat drink"
+				},
+				{
+					"productId": "463798",
+					"name": "Valio voi 200 g normaalisuolainen",
+					"unit": "KI",
+					"lotStep": 1,
+					"qty": 1,
+					"days": ["mon", "thu"],
+					"note": "butter for the pastries"
+				},
+				{
+					"productId": "460588",
+					"name": "Paulig Café Parisien kahvi suodatinjauhatus 12x400g",
+					"unit": "KI",
+					"lotStep": 1,
+					"qty": 1,
+					"days": ["mon", "thu"],
+					"note": "filter coffee"
+				}
+			]
+		},
+		"P8": {
+			"noise": 0.12,
+			"missRate": 0.03,
+			"dayFactor": {
+				"fri": 1.6
+			},
+			"breaks": [
+				{
+					"from": "2026-05-01",
+					"to": "2026-11-26",
+					"factor": 0.25,
+					"why": "off season (May–Nov): the hotel runs a quarter full until the slopes open"
+				}
+			],
+			"items": [
+				{
+					"productId": "464201",
+					"name": "Valio kevytmaito 1 l laktoositon UHT",
+					"unit": "ST",
+					"lotStep": 1,
+					"qty": 120,
+					"days": ["tue", "fri"],
+					"note": "breakfast milk; Friday carries the weekend peak"
+				},
+				{
+					"productId": "463982",
+					"name": "Kieku Vapaan kanan muna L180 12300g",
+					"unit": "KI",
+					"lotStep": 1,
+					"qty": 3,
+					"days": ["tue", "fri"],
+					"note": "breakfast eggs"
+				},
+				{
+					"productId": "462584",
+					"name": "Valio Oltermanni® e900 g viipale",
+					"unit": "ST",
+					"lotStep": 1,
+					"qty": 14,
+					"days": ["tue", "fri"],
+					"note": "breakfast cheese"
+				},
+				{
+					"productId": "475214",
+					"name": "SPL Raaka annosperuna veitsikuorittu 10kg",
+					"unit": "ST",
+					"lotStep": 1,
+					"qty": 6,
+					"days": ["tue", "fri"],
+					"note": "restaurant potatoes"
+				},
+				{
+					"productId": "462150",
+					"name": "LOHIFILEE C-LEIKATTU 10KG",
+					"unit": "KG",
+					"lotStep": 10,
+					"qty": 20,
+					"days": ["fri"],
+					"note": "restaurant fish for the weekend"
+				},
+				{
+					"productId": "466964",
+					"name": "Myllyn Paras Puuroriisi 1kg",
+					"unit": "BAG",
+					"lotStep": 1,
+					"qty": 12,
+					"days": ["tue"],
+					"note": "porridge rice"
 				}
 			]
 		}

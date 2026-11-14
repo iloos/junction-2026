@@ -110,3 +110,33 @@ describe('usual orders over the simulated history', () => {
 		expect(u.dropped.map((c) => c.productId)).toEqual(['472186']);
 	});
 });
+
+describe('every seeded kitchen has a history', () => {
+	it('all seven kitchens get non-empty simulated history, on their own receiving days', () => {
+		for (const k of kitchensJson.kitchens) {
+			const h = history(k.id);
+			expect(h.lines.length, k.id).toBeGreaterThan(0);
+			expect(
+				h.lines.every((l) => (k.deliveryDays as Weekday[]).includes(weekdayOf(l.date))),
+				k.id
+			).toBe(true);
+		}
+	});
+
+	it('ski hotel: the off season runs at a fraction of the season', () => {
+		const milk = history('k-skiresort').lines.filter((l) => l.productId === '464201');
+		const avg = (xs: { qty: number }[]) =>
+			xs.reduce((s, l) => s + l.qty, 0) / Math.max(1, xs.length);
+		const off = milk.filter((l) => l.date <= '2026-11-26');
+		const season = milk.filter((l) => l.date > '2026-11-26');
+		expect(season.length).toBeGreaterThan(0);
+		expect(avg(off)).toBeLessThan(avg(season) * 0.5);
+	});
+
+	it('café: coffee milk on every receiving day, small amounts', () => {
+		const milk = history('k-cafe').lines.filter((l) => l.productId === '464237');
+		const days = new Set(milk.map((l) => weekdayOf(l.date)));
+		expect([...days].sort()).toEqual(['fri', 'mon', 'sat', 'thu', 'tue', 'wed']);
+		expect(Math.max(...milk.map((l) => l.qty))).toBeLessThan(20);
+	});
+});
