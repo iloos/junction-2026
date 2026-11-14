@@ -138,6 +138,8 @@ export const toolSchemas = {
 				z.object({
 					id: KitchenId,
 					name: z.string(),
+					/** A kitchen this visitor made (D26): listed first; only its owner may change it. */
+					mine: z.boolean().optional(),
 					events: z.array(z.object({ id: z.string(), title: z.string() })),
 					/** Weekdays the kitchen receives deliveries (mon…sun); order for one of these. */
 					deliveryDays: z.array(z.string()).optional(),
