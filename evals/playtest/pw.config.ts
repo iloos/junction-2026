@@ -22,7 +22,7 @@ export default defineConfig({
 	webServer: remote
 		? undefined
 		: {
-				command: 'npm run build && npm run preview -- --port 5190 --strictPort',
+				command: 'npm run build && npx vite preview --port 5190 --strictPort',
 				port: 5190,
 				cwd: '../..',
 				timeout: 300_000,
