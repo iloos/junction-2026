@@ -127,7 +127,8 @@ section.s:last-of-type { padding-bottom: 120px; }
 .ck .dot svg { grid-area: 1 / 1; width: 13px; height: 13px; opacity: 0; transition: opacity 0.2s; }
 .ck b { font-size: 16px; font-weight: 600; }
 .ck small { font-size: 13.5px; line-height: 1.4; display: none; }
-.ck.pass { color: var(--ink-2); }
+.ck.pass, .ck.seen { color: var(--ink-2); }
+.ck.seen .dot { border-color: var(--ink-3); }
 .ck.pass .dot { border-color: var(--ok); background: var(--ok-wash); color: var(--ok); }
 .ck.pass .dot .t { opacity: 1; }
 .ck.stop { color: var(--ink); background: var(--sheet); border-color: var(--c); }
@@ -280,7 +281,7 @@ section.s:last-of-type { padding-bottom: 120px; }
 <section class="s" id="checks" aria-labelledby="h-checks">
 	<div class="head">
 		<h2 id="h-checks">Every line passes the same checks, whoever sends it.</h2>
-		<p class="sub">Five requests recorded from the app. Scroll to send each one through. Most stop somewhere, and each stop says why.</p>
+		<p class="sub">Five requests recorded from the app. Scroll to send each one through. Most stop somewhere; each stop and its reason is what the app recorded.</p>
 	</div>
 	<div class="static" id="checks-static">
 		<div class="srow"><span class="r" data-s="cases.#within-mandate.request">10 kg salmon fillet for Friday</span><span class="at">passes every check</span><span class="chip ok" data-s="cases.#within-mandate.outcome.label">Ordered within your mandate</span></div>
@@ -449,7 +450,9 @@ function buildChecks(d) {
 		lastStep = key;
 		const [cls, col] = TIER[r.c.outcome.state] || ['', 'var(--ink-3)'];
 		cks.forEach((el, k) => {
-			el.classList.toggle('pass', k < Math.min(shownChecks, passes));
+			// Ticks only where the recording says every check passed; otherwise only the recorded stop is marked.
+			el.classList.toggle('pass', r.stop < 0 && k < shownChecks);
+			el.classList.toggle('seen', r.stop >= 0 && k < Math.min(shownChecks, passes));
 			const stop = reachedStop && k === r.stop;
 			el.classList.toggle('stop', stop);
 			el.style.setProperty('--c', col);
