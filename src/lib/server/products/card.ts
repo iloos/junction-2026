@@ -9,6 +9,7 @@ import listingsFile from '../web/fixtures/listings.json';
 import type { Offer, Product } from '$lib/core/contracts';
 import type { Catalog } from '$lib/core/ports';
 import type { ProductListing } from '../web/listing';
+import type { ProductPhoto } from '../web/photo';
 
 export interface ProductCard {
 	productId: string;
@@ -33,6 +34,8 @@ export interface ProductCard {
 	/** Valio's own substitution rules for this product. */
 	substitutes: { productId: string; nameFi: string }[];
 	listing: ProductListing | null;
+	/** The picture to show and what it is (gtin / family / brand / category); set by the caller (cardFor). */
+	photo?: ProductPhoto;
 	/** Why there is no link, in words, when there is none. */
 	listingNote?: string;
 }
@@ -95,6 +98,12 @@ let recorded: Record<string, ProductListing | null> | null = null;
 export function recordedListing(productId: string): ProductListing | null | undefined {
 	recorded ??= (listingsFile as { listings: Record<string, ProductListing | null> }).listings;
 	return productId in recorded ? recorded[productId] : undefined;
+}
+
+/** The product ids the recorded set knows (with or without a page). */
+export function recordedIds(): string[] {
+	recorded ??= (listingsFile as { listings: Record<string, ProductListing | null> }).listings;
+	return Object.keys(recorded);
 }
 
 export async function productCard(
