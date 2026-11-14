@@ -3,7 +3,15 @@ import { SCOPES_BY_ACTOR } from '$lib/core/contracts';
 import type { CallContext } from '$lib/core/ports';
 import { createHandlers } from '$lib/core/services/handlers';
 import { createDbPorts } from '../store/db-ports';
-import { acceptMenu, editAmounts, kitchenUrl, planMenu, proposeForBrief, readMenu } from './flow';
+import {
+	acceptMenu,
+	editAmounts,
+	editMenu,
+	kitchenUrl,
+	planMenu,
+	proposeForBrief,
+	readMenu
+} from './flow';
 import { goldenBrief } from './golden';
 import { memoryMenuStore } from './store';
 
@@ -133,5 +141,77 @@ describe('menu review flow', () => {
 		if (r.value.state !== 'planned') return;
 		expect(r.value.plan.kitchenId).toBe('k-hotel');
 		expect(r.value.kitchenUrl).toBe(kitchenUrl(r.value.plan));
+	});
+});
+
+describe('chef changes that get a blocked menu to Accept', () => {
+	it('removes an ingredient or dish, turns a product down, keeps a shortfall open', async () => {
+		const { d, view } = await setup();
+		const p = view.proposal;
+		const [first, second] = p.dishes;
+		const ing = first.ingredients[0];
+		const r = await editMenu(d, {
+			id: p.id,
+			revision: 0,
+			changes: [
+				{ kind: 'removeDish', dishId: second.id },
+				{ kind: 'removeIngredient', ingredientId: first.ingredients[1].id },
+				{ kind: 'unresolve', ingredientId: ing.id }
+			]
+		});
+		expect(r.ok).toBe(true);
+		if (!r.ok) return;
+		const next = r.value.proposal;
+		expect(next.revision).toBe(1);
+		expect(next.dishes.map((x) => x.id)).not.toContain(second.id);
+		expect(next.dishes[0].ingredients.map((i) => i.id)).not.toContain(first.ingredients[1].id);
+		expect(next.dishes[0].ingredients[0].productId).toBeUndefined();
+		expect(next.dishes[0].ingredients[0].unresolved).toMatch(/turned down/);
+		// A chef revision may drop ids: no "dropped" block.
+		expect(r.value.issues.filter((i) => i.id.startsWith('dropped:'))).toEqual([]);
+	});
+
+	it('an amount block names its row and fixes; keeping a course shortfall open lets Accept through', async () => {
+		const { d, view } = await setup();
+		const p = view.proposal;
+		const ing = p.dishes[0].ingredients[0];
+		const slip = await editMenu(d, {
+			id: p.id,
+			revision: 0,
+			changes: [{ kind: 'amount', ingredientId: ing.id, amountPerCover: 900 }]
+		});
+		if (!slip.ok) throw new Error(slip.error.message);
+		const block = slip.value.issues.find((i) => i.id === `amount:${ing.id}`)!;
+		expect(block).toMatchObject({ severity: 'block', targets: [ing.id] });
+		expect(block.fixes).toEqual(['amount', 'removeIngredient']);
+		const fixed = await editMenu(d, {
+			id: p.id,
+			revision: 1,
+			changes: [{ kind: 'removeIngredient', ingredientId: ing.id }]
+		});
+		if (!fixed.ok) throw new Error(fixed.error.message);
+		expect(fixed.value.issues.filter((i) => i.severity === 'block')).toEqual([]);
+
+		// Cut the buffet below its minimum: a "dishes" block, waivable as an open item.
+		const keep = fixed.value.proposal.dishes.slice(0, 1).map((x) => x.id);
+		const cut = await editMenu(d, {
+			id: p.id,
+			revision: 2,
+			changes: fixed.value.proposal.dishes
+				.filter((x) => !keep.includes(x.id))
+				.map((x) => ({ kind: 'removeDish' as const, dishId: x.id }))
+		});
+		if (!cut.ok) throw new Error(cut.error.message);
+		const dishesBlock = cut.value.issues.find((i) => i.id === 'dishes')!;
+		expect(dishesBlock).toMatchObject({ severity: 'block', fixes: ['keepOpen'] });
+		const open = await editMenu(d, {
+			id: p.id,
+			revision: 3,
+			changes: [{ kind: 'keepOpen', issueId: 'dishes', text: dishesBlock.text }]
+		});
+		if (!open.ok) throw new Error(open.error.message);
+		expect(open.value.issues.find((i) => i.id === 'dishes')?.severity).toBe('warn');
+		const acc = await acceptMenu(d, { id: p.id, revision: 4, by: { kind: 'chef', id: 'chef' } });
+		expect(acc.ok).toBe(true);
 	});
 });

@@ -19,6 +19,7 @@
 		CommitView,
 		EventView,
 		LookupView,
+		MenuChange,
 		MenuPlanResult,
 		MenuView,
 		OrderView,
@@ -323,13 +324,13 @@
 	async function propose() {
 		menu = await menuCall<MenuView>({ action: 'propose', text, kitchenId, briefAnswers, nonce });
 	}
-	async function editMenu(edits: { ingredientId: string; amountPerCover: number }[]) {
+	async function editMenu(changes: MenuChange[]) {
 		if (!menu) return;
 		const r = await menuCall<MenuView>({
 			action: 'edit',
 			id: menu.proposal.id,
 			revision: menu.proposal.revision,
-			edits
+			changes
 		});
 		if (r) menu = r;
 	}
@@ -713,7 +714,7 @@
 								view={menu}
 								busy={busy || menuBusy}
 								plan={menuPlan}
-								onedit={editMenu}
+								onchange={editMenu}
 								onaccept={acceptMenu}
 								onplan={planMenu}
 							/>

@@ -10,7 +10,13 @@ export interface Issue {
 	id: string;
 	severity: 'block' | 'warn';
 	text: string;
+	/** Dish or ingredient ids the issue is about, so the review can point at and highlight their rows. */
+	targets?: string[];
+	/** What the chef can do about it on the review: change an amount, remove the subject, or keep it as open. */
+	fixes?: Fix[];
 }
+
+export type Fix = 'amount' | 'removeIngredient' | 'removeDish' | 'keepOpen';
 
 /** Courses that are a course of the meal; sides, bread and drinks accompany one. */
 const MEAL_COURSES = new Set<Course>([
@@ -39,8 +45,17 @@ export function reviewProposal(
 	previous?: MenuProposal | null
 ): Issue[] {
 	const out: Issue[] = [];
-	const block = (id: string, text: string) => out.push({ id, severity: 'block', text });
-	const warn = (id: string, text: string) => out.push({ id, severity: 'warn', text });
+	const open = new Set(p.open.map((o) => o.id));
+	type More = Pick<Issue, 'targets' | 'fixes'>;
+	// The chef can keep a shortfall as an open item (keepOpen): it is still shown, as a warning, and no longer blocks.
+	const block = (id: string, text: string, more: More = {}) =>
+		out.push(
+			more.fixes?.includes('keepOpen') && open.has(id)
+				? { id, severity: 'warn', text: `${text} (kept open by the chef)`, ...more }
+				: { id, severity: 'block', text, ...more }
+		);
+	const warn = (id: string, text: string, more: More = {}) =>
+		out.push({ id, severity: 'warn', text, ...more });
 
 	// Covers and date: the proposal is for exactly this brief.
 	if (p.brief.guests !== brief.guests)
@@ -51,7 +66,9 @@ export function reviewProposal(
 	// Courses: every requested course has a dish.
 	const meal = p.dishes.filter((d) => !d.course || MEAL_COURSES.has(d.course));
 	if (brief.courses !== undefined && meal.length < brief.courses)
-		block('courses', `${brief.courses} courses asked, ${meal.length} course dishes proposed`);
+		block('courses', `${brief.courses} courses asked, ${meal.length} course dishes proposed`, {
+			fixes: ['keepOpen']
+		});
 	if (
 		brief.courses === undefined &&
 		(brief.serviceStyle === 'buffet' || brief.serviceStyle === 'canape') &&
@@ -59,12 +76,12 @@ export function reviewProposal(
 	)
 		block(
 			'dishes',
-			`${p.dishes.length} dishes for a ${brief.serviceStyle}: at least ${MIN_BUFFET_DISHES} expected`
+			`${p.dishes.length} dishes for a ${brief.serviceStyle}: at least ${MIN_BUFFET_DISHES} expected`,
+			{ fixes: ['keepOpen'] }
 		);
 
 	// Explicit requirements survive: kept on the proposal's brief, and met by every dish (or said open).
 	const kept = new Set(p.brief.dietary.map((d) => d.toLowerCase()));
-	const open = new Set(p.open.map((o) => o.id));
 	for (const d of brief.dietary) {
 		const base = dietBase(d);
 		if (!kept.has(d.toLowerCase())) {
@@ -74,13 +91,14 @@ export function reviewProposal(
 		const claims = p.dishes.filter((x) => x.claimedCompatible.map(dietBase).includes(base));
 		if (counted(d)) {
 			if (!claims.length && !open.has(`diet:${base}`))
-				block(`diet:${base}`, `"${d}": no dish is offered as ${base}`);
+				block(`diet:${base}`, `"${d}": no dish is offered as ${base}`, { fixes: ['keepOpen'] });
 		} else {
 			const not = p.dishes.filter((x) => !claims.includes(x));
 			if (not.length && !open.has(`diet:${base}`))
 				block(
 					`diet:${base}`,
-					`${base} is a requirement for every dish; not claimed by ${not.map((x) => x.name).join(', ')}`
+					`${base} is a requirement for every dish; not claimed by ${not.map((x) => x.name).join(', ')}`,
+					{ targets: not.map((x) => x.id), fixes: ['removeDish', 'keepOpen'] }
 				);
 		}
 	}
@@ -89,16 +107,22 @@ export function reviewProposal(
 	let grams = 0;
 	for (const dish of p.dishes) {
 		if (!dish.ingredients.some((i) => i.amountPerCover > 0))
-			block(`amount:${dish.id}`, `${dish.name} has no ingredient with an amount`);
+			block(`amount:${dish.id}`, `${dish.name} has no ingredient with an amount`, {
+				targets: [dish.id],
+				fixes: ['removeDish']
+			});
 		for (const i of dish.ingredients) {
 			if (i.unit === 'g') grams += i.amountPerCover;
 			if (i.unit === 'g' && i.amountPerCover > MAX_INGREDIENT_G)
 				block(
 					`amount:${i.id}`,
-					`${i.label}: ${i.amountPerCover} g per guest is more than ${MAX_INGREDIENT_G} g`
+					`${i.label}: ${i.amountPerCover} g per guest is more than ${MAX_INGREDIENT_G} g`,
+					{ targets: [i.id], fixes: ['amount', 'removeIngredient'] }
 				);
 			if (i.unresolved !== undefined)
-				warn(`unresolved:${i.id}`, `${i.label}: no product yet (${i.unresolved})`);
+				warn(`unresolved:${i.id}`, `${i.label}: no product yet (${i.unresolved})`, {
+					targets: [i.id]
+				});
 		}
 	}
 	if (grams < GRAMS_PER_GUEST.min || grams > GRAMS_PER_GUEST.max)

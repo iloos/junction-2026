@@ -1,25 +1,29 @@
 <script lang="ts">
 	import { ArrowRight, Check, CircleAlert, OctagonX, Save } from '@lucide/svelte';
+	import { tick } from 'svelte';
 	import { resolve } from '$app/paths';
 	import SourceTag from '$lib/ui/SourceTag.svelte';
 	import { day, num } from '$lib/ui/format';
-	import type { MenuPlanResult, MenuView } from './types';
+	import type { MenuChange, MenuPlanResult, MenuView } from './types';
 	import { measureWords } from './words';
 
 	/**
 	 * The chef's review of a menu proposal: dishes, each ingredient's amount per guest (editable), the product it
-	 * resolved to or why it did not, and the rubric's issues. Saving amounts makes a new revision; accepting records
-	 * the review on the server; planning hands the accepted revision to plan_event.
+	 * resolved to or why it did not, and the rubric's issues. Every change (amounts, a product turned down, an
+	 * ingredient or dish removed, a shortfall kept open) makes a new revision; accepting records the review on the
+	 * server; planning hands the accepted revision to plan_event. What blocks Accept is listed next to it, each with
+	 * the row it is about and what the chef can do, so Accept is always reachable.
 	 */
 	interface Props {
 		view: MenuView;
 		busy: boolean;
 		plan: MenuPlanResult | null;
-		onedit: (edits: { ingredientId: string; amountPerCover: number }[]) => void;
+		/** Saves the given changes plus any amounts typed and not saved yet, as one new revision. */
+		onchange: (changes: MenuChange[]) => void;
 		onaccept: () => void;
 		onplan: () => void;
 	}
-	let { view, busy, plan, onedit, onaccept, onplan }: Props = $props();
+	let { view, busy, plan, onchange, onaccept, onplan }: Props = $props();
 
 	const p = $derived(view.proposal);
 	const kitchenHref = $derived(
@@ -57,6 +61,26 @@
 		})
 	);
 	const blocks = $derived(view.issues.filter((i) => i.severity === 'block'));
+	/** Rows a blocking issue is about: highlighted until it is fixed. */
+	const flagged = $derived(new Set(blocks.flatMap((b) => b.targets ?? [])));
+	const dishOf = (id: string) => p.dishes.find((d) => d.id === id);
+	const ingredientOf = (id: string) =>
+		p.dishes.flatMap((d) => d.ingredients).find((i) => i.id === id);
+	const label = (id: string) => dishOf(id)?.name ?? ingredientOf(id)?.label ?? id;
+	const amountChanges = $derived(edits.map((e) => ({ kind: 'amount' as const, ...e })));
+	function change(c: MenuChange[]) {
+		onchange([...amountChanges, ...c]);
+	}
+	/** Scrolls to a row and focuses its amount when it has one. */
+	let lit = $state<string | null>(null);
+	async function show(id: string, focusAmount = false) {
+		lit = id;
+		await tick();
+		document
+			.getElementById(`menu-row-${id}`)
+			?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+		if (focusAmount) (document.getElementById(`amt-${id}`) as HTMLInputElement | null)?.select();
+	}
 	const warns = $derived(view.issues.filter((i) => i.severity === 'warn'));
 	const accepted = $derived(!!p.review);
 	const gramsPerGuest = $derived(
@@ -114,11 +138,13 @@
 
 	{#if blocks.length || warns.length}
 		<ul class="mx-3 mt-2 space-y-1 text-body" aria-label="Checks">
-			{#each blocks as i (i.id)}<li
+			{#if blocks.length && !accepted}<li
 					class="flex gap-2 rounded-md border border-out/30 bg-out-wash px-2.5 py-1.5 text-ink"
 				>
-					<OctagonX size={14} class="mt-0.5 shrink-0 text-out" aria-hidden="true" />{i.text}
-				</li>{/each}
+					<OctagonX size={14} class="mt-0.5 shrink-0 text-out" aria-hidden="true" />
+					{blocks.length} thing{blocks.length === 1 ? '' : 's'} to fix before accepting: listed next to
+					Accept below, each with what you can do.
+				</li>{/if}
 			{#each warns as i (i.id)}<li class="flex gap-2 px-2.5 py-0.5 text-ink-2">
 					<CircleAlert size={14} class="mt-0.5 shrink-0 text-signoff" aria-hidden="true" />{i.text}
 				</li>{/each}
@@ -138,7 +164,13 @@
 
 	<ol class="mt-2 divide-y divide-rule">
 		{#each p.dishes as d (d.id)}
-			<li class="px-3 py-2.5">
+			<li
+				id="menu-row-{d.id}"
+				class="px-3 py-2.5 {flagged.has(d.id) ? 'bg-out-wash' : ''} {lit === d.id
+					? 'ring-2 ring-out/50 ring-inset'
+					: ''}"
+				data-flagged={flagged.has(d.id) || undefined}
+			>
 				<p class="flex flex-wrap items-baseline gap-x-2">
 					<b class="font-medium">{d.name}</b>
 					{#if d.course}<span class="text-meta text-ink-3">{d.course}</span>{/if}
@@ -151,7 +183,13 @@
 				<ul class="mt-1.5 space-y-1.5">
 					{#each d.ingredients as i (i.id)}
 						{@const mine = i.provenance.source === 'user'}
-						<li class="grid grid-cols-[1fr_auto] items-start gap-x-3">
+						<li
+							id="menu-row-{i.id}"
+							class="grid grid-cols-[1fr_auto] items-start gap-x-3 rounded-md {flagged.has(i.id)
+								? '-mx-1.5 bg-out-wash px-1.5'
+								: ''} {lit === i.id ? 'ring-2 ring-out/50' : ''}"
+							data-flagged={flagged.has(i.id) || undefined}
+						>
 							<div class="min-w-0 text-body">
 								<span class="text-ink">{i.label}</span>
 								{#if i.productId}
@@ -163,6 +201,24 @@
 									<span class="block text-meta text-signoff"
 										>unresolved: {i.unresolved ?? i.query}</span
 									>
+								{/if}
+								{#if !accepted}
+									<span class="mt-0.5 flex flex-wrap gap-x-3 text-micro">
+										{#if i.productId}<button
+												type="button"
+												disabled={busy}
+												class="text-ink-3 underline hover:text-ink disabled:opacity-40"
+												onclick={() => change([{ kind: 'unresolve', ingredientId: i.id }])}
+												>Not this product</button
+											>{/if}
+										<button
+											type="button"
+											disabled={busy}
+											class="text-ink-3 underline hover:text-out disabled:opacity-40"
+											onclick={() => change([{ kind: 'removeIngredient', ingredientId: i.id }])}
+											>Remove</button
+										>
+									</span>
 								{/if}
 							</div>
 							<div class="flex items-center gap-1.5 text-body">
@@ -209,12 +265,70 @@
 				allergen and approves no spending.
 			</p>
 		{/if}
+		{#if blocks.length && !accepted}
+			<div
+				class="mt-2 rounded-md border border-out/35 bg-sheet px-2.5 py-2"
+				role="region"
+				aria-label="To fix before accepting"
+				data-testid="menu-blocks"
+			>
+				<p class="font-medium text-out">
+					{blocks.length} thing{blocks.length === 1 ? '' : 's'} to fix before accepting:
+				</p>
+				<ol class="mt-1 space-y-2">
+					{#each blocks as b (b.id)}
+						{@const fixes = b.fixes ?? []}
+						<li class="text-body text-ink">
+							<span class="flex gap-1.5"
+								><OctagonX
+									size={14}
+									class="mt-0.5 shrink-0 text-out"
+									aria-hidden="true"
+								/>{b.text}</span
+							>
+							<span class="mt-1 ml-5 flex flex-wrap gap-1.5">
+								{#each b.targets ?? [] as t (t)}
+									<button
+										type="button"
+										class="h-8 rounded-md border border-rule-strong px-2 text-meta text-ink-2 hover:text-ink"
+										onclick={() => show(t, fixes.includes('amount'))}
+										>{fixes.includes('amount') ? 'Change the amount of' : 'Show'} {label(t)}</button
+									>
+									{#if fixes.includes('removeIngredient') && ingredientOf(t)}<button
+											type="button"
+											disabled={busy}
+											class="h-8 rounded-md border border-out/40 px-2 text-meta text-out hover:bg-out-wash disabled:opacity-40"
+											onclick={() => change([{ kind: 'removeIngredient', ingredientId: t }])}
+											>Remove {label(t)}</button
+										>{/if}
+									{#if fixes.includes('removeDish') && dishOf(t)}<button
+											type="button"
+											disabled={busy}
+											class="h-8 rounded-md border border-out/40 px-2 text-meta text-out hover:bg-out-wash disabled:opacity-40"
+											onclick={() => change([{ kind: 'removeDish', dishId: t }])}
+											>Remove {label(t)}</button
+										>{/if}
+								{/each}
+								{#if fixes.includes('keepOpen')}<button
+										type="button"
+										disabled={busy}
+										class="h-8 rounded-md border border-signoff/50 px-2 text-meta text-ink hover:bg-signoff-wash disabled:opacity-40"
+										title="Accept the menu knowing this is not met; it stays listed as open"
+										onclick={() => change([{ kind: 'keepOpen', issueId: b.id, text: b.text }])}
+										>Keep as an open item</button
+									>{/if}
+							</span>
+						</li>
+					{/each}
+				</ol>
+			</div>
+		{/if}
 		<div class="mt-2 flex flex-wrap gap-2">
 			{#if !accepted}
 				<button
 					type="button"
 					disabled={busy || !edits.length || invalid}
-					onclick={() => onedit(edits)}
+					onclick={() => change([])}
 					class="inline-flex h-10 items-center gap-1.5 rounded-md border border-rule-strong bg-sheet px-3 text-body text-ink hover:border-accent/50 disabled:opacity-40"
 				>
 					<Save size={15} aria-hidden="true" /> Save {edits.length || ''} amount{edits.length === 1
@@ -227,7 +341,7 @@
 					onclick={onaccept}
 					class="inline-flex h-10 items-center gap-1.5 rounded-md bg-accent px-4 text-body font-medium text-sheet hover:bg-accent-ink disabled:opacity-40"
 					title={blocks.length
-						? 'Fix the red checks first'
+						? 'Fix the items listed above first'
 						: edits.length
 							? 'Save your amounts first'
 							: undefined}
