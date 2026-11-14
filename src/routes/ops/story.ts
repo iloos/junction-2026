@@ -4,7 +4,7 @@
  */
 import type { Line, OpEnvelope } from '$lib/core/contracts';
 import type { WorkspaceState } from '$lib/core/state';
-import { euro, productName, reasonText, type Names } from './labels';
+import { euro, productName, reasonText, refusalWhat, type Names } from './labels';
 import { dishPhrase, type Problem } from './problems';
 
 /** Who a step is from, as its chip reads. */
@@ -54,6 +54,12 @@ const AVAIL: Record<string, string> = {
 	known: 'in stock',
 	unknown: "in Valio's range, quantity not stated",
 	supplier: 'delivered by its supplier, quantity not stated'
+};
+
+/** Why the rules refuse a tool to an agent, in words; other tools show the gate's own message. */
+const WHY_REFUSED: Record<string, string> = {
+	approve: 'only the chef or a named approver can approve',
+	set_mandate: 'only the chef can change the mandate'
 };
 
 function planOf(env: OpEnvelope): string | undefined {
@@ -275,6 +281,14 @@ export function storyOf(
 				});
 				break;
 			}
+			case 'RecordRefusal':
+				steps.push({
+					...base,
+					what: `${refusalWhat(env.actor.kind, op.tool)}.`,
+					then: `Refused: ${WHY_REFUSED[op.tool] ?? op.message.replace(/\.$/, '')}. Nothing changed.`,
+					tone: 'bad'
+				});
+				break;
 			default:
 				hidden += 1;
 		}

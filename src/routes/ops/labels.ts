@@ -140,7 +140,21 @@ export function opSummary(env: OpEnvelope, names: Names, plans: Record<string, P
 			return op.anomaly.message;
 		case 'RecordEnrichment':
 			return `Added ${op.field} for ${name(names, op.productId)} (${op.provenance.source})`;
+		case 'RecordRefusal':
+			return `${refusalWhat(env.actor.kind, op.tool)}. Refused (${op.code}); nothing changed`;
 	}
+}
+
+/** "An outside agent tried to approve on the chef's behalf", for the log and the story. */
+export function refusalWhat(actor: ActorKind, tool: string): string {
+	const who = actor === 'external_agent' ? 'An outside agent' : 'The kitchen agent';
+	const what: Record<string, string> = {
+		approve: "tried to approve on the chef's behalf",
+		set_mandate: "tried to change the kitchen's mandate",
+		commit_order: 'tried to commit an order it may not commit',
+		place_order: 'tried to place an order it may not place'
+	};
+	return `${who} ${what[tool] ?? `tried to ${toolText(tool).toLowerCase()} without the right`}`;
 }
 
 export function opPlanId(env: OpEnvelope): string | undefined {

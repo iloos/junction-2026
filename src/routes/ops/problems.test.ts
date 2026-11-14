@@ -113,4 +113,38 @@ describe('the story of a problem', () => {
 		expect(asks.length).toBeGreaterThan(1);
 		expect(asks.slice(1).every((x) => x.what.includes('again'))).toBe(true);
 	});
+
+	it("shows an outside agent's refused approve as its own step", () => {
+		const last = ops.at(-1)!;
+		const planId = ham.lines[0].planId;
+		const refusal: OpEnvelope = {
+			workspaceId: last.workspaceId,
+			runId: last.runId,
+			seq: last.seq + 1,
+			at: last.at,
+			actor: { kind: 'external_agent', id: 'judge' },
+			via: 'mcp',
+			op: {
+				type: 'RecordRefusal',
+				tool: 'approve',
+				code: 'FORBIDDEN',
+				message: 'external_agent may not call approve (needs scope approve)',
+				planId
+			}
+		};
+		const all = [...ops, refusal];
+		const after = applyOps(s, [refusal]);
+		if (!after.ok) throw new Error('refusal rejected');
+		expect(after.value.plans[planId]).toBe(s.plans[planId]);
+		const story = storyOf(ham, all, after.value, names).steps;
+		expect(story.at(-1)).toMatchObject({
+			seq: refusal.seq,
+			chip: 'outside',
+			tone: 'bad',
+			what: "An outside agent tried to approve on the chef's behalf."
+		});
+		expect(story.at(-1)!.then).toBe(
+			'Refused: only the chef or a named approver can approve. Nothing changed.'
+		);
+	});
 });

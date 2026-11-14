@@ -256,7 +256,7 @@
 			unresolved: views.filter((f) => f.unresolved.value > 1e-9).length,
 			needs: views.length,
 			committed: Object.values(stream.state.orders).reduce((s, o) => s + o.totalCents, 0),
-			refused: stream.state.failedCommits.length
+			refused: stream.state.failedCommits.length + stream.state.refusals.length
 		};
 	});
 
@@ -349,7 +349,7 @@
 				<dd>{euro(totals.committed)}</dd>
 			</div>
 			<div class:bad={totals.refused > 0}>
-				<dt>commits refused</dt>
+				<dt>refused by the rules</dt>
 				<dd>{totals.refused}</dd>
 			</div>
 		</dl>
