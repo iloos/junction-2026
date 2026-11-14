@@ -11,6 +11,7 @@
 	import GramsStepper from '$lib/ui/GramsStepper.svelte';
 	import WhyDrawer from '$lib/ui/WhyDrawer.svelte';
 	import { day, fixed, money, moneyDelta, num, storyTime } from '$lib/ui/format';
+	import { SCENARIO } from '$lib/core/scenario';
 	import { reasonShort } from '$lib/ui/reasons';
 	import RescuePanel from './RescuePanel.svelte';
 	import RulesPanel from './RulesPanel.svelte';
@@ -222,7 +223,8 @@
 				>
 			{/if}
 			<span
-				><span class="mono text-ink">{k.now ? storyTime(k.now) : '—'}</span> · simulated clock</span
+				><span class="mono text-ink">{storyTime(k.now ?? new Date(SCENARIO.start))}</span> · simulated
+				clock</span
 			>
 			<button
 				type="button"
