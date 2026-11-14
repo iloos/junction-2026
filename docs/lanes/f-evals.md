@@ -10,7 +10,7 @@
 3. [x] R5 domain journeys (r5-*) as expected-fail evals tagged F5, F8, F9, F10, F11, F22.
 4. [x] Cross-entry intent fidelity (/request, REST place_order, agent → same basket); expected-fail until F3/F4.
 5. [x] Opt-in live-planner suite (AGENT_PLANNER=llm, 3 repeats).
-6. [ ] pg race in deploy smoke (with 9c).
+6. [~] pg race in deploy smoke: `scripts/smoke-race.mjs` (passes locally on `node build`); 9c wires it into the deploy smoke with a kitchen_agent key bound to a throwaway workspace.
 7. [x] Round-6 foundation evals r6-1…r6-5 (expectFail R6-lineage, R6-fulfilment, R6-units, R6-diff).
 
 ## Needs
