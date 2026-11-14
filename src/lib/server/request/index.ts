@@ -23,7 +23,7 @@ import type {
 	RequestResult
 } from '$lib/ui/request/types';
 import { helsinkiDate } from './dates';
-import { approvalView, callTool, runRequest, type ApprovalRecord } from './run';
+import { approvalView, callTool, runRequest } from './run';
 import type { ParsedRequest } from './parse';
 
 export { ToolFailed } from './run';
@@ -56,23 +56,6 @@ export async function simToday(): Promise<string> {
 
 export async function kitchens(ctx: CallContext): Promise<Kitchen[]> {
 	return (await ports()).store.kitchens(ctx.workspaceId);
-}
-
-/** Fallback while get_plan's optional approval fields are not filled yet. Read-only. */
-function approvalRecord(ctx: CallContext) {
-	return async (id: string): Promise<ApprovalRecord | null> => {
-		const b = await ports();
-		const st = await b.store.load(ctx.workspaceId, ctx.runId);
-		const a = st.approvals[id];
-		return a
-			? {
-					mandateVersion: a.mandateVersion,
-					expiresAt: a.expiresAt,
-					requestedBy: `${a.requestedBy.kind}:${a.requestedBy.id}`,
-					decidedBy: a.decidedBy ? `${a.decidedBy.kind}:${a.decidedBy.id}` : undefined
-				}
-			: null;
-	};
 }
 
 export function llmKind(env: Env): ParsedRequest['parser']['kind'] {
@@ -119,7 +102,6 @@ export async function submitRequest(o: {
 		nonce: o.nonce,
 		place: o.place,
 		answers: o.answers,
-		approvalRecord: approvalRecord(ctx),
 		onEvent: o.onEvent
 	});
 }
@@ -140,7 +122,7 @@ export async function approveRequest(o: {
 		termsHash: o.termsHash,
 		decision: o.decision
 	});
-	const view = await approvalView(handlers, a.chef, o.planId, approvalRecord(a.chef));
+	const view = await approvalView(handlers, a.chef, o.planId);
 	return { state: r.state, ...view };
 }
 
@@ -167,6 +149,6 @@ export async function commitRequest(o: {
 		version: o.version,
 		idempotencyKey
 	});
-	const view = await approvalView(handlers, a.chef, o.planId, approvalRecord(a.chef));
+	const view = await approvalView(handlers, a.chef, o.planId);
 	return { commit: { ...r, idempotencyKey, attempt: o.attempt }, ...view };
 }
