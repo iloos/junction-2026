@@ -475,7 +475,7 @@
 	/* Header: title + switch, the four figures that matter, connection state. */
 	.room > header {
 		display: grid;
-		grid-template-columns: auto 1fr auto;
+		grid-template-columns: auto minmax(0, 1fr) auto;
 		gap: 40px;
 		align-items: end;
 		padding-bottom: 18px;
@@ -511,7 +511,9 @@
 
 	.figures {
 		display: flex;
-		gap: 28px;
+		flex-wrap: wrap;
+		gap: 12px 28px;
+		min-width: 0;
 		margin: 0;
 		justify-content: center;
 	}
@@ -543,7 +545,6 @@
 
 	.status {
 		text-align: right;
-		min-width: 250px;
 	}
 	.pill {
 		display: inline-flex;
