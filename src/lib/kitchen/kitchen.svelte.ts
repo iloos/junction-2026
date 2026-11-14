@@ -150,7 +150,7 @@ export class KitchenStore {
 				// briefly before saying the link's plan isn't here.
 				for (let i = 0; ; i++) {
 					try {
-						const s = await backend.snapshot(this.mode, planId);
+						const s = await backend.snapshot(this.mode, planId, !this.shared);
 						this.focusedPlan = planId;
 						return s;
 					} catch (e) {
@@ -220,7 +220,7 @@ export class KitchenStore {
 	async setPreset(preset: PresetId) {
 		if (this.snap?.preset === preset || this.readOnly) return;
 		await this.#run(async () => {
-			const answer = await backend.setPreset(this.mode, preset);
+			const answer = await backend.setPreset(this.mode, preset, this.focusedPlan);
 			this.#log(
 				'rules',
 				`Rules: ${preset === 'kitchen' ? 'kitchen default' : preset === 'price' ? 'price first' : 'Finnish required'}`
@@ -232,7 +232,7 @@ export class KitchenStore {
 	async applyRules() {
 		if (this.readOnly) return;
 		await this.#run(async () => {
-			const answer = await backend.applyRules(this.mode);
+			const answer = await backend.applyRules(this.mode, this.focusedPlan);
 			this.#log('rules', 'Applied the previewed rules to the order: approval voided, re-quoted');
 			return answer;
 		});
@@ -252,7 +252,7 @@ export class KitchenStore {
 	async setContention(on: boolean) {
 		if (this.readOnly) return;
 		await this.#run(async () => {
-			const answer = await backend.setContention(this.mode, on);
+			const answer = await backend.setContention(this.mode, on, this.focusedPlan);
 			this.#log(
 				'sim',
 				on
@@ -291,7 +291,7 @@ export class KitchenStore {
 			ok = out.state === 'granted' || (decision === 'deny' && out.state === 'denied');
 			// The grant must be visible before the panel moves on: re-read if the store still says pending.
 			for (let i = 0; ok && i < 3; i++) {
-				const s = await backend.snapshot(this.mode, this.focusedPlan ?? undefined);
+				const s = await backend.snapshot(this.mode, this.focusedPlan ?? undefined, !this.shared);
 				if (!('plan' in s) || s.approval?.id !== a.id || s.approval.state !== 'pending') break;
 				await new Promise((r) => setTimeout(r, 250));
 			}
@@ -376,7 +376,8 @@ export class KitchenStore {
 			this.#fail(e);
 		}
 		try {
-			const next = answer ?? (await backend.snapshot(this.mode, this.focusedPlan ?? undefined));
+			const next =
+				answer ?? (await backend.snapshot(this.mode, this.focusedPlan ?? undefined, !this.shared));
 			this.stale = null;
 			if ('plan' in next) {
 				this.started = true;
@@ -395,6 +396,9 @@ export class KitchenStore {
 							? this.changeFrom
 							: null;
 				this.snap = next;
+				// Pin the plan on screen: every later read and command names it, so another screen on this browser
+				// (the dock's own state) moving the server session can never switch what this one shows.
+				this.focusedPlan = next.plan.id;
 				this.#receiptFrom(next);
 				this.rendered =
 					this.mode === 'live' && next.clock

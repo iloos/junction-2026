@@ -113,17 +113,16 @@ export function callTool(
 			error: { code: 'FORBIDDEN', message, retryable: false }
 		});
 		if (!ALLOWED.has(name)) return deny(`the kitchen screen does not send ${name}`);
-		const s = session(sid, workspaceId);
-		// The page names the plan it shows; adopt it if this workspace has it, so a command never depends on this
-		// process having seen the link that opened the plan.
+		const remembered = session(sid, workspaceId);
+		// The screen names the plan it shows; the command acts on that plan if this workspace has it, so it never
+		// depends on this process having seen the link. A copy: one screen's command (the dock's) never moves the
+		// plan another screen on this browser (the Kitchen page) reads by default.
+		let s = remembered;
+		const b0 = await createServerPorts();
+		const ws0 = await b0.ports.store.load(chef(s).workspaceId, chef(s).runId);
 		if (view && view.planId !== s.planId) {
-			const ctx = chef(s);
-			const b = await createServerPorts();
-			const named = (await b.ports.store.load(ctx.workspaceId, ctx.runId)).plans[view.planId];
-			if (named) {
-				s.planId = named.id;
-				s.kitchenId = named.kitchenId;
-			}
+			const named = ws0.plans[view.planId];
+			if (named) s = { ...remembered, planId: named.id, kitchenId: named.kitchenId };
 		}
 		const plan = await findPlan(s);
 		const i = (input ?? {}) as { planId?: string; approvalId?: string };
@@ -144,7 +143,8 @@ export function callTool(
 			);
 		if (i.planId !== undefined && i.planId !== plan.id)
 			return deny("that plan is not this session's kitchen plan");
-		if (name === 'approve' && !(i.approvalId ?? '').includes(plan.id))
+		// The approval must exist and belong to the plan on screen: an exact check, not a match on its id's text.
+		if (name === 'approve' && ws0.approvals[i.approvalId ?? '']?.planId !== plan.id)
 			return deny("that approval is not for this session's plan");
 		return serveTool(name, chef(s), input, handlers);
 	});
@@ -243,10 +243,13 @@ export function snapshot(sid: string, workspaceId: string): Promise<LiveSnapshot
 export function focusPlan(
 	sid: string,
 	workspaceId: string,
-	planId: string
+	planId: string,
+	/** Read that plan without making it this browser's remembered plan (the dock's own view of another plan). */
+	peek = false
 ): Promise<LiveSnapshot | null> {
 	return serial(workspaceId, async () => {
-		const s = session(sid, workspaceId);
+		const remembered = session(sid, workspaceId);
+		const s = peek ? { ...remembered } : remembered;
 		const b = await createServerPorts();
 		const find = async () => {
 			const ctx = chef(s);
@@ -546,10 +549,26 @@ export function scenario(
 	sid: string,
 	workspaceId: string,
 	action: string,
-	value: unknown
+	value: unknown,
+	/** The plan the screen shows: the command acts on it, not on whatever this browser's session last opened. */
+	planId?: string
 ): Promise<LiveSnapshot | PlanProgress> {
-	return serial(workspaceId, () => applyScenario(session(sid, workspaceId), action, value));
+	return serial(workspaceId, async () => {
+		const s = session(sid, workspaceId);
+		if (planId && ON_PLAN.has(action)) {
+			const b = await createServerPorts();
+			const ctx = chef(s);
+			const plan = (await b.ports.store.load(ctx.workspaceId, ctx.runId)).plans[planId];
+			if (plan) {
+				s.kitchenId = plan.kitchenId;
+				s.planId = plan.id;
+			}
+		}
+		return applyScenario(s, action, value);
+	});
 }
+/** Commands about the plan on screen; starting, switching kitchen and resetting choose their own plan. */
+const ON_PLAN = new Set(['preset', 'apply', 'contention']);
 
 async function applyScenario(
 	s: Session,

@@ -15,7 +15,12 @@ export const GET: RequestHandler = async (event) => {
 	const id = sid(event.cookies);
 	const planId = event.url.searchParams.get('plan');
 	if (planId) {
-		const focused = await focusPlan(id, workspaceId, planId);
+		const focused = await focusPlan(
+			id,
+			workspaceId,
+			planId,
+			event.url.searchParams.get('peek') === '1'
+		);
 		if (focused) return json(focused);
 		return json(
 			{
