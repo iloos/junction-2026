@@ -182,6 +182,7 @@ function knownWord(k: string): boolean {
 		!!unitOf(k) ||
 		!!productOf(k) ||
 		!!constraintOf(k) ||
+		SERVING_WORD.test(k) ||
 		FILLER.has(k) ||
 		SHORT_WORDS.has(k) ||
 		NUMBER_WORDS[k] !== undefined
@@ -294,9 +295,13 @@ function withIds(items: (Omit<ParsedItem, 'id'> & { id?: string })[]): ParsedIte
 	});
 }
 
+/** Words that count who is served (D20 `for_people`, and courses): never a unit to buy in. */
+const SERVING =
+	'breakfasts?|lunch(?:es)?|dinners?|meals?|guests|people|persons|covers|portions|servings|pax|diners|hengelle|henkeä|annosta|annokselle|aamiaiselle|lounaalle';
+const SERVING_WORD = new RegExp(`^(?:${SERVING}|courses?)$`, 'iu');
+
 /** "for 300 breakfasts": how many are served, never an amount to buy. */
-const COVERS =
-	/(?:\bfor\s+)?(\d[\d\s,]*)\s+(breakfasts?|lunch(?:es)?|dinners?|meals?|guests|people|persons|covers|portions|servings|pax|diners|hengelle|henkeä|annosta|annokselle|aamiaiselle|lounaalle)(?![\p{L}])/iu;
+const COVERS = new RegExp(String.raw`(?:\bfor\s+)?(\d[\d\s,]*)\s+(${SERVING})(?![\p{L}])`, 'iu');
 
 /** "2 x 10 kg" / "4×5 l": a count of packs of a stated size, i.e. 20 kg. */
 const MULTIPACK = /(\d+)\s*[x×]\s*(\d+(?:[.,]\d+)?)\s+([\p{L}.]+)/iu;
