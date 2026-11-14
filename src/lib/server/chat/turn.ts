@@ -440,7 +440,9 @@ export async function* runChatTurn(
 	}
 
 	if (resize && held) {
-		steps = await resizeLine(held, resize, agentCtx, deps.handlers);
+		const mismatch: { at?: string } = {};
+		steps = await resizeLine(held, resize, mismatch, agentCtx, deps.handlers);
+		if (mismatch.at) refusal = mismatch.at;
 	} else if (input.continue) {
 		if (!task.plans.length) {
 			// Still waiting for an answer: ask the open question again rather than act.
@@ -782,6 +784,7 @@ const RESIZE =
 async function resizeLine(
 	planId: string,
 	m: RegExpMatchArray,
+	mismatch: { at?: string },
 	ctx: CallContext,
 	handlers: ToolHandlers
 ): Promise<StepRecord[]> {
@@ -808,6 +811,12 @@ async function resizeLine(
 	let amount = Number(m[1].replace(',', '.'));
 	if (unit === 'g') amount /= 1000;
 	if (unit === 'dl') amount /= 10;
+	// Kilograms for a line bought in litres (or the reverse) are another dimension: ask, never invent a density.
+	const dim = /^(kg|kilo|g)/.test(unit) ? 'kg' : /^(l|litra|dl)/.test(unit) ? 'l' : null;
+	if ((dim && dim !== phys.unit) || !(amount > 0)) {
+		mismatch.at = `That line is bought in ${phys.unit === 'l' ? 'litres' : phys.unit}; say the new amount in ${phys.unit === 'l' ? 'litres' : phys.unit}.`;
+		return steps;
+	}
 	const per = phys.value / line.qty.value;
 	const qty = Math.max(1, Math.ceil(amount / per - 1e-9));
 	const input = { planId, version: plan.version, lineId: line.id, patch: { qty } };
