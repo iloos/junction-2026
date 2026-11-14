@@ -27,7 +27,7 @@ import {
 	type RoutineCandidate,
 	type RoutineFacts
 } from './routine';
-import { SHORTLIST } from '$lib/server/request/lookup';
+import { rankOrder, SHORTLIST } from '$lib/server/request/lookup';
 import { orderLineFor } from '$lib/server/request/order-line';
 import type { AgentContext, GoalOutcome, Intent, RoutineLine } from './types';
 
@@ -723,14 +723,14 @@ export function scriptedPlanner(): Planner {
 							routineQueries(l).includes(String((h.input as { query?: unknown }).query))
 					);
 				// /request's own choice, so the same words give the same basket on every door: every search word of a
-				// product searched, the hits ranked together (filterHits' score, then id), the top SHORTLIST quoted, and
+				// product searched, the hits ranked together (rankOrder: fit to the ask, score, id), the top SHORTLIST quoted, and
 				// the first that can be bought (priced, deliverable, enough stock, cut-off ahead) picked in rank order.
 				const candidatesFor = (l: RoutineLine) => {
 					const seen = new Set<string>();
 					return searchesFor(l)
 						.flatMap((h) => (h.ok ? ((h.facts as RoutineFacts | undefined)?.products ?? []) : []))
 						.filter((c) => !seen.has(c.productId) && seen.add(c.productId))
-						.sort((x, y) => (y.score ?? 0) - (x.score ?? 0) || (x.productId < y.productId ? -1 : 1))
+						.sort(rankOrder)
 						.slice(0, SHORTLIST);
 				};
 				// Searches are budgeted so the order always fits the step cap: every product gets its first search,
