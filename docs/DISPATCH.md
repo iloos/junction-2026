@@ -15,10 +15,14 @@ One session or lead agent per track, in its own worktree and branch, editing onl
 | Request + menu | lead agent B | resolver category guards (fish ≠ poultry, no meat in vegetarian, spices) · menu progress · `/request` polish |
 | Sponsors | lead agent D | Gemini text calls through `external/` with trace + cap · `propose_menu` traced |
 | Evals, claims | 91 | PITCH/CLAIMS truth pass · README tour checked on prod · prod re-test per deploy · gate without `data/valio/` |
+| Agent door | junc26-da | `get_context` mandate, per-key limits, MCP hints · "Your agent's changes" on /agents (worktree `agent-door`, branch `agent-door-hardening`) |
+| Site + domain | junc26-d0 | `mandate.kitchen` static site (Cloudflare Worker, `site/`, untracked until placed) · `app.mandate.kitchen` = the app (Aiven custom domain) · claims checked against CLAIMS |
+| Valo basket | junc26-0d | `lane/valo-basket`; scope under review (Valio's booth webshop is production: no writes, no credentials) |
 | Design | design session | judge README draft · Wave 1 acceptance criteria · Wave 2 mocks (memory, forecast) |
 | Lead | lead | merges, gate, `withCallScope` at every door, dead stub code out, submission texts, ARCHITECTURE and CLAUDE.md refresh, five-second rule as a hard rule, archive stale docs |
 
 ## Seams (one owner each)
+- **The main checkout** is the lead's: no other session switches branches or edits files there (D4); work in `../junc26-lanes/<lane>`.
 - **Contracts** (`src/lib/core/contracts`): lead; contract edits come as their own commit and are approved before merge.
 - **Call scope** (`src/lib/server/scope.ts`, `tools/handlers.ts`): lead. Every door enters `withCallScope` or `serveTool`.
 - **Next action**: core `nextActionFor` (8d) is the one rule; the agent, ledger, MCP meta and Kitchen read it.
