@@ -94,22 +94,21 @@
 
 	/** A tick where a plan's version changes (the version an op produced). */
 	const ticks = $derived.by(() => {
-		const last = new Map<string, number>();
+		const last: Record<string, number> = {};
 		const out: { x: number; label: string }[] = [];
 		for (const m of marks) {
 			if (!m.planId || m.version === undefined) continue;
-			if (last.get(m.planId) !== m.version) out.push({ x: m.x, label: `v${m.version}` });
-			last.set(m.planId, m.version);
+			if (last[m.planId] !== m.version) out.push({ x: m.x, label: `v${m.version}` });
+			last[m.planId] = m.version;
 		}
 		return out;
 	});
 
 	/** Commits that share a receipt: the first, and every later one that replayed it. */
 	const sameReceipt = $derived.by(() => {
-		const byReceipt = new Map<string, Mark[]>();
-		for (const m of marks)
-			if (m.receipt) byReceipt.set(m.receipt, [...(byReceipt.get(m.receipt) ?? []), m]);
-		return [...byReceipt.values()].filter((g) => g.length > 1);
+		const byReceipt: Record<string, Mark[]> = {};
+		for (const m of marks) if (m.receipt) (byReceipt[m.receipt] ??= []).push(m);
+		return Object.values(byReceipt).filter((g) => g.length > 1);
 	});
 
 	const width = $derived(LEFT + Math.max(ops.length, 8) * STEP + 24);
