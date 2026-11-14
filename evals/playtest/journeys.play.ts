@@ -12,19 +12,25 @@ const SITE = process.env.SITE_URL ?? 'https://mandate.kitchen';
 
 // ---------- shared moves ----------
 
-async function home(page: Page) {
+/**
+ * Opens the Kitchen as a first-time visitor. A fresh sandbox shows the establishment picker first: with a recorder, the
+ * picker is recorded as its own beat (it is the visitor's first screen), then the hotel is picked.
+ */
+async function home(page: Page, r?: Recorder) {
 	await page.goto(`${BASE}/`);
 	await page.waitForLoadState('networkidle', { timeout: 30_000 }).catch(() => {});
+	const picker = page.getByTestId('establishment-picker');
+	if (await picker.isVisible().catch(() => false)) {
+		if (r) await r.beat('picker-first-screen');
+		await picker.locator('[data-kitchen-id="k-hotel"]').click();
+		await picker.waitFor({ state: 'hidden', timeout: 60_000 });
+		await page.waitForLoadState('networkidle').catch(() => {});
+	}
 }
 
 /** The hotel's seeded event, planned the way a visitor would: pick the kitchen if asked, then plan. */
 async function planEvent(page: Page) {
-	const picker = page.getByRole('region', { name: /Who are you cooking for/i });
-	if (await picker.isVisible().catch(() => false)) {
-		const hotel = picker.getByRole('button', { name: /hotel/i }).first();
-		await hotel.click();
-		await page.waitForLoadState('networkidle').catch(() => {});
-	}
+	await home(page);
 	const start = page.getByRole('button', { name: /^Plan the event/ });
 	await page.locator('#task-h').or(start).first().waitFor({ timeout: 60_000 });
 	if (await start.isVisible()) await start.click();
@@ -65,11 +71,8 @@ async function say(r: Recorder, page: Page, text: string) {
 
 async function requestPage(page: Page, text: string) {
 	await page.goto(`${BASE}/request`);
-	await page.locator('#req, textarea').first().fill(text);
-	await page
-		.getByRole('button', { name: /Find and price|Send|Ask/ })
-		.first()
-		.click();
+	await page.locator('#req').fill(text);
+	await page.getByRole('button', { name: /Find and price/ }).click();
 	await page
 		.getByText(/Prepared by the kitchen agent|Nothing was ordered|Event brief|nothing quoted|Menu/)
 		.first()
@@ -113,7 +116,7 @@ async function judgeAuth(page: Page) {
 // ---------- the four moments ----------
 
 journey('m1', 'A shortage hits and every kitchen re-plans', async (r, page) => {
-	await r.step('first look at the home', () => home(page));
+	await r.step('first look at the home', () => home(page, r));
 	if (!(await r.step('plan the hotel event', () => planEvent(page)))) return;
 	await r.step('a shortage hits (scenario shortage, else contention)', async () => {
 		let res = await page.request.post(`${BASE}/kitchen-api/scenario`, {
@@ -272,7 +275,7 @@ journey('m4', "Valio's view: demand, forecast, short stock", async (r, page) => 
 // ---------- the nine Round 12 journeys ----------
 
 journey('j1', 'Kitchen as basket: pick, plan, approve, order, reload', async (r, page) => {
-	await r.step('first look (5-second test: read the fold)', () => home(page));
+	await r.step('first look (5-second test: read the fold)', () => home(page, r));
 	if (!(await r.step('plan the event', () => planEvent(page)))) return;
 	await r.step('approve the decisions', async () =>
 		r.note('approvedLines', await approveAll(page))

@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { approveAll, BASE, planBuffet } from './flow';
+import { approveAll, BASE, planBuffet, enterKitchen } from './flow';
 
 /**
  * Regression checks from the prod bug bash (docs/BUGS.md #1, #5, #6, #9), on the Kitchen screen as a judge uses it.
@@ -134,7 +134,7 @@ test('the order summary counts what was approved, adds up, and survives a reload
 test("an agent's approval link opens a plan the chef can approve", async ({ page, request }) => {
 	test.setTimeout(120_000);
 	// The visitor's own sandbox and its judge key, as /agents hands them out.
-	await page.goto(`${BASE}/?ws=mine`);
+	await enterKitchen(page, '/?ws=mine');
 	const k = await page.request.get(`${BASE}/api/demo/judge-key`);
 	test.skip(k.status() !== 200, `judge keys off here (${k.status()})`);
 	const { key } = (await k.json()) as { key: string };

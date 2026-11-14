@@ -90,11 +90,13 @@ export class Recorder {
 			await fn();
 			const beat = opts.beat === false ? undefined : await this.beat(slug(name));
 			this.j.steps.push({ step: name, ok: true, ms: Date.now() - t, beat });
+			this.save();
 			return true;
 		} catch (e) {
 			const beat = await this.beat(`STUCK-${slug(name)}`);
 			const error = (e instanceof Error ? e.message : String(e)).split('\n').slice(0, 4).join(' ');
 			this.j.steps.push({ step: name, ok: false, ms: Date.now() - t, error, beat });
+			this.save();
 			return false;
 		}
 	}

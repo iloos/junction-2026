@@ -11,7 +11,7 @@ export default defineConfig({
 	testDir: '.',
 	testMatch: '*.play.ts',
 	reporter: 'line',
-	workers: Number(process.env.PLAYTEST_WORKERS ?? 4),
+	workers: Number(process.env.PLAYTEST_WORKERS ?? (remote ? 2 : 4)),
 	fullyParallel: true,
 	retries: 0,
 	use: { trace: 'off', screenshot: 'off' },
@@ -22,7 +22,7 @@ export default defineConfig({
 	webServer: remote
 		? undefined
 		: {
-				command: 'npm run build && npm run preview -- --port 5190 --strictPort',
+				command: 'npm run build && npx vite preview --port 5190 --strictPort',
 				port: 5190,
 				cwd: '../..',
 				timeout: 300_000,
