@@ -3,7 +3,7 @@
 	import type { RescueView } from '$lib/kitchen/view-model';
 	import ScoreBar from '$lib/ui/ScoreBar.svelte';
 	import RankingStrip from '$lib/ui/viz/RankingStrip.svelte';
-	import { money, num, fixed } from '$lib/ui/format';
+	import { money, num, fixed, readableName } from '$lib/ui/format';
 	import { reasonShort } from '$lib/ui/reasons';
 
 	interface Props {
@@ -92,7 +92,7 @@
 				>
 					<div class="flex items-start justify-between gap-3">
 						<p class="min-w-0 text-body leading-snug font-medium {rej ? 'text-ink-2' : 'text-ink'}">
-							<span class="mono mr-1 text-ink-3">{c.rank ?? '–'}</span>{c.name}
+							<span class="mono mr-1 text-ink-3">{c.rank ?? '–'}</span>{readableName(c.name)}
 						</p>
 						{#if c.score && !rej}<span class="mono shrink-0 text-body text-ink"
 								>{c.score.total.toFixed(2)}</span
@@ -163,7 +163,9 @@
 									{c.rank ?? '–'}
 								</td>
 								<td class="py-2.5 pr-3">
-									<div class="font-medium {rej ? 'text-ink-2' : 'text-ink'}">{c.name}</div>
+									<div class="font-medium {rej ? 'text-ink-2' : 'text-ink'}">
+										{readableName(c.name)}
+									</div>
 									<div class="mono text-micro text-ink-3">
 										{c.productId} · {c.origin ? c.origin.toUpperCase() : 'origin ?'}
 										{#if c.reliability !== undefined}· rel {c.reliability.toFixed(2)}{/if}
@@ -262,7 +264,7 @@
 					{#each rescue.candidates as c (c.productId)}
 						<li class="flex items-start justify-between gap-3">
 							<span class="min-w-0 text-ink-2">
-								<span class="block truncate">{c.name}</span>
+								<span class="block truncate">{readableName(c.name)}</span>
 								<span class="mono text-micro text-ink-3">{c.productId}</span>
 							</span>
 							<span

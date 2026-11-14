@@ -9,6 +9,7 @@
 	// Registers selection.transition(); the d3 bundle's side effect is tree-shaken out of production builds.
 	import 'd3-transition';
 	import type { CandidateView } from '$lib/kitchen/view-model';
+	import { readableName } from '$lib/ui/format';
 	import { reasonShort } from '$lib/ui/reasons';
 
 	interface Props {
@@ -104,7 +105,7 @@
 							: [];
 			return {
 				id: c.productId,
-				name: c.name,
+				name: readableName(c.name),
 				sub: `${c.productId} · ${c.origin ? c.origin.toUpperCase() : 'origin ?'} · ${c.availableText}`,
 				fit: c.rejected.length ? '' : fitText(c),
 				rank: c.rank,

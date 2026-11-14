@@ -13,7 +13,7 @@
 	import { untrack } from 'svelte';
 	import DecisionCard from '$lib/ui/DecisionCard.svelte';
 	import { decisionsOf } from '$lib/ui/decisions';
-	import { day, money } from '$lib/ui/format';
+	import { day, money, readableName } from '$lib/ui/format';
 	import { KitchenStore } from '$lib/kitchen/kitchen.svelte';
 	import Receipt from '$lib/ui/Receipt.svelte';
 	import type { ChatEvent, ChatTurnInput } from './types';
@@ -22,9 +22,10 @@
 
 	/**
 	 * The chat dock: a right-hand column on desktop, a bottom sheet on a phone, scoped to one procurement task. It
-	 * sends turns to POST /api/chat/turn and renders the NDJSON lines as they come: steps with our own summaries
-	 * linking to the plan, a question with chip answers, a decision card that links to the Kitchen approval panel
-	 * (there is no approve button here, by design) and the outcome line from the task ledger.
+	 * sends turns to POST /api/chat/turn and renders the NDJSON lines as they come: steps folded into one line,
+	 * questions with chip answers, a menu card, decision cards and the outcome line from the task ledger. The agent
+	 * never approves: on the plan the page shows, a decision card links to the page's own card; on another plan the
+	 * chef approves here with the page's card and Kitchen command, as the chef, never through a chat turn (D13).
 	 */
 	interface Props {
 		kitchenId?: string;
@@ -180,7 +181,12 @@
 	const ownSnap = $derived(own?.snap && own.snap.plan.id === actPlan ? own.snap : null);
 	const liveDecisions = $derived(ownSnap ? decisionsOf(ownSnap.plan, ownSnap.approval) : []);
 	const ownNames = $derived(
-		new Map((ownSnap?.plan.lines ?? []).map((l) => [l.productId, l.productName ?? l.productId]))
+		new Map(
+			(ownSnap?.plan.lines ?? []).map((l) => [
+				l.productId,
+				readableName(l.productName ?? l.productId)
+			])
+		)
 	);
 	const approvedOpen = $derived(
 		(ownSnap?.plan.lines ?? []).filter(
@@ -464,7 +470,9 @@
 						{/if}
 					</li>
 				{:else if x.e.type === 'decision'}
-					{@const names = new Map(Object.entries(x.e.names))}
+					{@const names = new Map(
+						Object.entries(x.e.names).map(([id, n]) => [id, readableName(n)])
+					)}
 					{@const here = x.e.planId === planId}
 					{#if x === lastDecision && !here && ownSnap}
 						<!-- D13: the chef decides here, with the page's own card and command. -->

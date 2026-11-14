@@ -203,9 +203,11 @@
 		const c = k.snap?.contentionRescue;
 		if (!c) return null;
 		const added = c.added
-			.map((a) => `${a.physical ?? `${num(a.qty)} ${a.unit.toLowerCase()}`} of ${a.name}`)
+			.map(
+				(a) => `${a.physical ?? `${num(a.qty)} ${a.unit.toLowerCase()}`} of ${readableName(a.name)}`
+			)
 			.join(' and ');
-		return `Another kitchen took ${c.taken} × ${c.productName}: ${c.left} are left of the ${c.had} the plan needed. I kept ${c.left}${
+		return `Another kitchen took ${c.taken} × ${readableName(c.productName)}: ${c.left} are left of the ${c.had} the plan needed. I kept ${c.left}${
 			added ? ` and added ${added}` : ''
 		}${c.signOff ? '; that part needs your sign-off' : ''}. Nothing is ordered.`;
 	});

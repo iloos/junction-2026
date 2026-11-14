@@ -8,7 +8,7 @@ import type { RequestHandler } from './$types';
 /**
  * GET /kitchen-api/calendar.ics?kitchen=<id>: the kitchen's decisions, deliveries, receiving days and holidays
  * as an iCalendar feed, in this browser's own workspace (its cookie). For a calendar app that can't send the
- * cookie, /api/calendar/<kitchen>.ics?key=<agent key> serves the same feed.
+ * cookie, /api/calendar/<kitchen>.ics?token=<calendar token> (from /api/demo/calendar-link) serves the same feed.
  */
 export const GET: RequestHandler = async (event) => {
 	const kitchen = event.url.searchParams.get('kitchen');

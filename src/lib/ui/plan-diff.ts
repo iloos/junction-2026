@@ -4,6 +4,7 @@
  */
 import type { Approval, Plan } from '$lib/core/contracts';
 import { needUnit } from './coverage';
+import { readableName } from './format';
 import { decisionsOf } from './decisions';
 
 export interface PlanDiff {
@@ -47,7 +48,7 @@ export function planDiff(
 	});
 	const la = new Map(counted(a.plan).map((l) => [l.id, l]));
 	const lb = new Map(counted(b.plan).map((l) => [l.id, l]));
-	const name = (l: Plan['lines'][number]) => l.productName ?? l.productId;
+	const name = (l: Plan['lines'][number]) => readableName(l.productName ?? l.productId);
 	const lines: PlanDiff['lines'] = [];
 	for (const [id, l] of lb) {
 		const o = la.get(id);
