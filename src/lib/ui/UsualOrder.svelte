@@ -32,8 +32,17 @@
 		onplanned?: (r: { planId: string; state: string; approvalId: string | null }) => void;
 		/** What the usual order comes to as read and edited, for a headline outside the card. */
 		onsummary?: (s: UsualSummary | null) => void;
+		/** The card's own "Plan this order" is the zone's primary; false when a headline outside owns it. */
+		primary?: boolean;
 	}
-	let { kitchenId, date, endpoint = '/kitchen-api/usual', onplanned, onsummary }: Props = $props();
+	let {
+		kitchenId,
+		date,
+		endpoint = '/kitchen-api/usual',
+		onplanned,
+		onsummary,
+		primary = true
+	}: Props = $props();
 
 	type Status = 'settled' | 'forming' | 'joined' | 'dropped' | 'not_settled';
 	interface Line {
@@ -189,7 +198,9 @@
 						deliveryDate: data.deliveryDate,
 						lines: chosen.length,
 						cents: total,
-						unpriced
+						unpriced,
+						planning,
+						planned: !!planned
 					}
 				: null
 		);
@@ -247,7 +258,8 @@
 		}, 250);
 	}
 
-	async function plan() {
+	/** Plan the order as read and edited; a headline outside the card calls it through `bind:this`. */
+	export async function plan() {
 		if (!data || !chosen.length) return;
 		planning = true;
 		planError = null;
@@ -549,7 +561,9 @@
 			<!-- eslint-enable svelte/no-navigation-without-resolve -->
 		{:else}
 			<button
-				class="inline-flex items-center gap-1.5 rounded-md bg-accent px-4 py-2 text-body font-medium text-sheet disabled:opacity-50"
+				class="inline-flex items-center gap-1.5 rounded-md px-4 py-2 text-body font-medium disabled:opacity-50 {primary
+					? 'bg-accent text-sheet'
+					: 'border border-rule-strong text-ink hover:border-accent'}"
 				disabled={planning || !chosen.length || !data}
 				onclick={plan}
 			>

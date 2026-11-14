@@ -64,6 +64,13 @@
 	import PairDevice from '$lib/ui/pair/PairDevice.svelte';
 	import Basket from './Basket.svelte';
 	import NothingPlanned from './NothingPlanned.svelte';
+	import {
+		readOwn,
+		saveOwn,
+		withOwn,
+		type CreatedKitchen,
+		type OwnKitchen
+	} from '$lib/kitchen/own';
 
 	import type { ApiMode } from '$lib/kitchen/api';
 
@@ -630,6 +637,41 @@
 			!roomNotice &&
 			!page.url.searchParams.get('plan')
 	);
+	/** This workspace's own kitchens (D25/D26): listed first in the selector, landed on next time. */
+	const ownKey = $derived(shell?.sandbox?.workspace ?? 'this-browser');
+	// Read from this browser per workspace; reassigned when a kitchen is made.
+	let own = $derived<OwnKitchen[]>(typeof localStorage === 'undefined' ? [] : readOwn(ownKey));
+	async function created(kc: CreatedKitchen, description?: string) {
+		own = withOwn(own, {
+			kitchenId: kc.kitchenId,
+			name: kc.name,
+			mandateWords: kc.mandateWords,
+			copiedFrom: kc.copiedFrom,
+			...(description ? { description } : {})
+		});
+		saveOwn(ownKey, own);
+		await choose(kc.kitchenId, description);
+	}
+	/** The kitchen whose home shows before its first plan: one of ours, else a sample. */
+	const homeKit = $derived.by(() => {
+		const id = k.startKitchen ?? joinedAs?.kitchenId ?? null;
+		const mine = own.find((o) => o.kitchenId === id);
+		if (mine)
+			return {
+				id: mine.kitchenId,
+				name: mine.name,
+				words: mine.mandateWords,
+				blank: !mine.copiedFrom
+			};
+		const kit = KITCHENS.find((x) => x.id === id) ?? KITCHENS[0];
+		return {
+			id: kit.id,
+			name: kit.name.replace(' (fictional)', ''),
+			words: kit.mandate.words,
+			blank: false
+		};
+	});
+
 	async function choose(kitchenId: string, notes?: string) {
 		joinedAs = { kitchenId, ...(notes ? { notes } : {}) };
 		try {
@@ -797,15 +839,26 @@
 			<span class="sr-only md:not-sr-only">Kitchen</span>
 			<select
 				class="h-8 rounded-md border border-rule-strong bg-sheet px-2 text-body font-medium text-ink"
-				value={needsJoin ? '' : (snap?.kitchen.id ?? 'k-hotel')}
+				value={needsJoin ? '' : (snap?.kitchen.id ?? homeKit.id)}
 				disabled={k.readOnly || (!snap && !needsJoin)}
 				onchange={(e) =>
 					needsJoin ? choose(e.currentTarget.value) : k.setKitchen(e.currentTarget.value)}
 			>
 				{#if needsJoin}<option value="" disabled>Choose a kitchen</option>{/if}
-				{#each KITCHENS as kit (kit.id)}
-					<option value={kit.id}>{kit.name.replace(' (fictional)', '')}</option>
-				{/each}
+				{#if own.length}
+					<optgroup label="Your kitchens">
+						{#each own as o (o.kitchenId)}<option value={o.kitchenId}>{o.name}</option>{/each}
+					</optgroup>
+					<optgroup label="Sample kitchens">
+						{#each KITCHENS as kit (kit.id)}
+							<option value={kit.id}>{kit.name.replace(' (fictional)', '')}</option>
+						{/each}
+					</optgroup>
+				{:else}
+					{#each KITCHENS as kit (kit.id)}
+						<option value={kit.id}>{kit.name.replace(' (fictional)', '')}</option>
+					{/each}
+				{/if}
 			</select>
 		</label>
 		{#if roomNotice}
@@ -814,11 +867,17 @@
 			</p>
 		{/if}
 		{#if !snap && k.started === false && !needsJoin}
-			{@const kit = KITCHENS.find((x) => x.id === k.startKitchen) ?? KITCHENS[0]}
-			<p class="max-w-[95ch] min-w-0 text-meta text-ink-2">
-				<span class="font-medium text-ink">Mandate, in the chef's words:</span>
-				“{kit.mandate.words}”
+			<p
+				class="max-w-[95ch] min-w-0 text-meta text-ink-2 {mandateOpen ? '' : 'max-lg:line-clamp-1'}"
+			>
+				<span class="font-medium text-ink">Rules:</span>
+				“{homeKit.words}”
 			</p>
+			{#if !mandateOpen}<button
+					type="button"
+					class="-mt-1.5 self-start text-meta text-ink-2 underline underline-offset-2 lg:hidden"
+					onclick={() => (mandateOpen = true)}>more</button
+				>{/if}
 		{/if}
 		{#if snap}
 			<!-- One line on a phone, with "more"; the whole quote from sm. -->
@@ -927,19 +986,19 @@
 	</main>
 {:else if needsJoin}
 	<main class="pb-10">
-		<EstablishmentPicker onchoose={choose} />
+		<EstablishmentPicker onchoose={choose} oncreated={created} />
 		{#if k.error}
 			<p class="mx-auto max-w-5xl px-4 text-body text-out" role="alert">{errorWords(k.error)}</p>
 		{/if}
 	</main>
 {:else if k.started === false}
-	{@const kit = KITCHENS.find((x) => x.id === k.startKitchen) ?? KITCHENS[0]}
 	<main class="mx-auto max-w-[1080px] px-4 py-8 md:px-6 md:py-10">
 		<!-- The kitchen's own home comes first; a seeded booking is offered as an example to try, never as the page. -->
 		<NothingPlanned
-			kitchenId={kit.id}
-			kitchenName={kit.name.replace(' (fictional)', '')}
-			notes={joinedAs?.kitchenId === kit.id ? (joinedAs.notes ?? null) : null}
+			kitchenId={homeKit.id}
+			kitchenName={homeKit.name}
+			blank={homeKit.blank}
+			notes={joinedAs?.kitchenId === homeKit.id ? (joinedAs.notes ?? null) : null}
 			onnotes={saveNotes}
 			onplanned={openPlan}
 			onask={askFor}

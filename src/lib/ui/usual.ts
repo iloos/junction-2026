@@ -7,6 +7,9 @@ export interface UsualSummary {
 	cents: number;
 	/** Lines without a price until planned. */
 	unpriced: number;
+	planning?: boolean;
+	/** Already planned from this card. */
+	planned?: boolean;
 }
 
 /** The home's first read: "Tuesday's usual is ready: 5 lines, €272. Plan it, or change a line." */
