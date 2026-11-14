@@ -19,7 +19,8 @@
 		notes = null,
 		onnotes,
 		embedded = false,
-		blank = false
+		blank = false,
+		showDays = true
 	}: {
 		kitchenId: string;
 		kitchenName: string;
@@ -36,6 +37,8 @@
 		embedded?: boolean;
 		/** A new kitchen of your own (D25): no history, no booking. The agent is the way in. */
 		blank?: boolean;
+		/** Its own delivery-day calendar. False inside a screen that already has one (the Basket): one per screen. */
+		showDays?: boolean;
 	} = $props();
 	let card = $state<UsualOrder | null>(null);
 	let setUp = $state(false);
@@ -121,9 +124,13 @@
 			{/if}
 		</div>{/if}
 
-	<div class="grid gap-6 md:grid-cols-[minmax(0,320px)_minmax(0,1fr)] md:items-start">
-		<div class="flex flex-col gap-3">
-			<DayPicker {kitchenId} bind:value={date} label="Delivery day" />
+	<div
+		class="grid gap-6 md:items-start {showDays
+			? 'md:grid-cols-[minmax(0,320px)_minmax(0,1fr)]'
+			: ''}"
+	>
+		<div class="flex flex-col gap-3 {showDays ? '' : 'sm:flex-row'}">
+			{#if showDays}<DayPicker {kitchenId} bind:value={date} label="Delivery day" />{/if}
 			<button
 				type="button"
 				class="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-rule-strong bg-sheet px-4 text-body font-medium text-ink hover:border-accent"
