@@ -19,16 +19,11 @@ import { isSandbox, resetSandbox } from '$lib/server/demo/sandbox';
 import { roomLabel, roomNotice, visitorWorkspace, ROOM_COOKIE } from '$lib/server/demo/visitor';
 import { judgeKeysOn } from '$lib/server/demo/judge-key';
 import { STRESS_WORKSPACE } from '$lib/server/bus/stress';
+import { createServerPorts } from '$lib/server/store/server-ports';
 import type { Actions, PageServerLoad, RequestEvent } from './$types';
 
-export type OpsKitchen = {
-	id: string;
-	name: string;
-	kind: string;
-	city: string;
-	mandateWords: string;
-	weeklyCapCents: number;
-};
+import type { OpsKitchen } from './room';
+export type { OpsKitchen };
 
 /** productId → name from the seeds and the simulated run's products; anything else shows as `Product <id>`. */
 function seedNames(): Record<string, string> {
@@ -47,7 +42,7 @@ function seedNames(): Record<string, string> {
 }
 
 const names = { ...seedNames(), ...SYNTH_PRODUCTS };
-const kitchens: OpsKitchen[] = kitchenSeed.kitchens.map((k) => ({
+const seedKitchens: OpsKitchen[] = kitchenSeed.kitchens.map((k) => ({
 	id: k.id,
 	name: k.name.replace(/\s*\(fictional\)$/, ''),
 	kind: k.kind,
@@ -55,6 +50,27 @@ const kitchens: OpsKitchen[] = kitchenSeed.kitchens.map((k) => ({
 	mandateWords: k.mandate.words,
 	weeklyCapCents: k.mandate.weeklyCapCents
 }));
+
+/** The workspace's kitchens, stores made in the room included (D24); the seeds when the store can't answer. */
+async function roomKitchens(workspace: string): Promise<OpsKitchen[]> {
+	if (workspace === SYNTH_WORKSPACE) return seedKitchens;
+	try {
+		const { ports } = await createServerPorts();
+		const list = await ports.store.kitchens(workspace);
+		if (!list.length) return seedKitchens;
+		return list.map((k) => ({
+			id: k.id,
+			name: k.name.replace(/\s*\(fictional\)$/, ''),
+			kind: k.kind,
+			city: k.city,
+			mandateWords: k.mandate.words,
+			weeklyCapCents: k.mandate.weeklyCapCents ?? 0,
+			copiedFrom: (k as { copiedFrom?: string }).copiedFrom
+		}));
+	} catch {
+		return seedKitchens;
+	}
+}
 
 /**
  * Which workspace /ops shows. By default the browser's room (server/demo/visitor.ts), so a visitor sees the
@@ -100,7 +116,7 @@ export const load: PageServerLoad = async (event) => {
 		/** The sign-in form is for the stage operator only: shown with `?presenter=1`, hidden from visitors. */
 		showPresenterSignIn: event.url.searchParams.get('presenter') === '1',
 		judgeKeys: judgeKeysOn(env) && v.kind === 'own' && !viewOnly,
-		kitchens,
+		kitchens: await roomKitchens(workspace),
 		names,
 		/** Dev load test only: how many synthetic runs ws-stress streams. */
 		copies: dev ? Number(event.url.searchParams.get('copies')) || 0 : 0,
