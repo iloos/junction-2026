@@ -9,7 +9,7 @@
 	import OpTimeline from './OpTimeline.svelte';
 	import TraceDrawer from './TraceDrawer.svelte';
 	import Queue from './Queue.svelte';
-	import { buildCases, coverage, openLines } from './cases';
+	import { buildCases, coverage, openDecisions, openLines } from './cases';
 	import { ACTOR, euro, opPlanId, opSummary, SIM_KIND } from './labels';
 
 	let { data, form } = $props();
@@ -176,14 +176,18 @@
 	});
 
 	const totals = $derived.by(() => {
-		// Same counts as the kitchen screen: "held" is lines waiting for a person; lines that cannot be ordered
-		// at all (outages) are their own figure, and both are cases in the queue.
-		const lines = columns.flatMap((c) => c.held).map((h) => h.line);
-		const held = lines.filter((l) => l.state === 'held');
+		// The kitchen's definitions (the task header): decisions are reason groups of the pending approvals
+		// (decisionsOf); "can't be ordered" counts every product that is out or undeliverable, rescued or not;
+		// "unresolved" counts needs whose plan view still has something no line covers.
+		const all = plans.map(withView);
+		const decisions = openDecisions(stream.state, all);
+		const views = all.flatMap((p) => p.view?.fulfilment ?? []);
 		return {
-			held: held.length,
-			unorderable: lines.filter((l) => l.state === 'unorderable').length,
-			signOff: held.filter((l) => l.tier === 'sign_off').length,
+			decisions: decisions.length,
+			signOff: decisions.filter((d) => d.signOff).length,
+			cannot: all.flatMap((p) => p.lines).filter((l) => l.state === 'unorderable').length,
+			unresolved: views.filter((f) => f.unresolved.value > 1e-9).length,
+			needs: views.length,
 			committed: Object.values(stream.state.orders).reduce((s, o) => s + o.totalCents, 0),
 			refused: stream.state.failedCommits.length
 		};
@@ -250,17 +254,21 @@
 		</div>
 
 		<dl class="figures">
-			<div>
-				<dt>held for a person</dt>
-				<dd>{totals.held}</dd>
+			<div class:so={totals.signOff > 0}>
+				<dt>
+					{totals.decisions === 1 ? 'decision' : 'decisions'} for a person{totals.signOff
+						? `, ${totals.signOff} sign-off`
+						: ''}
+				</dt>
+				<dd>{totals.decisions}</dd>
 			</div>
-			<div class:bad={totals.unorderable > 0}>
-				<dt>can't be ordered</dt>
-				<dd>{totals.unorderable}</dd>
+			<div class:bad={totals.cannot > 0}>
+				<dt>{totals.cannot === 1 ? 'product' : 'products'} can't be ordered</dt>
+				<dd>{totals.cannot}</dd>
 			</div>
-			<div class="so">
-				<dt>need sign-off</dt>
-				<dd>{totals.signOff}</dd>
+			<div class:bad={totals.unresolved > 0}>
+				<dt>{totals.needs ? `of ${totals.needs} needs unresolved` : 'needs unresolved'}</dt>
+				<dd>{totals.unresolved}</dd>
 			</div>
 			<div class="ok">
 				<dt>committed</dt>
@@ -400,7 +408,7 @@
 						: { ws: data.workspace, run: stream.state.runId || data.run }}
 				/>
 			{:else if view === 'timeline'}
-				<OpTimeline log={stream.log} names={data.names} />
+				<OpTimeline log={stream.log} names={data.names} plans={stream.state.plans} />
 			{:else}
 				<section class="board" aria-label="Cases by kitchen">
 					{#each columns as c (c.kitchen.id)}
@@ -498,7 +506,7 @@
 								</div>
 								<p>
 									{#if pid}<b>{planKitchen(pid)}.</b>{/if}
-									{opSummary(env, data.names)}
+									{opSummary(env, data.names, stream.state.plans)}
 								</p>
 								<p class="who">
 									<span class="actor">{ACTOR[env.actor.kind]}</span>

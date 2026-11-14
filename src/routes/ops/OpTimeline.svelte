@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { ActorKind, OpEnvelope } from '$lib/core/contracts';
+	import type { ActorKind, OpEnvelope, Plan } from '$lib/core/contracts';
 	import type { LogEntry } from './stream.svelte';
 	import { ACTOR, opPlanId, opSummary, type Names } from './labels';
 
@@ -8,7 +8,11 @@
 	 * quote, rescue, approval, commit, anomaly), red marks a refused commit, ticks on the axis mark each new plan
 	 * version, and commits that landed on the same receipt are joined: a retry never makes a second order.
 	 */
-	let { log, names }: { log: LogEntry[]; names: Names } = $props();
+	let {
+		log,
+		names,
+		plans = {}
+	}: { log: LogEntry[]; names: Names; plans?: Record<string, Plan> } = $props();
 
 	const LANE_ORDER: ActorKind[] = [
 		'chef',
@@ -81,7 +85,7 @@
 				x: LEFT + i * STEP + STEP / 2,
 				lane: lanes.indexOf(env.actor.kind),
 				kind: kindOf(env),
-				title: `#${env.seq} ${ACTOR[env.actor.kind]}: ${opSummary(env, names)}`,
+				title: `#${env.seq} ${ACTOR[env.actor.kind]}: ${opSummary(env, names, plans)}`,
 				receipt:
 					op.type === 'CommitOrder' && op.outcome.result === 'committed'
 						? op.outcome.receipt.id
