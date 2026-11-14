@@ -1,5 +1,6 @@
 import type { OpEnvelope, ServerEvent, SimEvent } from '$lib/core/contracts';
 import { applyOps, emptyState, type WorkspaceState } from '$lib/core/state';
+import { lineKey } from './cases';
 
 export type LogEntry =
 	| { kind: 'op'; seq: number; envelope: OpEnvelope; rejected?: string }
@@ -40,6 +41,8 @@ export class OpsStream {
 	fresh = $state(0);
 	catchupError: string | null = $state(null);
 	simClock: string | null = $state(null);
+	/** When each plan line was first seen held (op time), for case age. Key: lineKey(planId, lineId). */
+	heldSince: Record<string, string> = $state.raw({});
 	/** Agent runs, newest first; traces are live only (they have no seq and no catch-up). */
 	traces: TraceRun[] = $state.raw([]);
 
@@ -127,6 +130,7 @@ export class OpsStream {
 	resetTo(runId: string): void {
 		this.state = emptyState(this.workspaceId, runId);
 		this.log = [];
+		this.heldSince = {};
 		this.simClock = null;
 	}
 
@@ -167,6 +171,8 @@ export class OpsStream {
 			.splice(0)
 			.sort((a, b) => ('seq' in a && 'seq' in b ? a.seq - b.seq : 0));
 		let state = this.state;
+		let since = this.heldSince;
+		let batchAt: string | null = null;
 		const added: LogEntry[] = [];
 		for (const e of batch) {
 			if (!('seq' in e) || e.seq <= this.last) continue;
@@ -175,6 +181,7 @@ export class OpsStream {
 			if (runId !== state.runId) {
 				// A new run (reset or scenario restart): start from empty, keep the log.
 				state = emptyState(this.workspaceId, runId);
+				since = {};
 			}
 			if (e.kind === 'sim') {
 				added.push({ kind: 'sim', seq: e.seq, runId, event: e.event });
@@ -184,6 +191,7 @@ export class OpsStream {
 			const r = applyOps(state, [e.envelope]);
 			if (r.ok) {
 				state = r.value;
+				batchAt = e.envelope.at;
 				added.push({ kind: 'op', seq: e.seq, envelope: e.envelope });
 			} else
 				added.push({
@@ -194,8 +202,27 @@ export class OpsStream {
 				});
 		}
 		if (!added.length) return;
+		// One pass per batch (a frame's worth of events): first-held time = the batch's last op time.
+		if (batchAt) since = trackHeld(since, state, batchAt);
 		this.state = state;
+		this.heldSince = since;
 		this.log = [...added.reverse(), ...this.log].slice(0, LOG_CAP);
 		this.fresh = this.last;
 	}
+}
+
+/** First-held times: add lines that are held now, drop lines that no longer are. */
+function trackHeld(
+	prev: Record<string, string>,
+	s: WorkspaceState,
+	at: string
+): Record<string, string> {
+	const next: Record<string, string> = {};
+	for (const p of Object.values(s.plans))
+		for (const l of p.lines)
+			if (l.state === 'held' || l.state === 'unorderable') {
+				const k = lineKey(p.id, l.id);
+				next[k] = prev[k] ?? at;
+			}
+	return next;
 }

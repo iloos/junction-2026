@@ -9,8 +9,10 @@ import {
 	type Kitchen,
 	type Line,
 	type Need,
+	type Offer,
 	type PendingOp,
 	type Plan,
+	type Product,
 	type Result,
 	type ToolInput,
 	type ToolOutput
@@ -105,7 +107,29 @@ const orderedBefore = (state: WorkspaceState, kitchenId: string) =>
 			.flatMap((o) => o.lines.map((l) => l.productId))
 	);
 
-/** Tiers the open drafts (committed lines stay) and returns the quote ops for the plan. */
+/** Catalogue data a quote needs, fetched before the transaction (never inside it: D6, review triage #1). */
+export interface Prefetched {
+	offers: Offer[];
+	products: Map<string, Product>;
+}
+
+export async function prefetch(
+	ports: Ports,
+	ids: string[],
+	deliverBy: string
+): Promise<Prefetched> {
+	const unique = [...new Set(ids)];
+	const [{ offers }, products] = await Promise.all([
+		ports.catalog.offers(unique, deliverBy),
+		ports.catalog.get(unique)
+	]);
+	return { offers, products };
+}
+
+/**
+ * Tiers the open drafts (committed lines stay) and returns the quote ops for the plan. Runs inside the transaction
+ * on prefetched catalogue data; only the budget row is read here, through the transaction.
+ */
 export async function requote(
 	ports: Ports,
 	ctx: CallContext,
@@ -113,13 +137,9 @@ export async function requote(
 	state: WorkspaceState,
 	plan: Plan,
 	kitchen: Kitchen,
-	drafts: DraftLine[]
+	drafts: DraftLine[],
+	pre: Prefetched
 ) {
-	const ids = [...new Set(drafts.map((d) => d.productId))];
-	const [{ offers }, products] = await Promise.all([
-		ports.catalog.offers(ids, plan.deliverBy),
-		ports.catalog.get(ids)
-	]);
 	const spent = await ports.store.lockBudget(tx, {
 		workspaceId: ctx.workspaceId,
 		kitchenId: kitchen.id,
@@ -128,16 +148,21 @@ export async function requote(
 	const t = tierLines({
 		kitchen,
 		lines: drafts,
-		offers: new Map(offers.map((o) => [o.productId, o])),
-		products,
+		offers: new Map(pre.offers.map((o) => [o.productId, o])),
+		products: pre.products,
 		weekSpentCents: spent,
 		actor: ctx.actor.kind,
 		createdBy: plan.createdBy.kind,
 		orderedBefore: orderedBefore(state, kitchen.id),
 		committed: plan.lines.filter((l) => l.state === 'committed')
 	});
-	return quoteOps(ctx, ports, plan, kitchen, t, offers);
+	return quoteOps(ctx, ports, plan, kitchen, t, pre.offers);
 }
+
+const conflict = (what: string) => ({
+	error: err('STALE_VERSION', `${what} changed while this call was prepared; reload and retry`)
+		.error
+});
 
 export async function planEvent(
 	ports: ServicePorts,
@@ -149,10 +174,19 @@ export async function planEvent(
 	const kitchen = await kitchenOf(ports, ctx, input.kitchenId);
 	if (!kitchen) return err('NOT_FOUND', `kitchen ${input.kitchenId}`);
 	const planId = `pl-${ctx.runId}-${(await sha256Hex(`event|${kitchen.id}|${input.eventId}`)).slice(0, 12)}`;
+	const existing = (await ports.store.load(ctx.workspaceId, ctx.runId)).plans[planId];
+	if (existing) return ok({ plan: existing }); // one plan per (kitchen, event): planning again is a read
+
+	// Prepare outside the transaction: demand is pure, the catalogue is read once.
+	const { needs, drafts } = demandLines(planId, seed, {});
+	const deliverBy = deliverByFor(seed.date);
+	const pre = await prefetch(
+		ports,
+		drafts.map((d) => d.productId),
+		deliverBy
+	);
 	const r = await ports.store.transact<Plan>(ctx.workspaceId, async (tx, state) => {
-		const existing = state.plans[planId];
-		if (existing) return { ops: [], value: existing }; // one plan per (kitchen, event): planning again is a read
-		const { needs, drafts } = demandLines(planId, seed, {});
+		if (state.plans[planId]) return { ops: [], value: state.plans[planId] }; // planned meanwhile
 		const plan0: Plan = {
 			workspaceId: ctx.workspaceId,
 			runId: ctx.runId,
@@ -160,7 +194,7 @@ export async function planEvent(
 			kitchenId: kitchen.id,
 			version: 0,
 			state: 'draft',
-			deliverBy: deliverByFor(seed.date),
+			deliverBy,
 			eventId: input.eventId,
 			needs,
 			lines: [],
@@ -168,10 +202,101 @@ export async function planEvent(
 			termsHash: null,
 			createdBy: ctx.actor
 		};
-		const q = await requote(ports, ctx, tx, state, plan0, kitchen, drafts);
+		const q = await requote(ports, ctx, tx, state, plan0, kitchen, drafts, pre);
 		return { ops: [pending(ctx, { type: 'CreatePlan', plan: plan0 }), ...q.ops], value: q.plan };
 	});
 	return r.ok ? ok({ plan: r.value.value }) : r;
+}
+
+interface PreparedEdit {
+	plan: Plan;
+	kitchen: Kitchen;
+	drafts: DraftLine[];
+	need?: Need;
+	changed: string[];
+	summary: string;
+}
+
+/** Everything an edit needs, computed from the loaded plan and the catalogue before any lock is taken. */
+async function prepareEdit(
+	ports: ServicePorts,
+	ctx: CallContext,
+	input: ToolInput<'edit_line'>
+): Promise<Result<PreparedEdit>> {
+	const [kitchens, loaded] = await Promise.all([
+		ports.store.kitchens(ctx.workspaceId),
+		ports.store.load(ctx.workspaceId, ctx.runId)
+	]);
+	const plan = loaded.plans[input.planId];
+	if (!plan) return err('NOT_FOUND', `plan ${input.planId}`);
+	if (plan.version !== input.version)
+		return err('STALE_VERSION', `plan is at v${plan.version}, not v${input.version}`);
+	const kitchen = kitchens.find((k) => k.id === plan.kitchenId);
+	if (!kitchen) return err('NOT_FOUND', `kitchen ${plan.kitchenId}`);
+	let drafts = plan.lines.filter((l) => l.state !== 'committed').map(draftFromLine);
+
+	if (input.needId && input.patch.gramsPerGuest !== undefined) {
+		const seed = plan.eventId ? ports.events?.[plan.eventId] : undefined;
+		if (!seed) return err('INVALID_INPUT', 'this plan has no event to recompute');
+		const before = plan.needs.find((n) => n.id === input.needId);
+		if (!before) return err('NOT_FOUND', `need ${input.needId}`);
+		if (plan.lines.some((l) => l.needId === input.needId && l.state === 'committed'))
+			return err('STALE_VERSION', 'a line of this need is already committed');
+		const overrides = { ...overridesOf(plan), [input.needId]: input.patch.gramsPerGuest };
+		const next = demandLines(plan.id, seed, overrides);
+		const need = next.needs.find((n) => n.id === input.needId);
+		const fresh = new Map(next.drafts.map((d) => [d.id, d]));
+		drafts = drafts.map((d) => (d.needId === input.needId ? (fresh.get(d.id) ?? d) : d));
+		// Replacements serving this dish follow the new need: a product substitute by the same yield/pack rules
+		// as when it was ranked, make-in-house ingredients by their amount per kg of dish.
+		const subs = drafts.filter((d) => d.needId === input.needId && d.substituteFor);
+		if (need && need.amount.unit === 'kg' && subs.length) {
+			const servedKg = need.amount.value * (need.dish?.yield ?? 1);
+			const products = await ports.catalog.get(subs.map((d) => d.productId));
+			const recipe = rescueFor(seed, subs[0].substituteFor!)?.chosen;
+			drafts = drafts.map((d) => {
+				if (!subs.includes(d)) return d;
+				if (d.id.includes('-mih-')) {
+					const g = recipe?.ingredients?.find(
+						(x: { productId: string }) => x.productId === d.productId
+					);
+					return g ? { ...d, qty: makeInHouseQty(g, need.amount.value) } : d;
+				}
+				const p = products.get(d.productId);
+				const line = plan.lines.find((l) => l.id === d.id);
+				const entry = seedEntryFor(seed, before.label, d.substituteFor!, d.productId);
+				const qty = p && line ? sizeFor(p, entry, servedKg, line)?.qty : null;
+				return qty ? { ...d, qty } : d;
+			});
+		}
+		const dish = seed.dishes.find((x) => x.dish === before.label);
+		return ok({
+			plan,
+			kitchen,
+			drafts,
+			need,
+			changed: drafts.filter((d) => d.needId === input.needId).map((d) => d.id),
+			summary: `${before.label}: g/guest ${dish?.gServed ?? '?'} → ${input.patch.gramsPerGuest}`
+		});
+	}
+	if (input.lineId) {
+		const line = plan.lines.find((l) => l.id === input.lineId);
+		if (!line) return err('NOT_FOUND', `line ${input.lineId}`);
+		if (line.state === 'committed') return err('STALE_VERSION', 'committed lines cannot be edited');
+		const productId = input.patch.productId ?? line.productId;
+		const product = (await ports.catalog.get([productId])).get(productId);
+		if (!product) return err('NOT_FOUND', `product ${productId}`);
+		const qty =
+			input.patch.qty !== undefined ? toLot(input.patch.qty, product.salesUnit, product) : line.qty;
+		return ok({
+			plan,
+			kitchen,
+			drafts: drafts.map((d) => (d.id === line.id ? { ...d, productId, qty } : d)),
+			changed: [line.id],
+			summary: `${line.productId} ${line.qty.value} ${line.qty.unit} → ${productId} ${qty.value} ${qty.unit}`
+		});
+	}
+	return err('INVALID_INPUT', 'give needId + gramsPerGuest, or lineId + qty/productId');
 }
 
 export async function editLine(
@@ -179,81 +304,18 @@ export async function editLine(
 	ctx: CallContext,
 	input: ToolInput<'edit_line'>
 ): Promise<Result<ToolOutput<'edit_line'>>> {
-	// Kitchens are read before the transaction: no query may run outside it while it holds the lock.
-	const kitchens = await ports.store.kitchens(ctx.workspaceId);
+	const prepared = await prepareEdit(ports, ctx, input);
+	if (!prepared.ok) return prepared;
+	const { plan, kitchen, drafts, need, changed, summary } = prepared.value;
+	const pre = await prefetch(
+		ports,
+		drafts.map((d) => d.productId),
+		plan.deliverBy
+	);
+
 	const r = await ports.store.transact<Plan>(ctx.workspaceId, async (tx, state) => {
-		const plan = state.plans[input.planId];
-		if (!plan) return { error: err('NOT_FOUND', `plan ${input.planId}`).error };
-		if (plan.version !== input.version)
-			return {
-				error: err('STALE_VERSION', `plan is at v${plan.version}, not v${input.version}`).error
-			};
-		const kitchen = kitchens.find((k) => k.id === plan.kitchenId);
-		if (!kitchen) return { error: err('NOT_FOUND', `kitchen ${plan.kitchenId}`).error };
-		const toDraft = draftFromLine;
-		let drafts = plan.lines.filter((l) => l.state !== 'committed').map(toDraft);
-		let need: Need | undefined;
-		let summary: string;
-		let changed: string[];
-
-		if (input.needId && input.patch.gramsPerGuest !== undefined) {
-			const seed = plan.eventId ? ports.events?.[plan.eventId] : undefined;
-			if (!seed)
-				return { error: err('INVALID_INPUT', 'this plan has no event to recompute').error };
-			const before = plan.needs.find((n) => n.id === input.needId);
-			if (!before) return { error: err('NOT_FOUND', `need ${input.needId}`).error };
-			const overrides = { ...overridesOf(plan), [input.needId]: input.patch.gramsPerGuest };
-			const next = demandLines(plan.id, seed, overrides);
-			need = next.needs.find((n) => n.id === input.needId);
-			const fresh = new Map(next.drafts.map((d) => [d.id, d]));
-			if (plan.lines.some((l) => l.needId === input.needId && l.state === 'committed'))
-				return { error: err('STALE_VERSION', 'a line of this need is already committed').error };
-			drafts = drafts.map((d) => (d.needId === input.needId ? (fresh.get(d.id) ?? d) : d));
-			// Replacements serving this dish follow the new need: a product substitute by the same yield/pack rules
-			// as when it was ranked, make-in-house ingredients by their amount per kg of dish.
-			const subs = drafts.filter((d) => d.needId === input.needId && d.substituteFor);
-			if (need && need.amount.unit === 'kg' && subs.length) {
-				const servedKg = need.amount.value * (need.dish?.yield ?? 1);
-				const products = await ports.catalog.get(subs.map((d) => d.productId));
-				const recipe = rescueFor(seed, subs[0].substituteFor!)?.chosen;
-				drafts = drafts.map((d) => {
-					if (!subs.includes(d)) return d;
-					if (d.id.includes('-mih-')) {
-						const g = recipe?.ingredients?.find(
-							(x: { productId: string }) => x.productId === d.productId
-						);
-						return g ? { ...d, qty: makeInHouseQty(g, need!.amount.value) } : d;
-					}
-					const p = products.get(d.productId);
-					const line = plan.lines.find((l) => l.id === d.id);
-					const entry = seedEntryFor(seed, before.label, d.substituteFor!, d.productId);
-					const qty = p && line ? sizeFor(p, entry, servedKg, line)?.qty : null;
-					return qty ? { ...d, qty } : d;
-				});
-			}
-			changed = drafts.filter((d) => d.needId === input.needId).map((d) => d.id);
-			const dish = seed.dishes.find((x) => x.dish === before.label);
-			summary = `${before.label}: g/guest ${dish?.gServed ?? '?'} → ${input.patch.gramsPerGuest}`;
-		} else if (input.lineId) {
-			const line = plan.lines.find((l) => l.id === input.lineId);
-			if (!line) return { error: err('NOT_FOUND', `line ${input.lineId}`).error };
-			if (line.state === 'committed')
-				return { error: err('STALE_VERSION', 'committed lines cannot be edited').error };
-			const productId = input.patch.productId ?? line.productId;
-			const product = (await ports.catalog.get([productId])).get(productId);
-			if (!product) return { error: err('NOT_FOUND', `product ${productId}`).error };
-			const qty =
-				input.patch.qty !== undefined
-					? toLot(input.patch.qty, product.salesUnit, product)
-					: line.qty;
-			drafts = drafts.map((d) => (d.id === line.id ? { ...d, productId, qty } : d));
-			changed = [line.id];
-			summary = `${line.productId} ${line.qty.value} ${line.qty.unit} → ${productId} ${qty.value} ${qty.unit}`;
-		} else
-			return {
-				error: err('INVALID_INPUT', 'give needId + gramsPerGuest, or lineId + qty/productId').error
-			};
-
+		const now = state.plans[plan.id];
+		if (!now || now.version !== plan.version) return conflict(`plan ${plan.id}`);
 		const proposed = (d: DraftLine): Line => ({
 			...d,
 			state: 'proposed',
@@ -277,9 +339,9 @@ export async function editLine(
 			version: plan.version + 1,
 			state: 'draft',
 			termsHash: null,
-			needs: need ? plan.needs.map((n) => (n.id === need!.id ? need! : n)) : plan.needs
+			needs: need ? plan.needs.map((n) => (n.id === need.id ? need : n)) : plan.needs
 		};
-		const q = await requote(ports, ctx, tx, state, edited, kitchen, drafts);
+		const q = await requote(ports, ctx, tx, state, edited, kitchen, drafts, pre);
 		return { ops: [edit, ...q.ops], value: q.plan };
 	});
 	return r.ok ? ok({ plan: r.value.value }) : r;

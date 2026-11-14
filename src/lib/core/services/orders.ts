@@ -245,7 +245,11 @@ export async function getPlan(
 					planVersion: a.planVersion,
 					termsHash: a.termsHash,
 					lineIds: a.lineIds,
-					tier: a.tier
+					tier: a.tier,
+					mandateVersion: a.mandateVersion,
+					expiresAt: a.expiresAt,
+					requestedBy: a.requestedBy,
+					...(a.decidedBy ? { decidedBy: a.decidedBy } : {})
 				}
 			: null
 	});
@@ -425,12 +429,18 @@ export async function commitOrder(
 			authority = { approvalId: granted.id };
 		}
 
+		const offerById = new Map(offers.map((o) => [o.productId, o]));
 		// Consume simulated stock atomically; on a shortfall, put back what was taken and fail.
 		const taken: { productId: string; qty: number }[] = [];
 		const confirmed: Receipt['confirmed'] = [];
 		const awaiting: Receipt['awaitingSupplier'] = [];
 		for (const l of lines) {
-			const c = await ports.simulator.consume(tx, l.productId, l.qty.value);
+			const c = await ports.simulator.consume(
+				tx,
+				l.productId,
+				l.qty.value,
+				offerById.get(l.productId)
+			);
 			if (!c.ok) {
 				for (const back of taken) await ports.simulator.consume(tx, back.productId, -back.qty);
 				return fail(c.error);

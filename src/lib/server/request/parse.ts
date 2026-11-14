@@ -44,6 +44,7 @@ export interface ParsedRequest {
 	notes: string[];
 	/** Request-level questions (date, disagreements); item questions live on the item. */
 	ambiguities: string[];
+	answered?: { item: number; qty?: number; unit?: ReqUnit; productId?: string }[];
 	parser: {
 		kind: 'rules' | 'gemini' | 'featherless' | 'fixture';
 		model: string;

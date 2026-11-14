@@ -1,6 +1,7 @@
 <script lang="ts">
 	import {
 		ArrowRight,
+		Building2,
 		Database,
 		FlaskConical,
 		Receipt,
@@ -17,6 +18,7 @@
 	import StateChip from '$lib/ui/StateChip.svelte';
 	import { day, money, num, shortHash } from '$lib/ui/format';
 	import Step from '$lib/ui/request/Step.svelte';
+	import Answer from '$lib/ui/request/Answer.svelte';
 	import type {
 		ApprovalView,
 		CommitView,
@@ -24,6 +26,7 @@
 		OrderView,
 		ParsedView,
 		RequestEvent,
+		RequestAnswer,
 		RequestResult
 	} from '$lib/ui/request/types';
 	import {
@@ -52,6 +55,8 @@
 	});
 	const newNonce = () => (crypto.randomUUID?.() ?? String(Math.random())).slice(0, 12);
 	let nonce = $state(newNonce());
+	/** Inline answers to the current request's questions; new words start without them. */
+	let answers = $state.raw<RequestAnswer[]>([]);
 	let busy = $state(false);
 	/** Until hydration the form would submit natively and lose the text. */
 	let ready = $state(false);
@@ -138,8 +143,9 @@
 		}
 	}
 
-	async function submit(t = text) {
+	async function submit(t = text, keepAnswers = false) {
 		const req = t.trim() || PLACEHOLDER;
+		if (!keepAnswers || req !== text) answers = [];
 		text = req;
 		reset();
 		busy = true;
@@ -148,7 +154,7 @@
 			const res = await fetch('/request/run', {
 				method: 'POST',
 				headers: { 'content-type': 'application/json' },
-				body: JSON.stringify({ text: req, kitchenId, nonce })
+				body: JSON.stringify({ text: req, kitchenId, nonce, answers })
 			});
 			if (!res.ok || !res.body) {
 				const b = await res.json().catch(() => null);
@@ -235,8 +241,25 @@
 		}
 	}
 
+	/** Answer one item's question in place and run the same words again with every answer so far. */
+	function answer(a: RequestAnswer) {
+		answers = [...answers.filter((x) => x.item !== a.item), a];
+		submit(text, true);
+	}
+
+	function answerText(a: RequestAnswer): string {
+		const item = parsed?.items[a.item];
+		const what = item?.product ?? item?.query ?? `item ${a.item + 1}`;
+		const parts = [
+			a.qty !== undefined ? `${num(a.qty, 3)} ${a.unit ? (UNIT_WORDS[a.unit] ?? a.unit) : ''}` : '',
+			a.productId ? `product ${a.productId}` : ''
+		].filter(Boolean);
+		return `${what}: ${parts.join(', ')}`;
+	}
+
 	function startOver() {
 		reset();
+		answers = [];
 		text = '';
 		nonce = newNonce();
 	}
@@ -277,6 +300,18 @@
 		<span class="inline-flex items-center gap-1.5"
 			><Receipt size={13} class="text-signoff" aria-hidden="true" />Orders:
 			<b class="font-medium text-ink">local simulated commitment</b></span
+		>
+		<span
+			class="inline-flex items-center gap-1.5"
+			title={data.workspace.stage
+				? 'Presenter mode: the stage run everyone watches on /ops.'
+				: 'Your own sandbox: orders, approvals and commits here never touch the stage run.'}
+			><Building2
+				size={13}
+				class={data.workspace.stage ? 'text-accent' : 'text-propose'}
+				aria-hidden="true"
+			/>{data.workspace.stage ? 'Stage run' : "Judges' sandbox"}
+			<b class="mono font-medium text-ink">{data.workspace.id}</b></span
 		>
 		<span class="inline-flex items-center gap-1.5"
 			><Sparkles size={13} aria-hidden="true" />Parser:
@@ -410,6 +445,17 @@
 						{#if parsed.deliverByText}<span class="text-ink-3">from “{parsed.deliverByText}”</span
 							>{:else}<span class="text-signoff">(no day given)</span>{/if}
 					</p>
+					{#if parsed.answered?.length}
+						<p class="mt-2 text-[13px] text-ink-2">
+							Your answers: {parsed.answered.map(answerText).join(' · ')}
+							<button
+								type="button"
+								class="ml-1 text-accent-ink underline"
+								disabled={busy}
+								onclick={() => submit(text)}>clear</button
+							>
+						</p>
+					{/if}
 					{@const asks = [
 						...parsed.ambiguities,
 						...parsed.items.flatMap((i) =>
@@ -507,6 +553,7 @@
 											aria-hidden="true"
 										/>{it.question}
 									</p>
+									{#if it.answer}<Answer spec={it.answer} {busy} onanswer={answer} />{/if}
 								{/if}
 								{#each it.valioRules as r (r.to)}
 									<p

@@ -12,7 +12,7 @@ import { txOf } from '../../store/drizzle-store';
 export function createSimulator(catalog: Catalog, opts: { today: () => string }): Simulator {
 	return {
 		events: () => [],
-		async consume(tx, productId, qty) {
+		async consume(tx, productId, qty, given) {
 			const { db, workspaceId, runId } = txOf(tx);
 			const key = and(
 				eq(schema.simStock.workspaceId, workspaceId),
@@ -21,8 +21,9 @@ export function createSimulator(catalog: Catalog, opts: { today: () => string })
 			);
 			let [row] = await db.select().from(schema.simStock).where(key);
 			if (!row) {
-				const { offers } = await catalog.offers([productId], opts.today());
-				const a = offers[0]?.availability;
+				// The caller's offer, fetched before the transaction; the catalog is only a fallback (fixture path).
+				const offer = given ?? (await catalog.offers([productId], opts.today())).offers[0];
+				const a = offer?.availability;
 				if (!a) return err('NOT_FOUND', `product ${productId}`);
 				if (a.kind === 'unknown') return ok({ lotId: null, confirmed: false });
 				if (a.kind !== 'known')
