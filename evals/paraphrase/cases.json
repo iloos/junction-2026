@@ -50,17 +50,9 @@
 					"fi#2.agent.category",
 					"fi#3.agent.physical",
 					"fi#3.agent.category"
-				],
-				"B-cutoff-date": [
-					"en#1.request.plan",
-					"en#2.request.plan",
-					"en#3.request.plan",
-					"fi#1.request.plan",
-					"fi#2.request.plan",
-					"fi#3.request.plan"
 				]
 			},
-			"$expectFailNote": "A3-agent-cutoff (E): the agent picks a Terminal product that cannot deliver tomorrow; see the fidelity case. B-cutoff-date (stale expectation, 91): on Mon 7 Dec 21:40 tomorrow's cut-off (17:00 Mon) has passed, so /request asks for the first open date (Wed 9 Dec, one click) instead of placing an order A3 would refuse at commit. Replace with the cut-off-aware expectation."
+			"$expectFailNote": "A3-agent-cutoff (E): the agent picks a Terminal product that cannot deliver tomorrow; see the fidelity case."
 		},
 		{
 			"id": "order-cream-friday",

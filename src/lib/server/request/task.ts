@@ -20,7 +20,8 @@ export function kitchenUrl(plan: Pick<Plan, 'kitchenId' | 'id' | 'version'>): st
 export interface TaskSeed {
 	tasks?: TaskStore;
 	ctx: CallContext;
-	now: Date;
+	/** The workspace clock's instant; without it no task is stored (a task's times come from that clock only). */
+	now: Date | undefined;
 	plan: Plan;
 	title: string;
 	/** The request as typed intent ("what"), never the transcript. */
@@ -46,7 +47,7 @@ export interface TaskLink {
 /** The task for this plan: created once (same plan, same task), then returned as stored. */
 export async function taskForPlan(s: TaskSeed): Promise<TaskLink> {
 	const link = { kitchenUrl: kitchenUrl(s.plan) };
-	if (!s.tasks) return { taskId: null, ...link };
+	if (!s.tasks || !s.now) return { taskId: null, ...link };
 	const id = `t-${s.plan.id}`.slice(0, 64);
 	const existing = await s.tasks.get(s.ctx.workspaceId, id);
 	if (existing) return { taskId: existing.id, ...link };

@@ -491,3 +491,54 @@ describe('cut-off before the case question', () => {
 		expect(r.lookup!.items[0].answer).toMatchObject({ kind: 'date', date: '2026-12-09' });
 	});
 });
+
+describe('one clock: the workspace store clock judges cut-offs', () => {
+	it('Mon 09:00 on ports.clock: "tomorrow" is orderable and no cut-off is said', async () => {
+		const env = await createDbPorts({ now: '2026-12-07T09:00:00+02:00' });
+		env.overlay.clear();
+		const h = createHandlers(env.ports);
+		const ctx: CallContext = {
+			workspaceId: env.workspaceId,
+			runId: env.runId,
+			actor: { kind: 'kitchen_agent', id: 'a' },
+			scopes: SCOPES_BY_ACTOR.kitchen_agent,
+			via: 'test'
+		};
+		const kitchen = (await env.store.kitchens(env.workspaceId)).find((k) => k.id === 'k-hotel')!;
+		const r = await runRequest('4 kg butter for tomorrow', {
+			handlers: h,
+			ctx,
+			today: '2026-12-07',
+			kitchen,
+			clock: env.ports.clock,
+			nonce: 'clock'
+		});
+		expect(r.lookup!.items[0].pick).toBeTruthy();
+		expect(r.order?.plan.deliverBy).toBe('2026-12-08');
+		const said = [r.message, ...r.lookup!.items.map((i) => i.question)].join(' ');
+		expect(said).not.toMatch(/cut-off/i);
+	});
+
+	it('Mon 21:40 on ports.clock: the same words ask for Wed 9 Dec', async () => {
+		const env = await createDbPorts({ now: '2026-12-07T21:40:00+02:00' });
+		env.overlay.clear();
+		const h = createHandlers(env.ports);
+		const ctx: CallContext = {
+			workspaceId: env.workspaceId,
+			runId: env.runId,
+			actor: { kind: 'kitchen_agent', id: 'a' },
+			scopes: SCOPES_BY_ACTOR.kitchen_agent,
+			via: 'test'
+		};
+		const kitchen = (await env.store.kitchens(env.workspaceId)).find((k) => k.id === 'k-hotel')!;
+		const r = await runRequest('4 kg butter for tomorrow', {
+			handlers: h,
+			ctx,
+			today: '2026-12-07',
+			kitchen,
+			clock: env.ports.clock
+		});
+		expect(r.order).toBeNull();
+		expect(r.lookup!.items[0].answer).toMatchObject({ kind: 'date', date: '2026-12-09' });
+	});
+});

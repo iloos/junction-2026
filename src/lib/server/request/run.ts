@@ -7,7 +7,7 @@ import type { Kitchen, Measure, Offer, Product, ToolName, ToolOutput } from '$li
 import { sizeDirect } from '$lib/core/demand/sizing';
 import { day, money } from '$lib/ui/format';
 import { canonicalJson, sha256Hex } from '$lib/core/hash';
-import type { CallContext, Llm, TaskStore, ToolHandlers } from '$lib/core/ports';
+import type { CallContext, Clock, Llm, TaskStore, ToolHandlers } from '$lib/core/ports';
 import { taskForPlan } from './task';
 import { serveTool } from '$lib/server/tools/serve';
 import type {
@@ -39,7 +39,6 @@ import {
 	unpickable,
 	type Ranked
 } from './lookup';
-import { SCENARIO, scenarioDate } from '$lib/core/scenario';
 import { parseRequest, type ParsedRequest } from './parse';
 import { requestParseCheckpoint, withReview, type ReviewDeps } from '$lib/server/review';
 import { classifyRequest } from './classify';
@@ -90,15 +89,20 @@ export interface RequestDeps {
 	/** Set when the parse is reviewed (REVIEW=1): the reviewer's deps (Decide, trace, budget). */
 	review?: ReviewDeps;
 	/**
-	 * The scenario clock's instant, for cut-offs. Absent: the scenario's start, a lower bound (the clock only moves
-	 * forward from it), so a cut-off reported as passed has passed.
+	 * The workspace's store clock (ports.clock, the scenario clock on the server): the one "now" for cut-offs and task
+	 * times, the same one place_order and commit judge by. Absent (and no `now`): lookup leaves cut-offs to place_order.
 	 */
+	clock?: Pick<Clock, 'now'>;
+	/** A fixed instant instead of `clock`, for tests. */
 	now?: Date;
 	/** Procurement tasks (ports.tasks); absent: no task is stored and the result still links the plan. */
 	tasks?: TaskStore;
 	/** The chef chose this delivery date instead of the one the words gave (a cut-off answer). Shown, never silent. */
 	deliverBy?: string;
 }
+
+/** The request's one "now": the override, else the workspace's store clock. */
+const nowOf = (d: Pick<RequestDeps, 'now' | 'clock'>): Date | undefined => d.now ?? d.clock?.now();
 
 const cap = (s: string) => s[0].toUpperCase() + s.slice(1);
 
@@ -145,10 +149,7 @@ async function lookupItems(
 	d: RequestDeps
 ): Promise<{ lookup: LookupView; picked: Map<string, Product> }> {
 	let searchCalls = 0;
-	// Without the clock's instant, the scenario's start is a lower bound once its day has come (the clock only moves
-	// forward from it); before that day the cut-off is left to place_order's tiering.
-	const start = new Date(SCENARIO.start);
-	const now = d.now ?? (d.today >= scenarioDate(start) ? start : undefined);
+	const now = nowOf(d);
 	const prepared: {
 		item: ParsedRequest['items'][number];
 		searches: { query: string; hits: number }[];
@@ -647,7 +648,7 @@ export async function runRequest(text: string, d: RequestDeps): Promise<RequestR
 			task: await taskForPlan({
 				tasks: d.tasks,
 				ctx: d.ctx,
-				now: d.now ?? new Date(),
+				now: nowOf(d),
 				plan,
 				title: text,
 				requirement: {
