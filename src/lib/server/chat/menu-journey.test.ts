@@ -73,3 +73,70 @@ describe('moment 2: words → menu → plan in the chat', () => {
 		expect(text).not.toMatch(/\d kg \+|unresolved/);
 	});
 });
+
+describe('hero: "plan it" never repeats a question', () => {
+	it(
+		'day chip, then "plan it": the menu comes with stated defaults, then "plan it" plans',
+		{ timeout: 180_000 },
+		async () => {
+			const w = await trialWorkspace();
+			w.env.ports.clock = { now: () => FIDELITY_NOW };
+			const chef = w.ctx('chef');
+			const md = {
+				workspaceId: w.env.workspaceId,
+				store: w.env.ports.menus!,
+				catalog: w.env.ports.catalog,
+				now: () => w.env.ports.clock.now()
+			};
+			const deps = {
+				handlers: w.handlers,
+				ctx: chef,
+				ports: w.env.ports,
+				workspaceId: w.env.workspaceId,
+				kitchen: { id: 'k-hotel' },
+				today: scenarioDate(FIDELITY_NOW),
+				acceptMenu: (id: string, revision: number) =>
+					acceptMenu(md, { id, revision, by: chef.actor })
+			};
+			const t1 = await chatTurn({ text: 'a no-meat dinner for 120 with a peach dessert' }, deps);
+			const taskId = t1[0].taskId;
+			const day = t1.find((e) => e.type === 'clarify');
+			if (day?.type !== 'clarify') throw new Error('no day question');
+			const t2 = await chatTurn(
+				{ taskId, answer: { field: 'date', value: JSON.parse(day.options[1].value) } },
+				deps
+			);
+			expect(t2.find((e) => e.type === 'clarify')).toMatchObject({ field: 'serviceStyle' });
+			const t3 = await chatTurn({ taskId, text: 'plan it' }, deps);
+			expect(t3.some((e) => e.type === 'clarify')).toBe(false);
+			expect(t3.some((e) => e.type === 'menu')).toBe(true);
+			const said = t3.at(-1);
+			expect(said?.type === 'done' && said.text).toMatch(
+				/I assumed served as a buffet.*say if not/
+			);
+			const t4 = await chatTurn({ taskId, text: 'plan it' }, deps);
+			expect(t4.some((e) => e.type === 'step' && e.tool === 'plan_event' && e.ok)).toBe(true);
+		}
+	);
+
+	it(
+		'a typed "buffet" answers the style; "no budget" answers the budget',
+		{ timeout: 180_000 },
+		async () => {
+			const w = await trialWorkspace();
+			w.env.ports.clock = { now: () => FIDELITY_NOW };
+			const deps = {
+				handlers: w.handlers,
+				ctx: w.ctx('chef'),
+				ports: w.env.ports,
+				workspaceId: w.env.workspaceId,
+				kitchen: { id: 'k-hotel' },
+				today: scenarioDate(FIDELITY_NOW)
+			};
+			const t1 = await chatTurn({ text: 'dinner for 40 on Saturday' }, deps);
+			const taskId = t1[0].taskId;
+			const t2 = await chatTurn({ taskId, text: 'a buffet please' }, deps);
+			expect(t2.find((e) => e.type === 'clarify')).not.toMatchObject({ field: 'serviceStyle' });
+		}
+	);
+});
