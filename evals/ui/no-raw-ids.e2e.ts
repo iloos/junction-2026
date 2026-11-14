@@ -63,9 +63,15 @@ async function kitchen(page: Page, w: number) {
 	await start.waitFor({ timeout: 30_000 }).catch(() => undefined);
 	await sweep(page, `/ pre-plan ${w}`);
 	if (await start.count()) await start.click();
-	await page.getByText('Menu → need → order').waitFor({ state: 'attached', timeout: 120_000 });
+	await page.locator('#dishes-h').waitFor({ state: 'attached', timeout: 120_000 });
 	await sweep(page, `/ planned ${w}`);
 	if (w < 600) await page.getByRole('tab', { name: /Plan/ }).first().click();
+	// A dish row is one line; its lines and their Why open with the row's details.
+	await page
+		.getByRole('button', { name: /^Show details:/ })
+		.first()
+		.click();
+	await sweep(page, `/ row details ${w}`);
 	await page.getByRole('button', { name: 'Why this line' }).first().click();
 	await page.getByRole('dialog').waitFor();
 	await sweep(page, `/ Why ${w}`);
@@ -115,7 +121,7 @@ async function agents(page: Page, w: number) {
 
 async function dock(page: Page, w: number) {
 	await page.goto(`${BASE}/`);
-	await page.getByText('Menu → need → order').waitFor({ state: 'attached', timeout: 120_000 });
+	await page.locator('#dishes-h').waitFor({ state: 'attached', timeout: 120_000 });
 	await page.getByRole('button', { name: 'Ask the agent' }).click();
 	const box = page.locator('aside[aria-label="Agent chat"] textarea');
 	await box.fill('4 kg lactose-free butter for Thursday');
