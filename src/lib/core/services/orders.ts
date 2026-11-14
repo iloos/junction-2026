@@ -10,6 +10,7 @@ import {
 	type Approval,
 	type DomainError,
 	type Kitchen,
+	type Need,
 	type Offer,
 	type Order,
 	type PendingOp,
@@ -17,6 +18,7 @@ import {
 	type Product,
 	type Receipt,
 	type Result,
+	type SalesQty,
 	type ToolInput,
 	type ToolOutput
 } from '../contracts';
@@ -31,7 +33,7 @@ import {
 	type TierResult
 } from '../mandate/tier';
 import type { CallContext, Ports, Tx } from '../ports';
-import { seedNeedQty, type EventSeed } from '../demand';
+import { seedNeedQty, sizeDirect, type EventSeed } from '../demand';
 import type { WorkspaceState } from '../state';
 
 const APPROVAL_TTL_MS = 24 * 3600 * 1000;
@@ -44,6 +46,7 @@ function pending(ctx: CallContext, op: PendingOp['op'], idempotencyKey?: string)
 		runId: ctx.runId,
 		actor: ctx.actor,
 		via: ctx.via,
+		...(ctx.initiatedBy ? { initiatedBy: ctx.initiatedBy } : {}),
 		idempotencyKey,
 		op
 	};
@@ -169,8 +172,44 @@ export async function placeOrder(
 		});
 	const kitchen = await kitchenOf(ports, ctx, input.kitchenId);
 	if (!kitchen) return err('NOT_FOUND', `kitchen ${input.kitchenId}`);
+	// A physical amount is the demand authority (F10): the server sizes it, and a qty that disagrees is refused.
+	const sized: (SalesQty | null)[] = [];
+	for (const [i, l] of input.lines.entries()) {
+		if (!l.amount) {
+			sized.push(null);
+			continue;
+		}
+		const p = products.get(l.productId)!;
+		const s = sizeDirect(p, l.amount);
+		if (!s)
+			return err(
+				'INVALID_INPUT',
+				`lines[${i}]: ${l.productId} has no known ${l.amount.unit} content per ${p.salesUnit}; give qty in ${p.salesUnit} without amount`,
+				{ detail: { line: i } }
+			);
+		if (Math.abs(s.value - l.qty) > 1e-9 || l.unit !== s.unit)
+			return err(
+				'INVALID_INPUT',
+				`lines[${i}]: ${l.amount.value} ${l.amount.unit} of ${l.productId} is ${s.value} ${s.unit}, not ${l.qty} ${l.unit}`,
+				{ detail: { line: i, computedQty: s.value, unit: s.unit } }
+			);
+		sized.push(s);
+	}
 	const { offers } = await ports.catalog.offers(ids, input.deliverBy); // outside the lock (D6)
 	const planId = `pl-${ctx.runId}-${await short(`${ctx.actor.id}|${input.idempotencyKey}`)}`;
+	const needs: Need[] = input.lines.flatMap((l, i) =>
+		l.amount
+			? [
+					{
+						id: `need:direct-${i + 1}`,
+						label: `${l.amount.value} ${l.amount.unit} ${products.get(l.productId)!.nameFi}`,
+						kind: 'direct' as const,
+						amount: l.amount,
+						provenance: { source: 'user' as const, note: `${ctx.actor.kind} via ${ctx.via}` }
+					}
+				]
+			: []
+	);
 
 	return idempotent(ports, ctx, 'place_order', input.idempotencyKey, input, async (tx, state) => {
 		const spent = await ports.store.lockBudget(tx, {
@@ -180,8 +219,9 @@ export async function placeOrder(
 		});
 		const drafts: DraftLine[] = input.lines.map((l, i) => ({
 			id: `${planId}-l${i + 1}`,
+			...(l.amount ? { needId: `need:direct-${i + 1}` } : {}),
 			productId: l.productId,
-			qty: toLot(l.qty, l.unit, products.get(l.productId)!),
+			qty: sized[i] ?? toLot(l.qty, l.unit, products.get(l.productId)!),
 			provenance: { source: 'user', note: `${ctx.actor.kind} via ${ctx.via}` }
 		}));
 		const t = tierLines({
@@ -203,7 +243,7 @@ export async function placeOrder(
 			version: 0,
 			state: 'draft',
 			deliverBy: input.deliverBy,
-			needs: [],
+			needs,
 			lines: [],
 			totalCents: null,
 			termsHash: null,
