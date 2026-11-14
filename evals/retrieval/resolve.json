@@ -265,6 +265,40 @@
 			"reject": "viipal|serran"
 		},
 		{
+			"q": "voi tai margariini",
+			"accept": "(^| )voi( |$)",
+			"reject": "margariini"
+		},
+		{
+			"q": "2 dl vispi- tai kuohukermaa",
+			"accept": "kuohukerma"
+		},
+		{
+			"q": "suklaa",
+			"accept": "suklaa"
+		},
+		{
+			"q": "pippuri",
+			"accept": "pippuri",
+			"reject": "pihvi|nauta|naudan"
+		},
+		{
+			"q": "tomaatti",
+			"diet": ["VEGAN"],
+			"accept": "tomaatti",
+			"reject": "pesto|nyhtö|kastike"
+		},
+		{
+			"q": "hunaja",
+			"diet": ["VEGAN"],
+			"unresolved": true
+		},
+		{
+			"q": "liivate",
+			"diet": ["VEGAN"],
+			"unresolved": true
+		},
+		{
 			"q": "strutsifilee",
 			"unresolved": true
 		},

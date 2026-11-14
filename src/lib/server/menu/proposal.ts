@@ -417,7 +417,12 @@ export async function proposeMenu(d: ProposeDeps): Promise<Proposed> {
 				flags,
 				plantFor(dish.claimedCompatible)
 			);
-			if (r?.status === 'resolved' && r.candidates.length)
+			if (r?.status === 'resolved' && r.candidates.length) {
+				// A vegan dish's pick without a declared allergen record is not called vegan: the note says to check it.
+				const unchecked =
+					plantFor(dish.claimedCompatible).includes('VEGAN') &&
+					!(await d.catalog.get([r.candidates[0].productId])).get(r.candidates[0].productId)
+						?.allergens.declared;
 				ingredients.push({
 					...base,
 					productId: r.candidates[0].productId,
@@ -425,10 +430,10 @@ export async function proposeMenu(d: ProposeDeps): Promise<Proposed> {
 						source,
 						at,
 						ref: i.query,
-						note: `amount: ${source === 'llm' ? 'model' : 'team'} estimate; product: best of ${r.candidates.length} for "${i.query}"`
+						note: `amount: ${source === 'llm' ? 'model' : 'team'} estimate; product: best of ${r.candidates.length} for "${i.query}"${unchecked ? '; vegan: no allergen record — check' : ''}`
 					}
 				});
-			else
+			} else
 				ingredients.push({
 					...base,
 					unresolved: r?.status === 'unresolved' ? r.reason : 'no catalogue resolver',
