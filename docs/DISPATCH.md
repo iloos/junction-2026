@@ -42,5 +42,8 @@ One session or lead agent per track, in its own worktree and branch, editing onl
 - **Free session · Profiles P4, P5, P6 and P8** from [horeca-profiles](research/horeca-profiles.md) §2, seeded in `fixtures/seeds/kitchens.json` with their weights and hard rules, so "same shortage, different answer" shows across kitchen types. The evals must stay green.
 - **Pitch only:** recurring / usual orders (d0's held design, waiting on the user's history policy); cards with images (after the vision endpoint).
 
+## Gate rule from Sat 19:00 (lock contention)
+Lanes no longer run the full `pnpm gate`. Before sending a SHA, a lane runs `pnpm gate --only check,lint` plus the targeted tests for its paths (`pnpm vitest run <paths>`, and its own e2e if it touches the UI). The lead's main-checkout gate is the only full gate, and it runs once per merged batch. Stopping a gate on Windows leaves its node process queued, so kill `merge-gate` by PID when you stop one.
+
 ## Held
 SetMandate op (after the hackathon; don't claim mandate history) · Kitchen layout restructure (B's deltas only) · new dependencies · forecast/demand tabs and the product sheet until Wave 2.
