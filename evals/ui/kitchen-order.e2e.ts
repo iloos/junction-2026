@@ -68,10 +68,8 @@ test('the order summary counts what was approved, adds up, and survives a reload
 		.first()
 		.waitFor({ timeout: 30_000 })
 		.catch(() => undefined);
-	await page
-		.getByText(/receipt rc-/)
-		.first()
-		.waitFor({ timeout: 30_000 });
+	// The receipt id is System-layer detail; the receipt card itself is what the chef sees.
+	await page.getByLabel('Receipt', { exact: true }).first().waitFor({ timeout: 30_000 });
 	const panel = await page.locator('body').innerText();
 
 	// #5: the order summary counts what was ordered, from the receipt, and the money rows add up to the total.
@@ -112,7 +110,12 @@ test('the order summary counts what was approved, adds up, and survives a reload
 		total !== undefined && Math.abs(parts - total) < 0.01,
 		`money rows ${parts.toFixed(2)} vs plan total ${total}`
 	);
-	const receipt = panel.match(/receipt (rc-[a-z0-9]+)/)?.[1];
+	// The receipt id lives in the System layer (in the DOM, not on screen): read it from there.
+	const receiptOf = async () =>
+		(await page.getByLabel('Receipt', { exact: true }).first().textContent())?.match(
+			/receipt (rc-[a-z0-9]+)/
+		)?.[1];
+	const receipt = await receiptOf();
 	expect(receipt).toBeTruthy();
 
 	// #6: a reload still shows the order and its receipt.
@@ -120,10 +123,11 @@ test('the order summary counts what was approved, adds up, and survives a reload
 	await page.waitForLoadState('networkidle');
 	await page.waitForTimeout(1500);
 	const after = await page.locator('body').innerText();
+	const kept = (await receiptOf().catch(() => undefined)) === receipt;
 	check(
 		'BUG-6',
-		after.includes(receipt!) && !/No decisions\s+Nothing needs you/.test(after),
-		`after reload: receipt ${after.includes(receipt!) ? 'shown' : 'gone'}, headline ${/No decisions/.test(after) ? '"No decisions"' : 'ordered'}`
+		kept && !/No decisions\s+Nothing needs you/.test(after),
+		`after reload: receipt ${kept ? 'shown' : 'gone'}, headline ${/No decisions/.test(after) ? '"No decisions"' : 'ordered'}`
 	);
 });
 

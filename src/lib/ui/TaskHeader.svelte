@@ -5,7 +5,8 @@
 	 * supplier confirmed vs awaiting, and that editing is locked. One primary action, passed in by the page.
 	 */
 	import type { Snippet } from 'svelte';
-	import { Ban, Lock, ListTodo } from '@lucide/svelte';
+	import { Popover } from 'bits-ui';
+	import { Ban, Lock, ListTodo, X } from '@lucide/svelte';
 	import type { FulfilmentView } from '$lib/core/contracts';
 
 	import { BUCKETS, needTally } from './coverage';
@@ -36,6 +37,10 @@
 		busy?: boolean;
 		/** The kitchen's other plans in this sandbox, each with a link that opens it here. */
 		others?: { id: string; title: string; open: number; ordered: number; href: string }[];
+		/** Hide an "Also open" task from this browser's list. */
+		ondismiss?: (id: string) => void;
+		/** Cancel what is still open on that task (its lines to zero). Resolves true when done. */
+		oncancel?: (id: string) => Promise<boolean>;
 	}
 	let {
 		title,
@@ -51,8 +56,13 @@
 		action,
 		onorder,
 		busy = false,
-		others = []
+		others = [],
+		ondismiss,
+		oncancel
 	}: Props = $props();
+	/** The "Also open" chip whose menu is open, and the one being confirmed for cancelling. */
+	let menuFor = $state<string | null>(null);
+	let cancelling = $state<string | null>(null);
 
 	const t = $derived(needTally(coverage));
 	/** The deadline in one short phrase for a phone: "Tue 15:00". */
@@ -86,14 +96,87 @@
 				{#each others as o (o.id)}
 					<!-- The page builds the href with resolve(). -->
 					<!-- eslint-disable svelte/no-navigation-without-resolve -->
-					<a
-						href={o.href}
-						class="inline-flex max-w-full min-w-0 rounded-full border border-rule-strong px-2 py-0.5 text-ink hover:border-accent hover:text-accent-ink"
-						title={o.title}
-						><span class="max-w-[14rem] truncate">{o.title}</span><span class="shrink-0 text-ink-3"
-							>&nbsp;· {o.open ? `${o.open} open` : `${o.ordered} ordered`}</span
-						></a
+					<span
+						class="inline-flex max-w-full min-w-0 items-center rounded-full border border-rule-strong text-ink"
 					>
+						<a
+							href={o.href}
+							class="inline-flex min-w-0 rounded-l-full py-0.5 pl-2 hover:text-accent-ink {ondismiss ||
+							oncancel
+								? 'pr-1'
+								: 'rounded-r-full pr-2'}"
+							title={o.title}
+							><span class="max-w-[14rem] truncate">{o.title}</span><span
+								class="shrink-0 text-ink-3"
+								>&nbsp;· {o.open ? `${o.open} open` : `${o.ordered} ordered`}</span
+							></a
+						>
+						{#if ondismiss || oncancel}
+							<Popover.Root
+								open={menuFor === o.id}
+								onOpenChange={(v) => {
+									menuFor = v ? o.id : null;
+									cancelling = null;
+								}}
+							>
+								<Popover.Trigger
+									class="grid size-6 place-items-center rounded-r-full text-ink-3 hover:text-ink"
+									aria-label="Hide or cancel: {o.title}"
+									><X size={13} aria-hidden="true" /></Popover.Trigger
+								>
+								<Popover.Portal>
+									<Popover.Content
+										sideOffset={4}
+										align="start"
+										class="z-50 w-[min(280px,calc(100vw-24px))] rounded-lg border border-rule bg-sheet p-2 text-meta text-ink-2 shadow-lg"
+									>
+										{#if cancelling === o.id}
+											<p class="px-1 text-ink">
+												Cancel the {o.open} open {o.open === 1 ? 'line' : 'lines'}? They go to zero
+												and nothing is bought.{o.ordered
+													? ` The ${o.ordered} ordered ${o.ordered === 1 ? 'line stays' : 'lines stay'} ordered.`
+													: ''}
+											</p>
+											<div class="mt-2 flex gap-2">
+												<button
+													type="button"
+													class="h-8 flex-1 rounded-md bg-ink px-3 font-medium text-sheet disabled:opacity-50"
+													disabled={busy}
+													onclick={async () => {
+														if (await oncancel?.(o.id)) menuFor = null;
+													}}>Cancel the lines</button
+												>
+												<button
+													type="button"
+													class="h-8 rounded-md px-3 hover:bg-well hover:text-ink"
+													onclick={() => (cancelling = null)}>Keep</button
+												>
+											</div>
+										{:else}
+											{#if ondismiss}
+												<button
+													type="button"
+													class="block w-full rounded-md px-2 py-1.5 text-left hover:bg-well hover:text-ink"
+													onclick={() => {
+														ondismiss(o.id);
+														menuFor = null;
+													}}>Hide from this list</button
+												>
+											{/if}
+											{#if oncancel && o.open}
+												<button
+													type="button"
+													class="block w-full rounded-md px-2 py-1.5 text-left hover:bg-well hover:text-ink"
+													onclick={() => (cancelling = o.id)}
+													>Cancel its {o.open} open {o.open === 1 ? 'line' : 'lines'}…</button
+												>
+											{/if}
+										{/if}
+									</Popover.Content>
+								</Popover.Portal>
+							</Popover.Root>
+						{/if}
+					</span>
 					<!-- eslint-enable svelte/no-navigation-without-resolve -->
 				{/each}
 			</nav>

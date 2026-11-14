@@ -15,9 +15,10 @@
 	import type { CommitNote, TermChange } from '$lib/kitchen/kitchen.svelte';
 	import type { CommitRecord } from '$lib/kitchen/fixture-server';
 	import DecisionCard from '$lib/ui/DecisionCard.svelte';
+	import BillLines, { BILL_COLS, type BillRow } from '$lib/ui/BillLines.svelte';
 	import Receipt from '$lib/ui/Receipt.svelte';
 	import { decisionsDue, decisionsOf } from '$lib/ui/decisions';
-	import { money, num, shortHash, day, storyTime } from '$lib/ui/format';
+	import { money, num, shortHash, day, storyTime, unitWord, qtyWords } from '$lib/ui/format';
 
 	interface Props {
 		plan: Plan;
@@ -179,6 +180,14 @@
 		if (d) onmark?.(d.lineIds, true);
 	}
 	const nameOf = (id: string) => names.get(id) ?? id;
+	const billOf = (lines: Line[]): BillRow[] =>
+		lines.map((l) => ({
+			id: l.id,
+			name: nameOf(l.productId),
+			qty: qtyWords(l.qty),
+			cents: l.lineCents ?? null
+		}));
+	const centsOf = (lines: Line[]) => lines.reduce((s, l) => s + (l.lineCents ?? 0), 0);
 
 	/**
 	 * The plan's money as a partition that adds up: every priced, orderable line sits in exactly one row, by what
@@ -324,7 +333,7 @@
 									<span class="mono"
 										>{num(c.before.qty)} →
 										<mark class="bg-signoff/25 px-0.5 text-ink"
-											>{num(c.after.qty)} {c.after.unit}</mark
+											>{num(c.after.qty)} {unitWord(c.after.unit, c.after.qty)}</mark
 										>, {money(c.before.lineCents)} →
 										<mark class="bg-signoff/25 px-0.5 text-ink">{money(c.after.lineCents)}</mark
 										></span
@@ -332,12 +341,14 @@
 								{:else if c.after}
 									<span class="text-ink-2"
 										>added: <span class="mono"
-											>{num(c.after.qty)} {c.after.unit} · {money(c.after.lineCents)}</span
+											>{num(c.after.qty)}
+											{unitWord(c.after.unit, c.after.qty)} · {money(c.after.lineCents)}</span
 										></span
 									>
 								{:else if c.before}
 									<span class="text-ink-2"
-										>removed (was <span class="mono">{num(c.before.qty)} {c.before.unit}</span
+										>removed (was <span class="mono"
+											>{num(c.before.qty)} {unitWord(c.before.unit, c.before.qty)}</span
 										>)</span
 									>
 								{/if}
@@ -404,22 +415,20 @@
 					<ul class="mt-2.5 space-y-3">
 						{#each decided as d (d.key)}
 							<li>
-								<p class="text-meta font-medium text-ink">
-									{ordered || granted ? 'Approved because' : 'Why it needed you'}: {d.reason.toLowerCase()}
+								<!-- Grouped by why it needed the chef, with the count and the group's total on the bill's grid. -->
+								<p class="{BILL_COLS} items-start text-meta font-medium text-ink">
+									<span class="min-w-0"
+										>{ordered || granted ? 'Approved' : 'Needed you'}: {d.reason.toLowerCase()}</span
+									>
+									<span class="mono text-right text-ink-3 tabular-nums"
+										>{d.lines.length} {d.lines.length === 1 ? 'line' : 'lines'}</span
+									>
+									<span class="mono text-right tabular-nums">{money(centsOf(d.lines))}</span>
 								</p>
 								<p class="text-micro text-ink-3">{d.why}</p>
-								<ul class="mt-1">
-									{#each d.lines as l (l.id)}
-										<li class="flex items-baseline justify-between gap-3 text-meta">
-											<span class="min-w-0 truncate text-ink-2" title={nameOf(l.productId)}
-												>{nameOf(l.productId)}</span
-											>
-											<span class="mono shrink-0 text-ink"
-												>{num(l.qty.value)} {l.qty.unit} · {money(l.lineCents)}</span
-											>
-										</li>
-									{/each}
-								</ul>
+								<div class="mt-1">
+									<BillLines rows={billOf(d.lines)} label={d.reason} />
+								</div>
 							</li>
 						{/each}
 					</ul>
@@ -430,14 +439,9 @@
 							<CircleCheck size={14} class="text-ok" aria-hidden="true" /> Approved by you, not ordered
 							yet
 						</p>
-						<ul class="mt-1">
-							{#each approvedEarlier as l (l.id)}
-								<li class="flex items-baseline justify-between gap-3 text-meta">
-									<span class="min-w-0 truncate text-ink-2">{nameOf(l.productId)}</span>
-									<span class="mono shrink-0 text-ink">{num(l.qty.value)} {l.qty.unit}</span>
-								</li>
-							{/each}
-						</ul>
+						<div class="mt-1">
+							<BillLines rows={billOf(approvedEarlier)} label="Approved by you, not ordered yet" />
+						</div>
 					</div>
 				{/if}
 			</div>
@@ -458,23 +462,26 @@
 			<h2 id="order-h" class="text-heading font-semibold text-ink">Order</h2>
 			<span class="text-meta text-ink-3">delivery {day(plan.deliverBy)}</span>
 		</div>
+		<!-- The same grid as every bill: the amounts sit in the price column. -->
 		<dl
-			class="mx-4 mt-3 grid grid-cols-[1fr_auto] gap-x-3 gap-y-1 border-t border-rule pt-2.5 text-meta"
+			class="mx-4 mt-3 {BILL_COLS} gap-y-1 border-t border-rule pt-2.5 text-meta"
 			aria-label="Where the plan's money stands"
 		>
 			{#each split.rows as r (r.label)}
-				<dt class="text-ink-2">{r.label}</dt>
-				<dd class="mono text-right text-ink">{money(r.cents)}</dd>
+				<dt class="col-span-2 text-ink-2">{r.label}</dt>
+				<dd class="mono text-right text-ink tabular-nums">{money(r.cents)}</dd>
 			{/each}
-			<dt class="font-medium text-ink">Plan total, ex VAT</dt>
-			<dd class="mono text-right font-medium text-ink">{money(split.total)}</dd>
+			<dt class="col-span-2 font-medium text-ink">Plan total, ex VAT</dt>
+			<dd class="mono text-right font-medium text-ink tabular-nums">{money(split.total)}</dd>
 			<dt class="text-ink-2">Delivery</dt>
-			<dd class="text-right text-ink">{day(plan.deliverBy)}</dd>
+			<dd class="col-span-2 text-right text-ink">{day(plan.deliverBy)}</dd>
 			{#if approval && pending}
 				<!-- An approval can't outlive the order cut-off: past it, nothing it approves can be ordered. -->
 				{@const capped = new Date(due).getTime() < new Date(approval.expiresAt).getTime()}
 				<dt class="text-ink-2">{capped ? 'Approve before the cut-off' : 'Approval valid until'}</dt>
-				<dd class="text-right text-ink">{storyTime(capped ? due : approval.expiresAt)}</dd>
+				<dd class="col-span-2 text-right text-ink">
+					{storyTime(capped ? due : approval.expiresAt)}
+				</dd>
 			{/if}
 		</dl>
 		{#if approval}

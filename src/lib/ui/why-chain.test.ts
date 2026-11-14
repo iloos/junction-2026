@@ -35,7 +35,7 @@ describe('Why chain (core fixture)', () => {
 		const v = Object.fromEntries(c.nodes.map((n) => [n.label, n.value]));
 		expect(v.Served).toBe('× 140 = 18.9 kg');
 		expect(v.Yield).toBe('÷ 0.7 = 27 kg to buy');
-		expect(v.Packs).toBe('13 ST ≈ 19.5 kg net');
+		expect(v.Packs).toBe('13 pcs ≈ 19.5 kg net');
 		// Served basis: 13 ST of cooked ham covers the 18.9 kg served (27 kg raw on the bone).
 		expect(v.Covers).toBe('18.9 kg planned, known stock');
 		expect(v.Rule).toMatch(/^Needs your approval/);

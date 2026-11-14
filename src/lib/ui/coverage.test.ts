@@ -79,7 +79,7 @@ describe('line basis (F14)', () => {
 				}
 			)
 		).toEqual({
-			buys: '13 ST',
+			buys: '13 pcs',
 			physical: '≈ 19.5 kg net',
 			unitPrice: '€15.43/ST',
 			comparison: '€10.29/kg'
@@ -98,7 +98,7 @@ describe('line basis (F14)', () => {
 		expect(kgLine.physical).toBeNull();
 		expect(kgLine.comparison).toBeNull();
 		expect(lineBasis({ value: 2, unit: 'KI' }, undefined)).toEqual({
-			buys: '2 KI',
+			buys: '2 cases',
 			physical: null,
 			unitPrice: null,
 			comparison: null

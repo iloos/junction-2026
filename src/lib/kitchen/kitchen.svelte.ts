@@ -1,4 +1,5 @@
 /* eslint-disable svelte/prefer-svelte-reactivity -- Maps and Sets here are built fresh and replaced wholesale ($state.raw), never mutated after. */
+import { errorWords } from './error-words';
 import type { Approval, DomainError, Line } from '$lib/core/contracts';
 import { ToolError, Unreachable, call, rendered, type ApiMode, type RenderedView } from './api';
 import type { ToolInput, ToolName, ToolOutput } from '$lib/core/contracts';
@@ -11,6 +12,8 @@ export interface ActivityItem {
 	text: string;
 	kind: 'edit' | 'rules' | 'approval' | 'commit' | 'retry' | 'error' | 'sim';
 	version: number;
+	/** Keys, ids, codes and hashes: shown in the System layer only. */
+	sys?: string;
 }
 
 /** Where a change to the plan on screen came from, when it wasn't this screen. */
@@ -281,7 +284,7 @@ export class KitchenStore {
 			const answer = await backend.setKitchen(this.mode, kitchenId);
 			this.focusedPlan = null;
 			this.lastCommit = null;
-			this.#log('rules', `Kitchen: ${kitchenId}`);
+			this.#log('rules', `Switched to ${this.snap?.kitchen.name ?? 'another kitchen'}`, kitchenId);
 			return answer;
 		});
 	}
@@ -292,9 +295,7 @@ export class KitchenStore {
 			const answer = await backend.setContention(this.mode, on, this.focusedPlan);
 			this.#log(
 				'sim',
-				on
-					? 'Simulator: another kitchen took 4 × palvikinkku 476768'
-					: 'Simulator: contention cleared'
+				on ? 'Simulator: another kitchen took 4 palvikinkku' : 'Simulator: contention cleared'
 			);
 			return answer;
 		});
@@ -334,7 +335,8 @@ export class KitchenStore {
 			}
 			this.#log(
 				'approval',
-				`${out.state}: ${(lineIds ?? a.lineIds).length} lines, bound to v${a.planVersion} · ${a.termsHash.slice(0, 8)}`
+				`${out.state === 'granted' ? 'Approved' : out.state === 'denied' ? 'Kept held' : 'Decided'}: ${(lineIds ?? a.lineIds).length} ${(lineIds ?? a.lineIds).length === 1 ? 'line' : 'lines'}`,
+				`${out.state} · bound to v${a.planVersion} · ${a.termsHash.slice(0, 8)}`
 			);
 		});
 		return ok;
@@ -371,10 +373,48 @@ export class KitchenStore {
 			this.#log(
 				replay ? 'retry' : 'commit',
 				replay
-					? `Retry with key ${key}: same receipt ${out.receiptId}, no second order`
-					: `${out.orderId} ordered: ${out.committedLineIds.length} lines, receipt ${out.receiptId}`
+					? 'Sent again: same order, nothing bought twice'
+					: `Ordered ${out.committedLineIds.length} ${out.committedLineIds.length === 1 ? 'line' : 'lines'}`,
+				replay
+					? `key ${key} · same receipt ${out.receiptId}`
+					: `${out.orderId} · receipt ${out.receiptId}`
 			);
 		});
+	}
+
+	/**
+	 * Cancel what is still open on another of this kitchen's plans (an old agent order): each open line goes to zero
+	 * through edit_line, the same command a grams edit uses, so the plan's history says who did it. Ordered lines
+	 * stay ordered. The page keeps showing its own plan.
+	 */
+	async cancelOther(planId: string, version: number) {
+		if (this.mode !== 'live' || !rendered.view) return false;
+		const runId = rendered.view.runId;
+		let ok = false;
+		await this.#run(async () => {
+			let view = { runId, planId, version };
+			const got = await call(this.mode, 'get_plan', { planId }, view);
+			view = { ...view, version: got.plan.version };
+			const open = got.plan.lines.filter(
+				(l) => !['committed', 'rejected', 'unorderable'].includes(l.state) && l.qty.value > 0
+			);
+			for (const l of open) {
+				const r = await call(
+					this.mode,
+					'edit_line',
+					{ planId, version: view.version, lineId: l.id, patch: { qty: 0 } },
+					view
+				);
+				view = { ...view, version: r.plan.version };
+			}
+			this.#log(
+				'edit',
+				`Cancelled an open order: ${open.length} ${open.length === 1 ? 'line' : 'lines'} set to zero`,
+				planId
+			);
+			ok = true;
+		});
+		return ok;
 	}
 
 	async openWhy(lineId: string) {
@@ -498,11 +538,11 @@ export class KitchenStore {
 			this.error = e.error;
 			// A cooldown is a wait, not a failure.
 			if (e.error.detail?.retryInMs) this.#log('sim', e.error.message);
-			else this.#log('error', `${e.error.code}: ${e.error.message}`);
+			else this.#log('error', errorWords(e.error), `${e.error.code}: ${e.error.message}`);
 		} else {
 			const message = e instanceof Error ? e.message : String(e);
 			this.error = { code: 'PROVIDER_UNAVAILABLE', message, retryable: true };
-			this.#log('error', message);
+			this.#log('error', errorWords(this.error), message);
 		}
 	}
 
@@ -542,10 +582,10 @@ export class KitchenStore {
 		this.#flashTimer = setTimeout(() => (this.flash = new Set()), 1400);
 	}
 
-	#log(kind: ActivityItem['kind'], text: string) {
+	#log(kind: ActivityItem['kind'], text: string, sys?: string) {
 		this.#seq += 1;
 		this.activity = [
-			{ id: this.#seq, kind, text, version: this.snap?.plan.version ?? 0 },
+			{ id: this.#seq, kind, text, sys, version: this.snap?.plan.version ?? 0 },
 			...this.activity
 		].slice(0, 30);
 	}

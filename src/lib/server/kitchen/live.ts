@@ -27,6 +27,7 @@ import { inWorkspace } from '$lib/server/adapters/simulator/overlay';
 import { rescueContention } from '$lib/core/services/contention';
 import { catchUp } from '$lib/server/bus';
 import type { DietFacts } from '$lib/ui/diet';
+import { qtyWords, readableName } from '$lib/ui/format';
 
 /** The palvikinkku the ham rescue relies on (13 of 15 in stock): the contention preset takes 4 of them. */
 const CONTENDED = { productId: '476768', left: 11, taken: 4 };
@@ -396,7 +397,7 @@ function titleOf(plan: Plan): string {
 	if (!labels.length) {
 		const bought = plan.lines
 			.filter((l) => l.qty.value > 0)
-			.map((l) => `${l.qty.value} ${l.qty.unit} ${l.productName ?? l.productId}`);
+			.map((l) => `${qtyWords(l.qty)} ${readableName(l.productName ?? l.productId)}`);
 		if (!bought.length) return 'Order';
 		return bought.length <= 2
 			? bought.join(', ')
@@ -523,11 +524,14 @@ async function buildSnapshot(s: Session): Promise<LiveSnapshot> {
 		.filter((p) => p.kitchenId === kitchen.id && p.id !== plan.id && p.lines.length > 0)
 		.map((p) => ({
 			id: p.id,
+			version: p.version,
 			title: (p.eventId && EVENT_SEED_BY_ID[p.eventId]?.title) || titleOf(p),
 			open: p.lines.filter((l) => !['committed', 'rejected', 'unorderable'].includes(l.state))
 				.length,
 			ordered: p.lines.filter((l) => l.state === 'committed').length
 		}))
+		// A plan with nothing open and nothing ordered (cancelled to zero) is no longer a task.
+		.filter((o) => o.open > 0 || o.ordered > 0)
 		.slice(-6);
 	return {
 		others,
