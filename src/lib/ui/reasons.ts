@@ -6,12 +6,12 @@ const TEXT: Record<string, { short: string; long: string }> = {
 		long: 'Valio cannot deliver this product to this kitchen on this date. Not a stock problem: it is not on the route.'
 	},
 	unknown: {
-		short: 'Unknown quantity',
-		long: 'Terminal item: Valio does not say how many there are. It can be ordered, but it never counts as cover.'
+		short: 'Quantity not stated',
+		long: "Valio doesn't state a quantity: ordered, it is not counted as cover until the supplier confirms."
 	},
 	UNKNOWN_REQUIRED: {
-		short: 'Unknown quantity',
-		long: 'Terminal item: Valio does not say how many there are. It can be ordered, but it never counts as cover.'
+		short: 'Quantity not stated',
+		long: "Valio doesn't state a quantity: your mandate asks before buying it. Ordered, it is not counted as cover until the supplier confirms."
 	},
 	INSUFFICIENT_STOCK: {
 		short: 'Not enough stock',
@@ -54,6 +54,10 @@ const TEXT: Record<string, { short: string; long: string }> = {
 	superseded: {
 		short: 'Replaced, not bought',
 		long: 'A substitute replaced this product; it stays in the plan at 0 so you can see what changed, and is not bought.'
+	},
+	'CAUTION.model_fit': {
+		short: 'Poor fit for the dish',
+		long: 'Gemini rates this a poor fit for the dish: check it before you approve.'
 	},
 	'CAUTION.model_constraint': {
 		short: 'Model caution',

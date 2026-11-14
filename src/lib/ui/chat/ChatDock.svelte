@@ -9,7 +9,11 @@
 		Plus,
 		Send
 	} from '@lucide/svelte';
+	import { untrack } from 'svelte';
 	import DecisionCard from '$lib/ui/DecisionCard.svelte';
+	import { decisionsOf } from '$lib/ui/decisions';
+	import { money } from '$lib/ui/format';
+	import { KitchenStore } from '$lib/kitchen/kitchen.svelte';
 	import Receipt from '$lib/ui/Receipt.svelte';
 	import type { ChatEvent, ChatTurnInput } from './types';
 	import { foldRows, outcomeLine, stepsSinceChef, workedLine, type Entry } from './turn-view';
@@ -33,6 +37,8 @@
 		taskId?: string;
 		/** Its own floating "Ask the agent" button; off when the app shell opens the dock. */
 		launcher?: boolean;
+		/** Said next to the composer, e.g. a shared demo room where others can see what you type. */
+		notice?: string | null;
 	}
 	let {
 		kitchenId = 'k-hotel',
@@ -40,7 +46,8 @@
 		pinned = true,
 		planId,
 		taskId: openTask,
-		launcher = true
+		launcher = true,
+		notice = null
 	}: Props = $props();
 
 	/**
@@ -48,10 +55,14 @@
 	 * navigating, which would reload the screen.
 	 */
 	const shell = useShell();
-	function locate(ev: MouseEvent, plan: string) {
+	function locate(
+		ev: MouseEvent,
+		plan: string,
+		at: { decision?: string; zone?: 'decide' | 'order' } = {}
+	) {
 		if (!shell || plan !== planId) return;
 		ev.preventDefault();
-		shell.locate = { planId: plan, at: Date.now() };
+		shell.locate = { planId: plan, at: Date.now(), ...at };
 		// The dock overlays the approval panel on desktop and the page on a phone: close it so the card shows.
 		if (!pinned) open = false;
 	}
@@ -136,6 +147,71 @@
 	const rows = $derived(foldRows(entries));
 	/** Steps so far in the turn that is running, for the indicator ("step 3"). */
 	const stepsThisTurn = $derived(stepsSinceChef(entries));
+	/**
+	 * Approving from the dock (D13): the newest decision's plan, when it is not the plan on the page, gets its own
+	 * Kitchen state here. The chef approves with the same exact terms, the same hold-to-confirm and the same Kitchen
+	 * command as the page, as the signed-in chef; never through the model or a chat turn. On the plan the page
+	 * shows, the page's card is the one control and the dock links to it.
+	 */
+	const lastDecision = $derived(
+		entries.findLast((x) => x.kind === 'event' && x.e.type === 'decision')
+	);
+	const actPlan = $derived(
+		lastDecision?.kind === 'event' && lastDecision.e.type === 'decision'
+			? lastDecision.e.planId
+			: null
+	);
+	let own = $state.raw<KitchenStore | null>(null);
+	let ownFor: string | null = null;
+	$effect(() => {
+		const id = actPlan;
+		if (!id || id === planId || !(open || pinned) || id === ownFor) return;
+		ownFor = id;
+		untrack(() => {
+			const st = new KitchenStore('live', false);
+			own = st;
+			void st.load(id);
+		});
+	});
+	/** The chef decided or ordered here: the turn's own outcome line predates it, so it gives way. */
+	const actedHere = $derived(!!own?.lastCommit);
+	const lastDecisionAt = $derived(lastDecision ? entries.indexOf(lastDecision) : -1);
+	const ownSnap = $derived(own?.snap && own.snap.plan.id === actPlan ? own.snap : null);
+	const liveDecisions = $derived(ownSnap ? decisionsOf(ownSnap.plan, ownSnap.approval) : []);
+	const ownNames = $derived(
+		new Map((ownSnap?.plan.lines ?? []).map((l) => [l.productId, l.productName ?? l.productId]))
+	);
+	const approvedOpen = $derived(
+		(ownSnap?.plan.lines ?? []).filter(
+			(l) => l.state !== 'committed' && l.view?.committable === true
+		)
+	);
+
+	/** The plan the task works on, from its newest ledger or decision. */
+	const taskPlan = $derived.by(() => {
+		for (let j = entries.length - 1; j >= 0; j--) {
+			const x = entries[j];
+			if (x.kind !== 'event') continue;
+			if (x.e.type === 'decision') return x.e.planId;
+			if (x.e.type === 'ledger' && x.e.ledger.needs[0]) return x.e.ledger.needs[0].planId;
+		}
+		return null;
+	});
+	/**
+	 * The task named by what it is about: its own title when the server sends one, else the chef's first words, else
+	 * the needs it holds. The task id is for the System layer.
+	 */
+	const taskTitle = $derived.by(() => {
+		for (const x of entries)
+			if (x.kind === 'event' && 'title' in x.e && typeof x.e.title === 'string' && x.e.title)
+				return x.e.title;
+		const said = entries.find((x) => x.kind === 'chef');
+		if (said?.kind === 'chef') return said.text;
+		const l = entries.findLast((x) => x.kind === 'event' && x.e.type === 'ledger');
+		const labels =
+			l?.kind === 'event' && l.e.type === 'ledger' ? l.e.ledger.needs.map((n) => n.label) : [];
+		return labels.length ? labels.slice(0, 3).join(', ') : 'Your task';
+	});
 	const doneLine = $derived(last?.kind === 'event' && last.e.type === 'done' ? last.e : undefined);
 
 	async function turn(body: ChatTurnInput, said?: string) {
@@ -249,7 +325,8 @@
 		<div class="min-w-0 flex-1">
 			<p class="text-body font-semibold">Purchasing agent</p>
 			<p class="truncate text-meta text-ink-3">
-				{taskId ? `Task ${taskId}` : 'Plans and orders within your mandate. Never approves.'}
+				{#if taskId}{taskTitle}<span class="sys-only mono"> · {taskId}</span>{:else}Plans and orders
+					within your mandate. Never approves.{/if}
 			</p>
 		</div>
 		<button
@@ -349,22 +426,70 @@
 					</li>
 				{:else if x.e.type === 'decision'}
 					{@const names = new Map(Object.entries(x.e.names))}
-					<li class="space-y-2">
-						{#each x.e.decisions as d (d.key)}
-							<DecisionCard decision={d} {names} due={x.e.due} readonly compact />
-						{/each}
-						<a
-							class="inline-flex items-center gap-1 font-medium text-propose underline"
-							href={x.e.approvalUrl}
-							onclick={(ev) => x.e.type === 'decision' && locate(ev, x.e.planId)}
-							>{x.e.planId === planId ? 'Show the decision' : 'Open the approval in Kitchen'}
-							<ArrowUpRight size={13} /></a
-						>
-						<p class="text-meta text-ink-3">
-							Only a chef approves, in the Kitchen screen. Then continue here.
-						</p>
-					</li>
-				{:else if x.e.type === 'ledger'}
+					{@const here = x.e.planId === planId}
+					{#if x === lastDecision && !here && ownSnap}
+						<!-- D13: the chef decides here, with the page's own card and command. -->
+						<li class="space-y-2" aria-label="Decide here">
+							{#each liveDecisions as d (d.key)}
+								<DecisionCard
+									decision={d}
+									names={ownNames}
+									busy={own?.busy}
+									onapprove={(ids) => own!.approve('grant', ids)}
+									onkeep={(ids) => void own!.approve('deny', ids)}
+								/>
+							{/each}
+							{#if !liveDecisions.length && approvedOpen.length && !own?.lastCommit}
+								<button
+									type="button"
+									class="w-full rounded-md bg-accent px-3 py-2 text-body font-semibold text-sheet hover:bg-accent-ink disabled:opacity-50"
+									disabled={own?.busy}
+									onclick={() => own!.commit()}
+									>Order the approved lines · {approvedOpen.length} ·
+									{money(approvedOpen.reduce((t, l) => t + (l.lineCents ?? 0), 0))}</button
+								>
+							{/if}
+							{#if own?.lastCommit}
+								<p class="text-body text-ink">
+									<b class="font-medium">Ordered</b> · {own.lastCommit.lines}
+									{own.lastCommit.lines === 1 ? 'line' : 'lines'},
+									<span class="mono">{money(own.lastCommit.totalCents)}</span>. Supplier
+									confirmation is on receipt
+									<span class="mono">{own.lastCommit.receiptId}</span>.
+								</p>
+							{/if}
+							{#if own?.error}<p class="text-meta text-out">{own.error.message}</p>{/if}
+							<a class="text-meta text-ink-2 underline" href={x.e.approvalUrl}
+								>Open this plan in the Kitchen</a
+							>
+						</li>
+					{:else}
+						<li class="space-y-2">
+							<!-- Each card opens its own decision on the page: the same card, where a chef approves it. -->
+							{#each x.e.decisions as d (d.key)}
+								<a
+									class="group block rounded-lg focus-visible:outline-2 focus-visible:outline-propose"
+									href={x.e.approvalUrl}
+									onclick={(ev) =>
+										x.e.type === 'decision' && locate(ev, x.e.planId, { decision: d.key })}
+									aria-label="{here
+										? 'Show'
+										: 'Open'} this decision on the Kitchen page: {d.title ?? d.reason}"
+								>
+									<DecisionCard decision={d} {names} due={x.e.due} readonly compact />
+									<span
+										class="mt-1 inline-flex items-center gap-1 text-meta font-medium text-propose group-hover:underline"
+										>{here ? 'Show on the page' : 'Open in the Kitchen'}
+										<ArrowUpRight size={13} aria-hidden="true" /></span
+									>
+								</a>
+							{/each}
+							<p class="text-meta text-ink-3">
+								Only a chef approves, on the page. Then continue here.
+							</p>
+						</li>
+					{/if}
+				{:else if x.e.type === 'ledger' && !(actedHere && i > lastDecisionAt)}
 					<li class="border-l-2 border-accent pl-3 text-ink" title={x.e.summary}>
 						{outcomeLine(x.e.ledger)}
 					</li>
@@ -374,11 +499,21 @@
 						<!-- The agent's answer, worded from the ledger (the line above carries the numbers). -->
 						<li class="text-ink">{x.e.text}</li>
 					{/if}
-					{#if x === last && (x.e.canContinue || x.e.state === 'awaiting_chef')}
+					{#if x === last && x.e.canContinue && taskPlan && taskPlan === planId}
+						<!-- The plan is on the page: its own Order button is the one primary action; the dock points to it. -->
+						<li>
+							<a
+								class="inline-flex items-center gap-1 text-meta font-medium text-accent-ink underline"
+								href="#order"
+								onclick={(ev) => locate(ev, taskPlan!, { zone: 'order' })}
+								>Order it on the page <ArrowUpRight size={13} aria-hidden="true" /></a
+							>
+						</li>
+					{:else if x === last && !actedHere && (x.e.canContinue || x.e.state === 'awaiting_chef')}
 						<li class="flex flex-wrap gap-2">
 							<button
 								type="button"
-								class="rounded-md bg-accent px-3 py-1.5 text-meta font-semibold text-sheet disabled:opacity-50"
+								class="rounded-md border border-accent px-3 py-1.5 text-meta font-semibold text-accent-ink hover:bg-accent-wash disabled:opacity-50"
 								disabled={busy}
 								onclick={() => turn({ continue: true }, 'Continue')}
 							>
@@ -397,6 +532,14 @@
 		{#if error}<li class="text-out">{error}</li>{/if}
 	</ol>
 
+	{#if notice}
+		<p
+			class="border-t border-signoff/40 bg-signoff-wash px-3 py-1.5 text-meta text-ink"
+			role="note"
+		>
+			{notice}
+		</p>
+	{/if}
 	<form class="flex items-end gap-2 border-t border-rule p-3" onsubmit={submit}>
 		<label class="sr-only" for="chat-text">Message the agent</label>
 		<textarea

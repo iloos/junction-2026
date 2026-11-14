@@ -60,7 +60,7 @@ type LooseRescue = any;
 
 const AVAIL_TEXT: Record<AvailabilityKind, string> = {
 	known: 'in stock',
-	unknown: 'quantity unknown (supplier-delivered)',
+	unknown: "Valio doesn't state a quantity",
 	out: 'out of stock',
 	undeliverable: 'not deliverable',
 	blocked: 'not orderable yet'
@@ -73,7 +73,7 @@ export function availText(o?: Offer): string {
 	const a = o?.availability;
 	if (!a) return 'no availability data';
 	if (a.kind === 'known')
-		return a.amount === null ? 'in stock (no limit stated)' : `${a.amount} in stock`;
+		return a.amount === null ? "Valio doesn't state a quantity" : `${a.amount} in stock`;
 	return AVAIL_TEXT[a.kind];
 }
 

@@ -3,6 +3,7 @@
  * Pages publish what the shell shows: the sandbox they read and write, and where their data came from.
  */
 import { getContext, setContext } from 'svelte';
+import type { KitchenStore } from '$lib/kitchen/kitchen.svelte';
 
 export interface SandboxInfo {
 	/** Visitor workspace id (D9), e.g. ws-j-…; `ws-demo` is the shared presenter sandbox. */
@@ -31,8 +32,17 @@ export class Shell {
 	chatOpen = $state(false);
 	/** What the agent is scoped to on this page: the kitchen and the plan on screen (Kitchen, Request, Ops). */
 	chat = $state<{ kitchenId?: string; planId?: string }>({});
+	/** The Kitchen screen's own state while it is open: the dock defers to it for the plan on screen. */
+	kitchen = $state.raw<KitchenStore | null>(null);
 	/** A request to show a plan's decisions in place (the dock's decision card on the plan already on screen). */
-	locate = $state<{ planId: string; at: number } | null>(null);
+	locate = $state<{
+		planId: string;
+		at: number;
+		/** One decision to bring into view (Decision.key); the panel when absent. */
+		decision?: string;
+		/** Which part of the page: the decisions (default) or the order panel. */
+		zone?: 'decide' | 'order';
+	} | null>(null);
 }
 
 const KEY = Symbol('shell');

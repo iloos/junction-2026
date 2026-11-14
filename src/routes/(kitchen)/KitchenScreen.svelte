@@ -16,6 +16,7 @@
 	import GramsStepper from '$lib/ui/GramsStepper.svelte';
 	import WhyDrawer from '$lib/ui/WhyDrawer.svelte';
 	import DishStatus from '$lib/ui/DishStatus.svelte';
+	import AgentMark from '$lib/ui/AgentMark.svelte';
 	import { planDiff } from '$lib/ui/plan-diff';
 	import { dishGate } from '$lib/ui/coverage';
 	import { whyChain } from '$lib/ui/why-chain';
@@ -125,6 +126,23 @@
 	}
 
 	const snap = $derived(k.snap);
+	/** A shared demo room: others see what is typed here (the loader says so; null in your own sandbox). */
+	const roomNotice = $derived(
+		(page.data as { room?: { notice?: string | null } }).room?.notice ?? null
+	);
+	/** Why a link didn't land exactly where it pointed, if it didn't. */
+	const linkNote = $derived.by(() => {
+		if (!fromOps || !snap) return null;
+		if (fromOps.ws && snap.clock?.workspaceId && fromOps.ws !== snap.clock.workspaceId)
+			return 'The link is from another sandbox, which only its own browser can open; showing yours.';
+		if (fromOps.run && snap.clock?.runId && fromOps.run !== snap.clock.runId)
+			return 'The link is from before this sandbox was started over; showing the current plan.';
+		if (fromOps.plan && fromOps.plan !== snap.plan.id)
+			return "The link points to a plan this sandbox doesn't have; showing this kitchen's plan.";
+		if (Number.isFinite(fromOps.v) && fromOps.v !== snap.plan.version)
+			return `The plan changed since the link was made (v${fromOps.v} → v${snap.plan.version}). Check what changed before acting.`;
+		return null;
+	});
 	/** The latest change to this plan, before → after, from the two snapshots (not from copy). */
 	const changed = $derived(
 		k.changeFrom && k.snap
@@ -169,10 +187,19 @@
 		if (!l || l.at === locatedAt || l.planId !== k.snap?.plan.id) return;
 		locatedAt = l.at;
 		untrack(() => {
-			zone = 'decide';
-			void tick().then(() =>
-				document.getElementById('approval')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-			);
+			zone = l.zone ?? 'decide';
+			void tick().then(() => {
+				const card = l.decision
+					? document.querySelector<HTMLElement>(`[data-decision="${CSS.escape(l.decision)}"]`)
+					: null;
+				const target = card ?? document.getElementById(l.zone === 'order' ? 'order' : 'approval');
+				target?.scrollIntoView({ behavior: 'smooth', block: card ? 'center' : 'start' });
+				// The exact card the dock pointed at shows itself once.
+				card?.animate(
+					[{ boxShadow: '0 0 0 4px var(--color-propose)' }, { boxShadow: '0 0 0 0 transparent' }],
+					{ duration: 1600, easing: 'ease-out' }
+				);
+			});
 		});
 	});
 	const view = $derived(k.view);
@@ -284,7 +311,7 @@
 	const orderedState = $derived.by(() => {
 		const done = (plan?.lines ?? []).filter((l) => l.state === 'committed');
 		const orders = snap?.orders ?? [];
-		if (!done.length || orderable.lines > 0 || !orders.length) return null;
+		if (!done.length || !orders.length) return null;
 		// Every order on the plan (in-mandate lines may have gone first, approved ones later), from the receipts.
 		const lines = orders.reduce((a, o) => a + o.output.committedLineIds.length, 0);
 		const awaiting = orders.reduce((a, o) => a + o.output.awaitingSupplier.length, 0);
@@ -341,6 +368,7 @@
 		shell.labels = { source: valioSource, offline: k.mode === 'fixture' };
 		// The agent dock is scoped to this kitchen and the plan on screen.
 		shell.chat = { kitchenId: snap?.kitchen.id, planId: snap?.plan.id };
+		shell.kitchen = k;
 		shell.sandbox = snap?.clock
 			? {
 					workspace: snap.clock.workspaceId ?? 'ws-demo',
@@ -354,6 +382,7 @@
 			shell.labels = null;
 			shell.sandbox = null;
 			shell.chat = {};
+			shell.kitchen = null;
 		};
 	});
 
@@ -402,6 +431,11 @@
 				{/each}
 			</select>
 		</label>
+		{#if roomNotice}
+			<p class="min-w-0 rounded-md bg-signoff-wash px-2 py-1 text-meta text-ink" role="note">
+				{roomNotice}
+			</p>
+		{/if}
 		{#if snap}
 			<p class="max-w-[95ch] min-w-0 text-meta text-ink-2">
 				<span class="font-medium text-ink">Mandate, in the chef's words:</span>
@@ -443,36 +477,13 @@
 	</div>
 {/if}
 
-{#if fromOps && snap}
-	<div class="border-b border-propose/30 bg-propose-wash" role="status">
+{#if linkNote}
+	<!-- Only when the link and what this browser shows disagree; a link that landed needs no banner. -->
+	<div class="border-b border-signoff/40 bg-signoff-wash" role="status">
 		<div
 			class="mx-auto flex max-w-[1440px] flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2 text-body text-ink md:px-6"
 		>
-			<b class="font-medium">Opened by link</b>
-			<span class="text-ink-2"
-				>{snap.kitchen.name.replace(' (fictional)', '')}{fromOps.need
-					? ` · ${view?.dishes.find((d) => d.needId === fromOps!.need)?.nameFi ?? fromOps.need}`
-					: ''}</span
-			>
-			{#if fromOps.ws && snap.clock?.workspaceId && fromOps.ws !== snap.clock.workspaceId}
-				<span class="text-signoff"
-					>The link is from another sandbox, which only its own browser can open; showing yours.</span
-				>
-			{:else if fromOps.run && snap.clock?.runId && fromOps.run !== snap.clock.runId}
-				<span class="text-signoff"
-					>The link is from an earlier run of this sandbox (it was started over); showing the
-					current plan.</span
-				>
-			{:else if fromOps.plan && fromOps.plan !== snap.plan.id}
-				<span class="text-signoff"
-					>The link points to another plan ({fromOps.plan}); showing this kitchen's current plan.</span
-				>
-			{:else if Number.isFinite(fromOps.v) && fromOps.v !== snap.plan.version}
-				<span class="text-signoff"
-					>Operations saw v{fromOps.v}; the plan is now v{snap.plan.version}. Check what changed
-					before acting.</span
-				>
-			{/if}
+			<span>{linkNote}</span>
 			<button
 				type="button"
 				class="ml-auto text-meta text-ink-2 underline underline-offset-2"
@@ -588,6 +599,7 @@
 			name={names.get(l.productId) ?? l.productId}
 			approved={approvedIds.has(l.id)}
 			flash={k.flash.has(l.id)}
+			by={inGroup ? undefined : snap?.byAgent?.[l.id]}
 			replaces={l.substituteFor && !inGroup
 				? {
 						name: names.get(l.substituteFor) ?? l.substituteFor,
@@ -616,6 +628,9 @@
 					cannot={needsYou.cannot}
 					{orderable}
 					ordered={orderedState}
+					openLines={(plan?.lines ?? []).filter(
+						(l) => !['committed', 'rejected', 'unorderable'].includes(l.state) && l.qty.value > 0
+					).length}
 					others={(snap?.others ?? []).map((o) => ({
 						...o,
 						href: `${resolve('/')}?kitchen=${snap!.kitchen.id}&plan=${o.id}`
@@ -633,14 +648,16 @@
 					{/snippet}
 				</TaskHeader>
 				{#if isEvent}<p class="mt-2 text-meta text-ink-2">
-						A normal week <span class="mono">{money(view.normalWeek.cents, { whole: true })}</span>
-						({view.normalWeek.lines} lines) → this week
-						<span class="mono text-ink">{money(view.thisWeek.cents, { whole: true })}</span>
-						({view.thisWeek.lines} lines): the event adds
+						The event adds
 						<span class="mono text-ink"
 							>{moneyDelta(view.thisWeek.cents - view.normalWeek.cents)}</span
 						>
-						and <span class="mono">{fixed(view.eventKg)}</span> kg of food.
+						and <span class="mono text-ink">{fixed(view.eventKg)}</span> kg of food to a normal week
+						<span class="text-ink-3"
+							>(team estimate: <span class="mono"
+								>{money(view.normalWeek.cents, { whole: true })}</span
+							>, {view.normalWeek.lines} lines)</span
+						>.
 					</p>{/if}
 				{#if weekMeter}
 					<div class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-meta text-ink-3">
@@ -752,6 +769,8 @@
 										>{:else if l.before === l.after}<span
 											>stays <span class="mono">{num(l.after)} {l.unit}</span></span
 										>{:else}<span class="mono">{num(l.before)} → {num(l.after)} {l.unit}</span>{/if}
+									{#if l.before !== l.after && snap?.byAgent?.[l.lineId]}
+										· <AgentMark by={snap.byAgent[l.lineId]} />{/if}
 								</li>
 							{/each}
 							{#if changed.lines.length > 4}<li>and {changed.lines.length - 4} more lines</li>{/if}
@@ -800,7 +819,9 @@
 											original={d.gDefault}
 											label={d.nameFi}
 											pending={k.pendingGrams[d.id]}
-											disabled={k.readOnly || !d.editable || !!orderedState}
+											disabled={k.readOnly ||
+												!d.editable ||
+												lines.some((l) => l.state === 'committed')}
 											onchange={(g) => k.setGrams(d.id, g)}
 										/>{/if}
 									<div class="min-w-0 pt-1">
@@ -848,6 +869,7 @@
 										{#if g.make}
 											<li>
 												<StrategyCard
+													by={g.lines.map((l) => snap?.byAgent?.[l.id]).find(Boolean)}
 													title={d.nameFi}
 													lines={g.lines}
 													replaces={g.lines[0]?.substituteFor

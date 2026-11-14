@@ -1,4 +1,5 @@
 import type { Source } from '$lib/core/contracts';
+import { humanDates } from './format';
 
 /**
  * How a provenance source reads on screen. Four families the pitch promises the judge:
@@ -21,6 +22,21 @@ export const SOURCE_LABEL: Record<Source | 'mandate', { label: string; family: S
 	mandate: { label: 'Your mandate', family: 'rule' }
 };
 
-export function sourceLabel(source: string): { label: string; family: SourceFamily } {
-	return SOURCE_LABEL[source as Source] ?? { label: source, family: 'estimate' };
+/**
+ * A source's chip. A free-text provenance note in place of a source code (the scenario's date shift: "scenario
+ * dates: D-1 cut-off…") is labelled by its kind, with the note kept as the chip's title; anything else unknown shows
+ * as a short label, never as a raw sentence with ISO dates in it.
+ */
+export function sourceLabel(source: string): {
+	label: string;
+	family: SourceFamily;
+	note?: string;
+} {
+	const known = SOURCE_LABEL[source as Source];
+	if (known) return known;
+	if (/^scenario dates\b/i.test(source))
+		return { label: 'Scenario dates', family: 'scenario', note: humanDates(source) };
+	if (source.length > 24 || /\d{4}-\d\d-\d\d/.test(source))
+		return { label: 'Note', family: 'estimate', note: humanDates(source) };
+	return { label: source, family: 'estimate' };
 }

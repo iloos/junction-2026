@@ -65,3 +65,35 @@ const hel = new Intl.DateTimeFormat('en-GB', {
 export function storyTime(at: string | Date): string {
 	return hel.format(typeof at === 'string' ? new Date(at) : at);
 }
+
+/**
+ * Text from the core or a provider with ISO dates in it, as a person reads dates: "2026-11-15T17:00:00+02:00" →
+ * "Sun 15 Nov, 17:00", "2026-12-14" → "Mon 14 Dec". Everything else is left as written.
+ */
+export function humanDates(text: string): string {
+	return text.replace(
+		/\b(20\d\d-\d\d-\d\d)(T\d\d:\d\d(?::\d\d(?:\.\d+)?)?(?:Z|[+-]\d\d:\d\d)?)?/g,
+		(_, date: string, time?: string) => (time ? storyTime(`${date}${time}`) : day(date))
+	);
+}
+
+const KEEP_UPPER = new Set(['MSC', 'ASC', 'UHT', 'HK', 'FI', 'EU', 'XL', 'GN', 'BBQ', 'LTO']);
+/**
+ * A catalogue name as people read it: the normalised short name when the catalogue has one, else Valio's ALL-CAPS
+ * name in sentence case ("AIMO 2,5/1,25KG SINAPPISILLI MSC" → "Aimo 2,5/1,25kg sinappisilli MSC"). Mixed-case
+ * names are left as they are.
+ */
+export function readableName(raw: string, short?: string | null): string {
+	if (short) return short;
+	const letters = raw.replace(/[^A-Za-zÅÄÖåäö]/g, '');
+	const upper = letters.replace(/[^A-ZÅÄÖ]/g, '').length;
+	if (letters.length < 4 || upper / letters.length < 0.7) return raw;
+	return raw
+		.split(/(\s+)/)
+		.map((w, i) => {
+			if (KEEP_UPPER.has(w)) return w;
+			const lower = w.toLocaleLowerCase('fi');
+			return i === 0 ? lower.charAt(0).toLocaleUpperCase('fi') + lower.slice(1) : lower;
+		})
+		.join('');
+}

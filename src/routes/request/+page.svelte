@@ -47,6 +47,7 @@
 		tierWords,
 		UNIT_WORDS
 	} from '$lib/ui/request/words';
+	import { availText } from '$lib/kitchen/live-view';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
@@ -987,11 +988,7 @@
 											</dd>
 											<dt class="text-ink-3">Availability</dt>
 											<dd>
-												{o?.availability.kind === 'known'
-													? o.availability.amount === null
-														? 'unlimited'
-														: `${o.availability.amount} available`
-													: o?.availability.kind}{o?.availability.logisticModel
+												{availText(o ?? undefined)}{o?.availability.logisticModel
 													? ` · ${o.availability.logisticModel}`
 													: ''}{cutoffText(o?.availability.closingTime ?? null)}
 											</dd>
