@@ -124,6 +124,44 @@
 				"en": ["How much does butter cost?", "Is lactose-free milk available for Thursday?"],
 				"fi": ["Paljonko voi maksaa?", "Onko laktoositonta maitoa saatavilla torstaiksi?"]
 			}
+		},
+		{
+			"id": "late-tomorrow",
+			"kind": "late",
+			"kitchen": "k-hotel",
+			"now": "2026-12-07T21:40:00+02:00",
+			"late": {
+				"requested": "2026-12-08",
+				"offer": "2026-12-09"
+			},
+			"$comment": "Monday 21:40 (SCENARIO.start), after Valio's 17:00 cut-off: tomorrow is too late. Never committed for Tue 8 Dec, never moved silently; the passed cut-off is named and Wed 9 Dec (Stock D-1) offered, or the date asked.",
+			"texts": {
+				"en": ["4 kg lactose-free butter tomorrow", "Order 4 kg lactose-free butter for tomorrow"],
+				"fi": ["4 kg laktoositonta voita huomiseksi", "Tilaa 4 kg laktoositonta voita huomiseksi"]
+			},
+			"expectFail": {
+				"LATE-request-words": [
+					"en#1.request.late.namesCutoff",
+					"en#1.request.late.offersNext",
+					"en#2.request.late.namesCutoff",
+					"en#2.request.late.offersNext",
+					"fi#1.request.late.namesCutoff",
+					"fi#1.request.late.offersNext",
+					"fi#2.request.late.namesCutoff",
+					"fi#2.request.late.offersNext"
+				],
+				"LATE-agent-words": [
+					"en#1.agent.late.namesCutoff",
+					"en#1.agent.late.offersNext",
+					"en#2.agent.late.namesCutoff",
+					"en#2.agent.late.offersNext",
+					"fi#1.agent.late.namesCutoff",
+					"fi#1.agent.late.offersNext",
+					"fi#2.agent.late.namesCutoff",
+					"fi#2.agent.late.offersNext"
+				]
+			},
+			"$expectFailNote": "Today the line is held unorderable with reason cutoff_passed (no commit, no shift), but /request says nothing in words and offers no date (B), and the agent says 'no orderable line, find a substitute', which points at the product instead of the date (E)."
 		}
 	]
 }

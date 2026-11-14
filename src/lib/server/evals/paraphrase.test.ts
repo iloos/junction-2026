@@ -7,7 +7,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { applyExpectFail } from '../../../../evals/check';
+import { applyExpectFail, checkLate } from '../../../../evals/check';
 import type { CheckResult } from '../../../../evals/types';
 import { cases, checkBasket, playText, type Played } from './fidelity';
 
@@ -19,7 +19,10 @@ interface Phrasing {
 }
 interface Intent {
 	id: string;
-	kind: 'order' | 'event' | 'question';
+	kind: 'order' | 'event' | 'question' | 'late';
+	/** Scenario clock for this intent (default: Monday 09:00, before the cut-off). */
+	now?: string;
+	late?: { requested: string; offer: string };
 	kitchen: string;
 	sameAs?: string;
 	texts?: Record<string, string[]>;
@@ -44,6 +47,14 @@ function phrasings(i: Intent): [string, Phrasing][] {
 
 function check(i: Intent, key: string, p: Phrasing, path: string, r: Played): CheckResult[] {
 	const k = (s: string) => `${key}.${path}.${s}`;
+	if (i.kind === 'late')
+		return checkLate(`${key}.${path}`, i.late!, {
+			plans: r.plans,
+			committedFor: r.committedFor,
+			said: r.said,
+			askedDate:
+				/\?/.test(r.said) && /(?<!\p{L})(date|day|when|päivä|milloin)(?!\p{L})/iu.test(r.said)
+		});
 	if (i.kind === 'order') {
 		const c = cases.find((x) => x.id === i.sameAs);
 		if (!c) return [{ key: k('sameAs'), pass: false, detail: `no fidelity case ${i.sameAs}` }];
@@ -93,7 +104,19 @@ describe('paraphrase set', () => {
 			for (const [key, p] of phrasings(i))
 				for (const path of ['request', 'agent'] as const)
 					results.push(
-						...check(i, key, p, path, await playText(i.kitchen, p.text, path, `${i.id}-${key}`))
+						...check(
+							i,
+							key,
+							p,
+							path,
+							await playText(
+								i.kitchen,
+								p.text,
+								path,
+								`${i.id}-${key}`,
+								i.now ? new Date(i.now) : undefined
+							)
+						)
 					);
 			const final = applyExpectFail(results, i.expectFail);
 			const failed = final.filter((r) => !r.pass);

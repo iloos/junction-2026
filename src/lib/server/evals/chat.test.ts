@@ -1,6 +1,7 @@
 /**
  * Chat-session trials (evals/chat/trials/*.json): scripted chef turns through the real chat entry, with human acts
- * (approve, edit) on other screens between turns, on a fresh PGlite workspace. After every step the driver observes
+ * (approve, edit) on other screens between turns, on a fresh PGlite workspace; the driver answers each clarification
+ * from the trial's `answers` by field. After every step the driver observes
  * the task record, get_plan (FulfilmentView, approval), receipts and the ops written; evals/chat/check.ts judges
  * clarification, approval handoff, continuation and a truthful ledger, never the model's prose.
  *
@@ -10,7 +11,7 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { scenarioDate } from '$lib/core/scenario';
+import { SCENARIO, scenarioDate } from '$lib/core/scenario';
 import {
 	checkTrial,
 	type ChatEvent,
@@ -21,12 +22,15 @@ import {
 } from '../../../../evals/chat/check';
 import { applyExpectFail } from '../../../../evals/check';
 import { trialWorkspace } from '../agent/trial-harness';
-import { FIDELITY_NOW } from './fidelity';
 
 interface Trial {
 	id: string;
 	kitchen: string;
+	/** Scenario clock (default SCENARIO.start, Monday 21:40, after the 17:00 cut-off, as on prod). */
+	now?: string;
 	steps: ChatStep[];
+	/** How the chef answers a clarification, by field. */
+	answers?: Record<string, unknown>;
 	expect?: Record<string, StepExpect>;
 	expectFail?: Record<string, string[]>;
 }
@@ -60,36 +64,97 @@ async function collect(r: ReturnType<ChatTurn>): Promise<ChatEvent[]> {
 
 async function play(t: Trial, turn: ChatTurn): Promise<Observed[]> {
 	const w = await trialWorkspace();
-	w.env.ports.clock = { now: () => FIDELITY_NOW };
-	const today = scenarioDate(w.env.ports.clock.now());
+	const now = new Date(t.now ?? SCENARIO.start);
+	w.env.ports.clock = { now: () => now };
+	const today = scenarioDate(now);
 	const kitchen = (await w.env.ports.store.kitchens(w.env.workspaceId)).find(
 		(k) => k.id === t.kitchen
 	)!;
 	const chef = w.ctx('chef');
+	const deps = {
+		handlers: w.handlers,
+		ctx: chef,
+		ports: w.env.ports,
+		workspaceId: w.env.workspaceId,
+		kitchen,
+		today
+	};
 	const observed: Observed[] = [];
 	let taskId: string | undefined;
+	const getTask = async () =>
+		taskId ? ((await w.env.ports.tasks?.get(w.env.workspaceId, taskId)) ?? null) : null;
 
-	for (const step of t.steps) {
-		const opsBefore = w.ops.length;
-		let events: ChatEvent[] = [];
-		const task0 = taskId ? await w.env.ports.tasks?.get(w.env.workspaceId, taskId) : null;
-		const primary = task0?.plans.find((p) => p.role === 'primary')?.planId;
+	/** State after one turn or human act. */
+	async function observe(
+		step: ChatStep,
+		stepIndex: number,
+		events: ChatEvent[],
+		opsBefore: number
+	) {
+		const task = await getTask();
+		const s = await w.state();
+		const plans: Observed['plans'] = [];
+		for (const ref of task?.plans ?? []) {
+			const v = await w.handlers.get_plan(chef, { planId: ref.planId });
+			if (!v.ok) continue;
+			plans.push({
+				id: ref.planId,
+				deliverBy: v.value.plan.deliverBy,
+				lines: v.value.plan.lines.map((l) => ({ state: l.state, reasons: l.reasons })),
+				approval: v.value.approval
+					? { id: v.value.approval.id, state: v.value.approval.state }
+					: null,
+				needs: (v.value.plan.view?.fulfilment ?? []).map((f) => ({ ...f, needId: f.needId }))
+			});
+		}
+		observed.push({
+			step,
+			stepIndex,
+			events,
+			task: (task as unknown as TaskView) ?? null,
+			plans,
+			receipts: Object.values(s.receipts).map((r) => {
+				const o = s.orders[r.orderId];
+				return {
+					id: r.id,
+					planId: o?.planId ?? '?',
+					idempotencyKey: o?.idempotencyKey ?? r.id,
+					totalCents: o?.totalCents ?? 0
+				};
+			}),
+			ops: w.ops.slice(opsBefore).map((e) => ({
+				type: e.op.type,
+				actor: e.actor.kind,
+				initiatedBy: e.initiatedBy?.kind,
+				state: e.op.type === 'RecordApproval' ? e.op.approval.state : undefined
+			}))
+		});
+	}
+
+	for (const [n, step] of t.steps.entries()) {
+		let opsBefore = w.ops.length;
+		const primary = (await getTask())?.plans.find((p) => p.role === 'primary')?.planId;
 		if ('chef' in step) {
-			events = await collect(
-				turn(
-					{ ...step.chef, taskId },
-					{
-						handlers: w.handlers,
-						ctx: chef,
-						ports: w.env.ports,
-						workspaceId: w.env.workspaceId,
-						kitchen,
-						today
-					}
-				)
-			);
+			const events = await collect(turn({ ...step.chef, taskId }, deps));
 			taskId ??= events.map((e) => e.taskId).find((x): x is string => typeof x === 'string');
-		} else if (primary && step.human === 'approve') {
+			await observe(step, n, events, opsBefore);
+			// The chef answers each clarification from the trial's answers, as a person would, up to 4 rounds.
+			for (let round = 0; round < 4; round++) {
+				const p = (await getTask())?.pending;
+				const value = p?.kind === 'clarify' ? t.answers?.[p.field] : undefined;
+				if (p?.kind !== 'clarify' || value === undefined) break;
+				opsBefore = w.ops.length;
+				const answer = { answer: { field: p.field, value } };
+				await observe(
+					{ chef: answer },
+					n,
+					await collect(turn({ ...answer, taskId }, deps)),
+					opsBefore
+				);
+			}
+			continue;
+		}
+		if (primary && step.human === 'approve') {
 			const v = await w.handlers.get_plan(chef, { planId: primary });
 			const a = v.ok ? v.value.approval : null;
 			if (a)
@@ -110,42 +175,7 @@ async function play(t: Trial, turn: ChatTurn): Promise<Observed[]> {
 					patch: { qty: { value: step.qty ?? line.qty.value + 1, unit: line.qty.unit } }
 				} as never);
 		}
-
-		const task = taskId ? await w.env.ports.tasks?.get(w.env.workspaceId, taskId) : null;
-		const s = await w.state();
-		const plans: Observed['plans'] = [];
-		for (const ref of task?.plans ?? []) {
-			const v = await w.handlers.get_plan(chef, { planId: ref.planId });
-			if (!v.ok) continue;
-			plans.push({
-				id: ref.planId,
-				approval: v.value.approval
-					? { id: v.value.approval.id, state: v.value.approval.state }
-					: null,
-				needs: (v.value.plan.view?.fulfilment ?? []).map((f) => ({ ...f, needId: f.needId }))
-			});
-		}
-		observed.push({
-			step,
-			events,
-			task: (task as unknown as TaskView) ?? null,
-			plans,
-			receipts: Object.values(s.receipts).map((r) => {
-				const o = s.orders[r.orderId];
-				return {
-					id: r.id,
-					planId: o?.planId ?? '?',
-					idempotencyKey: o?.idempotencyKey ?? r.id,
-					totalCents: o?.totalCents ?? 0
-				};
-			}),
-			ops: w.ops.slice(opsBefore).map((e) => ({
-				type: e.op.type,
-				actor: e.actor.kind,
-				initiatedBy: e.initiatedBy?.kind,
-				state: e.op.type === 'RecordApproval' ? e.op.approval.state : undefined
-			}))
-		});
+		await observe(step, n, [], opsBefore);
 	}
 	return observed;
 }

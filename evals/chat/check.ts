@@ -1,6 +1,7 @@
 // Chat-session checks: a multi-turn trial is judged on the task record, the plans and the op log after each step,
 // never on the model's prose (except that the closing text may claim nothing the state does not hold). Pure: the
 // driver (src/lib/server/evals/chat.test.ts) observes the app; this file only compares. Node runs it directly.
+import { checkLate, type LateWant } from '../check.ts';
 import type { CheckResult } from '../types.ts';
 
 /** One line of the /api/chat/turn NDJSON stream, as far as the checks read it. */
@@ -52,11 +53,15 @@ export interface TaskView {
 }
 export interface PlanView {
 	id: string;
+	deliverBy?: string;
+	lines?: { state: string; reasons?: string[] }[];
 	approval: { id: string; state: string } | null;
 	needs: NeedBuckets[];
 }
 export interface Observed {
 	step: ChatStep;
+	/** The scripted step this observation belongs to (a chef step may take several turns when the driver answers its clarifications). */
+	stepIndex?: number;
 	/** NDJSON events of a chef turn; empty for a human step. */
 	events: ChatEvent[];
 	task: TaskView | null;
@@ -68,8 +73,8 @@ export interface Observed {
 
 /** What a trial file may expect after a step (all optional; invariants run on every step regardless). */
 export interface StepExpect {
-	/** The one field asked this turn, or null for no question. */
-	asks?: string | null;
+	/** The field asked this turn (one of a list), or null for no question. */
+	asks?: string | string[] | null;
 	pending?: TaskView['pending']['kind'] | TaskView['pending']['kind'][];
 	taskState?: string | string[];
 	/** The primary plan is the one of the previous step (continuation, not a new plan). */
@@ -80,6 +85,8 @@ export interface StepExpect {
 	approvalVoided?: boolean;
 	/** Slot values after the step. */
 	slots?: Record<string, unknown>;
+	/** The requested date is past its cut-off: caught before ordering, named, next date offered or the date asked (over every turn of the step). */
+	late?: LateWant;
 }
 
 const ORDERED = /\b(ordered|committed|placed the order|tilattu|tilasin|tilaus tehty)\b/i;
@@ -153,7 +160,9 @@ export function checkStep(
 	if (want.asks !== undefined)
 		add(
 			'asks',
-			want.asks === null ? asked.length === 0 : eq(asked, [want.asks]),
+			want.asks === null
+				? asked.length === 0
+				: asked.length === 1 && ([] as string[]).concat(want.asks).includes(asked[0]),
 			`asked ${JSON.stringify(asked)}`
 		);
 	if (want.pending !== undefined)
@@ -239,10 +248,43 @@ export function checkLedger(i: number, o: Observed): CheckResult[] {
 	return out;
 }
 
-/** Every step of a trial; `expect` is keyed by step index. */
+/**
+ * Every observation of a trial. `expect` is keyed by scripted step index and applies to the last observation of that
+ * step; `late` reads every turn of the step (what was said and whether the date was asked).
+ */
 export function checkTrial(
 	observed: Observed[],
 	expect: Record<string, StepExpect> = {}
 ): CheckResult[] {
-	return observed.flatMap((o, i) => checkStep(i, o, i ? observed[i - 1] : null, expect[i]));
+	const stepOf = (o: Observed, i: number) => o.stepIndex ?? i;
+	return observed.flatMap((o, i) => {
+		const n = stepOf(o, i);
+		const last = observed.findLastIndex((x, j) => stepOf(x, j) === n) === i;
+		const first = observed.findIndex((x, j) => stepOf(x, j) === n) === i;
+		// `asks` judges the step's first turn (the chef's words); the rest judge where the step ended.
+		const { asks, ...rest } = expect[n] ?? {};
+		const want = { ...(first && asks !== undefined ? { asks } : {}), ...(last ? rest : {}) };
+		const out = checkStep(i, o, i ? observed[i - 1] : null, want);
+		if (last && want?.late) {
+			const turns = observed.filter((x, j) => stepOf(x, j) === n);
+			const events = turns.flatMap((x) => x.events);
+			const plans = o.plans.filter(
+				(p) => p.id === o.task?.plans.find((r) => r.role === 'primary')?.planId
+			);
+			out.push(
+				...checkLate(`${i}`, want.late, {
+					plans: plans.map((p) => ({ deliverBy: p.deliverBy ?? '?', lines: p.lines ?? [] })),
+					committedFor: o.receipts.map(
+						(r) => o.plans.find((p) => p.id === r.planId)?.deliverBy ?? '?'
+					),
+					said: events
+						.filter((e) => e.type === 'done' || e.type === 'clarify')
+						.map((e) => String(e.text ?? e.question ?? ''))
+						.join(' | '),
+					askedDate: events.some((e) => e.type === 'clarify' && e.field === 'date')
+				})
+			);
+		}
+		return out;
+	});
 }

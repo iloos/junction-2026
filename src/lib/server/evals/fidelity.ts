@@ -129,6 +129,10 @@ export interface Played {
 	event?: EventView;
 	/** Receipts written (no read or event intent may write one). */
 	receipts: number;
+	/** Delivery dates of the committed order lines' plans, one per receipt. */
+	committedFor: string[];
+	/** What the entry told the chef: /request message, notes and delivery note, or the agent's summary. */
+	said: string;
 }
 
 /**
@@ -139,14 +143,22 @@ export async function playText(
 	kitchen: string,
 	text: string,
 	path: 'request' | 'agent',
-	id: string
+	id: string,
+	now: Date = FIDELITY_NOW
 ): Promise<Played> {
 	const w = await trialWorkspace();
-	w.env.ports.clock = { now: () => FIDELITY_NOW };
+	w.env.ports.clock = { now: () => now };
 	const today = scenarioDate(w.env.ports.clock.now());
 	const done = async (extra: Partial<Played> = {}): Promise<Played> => {
 		const s = await w.state();
-		return { plans: Object.values(s.plans), receipts: Object.keys(s.orders).length, ...extra };
+		const orders = Object.values(s.orders);
+		return {
+			plans: Object.values(s.plans),
+			receipts: orders.length,
+			committedFor: orders.map((o) => s.plans[o.planId]?.deliverBy ?? '?'),
+			said: '',
+			...extra
+		};
 	};
 	try {
 		if (path === 'request') {
@@ -162,7 +174,16 @@ export async function playText(
 				llmKind: 'fixture',
 				place: true
 			});
-			return done({ event: r.event, error: r.message });
+			const said = [
+				r.message,
+				...r.parsed.notes,
+				...r.parsed.ambiguities,
+				r.order?.deliveryNote,
+				...(r.lookup?.items.flatMap((x) => [x.question, x.pick?.skipped]) ?? [])
+			]
+				.filter(Boolean)
+				.join(' | ');
+			return done({ event: r.event, error: r.message, said });
 		}
 		const run = await runGoal({
 			goal: text,
@@ -171,7 +192,7 @@ export async function playText(
 			planner: scriptedPlanner(),
 			source: { ...w.source, today: () => today }
 		});
-		const out = await done();
+		const out = await done({ said: run.summary });
 		return out.plans.length
 			? out
 			: { ...out, error: `agent stopped ${run.stopped}: ${run.summary.slice(0, 160)}` };

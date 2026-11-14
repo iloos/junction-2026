@@ -23,6 +23,11 @@ _The claim ledger for the video and the stage. Every sentence in [PITCH.md](PITC
 | Gemini Decisions scores recipe fit, with replay and rules fallbacks | `server/adapters/decide`; `DECIDE_LIVE=1 pnpm test:live` | live call not re-run this pass | narrow it: "ranks with Gemini Decisions and falls back to rules"; no "recipe-aware" (no labelled fit set has run) |
 | Valio's milk example runs on `/request`, keeping "lactose-free" | `server/request/fixes.test.ts`, `request.test.ts`; fidelity `lactose-free-milk-2l` | main; prod `/request` 200 | say it, tests. Phrase it as typed ("lactose-free milk"); see P1 for other word orders |
 
+## Asked for (lead)
+| Claim | Evidence | Observed | Verdict |
+|---|---|---|---|
+| Knows the cut-off: a too-late date is caught before ordering | `evals/check.ts` `checkLate`; paraphrase `late-tomorrow` (EN/FI × `/request` + agent, Monday 21:40); chat trials c1, c4 | main: never committed for Tue 8 Dec, never moved silently, held at plan time (line `cutoff_passed`). **Not green:** neither entry names the passed cut-off or offers Wed 9 Dec. `/request` says nothing in words (LATE-request-words, B); the agent says "no orderable line, find a substitute" (LATE-agent-words, E). Chat waits on the entry | not yet |
+
 ## Deployed journey: two browsers + an outside agent (prod `ab3a557`)
 Recorded Sat 14 Nov against https://widely-many-scorpion.eur-1.aiven.app. Trace, screenshots and the MCP log are in `scratch/claims/` (gitignored; the lead copies what the video needs).
 - **Two browsers, REST agent, stranger, forged cookies:** `GATE_URL=<prod> npx playwright test -c scripts/deploy/pw-gate.config.ts --trace on` passed (1/1, 23 s). A plans the buffet, and A's Ops shows its own sandbox (`ws-j-…`): 14 held, 3 can't be ordered, quoted €933.92. B is in a different `ws-j-…` with an empty queue. B can't read A's stream (403), approve A (403) or reset A. An outside agent on A's judge key orders into A's sandbox and current run, can't approve (403), and a tampered key gets 401. A stranger opening A's deep link lands in their own sandbox and can't approve. Forged visitor/room cookies select nothing of A's. Each reset changes only its own sandbox.

@@ -105,6 +105,7 @@ The runner reports pass/fail per key, so a partial build shows exactly which gua
 | A3-agent-cutoff | fidelity `butter-4kg-tomorrow`, paraphrase `order-butter-tomorrow` | agent (E) | the agent picks a Terminal product that cannot deliver tomorrow; A3 rightly refuses it |
 | P1-clause-constraint | paraphrase `order-lactose-free-milk` | request parser (B) | a constraint between product and date ("2 l milk, lactose free, for Thursday") is dropped |
 | P2-fi-lexicon | paraphrase `order-cream-friday` | request lexicon (B) | "vispikermaa" is unknown; nominative "laktoositon" is not read as lactose_free |
+| LATE-request-words, LATE-agent-words | paraphrase `late-tomorrow` | request (B), agent (E) | Monday 21:40 "tomorrow": held unorderable (`cutoff_passed`), but neither says the cut-off passed nor offers Wed 9 Dec |
 | P3-agent-seeded-event | paraphrase `event-brief` | agent classifier (E) | "Christmas dinner for 50" makes the agent plan the seeded buffet for 140 |
 | R6-lineage | `r6-1-lineage` | menu track (A4/B) | `plan_event{proposal}`; need ids that carry the ingredient id |
 | F12-ops | `surfaces.test.ts` | Ops (9c) | Ops counts coverage from line states instead of reading `plan.view.fulfilment` |
