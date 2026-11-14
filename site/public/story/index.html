@@ -112,7 +112,7 @@ h3 { font-size: 19px; line-height: 1.3; letter-spacing: -0.01em; font-weight: 60
 .track { display: none; }
 .live #checks .static { display: none; }
 .live .track { display: block; position: relative; }
-.stage { position: sticky; top: 0; height: 100svh; display: grid; align-content: center; gap: 24px; }
+.stage { display: grid; gap: 24px; }
 .stage-grid { display: grid; gap: 20px; }
 @media (min-width: 960px) { .stage-grid { grid-template-columns: 1fr 1.1fr 0.9fr; gap: 28px; align-items: center; } }
 .req { padding: 22px 24px; border: 1px solid var(--rule); border-radius: 16px; background: var(--sheet); display: grid; gap: 10px; transition: opacity 0.35s var(--ease), transform 0.35s var(--ease); }
@@ -142,15 +142,14 @@ h3 { font-size: 19px; line-height: 1.3; letter-spacing: -0.01em; font-weight: 60
 .picker { display: flex; flex-wrap: wrap; gap: 8px; }
 .picker button { font: 500 13.5px 'IBM Plex Sans', sans-serif; color: var(--ink-3); background: transparent; border: 1px solid var(--rule); border-radius: 999px; padding: 7px 12px; cursor: pointer; transition: color 0.2s, border-color 0.2s, background 0.2s; }
 .picker button:hover { color: var(--ink); border-color: var(--rule-strong); }
+.picker .next { margin-left: auto; border-color: var(--rule-strong); color: var(--ink-2); }
 .picker button[aria-current='true'] { color: var(--ink); border-color: var(--ink-3); background: var(--sheet); }
-@media (max-width: 959px) { .stage { align-content: start; padding-top: 72px; gap: 16px; } .ck { padding: 8px 10px; } .ck small { font-size: 13px; } .req .text { font-size: 18px; } .outcome { min-height: 0; } }
+@media (max-width: 959px) { .stage { gap: 16px; } .ck { padding: 8px 10px; } .ck small { font-size: 13px; } .req .text { font-size: 18px; } .outcome { min-height: 0; } }
 
 /* 4 · out of stock */
 .fixes { border-top: 1px solid var(--rule); }
 .fix { display: grid; gap: 8px 32px; padding: 26px 0; border-bottom: 1px solid var(--rule); }
-.fix h3 { font-size: 21px; }
-.fix details { grid-column: 1 / -1; }
-@media (min-width: 860px) { .fix details { grid-column: 2 / -1; } }
+.fix h3 { font-size: 19px; }
 .fix summary { cursor: pointer; font-size: 14px; color: var(--ink-3); list-style: none; display: inline-flex; gap: 6px; align-items: center; }
 .fix summary::-webkit-details-marker { display: none; }
 .fix summary::before { content: '+'; font: 500 14px 'IBM Plex Mono', monospace; width: 12px; }
@@ -204,12 +203,12 @@ section.s .sub.big { font-size: clamp(20px, 1.8vw, 24px); line-height: 1.35; col
 .msg.me { margin-left: 24px; background: color-mix(in oklab, var(--accent) 12%, var(--well)); }
 .pfoot { margin: auto 0 0; padding-top: 10px; border-top: 1px solid var(--rule); font-size: 13.5px; color: var(--ink-3); }
 .plines { display: grid; }
-.pl { display: grid; grid-template-columns: 1fr auto; align-items: start; gap: 8px 12px; padding: 12px 0; border-bottom: 1px solid var(--rule); }
+.pl { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: baseline; gap: 4px 12px; padding: 10px 0; border-bottom: 1px solid var(--rule); }
 .pl:first-child { padding-top: 0; }
 .pn { display: grid; gap: 2px; font-size: 15px; color: var(--ink); }
-.pn s { font-size: 13.5px; color: var(--ink-3); }
+.pn s { font-size: 12.5px; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .pq { font: 500 13px/1.45 'IBM Plex Mono', ui-monospace, monospace; color: var(--ink-2); text-align: right; font-variant-numeric: tabular-nums; }
-.bar { grid-column: 1 / -1; display: flex; height: 6px; border-radius: 3px; background: var(--well); overflow: hidden; }
+.bar { grid-column: 1 / -1; display: flex; height: 4px; margin-top: 4px; border-radius: 3px; background: var(--well); overflow: hidden; }
 .bar i, .sw { display: block; }
 .confirmed { background: var(--ok); }
 .awaiting { background: repeating-linear-gradient(135deg, var(--ok) 0 4px, transparent 4px 8px); }
@@ -233,7 +232,7 @@ section.s .sub.big { font-size: clamp(20px, 1.8vw, 24px); line-height: 1.35; col
 .steps-run { list-style: none; margin: 10px 0 0; padding: 0 0 0 14px; border-left: 1px solid var(--rule-strong); display: grid; gap: 8px; }
 .steps-run li { display: grid; gap: 1px; font-size: 13.5px; line-height: 1.45; color: var(--ink-2); }
 .steps-run b { font-size: 12.5px; font-weight: 600; color: var(--ink-3); }
-.sl { grid-column: 1 / -1; font-size: 12.5px; color: var(--ink-3); }
+.sl { grid-column: 1 / -1; font-size: 12px; color: var(--ink-3); }
 .pn s.nos { text-decoration: none; }
 .bar i { width: 100%; }
 .dchips { display: flex; gap: 6px; flex-wrap: wrap; }
@@ -247,23 +246,31 @@ section.s .sub.big { font-size: clamp(20px, 1.8vw, 24px); line-height: 1.35; col
 .lrow .to { color: var(--ink-3); }
 .lrow .to .pname { color: var(--ink-2); font-weight: 400; }
 .pe { font: 500 13.5px 'IBM Plex Mono', ui-monospace, monospace; color: var(--ink-2); font-variant-numeric: tabular-nums; }
-.pn { gap: 6px; }
-.pn .pname { font-size: 15px; }
+.pn { gap: 2px; min-width: 0; }
+.pn .ptok { display: block; line-height: 1.45; }
+.pn .ptok .q { margin-right: 6px; }
+.pn .pname { font-size: 14.5px; }
 
 /* out of stock: verb, before → after, one outcome */
 .fix { grid-template-columns: 1fr; }
-@media (min-width: 900px) { .fix { grid-template-columns: 180px 1fr auto; align-items: center; } }
-.ba { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; font-size: 16px; }
+@media (min-width: 900px) {
+	.fix { grid-template-columns: 170px minmax(0, 1fr) 16px minmax(0, 1.15fr) 170px; column-gap: 20px; row-gap: 6px; align-items: baseline; }
+	.fix .ba { display: contents; }
+	.fix > .chip { justify-self: end; }
+	.fix details { grid-column: 2 / -1; }
+	.fix .ba .arrow { align-self: start; margin-top: 4px; }
+}
+.ba { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; font-size: 15.5px; line-height: 1.45; }
 .ba .before { color: var(--ink-3); }
 .ba .before s { color: var(--ink-3); text-decoration-color: color-mix(in oklab, var(--ink-3) 60%, transparent); }
 .ba .after { color: var(--ink); }
 .ba .arrow { width: 16px; height: 16px; color: var(--ink-3); flex: none; }
 .fix > .chip { justify-self: start; }
+@media (min-width: 900px) { .fix > .chip { justify-self: end; } }
 
 /* the checks: the heading travels with the stage */
 .stage-head h2 { margin-bottom: 8px; }
 .stage-head .sub { margin-bottom: 0; }
-.live #checks-head { display: none; }
 
 /* supply states */
 .cert { display: grid; gap: 14px; }
@@ -409,7 +416,7 @@ section.s .sub.big { font-size: clamp(20px, 1.8vw, 24px); line-height: 1.35; col
 		<div class="pane">
 			<div class="ph">The ask</div>
 			<div class="msg me" data-s="plan.ask">Plan the Christmas buffet for 140 on Saturday.</div>
-			<div class="msg" data-s="plan.reply">For Thu 10 Dec: 92.82 kg + 10.5 l needed; 84.42 kg + 10.5 l planned, not yet submitted; 8.4 kg unresolved; no order placed yet; 3 decisions wait for you.</div>
+			<div class="msg" id="p-reply" data-s="plan.reply">For Thu 10 Dec: 92.82 kg + 10.5 l needed; 84.42 kg + 10.5 l planned, not yet submitted; 8.4 kg unresolved; no order placed yet; 3 decisions wait for you.</div>
 			<details class="runbox"><summary id="p-runsum">5 steps: Understand → Plan the event → Find substitutes ×2 → Explain</summary>
 			<ol class="steps-run" id="p-steps">
 				<li><b>Understand</b><span>An event brief.</span></li>
@@ -446,7 +453,7 @@ section.s .sub.big { font-size: clamp(20px, 1.8vw, 24px); line-height: 1.35; col
 <section class="s" id="checks" aria-labelledby="h-checks">
 	<div class="head" id="checks-head">
 		<h2 id="h-checks">Five recorded requests through the same checks.</h2>
-		<p class="sub">Four stopped before buying, each for the reason the app recorded. Scroll to step through them.</p>
+		<p class="sub">Four stopped before buying, each for the reason the app recorded. Pick one to see where it stopped.</p>
 	</div>
 	<div class="static" id="checks-static">
 		<div class="srow"><span class="r" data-s="cases.#within-mandate.request">10 kg salmon fillet for Friday</span><span class="at">passes every check</span><span class="chip ok" data-s="cases.#within-mandate.outcome.label">Ordered within your mandate</span></div>
@@ -618,9 +625,6 @@ function buildChecks(d) {
 	const cks = [...list.children];
 	picker.innerHTML = runs.map((r, i) => `<button type="button" data-i="${i}">${i + 1}. ${shortName(r)}</button>`).join('');
 	document.documentElement.classList.add('live');
-	const hd = $('checks-head').cloneNode(true); hd.removeAttribute('id'); hd.querySelector('h2').removeAttribute('id'); $('stage-head').replaceWith(Object.assign(hd, { className: 'head stage-head' }));
-	const sizeTrack = () => { track.style.height = `calc(${runs.length * 90}svh + 100svh)`; };
-	sizeTrack();
 	let cur = -1, lastStep = -2;
 	function lineOf(r) {
 		const s = r.line != null ? r.c.steps[r.line] : r.c.steps.find((s) => s.parts && s.parts.some((p) => p.product));
@@ -668,24 +672,23 @@ function buildChecks(d) {
 			out.innerHTML = `<span class="chip ${cls}">${r.c.outcome.label}</span>${e}<span class="why">${why}</span>`;
 		} else out.innerHTML = '<span class="placeholder">Outcome appears once the line has passed or stopped.</span>';
 	}
-	let ticking = false;
-	function onScroll() {
-		ticking = false;
-		const rect = track.getBoundingClientRect();
-		const span = track.offsetHeight - innerHeight;
-		const p = Math.min(0.9999, Math.max(0, -rect.top / span));
-		const x = p * runs.length, i = Math.floor(x);
-		if (i !== cur) show(i);
-		step(i, x - i);
+	// Click-driven: choosing a request plays its line through the checks once. The page scrolls normally.
+	picker.insertAdjacentHTML('beforeend', '<button type="button" class="next" data-next>Next request →</button>');
+	let raf = 0;
+	function play(i) {
+		cancelAnimationFrame(raf);
+		show(i);
+		if (reduce) { step(i, 1); return; }
+		const t0 = performance.now(), dur = 1700;
+		const tick = (now) => { const t = Math.min(1, (now - t0) / dur); step(i, t); if (t < 1) raf = requestAnimationFrame(tick); };
+		step(i, 0);
+		raf = requestAnimationFrame(tick);
 	}
-	addEventListener('scroll', () => { if (!ticking) { ticking = true; requestAnimationFrame(onScroll); } }, { passive: true });
-	addEventListener('resize', () => { sizeTrack(); onScroll(); });
 	picker.addEventListener('click', (e) => {
 		const b = e.target.closest('button'); if (!b) return;
-		const i = +b.dataset.i, top = track.getBoundingClientRect().top + scrollY;
-		scrollTo({ top: top + (track.offsetHeight - innerHeight) * ((i + 0.85) / runs.length), behavior: 'smooth' });
+		play(b.hasAttribute('data-next') ? (cur + 1) % runs.length : +b.dataset.i);
 	});
-	onScroll();
+	new IntersectionObserver((es, o) => es.forEach((e) => { if (e.isIntersecting) { play(0); o.disconnect(); } }), { threshold: 0.4 }).observe($('stage'));
 }
 function shortName(r) {
 	return { 'within-mandate': 'Salmon', 'out-of-stock': 'Ham', 'cut-off': 'Butter', 'lactose-free': 'Milk', 'agent-cannot-approve': 'Outside agent' }[r.id] || r.id;
@@ -717,6 +720,7 @@ function fillPlan(d) {
 	const pl = d && d.plan;
 	if (!pl) return;
 	const H = (x) => String(x).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+	if (pl.reply) { const m = String(pl.reply).match(/^.*?[.;](\s|$)/); $('p-reply').textContent = m ? m[0].trim().replace(/;$/, '.') : pl.reply; }
 	const TOOL = { understand: 'Understand', plan_event: 'Plan the event', find_substitutes: 'Find substitutes', explain: 'Explain' };
 	if (Array.isArray(pl.steps)) {
 		const names = [];
