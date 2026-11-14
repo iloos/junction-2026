@@ -24,6 +24,8 @@
 9. **Dependencies:** prefer an existing OSS library to writing it ([docs/BUILDING-BLOCKS.md](docs/BUILDING-BLOCKS.md)). Any new dependency over ~500 kB is cleared with the lead first.
 10. **Parallel lanes** ([docs/ORCHESTRATION.md](docs/ORCHESTRATION.md)): concept and contracts first, then one brief + branch + worktree per lane (`docs/lanes/<lane>.md`). Edit only your owned paths; shared files are lead-only (use the brief's **Needs**). `pnpm i` inside the worktree (never symlink `node_modules`); own dev port. Only the lead merges to `main`. Rebase on `main` about every 90 min. Lane agents use the `lane` skill; the lead uses `integrate`.
 11. **No artifacts at repo root.** Scratch goes to `scratch/` (gitignored). On Windows, check `git status` for stray `nul` / pasted-line files.
+12. **Five-second UI.** Every element on a judge-facing page reads in under 5 s: a sentence and an icon over an encoded bar; depth on demand (Why, System layer, Engine room). Checks: the first decision is above the fold at 390 px; no raw ids (`ws-j-`, `pl-run-`, op names) or ISO dates on screen outside the System layer; words per [VOCABULARY](docs/concept/VOCABULARY.md).
+13. **Local runs never touch the real database.** Dev servers and test previews run with `DATABASE_URL=` blank (worktree `.env` files point at prod); remote data only through the opt-in scripts.
 
 ## Docs (keep each short)
 | File | Who edits | What |
@@ -50,7 +52,7 @@
 - `pnpm db:migrate` / `pnpm db:seed` (Aiven, from the main checkout: needs `data/valio/`).
 - Valio probe (cache-through): `python -I scripts/probe/valio_probe.py` with `VALIO_API_KEY` exported; cache in `data/valio/cache/` (gitignored, copy into lane worktrees with `.env` and `data/valio/`).
 
-Routes: `/` kitchen (`/offline` fixture), `/request` (Valio's request → lookup → order flow), `/ops` control room, `/healthz`. Tools: `/api/tools/<name>`, `/mcp` (+ `/mcp/k/<key>`), `/api/openapi.json`. App APIs: `/api/request`, `/api/agent/run` (+ `/<id>`, `/<id>/cancel`), `/api/events` (SSE), `/api/web/{facts,outside,recall,findings,contextdev,replay}`, `/api/demo/{reset,sandbox/reset,judge-key}`, `/kitchen-api/{snapshot,scenario,tool/<name>}`.
+Routes: `/` kitchen (`?plan=` opens a plan; `?chat=1` opens the agent dock, which every page has; `/offline` fixture), `/request` (request → lookup → order, or brief → menu → plan), `/ops` control room, `/agents` (judge key and MCP config), `/healthz` (reports the deployed commit). Tools: `/api/tools/<name>`, `/mcp` (+ `/mcp/k/<key>`), `/api/openapi.json`. App APIs: `/api/request`, `/api/chat/{turn,task}`, `/api/agent/run` (+ `/<id>`, `/<id>/cancel`), `/api/events` (SSE), `/api/web/{facts,outside,recall,findings,contextdev,replay,evidence,make-in-house,leads}`, `/api/demo/{reset,sandbox/reset,judge-key}`, `/kitchen-api/{snapshot,scenario,tool/<name>,web/<action>}`.
 
 ## Comments
 Say what is true now and why, never how the code got there.

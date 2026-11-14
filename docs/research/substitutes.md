@@ -45,7 +45,7 @@ Rank and present in this order. A kind-3/4 swap always shows what changes (labou
 - **Embeddings alone** find "similar text", not "does the same job". Lanttulaatikko sits near porkkanalaatikko, which is good, but also near "lanttu raw 10 kg", which needs cooking. Filters and the role fix that.
 - **An ontology alone** is a weekend sink. Use a thin typed profile plus roles, and let retrieval and the model fill the long tail.
 
-## Measuring it (ties to [sibling-repos](sibling-repos.md) #8)
+## Measuring it
 - **Recall@k of candidate generation:** for 20–40 out-of-stock lines, list the acceptable substitutes by hand. Compare id order (today) vs hybrid retrieval at k = 12.
 - **Fit precision:** minimal pairs (same product with one disqualifier flipped: allergen, form, temperature). Three arms: rules / model / model + policy. Report suitability, violations, abstains, latency and cost.
 
