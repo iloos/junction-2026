@@ -126,8 +126,15 @@ async function rebuild(bump: boolean, summary?: string) {
 					}
 				: a
 		);
-	const held = s.built.plan.lines.filter((l) => l.state === 'held');
-	const live = current();
+	// Lines the chef denied at this version stay held without being asked again.
+	const denied = new Set(
+		s.approvals
+			.filter((a) => a.state === 'denied' && a.planVersion === s.version)
+			.flatMap((a) => a.lineIds)
+	);
+	const held = s.built.plan.lines.filter((l) => l.state === 'held' && !denied.has(l.id));
+	const live =
+		s.approvals.find((a) => a.state === 'pending' && a.planVersion === s.version) ?? current();
 	if (held.length && !live) {
 		s.seq += 1;
 		s.approvals = [
@@ -148,11 +155,15 @@ async function rebuild(bump: boolean, summary?: string) {
 			}
 		];
 	}
-	// Lines covered by a granted approval may be committed.
-	const granted = current();
-	if (granted?.state === 'granted') {
+	// Lines covered by any granted approval at this version may be committed (groups are granted one at a time).
+	const grantedIds = new Set(
+		s.approvals
+			.filter((a) => a.state === 'granted' && a.planVersion === s.version)
+			.flatMap((a) => a.lineIds)
+	);
+	if (grantedIds.size) {
 		s.built.plan.lines = s.built.plan.lines.map((l) =>
-			granted.lineIds.includes(l.id) && l.state === 'held' ? { ...l, state: 'eligible' } : l
+			grantedIds.has(l.id) && l.state === 'held' ? { ...l, state: 'eligible' } : l
 		);
 		s.built.plan.state = 'ready';
 	}
@@ -250,14 +261,34 @@ const handlers: { [N in ToolName]?: Handler<N> } = {
 			);
 		if (input.termsHash !== a.termsHash || a.termsHash !== s.hash)
 			fail('TERMS_CHANGED', 'the terms you saw are not the terms now');
+		if (a.state !== 'pending') fail('INVALID_INPUT', `approval is ${a.state}`);
+		// A subset decides those lines only; the rest move to a new pending approval on the same terms (core rule).
+		const decide = input.lineIds ?? a.lineIds;
+		if (decide.some((id) => !a.lineIds.includes(id)))
+			fail('INVALID_INPUT', 'lineIds must belong to this approval');
+		const rest = a.lineIds.filter((id) => !decide.includes(id));
 		const next: Approval = {
 			...a,
+			lineIds: decide,
 			state: input.decision === 'grant' ? 'granted' : 'denied',
 			decidedBy: { kind: 'chef', id: 'chef-demo' }
 		};
-		s.approvals = s.approvals.map((x) => (x.id === a.id ? next : x));
+		let remaining: Approval | null = null;
+		if (rest.length) {
+			s.seq += 1;
+			remaining = {
+				...a,
+				id: `apr-${String(s.seq).padStart(3, '0')}`,
+				lineIds: rest,
+				state: 'pending'
+			};
+		}
+		s.approvals = [
+			...s.approvals.map((x) => (x.id === a.id ? next : x)),
+			...(remaining ? [remaining] : [])
+		];
 		await rebuild(false);
-		return { state: next.state };
+		return { state: next.state, remainingApprovalId: remaining?.id ?? null };
 	},
 	commit_order: async (input) => {
 		const prior = s.orders.get(input.idempotencyKey);

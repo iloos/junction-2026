@@ -38,16 +38,26 @@
 	// svelte-ignore state_referenced_locally
 	const k = new KitchenStore(mode);
 	/**
-	 * Deep link from Operations: /?kitchen=<id>&plan=<planId>&v=<version>&need=<needId>. Client-side focus only:
-	 * switch kitchen through the normal command, then scroll to the need, open its rescue and highlight it.
+	 * Deep link from Operations: /?ws=<workspace>&run=<runId>&kitchen=<id>&plan=<planId>&v=<version>&need=<needId>.
+	 * The server already moved this browser into `ws` if it may enter it (server/demo/visitor.ts). Client-side
+	 * focus only: switch kitchen through the normal command, then scroll to the need, open its rescue, highlight it.
 	 */
-	let fromOps = $state<{ kitchen: string; plan: string; v: number; need: string } | null>(null);
+	let fromOps = $state<{
+		ws: string;
+		run: string;
+		kitchen: string;
+		plan: string;
+		v: number;
+		need: string;
+	} | null>(null);
 	let focusNeed = $state<string | null>(null);
 	async function honourDeepLink() {
 		const q = new URL(location.href).searchParams;
 		const kitchen = q.get('kitchen');
 		if (!kitchen) return;
 		fromOps = {
+			ws: q.get('ws') ?? '',
+			run: q.get('run') ?? '',
 			kitchen,
 			plan: q.get('plan') ?? '',
 			v: Number(q.get('v') ?? NaN),
@@ -273,7 +283,9 @@
 				onclick={() => k.reset()}
 			>
 				<RotateCcw size={13} aria-hidden="true" />
-				{snap?.clock?.workspaceId === 'ws-judges' ? 'Start over (sandbox)' : 'Reset demo'}
+				{snap?.clock?.workspaceId && snap.clock.workspaceId !== 'ws-demo'
+					? 'Start over (sandbox)'
+					: 'Reset demo'}
 			</button>
 		</div>
 	</div>
@@ -330,7 +342,16 @@
 					(d) => d.needId === fromOps!.need
 				)?.nameFi ?? fromOps.need}</span
 			>
-			{#if fromOps.plan && fromOps.plan !== snap.plan.id}
+			{#if fromOps.ws && snap.clock?.workspaceId && fromOps.ws !== snap.clock.workspaceId}
+				<span class="text-signoff"
+					>The link is from another sandbox, which only its own browser can open; showing yours.</span
+				>
+			{:else if fromOps.run && snap.clock?.runId && fromOps.run !== snap.clock.runId}
+				<span class="text-signoff"
+					>The link is from an earlier run of this sandbox (it was started over); showing the
+					current plan.</span
+				>
+			{:else if fromOps.plan && fromOps.plan !== snap.plan.id}
 				<span class="text-signoff"
 					>The link points to another plan ({fromOps.plan}); showing this kitchen's current plan.</span
 				>
@@ -685,8 +706,8 @@
 				lastCommit={k.lastCommit}
 				{names}
 				busy={k.busy}
-				onapprove={() => k.approve('grant')}
-				ondeny={() => k.approve('deny')}
+				onapprove={(ids) => k.approve('grant', ids)}
+				ondeny={(ids) => k.approve('deny', ids)}
 				oncommit={() => k.commit()}
 				onretry={() => k.retryCommit()}
 			/>
