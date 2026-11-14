@@ -42,6 +42,20 @@ test('the evidence is pinned: the deployed commit is the source on main', () => 
 	).toBe(pin.sourceMain);
 });
 
+/** The line rows (and their Why) sit inside each dish's details, collapsed by default: open the first dish. */
+async function openWhy(page: Page) {
+	const why = page.getByRole('button', { name: 'Why this line' }).first();
+	if (!(await why.isVisible().catch(() => false))) {
+		const plan = page.getByRole('tab', { name: /^Plan/ }).first();
+		if (await plan.isVisible().catch(() => false)) await plan.click();
+		await page
+			.getByRole('button', { name: /^Show details: / })
+			.first()
+			.click({ timeout: 30_000 });
+	}
+	await why.click({ timeout: 30_000 });
+}
+
 async function record(page: Page, name: string, extra = '') {
 	await page.screenshot({ path: join(OUT, `${name}.png`), fullPage: true });
 	const text = await page.locator('body').innerText();
@@ -125,9 +139,10 @@ test('the problem, the Why drawer and its web evidence', async ({ page }) => {
 	test.setTimeout(240_000);
 	await planBuffet(page);
 	const t = await record(page, 'b1-planned');
-	expect.soft(t).toMatch(/462490/);
-	expect.soft(t).toMatch(/462482/);
-	await page.getByRole('button', { name: 'Why this line' }).first().click();
+	// The planned page names dishes, not product codes (five-second UI): the two outages by dish.
+	expect.soft(t).toMatch(/Joulukinkku/);
+	expect.soft(t).toMatch(/Lanttulaatikko/);
+	await openWhy(page);
 	await page
 		.getByText(/From the web/)
 		.first()
@@ -136,6 +151,10 @@ test('the problem, the Why drawer and its web evidence', async ({ page }) => {
 	await page.waitForTimeout(10_000);
 	const w = await record(page, 'b2-why');
 	expect.soft(w, 'web evidence cites the GTIN').toMatch(/GTIN cited/);
+	// The outage itself is stated in the dish details (opened for the Why), not on the collapsed row.
+	expect
+		.soft(w, 'the dish details say the original is out')
+		.toMatch(/out of stock|can.t supply|can.t deliver/i);
 });
 
 test('lines inside the mandate are ordered alone, before any decision', async ({ page }) => {

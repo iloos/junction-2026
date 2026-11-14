@@ -29,6 +29,20 @@ const RULES: { name: string; re: RegExp }[] = [
 ];
 
 /** Visible text outside the System layer, one string per text node's nearest element. */
+/** The line rows (and their Why) sit inside each dish's details, collapsed by default: open the first dish. */
+async function openWhy(page: Page) {
+	const why = page.getByRole('button', { name: 'Why this line' }).first();
+	if (!(await why.isVisible().catch(() => false))) {
+		const plan = page.getByRole('tab', { name: /^Plan/ }).first();
+		if (await plan.isVisible().catch(() => false)) await plan.click();
+		await page
+			.getByRole('button', { name: /^Show details: / })
+			.first()
+			.click({ timeout: 30_000 });
+	}
+	await why.click({ timeout: 30_000 });
+}
+
 async function visibleText(page: Page): Promise<string[]> {
 	return page.evaluate(() => {
 		const out: string[] = [];
@@ -65,8 +79,7 @@ async function kitchen(page: Page, w: number) {
 	if (await start.count()) await start.click();
 	await page.getByText('Menu → need → order').waitFor({ state: 'attached', timeout: 120_000 });
 	await sweep(page, `/ planned ${w}`);
-	if (w < 600) await page.getByRole('tab', { name: /Plan/ }).first().click();
-	await page.getByRole('button', { name: 'Why this line' }).first().click();
+	await openWhy(page);
 	await page.getByRole('dialog').waitFor();
 	await sweep(page, `/ Why ${w}`);
 	await page.keyboard.press('Escape');
