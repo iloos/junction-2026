@@ -7,12 +7,13 @@
 		CircleX,
 		MessageSquare,
 		Plus,
-		Send
+		Send,
+		UtensilsCrossed
 	} from '@lucide/svelte';
 	import { untrack } from 'svelte';
 	import DecisionCard from '$lib/ui/DecisionCard.svelte';
 	import { decisionsOf } from '$lib/ui/decisions';
-	import { money } from '$lib/ui/format';
+	import { day, money } from '$lib/ui/format';
 	import { KitchenStore } from '$lib/kitchen/kitchen.svelte';
 	import Receipt from '$lib/ui/Receipt.svelte';
 	import type { ChatEvent, ChatTurnInput } from './types';
@@ -422,6 +423,44 @@
 							</div>
 						{:else if active}
 							<p class="mt-1 text-meta text-ink-3">Type the answer below.</p>
+						{/if}
+					</li>
+				{:else if x.e.type === 'menu'}
+					<!-- A proposed menu: what it is, and the one way on (review it); nothing here approves or orders. -->
+					<li class="rounded-lg border border-rule bg-sheet px-3 py-2.5" aria-label="Menu proposal">
+						<p class="flex items-start gap-1.5 font-medium text-ink">
+							<UtensilsCrossed size={15} class="mt-0.5 shrink-0 text-accent" aria-hidden="true" />
+							{x.e.title}
+						</p>
+						<p class="mt-0.5 text-meta text-ink-2">
+							{x.e.guests} guests · {day(x.e.date)}{x.e.budgetCents
+								? ` · aims at ${money(x.e.budgetCents, { whole: true })}`
+								: ''}
+						</p>
+						<ul class="mt-1.5 space-y-0.5 text-meta text-ink">
+							{#each x.e.dishes.slice(0, 4) as dish, j (j)}
+								<li class="truncate">{dish.name}</li>
+							{/each}
+							{#if x.e.dishes.length > 4}
+								<li class="text-ink-3">and {x.e.dishes.length - 4} more</li>
+							{/if}
+						</ul>
+						{#if x.e.unresolved > 0}
+							<p class="mt-1 text-meta text-signoff">
+								{x.e.unresolved}
+								{x.e.unresolved === 1 ? 'ingredient has' : 'ingredients have'} no product yet
+							</p>
+						{/if}
+						{#if x.e.reviewed}
+							<p class="mt-2 inline-flex items-center gap-1 text-meta font-medium text-ok">
+								<CircleCheck size={13} aria-hidden="true" /> Reviewed
+							</p>
+						{:else}
+							<a
+								class="mt-2 inline-flex items-center gap-1 rounded-md border border-accent px-3 py-1.5 text-meta font-semibold text-accent-ink hover:bg-accent-wash"
+								href={x.e.reviewUrl}
+								>Review the menu <ArrowUpRight size={13} aria-hidden="true" /></a
+							>
 						{/if}
 					</li>
 				{:else if x.e.type === 'decision'}
