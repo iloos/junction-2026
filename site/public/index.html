@@ -17,17 +17,43 @@
 .hero { display: grid; gap: 40px; padding: 40px 0 56px; align-items: center; }
 @media (min-width: 900px) { .hero { grid-template-columns: 1.05fr 1fr; padding: 64px 0 80px; gap: 56px; } }
 
-/* Decision card: the three outcomes a mandate allows. */
-.card { background: var(--sheet); border: 1px solid var(--rule); border-radius: 14px; box-shadow: 0 1px 0 var(--rule), 0 18px 40px -24px oklch(0.3 0.03 255 / 0.35); overflow: hidden; }
-.card-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 16px 18px 12px; border-bottom: 1px solid var(--rule); }
-.card-head b { font-weight: 600; font-size: 15px; }
-.card-head span { font-size: 13px; color: var(--ink-3); }
-.line { display: grid; grid-template-columns: 32px 1fr; gap: 12px; padding: 14px 18px; border-bottom: 1px solid var(--rule); }
-.line:last-of-type { border-bottom: 0; }
-.line .what { font-weight: 500; font-size: 15px; margin: 0; }
-.line .why { font-size: 13.5px; color: var(--ink-2); margin: 2px 0 0; }
-.line .tag { margin-top: 8px; }
-.card-foot { padding: 12px 18px; background: var(--well); font-size: 12.5px; color: var(--ink-3); border-top: 1px solid var(--rule); }
+/* Recorded cases: one card per case, recorded from the app by site/record/record.mjs. */
+.cases { min-width: 0; }
+.cases-track { display: grid; grid-auto-flow: column; grid-auto-columns: 100%; gap: 14px; overflow-x: auto; scroll-snap-type: x mandatory; scroll-padding-inline: 4px; overscroll-behavior-x: contain; scrollbar-width: none; padding: 4px 4px 14px; margin: -4px -4px 0; border-radius: 16px; }
+.cases-track::-webkit-scrollbar { display: none; }
+.cases-track:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+@media (max-width: 719px) { .cases-track { grid-auto-columns: calc(100% - 28px); } }
+.case { scroll-snap-align: start; display: flex; flex-direction: column; background: var(--sheet); border: 1px solid var(--rule); border-radius: 14px; box-shadow: 0 1px 0 var(--rule), 0 8px 18px -14px oklch(0.3 0.03 255 / 0.4); overflow: hidden; }
+.case-ask { margin: 0; padding: 16px 18px 14px; border-bottom: 1px solid var(--rule); }
+.case-ask small { display: block; font: 500 12px/1.4 'IBM Plex Mono', ui-monospace, monospace; color: var(--ink-3); margin-bottom: 4px; }
+.case-ask b { font-weight: 600; font-size: 16px; line-height: 1.35; text-wrap: balance; }
+.case-steps { list-style: none; margin: 0; padding: 6px 18px; display: grid; flex: 1; align-content: start; }
+.case-steps li { display: grid; grid-template-columns: 26px 1fr; gap: 10px; padding: 8px 0; font-size: 14.5px; line-height: 1.45; color: var(--ink-2); }
+.case-steps li + li { border-top: 1px dashed var(--rule); }
+.case-steps svg { width: 18px; height: 18px; margin: 2px 0 0 4px; color: var(--ink-3); }
+.case-out { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 18px; background: var(--well); border-top: 1px solid var(--rule); }
+.chip { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 9px; border-radius: 6px; border: 1px solid; font-size: 13.5px; font-weight: 500; white-space: nowrap; background: var(--sheet); }
+.chip svg { width: 15px; height: 15px; flex: none; }
+.chip.held { color: var(--auth); border-color: var(--auth); border-style: dashed; }
+.chip.within { color: var(--ink-2); border-color: var(--rule-strong); }
+.chip.refused { color: var(--out); border-color: var(--out); }
+.chip.caught { color: var(--warn); border-color: var(--warn); }
+.chip.ordered { color: var(--ok); border-color: var(--ok); }
+.case-eur { font: 500 16px/1 'IBM Plex Mono', ui-monospace, monospace; }
+.case-link { display: block; padding: 12px 18px 14px; font-size: 14.5px; font-weight: 500; color: var(--accent-ink); text-underline-offset: 3px; border-top: 1px solid var(--rule); }
+.cases-nav { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.cases-dots { display: flex; gap: 2px; }
+.cases-dots button { width: 28px; height: 28px; padding: 0; border: 0; background: none; display: grid; place-items: center; cursor: pointer; border-radius: 6px; }
+.cases-dots button::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--rule-strong); }
+.cases-dots button[aria-current='true']::before { width: 20px; border-radius: 4px; background: var(--accent); }
+.cases-arrows { display: none; gap: 8px; }
+@media (min-width: 720px) { .cases-arrows { display: flex; } }
+.cases-btn { width: 40px; height: 40px; display: grid; place-items: center; border-radius: 10px; border: 1px solid var(--rule); background: var(--sheet); color: var(--ink); cursor: pointer; }
+.cases-btn:hover:not(:disabled) { background: var(--well); }
+.cases-btn:disabled { color: var(--rule-strong); cursor: default; }
+.cases-btn svg { width: 20px; height: 20px; }
+.cases-dots button:focus-visible, .cases-btn:focus-visible, .case-link:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.cases-when { margin: 8px 0 0; font-size: 13px; color: var(--ink-3); }
 
 /* Problem strip */
 .facts { display: grid; gap: 1px; background: var(--rule); border: 1px solid var(--rule); border-radius: 12px; overflow: hidden; }
@@ -36,7 +62,7 @@
 .fact b { font-size: 40px; line-height: 1; font-weight: 600; letter-spacing: -0.02em; }
 .fact b.out { color: var(--out); }
 .fact b.ok { color: var(--ok); }
-.fact p { margin: 0; color: var(--ink-2); font-size: 15px; }
+.fact p { margin: 0; color: var(--ink-2); font-size: 15px; text-wrap: pretty; }
 .fact .tag { justify-self: start; }
 
 /* The gate: doors → checks → outcomes. Columns on wide screens, a stack on phones. */
@@ -114,39 +140,22 @@
 				<p class="note">Every visitor gets a private sandbox. Nothing is sent to Valio.</p>
 			</div>
 
-			<div class="card" role="img" aria-label="Example decisions for a Christmas buffet: one line ordered within the mandate, one held for approval, one refused.">
-				<div class="card-head"><b>Christmas buffet, 140 guests</b><span>Saturday</span></div>
-				<div class="line ok">
-					<div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>
-					<div>
-						<p class="what">Whole ham is out. Ordered HK Palvikinkku instead.</p>
-						<p class="why">Same use, Valio states stock for it, and it fits the weekly cap.</p>
-						<span class="tag">Within the mandate</span>
+			<section class="cases" id="cases" aria-roledescription="carousel" aria-label="Cases recorded from the app" hidden>
+				<div class="cases-track" id="cases-track" tabindex="0" aria-live="polite"></div>
+				<div class="cases-nav">
+					<div class="cases-dots" id="cases-dots"></div>
+					<div class="cases-arrows">
+						<button type="button" class="cases-btn" id="cases-prev" aria-label="Previous case"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg></button>
+						<button type="button" class="cases-btn" id="cases-next" aria-label="Next case"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button>
 					</div>
 				</div>
-				<div class="line auth">
-					<div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c1.2-3.6 4-5.5 7-5.5s5.8 1.9 7 5.5"/></svg></div>
-					<div>
-						<p class="what">A substitute changes the allergens.</p>
-						<p class="why">The chef never delegates allergen changes, so it waits for a person.</p>
-						<span class="tag">Needs your approval</span>
-					</div>
-				</div>
-				<div class="line out">
-					<div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M6.5 17.5l11-11"/></svg></div>
-					<div>
-						<p class="what">An extra order would pass the hard limit.</p>
-						<p class="why">No approval can lift it, even if the order is split.</p>
-						<span class="tag">Refused</span>
-					</div>
-				</div>
-				<div class="card-foot">An illustration of the three outcomes. Product names come from Valio's challenge data.</div>
-			</div>
+				<p class="cases-when" id="cases-when"></p>
+			</section>
 		</section>
 
 		<section class="band" id="problem">
 			<h2>A buffet for 140, and Valio is out of two products</h2>
-			<p class="sub">Today the chef reworks the order by hand in the webshop before the cut-off. An agent can find a replacement in seconds. The kitchen also needs to know what it may buy alone, at what price, and when it has to ask.</p>
+			<p class="sub">In Valio's webshop today, the chef moves order templates to the cart by hand, and an out-of-stock product shows similar products with no reason. An agent can find a replacement in seconds. The kitchen also needs to know what it may buy alone, at what price, and when it has to ask.</p>
 			<div class="facts">
 				<div class="fact">
 					<b>140</b>
@@ -224,7 +233,7 @@
 			<ul class="honest">
 				<li><b>Real</b><span>Valio Aimo's catalogue, and live price and availability calls for shortlisted products, cached with the time fetched.</span></li>
 				<li><b>Simulated</b><span>The booking, the clock, stock on hand, recipes, and the order itself. Valio's API has no order endpoint, so nothing is sent to Valio.</span></li>
-				<li><b>Models</b><span>Gemini reads requests and ranks substitutes. Every check that decides what may be ordered runs in plain code.</span></li>
+				<li><b>Models</b><span>Gemini reads requests and ranks substitutes. Every check that decides what may be ordered runs in plain code. A model can add a caution that holds a line, never one that allows it.</span></li>
 			</ul>
 		</section>
 
@@ -245,5 +254,127 @@
 		<nav><a href="https://app.mandate.kitchen/">Open the app</a><a href="/proof">Proof</a><a href="https://github.com/iloos/junction-2026">Source</a></nav>
 	</footer>
 </div>
+<script>
+// The hero's case cards, from /cases.json (recorded from the app by site/record/record.mjs). If it fails to load,
+// the carousel stays hidden and the hero text stands alone.
+(() => {
+	const root = document.getElementById('cases');
+	const track = document.getElementById('cases-track');
+	const dots = document.getElementById('cases-dots');
+	const prev = document.getElementById('cases-prev');
+	const next = document.getElementById('cases-next');
+	const reduced = matchMedia('(prefers-reduced-motion: reduce)');
+	const SVG = 'http://www.w3.org/2000/svg';
+	const ICONS = {
+		search: '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>',
+		swap: '<path d="M8 3 4 7l4 4"/><path d="M4 7h16"/><path d="m16 21 4-4-4-4"/><path d="M20 17H4"/>',
+		hold: '<circle cx="12" cy="8" r="3.5"/><path d="M5 20c1.2-3.6 4-5.5 7-5.5s5.8 1.9 7 5.5"/>',
+		clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+		shield: '<path d="M12 3 5 6v6c0 4.5 3 7.5 7 9 4-1.5 7-4.5 7-9V6z"/><path d="m9 12 2 2 4-4"/>',
+		receipt: '<path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/>',
+		check: '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
+		ban: '<circle cx="12" cy="12" r="8"/><path d="M6.5 17.5l11-11"/>'
+	};
+	// Outcome state → chip icon; every chip also carries its word.
+	const STATE_ICON = { held: 'hold', within: 'shield', refused: 'ban', caught: 'clock', ordered: 'receipt' };
+	const eur = new Intl.NumberFormat('en-IE', { style: 'currency', currency: 'EUR', minimumFractionDigits: 2 });
+
+	const el = (tag, cls, text) => {
+		const e = document.createElement(tag);
+		if (cls) e.className = cls;
+		if (text != null) e.textContent = text;
+		return e;
+	};
+	const icon = (name) => {
+		const s = document.createElementNS(SVG, 'svg');
+		for (const [k, v] of Object.entries({ viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': '2', 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'aria-hidden': 'true' }))
+			s.setAttribute(k, v);
+		s.innerHTML = ICONS[name] ?? ICONS.check;
+		return s;
+	};
+
+	function card(c, i, n) {
+		const a = el('article', 'case');
+		a.setAttribute('role', 'group');
+		a.setAttribute('aria-roledescription', 'slide');
+		a.setAttribute('aria-label', `${i + 1} of ${n}`);
+		const ask = el('p', 'case-ask');
+		ask.append(el('small', null, 'Asked'), el('b', null, c.request));
+		const steps = el('ol', 'case-steps');
+		for (const s of c.steps.slice(0, 3)) {
+			const li = el('li');
+			li.append(icon(s.icon), el('span', null, s.text));
+			steps.append(li);
+		}
+		const out = el('div', 'case-out');
+		const chip = el('span', `chip ${c.outcome.state}`);
+		chip.append(icon(STATE_ICON[c.outcome.state] ?? 'check'), document.createTextNode(c.outcome.label));
+		out.append(chip);
+		if (typeof c.outcome.eur === 'number') out.append(el('span', 'case-eur', eur.format(c.outcome.eur)));
+		const link = el('a', 'case-link', 'See it in the app →');
+		link.href = c.link;
+		a.append(ask, steps, out, link);
+		return a;
+	}
+
+	let slides = [];
+	let current = 0;
+	const offset = (k) => slides[k].offsetLeft - slides[0].offsetLeft;
+	function mark(i) {
+		current = i;
+		dots.querySelectorAll('button').forEach((b, k) => b.setAttribute('aria-current', String(k === i)));
+		prev.disabled = i === 0;
+		next.disabled = i === slides.length - 1;
+	}
+	function show(i) {
+		mark(Math.max(0, Math.min(slides.length - 1, i)));
+		track.scrollTo({ left: offset(current), behavior: reduced.matches ? 'auto' : 'smooth' });
+	}
+
+	fetch('/cases.json', { cache: 'no-cache' })
+		.then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
+		.then((data) => {
+			const cases = (data.cases ?? []).filter((c) => c.request && c.steps?.length && c.outcome && c.link);
+			if (!cases.length) return;
+			slides = cases.map((c, i) => card(c, i, cases.length));
+			track.replaceChildren(...slides);
+			cases.forEach((c, i) => {
+				const b = el('button');
+				b.type = 'button';
+				b.setAttribute('aria-label', `Case ${i + 1} of ${cases.length}: ${c.request}`);
+				b.addEventListener('click', () => show(i));
+				dots.append(b);
+			});
+			const when = new Date(data.recordedAt);
+			if (!isNaN(when)) {
+				const day = when.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'Europe/Helsinki' });
+				document.getElementById('cases-when').textContent = `Recorded from the app on ${day}.`;
+			}
+			prev.addEventListener('click', () => show(current - 1));
+			next.addEventListener('click', () => show(current + 1));
+			track.addEventListener('keydown', (e) => {
+				const to = { ArrowLeft: current - 1, ArrowRight: current + 1, Home: 0, End: slides.length - 1 }[e.key];
+				if (to === undefined) return;
+				e.preventDefault();
+				show(to);
+			});
+			// A swipe or trackpad scroll moves the dots to the slide it settles on.
+			let t;
+			track.addEventListener('scroll', () => {
+				clearTimeout(t);
+				t = setTimeout(() => {
+					let best = 0;
+					slides.forEach((_, k) => {
+						if (Math.abs(offset(k) - track.scrollLeft) < Math.abs(offset(best) - track.scrollLeft)) best = k;
+					});
+					mark(best);
+				}, 80);
+			}, { passive: true });
+			root.hidden = false;
+			mark(0);
+		})
+		.catch(() => {});
+})();
+</script>
 </body>
 </html>
