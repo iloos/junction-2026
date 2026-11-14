@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { BASE, planBuffet } from './flow';
 
 /**
  * The Kitchen page and the agent dock read one event stream, so what the chef does in one shows in the other
@@ -6,7 +7,6 @@ import { expect, test, type Page } from '@playwright/test';
  * (D13, another tab) takes the decision off the page and What changed says it was done in the dock.
  * Runs in `pnpm gate --full`, or KITCHEN_URL=<url> npx playwright test -c evals/ui/pw-prod.config.ts dock-sync
  */
-const BASE = process.env.KITCHEN_URL ?? 'http://localhost:4173';
 
 async function openDock(page: Page) {
 	const dock = page.locator('aside[aria-label="Agent chat"]');
@@ -15,14 +15,6 @@ async function openDock(page: Page) {
 		await expect(dock).toBeVisible({ timeout: 1000 });
 	}).toPass({ timeout: 30_000 });
 	return dock;
-}
-
-async function planBuffet(page: Page) {
-	await page.goto(`${BASE}/`);
-	const start = page.getByRole('button', { name: 'Plan the event' });
-	await page.locator('#task-h').or(start).first().waitFor({ timeout: 60_000 });
-	if (await start.isVisible()) await start.click();
-	await expect(page.locator('#task-h')).toContainText('Christmas', { timeout: 120_000 });
 }
 
 test('approving on the page shows in the dock, with the way on', async ({ page }) => {

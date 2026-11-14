@@ -2,6 +2,7 @@ import { expect, test, type APIRequestContext, type Page } from '@playwright/tes
 import { execSync } from 'node:child_process';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { approveAll, BASE, chat, openWhy, planBuffet, request } from './flow';
 
 /**
  * The claims journeys: every demo beat and every "say it" row in docs/CLAIMS.md that needs a prod observation, run
@@ -11,8 +12,7 @@ import { join } from 'node:path';
  * Exa and trips an outside agent's quote limit, so the post-deploy smoke (all of evals/ui) skips it.
  *   JOURNEYS=1 KITCHEN_URL=https://app.mandate.kitchen npx playwright test -c evals/ui/pw-prod.config.ts journeys
  */
-const BASE = process.env.KITCHEN_URL ?? '';
-const ON = process.env.JOURNEYS === '1' && Boolean(BASE);
+const ON = process.env.JOURNEYS === '1' && Boolean(process.env.KITCHEN_URL);
 let OUT = process.env.JOURNEY_OUT ?? '';
 
 test.skip(!ON, 'claims journeys: JOURNEYS=1 and KITCHEN_URL');
@@ -42,20 +42,6 @@ test('the evidence is pinned: the deployed commit is the source on main', () => 
 	).toBe(pin.sourceMain);
 });
 
-/** The line rows (and their Why) sit inside each dish's details, collapsed by default: open the first dish. */
-async function openWhy(page: Page) {
-	const why = page.getByRole('button', { name: 'Why this line' }).first();
-	if (!(await why.isVisible().catch(() => false))) {
-		const plan = page.getByRole('tab', { name: /^Plan/ }).first();
-		if (await plan.isVisible().catch(() => false)) await plan.click();
-		await page
-			.getByRole('button', { name: /^Show details: / })
-			.first()
-			.click({ timeout: 30_000 });
-	}
-	await why.click({ timeout: 30_000 });
-}
-
 async function record(page: Page, name: string, extra = '') {
 	await page.screenshot({ path: join(OUT, `${name}.png`), fullPage: true });
 	const text = await page.locator('body').innerText();
@@ -67,60 +53,6 @@ async function record(page: Page, name: string, extra = '') {
 }
 const note = (name: string, body: unknown) =>
 	writeFileSync(join(OUT, `${name}.json`), JSON.stringify(body, null, '\t'));
-
-async function planBuffet(page: Page) {
-	await page.goto(`${BASE}/`);
-	const start = page.getByRole('button', { name: 'Plan the event' });
-	await page.locator('#task-h, #event-h').or(start).first().waitFor({ timeout: 60_000 });
-	if (await start.isVisible()) await start.click();
-	await page.getByText('What happened').first().waitFor({ timeout: 90_000 });
-	await page.waitForLoadState('networkidle');
-}
-
-async function approveAll(page: Page) {
-	for (let round = 0; round < 6; round++) {
-		const review = page.getByRole('button', { name: /^Review \d+ lines?/ }).first();
-		const confirm = page.getByRole('button', { name: /Confirm exact terms/ }).first();
-		const hold = page.getByRole('button', { name: /Hold to sign off \d+ lines?/ }).first();
-		if (await review.isVisible().catch(() => false)) {
-			await review.click();
-			await confirm.click();
-		} else if (await hold.isVisible().catch(() => false)) {
-			const b = (await hold.boundingBox())!;
-			await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2);
-			await page.mouse.down();
-			await page.waitForTimeout(4000);
-			await page.mouse.up();
-		} else break;
-		await page.waitForLoadState('networkidle');
-		await page.waitForTimeout(1000);
-	}
-}
-
-async function request(page: Page, text: string, kitchen?: string) {
-	await page.goto(`${BASE}/request`);
-	if (kitchen) await page.locator('select').first().selectOption({ label: kitchen });
-	await page.locator('#req').fill(text);
-	await page.getByRole('button', { name: /Find and price/ }).click();
-	await page
-		.getByText(/Prepared by the kitchen agent|Nothing was ordered|Event brief|nothing quoted/)
-		.first()
-		.waitFor({ timeout: 60_000 })
-		.catch(() => undefined);
-	await page.waitForTimeout(1500);
-}
-
-async function chat(page: Page, text: string) {
-	await page.locator('#chat-text').fill(text);
-	await page.getByRole('button', { name: 'Send' }).click();
-	await page.waitForTimeout(1500);
-	await page
-		.getByText(/^Working( · step \d+)?…/)
-		.first()
-		.waitFor({ state: 'detached', timeout: 180_000 })
-		.catch(() => undefined);
-	await page.waitForTimeout(1500);
-}
 
 async function judgeKey(page: Page) {
 	await page.goto(`${BASE}/?ws=mine`);
@@ -238,7 +170,9 @@ test('/request: lactose-free milk, the passed cut-off, the off day', async ({ pa
 	expect.soft(milk).toMatch(/Valio doesn.t state a quantity/);
 	await request(page, '4 kg lactose-free butter for tomorrow');
 	const late = await record(page, 'b6-late');
-	expect.soft(late).toMatch(/cut-off for Tue 8 Dec has passed/);
+	// B's wording varies ("The cut-off for Tue 8 Dec has passed", "Tue 8 Dec is past this product's cut-off"): the property is
+	// that the passed cut-off is named for that day.
+	expect.soft(late).toMatch(/cut-off for Tue 8 Dec has passed|Tue 8 Dec is past [^.]*cut-off/);
 	expect.soft(late).toMatch(/Wed 9 Dec/);
 	await request(page, '10 l milk for Thursday', 'Lounas Ruoholahti (fictional)');
 	const off = await record(page, 'b6-offday');

@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { BASE, openWhy } from './flow';
 
 /**
  * CLAUDE.md rule 12 (five-second UI): no raw ids, op names, reason codes or ISO dates on a judge-facing page outside
@@ -7,7 +8,6 @@ import { expect, test, type Page } from '@playwright/test';
  * dock after a turn. Reads only text a person can see (visible elements, not attributes). Runs in `pnpm gate --full`,
  * or against a deployed app: KITCHEN_URL=<url> npx playwright test -c evals/ui/pw-prod.config.ts no-raw-ids
  */
-const BASE = process.env.KITCHEN_URL ?? 'http://localhost:4173';
 
 const OPS = [
 	'CreatePlan',
@@ -29,19 +29,6 @@ const RULES: { name: string; re: RegExp }[] = [
 ];
 
 /** Visible text outside the System layer, one string per text node's nearest element. */
-/** The line rows (and their Why) sit inside each dish's details, collapsed by default: open the first dish. */
-async function openWhy(page: Page) {
-	const why = page.getByRole('button', { name: 'Why this line' }).first();
-	if (!(await why.isVisible().catch(() => false))) {
-		const plan = page.getByRole('tab', { name: /^Plan/ }).first();
-		if (await plan.isVisible().catch(() => false)) await plan.click();
-		await page
-			.getByRole('button', { name: /^Show details: / })
-			.first()
-			.click({ timeout: 30_000 });
-	}
-	await why.click({ timeout: 30_000 });
-}
 
 async function visibleText(page: Page): Promise<string[]> {
 	return page.evaluate(() => {

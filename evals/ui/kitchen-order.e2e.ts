@@ -1,4 +1,5 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test } from '@playwright/test';
+import { approveAll, BASE, planBuffet } from './flow';
 
 /**
  * Regression checks from the prod bug bash (docs/BUGS.md #1, #5, #6, #9), on the Kitchen screen as a judge uses it.
@@ -7,7 +8,6 @@ import { expect, test, type Page } from '@playwright/test';
  * a human can approve. Runs in `pnpm gate --full` (production build on PGlite, throwaway JUDGE_KEY_SECRET) or against
  * a deployed app with KITCHEN_URL=<url>.
  */
-const BASE = process.env.KITCHEN_URL ?? 'http://localhost:4173';
 
 const euros = (s: string) => Number(s.replace(/[€\s,]/g, ''));
 
@@ -38,45 +38,11 @@ test.afterEach(() => {
 	seen.clear();
 });
 
-async function planEvent(page: Page) {
-	await page.goto(`${BASE}/`);
-	const start = page.getByRole('button', { name: 'Plan the event' });
-	await page.locator('#task-h, #event-h').or(start).first().waitFor({ timeout: 60_000 });
-	if (await start.isVisible()) await start.click();
-	await page.getByText('What happened').first().waitFor({ timeout: 90_000 });
-	await page.waitForLoadState('networkidle');
-}
-
-/** Approve every decision group as the chef; returns how many lines were signed off. */
-async function approveAll(page: Page): Promise<number> {
-	let lines = 0;
-	for (let round = 0; round < 6; round++) {
-		const review = page.getByRole('button', { name: /^Review \d+ lines?/ }).first();
-		const confirm = page.getByRole('button', { name: /Confirm exact terms/ }).first();
-		const hold = page.getByRole('button', { name: /Hold to sign off \d+ lines?/ }).first();
-		if (await review.isVisible().catch(() => false)) {
-			lines += Number(((await review.innerText()).match(/(\d+)/) ?? [])[1] ?? 0);
-			await review.click();
-			await confirm.click();
-		} else if (await hold.isVisible().catch(() => false)) {
-			lines += Number(((await hold.innerText()).match(/(\d+) lines?/) ?? [])[1] ?? 0);
-			const b = (await hold.boundingBox())!;
-			await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2);
-			await page.mouse.down();
-			await page.waitForTimeout(4000);
-			await page.mouse.up();
-		} else break;
-		await page.waitForLoadState('networkidle');
-		await page.waitForTimeout(1000);
-	}
-	return lines;
-}
-
 test('the order summary counts what was approved, adds up, and survives a reload', async ({
 	page
 }) => {
 	test.setTimeout(240_000);
-	await planEvent(page);
+	await planBuffet(page);
 
 	// #9: every plain "g × guests = kg" formula on screen is arithmetic (yield forms with ÷ are left out).
 	const body = await page.locator('body').innerText();
