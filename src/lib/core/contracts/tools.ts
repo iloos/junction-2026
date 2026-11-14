@@ -162,8 +162,11 @@ export const toolSchemas = {
 									country: z.string()
 								})
 							),
-							/** Labels every product must carry. */
-							labels: z.array(z.string()),
+							/**
+							 * The kitchen's own notes on what it buys (clinical diets, "allergens declared for every resident"): context
+							 * for choosing products, not a constraint the tools enforce.
+							 */
+							notes: z.array(z.string()),
 							/** What happens to a product with no allergen record: held for a chef, or rejected. Never ok. */
 							unknownAllergenRecord: z.enum(['hold', 'reject']),
 							/** What happens to a product that may contain traces of an excluded allergen. */
