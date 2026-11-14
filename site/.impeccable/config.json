@@ -47,6 +47,15 @@
         ],
         "createdAt": "2026-11-14T13:27:32.149Z",
         "reason": "Claude verified: headings use clamp() sizes the detector can't read; rendered h1/h2 are 40-56px serif vs 15px body (screenshot scratch/how2-1440.png)"
+      },
+      {
+        "rule": "overused-font",
+        "value": "instrument serif",
+        "files": [
+          "public/site.css"
+        ],
+        "createdAt": "2026-11-14T18:38:26.279Z",
+        "reason": "user confirmed: serif kept only as the .said accent for quoted chef words (not headings)"
       }
     ]
   }
