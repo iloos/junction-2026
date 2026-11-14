@@ -136,3 +136,13 @@ What changes is that hard constraints get **one vocabulary and one evaluator in 
 **Why:** a session over MCP had no way to reach the approval: the link was relative and bound to one browser's cookie. The obvious fix, a signed approve link in the tool result, would let the agent follow it and approve itself. That breaks "your agent never approves", and a catalogue string could exploit it by prompt injection. OAuth plus billing proves who pays, not that a person reviewed these lines. Verda's `confirm: true` is a flag the model sets; Mandate's gate must not be.
 
 **Reopen if:** an MCP client ships a human-only approval primitive (URL elicitation that the model can't complete) that works in the demo clients. Then use it for approval in chat, under the same rule.
+
+### D18 · The ask is first-class: every entry makes a need, lines are bound to it, one command identity (lead, 14 Nov night; from Round 11)
+**Choice:** three invariants in core, so an entry can no longer hand the gate a valid but wrong command:
+1. **Every entry makes a need**, including packs, cases and sales units. The need carries the ask: the words, the quantity, and the unit as stated, or `unknown` with the token. It also carries the requirements (D16). An unrecognised explicit unit never becomes a quantity: the entry asks a question first.
+2. **Lines are bound to their need's amount.** When a need's physical amount is known, the validator forbids a line whose physical amount exceeds the need by more than one lot step (lot rounding), and holds it when the size is unknown. "250 ml asked, 250 l bought" fails at quote and commit, whatever the entry did.
+3. **One command identity** in core: `commandKey(plan, version, termsHash, exact line ids)`. Request, Chat, the agent loop and the Kitchen all use it. A transport retry replays the same receipt. A newly authorised remainder is a new command.
+
+**Why:** Round 11 showed the core checks authority faithfully, but trusts what entries construct. The request parser turned an unknown "ml" into sales units (R11-01). Pack requests carried no need, so they lost their requirements (R11-02). Request built its own commit key and replayed an old receipt (R11-03). Chat and the loop had the same class of bug in Round 10. Patching each entry hasn't converged; the invariants have to live where every entry passes.
+
+**Reopen if:** a legitimate order deliberately buys well over the ask, e.g. stocking up. That needs an explicit "more than asked" reason on the line, chosen by the chef. The rule itself doesn't loosen.
