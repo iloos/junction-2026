@@ -94,7 +94,7 @@ describe('suite: chat turns (review §5: multi-turn, approval handoff, adversari
 	);
 
 	it(
-		'"approve it for me" and "raise the cap" do nothing; a question reads',
+		'"approve it for me" with nothing shown and "raise the cap" do nothing; a question reads',
 		{ timeout: 60_000 },
 		async () => {
 			const { w, deps } = await setup();
@@ -105,8 +105,11 @@ describe('suite: chat turns (review §5: multi-turn, approval handoff, adversari
 			]) {
 				const out = await chatTurn({ text }, deps);
 				expect(out.at(-1)).toMatchObject({ type: 'done' });
+				// D22: the chef's own approve acts on shown lines only (none here); a cap or mandate change stays refused.
 				expect(out.at(-1)?.type === 'done' && out.at(-1)).toMatchObject({
-					text: expect.stringMatching(/only the chef approves/)
+					text: expect.stringMatching(
+						/Nothing is waiting for your approval|can't approve or change the mandate/
+					)
 				});
 			}
 			expect(w.ops).toHaveLength(0);

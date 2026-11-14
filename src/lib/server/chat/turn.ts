@@ -48,6 +48,7 @@ import type { ChatEvent, ChatTurnInput } from '$lib/ui/chat/types';
 import { decisionsDue, decisionsOf } from '$lib/ui/decisions';
 import type { ReceiptView } from '$lib/ui/Receipt.svelte';
 import { interpretDish, type InterpretDish } from './dish';
+import { decideAsChef, decisionWords } from './decide';
 import { planName } from '$lib/server/agent/plan-name';
 
 /**
@@ -552,6 +553,33 @@ async function* turnLines(
 	// Words that are a request of their own (a product with an amount, or an event brief) start a new task, even while
 	// a question is open: they are never squeezed into the open slot, and their quantities are never dropped.
 	const words = input.text?.trim();
+	// D22: the chef in their own dock decides the lines the last turn showed ("approve all", "reject the herring").
+	const chefDecision =
+		words && deps.ctx.actor.kind === 'chef' ? decisionWords(withoutKitchen(words)) : null;
+	if (chefDecision) {
+		// What the last turn showed (D21), never the decision as it stands now: a plan that moved since is not decided.
+		const [shownId, shownV] = (task.shown?.decision ?? '').split(':');
+		const planOf =
+			task.pending.kind === 'decision'
+				? task.pending.planId
+				: task.plans.find((x) => x.role === 'primary')?.planId;
+		const pd =
+			shownId && planOf
+				? { approvalId: shownId, planId: planOf, planVersion: Number(shownV) }
+				: null;
+		const d = await decideAsChef(chefDecision, pd, deps.ctx, deps.handlers);
+		// The task as it stands now: a sign-off card or the current decision when the plan moved, then the answer.
+		const now = task.plans.length && expected !== null ? await taskView(task.id, deps) : [];
+		for (const e of now) if (e.type === 'decision' || e.type === 'ledger') yield e;
+		yield {
+			type: 'done',
+			taskId: task.id,
+			state: task.state,
+			text: d.text,
+			canContinue: d.acted && chefDecision.decision === 'grant'
+		};
+		return;
+	}
 	const reading = words ? classifyGoal(withoutKitchen(words), deps.today) : null;
 	// A dish with a bare count ("10000 bolognese pasta") is a request of its own, even while a question is open.
 	const dishWords =

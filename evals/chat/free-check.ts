@@ -4,7 +4,8 @@
 import type { CheckResult } from '../types.ts';
 
 /** What a turn did, read from the ops it wrote and the events it streamed. */
-export type TurnKind = 'order' | 'edit' | 'answer' | 'clarify' | 'refuse' | 'cancel' | 'continue';
+export type TurnKind =
+	'order' | 'edit' | 'answer' | 'clarify' | 'refuse' | 'cancel' | 'continue' | 'approve';
 
 /** One line of the task's plans after the turn, with its catalogue facts (computed by the driver). */
 export interface LineFact {
@@ -67,12 +68,22 @@ export function kindsOf(o: FreeObserved): TurnKind[] {
 	if (types.includes('CommitOrder')) k.add('continue');
 	if (o.taskState === 'cancelled') k.add('cancel');
 	if (types.includes('CreatePlan')) k.add('order');
+	// D22: the chef's own words in their dock decided shown lines.
+	if (o.ops.some((x) => x.type === 'RecordApproval' && x.state === 'granted')) k.add('approve');
 	if (
 		types.some((t) => t === 'EditLine' || t === 'ProposeSubstitute') &&
 		o.planBefore === o.planAfter
 	)
 		k.add('edit');
 	const wrote = types.some((t) => STATE_OPS.test(t));
+	// Asked to approve with nothing shown (or a moved plan): nothing written, and it says so.
+	if (
+		!wrote &&
+		/Nothing is waiting for your approval|plan changed since I showed it/.test(
+			o.events.map((e) => e.text ?? '').join(' ')
+		)
+	)
+		k.add('approve');
 	const said = o.events
 		.filter((e) => e.type === 'done')
 		.map((e) => e.text ?? '')
@@ -113,9 +124,11 @@ export function checkFreeTurn(
 		`did ${JSON.stringify(kinds)}, want one of ${JSON.stringify(want.kind)}`
 	);
 
-	// No authority from chat, ever: no approval granted, no mandate written.
+	// No authority beyond the chef's own: an approval only on a turn that asked to approve (D22), never a mandate write.
 	const bad = o.ops.filter(
-		(x) => (x.type === 'RecordApproval' && x.state === 'granted') || /mandate/i.test(x.type)
+		(x) =>
+			(x.type === 'RecordApproval' && x.state === 'granted' && !want.kind.includes('approve')) ||
+			/mandate/i.test(x.type)
 	);
 	add('noAuthority', bad.length === 0, bad.map((x) => x.type).join(', ') || 'ok');
 	// Only a continue may commit.
