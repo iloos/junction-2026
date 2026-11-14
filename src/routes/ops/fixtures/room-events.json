@@ -1,0 +1,127 @@
+[
+	{
+		"seq": 41,
+		"event": {
+			"kind": "kitchen.created",
+			"simAt": "2026-12-07T21:41:00.000Z",
+			"label": "New store in the room",
+			"detail": {
+				"kitchenId": "k-v-a1b2c3",
+				"name": "Aino's Lunch Bar",
+				"kind": "lunch_restaurant",
+				"city": "Espoo",
+				"copiedFrom": "k-lounas",
+				"mandateWords": "Order the usual lunch week; anything over €400 waits for me.",
+				"weeklyCapCents": 120000,
+				"createdAt": "2026-12-07T21:41:00.000Z"
+			}
+		}
+	},
+	{
+		"seq": 44,
+		"event": {
+			"kind": "kitchen.created",
+			"simAt": "2026-12-07T21:42:00.000Z",
+			"label": "New store in the room",
+			"detail": {
+				"kitchenId": "k-v-d4e5f6",
+				"name": "Hilltop Care",
+				"kind": "care_home_kitchen",
+				"city": "Vantaa",
+				"copiedFrom": "k-carehome",
+				"mandateWords": "Soft diets first; never swap an allergen-free line.",
+				"weeklyCapCents": 90000,
+				"createdAt": "2026-12-07T21:42:00.000Z"
+			}
+		}
+	},
+	{
+		"seq": 45,
+		"event": {
+			"kind": "kitchen.created",
+			"simAt": "2026-12-07T21:42:00.000Z",
+			"label": "New store in the room",
+			"detail": {
+				"kitchenId": "k-v-a1b2c3",
+				"name": "Aino's Lunch Bar",
+				"kind": "lunch_restaurant",
+				"city": "Espoo",
+				"copiedFrom": "k-lounas",
+				"mandateWords": "x",
+				"weeklyCapCents": 120000,
+				"createdAt": "2026-12-07T21:41:00.000Z"
+			}
+		}
+	},
+	{
+		"seq": 52,
+		"event": {
+			"kind": "shortage.replanned",
+			"simAt": "2026-12-07T21:45:00.000Z",
+			"label": "Shortage: Valio milk 1 l",
+			"detail": {
+				"shortageId": "sh-1",
+				"productId": "460692",
+				"productName": "Valio milk 1 l",
+				"had": 400,
+				"left": 60,
+				"unit": "KI",
+				"kitchens": [
+					{
+						"kitchenId": "k-hotel",
+						"kitchenName": "Hotel Rautatientori",
+						"planId": "pl-1",
+						"outcome": "swapped",
+						"changed": [
+							{
+								"lineId": "l1",
+								"productId": "460692",
+								"productName": "Valio milk 1 l",
+								"was": {
+									"qty": 12,
+									"unit": "KI"
+								},
+								"now": null
+							}
+						],
+						"swaps": [
+							{
+								"fromProductId": "460692",
+								"fromName": "Valio milk 1 l",
+								"toProductId": "460700",
+								"toName": "Valio lactose-free milk 1 l",
+								"qty": 12,
+								"unit": "KI"
+							}
+						],
+						"allowedBy": "Swaps within the same category are allowed up to €50 more.",
+						"waitsForPerson": 0,
+						"why": "Swapped to lactose-free milk; the rules allow a same-category swap."
+					},
+					{
+						"kitchenId": "k-v-d4e5f6",
+						"kitchenName": "Hilltop Care",
+						"planId": "pl-2",
+						"outcome": "held",
+						"changed": [],
+						"swaps": [],
+						"allowedBy": "Allergen-free lines are never swapped without a person.",
+						"waitsForPerson": 1,
+						"why": "Held for the chef: the only substitute is not on the free-from list."
+					},
+					{
+						"kitchenId": "k-v-a1b2c3",
+						"kitchenName": "Aino's Lunch Bar",
+						"planId": null,
+						"outcome": "unaffected",
+						"changed": [],
+						"swaps": [],
+						"allowedBy": "",
+						"waitsForPerson": 0,
+						"why": "No open plan uses this milk."
+					}
+				]
+			}
+		}
+	}
+]

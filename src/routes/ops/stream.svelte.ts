@@ -40,6 +40,8 @@ export function traceKey(e: Extract<ServerEvent, { kind: 'trace' }>): string {
 export type Status = 'connecting' | 'live' | 'reconnecting' | 'polling' | 'offline';
 
 const LOG_CAP = 200;
+/** Sim kinds that are about the room, not the simulated supplier (S1's contract, D24). */
+const ROOM_SIMS = new Set<string>(['kitchen.created', 'shortage.replanned']);
 const TRACE_RUN_CAP = 20;
 const POLL_MS = 2500;
 /** Consecutive EventSource errors before falling back to polling. */
@@ -64,6 +66,11 @@ export class OpsStream {
 	heldSince: Record<string, string> = $state.raw({});
 	/** Agent runs and requests, newest first: the stored calls of the last day, then live ones as they happen. */
 	traces: TraceRun[] = $state.raw([]);
+	/**
+	 * Room events (D24): stores created and shortage re-plans, kept apart from the capped log so a store made an hour
+	 * ago still shows. Not cleared on a new run: stores outlive runs.
+	 */
+	roomSims: { seq: number; event: SimEvent }[] = $state.raw([]);
 	/** Ops the reducer refused (stale writes from another run or process), shown as one muted line. */
 	refused = $state(0);
 	lastRefused: string | null = $state(null);
@@ -130,6 +137,7 @@ export class OpsStream {
 		const onEvent = (m: MessageEvent) => this.enqueue(JSON.parse(m.data) as ServerEvent);
 		es.addEventListener('op', onEvent);
 		es.addEventListener('sim', onEvent);
+		es.addEventListener('notice', (m) => this.onNotice(JSON.parse((m as MessageEvent).data)));
 		es.addEventListener('trace', (m) => this.onTrace(JSON.parse((m as MessageEvent).data)));
 		es.addEventListener('ready', (m) => {
 			this.errors = 0;
@@ -183,6 +191,17 @@ export class OpsStream {
 		this.log = [];
 		this.heldSince = {};
 		this.simClock = null;
+	}
+
+	/** Arrival order of room events: notices carry no seq (they are not in the op log). */
+	private roomN = 0;
+
+	/**
+	 * A room notice (kitchen.created, shortage.replanned): live only, no seq, kept in arrival order.
+	 */
+	private onNotice(e: { kind?: string; event?: SimEvent }): void {
+		if (!e.event || !ROOM_SIMS.has(e.event.kind)) return;
+		this.roomSims = [...this.roomSims, { seq: ++this.roomN, event: e.event }];
 	}
 
 	/** Calls already shown, live or stored, so a call read twice shows once. Bookkeeping only: nothing renders it. */
@@ -271,7 +290,9 @@ export class OpsStream {
 			if (e.kind === 'sim') {
 				this.last = e.seq;
 				added.push({ kind: 'sim', seq: e.seq, runId, event: e.event });
-				this.simClock = e.event.simAt;
+				if (ROOM_SIMS.has(e.event.kind))
+					this.roomSims = [...this.roomSims, { seq: ++this.roomN, event: e.event }];
+				else this.simClock = e.event.simAt;
 				continue;
 			}
 			const r = applyOps(state, [e.envelope]);
