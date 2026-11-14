@@ -60,6 +60,19 @@ function invalidateApprovals(state: WorkspaceState, planId: string): Record<stri
 }
 
 /**
+ * A re-quote with the same terms moves the plan to a new version, and the quote records a fresh pending approval at
+ * it. An older version's pending approval would then be a second, stale decision for the same lines, so it goes;
+ * a grant on the same terms stays.
+ */
+function supersedePending(state: WorkspaceState, planId: string): Record<string, Approval> {
+	const out = { ...state.approvals };
+	for (const a of Object.values(out))
+		if (a.planId === planId && a.state === 'pending')
+			out[a.id] = { ...a, state: 'invalidated', reason: 'superseded by a re-quote' };
+	return out;
+}
+
+/**
  * Who may commit which lines (★5/★7). Every order line is checked against the authority it names (an order line
  * without one names the order's). `mandate`: only `act`-tier eligible lines, never for
  * an external caller or an externally created plan. An approval: granted, bound to this exact plan version and
@@ -178,7 +191,7 @@ export function applyOps(state: WorkspaceState, ops: OpEnvelope[]): Result<Works
 				s = {
 					...s,
 					plans: { ...s.plans, [plan.id]: next },
-					approvals: termsChanged ? invalidateApprovals(s, plan.id) : s.approvals
+					approvals: termsChanged ? invalidateApprovals(s, plan.id) : supersedePending(s, plan.id)
 				};
 				break;
 			}
