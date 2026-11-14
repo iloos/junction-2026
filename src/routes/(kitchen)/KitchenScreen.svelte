@@ -787,14 +787,15 @@
 							{/if}
 							{#if d.rescue}
 								<div class="px-4 pb-3">
-									<p class="mb-1.5 text-body leading-snug text-ink">
-										<span class="font-medium"
-											>{d.outage === 'out'
-												? 'Out of stock at Valio.'
-												: "Valio can't deliver it."}</span
-										>
-										{d.rescue.summary}
-									</p>
+									{#if !open[d.id]}
+										<p class="mb-1.5 text-body leading-snug text-ink">
+											<span class="font-medium"
+												>{d.outage === 'out'
+													? 'Out of stock at Valio.'
+													: "Valio can't deliver it."}</span
+											>
+											{d.rescue.summary}
+										</p>{/if}
 									<button
 										type="button"
 										class="flex w-full items-center gap-2 text-left text-meta font-medium text-ink-2 hover:text-ink"

@@ -8,7 +8,7 @@
 	import type { Line } from '$lib/core/contracts';
 
 	import StateChip from './StateChip.svelte';
-	import { lineBasis } from './coverage';
+	import { lineBasis, lotSentence } from './coverage';
 	import { money } from './format';
 
 	interface Props {
@@ -35,6 +35,8 @@
 
 	const rejected = $derived(l.state === 'rejected' || l.state === 'unorderable');
 	const b = $derived(lineBasis(l.qty, l.view));
+	/** A lot step that buys well over the need is said on the row, not only in the detail. */
+	const lot = $derived(lotSentence(l.qty.rounding));
 	const hasDetail = $derived(!rejected && !!(b.physical || b.unitPrice || l.qty.rounding));
 </script>
 
@@ -77,6 +79,7 @@
 					class="text-ink">{b.buys}</span
 				>{#if b.physical && !expanded}<span class="text-ink-2"> {b.physical}</span>{/if}{/if}
 		</p>
+		{#if lot && !rejected}<p class="text-meta text-ink-2">{lot}</p>{/if}
 		{#if expanded && hasDetail}
 			<dl class="mono mt-0.5 grid grid-cols-[auto_1fr] gap-x-2 text-micro text-ink-2">
 				{#if b.physical}<dt class="font-sans text-ink-3">Buys</dt>

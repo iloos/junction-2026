@@ -233,3 +233,16 @@ export function neededVsBuying(f: FulfilmentView): {
 		over: f.excess.value > 0 ? amount({ value: f.excess.value, unit: u }) : null
 	};
 }
+
+/**
+ * Why a line buys more than the need, when a Valio lot step is the reason: "Valio sells 10 kg lots: 11.53 kg needed
+ * → 20 kg". Null for small top-ups and other roundings (pack division, unchanged lots), which stay in the line's detail.
+ */
+export function lotSentence(rounding: string | undefined): string | null {
+	const m = rounding?.match(/^([\d.,]+) (\w+) → (\d+) × ([\d.,]+) \w+ lot = ([\d.,]+) (\w+)$/);
+	if (!m) return null;
+	const [, need, unit, , step, total] = m;
+	// Only when the lot adds a tenth or more over the need; a small top-up stays in the detail.
+	if (Number(total) - Number(need) < Number(need) * 0.1) return null;
+	return `Valio sells ${step} ${unit} lots: ${need} ${unit} needed → ${total} ${unit}`;
+}

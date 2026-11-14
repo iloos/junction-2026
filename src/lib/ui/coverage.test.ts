@@ -5,6 +5,7 @@ import {
 	coverageSentence,
 	dishGate,
 	dishStatus,
+	lotSentence,
 	neededVsBuying,
 	lineBasis,
 	needStatus,
@@ -173,5 +174,18 @@ describe('dish status sentence (one per FulfilmentView partition)', () => {
 			buying: '11.5 kg',
 			over: '1.5 kg'
 		});
+	});
+});
+
+describe('lot step sentence', () => {
+	it('says why a lot step buys over the need', () => {
+		expect(lotSentence('11.53 kg → 2 × 10 kg lot = 20 kg')).toBe(
+			'Valio sells 10 kg lots: 11.53 kg needed → 20 kg'
+		);
+		expect(lotSentence('27.0 kg → 4 × 7 kg lot = 28 kg')).toBeNull();
+	});
+	it('stays silent for small top-ups, pack division and missing rounding', () => {
+		expect(lotSentence('5.6 / 0.7 = 8 ST')).toBeNull();
+		expect(lotSentence(undefined)).toBeNull();
 	});
 });
