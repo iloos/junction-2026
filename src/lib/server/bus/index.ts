@@ -71,7 +71,7 @@ export async function publish(workspaceId: string, events: ServerEvent[]): Promi
 
 /**
  * A plan created or re-priced: warm its products' photos in the background (live web mode only, the workspace's web
- * cap), so the rows show them when they render. Fire and forget; never delays or fails the write.
+ * prefetch cap, products/photos PREFETCH_LIMITS), so the rows show them when they render. Fire and forget; never delays or fails the write.
  */
 function warmPlanPhotos(workspaceId: string, events: ServerEvent[]) {
 	if (process.env.VITEST) return;
@@ -92,7 +92,7 @@ function warmPlanPhotos(workspaceId: string, events: ServerEvent[]) {
 		]);
 		const { ports } = await createServerPorts();
 		const products = await ports.catalog.get([...ids]);
-		await warmPhotos(process.env, `visitor:${workspaceId}`, [...products.values()]);
+		await warmPhotos(process.env, `prefetch:${workspaceId}`, [...products.values()]);
 	})().catch((err) => log.warn('photos.warm_failed', { workspaceId, error: errMsg(err) }));
 }
 

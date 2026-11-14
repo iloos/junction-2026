@@ -6,7 +6,7 @@
 import type { CallContext } from '$lib/core/ports';
 import { createWebHttp } from '../web/http';
 import { cacheDir, findingsFor, spendLedger, webContext, webMode, webPg } from '../web';
-import { spendLimits } from '../web/spend';
+import { spendLimits, type SpendLimits } from '../web/spend';
 import { createListingFinder } from '../web/listing';
 import { createBrandLookup, type BrandFacts } from '../web/photo';
 import type { WebCall } from '../web/http';
@@ -18,14 +18,14 @@ import { join } from 'node:path';
 type Env = Record<string, string | undefined>;
 
 /** Context.dev for a caller (its web cap), or undefined in fixture mode or without a key. */
-function contextDevCall(env: Env, spendKey: string): WebCall | undefined {
+function contextDevCall(env: Env, spendKey: string, limits?: SpendLimits): WebCall | undefined {
 	if (webMode(env) !== 'live' || !env.CONTEXT_DEV_API_KEY) return undefined;
 	return createWebHttp({
 		api: 'context.dev',
 		apiKey: env.CONTEXT_DEV_API_KEY,
 		cacheDir: join(cacheDir(env), 'context-dev'),
 		store: webPg()?.cache,
-		guard: spendLedger(env).guard(spendKey, spendLimits(env))
+		guard: spendLedger(env).guard(spendKey, limits ?? spendLimits(env))
 	});
 }
 
@@ -33,8 +33,8 @@ function contextDevCall(env: Env, spendKey: string): WebCall | undefined {
  * A brand's domain and logo (Context.dev), kept as a finding (`brand:<name>`) so cached reads (row photos) can use it
  * without a call. Undefined in fixture mode.
  */
-export function brandLookup(env: Env, spendKey: string) {
-	const cd = contextDevCall(env, spendKey);
+export function brandLookup(env: Env, spendKey: string, limits?: SpendLimits) {
+	const cd = contextDevCall(env, spendKey, limits);
 	if (!cd) return undefined;
 	const live = createBrandLookup(cd);
 	const findings = findingsFor(env);
@@ -56,10 +56,10 @@ export function brandLookup(env: Env, spendKey: string) {
 }
 
 /** The live finder for a caller (its web cap), or undefined when the web lane is in fixture mode. */
-export function listingFinder(env: Env, spendKey: string) {
+export function listingFinder(env: Env, spendKey: string, limits?: SpendLimits) {
 	if (webMode(env) !== 'live' || !env.EXA_API_KEY) return undefined;
-	const guard = spendLedger(env).guard(spendKey, spendLimits(env));
-	const brand = brandLookup(env, spendKey);
+	const guard = spendLedger(env).guard(spendKey, limits ?? spendLimits(env));
+	const brand = brandLookup(env, spendKey, limits);
 	return createListingFinder({
 		exa: createWebHttp({
 			api: 'exa',
@@ -68,7 +68,7 @@ export function listingFinder(env: Env, spendKey: string) {
 			store: webPg()?.cache,
 			guard
 		}),
-		contextdev: contextDevCall(env, spendKey),
+		contextdev: contextDevCall(env, spendKey, limits),
 		...(brand ? { brandDomain: async (name: string) => (await brand(name)).domain } : {}),
 		store: webPg()?.cache,
 		findings: findingsFor(env),
