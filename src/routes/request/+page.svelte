@@ -232,6 +232,26 @@
 			if (status[k] === 'warn') status[k] = 'done';
 	}
 
+	/**
+	 * Who did what to the order, in D10 words: the agent prepares; only a receipt makes it placed (simulated), and
+	 * until then the line says what it waits for.
+	 */
+	function orderStatusWords(): string {
+		const k = order?.kitchen.name ?? '';
+		if (committed) return `Placed for ${k} (simulated) · receipt ${committed.receiptId}`;
+		const prepared = `Prepared by the kitchen agent for ${k}`;
+		if (approval?.state === 'pending') return `${prepared} · waiting for your approval`;
+		if (approval?.state === 'granted') return `${prepared} · approved, not placed yet`;
+		if (approval?.state === 'denied') return `${prepared} · denied, nothing placed`;
+		if (approval)
+			return `${prepared} · approval ${APPROVAL_STATE_WORDS[approval.state]?.toLowerCase() ?? approval.state}, nothing placed`;
+		if (plan?.lines.some((l) => l.reasons.includes('over_hard_limit')))
+			return `${prepared} · over the hard limit, nothing can be placed`;
+		if (plan?.lines.every((l) => l.state === 'eligible' && l.tier === 'act'))
+			return `${prepared} · within your mandate, not placed yet`;
+		return `${prepared} · held, nothing placed`;
+	}
+
 	async function decide(decision: 'grant' | 'deny') {
 		if (!approval || !plan) return;
 		busy = true;
@@ -911,7 +931,7 @@
 				{/snippet}
 				{#if order && plan}
 					<p class="text-meta text-ink-3">
-						Placed by the kitchen agent for {order.kitchen.name} · key
+						{orderStatusWords()} · key
 						<span class="mono">{order.idempotencyKey}</span>
 						{#if order.replayed}· <b class="font-medium text-ink-2"
 								>same words, same key: the earlier plan returned, no second order</b
