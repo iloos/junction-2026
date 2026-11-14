@@ -7,61 +7,26 @@
  */
 import { describe, expect, it } from 'vitest';
 import type { Plan } from '$lib/core/contracts';
-import { scenarioDate } from '$lib/core/scenario';
 import { applyExpectFail } from '../../../../evals/check';
 import type { CheckResult } from '../../../../evals/types';
-import { runGoal } from '../agent';
-import { scriptedPlanner } from '../agent/loop';
 import { trialWorkspace } from '../agent/trial-harness';
-import { runRequest } from '../request/run';
-import { cases, checkBasket, type Case } from './fidelity';
+import { cases, checkBasket, FIDELITY_NOW, playText, type Case } from './fidelity';
 
 type Path = 'rest' | 'request' | 'agent';
 
 async function playPath(c: Case, path: Path): Promise<{ plans: Plan[]; error?: string }> {
+	if (path !== 'rest')
+		return playText(c.kitchen, path === 'agent' ? (c.agentText ?? c.text) : c.text, path, c.id);
 	const w = await trialWorkspace();
-	// Monday morning, before Valio's 17:00 cut-off: "tomorrow" is still orderable, so the paths are compared on
-	// intent, not on a closed cut-off.
-	w.env.ports.clock = { now: () => new Date('2026-12-07T09:00:00+02:00') };
-	const today = scenarioDate(w.env.ports.clock.now());
+	w.env.ports.clock = { now: () => FIDELITY_NOW };
 	try {
-		if (path === 'rest') {
-			const r = await w.handlers.place_order(w.ctx('kitchen_agent'), {
-				kitchenId: c.kitchen,
-				deliverBy: c.rest.deliverBy,
-				idempotencyKey: `fidelity-${c.id}`,
-				lines: c.rest.lines as never
-			});
-			if (!r.ok) return { plans: [], error: r.error.code };
-		} else if (path === 'request') {
-			const kitchen = (await w.env.ports.store.kitchens(w.env.workspaceId)).find(
-				(k) => k.id === c.kitchen
-			)!;
-			await runRequest(c.text, {
-				handlers: w.handlers,
-				ctx: w.ctx('kitchen_agent'),
-				today,
-				kitchen,
-				llm: null,
-				llmKind: 'fixture',
-				place: true
-			});
-		} else {
-			const run = await runGoal({
-				goal: c.agentText ?? c.text,
-				principal: w.principal({ kitchenIds: [c.kitchen], id: `fidelity-${c.id}` }),
-				handlers: w.handlers,
-				planner: scriptedPlanner(),
-				source: { ...w.source, today: () => today }
-			});
-			const plans = Object.values((await w.state()).plans);
-			return plans.length
-				? { plans }
-				: {
-						plans,
-						error: `agent stopped ${run.stopped}: ${run.summary.slice(0, 160)}`
-					};
-		}
+		const r = await w.handlers.place_order(w.ctx('kitchen_agent'), {
+			kitchenId: c.kitchen,
+			deliverBy: c.rest.deliverBy,
+			idempotencyKey: `fidelity-${c.id}`,
+			lines: c.rest.lines as never
+		});
+		if (!r.ok) return { plans: [], error: r.error.code };
 	} catch (e) {
 		return { plans: [], error: (e as Error).message.slice(0, 120) };
 	}

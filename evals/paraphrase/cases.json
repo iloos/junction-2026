@@ -1,0 +1,129 @@
+{
+	"$comment": "Paraphrase set per intent, English and Finnish: each phrasing goes through /request (fixture parser) and the agent (scripted planner) on a fresh workspace, today Mon 7 Dec 2026 09:00. An order reuses the property expectations of a fidelity case (`sameAs`); an event must be read as a brief with its guests and courses and must never buy; a read question must never create a plan or a receipt. Known gaps per intent in `expectFail` (finding id → result keys, `<lang>#<n>.<path>.<check>`). Runner: src/lib/server/evals/paraphrase.test.ts.",
+	"intents": [
+		{
+			"id": "order-lactose-free-milk",
+			"kind": "order",
+			"kitchen": "k-hotel",
+			"sameAs": "lactose-free-milk-2l",
+			"texts": {
+				"en": [
+					"2 litres of lactose-free milk by Thursday",
+					"We need 2 l milk, lactose free, for Thursday",
+					"Order 2 liters of lactose-free milk by Thursday"
+				],
+				"fi": [
+					"2 l laktoositonta maitoa torstaiksi",
+					"Tarvitaan 2 litraa laktoositonta maitoa torstaihin mennessä",
+					"Tilaa 2 l laktoositonta maitoa torstaiksi"
+				]
+			},
+			"expectFail": {
+				"P1-clause-constraint": ["en#2.request.plan"]
+			},
+			"$expectFailNote": "P1 (request parser, B): a constraint between the product and the date (\"2 l milk, lactose free, for Thursday\") is dropped by the rules parser; the item is asked about instead of carrying lactose_free."
+		},
+		{
+			"id": "order-butter-tomorrow",
+			"kind": "order",
+			"kitchen": "k-hotel",
+			"sameAs": "butter-4kg-tomorrow",
+			"texts": {
+				"en": [
+					"4 kilos of butter for tomorrow",
+					"Need 4kg butter tomorrow please",
+					"Order 4 kg butter for tomorrow"
+				],
+				"fi": [
+					"4 kg voita huomiseksi",
+					"Tilaa 4 kiloa voita huomiseksi",
+					"Tarvitsen 4 kg voita huomenna"
+				]
+			},
+			"expectFail": {
+				"A3-agent-cutoff": [
+					"en#1.agent.physical",
+					"en#1.agent.category",
+					"en#2.agent.physical",
+					"en#2.agent.category",
+					"en#3.agent.physical",
+					"en#3.agent.category",
+					"fi#1.agent.physical",
+					"fi#1.agent.category",
+					"fi#2.agent.physical",
+					"fi#2.agent.category",
+					"fi#3.agent.physical",
+					"fi#3.agent.category"
+				]
+			},
+			"$expectFailNote": "A3-agent-cutoff (E): the agent picks a Terminal product that cannot deliver tomorrow; see the fidelity case."
+		},
+		{
+			"id": "order-cream-friday",
+			"kind": "order",
+			"kitchen": "k-hotel",
+			"sameAs": "cream-constraint-last",
+			"texts": {
+				"en": [
+					"10 litres of lactose-free whipping cream for Friday",
+					"Whipping cream 10 l for Friday, lactose-free"
+				],
+				"fi": [
+					"10 l laktoositonta vispikermaa perjantaiksi",
+					"Vispikermaa 10 litraa perjantaiksi, laktoositon"
+				]
+			},
+			"expectFail": {
+				"P2-fi-lexicon": [
+					"fi#1.request.plan",
+					"fi#1.agent.plan",
+					"fi#2.request.plan",
+					"fi#2.agent.plan"
+				]
+			},
+			"$expectFailNote": "P2 (request lexicon, B): \"vispikermaa\" is not in the word list, and the nominative \"laktoositon\" is not read as lactose_free (P1)."
+		},
+		{
+			"id": "event-brief",
+			"kind": "event",
+			"kitchen": "k-hotel",
+			"phrasings": [
+				{
+					"lang": "en",
+					"text": "Christmas dinner for 50 on 20 December",
+					"guests": 50
+				},
+				{
+					"lang": "en",
+					"text": "Wedding dinner for 80 guests, 3 courses",
+					"guests": 80,
+					"courses": 3
+				},
+				{
+					"lang": "fi",
+					"text": "Pikkujoulut 60 hengelle 18.12.",
+					"guests": 60
+				},
+				{
+					"lang": "fi",
+					"text": "Illallinen 40 hengelle, 4 ruokalajia",
+					"guests": 40,
+					"courses": 4
+				}
+			],
+			"expectFail": {
+				"P3-agent-seeded-event": ["en#1.agent.noPlan", "fi#1.agent.noPlan"]
+			},
+			"$expectFailNote": "P3 (agent classifier, E): a Christmas brief for 50 or 60 makes the agent plan the seeded Christmas buffet for 140 (21 held lines); it should read a brief, not reuse the seeded event with other guests."
+		},
+		{
+			"id": "read-question",
+			"kind": "question",
+			"kitchen": "k-hotel",
+			"texts": {
+				"en": ["How much does butter cost?", "Is lactose-free milk available for Thursday?"],
+				"fi": ["Paljonko voi maksaa?", "Onko laktoositonta maitoa saatavilla torstaiksi?"]
+			}
+		}
+	]
+}

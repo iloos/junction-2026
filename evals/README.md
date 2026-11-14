@@ -6,6 +6,7 @@ Every eval plays through the **same gate the app uses** (tool handlers on PGlite
 |---|---|---|---|
 | `scenarios/` | one journey per JSON file: s1–s5 and s7 (product stories), r5-f9, r5-f10 and r6-1…r6-5 (one per review finding) | `src/lib/server/evals/evals.test.ts` with `check.ts`; `node evals/run.ts` validates the files alone | `pnpm eval` |
 | `fidelity/cases.json` | the same words through `/request`, the agent and REST `place_order` must give the same basket (properties, not first hits) | `src/lib/server/evals/fidelity.test.ts` | `pnpm eval` |
+| `paraphrase/cases.json` | English and Finnish phrasings per intent through `/request` and the agent: an order gives its fidelity case's basket, an event is read as a brief and buys nothing, a read question writes no plan | `src/lib/server/evals/paraphrase.test.ts` | `pnpm eval` |
 | (in code) | one plan, three surfaces: `get_plan` FulfilmentView, the kitchen dish status and the Ops coverage count agree per need | `src/lib/server/evals/surfaces.test.ts` | `pnpm eval` |
 | `briefs/golden.json` | open event briefs through `/request`, every brief question answered, ending in a held plan with every course and diet | `src/lib/server/evals/briefs.test.ts` | `pnpm eval` |
 | `agent/goals.json` | free-text goals played by the agent on a fresh workspace; expectations on domain state and the outcome | `src/lib/server/agent/goals.test.ts` | `pnpm eval:agent` |
@@ -95,12 +96,15 @@ Vocabulary follows [D6](../docs/DECISIONS.md) and [VOCABULARY](../docs/concept/V
 ### Known gaps: `expectFail`
 `"expectFail": {"F9": ["lines[463860]", "attempts[3]"]}` names result keys (or a key prefix such as `lines`) that must **still fail**, keyed by the finding id (`F<n>` from [SYNTHESIS](../docs/archive/handoff/SYNTHESIS.md) §2, or a review tag such as `R6-diff`). Everything else must pass. When a listed key starts passing the eval goes red ("F9 looks fixed, delete this expectFail entry"), and a prefix that matches no result is red too. A lane that fixes a finding deletes its entry in the same merge; that is the one part of `evals/` other lanes may edit. An `expectFail` entry also hides any other mistake in the same expectation (a wrong unit stays invisible until the fix lands), so check expectations under a marker against a probe of today's state first. Expected facts never depend on a search order: assert the property (`notChosen`, `excludes`, a category) rather than the current first result where retrieval may change it.
 
-The runner reports pass/fail per key, so a partial build shows exactly which guarantee holds. The fidelity cases and the briefs take the same `expectFail` per case; `surfaces.test.ts` keeps its list in code.
+The runner reports pass/fail per key, so a partial build shows exactly which guarantee holds. The fidelity cases, the paraphrase intents and the briefs take the same `expectFail` per case; `surfaces.test.ts` keeps its list in code.
 
 ### Open gaps
 | id | where | owner | what is missing |
 |---|---|---|---|
-| F9 | `r5-f9-cutoff-at-commit` | core (8d) | a commit after a line's cut-off still commits it |
+| A3-agent-cutoff | fidelity `butter-4kg-tomorrow`, paraphrase `order-butter-tomorrow` | agent (E) | the agent picks a Terminal product that cannot deliver tomorrow; A3 rightly refuses it |
+| P1-clause-constraint | paraphrase `order-lactose-free-milk` | request parser (B) | a constraint between product and date ("2 l milk, lactose free, for Thursday") is dropped |
+| P2-fi-lexicon | paraphrase `order-cream-friday` | request lexicon (B) | "vispikermaa" is unknown; nominative "laktoositon" is not read as lactose_free |
+| P3-agent-seeded-event | paraphrase `event-brief` | agent classifier (E) | "Christmas dinner for 50" makes the agent plan the seeded buffet for 140 |
 | R6-lineage | `r6-1-lineage` | menu track (A4/B) | `plan_event{proposal}`; need ids that carry the ingredient id |
 | F12-ops | `surfaces.test.ts` | Ops (9c) | Ops counts coverage from line states instead of reading `plan.view.fulfilment` |
 | A4 | `briefs/golden.json` (both) | menu track (A4) | proposal → review → `plan_event{proposal}` → held plan |
