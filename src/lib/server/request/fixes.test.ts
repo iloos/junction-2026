@@ -401,3 +401,47 @@ describe('parse review (REVIEW=1)', () => {
 		expect(r.parsed.ambiguities.join()).toMatch(/review: .*"butter"/);
 	}, 60_000);
 });
+
+describe('P1/P2: constraints in their own clause, Finnish cream words', () => {
+	it('gives a constraint-only clause to the item before it', () => {
+		const r = parseRules('We need 2 l milk, lactose free, for Thursday', TODAY);
+		expect(r.items).toHaveLength(1);
+		expect(r.items[0].constraints).toEqual(['lactose_free']);
+		expect(r.items[0].query).toBe('lactose-free milk');
+		expect(r.items[0].search[0]).toBe('maito laktoositon');
+		expect(r.items[0].id).toBe('milk.lactose_free');
+	});
+
+	it('reads "vispikermaa" as cream and a trailing nominative "laktoositon"', () => {
+		const r = parseRules('Vispikermaa 10 litraa perjantaiksi, laktoositon', TODAY);
+		expect(r.items).toHaveLength(1);
+		expect(r.items[0]).toMatchObject({ product: 'cream', qty: 10, unit: 'l' });
+		expect(r.items[0].constraints).toEqual(['lactose_free']);
+	});
+
+	it('gives a leading constraint-only clause to the item after it', () => {
+		const r = parseRules('lactose-free, 2 l milk by Thursday', TODAY);
+		expect(r.items).toHaveLength(1);
+		expect(r.items[0].constraints).toEqual(['lactose_free']);
+	});
+});
+
+describe('core-physical-intent: /request sends the physical amount', () => {
+	it('places a direct need sized by the server from the litres typed', async () => {
+		const { h, ctx, kitchen } = await setup();
+		const r = await runRequest('2 l lactose-free milk by Thursday', {
+			handlers: h,
+			ctx,
+			today: TODAY,
+			kitchen,
+			nonce: 'amount'
+		});
+		expect(r.order).toBeTruthy();
+		const plan = r.order!.plan;
+		expect(plan.needs.map((n) => n.amount)).toEqual([{ value: 2, unit: 'l' }]);
+		expect(plan.lines[0].needId).toBe(plan.needs[0].id);
+		// The preview's quantity is the quantity placed.
+		const pick = r.lookup!.items[0].pick!;
+		expect(plan.lines[0].qty.value).toBe((pick.conversion as { salesQty: number }).salesQty);
+	});
+});

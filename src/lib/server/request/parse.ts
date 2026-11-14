@@ -347,6 +347,41 @@ export function parseItem(chunk: string, finnish: boolean): Omit<ParsedItem, 'id
 	};
 }
 
+/** An item with more constraints: its query and searches are rebuilt from the same words. */
+function addConstraints(it: Omit<ParsedItem, 'id'>, more: ConstraintKey[]): Omit<ParsedItem, 'id'> {
+	const constraints = [...it.constraints, ...more.filter((c) => !it.constraints.includes(c))];
+	if (constraints.length === it.constraints.length) return it;
+	const added = constraints.filter((c) => !it.constraints.includes(c));
+	return {
+		...it,
+		constraints,
+		query: `${added.map(label).join(' ')} ${it.query}`,
+		search: buildSearch(it.search.at(-1) ?? it.query, constraints, it.variant)
+	};
+}
+
+/**
+ * Item phrases → items. A clause that only states constraints ("2 l milk, lactose free, for Thursday",
+ * "vispikermaa 10 litraa, laktoositon") belongs to the item before it (or after it, when it comes first).
+ */
+function withClauseConstraints(chunks: string[], finnish: boolean): Omit<ParsedItem, 'id'>[] {
+	const items: Omit<ParsedItem, 'id'>[] = [];
+	let carry: ConstraintKey[] = [];
+	for (const c of chunks) {
+		const it = parseItem(c, finnish);
+		if (it) {
+			items.push(carry.length ? addConstraints(it, carry) : it);
+			carry = [];
+			continue;
+		}
+		const cs = constraintsIn(c);
+		if (!cs.length) continue;
+		if (items.length) items[items.length - 1] = addConstraints(items[items.length - 1], cs);
+		else carry.push(...cs);
+	}
+	return items;
+}
+
 /** The deterministic parser. `today` is the simulator clock's Helsinki date. */
 export function parseRules(text: string, today: string): Omit<ParsedRequest, 'parser'> {
 	const notes: string[] = [];
@@ -354,11 +389,7 @@ export function parseRules(text: string, today: string): Omit<ParsedRequest, 'pa
 	const date = findDate(text, today);
 	const body = date ? text.replace(date.text, ' ') : text;
 	const finnish = looksFinnish(text);
-	const items = withIds(
-		splitItems(body)
-			.map((c) => parseItem(c, finnish))
-			.filter((i): i is Omit<ParsedItem, 'id'> => i !== null)
-	);
+	const items = withIds(withClauseConstraints(splitItems(body), finnish));
 
 	let deliverBy = today;
 	if (date?.invalid) {

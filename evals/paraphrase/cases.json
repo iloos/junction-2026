@@ -17,11 +17,7 @@
 					"Tarvitaan 2 litraa laktoositonta maitoa torstaihin mennessä",
 					"Tilaa 2 l laktoositonta maitoa torstaiksi"
 				]
-			},
-			"expectFail": {
-				"P1-clause-constraint": ["en#2.request.plan"]
-			},
-			"$expectFailNote": "P1 (request parser, B): a constraint between the product and the date (\"2 l milk, lactose free, for Thursday\") is dropped by the rules parser; the item is asked about instead of carrying lactose_free."
+			}
 		},
 		{
 			"id": "order-butter-tomorrow",
@@ -72,16 +68,7 @@
 					"10 l laktoositonta vispikermaa perjantaiksi",
 					"Vispikermaa 10 litraa perjantaiksi, laktoositon"
 				]
-			},
-			"expectFail": {
-				"P2-fi-lexicon": [
-					"fi#1.request.plan",
-					"fi#1.agent.plan",
-					"fi#2.request.plan",
-					"fi#2.agent.plan"
-				]
-			},
-			"$expectFailNote": "P2 (request lexicon, B): \"vispikermaa\" is not in the word list, and the nominative \"laktoositon\" is not read as lactose_free (P1)."
+			}
 		},
 		{
 			"id": "event-brief",

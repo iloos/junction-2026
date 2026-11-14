@@ -3,7 +3,8 @@
  * same scopes, validation and idempotency apply as for MCP and REST. Valio is touched only by
  * `quote`, and only for the shortlisted ids (plus Valio's own substitute rule for the pick).
  */
-import type { Kitchen, Offer, Product, ToolName, ToolOutput } from '$lib/core/contracts';
+import type { Kitchen, Measure, Offer, Product, ToolName, ToolOutput } from '$lib/core/contracts';
+import { sizeDirect } from '$lib/core/demand/sizing';
 import { money } from '$lib/ui/format';
 import { canonicalJson, sha256Hex } from '$lib/core/hash';
 import type { CallContext, Llm, ToolHandlers } from '$lib/core/ports';
@@ -117,7 +118,10 @@ function candidateView(r: Ranked, offer: Offer | null, quoted: boolean): Candida
 	};
 }
 
-async function lookupItems(parsed: ParsedRequest, d: RequestDeps): Promise<LookupView> {
+async function lookupItems(
+	parsed: ParsedRequest,
+	d: RequestDeps
+): Promise<{ lookup: LookupView; picked: Map<string, Product> }> {
 	let searchCalls = 0;
 	const prepared: {
 		item: ParsedRequest['items'][number];
@@ -162,6 +166,7 @@ async function lookupItems(parsed: ParsedRequest, d: RequestDeps): Promise<Looku
 		for (const o of q.offers) offers.set(o.productId, o);
 	}
 
+	const picked = new Map<string, Product>();
 	const items: LookupItemView[] = prepared.map((p) => {
 		const short = p.ranked.slice(0, SHORTLIST);
 		const views = short.map((r) =>
@@ -180,6 +185,7 @@ async function lookupItems(parsed: ParsedRequest, d: RequestDeps): Promise<Looku
 				v.picked = true;
 				v.amount = v.conversion?.ok ? orderAmount(short[i].product, v.conversion.salesQty) : null;
 				pick = v;
+				picked.set(p.item.id, short[i].product);
 				break;
 			}
 		}
@@ -295,7 +301,7 @@ async function lookupItems(parsed: ParsedRequest, d: RequestDeps): Promise<Looku
 				.filter((s): s is NonNullable<typeof s> => !!s)
 		)
 	];
-	return {
+	const lookup: LookupView = {
 		items,
 		searchCalls,
 		quotedIds: [...offers.keys()],
@@ -303,6 +309,7 @@ async function lookupItems(parsed: ParsedRequest, d: RequestDeps): Promise<Looku
 		sanity: sanityWarnings(items, d.kitchen),
 		hardLimit: hardLimit(items, d.kitchen)
 	};
+	return { lookup, picked };
 }
 
 export async function idempotencyKeyFor(
@@ -360,6 +367,27 @@ export function applyAnswers(parsed: ParsedRequest, answers: RequestAnswer[]): P
 		return next;
 	});
 	return { ...parsed, items, answered: answers };
+}
+
+/**
+ * One place_order line. A physical amount the chef typed ("2 l", "4 kg") travels as `amount`, so the plan holds a
+ * direct need and a substitute is sized to it, as when the agent orders; the quantity is the server's own sizing of
+ * that amount. Cases, packs and pieces the catalogue can't size go as the sales quantity alone.
+ */
+export function orderLine(
+	i: LookupItemView,
+	product: Product
+): { productId: string; qty: number; unit: string; amount?: Measure } {
+	const base = {
+		productId: i.pick!.productId,
+		qty: (i.pick!.conversion as { salesQty: number }).salesQty,
+		unit: i.pick!.salesUnit
+	};
+	const { qty, unit } = i.item;
+	if (qty === null || (unit !== 'kg' && unit !== 'l' && unit !== 'pcs')) return base;
+	const amount: Measure = { value: qty, unit };
+	const sized = sizeDirect(product, amount);
+	return sized ? { ...base, qty: sized.value, unit: sized.unit, amount } : base;
 }
 
 /** Runs the request flow and reports each step as it finishes. */
@@ -444,7 +472,7 @@ export async function runRequest(text: string, d: RequestDeps): Promise<RequestR
 			message: 'No item found in the request.'
 		};
 
-	const lookup = await lookupItems(parsed, d);
+	const { lookup, picked } = await lookupItems(parsed, d);
 	const picks = lookup.items.filter((i) => i.pick);
 	// An item without a pick holds the whole order: placing the rest now and the answered item
 	// later would place the rest twice (the answer changes the lines, so the key).
@@ -490,11 +518,7 @@ export async function runRequest(text: string, d: RequestDeps): Promise<RequestR
 	if (d.place === false)
 		return { parsed: parsedView, lookup, order: null, message: 'Lookup only (place=false).' };
 
-	const lines = picks.map((i) => ({
-		productId: i.pick!.productId,
-		qty: (i.pick!.conversion as { salesQty: number }).salesQty,
-		unit: i.pick!.salesUnit
-	}));
+	const lines = picks.map((i) => orderLine(i, picked.get(i.item.id)!));
 	const idempotencyKey = await idempotencyKeyFor(d.kitchen.id, parsed.deliverBy, lines, d.nonce);
 	try {
 		const placed = await callTool(d.handlers, d.ctx, 'place_order', {
