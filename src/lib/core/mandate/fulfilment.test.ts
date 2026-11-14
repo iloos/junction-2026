@@ -97,4 +97,29 @@ describe('fulfilment', () => {
 			status: 'awaiting_supplier'
 		});
 	});
+	it('a dish need with a yield is reported served: cooked ham covers raw ham on what reaches the plate', () => {
+		// 135 g × 140 ÷ 0.7 = 27 kg raw on the bone = 18.9 kg served; palvikinkku is cooked (yield 1), 13 × 1.5 kg.
+		const ham: Need = {
+			id: 'need:ham',
+			label: 'Joulukinkku',
+			amount: { value: 27, unit: 'kg' },
+			dish: { gServed: 135, defaultGServed: 135, guests: 140, yield: 0.7, formula: '' },
+			provenance: { source: 'team_estimate' }
+		};
+		const sub = line('palvi', 13, { needId: ham.id, substituteFor: '462490' });
+		const f = fulfilmentOf(ham, [sub], new Map([['palvi', view(true)]]), {
+			pack: () => ({ value: 1.5, unit: 'kg' }),
+			coverFactor: () => 1 / 0.7,
+			receipt: () => undefined
+		});
+		expect(f).toMatchObject({
+			basis: 'served',
+			yield: 0.7,
+			required: { value: 18.9, unit: 'kg' },
+			plannedKnown: { value: 18.9 },
+			unresolved: { value: 0 },
+			excess: { value: 0.6 },
+			status: 'planned'
+		});
+	});
 });

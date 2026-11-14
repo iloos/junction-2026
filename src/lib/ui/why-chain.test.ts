@@ -36,7 +36,8 @@ describe('Why chain (core fixture)', () => {
 		expect(v.Served).toBe('× 140 = 18.9 kg');
 		expect(v.Yield).toBe('÷ 0.7 = 27 kg to buy');
 		expect(v.Packs).toBe('13 ST ≈ 19.5 kg net');
-		expect(v.Covers).toBe('27 kg planned, known stock');
+		// Served basis: 13 ST of cooked ham covers the 18.9 kg served (27 kg raw on the bone).
+		expect(v.Covers).toBe('18.9 kg planned, known stock');
 		expect(v.Rule).toMatch(/^Needs your approval/);
 		expect(c.nodes.map((n) => n.value).join(' ')).not.toMatch(/supplier confirmed/i);
 	});

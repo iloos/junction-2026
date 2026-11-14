@@ -10,6 +10,7 @@
  *    ingredient supports, at the certainty of its least certain ingredient (pastry without filling makes no tarts);
  *  - a line nothing can buy (unorderable, rejected, a fact gap, superseded) covers nothing.
  * Allocation runs in order of certainty, up to `required`; the rest of each contribution is excess.
+ * A dish need with a yield reports every amount as served (purchase × yield, `basis: 'served'`).
  * Pure: the caller supplies packs, recipe ratios and receipts (`FulfilmentFacts`).
  */
 import type {
@@ -125,6 +126,10 @@ export function fulfilmentOf(
 ): FulfilmentView {
 	const unit = need.amount.unit;
 	const required = need.amount.value;
+	// A dish need with a yield is reported as served (purchase × yield): what a raw original and a cooked substitute
+	// put on the plate. Allocation runs in purchase units; only the reported amounts are scaled.
+	const y = unit === 'kg' && need.dish && need.dish.yield !== 1 ? need.dish.yield : undefined;
+	const out = (value: number) => m(value * (y ?? 1), unit);
 	const contributions: Contribution[] = [];
 	const own = lines.filter((l) => l.needId === need.id);
 
@@ -175,9 +180,9 @@ export function fulfilmentOf(
 		sums.excess += c.amount - used;
 		// A recipe's allocation is the dish amount it serves; each ingredient line names it, and the sums count it once.
 		for (const lineId of c.lineIds) {
-			if (used > 0) allocations.push({ lineId, amount: m(used, unit), bucket: c.bucket });
+			if (used > 0) allocations.push({ lineId, amount: out(used), bucket: c.bucket });
 			if (c.amount - used > 0)
-				allocations.push({ lineId, amount: m(c.amount - used, unit), bucket: 'excess' });
+				allocations.push({ lineId, amount: out(c.amount - used), bucket: 'excess' });
 		}
 	}
 	const unresolved = Math.max(0, left);
@@ -195,13 +200,14 @@ export function fulfilmentOf(
 	return {
 		needId: need.id,
 		label: need.label,
-		required: m(required, unit),
-		supplierConfirmed: m(sums.supplierConfirmed, unit),
-		awaitingSupplier: m(sums.awaitingSupplier, unit),
-		plannedKnown: m(sums.plannedKnown, unit),
-		plannedUnknown: m(sums.plannedUnknown, unit),
-		unresolved: m(unresolved, unit),
-		excess: m(sums.excess, unit),
+		required: out(required),
+		supplierConfirmed: out(sums.supplierConfirmed),
+		awaitingSupplier: out(sums.awaitingSupplier),
+		plannedKnown: out(sums.plannedKnown),
+		plannedUnknown: out(sums.plannedUnknown),
+		unresolved: out(unresolved),
+		excess: out(sums.excess),
+		...(y ? { basis: 'served' as const, yield: y } : {}),
 		status,
 		allocations
 	};
