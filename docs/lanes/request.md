@@ -51,7 +51,7 @@ A chef types a purchase request and gets a priced, availability-checked, mandate
 - `proposal.ts`: `proposeMenu` takes dishes from Gemini (zod with bounds, `llm` provenance) or the team templates (`team_estimate`), with yield always absent. Every ingredient goes through `catalog.resolve(query, {diet})`: a resolved one is pinned to the best product, an unresolved one keeps the reason. Revision 0 is stored before it is returned.
 - `golden.ts`: the two golden briefs, "5-star 5-course dinner for 50" and "Christmas dinner for 50 on 20 December", each built from its words plus answers.
 
-**Page (`/request`).** Steps Request → Lookup → Order → Approval. An event shows the brief card with question chips (`BriefAsk.svelte`) and ends at "Brief complete. Menu proposal: next." The workspace label and tooltip come from G's resolver.
+**Page (`/request`).** Steps Request → Lookup → Order → Approval; cautions turn green once the chef approves or commits. A placed order says it is now in the Kitchen plan (deep link) and creates its task. A passed cut-off is said with the first open date as a one-tap choice (never moved silently). An event shows the brief card (`BriefAsk.svelte`), then the menu review (`MenuReview.svelte`, `/request/menu`): amounts per guest editable (new revision, `user` provenance), accept = server-recorded chef review (refused while the rubric blocks), plan = `plan_event{proposal}`, then the Kitchen link. Data labels and the sandbox live in the shell (`useShell()`).
 
 **Tests.**
 - `request.test.ts`, `answers.test.ts`, `cases.test.ts`, `fixes.test.ts`
@@ -59,13 +59,18 @@ A chef types a purchase request and gets a priced, availability-checked, mandate
 - Opt-in live tests: `request/live.test.ts` and `menu/live.test.ts`, run with `DECIDE_LIVE=1 node --env-file=.env node_modules/vitest/vitest.mjs run --project server <file>`. The last menu run returned 402 from Gemini (billing) and fell back to templates.
 
 ## Next
-1. Chef review UI: show the proposal and rubric issues, allow amount edits (each edit a new revision with `user` provenance), then `review()` from the chef actor. After review, show "planning from a menu: next" until A4's `plan_event{proposal:{id, revision}}` lands, then call it.
-2. Rank /request candidates through `find_substitutes`, so the kitchen's `weights` apply; today `lookup.ts` uses hand-set scores and ignores them.
-3. Still open: one delivery date for several items; URL recovery for a review on reload (F16); hard-limit copy "split the order or raise the mandate" (F32).
+1. Rank /request candidates through `find_substitutes`, so the kitchen's `weights` apply; `lookup.ts` still uses hand-set scores.
+2. Still open: one delivery date for several items; URL recovery for a review on reload (F16); hard-limit copy "split the order or raise the mandate" (F32).
+3. Menu: remove a dish or swap an ingredient's product in review (amount edits only today).
 
 ## Needs
-- **`Ports.menus`**: set it to `drizzleMenuStore(db)` (`server/menu/pg.ts`) in `createDbPorts`, on the same Drizzle handle as the store, so `plan_event` reads what /request writes.
-- **One home for pack content.** With 8d: core adopts the cross-checked rules, then `request/convert` re-exports core.
+- **Register `propose_menu`** (lead): move it from `plannedToolSchemas` into `toolSchemas` and serve `proposeMenuHandler({ ports, llm: (ctx) => createLlmRouter(env).for('menu.propose') or null })` from `$lib/server/menu`.
+- **`ports.tasks`** (E): /request and the menu plan call `taskForPlan` (`server/request/task.ts`) with `ports.tasks`; it writes one task per plan once the TaskStore exists. Ledger is left to the store owner.
+- **Eval expectations (91):** `B-cutoff-date` in fidelity (butter-4kg-tomorrow, lactose-free-butter-4kg) and paraphrase (order-butter-tomorrow) marks stale `request.plan` expectations: /request now asks for Wed 9 Dec instead of placing for tomorrow. Replace with `checkLate`. Harnesses may pass `now` to `runRequest` (fallback: SCENARIO.start as a lower bound).
+- **Catalogue resolver (8d):** the fixture menu resolves pike-perch fillet → a chicken fillet, porridge rice → a carrot-rice mix, carrot → a carrot-potato cube. The review shows them honestly; `Catalog.resolve` ranking needs a look.
+
+## Report
+- Sat 14 Nov · done: P1/P2 parser fixes + physical `amount` (cd5868c); polish: green steps, unit words, friendly dates, approver name (6e1407d); cut-off at lookup with one-click open date (4e282ad, a88cf30); menu review → accept → plan_event{proposal} → Kitchen link, golden briefs green (c1b1dc4, b5e40c6); propose_menu handler (a001ddd); task per order/menu plan (f7bb8ce) · stubbed: task store (seam until E) · needs: above · ready to merge: yes after gate
 
 ## Run
 ```bash
