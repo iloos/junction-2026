@@ -358,7 +358,9 @@ journey(
 			const inDock = dock.getByRole('button', { name: /^Order/ }).first();
 			const order = (await inDock.isVisible().catch(() => false))
 				? inDock
-				: page.getByRole('button', { name: /^(Order|Place order)/ }).first();
+				: page
+						.getByRole('button', { name: /^(Order \d+ lines? now|Order the|Place order)/ })
+						.first();
 			await order.click({ timeout: 30_000 });
 			await page
 				.getByText(/Ordered\s*·\s*\d+\s+lines?/)
@@ -754,7 +756,21 @@ journey(
 						`${name}: orders`,
 						async () => {
 							await say(r, p, '10 l milk for friday, order it');
-							await approveAll(p).catch(() => 0);
+							// Approve on the page (the dock closed so the Decide rail shows), then order.
+							const close = p.getByRole('button', { name: 'Close chat' });
+							if (await close.isVisible().catch(() => false)) await close.click();
+							const all = p.getByRole('button', { name: /^Accept all/ }).first();
+							if (await all.isVisible().catch(() => false)) await all.click();
+							else await approveAll(p).catch(() => 0);
+							await p.waitForTimeout(1500);
+							await p
+								.getByRole('button', { name: /^(Order \d+ lines? now|Order the|Place order)/ })
+								.first()
+								.click({ timeout: 20_000 });
+							await p
+								.getByText(/Ordered\s*·\s*\d+\s+lines?/)
+								.first()
+								.waitFor({ timeout: 60_000 });
 						},
 						{ beat: false }
 					);
