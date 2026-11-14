@@ -10,6 +10,7 @@
 	import SystemToggle from '$lib/ui/shell/SystemToggle.svelte';
 	import { provideShell } from '$lib/ui/shell/shell.svelte';
 	import ChatDock from '$lib/ui/chat/ChatDock.svelte';
+	import ServiceStatus from './ops/ServiceStatus.svelte';
 	import { Bot } from '@lucide/svelte';
 
 	let { children } = $props();
@@ -141,6 +142,16 @@
 		</div>
 	</div>
 </header>
+{#if shell.system && !page.url.pathname.startsWith('/ops')}
+	<!-- System layer: where each outside service's answers come from right now (Ops shows it in its own header). -->
+	<div
+		class="service-line border-b border-rule bg-well px-3 py-1.5 md:px-6"
+		data-theme={theme}
+		aria-label="Service status"
+	>
+		<div class="mx-auto max-w-[1440px]"><ServiceStatus /></div>
+	</div>
+{/if}
 {@render children()}
 
 <!-- The purchasing agent on every page, scoped to what the page shows (shell.chat); it never approves. -->
@@ -149,5 +160,18 @@
 	planId={shell.chat.planId}
 	pinned={false}
 	launcher={false}
+	notice={(page.data as { room?: { notice?: string | null } }).room?.notice ?? null}
 	bind:open={shell.chatOpen}
 />
+
+<style>
+	/* ServiceStatus speaks the Ops palette; outside Ops it reads the shared tokens. */
+	.service-line {
+		--text: var(--color-ink);
+		--muted: var(--color-ink-2);
+		--faint: var(--color-ink-3);
+		--done: var(--color-ok);
+		--sign-off: var(--color-signoff);
+		--blocked: var(--color-out);
+	}
+</style>

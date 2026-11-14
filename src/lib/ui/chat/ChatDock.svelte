@@ -37,6 +37,8 @@
 		taskId?: string;
 		/** Its own floating "Ask the agent" button; off when the app shell opens the dock. */
 		launcher?: boolean;
+		/** Said next to the composer, e.g. a shared demo room where others can see what you type. */
+		notice?: string | null;
 	}
 	let {
 		kitchenId = 'k-hotel',
@@ -44,7 +46,8 @@
 		pinned = true,
 		planId,
 		taskId: openTask,
-		launcher = true
+		launcher = true,
+		notice = null
 	}: Props = $props();
 
 	/**
@@ -529,6 +532,14 @@
 		{#if error}<li class="text-out">{error}</li>{/if}
 	</ol>
 
+	{#if notice}
+		<p
+			class="border-t border-signoff/40 bg-signoff-wash px-3 py-1.5 text-meta text-ink"
+			role="note"
+		>
+			{notice}
+		</p>
+	{/if}
 	<form class="flex items-end gap-2 border-t border-rule p-3" onsubmit={submit}>
 		<label class="sr-only" for="chat-text">Message the agent</label>
 		<textarea

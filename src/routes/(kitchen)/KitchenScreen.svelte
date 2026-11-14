@@ -126,6 +126,10 @@
 	}
 
 	const snap = $derived(k.snap);
+	/** A shared demo room: others see what is typed here (the loader says so; null in your own sandbox). */
+	const roomNotice = $derived(
+		(page.data as { room?: { notice?: string | null } }).room?.notice ?? null
+	);
 	/** Why a link didn't land exactly where it pointed, if it didn't. */
 	const linkNote = $derived.by(() => {
 		if (!fromOps || !snap) return null;
@@ -427,6 +431,11 @@
 				{/each}
 			</select>
 		</label>
+		{#if roomNotice}
+			<p class="min-w-0 rounded-md bg-signoff-wash px-2 py-1 text-meta text-ink" role="note">
+				{roomNotice}
+			</p>
+		{/if}
 		{#if snap}
 			<p class="max-w-[95ch] min-w-0 text-meta text-ink-2">
 				<span class="font-medium text-ink">Mandate, in the chef's words:</span>
