@@ -273,8 +273,10 @@ section.s .sub.big { font-size: clamp(20px, 1.8vw, 24px); line-height: 1.35; col
 .fix .out { display: grid; gap: 6px; justify-items: start; }
 .fix .reason { font-size: 13.5px; color: var(--ink-2); }
 .ba .ptok { display: inline; }
+.nw { white-space: nowrap; }
+.ba .after, .ba .before { text-wrap: pretty; }
 .ba .ptok .q { margin-right: 8px; }
-@media (min-width: 900px) { .fix .out { justify-items: end; text-align: right; } .fix { grid-template-columns: 170px minmax(0, 1fr) 16px minmax(0, 1.15fr) 200px; } }
+@media (min-width: 900px) { .fix .out { justify-items: end; text-align: right; } .fix { grid-template-columns: 160px minmax(0, 0.8fr) 16px minmax(0, 1.45fr) 190px; } }
 
 /* the checks: the request's product reads as one line, chip then name */
 .req .ptok { display: block; line-height: 1.5; }
@@ -495,7 +497,7 @@ section.s .sub.big { font-size: clamp(20px, 1.8vw, 24px); line-height: 1.35; col
 	<div class="fixes">
 		<div class="fix">
 			<h3>Swap it</h3>
-			<div class="ba"><span class="before"><s>HK Viljaporsaan Juhlakinkku 6-8 kg</s> out of stock</span><svg class="arrow" viewBox="0 0 18 18" aria-hidden="true"><path d="M3 9h11m-4-4 4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="after"><span class="ptok"><span class="q" data-s="cases.#out-of-stock.steps.1.parts.1.qty">13 × 1.5 kg</span><span class="pname">HK Palvikinkku viipaloitu 1,5 kg</span></span></span></div>
+			<div class="ba"><span class="before"><s>HK Viljaporsaan Juhlakinkku <span class="nw">6-8 kg</span></s> out of stock</span><svg class="arrow" viewBox="0 0 18 18" aria-hidden="true"><path d="M3 9h11m-4-4 4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="after"><span class="ptok"><span class="q" data-s="cases.#out-of-stock.steps.1.parts.1.qty">13 × 1.5 kg</span><span class="pname">HK Palvikinkku viipaloitu 1,5 kg</span></span></span></div>
 			<div class="out"><span class="chip wait" data-s="cases.#out-of-stock.outcome.label">Needs your approval</span><span class="reason">New product for this kitchen</span></div>
 		</div>
 		<div class="fix">
