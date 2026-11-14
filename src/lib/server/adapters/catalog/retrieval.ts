@@ -205,7 +205,9 @@ function present(q: string, words: string[]): boolean {
 		const mod = q.slice(0, -c.length);
 		return (
 			mod.length >= 3 &&
-			words.some((m) => m !== c && (m === mod || m.startsWith(mod) || m.endsWith(mod)))
+			words.some((m) => m !== c && (m === mod || m.startsWith(mod) || m.endsWith(mod))) &&
+			// Another compound on the same head names the product ("suklaa-päärynäkakku" is a pear cake).
+			!words.some((w) => w !== c && w.endsWith(c) && !w.startsWith(mod))
 		);
 	});
 }
