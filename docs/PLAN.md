@@ -26,7 +26,7 @@ The only plan. Markers: `[x]` done · `[~]` in progress · `[ ]` todo · `[!]` b
 - [ ] **Public repo scrub** before flipping to public (user):
   - [ ] rotate the judge keys and SMOKE_KEY (pasted in lane chats)
   - [ ] Valio API key and redeem codes out of `docs/event/challenges/`; `git grep` for keys and codes
-  - [ ] the working tree is clean (S7, 02:00), but the Valio key and codes are still in history (b526a62, on the private origin). Don't flip this repo public: publish a **fresh public repo** from the tagged tree as one squashed commit (no filter-repo on the shared history the lanes use); placeholder Valio prices; also redact the Cala promo code (`docs/event/challenges/main/cala--*.md:74`) and atech's code (`tech/*atech*.md:101`)
+  - [ ] the working tree is clean (S7, 02:00), but the Valio key and codes are still in history (b526a62, on the private origin). After the 06:00 freeze, once every lane has pushed and stopped: either rewrite history here (`git filter-repo --replace-text`, force-push, then the lanes' worktrees are discarded) or publish a fresh public repo from the tagged tree as one squashed commit; placeholder Valio prices; also redact the Cala promo code (`docs/event/challenges/main/cala--*.md:74`) and atech's code (`tech/*atech*.md:101`)
   - [ ] trim hallway quotes in `docs/research/mcpcon.md`; no Valio dataset files beyond `fixtures/seeds/`
   - [ ] `.env.example` names only
 - [ ] Rehearse the 3:00 pitch ×5; QR card for the peer-review table (Sun 10:30)
