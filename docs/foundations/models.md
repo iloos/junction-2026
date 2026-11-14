@@ -3,7 +3,12 @@
 _Foundation note, Sat 14 Nov. Sources: Verda docs (inference models, rate limits, CLI object storage), the HF model card for `nvidia/NVIDIA-Nemotron-3.5-Super-VL-120B-A12B-BF16`, the public NVIDIA Build `/v1/models` list, the Featherless `/v1/models` list, and the installed `ai@7.0.172` / `@ai-sdk/openai-compatible@3.0.92` types. Live check on Sat 14 Nov: ~45 calls. Spike and raw results: `scratch/spikes/models/` (`results.md`, `sdk-check.mjs`)._
 
 ## 1. Nemotron 3.5 Super VL
-**We have no working Nemotron endpoint yet. This blocks the Nemotron prize.**
+**Wired, not yet measured (Sat 14 Nov, 15:00).** `read_image` (tool, read scope) and the router job `image.read` call NVIDIA Nemotron 3.5 Super VL on a Verda serverless container: `https://containers.datacrunch.io/nemotron-3-5-super-vl-b300/v1`, model `nemotron-3.5-super-vl`, key `VERDA_INFERENCE_KEY`, OpenAI-style `image_url` data URL, `max_tokens` 1500, thinking off (`chat_template_kwargs.enable_thinking: false`; `reasoning_content` ignored), temperature 0.2, JSON schema in the system prompt (`server/images/read.ts`, `adapters/llm/verda.ts`). Every call is one ExternalCallTrace (api `verda`), behind a breaker, honouring 429 Retry-After, with daily caps per visitor workspace and per instance (`VISION_CAP_PER_WORKSPACE` 30, `VISION_CAP_GLOBAL` 500, Postgres `web_spend`). The picture is never stored.
+
+**Measurement: blocked.** At 14:45–15:00 every path on that base (`/v1/chat/completions`, `/v1/models`, `/health`) answered **404 `no such container deployment or batch job: nemotron-3-5-super-vl-b300`**: the container is not deployed under that name. The harness is ready: `IMAGE_LIVE=1 node --env-file=.env node_modules/vitest/vitest.mjs run --project server src/lib/server/images/live.test.ts` reads the three samples in `fixtures/images/` (typed prep list, delivery note with a short-delivered line, product label; fictional, rendered by `scripts/web/render-image-samples.mjs`) and reports latency, kind and line recall/precision against the hand-written readings in `fixtures/images/readings.json` to `scratch/image-live.json`. Fixture mode answers those three samples from the hand-written readings, labelled `fixture`, and refuses any other picture.
+
+Earlier paths, for reference:
+
 | Path | Base URL · model id | Status |
 |---|---|---|
 | **Verda (NVIDIA-hosted)** | `https://inference.verda.com/v1` · id unknown | Our `VERDA_INFERENCE_KEY` is valid, but `/v1/models` returns `[]` and 12 likely ids return **404 `model_not_found`**. At the kickoff NVIDIA said: _message the NVIDIA sub-channel on Discord and we'll send you a Verda inference key_. That key, and the id it uses, are separate from ours. **Ask today.** |

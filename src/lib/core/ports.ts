@@ -120,6 +120,8 @@ export interface Llm {
 		prompt: string;
 		maxTokens: number;
 		json?: boolean;
+		/** Pictures sent with the prompt (vision models only; text-only adapters ignore them). */
+		images?: { mimeType: string; base64: string }[];
 		/** Cancels the provider call when the run stops (an in-flight call may still be billed). */
 		signal?: AbortSignal;
 	}): Promise<{
