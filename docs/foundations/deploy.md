@@ -49,7 +49,8 @@ Env changes go through `aiven_service_update` (`user_config.application.environm
 - **`JUDGE_KEY_SECRET`** (secret, ≥16 chars, added in the console): signs visitor cookies and judge keys. Without it, cookies are signed per process (visitors get a fresh sandbox after each restart) and judge keys are off (`/api/demo/judge-key` answers 503). Changing it gives every visitor a new sandbox. `JUDGE_KEY_EXPIRES` (ISO) overrides the key expiry, default 2026-11-16 00:00 Helsinki.
 - **Judge keys** `jk_<ws>.<exp>.<hmac>`: `GET /api/demo/judge-key` (cookie) returns the key and `mcpUrl` for the browser's own sandbox; /ops shows it under "Agent key for this sandbox". The key acts as an external agent (no approve) in that sandbox's current run.
 - **Presenter session.** On /ops, "Presenter" takes the chef or approver key once and sets a signed httpOnly cookie (12 h, ends if the key rotates); the browser then defaults to the stage and gets Run / Stop / Reset. `DEMO_RESET_OPEN=1` opens these for everyone and stays unset on prod (rules: `server/demo/presenter.ts`).
-  - `POST /api/demo/reset` (chef or approver key): starts a fresh `ws-demo` run.
+  - `POST /api/demo/reset` (chef or approver key): starts a fresh `ws-demo` run. A key bound to another workspace in MCP_KEYS (e.g. the smoke's `smoke:kitchen_agent:<key>:ws-smoke`) resets that workspace instead; external agents never.
+  - Deploy smoke with the race check: `SMOKE_KEY=<smoke key> EXPECT_DB=ok scripts/deploy/smoke.sh <url>` resets ws-smoke, then runs `scripts/smoke-race.mjs` (4 same-key commits → one receipt; 3 different-key commits → one).
   - `POST /api/demo/sandbox/reset` (no key; the browser's cookie): starts that browser's room over (its own sandbox or `ws-judges`), 20 s cooldown per sandbox (429 with `retryInMs`), 403 for the stage. Each reset also clears that workspace's idempotency rows. Server function: `resetSandbox()` in `server/demo/sandbox.ts`.
   - `POST /api/agent/run` (**chef key only**, needs `agent:run`): runs the routine agent; NDJSON traces, 409 while a run is going. Its ops name the starter.
   - `POST /api/agent/run/<id>/cancel` (chef key only): stops that run; 202 `{ id, cancelled, run }` once the loop has stopped, 404 if it isn't the run in progress.
@@ -82,6 +83,8 @@ _Checked Sat 14 Nov ~03:00 against the live service; each line says how._
 | No catalogue or model call holds a database lock | `store/prepare.test.ts` fails on any catalogue call made inside a store transaction across the full journey and three concurrent commands; it passes (0). The author's commit (4c553fd) reports 21 such calls on the previous code. |
 
 ## Warm up before judging
+**Rule: no redeploy in the last 30 minutes before judging or recording.** A redeploy redirects to Aiven's status page for about a minute, restarts every in-memory run pointer and kitchen session, and its first requests are cold. Merge earlier, or wait until after.
+
 `scripts/deploy/warm.sh <url>` waits out the status-page redirect, then walks one visitor's first minute (pages, a sandbox seed, the kitchen snapshot, the op stream) and prints each time.
 A container that has just started, or has sat idle, answers its first request slowly: the first `/healthz` after a deploy took **7.3 s** (container wake + first Postgres connect + TLS), the first `quote` 0.85 s; warm calls are 0.2–0.4 s from Helsinki. Aiven's proxy also redirects to its status page (302/307) for about a minute while a redeploy switches containers. Before judging or recording: open `/`, `/ops` and `/request` once, run one `quote`, and run `EXPECT_DB=ok scripts/deploy/smoke.sh <url>`; don't redeploy in the last half hour.
 

@@ -24,6 +24,9 @@ export interface PriceOverride {
  */
 const scope = new AsyncLocalStorage<string>();
 
+/** The workspace the current call runs for (set by `inWorkspace`), or undefined outside a scope. */
+export const scopedWorkspace = (): string | undefined => scope.getStore();
+
 /** Run `fn` with overlay reads and writes scoped to `workspaceId`. */
 export function inWorkspace<T>(workspaceId: string, fn: () => T): T {
 	return scope.run(workspaceId, fn);

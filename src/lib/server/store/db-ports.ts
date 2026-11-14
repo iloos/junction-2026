@@ -7,7 +7,7 @@ import type { Catalog } from '$lib/core/ports';
 import { Kitchen as KitchenSchema } from '$lib/core/contracts';
 import { createFixtureDb } from '../db/pglite';
 import { createSimulator } from '../adapters/simulator/stock';
-import { SimOverlay } from '../adapters/simulator/overlay';
+import { scopedWorkspace, SimOverlay } from '../adapters/simulator/overlay';
 import { createFixturePorts } from './fixture-ports';
 import { createDrizzleStore, type AnyDb } from './drizzle-store';
 import seedKitchens from '../../../../fixtures/seeds/kitchens.json';
@@ -58,8 +58,10 @@ export async function createDbPorts(o: DbPortsOptions = {}) {
 	const base = createFixturePorts({ now, overlay, catalog: o.catalog });
 	if (o.followCurrentRun) {
 		await loadCurrentRun(db, workspaceId);
+		// Each workspace's clock ticks from its own run's start: the call's workspace scope (serveTool, the kitchen
+		// queue) picks it, the configured workspace outside a scope.
 		base.clock = {
-			now: () => scenarioClock(currentRunStartedAt(workspaceId)).at(Date.now())
+			now: () => scenarioClock(currentRunStartedAt(scopedWorkspace() ?? workspaceId)).at(Date.now())
 		};
 	}
 	const live = o.followCurrentRun ?? false;

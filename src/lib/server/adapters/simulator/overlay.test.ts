@@ -36,3 +36,21 @@ describe('SimOverlay scopes', () => {
 		expect(o.apply(offer).price?.unitCents).toBe(100);
 	});
 });
+
+describe('workspace scope', () => {
+	it('drives the served clock: each workspace ticks from its own run start', async () => {
+		const { createDbPorts } = await import('$lib/server/store/db-ports');
+		const { setCurrentRun } = await import('$lib/server/demo/run');
+		const { SCENARIO } = await import('$lib/core/scenario');
+		const { inWorkspace: scoped } = await import('./overlay');
+		const now = Date.now();
+		setCurrentRun('ws-clock-a', 'run-a', now);
+		setCurrentRun('ws-clock-b', 'run-b', now - 3_600_000);
+		const { ports } = await createDbPorts({ workspaceId: 'ws-clock-a', followCurrentRun: true });
+		const start = new Date(SCENARIO.start).getTime();
+		const a = scoped('ws-clock-a', () => ports.clock.now().getTime()) - start;
+		const b = scoped('ws-clock-b', () => ports.clock.now().getTime()) - start;
+		expect(a).toBeLessThan(60_000);
+		expect(b).toBeGreaterThan(3_500_000);
+	}, 60_000);
+});
