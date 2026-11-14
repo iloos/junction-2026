@@ -15,7 +15,7 @@ export const CHIP: Record<Chip, string> = {
 	kitchen_agent: 'Kitchen agent',
 	chef: 'Chef',
 	approver: 'Approver',
-	outside: 'Outside agent · MCP',
+	outside: 'Outside agent',
 	job: 'Monitor job',
 	system: 'System'
 };
@@ -28,7 +28,15 @@ export interface StoryStep {
 	what: string;
 	/** What it changed. */
 	then: string;
+	/** The door an outside agent came through, from the op's `via` ("MCP", "API"), when known. */
+	door?: string;
 	tone: 'bad' | 'warn' | 'ok' | 'plain';
+}
+
+/** "mcp" / "mcp:approve" → MCP; "rest" → API; anything else names no door. */
+export function doorOf(via: string): string | undefined {
+	const d = via.split(':')[0];
+	return d === 'mcp' ? 'MCP' : d === 'rest' ? 'API' : undefined;
 }
 
 function chipOf(env: OpEnvelope): Chip {
@@ -106,7 +114,8 @@ export function storyOf(
 
 	for (const env of log) {
 		const op = env.op;
-		const base = { seq: env.seq, at: env.at, chip: chipOf(env) };
+		const door = env.actor.kind === 'external_agent' ? doorOf(env.via) : undefined;
+		const base = { seq: env.seq, at: env.at, chip: chipOf(env), ...(door ? { door } : {}) };
 		if (op.type === 'RecordAnomaly') {
 			if (!op.anomaly.productId || !products.has(op.anomaly.productId)) continue;
 			steps.push({

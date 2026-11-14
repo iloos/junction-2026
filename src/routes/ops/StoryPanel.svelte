@@ -30,7 +30,9 @@
 					<span class="tm" title="op {st.seq}">{time(st.at)}</span>
 					<i class="pip" aria-hidden="true"></i>
 					<div class="bd">
-						<span class="chip" data-chip={st.chip}>{CHIP[st.chip]}</span>
+						<span class="chip" data-chip={st.chip}
+							>{CHIP[st.chip]}{st.door ? ` · ${st.door}` : ''}</span
+						>
 						<p class="what">{st.what}</p>
 						<p class="then">{st.then}</p>
 						<button class="more" onclick={() => ondetail(st.seq)}
