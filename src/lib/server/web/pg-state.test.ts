@@ -3,7 +3,9 @@ import { createFixtureDb } from '../db/pglite';
 import type { AnyDb } from '../store/drizzle-store';
 import { createExternalCall, resetExternalCache } from '../external/call';
 import { resetBreakers } from '../external/breaker';
-import { LimitError } from '../external/ledger';
+import { LimitError, setSharedLedger } from '../external/ledger';
+import { withExternalScope } from '../external/scope';
+import { createDecide } from '../adapters/decide';
 import { createPgWebState } from './pg-state';
 import { attachStateSink, hydrateSlot, stateWrites } from './persist';
 import { createFindings } from './findings';
@@ -93,5 +95,29 @@ describe('web state in Postgres', { timeout: 30_000 }, () => {
 		expect(one.length + two.length).toBe(3);
 		await s.releaseQueue('i1');
 		expect((await s.claimQueue('i3', 5)).length).toBe(one.length);
+	});
+
+	it('Gemini Decide calls are capped per visitor workspace in web_spend once Postgres is attached', async () => {
+		const s = await state();
+		resetBreakers();
+		setSharedLedger(s);
+		try {
+			const d = createDecide({
+				env: { LLM_PROVIDER: 'gemini', DECIDE_CAP_PER_WORKSPACE: '1' },
+				gemini: {
+					create: async () => ({ answers: { q0: { type: 'noul', noul: 0.2, confidence: 0.8 } } })
+				}
+			});
+			await withExternalScope({ workspaceId: 'ws-j-pg' }, async () => {
+				expect((await d.yesNo({ question: 'pg a?', context: 'c' })).source).toBe('gemini');
+				expect((await d.yesNo({ question: 'pg b?', context: 'c' })).source).toBe('rules');
+			});
+			expect(await s.usage()).toEqual([
+				{ api: 'gemini-decide', key: '*', n: 1 },
+				{ api: 'gemini-decide', key: 'ws-j-pg', n: 1 }
+			]);
+		} finally {
+			setSharedLedger(null);
+		}
 	});
 });

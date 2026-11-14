@@ -49,7 +49,15 @@ function traced(source: string, model: string, trace: Trace, fn: (r: Req) => Pro
 }
 
 /** Gemini Flash-Lite via the Interactions API, thinking minimal, not stored. */
-export function geminiLlm(apiKey: string, trace: Trace = noTrace, model = GEMINI_LLM_MODEL): Llm {
+/** Gemini thinking level. Thinking tokens count against max_output_tokens, so routes leave headroom. */
+export type ThinkingLevel = 'minimal' | 'low' | 'medium' | 'high';
+
+export function geminiLlm(
+	apiKey: string,
+	trace: Trace = noTrace,
+	model = GEMINI_LLM_MODEL,
+	thinking: ThinkingLevel = 'minimal'
+): Llm {
 	const ai = new GoogleGenAI({ apiKey, apiVersion: 'v1beta' });
 	return traced('gemini', model, trace, async (req) => {
 		const t0 = performance.now();
@@ -60,7 +68,7 @@ export function geminiLlm(apiKey: string, trace: Trace = noTrace, model = GEMINI
 				system_instruction: req.system,
 				// The Interactions API takes JSON mode as a text response_format (a bare response_mime_type is a 400).
 				...(req.json ? { response_format: { type: 'text', mime_type: 'application/json' } } : {}),
-				generation_config: { max_output_tokens: req.maxTokens, thinking_level: 'minimal' },
+				generation_config: { max_output_tokens: req.maxTokens, thinking_level: thinking },
 				store: false
 			} as Parameters<typeof ai.interactions.create>[0],
 			// The run's cancel signal plus a hard 30 s cap; the provider may still bill a call it already started.

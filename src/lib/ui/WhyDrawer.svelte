@@ -6,6 +6,16 @@
 	import StateChip from './StateChip.svelte';
 	import { money, num } from './format';
 	import type { WhyChain } from './why-chain';
+	import { page } from '$app/state';
+	import SourceChip from './SourceChip.svelte';
+	import {
+		loadEvidence,
+		makeInHouse,
+		unresolved,
+		type Loaded,
+		type MakeInHouseProposal,
+		type WhyEvidence
+	} from './why-evidence';
 
 	interface Step {
 		text: string;
@@ -23,6 +33,38 @@
 		onclose: () => void;
 	}
 	let { open, line, productName, dishName, steps, chain = null, onclose }: Props = $props();
+
+	// Web evidence (Exa via the kitchen helper): loaded when the drawer opens on a line; none offline.
+	const offline = $derived(page.url.pathname.startsWith('/offline'));
+	let evidence = $state<Loaded<WhyEvidence>>({ state: 'idle' });
+	let recipe = $state<Loaded<MakeInHouseProposal>>({ state: 'idle' });
+	const productId = $derived(open && line && !offline ? line.productId : null);
+	$effect(() => {
+		const id = productId;
+		recipe = { state: 'idle' };
+		if (!id) {
+			evidence = { state: 'idle' };
+			return;
+		}
+		evidence = { state: 'loading' };
+		loadEvidence(id).then(
+			(value) => {
+				if (productId === id) evidence = { state: 'done', value };
+			},
+			(e) => {
+				if (productId === id) evidence = { state: 'error', message: String(e?.message ?? e) };
+			}
+		);
+	});
+	const dishFi = $derived(dishName.split(' (')[0] || productName);
+	function askRecipe() {
+		recipe = { state: 'loading' };
+		makeInHouse(dishFi, line ? `${line.qty.value} ${line.qty.unit}` : undefined).then(
+			(value) => (recipe = { state: 'done', value }),
+			(e) => (recipe = { state: 'error', message: String(e?.message ?? e) })
+		);
+	}
+	const STATUS_WORD = { resolved: 'in the catalogue', nearest: 'near match', none: 'not found' };
 </script>
 
 <Dialog.Root
@@ -113,6 +155,112 @@
 											</li>
 										{/each}
 									</ul>
+								</div>
+							{/if}
+						</section>
+					{/if}
+					{#if !offline}
+						<section class="border-b border-rule px-5 py-4" aria-labelledby="web-h">
+							<h3 id="web-h" class="text-body font-semibold text-ink">From the web</h3>
+							{#if evidence.state === 'loading'}
+								<p class="mt-1 text-meta text-ink-3">Looking up cited facts…</p>
+							{:else if evidence.state === 'error'}
+								<p class="mt-1 text-meta text-ink-3">
+									Web evidence unavailable: {evidence.message}
+								</p>
+							{:else if evidence.state === 'done'}
+								{@const ev = evidence.value}
+								<p class="mt-1 text-meta {ev.gap ? 'text-signoff' : 'text-ink-2'}">
+									{ev.catalogue}
+								</p>
+								{#if ev.fields.length}
+									<ul class="mt-2 space-y-2.5">
+										{#each ev.fields as f (f.field)}
+											<li class="rounded-md border border-rule px-3 py-2">
+												<div class="flex items-baseline justify-between gap-3">
+													<p class="text-meta text-ink-3">{f.label}</p>
+													{#if f.gtinCited}<span class="mono text-micro text-ok">GTIN cited</span
+														>{:else}<span class="text-micro text-ink-3">name match only</span>{/if}
+												</div>
+												<p class="mt-0.5 text-body leading-snug text-ink">{f.value}</p>
+												{#if f.sources[0]?.quote}
+													<blockquote
+														class="mt-1 border-l-2 border-rule-strong pl-2 text-meta leading-snug text-ink-2"
+													>
+														{f.sources[0].quote.slice(0, 220)}
+													</blockquote>
+												{/if}
+												<div class="mt-1.5 flex flex-wrap gap-1.5">
+													{#each f.sources.slice(0, 3) as src (src.url)}
+														<SourceChip
+															api="exa"
+															cache={ev.source}
+															at={ev.at}
+															href={src.url}
+															label={src.host}
+														/>
+													{/each}
+												</div>
+											</li>
+										{/each}
+									</ul>
+								{:else}
+									<p class="mt-1 text-meta text-ink-3">{ev.note}</p>
+								{/if}
+								<p class="mt-2 text-micro leading-snug text-ink-3">{ev.disclaimer}</p>
+							{/if}
+							{#if unresolved(line)}
+								<div class="mt-3">
+									{#if recipe.state === 'idle'}
+										<button
+											type="button"
+											class="rounded-md border border-rule-strong px-3 py-1.5 text-meta text-ink hover:bg-well"
+											onclick={askRecipe}>Make in house from a web recipe</button
+										>
+									{:else if recipe.state === 'loading'}
+										<p class="text-meta text-ink-3">Finding a recipe for {dishFi}…</p>
+									{:else if recipe.state === 'error'}
+										<p class="text-meta text-ink-3">No recipe: {recipe.message}</p>
+									{:else}
+										{@const r = recipe.value}
+										<div class="rounded-md border border-signoff/40 bg-well/60 px-3 py-2.5">
+											<div class="flex items-baseline justify-between gap-3">
+												<p class="text-body font-medium text-ink">
+													{r.recipe?.title ?? 'No sourced recipe'}
+												</p>
+												<span class="text-micro font-medium text-signoff">Held for sign-off</span>
+											</div>
+											<p class="mt-0.5 text-meta leading-snug text-ink-2">{r.note}</p>
+											{#if r.ingredients.length}
+												<ul class="mt-2 space-y-1">
+													{#each r.ingredients as g, i (i)}
+														<li class="text-meta leading-snug">
+															<span class="text-ink">{g.text}</span>
+															<span class="text-ink-3">
+																· {STATUS_WORD[g.status]}{g.products[0]
+																	? `: ${g.products[0].name}`
+																	: ''}</span
+															>
+														</li>
+													{/each}
+												</ul>
+											{/if}
+											{#if r.recipe}
+												<div class="mt-2">
+													<SourceChip
+														api="exa"
+														cache={r.source}
+														at={r.at}
+														href={r.recipe.url}
+														label={r.recipe.host}
+													/>
+												</div>
+											{/if}
+											<p class="mt-2 text-micro text-ink-3">
+												A proposal only: nothing is added to the order.
+											</p>
+										</div>
+									{/if}
 								</div>
 							{/if}
 						</section>

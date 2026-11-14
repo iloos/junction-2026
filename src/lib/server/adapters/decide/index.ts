@@ -5,7 +5,13 @@ import { canonicalJson, sha256Hex } from '$lib/core/hash';
 import type { Decide, Decision, DecideQuestion as PortQuestion } from '$lib/core/ports';
 import type { Env } from '$lib/server/auth';
 import { createExternalCall, RateLimited } from '../../external/call';
-import { capFromEnv, createSpendLedger, type SpendLedger } from '../../external/ledger';
+import {
+	capFromEnv,
+	createSpendLedger,
+	sharedLedger,
+	type GuardSource,
+	type SpendLedger
+} from '../../external/ledger';
 import { currentScope } from '../../external/scope';
 import { geminiKey } from '../llm';
 import { logTrace, noTrace, type Trace } from '../llm/trace';
@@ -186,7 +192,14 @@ export function createDecide(o: DecideOptions): Decide {
 	const book = loadReplay(o.replayPath);
 	const client = liveClient(o);
 	const sleep = o.sleep ?? ((ms: number) => new Promise<void>((r) => setTimeout(r, ms)));
-	const ledger = o.spend ?? processLedger(o.env);
+	// The caps are shared by every instance once the web state is in Postgres (`web_spend`, api 'gemini-decide');
+	// before that, and in tests, a per-process file ledger.
+	const ledgerFor = async (): Promise<GuardSource> => {
+		if (o.spend) return o.spend;
+		if (!sharedLedger() && !process.env.VITEST)
+			await import('../../web').then((m) => m.webStateReady(process.env)).catch(() => {});
+		return sharedLedger() ?? processLedger(o.env);
+	};
 	const limits = {
 		perKey: capFromEnv(o.env.DECIDE_CAP_PER_WORKSPACE, DEFAULT_DECIDE_LIMITS.perKey),
 		global: capFromEnv(o.env.DECIDE_CAP_GLOBAL, DEFAULT_DECIDE_LIMITS.global)
@@ -197,7 +210,10 @@ export function createDecide(o: DecideOptions): Decide {
 		step: 'decision',
 		cache: false,
 		trace: o.trace,
-		guard: (scope) => ledger.guard(scope?.spendKey ?? scope?.workspaceId ?? null, limits),
+		guard: (scope) => {
+			const key = scope?.spendKey ?? scope?.workspaceId ?? null;
+			return { charge: async (api) => (await ledgerFor()).guard(key, limits).charge(api) };
+		},
 		// A 400 (safety block, bad key) is about this input, not an outage.
 		isOutage: (e) => !(e instanceof ApiError && e.status >= 400 && e.status < 500)
 	});
