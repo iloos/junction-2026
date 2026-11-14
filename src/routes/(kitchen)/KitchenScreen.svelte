@@ -48,6 +48,7 @@
 		num,
 		qtyWords,
 		readableName,
+		unitWord,
 		storyTime
 	} from '$lib/ui/format';
 	import { SCENARIO } from '$lib/core/scenario';
@@ -56,6 +57,7 @@
 	import RulesPanel from './RulesPanel.svelte';
 	import { errorWords } from '$lib/kitchen/error-words';
 	import ApprovalPanel, { type Shortfall } from './ApprovalPanel.svelte';
+	import ProductToken from '$lib/ui/ProductToken.svelte';
 	import CutoffTimeline from '$lib/ui/viz/CutoffTimeline.svelte';
 
 	import type { ApiMode } from '$lib/kitchen/api';
@@ -440,8 +442,10 @@
 				}: Valio doesn't state a quantity, so ${n === 1 ? 'it is' : 'they are'} not counted as cover`,
 				items: lines.map((l) => ({
 					id: l.id,
+					productId: l.productId,
 					name: names.get(l.productId) ?? l.productId,
-					qty: qtyWords(l.qty)
+					qty: qtyWords(l.qty),
+					amount: { value: l.qty.value, unit: unitWord(l.qty.unit, l.qty.value) }
 				})),
 				approve: oneTap ? lines.map((l) => l.id) : undefined
 			});
@@ -555,6 +559,7 @@
 		if (made.length)
 			return {
 				kind: 'make' as const,
+				productId: null as string | null,
 				product: `Make in house · ${made.length} ingredients`,
 				more: 0,
 				cents,
@@ -567,6 +572,7 @@
 		if (!main)
 			return {
 				kind: 'none' as const,
+				productId: null as string | null,
 				product: `${names.get(lines[0]?.productId ?? '') ?? d.nameFi} · not orderable`,
 				more: 0,
 				cents,
@@ -577,6 +583,7 @@
 			};
 		return {
 			kind: main.substituteFor ? ('sub' as const) : ('buy' as const),
+			productId: main.productId as string | null,
 			product: names.get(main.productId) ?? main.productId,
 			more: live.length - 1,
 			cents,
@@ -1252,9 +1259,19 @@
 												class="shrink-0 text-sup-missing"
 												aria-hidden="true"
 											/>{/if}
-										<span class="truncate {r.kind === 'none' ? 'text-ink-3' : 'text-ink'}"
-											>{r.product}</span
-										>
+										{#if r.productId}
+											<!-- The product opens its card (pack, price, supply in words, the Valio listing). -->
+											<ProductToken
+												productId={r.productId}
+												name={r.product}
+												deliverBy={plan?.deliverBy}
+												class="hover:text-accent-ink"
+											/>
+										{:else}
+											<span class="truncate {r.kind === 'none' ? 'text-ink-3' : 'text-ink'}"
+												>{r.product}</span
+											>
+										{/if}
 										{#if r.more}<span class="shrink-0 text-meta text-ink-3">+{r.more}</span>{/if}
 										{#if r.by}<Bot
 												size={13}
