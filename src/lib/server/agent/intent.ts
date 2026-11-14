@@ -38,10 +38,13 @@ function noPlan(c: AgentContext, none: string): Resolved {
 	return ask(`Which plan? Name its id, event or kitchen: ${list}.`);
 }
 
+/** The kitchen is the run's business, not the product's: the goal without it (and its "for"). */
+const withoutKitchen = (goal: string) =>
+	goal.replace(/\b(?:for|at|to)\s+k-[a-z]+\b/gi, ' ').replace(KITCHEN, ' ');
+
 /** "4 kg butter tomorrow": no order verb, but an item with a quantity in a stated unit reads as an order. */
 function statesAnAmount(goal: string, today: string): boolean {
-	const text = goal.replace(/\b(?:for|at|to)\s+k-[a-z]+\b/gi, ' ').replace(KITCHEN, ' ');
-	return parseRules(text, today).items.some(
+	return parseRules(withoutKitchen(goal), today).items.some(
 		(i) =>
 			i.qty !== null &&
 			(i.product !== null || i.search.length > 0) &&
@@ -62,9 +65,7 @@ function routineOrder(
 	named: string | undefined,
 	kitchens: string[]
 ): Resolved | null {
-	// The kitchen is the run's business, not the product's: drop it (and its "for") before parsing.
-	const text = goal.replace(/\b(?:for|at|to)\s+k-[a-z]+\b/gi, ' ').replace(KITCHEN, ' ');
-	const parsed = parseRules(text, c.today);
+	const parsed = parseRules(withoutKitchen(goal), c.today);
 	const items = parsed.items;
 	if (!items.some((i) => i.qty !== null || i.product)) return null;
 
@@ -123,7 +124,7 @@ export function resolveIntent(goalRaw: string, c: AgentContext): Resolved {
 	const supported =
 		'I can plan a seeded event (' +
 		(c.supportedEvents.map((e) => `${e.title} at ${e.kitchenId}`).join(', ') || 'none seeded') +
-		'), repair shortages in the current plan, place a routine order ("order 4 maito for k-lounas"), or show the current plan.';
+		'), repair shortages in the current plan, change a dish ("cured salmon to 160 g per guest"), place a routine order ("order 4 l maito for k-lounas tomorrow"), or show the current plan.';
 
 	if (!goal) return { kind: 'unsupported', reason: `No goal given. ${supported}`, clarify: true };
 	if (AUTHORITY.test(goal))

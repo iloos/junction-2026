@@ -2,10 +2,7 @@ import type { Actor, ToolName } from '$lib/core/contracts';
 import type { ParsedItem } from '$lib/server/request/parse';
 import type { ReqUnit } from '$lib/server/request/lexicon';
 
-/**
- * Agent-local types. RunPrincipal and GoalOutcome are candidates for `src/lib/core/contracts`
- * (see docs/lanes/agent2.md, Needs); until then they live here.
- */
+/** Agent types: the run principal, the typed intent, the context bootstrap and the domain outcome. */
 
 /**
  * Who a run acts for, built server-side when the run starts and never taken from a request body.
@@ -113,11 +110,14 @@ export interface GoalOutcome {
 	intent: IntentKind;
 	planId: string | null;
 	planVersion: number | null;
-	/** Covered by committed lines. */
+	/**
+	 * Supplier confirmed (D10): receipt-backed per the plan's FulfilmentView. A plan without a view falls back
+	 * to "every active line committed", since a commit writes the receipt.
+	 */
 	confirmedNeeds: NeedRef[];
-	/** Covered by lines that are not committed yet (eligible, held or proposed). */
+	/** Planned, held, or ordered and awaiting the supplier: covered, not yet supplier confirmed. */
 	unconfirmedNeeds: NeedRef[];
-	/** No orderable line covers them. */
+	/** Some required quantity has no line (FulfilmentView `unresolved`), or no orderable line at all. */
 	unresolvedNeeds: NeedRef[];
 	/** Pending approvals waiting for a human. */
 	approvalIds: string[];

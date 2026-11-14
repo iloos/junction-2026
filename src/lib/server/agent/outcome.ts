@@ -7,11 +7,11 @@ type Approval = ToolOutput<'get_plan'>['approval'];
 const ACTIVE = new Set(['proposed', 'eligible', 'held', 'committed']);
 
 /**
- * GoalOutcome from domain state. Each need (or, for a plan without needs, each line) is confirmed when
- * every active line covering it is committed, unconfirmed when active lines cover it but some are not
- * committed, unresolved when no active line covers it. Precedence of the status:
- * unresolved needs → partial (blocked if nothing else is covered); a pending approval or held line →
- * awaiting_user; everything committed → fulfilled; otherwise partial (eligible lines not committed).
+ * GoalOutcome from domain state. With the plan's FulfilmentView, each need is supplier confirmed only when
+ * receipt-backed, unresolved when any required quantity has no line, and otherwise covered but unconfirmed
+ * (planned, held, or ordered and awaiting the supplier). A plan without a view falls back to line states.
+ * Status: unresolved needs → partial (blocked if nothing else is covered); a pending approval or held line
+ * → awaiting_user; every need supplier confirmed → fulfilled; otherwise partial.
  * `inspect` is fulfilled once the plan was read: it asks a question, not for supply.
  */
 export function computeOutcome(o: {
