@@ -1,14 +1,20 @@
 /**
  * Recall notice → `RecordAnomaly` ops in the workspace's current run, through the store's `transact`
- * (which publishes them, so /ops shows them live). Anomaly ids are stable per notice, product and plan,
- * so a webhook retry or a second replay adds nothing.
+ * (which publishes them, so /ops shows them live). Anomaly ids are stable per notice identity, revision,
+ * product and plan, so a webhook retry or a second replay adds nothing, while an edited notice (a new
+ * batch or product) is recorded again as an update that says what changed.
  */
 import type { Anomaly, PendingOp, Actor } from '$lib/core/contracts';
 import type { Store } from '$lib/core/ports';
 import type { WorkspaceState } from '$lib/core/state';
 import {
-	noticeKey,
+	diffNotice,
+	noticeIdentity,
+	noticeRevision,
+	recalledItemKey,
+	touchedItems,
 	strongMatches,
+	type NoticeDiff,
 	type RecallMatch,
 	type RecallNotice,
 	type CatalogIndex,
@@ -34,16 +40,39 @@ function dateLabel(iso: string | null): string {
 		: d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
-function lineFor(m: RecallMatch): string {
+/**
+ * What the chef should do with a matched line. Only a GTIN hit is this product; a name match is a
+ * potential match, so it never claims that every pack is affected.
+ */
+export function lineFor(m: RecallMatch): string {
 	const r = m.recalled;
 	const bits = [
 		r.batch && `batch ${r.batch}`,
 		r.bestBefore && `best before ${r.bestBefore}`
 	].filter(Boolean);
-	const scope = bits.length
-		? `potentially affected: orders don't record ${bits.join(', ')}; check the pack`
-		: 'affected: the notice gives no batch, so every pack counts';
+	const scope =
+		m.tier !== 'gtin'
+			? `potential match; verify variant and batch on the pack${bits.length ? ` (notice: ${bits.join(', ')})` : ''}`
+			: bits.length
+				? `potentially affected: orders don't record ${bits.join(', ')}; check the pack`
+				: 'affected: the notice gives no batch, so every pack with this GTIN counts';
 	return `${m.productName} (${m.why}, confidence ${m.confidence.toFixed(2)}): ${scope}`;
+}
+
+/** "added: X; batch of Y: A → B; removed: Z", for the update message. */
+export function diffText(d: NoticeDiff): string {
+	const parts = [
+		d.added.length && `added ${d.added.map((p) => p.name).join(', ')}`,
+		...d.changed.map((c) => `${c.field} of ${c.item.name}: ${c.from ?? '–'} → ${c.to ?? '–'}`),
+		d.removed.length && `removed ${d.removed.map((p) => p.name).join(', ')}`
+	].filter(Boolean);
+	return parts.length ? parts.join('; ') : 'wording changed';
+}
+
+/** A re-read that differs from the last recorded read of the same notice. */
+export interface NoticeUpdate {
+	revision: string;
+	diff: NoticeDiff;
 }
 
 /**
@@ -56,14 +85,15 @@ export function recallAnomalies(
 	matches: RecallMatch[],
 	state: Pick<WorkspaceState, 'plans' | 'anomalies'>,
 	scope: { workspaceId: string; runId: string },
-	detectedAt: string
+	detectedAt: string,
+	update?: NoticeUpdate
 ): Anomaly[] {
-	const key = noticeKey(notice.url);
+	const key = noticeIdentity(notice).id + (update ? `-r${update.revision}` : '');
 	const label = notice.replayOf
 		? `Replay of the ${dateLabel(notice.publishedDate)} recall`
-		: `Recall ${dateLabel(notice.publishedDate)}`;
+		: `${update ? 'Updated recall' : 'Recall'} ${dateLabel(notice.publishedDate)}`;
 	const hazard = HAZARD_EN[notice.hazard ?? ''] ?? 'safety issue';
-	const head = `${label} (Ruokavirasto): ${notice.title}, ${hazard}.`;
+	const head = `${label} (Ruokavirasto): ${notice.title}, ${hazard}.${update ? ` Changed: ${diffText(update.diff)}.` : ''}`;
 	const provenance = (m?: RecallMatch) => ({
 		source: 'web' as const,
 		ref: notice.url,
@@ -78,7 +108,11 @@ export function recallAnomalies(
 	});
 
 	const out: Anomaly[] = [];
-	const strong = strongMatches(matches);
+	// An update re-flags only the products whose recalled item it added or changed.
+	const touched = update ? touchedItems(update.diff) : null;
+	const strong = strongMatches(matches).filter(
+		(m) => !touched || touched.has(recalledItemKey(m.recalled))
+	);
 	for (const m of strong) {
 		const plans = Object.values(state.plans).filter((p) =>
 			p.lines.some((l) => l.productId === m.productId)
@@ -96,7 +130,16 @@ export function recallAnomalies(
 				provenance: provenance(m)
 			});
 	}
-	if (!strong.length) {
+	if (!strong.length && update) {
+		out.push({
+			...scope,
+			id: `recall-${key}-notice`,
+			kind: 'recall',
+			message: `${head} No newly affected catalogue product. Nothing new held.`,
+			detectedAt,
+			provenance: provenance()
+		});
+	} else if (!strong.length) {
 		const leads = matches.filter((m) => m.tier !== 'gtin');
 		const named = notice.products
 			.map((p) => p.name)
@@ -137,11 +180,31 @@ export interface IngestResult {
 	recorded: { id: string; productId?: string; planId?: string; seq: number }[];
 	/** Anomalies that already existed in this run (dedup). */
 	alreadyKnown: number;
+	/** The finding this read is filed under (`recall:<key>`, or `drill:<key>:<gtin>`). */
+	findingId: string;
+	revision: string;
+	/** Set when this read differs from the last recorded read of the same notice. */
+	update?: NoticeUpdate;
+}
+
+/** What the findings keep per notice: the last read, and every revision seen. */
+export interface RecallFindingData {
+	notice: RecallNotice;
+	matches: RecallMatch[];
+	revision: string;
+	revisions: { revision: string; at: string; diff?: string }[];
 }
 
 export async function ingestRecall(notice: RecallNotice, d: IngestDeps): Promise<IngestResult> {
 	// Matching reads the catalogue outside the lock (D6: no I/O while transact holds it).
 	const matches = await matchNotice(notice, d.index);
+	const ident = noticeIdentity(notice);
+	const revision = noticeRevision(notice);
+	const prev = d.findings.get(ident.findingId)?.data as RecallFindingData | undefined;
+	const update: NoticeUpdate | undefined =
+		prev?.notice && prev.revision && prev.revision !== revision
+			? { revision, diff: diffNotice(prev.notice, notice) }
+			: undefined;
 	const actor = d.actor ?? { kind: 'system', id: 'web:context.dev' };
 	const via = d.via ?? 'web:contextdev';
 	const detectedAt = (d.now?.() ?? new Date()).toISOString();
@@ -153,7 +216,8 @@ export async function ingestRecall(notice: RecallNotice, d: IngestDeps): Promise
 			matches,
 			{ plans: state.plans, anomalies: {} },
 			scope,
-			detectedAt
+			detectedAt,
+			update
 		);
 		const fresh = all.filter((a) => !state.anomalies[a.id]);
 		produced = all.length;
@@ -170,21 +234,35 @@ export async function ingestRecall(notice: RecallNotice, d: IngestDeps): Promise
 		const a = (e.op as { anomaly: Anomaly }).anomaly;
 		return { id: a.id, productId: a.productId, planId: a.planId, seq: e.seq };
 	});
-	const key = noticeKey(notice.url);
+	const revisions = prev?.revisions ?? [];
+	const data: RecallFindingData = {
+		notice,
+		matches: matches.slice(0, 25),
+		revision,
+		revisions: revisions.some((x) => x.revision === revision)
+			? revisions
+			: [
+					...revisions,
+					{ revision, at: detectedAt, ...(update ? { diff: diffText(update.diff) } : {}) }
+				]
+	};
 	d.findings.put({
-		id: `recall:${key}`,
+		id: ident.findingId,
 		kind: 'recall',
 		at: detectedAt,
 		title: notice.title,
 		sources: [notice.url],
 		ops: recorded.length ? [{ runId: r.value.ops[0].runId, seqs: recorded.map((x) => x.seq) }] : [],
-		data: { notice, matches: matches.slice(0, 25) }
+		data
 	});
 	return {
-		noticeKey: key,
+		noticeKey: ident.key,
 		url: notice.url,
 		matches,
 		recorded,
-		alreadyKnown: produced - recorded.length
+		alreadyKnown: produced - recorded.length,
+		findingId: ident.findingId,
+		revision,
+		...(update ? { update } : {})
 	};
 }

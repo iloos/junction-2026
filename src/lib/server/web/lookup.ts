@@ -5,6 +5,7 @@
  * - `findOutside`: when nothing deliverable fits a need, recipes or alternatives from the web, each
  *   ingredient mapped back to catalogue products the kitchen can order.
  */
+import { z } from 'zod';
 import type { Actor, PendingOp, Product } from '$lib/core/contracts';
 import type { Catalog, Store } from '$lib/core/ports';
 import type { FactSearch, Grounding, ExaResult } from './exa';
@@ -17,8 +18,11 @@ export interface Source {
 	title?: string;
 	/** Excerpt from the page that carries the fact (Exa highlight). */
 	quote?: string;
-	/** The page names this product's GTIN (in its URL or text), so it's about this exact item. */
-	gtinOnPage: boolean;
+	/**
+	 * The cited URL or excerpt contains this product's GTIN as a whole number. A text match on what
+	 * Exa returned, not a verification: the page is probably about this exact item.
+	 */
+	gtinCited: boolean;
 }
 
 export interface Suggestion {
@@ -26,9 +30,31 @@ export interface Suggestion {
 	value: unknown;
 	/** Exa's grounding label for the field ("high", "medium", "low"). */
 	grounding?: string;
-	/** gtin: a citing page names this GTIN; name: cited pages match by name only (weaker). */
-	verified: 'gtin' | 'name';
+	/** A cited page mentions this GTIN (see `Source.gtinCited`); false = matched by name only (weaker). */
+	gtinCited: boolean;
 	sources: Source[];
+}
+
+/**
+ * The `web.<field>` enrichment value. `verified` is a compatibility alias of `gtinCited` for readers
+ * written before the rename ('gtin' = gtinCited); nothing here is a verified fact (D6).
+ */
+export interface WebEnrichmentValue {
+	value: unknown;
+	gtinCited: boolean;
+	verified: 'gtin' | 'name';
+	sources: string[];
+}
+
+export function enrichmentValue(
+	s: Pick<Suggestion, 'value' | 'gtinCited' | 'sources'>
+): WebEnrichmentValue {
+	return {
+		value: s.value,
+		gtinCited: s.gtinCited,
+		verified: s.gtinCited ? 'gtin' : 'name',
+		sources: s.sources.map((x) => x.url)
+	};
 }
 
 export interface FactsResult {
@@ -50,6 +76,25 @@ export interface FactsResult {
 	recorded: number[];
 	note: string;
 }
+
+/** One field Exa may get wrong: a bad value becomes null (dropped), never a cast. */
+const strList = z
+	.array(z.string())
+	.nullish()
+	.catch(null)
+	.transform((v) => v ?? null);
+const str = z
+	.string()
+	.nullish()
+	.catch(null)
+	.transform((v) => (v?.trim() ? v : null));
+export const FactsContent = z.object({
+	allergens: strList,
+	mayContain: strList,
+	netContent: str,
+	origin: str,
+	ingredients: str
+});
 
 const FACTS_SCHEMA = {
 	type: 'object',
@@ -101,9 +146,15 @@ export function sourcesFor(
 				url: c.url,
 				title: c.title ?? r?.title,
 				quote: r?.highlights?.[0]?.slice(0, 400),
-				gtinOnPage: !!gtin && text.includes(gtin)
+				gtinCited: mentionsGtin(text, gtin)
 			};
 		});
+}
+
+/** `gtin` appears as a whole number (not inside a longer digit run). */
+export function mentionsGtin(text: string, gtin?: string): boolean {
+	if (!gtin || !/^\d{8,14}$/.test(gtin)) return false;
+	return new RegExp(`(?<!\\d)${gtin}(?!\\d)`).test(text);
 }
 
 export interface LookupDeps {
@@ -131,8 +182,9 @@ export async function lookupFacts(
 	const query = `${name}${gtin ? ` ${gtin}` : ''} ainesosat allergeenit`;
 	const key = product ? `facts:${product.productId}` : `facts:q:${slug(name)}`;
 
-	const r = await d.exa.structured<Record<FactField, unknown>>({
+	const r = await d.exa.structured({
 		key,
+		parse: FactsContent,
 		query,
 		systemPrompt:
 			"Prefer the manufacturer's own product page, then wholesaler or retailer product pages for this exact product (same GTIN or same name and size). Report only facts stated on the pages; null or [] when not stated. Never mix in a sibling product.",
@@ -151,13 +203,14 @@ export async function lookupFacts(
 	] as FactField[]) {
 		const value = r.content?.[field];
 		if (value === null || value === undefined) continue;
+		if (Array.isArray(value) && !value.length) continue; // an empty list means not stated
 		const sources = sourcesFor(field, r.grounding, r.results, gtin);
 		if (!sources.length) continue; // no citation, no suggestion
 		suggestions.push({
 			field,
 			value,
 			grounding: r.grounding.find((g) => g.field === field)?.confidence,
-			verified: sources.some((s) => s.gtinOnPage) ? 'gtin' : 'name',
+			gtinCited: sources.some((s) => s.gtinCited),
 			sources
 		});
 	}
@@ -185,12 +238,12 @@ export async function lookupFacts(
 						type: 'RecordEnrichment',
 						productId: product.productId,
 						field: `web.${s.field}`,
-						value: { value: s.value, verified: s.verified, sources: s.sources.map((x) => x.url) },
+						value: enrichmentValue(s),
 						provenance: {
 							source: 'web',
 							ref: s.sources[0].url,
 							at: r.at,
-							note: `Exa search (outputSchema); suggestion, not a catalogue fact; ${s.verified === 'gtin' ? 'page names this GTIN' : 'matched by name only'}`
+							note: `Exa search (outputSchema); suggestion, not a catalogue fact; ${s.gtinCited ? 'a cited page mentions this GTIN' : 'matched by name only'}`
 						}
 					}
 				}));
@@ -240,6 +293,26 @@ export interface OutsideOption {
 	ingredients: { text: string; catalogue: { productId: string; name: string }[] }[];
 	sources: Source[];
 }
+
+const OutsideOptionZ = z.object({
+	title: z.string().min(1),
+	kind: z.enum(['recipe', 'ready_made', 'alternative_dish']).catch('recipe'),
+	ingredients: z.array(z.string()).catch([]),
+	yield: str,
+	note: str
+});
+/** Options keep their position (grounding cites `options[<i>]`); one that fails its schema is null. */
+export const OutsideContent = z.object({
+	options: z
+		.array(z.unknown())
+		.catch([])
+		.transform((xs) =>
+			xs.map((x) => {
+				const p = OutsideOptionZ.safeParse(x);
+				return p.success ? p.data : null;
+			})
+		)
+});
 
 const OUTSIDE_SCHEMA = {
 	type: 'object',
@@ -318,26 +391,19 @@ export async function findOutside(
 	d: { exa: FactSearch; catalog: Catalog; findings: Findings; context?: string }
 ) {
 	const key = `outside:${slug(need)}`;
-	const r = await d.exa.structured<{
-		options?: Omit<OutsideOption, 'ingredients' | 'sources'>[] & { ingredients: string[] }[];
-	}>({
+	const r = await d.exa.structured({
 		key,
+		parse: OutsideContent,
 		query: `${need} resepti suurkeittiö isolle määrälle`,
 		systemPrompt: `A professional kitchen needs "${need}"${d.context ? ` (${d.context})` : ''} and its wholesaler has nothing deliverable. Find recipes that scale to a large batch, or ready-made alternatives. Report only what pages state.`,
 		schema: OUTSIDE_SCHEMA,
 		numResults: 5
 	});
 	const options: OutsideOption[] = [];
-	const raw = (r.content?.options ?? []) as unknown as {
-		title: string;
-		kind: OutsideOption['kind'];
-		ingredients: string[];
-		yield: string | null;
-		note: string | null;
-	}[];
-	for (const [i, o] of raw.entries()) {
+	for (const [i, o] of (r.content?.options ?? []).entries()) {
+		if (!o) continue;
 		const ingredients = [];
-		for (const text of o.ingredients ?? []) {
+		for (const text of o.ingredients) {
 			// Every stem's hits, ranked together on the shortest stem (Finnish inflection).
 			const terms = ingredientTerms(text);
 			const pool = new Map<string, Product>();

@@ -2,6 +2,7 @@
 import type { CallContext } from '$lib/core/ports';
 import { resolveRequest, type Env } from '../auth';
 import { json, unauthorized } from '../tools/http';
+import { WebLimitError } from './spend';
 
 export function authed(
 	request: Request,
@@ -30,8 +31,26 @@ export function fail(code: string, message: string, status: number, retryable = 
 	return json({ error: { code, message, retryable } }, status);
 }
 
-/** Provider errors become 503 PROVIDER_UNAVAILABLE (retryable); input errors 400. */
+/**
+ * A cap or the provider's rate limit is 429 RATE_LIMITED with `Retry-After` (the UI waits, a click
+ * doesn't become a 503); other provider errors are 503 PROVIDER_UNAVAILABLE (retryable); input errors 400.
+ */
 export function providerFail(e: unknown): Response {
+	if (e instanceof WebLimitError) {
+		return json(
+			{
+				error: {
+					code: 'RATE_LIMITED',
+					message: e.message,
+					retryable: true,
+					retryAfter: e.retryAfterS,
+					reason: e.reason
+				}
+			},
+			429,
+			{ 'retry-after': String(e.retryAfterS) }
+		);
+	}
 	const msg = e instanceof Error ? e.message : String(e);
 	if (/^unknown product|^give a /.test(msg)) return fail('INVALID_INPUT', msg, 400);
 	console.error('[web]', msg);

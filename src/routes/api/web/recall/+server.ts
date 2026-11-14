@@ -1,7 +1,7 @@
 import { dev } from '$app/environment';
 import { env } from '$env/dynamic/private';
 import { json } from '$lib/server/tools/http';
-import { findingsFor, servedPorts, webClients } from '$lib/server/web';
+import { callerKey, findingsFor, servedPorts, webClients } from '$lib/server/web';
 import { ingestRecall } from '$lib/server/web/ingest';
 import { authed, body, fail, providerFail } from '$lib/server/web/route';
 import { busTrace } from '$lib/server/web/watch';
@@ -19,7 +19,11 @@ export const POST: RequestHandler = async ({ request }) => {
 	if (b instanceof Response) return b;
 	try {
 		const ports = await servedPorts();
-		const { recalls } = webClients(env, busTrace(ports.scope, { lane: 'web' }));
+		const { recalls } = webClients(
+			env,
+			busTrace(ports.scope, { lane: 'web' }),
+			callerKey(ctx.actor)
+		);
 		if (!b.url)
 			return json({
 				mode: recalls.mode,

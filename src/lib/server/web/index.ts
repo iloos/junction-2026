@@ -7,7 +7,8 @@
  * - `CONTEXT_DEV_API_KEY`, `EXA_API_KEY`
  * - `CONTEXT_DEV_WEBHOOK_SECRET`: the monitor's webhook signing secret, also accepted as the
  *   `x-mandate-webhook-secret` header from our own scripts
- * - `WEB_CACHE_DIR` (default `scratch/web-cache`): response cache + findings file
+ * - `WEB_CACHE_DIR` (default `scratch/web-cache`): response cache, findings, recall work queue, spend ledger
+ * - `WEB_CAP_PER_KEY`, `WEB_CAP_GLOBAL`: daily call caps per API (spend.ts)
  */
 import { sql } from 'drizzle-orm';
 import { join } from 'node:path';
@@ -24,6 +25,8 @@ import { createContextDev, type RecallSource } from './contextdev';
 import { createExa, type FactSearch } from './exa';
 import { createFixtureFactSearch, createFixtureRecallSource } from './fixture';
 import { createFindings } from './findings';
+import { createWorkQueue } from './queue';
+import { createSpendLedger, spendLimits } from './spend';
 import { hasWords, memoryIndex, type CatalogIndex } from './recall';
 
 type Env = Record<string, string | undefined>;
@@ -41,9 +44,28 @@ export function cacheDir(env: Env): string {
 	return env.WEB_CACHE_DIR || join('scratch', 'web-cache');
 }
 
-export function webClients(env: Env, trace?: Trace): { recalls: RecallSource; exa: FactSearch } {
+const g = globalThis as typeof globalThis & {
+	__webSpend?: ReturnType<typeof createSpendLedger>;
+};
+/** One spend ledger per process, persisted next to the cache so a restart keeps the day's counts. */
+export const spendLedger = (env: Env) =>
+	(g.__webSpend ??= createSpendLedger(join(cacheDir(env), 'spend.json')));
+
+/**
+ * Who a paid call is charged to: `<actor kind>:<key label>` for a keyed caller, null for the monitor
+ * (bound by the global cap only).
+ */
+export const callerKey = (actor?: { kind: string; id: string } | null) =>
+	actor && actor.kind !== 'system' ? `${actor.kind}:${actor.id}` : null;
+
+export function webClients(
+	env: Env,
+	trace?: Trace,
+	caller: string | null = null
+): { recalls: RecallSource; exa: FactSearch } {
 	const mode = webMode(env);
 	const dir = cacheDir(env);
+	const guard = spendLedger(env).guard(caller, spendLimits(env));
 	const recalls =
 		mode === 'live' && env.CONTEXT_DEV_API_KEY
 			? createContextDev(
@@ -51,14 +73,21 @@ export function webClients(env: Env, trace?: Trace): { recalls: RecallSource; ex
 						api: 'context.dev',
 						apiKey: env.CONTEXT_DEV_API_KEY,
 						cacheDir: join(dir, 'context-dev'),
-						trace
+						trace,
+						guard
 					})
 				)
 			: createFixtureRecallSource();
 	const exa =
 		mode === 'live' && env.EXA_API_KEY
 			? createExa(
-					createWebHttp({ api: 'exa', apiKey: env.EXA_API_KEY, cacheDir: join(dir, 'exa'), trace })
+					createWebHttp({
+						api: 'exa',
+						apiKey: env.EXA_API_KEY,
+						cacheDir: join(dir, 'exa'),
+						trace,
+						guard
+					})
 				)
 			: createFixtureFactSearch();
 	return { recalls, exa };
@@ -76,6 +105,7 @@ export function contextDevAdmin(env: Env) {
 }
 
 export const findingsFor = (env: Env) => createFindings(join(cacheDir(env), 'findings.json'));
+export const queueFor = (env: Env) => createWorkQueue(join(cacheDir(env), 'recall-queue.json'));
 
 /** Catalogue reads for recall matching: the file catalogue in memory, or the products table. */
 export function catalogIndex(catalog: Catalog, db: AnyDb): CatalogIndex {

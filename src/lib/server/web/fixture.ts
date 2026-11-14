@@ -4,7 +4,7 @@
  */
 import { RecallListItem, RecallNotice, noticeKey } from './recall';
 import type { RecallSource } from './contextdev';
-import type { FactSearch, Structured } from './exa';
+import { shapeStructured, type FactSearch, type Structured, type StructuredQuery } from './exa';
 import listFx from './fixtures/recall-list.json';
 import noticesFx from './fixtures/recall-notices.json';
 import exaFx from './fixtures/exa.json';
@@ -57,7 +57,7 @@ export function createFixtureFactSearch(): FactSearch {
 				text: r.highlights?.join('\n…\n')
 			}));
 		},
-		async structured<T>(q: { key: string }): Promise<Structured<T>> {
+		async structured<T>(q: StructuredQuery<T>): Promise<Structured<T>> {
 			const a = answers[q.key];
 			if (!a)
 				return {
@@ -68,7 +68,12 @@ export function createFixtureFactSearch(): FactSearch {
 					cached: true,
 					latencyMs: 0
 				};
-			return { ...(a as Structured<T>), cached: true, latencyMs: 0 };
+			// Recorded answers go through the same runtime schema as live ones.
+			const shaped = shapeStructured(
+				{ output: { content: a.content, grounding: a.grounding }, results: a.results },
+				q.parse
+			);
+			return { ...shaped, at: a.at, costUsd: a.costUsd, cached: true, latencyMs: 0 };
 		}
 	};
 }

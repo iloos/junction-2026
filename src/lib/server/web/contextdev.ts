@@ -46,7 +46,15 @@ export function createContextDev(call: WebCall): RecallSource & {
 			// Context.dev's own cache: 0 forces a fresh read of the page.
 			...(maxAgeMs === 0 ? { maxAgeMs: 0 } : {})
 		};
-		const r = await call<ScrapeJson<T>>('/web/scrape', body, { maxAgeMs, purpose });
+		const r = await call<ScrapeJson<T>>('/web/scrape', body, {
+			maxAgeMs,
+			purpose,
+			// A failed extraction is a 2xx too: never cache it, so the next read tries again.
+			accept: (b) => {
+				const j = (b as ScrapeJson<T> | null)?.json;
+				return !!j?.success && !!j.data && typeof j.data === 'object';
+			}
+		});
 		const out = r.body.json;
 		if (!out?.success || !out.data)
 			throw new Error(

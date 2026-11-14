@@ -21,8 +21,9 @@ export interface Finding {
 
 const g = globalThis as typeof globalThis & { __webFindings?: Map<string, Finding> };
 
-export function createFindings(file?: string) {
-	const map = (g.__webFindings ??= new Map());
+/** `fresh` gives a private map (tests); otherwise one map per process, shared by every route. */
+export function createFindings(file?: string, fresh = false) {
+	const map: Map<string, Finding> = fresh ? new Map() : (g.__webFindings ??= new Map());
 	if (file && existsSync(file) && map.size === 0) {
 		try {
 			for (const f of JSON.parse(readFileSync(file, 'utf8')) as Finding[]) map.set(f.id, f);
