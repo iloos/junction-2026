@@ -9,6 +9,8 @@
 		/** A requested value the server hasn't confirmed yet: shown, not editable. */
 		pending?: number;
 		disabled?: boolean;
+		/** Why it's locked, in words (hover, focus and screen readers). */
+		lockedWhy?: string;
 		/** A one-line table row: shorter, no "was" line under it (the row's detail says what it was). */
 		compact?: boolean;
 		onchange: (v: number) => void;
@@ -20,6 +22,7 @@
 		label,
 		pending,
 		disabled = false,
+		lockedWhy,
 		compact = false,
 		onchange
 	}: Props = $props();
@@ -44,7 +47,8 @@
 			class="inline-flex {compact
 				? 'h-8'
 				: 'h-9'} items-center gap-1.5 rounded-md border border-dashed border-rule-strong bg-well px-2.5 text-ink-2"
-			aria-label="{label}: {shown} grams per guest, locked"
+			aria-label="{label}: {shown} grams per guest, locked{lockedWhy ? `: ${lockedWhy}` : ''}"
+			title={lockedWhy}
 		>
 			<Lock size={13} aria-hidden="true" />
 			<span class="mono text-body text-ink">{shown}</span>

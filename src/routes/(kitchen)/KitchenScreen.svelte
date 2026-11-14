@@ -19,7 +19,7 @@
 	import { KitchenStore } from '$lib/kitchen/kitchen.svelte';
 	import { KITCHENS, PRODUCTS, SEED } from '$lib/kitchen/catalog';
 	import { eventFor, type EventSeedFile } from '$lib/kitchen/events';
-	import type { DishView } from '$lib/kitchen/view-model';
+	import type { DishView, PresetId } from '$lib/kitchen/view-model';
 	import type { Line } from '$lib/core/contracts';
 	import { useShell } from '$lib/ui/shell/shell.svelte';
 	import TaskHeader from '$lib/ui/TaskHeader.svelte';
@@ -54,7 +54,8 @@
 	import { SCENARIO } from '$lib/core/scenario';
 	import { reasonShort } from '$lib/ui/reasons';
 	import RescueCompare from '$lib/ui/RescueCompare.svelte';
-	import RulesPanel from './RulesPanel.svelte';
+	import RulesPanel, { PICKED_BY } from './RulesPanel.svelte';
+	import { Popover } from 'bits-ui';
 	import { errorWords } from '$lib/kitchen/error-words';
 	import ApprovalPanel, { type Shortfall } from './ApprovalPanel.svelte';
 	import ProductToken from '$lib/ui/ProductToken.svelte';
@@ -612,6 +613,8 @@
 	 * their rows get an accent band and the rest dim a little. Opening scrolls the first one into view.
 	 */
 	let marked = $state.raw<Set<string> | null>(null);
+	/** The "Picked by" menu at the Product column. */
+	let pickOpen = $state(false);
 
 	/** "Also open" tasks this browser chose to hide (a convenience kept per browser; nothing changes on the server). */
 	const DISMISSED = 'mandate.others.hidden';
@@ -1176,12 +1179,63 @@
 				<div class="mt-2 overflow-hidden rounded-lg border border-rule bg-sheet">
 					<div
 						class="hidden {ROW_COLS} items-center gap-x-3 border-b border-rule bg-well px-4 py-2 text-micro font-medium text-ink-3 lg:grid"
-						aria-hidden="true"
 					>
-						<span>{isEvent ? 'Dish' : 'Item'}</span>
-						<span>{isEvent ? 'g per guest' : ''}</span>
-						<span class="text-right">Need</span>
-						<span>Product</span>
+						<span aria-hidden="true">{isEvent ? 'Dish' : 'Item'}</span>
+						<span aria-hidden="true">{isEvent ? 'g per guest' : ''}</span>
+						<span class="text-right" aria-hidden="true">Need</span>
+						<span class="flex min-w-0 items-center gap-1.5"
+							><span aria-hidden="true">Product</span>
+							{#if isEvent && snap?.rules}
+								<Popover.Root bind:open={pickOpen}>
+									<Popover.Trigger
+										class="inline-flex items-center gap-0.5 rounded px-1 font-normal text-ink-2 normal-case hover:bg-sheet hover:text-ink"
+										aria-label="Picked by: {PICKED_BY[
+											snap.preset
+										]}. Change how substitutes are picked"
+										>· Picked by: <span class="font-medium text-ink">{PICKED_BY[snap.preset]}</span
+										><ChevronDown size={12} aria-hidden="true" /></Popover.Trigger
+									>
+									<Popover.Portal>
+										<Popover.Content
+											sideOffset={6}
+											align="start"
+											class="z-50 w-[min(320px,calc(100vw-24px))] rounded-lg border border-rule bg-sheet p-3 text-meta text-ink-2 shadow-lg"
+										>
+											<p class="font-medium text-ink">How substitutes are picked</p>
+											<p class="mt-0.5">
+												Among what your hard rules allow. A choice previews first.
+											</p>
+											<div
+												class="mt-2 flex flex-wrap gap-1.5"
+												role="radiogroup"
+												aria-label="Picked by"
+											>
+												{#each Object.keys(PICKED_BY) as id (id)}
+													<button
+														type="button"
+														role="radio"
+														aria-checked={snap.preset === id}
+														class="rounded-full border px-2.5 py-1 font-medium {snap.preset === id
+															? 'border-ink bg-ink text-sheet'
+															: 'border-rule-strong text-ink-2 hover:text-ink'}"
+														disabled={k.busy}
+														onclick={() => {
+															void k.setPreset(id as PresetId);
+															pickOpen = false;
+															void tick().then(() =>
+																document
+																	.getElementById('rules-h')
+																	?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+															);
+														}}>{PICKED_BY[id as PresetId]}</button
+													>
+												{/each}
+											</div>
+										</Popover.Content>
+									</Popover.Portal>
+								</Popover.Root>
+							{/if}</span
+						>
 						<span class="text-right">€ ex VAT</span>
 						<span>State</span>
 						<span></span>
@@ -1236,6 +1290,13 @@
 											label={d.nameFi}
 											pending={k.pendingGrams[d.id]}
 											disabled={k.readOnly || !d.editable || lockedDish}
+											lockedWhy={lockedDish
+												? 'Already ordered: the grams are locked'
+												: k.readOnly
+													? 'This view is read-only'
+													: !d.editable
+														? 'This dish is not sized by grams per guest'
+														: undefined}
 											onchange={(g) => k.setGrams(d.id, g)}
 										/>{:else}<span class="text-meta text-ink-3">—</span>{/if}
 								</div>
@@ -1334,6 +1395,13 @@
 													label={d.nameFi}
 													pending={k.pendingGrams[d.id]}
 													disabled={k.readOnly || !d.editable || lockedDish}
+													lockedWhy={lockedDish
+														? 'Already ordered: the grams are locked'
+														: k.readOnly
+															? 'This view is read-only'
+															: !d.editable
+																? 'This dish is not sized by grams per guest'
+																: undefined}
 													onchange={(g) => k.setGrams(d.id, g)}
 												/>
 											</div>{/if}
@@ -1524,7 +1592,7 @@
 			{/if}
 		</aside>
 	</main>
-	<!-- Under the plan and its panels, on the page's own columns: the rules, ranking and simulator under the plan,
+	<!-- Under the plan and its panels, on the page's own columns: the rules (and, in System, the demo tools) under the plan,
 	     what happened under Order. Outside <main>, so the sticky panels never slide over it. -->
 	<div
 		class="mx-auto grid max-w-[1440px] grid-cols-1 gap-6 px-4 pb-32 md:px-6 lg:pb-10 {shell?.chatOpen
@@ -1536,24 +1604,44 @@
 				<RulesPanel
 					rules={snap.rules}
 					preset={snap.preset}
-					contention={snap.contention}
 					busy={k.busy}
-					ordered={view.dishes.filter((d) => linesOf(d).some((l) => l.state === 'committed'))
-						.length}
 					previews={view.dishes
-						.filter(
-							(d) => d.rescue?.preview?.differs && !linesOf(d).some((l) => l.state === 'committed')
-						)
+						.filter((d) => d.rescue?.preview?.differs)
 						.map((d) => ({
 							dish: d.nameFi,
 							recommended: d.rescue!.preview!.recommended,
-							saved: d.rescue!.preview!.saved
+							saved: d.rescue!.preview!.saved,
+							ordered: linesOf(d).some((l) => l.state === 'committed')
 						}))}
 					onapply={() => k.applyRules()}
 					onpreset={(p) => k.setPreset(p)}
-					oncontention={(on) => k.setContention(on)}
 				/>
 			</div>
+			<!-- Demo tools, in the System layer: the simulator changes Valio's stock for this run, not a rule. -->
+			<section
+				class="sys-only mt-4 rounded-lg border border-dashed border-rule-strong bg-sheet px-4 py-3 {isEvent
+					? ''
+					: 'hidden'}"
+				aria-label="Demo tools"
+			>
+				<p class="text-meta font-medium text-ink-2">Demo tools</p>
+				<label class="mt-1.5 flex cursor-pointer items-start gap-3">
+					<input
+						type="checkbox"
+						class="mt-0.5 size-4 accent-[var(--color-accent)]"
+						checked={snap.contention}
+						disabled={k.busy}
+						onchange={(e) => k.setContention(e.currentTarget.checked)}
+					/>
+					<span class="text-meta leading-snug text-ink-2">
+						<span class="font-medium text-ink">Simulator: another kitchen takes 4 palvikinkku</span>
+						<span class="block"
+							>15 in stock → 11, for every kitchen in this run. The ham rescue no longer covers 140
+							guests.</span
+						>
+					</span>
+				</label>
+			</section>
 		</div>
 		<div class="min-w-0">
 			{#if k.activity.length}
@@ -1621,6 +1709,7 @@
 			{rail}
 			folded={rail && !!shell?.railFolded}
 			onmark={markLines}
+			now={k.now}
 			part="decide"
 			{plan}
 			{approval}

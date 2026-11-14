@@ -55,6 +55,8 @@
 		folded?: boolean;
 		/** Mark these lines on the page (null clears); `scroll` brings the first into view. */
 		onmark?: (lineIds: string[] | null, scroll: boolean) => void;
+		/** The scenario's now: decisions past their cut-off can't be approved, and say so. */
+		now?: Date | null;
 	}
 	let {
 		plan,
@@ -73,7 +75,8 @@
 		part,
 		rail = false,
 		folded = false,
-		onmark
+		onmark,
+		now = null
 	}: Props = $props();
 
 	const byId = $derived(new Map(plan.lines.map((l) => [l.id, l])));
@@ -286,6 +289,7 @@
 						{#if open}
 							<div id="rail-dec-{d.key}" class="px-2 pb-2">
 								<DecisionCard
+									{now}
 									deliverBy={plan.deliverBy}
 									decision={d}
 									{names}
@@ -408,6 +412,7 @@
 						{#each decisions as d (d.key)}
 							<li>
 								<DecisionCard
+									{now}
 									deliverBy={plan.deliverBy}
 									decision={d}
 									{names}
