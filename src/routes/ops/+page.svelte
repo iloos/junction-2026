@@ -345,7 +345,11 @@
 			</nav>
 			<p class="roomline" title="Workspace and run this screen reads">
 				{data.room.label}
-				<span class="mono sys-only">{data.workspace}{data.run ? ` · ${data.run}` : ''}</span>
+				<span class="mono sys-only"
+					>{data.workspace}{stream.state.runId || data.run
+						? ` · ${stream.state.runId || data.run}`
+						: ''}</span
+				>
 			</p>
 			{#if data.room.notice}<p class="room-notice" role="note">{data.room.notice}</p>{/if}
 		</div>
@@ -551,15 +555,20 @@
 					<GatePanel g={gatePaths(stream.state)} />
 				</div>
 			{:else if view === 'orders'}
-				<OrdersTab
-					ws={data.workspace}
-					{kitchens}
-					version={stream.last}
-					href={(planId, kitchenId) =>
-						data.simulated ? null : kitchenHref({ planId, kitchenId }, linkAt)}
-				/>
+				<!-- A reset (here or in another tab) starts a new run with the seq cursor kept: remount to refetch. -->
+				{#key stream.state.runId}
+					<OrdersTab
+						ws={data.workspace}
+						{kitchens}
+						version={stream.last}
+						href={(planId, kitchenId) =>
+							data.simulated ? null : kitchenHref({ planId, kitchenId }, linkAt)}
+					/>
+				{/key}
 			{:else if view === 'demand'}
-				<DemandTab ws={data.workspace} version={stream.last} />
+				{#key stream.state.runId}
+					<DemandTab ws={data.workspace} version={stream.last} />
+				{/key}
 			{:else if view === 'queue'}
 				<Queue
 					{cases}
