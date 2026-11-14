@@ -1176,6 +1176,14 @@ async function eventTurn(
 	}
 
 	const draft = applyBriefAnswers(draftBrief(goal, deps.today), briefAnswers(task), deps.today);
+	// The title says what the event is as far as the brief knows it ("Menu for 3, 7 courses").
+	task.title = [
+		draft.guests ? `Menu for ${draft.guests}` : 'Event menu',
+		draft.courses ? `${draft.courses} courses` : '',
+		draft.date ? dayWords(draft.date) : ''
+	]
+		.filter(Boolean)
+		.join(', ');
 	const q = nextQuestion(draft, deps.today);
 	if (q) {
 		const options = q.chips.slice(0, 6).map((c) => ({
@@ -1210,7 +1218,6 @@ async function eventTurn(
 	if (!r.ok) return { steps, clarify: null, menu: null, say: `No menu yet: ${r.error.message}` };
 	const proposal = (r.value as { proposal: MenuProposal }).proposal;
 	task.proposal = { id: proposal.id, revision: proposal.revision };
-	task.title = brief.title.slice(0, 200);
 	const unresolved = proposal.dishes
 		.flatMap((x) => x.ingredients)
 		.filter((i) => i.unresolved !== undefined).length;
