@@ -280,6 +280,23 @@ export function toFacts(tool: ToolName, value: unknown, intent?: Intent, input?:
 				blocks: issues.filter((i) => i.severity === 'block').length
 			};
 		}
+		// A picture's words are untrusted text: the planner gets the kind, the count and per line a number, a unit code and
+		// a bounded hint, never free text.
+		case 'read_image': {
+			const r = obj(v.reading);
+			return {
+				kind: code(r.kind, 16),
+				confidence: num(r.confidence),
+				lines: cap(r.lines, 'lines', cut, 20).map((x) => {
+					const l = obj(x);
+					return {
+						qty: num(l.qty) ?? null,
+						unit: code(l.unit, 16),
+						hint: shortText(l.productHint)
+					};
+				})
+			};
+		}
 		case 'get_context':
 			return {
 				kitchens: Array.isArray(v.kitchens) ? v.kitchens.length : 0,
