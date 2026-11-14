@@ -101,7 +101,9 @@ export async function bootstrapContext(
 	const open = plans.filter((p) => allowed(p.kitchenId) && p.state !== 'committed');
 	const picked = pickPlan(goal, open, planId);
 	return {
-		kitchens: kitchens.filter((k) => allowed(k.id)).map((k) => ({ id: k.id, name: k.name })),
+		kitchens: kitchens
+			.filter((k) => allowed(k.id))
+			.map((k) => ({ id: k.id, name: k.name, weights: k.weights })),
 		currentPlan: picked
 			? {
 					id: picked.plan.id,

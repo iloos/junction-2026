@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { Product, RankBy, ToolOutput } from '$lib/core/contracts';
 import { presetWeights, sortByPreference } from '$lib/core/rank/presets';
 import { scenarioDate } from '$lib/core/scenario';
-import { byPreference, preferenceNote } from '../loop';
+import { preferredPick } from '../loop';
 import type { OfferFacts, RoutineCandidate } from '../routine';
 import { trialWorkspace } from '../trial-harness';
 import { FIDELITY_NOW } from '../../evals/fidelity';
@@ -34,14 +34,15 @@ describe('readPreference (EN + FI)', () => {
 });
 
 describe('presets', () => {
-	it('makes the preferred criterion dominant and keeps the kitchen’s other weights', () => {
-		expect(presetWeights({ price: 0.4, finnish: 0.3, carbon: 0.3 }, 'carbon')).toEqual({
-			price: 0.4,
-			finnish: 0.3,
-			carbon: 2.0999999999999996
-		});
-		expect(presetWeights({ price: 1 }, 'default')).toEqual({ price: 1 });
-		expect(presetWeights({}, 'reliability')).toEqual({ reliability: 1 });
+	it('is /request’s rule: the criterion at full weight, the kitchen’s own weights a tenth as much', () => {
+		expect(presetWeights('carbon', { weights: { price: 0.4, finnish: 0.3, carbon: 0.3 } })).toEqual(
+			{
+				price: 0.04000000000000001,
+				finnish: 0.03,
+				carbon: 1
+			}
+		);
+		expect(presetWeights('reliability', { weights: {} })).toEqual({ reliability: 1 });
 	});
 
 	it('sorts static hits by carbon, origin or reliability; unknown last; price keeps relevance order', () => {
@@ -59,7 +60,7 @@ describe('presets', () => {
 	});
 });
 
-describe('routine choice under a preference', () => {
+describe('routine choice under a preference (the same rule as /request)', () => {
 	const c = (id: string, x: Partial<RoutineCandidate> = {}): RoutineCandidate => ({
 		productId: id,
 		name: id.toUpperCase(),
@@ -71,23 +72,29 @@ describe('routine choice under a preference', () => {
 	});
 	const offers = new Map<string | undefined, OfferFacts>([
 		['a', { productId: 'a', unitCents: 900 }],
-		['b', { productId: 'b', unitCents: 700 }]
+		['b', { productId: 'b', unitCents: 700 }],
+		['x', { productId: 'x', unitCents: 100 }]
 	]);
+	const all = () => true;
 
-	it('picks the cheaper buyable candidate and says what changed', () => {
-		const cands = [c('a'), c('b')];
-		const picked = byPreference(cands, offers, 'price');
-		expect(picked[0].productId).toBe('b');
-		expect(preferenceNote(cands[0], picked[0], offers, 'price')).toBe(
-			'Picked B over A: cheaper (€14.00 vs €18.00)'
-		);
-		expect(byPreference(cands, offers, undefined)).toBe(cands);
-		expect(preferenceNote(cands[0], cands[0], offers, 'price')).toBeNull();
+	it('picks the cheaper candidate on the total cost and says so in /request’s words', () => {
+		const r = preferredPick([c('a'), c('b')], all, offers, 'price');
+		expect(r.pick?.productId).toBe('b');
+		expect(r.note).toBe('Ranked by price: picked B over A: −€4.00 in total.');
+		expect(preferredPick([c('a'), c('b')], all, offers, undefined)).toEqual({
+			pick: expect.objectContaining({ productId: 'a' }),
+			note: null
+		});
+	});
+
+	it('orders the whole shortlist, then takes the first that can be bought', () => {
+		const r = preferredPick([c('a'), c('b'), c('x')], (k) => k.productId !== 'x', offers, 'price');
+		expect(r.pick?.productId).toBe('b');
 	});
 
 	it('never favours an unknown value', () => {
-		const picked = byPreference([c('a'), c('b', { co2PerKg: 2 })], offers, 'carbon');
-		expect(picked.map((x) => x.productId)).toEqual(['b', 'a']);
+		const r = preferredPick([c('a'), c('b', { co2PerKg: 2 })], all, offers, 'carbon');
+		expect(r.pick?.productId).toBe('b');
 	});
 });
 
@@ -107,7 +114,7 @@ describe('a preference never changes tiers or exclusions', () => {
 			const plan = planned.value.plan;
 			const line = plan.lines.find((l) => l.state === 'unorderable') ?? plan.lines[0];
 			const runs: ToolOutput<'find_substitutes'>[] = [];
-			for (const rankBy of ['default', 'price', 'carbon', 'finnish', 'reliability'] as const) {
+			for (const rankBy of ['kitchen', 'price', 'carbon', 'finnish', 'reliability'] as const) {
 				const r = await w.handlers.find_substitutes(ctx, {
 					planId: plan.id,
 					version: plan.version,
@@ -171,6 +178,59 @@ describe('chat: "cheapest" for one request', () => {
 				expect(done.text).toMatch(/Picked .+ over .+: cheaper/);
 			// The preference words are a ranking, not part of the product searched for.
 			expect(cheap.line?.productName ?? '').not.toMatch(/cheap/i);
+		}
+	);
+});
+
+describe('one preference, one pick: /request and chat agree', () => {
+	it.each(['price', 'carbon'] as const)(
+		'%s picks the same cream on /request and in chat, not the kitchen default',
+		{ timeout: 180_000 },
+		async (rankBy) => {
+			const { runRequest } = await import('../../request/run');
+			const w = await trialWorkspace();
+			const ctx = w.ctx('kitchen_agent');
+			const kitchen = (await w.env.ports.store.kitchens(w.env.workspaceId)).find(
+				(k) => k.id === 'k-hotel'
+			)!;
+			const today = scenarioDate(w.env.ports.clock.now());
+			const page = await runRequest('6 kg cream for Thursday', {
+				handlers: w.handlers,
+				ctx,
+				today,
+				kitchen,
+				clock: w.env.ports.clock,
+				place: false,
+				rankBy
+			});
+			const pagePick = page.lookup?.items[0].pick?.productId;
+			expect(pagePick).toBeTruthy();
+			// The preference really changes the pick here, so agreeing is not agreeing on the default.
+			const usual = await runRequest('6 kg cream for Thursday', {
+				handlers: w.handlers,
+				ctx,
+				today,
+				kitchen,
+				clock: w.env.ports.clock,
+				place: false
+			});
+			expect(pagePick).not.toBe(usual.lookup?.items[0].pick?.productId);
+
+			const words = rankBy === 'price' ? 'cheapest' : 'lowest carbon';
+			await chatTurn(
+				{ text: `Order 6 kg cream for k-hotel for Thursday, ${words}` },
+				{
+					handlers: w.handlers,
+					ctx: w.ctx('chef'),
+					ports: w.env.ports,
+					workspaceId: w.env.workspaceId,
+					kitchen: { id: 'k-hotel' },
+					today
+				}
+			);
+			const offer = w.ops.find((o) => o.op.type === 'RecordOffer');
+			const chatPick = offer?.op.type === 'RecordOffer' ? offer.op.lines[0]?.productId : undefined;
+			expect(chatPick).toBe(pagePick);
 		}
 	);
 });

@@ -27,7 +27,6 @@ const OPEN: Record<string, string> = {
 	'R11-06a': '9c',
 	'R11-06b': '9c',
 	'R11-07a': '1f + 9c',
-	'R11-08': 'da',
 	'R11-09': '8d',
 	'R11-10': '8d'
 };

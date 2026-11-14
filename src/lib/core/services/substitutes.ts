@@ -251,7 +251,7 @@ export async function findSubstitutes(
 	// Explicit weights win; a request's preference (rankBy) reweights for this call only, never a tier or authority.
 	const weights =
 		input.weights ??
-		(isPreference(input.rankBy) ? presetWeights(kitchen.weights, input.rankBy) : undefined);
+		(isPreference(input.rankBy) ? presetWeights(input.rankBy, kitchen) : undefined);
 	const rankKitchen = weights ? { ...kitchen, weights } : kitchen;
 
 	const seed = plan0.eventId ? ports.events?.[plan0.eventId] : undefined;

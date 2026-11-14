@@ -6,7 +6,7 @@
  */
 import type { RankBy } from '$lib/core/contracts';
 
-const PATTERNS: [Exclude<RankBy, 'default'>, RegExp][] = [
+const PATTERNS: [Exclude<RankBy, 'kitchen'>, RegExp][] = [
 	[
 		'price',
 		/\b(cheapest|cheaper|lowest[- ]price\w*|least expensive|best price|on a budget|budget option|halvin\w*|halvemp\w*|edullisin\w*|edullisemp\w*)\b/i
@@ -30,7 +30,7 @@ const REQUIRES_ORIGIN =
 	/\b(must be (finnish|domestic)|only (finnish|domestic)|pakko olla (kotimai\w*|suomalai\w*))\b/i;
 
 export interface Preference {
-	rankBy: Exclude<RankBy, 'default'>;
+	rankBy: Exclude<RankBy, 'kitchen'>;
 	/** The words that said it, for "Ranked by … (you said "cheapest")". */
 	said: string;
 	/** The words asked for an origin requirement, which chat does not set. */
@@ -39,7 +39,7 @@ export interface Preference {
 
 /** The first preference the words state, or null. One per request: the first named wins. */
 export function readPreference(text: string): Preference | null {
-	let best: { rankBy: Exclude<RankBy, 'default'>; at: number; said: string } | null = null;
+	let best: { rankBy: Exclude<RankBy, 'kitchen'>; at: number; said: string } | null = null;
 	for (const [rankBy, re] of PATTERNS) {
 		const m = re.exec(text);
 		if (m && (best === null || m.index < best.at)) best = { rankBy, at: m.index, said: m[0] };
@@ -56,7 +56,7 @@ export function readPreference(text: string): Preference | null {
 export function preferenceSentence(
 	p: Preference,
 	steps: readonly { tool: string; ok: boolean; why: string }[],
-	names: Record<Exclude<RankBy, 'default'>, string>
+	names: Record<Exclude<RankBy, 'kitchen'>, string>
 ): string {
 	const picked = steps
 		.filter((s) => s.tool === 'place_order' && s.ok)

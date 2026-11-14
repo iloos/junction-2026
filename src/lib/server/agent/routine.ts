@@ -19,6 +19,8 @@ export interface RoutineCandidate {
 	unit: string;
 	lotStep?: number;
 	origin?: string;
+	/** Organic label: the one label the ranker weighs (in the kitchen's own weights). No raw label text reaches the planner. */
+	organic?: boolean;
 	/** CO₂e per kg (Valio's footprint file), for a carbon preference. */
 	co2PerKg?: number;
 	/** On-time share 0–1 (Valio's reliability file), for a reliability preference. */
@@ -82,6 +84,7 @@ export function routineCandidates(intent: RoutineLine, hits: Product[]): Routine
 			unit: r.product.salesUnit,
 			lotStep: r.product.lotStep,
 			origin: r.product.origin ?? undefined,
+			...(r.product.labels.some((l) => /ORGANIC/i.test(l)) ? { organic: true } : {}),
 			...(r.product.co2PerKg ? { co2PerKg: r.product.co2PerKg.value } : {}),
 			...(r.product.reliability !== undefined ? { reliability: r.product.reliability } : {}),
 			salesQty: r.conversion?.ok ? r.conversion.salesQty : null,
@@ -126,6 +129,9 @@ export function pickRoutine(
 export interface OfferFacts {
 	productId?: string;
 	unitCents?: number;
+	/** Valio's comparison price (per kg or l), when it states one: the price basis across pack sizes. */
+	comparisonCents?: number;
+	comparisonUnit?: string;
 	availability?: string;
 	logisticModel?: string;
 	/** Sales units in stock, when Valio says (known availability). */

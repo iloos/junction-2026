@@ -3,11 +3,15 @@ import {
 	err,
 	toolSchemas,
 	type DomainError,
+	type Offer,
+	type Product,
 	type RankBy,
 	type ServerEvent,
+	type Weights,
 	type ToolName
 } from '$lib/core/contracts';
-import { isPreference, PREFERENCE_WORDS } from '$lib/core/rank/presets';
+import { isPreference, preferenceOrder, priceBasis } from '$lib/core/rank/presets';
+import { preferenceNote } from '$lib/server/request/rank-by';
 import type { CallContext, Llm, ToolHandlers } from '$lib/core/ports';
 import { traceEvent, type TraceStep } from '$lib/server/adapters/llm/trace';
 import { serveTool, toolsFor } from '$lib/server/tools/serve';
@@ -86,66 +90,59 @@ export interface AgentRun {
 
 class Stopped extends Error {}
 
-const lineCents = (c: RoutineCandidate, offers: Map<string | undefined, OfferFacts>) => {
-	const u = offers.get(c.productId)?.unitCents;
-	return u !== undefined && c.salesQty !== null ? u * c.salesQty : null;
-};
+/** A routine candidate and its quote as the core ranker reads them (only the fields it uses). */
+const asProduct = (c: RoutineCandidate) =>
+	({
+		productId: c.productId,
+		// The bounded short name (facts' shortText): no raw catalogue text reaches the planner or its notes.
+		nameFi: c.name ?? c.productId,
+		origin: c.origin,
+		labels: c.organic ? ['EU_ORGANIC_FARMING'] : [],
+		reliability: c.reliability,
+		...(c.co2PerKg !== undefined
+			? { co2PerKg: { value: c.co2PerKg, provenance: { source: 'valio_static' } } }
+			: {})
+	}) as unknown as Product;
+const asOffer = (o: OfferFacts | undefined) =>
+	(o?.unitCents !== undefined
+		? {
+				productId: o.productId,
+				price: {
+					unitCents: o.unitCents,
+					...(o.comparisonCents !== undefined && o.comparisonUnit
+						? { comparison: { cents: o.comparisonCents, unit: o.comparisonUnit } }
+						: {})
+				}
+			}
+		: undefined) as unknown as Offer | undefined;
 
-/** Candidates in the request's preference order (stable; an unknown value sorts last, never favourably). */
-export function byPreference(
-	cands: RoutineCandidate[],
+/**
+ * A routine order's pick under the request's preference, exactly as /request picks: core's preferenceOrder over the
+ * whole shortlist (price on a common basis, the kitchen's weights a tenth as much), then the first one that can be
+ * bought. Without a preference, the shortlist's own order. Returns the pick and /request's note when it differs.
+ */
+export function preferredPick(
+	shortlist: RoutineCandidate[],
+	canBuy: (c: RoutineCandidate) => boolean,
 	offers: Map<string | undefined, OfferFacts>,
-	rankBy: RankBy | undefined
-): RoutineCandidate[] {
-	if (!isPreference(rankBy)) return cands;
-	const key = (c: RoutineCandidate): number | null =>
-		rankBy === 'price'
-			? lineCents(c, offers)
-			: rankBy === 'carbon'
-				? (c.co2PerKg ?? null)
-				: rankBy === 'finnish'
-					? c.origin
-						? c.origin.toUpperCase() === 'FI'
-							? 0
-							: 1
-						: null
-					: c.reliability === undefined
-						? null
-						: -c.reliability;
-	return cands
-		.map((c, i) => ({ c, i, k: key(c) }))
-		.sort((a, b) =>
-			a.k === null && b.k === null
-				? a.i - b.i
-				: a.k === null
-					? 1
-					: b.k === null
-						? -1
-						: a.k - b.k || a.i - b.i
-		)
-		.map((x) => x.c);
-}
-
-/** "Picked X over Y: lower CO₂e (0.9 vs 1.4 kg CO₂e/kg)", when the preference changed the pick. */
-export function preferenceNote(
-	usual: RoutineCandidate | undefined,
-	picked: RoutineCandidate | undefined,
-	offers: Map<string | undefined, OfferFacts>,
-	rankBy: RankBy | undefined
-): string | null {
-	if (!isPreference(rankBy) || !usual || !picked || usual.productId === picked.productId)
-		return null;
-	const name = (c: RoutineCandidate) => c.name ?? c.productId;
-	const eur = (cents: number | null) => (cents === null ? '?' : `€${(cents / 100).toFixed(2)}`);
-	const detail =
-		rankBy === 'price'
-			? ` (${eur(lineCents(picked, offers))} vs ${eur(lineCents(usual, offers))})`
-			: rankBy === 'carbon' && picked.co2PerKg !== undefined && usual.co2PerKg !== undefined
-				? ` (${picked.co2PerKg.toFixed(1)} vs ${usual.co2PerKg.toFixed(1)} kg CO₂e/kg)`
-				: rankBy === 'reliability' && picked.reliability !== undefined
-					? ` (${Math.round(picked.reliability * 100)}% vs ${usual.reliability === undefined ? '?' : Math.round(usual.reliability * 100) + '%'} on time)`
-					: '';
-	return `Picked ${name(picked)} over ${name(usual)}: ${PREFERENCE_WORDS[rankBy]}${detail}`;
+	rankBy: RankBy | undefined,
+	weights: Weights = {}
+): { pick: RoutineCandidate | null; note: string | null } {
+	const usual = shortlist.find(canBuy) ?? null;
+	if (!isPreference(rankBy)) return { pick: usual, note: null };
+	const short = shortlist.map((c) => ({ product: asProduct(c), qty: c.salesQty ?? 0 }));
+	const offerMap = new Map(
+		shortlist.flatMap((c) => {
+			const o = asOffer(offers.get(c.productId));
+			return o ? [[c.productId, o] as const] : [];
+		})
+	);
+	const order = preferenceOrder(rankBy, { weights }, short, offerMap);
+	const pick = order ? (order.map((i) => shortlist[i]).find(canBuy) ?? null) : usual;
+	const side = (c: RoutineCandidate | null) =>
+		c ? { product: asProduct(c), offer: offerMap.get(c.productId), qty: c.salesQty ?? 0 } : null;
+	const note = preferenceNote(rankBy, side(pick), side(usual), priceBasis(short, offerMap));
+	return { pick, note };
 }
 
 /** The request's preference on the calls that rank, unless the planner set one (a model may pass its own). */
@@ -754,19 +751,19 @@ export function scriptedPlanner(): Planner {
 							);
 						for (const [i, l] of lines.entries()) {
 							const cands = candidatesFor(l);
-							const buyable = cands.filter((c) => {
+							const canBuy = (c: RoutineCandidate) => {
 								const o = offers.get(c.productId);
 								return (
 									c.salesQty !== null &&
 									orderable(o, intent.deliverBy, context?.now) &&
 									!(o?.availability === 'known' && o.amount != null && o.amount < c.salesQty)
 								);
-							});
-							// The request's preference reorders what can be bought; without one, rank order decides.
-							const pick = byPreference(buyable, offers, rankBy);
-							found[i] = pick.at(0) ?? null;
-							const note = preferenceNote(buyable[0], pick[0], offers, rankBy);
-							if (note) preferred.push(note);
+							};
+							// The request's preference orders the shortlist as /request does; without one, rank order decides.
+							const weights = context?.kitchens.find((k) => k.id === intent.kitchenId)?.weights;
+							const r = preferredPick(cands, canBuy, offers, rankBy, weights);
+							found[i] = r.pick;
+							if (r.note) preferred.push(r.note);
 							// Nothing open for that day among the quoted: a date problem for this product.
 							const quotedIds = cands.filter((c) => offers.has(c.productId));
 							if (
