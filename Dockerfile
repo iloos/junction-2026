@@ -10,7 +10,8 @@ RUN pnpm build && pnpm prune --prod && node scripts/deploy/commit.mjs > COMMIT
 
 FROM node:24-slim
 WORKDIR /app
-ENV NODE_ENV=production PORT=3000 HOST=0.0.0.0
+# BODY_SIZE_LIMIT: adapter-node's 512 KB default refuses a phone photo sent to read_image (the tool caps images at 4 MB).
+ENV NODE_ENV=production PORT=3000 HOST=0.0.0.0 BODY_SIZE_LIMIT=8M
 COPY --from=build /app/build ./build
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/package.json ./
