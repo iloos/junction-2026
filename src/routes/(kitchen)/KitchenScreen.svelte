@@ -31,6 +31,8 @@
 	import CalendarSubscribe from '$lib/ui/CalendarSubscribe.svelte';
 	import AgentMark from '$lib/ui/AgentMark.svelte';
 	import { planDiff } from '$lib/ui/plan-diff';
+	import { planOf } from '$lib/ui/shell/plan-events.svelte';
+	import { describeOps } from '$lib/ui/chat/turn-view';
 	import { dishGate } from '$lib/ui/coverage';
 	import { whyChain } from '$lib/ui/why-chain';
 	import { day, fixed, money, moneyDelta, num, readableName, storyTime } from '$lib/ui/format';
@@ -148,6 +150,28 @@
 		const shown = new Set((k.view?.dishes ?? []).flatMap((d) => d.lineIds));
 		return (k.plan?.lines ?? []).filter((l) => !shown.has(l.id) && l.qty.value > 0);
 	});
+	// The page and the dock stay in step: a change to this plan made elsewhere (the dock, a chat turn, an outside
+	// agent) re-reads it once per burst, and What changed says who made it. The page's own commands re-read anyway.
+	$effect(() => {
+		if (!shell || k.mode !== 'live') return;
+		return shell.events.subscribe((ops) => {
+			const here = k.plan?.id;
+			const mine = ops.filter((o) => here && planOf(o.op) === here && !/^kitchen\b/.test(o.via));
+			if (!mine.length) return;
+			const by = mine.some((o) => /^dock\b/.test(o.via))
+				? 'dock'
+				: mine.some((o) => /^(chat|task)\b/.test(o.via))
+					? 'agent'
+					: 'outside';
+			void k.refreshFrom(by, describeOps(mine));
+		});
+	});
+	const CHANGE_BY = {
+		dock: 'by you in the agent dock',
+		agent: 'by the agent in chat',
+		outside: 'by an outside agent'
+	} as const;
+
 	/** Who made the plan on screen, in words, for a plan that isn't the booking (its CreatePlan op). */
 	const ORIGIN: Record<string, string> = {
 		chat: 'Drafted by the agent in chat',
@@ -830,6 +854,22 @@
 						<span>{contended}</span>
 					</p>
 				{/if}
+				{#if k.outsideNote}
+					<p
+						class="mt-2 flex items-start gap-2 rounded-lg border border-accent/40 bg-accent-wash/50 px-4 py-2 text-body text-ink"
+						role="status"
+					>
+						<span class="min-w-0 flex-1"
+							><span class="font-medium">{CHANGE_BY[k.outsideNote.by].replace(/^by/, 'By')}:</span>
+							{k.outsideNote.text}</span
+						>
+						<button
+							type="button"
+							class="shrink-0 text-meta text-ink-2 underline underline-offset-2 hover:text-ink"
+							onclick={() => (k.outsideNote = null)}>Dismiss</button
+						>
+					</p>
+				{/if}
 				{#if changed}
 					<section
 						class="mt-2 rounded-lg border border-accent/40 bg-accent-wash/50 px-4 py-2.5"
@@ -837,7 +877,9 @@
 					>
 						<div class="flex items-baseline justify-between gap-3">
 							<p class="text-body font-semibold text-ink">
-								What changed
+								What changed{#if k.changeBy}<span class="font-normal text-ink-2">
+										· {CHANGE_BY[k.changeBy]}</span
+									>{/if}
 								<span class="mono text-meta font-normal text-ink-3"
 									>v{changed.from} → v{changed.to}</span
 								>

@@ -1,7 +1,16 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import type { ChatEvent } from './types';
-import { foldRows, outcomeLine, stepsSinceChef, workedLine, type Entry } from './turn-view';
+import {
+	describeOps,
+	foldRows,
+	fromChat,
+	outcomeLine,
+	stepsSinceChef,
+	workedLine,
+	type Entry
+} from './turn-view';
+import type { OpEnvelope } from '$lib/core/contracts';
 
 /** A recorded task (fixture LLM): "I need butter" → qty clarify → date clarify with options → steps, decision, ledger. */
 const entries: Entry[] = readFileSync(
@@ -50,5 +59,44 @@ describe('a recorded chat turn renders as five parts', () => {
 	it('times a running turn by the steps since the chef spoke', () => {
 		expect(stepsSinceChef(entries)).toBe(3);
 		expect(stepsSinceChef(entries.slice(0, 2))).toBe(0);
+	});
+});
+
+describe('what happened outside the chat, in one line', () => {
+	const env = (op: unknown, via = 'kitchen:approve') =>
+		({ seq: 1, at: '', actor: { kind: 'chef', id: 'c' }, via, op }) as unknown as OpEnvelope;
+	const approval = (state: string, n = 7) => ({
+		type: 'RecordApproval',
+		approval: {
+			id: 'ap1',
+			planId: 'p1',
+			lineIds: Array.from({ length: n }, (_, i) => `l${i}`),
+			state
+		}
+	});
+	it('says approvals, holds, voids and orders plainly', () => {
+		expect(describeOps([env(approval('granted'))])).toBe('You approved 7 lines.');
+		expect(describeOps([env(approval('denied', 1))])).toBe(
+			'You kept 1 line held: nothing more to order there.'
+		);
+		expect(describeOps([env(approval('invalidated'))])).toBe(
+			'The plan changed: the earlier approval no longer applies.'
+		);
+		const commit = {
+			type: 'CommitOrder',
+			outcome: {
+				result: 'committed',
+				order: { planId: 'p1' },
+				receipt: { id: 'rc-1', awaitingSupplier: [{}, {}, {}] }
+			}
+		};
+		expect(describeOps([env(commit, 'kitchen:commit_order')])).toBe(
+			'Ordered: receipt rc-1 (3 awaiting the supplier).'
+		);
+	});
+	it("says nothing for a quiet burst, and knows a chat turn's own ops", () => {
+		expect(describeOps([env({ type: 'RecordOffer', planId: 'p1', lines: [] })])).toBeNull();
+		expect(fromChat(env({}, 'chat:place_order'))).toBe(true);
+		expect(fromChat(env({}, 'dock:approve'))).toBe(false);
 	});
 });

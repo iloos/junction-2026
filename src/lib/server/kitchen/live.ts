@@ -104,7 +104,9 @@ export function callTool(
 	workspaceId: string,
 	name: string,
 	input: unknown,
-	view: RenderedView | null
+	view: RenderedView | null,
+	/** Where the chef acted: the Kitchen page or the agent dock (D13); recorded as the ops' `via`. */
+	surface: 'kitchen' | 'dock' = 'kitchen'
 ): Promise<Served> {
 	return serial(workspaceId, async () => {
 		const deny = (message: string): Served => ({
@@ -146,7 +148,9 @@ export function callTool(
 		// The approval must exist and belong to the plan on screen: an exact check, not a match on its id's text.
 		if (name === 'approve' && ws0.approvals[i.approvalId ?? '']?.planId !== plan.id)
 			return deny("that approval is not for this session's plan");
-		return serveTool(name, chef(s), input, handlers);
+		const ctx =
+			surface === 'dock' ? contextFor('chef', 'kitchen-ui', 'dock', env, s.workspaceId) : chef(s);
+		return serveTool(name, ctx, input, handlers);
 	});
 }
 

@@ -27,6 +27,7 @@ export const POST: RequestHandler = async (event) => {
 	const { workspaceId } = await visitorWorkspace(event, env, dev);
 	const input = await request.json().catch(() => ({}));
 	const view = renderedView(request.headers.get('x-kitchen-view'));
-	const r = await callTool(sid(cookies), workspaceId, params.name, input, view);
+	const surface = request.headers.get('x-kitchen-surface') === 'dock' ? 'dock' : 'kitchen';
+	const r = await callTool(sid(cookies), workspaceId, params.name, input, view, surface);
 	return r.ok ? json(r.value) : json({ error: r.error }, { status: r.status });
 };
