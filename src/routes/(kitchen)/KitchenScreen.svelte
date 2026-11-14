@@ -1127,6 +1127,14 @@
 					}
 				: undefined}
 			onwhy={() => k.openWhy(l.id)}
+			swap={k.mode === 'live' && plan && !k.readOnly
+				? {
+						planId: plan.id,
+						version: plan.version,
+						deliverBy: plan.deliverBy,
+						onchanged: () => void k.retry()
+					}
+				: undefined}
 		/>
 	{/snippet}
 	<nav class="mx-auto flex max-w-[1440px] gap-1 px-4 pt-4 md:px-6" aria-label="Kitchen view">
