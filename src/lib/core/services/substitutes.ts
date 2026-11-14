@@ -66,6 +66,33 @@ function unsizedReason(o: { availability: { kind: string } } | undefined): strin
 	return k === 'out' || k === 'undeliverable' || k === 'blocked' ? k : 'UNKNOWN_REQUIRED';
 }
 
+/**
+ * Re-sizes a product substitute after its dish's need changed (a g/guest edit): same yield and pack rules as when
+ * it was ranked. Returns null when it can't be sized (then the line keeps its quantity).
+ */
+export function resizeSubstitute(
+	seed: EventSeed | undefined,
+	needLabel: string,
+	servedKg: number,
+	line: Line,
+	p: Product
+): Line['qty'] | null {
+	const dish = seed?.dishes.find((d) => d.dish === needLabel) as Loose;
+	const rescue = line.substituteFor ? rescueFor(seed, line.substituteFor) : undefined;
+	const fromSeed = [
+		...((dish?.candidates ?? []) as Loose[]),
+		...((rescue?.alternatives ?? []) as Loose[]),
+		...(rescue?.chosen?.productId ? [rescue.chosen] : [])
+	].find((c) => c.productId === line.productId);
+	const entry: PoolEntry = {
+		productId: line.productId,
+		fromValioRule: false,
+		yield: fromSeed ? (fromSeed.yield ?? (rescue ? 1 : dish?.yield)) : dish?.yield,
+		pack: fromSeed?.pack
+	};
+	return sizeFor(p, entry, servedKg, line)?.qty ?? null;
+}
+
 export async function findSubstitutes(
 	ports: ServicePorts,
 	ctx: CallContext,
