@@ -51,6 +51,10 @@ const TEXT: Record<string, { short: string; long: string }> = {
 		short: "Doesn't meet the requirement",
 		long: "It doesn't meet a requirement of the dish it is for (for example lactose-free): it can't be ordered for it."
 	},
+	need_rounding_large: {
+		short: 'Far over the need',
+		long: 'The smallest pack is many times what the dish needs; nothing is ordered until you confirm it.'
+	},
 	superseded: {
 		short: 'Replaced, not bought',
 		long: 'A substitute replaced this product; it stays in the plan at 0 so you can see what changed, and is not bought.'
