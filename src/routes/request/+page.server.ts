@@ -6,6 +6,7 @@ import {
 	kitchens,
 	llmKind,
 	pageWorkspace,
+	simNow,
 	simToday
 } from '$lib/server/request';
 import type { PageServerLoad } from './$types';
@@ -16,6 +17,7 @@ export const load: PageServerLoad = async () => {
 	const list = await kitchens(ctx);
 	return {
 		today: await simToday(),
+		now: await simNow(),
 		parser: llmKind(env),
 		workspace: { id: ws.id, stage: ws.stage, run: ctx.runId },
 		defaultKitchen: DEFAULT_KITCHEN,

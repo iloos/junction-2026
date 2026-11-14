@@ -72,6 +72,8 @@ export interface CandidateView {
 	skipped: string | null;
 	picked: boolean;
 	quoted: boolean;
+	/** What the converted quantity holds in total, when the product states it. */
+	amount?: { value: number; unit: 'kg' | 'l' } | null;
 }
 
 export interface ValioRuleView {
@@ -101,6 +103,8 @@ export interface LookupView {
 	quotedIds: string[];
 	/** Where the offers came from (valio_live / valio_cache / simulator). */
 	offerSources: string[];
+	/** Size checks against the kitchen's own numbers; non-empty means confirm before placing. */
+	sanity: string[];
 }
 
 export interface ApprovalView {
@@ -159,4 +163,6 @@ export interface RequestResult {
 	lookup: LookupView | null;
 	order: OrderView | null;
 	message?: string;
+	/** Set when the order is unusually large and was not placed: send again with confirmLarge. */
+	needsConfirm?: boolean;
 }

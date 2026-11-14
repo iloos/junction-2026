@@ -77,6 +77,8 @@
 	let approval = $state.raw<ApprovalView | null>(null);
 	let commits = $state.raw<CommitView[]>([]);
 	let resultMessage = $state<string | null>(null);
+	/** The last run stopped before placing because the order is unusually large. */
+	let needsConfirm = $state(false);
 
 	const kitchen = $derived(data.kitchens.find((k) => k.id === kitchenId) ?? data.kitchens[0]);
 	const names = $derived(
@@ -99,6 +101,7 @@
 		parsed = lookup = order = plan = approval = null;
 		commits = [];
 		error = resultMessage = null;
+		needsConfirm = false;
 	}
 
 	function approvalStatus(): Status {
@@ -116,6 +119,7 @@
 	function apply(e: RequestEvent | { step: 'result'; data: RequestResult }) {
 		if (e.step === 'result') {
 			resultMessage = e.data.message ?? null;
+			needsConfirm = e.data.needsConfirm === true;
 			if (status.lookup === 'running') status.lookup = 'idle';
 			if (status.order === 'running') status.order = 'idle';
 			return;
@@ -143,7 +147,7 @@
 		}
 	}
 
-	async function submit(t = text, keepAnswers = false) {
+	async function submit(t = text, keepAnswers = false, confirmLarge = false) {
 		const req = t.trim() || PLACEHOLDER;
 		if (!keepAnswers || req !== text) answers = [];
 		text = req;
@@ -154,7 +158,7 @@
 			const res = await fetch('/request/run', {
 				method: 'POST',
 				headers: { 'content-type': 'application/json' },
-				body: JSON.stringify({ text: req, kitchenId, nonce, answers })
+				body: JSON.stringify({ text: req, kitchenId, nonce, answers, confirmLarge })
 			});
 			if (!res.ok || !res.body) {
 				const b = await res.json().catch(() => null);
@@ -265,6 +269,13 @@
 	}
 
 	const sim = $derived(day(data.today));
+	/** A cut-off before the scenario's now is a cached date from another clock: not shown as a deadline. */
+	const cutoffText = (iso: string | null) =>
+		!iso
+			? ''
+			: Date.parse(iso) < Date.parse(data.now)
+				? ' · cut-off: cached date, predates the sim clock'
+				: ` · cut-off ${expires(iso)}`;
 	const qtyText = (q: number | null, u: string | null) =>
 		q === null ? '? ' : `${num(q, 3)} ${u ? (UNIT_WORDS[u] ?? u) : ''}`;
 	const expires = (iso: string | null) =>
@@ -499,6 +510,36 @@
 								? ''
 								: 's'} ({offerSourceWords(lookup.offerSources)}){:else}nothing quoted{/if}
 					</p>
+					{#if lookup.sanity.length}
+						<div
+							class="mt-3 rounded-lg border border-out/35 bg-out-wash px-3 py-2.5 text-[13.5px]"
+							role="alert"
+						>
+							<p class="font-medium text-out">
+								Unusually large order{needsConfirm ? ': nothing placed yet' : ''}
+							</p>
+							<ul class="mt-1 space-y-0.5 text-ink">
+								{#each lookup.sanity as w (w)}<li>· {w}.</li>{/each}
+							</ul>
+							{#if needsConfirm}
+								<div class="mt-2 flex flex-wrap gap-2">
+									<button
+										type="button"
+										disabled={busy}
+										onclick={() => submit(text, true, true)}
+										class="h-9 rounded-md border border-out/50 bg-sheet px-3 text-[13px] font-medium text-out hover:bg-out-wash disabled:opacity-50"
+										>Place it anyway (still needs approval)</button
+									>
+									<button
+										type="button"
+										onclick={() => document.getElementById('req')?.focus()}
+										class="h-9 rounded-md px-3 text-[13px] text-ink-2 hover:text-ink"
+										>Change the request</button
+									>
+								</div>
+							{/if}
+						</div>
+					{/if}
 					<div class="mt-3 space-y-4">
 						{#each lookup.items as it, i (i)}
 							<article class="rounded-lg border border-rule bg-sheet">
@@ -536,9 +577,7 @@
 														: `${o.availability.amount} available`
 													: o?.availability.kind}{o?.availability.logisticModel
 													? ` · ${o.availability.logisticModel}`
-													: ''}{o?.availability.closingTime
-													? ` · cut-off ${expires(o.availability.closingTime)}`
-													: ''}
+													: ''}{cutoffText(o?.availability.closingTime ?? null)}
 											</dd>
 										</dl>
 									</div>
@@ -817,7 +856,7 @@
 				{/if}
 			</Step>
 		</ol>
-		{#if resultMessage && !plan}
+		{#if resultMessage && !plan && !needsConfirm}
 			<p class="-mt-2 ml-11 text-[13.5px] text-ink-2">{resultMessage}</p>
 		{/if}
 	{/if}

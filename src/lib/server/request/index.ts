@@ -50,6 +50,11 @@ async function ports() {
 	return createServerPorts();
 }
 
+/** The scenario clock's instant (ISO), for comparing cut-offs on the page. */
+export async function simNow(): Promise<string> {
+	return (await ports()).ports.clock.now().toISOString();
+}
+
 export async function simToday(): Promise<string> {
 	return helsinkiDate((await ports()).ports.clock.now());
 }
@@ -71,6 +76,7 @@ export async function submitRequest(o: {
 	nonce?: string;
 	place?: boolean;
 	answers?: RequestAnswer[];
+	confirmLarge?: boolean;
 	env: Env;
 	/** The page passes its workspace; the API passes the key's context instead. */
 	workspaceId?: string;
@@ -102,6 +108,7 @@ export async function submitRequest(o: {
 		nonce: o.nonce,
 		place: o.place,
 		answers: o.answers,
+		confirmLarge: o.confirmLarge,
 		onEvent: o.onEvent
 	});
 }

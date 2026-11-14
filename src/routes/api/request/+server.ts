@@ -19,6 +19,7 @@ export const POST: RequestHandler = async ({ request }) => {
 		nonce?: unknown;
 		place?: unknown;
 		answers?: unknown;
+		confirmLarge?: unknown;
 	};
 	try {
 		body = await request.json();
@@ -41,6 +42,7 @@ export const POST: RequestHandler = async ({ request }) => {
 			nonce: typeof body.nonce === 'string' ? body.nonce : undefined,
 			place: body.place !== false,
 			answers: readAnswers(body.answers),
+			confirmLarge: body.confirmLarge === true,
 			env,
 			ctx
 		});

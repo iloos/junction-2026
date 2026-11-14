@@ -22,7 +22,8 @@ import type {
 	ValioRuleView
 } from '$lib/ui/request/types';
 import { weekdayOf } from './dates';
-import { caseDescription } from './convert';
+import { caseBreakdown, caseHeadline, orderAmount } from './convert';
+import { sanityWarnings } from './sanity';
 import { rankCandidates, SHORTLIST, unpickable, type Ranked } from './lookup';
 import { parseRequest, type ParsedRequest } from './parse';
 
@@ -63,6 +64,8 @@ export interface RequestDeps {
 	place?: boolean;
 	/** The chef's inline answers to earlier questions, by item index. */
 	answers?: RequestAnswer[];
+	/** The chef saw the size warnings and wants the order placed anyway. */
+	confirmLarge?: boolean;
 	onEvent?: (e: RequestEvent) => void;
 }
 
@@ -155,6 +158,7 @@ async function lookupItems(parsed: ParsedRequest, d: RequestDeps): Promise<Looku
 			if (why) v.skipped = why;
 			else if (!pick && !askCase) {
 				v.picked = true;
+				v.amount = v.conversion?.ok ? orderAmount(short[i].product, v.conversion.salesQty) : null;
 				pick = v;
 				break;
 			}
@@ -171,10 +175,21 @@ async function lookupItems(parsed: ParsedRequest, d: RequestDeps): Promise<Looku
 				.filter(({ r, v }) => !unpickable(offers.get(v.productId), r.conversion))
 				.slice(0, 4)
 				.map(({ r, v }) => {
-					const size = caseDescription(r.product);
+					// Headline and detail come from the same breakdown, so they can never disagree.
+					const b = caseBreakdown(r.product, p.item.qty!);
+					const unitCents = offers.get(v.productId)?.price?.unitCents ?? null;
+					if ('error' in b)
+						return {
+							label: `${p.item.qty} cases, size not stated`,
+							detail: `${r.product.nameFi} · ${b.error}`,
+							answer: { item: idx, productId: r.product.productId }
+						};
+					const oneCase = b.perCase
+						? ` · 1 case = ${b.perCase.count > 1 ? `${b.perCase.count} × ${b.perCase.each} = ` : ''}${b.perCase.total}`
+						: '';
 					return {
-						label: size ?? `1 ${r.product.salesUnit === 'KI' ? 'KI' : 'case'}, size not stated`,
-						detail: `${r.product.nameFi} · ${(v.conversion as { explain: string }).explain} · ${money(offers.get(v.productId)?.price?.unitCents)} / ${r.product.salesUnit}`,
+						label: caseHeadline(b),
+						detail: `${r.product.nameFi}${oneCase} · ${b.salesQty} ${b.salesUnit} × ${money(unitCents)} = ${money(unitCents === null ? null : unitCents * b.salesQty)}`,
 						answer: { item: idx, productId: r.product.productId }
 					};
 				});
@@ -260,7 +275,13 @@ async function lookupItems(parsed: ParsedRequest, d: RequestDeps): Promise<Looku
 				.filter((s): s is NonNullable<typeof s> => !!s)
 		)
 	];
-	return { items, searchCalls, quotedIds: [...offers.keys()], offerSources };
+	return {
+		items,
+		searchCalls,
+		quotedIds: [...offers.keys()],
+		offerSources,
+		sanity: sanityWarnings(items, d.kitchen)
+	};
 }
 
 export async function idempotencyKeyFor(
@@ -359,9 +380,10 @@ export async function runRequest(text: string, d: RequestDeps): Promise<RequestR
 	emit({
 		step: 'lookup',
 		status:
-			picks.length === 0
+			picks.length === 0 || (lookup.sanity.length && !d.confirmLarge)
 				? 'blocked'
-				: picks.length < lookup.items.length ||
+				: lookup.sanity.length ||
+					  picks.length < lookup.items.length ||
 					  picks.some((i) => i.pick?.conversion?.ok && i.pick.conversion.warnings.length)
 					? 'warn'
 					: 'done',
@@ -374,6 +396,14 @@ export async function runRequest(text: string, d: RequestDeps): Promise<RequestR
 			lookup,
 			order: null,
 			message: 'Nothing to order yet: answer the questions above.'
+		};
+	if (lookup.sanity.length && !d.confirmLarge && d.place !== false)
+		return {
+			parsed: parsedView,
+			lookup,
+			order: null,
+			needsConfirm: true,
+			message: 'This order is far larger than this kitchen usually needs. Nothing was placed.'
 		};
 	if (d.place === false)
 		return { parsed: parsedView, lookup, order: null, message: 'Lookup only (place=false).' };
