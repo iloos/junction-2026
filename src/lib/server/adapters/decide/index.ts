@@ -110,6 +110,9 @@ function liveClient(o: DecideOptions): DecideOptions['gemini'] | null {
 	return { create: (b: unknown) => ai.decisions.create(b as never) };
 }
 
+/** Live answers kept per process before the oldest is dropped. */
+const MEMO_MAX = 2000;
+
 export function createDecide(o: DecideOptions): Decide {
 	const trace = o.trace ?? noTrace;
 	const book = loadReplay(o.replayPath);
@@ -181,14 +184,35 @@ export function createDecide(o: DecideOptions): Decide {
 		return done(rulesAnswer(q), 'rules');
 	}
 
+	// Live answers per process, keyed like the replay book: the same question (e.g. one recipe fit asked by every
+	// snapshot) gets the same answer without another call, so rankings don't flicker and an edit isn't 9 LLM calls.
+	// Concurrent asks share one call; fallbacks (replay, rules) are not kept, so a later ask retries the live model.
+	const memo = new Map<string, Promise<Decision<boolean | string | number>>>();
+	async function remembered(q: DecideQuestion): Promise<Decision<boolean | string | number>> {
+		if (!client) return ask(q);
+		const k = await replayKey(q);
+		const hit = memo.get(k);
+		if (hit) return hit;
+		const p = ask(q);
+		memo.set(k, p);
+		p.then(
+			(d) => {
+				if (d.source !== 'gemini') memo.delete(k);
+				else if (memo.size > MEMO_MAX) memo.delete(memo.keys().next().value!);
+			},
+			() => memo.delete(k)
+		);
+		return p;
+	}
+
 	return {
-		yesNo: async (q) => (await ask({ kind: 'yesNo', ...q })) as Decision<boolean>,
+		yesNo: async (q) => (await remembered({ kind: 'yesNo', ...q })) as Decision<boolean>,
 		choice: async <T extends string>(q: {
 			question: string;
 			options: readonly T[];
 			context: string;
-		}) => (await ask({ kind: 'choice', ...q })) as Decision<T>,
-		score: async (q) => (await ask({ kind: 'score', ...q })) as Decision<number>
+		}) => (await remembered({ kind: 'choice', ...q })) as Decision<T>,
+		score: async (q) => (await remembered({ kind: 'score', ...q })) as Decision<number>
 	};
 }
 

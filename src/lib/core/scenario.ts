@@ -9,8 +9,11 @@ import type { Availability } from './contracts';
 export const SCENARIO = {
 	/** Simulated "now" when a run starts: Monday evening, when the chef usually redoes the order. */
 	start: '2026-12-07T21:40:00+02:00',
-	/** Order cut-off for the delivery below. */
-	cutoff: '2026-12-08T14:00:00+02:00',
+	/**
+	 * The story's binding "must order by": the earliest cut-off among the event's lines (Terminal, D-2 at Valio's
+	 * 15:00). Each line still shows its own (onScenario); this is the one the header and timeline count down to.
+	 */
+	cutoff: '2026-12-08T15:00:00+02:00',
 	/** Delivery date for the event's order. */
 	delivery: '2026-12-10',
 	/** The Christmas buffet. */
@@ -35,7 +38,7 @@ export function scenarioDate(d: Date): string {
 }
 
 /** Days before delivery that Valio's order closes, by logistic model (Stock from the warehouse, Terminal via supplier). */
-export const LEAD_DAYS = { Stock: 1, Terminal: 3 } as const;
+export const LEAD_DAYS = { Stock: 1, Terminal: 2 } as const;
 const DEFAULT_CLOSE = '17:00:00';
 
 /** UTC offset of Helsinki on a calendar date, as "+02:00". */

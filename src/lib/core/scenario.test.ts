@@ -23,12 +23,12 @@ describe('onScenario', () => {
 		expect(a).toMatchObject({ kind: 'known', amount: 5 });
 	});
 
-	it('gives a Terminal offer a D-3 cut-off, and 17:00 when Valio gave no time', () => {
+	it('gives a Terminal offer a D-2 cut-off, and 17:00 when Valio gave no time', () => {
 		expect(
 			onScenario(cached('Terminal', '2026-11-12T15:00:00+02:00'), '2026-12-10').closingTime
-		).toBe('2026-12-07T15:00:00+02:00');
+		).toBe('2026-12-08T15:00:00+02:00');
 		expect(onScenario(cached('Terminal', null), '2026-12-10').closingTime).toBe(
-			'2026-12-07T17:00:00+02:00'
+			'2026-12-08T17:00:00+02:00'
 		);
 	});
 

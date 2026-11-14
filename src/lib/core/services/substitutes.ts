@@ -171,11 +171,13 @@ export async function findSubstitutes(
 	});
 	// Recipe fit (0–4) from Decide for the top survivors, then rank again with it (D6 w_fit). Outside the lock;
 	// a provider failure leaves the deterministic ranking in place.
+	// Fit only reorders survivors: with fewer than two there is nothing to reorder, so no call is made.
+	const survivors = ranked.filter((r) => r.rank !== null).length;
 	const fit = await recipeFit(ports, {
 		dish: need?.label ?? line.productId,
 		original: line.productName ?? line.productId,
 		candidates: ranked
-			.filter((r) => r.rank !== null)
+			.filter((r) => r.rank !== null && survivors > 1)
 			.sort((a, b) => a.rank! - b.rank!)
 			.slice(0, FIT_TOP_N)
 			.map((r) => ({
