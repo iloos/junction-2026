@@ -104,6 +104,10 @@ export function cutoffPassed(deliverBy: string, closes: string, earliest: string
 	return `The cut-off for ${dayLabel(deliverBy)} has passed (${at} ${on}); earliest is ${dayLabel(earliest)}. Which day should it arrive?`;
 }
 
+/** Date chips from the first day still open for ordering (the scenario clock's cut-offs), never one already closed. */
+const openDates = (c: AgentContext) =>
+	dateOptions(c.today, c.now ? earliestOpen(c.today, c.now) : undefined);
+
 /** No plan picked: either none is open, or the request does not say which of several. */
 function noPlan(c: AgentContext, none: string): Resolved {
 	// No plan open at all: nothing to pick, so say so rather than ask an unanswerable question.
@@ -218,17 +222,17 @@ function routineOrder(
 	let deliverByText = parsed.deliverByText;
 	if (slots.date !== undefined) {
 		const d = slotDate(String(slots.date), c.today);
-		if (!d) return ask('date', `When should ${what} arrive?`, dateOptions(c.today));
+		if (!d) return ask('date', `When should ${what} arrive?`, openDates(c));
 		deliverBy = d.iso;
 		deliverByText = d.text;
 	} else if (parsed.deliverBySource === 'default' || !parsed.deliverByText)
 		return ask(
 			'date',
 			`When should ${what} arrive? Say "tomorrow", a weekday or a date (YYYY-MM-DD); I will not pick one.`,
-			dateOptions(c.today)
+			openDates(c)
 		);
 	if (!deliverByText || deliverBy < c.today)
-		return ask('date', `"${deliverByText}" (${deliverBy}) is in the past.`, dateOptions(c.today));
+		return ask('date', `"${deliverByText}" (${deliverBy}) is in the past.`, openDates(c));
 	// Ordering for that day may already have closed: say so and offer the first day still open, never shift it.
 	if (c.now) {
 		const closes = stockCutoff(deliverBy);

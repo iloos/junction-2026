@@ -186,3 +186,12 @@ describe('Finnish authority imperatives are refused, Finnish questions read', ()
 		['voitko tilata 4 kg voita huomiseksi?', 'order']
 	])('%s → %s', (text, kind) => expect(classifyGoal(text, TODAY).kind).toBe(kind));
 });
+
+describe('date chips start at the first day still open', () => {
+	it('Monday 21:40, no date given: the first chip is Wed 9 Dec, never tomorrow', () => {
+		const late = ctx({ today: '2026-12-07', now: '2026-12-07T21:40:00+02:00' });
+		const r = resolveIntent('4 kg butter for k-hotel', late);
+		expect(r.clarify?.field).toBe('date');
+		expect(r.clarify?.options[0].value).toBe('2026-12-09');
+	});
+});

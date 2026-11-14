@@ -17,6 +17,10 @@ export type ChatEvent =
 			summary: string;
 			/** Folded detail: which model, how long, a guard that applied. */
 			detail?: string;
+			/** Server-measured duration of the step. */
+			ms?: number;
+			/** Where a reading or an answer came from: a live model, a recording, the fixture, or the rules. */
+			source?: 'live' | 'replay' | 'fixture' | 'rules';
 			/** Kitchen deep link to the plan or line the step touched. */
 			href?: string;
 			/** What a commit did (commit_order steps). */

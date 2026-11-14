@@ -131,6 +131,7 @@ function stepEvents(taskId: string, steps: StepRecord[]): ChatEvent[] {
 			tool: s.tool,
 			ok: s.ok,
 			summary: summary.slice(0, 400),
+			ms: s.ms,
 			...(plan ? { href: approvalUrl(plan) } : {}),
 			...(s.ok && s.tool === 'commit_order' ? { receipt: receiptView(s) } : {})
 		};
@@ -389,6 +390,8 @@ export async function* runChatTurn(
 			tool: 'understand',
 			ok: true,
 			summary: understoodWords(u!, understood.goal),
+			ms: understood.ms,
+			source: understood.source === 'gemini' ? 'live' : 'rules',
 			detail:
 				(understood.source === 'gemini' ? `via Gemini · ${understood.ms} ms` : 'read by rules') +
 				(understood.guard ? ` · ${understood.guard}` : '')
@@ -638,6 +641,8 @@ export async function* runChatTurn(
 				tool: 'explain',
 				ok: true,
 				summary: "Answered from the order's numbers.",
+				ms: ex.ms,
+				source: ex.source === 'gemini' ? 'live' : 'rules',
 				detail:
 					ex.source === 'gemini'
 						? `via Gemini · ${ex.ms} ms`
