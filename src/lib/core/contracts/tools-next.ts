@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { KitchenId, Measure, ProductId, Provenance } from './primitives';
+import { Measure, ProductId, Provenance } from './primitives';
 import { ResultMeta } from './tools';
 
 /**
