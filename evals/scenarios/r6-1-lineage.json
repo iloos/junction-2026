@@ -121,8 +121,5 @@
 			}
 		]
 	},
-	"expectFail": {
-		"R6-lineage": ["attempts[0]", "attempts[1]", "qtys"]
-	},
-	"notes": "R6 §1 (A4/B). 60 × 80 g = 4.8 kg → one 10 kg lot each; soup B at 200 g = 12 kg → 20 kg. The adapter finds the need whose id contains the ingredient id, so need ids must carry ingredient lineage. The review record is supplied by the fixture until a server review command exists (then this scenario reviews through it). If lines are merged per SKU, assert per-need fulfilment instead of qtys."
+	"notes": "R6 §1 (A4/B). 60 × 80 g = 4.8 kg → one 10 kg lot each; soup B at 200 g = 12 kg → 20 kg. The adapter finds the need whose id contains the ingredient id, so need ids must carry ingredient lineage. The adapter stores the proposal and records the fixture's review through the menu store's review command. If lines are merged per SKU, assert per-need fulfilment instead of qtys."
 }
