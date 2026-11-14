@@ -61,7 +61,7 @@ const hel = new Intl.DateTimeFormat('en-GB', {
 	hourCycle: 'h23'
 });
 
-/** A scenario instant as Helsinki story time: "Tue 8 Dec, 14:00". */
+/** A scenario instant as Helsinki story time: "Tue 8 Dec, 15:00". */
 export function storyTime(at: string | Date): string {
 	return hel.format(typeof at === 'string' ? new Date(at) : at);
 }
