@@ -2,7 +2,10 @@
 // HTTP endpoints in a fresh visitor sandbox (its own cookie jar), and every number and product name on a card comes
 // from what the app answered. Plain Node 18+, no dependencies:
 //   node site/record/record.mjs [baseUrl]        → writes site/public/cases.json
-// Spend: at most one Gemini parse per /request/run call (3 here) plus the buffet plan's substitute ranking. It only
+// Besides the cards it records the landing's chain (kitchen → event → dish → ingredient → product → order): one line
+// of the seeded buffet, followed from the kitchen to its receipt, in its own sandbox.
+// Spend: at most one Gemini parse per /request/run call (3 here) plus the buffet plan's substitute ranking (once per
+// buffet start: 3 here). It only
 // approves, orders or commits inside the sandboxes it creates, and never calls an admin or reset endpoint.
 import { writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -53,7 +56,7 @@ const need = (cond, msg) => {
 
 const eur = (cents) => Math.round(cents) / 100;
 const num = (n) => (Number.isInteger(n) ? String(n) : String(Math.round(n * 100) / 100));
-const unit = (u) => ({ ST: 'packs', KG: 'kg', KI: 'cases', l: 'l', kg: 'kg' })[u] ?? u.toLowerCase();
+const unit = (u) => ({ ST: 'packs', KG: 'kg', KI: 'cases', BAG: 'bags', RAS: 'boxes', PRK: 'tubs', l: 'l', kg: 'kg' })[u] ?? u.toLowerCase();
 /** "Tue 8 Dec" from an ISO date (the app's scenario dates are calendar days). */
 const day = (iso) =>
 	new Date(`${iso.slice(0, 10)}T12:00:00Z`).toLocaleDateString('en-GB', {
@@ -386,6 +389,124 @@ const CASES = [
 ];
 
 // ---------------------------------------------------------------------------------------------------------------
+// The chain: one line of the seeded buffet from the kitchen to its receipt. Every value comes from the scenario
+// response and the commit's answer; the counts in the "decides" markers come from the same plan.
+
+async function recordChain() {
+	const go = visitor();
+	await go('/kitchen-api/snapshot');
+	const s = await go('/kitchen-api/scenario', post({ action: 'start' }));
+	need(s.status === 200 && s.json?.plan, `scenario start ${s.status}`);
+	const { plan, view, clock, kitchen } = s.json;
+	need(clock?.runId && kitchen?.name, 'scenario start has no run id or kitchen');
+	const shown = { runId: clock.runId, planId: plan.id, version: plan.version };
+	const eligible = plan.lines.filter((l) => l.view?.committable === true);
+	need(eligible.length > 0, 'no line can be ordered now');
+	const dishOf = (l) => view.dishes.find((d) => d.needId === l.needId);
+	const needOf = (l) => plan.needs.find((n) => n.id === l.needId);
+	// A need that is one ingredient of a dish is labelled "Riisipuuro (rice porridge): rice".
+	const isIngredient = (l) => Boolean(needOf(l)?.label.includes(': '));
+	// Prefer a line that is one ingredient of a dish ("Rice porridge: rice"), so dish and ingredient are two steps.
+	const candidates = eligible.filter((l) => dishOf(l) && needOf(l)?.dish && l.view?.physical);
+	need(candidates.length > 0, 'no eligible line serves a dish');
+	const r = await kitchenTool(go, 'commit_order', {
+		planId: plan.id,
+		version: plan.version,
+		idempotencyKey: `record-chain-${plan.id}-v${plan.version}`
+	}, shown);
+	need(r.status === 200 && r.json?.receiptId, `commit_order ${r.status} ${r.body.slice(0, 120)}`);
+	const committed = new Set(r.json.committedLineIds);
+	const awaiting = new Set(r.json.awaitingSupplier ?? []);
+	const confirmed = (l) => committed.has(l.id) && !awaiting.has(l.id) && !awaiting.has(l.productId);
+	const rank = (l) => (isIngredient(l) ? 0 : 2) + (confirmed(l) ? 0 : 1);
+	const line = [...candidates].filter((l) => committed.has(l.id)).sort((a, b) => rank(a) - rank(b))[0];
+	need(line, 'the chosen line was not committed');
+
+	const d = dishOf(line);
+	const n = needOf(line);
+	const [dishName, ingredient] = isIngredient(line) ? d.name.split(': ') : [d.name.split(': ')[0], null];
+	const phys = line.view.physical;
+	const pack = phys.value / line.qty.value;
+	const others = committed.size - 1;
+	const held = plan.lines.filter((l) => l.state === 'held');
+	const unknown = held.filter((l) => l.reasons.includes('UNKNOWN_REQUIRED'));
+	// A sibling ingredient of the same dish that waits because Valio doesn't state a quantity (the porridge's milk).
+	const sibling = unknown.find((l) => {
+		const sd = dishOf(l);
+		return sd && sd.needId !== d.needId && isIngredient(l) && sd.name.split(': ')[0] === dishName;
+	});
+	const siblingName = sibling ? dishOf(sibling).name.split(': ')[1] : null;
+	const capEur = kitchen.mandate?.lineCapCents != null ? `€${num(kitchen.mandate.lineCapCents / 100)}` : null;
+	const per = `${num(n.dish.gServed)} g`;
+	const total = `${num(Math.round(n.amount.value * 100) / 100)} ${n.amount.unit}`;
+	const isConfirmed = confirmed(line);
+	const fictional = / \(fictional\)$/.test(kitchen.name);
+	const kind = { city_hotel: 'city hotel' }[kitchen.kind] ?? 'kitchen';
+	const dishes = new Set(view.dishes.map((x) => x.name.split(': ')[0])).size;
+	const packs = unit(line.qty.unit) === phys.unit ? '' : `${num(line.qty.value)} ${unit(line.qty.unit)} × `;
+	const size = `${num(unit(line.qty.unit) === phys.unit ? phys.value : pack)} ${phys.unit}`;
+
+	return {
+		recordedAt: new Date().toISOString(),
+		line: { dish: dishName, ingredient, product: line.productName, eur: eur(line.lineCents) },
+		counts: { orderedNow: committed.size, waiting: held.length, unknownQuantity: unknown.length },
+		steps: [
+			{
+				key: 'kitchen',
+				title: 'The kitchen',
+				value: kitchen.name.replace(/ \(fictional\)$/, ''),
+				text: `${fictional ? 'A fictional' : 'A'} ${kind} in ${kitchen.city}. The agent may order alone up to ${capEur ?? 'a set amount'} a line.`
+			},
+			{
+				key: 'event',
+				title: 'The event',
+				value: `${view.guests} guests`,
+				text: `${view.title.replace(/, \d+ guests$/, '')} on ${day(view.date)}.`
+			},
+			{
+				key: 'dish',
+				title: 'The dish',
+				value: dishName,
+				text: `One of ${dishes} dishes on the menu, ${per} a guest.`
+			},
+			{
+				key: 'ingredient',
+				title: 'The ingredient',
+				value: ingredient ? `${total} ${ingredient}` : total,
+				text: `${ingredient ? `${ingredient[0].toUpperCase()}${ingredient.slice(1)}` : 'What to buy'} for ${view.guests} guests at ${per} of ${dishName.toLowerCase()} each.`,
+				...(sibling
+					? {
+							decides: {
+								kind: 'unknown',
+								text: `The ${siblingName} waits for one tap: Valio doesn't state a quantity.`
+							}
+						}
+					: {})
+			},
+			{
+				key: 'product',
+				title: "Valio's product",
+				value: line.productName,
+				text: `${packs}${size}, €${eur(line.lineCents).toFixed(2)}.`,
+				...(line.tier === 'act' && line.reasons.length === 0
+					? { decides: { kind: 'rule', text: 'Inside the mandate: ordered without asking.' } }
+					: {})
+			},
+			{
+				key: 'order',
+				title: 'The order',
+				value: isConfirmed ? 'Supplier confirmed' : 'Ordered, awaiting supplier',
+				text: `Ordered with ${others} other line${others === 1 ? '' : 's'} on one receipt.`,
+				decides: {
+					kind: 'signoff',
+					text: `${committed.size} lines ordered now · ${held.length} wait for the chef · ${unknown.length} of them because Valio doesn't state a quantity`
+				}
+			}
+		]
+	};
+}
+
+// ---------------------------------------------------------------------------------------------------------------
 
 const health = await fetch(`${BASE}/healthz`).then((r) => r.json());
 const cases = [];
@@ -410,10 +531,19 @@ for (const c of CASES) {
 	}
 }
 
+let chain = null;
+try {
+	chain = { ...(await recordChain()), appCommit: health.commit };
+	console.log(`ok    chain: ${chain.steps.map((s) => s.value).join(' → ')}`);
+} catch (e) {
+	failed.push('chain');
+	console.log(`FAIL  chain: ${e instanceof Unrecordable ? e.message : e.stack}`);
+}
+
 writeFileSync(
 	OUT,
 	JSON.stringify(
-		{ recordedAt: new Date().toISOString(), appCommit: health.commit, cases },
+		{ recordedAt: new Date().toISOString(), appCommit: health.commit, chain, cases },
 		null,
 		'\t'
 	) + '\n'

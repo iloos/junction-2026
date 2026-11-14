@@ -1,10 +1,75 @@
 {
-	"recordedAt": "2026-11-14T13:55:02.366Z",
-	"appCommit": "2c28b4b692bca639d3ae9edc7059cbaeb9fe187d",
+	"recordedAt": "2026-11-14T14:56:43.420Z",
+	"appCommit": "d9ee3ee8d4a992c57446a00cbdac803f0695f1ae",
+	"chain": {
+		"recordedAt": "2026-11-14T14:56:43.419Z",
+		"line": {
+			"dish": "Rice porridge",
+			"ingredient": "rice",
+			"product": "Myllyn Paras Puuroriisi 1kg",
+			"eur": 4.6
+		},
+		"counts": {
+			"orderedNow": 3,
+			"waiting": 15,
+			"unknownQuantity": 11
+		},
+		"steps": [
+			{
+				"key": "kitchen",
+				"title": "The kitchen",
+				"value": "Hotel Rautatientori",
+				"text": "A fictional city hotel in Helsinki. The agent may order alone up to €800 a line."
+			},
+			{
+				"key": "event",
+				"title": "The event",
+				"value": "140 guests",
+				"text": "Christmas dinner buffet on Sat 12 Dec."
+			},
+			{
+				"key": "dish",
+				"title": "The dish",
+				"value": "Rice porridge",
+				"text": "One of 12 dishes on the menu, 100 g a guest."
+			},
+			{
+				"key": "ingredient",
+				"title": "The ingredient",
+				"value": "1.68 kg rice",
+				"text": "Rice for 140 guests at 100 g of rice porridge each.",
+				"decides": {
+					"kind": "unknown",
+					"text": "The milk waits for one tap: Valio doesn't state a quantity."
+				}
+			},
+			{
+				"key": "product",
+				"title": "Valio's product",
+				"value": "Myllyn Paras Puuroriisi 1kg",
+				"text": "2 bags × 1 kg, €4.60.",
+				"decides": {
+					"kind": "rule",
+					"text": "Inside the mandate: ordered without asking."
+				}
+			},
+			{
+				"key": "order",
+				"title": "The order",
+				"value": "Supplier confirmed",
+				"text": "Ordered with 2 other lines on one receipt.",
+				"decides": {
+					"kind": "signoff",
+					"text": "3 lines ordered now · 15 wait for the chef · 11 of them because Valio doesn't state a quantity"
+				}
+			}
+		],
+		"appCommit": "d9ee3ee8d4a992c57446a00cbdac803f0695f1ae"
+	},
 	"cases": [
 		{
 			"id": "within-mandate",
-			"recordedAt": "2026-11-14T13:54:55.184Z",
+			"recordedAt": "2026-11-14T14:56:35.554Z",
 			"source": {
 				"app": "https://app.mandate.kitchen",
 				"endpoints": [
@@ -38,7 +103,7 @@
 		},
 		{
 			"id": "out-of-stock",
-			"recordedAt": "2026-11-14T13:54:56.579Z",
+			"recordedAt": "2026-11-14T14:56:36.721Z",
 			"source": {
 				"app": "https://app.mandate.kitchen",
 				"endpoints": [
@@ -71,7 +136,7 @@
 		},
 		{
 			"id": "lactose-free",
-			"recordedAt": "2026-11-14T13:54:57.957Z",
+			"recordedAt": "2026-11-14T14:56:37.893Z",
 			"source": {
 				"app": "https://app.mandate.kitchen",
 				"endpoints": [
@@ -102,7 +167,7 @@
 		},
 		{
 			"id": "cut-off",
-			"recordedAt": "2026-11-14T13:54:59.412Z",
+			"recordedAt": "2026-11-14T14:56:39.617Z",
 			"source": {
 				"app": "https://app.mandate.kitchen",
 				"endpoints": [
@@ -132,7 +197,7 @@
 		},
 		{
 			"id": "agent-cannot-approve",
-			"recordedAt": "2026-11-14T13:55:00.538Z",
+			"recordedAt": "2026-11-14T14:56:40.481Z",
 			"source": {
 				"app": "https://app.mandate.kitchen",
 				"endpoints": [
@@ -166,7 +231,7 @@
 		},
 		{
 			"id": "one-receipt",
-			"recordedAt": "2026-11-14T13:55:02.366Z",
+			"recordedAt": "2026-11-14T14:56:42.104Z",
 			"source": {
 				"app": "https://app.mandate.kitchen",
 				"endpoints": [
