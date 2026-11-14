@@ -27,7 +27,11 @@
 - **Solid:** the gate and its eval layers (scenarios, fidelity, paraphrase, chat replay, adversarial and kinds suites with owned `it.fails`); prod evidence for every "say it" row, with page text and screenshots in `scratch/claims/obs*`; `evals/ui` against prod after each deploy.
 - **Fragile:** the prod observation scripts in `scratch/claims/*.e2e.ts` are untracked and key on UI text (the chat's "Working…" changed under me); the menu proposal varies between runs, so menu claims rest on one recorded run; the substitution kinds are derived from grades plus name rules (only kind 1 hand-checked).
 - **Untested:** the UI void of an approval after an edit and a UI retry on prod; chat as a fidelity entry; the review on/off arms; the full gate without `data/valio/` (it fails: the fixture catalogue reads the dataset).
-- **One hour before 06:00:** move the claims journeys from `scratch/` into `evals/ui/journeys.e2e.ts` (prod-only, page text saved as artifacts) so the video's evidence is reproducible by anyone; then the full demo-beat re-test after the last deploy.
+- **Plan to the deadline** (Sat 15:30 → Sun 06:00 feature freeze, 10:00 submission):
+  1. Now: `evals/ui/journeys.e2e.ts` is tracked (prod-only, `JOURNEYS=1`; page text and screenshots per beat); run it on every deploy and fill the CLAIMS rows for the freeze build.
+  2. Evening: the open adversarial and kinds cases as owners fix them (delete `OPEN` lines); chat events and the off-day copy re-tested as they land; the UI void and UI retry made observable beats.
+  3. Before 06:00: one final journeys pass on the freeze build; CLAIMS, PITCH and the site's cases re-checked against it.
+  4. 06:00–10:00: no code; re-run the journeys after the last deploy, check the video and submission texts against CLAIMS, and keep prod evidence current until submission.
 - **Owned slip today:** I called the core's outside-agent approval guard missing (d0 corrected it with `core/state.ts`); claims about code get a grep before they're sent.
 
 ## Traps
