@@ -20,7 +20,7 @@
 		deliverBy?: string;
 		cents?: number | null;
 		quantity?: string;
-		size?: 32 | 40 | 64;
+		size?: 32 | 40 | 48 | 64 | 96;
 		eager?: boolean;
 		/** Disclosure summaries use a plain name; product inspection stays a separate control. */
 		inspect?: boolean;
@@ -99,7 +99,12 @@
 	});
 </script>
 
-<span class="product-row" style="--photo-size: {size}px" data-canvas-product={productId}>
+<span
+	class="product-row"
+	class:media={size >= 64}
+	style="--photo-size: {size}px"
+	data-canvas-product={productId}
+>
 	<span
 		bind:this={photoEl}
 		class="photo"
@@ -157,6 +162,17 @@
 		gap: 12px;
 		width: 100%;
 		text-align: left;
+	}
+	.media {
+		grid-template-columns: var(--photo-size) minmax(0, 1fr);
+		row-gap: 4px;
+	}
+	.media .photo {
+		grid-row: 1 / span 2;
+	}
+	.media .product-price {
+		grid-column: 2;
+		justify-self: end;
 	}
 	.photo {
 		position: relative;

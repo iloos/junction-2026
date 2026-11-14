@@ -93,6 +93,7 @@
 												name={line.name}
 												cents={line.lineCents}
 												{deliverBy}
+												size={64}
 											/>
 										</div>
 									{/each}
@@ -116,13 +117,9 @@
 		display: flex;
 		align-items: flex-start;
 		gap: 24px;
-		overflow: auto;
-		min-height: 520px;
-		max-height: calc(100dvh - 260px);
+		min-height: 100%;
 		padding: 24px;
 		background: var(--color-well);
-		scrollbar-color: var(--color-rule-strong) transparent;
-		scroll-padding: 24px;
 	}
 	.recipe {
 		flex: 0 0 288px;

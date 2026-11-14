@@ -43,6 +43,8 @@
 	let diet = $state('all');
 	let compact = $state(false);
 	let filtersOpen = $state(true);
+	let workbenchEl = $state<HTMLElement | null>(null);
+	let workbenchHeight = $state(600);
 	let notice = $state('');
 	let recommendError = $state('');
 	let refreshPending = $state(false);
@@ -196,6 +198,23 @@
 			untrack(() => void k.refreshFrom('outside'));
 		}
 	});
+	// Both desktop panes share the available height. Scroll position does not change their document-top anchor.
+	$effect(() => {
+		const el = workbenchEl;
+		if (!el) return;
+		const measure = () => {
+			const top = el.getBoundingClientRect().top + window.scrollY;
+			workbenchHeight = Math.max(480, Math.min(900, Math.floor(window.innerHeight - top - 24)));
+		};
+		measure();
+		const observer = new ResizeObserver(measure);
+		observer.observe(el.parentElement ?? el);
+		window.addEventListener('resize', measure);
+		return () => {
+			observer.disconnect();
+			window.removeEventListener('resize', measure);
+		};
+	});
 	onMount(() => {
 		const clock = setInterval(() => k.tick(), 1000);
 		const wide = window.matchMedia('(min-width: 768px)');
@@ -215,6 +234,7 @@
 		recommendError = '';
 		detailOpen = true;
 		await tick();
+		document.getElementById('ingredient-inspector')?.scrollTo({ top: 0 });
 		if (window.matchMedia('(max-width: 767px)').matches) {
 			document.getElementById('ingredient-heading')?.focus({ preventScroll: true });
 			document
@@ -439,7 +459,13 @@
 				onclick={() => (detailOpen = true)}>Selected ingredient</button
 			>
 		</div>
-		<div class="workbench" class:details-open={detailOpen}>
+		<div
+			bind:this={workbenchEl}
+			class="workbench"
+			class:details-open={detailOpen}
+			style="--workbench-height: {workbenchHeight}px"
+			data-workbench
+		>
 			<div class="board-area min-w-0">
 				{#if visibleCount}<Board
 						{groups}
@@ -481,7 +507,7 @@
 			</div>
 			<aside id="ingredient-inspector" aria-label="Ingredient inspector" class="inspector">
 				{#if item}
-					<div class="flex items-start justify-between gap-3">
+					<div class="inspector-title flex items-start justify-between gap-3">
 						<h2 id="ingredient-heading" tabindex="-1" class="text-title font-medium">
 							{item.label}
 						</h2>
@@ -533,7 +559,7 @@
 								cents={line.lineCents}
 								quantity={`${qtyWords(line.qty)}${line.physical ? ` · ${qty(line.physical.value, line.physical.unit)}` : ''}`}
 								deliverBy={k.plan?.deliverBy}
-								size={64}
+								size={96}
 								eager
 							/>
 							<p class="mt-2 text-meta text-ink-2">
@@ -589,6 +615,7 @@
 												productId={candidate.productId}
 												name={candidate.name}
 												deliverBy={k.plan?.deliverBy}
+												size={48}
 												inspect={false}
 											/><span class="mt-1 block text-meta text-ink-2"
 												>{candidate.chosen
@@ -655,6 +682,7 @@
 							<h3 class="mb-3 text-heading font-medium">Shared basket decisions</h3>
 							{#each itemDecisions as decision (decision.key)}<div
 									id={`canvas-decision-${decision.key}`}
+									class="decision-anchor"
 								>
 									<p class="mb-3 text-meta text-ink-2">
 										Includes this ingredient. Reviewing covers all {decision.lineIds.length} listed purchases
@@ -693,6 +721,16 @@
 		grid-template-columns: minmax(0, 1fr) 360px;
 		gap: 24px;
 		align-items: start;
+		height: var(--workbench-height);
+	}
+	.board-area {
+		height: 100%;
+		min-height: 0;
+		overflow: auto;
+		background: var(--color-well);
+		scroll-padding: 24px;
+		scrollbar-gutter: stable;
+		scrollbar-color: var(--color-rule-strong) transparent;
 	}
 	.phone-views {
 		display: none;
@@ -743,10 +781,24 @@
 	}
 	.inspector {
 		min-width: 0;
+		height: 100%;
+		overflow-y: auto;
+		scrollbar-gutter: stable;
+		scrollbar-color: var(--color-rule-strong) transparent;
 		padding: 0 0 24px 24px;
 		border-left: 1px solid var(--color-rule);
 		overflow-wrap: anywhere;
 		scroll-margin-top: 16px;
+	}
+	.inspector-title {
+		position: sticky;
+		top: 0;
+		z-index: 1;
+		padding-bottom: 12px;
+		background: var(--color-paper);
+	}
+	.decision-anchor {
+		scroll-margin-top: 80px;
 	}
 	.purchase {
 		margin-top: 12px;
@@ -866,6 +918,15 @@
 		.workbench {
 			display: flex;
 			flex-direction: column;
+			height: auto;
+		}
+		.board-area {
+			height: auto;
+			overflow: visible;
+			scrollbar-gutter: auto;
+		}
+		.inspector-title {
+			position: static;
 		}
 		.workbench > div {
 			width: 100%;
@@ -875,6 +936,9 @@
 			width: 100%;
 			border-left: 0;
 			padding: 0;
+			height: auto;
+			overflow: visible;
+			scrollbar-gutter: auto;
 		}
 		.details-open > .inspector {
 			display: block;

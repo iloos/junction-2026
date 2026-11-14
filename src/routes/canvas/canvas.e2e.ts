@@ -662,8 +662,8 @@ test.describe('basket canvas, real fixture APIs', () => {
 					await expect(slot).toHaveAttribute('data-photo-state', 'loading');
 					const box = await slot.boundingBox();
 					expect(box).not.toBeNull();
-					expect(Math.round(box!.width)).toBe(32);
-					expect(Math.round(box!.height)).toBe(32);
+					expect(Math.round(box!.width)).toBe(64);
+					expect(Math.round(box!.height)).toBe(64);
 					initialSlots.set(id, { width: box!.width, height: box!.height });
 				}
 				release();
@@ -729,7 +729,20 @@ test.describe('basket canvas, real fixture APIs', () => {
 				await page.keyboard.press('Escape');
 				await expect(page.getByText('Pack', { exact: true })).toBeHidden();
 				await page.evaluate(() => window.scrollTo(0, 0));
-				if (width === 390) await capture(page, 'canvas-photos-mobile-board.png');
+				const boardArea = page.locator('.board-area');
+				if (width === 390) {
+					const flow = await boardArea.evaluate((element) => ({
+						viewport: window.innerHeight,
+						height: element.clientHeight,
+						content: element.scrollHeight
+					}));
+					expect(
+						flow.height,
+						'the phone board uses the document rather than a short pane'
+					).toBeGreaterThan(flow.viewport);
+					expect(flow.content - flow.height).toBeLessThanOrEqual(1);
+					await capture(page, 'canvas-photos-mobile-board.png');
+				}
 
 				const ham = snapshot.plan.needs.find((need) => need.id === 'need:joulukinkku')!;
 				await ingredient(page, ham.id).click();
@@ -738,8 +751,57 @@ test.describe('basket canvas, real fixture APIs', () => {
 				await expect(inspectionPhoto).toHaveAttribute('data-photo-state', 'ready');
 				await expect(inspectionPhoto).toHaveAccessibleName(/Pack may differ/i);
 				const inspectionBox = await inspectionPhoto.boundingBox();
-				expect(Math.round(inspectionBox!.width)).toBe(64);
-				expect(Math.round(inspectionBox!.height)).toBe(64);
+				expect(Math.round(inspectionBox!.width)).toBe(96);
+				expect(Math.round(inspectionBox!.height)).toBe(96);
+				const paneGeometry = () =>
+					page.locator('.workbench').evaluate((element) => {
+						const left = element.querySelector<HTMLElement>('.board-area')!;
+						const right = element.querySelector<HTMLElement>('.inspector')!;
+						const measure = (pane: HTMLElement) => ({
+							height: pane.getBoundingClientRect().height,
+							client: pane.clientHeight,
+							content: pane.scrollHeight,
+							scroll: pane.scrollTop
+						});
+						const bounds = element.getBoundingClientRect();
+						return {
+							viewport: window.innerHeight,
+							pageScroll: window.scrollY,
+							workbench: { top: bounds.top, bottom: bounds.bottom, height: bounds.height },
+							left: measure(left),
+							right: measure(right)
+						};
+					});
+				await page.evaluate(() => window.scrollTo(0, 0));
+				const panesBefore = await paneGeometry();
+				if (width === 1440) {
+					expect(
+						Math.abs(panesBefore.left.height - panesBefore.right.height),
+						'desktop panes have equal visible heights'
+					).toBeLessThanOrEqual(1);
+					expect(panesBefore.workbench.top).toBeGreaterThanOrEqual(0);
+					expect(
+						panesBefore.workbench.bottom,
+						'the workbench stays inside the viewport'
+					).toBeLessThanOrEqual(panesBefore.viewport + 1);
+					expect(panesBefore.left.content).toBeGreaterThan(panesBefore.left.client);
+					expect(panesBefore.right.content).toBeGreaterThan(panesBefore.right.client);
+					const inner = await board.evaluate((element) => ({
+						height: element.clientHeight,
+						content: element.scrollHeight
+					}));
+					expect(
+						inner.content - inner.height,
+						'the board itself does not create a second nested scroll area'
+					).toBeLessThanOrEqual(1);
+				} else {
+					expect(
+						panesBefore.right.height,
+						'phone inspection grows to fit its content'
+					).toBeGreaterThan(panesBefore.viewport);
+					expect(panesBefore.right.content - panesBefore.right.client).toBeLessThanOrEqual(1);
+					expect(panesBefore.right.scroll).toBe(0);
+				}
 				const alternatives = inspector(page).getByRole('region', {
 					name: 'Ingredient alternatives'
 				});
@@ -747,9 +809,37 @@ test.describe('basket canvas, real fixture APIs', () => {
 				await candidatePhoto.scrollIntoViewIfNeeded();
 				await expect(candidatePhoto).toHaveAttribute('data-photo-state', 'ready');
 				await expect(candidatePhoto).toHaveAccessibleName(/Pack may differ/i);
+				const candidateBox = await candidatePhoto.boundingBox();
+				expect(Math.round(candidateBox!.width)).toBe(48);
+				expect(Math.round(candidateBox!.height)).toBe(48);
 				await expect(
 					alternatives.getByText('Pack may differ', { exact: true }).first()
 				).toBeVisible();
+				const approval = inspector(page)
+					.getByRole('region', { name: 'Ingredient decisions' })
+					.getByRole('button', { name: /^Review \d+ lines?/ })
+					.first();
+				await approval.scrollIntoViewIfNeeded();
+				await expect(approval).toBeInViewport();
+				const panesAfter = await paneGeometry();
+				expect(panesAfter.workbench.height).toBeCloseTo(panesBefore.workbench.height, 1);
+				expect(panesAfter.right.height).toBeCloseTo(panesBefore.right.height, 1);
+				if (width === 1440) {
+					expect(panesAfter.right.scroll, 'the inspector scrolls to its decisions').toBeGreaterThan(
+						panesBefore.right.scroll
+					);
+					expect(
+						panesAfter.left.scroll,
+						'inspector navigation leaves the board in place'
+					).toBeCloseTo(panesBefore.left.scroll, 1);
+					expect(panesAfter.pageScroll).toBeCloseTo(panesBefore.pageScroll, 1);
+					await capture(page, 'canvas-photos-desktop-inspector-end.png');
+				} else {
+					expect(panesAfter.right.scroll).toBe(0);
+					expect(panesAfter.pageScroll, 'phone inspection scrolls the document').toBeGreaterThan(
+						panesBefore.pageScroll
+					);
+				}
 				await expectNoPageOverflow(page);
 				const afterResponse = await context.request.get(
 					`${BASE}/kitchen-api/snapshot?plan=${encodeURIComponent(snapshot.plan.id)}&peek=1`
@@ -766,6 +856,11 @@ test.describe('basket canvas, real fixture APIs', () => {
 					'photos and product inspection append no purchasing operations'
 				).toBe(sequence);
 				expect(writes).toEqual([]);
+				if (width === 1440) {
+					await inspector(page).hover();
+					await page.mouse.wheel(0, -10_000);
+					await expect.poll(() => inspector(page).evaluate((element) => element.scrollTop)).toBe(0);
+				}
 				await page.evaluate(() => window.scrollTo(0, 0));
 				await capture(
 					page,
