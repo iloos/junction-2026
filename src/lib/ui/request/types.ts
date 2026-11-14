@@ -184,4 +184,50 @@ export interface EventView {
 	deliverBy: string;
 	deliverByText: string | null;
 	seeded: { eventId: string; title: string } | null;
+	/** What the brief holds so far (words and answers). */
+	draft?: BriefDraft;
+	/** The one thing still missing, asked next; null when the brief is complete. */
+	question?: BriefQuestion | null;
+}
+
+export type ServiceStyleWord = 'buffet' | 'plated' | 'family' | 'canape' | 'lunch';
+export type BriefField = 'guests' | 'date' | 'serviceStyle' | 'courses' | 'dietary' | 'budget';
+
+/**
+ * An event brief while it is being completed. `null` = not known yet (ask); for dietary and budget an explicit
+ * "none" is `[]` / `0`, so "not asked" and "asked, nothing" stay distinct.
+ */
+export interface BriefDraft {
+	title: string;
+	guests: number | null;
+	date: string | null;
+	dateText: string | null;
+	serviceStyle: ServiceStyleWord | null;
+	courses: number | null;
+	/** Normalised requirements ("lactose-free", "vegetarian:6"); typed ones are never dropped. */
+	dietary: string[] | null;
+	/** Food budget ex VAT for the whole event; 0 = no budget given on purpose. */
+	budgetCents: number | null;
+	/** Where each known field came from: the request words or the chef's answer. */
+	from: Partial<Record<BriefField, 'words' | 'answer'>>;
+	notes: string[];
+}
+
+/** An answer to a brief question, keyed by the question's stable id ("brief.guests"). */
+export interface BriefAnswer {
+	id: `brief.${BriefField}`;
+	value: string | number | string[];
+}
+
+/** One focused question with ready answers as chips, and optionally a typed value. */
+export interface BriefQuestion {
+	id: `brief.${BriefField}`;
+	field: BriefField;
+	text: string;
+	/** Why it matters for the menu, in one line. */
+	why: string;
+	chips: { label: string; answer: BriefAnswer }[];
+	input?: { kind: 'number' | 'date' | 'text'; placeholder: string; unit?: string };
+	/** Chips may be combined (dietary): the page sends the chosen values together. */
+	multi?: boolean;
 }

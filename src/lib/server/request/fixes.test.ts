@@ -160,7 +160,7 @@ describe('F7: an event brief is not a catalogue query', () => {
 		expect(classifyRequest('Christmas dinner for 50', [], 'k-school')?.seeded).toBeNull();
 	});
 
-	it('answers "event planning: coming" and searches nothing', async () => {
+	it('asks the first missing brief question and searches nothing', async () => {
 		const { h, ctx, kitchen } = await setup();
 		const steps: string[] = [];
 		const r = await runRequest('5-star 5-course dinner for 50', {
@@ -174,10 +174,11 @@ describe('F7: an event brief is not a catalogue query', () => {
 		expect(r.lookup).toBeNull();
 		expect(r.order).toBeNull();
 		expect(r.event).toMatchObject({ guests: 50, courses: 5, seeded: null });
-		expect(r.message).toMatch(/event to plan.*coming/);
+		expect(r.event?.question?.id).toBe('brief.date');
+		expect(r.message).toMatch(/event to plan.*On which day/);
 	}, 60_000);
 
-	it('points a Christmas brief at the seeded Christmas event, with its date read', async () => {
+	it('points a Christmas brief at the seeded event and keeps asking for the brief', async () => {
 		const { h, ctx, kitchen } = await setup();
 		const r = await runRequest('Christmas dinner for 50 on 20 December', {
 			handlers: h,
@@ -190,7 +191,27 @@ describe('F7: an event brief is not a catalogue query', () => {
 			deliverBy: '2026-12-20',
 			seeded: { eventId: 'event-xmas-140' }
 		});
-		expect(r.message).toMatch(/Christmas buffet for 140/);
+		expect(r.event?.draft).toMatchObject({ guests: 50, date: '2026-12-20' });
+		expect(r.event?.question?.id).toBe('brief.serviceStyle');
+	}, 60_000);
+
+	it('brief answers by id complete the brief; still nothing is searched', async () => {
+		const { h, ctx, kitchen } = await setup();
+		const r = await runRequest('Christmas dinner for 50 on 20 December', {
+			handlers: h,
+			ctx,
+			today: TODAY,
+			kitchen,
+			briefAnswers: [
+				{ id: 'brief.budget', value: 0 },
+				{ id: 'brief.serviceStyle', value: 'buffet' },
+				{ id: 'brief.dietary', value: ['lactose-free'] }
+			]
+		});
+		expect(r.lookup).toBeNull();
+		expect(r.event?.question).toBeNull();
+		expect(r.event?.draft).toMatchObject({ serviceStyle: 'buffet', dietary: ['lactose-free'] });
+		expect(r.message).toMatch(/brief is complete/);
 	}, 60_000);
 });
 

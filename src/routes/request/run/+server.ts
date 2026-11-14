@@ -6,6 +6,7 @@ import {
 	commitRequest,
 	pageWorkspace,
 	readAnswers,
+	readBriefAnswers,
 	submitRequest,
 	ToolFailed
 } from '$lib/server/request';
@@ -71,6 +72,7 @@ export const POST: RequestHandler = async ({ request }) => {
 					kitchenId: str('kitchenId') || undefined,
 					nonce: str('nonce') || undefined,
 					answers: readAnswers(body.answers),
+					briefAnswers: readBriefAnswers(body.briefAnswers),
 					confirmLarge: body.confirmLarge === true,
 					workspaceId,
 					env,
