@@ -49,3 +49,6 @@ data/venues/
 
 # S-Pankki challenge data (third-party, large)
 data/s-pankki/
+
+# Roadmap workbench (generated locally, not part of the app)
+docs/roadmap/
