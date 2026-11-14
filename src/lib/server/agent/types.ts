@@ -1,12 +1,11 @@
-import type { Actor, ActorKind, ToolName } from '$lib/core/contracts';
+import type { Actor, ToolName } from '$lib/core/contracts';
+import type { ParsedItem } from '$lib/server/request/parse';
+import type { ReqUnit } from '$lib/server/request/lexicon';
 
 /**
- * Agent-local types. RunPrincipal, GoalOutcome and the `agent:run` permission are candidates for
- * `src/lib/core/contracts` (see docs/lanes/agent2.md, Needs); until then they live here.
+ * Agent-local types. RunPrincipal and GoalOutcome are candidates for `src/lib/core/contracts`
+ * (see docs/lanes/agent2.md, Needs); until then they live here.
  */
-
-/** Actor kinds that may start the routine agent (`agent:run`). Starting a run delegates purchasing work. */
-export const AGENT_RUN_ACTORS: readonly ActorKind[] = ['chef'];
 
 /**
  * Who a run acts for, built server-side when the run starts and never taken from a request body.
@@ -44,18 +43,43 @@ export type Intent =
 	| {
 			kind: 'routine_order';
 			kitchenId: string;
+			/** What was asked for, in the chef's words minus quantity ("butter"). */
 			query: string;
+			/** Physical quantity as asked (4 kg), converted per product into sales units, never assumed. */
 			qty: number;
+			unit: ReqUnit;
+			/** The request parser's reading of the item: search words, constraints, variant. */
+			item: Pick<ParsedItem, 'product' | 'search' | 'constraints' | 'variant'>;
+			/** On the scenario clock (Helsinki), from the goal's own words. */
 			deliverBy: string;
+			deliverByText: string;
+			/** Readings the chef should see (a weekday read as next week, a Sunday delivery). */
+			notes: string[];
 	  }
 	| { kind: 'shortage_repair'; planId: string }
 	| { kind: 'inspect'; planId: string }
 	| { kind: 'unsupported'; reason: string };
 
+export type PlanPick = 'named' | 'event' | 'kitchen' | 'shortage' | 'only';
+
 /** What the planner may read about its situation without a tool call (the context bootstrap). */
 export interface AgentContext {
 	kitchens: { id: string; name: string }[];
-	currentPlan: { id: string; version: number; state: string; kitchenId: string } | null;
+	/**
+	 * The plan the request is about, or null when there is none or the request does not say which of
+	 * several (then `openPlans` lists them and the intent asks).
+	 */
+	currentPlan: {
+		id: string;
+		version: number;
+		state: string;
+		kitchenId: string;
+		eventId?: string;
+		/** How the request picked it: named its id, its event or its kitchen, or it is the only one open. */
+		pickedBy: PlanPick;
+	} | null;
+	/** Open (uncommitted) plans in the run's kitchens, at most 10. */
+	openPlans: { id: string; kitchenId: string; eventId?: string; state: string }[];
 	supportedEvents: { id: string; kitchenId: string; title: string }[];
 	supportedIntents: readonly IntentKind[];
 	/** Scenario "today" (YYYY-MM-DD) used for default delivery dates. */

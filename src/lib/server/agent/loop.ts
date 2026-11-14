@@ -10,6 +10,7 @@ import type { CallContext, Llm, ToolHandlers } from '$lib/core/ports';
 import { traceEvent, type TraceStep } from '$lib/server/adapters/llm/trace';
 import { serveTool, toolsFor } from '$lib/server/tools/serve';
 import { errorFacts, toFacts, type Facts, type PlanFacts } from './facts';
+import type { RoutineFacts } from './routine';
 import type { AgentContext, GoalOutcome, Intent } from './types';
 
 /**
@@ -201,7 +202,7 @@ export async function runAgent(o: {
 			...(refusal ? { refused: true } : {})
 		};
 		steps.push(rec);
-		const facts = rec.ok ? toFacts(rec.tool, rec.value) : undefined;
+		const facts = rec.ok ? toFacts(rec.tool, rec.value, o.intent) : undefined;
 		const plan = facts?.plan as PlanFacts | undefined;
 		if (plan?.id) planKitchen.set(plan.id, plan.kitchenId);
 		history.push({
@@ -416,29 +417,42 @@ export function scriptedPlanner(): Planner {
 				}
 				break;
 			case 'routine_order': {
-				const key = `routine:${intent.kitchenId}:${intent.query}:${intent.qty}:${intent.deliverBy}`
-					.replace(/[^\w:.-]/g, '_')
-					.slice(0, 120);
-				if (!has('search_products'))
+				const key =
+					`routine:${intent.kitchenId}:${intent.query}:${intent.qty}${intent.unit}:${intent.deliverBy}`
+						.replace(/[^\w:.-]/g, '_')
+						.slice(0, 120);
+				const searches = history.filter((h) => h.tool === 'search_products');
+				const queries = intent.item.search.length ? intent.item.search : [intent.query];
+				const found = searches
+					.flatMap((h) => (h.ok ? ((h.facts as RoutineFacts | undefined)?.products ?? []) : []))
+					.find((p) => p.salesQty !== null);
+				if (!found && searches.length < Math.min(queries.length, 2))
 					return {
 						tool: 'search_products',
-						input: { query: intent.query, limit: 5 },
+						input: { query: queries[searches.length], limit: 50 },
 						why: `find "${intent.query}" in the catalogue`
 					};
 				if (!has('place_order')) {
-					const found = history.find((h) => h.tool === 'search_products' && h.ok)?.facts
-						?.products as { productId: string; unit: string; name?: string }[] | undefined;
-					const p = found?.[0];
-					if (!p) return { done: true, summary: `no catalogue product matches "${intent.query}"` };
+					if (!found) {
+						const first = searches
+							.flatMap((h) => (h.facts as RoutineFacts | undefined)?.products ?? [])
+							.at(0);
+						return {
+							done: true,
+							summary: first
+								? `not ordered: ${intent.qty} ${intent.unit} of ${intent.query} can't be put in sales units (${first.productId}: ${first.conversion})`
+								: `not ordered: no catalogue product matches "${intent.query}"`
+						};
+					}
 					return {
 						tool: 'place_order',
 						input: {
 							kitchenId: intent.kitchenId,
 							deliverBy: intent.deliverBy,
 							idempotencyKey: key,
-							lines: [{ productId: p.productId, qty: intent.qty, unit: p.unit }]
+							lines: [{ productId: found.productId, qty: found.salesQty, unit: found.unit }]
 						},
-						why: `order ${intent.qty} ${p.unit} of ${p.productId} for ${intent.kitchenId}`
+						why: `${intent.qty} ${intent.unit} ${intent.query}: ${found.conversion}`
 					};
 				}
 				if (last && !last.ok && last.tool === 'place_order')
@@ -486,9 +500,9 @@ const ActionSchema = z.union([
 
 /**
  * LLM planner: the model sees the goal, the resolved intent, the context bootstrap, the run's tools
- * with JSON Schemas and the typed facts of past steps (never raw tool output). The adapter call is
- * raced against the run's signal: the loop stops waiting at once, though the provider call itself may
- * still finish and be billed.
+ * with JSON Schemas and the typed facts of past steps (never raw tool output). The run's signal goes to
+ * the adapter, which aborts the provider request, and the call is also raced against it, so the loop
+ * stops waiting at once even if an adapter ignores the signal.
  */
 export function llmPlanner(llm: Llm, opts: { maxTokens?: number } = {}): Planner {
 	return async ({ goal, tools, history, intent, context }, signal) => {
@@ -515,7 +529,8 @@ export function llmPlanner(llm: Llm, opts: { maxTokens?: number } = {}): Planner
 					stepsLeft: MAX_STEPS - history.length
 				}),
 				maxTokens: opts.maxTokens ?? 600,
-				json: true
+				json: true,
+				signal
 			}),
 			signal
 		);

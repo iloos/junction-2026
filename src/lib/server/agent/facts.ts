@@ -1,4 +1,6 @@
-import type { DomainError, ToolName } from '$lib/core/contracts';
+import type { DomainError, Product, ToolName } from '$lib/core/contracts';
+import { routineCandidates } from './routine';
+import type { Intent } from './types';
 
 /**
  * Evidence separation: what the planner reads about a tool result. Raw tool outputs carry catalogue and
@@ -7,6 +9,8 @@ import type { DomainError, ToolName } from '$lib/core/contracts';
  * reason codes. Full results stay in the trace for humans. This bounds what a planted instruction can
  * say to the planner; it is not a claim that text filtering stops injection. What stops damage is the
  * gate: scopes, the intent's tool list, the kitchen grant and the core's mandate checks.
+ * A list cut at its cap says so: the parent object gets `truncated: { <field>: <full length> }`, so the
+ * planner never mistakes the first 40 lines for the whole plan.
  */
 
 /** Longest free text a fact may carry (a short product name). */
@@ -40,7 +44,18 @@ function codes(v: unknown): string[] {
 
 type Obj = Record<string, unknown>;
 const obj = (v: unknown): Obj => (v && typeof v === 'object' ? (v as Obj) : {});
-const arr = (v: unknown): unknown[] => (Array.isArray(v) ? v.slice(0, MAX_ITEMS) : []);
+
+/** Full lengths of the lists cut at their cap, by field. */
+type Cut = Record<string, number>;
+
+/** The first `max` items of a list; records the full length in `cut` when that drops any. */
+function cap(v: unknown, field: string, cut: Cut, max = MAX_ITEMS): unknown[] {
+	if (!Array.isArray(v)) return [];
+	if (v.length > max) cut[field] = v.length;
+	return v.slice(0, max);
+}
+const marked = <T extends object>(o: T, cut: Cut): T & { truncated?: Cut } =>
+	Object.keys(cut).length ? { ...o, truncated: cut } : o;
 
 export interface PlanFacts {
 	id: string;
@@ -61,50 +76,65 @@ export interface PlanFacts {
 		substituteFor?: string;
 	}[];
 	needs: { id: string; label?: string }[];
+	/** Present when lines or needs were cut at the cap: their full counts. */
+	truncated?: Cut;
 }
 
 export function planFacts(p: unknown): PlanFacts {
 	const plan = obj(p);
-	return {
-		id: code(plan.id) ?? '',
-		version: num(plan.version) ?? 0,
-		state: code(plan.state) ?? '',
-		kitchenId: code(plan.kitchenId) ?? '',
-		totalCents: num(plan.totalCents) ?? null,
-		lines: arr(plan.lines).map((x) => {
-			const l = obj(x);
-			const qty = obj(l.qty);
-			return {
-				id: code(l.id, 128) ?? '',
-				needId: code(l.needId, 128),
-				productId: code(l.productId) ?? '',
-				name: shortText(l.productName),
-				qty: num(qty.value) ?? 0,
-				unit: code(qty.unit, 8) ?? '',
-				state: code(l.state) ?? '',
-				reasons: codes(l.reasons),
-				lineCents: num(l.lineCents),
-				substituteFor: code(l.substituteFor)
-			};
-		}),
-		needs: arr(plan.needs).map((x) => {
-			const n = obj(x);
-			return { id: code(n.id, 128) ?? '', label: shortText(n.label) };
-		})
-	};
+	const cut: Cut = {};
+	return marked(
+		{
+			id: code(plan.id) ?? '',
+			version: num(plan.version) ?? 0,
+			state: code(plan.state) ?? '',
+			kitchenId: code(plan.kitchenId) ?? '',
+			totalCents: num(plan.totalCents) ?? null,
+			lines: cap(plan.lines, 'lines', cut).map((x) => {
+				const l = obj(x);
+				const qty = obj(l.qty);
+				return {
+					id: code(l.id, 128) ?? '',
+					needId: code(l.needId, 128),
+					productId: code(l.productId) ?? '',
+					name: shortText(l.productName),
+					qty: num(qty.value) ?? 0,
+					unit: code(qty.unit, 8) ?? '',
+					state: code(l.state) ?? '',
+					reasons: codes(l.reasons),
+					lineCents: num(l.lineCents),
+					substituteFor: code(l.substituteFor)
+				};
+			}),
+			needs: cap(plan.needs, 'needs', cut).map((x) => {
+				const n = obj(x);
+				return { id: code(n.id, 128) ?? '', label: shortText(n.label) };
+			})
+		},
+		cut
+	);
 }
 
 export type Facts = Obj;
 
-/** Typed facts of one tool result, per tool. Unknown shapes reduce to nothing rather than to raw text. */
-export function toFacts(tool: ToolName, value: unknown): Facts {
+/**
+ * Typed facts of one tool result, per tool. Unknown shapes reduce to nothing rather than to raw text.
+ * For a routine order, search results are ranked against the request and carry how many sales units
+ * the asked quantity is for each product (the request parser's conversion), or why it can't be said.
+ */
+export function toFacts(tool: ToolName, value: unknown, intent?: Intent): Facts {
 	const v = obj(value);
+	const cut: Cut = {};
 	switch (tool) {
 		case 'search_products':
-			return {
-				products: arr(v.products)
-					.slice(0, 10)
-					.map((x) => {
+			if (intent?.kind === 'routine_order')
+				return routineCandidates(
+					intent,
+					(Array.isArray(v.products) ? v.products : []) as Product[]
+				);
+			return marked(
+				{
+					products: cap(v.products, 'products', cut, 10).map((x) => {
 						const p = obj(x);
 						return {
 							productId: code(p.productId),
@@ -114,19 +144,24 @@ export function toFacts(tool: ToolName, value: unknown): Facts {
 							origin: code(p.origin, 2)
 						};
 					})
-			};
+				},
+				cut
+			);
 		case 'quote':
-			return {
-				offers: arr(v.offers).map((x) => {
-					const o = obj(x);
-					return {
-						productId: code(o.productId),
-						unitCents: num(obj(o.price).unitCents),
-						availability: code(obj(o.availability).kind, 16)
-					};
-				}),
-				notFound: arr(v.notFound).map((x) => code(x))
-			};
+			return marked(
+				{
+					offers: cap(v.offers, 'offers', cut).map((x) => {
+						const o = obj(x);
+						return {
+							productId: code(o.productId),
+							unitCents: num(obj(o.price).unitCents),
+							availability: code(obj(o.availability).kind, 16)
+						};
+					}),
+					notFound: cap(v.notFound, 'notFound', cut).map((x) => code(x))
+				},
+				cut
+			);
 		case 'plan_event':
 		case 'edit_line':
 			return { plan: planFacts(v.plan) };
@@ -134,26 +169,28 @@ export function toFacts(tool: ToolName, value: unknown): Facts {
 			return { plan: planFacts(v.plan), approvalId: code(v.approvalId, 128) ?? null };
 		case 'get_plan': {
 			const a = v.approval ? obj(v.approval) : null;
-			return {
-				plan: planFacts(v.plan),
-				approval: a
-					? {
-							id: code(a.id, 128),
-							state: code(a.state),
-							tier: code(a.tier),
-							lineIds: arr(a.lineIds).map((x) => code(x, 128))
-						}
-					: null
-			};
+			return marked(
+				{
+					plan: planFacts(v.plan),
+					approval: a
+						? {
+								id: code(a.id, 128),
+								state: code(a.state),
+								tier: code(a.tier),
+								lineIds: cap(a.lineIds, 'approvalLineIds', cut).map((x) => code(x, 128))
+							}
+						: null
+				},
+				cut
+			);
 		}
 		case 'find_substitutes':
-			return {
-				plan: planFacts(v.plan),
-				kind: code(v.kind, 16),
-				chosen: arr(v.chosen).map((x) => code(obj(x).id, 128)),
-				candidates: arr(v.candidates)
-					.slice(0, 5)
-					.map((x) => {
+			return marked(
+				{
+					plan: planFacts(v.plan),
+					kind: code(v.kind, 16),
+					chosen: cap(v.chosen, 'chosen', cut).map((x) => code(obj(x).id, 128)),
+					candidates: cap(v.candidates, 'candidates', cut, 5).map((x) => {
 						const c = obj(x);
 						return {
 							productId: code(c.productId),
@@ -162,21 +199,33 @@ export function toFacts(tool: ToolName, value: unknown): Facts {
 							rejected: codes(c.rejectedReasons)
 						};
 					})
-			};
+				},
+				cut
+			);
 		case 'explain_line':
 			// The steps are prose built from catalogue text: the planner gets their sources only.
-			return {
-				steps: arr(v.steps).length,
-				sources: arr(v.steps).map((x) => code(obj(x).source, 48))
-			};
+			return marked(
+				{
+					steps: Array.isArray(v.steps) ? v.steps.length : 0,
+					sources: cap(v.steps, 'sources', cut).map((x) => code(obj(x).source, 48))
+				},
+				cut
+			);
 		case 'commit_order':
-			return {
-				orderId: code(v.orderId, 128),
-				receiptId: code(v.receiptId, 128),
-				totalCents: num(v.totalCents),
-				committedLineIds: arr(v.committedLineIds).map((x) => code(x, 128)),
-				awaitingSupplier: arr(v.awaitingSupplier).map((x) => code(x, 128))
-			};
+			return marked(
+				{
+					orderId: code(v.orderId, 128),
+					receiptId: code(v.receiptId, 128),
+					totalCents: num(v.totalCents),
+					committedLineIds: cap(v.committedLineIds, 'committedLineIds', cut).map((x) =>
+						code(x, 128)
+					),
+					awaitingSupplier: cap(v.awaitingSupplier, 'awaitingSupplier', cut).map((x) =>
+						code(x, 128)
+					)
+				},
+				cut
+			);
 		case 'approve':
 			return { state: code(v.state) };
 		case 'set_mandate':
