@@ -185,7 +185,7 @@ export function registerExtras(server: McpServer, ctx: CallContext, handlers: To
 						`Plan ${eventId ? `the event ${eventId}` : 'a seeded event'}${kitchenId ? ` for ${kitchenId}` : ''} inside the kitchen's mandate.`,
 						'1. Call get_context and read that kitchen’s mandate (or the mandate://<kitchen> resource): caps per line, order and week, what is never delegated, allergens it must be free from.',
 						'2. Call plan_event. For lines that cannot be ordered as planned, call find_substitutes and prefer the options inside the mandate.',
-						'3. Call get_plan, then commit_order only for what the mandate allows. Lines that are held wait for a chef: report them with meta.approvalUrl. Never try to approve.',
+						'3. Lines that are held wait for a chef: give the human meta.approvalUrl first, as a link to open on their device, and wait. Never try to approve. Then call get_plan and commit_order only for what the mandate or the chef’s approval allows.',
 						'4. Finish with get_outcome and report it in numbers: supplier confirmed, awaiting the supplier, held, unresolved.'
 					].join('\n')
 				)
@@ -223,7 +223,7 @@ export function registerExtras(server: McpServer, ctx: CallContext, handlers: To
 						`Order ${what} for delivery on ${date}${kitchenId ? ` to ${kitchenId}` : ''}.`,
 						'1. Call get_context: check the kitchen’s deliveryDays. If the date is not one of them, say so and propose the nearest earlier receiving day; do not order for a day the kitchen does not receive.',
 						'2. Call search_products for each item, pick catalogue products, and convert the amounts to sales units (the product says its content per unit).',
-						'3. Call place_order with an idempotency key. Held lines wait for a chef (meta.approvalUrl); commit_order only what the mandate allows. Never try to approve.',
+						'3. Call place_order with an idempotency key. If lines are held, give the human meta.approvalUrl first and wait for them; commit_order only what the mandate or their approval allows. Never try to approve.',
 						'4. Report what was ordered, what waits for a chef, and anything not ordered and why.'
 					].join('\n')
 				)

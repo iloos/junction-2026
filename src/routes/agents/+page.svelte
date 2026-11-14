@@ -13,6 +13,7 @@
 	import { onMount } from 'svelte';
 	import { invalidateAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
+	import PairDevice from '$lib/ui/pair/PairDevice.svelte';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
@@ -143,6 +144,8 @@
 			<code class="font-mono">{data.openapiUrl}</code>.
 		</p>
 	</section>
+
+	{#if data.key}<div class="mb-8"><PairDevice /></div>{/if}
 
 	<section class="mb-8" aria-labelledby="clients">
 		<h2 id="clients" class="font-semibold">Client configuration</h2>

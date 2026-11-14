@@ -3,6 +3,7 @@ import { env } from '$env/dynamic/private';
 import { resolveRequest } from '$lib/server/auth';
 import { handlers } from '$lib/server/tools/handlers';
 import { CORS, json, unauthorized } from '$lib/server/tools/http';
+import { absolutize, publicOrigin } from '$lib/server/tools/present';
 import { retryAfterOf, serveTool } from '$lib/server/tools/serve';
 import type { RequestHandler } from './$types';
 
@@ -21,7 +22,7 @@ export const POST: RequestHandler = async ({ request, params }) => {
 		);
 	}
 	const r = await serveTool(params.name, ctx, body, handlers);
-	if (r.ok) return json(r.value);
+	if (r.ok) return json(absolutize(r.value, publicOrigin(env, request.url)));
 	const wait = r.status === 429 ? retryAfterOf(r.error) : undefined;
 	return json({ error: r.error }, r.status, wait ? { 'retry-after': String(wait) } : {});
 };

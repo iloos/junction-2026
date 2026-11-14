@@ -61,6 +61,7 @@ A Claude Code session planned a 7-guest dinner over MCP and hit these problems:
 
 ### Ring 4: identity (GROWTH)
 - [ ] OAuth 2.1 per the MCP authorization spec; the workspace comes from the token, not the cookie; keys are revocable; spend per user.
+- [ ] Per-device sessions: a paired device today holds the same signed visitor cookie as the owner (deterministic `<ws>.<HMAC>`), which is fine for a sandbox. Revoking one device needs a per-device nonce in the cookie, with accounts.
 - [ ] The agent's token stays `read/plan/order`. Approval is a human step-up (passkey, or a push to the chef's phone), never a scope the agent's token can carry.
 
 ## Owned paths
