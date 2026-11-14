@@ -5,12 +5,12 @@
 		ChevronDown,
 		CircleCheck,
 		CircleX,
-		Hand,
 		MessageSquare,
 		Plus,
 		Send
 	} from '@lucide/svelte';
-	import { reasonShort } from '$lib/ui/reasons';
+	import DecisionCard from '$lib/ui/DecisionCard.svelte';
+	import Receipt from '$lib/ui/Receipt.svelte';
 	import type { ChatEvent, ChatTurnInput } from './types';
 
 	/**
@@ -56,6 +56,11 @@
 			? entries.findLast((x) => x.kind === 'event' && x.e.type === 'clarify')
 			: undefined
 	);
+	/** Orders on the task's plans, from the newest ledger (a repeated key stays one order). */
+	const latestReceipts = $derived.by(() => {
+		const l = entries.findLast((x) => x.kind === 'event' && x.e.type === 'ledger');
+		return l?.kind === 'event' && l.e.type === 'ledger' ? l.e.ledger.receiptIds.length : 0;
+	});
 	const doneLine = $derived(last?.kind === 'event' && last.e.type === 'done' ? last.e : undefined);
 
 	async function turn(body: ChatTurnInput, said?: string) {
@@ -119,7 +124,6 @@
 		error = null;
 	}
 
-	const euros = (c: number) => `€${(c / 100).toFixed(2)}`;
 	const TOOL: Record<string, string> = {
 		search_products: 'Searched the catalogue',
 		quote: 'Checked price and delivery',
@@ -191,15 +195,18 @@
 					{:else}
 						<CircleX size={15} class="mt-0.5 shrink-0 text-out" />
 					{/if}
-					<span class="min-w-0">
+					<div class="min-w-0">
 						<span class="font-medium text-ink">{TOOL[x.e.tool] ?? x.e.tool}.</span>
 						{x.e.summary}
+						{#if x.e.receipt}
+							<div class="mt-1"><Receipt receipt={x.e.receipt} orders={latestReceipts || 1} /></div>
+						{/if}
 						{#if x.e.href}
 							<a class="ml-1 inline-flex items-center text-accent-ink underline" href={x.e.href}
 								>plan<ArrowUpRight size={12} /></a
 							>
 						{/if}
-					</span>
+					</div>
 				</li>
 			{:else if x.e.type === 'clarify'}
 				{@const active = pendingClarify === x}
@@ -224,26 +231,16 @@
 					{/if}
 				</li>
 			{:else if x.e.type === 'decision'}
-				<li class="rounded-lg border border-propose bg-propose-wash px-3 py-2">
-					<p class="flex items-center gap-1.5 font-semibold text-propose">
-						<Hand size={15} /> Needs your approval
-					</p>
-					<ul class="mt-1 space-y-0.5 text-ink-2">
-						{#each x.e.groups as g (g.reason)}
-							<li>
-								{g.lineIds.length} line{g.lineIds.length === 1 ? '' : 's'} · {g.reason
-									.split(', ')
-									.map(reasonShort)
-									.join(', ')} ·
-								<span class="num">{euros(g.totalCents)}</span>
-							</li>
-						{/each}
-					</ul>
+				{@const names = new Map(Object.entries(x.e.names))}
+				<li class="space-y-2">
+					{#each x.e.decisions as d (d.key)}
+						<DecisionCard decision={d} {names} due={x.e.due} readonly />
+					{/each}
 					<a
-						class="mt-2 inline-flex items-center gap-1 font-medium text-propose underline"
+						class="inline-flex items-center gap-1 font-medium text-propose underline"
 						href={x.e.approvalUrl}>Open the approval in Kitchen <ArrowUpRight size={13} /></a
 					>
-					<p class="mt-1 text-xs text-ink-3">
+					<p class="text-xs text-ink-3">
 						Only a chef approves, in the Kitchen screen. Then continue here.
 					</p>
 				</li>

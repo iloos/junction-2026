@@ -20,6 +20,8 @@ import { memoryTaskStore } from '$lib/server/tasks/store';
 import { approvalUrl, presentMeta } from '$lib/server/tools/present';
 import { serveTool } from '$lib/server/tools/serve';
 import type { ChatEvent, ChatTurnInput } from '$lib/ui/chat/types';
+import { decisionsDue, decisionsOf } from '$lib/ui/decisions';
+import type { ReceiptView } from '$lib/ui/Receipt.svelte';
 
 /**
  * One chat turn on a procurement task, in process: the third door onto `runGoal` (after MCP and REST), under the
@@ -91,9 +93,22 @@ function stepEvents(taskId: string, steps: StepRecord[]): ChatEvent[] {
 			tool: s.tool,
 			ok: s.ok,
 			summary: summary.slice(0, 400),
-			...(plan ? { href: approvalUrl(plan) } : {})
+			...(plan ? { href: approvalUrl(plan) } : {}),
+			...(s.ok && s.tool === 'commit_order' ? { receipt: receiptView(s) } : {})
 		};
 	});
+}
+
+function receiptView(s: StepRecord): ReceiptView {
+	const v = s.value as ToolOutput<'commit_order'>;
+	return {
+		receiptId: v.receiptId,
+		orderId: v.orderId,
+		key: String((s.input as { idempotencyKey?: unknown }).idempotencyKey ?? ''),
+		totalCents: v.totalCents,
+		lines: v.committedLineIds.length,
+		awaiting: v.awaitingSupplier.length
+	};
 }
 
 function blankTask(deps: ChatDeps, text: string): Task {
@@ -293,16 +308,25 @@ export async function* runChatTurn(
 		task = p.task;
 		canContinue = p.canContinue;
 		const ledger = read.value.ledger;
-		if (task.pending.kind === 'decision')
+		if (task.pending.kind === 'decision') {
+			const pd = task.pending;
+			const plan = read.value.plans.find((x) => x.id === pd.planId)!;
+			const approval = read.value.approvals.find((x) => x.id === pd.approvalId) ?? null;
 			yield {
 				type: 'decision',
 				taskId: task.id,
-				approvalId: task.pending.approvalId,
-				planId: task.pending.planId,
-				planVersion: task.pending.planVersion,
-				groups: task.pending.groups,
-				approvalUrl: task.pending.approvalUrl
+				approvalId: pd.approvalId,
+				planId: pd.planId,
+				planVersion: pd.planVersion,
+				groups: pd.groups,
+				approvalUrl: pd.approvalUrl,
+				decisions: decisionsOf(plan, approval),
+				names: Object.fromEntries(
+					plan.lines.map((l) => [l.productId, l.productName ?? l.productId])
+				),
+				due: decisionsDue(plan, approval)
 			};
+		}
 		const summary = ledgerSummary(ledger);
 		yield { type: 'ledger', taskId: task.id, ledger, summary };
 		text = refusal ? `${refusal} ${summary}` : summary;

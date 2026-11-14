@@ -2,6 +2,7 @@ import type { Approval, Order, Plan, Receipt } from '$lib/core/contracts';
 import type { TaskLedger, TaskLedgerNeed, TaskPending } from '$lib/core/contracts/task';
 import { nextActionFor } from '$lib/server/agent/next-action';
 import { approvalUrl } from '$lib/server/tools/present';
+import { decisionsOf } from '$lib/ui/decisions';
 
 /**
  * The task ledger: what is true for a task's plans now, in numbers. Pure: computed from the plans as get_plan returns
@@ -14,27 +15,21 @@ export interface LedgerInput {
 	orders: Order[];
 	receipts: Receipt[];
 	/** Live approvals of those plans (any state); pending ones are decisions left. */
-	approvals: Pick<Approval, 'id' | 'planId' | 'planVersion' | 'state' | 'lineIds' | 'termsHash'>[];
+	approvals: Approval[];
 	/** Scenario-clock now. */
 	asOf: string;
 }
 
-/** A pending approval's lines grouped by the reasons they were held for: one decision per group. */
+/** A pending approval's decisions as the task records them: the Kitchen page's own grouping (decisionsOf). */
 export function decisionGroups(
 	plan: Plan,
-	approval: Pick<Approval, 'lineIds'>
+	approval: Approval
 ): { reason: string; lineIds: string[]; totalCents: number }[] {
-	const groups = new Map<string, { reason: string; lineIds: string[]; totalCents: number }>();
-	for (const id of approval.lineIds) {
-		const line = plan.lines.find((l) => l.id === id);
-		if (!line) continue;
-		const reason = [...line.reasons].sort().join(', ') || 'needs approval';
-		const g = groups.get(reason) ?? { reason, lineIds: [], totalCents: 0 };
-		g.lineIds.push(id);
-		g.totalCents += line.lineCents ?? 0;
-		groups.set(reason, g);
-	}
-	return [...groups.values()];
+	return decisionsOf(plan, approval).map((d) => ({
+		reason: d.reason,
+		lineIds: d.lineIds,
+		totalCents: d.totalCents
+	}));
 }
 
 /** The task's pending decision on its primary plan, or none: locates the Kitchen approval panel, never authorises. */
