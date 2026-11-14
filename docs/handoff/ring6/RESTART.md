@@ -29,6 +29,22 @@ The user's read: the app now feels like a cart with a chat box. The machinery th
 
 A short product-and-narrative session (design + pitch) writes this up as the target screens before Foundations 3 and the UI pass, so the polish serves the story.
 
+## A self-testing judge harness (user, Sat late): Claude playtests and reviews, so we iterate on feedback
+The adversarial rounds (R9–R12) and the user's own screenshots are the best feedback we have, but each is a manual, multi-hour event. Make it a loop any session can run.
+- **Playtest (code):** scripted journeys under `evals/playtest/` (Playwright plus the MCP client): the nine Round 12 journeys and the four north-star moments, run as a first-time visitor at 1440 and 390 against a target. Targets: local fixture (`DATABASE_URL=` blank, `LLM_PROVIDER=fixture`), or the deployed app in a fresh sandbox, with live models under the spend caps. Each run saves screenshots, the DOM text, the chat transcript, the traces by request id, and the receipts to `scratch/playtest/<run>/`.
+- **Exploratory playtest (agent):** a Claude subagent with the browser drives the app from a persona brief (a hotel chef with a shortage, a care-home cook with a lactose-free menu, a judge's outside agent) and tries to get the job done, recording where it got stuck.
+- **Judge (agent):** separate judge subagents score each run against written rubrics, each arguing a position rather than rating:
+  - the north-star test (understood in 5 s, acts in 30 s);
+  - DESIGN.md and the UX laws (Foundations 3);
+  - VOCABULARY;
+  - truthfulness: what's said vs the state, receipts and traces;
+  - safety: the mandate, D13/D17/D21, asked vs bought;
+  - parity: the UI vs the agent tools.
+  Every finding needs a reproduction (step plus screenshot or trace), a severity and an owner area. Existing pieces to reuse: the `judge` skill, impeccable critique, `request.reading`, the Round 12 prompt.
+- **Loop:** a repo skill `playtest` (`.claude/skills/playtest/`): run journeys → judge → write `scratch/playtest/<run>/FINDINGS.md` → compare with the previous run (fixed, new, regressed) → route by owner. Run it after each deploy (by the Ops session) and on demand by any lane for its surface. A confirmed finding becomes a test under `evals/` so it can't silently return.
+- **Acceptance:** one command produces a findings report for a deploy within ~15 minutes, under the provider caps, and a second run shows which findings were fixed. The first run's report on the current build seeds the UI pass.
+- **Owner:** the Evals session (91's successor), with the design session for the rubrics.
+
 ## Foundations first (user, Sat late): settle these before the lanes fan out
 The user's read: many small nudges, often the same ones, because the foundations are thin. Ring 6 opens with three short foundation docs, each owned, reviewed by the lead and the user, then binding on every lane.
 
