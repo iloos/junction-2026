@@ -21,16 +21,12 @@ import { PlanEvents, planOf } from '$lib/ui/shell/plan-events.svelte';
 import { milks, must, prober, setup } from './adversarial-harness';
 
 const OPEN: Record<string, string> = {
-	'R11-01': 'B + 8d (D18)',
-	'R11-02': 'B + 8d (D18)',
-	'R11-03': 'B + 8d (D18)',
 	'R11-04a': '8d',
 	'R11-04b': '8d',
 	'R11-05': '8d',
 	'R11-06a': '9c',
 	'R11-06b': '9c',
 	'R11-07a': '1f + 9c',
-	'R11-07b': '1f + 9c',
 	'R11-08': 'da',
 	'R11-09': '8d',
 	'R11-10': '8d',
@@ -124,10 +120,12 @@ describe('suite: adversarial (round 11: purchasing intent)', () => {
 				};
 			};
 			const p = await s.place('request-mixed', ['100001', '100002']);
+			const idsFor = (plan: any, productId: string) =>
+				plan.lines.filter((l: any) => l.productId === productId).map((l: any) => l.id);
 			const input = {
 				planId: p.id,
 				version: p.version,
-				idempotencyKey: commitKey(p.id, p.version)
+				idempotencyKey: await commitKey(p.id, p.version, null, idsFor(p, '100001'))
 			};
 			must(await s.h.commit_order(s.ctx('chef'), input));
 			await s.grant(p.id);
@@ -135,7 +133,7 @@ describe('suite: adversarial (round 11: purchasing intent)', () => {
 			await s.h.commit_order(s.ctx('chef'), {
 				...input,
 				version: now.version,
-				idempotencyKey: commitKey(p.id, now.version)
+				idempotencyKey: await commitKey(p.id, now.version, null, idsFor(now, '100002'))
 			});
 			const bought = (await s.orders()).flatMap((o) => o.lines.map((l: any) => l.productId));
 			expect(bought.sort()).toEqual(['100001', '100002']);
@@ -306,7 +304,7 @@ describe('suite: adversarial (round 11: recovery and read models)', () => {
 		}));
 		try {
 			const feed = new PlanEvents();
-			const off = feed.subscribe((ops: any[]) => delivered.push(...ops));
+			const off = feed.subscribe((b) => delivered.push(...b.ops));
 			await new Promise((r) => setTimeout(r, 20));
 			off();
 			expect(delivered.length).toBeGreaterThan(0);
