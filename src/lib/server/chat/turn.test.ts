@@ -447,3 +447,34 @@ describe('suite: chat turns · tasks opened elsewhere', () => {
 		}
 	);
 });
+
+describe('suite: chat turns · the plan on screen scopes questions, not new orders', () => {
+	it(
+		'an order typed with the buffet plan on screen starts its own task; a question joins the plan',
+		{ timeout: 120_000 },
+		async () => {
+			const { w, chef, deps } = await setup();
+			const planned = await w.handlers.plan_event(chef, {
+				kitchenId: 'k-hotel',
+				eventId: 'event-xmas-140'
+			});
+			if (!planned.ok) throw new Error(planned.error.message);
+			const buffet = planned.value.plan.id;
+			const q = await chatTurn({ planId: buffet, text: 'What needs my decision?' }, deps);
+			const buffetTask = q.at(-1)!.taskId;
+			const order = await chatTurn(
+				{ planId: buffet, text: 'Order 4 kg butter for Wednesday' },
+				deps
+			);
+			const orderTask = order.at(-1)!.taskId;
+			expect(orderTask).not.toBe(buffetTask);
+			const t = await w.env.ports.tasks!.get(w.env.workspaceId, orderTask);
+			expect(t?.plans.map((p) => p.planId)).not.toContain(buffet);
+			const ledger = order.find((e) => e.type === 'ledger');
+			if (ledger?.type !== 'ledger') throw new Error('no ledger');
+			expect(ledger.ledger.needs.map((n) => n.required)).toEqual([{ value: 4, unit: 'kg' }]);
+			const bt = await w.env.ports.tasks!.get(w.env.workspaceId, buffetTask);
+			expect(bt?.plans.map((p) => p.planId)).toEqual([buffet]);
+		}
+	);
+});

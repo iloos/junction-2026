@@ -349,7 +349,9 @@ export async function* runChatTurn(
 	const newRequest =
 		!resize &&
 		!addition &&
-		expected !== null &&
+		// A task already in hand, or the plan on screen: a request of its own never joins either. The plan on screen
+		// only scopes questions and Continue.
+		(expected !== null || (!!input.planId && !input.taskId)) &&
 		!!words &&
 		!!u &&
 		(u.kind === 'event' ||
