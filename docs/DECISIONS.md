@@ -157,3 +157,5 @@ It ships only if the substitute recall@12 (70% today) and the retrieval evals im
 **Why:** similarity is the right tool for coverage (cross-category, paraphrase, English → Finnish), not for safety (meatballs embed next to vegetable balls). Modal earns its place for the GPU-shaped reranker, not for the embeddings. Reranking alone is a thin sponsor story, so it's only worth it with the hybrid step and a measured gain.
 
 **Reopen if:** a measured run before the freeze shows a large recall gain cheaply. CLAIMS keeps "never pgvector" until it ships.
+
+**Amendment (user, via 41, same night):** held. If it returns, measure offline first: embed the 17.5k names into a gitignored file, run exact in-memory search, and check the substitute recall@12 and the retrieval evals. Migrate to pgvector only if recall rises with no regression. No Modal: the reranking role is covered by menu-v2's "find then choose" (a batched model pick restricted to the resolver's candidate pool).
