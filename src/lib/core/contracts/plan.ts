@@ -47,6 +47,16 @@ export const PolicyReason = z.enum([
 	'cutoff_passed',
 	/** The product does not meet a hard requirement of the need it serves (lactose-free, origin, label): forbidden. */
 	'requirement_unmet',
+	/** No record says whether the product meets a requirement (diet, allergens): held or rejected per unknownCounts. */
+	'requirement_unknown',
+	/** D18: the line buys more than its need by over one lot step (250 ml asked, 250 l bought): forbidden. */
+	'exceeds_need',
+	/** D18: the need's amount is physical but this product's content per unit is unknown: held for a person. */
+	'need_size_unknown',
+	/** A person accepted the best try: this line breaks the order's origin requirement only. Sign-off, in the terms. */
+	'requirement_relaxed.origin',
+	/** A person accepted the best try: this line lacks a required label only. Sign-off, in the terms. */
+	'requirement_relaxed.labels',
 	/** The delivery date is not one of the kitchen's receiving days: held for a named approver to accept or reschedule. */
 	'off_delivery_day',
 	/** A substitute replaced this line's purchase: it stays visible at quantity 0 and is not bought. */
@@ -96,14 +106,57 @@ export type ApprovalState = z.infer<typeof ApprovalState>;
  * Kitchen-wide constraints still apply on top.
  */
 export const NeedRequirements = z.object({
-	/** Free-from claims the product must carry (Product.freeFrom, e.g. LACTOSE, GLUTEN). */
+	/**
+	 * Free-from requirements in the catalogue's upper-case codes (LACTOSE, GLUTEN, MILK): met by the product's
+	 * free-from claim, or by a declared allergen record without the matching allergen (iceberg lettuce is lactose-free
+	 * without saying so).
+	 */
 	freeFrom: z.array(z.string()).optional(),
-	/** Country of origin the product must have (ISO 3166-1 alpha-2, lower case as in the catalogue). */
+	/** Country of origin the product must have: ISO 3166-1 alpha-2 in lower case, as in the catalogue ("fi", not "FI"). */
 	origin: z.string().length(2).optional(),
 	/** Labels the product must carry (Product.labels, e.g. organic). */
-	labels: z.array(z.string()).optional()
+	labels: z.array(z.string()).optional(),
+	/**
+	 * Diet the product must suit (a dish's VEG / VE code, a request's "vegetarian"): no meat or fish, and for vegan no
+	 * milk or egg either. From the product's diet record, else its allergens, category and name. Never relaxed.
+	 */
+	diet: z.array(z.enum(['vegetarian', 'vegan'])).optional(),
+	/**
+	 * Product families the need must not contain (a dish's M code excludes milk, G gluten cereals; "no pork"). From
+	 * the allergen record, the category groups (core/mandate/categories.ts) and the name. An undeclared record is
+	 * unknown, never ok.
+	 */
+	excludes: z.array(z.enum(['meat', 'fish', 'pork', 'milk', 'gluten_cereals'])).optional()
 });
+
+/**
+ * Why a product misses one requirement, as the evaluator (core/mandate/meets.ts) decided it. The same shape in the
+ * line read model, get_plan, explain_line, refusals and the MCP/REST answers, so an agent can repair it, not guess.
+ */
+export const RequirementCheck = z.object({
+	/** "<term>:<value>": diet:vegetarian, excludes:meat, freeFrom:LACTOSE, origin:fi, labels:EU_ORGANIC_FARMING. */
+	requirement: z.string(),
+	/** Who asked for it: the need (a request or a chef), the dish's diet codes, or the kitchen's own constraints. */
+	from: z.enum(['need', 'kitchen', 'dish']),
+	/** no: forbidden, never approvable. unknown: no record either way; held or rejected per unknownCounts, never ok. */
+	verdict: z.enum(['no', 'unknown']),
+	/** The product fact that decided it: "allergens list AM (milk)", "a meat product (category or name)", "origin se". */
+	fact: z.string()
+});
+export type RequirementCheck = z.infer<typeof RequirementCheck>;
 export type NeedRequirements = z.infer<typeof NeedRequirements>;
+
+/** The ask behind a need, as stated (D18). */
+export const NeedAsk = z.object({
+	/** The words it came from ("250 ml laktoositonta maitoa", "4 packs lactose-free milk"). */
+	words: z.string().max(300).optional(),
+	qty: z.number().nonnegative().nullable(),
+	unit: z.union([
+		z.enum(['g', 'kg', 'ml', 'cl', 'dl', 'l', 'pcs', 'pack', 'case', 'sales_unit']),
+		z.object({ unknown: z.string().max(40) })
+	])
+});
+export type NeedAsk = z.infer<typeof NeedAsk>;
 
 export const Need = z.object({
 	id: z.string(),
@@ -113,7 +166,13 @@ export const Need = z.object({
 	 * ("1 l lactose-free milk"); substitutes are sized to `amount`, not to the original product's sales units.
 	 * Absent on plans stored before this field existed: read as `dish` when `dish` is set, else `direct`.
 	 */
-	kind: z.enum(['dish', 'direct']).optional(),
+	kind: z.enum(['dish', 'direct', 'sales']).optional(),
+	/**
+	 * D18: the ask as stated, so no entry can turn it into something else. `sales`-kind needs (packs, cases, the
+	 * product's sales units, content per unit unknown) carry the asked count here; their `amount` is that count in
+	 * `pcs` of sales units. An explicit unit nobody recognises stays `{ unknown: token }`: the entry asks first.
+	 */
+	ask: NeedAsk.optional(),
 	/**
 	 * Requirement lineage for needs planned from a menu proposal: which revision, dish and ingredient this need serves.
 	 * Edits, substitutes and the Why chain follow these ids, never a label or an array position.
@@ -146,6 +205,8 @@ export const Need = z.object({
 	unresolved: z.string().max(300).optional(),
 	/** Hard requirements every line serving this need must meet. */
 	requirements: NeedRequirements.optional(),
+	/** Where the requirements came from: the dish's diet codes, the request's words, or the chef. */
+	requirementsFrom: z.enum(['dish', 'request', 'chef']).optional(),
 	provenance: Provenance
 });
 export type Need = z.infer<typeof Need>;
@@ -224,6 +285,8 @@ export const Line = z.object({
 	state: LineState,
 	tier: Tier.optional(),
 	reasons: z.array(LineReason),
+	/** Which requirements the product misses, and the fact behind each (with requirement_unmet / requirement_unknown). */
+	unmet: z.array(RequirementCheck).optional(),
 	/** Terms the line was quoted on; null until quoted. */
 	offer: Offer.nullable(),
 	lineCents: Cents.nullable(),
@@ -323,6 +386,11 @@ export const Plan = z.object({
 	taskId: z.string().optional(),
 	/** The chef-reviewed menu proposal revision this plan was built from. */
 	source: z.object({ proposalId: z.string(), revision: z.int().nonnegative() }).optional(),
+	/**
+	 * Order-scope hard requirements ("everything Finnish", "all organic"): they apply to every line beside each need's
+	 * own, and only ever tighten (a kitchen rule is never loosened by an order or a line).
+	 */
+	requirements: NeedRequirements.optional(),
 	needs: z.array(Need),
 	lines: z.array(Line),
 	totalCents: Cents.nullable(),

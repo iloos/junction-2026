@@ -15,6 +15,7 @@ import {
 	ok,
 	type Line,
 	type LineReason,
+	type NeedRequirements,
 	type PendingOp,
 	type Plan,
 	type Result,
@@ -32,7 +33,9 @@ import {
 	type PoolEntry,
 	type SeedDish
 } from '../demand';
+import { inCategoryGroup } from '../mandate/categories';
 import { draftFromLine, recalledProducts, type DraftLine } from '../mandate/tier';
+import { mergeRequirements } from '../mandate/validate';
 import { rankCandidates, supplyOf, type Fit } from '../rank/rank';
 import type { CallContext, DecideQuestion } from '../ports';
 import { prefetch, requote, type ServicePorts } from './events';
@@ -52,6 +55,34 @@ const FIT_TIMEOUT_MS = 4000;
  */
 const VIOLATES_P = 0.5;
 const MODEL_CAUTION = 'CAUTION.model_constraint' as const;
+
+const ORIGIN_WORD: Record<string, string> = {
+	fi: 'Finnish',
+	se: 'Swedish',
+	no: 'Norwegian',
+	dk: 'Danish',
+	ee: 'Estonian',
+	de: 'German',
+	nl: 'Dutch',
+	pl: 'Polish',
+	fr: 'French',
+	it: 'Italian',
+	es: 'Spanish'
+};
+const originWord = (c: string | undefined) =>
+	c ? (ORIGIN_WORD[c.toLowerCase()] ?? c.toUpperCase()) : 'unknown origin';
+
+/** "origin FI, label EU_ORGANIC_FARMING", for the need's unresolved sentence. */
+function describeRequirements(r: NeedRequirements & { conflict?: string }): string {
+	if (r.conflict) return `${r.conflict} at once`;
+	return [
+		...(r.diet ?? []),
+		...(r.excludes ?? []).map((x) => (x === 'gluten_cereals' ? 'no gluten cereals' : `no ${x}`)),
+		...(r.freeFrom ?? []).map((x) => `free from ${x}`),
+		...(r.origin ? [`origin ${r.origin.toUpperCase()}`] : []),
+		...(r.labels ?? []).map((x) => `label ${x}`)
+	].join(', ');
+}
 
 type RescueCandidate = { productId: string; name: string; origin?: string };
 type RescueAsk = {
@@ -213,7 +244,9 @@ export async function findSubstitutes(
 	);
 	if (saved.some((l) => l.state === 'committed') && input.apply)
 		return err('STALE_VERSION', 'the substitute for this dish is already committed');
-	const apply = input.apply ?? (!input.weights && !input.requireOrigin && saved.length === 0);
+	const apply =
+		input.apply ??
+		(!input.weights && !input.requireOrigin && !input.requirements && saved.length === 0);
 	const rankKitchen = input.weights ? { ...kitchen, weights: input.weights } : kitchen;
 
 	const seed = plan0.eventId ? ports.events?.[plan0.eventId] : undefined;
@@ -272,6 +305,11 @@ export async function findSubstitutes(
 		if (s) sized.set(id, s.qty);
 		else unsized.push(id);
 	}
+	// The order's requirements and the need's own, together: they only tighten.
+	// The plan's and the need's own requirements bind; a per-call `requirements` tightens this ranking only (a
+	// preview by default, never written onto the need). requireOrigin keeps its own origin_required rejection below.
+	const stored = mergeRequirements(plan0.requirements, need?.requirements);
+	const req = mergeRequirements(stored, input.requirements);
 	const ranked = rankCandidates({
 		kitchen: rankKitchen,
 		candidates: [...sized].map(([productId, qty]) => ({
@@ -282,7 +320,7 @@ export async function findSubstitutes(
 		products,
 		offers: new Map(offers.map((o) => [o.productId, o])),
 		recalled,
-		requirements: need?.requirements
+		requirements: req
 	});
 	// Gemini judges what code can't, outside the lock. Recipe fit (0–4, D6 w_fit) reorders survivors. With a batching
 	// Decide, one call per rescued line also asks each survivor's hard-constraint check (a calibrated "violates"
@@ -330,7 +368,7 @@ export async function findSubstitutes(
 				offers: new Map(offers.map((o) => [o.productId, o])),
 				recalled,
 				fit,
-				requirements: need?.requirements
+				requirements: req
 			})
 		);
 	// A calibrated P(violates) is evidence, not a rule (D10): the candidate stays listed with a caution, sorts after
@@ -374,6 +412,32 @@ export async function findSubstitutes(
 			r.rank = n++;
 	}
 	const nameOf = (id: string) => products.get(id)?.nameFi;
+	// Best try: nothing meets every strict requirement, so the nearest product that breaks only one relaxable rule
+	// (origin or a label; never an allergen) is marked for a person to accept. It is never applied by itself.
+	const bestTries = new Map<string, 'origin' | 'labels'>();
+	if (req && !req.conflict && !ranked.some((r) => r.rank !== null))
+		for (const rule of ['origin', 'labels'] as const) {
+			if (rule === 'origin' ? !req.origin : !req.labels?.length) continue;
+			const looser = { ...req };
+			delete looser[rule];
+			const alt = rankCandidates({
+				kitchen: rankKitchen,
+				candidates: [...sized].map(([productId, qty]) => ({
+					productId,
+					fromValioRule: pool.get(productId)!.fromValioRule,
+					qty: qty.value
+				})),
+				products,
+				offers: new Map(offers.map((o) => [o.productId, o])),
+				recalled,
+				requirements: looser
+			})
+				.filter((r) => r.rank !== null)
+				.sort((a, b) => a.rank! - b.rank!)[0];
+			if (alt && !bestTries.has(alt.productId)) bestTries.set(alt.productId, rule);
+		}
+	const bestTryOf = (id: string) =>
+		bestTries.has(id) ? { bestTry: { relaxes: bestTries.get(id)! } } : {};
 	// How each candidate relates to the planned product (describes only: ranking and tiers never read it).
 	const planned = products.get(line.productId);
 	const named = new Set(seedIds);
@@ -389,6 +453,7 @@ export async function findSubstitutes(
 			productId: r.productId,
 			productName: nameOf(r.productId),
 			...relation(r.productId),
+			...bestTryOf(r.productId),
 			rank: r.rank,
 			score: r.score,
 			rejectedReasons: r.rejectedReasons as string[],
@@ -508,11 +573,65 @@ export async function findSubstitutes(
 		offer: null,
 		lineCents: null
 	});
-	const base = { kind, candidates, labourNote, residual, saved };
+	// The kitchen prefers an origin (meat: Finnish preferred) the pick doesn't have: say why, in words.
+	const pickedProduct = best ? products.get(best.productId) : undefined;
+	const preferred = pickedProduct
+		? kitchen.constraints.origin.find(
+				(r) =>
+					r.rule === 'prefer' &&
+					inCategoryGroup(pickedProduct.category, r.categoryGroup) &&
+					pickedProduct.origin !== r.country
+			)
+		: undefined;
+	const fallback =
+		preferred && pickedProduct
+			? `no ${originWord(preferred.country)} option qualified: picked ${originWord(pickedProduct.origin)}`
+			: undefined;
+	const base = { kind, candidates, labourNote, residual, saved, ...(fallback ? { fallback } : {}) };
 
 	// Preview, nothing to propose, or nothing would change: the plan stays as it is. An empty proposal never writes:
 	// it would delete the saved rescue (and void its approval) without covering the dish, or bump the version for
 	// nothing, and a caller that retries on a version change loops.
+	// Strict requirements leave nothing to buy: the need says so (and stays visible), once.
+	if (
+		apply &&
+		drafts.length === 0 &&
+		stored &&
+		need &&
+		!input.requirements &&
+		!input.requireOrigin
+	) {
+		const req = stored;
+		const why = `no product meets ${describeRequirements(req)}`;
+		if (need.unresolved !== why) {
+			const w = await ports.store.transact<Plan>(ctx.workspaceId, async (_tx, state) => {
+				const plan = state.plans[input.planId];
+				if (!plan || plan.version !== input.version)
+					return {
+						error: err('STALE_VERSION', 'the plan changed while substitutes were ranked').error
+					};
+				return {
+					ops: [
+						pending(ctx, {
+							type: 'EditLine',
+							planId: plan.id,
+							baseVersion: plan.version,
+							need: { ...need, unresolved: why },
+							lines: [],
+							summary: `${need.label}: ${why}`
+						})
+					],
+					value: {
+						...plan,
+						version: plan.version + 1,
+						needs: plan.needs.map((n) => (n.id === need.id ? { ...n, unresolved: why } : n))
+					}
+				};
+			});
+			if (!w.ok) return w;
+			return ok({ ...base, plan: w.value.value, chosen: [], applied: false });
+		}
+	}
 	if (!apply || drafts.length === 0 || sameLines(drafts, saved))
 		return ok({ ...base, plan: plan0, chosen: drafts.map(proposedOf), applied: false });
 
@@ -553,6 +672,27 @@ export async function findSubstitutes(
 			const envelope = (op: PendingOp['op']) => pending(ctx, op);
 			const ops: PendingOp[] = [];
 			let version = plan.version;
+			// A need marked "no product meets …" by an earlier empty search has a product now: the note goes.
+			const marked = plan.needs.find(
+				(n) => n.id === line.needId && n.unresolved?.startsWith('no product meets')
+			);
+			let needs = plan.needs;
+			if (marked) {
+				const { unresolved: _gone, ...cleared } = marked;
+				void _gone;
+				needs = plan.needs.map((n) => (n.id === marked.id ? cleared : n));
+				ops.push(
+					envelope({
+						type: 'EditLine',
+						planId: plan.id,
+						baseVersion: version,
+						need: cleared,
+						lines: [],
+						summary: `${marked.label}: a product meets the requirements now`
+					})
+				);
+				version += 1;
+			}
 			if (old.size) {
 				// Replace, never stack: the old substitute leaves the plan before the new one is proposed.
 				ops.push(
@@ -584,6 +724,7 @@ export async function findSubstitutes(
 				version: version + 1,
 				state: 'draft',
 				termsHash: null,
+				needs,
 				lines: [...plan.lines.filter((l) => !old.has(l.id)), ...proposed]
 			};
 			const q = await requote(ports, ctx, tx, state, after, kitchen, openAfter, fetched);
