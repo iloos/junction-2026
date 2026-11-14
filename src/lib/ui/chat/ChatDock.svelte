@@ -21,10 +21,12 @@
 	 */
 	interface Props {
 		kitchenId?: string;
-		/** Start collapsed on a phone; the desktop column is always open. */
+		/** Start collapsed on a phone; the desktop column is always open when pinned. */
 		open?: boolean;
+		/** Desktop: always-open column (agent page). Unpinned, it opens and closes like the phone sheet (Kitchen). */
+		pinned?: boolean;
 	}
-	let { kitchenId = 'k-hotel', open = $bindable(false) }: Props = $props();
+	let { kitchenId = 'k-hotel', open = $bindable(false), pinned = true }: Props = $props();
 
 	type Entry = { kind: 'chef'; text: string } | { kind: 'event'; e: ChatEvent };
 	const KEY = 'mandate.chat.task';
@@ -141,8 +143,11 @@
 
 <button
 	type="button"
-	class="fixed right-4 bottom-4 z-30 flex items-center gap-2 rounded-full border border-rule-strong bg-sheet px-4 py-2 text-sm font-medium shadow-md lg:hidden"
-	class:hidden={open}
+	class={[
+		'fixed right-4 bottom-4 z-30 flex items-center gap-2 rounded-full border border-rule-strong bg-sheet px-4 py-2 text-body font-medium shadow-md',
+		pinned && 'lg:hidden',
+		open && 'hidden'
+	]}
 	onclick={() => (open = true)}
 >
 	<MessageSquare size={16} /> Ask the agent
@@ -150,16 +155,17 @@
 
 <aside
 	class={[
-		'fixed inset-x-0 bottom-0 z-40 flex max-h-[75dvh] flex-col rounded-t-xl border-t border-rule-strong bg-sheet shadow-lg lg:inset-x-auto lg:top-0 lg:right-0 lg:bottom-0 lg:max-h-none lg:w-96 lg:rounded-none lg:border-t-0 lg:border-l lg:shadow-none',
-		!open && 'max-lg:hidden'
+		'fixed inset-x-0 bottom-0 z-40 flex max-h-[75dvh] flex-col rounded-t-xl border-t border-rule-strong bg-sheet shadow-lg lg:inset-x-auto lg:top-11 lg:right-0 lg:bottom-0 lg:max-h-none lg:w-96 lg:rounded-none lg:border-t-0 lg:border-l lg:shadow-none',
+		!open && (pinned ? 'max-lg:hidden' : 'hidden'),
+		!pinned && 'lg:shadow-[-12px_0_32px_-16px_oklch(0.2_0.02_255/0.35)]'
 	]}
 	aria-label="Agent chat"
 >
 	<header class="flex items-center gap-2 border-b border-rule px-4 py-3">
 		<Bot size={18} class="text-accent" />
 		<div class="min-w-0 flex-1">
-			<p class="text-sm font-semibold">Purchasing agent</p>
-			<p class="truncate text-xs text-ink-3">
+			<p class="text-body font-semibold">Purchasing agent</p>
+			<p class="truncate text-meta text-ink-3">
 				{taskId ? `Task ${taskId}` : 'Plans and orders within your mandate. Never approves.'}
 			</p>
 		</div>
@@ -172,13 +178,13 @@
 		>
 		<button
 			type="button"
-			class="rounded p-1 text-ink-3 hover:bg-well lg:hidden"
+			class={['rounded p-1 text-ink-3 hover:bg-well', pinned && 'lg:hidden']}
 			aria-label="Close chat"
 			onclick={() => (open = false)}><ChevronDown size={16} /></button
 		>
 	</header>
 
-	<ol class="flex-1 space-y-3 overflow-y-auto px-4 py-3 text-sm" aria-live="polite">
+	<ol class="flex-1 space-y-3 overflow-y-auto px-4 py-3 text-body" aria-live="polite">
 		{#if !entries.length}
 			<li class="text-ink-3">
 				Try “4 kg lactose-free butter for Wednesday” or “what needs my approval?”. Answers to the
@@ -217,7 +223,7 @@
 							{#each x.e.options as o (o.value)}
 								<button
 									type="button"
-									class="rounded-full border border-accent px-3 py-1 text-xs font-medium text-accent-ink hover:bg-accent-wash disabled:opacity-50"
+									class="rounded-full border border-accent px-3 py-1 text-meta font-medium text-accent-ink hover:bg-accent-wash disabled:opacity-50"
 									disabled={!active || busy}
 									onclick={() =>
 										x.e.type === 'clarify' &&
@@ -227,7 +233,7 @@
 							{/each}
 						</div>
 					{:else if active}
-						<p class="mt-1 text-xs text-ink-3">Type the answer below.</p>
+						<p class="mt-1 text-meta text-ink-3">Type the answer below.</p>
 					{/if}
 				</li>
 			{:else if x.e.type === 'decision'}
@@ -240,7 +246,7 @@
 						class="inline-flex items-center gap-1 font-medium text-propose underline"
 						href={x.e.approvalUrl}>Open the approval in Kitchen <ArrowUpRight size={13} /></a
 					>
-					<p class="text-xs text-ink-3">
+					<p class="text-meta text-ink-3">
 						Only a chef approves, in the Kitchen screen. Then continue here.
 					</p>
 				</li>
@@ -253,7 +259,7 @@
 					{#if x.e.canContinue || x.e.state === 'awaiting_chef'}
 						<button
 							type="button"
-							class="rounded-md bg-accent px-3 py-1.5 text-xs font-semibold text-sheet disabled:opacity-50"
+							class="rounded-md bg-accent px-3 py-1.5 text-meta font-semibold text-sheet disabled:opacity-50"
 							disabled={busy}
 							onclick={() => turn({ continue: true }, 'Continue')}
 						>
@@ -271,7 +277,7 @@
 		<label class="sr-only" for="chat-text">Message the agent</label>
 		<textarea
 			id="chat-text"
-			class="min-h-10 flex-1 resize-none rounded-md border border-rule-strong bg-paper px-3 py-2 text-sm"
+			class="min-h-10 flex-1 resize-none rounded-md border border-rule-strong bg-paper px-3 py-2 text-body"
 			rows="1"
 			maxlength="500"
 			placeholder={doneLine?.state === 'awaiting_clarification'

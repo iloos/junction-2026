@@ -8,6 +8,7 @@
 	import type { Line } from '$lib/core/contracts';
 	import { useShell } from '$lib/ui/shell/shell.svelte';
 	import TaskHeader from '$lib/ui/TaskHeader.svelte';
+	import ChatDock from '$lib/ui/chat/ChatDock.svelte';
 	import LineRow from '$lib/ui/LineRow.svelte';
 	import StrategyCard from '$lib/ui/StrategyCard.svelte';
 	import { decisionCount, decisionsDue, decisionsOf } from '$lib/ui/decisions';
@@ -97,6 +98,7 @@
 	] as const;
 	type Zone = (typeof ZONES)[number]['id'];
 	let zone = $state<Zone | null>(null);
+	let chatOpen = $state(false);
 	function show(z: Zone) {
 		zone = z;
 		document.getElementById('zones')?.scrollIntoView({ block: 'start', behavior: 'smooth' });
@@ -453,7 +455,7 @@
 		/>
 	{/snippet}
 	<main
-		class="mx-auto grid max-w-[1440px] grid-cols-1 gap-6 px-4 pt-5 pb-28 md:px-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:pb-10"
+		class="mx-auto grid max-w-[1440px] grid-cols-1 gap-6 px-4 pt-5 pb-32 md:px-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:pb-10"
 	>
 		<div class="min-w-0">
 			<!-- The task: decisions left, by when, cover by certainty; the event as a diff of a normal week -->
@@ -793,7 +795,7 @@
 	{#if decisions.length && active !== 'decide'}
 		<button
 			type="button"
-			class="fixed inset-x-3 bottom-3 z-30 flex h-12 items-center justify-between rounded-lg bg-ink px-4 text-body font-medium text-sheet shadow-[0_8px_24px_-8px_oklch(0.2_0.02_255/0.5)] lg:hidden"
+			class="fixed inset-x-3 bottom-16 z-30 flex h-12 items-center justify-between rounded-lg bg-ink px-4 text-body font-medium text-sheet shadow-[0_8px_24px_-8px_oklch(0.2_0.02_255/0.5)] lg:hidden"
 			onclick={() => show('decide')}
 		>
 			<span>{decisionCount(decisions.length)} before {storyTime(decisionsDue(plan, approval))}</span
@@ -801,6 +803,10 @@
 			<span>Review</span>
 		</button>
 	{/if}
+
+	<!-- The agent, scoped to this kitchen: plans and orders within the mandate, never approves (links to Decide).
+	     On desktop it opens over the Decide/Order column, so the dish table keeps its width. -->
+	<ChatDock kitchenId={snap.kitchen.id} pinned={false} bind:open={chatOpen} />
 
 	<WhyDrawer
 		open={!!whyLine}
