@@ -1,7 +1,7 @@
 import type { Approval, Plan } from '$lib/core/contracts';
 import type { Task, TaskLedger, TaskState } from '$lib/core/contracts/task';
 import type { CallContext, Ports, TaskStore, ToolHandlers } from '$lib/core/ports';
-import { nextActionFor } from '$lib/server/agent/next-action';
+import { nextFor } from '$lib/server/agent/next';
 import { pendingDecision } from './ledger';
 import { readTask } from './outcome';
 
@@ -31,17 +31,16 @@ export function project(
 		.map((p) => pendingDecision(p, approvals))
 		.find((d) => d.kind === 'decision');
 	t.pending = decision ?? { kind: 'none' };
-	const pendingFor = (p: Plan) => approvals.some((a) => a.planId === p.id && a.state === 'pending');
-	const nexts = plans.map((p) => nextActionFor(p, { approvalPending: pendingFor(p) }));
+	const nexts = plans.map((p) => nextFor(p));
 	const canContinue = plans.some((p) =>
 		p.lines.some((l) => l.state !== 'committed' && l.view?.committable === true)
 	);
 	const state: TaskState =
-		t.pending.kind === 'decision' || nexts.some((n) => n.kind === 'chef')
+		t.pending.kind === 'decision' || nexts.some((n) => n.action === 'approve')
 			? 'awaiting_chef'
-			: canContinue || nexts.some((n) => n.kind !== 'done' && n.kind !== 'await_supplier')
+			: canContinue || nexts.some((n) => n.action !== 'done' && n.action !== 'wait_for_supplier')
 				? 'open'
-				: nexts.some((n) => n.kind === 'await_supplier')
+				: nexts.some((n) => n.action === 'wait_for_supplier')
 					? 'awaiting_supplier'
 					: plans.length && ledger.receiptIds.length
 						? 'done'

@@ -1,5 +1,5 @@
 import type { Plan, ResultMeta, ToolName } from '$lib/core/contracts';
-import { nextActionFor } from '$lib/server/agent/next-action';
+import { nextFor, nextTool } from '$lib/server/agent/next';
 
 /**
  * ResultMeta for tool outputs: one sentence, the suggested next call and, when lines wait for a chef, a deep
@@ -49,13 +49,9 @@ function planMeta(plan: Plan, approvalPending: boolean): ResultMeta {
 	const summary = `${parts.join('; ')}.`.slice(0, 400);
 	const meta: ResultMeta = { summary };
 	if (held || approvalPending) meta.approvalUrl = approvalUrl(plan);
-	const next = nextActionFor(plan, { approvalPending });
-	if (next.tool)
-		meta.nextAction = {
-			tool: next.tool,
-			why: next.text.slice(0, 200),
-			...(next.args ? { args: next.args } : {})
-		};
+	const next = nextFor(plan);
+	const call = nextTool(plan, next);
+	if (call) meta.nextAction = { tool: call.tool, why: next.text.slice(0, 200), args: call.args };
 	return meta;
 }
 

@@ -10,7 +10,6 @@ import type { CallContext, Llm, ToolHandlers } from '$lib/core/ports';
 import { traceEvent, type TraceStep } from '$lib/server/adapters/llm/trace';
 import { serveTool, toolsFor } from '$lib/server/tools/serve';
 import { errorFacts, toFacts, type Facts, type PlanFacts } from './facts';
-import { nextActionFor } from './next-action';
 import {
 	orderable,
 	pickRoutine,
@@ -464,7 +463,7 @@ function planSummary(plan: PlanFacts): string {
 	return (
 		`Plan ${plan.id} v${plan.version}: ${plan.lines.length} lines, total €${((plan.totalCents ?? 0) / 100).toFixed(2)}. ` +
 		`${held.length} held for the chef (${[...new Set(held.flatMap((l) => l.reasons))].join(', ') || 'none'}); ` +
-		`${unorderable.length} unorderable with no replacement chosen yet. Next: ${nextActionFor(plan).text}`
+		`${unorderable.length} unorderable with no replacement chosen yet.`
 	);
 }
 

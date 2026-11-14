@@ -24,7 +24,7 @@ import { setCurrentRun } from '$lib/server/demo/run';
 import { onCurrentRun } from '$lib/server/demo/reset';
 import { runRequest } from '$lib/server/request/run';
 import { computeOutcome } from '$lib/server/agent/outcome';
-import { nextActionFor } from '$lib/server/agent/next-action';
+import { nextActionFor } from '$lib/core/mandate/next';
 import { trialWorkspace } from '$lib/server/agent/trial-harness';
 import { attachStateSink, stateWrites } from '$lib/server/web/persist';
 import { createWorkQueue } from '$lib/server/web/queue';
@@ -42,8 +42,7 @@ const OPEN: Record<string, string> = {
 	'R7-05': '8d',
 	'R7-11': '8d',
 	'R8-web-write': 'D',
-	'R8-queue-claim': 'D',
-	'R8-next-action': 'E'
+	'R8-queue-claim': 'D'
 };
 /**
  * `it` for a guarded case, `it.fails` for an open one, named with its owner. `ADV_SHOW=1` runs every case as a plain
@@ -923,12 +922,26 @@ describe('suite: adversarial (round 8: identity, durability, reads)', () => {
 		'R8-next-action',
 		'a held line a chef already approved is next to commit, not "wait for a chef"',
 		() => {
-			const next = nextActionFor({
-				id: 'p',
-				version: 1,
-				lines: [{ id: 'l', productId: '464201', state: 'held', view: { committable: true } }]
-			} as any);
-			expect(next.kind).not.toBe('chef');
+			const next = nextActionFor(
+				{
+					id: 'p',
+					version: 1,
+					deliverBy: '2026-12-10',
+					needs: [],
+					lines: [
+						{
+							id: 'l',
+							productId: '464201',
+							state: 'held',
+							qty: { value: 1, unit: 'ST' },
+							reasons: [],
+							view: { committable: true, nextAction: 'commit' }
+						}
+					]
+				} as any,
+				new Date('2026-12-07T09:00:00Z')
+			);
+			expect(next.action).toBe('commit');
 		}
 	);
 

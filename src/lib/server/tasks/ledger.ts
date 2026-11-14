@@ -1,6 +1,6 @@
 import type { Approval, Order, Plan, Receipt } from '$lib/core/contracts';
 import type { TaskLedger, TaskLedgerNeed, TaskPending } from '$lib/core/contracts/task';
-import { nextActionFor } from '$lib/server/agent/next-action';
+import { nextFor } from '$lib/server/agent/next';
 import { approvalUrl } from '$lib/server/tools/present';
 import { decisionsOf } from '$lib/ui/decisions';
 
@@ -75,11 +75,9 @@ export function computeLedger(i: LedgerInput): TaskLedger {
 		return n + Math.max(1, decisionGroups(plan, a).length);
 	}, 0);
 	// The next action of the first plan that still has one: a finished plan never speaks for an open one.
-	const nexts = i.plans.map((p) =>
-		nextActionFor(p, { approvalPending: pending.some((a) => a.planId === p.id) })
-	);
+	const nexts = i.plans.map((p) => nextFor(p, new Date(i.asOf)));
 	const nextAction = nexts.length
-		? (nexts.find((n) => n.kind !== 'done') ?? nexts[0]).text
+		? (nexts.find((n) => n.action !== 'done') ?? nexts[0]).text
 		: 'Nothing is planned yet.';
 	const validUntil = i.plans
 		.map((p) => p.view?.validUntil)
