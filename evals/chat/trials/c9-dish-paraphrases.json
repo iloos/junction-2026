@@ -1,0 +1,18 @@
+{
+	"id": "c9-dish-paraphrases",
+	"$comment": "Held-out paraphrases of a dish request, written apart from any prompt example: a misspelt dish with a bare count is asked (portions or packs); the same dish 'for N people' says portions, so it goes straight to the event brief's next question; a product named after the dish ('bolognese sauce') with a weight is a product order, never the dish question.",
+	"kitchen": "k-hotel",
+	"steps": [
+		{ "chef": { "text": "we need spaghetti bolognaise x250 on friday" } },
+		{ "chef": { "text": "bolognese for 80 people" } },
+		{ "chef": { "text": "2 kg bolognese sauce for friday" } }
+	],
+	"expect": {
+		"0": { "asks": "dish", "receipts": 0 },
+		"1": {
+			"asks": ["date", "guests", "serviceStyle", "courses", "dietary", "budget"],
+			"receipts": 0
+		},
+		"2": { "receipts": 0 }
+	}
+}

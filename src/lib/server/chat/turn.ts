@@ -644,6 +644,15 @@ async function* turnLines(
 		task = { ...blankTask(deps, words!), kitchenId: task.kitchenId };
 		expected = null;
 	}
+	// The words said portions ("300 portions of lasagne"): the dish is planned like an event brief, nothing to ask.
+	if (dish?.said)
+		task.requirement = {
+			...task.requirement,
+			kind: 'event',
+			brief: `${dish.dish[0].toUpperCase()}${dish.dish.slice(1)} for ${dish.portions} guests`
+		};
+	/** Portions or packs is the chef's call when the words did not say. */
+	const dishAsk = dish && !dish.said ? dish : null;
 	// A cancelled task is a fence: no Continue, answer, resize or addition acts on it (a stale button in another tab
 	// included); questions still read it, and a request of its own starts a new task above.
 	if (
@@ -766,7 +775,7 @@ async function* turnLines(
 	// An event brief ("7-course meal for 3") is the chat's own flow: ask what the brief lacks, propose a menu, and plan
 	// it once a chef has reviewed it. The seeded buffet keeps the agent's own plan_event path.
 	const eventFlow =
-		!dish &&
+		!dishAsk &&
 		(task.requirement.kind === 'event' ||
 			(!followUp &&
 				!!words &&
@@ -793,14 +802,15 @@ async function* turnLines(
 		expected = reserved.value.version;
 	}
 
-	if (dish) {
+	if (dishAsk) {
 		steps = [];
-		const n = dish.portions.toLocaleString('en-US');
+		const n = dishAsk.portions.toLocaleString('en-US');
 		clarify = {
 			kind: 'clarify',
 			field: 'dish',
 			question:
-				dish.question ?? `That reads like a dish, not a product: ${n} portions of ${dish.dish}?`,
+				dishAsk.question ??
+				`That reads like a dish, not a product: ${n} portions of ${dishAsk.dish}?`,
 			options: [
 				{ label: 'Yes, plan it as a dish', value: 'as-dish' },
 				{ label: `No, ${n} packs`, value: 'as-packs' }
