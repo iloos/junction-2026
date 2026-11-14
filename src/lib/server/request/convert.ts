@@ -167,13 +167,40 @@ export function contentPerSalesUnit(p: Product, dim: Dim): Content | { error: st
 	};
 }
 
+/** The stated content of one sales unit: what the name says first, Valio net weight last. */
+function bestContent(p: Product): Content | null {
+	const all = (['kg', 'l'] as const)
+		.map((d) => contentPerSalesUnit(p, d))
+		.filter((c): c is Content => !('error' in c));
+	return all.find((c) => c.source !== 'net') ?? all[0] ?? null;
+}
+
 /** "40 kg" / "20 l" for a number of sales units, when the content is known. */
 function totalContent(p: Product, salesQty: number): string | null {
-	for (const dim of ['kg', 'l'] as const) {
-		const c = contentPerSalesUnit(p, dim);
-		if (!('error' in c)) return `${fmt(salesQty * c.value)} ${dim}`;
-	}
-	return null;
+	const c = bestContent(p);
+	return c ? `${fmt(salesQty * c.value)} ${c.unit}` : null;
+}
+
+const small = (v: number, dim: Dim) =>
+	dim === 'kg' && v < 1
+		? `${fmt(v * 1000)} g`
+		: dim === 'l' && v < 1
+			? `${fmt(v * 10)} dl`
+			: `${fmt(v)} ${dim}`;
+
+/** What one case (KI) holds, e.g. "20 × 200 g = 4 kg", or null when Valio's data doesn't say. */
+export function caseDescription(p: Product): string | null {
+	const ki = p.packs.find((x) => x.unit === 'KI');
+	const perSales = baseUnitsPerSales(p);
+	if (!ki || !perSales) return null;
+	const salesPerCase = p.salesUnit === 'KI' ? 1 : ki.baseUnits / perSales;
+	const c = bestContent(p);
+	if (!c) return null;
+	const total = c.value * salesPerCase;
+	const per = total / ki.baseUnits;
+	return ki.baseUnits > 1
+		? `${fmt(ki.baseUnits)} × ${small(per, c.unit)} = ${small(total, c.unit)}`
+		: `${small(total, c.unit)} per case`;
 }
 
 /** "(= 100 KI)" when the product has a case level and the quantity fills whole cases. */
