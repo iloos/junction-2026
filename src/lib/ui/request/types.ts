@@ -140,6 +140,8 @@ export interface OrderView {
 		mandateVersion: number;
 	};
 	deliveryNote: string | null;
+	/** The procurement task this order belongs to (null id: no task store yet) and the plan in the Kitchen. */
+	task: TaskLink;
 }
 
 export interface CommitView {
@@ -232,3 +234,5 @@ export interface BriefQuestion {
 }
 
 export type { MenuPlanResult, MenuView } from '$lib/server/menu/flow';
+import type { TaskLink } from '$lib/server/request/task';
+export type { TaskLink };

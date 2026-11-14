@@ -125,6 +125,7 @@ export async function submitRequest(o: {
 		confirmLarge: o.confirmLarge,
 		deliverBy: o.deliverBy,
 		now: (await ports()).ports.clock.now(),
+		tasks: (await ports()).ports.tasks,
 		onEvent: o.onEvent,
 		review
 	});

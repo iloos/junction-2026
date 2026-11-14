@@ -96,7 +96,8 @@ export async function planMenuAsChef(o: {
 	revision: number;
 }): Promise<Result<MenuPlanResult>> {
 	const a = await actors(o.env, o.workspaceId);
-	return planMenu({ ...(await deps(o.workspaceId)), handlers, ctx: a.chef }, o);
+	const tasks = (await ports()).ports.tasks;
+	return planMenu({ ...(await deps(o.workspaceId)), handlers, ctx: a.chef, tasks }, o);
 }
 
 /** Amount edits from a request body; anything malformed is dropped, never trusted. */

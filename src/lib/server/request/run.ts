@@ -7,7 +7,8 @@ import type { Kitchen, Measure, Offer, Product, ToolName, ToolOutput } from '$li
 import { sizeDirect } from '$lib/core/demand/sizing';
 import { day, money } from '$lib/ui/format';
 import { canonicalJson, sha256Hex } from '$lib/core/hash';
-import type { CallContext, Llm, ToolHandlers } from '$lib/core/ports';
+import type { CallContext, Llm, TaskStore, ToolHandlers } from '$lib/core/ports';
+import { taskForPlan } from './task';
 import { serveTool } from '$lib/server/tools/serve';
 import type {
 	AnswerSpec,
@@ -93,6 +94,8 @@ export interface RequestDeps {
 	 * forward from it), so a cut-off reported as passed has passed.
 	 */
 	now?: Date;
+	/** Procurement tasks (ports.tasks); absent: no task is stored and the result still links the plan. */
+	tasks?: TaskStore;
 	/** The chef chose this delivery date instead of the one the words gave (a cut-off answer). Shown, never silent. */
 	deliverBy?: string;
 }
@@ -638,7 +641,26 @@ export async function runRequest(text: string, d: RequestDeps): Promise<RequestR
 			},
 			deliveryNote: d.kitchen.deliveryDays.includes(dow)
 				? null
-				: `${d.kitchen.name} takes deliveries on ${d.kitchen.deliveryDays.map(cap).join(', ')}; ${day(parsed.deliverBy)} is not one of them`
+				: `${d.kitchen.name} takes deliveries on ${d.kitchen.deliveryDays.map(cap).join(', ')}; ${day(parsed.deliverBy)} is not one of them`,
+			task: await taskForPlan({
+				tasks: d.tasks,
+				ctx: d.ctx,
+				now: d.now ?? new Date(),
+				plan,
+				title: text,
+				requirement: {
+					kind: 'order',
+					text,
+					deliverBy: parsed.deliverBy,
+					items: parsed.items.map((i) => ({
+						query: i.query,
+						qty: i.qty,
+						unit: i.unit,
+						constraints: i.constraints
+					}))
+				},
+				approval: approval?.state === 'pending' ? approval : null
+			})
 		};
 		const held = plan.lines.some((l) => l.state === 'held');
 		const nothingOrderable = plan.lines.every(
@@ -650,7 +672,12 @@ export async function runRequest(text: string, d: RequestDeps): Promise<RequestR
 			ms: ms(),
 			data: order
 		});
-		return { parsed: parsedView, lookup, order };
+		return {
+			parsed: parsedView,
+			lookup,
+			order,
+			message: 'This order is now in your Kitchen plan.'
+		};
 	} catch (e) {
 		const message = e instanceof Error ? e.message : String(e);
 		emit({ step: 'order', status: 'error', ms: ms(), data: null, message });

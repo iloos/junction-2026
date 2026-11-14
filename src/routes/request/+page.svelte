@@ -1,11 +1,5 @@
 <script lang="ts">
-	import {
-		ArrowRight,
-		RotateCcw,
-		TriangleAlert,
-		Check,
-		Repeat
-	} from '@lucide/svelte';
+	import { ArrowRight, RotateCcw, TriangleAlert, Check, Repeat } from '@lucide/svelte';
 	import { onMount } from 'svelte';
 	import { resolve } from '$app/paths';
 	import type { Plan } from '$lib/core/contracts';
@@ -990,6 +984,16 @@
 					<blockquote class="mt-2 border-l-2 border-rule-strong pl-3 text-body text-ink-3 italic">
 						Your mandate: “{order.kitchen.mandateWords}”
 					</blockquote>
+					<!-- eslint-disable svelte/no-navigation-without-resolve -- kitchen deep link with query, built from resolve('/') -->
+					<p class="mt-2 text-body text-ink" data-testid="order-in-kitchen">
+						This order is now in your Kitchen plan.
+						<a
+							href={resolve('/') + order.task.kitchenUrl.slice(1)}
+							class="inline-flex items-center gap-1 font-medium text-accent-ink underline"
+							>Open it in the Kitchen <ArrowRight size={14} aria-hidden="true" /></a
+						>
+					</p>
+					<!-- eslint-enable svelte/no-navigation-without-resolve -->
 				{/if}
 			</Step>
 

@@ -13,8 +13,17 @@ import {
 	type Plan,
 	type Result
 } from '$lib/core/contracts';
-import type { CallContext, Catalog, Llm, MenuStore, ToolHandlers } from '$lib/core/ports';
+import type {
+	CallContext,
+	Catalog,
+	Llm,
+	MenuStore,
+	TaskStore,
+	ToolHandlers
+} from '$lib/core/ports';
 import { serveTool } from '$lib/server/tools/serve';
+import { kitchenUrl, taskForPlan } from '$lib/server/request/task';
+export { kitchenUrl };
 import { proposeMenu } from './proposal';
 import { blocks, reviewProposal, type Issue } from './rubric';
 
@@ -42,6 +51,8 @@ export interface MenuPlanResult {
 	state: 'planned';
 	plan: Plan;
 	kitchenUrl: string;
+	/** The procurement task the plan belongs to; null when the server has no task store yet. */
+	taskId: string | null;
 }
 
 export async function menuView(
@@ -202,22 +213,12 @@ export async function acceptMenu(
 	return ok(await menuView(d, r.value));
 }
 
-/** The Kitchen page focused on one plan (the deep link Ops uses). */
-export function kitchenUrl(plan: Pick<Plan, 'kitchenId' | 'id' | 'version'>): string {
-	const q = new URLSearchParams({
-		kitchen: plan.kitchenId,
-		plan: plan.id,
-		v: String(plan.version)
-	});
-	return `/?${q}`;
-}
-
 /**
  * Plans an accepted revision through the tool gate as the chef: plan_event{proposal} checks the stored review and its
  * digest, and keeps every unresolved ingredient as a need with its reason.
  */
 export async function planMenu(
-	d: MenuDeps & { handlers: ToolHandlers; ctx: CallContext },
+	d: MenuDeps & { handlers: ToolHandlers; ctx: CallContext; tasks?: TaskStore },
 	o: { id: string; revision: number }
 ): Promise<Result<MenuPlanResult>> {
 	const p = await d.store.get(d.workspaceId, o.id, o.revision);
@@ -232,7 +233,21 @@ export async function planMenu(
 	);
 	if (r.ok) {
 		const plan = (r.value as { plan: Plan }).plan;
-		return ok({ state: 'planned', plan, kitchenUrl: kitchenUrl(plan) });
+		const task = await taskForPlan({
+			tasks: d.tasks,
+			ctx: d.ctx,
+			now: d.now(),
+			plan,
+			title: p.brief.title,
+			requirement: {
+				kind: 'event',
+				guests: p.brief.guests,
+				date: p.brief.date,
+				dietary: p.brief.dietary
+			},
+			proposal: { id: o.id, revision: o.revision }
+		});
+		return ok({ state: 'planned', plan, ...task });
 	}
 	return r;
 }
