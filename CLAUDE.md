@@ -31,7 +31,7 @@
 | [docs/STATUS.md](docs/STATUS.md) | lead | Now: what works, next 3 steps, traps. Rewritten each checkpoint. |
 | [docs/PLAN.md](docs/PLAN.md) | everyone, own lines only | The one plan: phases, roles, shifts, `[x] [~] [ ] [!]` markers |
 | [docs/DECISIONS.md](docs/DECISIONS.md) | anyone | `D#` · choice · why · what would reopen it. Append only. |
-| [docs/concept/](docs/concept/CONCEPT.md) | lead + team | CONCEPT (product), PRODUCT (personas, stories, flows, edge cases), SCORECARD (criteria → evidence) and ARCHITECTURE (contracts, lanes). Frozen at fan-out; changed only via the lead. |
+| [docs/concept/](docs/concept/CONCEPT.md) | lead + team | CONCEPT (product), PRODUCT (personas, stories, flows, edge cases), SCORECARD (criteria → evidence), ARCHITECTURE (contracts, lanes) and GROWTH (entities and gates from demo to Finland). Frozen at fan-out; changed only via the lead. |
 | [docs/foundations/](docs/foundations/README.md) | lead | Per-service notes (gemini, models, modal, data, mcp, ux, valio-data). Read before touching that service. |
 | docs/review/ | outside reviewers | Adversarial reviews and the prompt that produced them |
 | docs/lanes/<lane>.md | that lane | Brief, Needs, Report |

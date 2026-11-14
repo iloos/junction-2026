@@ -58,3 +58,19 @@ describe('auth: bearer key → CallContext', () => {
 		expect(noHeader?.actor.kind).toBe('chef');
 	});
 });
+
+describe('MCP_KEYS workspaces', () => {
+	it('puts judge keys in the judges sandbox unless the entry names a workspace', () => {
+		const t = keyTable(
+			{
+				MCP_KEYS:
+					'j1:external_agent:judge-key-0123456789ab,j2:external_agent:judge-key-ba9876543210:ws-other',
+				MANDATE_KEY_CHEF: 'chef-key-0123456789abcdef'
+			},
+			{ dev: false }
+		);
+		expect(t.find((e) => e.label === 'j1')?.workspaceId).toBe('ws-judges');
+		expect(t.find((e) => e.label === 'j2')?.workspaceId).toBe('ws-other');
+		expect(t.find((e) => e.actor === 'chef')?.workspaceId).toBeUndefined();
+	});
+});

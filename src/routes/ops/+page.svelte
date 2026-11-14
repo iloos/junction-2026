@@ -12,7 +12,7 @@
 
 	// Workspace links reload the page (data-sveltekit-reload), so one stream per page load is enough.
 	// svelte-ignore state_referenced_locally
-	const stream = new OpsStream(data.workspace);
+	const stream = new OpsStream(data.workspace, data.copies ? `&copies=${data.copies}` : '');
 	onMount(() => {
 		stream.start();
 		return () => stream.stop();
@@ -117,6 +117,11 @@
 					data-sveltekit-reload
 					href={resolve('/ops') + `?workspace=${data.synthWorkspace}`}
 					aria-current={data.simulated ? 'page' : undefined}>Simulated run</a
+				>
+				<a
+					data-sveltekit-reload
+					href={resolve('/ops') + '?workspace=ws-judges'}
+					aria-current={data.workspace === 'ws-judges' ? 'page' : undefined}>Judges' sandbox</a
 				>
 			</nav>
 		</div>
