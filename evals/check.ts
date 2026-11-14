@@ -217,6 +217,53 @@ const CHECKERS: Record<string, Checker> = {
 				: fail(key, `authority ${l.authority} ≠ ${w.authority}`);
 		}),
 
+	/** Exact multiset of quantities for a product across its lines (two dishes sharing a SKU). */
+	qtys: (want, end) =>
+		(want as { productId: string; qty: number[] }[]).map((w) => {
+			const key = `qtys[${w.productId}]`;
+			const have = end.lines
+				.filter((l) => l.productId === w.productId && l.state !== 'rejected')
+				.map((l) => l.qty ?? NaN)
+				.sort((a, b) => a - b);
+			const exp = [...w.qty].sort((a, b) => a - b);
+			return show(have) === show(exp) ? ok(key) : fail(key, `${show(have)} ≠ ${show(exp)}`);
+		}),
+
+	fulfilment: (want, end) =>
+		(want as Obj[]).map((w) => {
+			const key = `fulfilment[${w.label}]`;
+			const f = (end.fulfilment ?? []).find((x) => x.label === w.label);
+			if (!f) return fail(key, end.fulfilment ? 'no such need' : 'no fulfilment view');
+			const p: string[] = [];
+			const statuses = w.status === undefined ? [] : ([] as unknown[]).concat(w.status);
+			if (statuses.length && !statuses.includes(f.status)) p.push(`status ${f.status}`);
+			if (w.unresolvedMin !== undefined && f.unresolved < Number(w.unresolvedMin))
+				p.push(`unresolved ${f.unresolved} < ${w.unresolvedMin}`);
+			if (w.partition && Math.abs(f.partitionSum - f.required) > 1e-6)
+				p.push(`buckets sum ${f.partitionSum} ≠ required ${f.required}`);
+			if (w.confirmedMax !== undefined && f.supplierConfirmed > Number(w.confirmedMax))
+				p.push(`supplierConfirmed ${f.supplierConfirmed} > ${w.confirmedMax}`);
+			return p.length ? fail(key, p.join('; ')) : ok(key);
+		}),
+
+	lastVoided: (want, end) => {
+		const w = want as { includes?: { productId: string; change: string }[]; excludes?: string[] };
+		const diff = end.lastVoided;
+		if (!diff) return [fail('lastVoided', 'no voided-approval diff')];
+		return [
+			...(w.includes ?? []).map((x) =>
+				diff.some((d) => d.productId === x.productId && d.change === x.change)
+					? ok(`lastVoided+${x.productId}`)
+					: fail(`lastVoided+${x.productId}`, `no ${x.change} in ${show(diff)}`)
+			),
+			...(w.excludes ?? []).map((id) =>
+				diff.some((d) => d.productId === id)
+					? fail(`lastVoided-${id}`, 'listed as changed')
+					: ok(`lastVoided-${id}`)
+			)
+		];
+	},
+
 	previousRunKept: (want, end) => {
 		const kept = (end.previousRunOps ?? 0) > 0;
 		return [

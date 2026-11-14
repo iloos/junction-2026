@@ -1,0 +1,45 @@
+{
+	"id": "r6-3-amount-conflict",
+	"title": "place_order with a physical amount that contradicts the sales quantity (3 × 1 l cartons said to be 1 l) is refused as INVALID_INPUT, never silently resolved",
+	"stories": [],
+	"edgeCases": [],
+	"seeds": {
+		"kitchen": "k-hotel"
+	},
+	"clock": "2026-12-07T21:40:00+02:00",
+	"steps": [
+		{
+			"actor": "chef",
+			"action": "place_order",
+			"input": {
+				"deliverBy": "2026-12-10",
+				"idempotencyKey": "milk-conflict",
+				"lines": [
+					{
+						"productId": "464201",
+						"qty": 3,
+						"unit": "ST",
+						"amount": {
+							"value": 1,
+							"unit": "l"
+						}
+					}
+				]
+			}
+		}
+	],
+	"expect": {
+		"attempts": [
+			{
+				"step": 0,
+				"result": "error",
+				"error": "INVALID_INPUT"
+			}
+		],
+		"receipts": 0
+	},
+	"expectFail": {
+		"R6-units": ["attempts[0]"]
+	},
+	"notes": "R6 §2 (A2): the physical requirement is the demand authority; inconsistent dual inputs are rejected."
+}

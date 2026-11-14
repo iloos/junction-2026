@@ -174,18 +174,32 @@ export async function playScenario(s: Scenario): Promise<EndState> {
 				break;
 			}
 			case 'plan_event': {
-				const r = await h.plan_event(c, { kitchenId, eventId: inp.eventId });
+				const r = await h.plan_event(
+					c,
+					inp.proposal ? { kitchenId, proposal: inp.proposal } : { kitchenId, eventId: inp.eventId }
+				);
 				record(i, step, r);
-				if (r.ok) planKeys.set(inp.eventId, r.value.plan.id);
+				if (r.ok) planKeys.set(inp.eventId ?? inp.proposal.id, r.value.plan.id);
 				break;
 			}
 			case 'edit_line': {
 				const plan = await planFor(undefined);
+				// A proposal's ingredient is addressed by its stable id, which the need id must carry (lineage, R6 §1).
+				const byIngredient = inp.ingredientId
+					? plan?.needs.find((n) => n.id.includes(inp.ingredientId))?.id
+					: undefined;
+				if (!plan || (inp.ingredientId && !byIngredient)) {
+					record(i, step, {
+						ok: false,
+						error: { code: 'NOT_FOUND', retryable: false }
+					});
+					break;
+				}
 				const t0 = performance.now();
 				const r = await h.edit_line(c, {
-					planId: plan!.id,
-					version: plan!.version,
-					needId: inp.dish ? needIdFor(inp.dish) : undefined,
+					planId: plan.id,
+					version: plan.version,
+					needId: byIngredient ?? (inp.dish ? needIdFor(inp.dish) : undefined),
 					lineId: inp.lineId,
 					patch: inp.field === 'gServed' ? { gramsPerGuest: inp.value } : { [inp.field]: inp.value }
 				});
@@ -449,6 +463,24 @@ export async function playScenario(s: Scenario): Promise<EndState> {
 	const newest = plans[plans.length - 1];
 	const current = newest ? await h.get_plan(ctx('chef'), { planId: newest.id }) : null;
 	const ap = current?.ok ? current.value.approval : null;
+	const fv = current?.ok ? current.value.plan.view?.fulfilment : undefined;
+	const fulfilment = fv?.map((f) => ({
+		label: f.label,
+		status: f.status,
+		unit: f.required.unit,
+		required: f.required.value,
+		partitionSum:
+			f.supplierConfirmed.value +
+			f.awaitingSupplier.value +
+			f.plannedKnown.value +
+			f.plannedUnknown.value +
+			f.unresolved.value,
+		unresolved: f.unresolved.value,
+		supplierConfirmed: f.supplierConfirmed.value
+	}));
+	const lastVoided = current?.ok
+		? current.value.lastVoided?.diff.map((d) => ({ productId: d.productId, change: d.change }))
+		: undefined;
 	const approval = ap
 		? {
 				state: ap.state,
@@ -490,6 +522,8 @@ export async function playScenario(s: Scenario): Promise<EndState> {
 		wording: AVAILABILITY_WORDING,
 		recomputeMs,
 		approval,
+		fulfilment,
+		lastVoided,
 		orderLines: Object.values(final.orders).flatMap((o) =>
 			o.lines.map((l) => ({
 				productId: l.productId,

@@ -1,0 +1,128 @@
+{
+	"id": "r6-1-lineage",
+	"title": "Two dishes with the same name use the same salmon SKU: editing one dish's ingredient (by its stable id) changes only that dish's purchase, after reload",
+	"stories": [],
+	"edgeCases": [],
+	"seeds": {
+		"kitchen": "k-hotel"
+	},
+	"clock": "2026-12-07T21:40:00+02:00",
+	"steps": [
+		{
+			"actor": "chef",
+			"action": "plan_event",
+			"input": {
+				"proposal": {
+					"id": "p-two-soups",
+					"revision": 2,
+					"kitchenId": "k-hotel",
+					"status": "chef_reviewed",
+					"brief": {
+						"title": "Two salmon soups for 60",
+						"date": "2026-12-12",
+						"guests": 60,
+						"serviceStyle": "buffet",
+						"dietary": [],
+						"provenance": {
+							"source": "user"
+						}
+					},
+					"dishes": [
+						{
+							"id": "d-soup-a",
+							"name": "Lohikeitto",
+							"course": "soup",
+							"claimedCompatible": [],
+							"ingredients": [
+								{
+									"id": "i-soup-a-salmon",
+									"label": "Lohi",
+									"productId": "462150",
+									"amountPerCover": 80,
+									"unit": "g",
+									"yield": 1,
+									"provenance": {
+										"source": "llm",
+										"ref": "eval fixture"
+									}
+								}
+							],
+							"provenance": {
+								"source": "llm",
+								"ref": "eval fixture"
+							}
+						},
+						{
+							"id": "d-soup-b",
+							"name": "Lohikeitto",
+							"course": "soup",
+							"claimedCompatible": [],
+							"ingredients": [
+								{
+									"id": "i-soup-b-salmon",
+									"label": "Lohi",
+									"productId": "462150",
+									"amountPerCover": 80,
+									"unit": "g",
+									"yield": 1,
+									"provenance": {
+										"source": "llm",
+										"ref": "eval fixture"
+									}
+								}
+							],
+							"provenance": {
+								"source": "llm",
+								"ref": "eval fixture"
+							}
+						}
+					],
+					"open": [],
+					"provenance": {
+						"source": "llm",
+						"ref": "eval fixture"
+					},
+					"review": {
+						"by": {
+							"kind": "chef",
+							"id": "chef-1"
+						},
+						"at": "2026-12-07T21:40:00+02:00",
+						"digest": "eval"
+					}
+				}
+			}
+		},
+		{
+			"actor": "chef",
+			"action": "edit_line",
+			"input": {
+				"ingredientId": "i-soup-b-salmon",
+				"field": "gramsPerGuest",
+				"value": 200
+			}
+		}
+	],
+	"expect": {
+		"attempts": [
+			{
+				"step": 0,
+				"result": "ok"
+			},
+			{
+				"step": 1,
+				"result": "ok"
+			}
+		],
+		"qtys": [
+			{
+				"productId": "462150",
+				"qty": [10, 20]
+			}
+		]
+	},
+	"expectFail": {
+		"R6-lineage": ["attempts[0]", "attempts[1]", "qtys"]
+	},
+	"notes": "R6 §1 (A4/B). 60 × 80 g = 4.8 kg → one 10 kg lot each; soup B at 200 g = 12 kg → 20 kg. The adapter finds the need whose id contains the ingredient id, so need ids must carry ingredient lineage. The review record is supplied by the fixture until a server review command exists (then this scenario reviews through it). If lines are merged per SKU, assert per-need fulfilment instead of qtys."
+}

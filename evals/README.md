@@ -30,8 +30,8 @@ Vocabulary follows [D6](../docs/DECISIONS.md): the six-digit Valio `productId` i
 | action | input | meaning |
 |---|---|---|
 | `request` | `text`, `deliverBy` | natural-language order request |
-| `plan_event` | `eventId` | expand an event seed into lines |
-| `edit_line` | `dish` or `productId`, field, value | chef edits (e.g. g/guest); invalidates the quote and approvals |
+| `plan_event` | `eventId` or `proposal` (a MenuProposal) | expand an event seed into lines |
+| `edit_line` | `dish`, `ingredientId` (a proposal's stable id) or `lineId`, field, value | chef edits (e.g. g/guest); invalidates the quote and approvals |
 | `search` / `quote` | `query` / `productIds[]` | read-only lookups |
 | `place_order` | `lines[]`, `idempotencyKey` | creates a plan through the gate |
 | `approve` | `ref` (line or order), `terms` | approval bound to the exact terms shown |
@@ -77,12 +77,15 @@ Vocabulary follows [D6](../docs/DECISIONS.md): the six-digit Valio `productId` i
 | `attempts[]` | per `step` index: `action`, `result`, `error`, `retryable`, `applied`, `kind`; `chosen`/`notChosen` product ids; `closingNotBefore` (quote cut-offs) |
 | `approval` | the newest plan's open approval: `{state, covers[], excludes[]}` by product id, or `null` for none |
 | `orderLines[]` | committed order lines `{productId, authority: mandate \| approval}` |
+| `qtys[]` | `{productId, qty[]}`: the exact multiset of quantities across that product's lines (two dishes sharing a SKU) |
+| `fulfilment[]` | per need label from `get_plan` `plan.view.fulfilment`: `status` (one or a list), `unresolvedMin`, `confirmedMax`, `partition` (the five buckets sum to `required`) |
+| `lastVoided` | `get_plan` `lastVoided.diff`: `includes[{productId, change}]`, `excludes[productId]` |
 | `previousRunKept` | ops of runs before the last `reset` are still in the database |
 
 Line matchers also take `notState`, `notReasons` and `substituteFor`, `closingTime`; plan matchers take `minTotalCents`.
 
 ### Known gaps: `expectFail`
-`"expectFail": {"F9": ["lines[463860]", "attempts[3]"]}` names result keys (or a key prefix such as `lines`) that must **still fail**, keyed by the SYNTHESIS finding id. Everything else must pass. When a listed key starts passing the eval goes red ("F9 looks fixed, delete this expectFail entry"), and a prefix that matches no result is red too. A lane that fixes a finding deletes its entry in the same merge; that is the one part of `evals/` other lanes may edit. Expected facts never depend on a search order: assert the property (`notChosen`, `kind`, `excludes`) rather than the current first result where retrieval may change it.
+`"expectFail": {"F9": ["lines[463860]", "attempts[3]"]}` names result keys (or a key prefix such as `lines`) that must **still fail**, keyed by the SYNTHESIS finding id. Everything else must pass. When a listed key starts passing the eval goes red ("F9 looks fixed, delete this expectFail entry"), and a prefix that matches no result is red too. A lane that fixes a finding deletes its entry in the same merge; that is the one part of `evals/` other lanes may edit. An `expectFail` entry also hides any other mistake in the same expectation (a wrong unit stays invisible until the fix lands), so check expectations under a marker against a probe of today's state first. Expected facts never depend on a search order: assert the property (`notChosen`, `kind`, `excludes`) rather than the current first result where retrieval may change it.
 
 The runner reports pass/fail per key, so a partial build shows exactly which guarantee holds.
 
@@ -97,5 +100,6 @@ The runner reports pass/fail per key, so a partial build shows exactly which gua
 
 | `s6`–`s11` | ★2–★6 | shipped since Friday: hard limit, recall rescue, usual-product baseline, scenario dates, substitute preview vs apply, sandbox reset |
 | `r5-f5/f8/f9/f10/f11/f22` | review round 5 | one journey per finding, expected-fail until track A lands it |
+| `r6-1`…`r6-5` | review round 6 | lineage across same-named dishes, recipe AND + partial receipts, amount/qty conflict, menu review guard, one perturbed requirement |
 
 Seeds live in `fixtures/seeds/`: `kitchens.json` (k-hotel, k-lounas, k-central), `christmas-buffet-140.json` (with a hand-checked `rescue` section: one Stock option per real outage), `calendar-factors.json`.

@@ -1,0 +1,73 @@
+{
+	"id": "r6-2b-partial-receipts",
+	"title": "Two partial commits of one plan: the salmon is committed alone, then the rest; fulfilment counts every line once and never confirms more than is required",
+	"stories": [],
+	"edgeCases": [],
+	"seeds": {
+		"kitchen": "k-hotel",
+		"event": "event-xmas-140"
+	},
+	"clock": "2026-12-07T21:40:00+02:00",
+	"steps": [
+		{
+			"actor": "chef",
+			"action": "plan_event",
+			"input": {
+				"eventId": "event-xmas-140"
+			}
+		},
+		{
+			"actor": "approver",
+			"action": "approve",
+			"input": {
+				"ref": "plan:event-xmas-140"
+			}
+		},
+		{
+			"actor": "chef",
+			"action": "commit",
+			"input": {
+				"ref": {
+					"productId": "462150"
+				},
+				"idempotencyKey": "part-1"
+			}
+		},
+		{
+			"actor": "chef",
+			"action": "commit",
+			"input": {
+				"ref": "plan:event-xmas-140",
+				"idempotencyKey": "part-2"
+			}
+		}
+	],
+	"expect": {
+		"attempts": [
+			{
+				"step": 2,
+				"result": "receipt"
+			},
+			{
+				"step": 3,
+				"result": "receipt"
+			}
+		],
+		"receipts": 2,
+		"fulfilment": [
+			{
+				"label": "Graavilohi (cured salmon), cured in-house",
+				"partition": true,
+				"confirmedMax": 11.53
+			},
+			{
+				"label": "Joulutorttu (prune star tart)",
+				"partition": true
+			}
+		]
+	},
+	"expectFail": {
+		"R6-fulfilment": ["fulfilment"]
+	},
+	"notes": "R6 §3 (A2): receipts join through order-line identity; a retry or a second partial receipt can't double-count. Salmon need 11.53 kg (lot rounding buys 20 kg; the 8.47 kg is excess, never cover)."
+}

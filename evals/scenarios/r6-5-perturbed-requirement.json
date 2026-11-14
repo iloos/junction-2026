@@ -1,0 +1,80 @@
+{
+	"id": "r6-5-perturbed-requirement",
+	"title": "Mid-plan the chef raises cured salmon from ~82 to 160 g per guest after rescuing the ham and approving: the salmon resizes, the ham rescue stays, the approval is voided with a diff naming only the salmon, and the dishes nothing can cover stay visible",
+	"stories": [],
+	"edgeCases": [],
+	"seeds": {
+		"kitchen": "k-hotel",
+		"event": "event-xmas-140"
+	},
+	"clock": "2026-12-07T21:40:00+02:00",
+	"steps": [
+		{
+			"actor": "chef",
+			"action": "plan_event",
+			"input": {
+				"eventId": "event-xmas-140"
+			}
+		},
+		{
+			"actor": "chef",
+			"action": "find_substitutes",
+			"input": {
+				"productId": "462490"
+			}
+		},
+		{
+			"actor": "approver",
+			"action": "approve",
+			"input": {
+				"ref": "plan:event-xmas-140"
+			}
+		},
+		{
+			"actor": "chef",
+			"action": "edit_line",
+			"input": {
+				"dish": "Graavilohi (cured salmon), cured in-house",
+				"field": "gServed",
+				"value": 160
+			}
+		}
+	],
+	"expect": {
+		"lines": [
+			{
+				"productId": "462150",
+				"qty": 30,
+				"unit": "KG"
+			},
+			{
+				"productId": "476768",
+				"qty": 13,
+				"unit": "ST",
+				"substituteFor": "462490"
+			}
+		],
+		"approvalStates": ["granted", "invalidated", "pending"],
+		"residualShortfall": [
+			{
+				"dish": "Lanttulaatikko (swede casserole)"
+			},
+			{
+				"dish": "Joulutorttu (prune star tart)"
+			}
+		],
+		"lastVoided": {
+			"includes": [
+				{
+					"productId": "462150",
+					"change": "qty"
+				}
+			],
+			"excludes": ["476768"]
+		}
+	},
+	"expectFail": {
+		"R6-diff": ["lastVoided"]
+	},
+	"notes": "R6 §5 / product direction: one perturbed task, scripted now; E runs the model policy on the same task later. 140 × 160 g = 22.4 kg → 30 kg in 10 kg lots. The diff is T0's get_plan lastVoided (not yet filled)."
+}

@@ -122,6 +122,19 @@ export interface EndState {
 	approval?: { state: string; productIds: string[] } | null;
 	/** Committed order lines with who allowed each: the mandate, an approval, or unrecorded (F8). */
 	orderLines?: { productId: string; authority: 'mandate' | 'approval' | 'unrecorded' }[];
+	/** The newest plan's FulfilmentView per need (get_plan `plan.view.fulfilment`), when the server fills it. */
+	fulfilment?: {
+		label: string;
+		status: string;
+		unit: string;
+		required: number;
+		/** supplierConfirmed + awaitingSupplier + plannedKnown + plannedUnknown + unresolved */
+		partitionSum: number;
+		unresolved: number;
+		supplierConfirmed: number;
+	}[];
+	/** What changed since the newest plan's last voided approval (get_plan `lastVoided.diff`). */
+	lastVoided?: { productId?: string; change: string }[];
 	/** Ops left in runs before the last reset (kept for audit). */
 	previousRunOps?: number;
 }
