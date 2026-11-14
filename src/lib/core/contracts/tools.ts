@@ -12,6 +12,7 @@ import { Offer, Product, SubstituteKind } from './product';
 import { TaskLedger } from './task';
 import { EventBrief, MenuProposal } from './event';
 import { IsoDate, KitchenId, Measure, ProductId, Provenance, SalesQty } from './primitives';
+import { KitchenCreated } from './events';
 
 /**
  * One tool registry, exposed three ways: MCP (`/mcp`), REST (`/api/tools/<name>`) and OpenAPI (`/api/openapi.json`).
@@ -573,6 +574,19 @@ export const toolSchemas = {
 				z.object({ id: z.string(), severity: z.enum(['block', 'warn']), text: z.string() })
 			)
 		})
+	},
+	create_kitchen: {
+		scope: 'plan',
+		description:
+			'Make a new kitchen (a store or site) owned by the visitor who asks: copied from the nearest sample kitchen of `profile` (its rules, usual order and history, copied, never linked), or blank with default rules the chef can edit when no profile is given. Only that visitor can plan, order or approve for it.',
+		input: z.object({
+			name: z.string().trim().min(1).max(60),
+			/** A sample kitchen kind to copy (city_hotel, lunch_restaurant, cafe…); absent: a blank kitchen. */
+			profile: z.string().trim().min(1).max(40).optional(),
+			description: z.string().trim().max(300).optional(),
+			city: z.string().trim().min(1).max(60).optional()
+		}),
+		output: out({ kitchen: KitchenCreated })
 	},
 	get_outcome: {
 		scope: 'read',

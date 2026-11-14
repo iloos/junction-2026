@@ -72,6 +72,8 @@ export const Kitchen = z.object({
 	usualProducts: z.array(ProductId).optional(),
 	/** The seeded kitchen a visitor's store was copied from (D24): copied, never linked. */
 	copiedFrom: KitchenId.optional(),
+	/** The chef's own words about a kitchen they made (D25). */
+	description: z.string().max(300).optional(),
 	/** The visitor who owns a room store (a hashed id, never shown). Absent: a seeded kitchen anyone in the room may use. */
 	owner: z.string().max(80).optional()
 });

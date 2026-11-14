@@ -21,6 +21,7 @@ import { lineView } from '../mandate/view';
 import { withPlanView } from './views';
 import { quote, searchProducts } from './quote';
 import { findSubstitutes } from './substitutes';
+import { createKitchen } from './kitchens';
 
 type Impl<N extends ToolName> = (
 	ports: ServicePorts,
@@ -54,6 +55,7 @@ const IMPLS: { [N in Exclude<ToolName, ServedElsewhere>]: Impl<N> } = {
 	quote,
 	plan_event: planEvent,
 	place_order: placeOrder,
+	create_kitchen: createKitchen,
 	edit_line: editLine,
 	find_substitutes: findSubstitutes,
 	get_plan: getPlan,
@@ -136,6 +138,44 @@ async function outsideGrant(ports: ServicePorts, ctx: CallContext, input: unknow
 		: null;
 }
 
+/** Kitchen ids an input names, directly or through a plan or approval. */
+async function kitchensNamed(ports: ServicePorts, ctx: CallContext, input: unknown) {
+	const refs = refsOf(input);
+	const kitchens = [...refs.kitchenIds];
+	if (refs.planIds.length || refs.approvalIds.length) {
+		const state = await ports.store.load(ctx.workspaceId, ctx.runId);
+		for (const id of refs.approvalIds) {
+			const planId = state.approvals[id]?.planId;
+			if (planId) refs.planIds.push(planId);
+		}
+		for (const id of refs.planIds) {
+			const k = state.plans[id]?.kitchenId;
+			if (k) kitchens.push(k);
+		}
+	}
+	return kitchens;
+}
+
+/**
+ * D24: a kitchen a visitor made takes writes (plan, order, approve, edit) only from that visitor. Fails closed: a
+ * door that did not say which visitor it acts for (ctx.visitor absent) is refused on an owned kitchen. Reads stay
+ * open (the room watches every store); seeded kitchens (no owner) are unchanged.
+ */
+async function notOwner(ports: ServicePorts, ctx: CallContext, scope: string, input: unknown) {
+	if (scope === 'read') return null;
+	const named = await kitchensNamed(ports, ctx, input);
+	if (!named.length) return null;
+	const owned = new Map(
+		(await ports.store.kitchens(ctx.workspaceId)).filter((k) => k.owner).map((k) => [k.id, k])
+	);
+	const k = named.map((id) => owned.get(id)).find((k) => k && k.owner !== ctx.visitor);
+	return k
+		? err('FORBIDDEN', `${k.name} belongs to another visitor: only its owner can change it`, {
+				sub: 'store_owner'
+			})
+		: null;
+}
+
 export function createHandlers(ports: ServicePorts): ToolHandlers {
 	const out = {} as Record<
 		ToolName,
@@ -154,7 +194,9 @@ export function createHandlers(ports: ServicePorts): ToolHandlers {
 			const parsed = schema.input.safeParse(input);
 			if (!parsed.success) return invalid(parsed.error.issues);
 			try {
-				const denied = await outsideGrant(ports, ctx, parsed.data);
+				const denied =
+					(await outsideGrant(ports, ctx, parsed.data)) ??
+					(await notOwner(ports, ctx, schema.scope, parsed.data));
 				if (denied) return denied;
 				const r = await impl(ports, ctx, parsed.data as ToolInput<ToolName>);
 				return r.ok ? ok(await withViews(ports, ctx, r.value)) : r;

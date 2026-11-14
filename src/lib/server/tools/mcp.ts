@@ -32,7 +32,8 @@ export const TITLES: Record<ToolName, string> = {
 	lookup_facts: 'Look up product facts on the web (sourced)',
 	find_outside: 'Find options outside the catalogue (sourced)',
 	check_recall: 'Check recall notices for a product',
-	read_image: 'Read a photo of a list, delivery note or label'
+	read_image: 'Read a photo of a list, delivery note or label',
+	create_kitchen: 'Make your own kitchen (copied from a sample, or blank)'
 };
 
 /** Tools that reach outside our own data: Valio's live terms and the web (Exa, the recall monitor, the menu model). */
