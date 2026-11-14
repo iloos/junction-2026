@@ -1,0 +1,68 @@
+/* The system map on /how: five zones, a detail panel, and one recorded order line traced through them.
+   Mounts on [data-system-map]; tokens from /site.css (dark theme). */
+.smap { --ease: cubic-bezier(0.16, 1, 0.3, 1); margin: 0 0 24px; }
+.smap-head h2 { font-size: clamp(26px, 3vw, 36px); line-height: 1.1; letter-spacing: -0.025em; font-weight: 600; margin: 0 0 10px; max-width: 24ch; }
+.smap-head p { margin: 0 0 32px; color: var(--ink-2); max-width: 56ch; font-size: 16.5px; text-wrap: pretty; }
+
+/* the diagram */
+.smap-grid { display: grid; gap: 10px; }
+@media (min-width: 900px) {
+	.smap-grid { grid-template-columns: 1.1fr 0.85fr 1.3fr 1fr; grid-template-areas: 'doors gate rules store' '. . ports .'; column-gap: 34px; row-gap: 34px; align-items: stretch; }
+	.zone.z-doors { grid-area: doors; } .zone.z-gate { grid-area: gate; } .zone.z-rules { grid-area: rules; } .zone.z-store { grid-area: store; } .zone.z-ports { grid-area: ports; }
+	.zone.z-gate, .zone.z-rules, .zone.z-store, .zone.z-ports { position: relative; }
+	.z-gate::before, .z-rules::before, .z-store::before { content: ''; position: absolute; left: -35px; top: 50%; width: 34px; height: 1px; background: var(--rule-strong); }
+	.z-ports::before { content: ''; position: absolute; left: 50%; top: -35px; width: 1px; height: 34px; background: var(--rule-strong); }
+}
+.zone { all: unset; box-sizing: border-box; display: grid; align-content: start; gap: 10px; padding: 16px 18px; border: 1px solid var(--rule); border-radius: 14px; background: var(--sheet); cursor: pointer; color: var(--ink-2); transition: border-color 0.3s var(--ease), background 0.3s var(--ease), opacity 0.3s var(--ease); }
+.zone:hover { border-color: var(--rule-strong); }
+.zone:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.zone .zt { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.zone .zt b { font-size: 16px; font-weight: 600; color: var(--ink); letter-spacing: -0.01em; }
+.zone .zt span { font-size: 12.5px; color: var(--ink-3); }
+.zone ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; font-size: 14px; line-height: 1.4; }
+.zone li { display: flex; gap: 8px; align-items: baseline; }
+.zone li::before { content: ''; width: 4px; height: 4px; border-radius: 50%; background: var(--rule-strong); flex: none; transform: translateY(-2px); }
+.zone[aria-pressed='true'] { border-color: var(--accent); background: color-mix(in oklab, var(--accent) 8%, var(--sheet)); }
+.zone.lit { border-color: var(--c, var(--accent)); background: color-mix(in oklab, var(--c, var(--accent)) 10%, var(--sheet)); }
+.smap.tracing .zone:not(.lit) { opacity: 0.45; }
+.z-ports ul { grid-template-columns: 1fr 1fr; column-gap: 12px; }
+
+/* the panel under the diagram: a zone's detail, or the trace caption */
+.smap-panel { margin-top: 18px; padding: 20px 22px; border: 1px solid var(--rule); border-radius: 14px; background: var(--paper); min-height: 132px; }
+.smap-panel h3 { margin: 0 0 6px; font-size: 18px; font-weight: 600; letter-spacing: -0.01em; }
+.smap-panel .lead { margin: 0 0 14px; color: var(--ink-2); font-size: 15.5px; max-width: 70ch; }
+.mech { display: grid; border-top: 1px solid var(--rule); }
+.mech > div { display: grid; gap: 4px 18px; padding: 12px 0; border-bottom: 1px solid var(--rule); }
+@media (min-width: 760px) { .mech > div { grid-template-columns: 1.1fr 1.4fr 84px; align-items: baseline; } }
+.mech b { font-weight: 600; font-size: 15px; color: var(--ink); }
+.mech span { font-size: 14.5px; color: var(--ink-2); }
+.mech code { font-size: 12.5px; background: none; border: 0; padding: 0; color: var(--ink-3); white-space: nowrap; }
+.mech .st { justify-self: start; font-size: 12px; font-weight: 500; padding: 4px 8px; border-radius: 999px; background: var(--well); color: var(--ink-2); white-space: nowrap; }
+.mech .st.live { background: var(--ok-wash); color: var(--ok); }
+.smap-panel .hint { font-size: 14px; color: var(--ink-3); margin: 0; }
+
+/* the trace: scroll moves one recorded line through the zones */
+.smap-track { position: relative; }
+.smap-stage { position: sticky; top: 0; min-height: 100svh; display: grid; align-content: center; padding: 24px 0; }
+.trace-cap { display: grid; gap: 8px; }
+.trace-cap .n { font-size: 13px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.trace-cap .t { font-size: 18px; line-height: 1.4; color: var(--ink); letter-spacing: -0.01em; max-width: 64ch; text-wrap: pretty; }
+.trace-cap .x { font-size: 14px; color: var(--ink-3); max-width: 70ch; }
+.trace-cap .chip { justify-self: start; display: inline-flex; align-items: center; gap: 8px; font-size: 13.5px; font-weight: 500; padding: 6px 11px; border-radius: 999px; }
+.trace-cap .chip::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.trace-cap .chip.wait { color: var(--warn); background: var(--warn-wash); }
+.trace-cap .chip.ok { color: var(--ok); background: var(--ok-wash); }
+.trace-cap .q { font: 500 0.92em 'IBM Plex Mono', ui-monospace, monospace; font-variant-numeric: tabular-nums; background: var(--well); border: 1px solid var(--rule); border-radius: 5px; padding: 1px 6px; white-space: nowrap; }
+.trace-bar { display: flex; gap: 4px; margin-top: 14px; }
+.trace-bar i { flex: 1; height: 3px; border-radius: 2px; background: var(--rule); transition: background 0.3s var(--ease); }
+.trace-bar i.on { background: var(--ink-3); }
+.trace-list { margin: 18px 0 0; padding-left: 20px; color: var(--ink-2); font-size: 15px; display: grid; gap: 8px; }
+
+@media (max-width: 899px) {
+	.zone { padding: 12px 14px; gap: 6px; }
+	.zone ul { font-size: 13.5px; }
+	.smap.tracing .zone ul { display: none; }
+	.smap-stage { align-content: start; padding-top: 16px; }
+	.trace-cap .t { font-size: 16.5px; }
+}
+@media (prefers-reduced-motion: reduce) { .zone, .trace-bar i { transition: none; } }
