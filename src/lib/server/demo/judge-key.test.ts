@@ -26,7 +26,10 @@ describe('judge keys', () => {
 		const key = keys.mint(ws, later)!;
 		const [, exp, mac] = key.split('.');
 		expect(keys.verify(`jk_${other}.${exp}.${mac}`, new Date())).toBeNull();
-		expect(keys.verify(`jk_${ws}.${exp}.${mac.slice(0, -1)}A`, new Date())).toBeNull();
+		// Flip a character to a different one; replacing the last with 'A' was a no-op whenever it already was 'A'.
+		const flip = (c: string) => (c === 'A' ? 'B' : 'A');
+		const tampered = mac.slice(0, 20) + flip(mac[20]) + mac.slice(21);
+		expect(keys.verify(`jk_${ws}.${exp}.${tampered}`, new Date())).toBeNull();
 		expect(keys.verify(`jk_${ws}.${Number(exp) + 3600}.${mac}`, new Date())).toBeNull();
 		expect(keys.verify(key, new Date(later.getTime() + 1000))).toBeNull();
 		expect(keys.verify(`jk_ws-judges.${exp}.${mac}`, new Date())).toBeNull();
