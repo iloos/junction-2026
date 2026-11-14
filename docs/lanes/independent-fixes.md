@@ -23,7 +23,7 @@ Core ports/contracts, DB schema/migrations, shared handler/scope wiring, package
 
 ## Small commits
 - [x] Keep failed persistence dirty and make the durability barrier reject failures; serialize writes so stale completion cannot win.
-- [ ] Initialize durable web state before enqueue and refuse acknowledgement on failed persistence.
+- [x] Initialize durable web state before enqueue and refuse acknowledgement on failed persistence.
 - [ ] Read claimed recall work from the database so a second worker can process it; fix only related queue/retry seams.
 
 ## Acceptance
@@ -39,4 +39,5 @@ Core ports/contracts, DB schema/migrations, shared handler/scope wiring, package
 
 ## Report
 - Started from `8844465`; implementation and checks pending.
-- 23:00 · done: persistence retry/order/snapshot fixes; 13 targeted tests passed (8 new + 5 existing), check/lint GREEN · needs: retire R8-web-write at integration · ready: yes with the eval-map update. No live services or dataset required.
+- 23:00 · done: persistence retry/order/snapshot fixes (`2306b0f`); 13 targeted tests passed (8 new + 5 existing), check/lint GREEN · needs: retire R8-web-write at integration · ready: yes with the eval-map update. No live services or dataset required.
+- 23:06 · done: webhook cold-start/failure acknowledgement; 13 signed-request tests passed, including startup/write recovery on redelivery; check 0 errors/warnings. `ADV_SHOW=1` R8-web-write passed as an ordinary test. No external calls.

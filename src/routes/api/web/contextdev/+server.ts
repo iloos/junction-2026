@@ -1,5 +1,5 @@
 import { env } from '$env/dynamic/private';
-import { stateWrites } from '$lib/server/web/persist';
+import { retryStateWrites } from '$lib/server/web/persist';
 import { json } from '$lib/server/tools/http';
 import {
 	sameSecret,
@@ -18,13 +18,14 @@ import {
 } from '$lib/server/web';
 import { fail } from '$lib/server/web/route';
 import { busTrace, drain, enqueueChange } from '$lib/server/web/watch';
+import { errMsg, log } from '$lib/server/obs/log';
 import type { RequestHandler } from './$types';
 
 /**
  * POST /api/web/contextdev: Context.dev monitor webhook. Accepted when `X-Context-Signature` verifies
  * against CONTEXT_DEV_WEBHOOK_SECRET (Context.dev deliveries) or `x-mandate-webhook-secret` equals it
  * (our scripts).
- * - `change.detected`: the change is written to the recall work queue on disk, then answered 202; the
+ * - `change.detected`: the change is written to the shared recall work queue, then answered 202; the
  *   notices are read and recorded in the background and the anomalies arrive on the op stream. A read
  *   that fails stays queued.
  * - `run.completed`: works the queue and re-reads the list (at most hourly), so a failed read heals on
@@ -45,13 +46,29 @@ export const POST: RequestHandler = async ({ request }) => {
 	} catch {
 		return fail('INVALID_INPUT', 'body is not JSON', 400);
 	}
-	const queue = queueFor(env);
+	if (!event || typeof event !== 'object' || Array.isArray(event))
+		return fail('INVALID_INPUT', 'body must be a webhook object', 400);
 	const isChange = event.event === 'change.detected';
-	// Recorded before any await that can fail (the memory map, written through to Postgres): a 202 never
-	// loses the change.
-	const queued = isChange ? enqueueChange(event, queue) : [];
-	await webStateReady(env);
-	await stateWrites();
+	let queue: ReturnType<typeof queueFor>;
+	let pg: ReturnType<typeof webPg>;
+	let queued: string[];
+	try {
+		// Attach the shared sink before enqueue, including the first request after a restart.
+		await webStateReady(env);
+		pg = webPg();
+		if (!pg) throw new Error('Shared recall storage is unavailable');
+		queue = queueFor(env);
+		queued = isChange ? enqueueChange(event, queue) : [];
+		await retryStateWrites();
+	} catch (e) {
+		log.error('web.webhook_persistence_failed', { error: errMsg(e) });
+		return fail(
+			'PROVIDER_UNAVAILABLE',
+			'Recall storage is unavailable; retry this webhook.',
+			503,
+			true
+		);
+	}
 	const receivedAt = new Date().toISOString();
 
 	let targets: Awaited<ReturnType<typeof recallTargets>>;
@@ -66,7 +83,6 @@ export const POST: RequestHandler = async ({ request }) => {
 	}
 	const findings = findingsFor(env);
 	const applications = applicationsFor(env);
-	const pg = webPg();
 	const owner = `${process.pid}:${receivedAt}`;
 	void (async () => {
 		// The notices are read once (first target); every target then gets them applied from the read.
