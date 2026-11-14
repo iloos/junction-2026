@@ -132,7 +132,11 @@ export async function planUsual(workspaceId: string, body: unknown): Promise<Pla
 	const b = parsed.data;
 	try {
 		const r = await inKitchen(workspaceId, b.kitchenId, async () => {
-			const ctx = contextFor('chef', 'kitchen-ui', 'kitchen', env, workspaceId);
+			// The usual-order door: the plan records it (Plan.origin, server-set, never from the request).
+			const ctx = {
+				...contextFor('chef', 'kitchen-ui', 'kitchen', env, workspaceId),
+				origin: 'usual' as const
+			};
 			return planUsualOrder(
 				handlers,
 				ctx,
