@@ -76,3 +76,5 @@ The user questioned Flash-Lite everywhere. D measured each router job on our own
 
 ### D6 amendment · Valio's availability semantics confirmed (Valio Aimo mentor, event Discord, 14 Nov)
 Availability ≥ 999999 = **unknown**, and orders of any quantity are allowed (so every such sentinel maps to `unknown`, not only Terminal 999999; 8d). Empty = not available. `closingTime` = the cut-off for `availableDate`. `allowedLotSize` 0.01 → 1. HTTP 429 = a 30 s block. The "unlimited is an assumption" note in D6 is closed: it is unknown, and unknown never counts as cover. Reopen if: Valio publishes real quantities above the sentinel.
+
+**D3 amendment (14 Nov evening):** the database and the app run in AWS `eu-central-1` (Frankfurt) on Aiven, not a Finnish region; pgvector is enabled but unused. Claim "EU (Frankfurt)", never Finland. See [concept/PRIVACY.md](concept/PRIVACY.md).
