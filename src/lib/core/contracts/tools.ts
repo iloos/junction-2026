@@ -11,7 +11,16 @@ import {
 import { Offer, Product, SubstituteKind } from './product';
 import { TaskLedger } from './task';
 import { EventBrief, MenuProposal } from './event';
-import { IsoDate, KitchenId, Measure, ProductId, Provenance, SalesQty } from './primitives';
+import {
+	Cents,
+	IsoDate,
+	KitchenId,
+	Measure,
+	MeasureUnit,
+	ProductId,
+	Provenance,
+	SalesQty
+} from './primitives';
 import { KitchenCreated } from './events';
 
 /**
@@ -333,6 +342,21 @@ export const toolSchemas = {
 			 */
 			requirements: NeedRequirements.optional(),
 			/**
+			 * D28: the chef steers the alternatives. organic adds the label as a requirement for this call; pack keeps
+			 * bigger or smaller packs than the planned product; sameBrand keeps its brand; differentKind looks beyond the
+			 * dish's own candidates (only a chef asks for another kind); text searches the catalogue with the chef's words.
+			 * A steered call is a preview unless `apply` is true.
+			 */
+			steer: z
+				.object({
+					organic: z.boolean().optional(),
+					pack: z.enum(['bigger', 'smaller']).optional(),
+					sameBrand: z.boolean().optional(),
+					differentKind: z.boolean().optional(),
+					text: z.string().trim().min(1).max(120).optional()
+				})
+				.optional(),
+			/**
 			 * Apply the recommendation to the plan: replaces the dish's current substitute and voids the approval.
 			 * Default: apply when the dish has no substitute yet and no per-call rules are given; otherwise preview.
 			 */
@@ -365,6 +389,24 @@ export const toolSchemas = {
 					bestTry: z.object({ relaxes: z.enum(['origin', 'labels']) }).optional()
 				})
 			),
+			/**
+			 * D28: up to four ranked alternatives after the pick, each with one reason, its supply and its price per kg
+			 * or l (when the pack content is known), for the compare panel.
+			 */
+			alternatives: z
+				.array(
+					z.object({
+						productId: ProductId,
+						productName: z.string().optional(),
+						reason: z.string().max(120),
+						supply: z.string(),
+						pricePer: z.object({ cents: Cents, per: MeasureUnit }).optional(),
+						/** Sized to the line's need, in the product's sales units, and what that costs. */
+						qty: z.object({ value: z.number(), unit: z.string() }).optional(),
+						totalCents: Cents.optional()
+					})
+				)
+				.optional(),
 			labourNote: z.string().optional(),
 			residual: Measure.optional(),
 			/** Why the pick is not what the kitchen prefers, in words ("no Finnish in stock: picked Swedish"). */
