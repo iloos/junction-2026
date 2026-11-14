@@ -93,7 +93,9 @@
 							? c.kind === 'undeliverable'
 								? 'text-undeliv'
 								: 'text-out'
-							: 'text-ink'}"
+							: c.cautions?.length
+								? 'text-signoff'
+								: 'text-ink'}"
 					>
 						{c.verdict}
 						{#if c.chosen}<span class="text-accent-ink"> · in your order</span>{/if}
@@ -180,7 +182,9 @@
 												: c.rejected.includes('unknown')
 													? 'text-ink-2'
 													: 'text-out'
-											: 'text-ink'}
+											: c.cautions?.length
+												? 'text-signoff'
+												: 'text-ink'}
 									>
 										{c.verdict}
 									</div>

@@ -319,6 +319,7 @@ export async function findSubstitutes(
 			.filter((r) => r.rank !== null && (judged.violates.get(r.productId) ?? 0) > VIOLATES_P)
 			.map((r) => r.productId)
 	);
+	const cautions = new Map<string, string>();
 	if (flagged.size) {
 		const inRank = ranked.filter((x) => x.rank !== null).sort((a, b) => a.rank! - b.rank!);
 		const tierAt = (r: (typeof inRank)[number]) => inRank.findIndex((x) => x.supply === r.supply);
@@ -334,8 +335,10 @@ export async function findSubstitutes(
 		const constraints = hardConstraints.join(', ') || 'a hard constraint';
 		for (const r of ranked.filter((x) => flagged.has(x.productId))) {
 			r.rejectedReasons = [MODEL_CAUTION];
-			if (r.score?.fit)
-				r.score.fit.provenance.note = `${r.score.fit.provenance.note ?? ''}; Gemini: may break ${constraints} (p ${judged.violates.get(r.productId)!.toFixed(2)}), ${known(r.productId) ? 'catalogue declares no such allergen' : 'catalogue has no record'}, check`;
+			cautions.set(
+				r.productId,
+				`Gemini: may break ${constraints} (p ${judged.violates.get(r.productId)!.toFixed(2)}), ${known(r.productId) ? 'catalogue declares no such allergen' : 'catalogue has no record'}, check`
+			);
 		}
 	}
 	if (input.requireOrigin) {
@@ -357,6 +360,7 @@ export async function findSubstitutes(
 			rank: r.rank,
 			score: r.score,
 			rejectedReasons: r.rejectedReasons as string[],
+			...(cautions.has(r.productId) ? { caution: cautions.get(r.productId) } : {}),
 			fromValioRule: r.fromValioRule
 		})),
 		...unsized.map((productId) => ({

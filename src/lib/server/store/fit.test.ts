@@ -159,7 +159,7 @@ describe('rescue batch (Decide.batch): fit, constraint check and origin in one c
 		// Not rejected: still ranked (it is the only in-stock ham, so still first of its supply tier).
 		expect(palvi.rank).not.toBeNull();
 		expect(palvi.rejectedReasons).toEqual(['CAUTION.model_constraint']);
-		expect(palvi.score?.fit?.provenance.note).toMatch(/Gemini: may break .* \(p 0\.97\).*check/);
+		expect(palvi.caution).toMatch(/^Gemini: may break .* \(p 0\.97\).*check$/);
 		expect(palvi.score?.fit?.provenance.note).toMatch(/conf 0\.90.*Finnish origin p 0\.93/);
 		// Chosen, so its line is held for a human: never within the mandate.
 		const line = r.chosen.find((l) => l.productId === '476768')!;
@@ -203,7 +203,8 @@ describe('rescue batch (Decide.batch): fit, constraint check and origin in one c
 		const lohi = r.candidates.find((c) => c.productId === '472048')!;
 		expect(lohi.rank).not.toBeNull();
 		expect(lohi.rejectedReasons).toEqual(['CAUTION.model_constraint']);
-		expect(lohi.score?.fit?.provenance.note).toMatch(/via replay.*p 0\.51/);
+		expect(lohi.score?.fit?.provenance.note).toMatch(/via replay/);
+		expect(lohi.caution).toMatch(/p 0\.51/);
 		// Demoted after the unflagged candidates of its supply tier.
 		const ranked = r.candidates.filter((c) => c.rank !== null).sort((a, b) => a.rank! - b.rank!);
 		expect(ranked.at(-1)?.productId).toBe('472048');

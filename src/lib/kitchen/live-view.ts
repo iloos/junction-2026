@@ -104,6 +104,8 @@ function verdict(c: CandidateView): string {
 		return 'Rejected: not enough in stock for the need';
 	if (c.rejected.includes('low_reliability')) return 'Rejected: delivery reliability below 0.7';
 	if (c.rejected.length) return `Rejected: ${c.rejected.join(', ')}`;
+	if (c.cautions?.length)
+		return `Caution: ${c.cautionNote ?? 'Gemini flags a hard constraint, check'} · needs sign-off`;
 	if (c.kind === 'unknown') return 'Terminal: unknown quantity never counts as cover';
 	if (c.partial) return `Partial: covers ${f1(c.coverValue)} kg`;
 	if (c.tier === 'sign_off') return 'Known stock for the whole need · needs sign-off';
@@ -146,7 +148,9 @@ function candidateViews(
 			partial,
 			rank: c.rank,
 			score: c.score as ScoreBreakdown | undefined,
-			rejected: c.rejectedReasons,
+			rejected: c.rejectedReasons.filter((r) => !r.startsWith('CAUTION.')),
+			cautions: c.rejectedReasons.filter((r) => r.startsWith('CAUTION.')),
+			cautionNote: c.caution,
 			holdReasons: line ? line.reasons.filter((r) => r !== 'UNKNOWN_REQUIRED') : [],
 			tier: line?.tier ?? (c.rank ? 'propose' : 'act'),
 			chosen: isChosen,

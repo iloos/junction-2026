@@ -67,6 +67,8 @@ export const ProposeSubstitute = z.object({
 			rank: z.int().positive().nullable(),
 			score: ScoreBreakdown.optional(),
 			rejectedReasons: z.array(z.string()),
+			/** A model caution in words (CAUTION.* in rejectedReasons): evidence for a human, never a rejection. */
+			caution: z.string().max(400).optional(),
 			fromValioRule: z.boolean()
 		})
 	)

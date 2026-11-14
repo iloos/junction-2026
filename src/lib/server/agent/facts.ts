@@ -196,7 +196,10 @@ export function toFacts(tool: ToolName, value: unknown, intent?: Intent): Facts 
 							productId: code(c.productId),
 							name: shortText(c.productName),
 							rank: num(c.rank) ?? null,
-							rejected: codes(c.rejectedReasons)
+							// A CAUTION.* reason is a model caution on a selectable candidate (its line is held for a human),
+							// not a rejection.
+							rejected: codes(c.rejectedReasons).filter((r) => !r.startsWith('CAUTION.')),
+							cautions: codes(c.rejectedReasons).filter((r) => r.startsWith('CAUTION.'))
 						};
 					})
 				},
