@@ -475,6 +475,10 @@ async function prepareEdit(
 		const need: Need = {
 			...before,
 			amount: { ...before.amount, value: amount.value },
+			// The amendment is the new ask (R12-01 binds lines to it); the earlier words stay in the op log.
+			...(before.ask
+				? { ask: { words: before.ask.words, qty: amount.value, unit: amount.unit } }
+				: {}),
 			label: before.label.replace(
 				`${before.amount.value} ${before.amount.unit}`,
 				`${amount.value} ${amount.unit}`
