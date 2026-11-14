@@ -5,6 +5,9 @@
 	 */
 	export const ROW_TRACKS =
 		'grid grid-cols-[5rem_minmax(0,1fr)_6rem] gap-x-3 sm:grid-cols-[5rem_minmax(0,1fr)_6rem_minmax(0,auto)]';
+	/** The same tracks with an icon-sized lead (a ledger entry): the text gets the width. */
+	export const ROW_TRACKS_ICON =
+		'grid grid-cols-[1.25rem_minmax(0,1fr)_auto] gap-x-3 sm:grid-cols-[1.25rem_minmax(0,1fr)_6rem_minmax(0,auto)]';
 </script>
 
 <script lang="ts">
@@ -34,6 +37,8 @@
 		flash?: boolean;
 		/** Not in force (dropped, cannot be ordered): struck and quiet. */
 		muted?: boolean;
+		/** The lead is an icon, not an amount: a narrow lead track. */
+		icon?: boolean;
 		class?: string;
 	}
 	let {
@@ -46,13 +51,14 @@
 		head = false,
 		flash = false,
 		muted = false,
+		icon = false,
 		class: cls = ''
 	}: Props = $props();
 </script>
 
 <svelte:element
 	this={as}
-	class="{ROW_TRACKS} items-baseline px-3 {head
+	class="{icon ? ROW_TRACKS_ICON : ROW_TRACKS} items-baseline px-3 {head
 		? 'bg-paper/60 py-1.5 text-meta font-medium text-ink-2'
 		: 'py-2 text-body'} {flash ? 'landed' : ''} {cls}"
 >
