@@ -62,7 +62,7 @@ export class OpsStream {
 	simClock: string | null = $state(null);
 	/** When each plan line was first seen held (op time), for case age. Key: lineKey(planId, lineId). */
 	heldSince: Record<string, string> = $state.raw({});
-	/** Agent runs, newest first; traces are live only (they have no seq and no catch-up). */
+	/** Agent runs and requests, newest first: the stored calls of the last day, then live ones as they happen. */
 	traces: TraceRun[] = $state.raw([]);
 	/** Ops the reducer refused (stale writes from another run or process), shown as one muted line. */
 	refused = $state(0);
@@ -90,6 +90,25 @@ export class OpsStream {
 	start(): void {
 		this.stopped = false;
 		this.openSse();
+		void this.loadStored();
+	}
+
+	/** Whether stored calls were read: null while loading, false when the database has none to give. */
+	storedTraces: boolean | null = $state(null);
+
+	/** Reads the calls stored before this page opened (GET /api/ops/traces?as=events) into the trace runs. */
+	private async loadStored(): Promise<void> {
+		try {
+			const r = await fetch(
+				`/api/ops/traces?ws=${encodeURIComponent(this.workspaceId)}&since=1d&limit=500&as=events`
+			);
+			if (!r.ok) throw new Error(String(r.status));
+			const { events } = (await r.json()) as { events?: Extract<ServerEvent, { kind: 'trace' }>[] };
+			this.loadHistory(events ?? []);
+			this.storedTraces = (events ?? []).length > 0;
+		} catch {
+			this.storedTraces = false;
+		}
 	}
 
 	stop(): void {
@@ -166,7 +185,8 @@ export class OpsStream {
 		this.simClock = null;
 	}
 
-	/** Calls already shown, live or stored, so a call read twice shows once. */
+	/** Calls already shown, live or stored, so a call read twice shows once. Bookkeeping only: nothing renders it. */
+	// eslint-disable-next-line svelte/prefer-svelte-reactivity
 	private seenTraces = new Set<string>();
 
 	/**
@@ -174,7 +194,12 @@ export class OpsStream {
 	 * opened. Merged with the live ones: a stored row and its live twin show once.
 	 */
 	loadHistory(events: Extract<ServerEvent, { kind: 'trace' }>[]): void {
-		for (const e of events) if (!this.state.runId || e.runId === this.state.runId) this.onTrace(e);
+		for (const e of events)
+			if (!e.runId || !this.state.runId || e.runId === this.state.runId) this.onTrace(e);
+		// Live calls may have arrived first: put runs newest first and each run's steps in time order.
+		this.traces = this.traces
+			.map((r) => ({ ...r, steps: [...r.steps].sort((a, b) => a.at.localeCompare(b.at)) }))
+			.sort((a, b) => b.startedAt.localeCompare(a.startedAt));
 	}
 
 	private onTrace(e: Extract<ServerEvent, { kind: 'trace' }>): void {
@@ -206,6 +231,7 @@ export class OpsStream {
 			i = 0;
 		}
 		const run = { ...runs[i] };
+		if (e.at < run.startedAt) run.startedAt = e.at;
 		if (e.step === 'done')
 			run.done = {
 				stopped: String(e.data.stopped),
