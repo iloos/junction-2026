@@ -279,3 +279,66 @@ export const agentTasks = pgTable(
 		index('agent_tasks_open').on(t.workspaceId, t.kitchenId, t.state)
 	]
 );
+
+/**
+ * Web lane state (migration 0004): one Postgres for the outside-call cache, the shared daily spend counters, the
+ * recall work queue (claimed with FOR UPDATE SKIP LOCKED and a lease), what was found and where it was applied.
+ */
+export const webCache = pgTable('web_cache', {
+	key: text('key').primaryKey(),
+	api: text('api').notNull(),
+	at: ts('at').notNull(),
+	value: jsonb('value').notNull(),
+	costUnits: numeric('cost_units', { mode: 'number' })
+});
+
+/** Calls per UTC day, API and caller key; key '*' is the instance-wide counter. */
+export const webSpend = pgTable(
+	'web_spend',
+	{
+		day: text('day').notNull(),
+		api: text('api').notNull(),
+		key: text('key').notNull(),
+		n: integer('n').notNull()
+	},
+	(t) => [primaryKey({ columns: [t.day, t.api, t.key] })]
+);
+
+export const webQueue = pgTable(
+	'web_queue',
+	{
+		id: text('id').primaryKey(),
+		at: ts('at').notNull(),
+		attempts: integer('attempts').notNull().default(0),
+		lockedBy: text('locked_by'),
+		lockedUntil: ts('locked_until'),
+		doc: jsonb('doc').notNull()
+	},
+	(t) => [index('web_queue_due').on(t.at)]
+);
+
+/** A finding without workspace_id is a public source read (a real recall notice) every workspace may see. */
+export const webFindings = pgTable(
+	'web_findings',
+	{
+		id: text('id').primaryKey(),
+		workspaceId: text('workspace_id'),
+		kind: text('kind').notNull(),
+		at: ts('at').notNull(),
+		doc: jsonb('doc').notNull()
+	},
+	(t) => [index('web_findings_kind').on(t.kind, t.at)]
+);
+
+export const webApplications = pgTable(
+	'web_applications',
+	{
+		key: text('key').primaryKey(),
+		workspaceId: text('workspace_id').notNull(),
+		runId: text('run_id').notNull(),
+		findingId: text('finding_id').notNull(),
+		at: ts('at').notNull(),
+		doc: jsonb('doc').notNull()
+	},
+	(t) => [index('web_applications_ws').on(t.workspaceId, t.runId)]
+);
