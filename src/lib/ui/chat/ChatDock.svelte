@@ -497,7 +497,19 @@
 					{@const ledgerLine = entries[i - 1]}
 					{#if !(ledgerLine?.kind === 'event' && ledgerLine.e.type === 'ledger' && ledgerLine.e.summary === x.e.text)}
 						<!-- The agent's answer, worded from the ledger (the line above carries the numbers). -->
-						<li class="text-ink">{x.e.text}</li>
+						<li class="whitespace-pre-line text-ink">{x.e.text}</li>
+					{/if}
+					{#if x.e.sources?.length}
+						<!-- Where a sourced answer came from (a recall notice, a web fact), the site named. -->
+						<li class="text-meta text-ink-3" data-testid="chat-sources">
+							Sources: {#each x.e.sources as s, k (k)}{k ? ' · ' : ''}<a
+									class="underline"
+									href={s.url}
+									target="_blank"
+									rel="noopener noreferrer"
+									title={s.title}>{s.host ?? s.title ?? 'link'}</a
+								>{/each}
+						</li>
 					{/if}
 					{#if x === last && x.e.canContinue && taskPlan && taskPlan === planId}
 						<!-- The plan is on the page: its own Order button is the one primary action; the dock points to it. -->
