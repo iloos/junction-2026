@@ -6,6 +6,8 @@ import type { Offer, Plan, Tier } from '$lib/core/contracts';
 
 import type { ReqUnit } from '$lib/server/request/lexicon';
 import type { RequestAnswer } from '$lib/server/request/workspace';
+import type { DishInterpretation } from '$lib/server/request/dish';
+export type { DishInterpretation };
 
 // The server owns the request's own vocabulary; the page sees the same types (type-only, erased in the build).
 export type { ReqUnit, RequestAnswer };
@@ -45,6 +47,9 @@ export interface ParsedView {
 	deliverBySource: 'request' | 'default';
 	/** The chef chose this date on the page, over the words' one. */
 	deliverByChosen?: boolean;
+	/** A dish with a count: how it was read, both ways to serve it, and which one the items are. */
+	dish?: DishInterpretation;
+	dishChoice?: 'ready' | 'raw';
 	notes: string[];
 	ambiguities: string[];
 	/** Inline answers applied on top of the words. */

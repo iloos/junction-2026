@@ -28,7 +28,7 @@ import type {
 import { scenarioDate } from '$lib/core/scenario';
 import { inWorkspace } from '$lib/server/adapters/simulator/overlay';
 import { ensureRunLoaded } from '$lib/server/demo/reset';
-import { approvalView, callTool, runRequest } from './run';
+import { approvalView, callTool, runRequest, type RequestDeps } from './run';
 import type { ParsedRequest } from './parse';
 import type { RankBy } from './rank-by';
 
@@ -104,6 +104,10 @@ type SubmitOptions = {
 	deliverBy?: string;
 	/** A per-request ranking preference (Rank by). */
 	rankBy?: RankBy;
+	/** A dish request's choice (ready-made or from raw), edited portions, or "packs, not portions". */
+	dish?: RequestDeps['dish'];
+	/** Items the chef edited in place: the words are not read again. */
+	items?: RequestDeps['items'];
 	env: Env;
 	/** The page passes its workspace; the API passes the key's context instead. */
 	workspaceId?: string;
@@ -148,6 +152,8 @@ async function submitInScope(o: SubmitOptions): Promise<RequestResult> {
 		confirmLarge: o.confirmLarge,
 		deliverBy: o.deliverBy,
 		rankBy: o.rankBy,
+		dish: o.dish,
+		items: o.items,
 		clock: (await ports()).ports.clock,
 		tasks: (await ports()).ports.tasks,
 		onEvent: o.onEvent,

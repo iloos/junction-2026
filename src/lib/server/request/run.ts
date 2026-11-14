@@ -49,7 +49,8 @@ import {
 	unpickable,
 	type Ranked
 } from './lookup';
-import { parseRequest, type ParsedRequest } from './parse';
+import { parseRequest, parseRules, type ParsedRequest } from './parse';
+import { dishItems, interpretDish, type DishInterpretation } from './dish';
 import { requestParseCheckpoint, withReview, type ReviewDeps } from '$lib/server/review';
 import { classifyRequest } from './classify';
 import { applyBriefAnswers, draftBrief, nextQuestion } from '../menu/brief';
@@ -111,6 +112,16 @@ export interface RequestDeps {
 	tasks?: TaskStore;
 	/** The chef chose this delivery date instead of the one the words gave (a cut-off answer). Shown, never silent. */
 	deliverBy?: string;
+	/**
+	 * A dish request: which way to serve it (default: the kitchen's preference), portions the chef edited, or `packs`
+	 * when the chef said the count is packs of a product, not portions.
+	 */
+	dish?: { option?: 'ready' | 'raw'; portions?: number; packs?: boolean };
+	/**
+	 * The chef edited the reading in place (an item's quantity, unit or words): these items replace the parse, so the
+	 * words are not read again and only the steps after it run.
+	 */
+	items?: ParsedRequest['items'];
 }
 
 /** The request's one "now": the override, else the workspace's store clock. */
@@ -592,6 +603,24 @@ export function withDate(
 	};
 }
 
+/**
+ * The chef's in-place edit of the reading: the items as edited, the words' date and notes kept from the rules (no
+ * model call), ids rebuilt so answers stay keyed. Edited items carry no parse doubts of their own.
+ */
+function edited(text: string, d: RequestDeps): ParsedRequest {
+	const rules = parseRules(text, d.today);
+	return {
+		...rules,
+		items: d.items!.map((it) => ({
+			...it,
+			ambiguities: it.ambiguities.filter((a) => !/^no (unit|quantity) given/.test(a))
+		})),
+		ambiguities: rules.ambiguities.filter((a) => !a.startsWith('no item found')),
+		notes: [...rules.notes, 'your edit: the words were not read again'],
+		parser: { kind: 'rules', model: 'your edit', latencyMs: 0 }
+	};
+}
+
 /** Runs the request flow and reports each step as it finishes. */
 export async function runRequest(text: string, d: RequestDeps): Promise<RequestResult> {
 	const emit = (e: RequestEvent) => d.onEvent?.(e);
@@ -618,8 +647,44 @@ export async function runRequest(text: string, d: RequestDeps): Promise<RequestR
 		if (r.verdict.kind === 'revise')
 			read = { ...read, ambiguities: [...read.ambiguities, `review: ${r.verdict.feedback}`] };
 		if (r.verdict.kind === 'block') reviewBlock = r.verdict.reason;
-	} else read = await parse();
-	const parsed = withDate(applyAnswers(read, d.answers ?? []), d.deliverBy, d.today);
+	} else read = d.items?.length ? edited(text, d) : await parse();
+	let parsed = withDate(applyAnswers(read, d.answers ?? []), d.deliverBy, d.today);
+	// A dish with a count is portions to serve: priced ready-made and from raw, and the kitchen's way is ordered.
+	let dish: DishInterpretation | null = null;
+	if (!d.dish?.packs && !d.items?.length && !reviewBlock) {
+		const words = d.dish?.portions
+			? text.replace(/\d{1,3}(?:[ ,]\d{3})+|\d+(?:[.,]\d+)?/, String(d.dish.portions))
+			: text;
+		dish = await interpretDish(words, {
+			handlers: d.handlers,
+			ctx: d.ctx,
+			deliverBy: parsed.deliverBy,
+			kitchen: d.kitchen,
+			now: nowOf(d)
+		});
+	}
+	if (dish && dish.ask && !d.dish) {
+		const view = { ...parsed, items: [], dish, ambiguities: [] } as ParsedView;
+		emit({ step: 'request', status: 'blocked', ms: ms(), data: view });
+		return { parsed: view, lookup: null, order: null, message: dish.ask.question };
+	}
+	let dishAnswers: RequestAnswer[] = [];
+	if (dish) {
+		const kind = d.dish?.option ?? dish.preferred.kind;
+		const { items, answers, left } = dishItems(dish, kind);
+		dishAnswers = answers;
+		parsed = {
+			...parsed,
+			items,
+			// The dish reading replaces the item guesses ("unclear", "no unit"): its reasoning is shown instead.
+			ambiguities: parsed.ambiguities.filter(
+				(a) => !a.startsWith('model:') && !a.startsWith('the model found')
+			),
+			notes: [...parsed.notes, ...left.map((l) => `left out: ${l}`)],
+			dish,
+			dishChoice: kind
+		};
+	}
 	const parsedView = parsed as ParsedView;
 	if (reviewBlock) {
 		emit({ step: 'request', status: 'blocked', ms: ms(), data: parsedView });
@@ -632,7 +697,7 @@ export async function runRequest(text: string, d: RequestDeps): Promise<RequestR
 	}
 
 	// An event brief is never a catalogue query: say what it is, and where a seeded plan lives.
-	const brief = classifyRequest(text, parsed.items, d.kitchen.id);
+	const brief = dish ? null : classifyRequest(text, parsed.items, d.kitchen.id);
 	if (brief) {
 		const draft = applyBriefAnswers(draftBrief(text, d.today), d.briefAnswers ?? [], d.today);
 		const question = nextQuestion(draft, d.today);
@@ -674,17 +739,22 @@ export async function runRequest(text: string, d: RequestDeps): Promise<RequestR
 			message: 'No item found in the request.'
 		};
 
-	const { lookup, picked, cands } = await lookupItems(parsed, d);
+	const { lookup, picked, cands } = await lookupItems(
+		parsed,
+		dishAnswers.length ? { ...d, answers: [...(d.answers ?? []), ...dishAnswers] } : d
+	);
 	const picks = lookup.items.filter((i) => i.pick);
 	// An item without a pick holds the whole order: placing the rest now and the answered item
 	// later would place the rest twice (the answer changes the lines, so the key).
+	// A dish is all its lines or nothing: pasta without the mince serves no one.
+	const dishLeft = dish ? parsed.notes.filter((n) => n.startsWith('left out: ')) : [];
 	const unplaced = lookup.items
 		.filter((i) => !i.pick)
 		.map((i) => ({ id: i.item.id, query: i.item.query, reason: i.question ?? 'nothing to pick' }));
 	emit({
 		step: 'lookup',
 		status:
-			unplaced.length || (lookup.sanity.length && !d.confirmLarge)
+			unplaced.length || dishLeft.length || (lookup.sanity.length && !d.confirmLarge)
 				? 'blocked'
 				: lookup.sanity.length ||
 					  picks.some((i) => i.pick?.conversion?.ok && i.pick.conversion.warnings.length)
@@ -703,6 +773,14 @@ export async function runRequest(text: string, d: RequestDeps): Promise<RequestR
 			message: lookup.items.every((i) => i.answer?.kind === 'date')
 				? `${lookup.items[0].question} Nothing was ordered; choose that date to order.`
 				: 'Nothing to order yet: answer the questions above.'
+		};
+	if (dish && dishLeft.length && d.place !== false)
+		return {
+			parsed: parsedView,
+			lookup,
+			order: null,
+			unplaced: dishLeft.map((n) => ({ id: n, query: n.slice(10), reason: 'no product' })),
+			message: `Nothing placed: ${dishLeft.length} of the dish's lines ${dishLeft.length === 1 ? 'has' : 'have'} no product (${dishLeft.map((n) => n.slice(10).split(':')[0]).join(', ')}). Switch the way to serve it, or change the request.`
 		};
 	if (unplaced.length && d.place !== false)
 		return {
