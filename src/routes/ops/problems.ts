@@ -51,7 +51,13 @@ export function dishName(label: string): string {
 	return s.charAt(0).toUpperCase() + s.slice(1);
 }
 /** The same name as written mid-sentence ("swede casserole", "Christmas ham"). */
-export const dishPhrase = (label: string) => (/\(([^)]+)\)/.exec(label)?.[1] ?? label).trim();
+export function dishPhrase(label: string): string {
+	const m = /\(([^)]+)\)(.*)$/.exec(label);
+	if (!m) return label.trim();
+	// "Riisipuuro (rice porridge): rice" keeps its part: rice and milk are two needs of one dish.
+	const part = m[2].trim().startsWith(':') ? m[2].trim() : '';
+	return `${m[1].trim()}${part}`;
+}
 
 const kitchens = (n: number) => `${n} kitchen${n === 1 ? '' : 's'}`;
 const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;

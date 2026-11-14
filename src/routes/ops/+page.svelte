@@ -12,6 +12,7 @@
 	import ProblemCard from './ProblemCard.svelte';
 	import StoryPanel from './StoryPanel.svelte';
 	import ServiceStatus from './ServiceStatus.svelte';
+	import OrdersTab from './OrdersTab.svelte';
 	import { storyOf } from './story';
 	import type { OpEnvelope } from '$lib/core/contracts';
 	import { buildCases, coverage, kitchenHref, openDecisions, openLines } from './cases';
@@ -111,7 +112,7 @@
 	 * Problems (cards and their story, the first screen), queue (work surface), wallboard (one column per kitchen)
 	 * or the engine room (timeline, op log and traces; shown with the System toggle). Remembered.
 	 */
-	type View = 'problems' | 'queue' | 'wallboard' | 'engine';
+	type View = 'problems' | 'orders' | 'queue' | 'wallboard' | 'engine';
 	const shell = useShell();
 	const system = $derived(!!shell?.system);
 	let chosen = $state<View>('problems');
@@ -119,7 +120,8 @@
 	onMount(() => {
 		try {
 			const saved = localStorage.getItem('ops-view');
-			if (saved === 'queue' || saved === 'wallboard' || saved === 'engine') chosen = saved;
+			if (saved === 'orders' || saved === 'queue' || saved === 'wallboard' || saved === 'engine')
+				chosen = saved;
 		} catch {
 			/* storage blocked: keep the default */
 		}
@@ -466,6 +468,9 @@
 			<button role="tab" aria-selected={view === 'problems'} onclick={() => setView('problems')}>
 				Problems <b>{problems.filter((p) => p.tone !== 'quiet').length}</b>
 			</button>
+			<button role="tab" aria-selected={view === 'orders'} onclick={() => setView('orders')}>
+				Orders <b>{Object.keys(stream.state.plans).length}</b>
+			</button>
 			<button role="tab" aria-selected={view === 'queue'} onclick={() => setView('queue')}>
 				Queue <b>{cases.length}</b>
 			</button>
@@ -509,6 +514,14 @@
 						/>
 					</div>
 				{/if}
+			{:else if view === 'orders'}
+				<OrdersTab
+					ws={data.workspace}
+					kitchens={data.kitchens}
+					version={stream.last}
+					href={(planId, kitchenId) =>
+						data.simulated ? null : kitchenHref({ planId, kitchenId }, linkAt)}
+				/>
 			{:else if view === 'queue'}
 				<Queue
 					{cases}
