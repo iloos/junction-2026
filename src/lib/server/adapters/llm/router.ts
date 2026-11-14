@@ -173,7 +173,7 @@ export function createLlmRouter(
 							source: 'fixture'
 						};
 						jobTrace('text', data);
-						logTrace(data);
+						logTrace(data, 'text');
 						return res;
 					}
 					const out = await call(

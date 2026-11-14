@@ -4,6 +4,7 @@ import { publish } from '$lib/server/bus';
 import { runRoutineAgent, type AgentRun } from './index';
 import { buildRunPrincipal, PRESENTER } from './principal';
 import type { RunPrincipal } from './types';
+import { errMsg, log } from '$lib/server/obs/log';
 
 type Trace = Extract<ServerEvent, { kind: 'trace' }>;
 
@@ -65,7 +66,7 @@ export function startAgentRun(o: {
 		if (e.kind !== 'trace') return;
 		const tagged: Trace = { ...e, data: { ...e.data, agentRun: id } };
 		void publish(tagged.workspaceId, [tagged]).catch((err) =>
-			console.error('[agent-run] publish failed', err)
+			log.error('agent_run.publish_failed', { agentRun: id, error: errMsg(err) })
 		);
 		o.onEvent?.(tagged);
 	};

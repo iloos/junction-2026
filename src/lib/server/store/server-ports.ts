@@ -16,6 +16,7 @@ import { createPgDb, dbMode } from '../db/client';
 import { createDbPorts } from './db-ports';
 import { registerBreaker } from '$lib/server/external/status';
 import type { AnyDb } from './drizzle-store';
+import { errMsg, log } from '$lib/server/obs/log';
 
 type Built = Awaited<ReturnType<typeof createDbPorts>>;
 const g = globalThis as typeof globalThis & { __mandatePorts?: Promise<Built> };
@@ -35,10 +36,7 @@ export function createServerPorts(): Promise<Built> {
  */
 const publish = (ws: string, events: Parameters<typeof busPublish>[1]) =>
 	void busPublish(ws, events).catch((e) =>
-		console.error(
-			`[bus] publish failed for ${ws} (${events.length} events)`,
-			e instanceof Error ? e.message : e
-		)
+		log.error('bus.publish_failed', { workspaceId: ws, events: events.length, error: errMsg(e) })
 	);
 
 async function build(): Promise<Built> {

@@ -1,6 +1,9 @@
 import type { ServerEvent } from '$lib/core/contracts';
 import type { CallContext } from '$lib/core/ports';
 import { noteExternal } from '../../external/status';
+import { insideOuterTrace } from '../../obs/context';
+import { log } from '../../obs/log';
+import { recordTrace } from '../../obs/traces';
 
 /** Trace step kinds a `trace` ServerEvent carries (CLAUDE.md rule 7). */
 export type TraceStep = Extract<ServerEvent, { kind: 'trace' }>['step'];
@@ -30,13 +33,28 @@ export function traceEvent(
 }
 
 /**
- * Every adapter call also logs one line to the dev console, and every outside call (an ExternalCallTrace: `api`
- * and `cache`) is noted for the service status (/healthz, the Ops header).
+ * Every adapter call also writes one structured log line and one stored trace row (obs/traces.ts, kept 7 days),
+ * and every outside call (an ExternalCallTrace: `api` and `cache`) is noted for the service status (/healthz, the
+ * Ops header). An adapter wrapped by an outside call (external/call.ts) logs at debug and is not stored twice.
  */
-export function logTrace(data: Record<string, unknown>) {
+export function logTrace(data: Record<string, unknown>, step?: TraceStep) {
 	noteExternal(data);
-	const { model, source, tokensIn, tokensOut, latencyMs, error } = data;
-	console.info(
-		`[trace] ${source ?? ''} ${model ?? ''} in=${tokensIn ?? '-'} out=${tokensOut ?? '-'} ${latencyMs}ms${error ? ` error=${error}` : ''}`
-	);
+	const { model, source, api, tokensIn, tokensOut, latencyMs, cache, error, purpose } = data;
+	const inner = insideOuterTrace();
+	const fields = {
+		source: source ?? api,
+		model,
+		purpose,
+		cache,
+		tokensIn,
+		tokensOut,
+		ms: latencyMs,
+		ok: !error && data.ok !== false,
+		...(error ? { error: String(error) } : {})
+	};
+	const event = model ? 'model.call' : 'outside.call';
+	if (inner) log.debug(event, fields);
+	else if (error) log.warn(event, fields);
+	else log.info(event, fields);
+	if (!inner) recordTrace(step ?? (error || data.ok === false ? 'error' : 'tool'), data);
 }

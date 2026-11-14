@@ -14,6 +14,8 @@ import { breakerFor, type Breaker } from './breaker';
 import { LimitError, type SpendGuard } from './ledger';
 import { readJson, writeJson } from './persist';
 import { currentScope, type ExternalScope } from './scope';
+import { withinOuterTrace } from '../obs/context';
+import { errMsg, log } from '../obs/log';
 
 export type ExternalApi = ExternalCallTrace['api'];
 
@@ -120,7 +122,7 @@ export function reportExternal(
 ) {
 	const data = { ...detail, ...t, source: t.api };
 	trace(t.ok ? step : 'error', data);
-	logTrace(data);
+	logTrace(data, t.ok ? step : 'error');
 }
 
 export function createExternalCall(o: ExternalCallOptions) {
@@ -142,7 +144,7 @@ export function createExternalCall(o: ExternalCallOptions) {
 		if (o.cacheDir) writeJson(join(o.cacheDir, `${k}.json`), e);
 		o.store
 			?.put(k, name, e)
-			.catch((err) => console.error('[external] cache write failed', name, err?.message ?? err));
+			.catch((err) => log.error('external.cache_write_failed', { api: name, error: errMsg(err) }));
 	}
 
 	return async function call<T>(
@@ -192,7 +194,7 @@ export function createExternalCall(o: ExternalCallOptions) {
 
 		const t0 = performance.now();
 		try {
-			const r = await send();
+			const r = await withinOuterTrace(send);
 			const latencyMs = Math.round(performance.now() - t0);
 			breaker.success();
 			const at = new Date().toISOString();

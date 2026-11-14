@@ -1,4 +1,5 @@
 import type { ServerEvent } from '$lib/core/contracts';
+import { errMsg, log } from '$lib/server/obs/log';
 
 type Listener = (e: ServerEvent) => void;
 type Seqd = Extract<ServerEvent, { seq: number }>;
@@ -34,7 +35,7 @@ export class MemoryBus {
 				try {
 					fn(e);
 				} catch (err) {
-					console.error('[bus] listener failed', err);
+					log.error('bus.listener_failed', { error: errMsg(err) });
 				}
 			}
 		}

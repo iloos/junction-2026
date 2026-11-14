@@ -1,0 +1,106 @@
+/**
+ * The `traces` table (migration 0005) behind one small port: insert a batch, prune old rows, list with filters,
+ * and a per-source summary. The same Drizzle code runs on Aiven and on PGlite (tests, fixture mode).
+ */
+import { and, desc, eq, gte, lt, sql } from 'drizzle-orm';
+import { traces } from '../db/schema';
+import type { AnyDb } from '../store/drizzle-store';
+
+export type TraceRow = typeof traces.$inferInsert;
+export type StoredTrace = typeof traces.$inferSelect;
+
+export interface TraceFilter {
+	/** ISO time; default: the last hour. */
+	since?: string;
+	workspaceId?: string;
+	requestId?: string;
+	source?: string;
+	limit?: number;
+}
+
+export interface SourceSummary {
+	source: string;
+	count: number;
+	p50Ms: number | null;
+	p95Ms: number | null;
+	/** Share of calls that failed, 0..1. */
+	errorRate: number;
+	/** Share of calls answered from the cache or the replay book, 0..1. */
+	cacheHitRate: number;
+	tokensIn: number;
+	tokensOut: number;
+}
+
+export interface TraceStore {
+	insert(rows: TraceRow[]): Promise<void>;
+	/** Deletes rows older than `before`; returns how many went. */
+	prune(before: Date): Promise<number>;
+	list(f: TraceFilter): Promise<StoredTrace[]>;
+	summary(f: Omit<TraceFilter, 'limit' | 'requestId'>): Promise<SourceSummary[]>;
+}
+
+const HOUR_MS = 60 * 60_000;
+export const MAX_LIST = 500;
+
+const rowsOf = (res: unknown): Record<string, unknown>[] =>
+	(Array.isArray(res) ? res : ((res as { rows?: unknown[] })?.rows ?? [])) as Record<
+		string,
+		unknown
+	>[];
+
+const sinceOf = (s: string | undefined, now: Date) => {
+	const t = s ? Date.parse(s) : NaN;
+	return new Date(Number.isFinite(t) ? t : now.getTime() - HOUR_MS).toISOString();
+};
+
+export function createTraceStore(db: AnyDb, clock: () => Date = () => new Date()): TraceStore {
+	const where = (f: TraceFilter) =>
+		and(
+			gte(traces.at, sinceOf(f.since, clock())),
+			f.workspaceId ? eq(traces.workspaceId, f.workspaceId) : undefined,
+			f.requestId ? eq(traces.requestId, f.requestId) : undefined,
+			f.source ? eq(traces.source, f.source) : undefined
+		);
+	return {
+		async insert(rows) {
+			if (rows.length) await db.insert(traces).values(rows).onConflictDoNothing();
+		},
+		async prune(before) {
+			const gone = await db
+				.delete(traces)
+				.where(lt(traces.at, before.toISOString()))
+				.returning({ id: traces.id });
+			return gone.length;
+		},
+		async list(f) {
+			const limit = Math.min(Math.max(1, f.limit ?? 200), MAX_LIST);
+			return db.select().from(traces).where(where(f)).orderBy(desc(traces.at)).limit(limit);
+		},
+		async summary(f) {
+			const res = await db.execute(sql`
+				select source,
+					count(*)::int as count,
+					percentile_cont(0.5) within group (order by latency_ms) as p50,
+					percentile_cont(0.95) within group (order by latency_ms) as p95,
+					avg(case when ok then 0 else 1 end)::float as error_rate,
+					avg(case when cache in ('cache', 'replay') then 1 else 0 end)::float as cache_rate,
+					coalesce(sum(tokens_in), 0)::int as tokens_in,
+					coalesce(sum(tokens_out), 0)::int as tokens_out
+				from traces
+				where ${where(f)}
+				group by source
+				order by count(*) desc`);
+			const num = (v: unknown) => (v == null ? null : Math.round(Number(v)));
+			return rowsOf(res).map((r) => ({
+				source: String(r.source),
+				count: Number(r.count),
+				p50Ms: num(r.p50),
+				p95Ms: num(r.p95),
+				errorRate: Number(r.error_rate) || 0,
+				cacheHitRate: Number(r.cache_rate) || 0,
+				tokensIn: Number(r.tokens_in) || 0,
+				tokensOut: Number(r.tokens_out) || 0
+			}));
+		}
+	};
+}

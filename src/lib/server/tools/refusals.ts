@@ -6,6 +6,7 @@
  */
 import type { DomainError, PendingOp } from '$lib/core/contracts';
 import type { CallContext } from '$lib/core/ports';
+import { errMsg, log } from '$lib/server/obs/log';
 
 export const REFUSAL_WINDOW_MS = 60_000;
 const RECORDED_CALLERS = new Set(['external_agent', 'kitchen_agent']);
@@ -77,7 +78,7 @@ export async function recordRefusal(
 		return true;
 	} catch (e) {
 		lastWritten.delete(key);
-		console.warn(`[tools] recording a refused ${tool} failed: ${(e as Error)?.message ?? e}`);
+		log.warn('refusal.record_failed', { tool, error: errMsg(e) });
 		return false;
 	}
 }

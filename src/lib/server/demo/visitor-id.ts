@@ -5,6 +5,7 @@
 import { randomBytes } from 'node:crypto';
 import { hmac, sameText } from '$lib/server/auth/crypto';
 import { VisitorWorkspaceId } from '$lib/core/contracts';
+import { log } from '$lib/server/obs/log';
 
 type Env = Record<string, string | undefined>;
 
@@ -36,7 +37,7 @@ function cookieSecret(env: Env): string {
 	if (s) return s;
 	if (!warned && process.env.NODE_ENV === 'production') {
 		warned = true;
-		console.warn('[visitor] JUDGE_KEY_SECRET unset: visitor cookies are signed per process');
+		log.warn('visitor.secret_unset', { note: 'visitor cookies are signed per process' });
 	}
 	return (g.__mandateCookieSecret ??= randomBytes(32).toString('hex'));
 }

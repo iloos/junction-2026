@@ -12,6 +12,8 @@ export interface ExternalScope {
 	runId?: string;
 	/** Who pays: a spend key such as the actor id. Absent = the workspace. */
 	spendKey?: string;
+	/** Who is calling, for the stored trace row. */
+	actor?: { kind: string; id: string };
 	trace?: Trace;
 }
 
@@ -31,6 +33,7 @@ export function scopeFor(ctx: Pick<CallContext, 'workspaceId' | 'runId' | 'actor
 		workspaceId: ctx.workspaceId,
 		runId: ctx.runId,
 		spendKey: ctx.workspaceId,
+		...(ctx.actor ? { actor: { kind: ctx.actor.kind, id: ctx.actor.id } } : {}),
 		trace: (step, data) => {
 			// The bus pulls in the database client; loaded on first trace only.
 			void import('../bus')

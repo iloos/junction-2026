@@ -5,6 +5,7 @@ import { resolveRequest, type Env } from '../auth';
 import { json, unauthorized } from '../tools/http';
 import { HTTP_STATUS, isWebLimit, retryAfterOf } from '../tools/serve';
 import { webError } from './spend';
+import { log } from '$lib/server/obs/log';
 
 /**
  * The caller of a web route from its key. Every route needs the `read` scope; a route that writes ops (recall
@@ -54,7 +55,7 @@ export function fail(code: string, message: string, status: number, retryable = 
 export function resultJson<T>(r: Result<T>): Response {
 	if (r.ok) return json(r.value);
 	const status = isWebLimit(r.error) ? 429 : HTTP_STATUS[r.error.code];
-	if (status === 503) console.error('[web]', r.error.message);
+	if (status === 503) log.error('web.unavailable', { error: r.error.message });
 	const wait = status === 429 ? retryAfterOf(r.error) : undefined;
 	return json({ error: r.error }, status, wait ? { 'retry-after': String(wait) } : {});
 }
