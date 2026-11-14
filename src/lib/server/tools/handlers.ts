@@ -11,7 +11,7 @@ import { createDecide } from '$lib/server/adapters/decide';
 import { createGetContext } from '$lib/server/agent/get-context';
 import { readImageHandler } from '$lib/server/images/tool';
 import { createGetOutcome } from '$lib/server/tasks/outcome';
-import { proposeMenuHandler } from '$lib/server/menu/tool';
+import { proposeMenuHandler, reviseMenuHandler } from '$lib/server/menu/tool';
 import { createLlmRouter } from '$lib/server/adapters/llm/router';
 import { projectedTaskStore } from '$lib/server/tasks/project';
 import { drizzleTaskStore } from '$lib/server/tasks/store';
@@ -68,6 +68,8 @@ export function realHandlers(): Promise<ToolHandlers> {
 						? null
 						: menuLlm.for('menu.propose')
 			}),
+			// One change set → the next revision, which a chef accepts again (no model: the changes are explicit).
+			revise_menu: reviseMenuHandler({ ports: b.ports }),
 			// Pictures go to the vision model (router job image.read); fixture mode reads only the sample pictures.
 			read_image: readImageHandler({
 				llm: () =>

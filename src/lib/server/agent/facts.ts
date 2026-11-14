@@ -268,7 +268,8 @@ export function toFacts(tool: ToolName, value: unknown, intent?: Intent, input?:
 				decisionsLeft: num(l.decisionsLeft)
 			};
 		}
-		case 'propose_menu': {
+		case 'propose_menu':
+		case 'revise_menu': {
 			const pr = obj(v.proposal);
 			const dishes = Array.isArray(pr.dishes) ? pr.dishes.map(obj) : [];
 			const issues = Array.isArray(v.issues) ? v.issues.map(obj) : [];
