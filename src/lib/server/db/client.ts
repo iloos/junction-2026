@@ -7,8 +7,13 @@ import * as schema from './schema';
 
 export type DbMode = 'postgres' | 'fixture';
 
-/** No DATABASE_URL means fixture mode: the app runs without Postgres. */
+/**
+ * No DATABASE_URL means fixture mode: the app runs without Postgres. Tests always run in fixture mode,
+ * because SvelteKit fills $env/dynamic/private from .env and would point them at the shared Aiven DB;
+ * an opt-in Postgres test sets MANDATE_TEST_PG=1 and uses its own workspace and run.
+ */
 export function dbMode(): DbMode {
+	if (process.env.VITEST && process.env.MANDATE_TEST_PG !== '1') return 'fixture';
 	return env.DATABASE_URL ? 'postgres' : 'fixture';
 }
 
