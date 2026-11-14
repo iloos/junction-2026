@@ -107,11 +107,8 @@
 		])
 	);
 	let toggled = $state<Record<string, boolean>>({});
-	// The first real outage opens by default; the chef's own toggles win after that.
-	const open = $derived.by(() => {
-		const first = view?.dishes.find((d) => d.rescue)?.id;
-		return first && toggled[first] === undefined ? { ...toggled, [first]: true } : toggled;
-	});
+	// Rescues start collapsed: one sentence on the row, the ranked options behind "See the options".
+	const open = $derived(toggled);
 
 	/** Phone zones (Decide / Plan / Order); desktop shows all three. Decide first while anything needs the chef. */
 	const ZONES = [
@@ -745,7 +742,9 @@
 											</p>{/if}
 										<p class="mt-0.5 text-micro text-ink-3 {isEvent ? '' : 'hidden'}">
 											{#if d.usual}normal week {num(d.usual.qty)} {d.usual.unit}{:else}<span
-													class="rounded-sm bg-well px-1 text-ink-2">event only</span
+													class="rounded-sm bg-well px-1 text-ink-2"
+													title="Bought only for this event: the kitchen's normal week has none of it"
+													>event only · not in a normal week</span
 												>{/if}
 										</p>
 									</div>
@@ -788,6 +787,14 @@
 							{/if}
 							{#if d.rescue}
 								<div class="px-4 pb-3">
+									<p class="mb-1.5 text-body leading-snug text-ink">
+										<span class="font-medium"
+											>{d.outage === 'out'
+												? 'Out of stock at Valio.'
+												: "Valio can't deliver it."}</span
+										>
+										{d.rescue.summary}
+									</p>
 									<button
 										type="button"
 										class="flex w-full items-center gap-2 text-left text-meta font-medium text-ink-2 hover:text-ink"
@@ -799,7 +806,7 @@
 											class="transition-transform duration-200 {open[d.id] ? '' : '-rotate-90'}"
 											aria-hidden="true"
 										/>
-										{d.outage === 'out' ? 'Out of stock at Valio' : "Valio can't deliver it"} ·
+										{open[d.id] ? 'Hide the options' : 'See the options'} ·
 										{d.rescue.kind === 'make_in_house'
 											? 'make it in house'
 											: `${d.rescue.candidates.length} substitutes ranked`}
