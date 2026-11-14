@@ -89,6 +89,8 @@ describe('the story of a problem', () => {
 
 	it('tells the ham case in seq order, one sentence per op that changed it', () => {
 		expect(steps.map((x) => x.seq)).toEqual([...steps.map((x) => x.seq)].sort((a, b) => a - b));
+		// No ISO dates or empty counts on the first screen.
+		expect(steps[0].what).toBe('Started an order for Thu 10 Dec.');
 		expect(steps[1]).toMatchObject({ chip: 'valio', tone: 'bad' });
 		expect(steps[1].what).toBe("Valio's live terms: HK Christmas ham is out.");
 		expect(steps[1].then).toBe('The plan lost its Christmas ham.');

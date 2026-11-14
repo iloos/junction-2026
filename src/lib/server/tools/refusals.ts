@@ -60,7 +60,7 @@ export async function recordRefusal(
 					tool,
 					code: error.code,
 					...(error.sub ? { sub: error.sub } : {}),
-					message: error.message,
+					message: error.message.slice(0, 300),
 					...(planId ? { planId } : {}),
 					...(kitchenId ? { kitchenId } : {})
 				}

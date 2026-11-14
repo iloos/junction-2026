@@ -108,11 +108,11 @@ export const RecordEnrichment = z.object({
  */
 export const RecordRefusal = z.object({
 	type: z.literal('RecordRefusal'),
-	tool: z.string(),
+	tool: z.string().max(80),
 	code: DomainError.shape.code,
 	sub: z.string().optional(),
-	/** The gate's message, as the caller got it. */
-	message: z.string(),
+	/** The gate's message, as the caller got it (cut to 300 characters). */
+	message: z.string().max(300),
 	planId: z.string().optional(),
 	kitchenId: z.string().optional()
 });

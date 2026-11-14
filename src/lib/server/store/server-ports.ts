@@ -14,6 +14,7 @@ import { currentScope } from '../external/scope';
 import { SimOverlay } from '../adapters/simulator/overlay';
 import { createPgDb, dbMode } from '../db/client';
 import { createDbPorts } from './db-ports';
+import { registerBreaker } from '$lib/server/external/status';
 import type { AnyDb } from './drizzle-store';
 
 type Built = Awaited<ReturnType<typeof createDbPorts>>;
@@ -59,6 +60,7 @@ async function build(): Promise<Built> {
 					}
 				})
 			: undefined;
+	if (live) registerBreaker('valio', () => live.breaker());
 	return createDbPorts({
 		db,
 		overlay,

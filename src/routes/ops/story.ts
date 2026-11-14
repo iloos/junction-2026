@@ -5,6 +5,7 @@
 import type { Line, OpEnvelope } from '$lib/core/contracts';
 import type { WorkspaceState } from '$lib/core/state';
 import { euro, productName, reasonText, refusalWhat, type Names } from './labels';
+import { day } from '$lib/ui/format';
 import { dishPhrase, type Problem } from './problems';
 
 /** Who a step is from, as its chip reads. */
@@ -129,8 +130,8 @@ export function storyOf(
 					...base,
 					what:
 						n === 0
-							? `Started an order for delivery ${op.plan.deliverBy}.`
-							: `Drafted an order of ${plural(n, 'line')} for delivery ${op.plan.deliverBy}.`,
+							? `Started an order for ${day(op.plan.deliverBy)}.`
+							: `Drafted an order of ${plural(n, 'line')} for ${day(op.plan.deliverBy)}.`,
 					then:
 						n === 0 ? 'Lines follow as the menu is worked out.' : 'Next: live terms from Valio.',
 					tone: 'plain'

@@ -11,7 +11,9 @@
  * - A signed-in presenter (or DEMO_RESET_OPEN=1) defaults to the stage. Dev has presenter rights but starts in
  *   its own sandbox: dev servers share the deployed database, so a dev default of the stage would write into
  *   prod's stage run.
- * - At most MAX_VISITORS sandboxes are seeded per process; past that, new visitors share ws-judges.
+ * - At most `maxVisitors` sandboxes are seeded per process (VISITOR_CAP, default 5,000; a sandbox is a runs row
+ *   and the seed kitchens). Past that a new visitor lands in ws-judges, which is logged, and every surface shows
+ *   `roomNotice`: in a shared room, what you type is visible to others. Nobody is ever moved there silently.
  */
 import type { Cookies } from '@sveltejs/kit';
 import { DEMO_WORKSPACE, JUDGES_WORKSPACE, SYNTH_WORKSPACE } from './workspaces';
@@ -23,7 +25,8 @@ type Env = Record<string, string | undefined>;
 
 export const VISITOR_COOKIE = 'mandate_visitor';
 export const ROOM_COOKIE = 'mandate_room';
-export const MAX_VISITORS = 300;
+export const MAX_VISITORS = 5000;
+const maxVisitors = (env: Env) => Math.max(1, Number(env.VISITOR_CAP) || MAX_VISITORS);
 const COOKIE_AGE_S = 60 * 60 * 24 * 14;
 
 /** own: this browser's sandbox · shared: ws-judges · stage: ws-demo · full: cap reached, sharing ws-judges. */
@@ -98,14 +101,27 @@ export async function visitorWorkspace(
 	let kind: RoomKind =
 		chosen === DEMO_WORKSPACE ? 'stage' : chosen === JUDGES_WORKSPACE ? 'shared' : 'own';
 	if (kind === 'own' && !seeded.has(chosen)) {
-		if (seeded.size >= MAX_VISITORS) {
+		if (seeded.size >= maxVisitors(env)) {
 			workspaceId = JUDGES_WORKSPACE;
 			kind = 'full';
+			console.warn(
+				`[visitor] sandbox cap ${maxVisitors(env)} reached: a new visitor shares ${JUDGES_WORKSPACE}`
+			);
 		} else seeded.add(chosen);
 	}
 
 	await ensureRunLoaded(workspaceId, { start: kind !== 'stage' });
 	return { workspaceId, own, kind, presenter };
+}
+
+/**
+ * What a visitor must know before typing, or null in a private room: in a shared room (the judges' room by
+ * link, or the cap reached) chat text and requests are stored with the plan, so others in the room see them.
+ */
+export function roomNotice(v: Pick<Visitor, 'kind'>): string | null {
+	return v.kind === 'shared' || v.kind === 'full'
+		? "You're in a shared demo room: others can see what you type."
+		: null;
 }
 
 /** Plain words for the room, for page headers. */

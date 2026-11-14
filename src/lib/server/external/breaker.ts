@@ -72,6 +72,10 @@ export function breakerFor(name: string, o?: BreakerOptions): Breaker {
 	if (!b) registry.set(name, (b = createBreaker(o)));
 	return b;
 }
+/** Every shared breaker's state, by name (for the service status). */
+export function breakerStates(): Record<string, BreakerState> {
+	return Object.fromEntries([...registry].map(([name, b]) => [name, b.state()]));
+}
 export function resetBreakers() {
 	registry.clear();
 }

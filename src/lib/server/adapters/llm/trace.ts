@@ -1,5 +1,6 @@
 import type { ServerEvent } from '$lib/core/contracts';
 import type { CallContext } from '$lib/core/ports';
+import { noteExternal } from '../../external/status';
 
 /** Trace step kinds a `trace` ServerEvent carries (CLAUDE.md rule 7). */
 export type TraceStep = Extract<ServerEvent, { kind: 'trace' }>['step'];
@@ -28,8 +29,12 @@ export function traceEvent(
 	};
 }
 
-/** Every adapter call also logs one line to the dev console. */
+/**
+ * Every adapter call also logs one line to the dev console, and every outside call (an ExternalCallTrace: `api`
+ * and `cache`) is noted for the service status (/healthz, the Ops header).
+ */
 export function logTrace(data: Record<string, unknown>) {
+	noteExternal(data);
 	const { model, source, tokensIn, tokensOut, latencyMs, error } = data;
 	console.info(
 		`[trace] ${source ?? ''} ${model ?? ''} in=${tokensIn ?? '-'} out=${tokensOut ?? '-'} ${latencyMs}ms${error ? ` error=${error}` : ''}`

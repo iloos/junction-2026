@@ -16,7 +16,7 @@ import { ensureRunLoaded, resetDemo } from '$lib/server/demo/reset';
 import { DEMO_WORKSPACE, JUDGES_WORKSPACE } from '$lib/server/demo/workspaces';
 import { currentRun, currentRunStartedAt } from '$lib/server/demo/run';
 import { isSandbox, resetSandbox } from '$lib/server/demo/sandbox';
-import { roomLabel, visitorWorkspace, ROOM_COOKIE } from '$lib/server/demo/visitor';
+import { roomLabel, roomNotice, visitorWorkspace, ROOM_COOKIE } from '$lib/server/demo/visitor';
 import { judgeKeysOn } from '$lib/server/demo/judge-key';
 import { STRESS_WORKSPACE } from '$lib/server/bus/stress';
 import type { Actions, PageServerLoad, RequestEvent } from './$types';
@@ -91,6 +91,7 @@ export const load: PageServerLoad = async (event) => {
 					? 'Stage run (view only)'
 					: 'Simulated run'
 				: roomLabel(v),
+			notice: viewOnly ? null : roomNotice(v),
 			own: v.own
 		},
 		presenter,
