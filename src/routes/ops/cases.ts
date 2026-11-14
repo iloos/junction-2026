@@ -23,11 +23,14 @@ export interface Case {
 	owner: Owner;
 	next: string;
 	tone: Tone;
-	/** When it must be done by (ISO): the scenario cut-off for the event delivery. */
+	/** When it must be done by (ISO): the line's offer closing time, else the scenario cut-off. */
 	deadline: string | null;
 	/** When it became a case (ISO, op time). */
 	since: string | null;
 }
+
+/** Deadline as epoch ms (ISO strings can carry different offsets); no deadline sorts last. */
+const due = (c: Case) => (c.deadline ? new Date(c.deadline).getTime() : Infinity);
 
 const TONE_RANK: Record<Tone, number> = { blocked: 0, sign_off: 1, propose: 2, act: 3 };
 
@@ -53,9 +56,8 @@ function lineCase(
 		title: name,
 		detail: `${l.qty.value} ${l.qty.unit}${l.substituteFor ? `, replaces ${names[l.substituteFor] ?? l.substituteFor}` : ''}`,
 		causes: l.reasons.map(reasonText),
-		// The mock's closingTime values are static November dates; the scenario cut-off is the real deadline
-		// until core exposes an effective per-line cut-off.
-		deadline: SCENARIO.cutoff,
+		// Offers carry closing times re-dated onto the scenario clock; without an offer, the scenario cut-off.
+		deadline: l.offer?.availability.closingTime ?? SCENARIO.cutoff,
 		since
 	};
 	if (l.state === 'unorderable')
@@ -138,7 +140,7 @@ export function buildCases(
 
 	return out.sort(
 		(a, b) =>
-			(a.deadline ?? '9').localeCompare(b.deadline ?? '9') ||
+			due(a) - due(b) ||
 			TONE_RANK[a.tone] - TONE_RANK[b.tone] ||
 			(a.since ?? '9').localeCompare(b.since ?? '9')
 	);
