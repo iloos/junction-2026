@@ -45,7 +45,15 @@ Env changes go through `aiven_service_update` (`user_config.application.environm
 - **Keys** (Aiven env, kind `secret`; values also in the main checkout's `.env`, never printed): `MANDATE_KEY_CHEF`, `MANDATE_KEY_KITCHEN_AGENT`, `MANDATE_KEY_APPROVER`, `MANDATE_KEY_EXTERNAL_AGENT` act in the stage workspace `ws-demo`. `MCP_KEYS` = `label:actor:key[:workspace]`, comma-separated; judge entries default to the sandbox `ws-judges`, created with the seed kitchens on first use. Public fixture keys (`MANDATE_FIXTURE_KEYS`) stay off.
 - **`GEMINI_STUDIO_API_KEY`** is pasted into the Aiven console by the user (agents never read `.env` values).
 - **Env updates replace the whole list.** `aiven_service_update` with `environment_variables` drops anything not re-sent, including `PROJECT_CA_CERT` (base64 of `certs/aiven-ca.pem`) and the console-added Gemini key. Prefer adding a single variable in the console.
-- **Presenter actions need a key on prod:** `POST /api/demo/reset` (chef or approver key) starts a fresh `ws-demo` run; `POST /api/agent/run` (chef, kitchen-agent or approver key) runs the routine agent. The key-less /ops buttons appear only in dev or with `DEMO_RESET_OPEN=1`, which stays unset on prod.
+- **Presenter actions need a key on prod.** The key-less /ops buttons (run, stop, reset) appear only in dev or with `DEMO_RESET_OPEN=1`, which stays unset on prod (one rule: `server/demo/presenter.ts`).
+  - `POST /api/demo/reset` (chef or approver key): starts a fresh `ws-demo` run.
+  - `POST /api/agent/run` (**chef key only**, needs `agent:run`): runs the routine agent; NDJSON traces, 409 while a run is going. Its ops name the starter.
+  - `POST /api/agent/run/<id>/cancel` (chef key only): stops that run; 202 `{ id, cancelled, run }` once the loop has stopped, 404 if it isn't the run in progress.
+- **Web routes** (`/api/web/*`):
+  - `POST contextdev`: Context.dev monitor webhook, no key; needs a valid `X-Context-Signature` for `CONTEXT_DEV_WEBHOOK_SECRET` (or `x-mandate-webhook-secret` from our scripts), else 401. Answers 202; anomalies arrive on the op stream.
+  - `POST replay` (chef or approver key): plays a recorded real Ruokavirasto recall into the current run, labelled as a replay (or DRILL with `drillProductId`).
+  - `POST recall`, `POST facts`, `POST outside`, `GET findings` (any key): read a recall notice, look up missing product facts, find outside recipes/alternatives, list findings.
+  - Env: `EXA_API_KEY`, `CONTEXT_DEV_API_KEY`, `CONTEXT_DEV_WEBHOOK_SECRET` (secrets) and `WEB_PROVIDER=live`, `WEB_CACHE_DIR=/tmp/web-cache` are added in the console.
 - **`/api/events`** serves only `ws-demo`, `ws-judges` and `ws-synth` on prod until CallContext gates it.
 - **Scenario clock:** `src/lib/core/scenario.ts`; the served app ticks it from each run's start. Reset re-anchors it.
 
