@@ -539,16 +539,16 @@ describe('suite: adversarial (round 10)', () => {
 					}))
 				})
 			).plan;
-			const command = (lineId: string) =>
-				withServerKey(
+			const command = async (lineId: string) =>
+				(await withServerKey(
 					'commit_order',
 					{ planId: p.id, version: p.version, lineIds: [lineId] },
 					undefined,
 					'continue',
 					'same-task'
-				) as any;
-			const a = command(p.lines[0].id);
-			const b = command(p.lines[1].id);
+				)) as any;
+			const a = await command(p.lines[0].id);
+			const b = await command(p.lines[1].id);
 			expect(a.idempotencyKey).not.toBe(b.idempotencyKey);
 			must(await s.h.commit_order(s.ctx('kitchen_agent'), a));
 			must(await s.h.commit_order(s.ctx('kitchen_agent'), b));

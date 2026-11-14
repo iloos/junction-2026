@@ -458,6 +458,20 @@ describe('suite: chat transitions (round 10)', () => {
 		expect(out.find((e) => e.taskId)?.taskId).not.toBe(stale.id);
 	});
 
+	it('a reply to an open question: an offered answer is that answer; anything else asks again, with context', async () => {
+		const s = await setup();
+		const first = await chatTurn({ text: '10000 bolognese pasta' }, s.deps);
+		const taskId = first.find((e) => e.taskId)!.taskId;
+		expect(first.find((e) => e.type === 'clarify')).toMatchObject({ field: 'dish' });
+		const unclear = await chatTurn({ taskId, text: 'hmm?' }, s.deps);
+		const again = unclear.find((e) => e.type === 'clarify');
+		expect(again).toMatchObject({ field: 'dish' });
+		expect(again?.type === 'clarify' && again.question).toMatch(/bolognese/);
+		const yes = await chatTurn({ taskId, text: 'yes please' }, s.deps);
+		expect(yes.find((e) => e.type === 'clarify')?.field).not.toBe('dish');
+		expect((await s.tasks.get(s.ws, taskId))?.requirement.kind).toBe('event');
+	});
+
 	it('a plan picked by the chef is asked in words, never by id', async () => {
 		const s = await setup();
 		await s.place(['100001'], 'one');
@@ -475,16 +489,16 @@ describe('suite: chat transitions (round 10)', () => {
 		const s = await setup();
 		const p = await s.place(['100001', '100003']);
 		await s.grant(p.id);
-		const command = (lineId: string) =>
-			withServerKey(
+		const command = async (lineId: string) =>
+			(await withServerKey(
 				'commit_order',
 				{ planId: p.id, version: p.version, lineIds: [lineId] },
 				undefined,
 				'continue',
 				'same-task'
-			) as { planId: string; version: number; lineIds: string[]; idempotencyKey: string };
-		const a = command(p.lines[0].id);
-		const b = command(p.lines[1].id);
+			)) as { planId: string; version: number; lineIds: string[]; idempotencyKey: string };
+		const a = await command(p.lines[0].id);
+		const b = await command(p.lines[1].id);
 		expect(a.idempotencyKey).not.toBe(b.idempotencyKey);
 		must(await s.h.commit_order(s.ctx('kitchen_agent'), a));
 		const now = must(await s.h.get_plan(s.ctx('chef'), { planId: p.id })).plan;
