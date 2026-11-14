@@ -35,7 +35,13 @@ The user's read: many small nudges, often the same ones, because the foundations
   - The same actions exist as tools for the agent (Foundations 2: parity), and the same nested row primitive serves the Kitchen, Basket, /request and the dock cards (Foundations 3).
   - Acceptance: on the hotel event, change one ingredient of one dish, approve one line alone, and select three lines and hold them, at 1440 and 390; the agent does the same through tools.
 - **Every request in view.** One list of all requests and plans for this kitchen, whatever door they came through (event, usual, /request, chat, outside agent), with their state (asked → proposed → held → approved → ordered), date and origin. Open any one in place. This is the Basket's other axis (by request rather than by delivery day).
-- **A full UI/UX pass in the new swarm:** after the three foundations land, one design session walks every surface (Kitchen, Basket, /request, chat dock, Ops, /agents, the site) with the impeccable critique against DESIGN.md. Its findings become the lanes' first batch.
+- **A full UI/UX pass in the new swarm:** after the three foundations land, one design session walks every surface (Kitchen, Basket, /request, chat dock, Ops, /agents, the site) with the impeccable critique against DESIGN.md. Its findings become the lanes' first batch. Seed findings from the user's full-page Kitchen screenshot (hotel buffet, Sat late):
+  - the state column truncates its chips ("Valio hasn't s…", "Rescued · Valio hasn't…"), and dish names truncate ("Perkkanalaat…", "Imellletty pe…"): the columns are sized for the shortest content, not the longest;
+  - "Valio hasn't said": the chip and its detail say the same thing, and Valio is made a speaker. Name the data instead ("No stock info"; detail: "Valio's data has no stock count for this product. The supplier confirms the amount when you order."). The vocabulary rule: name the data, not the supplier, and a chip and its detail never repeat each other;
+  - the Order panel's "Still not covered" is a tall list of chips; it should be a compact table or grouped by reason (K5);
+  - the rules and "Same shortage, your rules" sit detached at the bottom of a long page, with large empty areas beside them;
+  - the right rail stacks three long decision cards with nested product lists; with per-line control (above) they become rows with one primary action each;
+  - very small type throughout at 1440: the page fits by shrinking, not by structure.
 
 ## Queued at restart (from the lead's routing; lanes confirm in their Next)
 - **Core:** R12-01 (the ask binds quote and commit), R12-02 (one cereal/allergen fact table), R12-04 = R10-05 (contention adds only the residual); then R11-04, R11-10, R10-06, R10-08; every place_order line makes a need; the "Valio suggests" contract (K7).
