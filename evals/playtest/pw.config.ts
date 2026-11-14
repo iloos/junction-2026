@@ -11,7 +11,7 @@ export default defineConfig({
 	testDir: '.',
 	testMatch: '*.play.ts',
 	reporter: 'line',
-	workers: Number(process.env.PLAYTEST_WORKERS ?? 4),
+	workers: Number(process.env.PLAYTEST_WORKERS ?? (remote ? 2 : 4)),
 	fullyParallel: true,
 	retries: 0,
 	use: { trace: 'off', screenshot: 'off' },
