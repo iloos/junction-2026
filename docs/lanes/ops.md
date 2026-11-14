@@ -69,3 +69,14 @@ The app runs on Aiven. Operations shows every held line, refused commit and anom
 - The kitchen runaway loop (996 ops) is fixed by 8d.
 - Plan the event takes 4.24 s, of which 2.88 s is the stage-2 rescues; that's the next latency target.
 - `ops/+page.server.ts` names come from seeds plus `SYNTH_PRODUCTS`, not `catalog.get`, so a product outside them shows as "Product <id>".
+
+## Report
+- Sat 14 Nov ~06:00 · Track G (lane/g-visitor) · done:
+  - one visitor resolver (signed cookie, lazy seed with a fresh run, rooms `mine` / `ws-judges` / `ws-demo`);
+  - D9 judge keys and `GET /api/demo/judge-key`;
+  - presenter session on /ops;
+  - per-workspace reset cooldown, kitchen queue, sessions and simulator overlay;
+  - bus ring cap of 60; idempotency cleared on reset (s11 F1-idem flipped);
+  - F15 count parity, F16 Ops-side deep links `?ws&run`, F26 clock re-anchor and 400 on an empty cancel, F27 paged catch-up and resync on a refused op;
+  - `warm.sh`.
+  Integration gate `src/routes/ops/visitor-gate.e2e.ts` is green on a prod build (fixture DB), and so is merge-gate. Outside paths, approved by the lead: `auth.resolveKey` (judge keys) and `tools/serve.ts` (current run and overlay scope); edits to `evals/adapter.ts` reset and `adapters/simulator/overlay.ts`. Not yet done: the 30-visitor bound test on prod (second merge); the `/request` reload recovery (req). Ready to merge: yes.

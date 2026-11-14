@@ -5,6 +5,11 @@ type Seqd = Extract<ServerEvent, { seq: number }>;
 
 /** Events kept per workspace for catch-up of things that are not in the op log (sim events). */
 export const RING_SIZE = 500;
+/**
+ * Rings kept at once. With a sandbox per visitor, rings of workspaces nobody is watching are dropped, least
+ * recently written first; ops stay in the database, so only sim events of an idle sandbox are forgotten.
+ */
+export const MAX_RINGS = 60;
 
 export const hasSeq = (e: ServerEvent): e is Seqd => 'seq' in e;
 
@@ -35,7 +40,21 @@ export class MemoryBus {
 		}
 		ring.sort((a, b) => a.seq - b.seq);
 		if (ring.length > RING_SIZE) ring.splice(0, ring.length - RING_SIZE);
+		this.rings.delete(workspaceId); // most recently written last
 		this.rings.set(workspaceId, ring);
+		if (this.rings.size > MAX_RINGS) this.evict();
+	}
+
+	/** Drop the least recently written rings that have no listeners, down to MAX_RINGS. */
+	private evict(): void {
+		for (const ws of this.rings.keys()) {
+			if (this.rings.size <= MAX_RINGS) return;
+			if (!this.listeners.has(ws)) this.rings.delete(ws);
+		}
+	}
+
+	ringCount(): number {
+		return this.rings.size;
 	}
 
 	/** Sequenced events with seq > after, oldest first. */

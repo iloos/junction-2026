@@ -167,10 +167,19 @@ export function coverage(
 	return total ? { covered, total, unit } : null;
 }
 
-/** Where the kitchen shows this case: the exact plan, version and need. */
-export function kitchenHref(c: Case): string | null {
+/**
+ * Where the kitchen shows this case: the exact workspace, run, plan, version and need. `ws` moves the
+ * kitchen into the same room (server/demo/visitor.ts); a link from an older run finds no such plan there.
+ */
+export function kitchenHref(c: Case, at?: { ws: string; run: string | null }): string | null {
 	if (!c.planId) return null;
-	const q = new URLSearchParams({ kitchen: c.kitchenId, plan: c.planId });
+	const q = new URLSearchParams();
+	if (at) {
+		q.set('ws', at.ws);
+		if (at.run) q.set('run', at.run);
+	}
+	q.set('kitchen', c.kitchenId);
+	q.set('plan', c.planId);
 	if (c.version !== undefined) q.set('v', String(c.version));
 	if (c.needId) q.set('need', c.needId);
 	return `/?${q}`;

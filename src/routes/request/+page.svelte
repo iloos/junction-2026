@@ -284,7 +284,7 @@
 			const res = await fetch('/api/demo/sandbox/reset', { method: 'POST' });
 			const b = await res.json().catch(() => null);
 			if (res.status === 429)
-				sandboxNote = `The sandbox was just reset. Try again in ${Math.ceil((b?.retryInMs ?? 0) / 1000)} s.`;
+				sandboxNote = `This sandbox was just reset. Try again in ${Math.ceil((b?.retryInMs ?? 0) / 1000)} s.`;
 			else if (!res.ok) sandboxNote = b?.error?.message ?? `Reset failed (HTTP ${res.status}).`;
 			else {
 				startOver();
@@ -345,12 +345,14 @@
 			class="inline-flex items-center gap-1.5"
 			title={data.workspace.stage
 				? 'Presenter mode: the stage run everyone watches on /ops.'
-				: 'Shared sandbox: every visitor orders, approves and commits here; it never touches the stage run.'}
+				: data.workspace.kind === 'own'
+					? 'Only this browser works here: other visitors and the stage run never see your orders, approvals or commits.'
+					: 'Shared with every visitor in this room: their edits and resets reach you too.'}
 			><Building2
 				size={13}
 				class={data.workspace.stage ? 'text-accent' : 'text-propose'}
 				aria-hidden="true"
-			/>{data.workspace.stage ? 'Stage run' : "Judges' sandbox"}
+			/>{data.workspace.label}
 			<b class="mono font-medium text-ink">{data.workspace.id}</b></span
 		>
 		<span class="inline-flex items-center gap-1.5"

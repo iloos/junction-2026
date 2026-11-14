@@ -45,9 +45,12 @@ Env changes go through `aiven_service_update` (`user_config.application.environm
 - **Keys** (Aiven env, kind `secret`; values also in the main checkout's `.env`, never printed): `MANDATE_KEY_CHEF`, `MANDATE_KEY_KITCHEN_AGENT`, `MANDATE_KEY_APPROVER`, `MANDATE_KEY_EXTERNAL_AGENT` act in the stage workspace `ws-demo`. `MCP_KEYS` = `label:actor:key[:workspace]`, comma-separated; judge entries default to the sandbox `ws-judges`, created with the seed kitchens on first use. Public fixture keys (`MANDATE_FIXTURE_KEYS`) stay off.
 - **`GEMINI_STUDIO_API_KEY`** is pasted into the Aiven console by the user (agents never read `.env` values).
 - **Env updates replace the whole list.** `aiven_service_update` with `environment_variables` drops anything not re-sent, including `PROJECT_CA_CERT` (base64 of `certs/aiven-ca.pem`) and the console-added Gemini key. Prefer adding a single variable in the console.
-- **Presenter actions need a key on prod.** The key-less /ops buttons (run, stop, reset) appear only in dev or with `DEMO_RESET_OPEN=1`, which stays unset on prod (one rule: `server/demo/presenter.ts`).
+- **Visitors (D9, `server/demo/visitor.ts`).** Every browser gets its own sandbox `ws-j-<24 hex>` from a signed cookie (`mandate_visitor`, HMAC with `JUDGE_KEY_SECRET`), seeded lazily with a fresh run; kitchen, /request, /ops, `/api/events` and the sandbox reset all resolve through `visitorWorkspace()`. Links move a browser only between `?ws=mine`, `?ws=ws-judges` (the shared room) and `?ws=ws-demo` (presenters only); another visitor's id in a link, cookie or query selects nothing. Cap: 300 sandboxes per process, then new visitors share `ws-judges`.
+- **`JUDGE_KEY_SECRET`** (secret, ≥16 chars, added in the console): signs visitor cookies and judge keys. Without it, cookies are signed per process (visitors get a fresh sandbox after each restart) and judge keys are off (`/api/demo/judge-key` answers 503). Changing it gives every visitor a new sandbox. `JUDGE_KEY_EXPIRES` (ISO) overrides the key expiry, default 2026-11-16 00:00 Helsinki.
+- **Judge keys** `jk_<ws>.<exp>.<hmac>`: `GET /api/demo/judge-key` (cookie) returns the key and `mcpUrl` for the browser's own sandbox; /ops shows it under "Agent key for this sandbox". The key acts as an external agent (no approve) in that sandbox's current run.
+- **Presenter session.** On /ops, "Presenter" takes the chef or approver key once and sets a signed httpOnly cookie (12 h, ends if the key rotates); the browser then defaults to the stage and gets Run / Stop / Reset. `DEMO_RESET_OPEN=1` opens these for everyone and stays unset on prod (rules: `server/demo/presenter.ts`).
   - `POST /api/demo/reset` (chef or approver key): starts a fresh `ws-demo` run.
-  - `POST /api/demo/sandbox/reset` (no key, 20 s cooldown, 429 with `retryInMs` meanwhile): starts the judges' sandbox `ws-judges` over; it can never reach `ws-demo`. Server function: `resetSandbox()` in `server/demo/sandbox.ts`.
+  - `POST /api/demo/sandbox/reset` (no key; the browser's cookie): starts that browser's room over (its own sandbox or `ws-judges`), 20 s cooldown per sandbox (429 with `retryInMs`), 403 for the stage. Each reset also clears that workspace's idempotency rows. Server function: `resetSandbox()` in `server/demo/sandbox.ts`.
   - `POST /api/agent/run` (**chef key only**, needs `agent:run`): runs the routine agent; NDJSON traces, 409 while a run is going. Its ops name the starter.
   - `POST /api/agent/run/<id>/cancel` (chef key only): stops that run; 202 `{ id, cancelled, run }` once the loop has stopped, 404 if it isn't the run in progress.
 - **Web routes** (`/api/web/*`):
@@ -55,7 +58,7 @@ Env changes go through `aiven_service_update` (`user_config.application.environm
   - `POST replay` (chef or approver key): plays a recorded real Ruokavirasto recall into the current run, labelled as a replay (or DRILL with `drillProductId`).
   - `POST recall`, `POST facts`, `POST outside`, `GET findings` (any key): read a recall notice, look up missing product facts, find outside recipes/alternatives, list findings.
   - Env: `EXA_API_KEY`, `CONTEXT_DEV_API_KEY`, `CONTEXT_DEV_WEBHOOK_SECRET` (secrets) and `WEB_PROVIDER=live`, `WEB_CACHE_DIR=/tmp/web-cache` are added in the console.
-- **`/api/events`** serves only `ws-demo`, `ws-judges` and `ws-synth` on prod until CallContext gates it.
+- **`/api/events`** serves `ws-demo`, `ws-judges` and `ws-synth` to anyone, and a visitor sandbox only to the browser whose signed cookie names it.
 - **Scenario clock:** `src/lib/core/scenario.ts`; the served app ticks it from each run's start. Reset re-anchors it.
 
 ```sh
@@ -79,6 +82,7 @@ _Checked Sat 14 Nov ~03:00 against the live service; each line says how._
 | No catalogue or model call holds a database lock | `store/prepare.test.ts` fails on any catalogue call made inside a store transaction across the full journey and three concurrent commands; it passes (0). The author's commit (4c553fd) reports 21 such calls on the previous code. |
 
 ## Warm up before judging
+`scripts/deploy/warm.sh <url>` waits out the status-page redirect, then walks one visitor's first minute (pages, a sandbox seed, the kitchen snapshot, the op stream) and prints each time.
 A container that has just started, or has sat idle, answers its first request slowly: the first `/healthz` after a deploy took **7.3 s** (container wake + first Postgres connect + TLS), the first `quote` 0.85 s; warm calls are 0.2–0.4 s from Helsinki. Aiven's proxy also redirects to its status page (302/307) for about a minute while a redeploy switches containers. Before judging or recording: open `/`, `/ops` and `/request` once, run one `quote`, and run `EXPECT_DB=ok scripts/deploy/smoke.sh <url>`; don't redeploy in the last half hour.
 
 Measured on 39ef642 (fresh sandbox, Chromium, from Helsinki): page ready 1.9 s; **Plan the event 7.1 s** = `POST /kitchen-api/scenario` 4.7 s + a follow-up `GET /kitchen-api/snapshot` 1.8 s + 0.5 s client; `/request` 1.0–1.7 s (≈0.75 s Gemini parse); `place_order` 0.3–0.4 s.

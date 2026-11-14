@@ -5,7 +5,7 @@ import { createHandlers } from '$lib/core/services/handlers';
 import { createDbPorts } from '../store/db-ports';
 import { caseDescription } from './convert';
 import { runRequest } from './run';
-import { pageWorkspace, readAnswers } from './workspace';
+import { readAnswers } from './workspace';
 
 const TODAY = '2026-11-14';
 
@@ -30,14 +30,7 @@ async function setup() {
 	return { h, ctx, kitchen, quoted, products: env.ports.catalog };
 }
 
-describe('page workspace', () => {
-	it('is the judges sandbox unless presenter actions are open', () => {
-		expect(pageWorkspace({}, false)).toEqual({ id: 'ws-judges', stage: false });
-		expect(pageWorkspace({ MANDATE_WORKSPACE: 'ws-demo' }, false).id).toBe('ws-judges');
-		expect(pageWorkspace({}, true)).toEqual({ id: 'ws-demo', stage: true });
-		expect(pageWorkspace({ DEMO_RESET_OPEN: '1' }, false)).toEqual({ id: 'ws-demo', stage: true });
-		expect(pageWorkspace({ DEMO_RESET_OPEN: 'yes' }, false).id).toBe('ws-judges');
-	});
+describe('page answers', () => {
 	it('drops malformed answers', () => {
 		expect(
 			readAnswers([

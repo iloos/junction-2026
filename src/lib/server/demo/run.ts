@@ -23,6 +23,11 @@ export function currentRun(workspaceId: string): string {
 	return runs.get(workspaceId)?.id ?? DEFAULT_RUN;
 }
 
+/** Whether this process has a run for the workspace (loaded from the database or started here). */
+export function hasRun(workspaceId: string): boolean {
+	return runs.has(workspaceId);
+}
+
 /** When the current run started (wall ms), for the scenario clock. Before any load: process start. */
 export function currentRunStartedAt(workspaceId: string): number {
 	return runs.get(workspaceId)?.startedAt ?? PROCESS_START;
@@ -46,7 +51,15 @@ export function setCurrentRun(workspaceId: string, runId: string, startedAt = Da
 	runs.set(workspaceId, { id: runId, startedAt });
 }
 
-/** A new, sortable run id. */
+/**
+ * A new run id: time-sortable, with a random tail because `runs.id` is unique across workspaces and many
+ * visitor sandboxes can start a run in the same millisecond.
+ */
 export function newRunId(now = Date.now()): string {
-	return `run-${now.toString(36)}`;
+	const tail = crypto
+		.getRandomValues(new Uint32Array(1))[0]
+		.toString(36)
+		.padStart(7, '0')
+		.slice(0, 5);
+	return `run-${now.toString(36)}${tail}`;
 }

@@ -1,13 +1,18 @@
 import { json } from '@sveltejs/kit';
 import { Cooldown, scenario } from '$lib/server/kitchen/live';
 import { sid } from '$lib/server/kitchen/sid';
+import { dev } from '$app/environment';
+import { env } from '$env/dynamic/private';
+import { visitorWorkspace } from '$lib/server/demo/visitor';
 import type { RequestHandler } from './$types';
 
 /** Demo commands: start (plans the event), rule preset, kitchen, simulated contention, reset. Returns the snapshot. */
-export const POST: RequestHandler = async ({ request, cookies }) => {
+export const POST: RequestHandler = async (event) => {
+	const { request, cookies } = event;
+	const { workspaceId } = await visitorWorkspace(event, env, dev);
 	const body = (await request.json().catch(() => ({}))) as { action?: string; value?: unknown };
 	try {
-		return json(await scenario(sid(cookies), body.action ?? '', body.value));
+		return json(await scenario(sid(cookies), workspaceId, body.action ?? '', body.value));
 	} catch (e) {
 		if (e instanceof Cooldown)
 			return json(

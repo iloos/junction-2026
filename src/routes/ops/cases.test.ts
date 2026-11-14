@@ -31,6 +31,9 @@ describe('ops cases', () => {
 			x.title.startsWith('Kirjolohi')
 		);
 		expect(kitchenHref(c!)).toBe('/?kitchen=k-hotel&plan=p-hotel&v=3');
+		expect(kitchenHref(c!, { ws: 'ws-j-abcdefghijklmnop', run: 'run-x' })).toBe(
+			'/?ws=ws-j-abcdefghijklmnop&run=run-x&kitchen=k-hotel&plan=p-hotel&v=3'
+		);
 	});
 
 	it('reports coverage only from evidence', () => {

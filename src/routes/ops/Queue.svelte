@@ -6,7 +6,8 @@
 		cases,
 		kitchens,
 		now,
-		relative
+		relative,
+		at
 	}: {
 		cases: Case[];
 		kitchens: { id: string; name: string }[];
@@ -14,6 +15,8 @@
 		now: string;
 		/** Show deadlines relative to now (off for the simulated run, whose clock differs). */
 		relative: boolean;
+		/** Workspace and run the deep links open in the kitchen. */
+		at?: { ws: string; run: string | null };
 	} = $props();
 
 	let kitchen = $state('all');
@@ -103,7 +106,7 @@
 			</div>
 			{#each shown as c (c.id)}
 				{@const d = due(c.deadline)}
-				{@const href = kitchenHref(c)}
+				{@const href = kitchenHref(c, at)}
 				<div class="row" role="row" data-tone={c.tone}>
 					<span role="cell" class="due" class:late={d.late} title={d.abs}>{d.text}</span>
 					<span role="cell" class="what">

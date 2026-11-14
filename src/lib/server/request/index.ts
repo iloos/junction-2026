@@ -27,7 +27,7 @@ import { approvalView, callTool, runRequest } from './run';
 import type { ParsedRequest } from './parse';
 
 export { ToolFailed } from './run';
-export { pageWorkspace, presenterOpen, readAnswers, type PageWorkspace } from './workspace';
+export { readAnswers } from './workspace';
 
 export const DEFAULT_KITCHEN = 'k-hotel';
 
