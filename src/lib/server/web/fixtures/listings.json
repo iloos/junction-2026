@@ -1,32 +1,264 @@
 {
-	"$comment": "Public Valio Aimo listings for the demo products, recorded from live reads on 14 Nov 2026 (match confirmed by EAN). null = no public page names the product.",
+	"$comment": "Verified public pages for the demo products (barcode equals our GTIN), prewarmed by listing-prewarm.test.ts. null = no public page carries the barcode. Images are hotlinked, never copied.",
 	"recordedAt": "2026-11-14",
 	"listings": {
+		"460373": {
+			"pageUrl": "https://www.valioaimo.fi/toimitustukku/myllyn-paras-lehtitaikina-500-g/",
+			"shopUrl": "https://toimitustukku.valioaimo.fi/Myllyn-Paras-Lehtitaikina-500g/p/167890",
+			"imageUrl": "https://imgfly.scarabresearch.com/w_800/https://api.valioaimo.fi/medias/?context=bWFzdGVyfHJvb3R8Mjg5MTkxNnxpbWFnZS9qcGVnfGFEVTBMMmc0Wmk4NU1UVXlNekkxT0RRMU1ESXl8ZTAyZTc4MGQyNDgyOGFhZDUwMDk2ZGU0N2VlNDkyMTJiY2E0NGZkZjkxMDc0NDY3NjY3YWJmODM5NzFmNmRlZA",
+			"source": "valioaimo",
+			"verifiedBy": "gtin",
+			"checkedAt": "2026-11-14T16:11:57.480Z"
+		},
+		"460588": {
+			"pageUrl": "https://www.valioaimo.fi/toimitustukku/paulig-cafe-parisien-kahvi-suodatinjauhatus-12-x400-g/",
+			"shopUrl": "https://toimitustukku.valioaimo.fi/Paulig-Caf%C3%A9-Parisien-kahvi-suodatinjauhatus-12x400g/p/211839",
+			"imageUrl": "https://imgfly.scarabresearch.com/w_800/https://api.valioaimo.fi/medias/?context=bWFzdGVyfHJvb3R8NTc3NzIyOXxpbWFnZS9wbmd8YUdSaUwyZ3dNeTg1TVRVeU5EQTFNalF4T0RnMnxhYjE4ZjdmMDdkNWI0YzZiMzQwZTQ0N2Q0MjM4NjRhZTkyNzcwMGI4OGFhNmQzMmJjNWE3ODA5ODM3NTk4MDNh",
+			"source": "valioaimo",
+			"verifiedBy": "gtin",
+			"checkedAt": "2026-11-14T16:11:59.071Z"
+		},
+		"460613": {
+			"pageUrl": "https://www.valioaimo.fi/toimitustukku/myllyn-paras-korppujauho-300-g/",
+			"shopUrl": "https://toimitustukku.valioaimo.fi/Myllyn-Paras-Korppujauho-300-g/p/2088243",
+			"imageUrl": "https://imgfly.scarabresearch.com/w_800/https://api.valioaimo.fi/medias/?context=bWFzdGVyfHJvb3R8MjI4NjAxM3xpbWFnZS9qcGVnfGFEUmtMMmcyTUM4NU1UVXlOREl3TmpFd01EYzR8MzA5OTExOGEyODIzNzk5ZGU3OWZmMWU5MGIwNGI3OTllYjRlZTg1YjI4OGVjNWMwY2ZmNGFkODMzODZiYzExMQ",
+			"source": "valioaimo",
+			"verifiedBy": "gtin",
+			"checkedAt": "2026-11-14T16:12:01.505Z"
+		},
+		"460879": null,
+		"461210": null,
+		"461314": {
+			"pageUrl": "https://world.openfoodfacts.org/product/6414000069105",
+			"imageUrl": "https://images.openfoodfacts.org/images/products/641/400/006/9105/front_fr.3.400.jpg",
+			"source": "openfoodfacts",
+			"verifiedBy": "gtin",
+			"checkedAt": "2026-11-14T16:12:06.434Z"
+		},
+		"461378": null,
+		"461571": null,
+		"461578": {
+			"pageUrl": "https://www.valioaimo.fi/toimitustukku/vaasan-iso-ruisruutu-45-x85-g/",
+			"shopUrl": "https://toimitustukku.valioaimo.fi/Vaasan-Iso-Ruisruutu-45x85g/p/47290",
+			"imageUrl": "https://imgfly.scarabresearch.com/w_800/https://api.valioaimo.fi/medias/?context=bWFzdGVyfHJvb3R8NDQ3Mzl8aW1hZ2UvanBlZ3xhRFUzTDJnek5TODRPRGN6T1RJd05qSTJOekU0fGNhOWZkMjQzZDQ5N2E2NDA4MDc0NjM2ZWRkZmMyNjhmNmYzNzBmNWI0Yjc0OGRlNmQ4Y2E2MWEwZjI0ZmZmZGY",
+			"source": "valioaimo",
+			"verifiedBy": "gtin",
+			"checkedAt": "2026-11-14T16:12:11.954Z"
+		},
+		"461745": {
+			"pageUrl": "https://www.valioaimo.fi/toimitustukku/mestari-perunahiutale-10-kg/",
+			"shopUrl": "https://toimitustukku.valioaimo.fi/Mestari-Perunahiutale-10-kg/p/544775",
+			"imageUrl": "https://imgfly.scarabresearch.com/w_800/https://api.valioaimo.fi/medias/?context=bWFzdGVyfHJvb3R8ODc3OTQ0fGltYWdlL2pwZWd8YURNekwyaGpOeTg1TVRVeU9EazNNakl3TmpNNHw4Y2I5NzRmZDg5NzNhZTBmZGE0N2ZjNWQ2ZDZlMWIyZDhiNjg5ZDQ2MjIxNGRhNGEwYWNiMDMxNzk1NDBhZTFm",
+			"source": "valioaimo",
+			"verifiedBy": "gtin",
+			"checkedAt": "2026-11-14T16:12:13.345Z"
+		},
+		"461747": {
+			"pageUrl": "https://www.valioaimo.fi/toimitustukku/vaasan-pieni-ruisruutu-100-x38-g/",
+			"shopUrl": "https://toimitustukku.valioaimo.fi/Vaasan-Pieni-Ruisruutu-100x38g/p/557421",
+			"imageUrl": "https://imgfly.scarabresearch.com/w_800/https://api.valioaimo.fi/medias/?context=bWFzdGVyfHJvb3R8NTEwMDJ8aW1hZ2UvanBlZ3xhR1prTDJnNU1DODRPRGN6T1RNeE5qTTJOelkyfDc0ZDI2YTYzZjViYjg1NTNmMTIyNjJjMmQ1NzNkZTBjNmRiMWI0N2Q5MzMwZjY0ZDQ2N2UzYjA0ZTA4Njg3Yzc",
+			"source": "valioaimo",
+			"verifiedBy": "gtin",
+			"checkedAt": "2026-11-14T16:12:15.049Z"
+		},
+		"461765": null,
+		"461810": {
+			"pageUrl": "https://www.valioaimo.fi/toimitustukku/lagerblad-foods-jattilihapulla-50-g-5-kg-kypsa-pakaste/",
+			"shopUrl": "https://toimitustukku.valioaimo.fi/Lagerblad-Foods-J%C3%A4ttilihapulla-50g--5-kg-kyps%C3%A4-pakaste/p/603118",
+			"imageUrl": "https://imgfly.scarabresearch.com/w_800/https://api.valioaimo.fi/medias/?context=bWFzdGVyfHJvb3R8MTMyMjYwfGltYWdlL2pwZWd8YUdJM0wyZzVNeTg1TVRVeU9UVTBNREEzTlRneXw2YzkwMjFjYzMyYWQ0NDRlMGY1ZTczODAyOGQwMjU4M2Q4NDg1OWU5MDBmNDQwNTI5ZWY0ODM4NzVmY2NjZWIz",
+			"source": "valioaimo",
+			"verifiedBy": "gtin",
+			"checkedAt": "2026-11-14T16:12:18.369Z"
+		},
+		"461871": null,
+		"462016": null,
+		"462150": null,
+		"462157": null,
+		"462210": {
+			"pageUrl": "https://www.valioaimo.fi/toimitustukku/kymppi-lanttulaatikko-2-kg-raakapakaste/",
+			"shopUrl": "https://toimitustukku.valioaimo.fi/Kymppi-Lanttulaatikko-2-kg-raakapakaste/p/70482",
+			"imageUrl": "https://imgfly.scarabresearch.com/w_800/https://api.valioaimo.fi/medias/?context=bWFzdGVyfHJvb3R8MjczMjY1fGltYWdlL2pwZWd8YURnekwyZ3pZUzg1TVRVek1EYzNNRFV4TkRJeXwwNTYzNjdhNWEwZTU3MTAzMDkyOThiOTg4NjVkMmVjODNjNGI3ZmRiNmZkMDJmMTcyMjZjNGJjOGM1NTRkZTUw",
+			"source": "valioaimo",
+			"verifiedBy": "gtin",
+			"checkedAt": "2026-11-14T16:12:23.965Z"
+		},
+		"462447": {
+			"pageUrl": "https://www.valioaimo.fi/toimitustukku/saarioinen-lanttulaatikko-28-kg/",
+			"shopUrl": "https://toimitustukku.valioaimo.fi/Saarioinen-Lanttulaatikko-2%2C8kg/p/8003509",
+			"imageUrl": "https://imgfly.scarabresearch.com/w_800/https://api.valioaimo.fi/medias/?context=bWFzdGVyfHJvb3R8MjMxNjU4MjJ8aW1hZ2UvcG5nfGFEWTFMMmczWlM4NU1UWTBNRGt5TnpZNE1qZzJ8YzEyODBmYzllMWMyMjAwY2E1NWUwNjMwZDJjMTBmZmEzOWE2OTFkNTJkNjk5ZDhlZTk3OTIyZTIxMmYwNThkYQ",
+			"source": "valioaimo",
+			"verifiedBy": "gtin",
+			"checkedAt": "2026-11-14T16:12:25.536Z"
+		},
+		"462455": null,
+		"462482": {
+			"pageUrl": "https://www.valioaimo.fi/toimitustukku/saarioinen-lanttulaatikko-700-g/",
+			"shopUrl": "https://toimitustukku.valioaimo.fi/Saarioinen-Lanttulaatikko-700g/p/8003533",
+			"imageUrl": "https://imgfly.scarabresearch.com/w_800/https://api.valioaimo.fi/medias/?context=bWFzdGVyfHJvb3R8MjE2NjUxNXxpbWFnZS9wbmd8YUdOa0wyZzNPQzg1TVRVek1qSXpOemcyTlRJMnwxNDQwNGY5Nzg5NDUwYzNmYzY0OWZkOTU1ODkyZDQ5OGNiMjE2ZWFmNTgxYmU0N2M4MzVhMzQxMWE1ZGM3MGMz",
+			"source": "valioaimo",
+			"verifiedBy": "gtin",
+			"checkedAt": "2026-11-14T16:12:28.462Z"
+		},
 		"462490": {
-			"url": "https://www.valioaimo.fi/toimitustukku/hk-viljaporsaan-juhlakinkku-potkalla-tuoresuolattu-6-8-kg/",
-			"title": "HK Viljaporsaan Juhlakinkku potkalla tuoresuolattu 6-8 kg",
-			"match": "gtin",
-			"imageUrl": "https://imgfly.scarabresearch.com/w_800/https://api.valioaimo.fi/medias/?context=bWFzdGVyfHJvb3R8MTQxMzQ4Mjl8aW1hZ2UvcG5nfGFETXlMMmd3WlM4NU1UZzRNamd5TmpNd01UYzB8OWIxNTRjYzk1MDVkMzU3YmFhNGU1YTFiMjMyODU3MmU0ZmZiNjE4NjUwMzQ5YzRhN2ExMDcyNDc5ZDE0YjgzZQ"
+			"pageUrl": "https://www.valioaimo.fi/toimitustukku/hk-viljaporsaan-juhlakinkku-potkalla-tuoresuolattu-6-8-kg/",
+			"shopUrl": "https://toimitustukku.valioaimo.fi/HK-Viljaporsaan-Juhlakinkku-potkalla-tuoresuolattu-6-8kg/p/8003449",
+			"imageUrl": "https://imgfly.scarabresearch.com/w_800/https://api.valioaimo.fi/medias/?context=bWFzdGVyfHJvb3R8MTQxMzQ4Mjl8aW1hZ2UvcG5nfGFETXlMMmd3WlM4NU1UZzRNamd5TmpNd01UYzB8OWIxNTRjYzk1MDVkMzU3YmFhNGU1YTFiMjMyODU3MmU0ZmZiNjE4NjUwMzQ5YzRhN2ExMDcyNDc5ZDE0YjgzZQ",
+			"source": "valioaimo",
+			"verifiedBy": "gtin",
+			"checkedAt": "2026-11-14T16:12:29.959Z"
 		},
-		"463380": {
-			"url": "https://www.valioaimo.fi/toimitustukku/arla-cafe-maito-1-l-uht-laktoositon/",
-			"title": "Arla Café maito 1 L UHT laktoositon",
-			"match": "gtin",
-			"imageUrl": "https://imgfly.scarabresearch.com/w_800/https://api.valioaimo.fi/medias/?context=bWFzdGVyfHJvb3R8MjE1NzkwM3xpbWFnZS9qcGVnfGFHTm1MMmd5TlM4NU1UVXpOVEl6TURVMk5qY3d8Mzk1N2QyMTM1ZTEzMjU1YjUzZDEzM2RjNDliYTczN2QxZjMzODVkMmNmNTc0NjZlODRkNDM1ZjZiN2E2ZGNjZA"
+		"462584": null,
+		"462718": null,
+		"462919": {
+			"pageUrl": "https://www.valioaimo.fi/toimitustukku/hk-joulun-juhlakinkku-viipaloitu-25-kg/",
+			"shopUrl": "https://toimitustukku.valioaimo.fi/HK-Joulun-Juhlakinkku-viipaloitu-2%2C5-kg/p/8016348",
+			"imageUrl": "https://imgfly.scarabresearch.com/w_800/https://api.valioaimo.fi/medias/?context=bWFzdGVyfHJvb3R8NTI3OTY3MnxpbWFnZS9wbmd8YUdRMkwyZ3dZaTg1TVRVek16Z3lORGd4T1RVd3xiOGU5OWQ1MTAwNDU4ZjFhYmQ2Nzc0M2Q1YmJlZDE5MjgyODdlZDY1NmIzZDM2YWFhM2QxYzVhMzk4ZTFiMTBh",
+			"source": "valioaimo",
+			"verifiedBy": "gtin",
+			"checkedAt": "2026-11-14T16:12:34.730Z"
 		},
-		"464201": null,
-		"464411": null,
+		"463159": {
+			"pageUrl": "https://www.valioaimo.fi/toimitustukku/mattila-bros-aito-saunapalvikinkku-n-18-kg-siivutettu/",
+			"shopUrl": "https://toimitustukku.valioaimo.fi/Mattila-Bros-Aito-Saunapalvikinkku-n-1%2C8kg%2C-siivutettu/p/8019858",
+			"imageUrl": "https://imgfly.scarabresearch.com/w_800/https://api.valioaimo.fi/medias/?context=bWFzdGVyfHJvb3R8NTE4MTYzOXxpbWFnZS9qcGVnfGFHWmpMMmcxTlM4NU1UVXpOREF4TnpFMk56WTJ8NGYzMzg1NDVkNjZiZWE5YTkyYmE4OTk2NWJlN2I0YzYzNTAyZWUyYzBkNzdhNzk0YTdmMjhlMzZlZWNmZmM5Yw",
+			"source": "valioaimo",
+			"verifiedBy": "gtin",
+			"checkedAt": "2026-11-14T16:12:36.187Z"
+		},
+		"463437": null,
+		"463798": null,
+		"463804": null,
+		"463847": null,
+		"463860": {
+			"pageUrl": "https://www.valioaimo.fi/toimitustukku/atria-rosolli-25-kg/",
+			"shopUrl": "https://toimitustukku.valioaimo.fi/Atria-Rosolli-2%2C5kg/p/8037333",
+			"imageUrl": "https://imgfly.scarabresearch.com/w_800/https://api.valioaimo.fi/medias/?context=bWFzdGVyfHJvb3R8MTUyOTM1MnxpbWFnZS9qcGVnfGFETXlMMmhoWVM4NU1UVXpOakl5TlRjek1EZzJ8MDQzYzQ4MzVlYTNhOTgyNDEzZjZjZWZhMjE0NmUxODlkMGM5ZGZmYTBlMTM4NmIxY2MyNzY3NTZhMzZhYjUzMw",
+			"source": "valioaimo",
+			"verifiedBy": "gtin",
+			"checkedAt": "2026-11-14T16:12:43.494Z"
+		},
+		"463876": null,
+		"463928": null,
+		"463982": {
+			"pageUrl": "https://www.valioaimo.fi/toimitustukku/kieku-vapaan-kanan-muna-l180-12300-g/",
+			"shopUrl": "https://toimitustukku.valioaimo.fi/Kieku-Vapaan-kanan-muna-L180-12300g/p/8039831",
+			"imageUrl": "https://imgfly.scarabresearch.com/w_800/https://api.valioaimo.fi/medias/?context=bWFzdGVyfHJvb3R8MTYxNTM0NHxpbWFnZS9qcGVnfGFEZ3hMMmc0TUM4NU1UVXpOalkyTURnNE9Ua3d8NDhkOGY0NTQ1MWUwYjhjYjQ3YWExZjJiMDgwNzA4NjVjOWY0ZDQ5Y2E2NGY3NDQ2NjRkNTkwMzM3MWMxZDc0Yw",
+			"source": "valioaimo",
+			"verifiedBy": "gtin",
+			"checkedAt": "2026-11-14T16:12:48.914Z"
+		},
+		"464201": {
+			"pageUrl": "https://world.openfoodfacts.org/product/6408430011667",
+			"imageUrl": "https://images.openfoodfacts.org/images/products/640/843/001/1667/front_en.29.400.jpg",
+			"source": "openfoodfacts",
+			"verifiedBy": "gtin",
+			"checkedAt": "2026-11-14T16:12:51.059Z"
+		},
+		"464237": {
+			"pageUrl": "https://world.openfoodfacts.org/product/6408430000500",
+			"imageUrl": "https://images.openfoodfacts.org/images/products/640/843/000/0500/front_fi.14.400.jpg",
+			"source": "openfoodfacts",
+			"verifiedBy": "gtin",
+			"checkedAt": "2026-11-14T16:12:52.954Z"
+		},
+		"464249": {
+			"pageUrl": "https://world.openfoodfacts.org/product/6408430014958",
+			"source": "openfoodfacts",
+			"verifiedBy": "gtin",
+			"checkedAt": "2026-11-14T16:12:54.519Z"
+		},
+		"464273": null,
+		"464411": {
+			"pageUrl": "https://world.openfoodfacts.org/product/6408430030026",
+			"imageUrl": "https://images.openfoodfacts.org/images/products/640/843/003/0026/front_fi.16.400.jpg",
+			"source": "openfoodfacts",
+			"verifiedBy": "gtin",
+			"checkedAt": "2026-11-14T16:13:00.370Z"
+		},
+		"465109": {
+			"pageUrl": "https://www.valioaimo.fi/toimitustukku/mestari-forsman-kermainen-ruskeakastike-25-kg/",
+			"shopUrl": "https://toimitustukku.valioaimo.fi/Mestari-Forsman-Kermainen-Ruskeakastike-2%2C5kg/p/8054971",
+			"imageUrl": "https://imgfly.scarabresearch.com/w_800/https://api.valioaimo.fi/medias/?context=bWFzdGVyfHJvb3R8OTAwMjIzMHxpbWFnZS9wbmd8YUdRMEwyaGhaQzg1TVRVME1UQXhNRGcwTVRrd3w3NTM0MmNhNjY5YjA0MWYzZDYxYmVmMDI3MjQ2NjE4OGUzM2RmN2JlOTUyNmZjNzIwMTJmNjJjM2JkNDNmOGM5",
+			"source": "valioaimo",
+			"verifiedBy": "gtin",
+			"checkedAt": "2026-11-14T16:13:01.908Z"
+		},
 		"466964": {
-			"url": "https://www.valioaimo.fi/toimitustukku/myllyn-paras-puuroriisi-1-kg/",
-			"title": "Myllyn Paras Puuroriisi 1 kg",
-			"match": "gtin",
-			"imageUrl": "https://imgfly.scarabresearch.com/w_800/https://api.valioaimo.fi/medias/?context=bWFzdGVyfHJvb3R8NTQ3NTQxN3xpbWFnZS9qcGVnfGFEY3pMMmhoWkM4NU1UVTBOekk1T1RZM05qUTJ8NmFkNGZiOTk3M2JhZjZmNjRlZDE4ZGM1ZTYzNjcwMWJkMGZjMDMwMjBkODM3OGI2NzkwYWQwOGU0MWU2MjY4Yg"
+			"pageUrl": "https://www.valioaimo.fi/toimitustukku/myllyn-paras-puuroriisi-1-kg/",
+			"shopUrl": "https://toimitustukku.valioaimo.fi/Myllyn-Paras-Puuroriisi-1kg/p/8066467",
+			"imageUrl": "https://imgfly.scarabresearch.com/w_800/https://api.valioaimo.fi/medias/?context=bWFzdGVyfHJvb3R8NTQ3NTQxN3xpbWFnZS9qcGVnfGFEY3pMMmhoWkM4NU1UVTBOekk1T1RZM05qUTJ8NmFkNGZiOTk3M2JhZjZmNjRlZDE4ZGM1ZTYzNjcwMWJkMGZjMDMwMjBkODM3OGI2NzkwYWQwOGU0MWU2MjY4Yg",
+			"source": "valioaimo",
+			"verifiedBy": "gtin",
+			"checkedAt": "2026-11-14T16:13:03.413Z"
+		},
+		"467149": {
+			"pageUrl": "https://www.valioaimo.fi/toimitustukku/sallacarte-amerikansalaattisuikale-1-kg/",
+			"shopUrl": "https://toimitustukku.valioaimo.fi/SallaCarte-Amerikansalaattisuikale-1-kg/p/8068403",
+			"imageUrl": "https://imgfly.scarabresearch.com/w_800/https://api.valioaimo.fi/medias/?context=bWFzdGVyfHJvb3R8NDIyOTE1fGltYWdlL2pwZWd8YURBNEwyaGlOeTg1TVRrd09UVXdPRFl5T0RjNHw1ZjJhYWFjYWI2MzZlNTliODUxNjJhOGFjZmEyZDA2OTYwZjI5NGI2NjUwNmU0NmQzMTFiOWZlYmFlZDMyMDU5",
+			"source": "valioaimo",
+			"verifiedBy": "gtin",
+			"checkedAt": "2026-11-14T16:13:05.147Z"
+		},
+		"467464": null,
+		"468013": {
+			"pageUrl": "https://www.valioaimo.fi/toimitustukku/fazer-luumutahtitorttu-n-80-x-72-g-raakapakaste/",
+			"shopUrl": "https://toimitustukku.valioaimo.fi/Fazer-Luumut%C3%A4htitorttu-n-80-x-72g%2C-raakapakaste/p/8072070",
+			"imageUrl": "https://imgfly.scarabresearch.com/w_800/https://api.valioaimo.fi/medias/?context=bWFzdGVyfHJvb3R8MTQzMDYyMHxpbWFnZS9qcGVnfGFEVTJMMmhqWXk4NU1UVTFNVEU1TnpjMU56YzB8NjFjMjAzNWFhNGZjNDY3ODA1ZDRmNzZhMTk0MjFjMDk0MDkxYWZiN2YyNTk0YTI5YzdlYzI1NjViY2MxZTM0OQ",
+			"source": "valioaimo",
+			"verifiedBy": "gtin",
+			"checkedAt": "2026-11-14T16:13:08.563Z"
+		},
+		"469477": {
+			"pageUrl": "https://www.valioaimo.fi/toimitustukku/valio-rasvaton-maito-1-l-esl/",
+			"shopUrl": "https://toimitustukku.valioaimo.fi/Valio-rasvaton-maito-1-l-ESL/p/8079270",
+			"imageUrl": "https://imgfly.scarabresearch.com/w_800/https://api.valioaimo.fi/medias/?context=bWFzdGVyfHJvb3R8NjA2MjU1NHxpbWFnZS9wbmd8YUdJMEwyaGpNaTg1TVRNNE5USTNNek00TlRJMnw3NzVhZDQxZDFhZWEwNDZiODNlM2VkMzgyYjE5MTc5NzM1YjY5YjRlMTRlZTYwZThmZGViYjQxZmY2YTBjYTM0",
+			"source": "valioaimo",
+			"verifiedBy": "gtin",
+			"checkedAt": "2026-11-14T16:13:10.490Z"
+		},
+		"469512": {
+			"pageUrl": "https://www.valioaimo.fi/toimitustukku/80-x-8-x-elovena-1-l-kaurajuoma-kahviin/",
+			"shopUrl": "https://toimitustukku.valioaimo.fi/Elovena-1l-kaurajuoma-kahviin/p/8098361",
+			"imageUrl": "https://imgfly.scarabresearch.com/w_800/https://api.valioaimo.fi/medias/?context=bWFzdGVyfHJvb3R8MjUxMDIzNnxpbWFnZS9wbmd8YURnd0wyZ3dZeTg1TVRjeE56TTVOak01T0RNNHwwZjFhOTdhZWE2YzNhNWE5YjZiZDFjODQ5YTEzNTVlZjU5MzY4MTgwM2Q0MjJlM2M5NjlkODVmNWE3OGQ3Njhh",
+			"source": "valioaimo",
+			"verifiedBy": "gtin",
+			"checkedAt": "2026-11-14T16:13:13.672Z"
+		},
+		"471247": null,
+		"471898": null,
+		"472186": null,
+		"473317": {
+			"pageUrl": "https://www.valioaimo.fi/toimitustukku/vaasan-joulutorttu-40-x60-g/",
+			"shopUrl": "https://toimitustukku.valioaimo.fi/Vaasan-Joulutorttu-40x60g/p/8090149",
+			"imageUrl": "https://imgfly.scarabresearch.com/w_800/https://api.valioaimo.fi/medias/?context=bWFzdGVyfHJvb3R8MzM3NDI2NnxpbWFnZS9qcGVnfGFESTBMMmc1TVM4NU1UWTFOREkzT0RNME9URXd8NjkzMjU3NjVmMmZhYzIzYWEzNTIwM2UzYTE2YmE4NmVmNGQ5YjdiNjczN2U2YzFlYmVmYzJmYjc3MGY0MzY5Nw",
+			"source": "valioaimo",
+			"verifiedBy": "gtin",
+			"checkedAt": "2026-11-14T16:13:18.361Z"
+		},
+		"473482": {
+			"pageUrl": "https://www.valioaimo.fi/toimitustukku/vaasan-tahtitorttu-40-x60-g/",
+			"shopUrl": "https://toimitustukku.valioaimo.fi/Vaasan-T%C3%A4htitorttu-40x60g/p/8090176",
+			"imageUrl": "https://imgfly.scarabresearch.com/w_800/https://api.valioaimo.fi/medias/?context=bWFzdGVyfHJvb3R8NDcwMjQ3NnxpbWFnZS9qcGVnfGFEZ3lMMmd6T0M4NU1UWTFOREk0TXpJMk5ETXd8NGVmYjk1Yjg2YmQ4ZjJjZmYzY2ZiMWE0ZTdiMTM5OWE5MjkyNjk4Yjg1Y2I0NWI4MWM0MGEwZmJjYWEzYzA5MA",
+			"source": "valioaimo",
+			"verifiedBy": "gtin",
+			"checkedAt": "2026-11-14T16:13:19.937Z"
+		},
+		"475214": null,
+		"476648": {
+			"pageUrl": "https://www.valioaimo.fi/toimitustukku/vataja-noin-18-kg-maalaiskinkku-savustettu-pala-1-4/",
+			"shopUrl": "https://toimitustukku.valioaimo.fi/Vataja-noin-1%2C8kg-Maalaiskinkku-savustettu-pala-1-4/p/9903098",
+			"imageUrl": "https://imgfly.scarabresearch.com/w_800/https://api.valioaimo.fi/medias/?context=bWFzdGVyfHJvb3R8MTE0MDY1MXxpbWFnZS9qcGVnfGFHUTNMMmczWlM4NU1UVTNNelk0TVRVeU1EazB8NTI3NWQ2ODVmN2U2ZjI1ZDg5NDY5NTlkMDJlMGFhMDg4M2ZjZGYyMjAxOTE2ZjkzMDAwOTA5MzFiNDNlMWU1OQ",
+			"source": "valioaimo",
+			"verifiedBy": "gtin",
+			"checkedAt": "2026-11-14T16:13:22.649Z"
 		},
 		"476768": {
-			"url": "https://www.valioaimo.fi/toimitustukku/hk-palvikinkku-viipaloitu-15-kg/",
-			"title": "HK Palvikinkku viipaloitu 1,5 kg",
-			"match": "gtin",
-			"imageUrl": "https://imgfly.scarabresearch.com/w_800/https://api.valioaimo.fi/medias/?context=bWFzdGVyfHJvb3R8MjczMzQ1fGltYWdlL3BuZ3xhR0poTDJnMVlTODVNVFUzTWpRek1UQTVOREEyfDc4Yzc3MmQ2YzBmNDhjZDA2MzQ1MzhiNTFmYzNkODUxNjM2NTkzNWNkYTMzZDZlNjc2ZWFhZDE5ZGY0YTVjMTU"
+			"pageUrl": "https://www.valioaimo.fi/toimitustukku/hk-palvikinkku-viipaloitu-15-kg/",
+			"shopUrl": "https://toimitustukku.valioaimo.fi/HK-Palvikinkku-viipaloitu-1%2C5-kg/p/9901826",
+			"imageUrl": "https://imgfly.scarabresearch.com/w_800/https://api.valioaimo.fi/medias/?context=bWFzdGVyfHJvb3R8MjczMzQ1fGltYWdlL3BuZ3xhR0poTDJnMVlTODVNVFUzTWpRek1UQTVOREEyfDc4Yzc3MmQ2YzBmNDhjZDA2MzQ1MzhiNTFmYzNkODUxNjM2NTkzNWNkYTMzZDZlNjc2ZWFhZDE5ZGY0YTVjMTU",
+			"source": "valioaimo",
+			"verifiedBy": "gtin",
+			"checkedAt": "2026-11-14T16:13:23.537Z"
 		}
 	}
 }

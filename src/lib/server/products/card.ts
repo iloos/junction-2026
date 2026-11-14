@@ -1,14 +1,14 @@
 /**
  * One product's card, as the shared ProductToken opens it: pack and sales unit, price ex VAT, availability in words
  * (unknown supply said plainly), the allergen and diet record, origin, Valio's own substitutes, and the product's
- * public Valio Aimo listing when one is confirmed. Read-only. Valio terms come from the catalogue port (live or
+ * public page (Valio Aimo, else Open Food Facts) when its barcode matches. Read-only. Valio terms come from the catalogue port (live or
  * cached, as it says); the listing from web/listing.ts (live or recorded).
  */
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Offer, Product } from '$lib/core/contracts';
 import type { Catalog } from '$lib/core/ports';
-import type { PublicListing } from '../web/listing';
+import type { ProductListing } from '../web/listing';
 
 export interface ProductCard {
 	productId: string;
@@ -32,7 +32,7 @@ export interface ProductCard {
 	diet: Pick<Product, 'nameFi' | 'allergens' | 'freeFrom' | 'diet'>;
 	/** Valio's own substitution rules for this product. */
 	substitutes: { productId: string; nameFi: string }[];
-	listing: PublicListing | null;
+	listing: ProductListing | null;
 	/** Why there is no link, in words, when there is none. */
 	listingNote?: string;
 }
@@ -87,17 +87,18 @@ export function availabilityWords(
 	}
 }
 
-let recorded: Record<string, Omit<PublicListing, 'source'> | null> | null = null;
-/** The demo products' listings, recorded from live reads; undefined for a product not recorded. */
-export function recordedListing(productId: string): PublicListing | null | undefined {
+let recorded: Record<string, ProductListing | null> | null = null;
+/**
+ * The demo products' verified pages, prewarmed from live reads (scripts/web/prewarm-listings): the demo makes no live
+ * call for them. undefined = not prewarmed.
+ */
+export function recordedListing(productId: string): ProductListing | null | undefined {
 	recorded ??= (
 		JSON.parse(
 			readFileSync(join(process.cwd(), 'src/lib/server/web/fixtures/listings.json'), 'utf-8')
-		) as { listings: Record<string, Omit<PublicListing, 'source'> | null> }
+		) as { listings: Record<string, ProductListing | null> }
 	).listings;
-	if (!(productId in recorded)) return undefined;
-	const l = recorded[productId];
-	return l ? { ...l, source: 'fixture' } : null;
+	return productId in recorded ? recorded[productId] : undefined;
 }
 
 export async function productCard(
@@ -106,7 +107,7 @@ export async function productCard(
 		catalog: Catalog;
 		deliverBy: string;
 		/** The listing finder (live), or absent for the recorded set. */
-		listing?: (p: Product) => Promise<PublicListing | null>;
+		listing?: (p: Product) => Promise<ProductListing | null>;
 	}
 ): Promise<ProductCard | null> {
 	const p = (await d.catalog.get([productId])).get(productId);
@@ -115,7 +116,10 @@ export async function productCard(
 	const [{ offers }, subs, listing] = await Promise.all([
 		d.catalog.offers([productId], d.deliverBy),
 		subIds.length ? d.catalog.get(subIds) : Promise.resolve(new Map<string, Product>()),
-		d.listing ? d.listing(p).catch(() => undefined) : Promise.resolve(recordedListing(productId))
+		// Prewarmed demo products first (no live call), then the live finder when there is one.
+		recordedListing(productId) !== undefined || !d.listing
+			? Promise.resolve(recordedListing(productId))
+			: d.listing(p).catch(() => undefined)
 	]);
 	const o = offers.find((x) => x.productId === productId);
 	const unit = UNIT_WORD[p.salesUnit] ?? p.salesUnit;
@@ -149,8 +153,8 @@ export async function productCard(
 			: {
 					listingNote:
 						listing === undefined && !d.listing
-							? 'No recorded public listing for this product in demo mode.'
-							: 'No public Valio Aimo page names this exact product.'
+							? 'No public page looked up for this product in demo mode.'
+							: 'No public page carries this product’s barcode (Valio Aimo, Open Food Facts).'
 				})
 	};
 }

@@ -200,6 +200,25 @@
 								<p class="mt-1 text-meta {ev.gap ? 'text-signoff' : 'text-ink-2'}">
 									{ev.catalogue}
 								</p>
+								{#if ev.listing}
+									<div class="mt-2 flex items-center gap-3">
+										{#if ev.listing.imageUrl}<img
+												src={ev.listing.imageUrl}
+												alt=""
+												loading="lazy"
+												class="size-12 shrink-0 rounded-md border border-rule bg-sheet object-contain"
+											/>{/if}
+										<SourceChip
+											api="other"
+											cache="cache"
+											at={ev.listing.checkedAt}
+											href={ev.listing.pageUrl}
+											label={ev.listing.source === 'valioaimo'
+												? 'valioaimo.fi · barcode matches'
+												: 'Open Food Facts · barcode matches'}
+										/>
+									</div>
+								{/if}
 								{#if ev.fields.length}
 									<ul class="mt-2 space-y-2.5">
 										{#each ev.fields as f (f.field)}

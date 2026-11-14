@@ -11,7 +11,7 @@
 	import type { Snippet } from 'svelte';
 	import DietMarks from './DietMarks.svelte';
 	import { marksOf, type Marks } from './diet';
-	import { money, readableName } from './format';
+	import { money, readableName, storyTime } from './format';
 	import { loadCard, qtyText, type ProductCard } from './product-card';
 	import { useShell } from './shell/shell.svelte';
 
@@ -27,12 +27,24 @@
 		marks?: Marks;
 		/** Delivery date the card's price and availability are for (YYYY-MM-DD); default the scenario's today. */
 		deliverBy?: string;
+		/** A verified product photo the page already has (ProductListing.imageUrl); else the card's, once opened. */
+		imageUrl?: string;
 		/** Replaces the default diet mark (e.g. a page's own badge). */
 		mark?: Snippet;
 		/** Extra classes on the token. */
 		class?: string;
 	}
-	let { productId, name, short, qty, marks, deliverBy, mark, class: cls = '' }: Props = $props();
+	let {
+		productId,
+		name,
+		short,
+		qty,
+		marks,
+		deliverBy,
+		imageUrl,
+		mark,
+		class: cls = ''
+	}: Props = $props();
 
 	const shell = useShell();
 	const system = $derived(shell?.system ?? false);
@@ -57,6 +69,8 @@
 			}
 		);
 	});
+	// A thumbnail only from a page whose barcode matched: the page's own photo or the card's once it is open.
+	const thumb = $derived(imageUrl ?? card?.listing?.imageUrl);
 	const shownMarks = $derived(marks ?? (card ? marksOf(card.diet) : undefined));
 
 	// A phone gets a bottom sheet; anything wider a popover beside the token.
@@ -80,6 +94,12 @@
 </script>
 
 {#snippet token()}
+	{#if thumb}<img
+			src={thumb}
+			alt=""
+			loading="lazy"
+			class="size-6 shrink-0 rounded-[4px] border border-rule bg-sheet object-contain"
+		/>{/if}
 	{#if qty}<span
 			class="mono shrink-0 rounded-[5px] border border-rule bg-well px-1.5 py-px text-meta text-ink tabular-nums"
 			>{qtyText(qty)}</span
@@ -154,7 +174,7 @@
 				<!-- An outside page, not an app route. -->
 				<!-- eslint-disable svelte/no-navigation-without-resolve -->
 				<a
-					href={c.listing.url}
+					href={c.listing.pageUrl}
 					target="_blank"
 					rel="noopener noreferrer"
 					class="inline-flex items-center gap-1.5 text-meta font-medium text-accent-ink hover:underline"
@@ -163,9 +183,11 @@
 				</a>
 				<!-- eslint-enable svelte/no-navigation-without-resolve -->
 				<p class="mt-0.5 text-micro text-ink-3">
-					valioaimo.fi · browse only, ordering stays here · matched by {c.listing.match === 'gtin'
-						? 'EAN'
-						: 'exact name'}{c.listing.source === 'fixture' ? ' · recorded' : ''}
+					{c.listing.source === 'valioaimo'
+						? 'valioaimo.fi · browse only; ordering stays here'
+						: 'Open Food Facts · open data'} · barcode matches · checked {storyTime(
+						c.listing.checkedAt
+					)}
 				</p>
 			{:else}
 				<p class="text-micro text-ink-3">{c.listingNote ?? 'No public listing found.'}</p>
