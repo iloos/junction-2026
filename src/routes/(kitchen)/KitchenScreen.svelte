@@ -160,7 +160,11 @@
 
 	/** Leave a link that didn't resolve: drop it from the address and open the kitchen's own plan. */
 	async function openOwn() {
-		await goto(resolve('/'), { replaceState: true });
+		// In the shared room, stay in it: the room is named in the address.
+		const ws = page.url.searchParams.get('ws');
+		await goto(ws ? resolve(`/?ws=${encodeURIComponent(ws)}`) : resolve('/'), {
+			replaceState: true
+		});
 		k.linkMissing = null;
 		linkedSeen = null;
 		await k.load();
@@ -749,6 +753,19 @@
 		const extra = cached.filter((c) => !server.some((x) => x.id === c.kitchenId));
 		return [...mine, ...extra];
 	});
+	// In the shared room a visitor always works in their own store (D24): never the seeded hotel or another visitor's
+	// store, whatever a link or the server's session last showed.
+	let roomMoving = false;
+	$effect(() => {
+		if (!roomNotice || roomMoving || k.busy) return;
+		const mine = own.map((o) => o.kitchenId);
+		const here = snap?.kitchen.id ?? k.startKitchen;
+		if (!mine.length || !here || mine.includes(here)) return;
+		roomMoving = true;
+		k.linkMissing = null;
+		void switchKitchen(mine[0]).finally(() => (roomMoving = false));
+	});
+
 	async function created(kc: CreatedKitchen, description?: string) {
 		cached = withOwn(cached, {
 			kitchenId: kc.kitchenId,
@@ -1003,7 +1020,9 @@
 					needsJoin ? choose(e.currentTarget.value) : switchKitchen(e.currentTarget.value)}
 			>
 				{#if needsJoin}<option value="" disabled>Choose a kitchen</option>{/if}
-				{#if own.length}
+				{#if roomNotice && own.length}
+					{#each own as o (o.kitchenId)}<option value={o.kitchenId}>{o.name}</option>{/each}
+				{:else if own.length}
 					<optgroup label="Your kitchens">
 						{#each own as o (o.kitchenId)}<option value={o.kitchenId}>{o.name}</option>{/each}
 					</optgroup>
