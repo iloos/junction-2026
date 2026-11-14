@@ -6,7 +6,16 @@
  *  - `waive`: a human may accept it (unknown Terminal quantity, tender list, a preference); held for approval.
  * Unknown never counts as fine: a missing allergen record or origin is treated by the kitchen's stated policy.
  */
-import type { Kitchen, LineReason, Mandate, Offer, Product, SalesQty, Tier } from '../contracts';
+import type {
+	Kitchen,
+	LineReason,
+	Mandate,
+	NeedRequirements,
+	Offer,
+	Product,
+	SalesQty,
+	Tier
+} from '../contracts';
 import { inCategoryGroup } from './categories';
 
 export type Effect = 'forbid' | 'gap' | 'waive';
@@ -23,6 +32,38 @@ export interface ValidateOptions {
 	substitute?: boolean;
 	/** What the dish needs, in the line's sales unit, when the line serves a dish. */
 	expectedQty?: number;
+	/** Hard requirements of the need this line serves: any one unmet forbids the line. */
+	requirements?: NeedRequirements;
+}
+
+/**
+ * Words in Valio's own product name that state a claim the structured data may lack ("laktoositon" on a milk whose
+ * freeFrom list is empty). The same evidence request lookup accepts, so a pick never fails its own requirement.
+ */
+const NAME_CLAIMS: Record<string, string> = {
+	LACTOSE: 'laktoositon',
+	GLUTEN: 'gluteeniton',
+	EU_ORGANIC_FARMING: 'luomu'
+};
+const named = (p: Product, code: string) =>
+	NAME_CLAIMS[code] !== undefined &&
+	p.nameFi
+		.toLowerCase()
+		.split(/[^a-zåäö]+/)
+		.some((w) => w.startsWith(NAME_CLAIMS[code]));
+
+/** The requirements a product does not meet, in words ("free from LACTOSE"); empty when it meets them all. */
+export function unmetRequirements(p: Product, r: NeedRequirements | undefined): string[] {
+	if (!r) return [];
+	return [
+		...(r.freeFrom ?? [])
+			.filter((x) => !p.freeFrom.includes(x) && !named(p, x))
+			.map((x) => `free from ${x}`),
+		...(r.origin && p.origin !== r.origin ? [`origin ${r.origin.toUpperCase()}`] : []),
+		...(r.labels ?? [])
+			.filter((x) => !p.labels.includes(x) && !named(p, x))
+			.map((x) => `label ${x}`)
+	];
 }
 
 /** The mandate's ceiling: above it nothing is orderable, whoever approves. */
@@ -110,6 +151,10 @@ export function validateLine(
 		else if (opts.substitute)
 			out.push({ reason: 'substitute_breaks_preference', effect: 'waive', tier: 'sign_off' });
 	}
+
+	// The need's own hard requirements (the request said lactose-free): no approval passes a product that misses one.
+	if (unmetRequirements(p, opts.requirements).length)
+		out.push({ reason: 'requirement_unmet', effect: 'forbid' });
 
 	// Tender list: anything off it goes to the named approver.
 	if (k.constraints.tenderListOnly && !k.constraints.tenderList?.includes(p.productId))

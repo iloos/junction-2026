@@ -7,7 +7,15 @@
  * D8: ranking is lexicographic on supply first. Known stock (Valio states availability) ranks above unknown stock
  * whatever the score, so a candidate whose supply nobody knows is never recommended over one whose supply is known.
  */
-import type { Kitchen, LineReason, Offer, Product, ScoreBreakdown, SupplyTier } from '../contracts';
+import type {
+	Kitchen,
+	LineReason,
+	NeedRequirements,
+	Offer,
+	Product,
+	ScoreBreakdown,
+	SupplyTier
+} from '../contracts';
 import { blocking, validateLine } from '../mandate/validate';
 
 /** Recipe fit from Decide: score 0–4, its source, and Gemini's confidence when calibrated. */
@@ -32,6 +40,8 @@ export interface RankInput {
 	recalled?: Set<string>;
 	/** Weight of the fit term relative to the criteria (D6 w_fit). */
 	fitWeight?: number;
+	/** Hard requirements of the need being rescued: a candidate that misses one is never ranked. */
+	requirements?: NeedRequirements;
 }
 
 export interface Ranked {
@@ -64,11 +74,12 @@ function exclusions(
 	k: Kitchen,
 	p: Product | undefined,
 	o: Offer | undefined,
-	qty: number
+	qty: number,
+	requirements?: NeedRequirements
 ): LineReason[] {
 	if (!p) return ['NOT_FOUND'];
 	const out = blocking(
-		validateLine(k, p, o, { value: qty, unit: p.salesUnit }, { substitute: true })
+		validateLine(k, p, o, { value: qty, unit: p.salesUnit }, { substitute: true, requirements })
 	).map((f) => f.reason);
 	if (p.reliability !== undefined && p.reliability < RELIABILITY_FLOOR) out.push('low_reliability');
 	return out;
@@ -95,7 +106,13 @@ export function rankCandidates(input: RankInput): Ranked[] {
 		p: products.get(c.productId),
 		o: offers.get(c.productId),
 		reasons: [
-			...exclusions(kitchen, products.get(c.productId), offers.get(c.productId), c.qty),
+			...exclusions(
+				kitchen,
+				products.get(c.productId),
+				offers.get(c.productId),
+				c.qty,
+				input.requirements
+			),
 			...(input.recalled?.has(c.productId) ? (['recall'] as LineReason[]) : [])
 		]
 	}));

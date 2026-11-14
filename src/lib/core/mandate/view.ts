@@ -18,6 +18,7 @@ const DETAIL: Partial<Record<string, Detail>> = {
 	unit_mismatch: 'unit',
 	origin_required: 'origin',
 	allergen_declared: 'dietary_evidence',
+	requirement_unmet: 'dietary_evidence',
 	allergen_trace: 'dietary_evidence',
 	allergen_unknown: 'dietary_evidence',
 	NOT_FOUND: 'qty',

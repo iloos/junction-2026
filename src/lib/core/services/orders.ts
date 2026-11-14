@@ -192,6 +192,10 @@ export async function placeOrder(
 	// A physical amount is the demand authority (F10): the server sizes it, and a qty that disagrees is refused.
 	const sized: (SalesQty | null)[] = [];
 	for (const [i, l] of input.lines.entries()) {
+		if (l.requirements && !l.amount)
+			return err('INVALID_INPUT', `lines[${i}]: requirements need an amount to live on`, {
+				detail: { line: i }
+			});
 		if (!l.amount) {
 			sized.push(null);
 			continue;
@@ -222,6 +226,7 @@ export async function placeOrder(
 						label: `${l.amount.value} ${l.amount.unit} ${products.get(l.productId)!.nameFi}`,
 						kind: 'direct' as const,
 						amount: l.amount,
+						...(l.requirements ? { requirements: l.requirements } : {}),
 						provenance: { source: 'user' as const, note: `${ctx.actor.kind} via ${ctx.via}` }
 					}
 				]
@@ -251,7 +256,9 @@ export async function placeOrder(
 			actor: ctx.actor.kind,
 			createdBy: ctx.actor.kind,
 			orderedBefore: orderedBefore(state, kitchen),
-			recalled: recalledProducts(state)
+			recalled: recalledProducts(state),
+			needs,
+			deliverBy: input.deliverBy
 		});
 		const plan0: Plan = {
 			workspaceId: ctx.workspaceId,
@@ -479,7 +486,9 @@ export async function commitOrder(
 			recalled: recalledProducts(state),
 			committed,
 			// The same yardstick as the quote, so a line held for its quantity stays held here.
-			expectedQty: seed ? seedNeedQty(plan.id, seed) : undefined
+			expectedQty: seed ? seedNeedQty(plan.id, seed) : undefined,
+			needs: plan.needs,
+			deliverBy: plan.deliverBy
 		});
 		// F9: lines whose cut-off has passed (scenario clock) can't be bought. Named explicitly, the commit is refused by
 		// name. Otherwise the re-quote is recorded (they show closed; the changed terms void any approval) and the commit

@@ -156,7 +156,9 @@ export async function requote(
 		orderedBefore: orderedBefore(state, kitchen),
 		recalled: recalledProducts(state),
 		committed: plan.lines.filter((l) => l.state === 'committed'),
-		expectedQty: expectedFor(ports, plan, drafts, pre.products)
+		expectedQty: expectedFor(ports, plan, drafts, pre.products),
+		needs: plan.needs,
+		deliverBy: plan.deliverBy
 	});
 	return quoteOps(ctx, ports, plan, kitchen, t, pre.offers);
 }

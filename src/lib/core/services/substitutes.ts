@@ -277,7 +277,8 @@ export async function findSubstitutes(
 		})),
 		products,
 		offers: new Map(offers.map((o) => [o.productId, o])),
-		recalled
+		recalled,
+		requirements: need?.requirements
 	});
 	// Gemini judges what code can't, outside the lock. Recipe fit (0–4, D6 w_fit) reorders survivors. With a batching
 	// Decide, one call per rescued line also asks each survivor's hard-constraint check (a calibrated "violates"
@@ -324,7 +325,8 @@ export async function findSubstitutes(
 				products,
 				offers: new Map(offers.map((o) => [o.productId, o])),
 				recalled,
-				fit
+				fit,
+				requirements: need?.requirements
 			})
 		);
 	// A calibrated P(violates) is evidence, not a rule (D10): the candidate stays listed with a caution, sorts after
