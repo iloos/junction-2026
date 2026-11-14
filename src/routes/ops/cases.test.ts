@@ -22,6 +22,7 @@ describe('ops cases', () => {
 			['sign_off', 'Approver'], // casserole
 			['propose', 'Chef'] // trout
 		]);
+		// The synthetic run has no offers, so every deadline falls back to the scenario cut-off.
 		expect(cases.every((c) => c.deadline === SCENARIO.cutoff)).toBe(true);
 	});
 
@@ -36,5 +37,38 @@ describe('ops cases', () => {
 		const s = stateAfter(19);
 		expect(coverage([s.plans['p-lounas']])).toEqual({ covered: 4, total: 4, unit: 'lines' });
 		expect(coverage([])).toBeNull();
+	});
+
+	it('takes the deadline from the line offer and sorts by real time', () => {
+		const s = stateAfter(19);
+		const plan = s.plans['p-hotel'];
+		const trout = plan.lines.find((l) => l.id === 'h-trout')!;
+		const early = '2026-12-08T09:00:00Z'; // 11:00 Helsinki, before the scenario cut-off
+		const withOffer = {
+			...trout,
+			offer: {
+				productId: trout.productId,
+				price: null,
+				availability: {
+					kind: 'known' as const,
+					amount: 40,
+					logisticModel: 'Stock' as const,
+					availableDate: '2026-12-10',
+					closingTime: early,
+					raw: null,
+					provenance: { source: 'simulator' as const }
+				}
+			}
+		};
+		const s2 = {
+			...s,
+			plans: {
+				...s.plans,
+				'p-hotel': { ...plan, lines: plan.lines.map((l) => (l.id === 'h-trout' ? withOffer : l)) }
+			}
+		};
+		const cases = buildCases(s2, SYNTH_PRODUCTS, {});
+		expect(cases[0].title.startsWith('Kirjolohi')).toBe(true);
+		expect(cases[0].deadline).toBe(early);
 	});
 });
