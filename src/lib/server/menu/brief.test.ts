@@ -17,7 +17,7 @@ describe('brief from the words', () => {
 	it('golden brief: Christmas dinner for 50 on 20 December', () => {
 		const d = draftBrief(XMAS, TODAY);
 		expect(d).toMatchObject({ guests: 50, date: '2026-12-20', serviceStyle: null, dietary: null });
-		expect(d.title).toBe('Christmas dinner for 50');
+		expect(d.title).toBe('Christmas dinner for 50 on 20 December');
 		expect(missing(d)).toEqual(['serviceStyle', 'dietary', 'budget']);
 	});
 
@@ -67,7 +67,7 @@ describe('one question at a time, keyed by id', () => {
 
 		const brief = toEventBrief(d, XMAS)!;
 		expect(brief).toMatchObject({
-			title: 'Christmas dinner for 50',
+			title: 'Christmas dinner for 50 on 20 December',
 			date: '2026-12-20',
 			guests: 50,
 			serviceStyle: 'plated',
@@ -132,5 +132,12 @@ describe('counted request constraints', () => {
 		).toEqual(['lactose-free:4', 'vegetarian:2']);
 		expect(dietaryIn('dinner for 40, 3 lactose free')).toEqual(['lactose-free:3']);
 		expect(dietaryIn('lactose-free dinner for 40')).toEqual(['lactose-free']);
+	});
+});
+
+describe('brief title', () => {
+	it('keeps the date words and closes the gap before a comma', () => {
+		const d = draftBrief('Christmas dinner for 50 on Saturday 12 December, buffet', '2026-12-07');
+		expect(d.title).toBe('Christmas dinner for 50 on Saturday 12 December, buffet');
 	});
 });

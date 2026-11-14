@@ -239,6 +239,32 @@
 			"unresolved": true
 		},
 		{
+			"q": "kirjolohifilee",
+			"accept": "kirjolohi",
+			"reject": "porsa|sika|kana|broiler"
+		},
+		{
+			"q": "kirjolohifilee",
+			"diet": ["LACTOSE"],
+			"accept": "kirjolohi",
+			"reject": "porsa|sika|kana|broiler"
+		},
+		{
+			"q": "kirjolohifileet",
+			"accept": "kirjolohi",
+			"reject": "porsa|sika|kana|broiler|sardelli"
+		},
+		{
+			"q": "kinkku",
+			"accept": "kinkku",
+			"reject": "serran|coppa|crudo|viipale|speck|parma"
+		},
+		{
+			"q": "joulukinkku",
+			"accept": "joulukinkku",
+			"reject": "viipal|serran"
+		},
+		{
 			"q": "strutsifilee",
 			"unresolved": true
 		},

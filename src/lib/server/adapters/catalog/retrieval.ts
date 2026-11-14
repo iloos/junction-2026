@@ -285,7 +285,9 @@ export class RetrievalIndex {
 	 * Resolve an ingredient query. Dietary requirements come from the query's words ("laktoositon kerma") and from
 	 * `diet` (e.g. ['LACTOSE'] for a lactose-free menu). Unresolved results say which bar was not cleared.
 	 */
-	resolve(query: string, o: { limit?: number; diet?: string[] } = {}): Resolution {
+	resolve(raw: string, o: { limit?: number; diet?: string[] } = {}): Resolution {
+		// Plural fillets read as the fillet: "kirjolohifileet" is "kirjolohifilee".
+		const query = raw.replace(/fileet(?![a-zåäö])/gi, 'filee');
 		const t = this.queryTarget(query);
 		const limit = o.limit ?? 5;
 		if (contentWords(query).length === 0)
@@ -396,12 +398,27 @@ export class RetrievalIndex {
 				if (!reasons.includes(why)) reasons.push(why);
 			} else kept.push(r.c);
 		}
-		// A free-from product nobody asked for (gluten-free bread for "leipä") goes after the plain ones.
+		// A product sold as free-from (its name says so) that nobody asked for goes after the plain ones: gluten-free
+		// bread for "leipä". Meat is free from milk in the data without being sold as such.
 		const unasked = (c: Candidate) => {
-			const d = dietOf(this.byId.get(c.productId)!.p, false);
+			const d = dietOf(this.byId.get(c.productId)!.p, true);
 			return DIET_KEYS.some((k) => d.has(k.flag) && !asked.includes(k.flag)) ? 1 : 0;
 		};
-		kept.sort((a, b) => unasked(a) - unasked(b));
+		// A meat query is served as a roast or whole cut first: raw and whole-ham categories before sliced cold cuts
+		// (172xx), so "kinkku" for a Christmas buffet is a whole ham, not a 500 g serrano pack, unless the words ask
+		// for slices or a cured product.
+		const coldCutAsked = named.some((w) =>
+			/viipale|viipaloitu|leike|siivu|salami|makkara|pekoni|nakki|serrano|parma|crudo|coppa/.test(w)
+		);
+		const isColdCut = (c: Candidate) => {
+			const cat = Number(this.byId.get(c.productId)!.p.category);
+			return cat >= 17200 && cat <= 17210;
+		};
+		const wholeMeat = kept.some(
+			(c) => foodKind(this.byId.get(c.productId)!.p.category) === 'meat' && !isColdCut(c)
+		);
+		const coldCut = (c: Candidate) => (wholeMeat && !coldCutAsked && isColdCut(c) ? 1 : 0);
+		kept.sort((a, b) => unasked(a) - unasked(b) || coldCut(a) - coldCut(b));
 		return {
 			kept,
 			dropped,

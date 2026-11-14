@@ -117,8 +117,10 @@ export function draftBrief(text: string, today: string): BriefDraft {
 	}
 	if (/\b\d\s*-?\s*star\b|michelin|fine dining/i.test(text)) notes.push('fine-dining level asked');
 
-	const title = (d && !d.invalid ? text.replace(d.text, ' ') : text)
+	// The chef's own words, date included: cutting the date out left "on Saturday , buffet".
+	const title = text
 		.replace(/\s+/g, ' ')
+		.replace(/\s+([,.;:])/g, '$1')
 		.trim()
 		.replace(/[,.;:]+$/, '')
 		.slice(0, 200);
