@@ -23,7 +23,6 @@ import { milks, must, prober, setup } from './adversarial-harness';
 const OPEN: Record<string, string> = {
 	'R11-04a': '8d',
 	'R11-04b': '8d',
-	'R11-05': '8d',
 	'R11-06a': '9c',
 	'R11-06b': '9c',
 	'R11-07a': '1f + 9c',
