@@ -40,7 +40,7 @@ const egg = recordedNotice(EGG_RECALL_URL)!;
 const v1: RecallNotice = { ...egg, products: [{ ...egg.products[0], gtin: product.gtin! }] };
 /** One PGlite for the file (the suite's load); each test gets its own workspace instead. */
 let db: ReturnType<typeof createDbPorts> | undefined;
-const store = async (_label: string) => (await (db ??= createDbPorts({ runId: 'run-w' }))).store;
+const store = async () => (await (db ??= createDbPorts({ runId: 'run-w' }))).store;
 
 describe('F20 notice identity and revisions', { timeout: 30_000 }, () => {
 	it('the same page read twice is one revision; an added batch is a new one, diffed by item', () => {
@@ -53,7 +53,7 @@ describe('F20 notice identity and revisions', { timeout: 30_000 }, () => {
 	});
 
 	it('an edited notice is recorded as an update naming the change; re-reading it adds nothing', async () => {
-		const s = await store('run-rev');
+		const s = await store();
 		const deps = {
 			store: s,
 			index: idx,
@@ -79,7 +79,7 @@ describe('F20 notice identity and revisions', { timeout: 30_000 }, () => {
 	});
 
 	it('a drill has its own namespace: the real notice still records and is still unseen after it', async () => {
-		const s = await store('run-drill-ns');
+		const s = await store();
 		const findings = createFindings(undefined, true);
 		const deps = {
 			store: s,
@@ -169,7 +169,7 @@ describe('F20 webhook work is never lost', { timeout: 30_000 }, () => {
 				return fx.readNotice(url, o);
 			}
 		};
-		const s = await store('run-heal');
+		const s = await store();
 		const queue = createWorkQueue(undefined, true);
 		const deps = {
 			store: s,
@@ -213,7 +213,7 @@ describe('F20 webhook work is never lost', { timeout: 30_000 }, () => {
 			}
 		};
 		const r = await drain({
-			store: await store('run-list'),
+			store: await store(),
 			index: idx,
 			findings: createFindings(undefined, true),
 			scope: { workspaceId: 'ws-list', runId: 'run-w' },
