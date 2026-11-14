@@ -26,8 +26,7 @@ const OPEN: Record<string, string> = {
 	'R11-06a': '9c',
 	'R11-06b': '9c',
 	'R11-07a': '1f + 9c',
-	'R11-10': '8d',
-	'R11-15': 'B + 8d'
+	'R11-10': '8d'
 };
 const probe = prober(it, OPEN);
 
@@ -45,6 +44,17 @@ const named = [
 	Product.parse({ ...milks[1], nameFi: 'Valio kevytmaito 1 l', category: '10400' })
 ];
 
+/** No order came back: the request must have asked something (a question on a looked-up item, or the run's own). */
+function expectAsked(r: any, hold?: string) {
+	const items: any[] = r.lookup?.items ?? [];
+	const asks = [r.message, ...items.map((i) => i.question)].filter(Boolean);
+	expect(
+		asks.length,
+		`no order and no question: ${JSON.stringify(r).slice(0, 300)}`
+	).toBeGreaterThan(0);
+	if (hold) expect(items.map((i) => i.hold)).toContain(hold);
+}
+
 describe('suite: adversarial (round 11: purchasing intent)', () => {
 	probe(
 		'R11-01',
@@ -59,7 +69,8 @@ describe('suite: adversarial (round 11: purchasing intent)', () => {
 				clock: s.b.ports.clock,
 				nonce: 'unsupported-unit'
 			} as any);
-			if (!r.order) return; // asking first is correct
+			// Asking first is correct, as long as it really asks.
+			if (!r.order) return expectAsked(r);
 			const litres = r.order.plan.lines.reduce((n: number, l: any) => n + l.qty.value, 0);
 			expect(litres, `planned ${litres} × 1 l for 250 ml`).toBeLessThanOrEqual(1);
 		}
@@ -417,7 +428,7 @@ describe('suite: adversarial (round 11: recovery and read models)', () => {
 				clock: s.b.ports.clock,
 				nonce: 'rounding-large'
 			} as any);
-			if (!r.order) return; // asking first is correct
+			if (!r.order) return expectAsked(r, 'need_rounding_large');
 			const p = r.order.plan;
 			const alone = committableLines(p, r.order.approval ?? null);
 			expect(
