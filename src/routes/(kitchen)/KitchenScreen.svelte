@@ -2078,6 +2078,12 @@
 			{rail}
 			folded={rail && !!shell?.railFolded}
 			onunfold={() => shell && (shell.railFolded = false)}
+			acceptAll={{
+				count: all.count,
+				cents: all.cents,
+				signOff: all.signOff,
+				onaccept: () => void k.decideLines([...all.byApproval.values()], 'grant')
+			}}
 			onmark={markLines}
 			now={k.now}
 			part="decide"
