@@ -257,3 +257,14 @@ The plan page lists every line once. Today the same lines appear in the table, a
 **Why:** the user: we should be able to manage this from the agent; MCP can prompt the user for an explicit yes to an explicit ask.
 
 **Reopen if:** an elicitation approves terms other than the ones it showed, or a non-chef key reaches approve.
+
+### D30 · One Kitchen view: the delivery day's basket, with plans as groups inside it (user + lead, 15 Nov 01:35)
+The Kitchen shows one thing at a time: **the basket for a delivery day** (Tenancy: one basket per kitchen per day). The "Basket" / "This plan" tabs and the "By source" / "By stage" toggle go.
+- **Header:** the kitchen, the delivery day (the day picker), and one sentence: "Wed 16 Dec · 12 items · €621 · 5 need you".
+- **Plans are groups in the list**, named by where they came from ("Usual Wednesday order", "From the chat: no-meat dinner for 120", "Christmas buffet"), each collapsible, each with its D29 decision headers and per-line chip menus. Opening a plan from a link (`?plan=`) scrolls to and expands its group; there is no separate plan page.
+- **Stage is a filter, not a view:** chips above the list ("Waits for you 5 · Ready to order 4 · Ordered 3") filter the rows.
+- **One sticky action bar** for the day (D29): "Accept all N · €X", "M need your sign-off", "Order K lines now · €Y".
+
+**Why:** the user: "Basket" next to the plan button, and By source / By stage, are confusing; it's unclear which one is the actual order.
+
+**Reopen if:** a kitchen with several plans for one day can't tell which plan a line came from.
