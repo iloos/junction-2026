@@ -533,3 +533,145 @@ journey(
 	},
 	420_000
 );
+
+// ---------- D26: a visitor's workspace persists (S1 create_kitchen e2842bd/ff8c1a0) ----------
+
+journey(
+	'p1',
+	'Your own kitchen persists: new tab, start over, a paired phone, your agent key',
+	async (r, page) => {
+		const origin = { origin: BASE };
+		const name = `Playtest Persist ${Date.now().toString(36)}`;
+		let kitchenId = '';
+		let planId = '';
+		const has = async (p: Page, what: string) =>
+			(await p.locator('body').innerText()).includes(what);
+
+		await r.step('first look', () => home(page, r));
+		if (
+			!(await r.step(
+				'create my kitchen',
+				async () => {
+					const res = await page.request.post(`${BASE}/kitchen-api/kitchen`, {
+						headers: origin,
+						data: { name, city: 'Espoo', description: 'a small bistro, lunch for 40' }
+					});
+					const body = (await res.json().catch(() => ({}))) as { kitchen?: { kitchenId: string } };
+					r.note('create', { status: res.status(), body });
+					if (!body.kitchen?.kitchenId) throw new Error(`create_kitchen ${res.status()}`);
+					kitchenId = body.kitchen.kitchenId;
+					const j = await page.request.post(`${BASE}/kitchen-api/scenario`, {
+						headers: origin,
+						data: { action: 'join', value: kitchenId }
+					});
+					if (!j.ok()) throw new Error(`join ${j.status()}`);
+				},
+				{ beat: false }
+			))
+		)
+			return;
+		await r.step('a first basket in my kitchen', async () => {
+			const res = await page.request.post(`${BASE}/kitchen-api/tool/place_order`, {
+				headers: origin,
+				data: {
+					kitchenId,
+					deliverBy: '2026-12-11',
+					idempotencyKey: `persist-${kitchenId}`,
+					lines: [{ productId: '464201', qty: 10, unit: 'ST' }]
+				}
+			});
+			const body = (await res.json().catch(() => ({}))) as { plan?: { id: string } };
+			r.note('placeOrder', { status: res.status(), plan: body.plan?.id });
+			if (!body.plan?.id) throw new Error(`place_order ${res.status()}`);
+			planId = body.plan.id;
+			await page.goto(`${BASE}/?plan=${planId}`);
+			await page.waitForLoadState('networkidle').catch(() => {});
+		});
+		const state = await page.context().storageState();
+		const browser = page.context().browser()!;
+
+		const again = await browser.newContext({ storageState: state, viewport: page.viewportSize()! });
+		try {
+			const p = await again.newPage();
+			await r.step(
+				'the same browser later (new tab, same cookie): kitchen and basket still there',
+				async () => {
+					await p.goto(`${BASE}/`);
+					await p.waitForLoadState('networkidle').catch(() => {});
+					await p.screenshot({ path: `${r.dir}/later-tab.png`, fullPage: true });
+					const snap = await p.request.get(`${BASE}/kitchen-api/snapshot?plan=${planId}&peek=1`);
+					if (!snap.ok()) throw new Error(`basket gone: snapshot ${snap.status()}`);
+					if (!(await has(p, name))) throw new Error('kitchen not named on the Kitchen page');
+				},
+				{ beat: false }
+			);
+			await r.step(
+				'start over, then my kitchen is still mine',
+				async () => {
+					const reset = await p.request.post(`${BASE}/kitchen-api/scenario`, {
+						headers: origin,
+						data: { action: 'reset' }
+					});
+					r.note('reset', reset.status());
+					const j = await p.request.post(`${BASE}/kitchen-api/scenario`, {
+						headers: origin,
+						data: { action: 'join', value: kitchenId }
+					});
+					r.note('joinAfterReset', j.status());
+					if (!j.ok()) throw new Error(`join after reset ${j.status()}`);
+					await p.goto(`${BASE}/`);
+					await p.screenshot({ path: `${r.dir}/after-reset.png`, fullPage: true });
+					if (!(await has(p, name))) throw new Error('kitchen not named after start over');
+				},
+				{ beat: false }
+			);
+		} finally {
+			await again.close();
+		}
+
+		await r.step(
+			'pair a phone: it sees my kitchen',
+			async () => {
+				const res = await page.request.post(`${BASE}/pair/new`, { headers: origin });
+				const body = (await res.json().catch(() => ({}))) as { link?: string };
+				r.note('pair', { status: res.status() });
+				if (!body.link) throw new Error(`pair ${res.status()}`);
+				const phone = await browser.newContext({
+					viewport: { width: 390, height: 844 },
+					isMobile: true,
+					hasTouch: true
+				});
+				try {
+					const ph = await phone.newPage();
+					await ph.goto(body.link.replace(/^https?:\/\/[^/]+/, BASE));
+					await ph.waitForLoadState('networkidle').catch(() => {});
+					await ph.goto(`${BASE}/`);
+					await ph.waitForLoadState('networkidle').catch(() => {});
+					await ph.screenshot({ path: `${r.dir}/phone.png`, fullPage: true });
+					if (!(await has(ph, name))) throw new Error('the paired phone does not show my kitchen');
+				} finally {
+					await phone.close();
+				}
+			},
+			{ beat: false }
+		);
+
+		await r.step(
+			'my agent key: get_context lists my kitchen',
+			async () => {
+				const k = await page.request.get(`${BASE}/api/demo/judge-key`);
+				const key = ((await k.json().catch(() => ({}))) as { key?: string }).key;
+				if (!key) throw new Error(`judge key ${k.status()}`);
+				const ctx = await page.request.post(`${BASE}/api/tools/get_context`, {
+					headers: { authorization: `Bearer ${key}` },
+					data: {}
+				});
+				const text = await ctx.text();
+				r.note('getContextHasKitchen', text.includes(kitchenId));
+				if (!text.includes(kitchenId)) throw new Error('get_context does not list my kitchen');
+			},
+			{ beat: false }
+		);
+	},
+	300_000
+);
