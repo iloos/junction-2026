@@ -57,7 +57,8 @@ export function geminiLlm(apiKey: string, trace: Trace = noTrace, model = GEMINI
 			model,
 			input: req.prompt,
 			system_instruction: req.system,
-			...(req.json ? { response_mime_type: 'application/json' } : {}),
+			// The Interactions API takes JSON mode as a text response_format (a bare response_mime_type is a 400).
+			...(req.json ? { response_format: { type: 'text', mime_type: 'application/json' } } : {}),
 			generation_config: { max_output_tokens: req.maxTokens, thinking_level: 'minimal' },
 			store: false
 		} as Parameters<typeof ai.interactions.create>[0]);
