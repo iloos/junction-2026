@@ -53,15 +53,19 @@ export function geminiLlm(apiKey: string, trace: Trace = noTrace, model = GEMINI
 	const ai = new GoogleGenAI({ apiKey, apiVersion: 'v1beta' });
 	return traced('gemini', model, trace, async (req) => {
 		const t0 = performance.now();
-		const r = await ai.interactions.create({
-			model,
-			input: req.prompt,
-			system_instruction: req.system,
-			// The Interactions API takes JSON mode as a text response_format (a bare response_mime_type is a 400).
-			...(req.json ? { response_format: { type: 'text', mime_type: 'application/json' } } : {}),
-			generation_config: { max_output_tokens: req.maxTokens, thinking_level: 'minimal' },
-			store: false
-		} as Parameters<typeof ai.interactions.create>[0]);
+		const r = await ai.interactions.create(
+			{
+				model,
+				input: req.prompt,
+				system_instruction: req.system,
+				// The Interactions API takes JSON mode as a text response_format (a bare response_mime_type is a 400).
+				...(req.json ? { response_format: { type: 'text', mime_type: 'application/json' } } : {}),
+				generation_config: { max_output_tokens: req.maxTokens, thinking_level: 'minimal' },
+				store: false
+			} as Parameters<typeof ai.interactions.create>[0],
+			// The run's cancel signal plus a hard 30 s cap; the provider may still bill a call it already started.
+			{ signal: withTimeout(req.signal) } as never
+		);
 		const out = r as { output_text?: string; usage?: Record<string, number>; model?: string };
 		return {
 			text: out.output_text ?? '',
@@ -95,7 +99,7 @@ export function openAiCompatibleLlm(
 			prompt: req.prompt,
 			maxOutputTokens: req.maxTokens,
 			maxRetries: 1,
-			abortSignal: AbortSignal.timeout(30_000)
+			abortSignal: withTimeout(req.signal)
 		});
 		return {
 			text: r.text,
