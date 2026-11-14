@@ -599,9 +599,9 @@ function verdictFor(c: CandidateView): string {
 	if (c.rejected.includes('origin_required'))
 		return `Rejected: origin ${c.origin?.toUpperCase() ?? '?'}, your rules require FI`;
 	if (c.partial) return `Partial: covers ${f1(c.coverValue)} kg`;
-	if (c.tier === 'sign_off') return 'Full cover, needs sign-off';
-	if (c.tier === 'propose') return 'Full cover, one tap to approve';
-	return 'Full cover, within your mandate';
+	if (c.tier === 'sign_off') return 'Known stock for the whole need · needs sign-off';
+	if (c.tier === 'propose') return 'Known stock for the whole need · one tap to approve';
+	return 'Known stock for the whole need · within your mandate';
 }
 
 // ───────────────────────────── make in house ─────────────────────────────
@@ -1025,7 +1025,7 @@ export function buildEvent(input: BuildInput): Built {
 					summary: chosen
 						? chosen.partial
 							? `Best option covers ${f1(chosen.coverValue)} of ${f1(servedKg)} kg. The rest is a shortfall, stated.`
-							: `${product(chosen.productId).name} covers the full ${f1(servedKg)} kg.`
+							: `${product(chosen.productId).name} has known stock for the full ${f1(servedKg)} kg served (planned, not reserved).`
 						: 'Nothing qualifies under your rules. The ham is a shortfall.'
 				};
 			} else {
