@@ -6,6 +6,7 @@ import { POST as mint } from '../../../routes/pair/new/+server';
 import {
 	CODE_ALPHABET,
 	CODE_LENGTH,
+	MAX_GLOBAL_MISSES,
 	MAX_MISSES,
 	PAIR_TTL_MS,
 	mintPairing,
@@ -44,13 +45,24 @@ describe('pairing (D17: only the human grants)', () => {
 		expect(redeemToken(c.token, t0 + PAIR_TTL_MS + 1).ok).toBe(false);
 	});
 
-	it('a client that misses too often waits, even with a right code', () => {
+	it('a client that misses many times waits; others sharing the venue are not locked out', () => {
 		const t0 = 2_000_000;
 		const p = mintPairing(WS, t0)!;
 		for (let i = 0; i < MAX_MISSES; i++) expect(redeemCode('ZZZZZZ', 'bad', t0 + i).ok).toBe(false);
-		expect(redeemCode(p.code, 'bad', t0 + 10)).toMatchObject({ ok: false, reason: 'limited' });
-		// Another client is unaffected.
-		expect(redeemCode(p.code, 'good', t0 + 11).ok).toBe(true);
+		expect(redeemCode(p.code, 'bad', t0 + 100)).toMatchObject({ ok: false, reason: 'limited' });
+		// Five typos by anyone never block the rest of the room.
+		expect(redeemCode(p.code, 'good', t0 + 101).ok).toBe(true);
+	});
+
+	it('a flood of misses pauses typed codes for everyone, while the QR link still works', () => {
+		const t0 = 3_000_000;
+		const p = mintPairing(WS, t0)!;
+		for (let i = 0; i < MAX_GLOBAL_MISSES; i++) redeemCode('ZZZZZZ', `ip-${i}`, t0 + 1);
+		expect(redeemCode(p.code, 'fresh', t0 + 2)).toMatchObject({ ok: false, reason: 'paused' });
+		expect(redeemToken(p.token, t0 + 3)).toEqual({ ok: true, workspaceId: WS });
+		// The window passes; typed codes come back.
+		const q = mintPairing(WS, t0 + PAIR_TTL_MS + 10)!;
+		expect(redeemCode(q.code, 'fresh', t0 + PAIR_TTL_MS + 11).ok).toBe(true);
 	});
 });
 

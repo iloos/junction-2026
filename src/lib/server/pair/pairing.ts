@@ -3,8 +3,11 @@
  * device by a QR code (a one-time link) or a short typed code. Neither ever appears in a tool result: they are minted
  * only for a request carrying that browser's own visitor cookie, never for a key, and live only in this process.
  *
- * Single use, 10 minutes. Codes use an unambiguous alphabet (no 0/O/1/I). Typed attempts are limited per client:
- * a few misses and that client waits. Visitor sandboxes only: the stage and the judges' room never pair.
+ * Single use, 10 minutes. Codes use an unambiguous alphabet (no 0/O/1/I). Guessing is made infeasible by numbers, not
+ * by locking people out: a whole venue can share one address behind a NAT or the platform's proxy, so the per-client
+ * limit is soft (MAX_MISSES), and a global miss cap pauses typed codes for everyone for the window (the QR link still
+ * works). With 32^6 codes and a few hundred live, the odds of a guess stay negligible. Visitor sandboxes only: the
+ * stage and the judges' room never pair.
  */
 import { randomBytes, randomInt } from 'node:crypto';
 import { isVisitorWorkspace } from '$lib/server/demo/visitor-id';
@@ -12,8 +15,11 @@ import { isVisitorWorkspace } from '$lib/server/demo/visitor-id';
 export const PAIR_TTL_MS = 10 * 60_000;
 export const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 export const CODE_LENGTH = 6;
-/** Typed misses a client may make before it waits out the window. */
-export const MAX_MISSES = 5;
+/** Typed misses one client address may make in a window: soft, since a venue can share one address. */
+export const MAX_MISSES = 20;
+/** Typed misses across all clients in a window; past it typed codes pause and the QR link still works. */
+export const MAX_GLOBAL_MISSES = 500;
+const GLOBAL = '*';
 /** Codes one sandbox may have outstanding; minting another retires the oldest. */
 const MAX_PER_WORKSPACE = 3;
 
@@ -90,7 +96,7 @@ export function mintPairing(
 
 export type Redeemed =
 	| { ok: true; workspaceId: string }
-	| { ok: false; reason: 'unknown' | 'limited'; retryInMs?: number };
+	| { ok: false; reason: 'unknown' | 'limited' | 'paused'; retryInMs?: number };
 
 /** Redeem by the QR link's token: single use. */
 export function redeemToken(token: string, now = Date.now()): Redeemed {
@@ -105,12 +111,16 @@ export function redeemToken(token: string, now = Date.now()): Redeemed {
 export function redeemCode(typed: string, who: string, now = Date.now()): Redeemed {
 	sweep(now);
 	const s = state();
-	const misses = s.misses.get(who) ?? [];
+	const all = s.misses.get(GLOBAL) ?? [];
+	if (all.length >= MAX_GLOBAL_MISSES)
+		return { ok: false, reason: 'paused', retryInMs: all[0] + PAIR_TTL_MS - now };
+	const misses = s.misses.get(`ip:${who}`) ?? [];
 	if (misses.length >= MAX_MISSES)
 		return { ok: false, reason: 'limited', retryInMs: misses[0] + PAIR_TTL_MS - now };
 	const p = s.byCode.get(normaliseCode(typed));
 	if (!p) {
-		s.misses.set(who, [...misses, now]);
+		s.misses.set(`ip:${who}`, [...misses, now]);
+		s.misses.set(GLOBAL, [...all, now]);
 		return { ok: false, reason: 'unknown' };
 	}
 	retire(p);
