@@ -91,6 +91,12 @@ test('the order summary counts what was approved, adds up, and survives a reload
 		.getByRole('button', { name: /Place order/ })
 		.first()
 		.click();
+	// The order summary's own sentence, not the first "receipt" anywhere (the activity log shows it earlier).
+	await page
+		.getByText(/Ordered\s*·\s*\d+\s+lines?/)
+		.first()
+		.waitFor({ timeout: 30_000 })
+		.catch(() => undefined);
 	await page
 		.getByText(/receipt rc-/)
 		.first()
@@ -107,6 +113,16 @@ test('the order summary counts what was approved, adds up, and survives a reload
 		`"Ordered · ${said} lines" vs receipt ${confirmed} confirmed + ${awaiting} awaiting`
 	);
 	check('BUG-5', Number(said) >= approved, `${said} ordered lines for ${approved} signed off`);
+	// The screen's count against the server's plan: every committed line, no more, no fewer.
+	const snap = (await (await page.request.get(`${BASE}/kitchen-api/snapshot`)).json()) as {
+		plan?: { lines: { state: string }[] };
+	};
+	const committed = snap.plan?.lines.filter((l) => l.state === 'committed').length;
+	check(
+		'BUG-5',
+		committed !== undefined && Number(said) === committed,
+		`"Ordered · ${said} lines" vs ${committed} committed lines in the server's plan`
+	);
 	const money = await page
 		.locator('dl[aria-label^="Where the plan"]')
 		.innerText()

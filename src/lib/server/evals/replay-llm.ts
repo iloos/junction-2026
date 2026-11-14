@@ -46,9 +46,27 @@ export function replayLlm(o: { path: string; inner?: Llm; record?: boolean }): L
 	hits: number;
 	misses: number;
 } {
-	const book: Record<string, Recorded> = existsSync(o.path)
-		? JSON.parse(readFileSync(o.path, 'utf-8'))
+	return replayBook(o.path).wrap(o.inner, o.record);
+}
+
+/**
+ * One recording file shared by several models (the chat's understand, explain and plan jobs): every wrapper reads and
+ * writes the same book, so one job's recording never overwrites another's.
+ */
+export function replayBook(path: string) {
+	const book: Record<string, Recorded> = existsSync(path)
+		? JSON.parse(readFileSync(path, 'utf-8'))
 		: {};
+	return { wrap: (inner?: Llm, record?: boolean) => wrapBook(book, path, inner, record) };
+}
+
+function wrapBook(
+	book: Record<string, Recorded>,
+	path: string,
+	inner?: Llm,
+	record?: boolean
+): Llm & { hits: number; misses: number } {
+	const o = { path, inner, record };
 	const self = {
 		hits: 0,
 		misses: 0,
@@ -64,7 +82,8 @@ export function replayLlm(o: { path: string; inner?: Llm; record?: boolean }): L
 			const r = await o.inner.generate(req);
 			if (o.record) {
 				book[key] = { text: r.text, model: r.model, tokens: r.tokens };
-				writeFileSync(o.path, JSON.stringify(book, null, 1) + '\n');
+				// Tab-indented, as Prettier formats JSON, so a fresh recording passes `pnpm lint`.
+				writeFileSync(o.path, JSON.stringify(book, null, '\t') + '\n');
 			}
 			return r;
 		}
