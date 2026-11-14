@@ -162,10 +162,7 @@ describe('typed intent (finding D)', () => {
 	it('needs a current plan to repair or inspect', () => {
 		expect(
 			resolveIntent('repair the shortages', ctx({ currentPlan: null, openPlans: [] }))
-		).toMatchObject({
-			kind: 'unsupported',
-			clarify: expect.objectContaining({ field: expect.any(String) })
-		});
+		).toMatchObject({ kind: 'unsupported', reason: expect.stringMatching(/no current plan/) });
 	});
 });
 

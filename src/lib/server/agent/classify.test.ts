@@ -176,3 +176,13 @@ describe('a delivery date past its cut-off is asked about, never shifted', () =>
 		).toMatchObject({ kind: 'routine_order', deliverBy: '2026-12-09' });
 	});
 });
+
+describe('Finnish authority imperatives are refused, Finnish questions read', () => {
+	it.each([
+		['hyväksy se', 'authority'],
+		['voitko hyväksyä sen?', 'authority'],
+		['nosta viikkokattoa', 'authority'],
+		['mitä pitää vielä hyväksyä?', 'read'],
+		['voitko tilata 4 kg voita huomiseksi?', 'order']
+	])('%s → %s', (text, kind) => expect(classifyGoal(text, TODAY).kind).toBe(kind));
+});
