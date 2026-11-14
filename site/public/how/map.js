@@ -55,7 +55,7 @@
 	const ORDER = ['doors', 'gate', 'rules', 'store', 'ports'];
 
 	root.classList.add('smap');
-	root.innerHTML = `<div class="smap-head"><h2>One engine, several doors</h2><p>Every request, from any door, passes one gate and changes state through one function. Open any part to see what it does and the test behind it.</p></div>
+	root.innerHTML = `<div class="smap-head"><h2>The system in five parts</h2><p>Four ways in, one gate, the rules in plain code, one database, and five partners. Open a part to see what it does and the test behind it.</p></div>
 	<div class="smap-track"><div class="smap-stage"><div class="smap-grid">${ORDER.map((k) => {
 		const [t, s, parts] = Z[k];
 		return `<button type="button" class="zone z-${k}" data-z="${k}" aria-pressed="false" aria-controls="smap-panel"><span class="zt"><b>${t}</b><span>${s}</span></span><ul>${parts.map((p) => `<li>${esc(p)}</li>`).join('')}</ul></button>`;
