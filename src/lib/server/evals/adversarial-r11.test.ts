@@ -23,9 +23,6 @@ import { milks, must, prober, setup } from './adversarial-harness';
 const OPEN: Record<string, string> = {
 	'R11-04a': '8d',
 	'R11-04b': '8d',
-	'R11-06a': '9c',
-	'R11-06b': '9c',
-	'R11-07a': '1f + 9c',
 	'R11-10': '8d'
 };
 const probe = prober(it, OPEN);
@@ -260,70 +257,97 @@ describe('suite: adversarial (round 11: purchasing intent)', () => {
 });
 
 describe('suite: adversarial (round 11: recovery and read models)', () => {
+	// The composed sender as /api/events builds it: pages of the op log ({events, complete}), retries on a failed
+	// read, and onLost (close for a resync) instead of moving past a gap the log didn't rule out.
+	const log = [1, 2, 3].map((seq) => ({ seq }));
+	const page = (cap: number) => async (from: number) => {
+		const events = log.filter((e) => e.seq > from).slice(0, cap);
+		return { events, complete: log.filter((e) => e.seq > from).length <= cap };
+	};
+	const noWait = async () => {};
+
 	probe('R11-06a', 'one failed gap read never loses the missing event', async () => {
 		const sent: number[] = [];
-		let fail = true;
-		const stream = orderedSender({
+		const lost: unknown[] = [];
+		let fail = 1;
+		const read = page(10);
+		const stream = orderedSender<{ seq: number }>({
 			after: 0,
-			deliver: (e: { seq: number }) => sent.push(e.seq),
+			deliver: (e) => sent.push(e.seq),
+			readAfter: async (from) => {
+				if (fail-- > 0) throw new Error('transient database read failure');
+				return read(from);
+			},
+			onLost: (err) => lost.push(err),
+			wait: noWait
+		});
+		stream.push({ seq: 2 });
+		await stream.idle();
+		expect(lost, 'a transient failure is retried, not given up on').toEqual([]);
+		expect(sent, 'the missing seq 1 is read from the log and everything goes out in order').toEqual(
+			[1, 2, 3]
+		);
+		// A read that keeps failing gives up without passing the gap: the client reconnects from what it has.
+		const sent2: number[] = [];
+		const lost2: unknown[] = [];
+		const dead = orderedSender<{ seq: number }>({
+			after: 0,
+			deliver: (e) => sent2.push(e.seq),
 			readAfter: async () => {
-				if (fail) {
-					fail = false;
-					throw new Error('transient database read failure');
-				}
-				return [];
-			}
-		} as any);
-		stream.push({ seq: 2 } as any);
-		await stream.idle();
-		stream.push({ seq: 1 } as any);
-		await stream.idle();
-		expect(sent).toEqual([1, 2]);
+				throw new Error('database down');
+			},
+			onLost: (err) => lost2.push(err),
+			wait: noWait
+		});
+		dead.push({ seq: 2 });
+		await dead.idle();
+		expect(sent2, 'nothing past the gap goes out').toEqual([]);
+		expect(dead.last(), 'the client keeps the seq it really has').toBe(0);
+		expect(lost2.length, 'the stream closes for a resync').toBe(1);
 	});
 
 	probe('R11-06b', 'a capped catch-up read never skips the events above its cap', async () => {
 		const sent: number[] = [];
-		const stream = orderedSender({
+		const stream = orderedSender<{ seq: number }>({
 			after: 0,
-			deliver: (e: { seq: number }) => sent.push(e.seq),
-			readAfter: async () => [{ seq: 1 }, { seq: 2 }]
-		} as any);
-		stream.push({ seq: 4 } as any);
-		await stream.idle();
-		stream.push({ seq: 3 } as any);
+			deliver: (e) => sent.push(e.seq),
+			readAfter: page(2), // a page holds two: seq 3 is above the first read's cap
+			onLost: () => {
+				throw new Error('lost');
+			},
+			wait: noWait
+		});
+		stream.push({ seq: 4 });
 		await stream.idle();
 		expect(sent).toEqual([1, 2, 3, 4]);
 	});
 
-	probe('R11-07a', 'a change returned by the live feed’s first poll reaches the page', async () => {
-		const delivered: any[] = [];
-		class FakeSource {
-			addEventListener() {}
-			close() {}
+	probe(
+		'R11-07a',
+		'a change landing before the live feed opens reaches the page (as its ops or a re-read)',
+		async () => {
+			const bursts: { ops: unknown[]; resync: boolean }[] = [];
+			class FakeSource {
+				addEventListener() {}
+				close() {}
+			}
+			vi.stubGlobal('EventSource', FakeSource);
+			// The first poll reports seq 2 already in the log: the stream opens after it, so seq 2 never streams.
+			vi.stubGlobal('fetch', async () => ({ json: async () => ({ last: 2, events: [] }) }));
+			try {
+				const feed = new PlanEvents();
+				const off = feed.subscribe((b) => bursts.push(b));
+				await new Promise((r) => setTimeout(r, 600)); // one burst window (400 ms) and margin
+				off();
+				expect(
+					bursts.some((b) => b.resync || b.ops.length),
+					'the page is told to re-read (or given the ops) once the stream opens'
+				).toBe(true);
+			} finally {
+				vi.unstubAllGlobals();
+			}
 		}
-		vi.stubGlobal('EventSource', FakeSource);
-		vi.stubGlobal('fetch', async () => ({
-			json: async () => ({
-				last: 2,
-				events: [
-					{
-						kind: 'op',
-						seq: 2,
-						envelope: { seq: 2, op: { type: 'RecordApproval', approval: { planId: 'p' } } }
-					}
-				]
-			})
-		}));
-		try {
-			const feed = new PlanEvents();
-			const off = feed.subscribe((b) => delivered.push(...b.ops));
-			await new Promise((r) => setTimeout(r, 20));
-			off();
-			expect(delivered.length).toBeGreaterThan(0);
-		} finally {
-			vi.unstubAllGlobals();
-		}
-	});
+	);
 
 	probe('R11-07b', 'a recall op is routed to the plan it changes', () => {
 		const op = {
