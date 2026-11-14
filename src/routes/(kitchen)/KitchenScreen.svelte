@@ -68,6 +68,7 @@
 	import UseElsewhere from '$lib/ui/UseElsewhere.svelte';
 	import ProductThumb from '$lib/ui/ProductThumb.svelte';
 	import { acceptAll, lineDecisions } from '$lib/kitchen/line-decisions';
+	import type { ShortageNotice } from '$lib/ui/ledger';
 	import { menuTitle, splitNeed, startsDish } from '$lib/kitchen/menu-plan';
 	import {
 		readOwn,
@@ -250,6 +251,19 @@
 						? 'agent'
 						: 'outside';
 			void k.refreshFrom(by, describeOps(mine));
+		});
+	});
+	// Moment 1: a shortage re-planned this kitchen elsewhere (Ops' presenter, another tab). The plan re-reads, What
+	// changed says why in words, and the changed rows flash; a kitchen the shortage left alone stays quiet.
+	$effect(() => {
+		if (!shell || k.mode !== 'live') return;
+		return shell.events.notices((n) => {
+			if (n.event.kind !== 'shortage.replanned') return;
+			const d = n.event.detail as ShortageNotice;
+			const mine = d?.kitchens?.find((x) => x.kitchenId === (snap?.kitchen.id ?? k.startKitchen));
+			if (!mine || mine.outcome === 'unaffected') return;
+			const what = `Valio ran short of ${readableName(d.productName)} (${d.had} → ${d.left} ${unitWord(d.unit, d.left)})`;
+			void k.refreshFrom('outside', `${what}. ${mine.why || mine.allowedBy}`);
 		});
 	});
 	const CHANGE_BY = {

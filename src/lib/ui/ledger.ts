@@ -5,7 +5,7 @@
  */
 import type { BasketDay } from './basket';
 import { sourceChip } from './basket';
-import { day as dayLabel, money, readableName, storyTime } from './format';
+import { day as dayLabel, money, readableName, storyTime, unitWord } from './format';
 
 export type LedgerKind =
 	'decide' | 'order' | 'swap' | 'shortage' | 'ordered' | 'planned' | 'delivery';
@@ -68,7 +68,7 @@ export function buildLedger(
 	for (const n of notices) {
 		const k = kitchenId ? n.kitchens.find((x) => x.kitchenId === kitchenId) : n.kitchens[0];
 		if (!k || k.outcome === 'unaffected') continue;
-		const what = `Valio ran short of ${readableName(n.productName)} (${n.had} → ${n.left} ${n.unit})`;
+		const what = `Valio ran short of ${readableName(n.productName)} (${n.had} → ${n.left} ${unitWord(n.unit, n.left)})`;
 		const did =
 			k.outcome === 'swapped'
 				? `your agent swapped ${k.swaps.map((s) => `${readableName(s.fromName)} for ${readableName(s.toName)}`).join(', ')}`
