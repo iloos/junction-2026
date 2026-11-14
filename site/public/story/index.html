@@ -267,14 +267,14 @@ h2{font-size:clamp(30px,3.5vw,54px);max-width:27ch}
 <!-- 1 HERO -->
 <section id="hero" aria-label="Mandate">
   <div>
-    <h1 class="reveal d1">Bring an event, its menu, or one item. <em>Mandate sorts out the order.</em></h1>
-    <p class="lede reveal d2">It finds each product in Valio Aimo's catalogue and orders on its own only within the limits the chef sets. Anything else waits for the chef, with the reason.</p>
+    <h1 class="reveal d1">Bring an event or one item. <em>Mandate sorts out the order.</em></h1>
+    <p class="lede reveal d2">It drafts the menu when you need one, finds each product in Valio Aimo's catalogue and orders on its own only within the limits the chef sets. Anything else waits for the chef, with the reason.</p>
     <div class="ctas reveal d3">
       <a class="btn primary" href="https://app.mandate.kitchen/request">Try a request</a>
       <a class="btn" href="https://app.mandate.kitchen/">See the Christmas buffet</a>
     </div>
   </div>
-  <div class="gatebox reveal d2" role="img" aria-label="Illustration: order lines from an event, its menu or a single item pass the same checks and end ordered within the mandate, waiting for the chef, or refused with a reason.">
+  <div class="gatebox reveal d2" role="img" aria-label="Illustration: order lines from an event or a single item pass the same checks and end ordered within the mandate, waiting for the chef, or refused with a reason.">
     <canvas id="gatecv"></canvas>
     <div class="tick">illustration</div>
     <div class="legend"><span><b style="background:var(--ok)"></b>ordered within the mandate</span><span><b style="background:var(--amber)"></b>waits for the chef</span><span><b style="background:var(--red)"></b>refused, with the reason</span></div>
@@ -321,7 +321,7 @@ h2{font-size:clamp(30px,3.5vw,54px);max-width:27ch}
     <div class="way reveal d4" style="--c:var(--amber)">
       <h3>Hold and say why</h3>
       <div class="ask">“<span data-s="cases.#lactose-free.request">10 l lactose-free milk for Friday</span>”</div>
-      <p>Picked <b>Valio kevytmaito 1 l laktoositon UHT</b>, 10 packs. Valio doesn't state a quantity, so it asks before buying and never counts it as covered.</p>
+      <p>Picked <b>Valio kevytmaito 1 l laktoositon UHT</b>, 10 packs. Valio doesn't state a quantity, so it asks before buying and doesn't count it as covered until the supplier confirms.</p>
       <div class="end"><span class="chip amber" data-s="cases.#lactose-free.outcome.label">Needs your approval</span><span data-s="cases.#lactose-free.outcome.eur" data-f="eur">€15.60</span></div>
     </div>
   </div>
@@ -449,7 +449,7 @@ const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
  const C={ok:css('--ok'),am:css('--amber'),red:css('--red'),line:css('--line2'),ink3:css('--ink3'),ink:css('--ink')};
  const narrow=()=>W<520;
  const checks=()=>narrow()?['mandate','caps','terms','cut-off','stock']:['mandate','caps','exact terms','cut-off','stock'];
- const doors=()=>['An event','Its menu','One item'];
+ const doors=()=>['An event','One item'];
  const names=['HK Palvikinkku viipaloitu 1,5 kg','LOHIFILEE C-LEIKATTU 10KG','Myllyn Paras Puuroriisi 1kg','Valio kevytmaito 1 l laktoositon UHT','Atria Rosolli 2,5 kg'];
  let parts=[],t=0;
  function spawn(x){const fate=Math.random();const f=fate<.62?'ok':fate<.9?'held':'ref';const failAt=f==='ok'?99:f==='held'?2+Math.floor(Math.random()*3):Math.floor(Math.random()*2)+1;
