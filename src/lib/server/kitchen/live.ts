@@ -703,6 +703,15 @@ async function applyScenario(
 				{ cause: e }
 			);
 		}
+	} else if (action === 'join' && typeof value === 'string') {
+		// Choosing an establishment (D15, R12-05): switch to it and read what it already has. Never plans: a kitchen's
+		// seeded event waits for the chef's "Plan the event", like any other first plan.
+		const known = await b.ports.store.kitchens(chef(s).workspaceId);
+		if (!known.some((k) => k.id === value)) throw new Error(`no kitchen ${value}`);
+		s.kitchenId = value;
+		s.planId = null;
+		s.preset = 'kitchen';
+		return await buildSnapshot(s);
 	} else if (action === 'contention') {
 		// The overlay is simulator state of this workspace (one Valio stock for every kitchen in it), not a
 		// view setting; other sandboxes never see it.
