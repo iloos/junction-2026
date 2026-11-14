@@ -33,7 +33,7 @@
 - Gate gaps: e2e only with `--full`; `test:pg`, `test:live`, `eval:live` are opt-in; evals run twice per gate (inside `test:unit` too).
 
 ## Resume
-- **Branch** `lane/f-evals`, head `HEADSHA` (rebased on origin/main 70c30e2; eb9e03b merged).
+- **Branch** `lane/f-evals`, head `401f0db` (this brief's commit) (rebased on origin/main 70c30e2; eb9e03b merged).
 - **Own:**
   - `scripts/merge-gate.mjs`, `scripts/smoke-race.mjs`;
   - `evals/**` (not `retrieval/`) and `src/lib/server/evals/**`;
