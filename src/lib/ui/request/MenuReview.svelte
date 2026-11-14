@@ -1,5 +1,14 @@
 <script lang="ts">
-	import { ArrowRight, Check, CircleAlert, CircleHelp, OctagonX, Save } from '@lucide/svelte';
+	import {
+		ArrowRight,
+		Check,
+		CircleAlert,
+		CircleHelp,
+		LoaderCircle,
+		OctagonX,
+		Save
+	} from '@lucide/svelte';
+	import SourceChip from '$lib/ui/SourceChip.svelte';
 	import { tick } from 'svelte';
 	import { resolve } from '$app/paths';
 	import SourceTag from '$lib/ui/SourceTag.svelte';
@@ -171,6 +180,7 @@
 
 	<ol class="mt-2 divide-y divide-rule">
 		{#each p.dishes as d (d.id)}
+			{@const g = view.grounding?.[d.id]}
 			<li
 				id="menu-row-{d.id}"
 				class="px-3 py-2.5 {flagged.has(d.id) ? 'bg-out-wash' : ''} {lit === d.id
@@ -187,6 +197,49 @@
 							>{c}</span
 						>{/each}
 				</p>
+				{#if g}
+					<div class="mt-0.5 text-meta text-ink-2" data-testid="dish-grounding">
+						{#if g.state === 'pending'}
+							<span class="inline-flex items-center gap-1"
+								><LoaderCircle size={12} class="animate-spin" aria-hidden="true" />Looking for
+								sourced recipes…</span
+							>
+						{:else if g.state === 'failed'}
+							No sourced recipe found (the lookup failed).
+						{:else}
+							<span class="flex flex-wrap items-center gap-1.5">
+								{#if g.matchedSources.length}
+									Matches {g.matchedSources.length} sourced recipe{g.matchedSources.length === 1
+										? ''
+										: 's'} ({g.matchedSources.map((s) => s.host).join(', ')})
+									{#each g.matchedSources as s (s.url)}<SourceChip
+											api="exa"
+											cache={g.source}
+											at={g.at}
+											href={s.url}
+											label={s.host}
+										/>{/each}
+								{:else}
+									No sourced recipe found{g.compared.length
+										? ` (compared ${g.compared.length})`
+										: ''}
+								{/if}
+							</span>
+							{#each g.modelOnly as m (m)}
+								<span class="flex items-center gap-1 text-signoff"
+									><CircleHelp size={12} aria-hidden="true" />the model added {m}, which no source
+									has</span
+								>
+							{/each}
+							{#if g.sourceOnly.length}
+								<details class="mt-0.5">
+									<summary class="cursor-pointer text-ink-3">sources also use…</summary>
+									<span class="text-ink-2">{g.sourceOnly.join(', ')}</span>
+								</details>
+							{/if}
+						{/if}
+					</div>
+				{/if}
 				<ul class="mt-1.5 space-y-1.5">
 					{#each d.ingredients as i (i.id)}
 						{@const mine = i.provenance.source === 'user'}

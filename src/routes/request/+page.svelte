@@ -395,6 +395,38 @@
 			proposing = null;
 		}
 	}
+	/**
+	 * Re-reads the menu every 2 s while any dish's sourced-recipe check is pending (at most 30 s), taking only the
+	 * grounding: evidence for the chef, never a change to the menu itself.
+	 */
+	let groundingPoll = 0;
+	async function pollGrounding() {
+		const run = ++groundingPoll;
+		for (let i = 0; i < 15; i++) {
+			const m = menu;
+			if (!m?.grounding || !Object.values(m.grounding).some((g) => g.state === 'pending')) return;
+			await new Promise((r) => setTimeout(r, 2000));
+			if (run !== groundingPoll || !menu || menu.proposal.id !== m.proposal.id) return;
+			try {
+				const res = await fetch('/request/menu', {
+					method: 'POST',
+					headers: { 'content-type': 'application/json' },
+					body: JSON.stringify({ action: 'read', id: m.proposal.id })
+				});
+				if (!res.ok) return;
+				const r = (await res.json()) as MenuView;
+				if (menu && menu.proposal.id === r.proposal.id && r.grounding)
+					menu = { ...menu, grounding: r.grounding };
+			} catch {
+				return;
+			}
+		}
+	}
+	$effect(() => {
+		if (menu?.grounding && Object.values(menu.grounding).some((g) => g.state === 'pending'))
+			void pollGrounding();
+	});
+
 	async function editMenu(changes: MenuChange[]) {
 		if (!menu) return;
 		const r = await menuCall<MenuView>({
@@ -603,6 +635,15 @@
 		<p class="-mt-2 mb-4 text-body text-ink-2" role="status">{sandboxNote}</p>
 	{/if}
 
+	{#if data.workspace.notice}
+		<p
+			class="mb-2 flex items-center gap-2 rounded-md border border-signoff/40 bg-signoff-wash px-3 py-2 text-body text-ink"
+			role="note"
+			data-testid="room-notice"
+		>
+			<Info size={15} class="shrink-0 text-signoff" aria-hidden="true" />{data.workspace.notice}
+		</p>
+	{/if}
 	<form
 		class="rounded-xl border border-rule-strong bg-sheet p-2 shadow-[0_1px_0_oklch(0.9_0.01_85)] focus-within:border-accent/60"
 		onsubmit={(e) => {
@@ -1091,7 +1132,16 @@
 								class="mt-0.5 shrink-0"
 								aria-hidden="true"
 							/>{order.deliveryNote}
-						</p>{/if}
+						</p>
+						{#if order.nextDeliveryDay && !committed}
+							<button
+								type="button"
+								disabled={busy}
+								onclick={() => chooseDate(order!.nextDeliveryDay!)}
+								class="mt-1 ml-6 inline-flex h-9 items-center gap-1.5 rounded-md bg-accent px-3 text-body font-medium text-sheet disabled:opacity-40"
+								data-testid="next-delivery-day">Deliver {day(order.nextDeliveryDay)} instead</button
+							>
+						{/if}{/if}
 					{#if approval}
 						{@const tw = tierWords(
 							approval.tier,
@@ -1122,7 +1172,7 @@
 					</blockquote>
 					<!-- eslint-disable svelte/no-navigation-without-resolve -- kitchen deep link with query, built from resolve('/') -->
 					<p class="mt-2 text-body text-ink" data-testid="order-in-kitchen">
-						This order is now in your Kitchen plan.
+						This plan is now in your Kitchen.
 						<a
 							href={resolve('/') + order.task.kitchenUrl.slice(1)}
 							class="inline-flex items-center gap-1 font-medium text-accent-ink underline"

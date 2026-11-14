@@ -542,3 +542,32 @@ describe('one clock: the workspace store clock judges cut-offs', () => {
 		expect(r.lookup!.items[0].answer).toMatchObject({ kind: 'date', date: '2026-12-09' });
 	});
 });
+
+describe('off delivery day: the next receiving day as a one-tap choice', () => {
+	it('Thursday at a Mon/Wed/Fri kitchen offers Fri 11 Dec, and that date clears the note', async () => {
+		const env = await createDbPorts({ now: '2026-12-07T09:00:00+02:00' });
+		env.overlay.clear();
+		const h = createHandlers(env.ports);
+		const ctx: CallContext = {
+			workspaceId: env.workspaceId,
+			runId: env.runId,
+			actor: { kind: 'kitchen_agent', id: 'a' },
+			scopes: SCOPES_BY_ACTOR.kitchen_agent,
+			via: 'test'
+		};
+		// The hotel's prices are cached; its receiving days are set to Lounas's (Mon, Wed, Fri) for the calendar rule.
+		const hotel = (await env.store.kitchens(env.workspaceId)).find((k) => k.id === 'k-hotel')!;
+		const kitchen = { ...hotel, deliveryDays: ['mon', 'wed', 'fri'] as typeof hotel.deliveryDays };
+		const base = { handlers: h, ctx, today: '2026-12-07', kitchen, clock: env.ports.clock };
+		const r = await runRequest('10 l lactose-free milk for Thursday', { ...base, nonce: 'off1' });
+		expect(r.order?.deliveryNote).toBeTruthy();
+		expect(r.order?.nextDeliveryDay).toBe('2026-12-11');
+		const again = await runRequest('10 l lactose-free milk for Thursday', {
+			...base,
+			nonce: 'off2',
+			deliverBy: '2026-12-11'
+		});
+		expect(again.order?.deliveryNote).toBeNull();
+		expect(again.order?.nextDeliveryDay).toBeNull();
+	});
+});
