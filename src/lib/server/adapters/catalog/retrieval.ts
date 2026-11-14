@@ -234,6 +234,18 @@ const PLANT_FLAGS = new Set(['VEGETARIAN', 'VEGAN']);
 /** Below this retrieval score a resolve candidate is too weak to pin. */
 export const MIN_RESOLVE_SCORE = 0.4;
 
+/**
+ * A partitive or plural recipe word in its base form, conservatively: "kermaa" → "kerma", "marmeladia" →
+ * "marmeladi", "maitoa" → "maito", "lehtitaikinalevyjä" → "lehtitaikinalevy". Anything else is returned as is.
+ */
+export function baseForm(w: string): string {
+	if (w.length < 5) return w;
+	if (/[aeiouyäö]j[aä]$/.test(w)) return w.slice(0, -2);
+	if (/(aa|ää)$/.test(w)) return w.slice(0, -1);
+	if (/[iouye][aä]$/.test(w)) return w.slice(0, -1);
+	return w;
+}
+
 interface Indexed {
 	p: RetrievalProduct;
 	words: string[];
@@ -287,7 +299,14 @@ export class RetrievalIndex {
 	 */
 	resolve(raw: string, o: { limit?: number; diet?: string[] } = {}): Resolution {
 		// Plural fillets read as the fillet: "kirjolohifileet" is "kirjolohifilee".
-		const query = raw.replace(/fileet(?![a-zåäö])/gi, 'filee');
+		// A recipe line reads as its ingredient: notes in brackets, the first of "A- tai B" alternatives and plural
+		// fillets ("kirjolohifileet") go; quantities and units are not content words anyway.
+		const query = raw
+			.replace(/\([^)]*\)/g, ' ')
+			.replace(/\S+-?\s+tai\s+/gi, '')
+			.replace(/fileet(?![a-zåäö])/gi, 'filee')
+			.replace(/\s+/g, ' ')
+			.trim();
 		const t = this.queryTarget(query);
 		const limit = o.limit ?? 5;
 		if (contentWords(query).length === 0)
@@ -358,7 +377,9 @@ export class RetrievalIndex {
 		plant: string[],
 		asked: string[] = []
 	): { kept: Candidate[]; dropped: Candidate[]; reason: string } {
-		const named = contentWords(query).filter((w) => !DIET_KEYS.some((k) => k.word.test(w)));
+		const named = contentWords(query)
+			.filter((w) => !DIET_KEYS.some((k) => k.word.test(w)))
+			.map(baseForm);
 		const rows = pool.map((c) => ({ c, it: this.byId.get(c.productId)! })).filter((r) => r.it);
 		const headStrong = rows.filter((r) =>
 			named.every((q) => r.it.words.some((w) => w === q || (q.length >= 4 && w.endsWith(q))))
@@ -476,7 +497,7 @@ export class RetrievalIndex {
 				// resolve(): the product is the ingredient, not a dish or mix that contains it; diets may be met by a
 				// declared allergen record.
 				const named = tWords.filter((w) => !DIET_KEYS.some((k) => k.word.test(w)));
-				if (!named.every((q) => present(q, words))) continue;
+				if (!named.every((q) => present(q, words) || present(baseForm(q), words))) continue;
 				if (
 					words.some(
 						(w) =>
