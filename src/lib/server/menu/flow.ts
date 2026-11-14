@@ -35,6 +35,8 @@ export interface MenuDeps {
 }
 
 /** A proposal as the page shows it: the rubric's issues and the names of the products it is pinned to. */
+import type { GroundingState } from '$lib/server/web/grounding';
+
 export interface MenuView {
 	proposal: MenuProposalT;
 	issues: Issue[];
@@ -44,6 +46,11 @@ export interface MenuView {
 	model: string;
 	/** Set when the model failed and the team templates answered. */
 	fallback?: string;
+	/**
+	 * Per dish id: the model's ingredients compared with cited web recipes (web/grounding.ts). Evidence for the chef,
+	 * never applied to the proposal. Absent when grounding was not started (fixture catalogue, old proposal).
+	 */
+	grounding?: Record<string, GroundingState>;
 }
 
 /** The plan an accepted menu became, and where the Kitchen shows it. */

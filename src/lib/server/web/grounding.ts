@@ -1,0 +1,227 @@
+/**
+ * Grounded menu: after a menu is proposed, each dish's model-written ingredients are compared with 1–2 cited recipes
+ * from the web (Exa, the make-in-house path) whose ingredients go through `Catalog.resolve`. Per dish it stores which
+ * sources match, which model ingredients no source has, and which ingredients the sources use that the model left
+ * out. Evidence only: the proposal is never changed; the chef decides. Runs in the background so the proposal is not
+ * slowed; cached per dish name for the process (the Exa answers themselves sit in the shared response cache).
+ */
+import type { Catalog } from '$lib/core/ports';
+import type { FactSearch } from './exa';
+import type { Findings } from './findings';
+import { findOutside, ingredientTerms, slug, type OutsideOption } from './lookup';
+import { evidenceSource, type EvidenceSource } from './evidence';
+
+/** Recipes compared per dish. */
+export const RECIPES_PER_DISH = 2;
+/** A source matches the dish when at least this share of the model's ingredients appears in it. */
+export const MATCH_SHARE = 0.5;
+
+export interface DishGrounding {
+	dishName: string;
+	state: 'done';
+	/** Where the recipes came from: live (sent now), cache, replay (fixture mode). */
+	source: EvidenceSource;
+	at: string;
+	/** Recipes sharing at least half of the model's ingredients, with how many they share. */
+	matchedSources: { url: string; title: string; host: string; shared: number; of: number }[];
+	/** Every recipe compared, matched or not. */
+	compared: { url: string; title: string; host: string }[];
+	/** Model ingredients (labels) that no compared source uses. */
+	modelOnly: string[];
+	/** Ingredients the sources use that the model left out (source wording). */
+	sourceOnly: string[];
+	note: string;
+}
+export type GroundingState =
+	| DishGrounding
+	| { dishName: string; state: 'pending' }
+	| { dishName: string; state: 'failed'; error: string };
+
+interface ModelIngredient {
+	label: string;
+	productId?: string;
+}
+export interface GroundDeps {
+	exa: FactSearch;
+	catalog: Catalog;
+	findings: Findings;
+	workspaceId?: string;
+}
+
+const host = (u: string) => {
+	try {
+		return new URL(u).host.replace(/^www\./, '');
+	} catch {
+		return u;
+	}
+};
+
+/** One source ingredient: its words and the catalogue products it resolves to. */
+async function sourceIngredient(
+	text: string,
+	fallback: { productId: string }[],
+	catalog: Catalog
+): Promise<{ text: string; terms: string[]; productIds: Set<string> }> {
+	const terms = ingredientTerms(text);
+	let ids = fallback.map((p) => p.productId);
+	if (catalog.resolve) {
+		const r = await catalog.resolve(text, { limit: 3 }).catch(() => null);
+		if (r?.status === 'resolved') ids = r.candidates.map((c) => c.productId);
+	}
+	return { text, terms, productIds: new Set(ids) };
+}
+
+/** The model ingredient and the source ingredient name the same thing: same product, or a shared word stem. */
+function same(
+	m: ModelIngredient & { terms: string[] },
+	s: { terms: string[]; productIds: Set<string> }
+): boolean {
+	if (m.productId && s.productIds.has(m.productId)) return true;
+	const stem = (t: string) => t.slice(0, Math.max(5, Math.min(t.length, 7)));
+	return m.terms.some((a) => s.terms.some((b) => stem(a) === stem(b)));
+}
+
+export async function groundDish(
+	dish: { name: string; ingredients: ModelIngredient[] },
+	d: GroundDeps
+): Promise<DishGrounding> {
+	const r = await findOutside(dish.name, {
+		...d,
+		context: 'a dish on a menu; recipes with ingredient lists'
+	});
+	const recipes = r.options
+		.filter(
+			(o): o is OutsideOption =>
+				o.kind === 'recipe' && o.sources.length > 0 && o.ingredients.length > 0
+		)
+		.slice(0, RECIPES_PER_DISH);
+	const model = dish.ingredients.map((i) => ({
+		...i,
+		terms: ingredientTerms(i.label).concat(
+			i.label
+				.toLowerCase()
+				.split(/\s+/)
+				.filter((w) => w.length > 3)
+		)
+	}));
+	const perRecipe = await Promise.all(
+		recipes.map(async (o) => ({
+			o,
+			ings: await Promise.all(
+				o.ingredients.map((i) => sourceIngredient(i.text, i.catalogue, d.catalog))
+			)
+		}))
+	);
+	const matchedSources = perRecipe.flatMap(({ o, ings }) => {
+		const shared = model.filter((m) => ings.some((s) => same(m, s))).length;
+		return model.length && shared / model.length >= MATCH_SHARE
+			? [
+					{
+						url: o.sources[0].url,
+						title: o.title,
+						host: host(o.sources[0].url),
+						shared,
+						of: model.length
+					}
+				]
+			: [];
+	});
+	const modelOnly = recipes.length
+		? model
+				.filter((m) => !perRecipe.some(({ ings }) => ings.some((s) => same(m, s))))
+				.map((m) => m.label)
+		: [];
+	const sourceOnly = [
+		...new Set(
+			perRecipe.flatMap(({ ings }) =>
+				ings.filter((s) => s.terms.length && !model.some((m) => same(m, s))).map((s) => s.text)
+			)
+		)
+	].slice(0, 12);
+	const compared = recipes.map((o) => ({
+		url: o.sources[0].url,
+		title: o.title,
+		host: host(o.sources[0].url)
+	}));
+	return {
+		dishName: dish.name,
+		state: 'done',
+		source: evidenceSource(r.mode, r.cached),
+		at: r.at,
+		matchedSources,
+		compared,
+		modelOnly,
+		sourceOnly,
+		note: !recipes.length
+			? r.mode === 'fixture'
+				? 'No recorded recipe for this dish in fixture mode.'
+				: 'No cited recipe found for this dish.'
+			: matchedSources.length
+				? `Matches ${matchedSources.length} sourced recipe(s) (${matchedSources.map((m) => m.host).join(', ')}).`
+				: `No compared recipe shares half of the model's ingredients (${compared.map((c) => c.host).join(', ')}).`
+	};
+}
+
+const g = globalThis as typeof globalThis & { __grounding?: Map<string, GroundingState> };
+const store = (g.__grounding ??= new Map<string, GroundingState>());
+const keyOf = (dishName: string) => slug(dishName);
+
+/** Test hook. */
+export function resetGrounding() {
+	store.clear();
+}
+
+/** What is known for each dish name now: done, pending, failed, or absent (never asked). */
+export function groundingFor(dishNames: string[]): Record<string, GroundingState> {
+	return Object.fromEntries(
+		dishNames.flatMap((n) => {
+			const s = store.get(keyOf(n));
+			return s ? [[n, s]] : [];
+		})
+	);
+}
+
+/**
+ * Starts grounding every dish not already known (two at a time) and returns at once. A failure is kept as `failed` for
+ * this process so a refresh does not retry a paid call in a loop; a new process tries again.
+ */
+export function startGrounding(
+	dishes: { name: string; ingredients: ModelIngredient[] }[],
+	d: GroundDeps
+): Promise<void> {
+	const todo = dishes.filter((x) => !store.has(keyOf(x.name)));
+	for (const x of todo) store.set(keyOf(x.name), { dishName: x.name, state: 'pending' });
+	const queue = [...todo];
+	const worker = async () => {
+		for (let x = queue.shift(); x; x = queue.shift()) {
+			try {
+				store.set(keyOf(x.name), await groundDish(x, d));
+			} catch (e) {
+				store.set(keyOf(x.name), {
+					dishName: x.name,
+					state: 'failed',
+					error: String((e as Error)?.message ?? e).slice(0, 200)
+				});
+			}
+		}
+	};
+	return Promise.all([worker(), worker()]).then(() => {});
+}
+
+/**
+ * Grounds a proposed menu's dishes in the background, as the visitor (its own daily web cap) with the live or fixture
+ * Exa client this env selects. Returns once the work is queued; the menu view reads progress with `groundingFor`.
+ */
+export async function groundMenuInBackground(
+	env: Record<string, string | undefined>,
+	workspaceId: string,
+	dishes: { name: string; ingredients: ModelIngredient[] }[],
+	catalog: Catalog
+): Promise<void> {
+	const { findingsFor, webClients, webStateReady } = await import('.');
+	await webStateReady(env);
+	const { exa } = webClients(env, undefined, `visitor:${workspaceId}`);
+	void startGrounding(dishes, { exa, catalog, findings: findingsFor(env), workspaceId }).catch(
+		() => {}
+	);
+}
