@@ -22,6 +22,8 @@
 <link rel="stylesheet" href="/site.css" />
 <script src="/name.js"></script>
 <style>
+.hero h1 .dim { color: var(--ink-3); }
+.hero .herofact { margin: -12px 0 24px; font-size: 15px; color: var(--ink-2); max-width: 36em; }
 .hero { display: grid; gap: 40px; padding: 40px 0 56px; align-items: center; }
 @media (min-width: 900px) { .hero { grid-template-columns: 1.05fr 1fr; padding: 24px 0 24px; gap: 56px; } }
 
@@ -208,8 +210,10 @@
 		<section class="hero">
 			<div>
 				<p class="eyebrow">Junction 2026 · Valio Aimo: Trusted Trade Agents</p>
-				<h1>An agent that orders for your kitchen, only inside the limits you set.</h1>
+				<h1>What do you need? We'll sort it out. <span class="dim">That's a mandate.</span></h1>
 				<p class="lede">Mandate plans a kitchen's order from Valio Aimo's catalogue, finds substitutes when products run out, and orders on its own only within the chef's mandate. Everything else waits for a person, with the reason.</p>
+				<!-- One recorded fact, bound to cases.json plan (event.guests, counts.lines, counts.waiting, counts.ordered). -->
+				<p class="herofact" id="hero-fact" hidden></p>
 				<div class="ctas">
 					<a class="btn primary" href="https://app.mandate.kitchen/">
 						Open the kitchen
@@ -797,6 +801,11 @@ function renderPartners(data) {
 		.then((data) => {
 			try {
 				renderChain(data);
+				const pl = data && data.plan, hf = document.getElementById('hero-fact');
+				if (hf && pl && pl.counts && pl.event) {
+					hf.textContent = `In a recorded chat request, a ${pl.event.guests}-guest buffet became ${pl.counts.lines} lines; ${pl.counts.waiting} waited for the chef.` + (pl.counts.ordered === 0 ? ' Nothing was ordered without the chef.' : '');
+					hf.hidden = false;
+				}
 			} catch {
 				/* the chain stays hidden; the cards still render */
 			}
