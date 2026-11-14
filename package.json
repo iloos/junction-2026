@@ -22,7 +22,7 @@
 		"eval:agent": "vitest run --project server src/lib/server/agent -t \"suite: agent goal trials|suite: adversarial authority\"",
 		"test:pg": "node scripts/test-pg.mjs",
 		"gate": "node scripts/merge-gate.mjs",
-		"eval:live": "node --env-file=.env node_modules/vitest/vitest.mjs run --project server src/lib/server/evals/live-planner.test.ts"
+		"eval:live": "node --env-file=.env node_modules/vitest/vitest.mjs run --project server src/lib/server/evals/live-planner.test.ts src/lib/server/evals/chat-free.test.ts"
 	},
 	"devDependencies": {
 		"@eslint/js": "^10.0.1",
