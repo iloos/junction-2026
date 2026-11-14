@@ -1413,6 +1413,31 @@
 			font-size: 34px;
 		}
 	}
+	/* Phone: the first screen reaches the problems. Figures two-up and smaller; the room name already shows in the
+	   nav and the outside-service strip is depth, so both step aside. */
+	@media (max-width: 480px) {
+		.room > header {
+			gap: 10px;
+		}
+		.figures {
+			display: grid;
+			grid-template-columns: 1fr 1fr;
+			gap: 8px 16px;
+		}
+		.figures dd {
+			font-size: 26px;
+		}
+		.figures dt {
+			font-size: 13px;
+		}
+		.roomline,
+		.services {
+			display: none;
+		}
+		h1 {
+			font-size: 28px;
+		}
+	}
 	@media (prefers-reduced-motion: reduce) {
 		li.fresh {
 			animation: none;
