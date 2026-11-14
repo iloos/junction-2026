@@ -20,6 +20,9 @@ type Path = 'rest' | 'request' | 'agent';
 
 async function playPath(c: Case, path: Path): Promise<{ plans: Plan[]; error?: string }> {
 	const w = await trialWorkspace();
+	// Monday morning, before Valio's 17:00 cut-off: "tomorrow" is still orderable, so the paths are compared on
+	// intent, not on a closed cut-off.
+	w.env.ports.clock = { now: () => new Date('2026-12-07T09:00:00+02:00') };
 	const today = scenarioDate(w.env.ports.clock.now());
 	try {
 		if (path === 'rest') {

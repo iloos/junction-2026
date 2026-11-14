@@ -12,7 +12,9 @@ import type { RunPrincipal } from './types';
  */
 export async function trialWorkspace() {
 	const ops: OpEnvelope[] = [];
+	// The store's clock is the trial's "today" (14 Nov, midday), so cut-offs agree with the dates the agent picks.
 	const env = await createDbPorts({
+		now: '2026-11-14T12:00:00+02:00',
 		publish: (_ws, events) => {
 			for (const e of events) if (e.kind === 'op') ops.push(e.envelope);
 		}

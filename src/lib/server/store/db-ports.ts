@@ -37,7 +37,7 @@ export interface DbPortsOptions {
 	workspaceId?: string;
 	runId?: string;
 	kitchens?: Kitchen[];
-	/** Simulator clock; default Sat 14 Nov 2026 12:00 Helsinki. */
+	/** Simulator clock; default the scenario start (Mon 7 Dec 21:40 Helsinki). */
 	now?: string;
 	overlay?: SimOverlay;
 	/** Catalog to use instead of the file catalog (e.g. createPgCatalog on Aiven). */

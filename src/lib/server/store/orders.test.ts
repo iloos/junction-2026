@@ -25,7 +25,11 @@ let published: ServerEvent[];
 
 beforeEach(async () => {
 	published = [];
-	env = await createDbPorts({ publish: (_ws, evs) => published.push(...evs) });
+	// These cases order for mid-November: the clock is that Saturday, so their cut-offs are ahead.
+	env = await createDbPorts({
+		now: '2026-11-14T12:00:00+02:00',
+		publish: (_ws, evs) => published.push(...evs)
+	});
 	env.overlay.clear();
 	h = createHandlers(env.ports);
 });

@@ -242,6 +242,7 @@ export async function placeOrder(
 			provenance: { source: 'user', note: `${ctx.actor.kind} via ${ctx.via}` }
 		}));
 		const t = tierLines({
+			now: ports.clock.now(),
 			kitchen,
 			lines: drafts,
 			offers: new Map(offers.map((o) => [o.productId, o])),
@@ -431,14 +432,17 @@ export async function commitOrder(
 	const week = isoWeek(plan0.deliverBy);
 
 	return idempotent(ports, ctx, 'commit_order', input.idempotencyKey, input, async (tx, state) => {
-		const plan = state.plans[input.planId];
+		let plan = state.plans[input.planId];
 		if (!plan) return { error: err('NOT_FOUND', `plan ${input.planId}`).error };
+		/** Ops recorded before the commit itself (a re-quote that closed lines past their cut-off). */
+		let prefix: PendingOp[] = [];
 		if (plan.version !== input.version)
 			return {
 				error: err('STALE_VERSION', `plan is at v${plan.version}, not v${input.version}`).error
 			};
 		const fail = (error: DomainError, extra: PendingOp[] = []) => ({
 			ops: [
+				...prefix,
 				...extra,
 				pending(ctx, {
 					type: 'CommitOrder',
@@ -463,6 +467,7 @@ export async function commitOrder(
 		const open = plan.lines.filter((l) => l.state !== 'committed');
 		const seed = plan.eventId ? ports.events?.[plan.eventId] : undefined;
 		const t = tierLines({
+			now: ports.clock.now(),
 			kitchen,
 			lines: open.map(draftFromLine),
 			offers: new Map(offers.map((o) => [o.productId, o])),
@@ -476,6 +481,31 @@ export async function commitOrder(
 			// The same yardstick as the quote, so a line held for its quantity stays held here.
 			expectedQty: seed ? seedNeedQty(plan.id, seed) : undefined
 		});
+		// F9: lines whose cut-off has passed (scenario clock) can't be bought. Named explicitly, the commit is refused by
+		// name. Otherwise the re-quote is recorded (they show closed; the changed terms void any approval) and the commit
+		// goes on with the lines the mandate still covers alone; approved lines need approving again.
+		const wanted = (id: string) =>
+			input.lineIds
+				? input.lineIds.includes(id)
+				: plan.lines.find((l) => l.id === id)?.state !== 'unorderable';
+		const closed = t.lines.filter((l) => l.reasons.includes('cutoff_passed') && wanted(l.id));
+		if (closed.length) {
+			const q = await quoteOps(ctx, ports, plan, kitchen, t, offers);
+			const at = closed[0].offer?.availability.closingTime;
+			const refuse = () =>
+				fail(
+					err(
+						'FORBIDDEN',
+						`ordering closed${at ? ` at ${at}` : ''} for ${closed.map((l) => l.productName ?? l.productId).join(', ')}`,
+						{ sub: 'cutoff', detail: { lineIds: closed.map((l) => l.id) } }
+					).error,
+					q.ops
+				);
+			if (input.lineIds || !t.lines.some((l) => l.state === 'eligible' && l.tier === 'act'))
+				return refuse();
+			prefix = q.ops;
+			plan = q.plan;
+		}
 		const fresh = await termsHash({ deliverBy: plan.deliverBy, lines: t.termsLines });
 		if (fresh !== plan.termsHash) {
 			const q = await quoteOps(ctx, ports, plan, kitchen, t, offers);
@@ -506,7 +536,10 @@ export async function commitOrder(
 
 		// Which lines, under which authority.
 		// Every granted group of this version covers its own lines (approve{lineIds}); one grant is the usual case.
-		const grants = liveApprovals(state, plan.id).filter((a) => a.state === 'granted');
+		// After a recorded re-quote the plan's approvals are void (its terms moved).
+		const grants = prefix.length
+			? []
+			: liveApprovals(state, plan.id).filter((a) => a.state === 'granted');
 		const grantFor = (lineId: string) => grants.find((a) => a.lineIds.includes(lineId));
 		const byId = new Map(plan.lines.map((l) => [l.id, l]));
 		const external =
@@ -677,6 +710,7 @@ export async function commitOrder(
 		);
 		return {
 			ops: [
+				...prefix,
 				pending(
 					ctx,
 					{ type: 'CommitOrder', outcome: { result: 'committed', order, receipt } },

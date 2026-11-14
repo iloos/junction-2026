@@ -109,6 +109,37 @@ export function factsFor(
 	};
 }
 
+/**
+ * F29: `committable` holds only as of now on the scenario clock. A line whose cut-off has passed is closed; a held
+ * line whose only grants have expired needs approving again.
+ */
+function asOf(
+	l: Line,
+	view: NonNullable<Line['view']>,
+	approvals: ApprovalLike[],
+	version: number,
+	now: Date
+): NonNullable<Line['view']> {
+	if (l.state === 'committed' || (!view.committable && !view.reviewable)) return view;
+	const closes = l.offer?.availability.closingTime;
+	if (closes && new Date(closes).getTime() <= now.getTime())
+		return {
+			...view,
+			reviewable: false,
+			committable: false,
+			blockedReason: { code: 'cutoff_passed', effect: 'forbid' },
+			nextAction: 'find_substitute'
+		};
+	if (view.committable && !(l.state === 'eligible' && l.tier === 'act')) {
+		const grants = approvals.filter(
+			(a) => a.planVersion === version && a.state === 'granted' && a.lineIds.includes(l.id)
+		);
+		if (grants.length && grants.every((a) => a.expiresAt && new Date(a.expiresAt) <= now))
+			return { ...view, committable: false, nextAction: 'approve' };
+	}
+	return view;
+}
+
 /** The plan with every line's view (incl. physical amount and prices) and the plan view, as of `now`. */
 export async function withPlanView(
 	ports: ServicePorts,
@@ -121,16 +152,17 @@ export async function withPlanView(
 	const seed = plan.eventId ? ports.events?.[plan.eventId] : undefined;
 	const facts = factsFor(plan, products, seed, state);
 	const viewed = withLineViews(plan, approval);
+	const now = ports.clock.now();
 	const lines = viewed.lines.map((l) => {
 		const pack = facts.pack(l);
 		const physical = physicalOf(l, pack);
-		return { ...l, view: { ...l.view!, ...(physical ? { physical } : {}), ...pricesOf(l, pack) } };
+		const view = { ...l.view!, ...(physical ? { physical } : {}), ...pricesOf(l, pack) };
+		return { ...l, view: asOf(l, view, approvals as ApprovalLike[], plan.version, now) };
 	});
 	const withLines = { ...viewed, lines };
 	const kitchen = (await ports.store.kitchens(plan.workspaceId)).find(
 		(k) => k.id === plan.kitchenId
 	);
-	const now = ports.clock.now();
 	const live = (approvals as ApprovalLike[])
 		.filter(
 			(a) =>
