@@ -174,6 +174,14 @@ describe('detectPatterns', () => {
 		expect(g.source).toBe('override');
 		expect(g.period).toEqual({ kind: 'weekly', weekday: 'tue', everyWeeks: 2 });
 		expect(g.sentence).toMatch(/^set to every other Tuesday: /);
+		// The chef's "every week" keeps an every-other-week product in the order (forming, 6 of 12).
+		const odd = dates(weeksBack(12), AS_OF, (d, i) => on('tue')(d) && Math.floor(i / 7) % 2 === 0);
+		const k = [...staple(['tue']), ...odd.map((d) => line('K', d))];
+		const kp = detectPatterns(k, {
+			asOf: AS_OF,
+			overrides: { products: { K: { every: 1, unit: 'weeks' } } }
+		}).find((p) => p.productId === 'K')!;
+		expect(kp.status).toBe('forming');
 		const all = detectPatterns(h, {
 			asOf: AS_OF,
 			overrides: { kitchen: { every: 7, unit: 'days' } }

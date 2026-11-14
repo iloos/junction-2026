@@ -389,7 +389,8 @@ function assess(
 				? 'not_settled'
 				: rate >= 0.8
 					? 'settled'
-					: rate >= 0.5
+					: // A rhythm the chef set is never dropped from the order for coming less often than set.
+						rate >= 0.5 || c.source === 'override'
 						? 'forming'
 						: 'occasional';
 	const score =
