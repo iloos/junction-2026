@@ -1,6 +1,6 @@
 {
 	"$comment": "Labelled substitute set for retrieval recall@12 (Track B, F18). Each target is treated as out of stock; `acceptable` lists catalogue products a chef would accept for the target's normal use (grade same | close | functional), `nearMisses` look similar but must not be accepted. Availability and price are ignored. Labelled 14 Nov 2026 by LLM agents (Claude Sonnet) from catalogue names under a written rubric, spot-checked by session 1f; not chef-reviewed. Product ids reference the Valio catalogue; names are kept only for readability.",
-	"$kindNote": "kind (substitution ladder, docs/research/substitutes.md): 1 same product, other pack (same brand and base name, fat % included) · 2 same base, other brand or variant · 3 other form or processing (frozen, trim, ready, raw) · 4 functional swap in the dish. Derived 14 Nov by session 91 from grade (functional → 4, close → 3, same → 1 or 2) and the catalogue's brand and normalised name; kind-1 rows hand-checked, the rest follow the labelled grade.",
+	"$kindNote": "kind, with 8d's definition (14 Nov): 1 pack (same base, brand, form and temperature; only size or pack differs) · 2 brand (same base, form and temperature, other brand) · 3 form (same base, other form or temperature: frozen, sliced, cooked, smoked, raw, lactose-free…) · 4 functional (a different base that a source endorses for the role; a grader's 'acceptable' here is that endorsement). Same base is decided by the name (brand, sizes, origin and form words removed; a compound shares its head), never by grade. Derived by session 91 from the grade (functional → 4; close → 3 unless the base itself differs (judged by hand: rosolli → beetroot salad, onion → garlic, spaghetti → bucatini are 4); same → 1 when brand and name match, else 2), independently of core's basekey.ts; kind-1 rows hand-checked.",
 	"k": 12,
 	"targets": [
 		{
@@ -556,25 +556,25 @@
 				{
 					"productId": "463870",
 					"grade": "close",
-					"kind": 3,
+					"kind": 4,
 					"note": "beetroot salad (no potato/carrot mix) used as rosolli stand-in"
 				},
 				{
 					"productId": "465535",
 					"grade": "close",
-					"kind": 3,
+					"kind": 4,
 					"note": "beetroot salad (no potato/carrot mix) used as rosolli stand-in"
 				},
 				{
 					"productId": "460042",
 					"grade": "close",
-					"kind": 3,
+					"kind": 4,
 					"note": "beetroot salad (no potato/carrot mix) used as rosolli stand-in"
 				},
 				{
 					"productId": "463786",
 					"grade": "close",
-					"kind": 3,
+					"kind": 4,
 					"note": "beetroot salad 3kg"
 				}
 			],
@@ -2493,7 +2493,7 @@
 				{
 					"productId": "463255",
 					"grade": "close",
-					"kind": 3,
+					"kind": 4,
 					"note": "frozen diced onion"
 				},
 				{
@@ -3661,13 +3661,13 @@
 				{
 					"productId": "467649",
 					"grade": "close",
-					"kind": 3,
+					"kind": 4,
 					"note": "bucatini long pasta"
 				},
 				{
 					"productId": "469597",
 					"grade": "close",
-					"kind": 3,
+					"kind": 4,
 					"note": "bucatini long pasta"
 				},
 				{

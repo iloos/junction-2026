@@ -1,4 +1,5 @@
 import { expect, test, type APIRequestContext, type Page } from '@playwright/test';
+import { execSync } from 'node:child_process';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
@@ -16,11 +17,29 @@ let OUT = process.env.JOURNEY_OUT ?? '';
 
 test.skip(!ON, 'claims journeys: JOURNEYS=1 and KITCHEN_URL');
 
+/** The deployed commit and what main holds now: a claims pass cites code at the deployed commit, so they must match. */
+let pin: { deployed: string; sourceMain: string | null } = { deployed: '', sourceMain: null };
+
 test.beforeAll(async ({ request }) => {
 	const h = (await (await request.get(`${BASE}/healthz`)).json()) as { commit: string };
 	OUT ||= join('scratch', 'claims', h.commit.slice(0, 7));
 	mkdirSync(OUT, { recursive: true });
-	writeFileSync(join(OUT, 'healthz.json'), JSON.stringify(h, null, '\t'));
+	let sourceMain: string | null;
+	try {
+		sourceMain = execSync('git rev-parse main', { encoding: 'utf-8' }).trim();
+	} catch {
+		sourceMain = null;
+	}
+	pin = { deployed: h.commit, sourceMain };
+	writeFileSync(join(OUT, 'healthz.json'), JSON.stringify({ ...h, pin }, null, '\t'));
+});
+
+test('the evidence is pinned: the deployed commit is the source on main', () => {
+	expect(pin.sourceMain, 'main resolves').toBeTruthy();
+	expect(
+		pin.deployed,
+		`deployed ${pin.deployed.slice(0, 7)} vs main ${pin.sourceMain?.slice(0, 7)}`
+	).toBe(pin.sourceMain);
 });
 
 async function record(page: Page, name: string, extra = '') {
