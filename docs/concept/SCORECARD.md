@@ -25,7 +25,7 @@ Rules from their sheet: not a chatbot; query their APIs only when needed (the sw
 | Creative use of live web data (20) | Recalls + manufacturer data enrichment + real menus | Three uses, each with a source link | [~] recall watch + Exa facts (MCP only) |
 | Completeness of demo (20) | The recall flow runs end to end | Live or replayed monitor event | [~] replayed drill |
 | Technical execution (20) | Monitors/webhooks, schema extraction, caching | Code + trace of the extraction | [x] webhook, revisions, caching, spend caps |
-| Real-timeness (20) | Monitor → webhook → anomaly in the kitchen app | Timestamp from notice to alert | [ ] hourly monitor |
+| Real-timeness (20) | Monitor → webhook → anomaly in the kitchen app | Timestamp from notice to alert | [~] monitor every 5 min; recall cases visible in Ops; a held line is a labelled drill |
 
 ## Tech challenges
 | Challenge (prize) | Criteria | Our central use | Evidence / required write-up | Status |
@@ -34,7 +34,7 @@ Rules from their sheet: not a chatbot; query their APIs only when needed (the sw
 | **Nemotron** (RTX 5080) | Meaningful use 25 · execution 25 · output quality 25 · creativity 25 | (parked) documents; second-model check on plans | Text in the submission form: model, what it does, why, **how we improved outputs** (eval set of 10–20 cases) | parked (D7) |
 | **Modal** ($2k + $3k credits) | Effective use 40 · ambition 25 · impact 20 · live demo 15 | (parked) enrichment batch over 17.5k products | Run dashboard: containers, throughput, cost; live deployed app | parked (D7) |
 | **Verda** ($10k credits) | Ambition · fit · working prototype · path to scale (25 each) | Hosts open models in the EU (Nemotron, Gemma); GPU batch if needed | Documented process; **summary link posted in their Discord channel** | parked (D7) |
-| **Aiven** (€1k) | Meaningful use 40 · tech 30 · impact 20 · creativity 10 | Postgres: enriched catalogue (pgvector), orders, ops; LISTEN/NOTIFY drives the control room; maybe Runtime hosting | Architecture slide; the live stream visibly fed by Postgres | [x] Runtime + Postgres, race test, NOTIFY → Ops; write-up open |
+| **Aiven** (€1k) | Meaningful use 40 · tech 30 · impact 20 · creativity 10 | Runtime (prod + staging); Postgres: catalogue and Valio offer cache, plans and op log, idempotency, agent tasks, web state and spend caps; LISTEN/NOTIFY drives the control room | Architecture slide; the live stream visibly fed by Postgres | [x] Runtime + Postgres, race test on prod, NOTIFY → Ops; write-up in [SUBMISSION](../SUBMISSION.md) |
 | **Cloudinary** ($500 voucher per member) | Innovation 30 · tech 20 · UX/design 30 · impact 20 | Valio data has no product images: only a document workflow (receipt / prep list / BEO upload → crop → extracted fields → order change), else drop | Before/after document crops; **submit their form** | dropped (no product images) |
 | **Context.dev tech** (€750) | Creative use 40 · centrality of live web 30 · execution 30 | Real menus, manufacturer enrichment, recall monitor | Same as the main entry | [~] as the main entry |
 | **Gemma** (€1k ×3) | Open | Cheap model for the swarm's kitchen agents (Featherless/Verda) | One line in the write-up + swarm config | parked (Featherless adapter exists, not in the demo) |
