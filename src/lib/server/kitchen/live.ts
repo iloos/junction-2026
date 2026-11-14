@@ -52,20 +52,28 @@ async function ensurePlan() {
 		kitchenId: state.kitchenId,
 		eventId: EVENT_ID
 	})) as PlanOut;
-	for (;;) {
+	// Each outage is tried at most once per call, and the loop is capped: a dish with no qualifying substitute
+	// stays a stated shortfall instead of being retried (a retry loop once wrote ~1,000 empty proposals).
+	const tried = new Set<string>();
+	for (let i = 0; i < 10; i++) {
 		const covered = new Set(plan.lines.map((l) => l.substituteFor).filter(Boolean));
 		const out = plan.lines.find(
-			(l) => l.state === 'unorderable' && !l.substituteFor && !covered.has(l.productId)
+			(l) =>
+				l.state === 'unorderable' &&
+				!l.substituteFor &&
+				!covered.has(l.productId) &&
+				!tried.has(l.id)
 		);
 		if (!out) return plan;
+		tried.add(out.id);
 		const r = (await must(
 			'find_substitutes',
 			{ planId: plan.id, version: plan.version, lineId: out.id },
 			agent()
 		)) as SubstitutesOut;
-		if (r.plan.version === plan.version) return plan; // nothing proposed: stop instead of looping
-		plan = r.plan;
+		if (r.applied) plan = r.plan;
 	}
+	return plan;
 }
 
 function presetInput(kitchen: Kitchen) {
