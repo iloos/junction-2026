@@ -14,6 +14,7 @@
 	import HoldButton from '$lib/ui/HoldButton.svelte';
 	import { money, num, shortHash, day, storyTime } from '$lib/ui/format';
 	import { reasonLong, reasonShort } from '$lib/ui/reasons';
+	import { SUBSET_APPROVE } from '$lib/kitchen/capabilities';
 
 	interface Props {
 		plan: Plan;
@@ -27,8 +28,9 @@
 		lastCommit: CommitNote | null;
 		names: Map<string, string>;
 		busy: boolean;
-		onapprove: () => Promise<boolean>;
-		ondeny: () => void;
+		/** Decide one reason group (its line ids) of the pending approval. */
+		onapprove: (lineIds?: string[]) => Promise<boolean>;
+		ondeny: (lineIds?: string[]) => void;
 		oncommit: () => void;
 		onretry: () => void;
 	}
@@ -65,9 +67,7 @@
 		)
 	);
 	const eligibleCents = $derived(eligible.reduce((s, l) => s + (l.lineCents ?? 0), 0));
-	const withinCents = $derived(
-		plan.lines.filter((l) => l.state === 'eligible').reduce((s, l) => s + (l.lineCents ?? 0), 0)
-	);
+
 	const committedN = $derived(plan.lines.filter((l) => l.state === 'committed').length);
 	const pending = $derived(approval?.state === 'pending');
 	/** The approval's lines have been bought: show the ordered state, not "approved, not yet ordered". */
@@ -81,32 +81,73 @@
 	const changedIds = $derived(new Set(changes.map((c) => c.lineId)));
 	const grouped = $derived.by(() => {
 		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local, rebuilt on every derive
-		const m = new Map<string, { reasons: string[]; lines: Line[] }>();
+		const m = new Map<string, { reasons: string[]; lines: Line[]; signOff: boolean }>();
 		for (const l of approvalLines) {
 			const reasons = l.reasons.filter((r) => r !== 'unknown' && r !== 'UNKNOWN_REQUIRED');
 			const key = reasons.map(reasonShort).join(' · ') || 'Held';
-			const g = m.get(key) ?? { reasons, lines: [] };
+			const g = m.get(key) ?? { reasons, lines: [], signOff: false };
 			g.lines.push(l);
+			if (l.tier === 'sign_off') g.signOff = true;
 			m.set(key, g);
 		}
 		return [...m.entries()];
 	});
+	/**
+	 * Lines a human already approved in an earlier group decision and that are not ordered yet: committable but not
+	 * within the mandate. Read from the server's view (offline: the fixture marks them eligible).
+	 */
+	const approvedEarlier = $derived(
+		plan.lines.filter(
+			(l) =>
+				!approvalLines.includes(l) &&
+				l.state !== 'committed' &&
+				l.tier !== undefined &&
+				l.tier !== 'act' &&
+				(l.view ? l.view.committable : l.state === 'eligible')
+		)
+	);
+	/** In the mandate on its own: eligible, and not because a human approved it. */
+	const withinCents = $derived(
+		plan.lines
+			.filter((l) => l.state === 'eligible' && !approvedEarlier.includes(l))
+			.reduce((s, l) => s + (l.lineCents ?? 0), 0)
+	);
 
-	/** The click path: Review → Confirm exact terms. The hold button is the shortcut. */
-	let confirming = $state(false);
+	/**
+	 * One decision per reason group: Review → Confirm exact terms for a routine group; a sign-off group (an allergen
+	 * change, a broken requirement) takes a deliberate hold. Approving one group never grants another.
+	 */
+	let confirming = $state<string | null>(null);
 	let confirmBtn = $state<HTMLButtonElement | null>(null);
 	let commitBtn = $state<HTMLButtonElement | null>(null);
-	async function review() {
-		confirming = true;
+	async function review(key: string) {
+		confirming = key;
 		await tick();
 		confirmBtn?.focus();
 	}
-	async function confirm() {
+	/** Groups the chef confirmed on screen, per approval (the fallback while core can't grant a subset). */
+	let checked = $state<Record<string, boolean>>({});
+	const ck = (key: string) => `${approval?.id}:${key}`;
+	const oneShot = $derived(SUBSET_APPROVE || grouped.length <= 1);
+	const allChecked = $derived(grouped.every(([key]) => checked[ck(key)]));
+	async function confirm(lines: Line[], key: string) {
+		if (!oneShot) {
+			checked = { ...checked, [ck(key)]: true };
+			confirming = null;
+			return;
+		}
+		const ok = await onapprove(SUBSET_APPROVE ? lines.map((l) => l.id) : undefined);
+		confirming = null;
+		await tick();
+		if (ok && grouped.length <= 1) commitBtn?.focus();
+	}
+	async function approveConfirmed() {
 		const ok = await onapprove();
-		confirming = false;
+		checked = {};
 		await tick();
 		if (ok) commitBtn?.focus();
 	}
+	const sum = (ls: Line[]) => ls.reduce((a, l) => a + (l.lineCents ?? 0), 0);
 	const nameOf = (id: string) => names.get(id) ?? id;
 </script>
 
@@ -177,53 +218,194 @@
 						><b class="font-medium">You approved these terms</b> · {approvalLines.length} lines. Approved
 						is not yet ordered, and not supplier-confirmed.</span
 					>
-				{:else if approval.tier === 'sign_off'}
-					<ShieldAlert size={16} class="text-signoff" aria-hidden="true" />
-					<span
-						><b class="font-medium">{approvalLines.length} lines need your sign-off</b> · {money(
-							approvalCents
-						)}</span
-					>
 				{:else}
-					<Hand size={16} class="text-propose" aria-hidden="true" />
+					{#if approval.tier === 'sign_off'}
+						<ShieldAlert size={16} class="text-signoff" aria-hidden="true" />
+					{:else}
+						<Hand size={16} class="text-propose" aria-hidden="true" />
+					{/if}
 					<span
-						><b class="font-medium">{approvalLines.length} lines need your yes</b> · {money(
-							approvalCents
-						)}</span
+						><b class="font-medium"
+							>{grouped.length === 1
+								? 'One decision needs you'
+								: `${grouped.length} decisions need you`}</b
+						>
+						· {approvalLines.length} lines · {money(approvalCents)}</span
 					>
 				{/if}
 			</p>
 
-			<ul class="mt-2.5 space-y-3">
-				{#each grouped as [key, g] (key)}
-					<li>
-						<p class="text-[12px] font-medium text-ink">
-							{ordered ? 'Approved because' : 'Why it needs you'}: {key.toLowerCase()}
-						</p>
-						<p class="text-[11.5px] leading-snug text-ink-3">
-							{g.reasons.map(reasonLong).join(' ')}
-						</p>
-						<ul class="mt-1">
-							{#each g.lines as l (l.id)}
-								<li
-									class="flex items-baseline justify-between gap-3 rounded-sm text-[12.5px] {changedIds.has(
-										l.id
-									)
-										? 'bg-signoff-wash'
-										: ''}"
-								>
-									<span class="min-w-0 truncate text-ink-2" title={nameOf(l.productId)}
-										>{nameOf(l.productId)}</span
+			{#if pending}
+				<ol class="mt-2.5 space-y-2.5">
+					{#each grouped as [key, g] (key)}
+						<li
+							class="rounded-md border px-3 py-2.5 {g.signOff
+								? 'border-signoff/50 bg-signoff-wash/50'
+								: 'border-rule'}"
+						>
+							<div class="flex items-baseline justify-between gap-2">
+								<p class="text-[12.5px] font-medium text-ink">{key}</p>
+								<p class="mono text-[12.5px] text-ink">{money(sum(g.lines))}</p>
+							</div>
+							<p class="mt-0.5 text-[11.5px] leading-snug text-ink-2">
+								{g.reasons.map(reasonLong).join(' ')}
+							</p>
+							<ul class="mt-1.5">
+								{#each g.lines as l (l.id)}
+									<li
+										class="flex items-baseline justify-between gap-3 rounded-sm text-[12.5px] {changedIds.has(
+											l.id
+										)
+											? 'bg-signoff-wash'
+											: ''}"
 									>
-									<span class="mono shrink-0 text-ink"
-										>{num(l.qty.value)} {l.qty.unit} · {money(l.lineCents)}</span
+										<span class="min-w-0 truncate text-ink-2" title={nameOf(l.productId)}
+											>{nameOf(l.productId)}</span
+										>
+										<span class="mono shrink-0 text-ink">{num(l.qty.value)} {l.qty.unit}</span>
+									</li>
+								{/each}
+							</ul>
+							<div class="mt-2 space-y-1.5">
+								{#if checked[ck(key)]}
+									<p class="flex items-center justify-between gap-2 text-[12.5px] text-ink">
+										<span class="flex items-center gap-1.5"
+											><CircleCheck size={14} class="text-ok" aria-hidden="true" /> Confirmed by you</span
+										>
+										<button
+											type="button"
+											class="text-[12px] text-ink-3 underline underline-offset-2 hover:text-ink"
+											onclick={() => (checked = { ...checked, [ck(key)]: false })}>Undo</button
+										>
+									</p>
+								{:else if confirming === key}
+									<p class="text-[12.5px] text-ink">
+										{oneShot ? 'Approve' : 'Confirm'} exactly these {g.lines.length} lines, {money(
+											sum(g.lines)
+										)}, for delivery {day(plan.deliverBy)}?{grouped.length > 1
+											? ' The other decisions stay open.'
+											: ''}
+									</p>
+									<div class="flex gap-2">
+										<button
+											bind:this={confirmBtn}
+											type="button"
+											class="h-9 flex-1 rounded-md bg-ink px-3 text-[13px] font-medium text-sheet disabled:opacity-50"
+											disabled={busy}
+											onclick={() => confirm(g.lines, key)}>Confirm exact terms</button
+										>
+										<button
+											type="button"
+											class="h-9 rounded-md border border-rule-strong px-3 text-[13px] text-ink"
+											onclick={() => (confirming = null)}>Cancel</button
+										>
+									</div>
+								{:else if g.signOff}
+									<HoldButton
+										label="Hold to sign off {g.lines.length} {g.lines.length === 1
+											? 'line'
+											: 'lines'}"
+										disabled={busy}
+										onconfirm={() => void confirm(g.lines, key)}
+									/>
+								{:else}
+									<button
+										type="button"
+										class="flex h-9 w-full items-center justify-center gap-1.5 rounded-md border border-ink/70 text-[13px] font-medium text-ink hover:bg-well disabled:opacity-50"
+										disabled={busy}
+										onclick={() => review(key)}
+										>{oneShot ? 'Approve' : 'Review'}
+										{g.lines.length}
+										{g.lines.length === 1 ? 'line' : 'lines'}
+										<ArrowRight size={14} aria-hidden="true" /></button
 									>
-								</li>
-							{/each}
-						</ul>
-					</li>
-				{/each}
-			</ul>
+								{/if}
+								{#if SUBSET_APPROVE && confirming !== key}
+									<button
+										type="button"
+										class="w-full text-center text-[12px] text-ink-3 hover:text-ink"
+										disabled={busy}
+										onclick={() => ondeny(g.lines.map((l) => l.id))}>Keep these held</button
+									>
+								{/if}
+							</div>
+						</li>
+					{/each}
+				</ol>
+				{#if !oneShot}
+					<div class="mt-2.5 space-y-1.5">
+						{#if allChecked}
+							<button
+								type="button"
+								class="h-10 w-full rounded-md bg-ink px-3 text-[13.5px] font-medium text-sheet disabled:opacity-50"
+								disabled={busy}
+								onclick={approveConfirmed}
+								>Approve the {grouped.length} confirmed decisions · {money(approvalCents)}</button
+							>
+						{:else}
+							<p class="text-[12px] leading-snug text-ink-3">
+								Confirm each decision on its own; one approval of these exact terms is sent when all
+								{grouped.length} are confirmed.
+							</p>
+						{/if}
+					</div>
+				{/if}
+				{#if !SUBSET_APPROVE}
+					<button
+						type="button"
+						class="mt-1.5 w-full text-center text-[12px] text-ink-3 hover:text-ink"
+						disabled={busy}
+						onclick={() => ondeny()}>Keep everything held</button
+					>
+				{/if}
+			{:else}
+				<ul class="mt-2.5 space-y-3">
+					{#each grouped as [key, g] (key)}
+						<li>
+							<p class="text-[12px] font-medium text-ink">
+								{ordered || granted ? 'Approved because' : 'Why it needs you'}: {key.toLowerCase()}
+							</p>
+							<p class="text-[11.5px] leading-snug text-ink-3">
+								{g.reasons.map(reasonLong).join(' ')}
+							</p>
+							<ul class="mt-1">
+								{#each g.lines as l (l.id)}
+									<li
+										class="flex items-baseline justify-between gap-3 rounded-sm text-[12.5px] {changedIds.has(
+											l.id
+										)
+											? 'bg-signoff-wash'
+											: ''}"
+									>
+										<span class="min-w-0 truncate text-ink-2" title={nameOf(l.productId)}
+											>{nameOf(l.productId)}</span
+										>
+										<span class="mono shrink-0 text-ink"
+											>{num(l.qty.value)} {l.qty.unit} · {money(l.lineCents)}</span
+										>
+									</li>
+								{/each}
+							</ul>
+						</li>
+					{/each}
+				</ul>
+			{/if}
+			{#if approvedEarlier.length}
+				<div class="mt-2.5 rounded-md border border-ok/30 bg-ok-wash/60 px-3 py-2">
+					<p class="flex items-center gap-1.5 text-[12.5px] font-medium text-ink">
+						<CircleCheck size={14} class="text-ok" aria-hidden="true" /> Approved by you, not ordered
+						yet
+					</p>
+					<ul class="mt-1">
+						{#each approvedEarlier as l (l.id)}
+							<li class="flex items-baseline justify-between gap-3 text-[12.5px]">
+								<span class="min-w-0 truncate text-ink-2">{nameOf(l.productId)}</span>
+								<span class="mono shrink-0 text-ink">{num(l.qty.value)} {l.qty.unit}</span>
+							</li>
+						{/each}
+					</ul>
+				</div>
+			{/if}
 		</div>
 
 		<dl
@@ -248,52 +430,6 @@
 				<ul class="mt-0.5 list-disc pl-4 text-ink-2">
 					{#each shortfalls as s (s)}<li>{s}</li>{/each}
 				</ul>
-			</div>
-		{/if}
-
-		{#if pending}
-			<div class="space-y-2 px-4 pt-3">
-				{#if confirming}
-					<div class="rounded-md border border-ink/20 p-2.5">
-						<p class="text-[12.5px] text-ink">
-							Approve exactly these {approvalLines.length} lines, {money(approvalCents)}, for
-							delivery
-							{day(plan.deliverBy)}?
-						</p>
-						<div class="mt-2 flex gap-2">
-							<button
-								bind:this={confirmBtn}
-								type="button"
-								class="h-10 flex-1 rounded-md bg-ink px-3 text-[13.5px] font-medium text-sheet disabled:opacity-50"
-								disabled={busy}
-								onclick={confirm}>Confirm exact terms</button
-							>
-							<button
-								type="button"
-								class="h-10 rounded-md border border-rule-strong px-3 text-[13px] text-ink"
-								onclick={() => (confirming = false)}>Cancel</button
-							>
-						</div>
-					</div>
-				{:else}
-					<button
-						type="button"
-						class="flex h-10 w-full items-center justify-center gap-1.5 rounded-md border border-ink/70 text-[13.5px] font-medium text-ink hover:bg-well disabled:opacity-50"
-						disabled={busy}
-						onclick={review}>Review and confirm <ArrowRight size={14} aria-hidden="true" /></button
-					>
-					<HoldButton
-						label="Or hold to approve {approvalLines.length} lines"
-						disabled={busy}
-						onconfirm={() => void confirm()}
-					/>
-				{/if}
-				<button
-					type="button"
-					class="w-full text-center text-[12.5px] text-ink-3 hover:text-ink"
-					disabled={busy}
-					onclick={ondeny}>Deny and keep them held</button
-				>
 			</div>
 		{/if}
 

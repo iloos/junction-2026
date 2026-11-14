@@ -11,6 +11,7 @@ import rescued from '../../../fixtures/views/christmas-rescued.json';
 
 const ref = rescued as unknown as Plan;
 const lineViews = new Map(ref.lines.map((l) => [`${l.needId}|${l.productId}`, l.view]));
+const refLineIdByKey = new Map(ref.lines.map((l) => [`${l.needId}|${l.productId}`, l.id]));
 /** Reference need id by the product first planned for it (a line that substitutes nothing). */
 const refNeedByProduct = new Map(
 	ref.lines.filter((l) => !l.substituteFor && l.needId).map((l) => [l.productId, l.needId!])
@@ -29,8 +30,13 @@ export function withFixtureView(plan: Plan): Plan {
 		if (r && !toRef.has(l.needId!)) toRef.set(l.needId!, r);
 	}
 	const fromRef = new Map([...toRef].map(([a, b]) => [b, a]));
+	// reference line id → fixture line id, so allocations point at the lines on screen
+	const lineFromRef = new Map<string, string>();
 	for (const l of plan.lines) {
-		const v = lineViews.get(`${toRef.get(l.needId ?? '')}|${l.productId}`);
+		const key = `${toRef.get(l.needId ?? '')}|${l.productId}`;
+		const r = refLineIdByKey.get(key);
+		if (r) lineFromRef.set(r, l.id);
+		const v = lineViews.get(key);
 		if (!v) continue;
 		borrowed.set(l.id, {
 			physical: v.physical,
@@ -44,7 +50,13 @@ export function withFixtureView(plan: Plan): Plan {
 			...ref.view,
 			fulfilment: ref.view.fulfilment
 				.filter((f) => fromRef.has(f.needId))
-				.map((f) => ({ ...f, needId: fromRef.get(f.needId)! }))
+				.map((f) => ({
+					...f,
+					needId: fromRef.get(f.needId)!,
+					allocations: f.allocations
+						.filter((a) => lineFromRef.has(a.lineId))
+						.map((a) => ({ ...a, lineId: lineFromRef.get(a.lineId)! }))
+				}))
 		}
 	};
 }

@@ -224,7 +224,8 @@ export class KitchenStore {
 		});
 	}
 
-	async approve(decision: 'grant' | 'deny' = 'grant') {
+	/** Decide the pending approval, or only `lineIds` of it (one reason group; the rest stay pending). */
+	async approve(decision: 'grant' | 'deny' = 'grant', lineIds?: string[]) {
 		const a = this.snap?.approval;
 		if (!a || this.readOnly) return false;
 		let ok = false;
@@ -233,9 +234,10 @@ export class KitchenStore {
 				approvalId: a.id,
 				planVersion: a.planVersion,
 				termsHash: a.termsHash,
-				decision
+				decision,
+				...(lineIds ? { lineIds } : {})
 			});
-			ok = out.state === 'granted';
+			ok = out.state === 'granted' || (decision === 'deny' && out.state === 'denied');
 			// The grant must be visible before the panel moves on: re-read if the store still says pending.
 			for (let i = 0; ok && i < 3; i++) {
 				const s = await backend.snapshot(this.mode);
@@ -244,7 +246,7 @@ export class KitchenStore {
 			}
 			this.#log(
 				'approval',
-				`${out.state}: ${a.lineIds.length} lines, bound to v${a.planVersion} · ${a.termsHash.slice(0, 8)}`
+				`${out.state}: ${(lineIds ?? a.lineIds).length} lines, bound to v${a.planVersion} · ${a.termsHash.slice(0, 8)}`
 			);
 		});
 		return ok;

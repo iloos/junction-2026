@@ -22,6 +22,7 @@
 	import CoverageLegend from '$lib/ui/CoverageLegend.svelte';
 	import { lineBasis } from '$lib/ui/coverage';
 	import { borrowed } from '$lib/kitchen/fixture-view';
+	import { whyChain } from '$lib/ui/why-chain';
 	import { day, fixed, money, moneyDelta, num, storyTime } from '$lib/ui/format';
 	import { SCENARIO } from '$lib/core/scenario';
 	import { reasonShort } from '$lib/ui/reasons';
@@ -37,16 +38,26 @@
 	// svelte-ignore state_referenced_locally
 	const k = new KitchenStore(mode);
 	/**
-	 * Deep link from Operations: /?kitchen=<id>&plan=<planId>&v=<version>&need=<needId>. Client-side focus only:
-	 * switch kitchen through the normal command, then scroll to the need, open its rescue and highlight it.
+	 * Deep link from Operations: /?ws=<workspace>&run=<runId>&kitchen=<id>&plan=<planId>&v=<version>&need=<needId>.
+	 * The server already moved this browser into `ws` if it may enter it (server/demo/visitor.ts). Client-side
+	 * focus only: switch kitchen through the normal command, then scroll to the need, open its rescue, highlight it.
 	 */
-	let fromOps = $state<{ kitchen: string; plan: string; v: number; need: string } | null>(null);
+	let fromOps = $state<{
+		ws: string;
+		run: string;
+		kitchen: string;
+		plan: string;
+		v: number;
+		need: string;
+	} | null>(null);
 	let focusNeed = $state<string | null>(null);
 	async function honourDeepLink() {
 		const q = new URL(location.href).searchParams;
 		const kitchen = q.get('kitchen');
 		if (!kitchen) return;
 		fromOps = {
+			ws: q.get('ws') ?? '',
+			run: q.get('run') ?? '',
 			kitchen,
 			plan: q.get('plan') ?? '',
 			v: Number(q.get('v') ?? NaN),
@@ -106,6 +117,30 @@
 
 	const whyLine = $derived(k.whyLineId ? (k.lineById.get(k.whyLineId) ?? null) : null);
 	const whyDish = $derived(view?.dishes.find((d) => d.lineIds.includes(k.whyLineId ?? '')) ?? null);
+
+	/** The worked calculation for the open Why line, from the plan's own numbers. */
+	const chain = $derived.by(() => {
+		if (!whyLine || !plan) return null;
+		const need = plan.needs.find((n) => n.id === whyLine.needId);
+		return whyChain({
+			need,
+			line: whyLine,
+			siblings: plan.lines.filter((l) => l.needId === whyLine.needId),
+			fulfilment: need ? coverage.get(need.id) : undefined,
+			basis: (l) => l.view ?? borrowed.get(l.id),
+			name: (id) => names.get(id) ?? id,
+			dish:
+				whyDish && view
+					? {
+							gServed: whyDish.gServed,
+							defaultGServed: whyDish.gDefault,
+							guests: view.guests,
+							yield: whyDish.yield,
+							formula: whyDish.needFormula
+						}
+					: undefined
+		});
+	});
 
 	const weekMeter = $derived.by(() => {
 		if (!snap || !plan) return null;
@@ -248,7 +283,9 @@
 				onclick={() => k.reset()}
 			>
 				<RotateCcw size={13} aria-hidden="true" />
-				{snap?.clock?.workspaceId === 'ws-judges' ? 'Start over (sandbox)' : 'Reset demo'}
+				{snap?.clock?.workspaceId && snap.clock.workspaceId !== 'ws-demo'
+					? 'Start over (sandbox)'
+					: 'Reset demo'}
 			</button>
 		</div>
 	</div>
@@ -305,7 +342,16 @@
 					(d) => d.needId === fromOps!.need
 				)?.nameFi ?? fromOps.need}</span
 			>
-			{#if fromOps.plan && fromOps.plan !== snap.plan.id}
+			{#if fromOps.ws && snap.clock?.workspaceId && fromOps.ws !== snap.clock.workspaceId}
+				<span class="text-signoff"
+					>The link is from another sandbox, which only its own browser can open; showing yours.</span
+				>
+			{:else if fromOps.run && snap.clock?.runId && fromOps.run !== snap.clock.runId}
+				<span class="text-signoff"
+					>The link is from an earlier run of this sandbox (it was started over); showing the
+					current plan.</span
+				>
+			{:else if fromOps.plan && fromOps.plan !== snap.plan.id}
 				<span class="text-signoff"
 					>The link points to another plan ({fromOps.plan}); showing this kitchen's current plan.</span
 				>
@@ -660,8 +706,8 @@
 				lastCommit={k.lastCommit}
 				{names}
 				busy={k.busy}
-				onapprove={() => k.approve('grant')}
-				ondeny={() => k.approve('deny')}
+				onapprove={(ids) => k.approve('grant', ids)}
+				ondeny={(ids) => k.approve('deny', ids)}
 				oncommit={() => k.commit()}
 				onretry={() => k.retryCommit()}
 			/>
@@ -731,6 +777,7 @@
 		productName={whyLine ? (names.get(whyLine.productId) ?? whyLine.productId) : ''}
 		dishName={whyDish ? `${whyDish.nameFi} (${whyDish.name})` : ''}
 		steps={k.whySteps}
+		{chain}
 		onclose={() => k.closeWhy()}
 	/>
 {/if}
