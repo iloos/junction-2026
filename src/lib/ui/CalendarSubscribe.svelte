@@ -42,14 +42,14 @@
 		<!-- eslint-disable svelte/no-navigation-without-resolve -->
 		<a
 			href={link.webcal}
-			class="inline-flex items-center gap-1 font-medium text-accent-ink hover:underline"
+			class="inline-flex items-center gap-1 font-medium whitespace-nowrap text-accent-ink hover:underline"
 			title="Decide-before times, delivery days and Finnish holidays, kept up to date in your calendar"
 			><CalendarPlus size={14} aria-hidden="true" />Subscribe in your calendar</a
 		>
 		<!-- eslint-enable svelte/no-navigation-without-resolve -->
 		<button
 			type="button"
-			class="inline-flex items-center gap-1 text-ink-2 hover:text-ink"
+			class="inline-flex items-center gap-1 whitespace-nowrap text-ink-2 hover:text-ink"
 			title="For Google Calendar: Other calendars → From URL"
 			onclick={copy}
 			>{#if copied}<Check size={13} aria-hidden="true" />Copied{:else}<Copy

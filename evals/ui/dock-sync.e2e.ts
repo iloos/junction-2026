@@ -31,10 +31,9 @@ test('approving on the page shows in the dock, with the way on', async ({ page }
 	const dock = await openDock(page);
 	await dock.locator('textarea').fill('What still needs my decision?');
 	await dock.locator('textarea').press('Enter');
-	await dock
-		.getByRole('link', { name: /this decision on the Kitchen page/ })
-		.first()
-		.waitFor();
+	// With the plan on the page, the rail shows its decisions once, above the chat; the chat points to them.
+	await dock.getByText(/decisions? waits? above/).first().waitFor();
+	await expect(dock.getByRole('region', { name: /Decide/ }).or(dock.locator('#approval'))).toBeVisible();
 	await dock.getByRole('button', { name: 'Close chat' }).click();
 
 	// Approve the first (non sign-off) decision on the page.

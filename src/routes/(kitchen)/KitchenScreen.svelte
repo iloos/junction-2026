@@ -491,6 +491,19 @@
 
 	// The shell shows the sandbox (workspace, run, clock, start over) and where the data comes from.
 	const shell = useShell();
+	/**
+	 * With the agent open and decisions waiting, the Decide panel lives at the top of the agent rail (the same panel
+	 * and command), once, instead of beside the plan as well.
+	 */
+	const inRail = $derived(!!shell?.chatOpen && decisions.length > 0);
+	$effect(() => {
+		if (!shell) return;
+		shell.railHeader = inRail && k.plan && k.snap ? decidePanel : null;
+		return () => {
+			if (shell.railHeader === decidePanel) shell.railHeader = null;
+		};
+	});
+
 	$effect(() => {
 		if (!shell) return;
 		shell.labels = { source: valioSource, offline: k.mode === 'fixture' };
@@ -741,7 +754,9 @@
 		/>
 	{/snippet}
 	<main
-		class="mx-auto grid max-w-[1440px] grid-cols-1 gap-6 px-4 pt-5 pb-32 md:px-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:pb-10"
+		class="mx-auto grid max-w-[1440px] grid-cols-1 gap-6 px-4 pt-5 pb-32 md:px-6 lg:pb-10 {shell?.chatOpen
+			? '2xl:grid-cols-[minmax(0,1fr)_360px]'
+			: 'lg:grid-cols-[minmax(0,1fr)_360px]'}"
 	>
 		<div class="min-w-0">
 			<!-- The task: decisions left, by when, cover by certainty; the event as a diff of a normal week -->
@@ -1213,28 +1228,18 @@
 			</section>
 		</div>
 
-		<aside class="space-y-4 lg:sticky lg:top-4 lg:self-start" aria-label="Rules and approval">
-			<div class={active === 'decide' ? '' : 'max-lg:hidden'}>
-				<ApprovalPanel
-					part="decide"
-					{plan}
-					{approval}
-					lastInvalidated={snap.lastInvalidated &&
-					snap.lastInvalidated.planVersion >= (k.firstVersion ?? Infinity)
-						? snap.lastInvalidated
-						: null}
-					changes={k.changes}
-					{shortfalls}
-					orders={snap.orders}
-					lastCommit={k.lastCommit}
-					{names}
-					busy={k.busy}
-					onapprove={(ids) => k.approve('grant', ids)}
-					ondeny={(ids) => k.approve('deny', ids)}
-					oncommit={() => k.commit()}
-					onretry={() => k.retryCommit()}
-				/>
-			</div>
+		<!-- With the agent rail open the page is narrower: the panels go under the plan until there is room again. -->
+		<aside
+			class="space-y-4 {shell?.chatOpen
+				? 'lg:grid lg:grid-cols-2 lg:gap-4 lg:space-y-0 2xl:sticky 2xl:top-4 2xl:block 2xl:space-y-4 2xl:self-start'
+				: 'lg:sticky lg:top-4 lg:self-start'}"
+			aria-label="Rules and approval"
+		>
+			{#if !inRail}
+				<div class={active === 'decide' ? '' : 'max-lg:hidden'}>
+					{@render decidePanel()}
+				</div>
+			{/if}
 			<div class="space-y-4 {active === 'order' ? '' : 'max-lg:hidden'}">
 				<ApprovalPanel
 					part="order"
@@ -1342,3 +1347,28 @@
 		onclose={() => k.closeWhy()}
 	/>
 {/if}
+
+<!-- The Decide panel: beside the plan, or at the top of the agent rail while the agent is open (one place). -->
+{#snippet decidePanel()}
+	{#if plan && snap}
+		<ApprovalPanel
+			part="decide"
+			{plan}
+			{approval}
+			lastInvalidated={snap.lastInvalidated &&
+			snap.lastInvalidated.planVersion >= (k.firstVersion ?? Infinity)
+				? snap.lastInvalidated
+				: null}
+			changes={k.changes}
+			{shortfalls}
+			orders={snap.orders}
+			lastCommit={k.lastCommit}
+			{names}
+			busy={k.busy}
+			onapprove={(ids) => k.approve('grant', ids)}
+			ondeny={(ids) => k.approve('deny', ids)}
+			oncommit={() => k.commit()}
+			onretry={() => k.retryCommit()}
+		/>
+	{/if}
+{/snippet}
