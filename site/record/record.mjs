@@ -357,13 +357,13 @@ const CASES = [
 	{
 		id: 'out-of-stock',
 		claimable: true,
-		endpoints: ['GET /kitchen-api/snapshot', 'POST /kitchen-api/scenario {action:start}'],
+		endpoints: ['GET /kitchen-api/snapshot', 'POST /kitchen-api/scenario {action:start}', 'POST /kitchen-api/tool/approve (lineIds)', 'POST /kitchen-api/tool/commit_order (lineIds)'],
 		async run() {
 			const go = visitor();
 			await go('/kitchen-api/snapshot');
 			const s = await go('/kitchen-api/scenario', post({ action: 'start' }));
 			need(s.status === 200 && s.json?.plan, `scenario start ${s.status}`);
-			const { plan, view } = s.json;
+			const { plan, view, clock, approval } = s.json;
 			const sub = plan.lines.find(
 				(l) => l.substituteFor && l.state === 'held' && /kinkku/i.test(l.productName ?? '')
 			);
@@ -380,7 +380,47 @@ const CASES = [
 			const held = sub.reasons.includes('new_sku')
 				? 'It is a new product for this kitchen, so it waits for the chef.'
 				: 'It waits for the chef.';
+			// The ham line's trace (need → packs → line → the chef's decision → receipt) for the /how map and /story:
+			// in this same sandbox the chef approves only this line, then orders only this line.
+			const shown = { runId: clock?.runId, planId: plan.id, version: plan.version };
+			need(shown.runId && approval?.state === 'pending', 'no run id or pending approval');
+			const needRow = plan.needs.find((x) => x.id === sub.needId);
+			need(needRow?.amount, 'the ham line has no need');
+			const g = await kitchenTool(
+				go,
+				'approve',
+				{ approvalId: approval.id, planVersion: approval.planVersion, termsHash: approval.termsHash, decision: 'grant', lineIds: [sub.id] },
+				shown
+			);
+			need(g.status === 200, `approve ${g.status} ${g.body.slice(0, 120)}`);
+			const c = await kitchenTool(
+				go,
+				'commit_order',
+				{ planId: plan.id, version: plan.version, idempotencyKey: `record-ham-${plan.id}-v${plan.version}`, lineIds: [sub.id] },
+				shown
+			);
+			need(c.status === 200 && c.json?.receiptId, `commit_order ${c.status} ${c.body.slice(0, 120)}`);
+			need(c.json.committedLineIds.length === 1 && c.json.committedLineIds[0] === sub.id, 'committed more than the ham line');
+			const awaiting = (c.json.awaitingSupplier ?? []).includes(sub.id);
+			const trace = {
+				// The need is the raw amount (per guest × guests ÷ yield); the served amount is per guest × guests, which a
+				// ready-to-serve substitute is sized on. Both come from the plan, so the trace can show 27 kg raw vs 19.5 kg bought.
+				need: {
+					label: needRow.label,
+					value: Math.round(needRow.amount.value * 100) / 100,
+					unit: needRow.amount.unit,
+					perGuestG: needRow.dish?.gServed ?? null,
+					guests: view.guests,
+					servedKg: needRow.dish?.gServed != null ? Math.round(((needRow.dish.gServed * view.guests) / 1000) * 100) / 100 : null
+				},
+				bought: sub.view?.physical ? { value: sub.view.physical.value, unit: sub.view.physical.unit } : null,
+				pack: { qty: packQty(sub), product: sub.productName, replaces: out.productName },
+				line: { eur: eur(sub.lineCents), state: sub.state, reasons: sub.reasons, label: 'Needs your approval' },
+				decision: { state: 'granted', by: 'the chef', label: 'Approved by the chef' },
+				receipt: { state: awaiting ? 'awaiting supplier' : 'supplier confirmed', label: awaiting ? 'Ordered, awaiting supplier' : 'Supplier confirmed', eur: eur(c.json.totalCents) }
+			};
 			return {
+				trace,
 				via: 'Started in the Kitchen',
 				request: `Plan the event · ${view.title.replace(/^Christmas dinner buffet/, 'Christmas buffet')}`,
 				steps: [

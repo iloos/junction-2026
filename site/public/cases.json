@@ -1,8 +1,8 @@
 {
-	"recordedAt": "2026-11-14T16:05:19.534Z",
+	"recordedAt": "2026-11-14T17:05:28.557Z",
 	"appCommit": "b2dfe9c1a94cd0ea0b51284cf504a53cb6589c3e",
 	"chain": {
-		"recordedAt": "2026-11-14T16:05:19.533Z",
+		"recordedAt": "2026-11-14T17:05:28.556Z",
 		"line": {
 			"dish": "Salmon soup",
 			"ingredient": "potatoes",
@@ -71,7 +71,7 @@
 	"cases": [
 		{
 			"id": "lactose-free",
-			"recordedAt": "2026-11-14T16:05:09.229Z",
+			"recordedAt": "2026-11-14T17:05:19.043Z",
 			"source": {
 				"app": "https://app.mandate.kitchen",
 				"endpoints": [
@@ -132,7 +132,7 @@
 		},
 		{
 			"id": "within-mandate",
-			"recordedAt": "2026-11-14T16:05:10.829Z",
+			"recordedAt": "2026-11-14T17:05:20.453Z",
 			"source": {
 				"app": "https://app.mandate.kitchen",
 				"endpoints": [
@@ -183,7 +183,7 @@
 		},
 		{
 			"id": "agent-cannot-approve",
-			"recordedAt": "2026-11-14T16:05:12.358Z",
+			"recordedAt": "2026-11-14T17:05:21.619Z",
 			"source": {
 				"app": "https://app.mandate.kitchen",
 				"endpoints": [
@@ -231,7 +231,7 @@
 		},
 		{
 			"id": "cut-off",
-			"recordedAt": "2026-11-14T16:05:13.931Z",
+			"recordedAt": "2026-11-14T17:05:23.135Z",
 			"source": {
 				"app": "https://app.mandate.kitchen",
 				"endpoints": [
@@ -266,7 +266,7 @@
 		},
 		{
 			"id": "one-receipt",
-			"recordedAt": "2026-11-14T16:05:16.422Z",
+			"recordedAt": "2026-11-14T17:05:25.123Z",
 			"source": {
 				"app": "https://app.mandate.kitchen",
 				"endpoints": [
@@ -305,13 +305,52 @@
 		},
 		{
 			"id": "out-of-stock",
-			"recordedAt": "2026-11-14T16:05:18.128Z",
+			"recordedAt": "2026-11-14T17:05:27.127Z",
 			"source": {
 				"app": "https://app.mandate.kitchen",
 				"endpoints": [
 					"GET /kitchen-api/snapshot",
-					"POST /kitchen-api/scenario {action:start}"
+					"POST /kitchen-api/scenario {action:start}",
+					"POST /kitchen-api/tool/approve (lineIds)",
+					"POST /kitchen-api/tool/commit_order (lineIds)"
 				]
+			},
+			"trace": {
+				"need": {
+					"label": "Joulukinkku (Christmas ham)",
+					"value": 27,
+					"unit": "kg",
+					"perGuestG": 135,
+					"guests": 140,
+					"servedKg": 18.9
+				},
+				"bought": {
+					"value": 19.5,
+					"unit": "kg"
+				},
+				"pack": {
+					"qty": "13 × 1.5 kg",
+					"product": "HK Palvikinkku viipaloitu 1,5 kg",
+					"replaces": "HK Viljaporsaan Juhlakinkku potkalla tuoresuolattu 6-8 kg"
+				},
+				"line": {
+					"eur": 200.59,
+					"state": "held",
+					"reasons": [
+						"new_sku"
+					],
+					"label": "Needs your approval"
+				},
+				"decision": {
+					"state": "granted",
+					"by": "the chef",
+					"label": "Approved by the chef"
+				},
+				"receipt": {
+					"state": "supplier confirmed",
+					"label": "Supplier confirmed",
+					"eur": 200.59
+				}
 			},
 			"via": "Started in the Kitchen",
 			"request": "Plan the event · Christmas buffet, 140 guests",
