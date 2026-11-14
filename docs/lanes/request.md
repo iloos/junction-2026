@@ -21,9 +21,20 @@ A chef types a short purchase request ("1,000 L lactose-free milk by Monday") an
 - The tool registry through `serveTool` (no direct store access).
 - `presenterOpen` (`server/demo/presenter.ts`), `POST /api/demo/sandbox/reset`, `hardLimitCents` (`core/mandate/validate.ts`).
 
+## Needs
+- **Migration `menu_proposals`** (for a pg MenuStore; memory adapter in `src/lib/server/menu/store.ts` until then). One row per revision, immutable except the review columns:
+  - `workspace_id text not null`, `id text not null`, `revision int not null`, primary key `(workspace_id, id, revision)`
+  - `kitchen_id text not null`, `status text not null check (status in ('proposed','chef_reviewed','planned'))`
+  - `body jsonb not null` (the whole `MenuProposal` as validated; status and review are mirrored in columns)
+  - `digest text not null` (`proposalDigest`: sha256 of the canonical proposal without status and review)
+  - `reviewed_by_kind text`, `reviewed_by_id text`, `reviewed_at timestamptz`, `review_digest text` (all null until `review()`)
+  - `created_at timestamptz not null default now()`; index `(workspace_id, id, revision desc)` for `latest`.
+- **`Ports.menus: MenuStore`** wired from `menuStore()` in `src/lib/server/menu` (server ports), so A4's `plan_event{proposal}` reads the same store the /request page writes.
+
 ## Report
 - Sat 02:00–05:30 · rounds 1–5 merged (6a1a00b … 6ba72e5) · review 8c4cf37.
 - Sat 14 Nov · done: F3 (typed constraints unioned into the model item, flagged; `sameItem` compares constraints), answers keyed by stable item id, F7 guard (event brief → "Event planning: coming", or a link to the seeded Christmas buffet on k-hotel; nothing searched), F17 (salmon categories + fillet variant, "2 x 10 kg" = 20 kg, cover phrases are not quantities, month-name dates EN/FI, impossible dates refused, an unpicked item holds the whole order, skip reasons named, preview rounded to lot step), "Shared sandbox" tooltip · tests `fixes.test.ts` (18) · stubbed: menu module · needs: none · ready to merge yes.
+- Sat 14 Nov · menu increment 1: `src/lib/server/menu/` memory MenuStore (dense immutable revisions, chef-only `review()` bound to `proposalDigest`, retried put is a no-op) and the brief (words → one question at a time by id `brief.<field>`, typed requirements never dropped, `toEventBrief` validates against the contract). /request asks the questions as chips (`BriefAsk.svelte`) and ends at "Brief complete. Menu proposal: next." · tests `menu/store.test.ts`, `menu/brief.test.ts`, 3 in `fixes.test.ts` · stubbed: proposal, review UI, plan_event · needs: migration + Ports.menus (above) · ready to merge yes.
 - Known: /request ranking ignores the kitchen's `weights` (hand-set scores in `lookup.ts`); ruling 1's `find_substitutes` route replaces them with the menu work. Open from F17: one date for many items. `src/lib/ui/request/types.ts` changed (`RequestAnswer.item` is now a string id; `EventView`, `unplaced`): request-lane types only.
 
 ## Handoff (Sat 14 Nov)

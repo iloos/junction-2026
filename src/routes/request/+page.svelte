@@ -20,8 +20,11 @@
 	import { day, money, num, shortHash } from '$lib/ui/format';
 	import Step from '$lib/ui/request/Step.svelte';
 	import Answer from '$lib/ui/request/Answer.svelte';
+	import BriefAsk from '$lib/ui/request/BriefAsk.svelte';
 	import type {
 		ApprovalView,
+		BriefAnswer,
+		BriefDraft,
 		CommitView,
 		EventView,
 		LookupView,
@@ -59,6 +62,8 @@
 	let nonce = $state(newNonce());
 	/** Inline answers to the current request's questions; new words start without them. */
 	let answers = $state.raw<RequestAnswer[]>([]);
+	/** Answers to the event brief's questions, by question id; new words start without them. */
+	let briefAnswers = $state.raw<BriefAnswer[]>([]);
 	let busy = $state(false);
 	/** Until hydration the form would submit natively and lose the text. */
 	let ready = $state(false);
@@ -156,7 +161,10 @@
 
 	async function submit(t = text, keepAnswers = false, confirmLarge = false) {
 		const req = t.trim() || PLACEHOLDER;
-		if (!keepAnswers || req !== text) answers = [];
+		if (!keepAnswers || req !== text) {
+			answers = [];
+			briefAnswers = [];
+		}
 		text = req;
 		reset();
 		busy = true;
@@ -165,7 +173,7 @@
 			const res = await fetch('/request/run', {
 				method: 'POST',
 				headers: { 'content-type': 'application/json' },
-				body: JSON.stringify({ text: req, kitchenId, nonce, answers, confirmLarge })
+				body: JSON.stringify({ text: req, kitchenId, nonce, answers, briefAnswers, confirmLarge })
 			});
 			if (!res.ok || !res.body) {
 				const b = await res.json().catch(() => null);
@@ -268,9 +276,58 @@
 		return `${what}: ${parts.join(', ')}`;
 	}
 
+	/** Answer the brief's open question and run the same words again with every brief answer so far. */
+	function answerBrief(a: BriefAnswer) {
+		briefAnswers = [...briefAnswers.filter((x) => x.id !== a.id), a];
+		submit(text, true);
+	}
+
+	const STYLE_LABEL: Record<string, string> = {
+		buffet: 'Buffet',
+		plated: 'Plated',
+		family: 'Family style',
+		canape: 'Canapés',
+		lunch: 'Lunch'
+	};
+	/** The brief's fields as rows: label, value (null = still to ask) and where it came from. */
+	function briefRows(b: BriefDraft): [string, string | null, string | undefined][] {
+		return [
+			['Guests', b.guests !== null ? String(b.guests) : null, b.from.guests],
+			['Date', b.date ? day(b.date) : null, b.from.date],
+			['Service', b.serviceStyle ? STYLE_LABEL[b.serviceStyle] : null, b.from.serviceStyle],
+			...(b.courses !== null || b.serviceStyle === 'plated' || b.serviceStyle === 'family'
+				? [
+						['Courses', b.courses !== null ? String(b.courses) : null, b.from.courses] as [
+							string,
+							string | null,
+							string | undefined
+						]
+					]
+				: []),
+			[
+				'Dietary',
+				b.dietary === null ? null : b.dietary.length ? b.dietary.join(', ') : 'none',
+				b.from.dietary
+			],
+			[
+				'Budget',
+				b.budgetCents === null
+					? null
+					: b.budgetCents
+						? money(b.budgetCents, { whole: true })
+						: 'none',
+				b.from.budget
+			],
+			...(b.notes.length
+				? [['Notes', b.notes.join('; '), undefined] as [string, string, undefined]]
+				: [])
+		];
+	}
+
 	function startOver() {
 		reset();
 		answers = [];
+		briefAnswers = [];
 		text = '';
 		nonce = newNonce();
 	}
@@ -540,35 +597,46 @@
 							data-testid="event-brief"
 						>
 							<p class="font-medium">
-								Event planning: coming.
+								Event brief.
 								<span class="font-normal text-ink-2"
 									>This reads as an event to plan, not products to buy, so nothing was searched or
 									ordered.</span
 								>
 							</p>
-							<p class="mt-1 text-[13px] text-ink-2">
-								{[
-									event.occasion,
-									event.guests !== null ? `${event.guests} guests` : 'guests not given',
-									event.courses !== null ? `${event.courses} courses` : null,
-									event.deliverByText ? day(event.deliverBy) : 'no date given'
-								]
-									.filter(Boolean)
-									.join(' · ')}
-							</p>
+							{#if event.draft}
+								{@const b = event.draft}
+								<dl
+									class="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 text-[13px]"
+									aria-label="Brief so far"
+								>
+									{#each briefRows(b) as [k, v, f] (k)}
+										<dt class="text-ink-2">{k}</dt>
+										<dd class={v ? 'text-ink' : 'text-ink-3'}>
+											{v ?? 'to ask'}{#if f === 'answer'}<span class="ml-1.5 text-ink-3">
+													· your answer</span
+												>{/if}
+										</dd>
+									{/each}
+								</dl>
+							{/if}
+							{#if event.question}
+								{#key event.question.id}
+									<BriefAsk q={event.question} {busy} onanswer={answerBrief} />
+								{/key}
+							{:else if event.draft}
+								<p class="mt-2 text-[13.5px] font-medium text-ink">
+									Brief complete. Menu proposal: next.
+								</p>
+							{/if}
 							{#if event.seeded}
 								<a
 									href={resolve('/')}
 									class="mt-2 inline-flex items-center gap-1 text-[13.5px] font-medium text-accent-ink underline"
-									>Open the planned {event.seeded.title} in the Kitchen <ArrowRight
+									>Or open the planned {event.seeded.title} in the Kitchen <ArrowRight
 										size={14}
 										aria-hidden="true"
 									/></a
 								>
-							{:else}
-								<p class="mt-1 text-[13px] text-ink-2">
-									For now, name the products: “20 kg salmon fillets by Friday”.
-								</p>
 							{/if}
 						</div>
 					{/if}

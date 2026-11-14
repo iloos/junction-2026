@@ -17,6 +17,7 @@ import { createServerPorts } from '$lib/server/store/server-ports';
 import { handlers, realHandlers } from '$lib/server/tools/handlers';
 import type {
 	ApprovalView,
+	BriefAnswer,
 	CommitView,
 	RequestAnswer,
 	RequestEvent,
@@ -27,6 +28,7 @@ import { approvalView, callTool, runRequest } from './run';
 import type { ParsedRequest } from './parse';
 
 export { ToolFailed } from './run';
+export { readBriefAnswers } from '$lib/server/menu/brief';
 export { readAnswers } from './workspace';
 
 export const DEFAULT_KITCHEN = 'k-hotel';
@@ -76,6 +78,7 @@ export async function submitRequest(o: {
 	nonce?: string;
 	place?: boolean;
 	answers?: RequestAnswer[];
+	briefAnswers?: BriefAnswer[];
 	confirmLarge?: boolean;
 	env: Env;
 	/** The page passes its workspace; the API passes the key's context instead. */
@@ -108,6 +111,7 @@ export async function submitRequest(o: {
 		nonce: o.nonce,
 		place: o.place,
 		answers: o.answers,
+		briefAnswers: o.briefAnswers,
 		confirmLarge: o.confirmLarge,
 		onEvent: o.onEvent
 	});

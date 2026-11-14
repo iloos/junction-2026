@@ -247,4 +247,6 @@ export interface Ports {
 	jobs: Jobs;
 	store: Store;
 	ops: Ops;
+	/** Menu proposals (Track B); plan_event{proposal} reads reviewed revisions from it. Absent = menus unsupported. */
+	menus?: MenuStore;
 }

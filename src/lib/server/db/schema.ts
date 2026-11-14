@@ -231,3 +231,31 @@ export const enrichments = pgTable(
 	},
 	(t) => [primaryKey({ columns: [t.workspaceId, t.productId, t.field] })]
 );
+
+/**
+ * Menu proposals, one row per revision (Track B's MenuStore). Revisions never change; an edit is a new revision.
+ * The review columns are written only by a chef's review command and bind to the revision's digest.
+ */
+export const menuProposals = pgTable(
+	'menu_proposals',
+	{
+		workspaceId: text('workspace_id')
+			.notNull()
+			.references(() => workspaces.id),
+		id: text('id').notNull(),
+		revision: integer('revision').notNull(),
+		kitchenId: text('kitchen_id').notNull(),
+		status: text('status', { enum: ['proposed', 'chef_reviewed', 'planned'] }).notNull(),
+		body: jsonb('body').notNull(),
+		digest: text('digest').notNull(),
+		reviewedByKind: text('reviewed_by_kind'),
+		reviewedById: text('reviewed_by_id'),
+		reviewedAt: ts('reviewed_at'),
+		reviewDigest: text('review_digest'),
+		createdAt: ts('created_at').notNull().defaultNow()
+	},
+	(t) => [
+		primaryKey({ columns: [t.workspaceId, t.id, t.revision] }),
+		index('menu_proposals_latest').on(t.workspaceId, t.id, t.revision.desc())
+	]
+);

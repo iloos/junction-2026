@@ -11,6 +11,7 @@ import { serveTool } from '$lib/server/tools/serve';
 import type {
 	AnswerSpec,
 	ApprovalView,
+	BriefAnswer,
 	RequestAnswer,
 	CandidateView,
 	EventView,
@@ -29,6 +30,7 @@ import { hardLimitCents } from '$lib/core/mandate/validate';
 import { rankCandidates, SHORTLIST, unpickable, type Ranked } from './lookup';
 import { parseRequest, type ParsedRequest } from './parse';
 import { classifyRequest } from './classify';
+import { applyBriefAnswers, draftBrief, nextQuestion } from '../menu/brief';
 
 export class ToolFailed extends Error {
 	constructor(
@@ -67,6 +69,8 @@ export interface RequestDeps {
 	place?: boolean;
 	/** The chef's inline answers to earlier questions, by item id. */
 	answers?: RequestAnswer[];
+	/** The chef's answers to event-brief questions, by question id. */
+	briefAnswers?: BriefAnswer[];
 	/** The chef saw the size warnings and wants the order placed anyway. */
 	confirmLarge?: boolean;
 	onEvent?: (e: RequestEvent) => void;
@@ -374,10 +378,14 @@ export async function runRequest(text: string, d: RequestDeps): Promise<RequestR
 	// An event brief is never a catalogue query: say what it is, and where a seeded plan lives.
 	const brief = classifyRequest(text, parsed.items, d.kitchen.id);
 	if (brief) {
+		const draft = applyBriefAnswers(draftBrief(text, d.today), d.briefAnswers ?? [], d.today);
+		const question = nextQuestion(draft, d.today);
 		const event: EventView = {
 			...brief,
 			deliverBy: parsed.deliverBy,
-			deliverByText: parsed.deliverByText
+			deliverByText: parsed.deliverByText,
+			draft,
+			question
 		};
 		emit({ step: 'request', status: 'blocked', ms: ms(), data: parsedView });
 		return {
@@ -385,9 +393,9 @@ export async function runRequest(text: string, d: RequestDeps): Promise<RequestR
 			lookup: null,
 			order: null,
 			event,
-			message: brief.seeded
-				? `This is an event to plan, not products to buy. ${d.kitchen.name} already plans the ${brief.seeded.title} in the Kitchen; planning other events from a brief is coming.`
-				: 'This is an event to plan, not products to buy. Event planning from a brief is coming; nothing was searched or ordered.'
+			message: question
+				? `This is an event to plan, not products to buy: nothing was searched or ordered. ${question.text}`
+				: 'The brief is complete. A menu proposal from it is next; nothing was searched or ordered.'
 		};
 	}
 

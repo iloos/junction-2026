@@ -15,6 +15,13 @@
       "when": 1794617518266,
       "tag": "0001_enrichments",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1794626864669,
+      "tag": "0002_menu_proposals",
+      "breakpoints": true
     }
   ]
 }
