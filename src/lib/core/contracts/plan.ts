@@ -103,11 +103,12 @@ export type ApprovalState = z.infer<typeof ApprovalState>;
  */
 export const NeedRequirements = z.object({
 	/**
-	 * Free-from requirements (LACTOSE, GLUTEN, MILK): met by the product's free-from claim, or by a declared allergen
-	 * record without the matching allergen (iceberg lettuce is lactose-free without saying so).
+	 * Free-from requirements in the catalogue's upper-case codes (LACTOSE, GLUTEN, MILK): met by the product's
+	 * free-from claim, or by a declared allergen record without the matching allergen (iceberg lettuce is lactose-free
+	 * without saying so).
 	 */
 	freeFrom: z.array(z.string()).optional(),
-	/** Country of origin the product must have (ISO 3166-1 alpha-2, lower case as in the catalogue). */
+	/** Country of origin the product must have: ISO 3166-1 alpha-2 in lower case, as in the catalogue ("fi", not "FI"). */
 	origin: z.string().length(2).optional(),
 	/** Labels the product must carry (Product.labels, e.g. organic). */
 	labels: z.array(z.string()).optional(),
@@ -121,8 +122,24 @@ export const NeedRequirements = z.object({
 	 * the allergen record, the category groups (core/mandate/categories.ts) and the name. An undeclared record is
 	 * unknown, never ok.
 	 */
-	excludes: z.array(z.enum(['meat', 'fish', 'pork', 'milk', 'glutenCereals'])).optional()
+	excludes: z.array(z.enum(['meat', 'fish', 'pork', 'milk', 'gluten_cereals'])).optional()
 });
+
+/**
+ * Why a product misses one requirement, as the evaluator (core/mandate/meets.ts) decided it. The same shape in the
+ * line read model, get_plan, explain_line, refusals and the MCP/REST answers, so an agent can repair it, not guess.
+ */
+export const RequirementCheck = z.object({
+	/** "<term>:<value>": diet:vegetarian, excludes:meat, freeFrom:LACTOSE, origin:fi, labels:EU_ORGANIC_FARMING. */
+	requirement: z.string(),
+	/** Who asked for it: the need (a request or a chef), the dish's diet codes, or the kitchen's own constraints. */
+	from: z.enum(['need', 'kitchen', 'dish']),
+	/** no: forbidden, never approvable. unknown: no record either way; held or rejected per unknownCounts, never ok. */
+	verdict: z.enum(['no', 'unknown']),
+	/** The product fact that decided it: "allergens list AM (milk)", "a meat product (category or name)", "origin se". */
+	fact: z.string()
+});
+export type RequirementCheck = z.infer<typeof RequirementCheck>;
 export type NeedRequirements = z.infer<typeof NeedRequirements>;
 
 export const Need = z.object({
@@ -166,6 +183,8 @@ export const Need = z.object({
 	unresolved: z.string().max(300).optional(),
 	/** Hard requirements every line serving this need must meet. */
 	requirements: NeedRequirements.optional(),
+	/** Where the requirements came from: the dish's diet codes, the request's words, or the chef. */
+	requirementsFrom: z.enum(['dish', 'request', 'chef']).optional(),
 	provenance: Provenance
 });
 export type Need = z.infer<typeof Need>;
@@ -244,6 +263,8 @@ export const Line = z.object({
 	state: LineState,
 	tier: Tier.optional(),
 	reasons: z.array(LineReason),
+	/** Which requirements the product misses, and the fact behind each (with requirement_unmet / requirement_unknown). */
+	unmet: z.array(RequirementCheck).optional(),
 	/** Terms the line was quoted on; null until quoted. */
 	offer: Offer.nullable(),
 	lineCents: Cents.nullable(),

@@ -77,7 +77,7 @@ function describeRequirements(r: NeedRequirements & { conflict?: string }): stri
 	if (r.conflict) return `${r.conflict} at once`;
 	return [
 		...(r.diet ?? []),
-		...(r.excludes ?? []).map((x) => (x === 'glutenCereals' ? 'no gluten cereals' : `no ${x}`)),
+		...(r.excludes ?? []).map((x) => (x === 'gluten_cereals' ? 'no gluten cereals' : `no ${x}`)),
 		...(r.freeFrom ?? []).map((x) => `free from ${x}`),
 		...(r.origin ? [`origin ${r.origin.toUpperCase()}`] : []),
 		...(r.labels ?? []).map((x) => `label ${x}`)

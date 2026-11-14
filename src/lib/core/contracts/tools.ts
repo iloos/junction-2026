@@ -236,8 +236,13 @@ export const toolSchemas = {
 			lineId: z.string(),
 			/** Rank under these weights instead of the kitchen's (the "Same shortage. Your rules." beat); not persisted. */
 			weights: z.record(z.string(), z.number().min(0)).optional(),
-			/** Extra origin requirement for this ranking only, e.g. "fi". */
+			/** Extra origin requirement for this ranking only, e.g. "fi" (a case of `requirements`). */
 			requireOrigin: z.string().length(2).optional(),
+			/**
+			 * Extra hard requirements for this ranking, added to the need's own (a union, never weaker). A preview unless
+			 * `apply` is true.
+			 */
+			requirements: NeedRequirements.optional(),
 			/**
 			 * Apply the recommendation to the plan: replaces the dish's current substitute and voids the approval.
 			 * Default: apply when the dish has no substitute yet and no per-call rules are given; otherwise preview.

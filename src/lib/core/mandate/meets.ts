@@ -114,13 +114,13 @@ const plantRecord = (p: Product) => p.diet.includes('vegan') || p.diet.includes(
 const PREPARED = ['173', '417', '219'];
 
 function excludes(p: Product, x: NonNullable<NeedRequirements['excludes']>[number]): TermResult {
-	const text = x === 'glutenCereals' ? 'no gluten cereals' : `no ${x}`;
+	const text = x === 'gluten_cereals' ? 'no gluten cereals' : `no ${x}`;
 	switch (x) {
 		case 'milk':
 			if (inCategoryGroup(p.category, 'milk')) return no('excludes', text, 'a milk product');
 			if (p.diet.includes('vegan')) return ok('excludes', text, 'diet record: vegan (no milk)');
 			return byAllergens(p, 'excludes', text, CODES.MILK);
-		case 'glutenCereals':
+		case 'gluten_cereals':
 			if (p.freeFrom.includes('GLUTEN')) return ok('excludes', text, 'claims gluten-free');
 			return byAllergens(p, 'excludes', text, CODES.GLUTEN);
 		case 'meat':
@@ -241,7 +241,7 @@ export function requirementsFromDiet(tags: readonly string[]): NeedRequirements 
 		if (['l', 'lactose-free', 'lactose free', 'laktoositon'].includes(t)) free.add('LACTOSE');
 		else if (['m', 'milk-free', 'dairy-free', 'maidoton'].includes(t)) ex.add('milk');
 		else if (['g', 'gluten-free', 'gluten free', 'gluteeniton'].includes(t))
-			ex.add('glutenCereals');
+			ex.add('gluten_cereals');
 		else if (['veg', 'vegetarian', 'kasvis'].includes(t)) d.add('vegetarian');
 		else if (['ve', 'vegan', 'vegaaninen'].includes(t)) d.add('vegan');
 		else if (['no pork', 'pork-free', 'sianlihaton'].includes(t)) ex.add('pork');
