@@ -6,6 +6,7 @@ import { factsEvidence } from '$lib/server/web/evidence';
 import { lookupFacts } from '$lib/server/web/lookup';
 import { authed, body, fail, providerFail } from '$lib/server/web/route';
 import { busTrace } from '$lib/server/web/watch';
+import { withCallScope } from '$lib/server/scope';
 import type { RequestHandler } from './$types';
 
 /**
@@ -17,22 +18,24 @@ import type { RequestHandler } from './$types';
 export const POST: RequestHandler = async ({ request }) => {
 	const ctx = authed(request, env, dev, 'web:evidence');
 	if (ctx instanceof Response) return ctx;
-	const b = await body<{ productId?: unknown; question?: unknown }>(request);
-	if (b instanceof Response) return b;
-	if (typeof b.productId !== 'string' || !b.productId)
-		return fail('INVALID_INPUT', 'productId is required', 400);
-	try {
-		const w = await webContext(ctx);
-		const { exa } = webClients(env, busTrace(scopeOf(w), { lane: 'web' }), w.spendKey);
-		const r = await lookupFacts(
-			{
-				productId: b.productId,
-				question: typeof b.question === 'string' ? b.question : undefined
-			},
-			{ exa, catalog: w.ports.catalog, findings: findingsFor(env), workspaceId: ctx.workspaceId }
-		);
-		return json(factsEvidence(r));
-	} catch (e) {
-		return providerFail(e);
-	}
+	return withCallScope(ctx, async () => {
+		const b = await body<{ productId?: unknown; question?: unknown }>(request);
+		if (b instanceof Response) return b;
+		if (typeof b.productId !== 'string' || !b.productId)
+			return fail('INVALID_INPUT', 'productId is required', 400);
+		try {
+			const w = await webContext(ctx);
+			const { exa } = webClients(env, busTrace(scopeOf(w), { lane: 'web' }), w.spendKey);
+			const r = await lookupFacts(
+				{
+					productId: b.productId,
+					question: typeof b.question === 'string' ? b.question : undefined
+				},
+				{ exa, catalog: w.ports.catalog, findings: findingsFor(env), workspaceId: ctx.workspaceId }
+			);
+			return json(factsEvidence(r));
+		} catch (e) {
+			return providerFail(e);
+		}
+	});
 };

@@ -132,7 +132,7 @@ describe('suite: grounded menu', () => {
 				})),
 				{ exa, catalog: w.env.ports.catalog, findings: createFindings(undefined, true) }
 			);
-			const g = groundingFor(p.dishes.map((x) => x.name)) as Record<string, GroundingState>;
+			const g = groundingFor(p.dishes) as Record<string, GroundingState>;
 			const after = JSON.stringify(await md.store.get(md.workspaceId, p.id, p.revision));
 			const results = checkGrounding(b.id, p, g, { before, after });
 			const done = Object.values(g).filter((x) => x.state === 'done');
