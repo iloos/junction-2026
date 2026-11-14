@@ -15,8 +15,10 @@ import type { AnyDb } from '$lib/server/store/drizzle-store';
 import { hasSeq, MemoryBus } from './memory';
 import { allocateSeq, PgTransport, readOps } from './pg';
 import { SYNTH_WORKSPACE, syntheticRun } from './synthetic';
+import { STRESS_WORKSPACE, stressEvents } from './stress';
 
 export { SYNTH_WORKSPACE } from './synthetic';
+export { STRESS_WORKSPACE } from './stress';
 
 type OpsReader = (workspaceId: string, after: number, limit: number) => Promise<OpEnvelope[]>;
 
@@ -43,7 +45,8 @@ function bus(): BusState {
 	return g.__mandateBus;
 }
 
-const viaPg = (workspaceId: string) => workspaceId !== SYNTH_WORKSPACE && bus().pg;
+const viaPg = (workspaceId: string) =>
+	workspaceId !== SYNTH_WORKSPACE && workspaceId !== STRESS_WORKSPACE && bus().pg;
 
 /** Deliver events to every subscriber of the workspace (across processes in Postgres mode). */
 export async function publish(workspaceId: string, events: ServerEvent[]): Promise<void> {
@@ -82,7 +85,7 @@ export function setFixtureOpsReader(reader: OpsReader | null): void {
 async function readOpEnvelopes(workspaceId: string, after: number, limit: number) {
 	const b = bus();
 	if (viaPg(workspaceId)) return readOps(workspaceId, after, limit);
-	if (b.fixtureReader && workspaceId !== SYNTH_WORKSPACE)
+	if (b.fixtureReader && workspaceId !== SYNTH_WORKSPACE && workspaceId !== STRESS_WORKSPACE)
 		return b.fixtureReader(workspaceId, after, limit);
 	return b.local
 		.after(workspaceId, after)
@@ -164,4 +167,26 @@ function startSynthetic(): void {
 		b.synth.timer = setTimeout(tick, 400);
 	};
 	play();
+}
+
+/**
+ * Dev-only load for the 10× check: replays `copies` interleaved synthetic runs into STRESS_WORKSPACE in
+ * bursts of BURST events every BURST_MS, as fast as many busy kitchens would produce them.
+ */
+const BURST = 25;
+const BURST_MS = 100;
+export function startStress(copies: number): void {
+	const b = bus();
+	b.local.reset(STRESS_WORKSPACE);
+	const events = stressEvents(copies, `stress-${Date.now().toString(36)}`).map((e) =>
+		'seq' in e ? { ...e, seq: e.seq + b.local.highestSeq(STRESS_WORKSPACE) } : e
+	);
+	for (const e of events) if (e.kind === 'op') e.envelope.seq = e.seq;
+	let i = 0;
+	const tick = () => {
+		b.local.deliver(STRESS_WORKSPACE, events.slice(i, i + BURST));
+		i += BURST;
+		if (i < events.length) setTimeout(tick, BURST_MS);
+	};
+	setTimeout(tick, 300);
 }

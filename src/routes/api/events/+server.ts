@@ -1,6 +1,12 @@
 import { json } from '@sveltejs/kit';
 import type { ServerEvent } from '$lib/core/contracts';
-import { catchUp, subscribe, SYNTH_WORKSPACE } from '$lib/server/bus';
+import {
+	catchUp,
+	startStress,
+	STRESS_WORKSPACE,
+	subscribe,
+	SYNTH_WORKSPACE
+} from '$lib/server/bus';
 import { currentRun } from '$lib/server/demo/run';
 import { ensureRunLoaded } from '$lib/server/demo/reset';
 import { dev } from '$app/environment';
@@ -32,8 +38,12 @@ export const GET: RequestHandler = async ({ url, request }) => {
 		Number(request.headers.get('last-event-id')) || 0
 	);
 
-	// The synthetic workspace loops its own runs; every other workspace shows only its current run.
-	const followRun = workspaceId !== SYNTH_WORKSPACE;
+	// Dev-only load test: a fresh stream of `copies` interleaved synthetic runs.
+	if (dev && workspaceId === STRESS_WORKSPACE && after === 0)
+		startStress(Math.min(Math.max(Number(url.searchParams.get('copies')) || 10, 1), 100));
+
+	// Synthetic workspaces carry their own runs; every other workspace shows only its current run.
+	const followRun = workspaceId !== SYNTH_WORKSPACE && workspaceId !== STRESS_WORKSPACE;
 	let runId = followRun ? await ensureRunLoaded(workspaceId) : undefined;
 
 	if (url.searchParams.get('mode') === 'poll') {

@@ -61,3 +61,15 @@ describe('MemoryBus', () => {
 		expect(bus.listenerCount('w')).toBe(0);
 	});
 });
+
+describe('stress events', () => {
+	it('10 interleaved copies reduce through applyOps without error', async () => {
+		const { stressEvents, STRESS_WORKSPACE } = await import('./stress');
+		const events = stressEvents(10);
+		const ops = events.flatMap((e) => (e.kind === 'op' ? [e.envelope] : []));
+		const r = applyOps(emptyState(STRESS_WORKSPACE, 'stress-1'), ops);
+		if (!r.ok) throw new Error(`${r.error.code}: ${r.error.message}`);
+		expect(Object.keys(r.value.plans)).toHaveLength(30);
+		expect(Object.keys(r.value.orders)).toHaveLength(20);
+	});
+});
