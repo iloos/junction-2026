@@ -6,6 +6,7 @@
 	import { scenarioClock } from '$lib/core/scenario';
 	import { OpsStream } from './stream.svelte';
 	import CaseTicket from './CaseTicket.svelte';
+	import OpTimeline from './OpTimeline.svelte';
 	import TraceDrawer from './TraceDrawer.svelte';
 	import Queue from './Queue.svelte';
 	import { buildCases, coverage, openLines } from './cases';
@@ -87,16 +88,18 @@
 		return p ? kitchenName(p.kitchenId) : planId;
 	};
 
-	/** Queue (work surface) or wallboard (three-column board); remembered per browser. */
-	let view = $state<'queue' | 'wallboard'>('queue');
+	/** Queue (work surface), wallboard (one column per kitchen) or timeline (op log by actor); remembered. */
+	type View = 'queue' | 'wallboard' | 'timeline';
+	let view = $state<View>('queue');
 	onMount(() => {
 		try {
-			if (localStorage.getItem('ops-view') === 'wallboard') view = 'wallboard';
+			const saved = localStorage.getItem('ops-view');
+			if (saved === 'wallboard' || saved === 'timeline') view = saved;
 		} catch {
 			/* storage blocked: keep the default */
 		}
 	});
-	const setView = (v: 'queue' | 'wallboard') => {
+	const setView = (v: View) => {
 		view = v;
 		try {
 			localStorage.setItem('ops-view', v);
@@ -373,6 +376,9 @@
 			<button role="tab" aria-selected={view === 'wallboard'} onclick={() => setView('wallboard')}>
 				Wallboard
 			</button>
+			<button role="tab" aria-selected={view === 'timeline'} onclick={() => setView('timeline')}>
+				Timeline
+			</button>
 		</div>
 		<main>
 			{#if view === 'queue'}
@@ -385,6 +391,8 @@
 						? undefined
 						: { ws: data.workspace, run: stream.state.runId || data.run }}
 				/>
+			{:else if view === 'timeline'}
+				<OpTimeline log={stream.log} names={data.names} />
 			{:else}
 				<section class="board" aria-label="Cases by kitchen">
 					{#each columns as c (c.kitchen.id)}
@@ -1036,6 +1044,33 @@
 	@media (max-width: 760px) {
 		.room {
 			padding: 16px;
+			min-width: 0;
+		}
+		/* One column: title and rooms, then the figures, then status and actions, all left-aligned. */
+		.room > header {
+			grid-template-columns: minmax(0, 1fr);
+			gap: 16px;
+		}
+		.room > header > * {
+			min-width: 0;
+		}
+		.figures {
+			grid-row: auto;
+			gap: 12px 24px;
+		}
+		.status {
+			text-align: left;
+		}
+		nav {
+			flex-wrap: wrap;
+		}
+		.roomline .mono {
+			white-space: normal;
+			overflow-wrap: anywhere;
+		}
+		.presenter form {
+			justify-content: flex-start;
+			flex-wrap: wrap;
 		}
 		.board {
 			grid-template-columns: 1fr;

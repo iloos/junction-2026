@@ -85,7 +85,29 @@ const TEXT: Record<string, { short: string; long: string }> = {
 	partial: {
 		short: 'Partial cover',
 		long: 'Covers only part of the need; the rest is stated as a shortfall.'
-	}
+	},
+	CAP_EXCEEDED: { short: 'Over a spending cap', long: 'Over a spending cap in the mandate.' },
+	STALE_VERSION: {
+		short: 'Plan changed since',
+		long: 'The plan changed after this was asked; it has to be done again on the current version.'
+	},
+	DUPLICATE: {
+		short: 'Already done',
+		long: 'The same request with the same key was already done; nothing new happened.'
+	},
+	PROVIDER_UNAVAILABLE: {
+		short: 'Supplier API unavailable',
+		long: 'Valio or another provider did not answer; nothing was changed.'
+	},
+	FORBIDDEN: {
+		short: 'Not allowed',
+		long: 'This actor may not do this (for example an agent approving).'
+	},
+	INVALID_INPUT: {
+		short: 'Invalid request',
+		long: 'The request was malformed; nothing was changed.'
+	},
+	INTERNAL: { short: 'Server error', long: 'Something failed on the server; nothing was changed.' }
 };
 
 export function reasonShort(code: string): string {

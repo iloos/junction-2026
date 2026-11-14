@@ -6,7 +6,7 @@ RUN corepack enable
 COPY package.json pnpm-lock.yaml .npmrc ./
 RUN pnpm install --frozen-lockfile
 COPY . .
-RUN pnpm build && pnpm prune --prod
+RUN pnpm build && pnpm prune --prod && node scripts/deploy/commit.mjs > COMMIT
 
 FROM node:24-slim
 WORKDIR /app
@@ -17,6 +17,8 @@ COPY --from=build /app/package.json ./
 # Read at runtime: SQL migrations (drizzle migrate) and demo seeds.
 COPY --from=build /app/drizzle ./drizzle
 COPY --from=build /app/fixtures ./fixtures
+# The deployed commit, for /healthz ("unknown" when the build context had no .git).
+COPY --from=build /app/COMMIT ./COMMIT
 EXPOSE 3000
 USER node
 CMD ["node", "build"]

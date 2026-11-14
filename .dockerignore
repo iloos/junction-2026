@@ -2,6 +2,10 @@ node_modules
 .svelte-kit
 build
 .git
+# Only what scripts/deploy/commit.mjs needs to stamp the deployed commit.
+!.git/HEAD
+!.git/refs
+!.git/packed-refs
 .env
 .env.*
 !.env.example
