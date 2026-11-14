@@ -199,14 +199,22 @@ async function buildSnapshot(s: Session): Promise<LiveSnapshot> {
 	})) as PlanOut & { approval: { id: string; state: Approval['state'] } | null };
 
 	// Rankings under the active rules preset (previews: nothing is persisted).
-	const rescues: Record<string, SubstitutesOut> = {};
-	for (const l of plan.lines.filter((x) => x.state === 'unorderable' && !x.substituteFor))
-		rescues[l.id] = (await must(s, 'find_substitutes', {
-			planId: plan.id,
-			version: plan.version,
-			lineId: l.id,
-			...presetInput(kitchen, s)
-		})) as SubstitutesOut;
+	// Previews write nothing, so they run side by side.
+	const outages = plan.lines.filter((x) => x.state === 'unorderable' && !x.substituteFor);
+	const previews = await Promise.all(
+		outages.map(
+			(l) =>
+				must(s, 'find_substitutes', {
+					planId: plan.id,
+					version: plan.version,
+					lineId: l.id,
+					...presetInput(kitchen, s)
+				}) as Promise<SubstitutesOut>
+		)
+	);
+	const rescues: Record<string, SubstitutesOut> = Object.fromEntries(
+		outages.map((l, i) => [l.id, previews[i]])
+	);
 
 	const ids = [
 		...new Set([
