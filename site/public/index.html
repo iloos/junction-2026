@@ -336,10 +336,11 @@
 				<article class="partner wide" data-partner="aiven">
 					<div class="partner-hd"><span class="pico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><ellipse cx="12" cy="5.5" rx="7" ry="2.5"/><path d="M5 5.5v13c0 1.4 3.1 2.5 7 2.5s7-1.1 7-2.5v-13"/><path d="M5 12c0 1.4 3.1 2.5 7 2.5s7-1.1 7-2.5"/></svg></span><h3>Aiven</h3></div>
 					<ul>
-						<li>Postgres holds the op log, the record of every change; open screens get each change through LISTEN/NOTIFY over SSE.</li>
+						<li>Postgres holds the data: kitchens, mandates, plans, orders and receipts.</li>
+						<li>An operational event log: every change is one logged event, and open screens get it live through LISTEN/NOTIFY over SSE.</li>
 						<li>A workspace lock and a stored receipt per order key mean an order sent more than once is placed once.</li>
 						<li>A stored trace of every model and Valio call.</li>
-						<li>Aiven Runtime runs the whole app as one container.</li>
+						<li>Aiven Runtime runs the whole app as one container; Postgres runs on one node with daily backups. A standby node for high availability is a plan change on Aiven.</li>
 					</ul>
 					<div class="measures"></div>
 					<a class="partner-link" href="https://app.mandate.kitchen/ops">See Ops update live →</a>
@@ -537,6 +538,14 @@ function renderPartners(data) {
 		if (day?.calls) return measure(`${day.calls}`, `${label} calls in the 24 hours before ${at}`, null);
 		return measure(`No ${label} call yet`, `in the 24 hours before ${at}`, null, true);
 	};
+	/** The 24-hour count beside a service's live measure (skipped when that service's tile already leads with it). */
+	const day24 = (name, label) => {
+		const s = sp.services[name];
+		const day = s?.day;
+		if (!day?.live) return null;
+		if (name !== 'contextdev' && !(s.recent?.live || s.liveMs != null)) return null;
+		return measure(`${day.live} live`, `${label} calls in the 24 hours before ${at}`, day.cache ? `plus ${day.cache} answered from cache` : null);
+	};
 	const put = (key, ...ms) => {
 		const box = document.querySelector(`[data-partner="${key}"] .measures`);
 		const list = ms.filter(Boolean);
@@ -550,7 +559,7 @@ function renderPartners(data) {
 		db?.ok && db.latencyMs != null ? measure(`${db.latencyMs} ms`, `Postgres answered the app's health check${db.tls === 'verified' ? ' over verified TLS' : ''}, at ${at}`) : null,
 		race && sends ? measure(`${sends} sends, 1 receipt`, `the same approved order sent at once, at ${when(race.recordedAt)}`) : null
 	);
-	put('valio', service('valio', 'Valio'));
+	put('valio', service('valio', 'Valio'), day24('valio', 'Valio'));
 	// One barcode-verified listing from the app's product card: the photo is hotlinked from Valio Aimo, never copied.
 	const vl = sp.valioListing, fig = document.querySelector('[data-partner="valio"] .listing');
 	if (vl && fig && /^https:\/\//.test(vl.imageUrl) && /^https:\/\/www\.valioaimo\.fi\//.test(vl.pageUrl)) {
@@ -565,12 +574,12 @@ function renderPartners(data) {
 		fig.replaceChildren(img, cap);
 		fig.hidden = false;
 	}
-	put('gemini', service('gemini', 'Gemini'));
-	put('exa', service('exa', 'Exa'));
+	put('gemini', service('gemini', 'Gemini'), day24('gemini', 'Gemini'));
+	put('exa', service('exa', 'Exa'), day24('exa', 'Exa'));
 	const rl = sp.services.contextdev?.recallList;
 	if (rl?.count != null) {
 		const newest = rl.newest ? new Date(`${rl.newest}T12:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' }) : null;
-		put('contextdev', measure(`${rl.count} notices`, `on the recall list${newest ? `, newest ${newest}` : ''}`, `read through Context.dev at ${when(rl.readAt)}${rl.source === 'cache' ? ', from a copy under an hour old' : ''}`));
+		put('contextdev', measure(`${rl.count} notices`, `on the recall list${newest ? `, newest ${newest}` : ''}`, `read through Context.dev at ${when(rl.readAt)}${rl.source === 'cache' ? ', from a copy under an hour old' : ''}`), day24('contextdev', 'Context.dev'));
 	} else put('contextdev', service('contextdev', 'Context.dev'));
 	const w = document.getElementById('partners-when');
 	if (at) {
