@@ -15,6 +15,7 @@
 	import SponsorsPanel from './SponsorsPanel.svelte';
 	import RoomView from './RoomView.svelte';
 	import ForecastTab from './ForecastTab.svelte';
+	import FlowTab from './FlowTab.svelte';
 	import { lastShortage, orderFeed, roomKitchens, storesCreated, storeTotals } from './room';
 	import OrdersTab from './OrdersTab.svelte';
 	import DemandTab from './DemandTab.svelte';
@@ -31,7 +32,16 @@
 		withApprovals
 	} from './cases';
 	import { buildProblems, type Problem } from './problems';
-	import { ACTOR, euro, opPlanId, opSummary, SIM_KIND, viaLabel, type Names } from './labels';
+	import {
+		ACTOR,
+		euro,
+		opPlanId,
+		opSummary,
+		productName,
+		SIM_KIND,
+		viaLabel,
+		type Names
+	} from './labels';
 	import { useShell } from '$lib/ui/shell/shell.svelte';
 
 	let { data, form } = $props();
@@ -132,7 +142,15 @@
 	 * or the engine room (timeline, op log and traces; shown with the System toggle). Remembered.
 	 */
 	type View =
-		'room' | 'problems' | 'orders' | 'demand' | 'forecast' | 'queue' | 'wallboard' | 'engine';
+		| 'room'
+		| 'problems'
+		| 'orders'
+		| 'demand'
+		| 'forecast'
+		| 'flow'
+		| 'queue'
+		| 'wallboard'
+		| 'engine';
 	const shell = useShell();
 	const system = $derived(!!shell?.system);
 	let chosen = $state<View>('problems');
@@ -145,6 +163,7 @@
 				saved === 'orders' ||
 				saved === 'demand' ||
 				saved === 'forecast' ||
+				saved === 'flow' ||
 				saved === 'queue' ||
 				saved === 'wallboard' ||
 				saved === 'engine'
@@ -516,6 +535,9 @@
 			<button role="tab" aria-selected={view === 'forecast'} onclick={() => setView('forecast')}>
 				Forecast
 			</button>
+			<button role="tab" aria-selected={view === 'flow'} onclick={() => setView('flow')}>
+				Flow
+			</button>
 			<button role="tab" aria-selected={view === 'queue'} onclick={() => setView('queue')}>
 				Queue <b>{cases.length}</b>
 			</button>
@@ -588,6 +610,8 @@
 					from={scenarioDate(new Date(SCENARIO.start))}
 					shortage={lastShortage(stream.roomSims)}
 				/>
+			{:else if view === 'flow'}
+				<FlowTab ws={stream.state} {kitchenName} productName={(id) => productName(names, id)} />
 			{:else if view === 'demand'}
 				{#key stream.state.runId}
 					<DemandTab ws={data.workspace} version={stream.last} />
