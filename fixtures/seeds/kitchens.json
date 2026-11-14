@@ -37,7 +37,7 @@
 				"labels": ["allergen labelling on buffet", "meat origin shown (Decree 154/2019)"]
 			},
 			"mandate": {
-				"words": "Order alone up to €800 a line and €1,000 an order, €4,000 a week. Never change an allergen. Ask me before any new supplier or any substitute I haven't seen.",
+				"words": "Order alone up to €800 a line and €1,000 an order, €4,000 a week. Never change an allergen. Ask me before any new product or any substitute I haven't seen.",
 				"lineCapCents": 80000,
 				"orderCapCents": 100000,
 				"weeklyCapCents": 400000,
