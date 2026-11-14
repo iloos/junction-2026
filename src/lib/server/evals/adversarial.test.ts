@@ -42,13 +42,8 @@ const OPEN: Record<string, string> = {
 	'R9-03': 'E',
 	'R9-04': 'E',
 	'R9-05': 'E',
-	'R9-06': '8d',
-	'R9-07': '8d',
 	'R9-08': '9c',
-	'R7-01': '8d',
-	'R7-02': '8d',
 	'R7-03': '8d',
-	'R7-04': '8d',
 	'R7-05': '8d',
 	'R7-11': '8d',
 	'R8-task-intent': 'E',
@@ -134,8 +129,11 @@ const milkCatalog: Catalog = {
 	})
 } as Catalog;
 
-/** A hotel kitchen that receives on Mondays only; 100001 is usual, the rest are new (held for a chef). */
-async function chatSetup() {
+/**
+ * A hotel kitchen; 100001 is usual, the rest are new (held for a chef). It receives on Thursdays (the probes'
+ * delivery day) unless `days` says otherwise: R9-06 gives it Mondays only.
+ */
+async function chatSetup(days: Kitchen['deliveryDays'] = ['mon', 'thu']) {
 	const ws = `ws-adv-${++seq}`;
 	const k = structuredClone(loadSeedKitchens().find((k) => k.id === 'k-hotel')!);
 	k.usualProducts = ['100001'];
@@ -145,7 +143,7 @@ async function chatSetup() {
 		tenderListOnly: false,
 		labels: []
 	};
-	k.deliveryDays = ['mon'];
+	k.deliveryDays = days;
 	k.mandate = {
 		...k.mandate,
 		lineCapCents: 100000,
@@ -319,7 +317,7 @@ describe('suite: adversarial (round 9: tasks, commands, transport)', () => {
 		'R9-06',
 		"the shared gate never commits a delivery outside the kitchen's receiving days",
 		async () => {
-			const s = await chatSetup();
+			const s = await chatSetup(['mon']);
 			const p = await s.place(['100001']); // Thu 10 Dec; the kitchen receives on Mondays only
 			const c = await s.h.commit_order(s.ctx('kitchen_agent'), {
 				planId: p.id,
@@ -533,6 +531,8 @@ describe('suite: adversarial (round 7: the purchase the chef asked for)', () => 
 			lineId: p.lines[0].id,
 			apply: true
 		});
+		// The need keeps the request's requirement, whatever happens to its lines.
+		expect(p.needs[0].requirements?.freeFrom).toContain('LACTOSE');
 		if (!sub.ok) return; // refusing the substitution is correct
 		const wrong = sub.value.chosen.filter(
 			(c: any) => !products.get(c.productId)!.freeFrom.includes('LACTOSE')
@@ -775,6 +775,7 @@ describe('suite: adversarial (round 7: the purchase the chef asked for)', () => 
 
 // ---------------------------------------------------------------------------- Round 8: identity, durability, reads
 
+/** k-lounas receives Mon/Wed/Fri: the probes order for Friday, so the calendar hold (R9-06) never answers for them. */
 async function chatDeps() {
 	const w = await trialWorkspace();
 	(w.env.ports as any).clock = { now: () => new Date('2026-12-07T10:00:00Z') };
@@ -820,8 +821,8 @@ describe('suite: adversarial (round 8: identity, durability, reads)', () => {
 		'two new tasks with the same words are two purchases, not one',
 		async () => {
 			const { deps } = await chatDeps();
-			const one = await chatTurn({ text: 'Order 4 l lactose-free milk for Thursday' }, deps);
-			const two = await chatTurn({ text: 'Order 4 l lactose-free milk for Thursday' }, deps);
+			const one = await chatTurn({ text: 'Order 4 l lactose-free milk for Friday' }, deps);
+			const two = await chatTurn({ text: 'Order 4 l lactose-free milk for Friday' }, deps);
 			const tasks = await Promise.all(
 				[one.at(-1)!.taskId, two.at(-1)!.taskId].map((id) =>
 					deps.ports.tasks!.get(deps.workspaceId, id)
@@ -839,7 +840,7 @@ describe('suite: adversarial (round 8: identity, durability, reads)', () => {
 			...deps.ports,
 			tasks: { ...store, put: async () => err('STALE_VERSION', 'injected lost task write') }
 		};
-		await chatTurn({ text: 'Order 4 l lactose-free milk for Thursday' }, { ...deps, ports });
+		await chatTurn({ text: 'Order 4 l lactose-free milk for Friday' }, { ...deps, ports });
 		expect(Object.keys((await w.state()).orders)).toHaveLength(0);
 	});
 
@@ -906,7 +907,7 @@ describe('suite: adversarial (round 8: identity, durability, reads)', () => {
 
 	probe('R8-task-read', 'the open task list and the task detail agree on its state', async () => {
 		const { w, deps } = await chatDeps();
-		const out = await chatTurn({ text: 'Order 4 l lactose-free milk for Thursday' }, deps);
+		const out = await chatTurn({ text: 'Order 4 l lactose-free milk for Friday' }, deps);
 		const taskId = out.at(-1)!.taskId;
 		const stored = await deps.ports.tasks!.get(deps.workspaceId, taskId);
 		const inner = memoryTaskStore();
