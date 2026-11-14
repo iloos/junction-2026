@@ -146,8 +146,7 @@
 		{#snippet lead()}<ProductThumb productId={r.productId} size={32} />{/snippet}
 		<span class={r.refused ? 'text-ink-3' : 'text-ink'}>{readableName(r.name)}</span>
 		{#snippet sub()}
-			{#if r.refused}<span class="text-out">Your rules refuse it: {r.refused}</span
-				>{:else}{r.reason}{/if}
+			{#if r.refused}<span class="text-out">Can't pick: {r.refused}</span>{:else}{r.reason}{/if}
 		{/snippet}
 		{#snippet end()}
 			{#if !r.refused}
