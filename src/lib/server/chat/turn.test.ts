@@ -220,7 +220,7 @@ describe('suite: chat turns · a question about the plan the screen has open', (
 			const ledger = out.find((e) => e.type === 'ledger');
 			if (ledger?.type !== 'ledger') throw new Error('no ledger');
 			expect(ledger.ledger.receiptIds).toHaveLength(1);
-			expect(done.text).toMatch(/ordered for €/);
+			expect(done.text).toMatch(/ordered for €/i);
 			// A read: the turn writes no op, and plans nothing new.
 			expect(w.ops.slice(opsBefore)).toEqual([]);
 			expect(Object.keys((await w.state()).plans)).toHaveLength(1);
@@ -413,7 +413,9 @@ describe('suite: chat v2 · several products in one message', () => {
 				{ value: 5, unit: 'l' }
 			]);
 			const done = out.at(-1);
-			expect(done?.type === 'done' && done.text).toMatch(/Waiting on you: .*peruna.*maito/i);
+			expect(done?.type === 'done' && done.text).toMatch(
+				/Waiting on you:\n[\s\S]*peruna[\s\S]*maito/i
+			);
 			expect(done?.type === 'done' && done.text).toMatch(/not bought before/);
 		}
 	);
