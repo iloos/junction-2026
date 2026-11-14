@@ -29,7 +29,8 @@ const OPEN: Record<string, string> = {
 	'R11-07a': '1f + 9c',
 	'R11-08': 'da',
 	'R11-09': '8d',
-	'R11-10': '8d'
+	'R11-10': '8d',
+	'R11-15': 'B + 8d'
 };
 const probe = prober(it, OPEN);
 
@@ -394,6 +395,37 @@ describe('suite: adversarial (round 11: recovery and read models)', () => {
 		expect(changes.length, 'Ops describes the refused line').toBeGreaterThan(0);
 		expect(said).not.toMatch(/out of stock/i);
 	});
+
+	probe(
+		'R11-15',
+		'"250 ml milk" never buys a 5 l pack without asking: a rounding 20× the ask is a question',
+		async () => {
+			const tub = Product.parse({
+				...milks[1],
+				productId: '100009',
+				nameFi: 'Valio kevytmaito 5 l',
+				nameEn: 'milk 5 l',
+				category: '10400',
+				netPerSalesUnit: { value: { value: 5, unit: 'l' }, provenance: { source: 'seed' } }
+			});
+			const s = await setup(fx.db, [tub]);
+			const r: any = await runRequest('250 ml milk for Thursday', {
+				handlers: s.h,
+				ctx: s.ctx('kitchen_agent'),
+				today: '2026-12-07',
+				kitchen: await s.kitchen(),
+				clock: s.b.ports.clock,
+				nonce: 'rounding-large'
+			} as any);
+			if (!r.order) return; // asking first is correct
+			const p = r.order.plan;
+			const alone = committableLines(p, r.order.approval ?? null);
+			expect(
+				alone,
+				`ordered alone for 250 ml: ${JSON.stringify(p.lines.map((l: any) => [l.qty, l.tier ?? l.state]))}`
+			).toEqual([]);
+		}
+	);
 
 	probe('R11-12', 'the Ops projection reads the log once, not once per plan', async () => {
 		const s = await setup(fx.db);
