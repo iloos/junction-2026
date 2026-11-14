@@ -96,7 +96,8 @@ describe('suite: agent goal trials · F25 seams', () => {
 		async () => {
 			const w = await trialWorkspace();
 			await play(w, 'Plan the Christmas buffet for 140 at k-hotel', 'agent-a');
-			await play(w, 'Order 4 kg butter for k-lounas by Monday', 'agent-b');
+			// Over the line cap, so it is held and both plans stay open.
+			await play(w, 'Order 400 kg butter for k-lounas by Monday', 'agent-b');
 			const plans = Object.values((await w.state()).plans);
 			const xmas = plans.find((p) => p.eventId)!;
 			const butter = plans.find((p) => !p.eventId)!;

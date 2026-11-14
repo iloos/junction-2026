@@ -1,4 +1,5 @@
 import type { Plan, ResultMeta, ToolName } from '$lib/core/contracts';
+import { nextActionFor } from '$lib/server/agent/next-action';
 
 /**
  * ResultMeta for tool outputs: one sentence, the suggested next call and, when lines wait for a chef, a deep
@@ -48,23 +49,12 @@ function planMeta(plan: Plan, approvalPending: boolean): ResultMeta {
 	const summary = `${parts.join('; ')}.`.slice(0, 400);
 	const meta: ResultMeta = { summary };
 	if (held || approvalPending) meta.approvalUrl = approvalUrl(plan);
-	if (out.length)
+	const next = nextActionFor(plan, { approvalPending });
+	if (next.tool)
 		meta.nextAction = {
-			tool: 'find_substitutes',
-			why: `line ${out[0].id} is unorderable: rank substitutes for it`.slice(0, 200),
-			args: { planId: plan.id, version: plan.version, lineId: out[0].id }
-		};
-	else if (eligible)
-		meta.nextAction = {
-			tool: 'commit_order',
-			why: `commit the ${plural(eligible, 'line')} the mandate allows; held lines stay for a chef`,
-			args: { planId: plan.id, version: plan.version }
-		};
-	else if (held || approvalPending)
-		meta.nextAction = {
-			tool: 'get_plan',
-			why: 'held lines need a chef: share approvalUrl, then read the plan again',
-			args: { planId: plan.id }
+			tool: next.tool,
+			why: next.text.slice(0, 200),
+			...(next.args ? { args: next.args } : {})
 		};
 	return meta;
 }

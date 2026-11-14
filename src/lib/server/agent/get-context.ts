@@ -4,6 +4,7 @@ import { toolSchemas } from '$lib/core/contracts';
 import type { CallContext, Ports } from '$lib/core/ports';
 import { SCENARIO } from '$lib/core/scenario';
 import { SUPPORTED_EVENTS } from './context';
+import { nextActionFor } from './next-action';
 
 export type GetContextOutput = z.infer<(typeof toolSchemas)['get_context']['output']>;
 export type GetContextHandler = (
@@ -11,20 +12,8 @@ export type GetContextHandler = (
 	input: unknown
 ) => Promise<Result<GetContextOutput>>;
 
-/**
- * What to do next with an open plan, in our own words from line states (never supplier text): held
- * lines wait for a chef, unorderable lines need a substitute, eligible lines can be committed.
- */
-export function planNextAction(p: Plan): string {
-	const count = (s: string) => p.lines.filter((l) => l.state === s).length;
-	const held = count('held');
-	const out = count('unorderable');
-	const eligible = count('eligible');
-	if (out) return `find_substitutes for ${out} unorderable line(s)`;
-	if (held) return `${held} line(s) held: a chef approves them in the Kitchen screen`;
-	if (eligible) return `commit_order for ${eligible} eligible line(s)`;
-	return 'get_plan to read it';
-}
+/** What to do next with an open plan: the one `nextActionFor` rule, in its own words. */
+export const planNextAction = (p: Plan): string => nextActionFor(p).text;
 
 /**
  * `get_context`: the first call of a fresh client. Who the caller is, its scopes, the kitchens it may act

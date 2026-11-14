@@ -28,11 +28,7 @@
 					"max": 5
 				},
 				"sameCategoryAs": "464411"
-			},
-			"expectFail": {
-				"A3-agent-cutoff": ["agent.physical", "agent.category"]
-			},
-			"$expectFailNote": "The agent picks 463798 (Terminal, cut-off D-2, unknown supply), which can never deliver tomorrow; A3 refuses it. The agent should prefer an orderable product (E)."
+			}
 		},
 		{
 			"id": "lactose-free-milk-2l",

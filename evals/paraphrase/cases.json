@@ -39,24 +39,7 @@
 					"Tilaa 4 kiloa voita huomiseksi",
 					"Tarvitsen 4 kg voita huomenna"
 				]
-			},
-			"expectFail": {
-				"A3-agent-cutoff": [
-					"en#1.agent.physical",
-					"en#1.agent.category",
-					"en#2.agent.physical",
-					"en#2.agent.category",
-					"en#3.agent.physical",
-					"en#3.agent.category",
-					"fi#1.agent.physical",
-					"fi#1.agent.category",
-					"fi#2.agent.physical",
-					"fi#2.agent.category",
-					"fi#3.agent.physical",
-					"fi#3.agent.category"
-				]
-			},
-			"$expectFailNote": "A3-agent-cutoff (E): the agent picks a Terminal product that cannot deliver tomorrow; see the fidelity case."
+			}
 		},
 		{
 			"id": "order-cream-friday",
@@ -110,11 +93,7 @@
 					"guests": 40,
 					"courses": 4
 				}
-			],
-			"expectFail": {
-				"P3-agent-seeded-event": ["en#1.agent.noPlan", "fi#1.agent.noPlan"]
-			},
-			"$expectFailNote": "P3 (agent classifier, E): a Christmas brief for 50 or 60 makes the agent plan the seeded Christmas buffet for 140 (21 held lines); it should read a brief, not reuse the seeded event with other guests."
+			]
 		},
 		{
 			"id": "read-question",
@@ -149,19 +128,9 @@
 					"fi#1.request.late.offersNext",
 					"fi#2.request.late.namesCutoff",
 					"fi#2.request.late.offersNext"
-				],
-				"LATE-agent-words": [
-					"en#1.agent.late.namesCutoff",
-					"en#1.agent.late.offersNext",
-					"en#2.agent.late.namesCutoff",
-					"en#2.agent.late.offersNext",
-					"fi#1.agent.late.namesCutoff",
-					"fi#1.agent.late.offersNext",
-					"fi#2.agent.late.namesCutoff",
-					"fi#2.agent.late.offersNext"
 				]
 			},
-			"$expectFailNote": "Today the line is held unorderable with reason cutoff_passed (no commit, no shift), but /request says nothing in words and offers no date (B), and the agent says 'no orderable line, find a substitute', which points at the product instead of the date (E)."
+			"$expectFailNote": "Today the line is held unorderable with reason cutoff_passed (no commit, no shift), but /request says nothing in words and offers no date (B)."
 		}
 	]
 }

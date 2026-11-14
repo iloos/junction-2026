@@ -2,6 +2,9 @@ import { SCOPES_BY_ACTOR, type ActorKind, type OpEnvelope } from '$lib/core/cont
 import type { CallContext, ToolHandlers } from '$lib/core/ports';
 import { createHandlers } from '$lib/core/services/handlers';
 import { createDbPorts } from '$lib/server/store/db-ports';
+import type { AnyDb } from '$lib/server/store/drizzle-store';
+import { projectedTaskStore } from '$lib/server/tasks/project';
+import { drizzleTaskStore } from '$lib/server/tasks/store';
 import type { ContextSource } from './context';
 import { buildRunPrincipal } from './principal';
 import type { RunPrincipal } from './types';
@@ -21,10 +24,17 @@ export async function trialWorkspace() {
 	});
 	env.overlay.clear();
 	const handlers: ToolHandlers = createHandlers(env.ports);
+	// Tasks on the same database (agent_tasks), read with their derived fields fresh, as the server wires them.
+	env.ports.tasks ??= projectedTaskStore(
+		drizzleTaskStore(env.db as unknown as AnyDb),
+		env.ports,
+		handlers
+	);
 	const source: ContextSource = {
 		kitchens: (ws) => env.ports.store.kitchens(ws),
 		plans: async (ws, run) => Object.values((await env.ports.store.load(ws, run)).plans),
-		today: () => '2026-11-14'
+		today: () => '2026-11-14',
+		now: () => env.ports.clock.now().toISOString()
 	};
 	const ctx = (kind: ActorKind, id = `${kind}-1`): CallContext => ({
 		workspaceId: env.workspaceId,

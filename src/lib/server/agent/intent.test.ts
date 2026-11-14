@@ -59,7 +59,7 @@ describe('typed intent (finding D)', () => {
 		// No kitchen named and two authorized: ask rather than guess.
 		expect(resolveIntent('order 4 l maito tomorrow', ctx())).toMatchObject({
 			kind: 'unsupported',
-			clarify: true
+			clarify: expect.objectContaining({ field: expect.any(String) })
 		});
 	});
 
@@ -95,7 +95,10 @@ describe('typed intent (finding D)', () => {
 		['order 0 kg butter for k-lounas tomorrow', /above 0/]
 	])('refuses what it cannot honour, with the reason: %s', (goal, why) => {
 		const r = resolveIntent(goal, ctx());
-		expect(r).toMatchObject({ kind: 'unsupported', clarify: true });
+		expect(r).toMatchObject({
+			kind: 'unsupported',
+			clarify: expect.objectContaining({ field: expect.any(String) })
+		});
 		expect((r as { reason: string }).reason).toMatch(why);
 	});
 
@@ -111,7 +114,7 @@ describe('typed intent (finding D)', () => {
 		).toMatchObject({ kind: 'adjust_need', gramsPerGuest: 200 });
 		expect(resolveIntent('salmon 5000 g per guest', ctx())).toMatchObject({
 			kind: 'unsupported',
-			clarify: true
+			clarify: expect.objectContaining({ field: expect.any(String) })
 		});
 	});
 
@@ -131,7 +134,10 @@ describe('typed intent (finding D)', () => {
 			kitchenId: 'k-hotel'
 		});
 		const r = resolveIntent('4 kg butter tomorrow', ctx());
-		expect(r).toMatchObject({ kind: 'unsupported', clarify: true });
+		expect(r).toMatchObject({
+			kind: 'unsupported',
+			clarify: expect.objectContaining({ field: expect.any(String) })
+		});
 		expect((r as { reason: string }).reason).toMatch(/Which kitchen/);
 		// A product word alone is not an order.
 		expect(resolveIntent('show me the milk plan', ctx()).kind).toBe('inspect');
@@ -146,7 +152,10 @@ describe('typed intent (finding D)', () => {
 			]
 		});
 		const r = resolveIntent('show me the plan status', two);
-		expect(r).toMatchObject({ kind: 'unsupported', clarify: true });
+		expect(r).toMatchObject({
+			kind: 'unsupported',
+			clarify: expect.objectContaining({ field: expect.any(String) })
+		});
 		expect((r as { reason: string }).reason).toMatch(/Which plan\? .*pl-1.*pl-2/);
 	});
 
@@ -155,7 +164,7 @@ describe('typed intent (finding D)', () => {
 			resolveIntent('repair the shortages', ctx({ currentPlan: null, openPlans: [] }))
 		).toMatchObject({
 			kind: 'unsupported',
-			clarify: true
+			clarify: expect.objectContaining({ field: expect.any(String) })
 		});
 	});
 });

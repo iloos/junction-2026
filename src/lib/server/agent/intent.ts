@@ -1,25 +1,22 @@
+import type { Availability } from '$lib/core/contracts';
+import type { ClarifyField } from '$lib/core/contracts/task';
+import { onScenario } from '$lib/core/scenario';
+import { addDays, findDate, realDate, weekdayName } from '$lib/server/request/dates';
+import type { ReqUnit } from '$lib/server/request/lexicon';
 import { parseRules } from '$lib/server/request/parse';
-import { eventMatches, KITCHEN_RE as KITCHEN, SHORTAGE_RE as SHORTAGE } from './context';
-import type { AgentContext, Intent } from './types';
+import { classifyGoal, perGuestIn } from './classify';
+import { eventMatches, KITCHEN_RE as KITCHEN } from './context';
+import type { AgentContext, Clarify, Intent, Slots } from './types';
 
 /**
- * Deterministic intent resolver: free-text goal → one supported intent, or `unsupported` with a reason.
- * It runs before any model call, so an unknown request is reported as such instead of being bent into
- * the one seeded event. `clarify` marks an unsupported reading the chef can fix by adding a detail.
- * Routine orders are read by the request parser (quantities, units, dates on the scenario clock);
- * what it cannot read for sure is refused with the reason, never filled in with a default.
+ * Deterministic intent resolver: free-text goal (+ answered slots) → one supported intent, or `unsupported` with a
+ * reason. It runs before any model call, so an unknown request is reported as such instead of being bent into the
+ * one seeded event. What the words mean comes from the shared classifier (`classifyGoal`), the same one /request
+ * uses. A refusal the chef can fix by giving one detail carries a typed `clarify` {field, question, options}; the
+ * answer comes back as a slot and fills that field only, never re-read as words.
  */
-export type Resolved = Intent & { clarify?: boolean };
+export type Resolved = Intent & { clarify?: Clarify };
 
-const AUTHORITY =
-	/\b(approve|approval|hyväksy\w*|grant)\b|\b(raise|increase|lift|change|set|remove|nosta\w*|muuta\w*|poista\w*)\b.{0,40}\b(cap|caps|limit|limits|mandate|budget|katto\w*|valtuu\w*)\b/i;
-const EVENT_WORDS =
-	/\b(wedding|häät|birthday|synttär\w*|party|juhla\w*|conference|seminar|banquet|gala|event|tapahtuma\w*|catering|buffet|dinner|lunch for)\b/i;
-const INSPECT = /\b(show|status|state|inspect|check|explain|summar\w*|näytä|tilanne|why|what)\b/i;
-const ORDER = /\b(order|reorder|buy|tilaa|tilaus)\b/i;
-/** "160 g per guest", "0.2 kg/cover", "160 g / hlö". */
-const PER_GUEST =
-	/(\d+(?:[.,]\d+)?)\s*(g|grams?|kg)\s*(?:per|\/|a|each)\s*(guest|cover|person|head|hlö|henkilö\w*|vieras\w*)/i;
 const ADJUST_STOP = new Set(
 	'raise increase lower reduce cut change set make bump up down the a an of for to from at in on per please each dish need it we our make serve serving portion portions instead now nosta laske muuta'.split(
 		' '
@@ -28,97 +25,223 @@ const ADJUST_STOP = new Set(
 
 /** Largest physical quantity a routine order may ask for; above it the chef uses the request page. */
 const MAX_QTY = 100_000;
+const UNITS: readonly ReqUnit[] = ['kg', 'l', 'pcs', 'case', 'sales'];
+const UNIT_LABEL: Record<ReqUnit, string> = {
+	kg: 'kg',
+	l: 'litres',
+	pcs: 'pieces',
+	case: 'cases',
+	sales: 'packs'
+};
 
-/** No plan picked: either none is open, or the request does not say which of several. */
-function noPlan(c: AgentContext, none: string): Resolved {
-	if (c.openPlans.length < 2) return ask(none);
-	const list = c.openPlans
-		.map((p) => `${p.id} (${p.kitchenId}${p.eventId ? `, ${p.eventId}` : ''})`)
-		.join(', ');
-	return ask(`Which plan? Name its id, event or kitchen: ${list}.`);
+const ask = (
+	field: ClarifyField,
+	question: string,
+	options: Clarify['options'] = []
+): Resolved => ({
+	kind: 'unsupported',
+	reason: question,
+	clarify: { field, question, options: options.slice(0, 6) }
+});
+const refuse = (reason: string): Resolved => ({ kind: 'unsupported', reason });
+
+/** Delivery dates to offer: five days from `start` (default tomorrow) on the scenario clock, by weekday. */
+function dateOptions(today: string, start = addDays(today, 1)): Clarify['options'] {
+	return [0, 1, 2, 3, 4].map((n) => {
+		const d = addDays(start, n);
+		return {
+			label: `${d === addDays(today, 1) ? 'Tomorrow' : weekdayName(d)} ${d.slice(5)}`,
+			value: d
+		};
+	});
 }
 
-/** The kitchen is the run's business, not the product's: the goal without it (and its "for"). */
-const withoutKitchen = (goal: string) =>
-	goal.replace(/\b(?:for|at|to)\s+k-[a-z]+\b/gi, ' ').replace(KITCHEN, ' ');
-
-/** "4 kg butter tomorrow": no order verb, but an item with a quantity in a stated unit reads as an order. */
-function statesAnAmount(goal: string, today: string): boolean {
-	return parseRules(withoutKitchen(goal), today).items.some(
-		(i) =>
-			i.qty !== null &&
-			(i.product !== null || i.search.length > 0) &&
-			!i.ambiguities.some((a) => a.startsWith('no unit given'))
+/** When ordering closes for a warehouse (Stock) delivery on `deliverBy`, on the scenario's rules (D-1, 17:00). */
+export function stockCutoff(deliverBy: string): string {
+	return (
+		onScenario(
+			{
+				kind: 'known',
+				amount: null,
+				logisticModel: 'Stock',
+				availableDate: deliverBy,
+				closingTime: null,
+				raw: null,
+				provenance: { source: 'rule' }
+			} as unknown as Availability,
+			deliverBy
+		).closingTime ?? `${deliverBy}T00:00:00Z`
 	);
 }
 
-const ask = (reason: string): Resolved => ({ kind: 'unsupported', reason, clarify: true });
+/** The first delivery day after `today` whose Stock cut-off is still ahead of `now`. */
+export function earliestOpen(today: string, now: string): string {
+	let d = addDays(today, 1);
+	for (let i = 0; i < 14 && Date.parse(stockCutoff(d)) <= Date.parse(now); i++) d = addDays(d, 1);
+	return d;
+}
+
+/** "Tue 8 Dec" for a calendar date. */
+export const dayLabel = (iso: string) =>
+	new Date(`${iso}T12:00:00Z`).toLocaleDateString('en-GB', {
+		weekday: 'short',
+		day: 'numeric',
+		month: 'short',
+		timeZone: 'UTC'
+	});
+
+/** Our words for a passed cut-off: the requested day, when ordering closed, and the earliest day still open. */
+export function cutoffPassed(deliverBy: string, closes: string, earliest: string): string {
+	const local = new Date(closes);
+	const at = local.toLocaleTimeString('en-GB', {
+		hour: '2-digit',
+		minute: '2-digit',
+		timeZone: 'Europe/Helsinki'
+	});
+	const on = local.toLocaleDateString('en-GB', { weekday: 'short', timeZone: 'Europe/Helsinki' });
+	return `The cut-off for ${dayLabel(deliverBy)} has passed (${at} ${on}); earliest is ${dayLabel(earliest)}. Which day should it arrive?`;
+}
+
+/** No plan picked: either none is open, or the request does not say which of several. */
+function noPlan(c: AgentContext, none: string): Resolved {
+	if (c.openPlans.length < 2) return ask('plan', none);
+	const list = c.openPlans
+		.map((p) => `${p.id} (${p.kitchenId}${p.eventId ? `, ${p.eventId}` : ''})`)
+		.join(', ');
+	return ask(
+		'plan',
+		`Which plan? Name its id, event or kitchen: ${list}.`,
+		c.openPlans.map((p) => ({
+			label: `${p.id} · ${p.kitchenId}${p.eventId ? ` · ${p.eventId}` : ''}`,
+			value: p.id
+		}))
+	);
+}
+
+/** The kitchen is the run's business, not the product's: the goal without it (and its "for"). */
+export const withoutKitchen = (goal: string) =>
+	goal.replace(/\b(?:for|at|to)\s+k-[a-z]+\b/gi, ' ').replace(KITCHEN, ' ');
+
+/** A date slot: an ISO date, or words the parser reads ("tomorrow", "friday"). */
+function slotDate(v: string, today: string): { iso: string; text: string } | null {
+	if (/^\d{4}-\d{2}-\d{2}$/.test(v) && realDate(v)) return { iso: v, text: v };
+	const hit = findDate(v, today);
+	return hit && !hit.invalid ? { iso: hit.iso, text: hit.text } : null;
+}
 
 /**
- * A routine order read by the request parser: one item with a quantity in a stated unit (kg, l, pieces,
- * cases or packs) and a delivery date from the goal's own words on the scenario clock. Returns null when
- * the goal names neither a product nor a quantity (then it is not an order request).
+ * A routine order read by the request parser: one item with a quantity in a stated unit (kg, l, pieces, cases or
+ * packs) and a delivery date from the goal's own words (or the answered slots) on the scenario clock.
  */
 function routineOrder(
 	goal: string,
 	c: AgentContext,
 	named: string | undefined,
-	kitchens: string[]
-): Resolved | null {
+	kitchens: string[],
+	slots: Slots
+): Resolved {
 	const parsed = parseRules(withoutKitchen(goal), c.today);
 	const items = parsed.items;
-	if (!items.some((i) => i.qty !== null || i.product)) return null;
 
 	const kitchenId = named ?? (kitchens.length === 1 ? kitchens[0] : c.defaultKitchenId);
-	if (!kitchenId) return ask(`Which kitchen should I order for (${kitchens.join(', ')})?`);
-	if (items.length > 1)
+	if (!kitchenId)
 		return ask(
-			`One product per routine order; I read ${items.length} (${items.map((i) => i.query || i.text).join(', ')}). Order them one at a time.`
+			'kitchen',
+			`Which kitchen should I order for (${kitchens.join(', ')})?`,
+			c.kitchens.map((k) => ({ label: k.name, value: k.id }))
 		);
-	const item = items[0];
-	const what = item.query || 'it';
-	if (!item.product && !item.search.length) return ask('Which product should I order?');
-	if (item.qty === null) return ask(`How much ${what}? Say for example "4 kg ${what}".`);
-	if (item.ambiguities.some((a) => a.startsWith('no unit given')))
+	// An answered `product` slot names one item (an option is that item's own words, amount included).
+	const slot = slots.product ? parseRules(String(slots.product), c.today).items[0] : undefined;
+	if (items.length > 1 && !slot)
 		return ask(
-			`${item.qty} of what unit? Say kg, l, pieces, cases or packs; I will not guess a pack size for ${what}.`
+			'product',
+			`One product per routine order; I read ${items.length} (${items.map((i) => i.query || i.text).join(', ')}). Which one first?`,
+			items.map((i) => ({ label: i.text.trim(), value: i.text.trim() }))
+		);
+	let item = items.length > 1 || !items[0] ? slot : items[0];
+	if (slot && item && item !== slot)
+		item = { ...item, product: slot.product, search: slot.search, query: slot.query };
+	if (!item || (!item.product && !item.search.length))
+		return ask('product', 'Which product should I order?');
+	const what = item.query || 'it';
+	const qty = slots.qty !== undefined ? Number(slots.qty) : item.qty;
+	const unit = (slots.unit as ReqUnit | undefined) ?? item.unit;
+	if (qty === null || !Number.isFinite(qty))
+		return ask('qty', `How much ${what}? Say for example "4 kg ${what}".`);
+	const noUnit = item.ambiguities.some((a) => a.startsWith('no unit given'));
+	if (slots.unit === undefined && (noUnit || !unit))
+		return ask(
+			'unit',
+			`${qty} of what unit? Say kg, l, pieces, cases or packs; I will not guess a pack size for ${what}.`,
+			UNITS.map((u) => ({ label: `${qty} ${UNIT_LABEL[u]}`, value: u }))
+		);
+	if (!unit || !UNITS.includes(unit))
+		return ask(
+			'unit',
+			`Which unit for ${what}?`,
+			UNITS.map((u) => ({ label: UNIT_LABEL[u], value: u }))
 		);
 	const comma = item.ambiguities.find((a) => a.includes('comma as thousands'));
-	if (comma) return ask(`Unclear quantity: ${comma}. Write it without the comma.`);
-	if (!(item.qty > 0 && item.qty <= MAX_QTY) || !item.unit)
-		return ask(`Quantity must be above 0 and at most ${MAX_QTY.toLocaleString('en-IE')}.`);
-	if (parsed.deliverBySource === 'default' || !parsed.deliverByText)
+	if (comma && slots.qty === undefined)
+		return ask('qty', `Unclear quantity: ${comma}. How much exactly?`);
+	if (!(qty > 0 && qty <= MAX_QTY))
+		return ask('qty', `Quantity must be above 0 and at most ${MAX_QTY.toLocaleString('en-IE')}.`);
+
+	let deliverBy = parsed.deliverBy;
+	let deliverByText = parsed.deliverByText;
+	if (slots.date !== undefined) {
+		const d = slotDate(String(slots.date), c.today);
+		if (!d) return ask('date', `When should ${what} arrive?`, dateOptions(c.today));
+		deliverBy = d.iso;
+		deliverByText = d.text;
+	} else if (parsed.deliverBySource === 'default' || !parsed.deliverByText)
 		return ask(
-			`When should ${what} arrive? Say "tomorrow", a weekday or a date (YYYY-MM-DD); I will not pick one.`
+			'date',
+			`When should ${what} arrive? Say "tomorrow", a weekday or a date (YYYY-MM-DD); I will not pick one.`,
+			dateOptions(c.today)
 		);
-	if (parsed.deliverBy < c.today)
-		return ask(`"${parsed.deliverByText}" (${parsed.deliverBy}) is in the past.`);
+	if (!deliverByText || deliverBy < c.today)
+		return ask('date', `"${deliverByText}" (${deliverBy}) is in the past.`, dateOptions(c.today));
+	// Ordering for that day may already have closed: say so and offer the first day still open, never shift it.
+	if (c.now) {
+		const closes = stockCutoff(deliverBy);
+		if (Date.parse(closes) <= Date.parse(c.now)) {
+			const first = earliestOpen(c.today, c.now);
+			return ask('date', cutoffPassed(deliverBy, closes, first), dateOptions(c.today, first));
+		}
+	}
 
 	// What the chef should see about how the words were read; nothing here changes the order.
-	const notes = [
-		...parsed.ambiguities.filter((a) => a.startsWith(`"${parsed.deliverByText}"`)),
-		...parsed.notes,
-		...item.ambiguities.filter((a) => a.includes('not in my word list'))
-	];
+	const notes =
+		slots.date !== undefined
+			? []
+			: [
+					...parsed.ambiguities.filter((a) => a.startsWith(`"${parsed.deliverByText}"`)),
+					...parsed.notes,
+					...item.ambiguities.filter((a) => a.includes('not in my word list'))
+				];
 	return {
 		kind: 'routine_order',
 		kitchenId,
 		query: what.slice(0, 60),
-		qty: item.qty,
-		unit: item.unit,
+		qty,
+		unit,
 		item: {
 			product: item.product,
 			search: item.search,
 			constraints: item.constraints,
 			variant: item.variant
 		},
-		deliverBy: parsed.deliverBy,
-		deliverByText: parsed.deliverByText,
+		deliverBy,
+		deliverByText,
 		notes
 	};
 }
 
-export function resolveIntent(goalRaw: string, c: AgentContext): Resolved {
+/** How many guests the seeded event is for (its own fixture), to tell "the buffet" from another brief. */
+const SEEDED_GUESTS: Record<string, number> = { 'event-xmas-140': 140 };
+
+export function resolveIntent(goalRaw: string, c: AgentContext, slots: Slots = {}): Resolved {
 	const goal = goalRaw.trim();
 	const kitchens = c.kitchens.map((k) => k.id);
 	const supported =
@@ -126,74 +249,89 @@ export function resolveIntent(goalRaw: string, c: AgentContext): Resolved {
 		(c.supportedEvents.map((e) => `${e.title} at ${e.kitchenId}`).join(', ') || 'none seeded') +
 		'), repair shortages in the current plan, change a dish ("cured salmon to 160 g per guest"), place a routine order ("order 4 l maito for k-lounas tomorrow"), or show the current plan.';
 
-	if (!goal) return { kind: 'unsupported', reason: `No goal given. ${supported}`, clarify: true };
-	if (AUTHORITY.test(goal))
-		return {
-			kind: 'unsupported',
-			reason:
+	if (!goal) return { kind: 'unsupported', reason: `No goal given. ${supported}` };
+
+	const said = goal.match(KITCHEN)?.[0]?.toLowerCase();
+	if (said && !kitchens.includes(said))
+		return refuse(
+			`${said} is not a kitchen this run may act for (${kitchens.join(', ') || 'none'}).`
+		);
+	const kitchenSlot = slots.kitchen !== undefined ? String(slots.kitchen) : undefined;
+	if (kitchenSlot && !kitchens.includes(kitchenSlot))
+		return refuse(`${kitchenSlot} is not a kitchen this run may act for.`);
+	const named = kitchenSlot ?? said;
+
+	const cls = classifyGoal(withoutKitchen(goal), c.today);
+	switch (cls.kind) {
+		case 'authority':
+			return refuse(
 				'Approving and changing the mandate belong to the chef; the agent never does either. Use the approval card or the mandate screen.'
-		};
-
-	const named = goal.match(KITCHEN)?.[0]?.toLowerCase();
-	if (named && !kitchens.includes(named))
-		return {
-			kind: 'unsupported',
-			reason: `${named} is not a kitchen this run may act for (${kitchens.join(', ') || 'none'}).`
-		};
-
-	// A changed requirement on an existing plan, before any event wording can read it as a new plan.
-	const perGuest = goal.match(PER_GUEST);
-	if (perGuest) {
-		const grams = Number(perGuest[1].replace(',', '.')) * (/^kg/i.test(perGuest[2]) ? 1000 : 1);
-		if (!(grams > 0 && grams <= 2000))
-			return ask('Grams per guest must be above 0 and at most 2,000.');
-		const dish = goal
-			.replace(PER_GUEST, ' ')
-			.replace(KITCHEN, ' ')
-			.toLowerCase()
-			.split(/[^\p{L}-]+/u)
-			.filter((w) => w.length > 1 && !ADJUST_STOP.has(w))
-			.join(' ');
-		if (!dish) return ask('Which dish should change?');
-		if (!c.currentPlan) return noPlan(c, 'There is no plan to change; plan the event first.');
-		return { kind: 'adjust_need', planId: c.currentPlan.id, dish, gramsPerGuest: grams };
-	}
-
-	const event = c.supportedEvents.find((e) => eventMatches(goal, e.title, e.id));
-	if (event) {
-		if (named && named !== event.kitchenId)
+			);
+		case 'read':
+			if (!c.currentPlan) return noPlan(c, 'There is no plan yet to show.');
+			return { kind: 'inspect', planId: c.currentPlan.id };
+		case 'adjust': {
+			// A changed requirement on an existing plan, before any event wording can read it as a new plan.
+			const pg = perGuestIn(goal)!;
+			if (!(pg.grams > 0 && pg.grams <= 2000))
+				return ask('dish', 'Grams per guest must be above 0 and at most 2,000.');
+			const dish =
+				slots.dish !== undefined
+					? String(slots.dish)
+					: goal
+							.replace(pg.match[0], ' ')
+							.replace(KITCHEN, ' ')
+							.toLowerCase()
+							.split(/[^\p{L}-]+/u)
+							.filter((w) => w.length > 1 && !ADJUST_STOP.has(w))
+							.join(' ');
+			if (!dish) return ask('dish', 'Which dish should change?');
+			if (!c.currentPlan) return noPlan(c, 'There is no plan to change; plan the event first.');
+			return { kind: 'adjust_need', planId: c.currentPlan.id, dish, gramsPerGuest: pg.grams };
+		}
+		case 'event': {
+			const event = c.supportedEvents.find((e) => eventMatches(goal, e.title, e.id));
+			const seededGuests = event ? SEEDED_GUESTS[event.id] : undefined;
+			const guests = slots.guests !== undefined ? Number(slots.guests) : cls.event.guests;
+			// The seeded event only when the brief is that event: no other guest count, no courses asked for.
+			if (event && (guests === null || guests === seededGuests) && cls.event.courses === null) {
+				if (named && named !== event.kitchenId)
+					return refuse(`${event.title} is seeded for ${event.kitchenId}, not ${named}.`);
+				if (!kitchens.includes(event.kitchenId))
+					return refuse(
+						`${event.title} is for ${event.kitchenId}, which this run may not act for.`
+					);
+				return { kind: 'seeded_event', kitchenId: event.kitchenId, eventId: event.id };
+			}
+			const brief = [
+				cls.event.occasion,
+				guests !== null ? `${guests} guests` : '',
+				cls.event.courses !== null ? `${cls.event.courses} courses` : ''
+			]
+				.filter(Boolean)
+				.join(', ');
 			return {
 				kind: 'unsupported',
-				reason: `${event.title} is seeded for ${event.kitchenId}, not ${named}.`
+				reason:
+					`This is an event brief (${brief}), not the seeded event${event ? ` for ${seededGuests ?? 'its'} guests` : ''}. ` +
+					'A menu has to be proposed and reviewed by a chef first: use New request to get a menu proposal. ' +
+					'No seeded event matches this request; I will not substitute another event.',
+				brief: { occasion: cls.event.occasion, guests, courses: cls.event.courses }
 			};
-		if (!kitchens.includes(event.kitchenId))
-			return {
-				kind: 'unsupported',
-				reason: `${event.title} is for ${event.kitchenId}, which this run may not act for.`
-			};
-		return { kind: 'seeded_event', kitchenId: event.kitchenId, eventId: event.id };
+		}
+		case 'repair':
+			if (!c.currentPlan)
+				return noPlan(c, 'There is no current plan to repair; plan the event first.');
+			return { kind: 'shortage_repair', planId: c.currentPlan.id };
+		case 'order':
+			return routineOrder(goal, c, named, kitchens, slots);
+		case 'other': {
+			// Bare inspect words ("status", "check the plan") read the plan.
+			if (/\b(status|state|inspect|check|tilanne)\b/i.test(goal)) {
+				if (!c.currentPlan) return noPlan(c, 'There is no plan yet to show.');
+				return { kind: 'inspect', planId: c.currentPlan.id };
+			}
+			return refuse(`I did not recognise this request. ${supported}`);
+		}
 	}
-	if (EVENT_WORDS.test(goal))
-		return {
-			kind: 'unsupported',
-			reason: `No seeded event matches this request; I will not substitute another event. ${supported}`
-		};
-
-	if (SHORTAGE.test(goal)) {
-		if (!c.currentPlan)
-			return noPlan(c, 'There is no current plan to repair; plan the event first.');
-		return { kind: 'shortage_repair', planId: c.currentPlan.id };
-	}
-
-	if (ORDER.test(goal) || statesAnAmount(goal, c.today)) {
-		const r = routineOrder(goal, c, named, kitchens);
-		if (r) return r;
-	}
-
-	if (INSPECT.test(goal) || ORDER.test(goal)) {
-		if (!c.currentPlan) return noPlan(c, 'There is no plan yet to show.');
-		return { kind: 'inspect', planId: c.currentPlan.id };
-	}
-
-	return { kind: 'unsupported', reason: `I did not recognise this request. ${supported}` };
 }

@@ -62,6 +62,7 @@ export interface PlanFacts {
 	version: number;
 	state: string;
 	kitchenId: string;
+	deliverBy?: string;
 	totalCents: number | null;
 	lines: {
 		id: string;
@@ -89,6 +90,7 @@ export function planFacts(p: unknown): PlanFacts {
 			version: num(plan.version) ?? 0,
 			state: code(plan.state) ?? '',
 			kitchenId: code(plan.kitchenId) ?? '',
+			deliverBy: code(plan.deliverBy, 10),
 			totalCents: num(plan.totalCents) ?? null,
 			lines: cap(plan.lines, 'lines', cut).map((x) => {
 				const l = obj(x);
@@ -152,10 +154,14 @@ export function toFacts(tool: ToolName, value: unknown, intent?: Intent): Facts 
 				{
 					offers: cap(v.offers, 'offers', cut).map((x) => {
 						const o = obj(x);
+						const a = obj(o.availability);
 						return {
 							productId: code(o.productId),
 							unitCents: num(obj(o.price).unitCents),
-							availability: code(obj(o.availability).kind, 16)
+							availability: code(a.kind, 16),
+							logisticModel: code(a.logisticModel, 16),
+							availableDate: code(a.availableDate, 10),
+							closingTime: code(a.closingTime, 40)
 						};
 					}),
 					notFound: cap(v.notFound, 'notFound', cut).map((x) => code(x))

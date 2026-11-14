@@ -11,6 +11,8 @@ export interface ContextSource {
 	plans(workspaceId: string, runId: string): Promise<Plan[]>;
 	/** Scenario date, YYYY-MM-DD. */
 	today(): string;
+	/** Scenario-clock now, ISO; offer cut-offs are compared with it. */
+	now?(): string;
 	/** The surface's default kitchen (the /request page's), if it has one. */
 	defaultKitchenId?: string;
 }
@@ -34,15 +36,25 @@ export function eventMatches(goal: string, title: string, id: string): boolean {
 }
 
 /**
- * The plan a request is about, picked by what the request says, never by "event plans first" or by
+ * The plan a request is about: the one the task (or an answered slot) names, else picked by what the request says, never by "event plans first" or by
  * version: a plan id it names, then a seeded event it names, then a kitchen it names, then (for a
  * shortage request) the plans with unorderable lines. Exactly one candidate left is the plan; several
  * mean the request does not say, and the caller asks which.
  */
-export function pickPlan(goal: string, open: Plan[]): { plan: Plan; pickedBy: PlanPick } | null {
+export function pickPlan(
+	goal: string,
+	open: Plan[],
+	planId?: string
+): { plan: Plan; pickedBy: PlanPick } | null {
 	const g = goal.toLowerCase();
 	const one = (ps: Plan[], pickedBy: PlanPick) =>
 		ps.length === 1 ? { plan: ps[0], pickedBy } : null;
+	// A plan the task holds or the chef picked as an answer beats anything the words suggest.
+	if (planId)
+		return one(
+			open.filter((p) => p.id === planId),
+			'task'
+		);
 	const named = open.filter((p) => g.includes(p.id.toLowerCase()));
 	if (named.length) return one(named, 'named');
 	const event = SUPPORTED_EVENTS.find((e) => eventMatches(goal, e.title, e.id));
@@ -76,7 +88,9 @@ export function pickPlan(goal: string, open: Plan[]): { plan: Plan; pickedBy: Pl
 export async function bootstrapContext(
 	source: ContextSource,
 	principal: Pick<RunPrincipal, 'workspaceId' | 'runId' | 'kitchenIds'>,
-	goal = ''
+	goal = '',
+	/** The plan the task or an answered `plan` slot names. */
+	planId?: string
 ): Promise<AgentContext> {
 	const grant = principal.kitchenIds ? new Set(principal.kitchenIds) : null;
 	const allowed = (id: string) => !grant || grant.has(id);
@@ -84,7 +98,7 @@ export async function bootstrapContext(
 	const kitchens = await source.kitchens(principal.workspaceId);
 	const plans = await source.plans(principal.workspaceId, principal.runId);
 	const open = plans.filter((p) => allowed(p.kitchenId) && p.state !== 'committed');
-	const picked = pickPlan(goal, open);
+	const picked = pickPlan(goal, open, planId);
 	return {
 		kitchens: kitchens.filter((k) => allowed(k.id)).map((k) => ({ id: k.id, name: k.name })),
 		currentPlan: picked
@@ -109,6 +123,7 @@ export async function bootstrapContext(
 		kitchens.some((k) => k.id === source.defaultKitchenId && allowed(k.id))
 			? { defaultKitchenId: source.defaultKitchenId }
 			: {}),
-		today: source.today()
+		today: source.today(),
+		...(source.now ? { now: source.now() } : {})
 	};
 }
