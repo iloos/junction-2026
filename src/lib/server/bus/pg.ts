@@ -15,12 +15,18 @@ type Wire = { ws: string; inline: ServerEvent } | { ws: string; ref: { kind: 'op
  */
 export class PgTransport {
 	private listening: Promise<unknown> | null = null;
+	/**
+	 * Per workspace, the delivery of the last notification. Each one waits for the one before it, so an op sent by
+	 * reference (fetched from the database) is never overtaken by a later inline one: the op stream drops any seq
+	 * at or below the highest it has sent, so out-of-order delivery would lose the earlier op.
+	 */
+	private chains = new Map<string, Promise<void>>();
 
 	constructor(private local: MemoryBus) {}
 
 	start(): Promise<unknown> {
 		return (this.listening ??= sql()
-			.listen(CHANNEL, (payload) => void this.receive(payload))
+			.listen(CHANNEL, (payload) => this.enqueue(payload))
 			.catch((e) => {
 				this.listening = null;
 				console.error('[bus] LISTEN failed', e instanceof Error ? e.message : e);
@@ -32,7 +38,8 @@ export class PgTransport {
 		for (const e of events) {
 			let wire: Wire = { ws: workspaceId, inline: e };
 			let text = JSON.stringify(wire);
-			if (text.length > INLINE_LIMIT) {
+			// The limit is in bytes: Finnish and other non-ASCII text takes more bytes than characters.
+			if (Buffer.byteLength(text, 'utf8') > INLINE_LIMIT) {
 				if (e.kind !== 'op') {
 					console.warn(`[bus] dropped ${e.kind} event over ${INLINE_LIMIT} bytes`);
 					continue;
@@ -44,15 +51,31 @@ export class PgTransport {
 		}
 	}
 
-	private async receive(payload: string): Promise<void> {
+	/** Deliver notifications per workspace in the order they arrived (see `chains`). */
+	private enqueue(payload: string): void {
+		let wire: Wire;
 		try {
-			const wire = JSON.parse(payload) as Wire;
+			wire = JSON.parse(payload) as Wire;
+		} catch (e) {
+			console.error('[bus] bad NOTIFY payload', e instanceof Error ? e.message : e);
+			return;
+		}
+		const prev = this.chains.get(wire.ws) ?? Promise.resolve();
+		const next = prev.then(() => this.receive(wire));
+		this.chains.set(wire.ws, next);
+		void next.then(() => {
+			if (this.chains.get(wire.ws) === next) this.chains.delete(wire.ws);
+		});
+	}
+
+	private async receive(wire: Wire): Promise<void> {
+		try {
 			if ('inline' in wire) return this.local.deliver(wire.ws, [wire.inline]);
 			const [env] = await readOps(wire.ws, wire.ref.seq - 1, 1);
 			if (env?.seq === wire.ref.seq)
 				this.local.deliver(wire.ws, [{ kind: 'op', seq: env.seq, envelope: env }]);
 		} catch (e) {
-			console.error('[bus] bad NOTIFY payload', e instanceof Error ? e.message : e);
+			console.error('[bus] notification not delivered', e instanceof Error ? e.message : e);
 		}
 	}
 }

@@ -6,7 +6,7 @@ import { ensureRunLoaded, onCurrentRun } from './reset';
 import { SCENARIO } from '$lib/core/scenario';
 import { createServerPorts } from '$lib/server/store/server-ports';
 import { loadSeedKitchens } from '$lib/server/store/db-ports';
-import { newRunId } from './run';
+import { newRunId, setCurrentRun } from './run';
 import { resetSandbox } from './sandbox';
 import { newVisitorWorkspace } from './visitor-id';
 
@@ -83,6 +83,13 @@ describe('onCurrentRun', () => {
 		// A pinned run (MANDATE_RUN) is left alone.
 		expect((await onCurrentRun(ctx, 'run-pinned')).runId).toBe(runA);
 	}, 60_000);
+
+	it('R9-08: a context on an old run moves to the run this process already knows', async () => {
+		const ws = newVisitorWorkspace();
+		setCurrentRun(ws, 'run-new');
+		const ctx = { ...contextFor('external_agent', 'review', 'review', {}, ws), runId: 'run-old' };
+		expect((await onCurrentRun(ctx)).runId).toBe('run-new');
+	});
 
 	it('keeps an explicit run in a workspace with no runs row', async () => {
 		const ctx = {

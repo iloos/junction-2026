@@ -26,8 +26,17 @@ export function createServerPorts(): Promise<Built> {
 	return g.__mandatePorts;
 }
 
+/**
+ * After commit, best effort: a failed notification never fails the write (the op is durable), and open screens
+ * get it on their next catch-up (a reconnect, or a run check's catch-up). Logged instead of left unhandled.
+ */
 const publish = (ws: string, events: Parameters<typeof busPublish>[1]) =>
-	void busPublish(ws, events);
+	void busPublish(ws, events).catch((e) =>
+		console.error(
+			`[bus] publish failed for ${ws} (${events.length} events)`,
+			e instanceof Error ? e.message : e
+		)
+	);
 
 async function build(): Promise<Built> {
 	if (dbMode() === 'fixture') return createDbPorts({ publish, followCurrentRun: true });
