@@ -44,8 +44,9 @@ export const milks = ['100001', '100002', '100003'].map((productId, i) =>
 		lotStep: 1,
 		catchWeight: false,
 		netPerSalesUnit: { value: { value: 1, unit: 'l' }, provenance },
-		// Ordinary milk declares milk (AM), as Valio's records do; the lactose-free one claims LACTOSE.
-		allergens: { contains: i === 0 ? [] : ['AM'], mayContain: [], declared: true },
+		// As Valio declares milk: every one contains milk (AM); only the lactose-free one leaves out lactose (ML). With no
+		// codes the one requirement evaluator (D16) would rightly read an ordinary milk as lactose-free.
+		allergens: { contains: i === 0 ? ['AM'] : ['AM', 'ML'], mayContain: [], declared: true },
 		freeFrom: i === 0 ? ['LACTOSE'] : [],
 		diet: [],
 		valioSubstitutes: [],
