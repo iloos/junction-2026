@@ -4,6 +4,7 @@
  * `allowedLotSize` is the lot step, money is integer cents.
  */
 import type { Availability, Offer, Price, Product, Provenance } from '$lib/core/contracts';
+import { baseKeyOf } from '$lib/core/demand/basekey';
 
 /* eslint-disable @typescript-eslint/no-explicit-any -- raw Valio JSON is untyped by nature */
 type Raw = any;
@@ -68,7 +69,7 @@ function netPerSalesUnit(raw: Raw): Product['netPerSalesUnit'] {
 }
 
 /** Bump when normalizeProduct's output changes: a cached normalised catalogue of another version is rebuilt. */
-export const NORMALIZE_VERSION = '3';
+export const NORMALIZE_VERSION = '4';
 
 const LITRES: Record<string, number> = { LTR: 1, DLT: 0.1, CLT: 0.01, MLT: 0.001 };
 const KILOS: Record<string, number> = { KGM: 1, GRM: 0.001 };
@@ -120,7 +121,7 @@ export function normalizeProduct(
 	// whole units; KG keeps 0.01, a real 10 g weighing step (396 KG items have it; catch-weight lots are larger).
 	const allowed = Number(raw.allowedLotSize) || 0.01;
 	const lotStep = raw.salesUnit !== 'KG' && allowed <= 0.01 ? 1 : allowed;
-	return {
+	const product: Product = {
 		productId: id,
 		gtin: raw.salesUnitGtin ?? raw.synkkaData?.gtin ?? undefined,
 		nameFi,
@@ -171,6 +172,8 @@ export function normalizeProduct(
 		valioSubstitutes: (raw.substitutions ?? []).map((s: Raw) => String(s.substituteProduct)),
 		dataQualityFlags: flags
 	};
+	// What the product is, from its name (substitute kinds compare it); recomputed when the normaliser changes.
+	return { ...product, baseKey: baseKeyOf(product) };
 }
 
 /** One product entry of POST /api/availability → D6 Availability (raw kept). */

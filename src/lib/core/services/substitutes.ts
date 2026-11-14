@@ -27,6 +27,8 @@ import {
 	seedEntryFor,
 	sizeDirect,
 	sizeFor,
+	substituteKind,
+	whatChanges,
 	type PoolEntry,
 	type SeedDish
 } from '../demand';
@@ -254,7 +256,7 @@ export async function findSubstitutes(
 		rescue?.chosen?.kind === 'make_in_house' && need?.amount.unit === 'kg' ? rescue.chosen : null;
 	const recipeIds: string[] = ((recipe?.ingredients ?? []) as Loose[]).map((g) => g.productId);
 	const [products, { offers }] = await Promise.all([
-		ports.catalog.get(ids),
+		ports.catalog.get([...ids, line.productId]),
 		ports.catalog.offers([...new Set([...ids, ...recipeIds])], plan0.deliverBy)
 	]);
 	const sized = new Map<string, Line['qty']>();
@@ -372,10 +374,21 @@ export async function findSubstitutes(
 			r.rank = n++;
 	}
 	const nameOf = (id: string) => products.get(id)?.nameFi;
+	// How each candidate relates to the planned product (describes only: ranking and tiers never read it).
+	const planned = products.get(line.productId);
+	const named = new Set(seedIds);
+	const relation = (id: string) => {
+		const p = products.get(id);
+		if (!planned || !p) return {};
+		const kind = substituteKind(planned, p, named.has(id) || pool.get(id)?.fromValioRule === true);
+		const changes = whatChanges(planned, p);
+		return { kind, ...(changes ? { whatChanges: changes.slice(0, 200) } : {}) };
+	};
 	const candidates = [
 		...ranked.map((r) => ({
 			productId: r.productId,
 			productName: nameOf(r.productId),
+			...relation(r.productId),
 			rank: r.rank,
 			score: r.score,
 			rejectedReasons: r.rejectedReasons as string[],
@@ -385,6 +398,7 @@ export async function findSubstitutes(
 		...unsized.map((productId) => ({
 			productId,
 			productName: nameOf(productId),
+			...relation(productId),
 			rank: null,
 			// Availability is the true reason when it already excludes the product; otherwise it can't be sized.
 			rejectedReasons: [unsizedReason(offers.find((o) => o.productId === productId))],

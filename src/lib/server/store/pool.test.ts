@@ -85,5 +85,10 @@ describe('substitute pool for a seeded dish', () => {
 		const r = await substitutesFor('462490');
 		expect(r.kind).toBe('product');
 		expect(r.chosen[0]?.productId).toBe('476768');
+		// The seed names it for the dish: a functional swap, with what changes in one line.
+		const palvi = r.candidates.find((c) => c.productId === '476768')!;
+		expect(palvi.kind).toBe('functional');
+		expect(palvi.whatChanges).toContain('sliced');
+		expect(r.candidates.every((c) => c.kind !== undefined)).toBe(true);
 	});
 });
