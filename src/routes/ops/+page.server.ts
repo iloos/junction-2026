@@ -4,7 +4,7 @@ import { SYNTH_PRODUCTS, SYNTH_WORKSPACE } from '$lib/server/bus/synthetic';
 import { fail } from '@sveltejs/kit';
 import { env } from '$env/dynamic/private';
 import { dev } from '$app/environment';
-import { startAgentRun } from '$lib/server/bus/agent-runs';
+import { cancelAgentRun, startAgentRun } from '$lib/server/bus/agent-runs';
 import { presenterOpen as isPresenterOpen } from '$lib/server/demo/presenter';
 import { ensureRunLoaded, resetDemo } from '$lib/server/demo/reset';
 import { currentRunStartedAt } from '$lib/server/demo/run';
@@ -90,6 +90,17 @@ export const actions: Actions = {
 		lastStart = Date.now();
 		started.done.catch((e) => console.error('[ops] agent run failed', e));
 		return { started: started.id };
+	},
+	cancelAgent: async ({ request }) => {
+		if (!presenterOpen())
+			return fail(403, {
+				message: 'Stopping the agent from here is turned off; use the cancel endpoint.'
+			});
+		const id = String((await request.formData()).get('id') ?? '');
+		const r = cancelAgentRun(id, { kind: 'chef', id: 'ops-presenter' });
+		if (!r.ok) return fail(404, { message: 'That run is no longer in progress.' });
+		await r.done;
+		return { cancelled: id };
 	},
 	resetRun: async () => {
 		if (!presenterOpen())

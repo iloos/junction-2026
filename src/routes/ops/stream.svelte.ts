@@ -12,7 +12,13 @@ export interface TraceRun {
 	goal: string;
 	startedAt: string;
 	steps: TraceRow[];
-	done?: { stopped: string; summary: string; at: string };
+	done?: {
+		stopped: string;
+		summary: string;
+		at: string;
+		/** The agent's GoalOutcome, when it reported one. */
+		outcome?: { status: string; nextAction: string; reason?: string };
+	};
 }
 export interface TraceRow {
 	at: string;
@@ -152,7 +158,8 @@ export class OpsStream {
 			run.done = {
 				stopped: String(e.data.stopped),
 				summary: String(e.data.summary ?? ''),
-				at: e.at
+				at: e.at,
+				outcome: outcomeOf(e.data.outcome)
 			};
 		else if (!(e.step === 'step' && e.data.n === 0))
 			run.steps = [...run.steps, { at: e.at, step: e.step, data: e.data }];
@@ -225,4 +232,17 @@ function trackHeld(
 				next[k] = prev[k] ?? at;
 			}
 	return next;
+}
+
+function outcomeOf(
+	v: unknown
+): { status: string; nextAction: string; reason?: string } | undefined {
+	if (!v || typeof v !== 'object') return undefined;
+	const o = v as Record<string, unknown>;
+	if (typeof o.status !== 'string') return undefined;
+	return {
+		status: o.status,
+		nextAction: typeof o.nextAction === 'string' ? o.nextAction : '',
+		...(typeof o.reason === 'string' ? { reason: o.reason } : {})
+	};
 }

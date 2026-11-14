@@ -28,7 +28,17 @@
 		done: 'Finished',
 		max_steps: 'Stopped at the 8-step limit',
 		deadline: 'Stopped at the deadline',
-		planner_error: 'Planner failed'
+		planner_error: 'Planner failed',
+		cancelled: 'Stopped by a person',
+		unsupported: 'Not something this agent does'
+	};
+	/** GoalOutcome.status in words, with the tone it reads in. */
+	const OUTCOME: Record<string, { word: string; tone: 'done' | 'warn' | 'bad' }> = {
+		fulfilled: { word: 'Goal met', tone: 'done' },
+		partial: { word: 'Partly met', tone: 'warn' },
+		awaiting_user: { word: 'Waiting for a person', tone: 'warn' },
+		blocked: { word: 'Blocked', tone: 'bad' },
+		unsupported: { word: 'Not supported', tone: 'bad' }
 	};
 </script>
 
@@ -72,7 +82,7 @@
 			<section class="run-block">
 				<header class="run-head">
 					<h3>{run.goal || 'Agent run'}</h3>
-					<p>
+					<div class="meta">
 						<span class="mono">{clock(run.startedAt)}</span>
 						{#if run.done}
 							<span class:warn={run.done.stopped !== 'done'}
@@ -80,8 +90,22 @@
 							>
 						{:else}
 							<span class="live">Running</span>
+							{#if canRun}
+								<form method="POST" action="?/cancelAgent" use:enhance class="stop">
+									<input type="hidden" name="id" value={run.id} />
+									<button>Stop</button>
+								</form>
+							{/if}
 						{/if}
-					</p>
+					</div>
+					{#if run.done?.outcome}
+						{@const o = run.done.outcome}
+						<p class="outcome" data-tone={OUTCOME[o.status]?.tone ?? 'warn'}>
+							<b>{OUTCOME[o.status]?.word ?? o.status}</b>
+							{#if o.nextAction}<span>Next: {o.nextAction}</span>{/if}
+							{#if o.reason}<span class="reason">{o.reason}</span>{/if}
+						</p>
+					{/if}
 				</header>
 				<ol>
 					{#each run.steps as s, i (i)}
@@ -237,7 +261,7 @@
 		font-size: 19px;
 		font-weight: 500;
 	}
-	.run-head p {
+	.run-head .meta {
 		margin: 4px 0 10px;
 		display: flex;
 		gap: 14px;
@@ -246,6 +270,40 @@
 	}
 	.live {
 		color: var(--done);
+	}
+	.stop {
+		display: inline;
+	}
+	.stop button {
+		background: transparent;
+		border: 1px solid var(--blocked);
+		color: var(--blocked);
+		border-radius: 6px;
+		padding: 0 10px;
+		font: inherit;
+		font-size: 15px;
+		cursor: pointer;
+	}
+	.outcome {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 4px 12px;
+		margin: 0 0 10px;
+		padding: 8px 12px;
+		border-left: 3px solid var(--done);
+		background: var(--raise);
+		font-size: 16px;
+		color: var(--text);
+	}
+	.outcome[data-tone='warn'] {
+		border-color: var(--sign-off);
+	}
+	.outcome[data-tone='bad'] {
+		border-color: var(--blocked);
+	}
+	.outcome .reason {
+		color: var(--muted);
+		flex-basis: 100%;
 	}
 	.warn {
 		color: var(--sign-off);
