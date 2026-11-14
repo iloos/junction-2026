@@ -11,6 +11,7 @@ The only plan. Markers: `[x]` done · `[~]` in progress · `[ ]` todo · `[!]` b
 - [~] **Review mechanism:** a validator at each model-output checkpoint (request parse, menu proposal, agent outcome, explanations): pass, revise once with the critique, or block with the reason. Never authorises, never overrides the gate; Gemini Decisions, traced and capped; behind a flag until evals show it helps. Owner E (`src/lib/server/review/`): outcome text and request parse on `lane/e-agent`, menu proposal next. Every track: rubric + eval before merge.
 - [ ] Video checkpoint Sat 22:00: green deployable tag; sponsor claims (Exa, Context.dev) decided from observed journeys
 - [ ] Next scope: **in-app agent chat and tooling** (the chef talks to the same agent, through the same gate)
+- [ ] **Agent door v2** ([lanes/agent-door-v2.md](lanes/agent-door-v2.md), D17): approve from any device (absolute links, pairing, dock approve cards) · `revise_menu` with product pins · questions before guessing · `reasoning` + `report_issue` · compact results
 - [ ] Next scope: **UI/UX pass** over Kitchen, Request, Ops and `/agents`, one vocabulary ([concept/VOCABULARY.md](concept/VOCABULARY.md))
 - [ ] Later: extension scopes from [concept/GROWTH.md](concept/GROWTH.md), only once the freeze plan is safe
 

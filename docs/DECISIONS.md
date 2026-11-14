@@ -125,3 +125,14 @@ What changes is that hard constraints get **one vocabulary and one evaluator in 
 **Why:** today three places interpret diet separately: the UI marks (lib/ui/diet.ts), the request filter (server/request filterHits, B's meatContradiction) and the core requirements (freeFrom/origin/labels only). Dish diet codes are display-only, which is how a vegetarian dish was substituted with meatballs on prod. The authority model and the single commit gate are sound. The vocabulary under them was too narrow and was enforced at the edges.
 
 **Reopen if:** a constraint can't be stated as a product predicate (e.g. a per-order mix such as "75% beef"). Those stay as quantities on needs, not requirements.
+
+### D17 · Links point; only the human grants (lead, 14 Nov night)
+**Choice:** approval and menu acceptance stay human acts, reachable from any device but never through the agent's channel:
+- every tool result carries absolute links (`approvalUrl`, `reviewUrl`) that only say where to go;
+- a second device gets the sandbox by pairing from the browser that owns it (a single-use QR or short code, never in a tool result);
+- the in-app dock shows approve cards (UI actions under the chef session);
+- later, OAuth gives identity from the token, and approval is a human step-up (a passkey or a push), never a scope the agent's token can hold.
+
+**Why:** a session over MCP had no way to reach the approval: the link was relative and bound to one browser's cookie. The obvious fix, a signed approve link in the tool result, would let the agent follow it and approve itself. That breaks "your agent never approves", and a catalogue string could exploit it by prompt injection. OAuth plus billing proves who pays, not that a person reviewed these lines. Verda's `confirm: true` is a flag the model sets; Mandate's gate must not be.
+
+**Reopen if:** an MCP client ships a human-only approval primitive (URL elicitation that the model can't complete) that works in the demo clients. Then use it for approval in chat, under the same rule.
