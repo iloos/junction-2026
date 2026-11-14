@@ -149,7 +149,7 @@ describe('grounded answers: the claim check', () => {
 		expect(unbacked('I ordered 60 kg of butter.', ledger())).toMatch(/ordered/);
 		expect(unbacked('75 kg are planned.', ledger())).toMatch(/number 75/);
 		expect(unbacked('60 kg is supplier confirmed.', ledger())).toMatch(/confirmed/);
-		expect(unbacked('Nothing is ordered yet, so it is not ordered.', ledger())).toBeNull();
+		expect(unbacked('The butter is not ordered yet.', ledger())).toBeNull();
 		// One claim checker: "confirmed" and "delivered" need a receipt-confirmed amount; kg and l never add up.
 		expect(unbacked('Your butter is confirmed.', ledger())).toMatch(/confirmed/);
 		expect(unbacked('The butter was delivered.', ledger())).toMatch(/confirmed|delivered/);

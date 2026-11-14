@@ -91,7 +91,23 @@ export function unbacked(text: string, l: TaskLedger): string | null {
 		return '"confirmed" or "delivered" without a confirmed amount';
 	if (APPROVED.test(text) && !/\bnot (yet )?approved\b/i.test(text) && f.decisionsLeft > 0)
 		return '"approved" with decisions left';
-	return null;
+	// The outcome review's deterministic checks too: one set of claim rules for every agent text.
+	const needs = l.needs;
+	const findings = outcomeTextCheckpoint.check({
+		input: { goal: '' },
+		output: text,
+		facts: {
+			status:
+				needs.length && needs.every((n) => n.supplierConfirmed.value >= n.required.value)
+					? 'fulfilled'
+					: 'partial',
+			unresolvedNeeds: needs.filter((n) => n.unresolved.value > 0).length,
+			committedLines: f.receipts,
+			approvalsGranted: f.decisionsLeft > 0 ? 0 : 1,
+			supplierConfirmedLines: needs.filter((n) => n.supplierConfirmed.value > 0).length
+		}
+	});
+	return findings[0]?.message.slice(0, 160) ?? null;
 }
 
 export async function explain(
