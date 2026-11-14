@@ -462,10 +462,18 @@ describe('cut-off at lookup: a date whose ordering closed is said and an open on
 		const it = r.lookup!.items[0];
 		expect(it.pick).toBeNull();
 		expect(it.question).toMatch(
-			/^The cut-off for Tue 8 Dec has passed \(17:00 Mon\); earliest delivery is Wed 9 Dec\./
+			/^Tue 8 Dec is past (this product's|every match's) cut-off \(Stock, 17:00 Mon\): earliest Wed 9 Dec\./
 		);
-		expect(it.answer).toMatchObject({ kind: 'date', date: '2026-12-09' });
+		expect(it.answer).toMatchObject({
+			kind: 'date',
+			date: '2026-12-09',
+			label: 'Deliver Wed 9 Dec instead'
+		});
 		expect(r.parsed.deliverBy).toBe('2026-12-08'); // never moved silently
+		// The date control says the same: Tue closed with its reason, Wed open.
+		const days = r.lookup!.days!;
+		expect(days.find((d) => d.date === '2026-12-08')).toMatchObject({ open: false });
+		expect(days.find((d) => d.date === '2026-12-09')).toMatchObject({ open: true });
 
 		const again = await runRequest('4 kg butter for tomorrow', {
 			...base,
@@ -569,5 +577,87 @@ describe('off delivery day: the next receiving day as a one-tap choice', () => {
 		});
 		expect(again.order?.deliveryNote).toBeNull();
 		expect(again.order?.nextDeliveryDay).toBeNull();
+	});
+});
+
+describe('no day given: the earliest open day, never a passed one', () => {
+	it('"4 kg butter" on Mon 21:40 is ordered for Wed 9 Dec, and says why', async () => {
+		const { h, ctx, kitchen } = await setup();
+		const r = await runRequest('4 kg butter', {
+			handlers: h,
+			ctx,
+			today: '2026-12-07',
+			kitchen,
+			now: new Date('2026-12-07T21:40:00+02:00'),
+			nonce: 'default-day'
+		});
+		expect(r.parsed.deliverBy).toBe('2026-12-09');
+		expect(r.parsed.notes).toContain('no day given: earliest you can get, Wed 9 Dec');
+		expect(r.parsed.ambiguities.join()).not.toMatch(/using today/);
+		expect(r.lookup!.items[0].answer?.kind).not.toBe('date');
+		expect(r.order?.plan.deliverBy).toBe('2026-12-09');
+	});
+});
+
+describe('R11-01: units as typed; an unknown explicit unit asks, never buys sales units', () => {
+	const one = (t: string) => parseRules(t, TODAY).items[0];
+	it('ml, cl, g, joined forms and multipacks', () => {
+		expect(one('250 ml milk')).toMatchObject({ qty: 0.25, unit: 'l' });
+		expect(one('250ml milk')).toMatchObject({ qty: 0.25, unit: 'l' });
+		expect(one('75 cl cream')).toMatchObject({ qty: 0.75, unit: 'l' });
+		expect(one('500g butter')).toMatchObject({ qty: 0.5, unit: 'kg' });
+		expect(one('6x1l milk')).toMatchObject({ qty: 6, unit: 'l' });
+		expect(one('2 x 10 kg potatoes')).toMatchObject({ qty: 20, unit: 'kg' });
+	});
+	it('"8 oz butter" asks for the amount: no quantity, no sales unit', () => {
+		const it = one('8 oz butter');
+		expect(it).toMatchObject({ qty: null, unit: null, unitToken: 'oz', product: 'butter' });
+		expect(it.ambiguities.join()).toMatch(/can't order in oz/);
+	});
+	it('the model cannot turn an unknown unit into a quantity', async () => {
+		const r = await parseRequest('8 oz butter', {
+			today: TODAY,
+			llmKind: 'gemini',
+			llm: model({ items: [{ query: 'butter', qty: 8, unit: 'sales', searchFi: ['voi'] }] })
+		});
+		expect(r.items[0]).toMatchObject({ qty: null, unit: null, unitToken: 'oz' });
+	});
+	it('through the request: 250 ml of a 1 l milk is never 250 packs, and oz places nothing', async () => {
+		const { h, ctx, kitchen } = await setup();
+		const base = {
+			handlers: h,
+			ctx,
+			today: '2026-12-07',
+			kitchen,
+			now: new Date('2026-12-07T09:00:00+02:00'),
+			place: false as const
+		};
+		const ml = await runRequest('250 ml milk Thursday', base);
+		const pick = ml.lookup!.items[0].pick;
+		if (pick?.conversion?.ok) expect(pick.conversion.salesQty).toBeLessThanOrEqual(1);
+		const oz = await runRequest('8 oz butter Thursday', base);
+		// The reading checkpoint asks before any lookup or order.
+		expect(oz.lookup).toBeNull();
+		expect(oz.order).toBeNull();
+		expect(oz.message).toMatch(/can't order in oz\. How much/);
+	});
+});
+
+describe('R11-02: packs and cases keep their hard requirements', () => {
+	it('"4 packs lactose-free milk" makes a need that requires lactose-free', async () => {
+		const { h, ctx, kitchen } = await setup();
+		const r = await runRequest('4 packs lactose-free milk Thursday', {
+			handlers: h,
+			ctx,
+			today: '2026-12-07',
+			kitchen,
+			now: new Date('2026-12-07T09:00:00+02:00'),
+			nonce: 'packs-req'
+		});
+		const plan = r.order!.plan;
+		expect(plan.lines[0].qty.value).toBe(4);
+		expect(plan.needs).toHaveLength(1);
+		expect(plan.needs[0].requirements?.freeFrom).toEqual(['LACTOSE']);
+		expect(plan.lines[0].needId).toBe(plan.needs[0].id);
 	});
 });

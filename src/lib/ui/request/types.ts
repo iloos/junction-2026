@@ -6,6 +6,8 @@ import type { Offer, Plan, Tier } from '$lib/core/contracts';
 
 import type { ReqUnit } from '$lib/server/request/lexicon';
 import type { RequestAnswer } from '$lib/server/request/workspace';
+import type { DishInterpretation } from '$lib/server/request/dish';
+export type { DishInterpretation };
 
 // The server owns the request's own vocabulary; the page sees the same types (type-only, erased in the build).
 export type { ReqUnit, RequestAnswer };
@@ -22,6 +24,8 @@ export interface ParsedItemView {
 	constraints: string[];
 	variant: { token: string; label: string; search?: string } | null;
 	ambiguities: string[];
+	/** An explicit unit the request can't order in ("oz"). */
+	unitToken?: string;
 }
 
 /** How a question can be answered inline. */
@@ -43,6 +47,11 @@ export interface ParsedView {
 	deliverBy: string;
 	deliverByText: string | null;
 	deliverBySource: 'request' | 'default';
+	/** The chef chose this date on the page, over the words' one. */
+	deliverByChosen?: boolean;
+	/** A dish with a count: how it was read, both ways to serve it, and which one the items are. */
+	dish?: DishInterpretation;
+	dishChoice?: 'ready' | 'raw';
 	notes: string[];
 	ambiguities: string[];
 	/** Inline answers applied on top of the words. */
@@ -109,6 +118,17 @@ export interface LookupView {
 	sanity: string[];
 	/** Set when the order is over the mandate's hard limit: placing it gives an unorderable line. */
 	hardLimit: { totalCents: number; limitCents: number } | null;
+	/** The next delivery dates from today: open or closed for this request's products, and why. */
+	days?: DayOptionView[];
+}
+
+/** One delivery date in the date control. */
+export interface DayOptionView {
+	date: string;
+	receiving: boolean;
+	open: boolean;
+	closes: string | null;
+	reason: string | null;
 }
 
 export interface ApprovalView {
@@ -159,6 +179,8 @@ export interface CommitView {
 	idempotencyKey: string;
 	/** The plan version this commit was for; a retry sends it again to get the same receipt. */
 	version: number;
+	/** The exact lines this commit meant; a retry sends them again. */
+	lineIds: string[];
 	attempt: number;
 }
 

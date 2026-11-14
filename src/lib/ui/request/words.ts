@@ -87,7 +87,7 @@ export const UNIT_WORDS: Record<string, string> = {
 	kg: 'kg',
 	pcs: 'pcs',
 	case: 'cases',
-	sales: '× sales unit'
+	sales: 'packs'
 };
 
 export const CONSTRAINT_WORDS: Record<string, string> = {

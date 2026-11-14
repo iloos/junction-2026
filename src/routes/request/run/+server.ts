@@ -10,6 +10,7 @@ import {
 	ToolFailed
 } from '$lib/server/request';
 import { readRankBy } from '$lib/server/request/rank-by';
+import { readDish, readItems } from '$lib/server/request/workspace';
 import { visitorWorkspace } from '$lib/server/demo/visitor';
 import type { RequestHandler } from './$types';
 
@@ -46,7 +47,12 @@ export const POST: RequestHandler = async (event) => {
 					workspaceId,
 					planId: str('planId'),
 					version: int('version'),
-					attempt: Math.max(1, int('attempt'))
+					attempt: Math.max(1, int('attempt')),
+					lineIds: Array.isArray(body.lineIds)
+						? (body.lineIds as unknown[])
+								.filter((x): x is string => typeof x === 'string' && /^[\w.:~-]{1,80}$/.test(x))
+								.slice(0, 50)
+						: undefined
 				})
 			);
 	} catch (e) {
@@ -78,6 +84,8 @@ export const POST: RequestHandler = async (event) => {
 					confirmLarge: body.confirmLarge === true,
 					deliverBy: /^\d{4}-\d{2}-\d{2}$/.test(str('deliverBy')) ? str('deliverBy') : undefined,
 					rankBy: readRankBy(body.rankBy),
+					dish: readDish(body.dish),
+					items: readItems(body.items),
 					workspaceId,
 					env,
 					onEvent: send

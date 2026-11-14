@@ -40,6 +40,9 @@
 <li
 	class="relative grid grid-cols-[2rem_1fr] gap-x-3 sm:gap-x-4"
 	aria-current={status === 'running' ? 'step' : undefined}
+	data-testid="step-card"
+	data-step={title.toLowerCase()}
+	data-status={status}
 >
 	<div class="relative flex flex-col items-center">
 		<span

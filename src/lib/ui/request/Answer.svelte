@@ -17,7 +17,7 @@
 		kg: 'kg',
 		pcs: 'pcs',
 		case: 'cases',
-		sales: 'sales units'
+		sales: 'packs'
 	};
 	const units = $derived(
 		spec.kind === 'qty'

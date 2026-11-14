@@ -14,6 +14,7 @@ import {
 	NUMBER_WORDS,
 	PRODUCTS,
 	UNITS,
+	UNKNOWN_UNITS,
 	type ConstraintKey,
 	type ProductWord,
 	type ReqUnit
@@ -40,6 +41,8 @@ export interface ParsedItem {
 	/** A variant the request named ("whole"), as a catalogue name token. */
 	variant: { token: string; label: string; search?: string } | null;
 	ambiguities: string[];
+	/** An explicit unit the request can't order in ("oz"): the amount is asked again, never guessed. */
+	unitToken?: string;
 }
 
 export interface ParsedRequest {
@@ -48,6 +51,11 @@ export interface ParsedRequest {
 	deliverBy: string;
 	deliverByText: string | null;
 	deliverBySource: 'request' | 'default';
+	/** The chef chose this date on the page (date control or a cut-off answer), over the words' one. */
+	deliverByChosen?: boolean;
+	/** A dish with a count: how it was read, both ways to serve it, and which one the items are. */
+	dish?: import('./dish').DishInterpretation;
+	dishChoice?: 'ready' | 'raw';
 	notes: string[];
 	/** Request-level questions (date, disagreements); item questions live on the item. */
 	ambiguities: string[];
@@ -90,6 +98,29 @@ const FILLER = new Set([
 	'kiitos',
 	'tarvis'
 ]);
+
+/** Short everyday words that follow a number without being a unit ("50 on Friday", "2 ja 3"). */
+const SHORT_WORDS = new Set(
+	'on in at by to is it we my or an as so up no me us am pm ja ei se ne tai klo'.split(' ')
+);
+
+/**
+ * A word right after a number that names a unit the request can't order in: a known one (oz, cup), or a one- or
+ * two-letter token that is no word the parser knows ("250 zz"). Longer unknown words are product words.
+ */
+export function unknownUnitWord(w: string): boolean {
+	const k = w.toLowerCase().replace(/\.$/, '');
+	if (UNKNOWN_UNITS.has(k)) return true;
+	return (
+		/^\p{L}{1,2}$/u.test(k) &&
+		!unitOf(k) &&
+		!productOf(k) &&
+		!constraintOf(k) &&
+		!FILLER.has(k) &&
+		!SHORT_WORDS.has(k) &&
+		NUMBER_WORDS[k] === undefined
+	);
+}
 
 /** "1,000" / "1 000" = thousands; "1,5" / "1.5" = decimal. Returns the value and whether the comma was ambiguous. */
 export function parseNumber(s: string): { value: number; commaThousands: boolean } | null {
@@ -250,12 +281,18 @@ export function parseItem(chunk: string, finnish: boolean): Omit<ParsedItem, 'id
 
 	// The unit is the first word after the number (or a number word when no digit was given).
 	const afterWords = after.split(/\s+/).filter(Boolean);
+	let unknownUnit: string | null = null;
 	if (qty !== null && afterWords.length) {
-		const u = unitOf(afterWords[0]);
+		const w0 = afterWords[0].replace(/^[,.:]+|[,.:]+$/g, '');
+		const u = unitOf(w0);
 		if (u) {
 			unit = u.unit;
 			qty = +(qty * u.factor).toFixed(6);
-			unitWordAt = words.indexOf(afterWords[0].replace(/^[,.:]+|[,.:]+$/g, ''));
+			unitWordAt = words.indexOf(w0);
+		} else if (unknownUnitWord(w0)) {
+			// An explicit unit the request can't order in: asked, never read as sales units.
+			unknownUnit = w0;
+			unitWordAt = words.indexOf(w0);
 		}
 	}
 	if (qty === null) {
@@ -316,7 +353,13 @@ export function parseItem(chunk: string, finnish: boolean): Omit<ParsedItem, 'id
 				? `"${leftovers.join(' ')}" is not in my word list: searched the catalogue as typed`
 				: 'no product named: what should I order?'
 		);
-	if (qty === null)
+	if (unknownUnit) {
+		ambiguities.push(
+			`"${qty} ${unknownUnit}": I can't order in ${unknownUnit}. How much, in kg, l, pieces, cases or packs?`
+		);
+		qty = null;
+		unit = null;
+	} else if (qty === null)
 		ambiguities.push(
 			covers
 				? `no quantity given: how much? ("${covers}" is how many you serve, not an amount)`
@@ -344,7 +387,8 @@ export function parseItem(chunk: string, finnish: boolean): Omit<ParsedItem, 'id
 		unit,
 		constraints,
 		variant,
-		ambiguities
+		ambiguities,
+		...(unknownUnit ? { unitToken: unknownUnit } : {})
 	};
 }
 
@@ -436,6 +480,8 @@ Return only JSON: {"items":[{"query":string,"qty":number|null,"unit":"l"|"kg"|"p
 - constraints from: lactose_free, organic, finnish, gluten_free.
 - searchFi: 1-3 Finnish catalogue words for the product, base form (maito, peruna, voi, kerma, laktoositon).
 - variant: a named product variant (e.g. "whole", "skimmed", "unsalted") or null.
+- A dish with a count and no unit ("10000 bolognese pasta", "200 portions of lasagne") is portions to serve, not packs: one item, query the dish name, qty the count, unit "sales"; the server prices the dish itself.
+- A ratio of one ingredient ("half beef, the other half mixed", "half only cow and other half half") describes that ingredient's composition: never a separate item, never an ambiguity.
 - Never invent a quantity, product or date. Put anything unclear in ambiguities.`;
 
 function constraintKey(s: string): ConstraintKey | null {
@@ -530,6 +576,18 @@ function reconcile(
 	m: Omit<ParsedItem, 'id'>,
 	r: ParsedItem | null
 ): Omit<ParsedItem, 'id'> & { id?: string } {
+	if (r?.unitToken)
+		// The words named a unit the request can't order in: the model's guess at a quantity is not used.
+		m = {
+			...m,
+			qty: null,
+			unit: null,
+			unitToken: r.unitToken,
+			ambiguities: [
+				...m.ambiguities.filter((a) => !/^no quantity/.test(a)),
+				...r.ambiguities.filter((a) => a.includes(r.unitToken!))
+			]
+		};
 	const typed = r?.constraints ?? constraintsIn(m.query);
 	const dropped = typed.filter((c) => !m.constraints.includes(c));
 	if (!dropped.length) return r ? { ...m, id: r.id } : m;

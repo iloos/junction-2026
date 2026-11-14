@@ -37,19 +37,21 @@ import type {
 } from '$lib/ui/request/types';
 import { salesUnitWords } from '$lib/ui/request/words';
 import { weekdayOf } from './dates';
+import { cutoffSentence, deliveryDays, firstOpenDay, itemOnDate, type DayCandidate } from './days';
 import { caseBreakdown, caseHeadline, orderAmount } from './convert';
 import { hardLimit, sanityWarnings } from './sanity';
 import { hardLimitCents } from '$lib/core/mandate/validate';
 import {
+	closesWords,
 	cutoffPassed,
-	cutoffQuestion,
-	earliestDelivery,
 	filterHits,
 	SHORTLIST,
 	unpickable,
 	type Ranked
 } from './lookup';
-import { parseRequest, type ParsedRequest } from './parse';
+import { parseRequest, parseRules, type ParsedRequest } from './parse';
+import { dishItems, interpretDish, type DishInterpretation } from './dish';
+import { readingOf, reviewReading } from './reading';
 import { requestParseCheckpoint, withReview, type ReviewDeps } from '$lib/server/review';
 import { classifyRequest } from './classify';
 import { applyBriefAnswers, draftBrief, nextQuestion } from '../menu/brief';
@@ -111,6 +113,16 @@ export interface RequestDeps {
 	tasks?: TaskStore;
 	/** The chef chose this delivery date instead of the one the words gave (a cut-off answer). Shown, never silent. */
 	deliverBy?: string;
+	/**
+	 * A dish request: which way to serve it (default: the kitchen's preference), portions the chef edited, or `packs`
+	 * when the chef said the count is packs of a product, not portions.
+	 */
+	dish?: { option?: 'ready' | 'raw'; portions?: number; packs?: boolean };
+	/**
+	 * The chef edited the reading in place (an item's quantity, unit or words): these items replace the parse, so the
+	 * words are not read again and only the steps after it run.
+	 */
+	items?: ParsedRequest['items'];
 }
 
 /** The request's one "now": the override, else the workspace's store clock. */
@@ -123,6 +135,21 @@ export function nextReceivingDay(date: string, days: readonly string[]): string 
 		if (days.includes(DAY_KEYS[weekdayOf(d)])) return d;
 	}
 	return null;
+}
+
+/**
+ * The first receiving day after `date` whose cut-off is still open for the picked products at `now`; without a
+ * clock, the first receiving day.
+ */
+export function nextOpenReceivingDay(
+	date: string,
+	days: readonly string[],
+	cands: readonly (readonly DayCandidate[])[],
+	now: Date | undefined
+): string | null {
+	if (!now) return nextReceivingDay(date, days);
+	const d = firstOpenDay(cands, date, now, days);
+	return d && d.receiving ? d.date : null;
 }
 
 const cap = (s: string) => s[0].toUpperCase() + s.slice(1);
@@ -168,7 +195,7 @@ function candidateView(r: Ranked, offer: Offer | null, quoted: boolean): Candida
 async function lookupItems(
 	parsed: ParsedRequest,
 	d: RequestDeps
-): Promise<{ lookup: LookupView; picked: Map<string, Product> }> {
+): Promise<{ lookup: LookupView; picked: Map<string, Product>; cands: DayCandidate[][] }> {
 	let searchCalls = 0;
 	const now = nowOf(d);
 	const rankBy = d.rankBy ?? 'kitchen';
@@ -190,11 +217,16 @@ async function lookupItems(
 			hits.push(...r.products);
 		}
 		const { ranked, rejected } = filterHits(item, hits);
-		const pin = d.answers?.find((a) => a.item === item.id)?.productId ?? null;
+		const pinned = d.answers?.find((a) => a.item === item.id);
+		const pin = pinned?.productId ?? null;
 		// The chosen product leads the shortlist, with the chef named as the reason.
 		const at = pin ? ranked.findIndex((r) => r.product.productId === pin) : -1;
 		if (at > 0) ranked.unshift(...ranked.splice(at, 1));
-		if (at >= 0) ranked[0] = { ...ranked[0], reasons: ['you chose this', ...ranked[0].reasons] };
+		if (at >= 0)
+			ranked[0] = {
+				...ranked[0],
+				reasons: [pinned?.why ?? 'you chose this', ...ranked[0].reasons]
+			};
 		prepared.push({ item, searches, ranked, rejected, pin });
 	}
 
@@ -216,7 +248,15 @@ async function lookupItems(
 	}
 
 	const picked = new Map<string, Product>();
-	const items: LookupItemView[] = prepared.map((p) => {
+	// What each item could be ordered as: the one input to every date the page offers or names.
+	const cands: DayCandidate[][] = prepared.map((p) =>
+		p.ranked.slice(0, SHORTLIST).map((r) => ({
+			product: r.product,
+			offer: offers.get(r.product.productId),
+			conversion: r.conversion
+		}))
+	);
+	const items: LookupItemView[] = prepared.map((p, pi) => {
 		const short = p.ranked.slice(0, SHORTLIST);
 		const views = short.map((r) =>
 			candidateView(r, offers.get(r.product.productId) ?? null, offers.has(r.product.productId))
@@ -286,22 +326,21 @@ async function lookupItems(
 			question = `How much ${p.item.query}?`;
 			answer = { kind: 'qty', item: idx, units: ['l', 'kg', 'pcs', 'case'] };
 		} else if (!pick && allClosed) {
-			// Ordering for this date has closed: say when, offer the first date still open, never move it silently.
-			const earliest = closed
-				.map((o) => earliestDelivery(o, parsed.deliverBy, now!))
-				.filter((x): x is string => x !== null)
-				.sort()[0];
-			question = cutoffQuestion(
+			// Ordering for this date has closed: say why, offer the first date that is open for every item (and a
+			// receiving day), so the button's day is the day that results. Never moved silently.
+			const here = itemOnDate(cands[pi], parsed.deliverBy, now!);
+			const first = firstOpenDay(cands, parsed.deliverBy, now!, d.kitchen.deliveryDays);
+			question = cutoffSentence(
 				parsed.deliverBy,
-				closed[0].availability.closingTime!,
-				earliest ?? null
+				here.reason ?? `past its cut-off (${closesWords(closed[0].availability.closingTime!)})`,
+				first?.date ?? null
 			);
-			if (earliest)
+			if (first)
 				answer = {
 					kind: 'date',
 					item: idx,
-					date: earliest,
-					label: `Deliver ${day(earliest)} instead`
+					date: first.date,
+					label: `Deliver ${day(first.date)} instead`
 				};
 		} else if (askCase) {
 			const options = short
@@ -412,13 +451,14 @@ async function lookupItems(
 	];
 	const lookup: LookupView = {
 		items,
+		...(now ? { days: deliveryDays(cands, d.today, now, d.kitchen.deliveryDays, 10) } : {}),
 		searchCalls,
 		quotedIds: [...offers.keys()],
 		offerSources,
 		sanity: sanityWarnings(items, d.kitchen),
 		hardLimit: hardLimit(items, d.kitchen)
 	};
-	return { lookup, picked };
+	return { lookup, picked, cands };
 }
 
 export async function idempotencyKeyFor(
@@ -485,6 +525,7 @@ export function applyAnswers(parsed: ParsedRequest, answers: RequestAnswer[]): P
 		if (!a) return it;
 		const next = { ...it, ambiguities: [...it.ambiguities] };
 		if (a.qty !== undefined && a.unit) {
+			// An answered amount replaces the words' one; an unknown unit token stays to say what was answered.
 			next.qty = a.qty;
 			next.unit = a.unit;
 			next.ambiguities = next.ambiguities.filter((x) => !/^no (quantity|unit) given/.test(x));
@@ -529,11 +570,19 @@ export function orderLine(
 		unit: i.pick!.salesUnit
 	};
 	const { qty, unit } = i.item;
-	if (qty === null || (unit !== 'kg' && unit !== 'l' && unit !== 'pcs')) return base;
-	const amount: Measure = { value: qty, unit };
-	const sized = sizeDirect(product, amount);
 	const requirements = requirementsOf(i.item.constraints);
-	return sized
+	// A physical ask (kg, l, pcs) is the need's amount as typed. Packs and cases become one through what the picked
+	// product states one sales unit holds (never invented): the need then carries the requirements too.
+	const amount: Measure | null =
+		qty === null
+			? null
+			: unit === 'kg' || unit === 'l' || unit === 'pcs'
+				? { value: qty, unit }
+				: i.pick!.amount
+					? { value: i.pick!.amount.value, unit: i.pick!.amount.unit }
+					: null;
+	const sized = amount ? sizeDirect(product, amount) : null;
+	return amount && sized
 		? {
 				...base,
 				qty: sized.value,
@@ -560,11 +609,30 @@ export function withDate(
 	return {
 		...parsed,
 		deliverBy: chosen,
+		deliverByChosen: true,
 		ambiguities: parsed.ambiguities.filter((a) => !a.startsWith('no delivery date given')),
 		notes: [
 			...parsed.notes,
 			`delivery ${day(chosen)}: your choice; the request said ${day(parsed.deliverBy)}`
 		]
+	};
+}
+
+/**
+ * The chef's in-place edit of the reading: the items as edited, the words' date and notes kept from the rules (no
+ * model call), ids rebuilt so answers stay keyed. Edited items carry no parse doubts of their own.
+ */
+function edited(text: string, d: RequestDeps): ParsedRequest {
+	const rules = parseRules(text, d.today);
+	return {
+		...rules,
+		items: d.items!.map((it) => ({
+			...it,
+			ambiguities: it.ambiguities.filter((a) => !/^no (unit|quantity) given/.test(a))
+		})),
+		ambiguities: rules.ambiguities.filter((a) => !a.startsWith('no item found')),
+		notes: [...rules.notes, 'your edit: the words were not read again'],
+		parser: { kind: 'rules', model: 'your edit', latencyMs: 0 }
 	};
 }
 
@@ -594,9 +662,57 @@ export async function runRequest(text: string, d: RequestDeps): Promise<RequestR
 		if (r.verdict.kind === 'revise')
 			read = { ...read, ambiguities: [...read.ambiguities, `review: ${r.verdict.feedback}`] };
 		if (r.verdict.kind === 'block') reviewBlock = r.verdict.reason;
-	} else read = await parse();
-	const parsed = withDate(applyAnswers(read, d.answers ?? []), d.deliverBy, d.today);
-	const parsedView = parsed as ParsedView;
+	} else read = d.items?.length ? edited(text, d) : await parse();
+	let parsed = withDate(applyAnswers(read, d.answers ?? []), d.deliverBy, d.today);
+	// A dish with a count is portions to serve: priced ready-made and from raw, and the kitchen's way is ordered.
+	let dish: DishInterpretation | null = null;
+	let readingBlock: string | null = null;
+	if (!d.dish?.packs && !d.items?.length && !reviewBlock) {
+		const words = d.dish?.portions
+			? text.replace(/\d{1,3}(?:[ ,]\d{3})+|\d+(?:[.,]\d+)?/, String(d.dish.portions))
+			: text;
+		dish = await interpretDish(words, {
+			handlers: d.handlers,
+			ctx: d.ctx,
+			deliverBy: parsed.deliverBy,
+			kitchen: d.kitchen,
+			now: nowOf(d)
+		});
+	}
+	if (dish && dish.ask && !d.dish) {
+		const view = { ...parsed, items: [], dish, ambiguities: [] } as ParsedView;
+		emit({ step: 'request', status: 'blocked', ms: ms(), data: view });
+		return { parsed: view, lookup: null, order: null, message: dish.ask.question };
+	}
+	let dishAnswers: RequestAnswer[] = [];
+	if (dish) {
+		const kind = d.dish?.option ?? dish.preferred.kind;
+		const { items, answers, left } = dishItems(dish, kind);
+		dishAnswers = answers;
+		parsed = {
+			...parsed,
+			items,
+			// The dish reading replaces the item guesses ("unclear", "no unit"): its reasoning is shown instead.
+			ambiguities: parsed.ambiguities.filter(
+				(a) => !a.startsWith('model:') && !a.startsWith('the model found')
+			),
+			notes: [...parsed.notes, ...left.map((l) => `left out: ${l}`)],
+			dish,
+			dishChoice: kind
+		};
+	}
+	// The reading is judged against the words on every request: a block is the question, asked before any lookup.
+	if (!dish && !d.items?.length && !reviewBlock) {
+		const v = await reviewReading(text, readingOf(parsed), d.review ?? {});
+		if (v.kind === 'block') readingBlock = v.reason;
+		else if (v.kind === 'revise')
+			parsed = { ...parsed, ambiguities: [...parsed.ambiguities, `check: ${v.feedback}`] };
+	}
+	let parsedView = parsed as ParsedView;
+	if (readingBlock) {
+		emit({ step: 'request', status: 'blocked', ms: ms(), data: parsedView });
+		return { parsed: parsedView, lookup: null, order: null, message: readingBlock };
+	}
 	if (reviewBlock) {
 		emit({ step: 'request', status: 'blocked', ms: ms(), data: parsedView });
 		return {
@@ -608,7 +724,7 @@ export async function runRequest(text: string, d: RequestDeps): Promise<RequestR
 	}
 
 	// An event brief is never a catalogue query: say what it is, and where a seeded plan lives.
-	const brief = classifyRequest(text, parsed.items, d.kitchen.id);
+	const brief = dish ? null : classifyRequest(text, parsed.items, d.kitchen.id);
 	if (brief) {
 		const draft = applyBriefAnswers(draftBrief(text, d.today), d.briefAnswers ?? [], d.today);
 		const question = nextQuestion(draft, d.today);
@@ -650,17 +766,47 @@ export async function runRequest(text: string, d: RequestDeps): Promise<RequestR
 			message: 'No item found in the request.'
 		};
 
-	const { lookup, picked } = await lookupItems(parsed, d);
+	const lookupDeps = dishAnswers.length
+		? { ...d, answers: [...(d.answers ?? []), ...dishAnswers] }
+		: d;
+	let { lookup, picked, cands } = await lookupItems(parsed, lookupDeps);
+	// No day in the words: the default is the earliest day open for every item, never a passed one. Said, not silent.
+	const now = nowOf(d);
+	if (parsed.deliverBySource === 'default' && !parsed.deliverByChosen && now) {
+		const here = lookup.days?.find((x) => x.date === parsed.deliverBy);
+		const first = lookup.days?.find((x) => x.open && x.receiving);
+		if (here && !here.open && first) {
+			parsed = {
+				...parsed,
+				deliverBy: first.date,
+				ambiguities: parsed.ambiguities.filter((a) => !a.startsWith('no delivery date given')),
+				notes: [...parsed.notes, `no day given: earliest you can get, ${day(first.date)}`]
+			};
+			parsedView = parsed as ParsedView;
+			emit({
+				step: 'request',
+				status:
+					parsed.ambiguities.length || parsed.items.some((i) => i.ambiguities.length)
+						? 'warn'
+						: 'done',
+				ms: 0,
+				data: parsedView
+			});
+			({ lookup, picked, cands } = await lookupItems(parsed, lookupDeps));
+		}
+	}
 	const picks = lookup.items.filter((i) => i.pick);
 	// An item without a pick holds the whole order: placing the rest now and the answered item
 	// later would place the rest twice (the answer changes the lines, so the key).
+	// A dish is all its lines or nothing: pasta without the mince serves no one.
+	const dishLeft = dish ? parsed.notes.filter((n) => n.startsWith('left out: ')) : [];
 	const unplaced = lookup.items
 		.filter((i) => !i.pick)
 		.map((i) => ({ id: i.item.id, query: i.item.query, reason: i.question ?? 'nothing to pick' }));
 	emit({
 		step: 'lookup',
 		status:
-			unplaced.length || (lookup.sanity.length && !d.confirmLarge)
+			unplaced.length || dishLeft.length || (lookup.sanity.length && !d.confirmLarge)
 				? 'blocked'
 				: lookup.sanity.length ||
 					  picks.some((i) => i.pick?.conversion?.ok && i.pick.conversion.warnings.length)
@@ -679,6 +825,42 @@ export async function runRequest(text: string, d: RequestDeps): Promise<RequestR
 			message: lookup.items.every((i) => i.answer?.kind === 'date')
 				? `${lookup.items[0].question} Nothing was ordered; choose that date to order.`
 				: 'Nothing to order yet: answer the questions above.'
+		};
+	// The chosen lines, echoed against the ask: more than one pack over what was asked is never placed.
+	const echo = await reviewReading(
+		text,
+		{
+			items: [],
+			echo: lookup.items.flatMap((i) => {
+				const p = i.pick;
+				const u = i.item.unit;
+				if (!p?.conversion?.ok || !p.amount || i.item.qty === null || (u !== 'kg' && u !== 'l'))
+					return [];
+				return [
+					{
+						item: i.item.id,
+						asked: { value: i.item.qty, unit: u },
+						salesQty: p.conversion.salesQty,
+						salesUnit: p.salesUnit,
+						perUnit:
+							p.amount.unit === u
+								? { value: p.amount.value / p.conversion.salesQty, unit: u }
+								: null
+					}
+				];
+			})
+		},
+		{}
+	);
+	if (echo.kind === 'block' && d.place !== false)
+		return { parsed: parsedView, lookup, order: null, message: echo.reason };
+	if (dish && dishLeft.length && d.place !== false)
+		return {
+			parsed: parsedView,
+			lookup,
+			order: null,
+			unplaced: dishLeft.map((n) => ({ id: n, query: n.slice(10), reason: 'no product' })),
+			message: `Nothing placed: ${dishLeft.length} of the dish's lines ${dishLeft.length === 1 ? 'has' : 'have'} no product (${dishLeft.map((n) => n.slice(10).split(':')[0]).join(', ')}). Switch the way to serve it, or change the request.`
 		};
 	if (unplaced.length && d.place !== false)
 		return {
@@ -700,6 +882,9 @@ export async function runRequest(text: string, d: RequestDeps): Promise<RequestR
 		return { parsed: parsedView, lookup, order: null, message: 'Lookup only (place=false).' };
 
 	const lines = picks.map((i) => orderLine(i, picked.get(i.item.id)!));
+	const pickedCands = lookup.items.map((it, k) =>
+		cands[k].filter((c) => !it.pick || c.product.productId === it.pick.productId)
+	);
 	const idempotencyKey = await idempotencyKeyFor(d.kitchen.id, parsed.deliverBy, lines, d.nonce);
 	try {
 		const placed = await callTool(d.handlers, d.ctx, 'place_order', {
@@ -730,9 +915,10 @@ export async function runRequest(text: string, d: RequestDeps): Promise<RequestR
 			deliveryNote: d.kitchen.deliveryDays.includes(dow)
 				? null
 				: `${d.kitchen.name} takes deliveries on ${d.kitchen.deliveryDays.map(cap).join(', ')}; ${day(parsed.deliverBy)} is not one of them`,
+			// The next receiving day that is still open for what was picked: the day the button names is the day it gives.
 			nextDeliveryDay: d.kitchen.deliveryDays.includes(dow)
 				? null
-				: nextReceivingDay(parsed.deliverBy, d.kitchen.deliveryDays),
+				: nextOpenReceivingDay(parsed.deliverBy, d.kitchen.deliveryDays, pickedCands, nowOf(d)),
 			task: await taskForPlan({
 				tasks: d.tasks,
 				ctx: d.ctx,

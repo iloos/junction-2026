@@ -15,6 +15,8 @@
 	import { day, num } from '$lib/ui/format';
 	import type { MenuChange, MenuPlanResult, MenuView } from './types';
 	import { measureWords } from './words';
+	import { useShell } from '$lib/ui/shell/shell.svelte';
+	import { readableName } from '$lib/ui/format';
 
 	/**
 	 * The chef's review of a menu proposal: dishes, each ingredient's amount per guest (editable), the product it
@@ -33,6 +35,7 @@
 		onplan: () => void;
 	}
 	let { view, busy, plan, onchange, onaccept, onplan }: Props = $props();
+	const shell = useShell();
 
 	const p = $derived(view.proposal);
 	const kitchenHref = $derived(
@@ -254,8 +257,8 @@
 								<span class="text-ink">{i.label}</span>
 								{#if i.productId}
 									<span class="block truncate text-meta text-ink-2"
-										>{view.products[i.productId] ?? i.productId}
-										<span class="mono text-ink-3">{i.productId}</span></span
+										>{readableName(view.products[i.productId] ?? 'a Valio product')}
+										{#if shell?.system}<span class="mono text-ink-3">{i.productId}</span>{/if}</span
 									>
 								{:else}
 									<span class="block text-meta text-signoff"
