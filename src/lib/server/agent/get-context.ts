@@ -5,6 +5,7 @@ import type { CallContext } from '$lib/core/ports';
 import type { ServicePorts } from '$lib/core/services/events';
 import { liveApprovals } from '$lib/core/services/orders';
 import { withPlanView } from '$lib/core/services/views';
+import { hardLimitCents } from '$lib/core/mandate/validate';
 import { SCENARIO } from '$lib/core/scenario';
 import { SUPPORTED_EVENTS } from './context';
 import { nextFor } from './next';
@@ -48,7 +49,18 @@ export function createGetContext(ports: ServicePorts): GetContextHandler {
 				events: SUPPORTED_EVENTS.filter((e) => e.kitchenId === k.id).map((e) => ({
 					id: e.id,
 					title: e.title
-				}))
+				})),
+				mandate: {
+					version: k.mandate.version,
+					words: k.mandate.words,
+					lineCapCents: k.mandate.lineCapCents,
+					orderCapCents: k.mandate.orderCapCents,
+					weeklyCapCents: k.mandate.weeklyCapCents,
+					hardLimitCents: hardLimitCents(k.mandate),
+					neverDelegate: [...k.mandate.neverDelegate],
+					allergenFreeFrom: [...k.constraints.allergens.freeFrom],
+					tenderListOnly: k.constraints.tenderListOnly
+				}
 			})),
 			// Read with their views (as get_plan returns them), so core's rule sees each line's state as of now.
 			openPlans: await Promise.all(

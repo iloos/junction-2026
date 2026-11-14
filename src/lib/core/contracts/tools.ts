@@ -90,7 +90,22 @@ export const toolSchemas = {
 				z.object({
 					id: KitchenId,
 					name: z.string(),
-					events: z.array(z.object({ id: z.string(), title: z.string() }))
+					events: z.array(z.object({ id: z.string(), title: z.string() })),
+					/**
+					 * The rules the tools enforce for this kitchen, so a caller can plan inside them instead of finding
+					 * out from held lines. Read-only: only a chef changes them.
+					 */
+					mandate: z.object({
+						version: z.int(),
+						words: z.string(),
+						lineCapCents: z.int(),
+						orderCapCents: z.int(),
+						weeklyCapCents: z.int(),
+						hardLimitCents: z.int(),
+						neverDelegate: z.array(z.string()),
+						allergenFreeFrom: z.array(z.string()),
+						tenderListOnly: z.boolean()
+					})
 				})
 			),
 			openPlans: z.array(

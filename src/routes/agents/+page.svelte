@@ -1,10 +1,61 @@
 <script lang="ts">
-	import { Bot, Check, Copy, KeyRound, ShieldCheck } from '@lucide/svelte';
+	import {
+		Ban,
+		Bot,
+		Check,
+		ClipboardList,
+		Copy,
+		Info,
+		KeyRound,
+		ShieldCheck,
+		ShoppingCart
+	} from '@lucide/svelte';
+	import { onMount } from 'svelte';
+	import { invalidateAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
 	let copied = $state<string | null>(null);
+	let live = $state(false);
+
+	const TONE_ICON = { plan: ClipboardList, order: ShoppingCart, refused: Ban, note: Info };
+	const TONE_CLASS = {
+		plan: 'text-ink-2',
+		order: 'text-accent-ink',
+		refused: 'text-signoff',
+		note: 'text-ink-3'
+	};
+
+	/**
+	 * Your agent's changes, live: this browser's own sandbox stream (/api/events without `ws` follows the visitor
+	 * cookie). An outside agent's write, or a reset of the sandbox, reloads the list from the server.
+	 */
+	onMount(() => {
+		if (!data.key) return;
+		let pending: ReturnType<typeof setTimeout> | null = null;
+		const reload = () => {
+			if (pending) return;
+			pending = setTimeout(() => {
+				pending = null;
+				void invalidateAll();
+			}, 300);
+		};
+		const es = new EventSource(`/api/events?after=${data.after}`);
+		es.addEventListener('ready', () => (live = true));
+		es.addEventListener('op', (m) => {
+			const e = JSON.parse((m as MessageEvent).data) as {
+				envelope?: { actor?: { kind?: string } };
+			};
+			if (e.envelope?.actor?.kind === 'external_agent') reload();
+		});
+		es.addEventListener('run', reload);
+		es.onerror = () => (live = false);
+		return () => {
+			if (pending) clearTimeout(pending);
+			es.close();
+		};
+	});
 
 	async function copy(what: string, text: string) {
 		try {
@@ -57,11 +108,18 @@
 		</h2>
 		{#if data.key}
 			<p class="mt-1 text-sm text-ink-2">
-				The key is bound to this browser’s own sandbox ({data.workspaceId}), so what your agent does
-				shows up in the <a class="text-accent-ink underline" href={resolve('/')}>Kitchen screen</a>
+				The key is bound to this browser’s own sandbox, so what your agent does shows up in the <a
+					class="text-accent-ink underline"
+					href={resolve('/')}>Kitchen screen</a
+				>
 				here. It expires {new Date(data.expires!).toLocaleString('en-GB', {
+					weekday: 'short',
+					day: 'numeric',
+					month: 'short',
+					hour: '2-digit',
+					minute: '2-digit',
 					timeZone: 'Europe/Helsinki'
-				})}.
+				})}. Each key may make 120 calls a minute, 30 of them changes and 20 live price checks.
 			</p>
 		{:else}
 			<p class="mt-1 text-sm text-signoff">{data.keyOff}</p>
@@ -109,24 +167,38 @@
 	</section>
 
 	<section class="mb-8" aria-labelledby="calls">
-		<h2 id="calls" class="font-semibold">Your agent’s changes</h2>
+		<h2 id="calls" class="flex items-center gap-2 font-semibold">
+			Your agent’s changes
+			{#if live}<span
+					class="flex items-center gap-1 text-xs font-normal text-ink-3"
+					data-testid="calls-live"
+					><span class="size-2 rounded-full bg-accent" aria-hidden="true"></span> live</span
+				>{/if}
+		</h2>
 		{#if data.calls.length}
-			<ol class="mt-2 divide-y divide-rule rounded-lg border border-rule bg-sheet text-sm">
+			<ol
+				class="mt-2 divide-y divide-rule rounded-lg border border-rule bg-sheet text-sm"
+				data-testid="agent-calls"
+			>
 				{#each data.calls as c (c.seq)}
-					<li class="flex flex-wrap items-baseline gap-x-3 px-3 py-2">
-						<span class="num text-ink-3">#{c.seq}</span>
-						<code class="font-mono font-semibold">{c.type}</code>
-						<span class="text-ink-2">{c.via}</span>
-						<span class="num ml-auto text-ink-3"
-							>{new Date(c.at).toLocaleTimeString('en-GB', { timeZone: 'Europe/Helsinki' })}</span
+					{@const Icon = TONE_ICON[c.tone]}
+					<li class="flex items-start gap-2 px-3 py-2">
+						<Icon size={16} class="mt-0.5 shrink-0 {TONE_CLASS[c.tone]}" aria-hidden="true" />
+						<span class="min-w-0 flex-1">{c.text}</span>
+						<span class="num shrink-0 text-ink-3"
+							>{new Date(c.at).toLocaleTimeString('en-GB', {
+								hour: '2-digit',
+								minute: '2-digit',
+								timeZone: 'Europe/Helsinki'
+							})}</span
 						>
 					</li>
 				{/each}
 			</ol>
 		{:else}
 			<p class="mt-1 text-sm text-ink-3">
-				Nothing yet. Every plan, order and substitute your key writes shows up here; reads leave no
-				trace in the op log.
+				Nothing yet. Every plan, order and substitute your agent makes appears here as it happens;
+				looking things up leaves no trace.
 			</p>
 		{/if}
 		<p class="mt-2 text-sm text-ink-2">
