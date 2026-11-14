@@ -12,6 +12,8 @@ export const ROUTINE_SHORTLIST = 8;
 
 export interface RoutineCandidate {
 	productId: string;
+	/** The request page's ranking score for this product and item (filterHits). */
+	score?: number;
 	name?: string;
 	/** The product's sales unit, the unit `place_order` takes. */
 	unit: string;
@@ -71,6 +73,7 @@ export function routineCandidates(intent: RoutineLine, hits: Product[]): Routine
 	const out: RoutineFacts = {
 		products: ranked.slice(0, ROUTINE_SHORTLIST).map((r) => ({
 			productId: r.product.productId,
+			score: r.score,
 			name: shortText(r.product.nameShort?.value ?? r.product.nameFi),
 			unit: r.product.salesUnit,
 			lotStep: r.product.lotStep,
@@ -119,6 +122,8 @@ export interface OfferFacts {
 	unitCents?: number;
 	availability?: string;
 	logisticModel?: string;
+	/** Sales units in stock, when Valio says (known availability). */
+	amount?: number;
 	availableDate?: string;
 	closingTime?: string;
 }

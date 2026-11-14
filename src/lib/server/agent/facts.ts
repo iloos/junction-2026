@@ -177,6 +177,7 @@ export function toFacts(tool: ToolName, value: unknown, intent?: Intent, input?:
 							unitCents: num(obj(o.price).unitCents),
 							availability: code(a.kind, 16),
 							logisticModel: code(a.logisticModel, 16),
+							amount: num(a.amount),
 							availableDate: code(a.availableDate, 10),
 							closingTime: isoTime(a.closingTime)
 						};

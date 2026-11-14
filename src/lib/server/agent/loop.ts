@@ -12,13 +12,13 @@ import { serveTool, toolsFor } from '$lib/server/tools/serve';
 import { errorFacts, toFacts, type Facts, type PlanFacts } from './facts';
 import {
 	orderable,
-	pickRoutine,
 	routineLines,
 	routineQueries,
 	type OfferFacts,
 	type RoutineCandidate,
 	type RoutineFacts
 } from './routine';
+import { SHORTLIST } from '$lib/server/request/lookup';
 import type { AgentContext, GoalOutcome, Intent, RoutineLine } from './types';
 
 /**
@@ -610,34 +610,35 @@ export function scriptedPlanner(): Planner {
 							h.tool === 'search_products' &&
 							routineQueries(l).includes(String((h.input as { query?: unknown }).query))
 					);
-				const candidatesFor = (l: RoutineLine) =>
-					searchesFor(l).flatMap((h) =>
-						h.ok ? ((h.facts as RoutineFacts | undefined)?.products ?? []) : []
-					);
-				const found = lines.map((l) => pickRoutine(l, candidatesFor(l)));
-				for (const [i, l] of lines.entries()) {
+				// /request's own choice, so the same words give the same basket on every door: every search word of a
+				// product searched, the hits ranked together (filterHits' score, then id), the top SHORTLIST quoted, and
+				// the first that can be bought (priced, deliverable, enough stock, cut-off ahead) picked in rank order.
+				const candidatesFor = (l: RoutineLine) => {
+					const seen = new Set<string>();
+					return searchesFor(l)
+						.flatMap((h) => (h.ok ? ((h.facts as RoutineFacts | undefined)?.products ?? []) : []))
+						.filter((c) => !seen.has(c.productId) && seen.add(c.productId))
+						.sort((x, y) => (y.score ?? 0) - (x.score ?? 0) || (x.productId < y.productId ? -1 : 1))
+						.slice(0, SHORTLIST);
+				};
+				for (const l of lines) {
 					const done = searchesFor(l).length;
-					if (!found[i] && done < Math.min(routineQueries(l).length, 2))
+					if (done < Math.min(routineQueries(l).length, 2))
 						return {
 							tool: 'search_products',
 							input: { query: routineQueries(l)[done], limit: 50 },
 							why: `find "${l.query}" in the catalogue`
 						};
 				}
-				// Quote the convertible candidates once and order, per product, one that can still arrive by the date.
+				const found: (RoutineCandidate | null)[] = lines.map(
+					(l) => candidatesFor(l).find((c) => c.salesQty !== null) ?? null
+				);
 				const closedFor = new Set<number>();
 				if (found.some(Boolean) && !has('place_order') && tools.includes('quote')) {
 					const quoted = history.find((h) => h.tool === 'quote' && h.ok);
 					if (!has('quote')) {
 						const ids = [
-							...new Set(
-								lines.flatMap((l) =>
-									candidatesFor(l)
-										.filter((c) => c.salesQty !== null)
-										.map((c) => c.productId)
-										.slice(0, 8)
-								)
-							)
+							...new Set(lines.flatMap((l) => candidatesFor(l).map((c) => c.productId)))
 						];
 						return {
 							tool: 'quote',
@@ -660,22 +661,23 @@ export function scriptedPlanner(): Planner {
 							);
 						for (const [i, l] of lines.entries()) {
 							const cands = candidatesFor(l);
-							const open = cands.filter((c) =>
-								orderable(offers.get(c.productId), intent.deliverBy, context?.now)
-							);
-							const pick = pickRoutine(l, open);
+							found[i] =
+								cands.find((c) => {
+									const o = offers.get(c.productId);
+									return (
+										c.salesQty !== null &&
+										orderable(o, intent.deliverBy, context?.now) &&
+										!(o?.availability === 'known' && o.amount != null && o.amount < c.salesQty)
+									);
+								}) ?? null;
+							// Nothing open for that day among the quoted: a date problem for this product.
 							const quotedIds = cands.filter((c) => offers.has(c.productId));
-							// No candidate that can be bought is still open for that day: a date problem for this product,
-							// never a line bought past its cut-off.
 							if (
-								!pick &&
-								((found[i] && closed(offers.get(found[i]!.productId))) ||
-									(!open.length &&
-										quotedIds.length &&
-										quotedIds.every((c) => closed(offers.get(c.productId)))))
+								!found[i] &&
+								quotedIds.length &&
+								quotedIds.every((c) => closed(offers.get(c.productId)))
 							)
 								closedFor.add(i);
-							found[i] = pick ?? found[i];
 						}
 						if (closedFor.size === lines.length)
 							return {
@@ -714,9 +716,17 @@ export function scriptedPlanner(): Planner {
 									: {})
 							}))
 						},
-						why: placed
-							.map(({ l, f }) => `${l.qty} ${l.unit} ${l.query}: ${f.conversion}`)
-							.join('; ')
+						why:
+							placed
+								.map(({ l, f }) => `${l.qty} ${l.unit} ${l.query}: ${f.conversion}`)
+								.join('; ') +
+							// A product nothing can be bought for is said, never dropped in silence.
+							(placed.length < lines.length
+								? `; not ordered: ${lines
+										.filter((l) => !placed.some((x) => x.l === l))
+										.map((l) => `${l.qty} ${l.unit} ${l.query}`)
+										.join(', ')} (no product can be bought as asked; say which one)`
+								: '')
 					};
 				}
 				if (last && !last.ok && last.tool === 'place_order')

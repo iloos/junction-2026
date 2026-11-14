@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { scenarioDate } from '$lib/core/scenario';
 import { trialWorkspace } from '../agent/trial-harness';
-import { FIDELITY_NOW } from '../evals/fidelity';
+import { FIDELITY_NOW, playText } from '../evals/fidelity';
 import type { Llm } from '$lib/core/ports';
 import { isTaskId } from '$lib/core/contracts/task';
 import { taskForPlan } from '../request/task';
@@ -401,17 +401,15 @@ describe('suite: chat v2 · several products in one message', () => {
 			expect(out.some((e) => e.type === 'clarify')).toBe(false);
 			const taskId = out.at(-1)!.taskId;
 			const task = await w.env.ports.tasks!.get(w.env.workspaceId, taskId);
-			// One plan with a line per product, for the one delivery day.
+			// One plan for the one delivery day; milk has no product /request would pick either, so it is said, not
+			// dropped and not guessed.
 			expect(task?.plans.map((p) => p.role)).toEqual(['primary']);
 			const plans = Object.values((await w.state()).plans);
 			expect(plans.map((p) => p.deliverBy)).toEqual(['2026-12-11']);
-			expect(plans[0].lines).toHaveLength(2);
+			expect(out.at(-1)).toMatchObject({ text: expect.stringMatching(/Not ordered: 5 l milk/) });
 			const ledger = out.find((e) => e.type === 'ledger');
 			if (ledger?.type !== 'ledger') throw new Error('no ledger');
-			expect(ledger.ledger.needs.map((n) => n.required)).toEqual([
-				{ value: 10, unit: 'kg' },
-				{ value: 5, unit: 'l' }
-			]);
+			expect(ledger.ledger.needs.map((n) => n.required)).toEqual([{ value: 10, unit: 'kg' }]);
 		}
 	);
 });
@@ -497,4 +495,21 @@ describe('suite: chat turns · delivery days', () => {
 			void w;
 		}
 	);
+});
+
+describe('suite: chat turns · same words, same basket', () => {
+	for (const text of [
+		'10 l lactose-free milk for Friday',
+		'4 kg butter for Friday',
+		'2 l whipping cream for Friday'
+	])
+		it(`"${text}" buys what /request buys`, { timeout: 120_000 }, async () => {
+			const req = await playText('k-hotel', text, 'request', `same-${text}`);
+			const { w, deps } = await setup();
+			await chatTurn({ text }, deps);
+			const chat = Object.values((await w.state()).plans);
+			const basket = (ps: typeof chat) =>
+				ps.flatMap((p) => p.lines.map((l) => `${l.productId}×${l.qty.value}`)).sort();
+			expect(basket(chat)).toEqual(basket(req.plans));
+		});
 });

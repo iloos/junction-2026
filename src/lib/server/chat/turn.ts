@@ -574,6 +574,11 @@ export async function* runChatTurn(
 			// An order the agent could not place says why (a passed cut-off, nothing in the catalogue), whatever plan
 			// the task already has.
 			const why = run.plannerSummary?.match(/^not ordered: (.*)$/s)?.[1];
+			// A product left out of a placed order (nothing could be bought as asked) is said in the answer.
+			const left = run.steps
+				.find((x) => x.tool === 'place_order' && x.ok)
+				?.why.match(/; not ordered: (.*)$/)?.[1];
+			if (left) refusal = `Not ordered: ${left}.`;
 			if (why && !run.steps.some((x) => x.tool === 'place_order' && x.ok))
 				refusal = `Not ordered: ${why.replace(/\b(\d{4}-\d{2}-\d{2})\b/g, (d) => dayWords(d))}`;
 			else if (o?.planId) touched.push(o.planId);
