@@ -12,6 +12,7 @@ import {
 import { readRankBy } from '$lib/server/request/rank-by';
 import { readDish, readItems } from '$lib/server/request/workspace';
 import { visitorWorkspace } from '$lib/server/demo/visitor';
+import { visitorKey } from '$lib/server/kitchen/live';
 import type { RequestHandler } from './$types';
 
 /**
@@ -24,7 +25,9 @@ export const POST: RequestHandler = async (event) => {
 	const { request } = event;
 	const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
 	const str = (k: string) => (typeof body[k] === 'string' ? (body[k] as string) : '');
-	const { workspaceId } = await visitorWorkspace(event, env, dev);
+	const { workspaceId, own } = await visitorWorkspace(event, env, dev);
+	// Writes to a kitchen this browser owns carry its visitor (D24).
+	const visitor = visitorKey(own);
 	const int = (k: string) => (Number.isInteger(body[k]) ? (body[k] as number) : -1);
 
 	try {
@@ -33,6 +36,7 @@ export const POST: RequestHandler = async (event) => {
 				await approveRequest({
 					env,
 					workspaceId,
+					visitor,
 					approvalId: str('approvalId'),
 					planId: str('planId'),
 					planVersion: int('planVersion'),
@@ -45,6 +49,7 @@ export const POST: RequestHandler = async (event) => {
 				await commitRequest({
 					env,
 					workspaceId,
+					visitor,
 					planId: str('planId'),
 					version: int('version'),
 					attempt: Math.max(1, int('attempt')),
@@ -87,6 +92,7 @@ export const POST: RequestHandler = async (event) => {
 					dish: readDish(body.dish),
 					items: readItems(body.items),
 					workspaceId,
+					visitor,
 					env,
 					onEvent: send
 				});

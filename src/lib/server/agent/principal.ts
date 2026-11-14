@@ -33,7 +33,7 @@ export function intersectScopes(a: readonly string[], b: readonly string[]): str
  * the agent.
  */
 export function buildRunPrincipal(o: {
-	initiator: Pick<CallContext, 'actor' | 'workspaceId' | 'runId' | 'scopes'>;
+	initiator: Pick<CallContext, 'actor' | 'workspaceId' | 'runId' | 'scopes' | 'visitor'>;
 	agentRunId: string;
 	kitchenIds?: readonly string[];
 	now?: number;
@@ -49,7 +49,8 @@ export function buildRunPrincipal(o: {
 		agentRunId: o.agentRunId,
 		...(o.kitchenIds ? { kitchenIds: [...o.kitchenIds] } : {}),
 		expiresAt: new Date((o.now ?? Date.now()) + RUN_TTL_MS).toISOString(),
-		scopes: intersectScopes(o.initiator.scopes, SCOPES_BY_ACTOR[SERVICE_ACTOR.kind])
+		scopes: intersectScopes(o.initiator.scopes, SCOPES_BY_ACTOR[SERVICE_ACTOR.kind]),
+		...(o.initiator.visitor ? { visitor: o.initiator.visitor } : {})
 	};
 }
 
@@ -66,6 +67,7 @@ export function principalContext(p: RunPrincipal): CallContext {
 		scopes: p.scopes,
 		via: `agent:${p.agentRunId} by ${p.initiatedBy.kind}:${p.initiatedBy.id}`,
 		initiatedBy: p.initiatedBy,
-		...(p.kitchenIds ? { kitchenIds: p.kitchenIds } : {})
+		...(p.kitchenIds ? { kitchenIds: p.kitchenIds } : {}),
+		...(p.visitor ? { visitor: p.visitor } : {})
 	};
 }

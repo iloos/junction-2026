@@ -44,6 +44,7 @@ async function deps(workspaceId: string): Promise<MenuDeps> {
 export async function proposeFromRequest(o: {
 	env: Env;
 	workspaceId: string;
+	visitor?: string;
 	kitchenId: string;
 	text: string;
 	briefAnswers: BriefAnswer[];
@@ -56,7 +57,7 @@ export async function proposeFromRequest(o: {
 		o.text
 	);
 	if (!brief) return err('INVALID_INPUT', 'the brief is not complete: answer its questions first');
-	const a = await actors(o.env, o.workspaceId);
+	const a = await actors(o.env, o.workspaceId, o.visitor);
 	const trace: Trace = (step, data) =>
 		void publish(o.workspaceId, [
 			traceEvent(a.chef, step, { actor: a.chef.actor.id, purpose: 'menu.propose', ...data })
@@ -114,20 +115,22 @@ export async function editMenuFor(o: {
 export async function acceptMenuAsChef(o: {
 	env: Env;
 	workspaceId: string;
+	visitor?: string;
 	id: string;
 	revision: number;
 }): Promise<Result<MenuView>> {
-	const a = await actors(o.env, o.workspaceId);
+	const a = await actors(o.env, o.workspaceId, o.visitor);
 	return acceptMenu(await deps(o.workspaceId), { ...o, by: a.chef.actor });
 }
 
 export async function planMenuAsChef(o: {
 	env: Env;
 	workspaceId: string;
+	visitor?: string;
 	id: string;
 	revision: number;
 }): Promise<Result<MenuPlanResult>> {
-	const a = await actors(o.env, o.workspaceId);
+	const a = await actors(o.env, o.workspaceId, o.visitor);
 	const tasks = (await ports()).ports.tasks;
 	return planMenu({ ...(await deps(o.workspaceId)), handlers, ctx: a.chef, tasks }, o);
 }

@@ -24,6 +24,8 @@ export interface RunPrincipal {
 	expiresAt: string;
 	/** Effective scopes (initiator ∩ service actor). */
 	scopes: readonly string[];
+	/** The initiator's visitor, so the run may write to the kitchens that visitor owns (D24); never widened. */
+	visitor?: string;
 }
 
 export const INTENT_KINDS = [
