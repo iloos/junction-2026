@@ -1,17 +1,27 @@
 <script lang="ts">
-	import { PRESETS, type PresetId, type Rules } from '$lib/kitchen/fixture-plan';
+	import { Eye } from '@lucide/svelte';
+	import { PRESETS, type PresetId, type PurchaseText, type Rules } from '$lib/kitchen/fixture-plan';
 	import ScoreLegend from '$lib/ui/ScoreLegend.svelte';
 	import { money } from '$lib/ui/format';
 
+	interface Preview {
+		dish: string;
+		recommended: PurchaseText[];
+		saved: PurchaseText[];
+	}
 	interface Props {
 		rules: Rules;
 		preset: PresetId;
 		contention: boolean;
 		busy: boolean;
+		/** Dishes where the previewed rules recommend something other than what the order holds. */
+		previews: Preview[];
 		onpreset: (p: PresetId) => void;
 		oncontention: (on: boolean) => void;
+		onapply: () => void;
 	}
-	let { rules, preset, contention, busy, onpreset, oncontention }: Props = $props();
+	let { rules, preset, contention, busy, previews, onpreset, oncontention, onapply }: Props =
+		$props();
 	const ids = Object.keys(PRESETS) as PresetId[];
 
 	const originText = $derived(
@@ -20,6 +30,8 @@
 			...rules.originPrefer.map((g) => `${g}: Finnish preferred`)
 		].join(' · ') || 'No origin rules'
 	);
+	const list = (xs: PurchaseText[]) =>
+		xs.length ? xs.map((x) => `${x.name} · ${x.qtyText}`).join(', ') : 'nothing';
 </script>
 
 <section aria-labelledby="rules-h" class="rounded-lg border border-rule bg-sheet">
@@ -27,28 +39,65 @@
 		<h2 id="rules-h" class="text-[14px] font-semibold text-ink">Same shortage. Your rules.</h2>
 		<span class="mono text-[11.5px] text-ink-3">mandate v{rules.mandateVersion}</span>
 	</div>
-	<div class="px-4 pt-2.5">
-		<div
-			class="grid grid-cols-3 rounded-md border border-rule-strong bg-well p-0.5"
-			role="radiogroup"
-			aria-label="Ranking rules"
-		>
+	<fieldset class="px-4 pt-2.5" disabled={busy}>
+		<legend class="sr-only">Ranking rules</legend>
+		<div class="grid grid-cols-3 rounded-md border border-rule-strong bg-well p-0.5">
 			{#each ids as id (id)}
-				<button
-					type="button"
-					role="radio"
-					aria-checked={preset === id}
-					disabled={busy}
-					class="h-8 rounded-[5px] px-1 text-[12.5px] font-medium transition-colors duration-150 {preset ===
+				<label
+					class="relative grid h-9 cursor-pointer place-items-center rounded-[5px] px-1 text-center text-[12.5px] leading-tight font-medium transition-colors duration-150 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-accent {preset ===
 					id
 						? 'bg-sheet text-ink shadow-[0_1px_2px_oklch(0.2_0.02_255/0.12)]'
 						: 'text-ink-2 hover:text-ink'}"
-					onclick={() => onpreset(id)}>{PRESETS[id].label}</button
 				>
+					<input
+						type="radio"
+						name="preset"
+						value={id}
+						checked={preset === id}
+						class="sr-only"
+						onchange={() => onpreset(id)}
+					/>
+					{PRESETS[id].label}
+				</label>
 			{/each}
 		</div>
 		<p class="mt-2 text-[12.5px] text-ink-2">{PRESETS[preset].hint}</p>
-	</div>
+	</fieldset>
+
+	{#if previews.length}
+		<div
+			class="mx-4 mt-3 rounded-md border border-propose/30 bg-propose-wash px-3 py-2.5"
+			role="status"
+		>
+			<p class="flex items-start gap-2 text-[12.5px] leading-snug text-ink">
+				<Eye size={15} class="mt-px shrink-0 text-propose" aria-hidden="true" />
+				<span>
+					<b class="font-medium">Previewing {PRESETS[preset].label.toLowerCase()}.</b> Your order is unchanged
+					until you apply.
+				</span>
+			</p>
+			<ul class="mt-2 space-y-1.5 text-[12px] leading-snug">
+				{#each previews as p (p.dish)}
+					<li>
+						<span class="font-medium text-ink">{p.dish}:</span>
+						<span class="text-ink-2">order has {list(p.saved)}</span>
+						<span class="block text-propose">these rules pick {list(p.recommended)}</span>
+					</li>
+				{/each}
+			</ul>
+			<button
+				type="button"
+				class="mt-2.5 h-9 w-full rounded-md bg-propose px-3 text-[13px] font-medium text-sheet hover:opacity-90 disabled:opacity-50"
+				disabled={busy}
+				onclick={onapply}>Apply these rules to the order</button
+			>
+			<p class="mt-1.5 text-[11.5px] leading-snug text-ink-3">
+				Replaces the substitute, re-quotes, and voids the current approval: you review the new terms
+				before anything is bought.
+			</p>
+		</div>
+	{/if}
+
 	<dl class="mt-3 space-y-2 border-t border-rule px-4 py-3 text-[12.5px]">
 		<div>
 			<dt class="text-ink-3">Ranking weights</dt>
@@ -83,7 +132,10 @@
 		/>
 		<span class="text-[12.5px] leading-snug text-ink-2">
 			<span class="font-medium text-ink">Simulator: another kitchen takes 4 palvikinkku</span>
-			<span class="block">15 in stock → 11. The ham rescue no longer covers 140 guests.</span>
+			<span class="block"
+				>15 in stock → 11, for every kitchen in this run. The ham rescue no longer covers 140
+				guests.</span
+			>
 		</span>
 	</label>
 </section>

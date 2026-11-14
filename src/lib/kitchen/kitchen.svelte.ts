@@ -1,15 +1,9 @@
 /* eslint-disable svelte/prefer-svelte-reactivity -- Maps and Sets here are built fresh and replaced wholesale ($state.raw), never mutated after. */
-import type { DomainError, Line } from '$lib/core/contracts';
-import { apiMode, ToolError, call, type ApiMode } from './api';
+import type { Approval, DomainError, Line } from '$lib/core/contracts';
+import { ToolError, Unreachable, call, type ApiMode } from './api';
 import type { PresetId } from './fixture-plan';
-import {
-	setContention as fxContention,
-	setKitchen as fxKitchen,
-	setPreset as fxPreset,
-	reset as fxReset,
-	snapshot,
-	type Snapshot as FixtureSnapshot
-} from './backend';
+import * as backend from './backend';
+import type { Snapshot } from './backend';
 
 export interface ActivityItem {
 	id: number;
@@ -28,27 +22,67 @@ export interface CommitNote {
 	replayed: boolean;
 }
 
+/** The terms a line had when an approval was shown: what a later approval is compared against. */
+export interface SeenTerm {
+	productId: string;
+	qty: number;
+	unit: string;
+	lineCents: number | null;
+}
+
+export interface TermChange {
+	lineId: string;
+	productId: string;
+	before: SeenTerm | null;
+	after: SeenTerm | null;
+}
+
+const termOf = (l: Line): SeenTerm => ({
+	productId: l.productId,
+	qty: l.qty.value,
+	unit: l.qty.unit,
+	lineCents: l.lineCents
+});
+
 /**
- * Client state for the kitchen screen. The snapshot is replaced wholesale after every call
- * ($state.raw, never mutated), so the table re-renders from one consistent plan version.
+ * Client state for the kitchen screen. One store is one mode for its whole life: the live page never falls back
+ * to the fixture basket. The snapshot is replaced wholesale after every call ($state.raw, never mutated).
  */
 export class KitchenStore {
-	snap = $state.raw<FixtureSnapshot | null>(null);
+	readonly mode: ApiMode;
+	snap = $state.raw<Snapshot | null>(null);
+	/** Live: false until the chef starts the demo (planning is an explicit command, never a side effect of viewing). */
+	started = $state<boolean | null>(null);
 	busy = $state(false);
+	/** A g/guest change waiting for the server, per dish: the stepper shows it as pending. */
+	pendingGrams = $state.raw<Record<string, number>>({});
 	error = $state.raw<DomainError | null>(null);
+	/** Set when the last read failed: the screen keeps the last state, read-only, with a retry. */
+	stale = $state.raw<{ message: string; unreachable: boolean } | null>(null);
 	activity = $state.raw<ActivityItem[]>([]);
 	/** Line ids that changed in the last update, for the row flash. */
 	flash = $state.raw<Set<string>>(new Set());
 	whyLineId = $state<string | null>(null);
 	whySteps = $state.raw<{ text: string; source: string; detail?: string }[]>([]);
 	lastCommit = $state.raw<CommitNote | null>(null);
-	/** Live unless the server can't be reached (then the labelled offline fixture). */
-	mode = $state<ApiMode>(apiMode());
+	/** Scenario "now" (Helsinki story time), ticking. */
+	now = $state.raw<Date | null>(null);
+	/** Plan version when this screen first saw the run: older voided approvals are history, not news. */
+	firstVersion = $state<number | null>(null);
+	runId = $state<string | null>(null);
+	/** Terms shown under each approval id, so a replacement approval can say exactly what changed. */
+	#seen = new Map<string, Map<string, SeenTerm>>();
+	#clockBase: { scenarioMs: number; wallMs: number } | null = null;
 	#seq = 0;
 	#flashTimer: ReturnType<typeof setTimeout> | undefined;
 
+	constructor(mode: ApiMode) {
+		this.mode = mode;
+	}
+
 	plan = $derived(this.snap?.plan ?? null);
 	view = $derived(this.snap?.view ?? null);
+	readOnly = $derived(this.stale !== null || this.busy);
 
 	lineById = $derived.by(() => {
 		const m = new Map<string, Line>();
@@ -56,20 +90,58 @@ export class KitchenStore {
 		return m;
 	});
 
+	/** What changed since the approval the chef last saw was voided (empty when there is nothing to compare). */
+	changes = $derived.by((): TermChange[] => {
+		const old = this.snap?.lastInvalidated;
+		const seen = old ? this.#seenFor(old) : null;
+		const current = this.snap?.approval;
+		if (!seen || !current || current.state !== 'pending' || !this.snap) return [];
+		const now = new Map(
+			this.snap.plan.lines
+				.filter((l) => l.state === 'held' || l.state === 'eligible')
+				.map((l) => [l.id, termOf(l)])
+		);
+		const out: TermChange[] = [];
+		for (const [id, before] of seen) {
+			const after = now.get(id) ?? null;
+			if (!after || after.qty !== before.qty || after.lineCents !== before.lineCents)
+				out.push({ lineId: id, productId: before.productId, before, after });
+		}
+		for (const [id, after] of now)
+			if (!seen.has(id) && current.lineIds.includes(id))
+				out.push({ lineId: id, productId: after.productId, before: null, after });
+		return out;
+	});
+
+	#seenFor(a: Approval) {
+		return this.#seen.get(a.id) ?? null;
+	}
+
 	async load() {
 		await this.#run(async () => {
-			await call('plan_event', {
-				kitchenId: this.snap?.kitchen.id ?? 'k-hotel',
-				eventId: 'event-xmas-140'
-			});
+			if (this.mode === 'fixture')
+				await call('fixture', 'plan_event', { kitchenId: 'k-hotel', eventId: 'event-xmas-140' });
 		});
+	}
+
+	/** Live: plan the event and let the kitchen agent propose rescues. The one command that creates the plan. */
+	async start() {
+		await this.#run(async () => {
+			await backend.start(this.mode);
+			this.#log('rules', 'Demo started: event planned, rescues proposed by the kitchen agent');
+		});
+	}
+
+	async retry() {
+		await this.#run(async () => {});
 	}
 
 	async setGrams(dishId: string, grams: number) {
 		const dish = this.view?.dishes.find((d) => d.id === dishId);
-		if (!dish || !this.plan || grams === dish.gServed) return;
+		if (!dish || !this.plan || grams === dish.gServed || this.readOnly) return;
+		this.pendingGrams = { ...this.pendingGrams, [dishId]: grams };
 		await this.#run(async () => {
-			await call('edit_line', {
+			await call(this.mode, 'edit_line', {
 				planId: this.plan!.id,
 				version: this.plan!.version,
 				needId: dish.needId,
@@ -77,12 +149,15 @@ export class KitchenStore {
 			});
 			this.#log('edit', `${dish.nameFi}: ${dish.gServed} → ${grams} g per guest`);
 		});
+		const rest = { ...this.pendingGrams };
+		delete rest[dishId];
+		this.pendingGrams = rest;
 	}
 
 	async setPreset(preset: PresetId) {
-		if (this.snap?.preset === preset) return;
+		if (this.snap?.preset === preset || this.readOnly) return;
 		await this.#run(async () => {
-			await fxPreset(preset);
+			await backend.setPreset(this.mode, preset);
 			this.#log(
 				'rules',
 				`Rules: ${preset === 'kitchen' ? 'kitchen default' : preset === 'price' ? 'price first' : 'Finnish required'}`
@@ -90,17 +165,27 @@ export class KitchenStore {
 		});
 	}
 
-	async setKitchen(kitchenId: string) {
+	async applyRules() {
+		if (this.readOnly) return;
 		await this.#run(async () => {
-			await fxKitchen(kitchenId);
+			await backend.applyRules(this.mode);
+			this.#log('rules', 'Applied the previewed rules to the order: approval voided, re-quoted');
+		});
+	}
+
+	async setKitchen(kitchenId: string) {
+		if (this.readOnly) return;
+		await this.#run(async () => {
+			await backend.setKitchen(this.mode, kitchenId);
 			this.lastCommit = null;
 			this.#log('rules', `Kitchen: ${kitchenId}`);
 		});
 	}
 
 	async setContention(on: boolean) {
+		if (this.readOnly) return;
 		await this.#run(async () => {
-			await fxContention(on);
+			await backend.setContention(this.mode, on);
 			this.#log(
 				'sim',
 				on
@@ -112,31 +197,36 @@ export class KitchenStore {
 
 	async reset() {
 		await this.#run(async () => {
-			await fxReset();
+			await backend.reset(this.mode);
 			this.lastCommit = null;
 			this.activity = [];
+			this.#seen.clear();
+			this.firstVersion = null;
 		});
 	}
 
 	async approve(decision: 'grant' | 'deny' = 'grant') {
 		const a = this.snap?.approval;
-		if (!a) return;
+		if (!a || this.readOnly) return false;
+		let ok = false;
 		await this.#run(async () => {
-			const out = await call('approve', {
+			const out = await call(this.mode, 'approve', {
 				approvalId: a.id,
 				planVersion: a.planVersion,
 				termsHash: a.termsHash,
 				decision
 			});
+			ok = out.state === 'granted';
 			this.#log(
 				'approval',
-				`${a.id} ${out.state}: ${a.lineIds.length} lines, bound to v${a.planVersion} · ${a.termsHash.slice(0, 8)}`
+				`${out.state}: ${a.lineIds.length} lines, bound to v${a.planVersion} · ${a.termsHash.slice(0, 8)}`
 			);
 		});
+		return ok;
 	}
 
 	async commit() {
-		if (!this.plan) return;
+		if (!this.plan || this.readOnly) return;
 		const key = `commit-${this.plan.id}-v${this.plan.version}`;
 		await this.#commitWith(key, false);
 	}
@@ -149,7 +239,7 @@ export class KitchenStore {
 
 	async #commitWith(key: string, replay: boolean) {
 		await this.#run(async () => {
-			const out = await call('commit_order', {
+			const out = await call(this.mode, 'commit_order', {
 				planId: this.plan!.id,
 				version: this.plan!.version,
 				idempotencyKey: key
@@ -175,12 +265,11 @@ export class KitchenStore {
 	async openWhy(lineId: string) {
 		if (!this.plan) return;
 		try {
-			const out = await call('explain_line', { planId: this.plan.id, lineId });
+			const out = await call(this.mode, 'explain_line', { planId: this.plan.id, lineId });
 			this.whySteps = out.steps;
 			this.whyLineId = lineId;
 		} catch (e) {
-			if (e instanceof ToolError) this.error = e.error;
-			else throw e;
+			this.#fail(e);
 		}
 	}
 
@@ -195,16 +284,66 @@ export class KitchenStore {
 		try {
 			await fn();
 		} catch (e) {
-			if (e instanceof ToolError) {
-				this.error = e.error;
-				this.#log('error', `${e.error.code}: ${e.error.message}`);
-			} else throw e;
+			this.#fail(e);
+		}
+		try {
+			const next = await backend.snapshot(this.mode);
+			this.stale = null;
+			if ('plan' in next) {
+				this.started = true;
+				this.snap = next;
+				this.#remember(next);
+				this.#clockAt(next);
+				this.#flashChanges(before, next.plan.lines);
+			} else {
+				this.started = false;
+				this.snap = null;
+			}
+		} catch (e) {
+			// Keep the last state, read-only, and say so. Never substitute another basket for a failed read.
+			const err = e instanceof ToolError ? e.error : null;
+			this.stale = {
+				message: err?.message ?? (e instanceof Error ? e.message : String(e)),
+				unreachable: e instanceof Unreachable
+			};
 		} finally {
-			this.snap = await snapshot();
-			this.mode = apiMode();
-			this.#flashChanges(before, this.snap.plan.lines);
 			this.busy = false;
 		}
+	}
+
+	#remember(s: Snapshot) {
+		const a = s.approval;
+		if (a && a.state === 'pending' && !this.#seen.has(a.id))
+			this.#seen.set(
+				a.id,
+				new Map(s.plan.lines.filter((l) => a.lineIds.includes(l.id)).map((l) => [l.id, termOf(l)]))
+			);
+	}
+
+	#fail(e: unknown) {
+		if (e instanceof ToolError) {
+			this.error = e.error;
+			this.#log('error', `${e.error.code}: ${e.error.message}`);
+		} else {
+			const message = e instanceof Error ? e.message : String(e);
+			this.error = { code: 'PROVIDER_UNAVAILABLE', message, retryable: true };
+			this.#log('error', message);
+		}
+	}
+
+	/** The scenario clock: the server's reading at snapshot time, then advanced by the wall clock. */
+	#clockAt(s: Snapshot) {
+		if (!s.clock) return;
+		this.#clockBase = { scenarioMs: new Date(s.clock.nowIso).getTime(), wallMs: Date.now() };
+		if (this.firstVersion === null || s.clock.runId !== this.runId)
+			this.firstVersion = s.plan.version;
+		this.runId = s.clock.runId;
+		this.tick();
+	}
+
+	tick() {
+		if (this.#clockBase)
+			this.now = new Date(this.#clockBase.scenarioMs + (Date.now() - this.#clockBase.wallMs));
 	}
 
 	#flashChanges(before: Line[], after: Line[]) {

@@ -10,6 +10,7 @@ import type {
 	ToolOutput
 } from '$lib/core/contracts';
 import { termsHash } from '$lib/core/hash';
+import { SCENARIO, scenarioClock } from '$lib/core/scenario';
 import { KITCHENS } from './catalog';
 import {
 	buildEvent,
@@ -142,7 +143,7 @@ async function rebuild(bump: boolean, summary?: string) {
 				tier: held.some((l) => l.tier === 'sign_off') ? 'sign_off' : 'propose',
 				state: 'pending',
 				requestedBy: { kind: 'kitchen_agent', id: 'agent-kitchen' },
-				expiresAt: '2026-12-09T17:00:00+02:00'
+				expiresAt: SCENARIO.cutoff
 			}
 		];
 	}
@@ -333,7 +334,12 @@ export interface FixtureSnapshot {
 	preset: PresetId;
 	contention: boolean;
 	mandateVersion: number;
+	/** The scenario clock's reading when the snapshot was made (SCENARIO.start + time since the run started). */
+	clock: { nowIso: string; runId: string; workspaceId?: string };
 }
+
+/** The fixture's run starts when the module loads (or on reset), like a server run. */
+let runStartedAt = Date.now();
 
 export async function snapshot(): Promise<FixtureSnapshot> {
 	if (!s.built) await rebuild(false);
@@ -348,7 +354,12 @@ export async function snapshot(): Promise<FixtureSnapshot> {
 		rules: s.rules,
 		preset: s.preset,
 		contention: s.contention,
-		mandateVersion: s.mandateVersion
+		mandateVersion: s.mandateVersion,
+		clock: {
+			nowIso: scenarioClock(runStartedAt).at(Date.now()).toISOString(),
+			runId: 'run-fixture',
+			workspaceId: 'browser fixture'
+		}
 	};
 }
 
@@ -372,6 +383,7 @@ export async function setContention(on: boolean) {
 }
 
 export async function reset() {
+	runStartedAt = Date.now();
 	s = initial(s.kitchen.id);
 	await rebuild(false);
 }

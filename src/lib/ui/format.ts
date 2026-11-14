@@ -50,3 +50,18 @@ export function day(iso: string): string {
 export function shortHash(hash: string | null | undefined): string {
 	return hash ? hash.slice(0, 8) : '—';
 }
+
+const hel = new Intl.DateTimeFormat('en-GB', {
+	timeZone: 'Europe/Helsinki',
+	weekday: 'short',
+	day: 'numeric',
+	month: 'short',
+	hour: '2-digit',
+	minute: '2-digit',
+	hourCycle: 'h23'
+});
+
+/** A scenario instant as Helsinki story time: "Tue 8 Dec, 14:00". */
+export function storyTime(at: string | Date): string {
+	return hel.format(typeof at === 'string' ? new Date(at) : at);
+}

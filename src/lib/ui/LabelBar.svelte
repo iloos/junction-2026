@@ -1,8 +1,14 @@
 <script lang="ts">
 	import { Database, FlaskConical, Receipt, WifiOff } from '@lucide/svelte';
 
-	/** The always-visible honesty strip: what is real Valio data, what is scenario, what is simulated. */
-	let { mode, cachedAt }: { mode: 'fixture' | 'live'; cachedAt: string } = $props();
+	import { storyTime } from './format';
+
+	/**
+	 * The always-visible honesty strip: what is Valio data, what is scenario, what is simulated.
+	 * The Valio label comes from the offers on the plan (their provenance), not from fixed copy.
+	 */
+	let { mode, source }: { mode: 'fixture' | 'live'; source: { live: boolean; at: string } | null } =
+		$props();
 </script>
 
 <div
@@ -15,7 +21,10 @@
 	>
 		<span class="inline-flex items-center gap-1.5">
 			<Database size={13} class="text-accent" aria-hidden="true" />
-			<span><b class="font-medium text-ink">Valio challenge mock</b> · cached {cachedAt}</span>
+			<span
+				><b class="font-medium text-ink">Valio challenge mock</b> ·
+				{#if source}{source.live ? 'fetched' : 'cached'} {storyTime(source.at)}{:else}no prices yet{/if}</span
+			>
 		</span>
 		<span class="inline-flex items-center gap-1.5">
 			<FlaskConical size={13} class="text-undeliv" aria-hidden="true" />
@@ -32,7 +41,10 @@
 		{#if mode === 'fixture'}
 			<span class="inline-flex items-center gap-1.5">
 				<WifiOff size={13} aria-hidden="true" />
-				<span>Offline fixture</span>
+				<span
+					><b class="font-medium text-ink">Offline demonstration</b>: browser fixture, not the live
+					order</span
+				>
 			</span>
 		{/if}
 	</div>

@@ -111,6 +111,8 @@ export type DishStatus = 'ok' | 'unknown' | 'rescued' | 'partial' | 'shortfall';
 export interface CandidateView {
 	productId: string;
 	name: string;
+	/** Live: the rules being previewed recommend this one (may differ from what the order holds). */
+	recommended?: boolean;
 	origin?: string;
 	kind: AvailabilityKind;
 	logistic: 'Stock' | 'Terminal' | null;
@@ -160,8 +162,20 @@ export interface MakeView {
 	recipeNote: string;
 }
 
+/** A short description of a purchase: "HK Palvikinkku viipaloitu 1,5 kg · 13 ST". */
+export interface PurchaseText {
+	productId: string;
+	name: string;
+	qtyText: string;
+}
+
 export interface RescueView {
 	forLineId: string;
+	/**
+	 * Preview vs saved (live): what the active rules recommend, what the order holds now. They differ when a
+	 * preset is being previewed; "Apply these rules" makes the order follow the recommendation.
+	 */
+	preview?: { recommended: PurchaseText[]; saved: PurchaseText[]; differs: boolean };
 	kind: 'product' | 'make_in_house' | 'none';
 	needServed: Measure;
 	candidates: CandidateView[];

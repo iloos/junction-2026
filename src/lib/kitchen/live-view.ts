@@ -20,6 +20,7 @@ import {
 	type DishView,
 	type EventView,
 	type MakeView,
+	type PurchaseText,
 	type RescueView,
 	type Rules
 } from './fixture-plan';
@@ -78,14 +79,23 @@ export function availText(o?: Offer): string {
 
 /** "Joulukinkku (Christmas ham)" → Finnish and English names; "Riisipuuro (rice porridge): rice" keeps the part. */
 function names(label: string): { nameFi: string; name: string } {
-	const m = label.match(/^([^(]+?)\s*\(([^)]+)\)\s*(?::\s*(.+))?$/);
+	// "Graavilohi (cured salmon), cured in-house" and "Riisipuuro (rice porridge): rice" keep their tail.
+	const m = label.match(/^([^(]+?)\s*\(([^)]+)\)\s*(.*)$/);
 	if (!m) return { nameFi: label, name: label };
-	const part = m[3] ? `: ${m[3]}` : '';
-	return { nameFi: `${m[1]}${part}`, name: `${m[2]}${part}` };
+	const tail = m[3].replace(/^[:,]\s*/, '');
+	const part = tail ? `: ${tail}` : '';
+	const en = m[2].charAt(0).toUpperCase() + m[2].slice(1);
+	return { nameFi: m[3].startsWith(':') ? `${m[1]}${part}` : m[1], name: `${en}${part}` };
 }
 
 const isOpen = (l: Line) => l.state === 'eligible' || l.state === 'held';
-const hasUnknown = (l: Line) => l.reasons.includes('UNKNOWN_REQUIRED');
+/** Supply the server cannot confirm (read model), with the reason code as the fallback for older outputs. */
+const hasUnknown = (l: Line) =>
+	l.view
+		? l.view.unconfirmedCover.value > 0 || l.view.blockedReason?.detail === 'qty'
+		: l.reasons.includes('UNKNOWN_REQUIRED');
+const isShort = (l: Line) =>
+	l.view ? l.view.blockedReason?.detail === 'stock' : l.reasons.includes('INSUFFICIENT_STOCK');
 
 function verdict(c: CandidateView): string {
 	if (c.rejected.includes('out')) return 'Rejected: out of stock (0)';
@@ -113,7 +123,10 @@ function candidateViews(
 	return out.candidates.map((c) => {
 		const f = facts[c.productId];
 		const o = f?.offer;
-		const isChosen = previewRanking ? c.rank === 1 : chosenLine?.productId === c.productId;
+		// `chosen` = in the order now; `recommended` = what the previewed rules would pick.
+		const isChosen = chosenLine?.productId === c.productId;
+		const recommended = out.chosen.some((l) => l.productId === c.productId);
+		void previewRanking;
 		const line = chosenLine?.productId === c.productId ? chosenLine : undefined;
 		const partial = Boolean(line?.reasons.includes('INSUFFICIENT_STOCK'));
 		const view: CandidateView = {
@@ -140,6 +153,7 @@ function candidateViews(
 			holdReasons: line ? line.reasons.filter((r) => r !== 'UNKNOWN_REQUIRED') : [],
 			tier: line?.tier ?? (c.rank ? 'propose' : 'act'),
 			chosen: isChosen,
+			recommended,
 			verdict: '',
 			reliability: f?.reliability,
 			co2PerKg: f?.co2PerKg
@@ -147,6 +161,24 @@ function candidateViews(
 		view.verdict = verdict(view);
 		return view;
 	});
+}
+
+const purchase = (l: Line, facts: Record<string, ProductFacts>): PurchaseText => ({
+	productId: l.productId,
+	name: l.productName ?? facts[l.productId]?.name ?? l.productId,
+	qtyText: `${l.qty.value} ${l.qty.unit}`
+});
+
+/** What the rules recommend vs what the order holds; they differ by product or quantity. */
+function previewOf(out: SubstitutesOut, facts: Record<string, ProductFacts>) {
+	const recommended = out.chosen.map((l) => purchase(l, facts));
+	const saved = (out.saved ?? []).map((l) => purchase(l, facts));
+	const key = (xs: PurchaseText[]) =>
+		xs
+			.map((x) => `${x.productId}:${x.qtyText}`)
+			.sort()
+			.join('|');
+	return { recommended, saved, differs: key(recommended) !== key(saved) };
 }
 
 function makeView(
@@ -213,7 +245,7 @@ export function buildLiveView(input: LiveInput): EventView {
 		let status: DishStatus = 'ok';
 		if (outage) {
 			if (!subs.length) status = 'shortfall';
-			else if (subs.some((l) => l.reasons.includes('INSUFFICIENT_STOCK'))) status = 'partial';
+			else if (subs.some(isShort)) status = 'partial';
 			else status = 'rescued';
 		} else if (dishLines.some((l) => isOpen(l) && hasUnknown(l))) status = 'unknown';
 
@@ -229,6 +261,7 @@ export function buildLiveView(input: LiveInput): EventView {
 				kind,
 				needServed: served,
 				candidates: candidateViews(out, productSub, facts, input.previewRanking),
+				preview: previewOf(out, facts),
 				make:
 					kind === 'make_in_house'
 						? makeView(nameFi, subs, out, seedRescueFor(input, planned!.productId), facts)
