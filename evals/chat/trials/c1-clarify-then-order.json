@@ -1,0 +1,18 @@
+{
+	"id": "c1-clarify-then-order",
+	"$comment": "Clarification: the amount is missing, so exactly one question about it; the answer fills the slot and the order goes on with the date and product the chef already typed.",
+	"kitchen": "k-hotel",
+	"steps": [
+		{ "chef": { "text": "I need lactose-free butter for tomorrow" } },
+		{ "chef": { "answer": { "field": "qty", "value": { "value": 4, "unit": "kg" } } } }
+	],
+	"expect": {
+		"0": {
+			"asks": "qty",
+			"pending": "clarify",
+			"taskState": "awaiting_clarification",
+			"receipts": 0
+		},
+		"1": { "asks": null, "pending": ["decision", "none"], "receipts": 0 }
+	}
+}

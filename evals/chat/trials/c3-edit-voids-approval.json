@@ -1,0 +1,15 @@
+{
+	"id": "c3-edit-voids-approval",
+	"$comment": "Continuation after an edit: the chef approves, then changes a quantity on the Kitchen screen; 'go ahead' must see the voided approval, commit nothing and point at the new decision.",
+	"kitchen": "k-hotel",
+	"steps": [
+		{ "chef": { "text": "Order 60 kg butter for Friday" } },
+		{ "human": "approve" },
+		{ "human": "edit" },
+		{ "chef": { "continue": true } }
+	],
+	"expect": {
+		"0": { "pending": "decision" },
+		"3": { "samePlan": true, "receipts": 0, "pending": "decision", "taskState": "awaiting_chef" }
+	}
+}
