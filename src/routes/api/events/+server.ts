@@ -97,14 +97,25 @@ export const GET: RequestHandler = async ({ url, request, cookies }) => {
 			const ordered = orderedSender<Sequenced>({
 				after,
 				deliver: (e) => write(`id: ${e.seq}\nevent: ${e.kind}\ndata: ${JSON.stringify(e)}\n\n`),
-				readAfter: async (from) =>
-					(await catchUpAll(from)).filter(
-						(e): e is Sequenced => 'seq' in e && (!followRun || runOfEvent(e) === runId)
-					),
-				onError: (err) =>
+				// One page of this run's log; `complete` when it reached the end rather than the page cap.
+				readAfter: async (from) => {
+					const page = await catchUp(workspaceId, from, PAGE, runId);
+					return {
+						events: page.filter(
+							(e): e is Sequenced => 'seq' in e && (!followRun || runOfEvent(e) === runId)
+						),
+						complete: page.length < PAGE
+					};
+				},
+				// The gap could not be read: say so and close, so the client reconnects from the last seq it has
+				// (EventSource sends Last-Event-ID) and catches up from the log.
+				onLost: (err) => {
 					console.warn(
-						`[events] gap read failed for ${workspaceId}: ${err instanceof Error ? err.message : err}`
-					)
+						`[events] gap read failed for ${workspaceId}, closing for a resync: ${err instanceof Error ? err.message : err}`
+					);
+					write(`event: resync\ndata: ${JSON.stringify({ last: ordered.last() })}\n\n`);
+					cleanup();
+				}
 			});
 			const highest = () => (followRun ? ordered.last() : memoryLast);
 			const send = (e: ServerEvent) => {

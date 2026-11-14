@@ -68,6 +68,25 @@ export type Names = Record<string, string>;
 export const productName = (names: Names, id: string) => names[id] ?? `Product ${id}`;
 const name = productName;
 
+/**
+ * The door an op came through, in words: the Kitchen page (kitchen#<tab>), the agent dock (dock#<tab>), MCP,
+ * the REST API; scenario actions and other callers keep their own name.
+ */
+export function viaLabel(via: string): string {
+	const door = via.split(':')[0];
+	if (door.startsWith('kitchen#')) return 'Kitchen page';
+	if (door.startsWith('dock#')) return 'Agent dock';
+	const known: Record<string, string> = {
+		kitchen: 'Kitchen',
+		mcp: 'MCP',
+		rest: 'API',
+		chat: 'Chat',
+		request: 'Request',
+		task: 'Chat'
+	};
+	return known[door] ?? door;
+}
+
 export function lineIsHeld(l: Line): boolean {
 	return l.state === 'held' || l.state === 'unorderable';
 }

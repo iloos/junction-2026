@@ -13,6 +13,7 @@
 	let days = $state.raw<DemandDay[]>([]);
 	let loaded = $state(false);
 	let failed = $state<string | null>(null);
+	let truncated = $state(false);
 	const SHOW = 12;
 	let all = $state<Record<string, boolean>>({});
 
@@ -20,7 +21,9 @@
 		try {
 			const r = await fetch(`/ops/demand?ws=${encodeURIComponent(ws)}`, { cache: 'no-store' });
 			if (!r.ok) throw new Error(`HTTP ${r.status}`);
-			days = ((await r.json()) as { days: DemandDay[] }).days;
+			const b = (await r.json()) as { days: DemandDay[]; truncated?: boolean };
+			days = b.days;
+			truncated = !!b.truncated;
 			failed = null;
 		} catch (e) {
 			failed = e instanceof Error ? e.message : String(e);
@@ -63,6 +66,11 @@
 			<span><i class="proposed"></i>proposed</span>
 		</p>
 	</header>
+	{#if truncated}
+		<p class="note">
+			This run is longer than Ops reads (20,000 changes): the newest are not shown.
+		</p>
+	{/if}
 	{#if !loaded}
 		<p class="note">Loading demand…</p>
 	{:else if failed && !days.length}

@@ -26,6 +26,7 @@
 	let orders = $state.raw<OrderRow[]>([]);
 	let loaded = $state(false);
 	let failed = $state<string | null>(null);
+	let truncated = $state(false);
 	let open = $state<string | null>(null);
 	const selected = $derived(orders.find((o) => o.planId === open) ?? orders[0] ?? null);
 
@@ -33,7 +34,9 @@
 		try {
 			const r = await fetch(`/ops/orders?ws=${encodeURIComponent(ws)}`, { cache: 'no-store' });
 			if (!r.ok) throw new Error(`HTTP ${r.status}`);
-			orders = ((await r.json()) as { orders: OrderRow[] }).orders;
+			const b = (await r.json()) as { orders: OrderRow[]; truncated?: boolean };
+			orders = b.orders;
+			truncated = !!b.truncated;
 			failed = null;
 		} catch (e) {
 			failed = e instanceof Error ? e.message : String(e);
@@ -104,6 +107,7 @@
 	} as const;
 	const CHIP = {
 		valio: 'Valio data',
+		rules: 'Kitchen rules',
 		chef: 'Chef',
 		approver: 'Approver',
 		kitchen_agent: 'Kitchen agent',
@@ -128,6 +132,9 @@
 </script>
 
 <section class="orders" aria-label="Orders">
+	{#if truncated}<p class="note wide">
+			This run is longer than Ops reads (20,000 changes): the newest are not shown.
+		</p>{/if}
 	{#if !loaded}
 		<p class="note">Loading orders…</p>
 	{:else if failed && !orders.length}
@@ -293,6 +300,10 @@
 	}
 	.note {
 		color: var(--muted);
+	}
+	.wide {
+		grid-column: 1 / -1;
+		margin: 0;
 	}
 	.list {
 		list-style: none;

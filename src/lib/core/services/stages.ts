@@ -16,6 +16,7 @@ import type {
 	SalesQty
 } from '../contracts';
 import { applyOps, emptyState, type WorkspaceState } from '../state';
+import { causeOf, type CauseBy } from './cause';
 
 export type Origin = 'chat' | 'request' | 'outside_agent' | 'event' | 'kitchen';
 
@@ -24,7 +25,16 @@ export interface StageChange {
 	at: string;
 	actor: ActorKind;
 	kind:
-		'out' | 'undeliverable' | 'substitute' | 'make_in_house' | 'no_substitute' | 'edit' | 'recall';
+		| 'out'
+		| 'undeliverable'
+		| 'rule'
+		| 'substitute'
+		| 'make_in_house'
+		| 'no_substitute'
+		| 'edit'
+		| 'recall';
+	/** For a line that can't be ordered: who imposed it (Valio, the kitchen's rules, the order). */
+	by?: CauseBy;
 	/** One plain sentence: what changed and why. */
 	text: string;
 	lineIds: string[];
@@ -128,7 +138,8 @@ function originOf(create: OpEnvelope, plan: Plan): Origin {
 	const door = create.via.split(':')[0];
 	if (plan.createdBy.kind === 'external_agent' || door === 'mcp' || door === 'rest')
 		return 'outside_agent';
-	if (create.via.includes('chat') || plan.taskId) return 'chat';
+	// The agent dock (dock#<tab>) and chat are the chef talking to the agent.
+	if (door.startsWith('dock') || create.via.includes('chat') || plan.taskId) return 'chat';
 	if (create.via.includes('request')) return 'request';
 	if (plan.eventId) return 'event';
 	return 'kitchen';
@@ -149,113 +160,111 @@ const WHO: Record<ActorKind, string> = {
 	job: 'A monitor job'
 };
 
-/**
- * The stages of one plan. `ops` is the workspace's op log of the run, in seq order; `start` the state the run
- * started from (its seeded kitchens' empty state when omitted).
- */
-export function orderStages(
-	planId: string,
-	ops: OpEnvelope[],
-	start?: WorkspaceState
-): OrderStages | null {
-	if (!ops.length) return null;
-	let state = start ?? emptyState(ops[0].workspaceId, ops[0].runId);
-	let before: Plan | undefined;
-	let create: OpEnvelope | undefined;
-	let first: Plan | undefined;
+/** What one replay keeps per plan while it walks the log. */
+interface Acc {
+	planId: string;
+	before?: Plan;
+	create?: OpEnvelope;
+	first?: Plan;
 	/** The first version that had lines (a plan is often created empty and filled by its first offer). */
-	let firstLined: Plan | undefined;
-	let askedAt: OpEnvelope | undefined;
-	const changes: StageChange[] = [];
-	const approvalOps = new Map<string, OpEnvelope>();
-	const orderOps = new Map<string, OpEnvelope>();
-	/** Product names seen on any version, for "instead of X" after X's line is gone. */
-	const names = new Map<string, string>();
+	firstLined?: Plan;
+	askedAt?: OpEnvelope;
+	changes: StageChange[];
+	approvalOps: Map<string, OpEnvelope>;
+	orderOps: Map<string, OpEnvelope>;
+}
 
-	for (const env of ops) {
-		const r = applyOps(state, [env]);
-		if (!r.ok) continue; // a refused op (another run, a stale write) changes nothing
-		state = r.value;
-		if (planIdOf(env) !== planId) continue;
-		const plan = state.plans[planId];
-		if (!plan) continue;
-		for (const l of plan.lines) names.set(l.productId, name(l));
-		if (!firstLined && plan.lines.length) firstLined = plan;
-		const at = env.at;
-		const actor = env.actor.kind;
-		const add = (kind: StageChange['kind'], text: string, lineIds: string[]) =>
-			changes.push({ seq: env.seq, at, actor, kind, text, lineIds });
-		const op = env.op;
-		switch (op.type) {
-			case 'CreatePlan':
-				create = env;
-				first = plan;
-				if (plan.needs.length) askedAt = env;
-				break;
-			case 'RecordOffer': {
-				const prev = new Map((before?.lines ?? []).map((l) => [l.id, l]));
-				for (const l of plan.lines) {
-					if (l.state !== 'unorderable' || prev.get(l.id)?.state === 'unorderable') continue;
-					const late = l.reasons.includes('undeliverable');
-					add(
-						late ? 'undeliverable' : 'out',
-						late
-							? `${name(l)} can't be delivered by ${dayText(plan.deliverBy)}, Valio says.`
-							: `${name(l)} is out of stock at Valio.`,
-						[l.id]
-					);
-				}
-				break;
-			}
-			case 'ProposeSubstitute': {
-				const forName = op.lines[0]?.substituteFor
-					? (names.get(op.lines[0].substituteFor) ?? `Product ${op.lines[0].substituteFor}`)
-					: 'the missing product';
-				const ranked = op.candidates.length
-					? `, ranked first of ${op.candidates.length} candidates by the kitchen's own rules`
-					: '';
-				if (!op.lines.length) add('no_substitute', `No substitute for ${forName} qualifies.`, []);
-				else if (op.kind === 'make_in_house')
-					add(
-						'make_in_house',
-						`Planned in house instead of ${forName}: ${op.lines.length} ingredient${op.lines.length === 1 ? '' : 's'}${op.labourNote ? `; ${op.labourNote.replace(/\.$/, '')}` : ''}.`,
-						op.lines.map((l) => l.id)
-					);
-				else
-					add(
-						'substitute',
-						`Proposed ${name(op.lines[0])} instead of ${forName}${ranked}.`,
-						op.lines.map((l) => l.id)
-					);
-				break;
-			}
-			case 'EditLine':
-				if (!askedAt && plan.needs.length) askedAt = env;
+const newAcc = (planId: string): Acc => ({
+	planId,
+	changes: [],
+	approvalOps: new Map(),
+	orderOps: new Map()
+});
+
+/** One op applied to its plan's accumulator; `plan` is the plan after the op. */
+function step(acc: Acc, env: OpEnvelope, plan: Plan, names: Map<string, string>) {
+	for (const l of plan.lines) names.set(l.productId, name(l));
+	if (!acc.firstLined && plan.lines.length) acc.firstLined = plan;
+	const at = env.at;
+	const actor = env.actor.kind;
+	const add = (kind: StageChange['kind'], text: string, lineIds: string[], by?: CauseBy) =>
+		acc.changes.push({ seq: env.seq, at, actor, kind, text, lineIds, ...(by ? { by } : {}) });
+	const op = env.op;
+	switch (op.type) {
+		case 'CreatePlan':
+			acc.create = env;
+			acc.first = plan;
+			if (plan.needs.length) acc.askedAt = env;
+			break;
+		case 'RecordOffer': {
+			const prev = new Map((acc.before?.lines ?? []).map((l) => [l.id, l]));
+			for (const l of plan.lines) {
+				if (l.state !== 'unorderable' || prev.get(l.id)?.state === 'unorderable') continue;
+				// The cause from the line's typed reasons, and who imposed it: never a kitchen rule as stock.
+				const c = causeOf(l);
 				add(
-					'edit',
-					`${WHO[actor]} changed it: ${op.summary.replace(/\.$/, '')}.`,
-					op.lines.map((x) => x.lineId)
+					c.reason === 'undeliverable' ? 'undeliverable' : c.shortage ? 'out' : 'rule',
+					c.reason === 'undeliverable'
+						? `${name(l)} can't be delivered by ${dayText(plan.deliverBy)}, Valio says.`
+						: `${name(l)} ${c.text}.`,
+					[l.id],
+					c.by
 				);
-				break;
-			case 'RecordAnomaly':
-				if (op.anomaly.kind === 'recall')
-					add(
-						'recall',
-						`Recall notice: ${op.anomaly.message.replace(/\.$/, '')}. Its lines are held until someone checks.`,
-						plan.lines.filter((l) => l.productId === op.anomaly.productId).map((l) => l.id)
-					);
-				break;
-			case 'RecordApproval':
-				approvalOps.set(op.approval.id, approvalOps.get(op.approval.id) ?? env);
-				if (op.approval.state !== 'pending') approvalOps.set(`${op.approval.id}:decided`, env);
-				break;
-			case 'CommitOrder':
-				if (op.outcome.result === 'committed') orderOps.set(op.outcome.order.id, env);
-				break;
+			}
+			break;
 		}
-		before = plan;
+		case 'ProposeSubstitute': {
+			const forName = op.lines[0]?.substituteFor
+				? (names.get(op.lines[0].substituteFor) ?? `Product ${op.lines[0].substituteFor}`)
+				: 'the missing product';
+			const ranked = op.candidates.length
+				? `, ranked first of ${op.candidates.length} candidates by the kitchen's own rules`
+				: '';
+			if (!op.lines.length) add('no_substitute', `No substitute for ${forName} qualifies.`, []);
+			else if (op.kind === 'make_in_house')
+				add(
+					'make_in_house',
+					`Planned in house instead of ${forName}: ${op.lines.length} ingredient${op.lines.length === 1 ? '' : 's'}${op.labourNote ? `; ${op.labourNote.replace(/\.$/, '')}` : ''}.`,
+					op.lines.map((l) => l.id)
+				);
+			else
+				add(
+					'substitute',
+					`Proposed ${name(op.lines[0])} instead of ${forName}${ranked}.`,
+					op.lines.map((l) => l.id)
+				);
+			break;
+		}
+		case 'EditLine':
+			if (!acc.askedAt && plan.needs.length) acc.askedAt = env;
+			add(
+				'edit',
+				`${WHO[actor]} changed it: ${op.summary.replace(/\.$/, '')}.`,
+				op.lines.map((x) => x.lineId)
+			);
+			break;
+		case 'RecordAnomaly':
+			if (op.anomaly.kind === 'recall')
+				add(
+					'recall',
+					`Recall notice: ${op.anomaly.message.replace(/\.$/, '')}. Its lines are held until someone checks.`,
+					plan.lines.filter((l) => l.productId === op.anomaly.productId).map((l) => l.id)
+				);
+			break;
+		case 'RecordApproval':
+			acc.approvalOps.set(op.approval.id, acc.approvalOps.get(op.approval.id) ?? env);
+			if (op.approval.state !== 'pending') acc.approvalOps.set(`${op.approval.id}:decided`, env);
+			break;
+		case 'CommitOrder':
+			if (op.outcome.result === 'committed') acc.orderOps.set(op.outcome.order.id, env);
+			break;
 	}
+	acc.before = plan;
+}
 
+/** The stages of one plan from its accumulator and the final state. */
+function finish(acc: Acc, state: WorkspaceState, names: Map<string, string>): OrderStages | null {
+	const { planId, create, first, firstLined, askedAt, changes, approvalOps, orderOps } = acc;
 	const plan = state.plans[planId];
 	if (!plan || !create || !first) return null;
 	const asked = askedAt ? (askedAt === create ? first : plan) : plan;
@@ -278,7 +287,7 @@ export function orderStages(
 	const signed: SignedStep[] = Object.values(state.approvals)
 		.filter((a) => a.planId === planId)
 		.map((a) => {
-			const env = approvalOps.get(`${a.id}:decided`) ?? approvalOps.get(a.id)!;
+			const env = approvalOps.get(`${a.id}:decided`) ?? approvalOps.get(a.id);
 			return {
 				approvalId: a.id,
 				seq: env?.seq ?? 0,
@@ -382,12 +391,40 @@ export function orderStages(
 	};
 }
 
-/** Every plan in the log, newest first, as stages. */
+/**
+ * Every plan in the log, newest first, as stages: one replay of the log with an accumulator per plan. `ops` is
+ * the workspace's op log of the run, in seq order; `start` the state the run started from (empty when omitted).
+ */
 export function allOrderStages(ops: OpEnvelope[], start?: WorkspaceState): OrderStages[] {
-	const ids: string[] = [];
-	for (const e of ops) if (e.op.type === 'CreatePlan') ids.push(e.op.plan.id);
-	return ids
-		.reverse()
-		.map((id) => orderStages(id, ops, start))
+	if (!ops.length) return [];
+	let state = start ?? emptyState(ops[0].workspaceId, ops[0].runId);
+	const accs = new Map<string, Acc>();
+	/** Product names seen on any version of any plan, for "instead of X" after X's line is gone. */
+	const names = new Map<string, string>();
+	for (const env of ops) {
+		const r = applyOps(state, [env]);
+		if (!r.ok) continue; // a refused op (another run, a stale write) changes nothing
+		state = r.value;
+		const planId = planIdOf(env);
+		if (!planId) continue;
+		const plan = state.plans[planId];
+		if (!plan) continue;
+		let acc = accs.get(planId);
+		if (!acc) accs.set(planId, (acc = newAcc(planId)));
+		step(acc, env, plan, names);
+	}
+	return [...accs.values()]
+		.filter((a) => a.create)
+		.sort((a, b) => b.create!.seq - a.create!.seq)
+		.map((a) => finish(a, state, names))
 		.filter((s): s is OrderStages => !!s);
+}
+
+/** The stages of one plan (one replay of the log, as `allOrderStages`). */
+export function orderStages(
+	planId: string,
+	ops: OpEnvelope[],
+	start?: WorkspaceState
+): OrderStages | null {
+	return allOrderStages(ops, start).find((s) => s.planId === planId) ?? null;
 }
