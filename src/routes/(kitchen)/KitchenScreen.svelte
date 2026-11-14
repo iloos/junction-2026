@@ -1,7 +1,15 @@
 <script lang="ts">
 	import { onMount, tick } from 'svelte';
 	import { resolve } from '$app/paths';
-	import { ChevronDown, CornerDownRight, Info, RotateCcw, Play, CloudOff } from '@lucide/svelte';
+	import {
+		ChevronDown,
+		CornerDownRight,
+		Info,
+		RotateCcw,
+		Play,
+		CloudOff,
+		LoaderCircle
+	} from '@lucide/svelte';
 	import { KitchenStore } from '$lib/kitchen/kitchen.svelte';
 	import { KITCHENS, PRODUCTS } from '$lib/kitchen/catalog';
 	import type { DishView } from '$lib/kitchen/fixture-plan';
@@ -328,6 +336,19 @@
 			<Play size={16} aria-hidden="true" />
 			{k.busy ? 'Planning…' : 'Plan the event'}
 		</button>
+		{#if k.progress}
+			<p
+				class="mt-4 flex items-center gap-2 text-[13.5px] text-ink-2"
+				role="status"
+				aria-live="polite"
+			>
+				<LoaderCircle size={15} class="animate-spin text-accent" aria-hidden="true" />
+				{k.progress}
+			</p>
+		{/if}
+		{#if k.error}
+			<p class="mt-4 text-[13px] text-out" role="alert">{k.error.message}</p>
+		{/if}
 	</main>
 {:else if !snap || !view || !plan}
 	<main class="mx-auto max-w-[1440px] px-4 py-10 md:px-6" aria-busy="true">
@@ -635,10 +656,16 @@
 				oncontention={(on) => k.setContention(on)}
 			/>
 			{#if k.error}
-				<p class="rounded-md bg-out-wash px-3 py-2 text-[12.5px] text-ink" role="alert">
-					<b class="mono font-medium text-out">{k.error.code}</b>
-					{k.error.message}
-				</p>
+				{#if k.error.detail?.retryInMs}
+					<p class="rounded-md bg-well px-3 py-2 text-[12.5px] text-ink" role="status">
+						{k.error.message}
+					</p>
+				{:else}
+					<p class="rounded-md bg-out-wash px-3 py-2 text-[12.5px] text-ink" role="alert">
+						<b class="mono font-medium text-out">{k.error.code}</b>
+						{k.error.message}
+					</p>
+				{/if}
 			{/if}
 			{#if k.activity.length}
 				<section aria-labelledby="log-h" class="rounded-lg border border-rule bg-sheet px-4 py-3">

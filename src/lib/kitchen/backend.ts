@@ -35,31 +35,54 @@ export async function snapshot(mode: ApiMode): Promise<MaybeStarted> {
 const scenario = (action: string, value?: unknown) =>
 	livePost<MaybeStarted>('/kitchen-api/scenario', { action, value });
 
-export async function start(mode: ApiMode) {
-	if (mode === 'live') await scenario('start');
+/**
+ * Each live command answers with the new snapshot, so the caller uses it instead of a second GET.
+ * Fixture commands return null: the caller reads the fixture snapshot.
+ */
+export type Answer = MaybeStarted | null;
+
+export interface PlanProgress {
+	planned: true;
+	dishes: number;
+	lines: number;
+	outages: number;
 }
 
-export async function setPreset(mode: ApiMode, preset: PresetId) {
-	if (mode === 'live') await scenario('preset', preset);
-	else await fx.setPreset(preset);
+/** Start, step 1: plan the event; answers with real counts for the progress label. */
+export function planStep(): Promise<PlanProgress> {
+	return livePost<PlanProgress>('/kitchen-api/scenario', { action: 'plan' });
 }
 
-export async function setKitchen(mode: ApiMode, kitchenId: string) {
-	if (mode === 'live') await scenario('kitchen', kitchenId);
-	else await fx.setKitchen(kitchenId);
+/** Start, step 2: the kitchen agent proposes rescues; answers with the snapshot. */
+export function rescueStep(): Promise<MaybeStarted> {
+	return scenario('rescue');
 }
 
-export async function setContention(mode: ApiMode, on: boolean) {
-	if (mode === 'live') await scenario('contention', on);
-	else await fx.setContention(on);
+export async function setPreset(mode: ApiMode, preset: PresetId): Promise<Answer> {
+	if (mode === 'live') return scenario('preset', preset);
+	await fx.setPreset(preset);
+	return null;
 }
 
-export async function reset(mode: ApiMode) {
-	if (mode === 'live') await scenario('reset');
-	else await fx.reset();
+export async function setKitchen(mode: ApiMode, kitchenId: string): Promise<Answer> {
+	if (mode === 'live') return scenario('kitchen', kitchenId);
+	await fx.setKitchen(kitchenId);
+	return null;
+}
+
+export async function setContention(mode: ApiMode, on: boolean): Promise<Answer> {
+	if (mode === 'live') return scenario('contention', on);
+	await fx.setContention(on);
+	return null;
+}
+
+export async function reset(mode: ApiMode): Promise<Answer> {
+	if (mode === 'live') return scenario('reset');
+	await fx.reset();
+	return null;
 }
 
 /** Live: make the order follow the previewed rules (replace substitutes, re-quote, void the approval). */
-export async function applyRules(mode: ApiMode) {
-	if (mode === 'live') await scenario('apply');
+export async function applyRules(mode: ApiMode): Promise<Answer> {
+	return mode === 'live' ? scenario('apply') : null;
 }

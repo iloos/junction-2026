@@ -124,12 +124,26 @@ export class KitchenStore {
 		});
 	}
 
-	/** Live: plan the event and let the kitchen agent propose rescues. The one command that creates the plan. */
+	/** What the start screen shows while planning: the step under way, with real counts once known. */
+	progress = $state<string | null>(null);
+
+	/**
+	 * Live: plan the event, then let the kitchen agent propose rescues. Two server steps, so the progress label
+	 * names the step actually running; the second step's answer is the snapshot (no extra read).
+	 */
 	async start() {
 		await this.#run(async () => {
-			await backend.start(this.mode);
-			this.#log('rules', 'Demo started: event planned, rescues proposed by the kitchen agent');
+			this.progress = 'Planning the menu: guests × grams → needs → Valio lines…';
+			const p = await backend.planStep();
+			this.progress = `Planned ${p.dishes} needs, ${p.lines} Valio lines. Finding rescues for ${p.outages} ${p.outages === 1 ? 'outage' : 'outages'}…`;
+			const snap = await backend.rescueStep();
+			this.#log(
+				'rules',
+				`Demo started: ${p.dishes} needs planned, rescues proposed for ${p.outages} outages`
+			);
+			return snap;
 		});
+		this.progress = null;
 	}
 
 	async retry() {
@@ -157,51 +171,56 @@ export class KitchenStore {
 	async setPreset(preset: PresetId) {
 		if (this.snap?.preset === preset || this.readOnly) return;
 		await this.#run(async () => {
-			await backend.setPreset(this.mode, preset);
+			const answer = await backend.setPreset(this.mode, preset);
 			this.#log(
 				'rules',
 				`Rules: ${preset === 'kitchen' ? 'kitchen default' : preset === 'price' ? 'price first' : 'Finnish required'}`
 			);
+			return answer;
 		});
 	}
 
 	async applyRules() {
 		if (this.readOnly) return;
 		await this.#run(async () => {
-			await backend.applyRules(this.mode);
+			const answer = await backend.applyRules(this.mode);
 			this.#log('rules', 'Applied the previewed rules to the order: approval voided, re-quoted');
+			return answer;
 		});
 	}
 
 	async setKitchen(kitchenId: string) {
 		if (this.readOnly) return;
 		await this.#run(async () => {
-			await backend.setKitchen(this.mode, kitchenId);
+			const answer = await backend.setKitchen(this.mode, kitchenId);
 			this.lastCommit = null;
 			this.#log('rules', `Kitchen: ${kitchenId}`);
+			return answer;
 		});
 	}
 
 	async setContention(on: boolean) {
 		if (this.readOnly) return;
 		await this.#run(async () => {
-			await backend.setContention(this.mode, on);
+			const answer = await backend.setContention(this.mode, on);
 			this.#log(
 				'sim',
 				on
 					? 'Simulator: another kitchen took 4 × palvikinkku 476768'
 					: 'Simulator: contention cleared'
 			);
+			return answer;
 		});
 	}
 
 	async reset() {
 		await this.#run(async () => {
-			await backend.reset(this.mode);
+			const answer = await backend.reset(this.mode);
 			this.lastCommit = null;
 			this.activity = [];
 			this.#seen.clear();
 			this.firstVersion = null;
+			return answer;
 		});
 	}
 
@@ -283,17 +302,19 @@ export class KitchenStore {
 		this.whyLineId = null;
 	}
 
-	async #run(fn: () => Promise<void>) {
+	/** Runs a command, then shows the snapshot it answered with, or reads one when it answered nothing. */
+	async #run(fn: () => Promise<backend.Answer | void>) {
 		this.busy = true;
 		this.error = null;
 		const before = this.snap?.plan.lines ?? [];
+		let answer: backend.Answer | void = null;
 		try {
-			await fn();
+			answer = await fn();
 		} catch (e) {
 			this.#fail(e);
 		}
 		try {
-			const next = await backend.snapshot(this.mode);
+			const next = answer ?? (await backend.snapshot(this.mode));
 			this.stale = null;
 			if ('plan' in next) {
 				this.started = true;
@@ -329,7 +350,9 @@ export class KitchenStore {
 	#fail(e: unknown) {
 		if (e instanceof ToolError) {
 			this.error = e.error;
-			this.#log('error', `${e.error.code}: ${e.error.message}`);
+			// A cooldown is a wait, not a failure.
+			if (e.error.detail?.retryInMs) this.#log('sim', e.error.message);
+			else this.#log('error', `${e.error.code}: ${e.error.message}`);
 		} else {
 			const message = e instanceof Error ? e.message : String(e);
 			this.error = { code: 'PROVIDER_UNAVAILABLE', message, retryable: true };
