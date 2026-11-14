@@ -633,7 +633,11 @@ async function snapshotBody(s: Session): Promise<FixtureSnapshot | NotStarted> {
 		kitchen,
 		rules,
 		preset: s.preset,
-		contention: s.contention,
+		// From the workspace's overlay, not this browser's toggle: another tab's shortage or reset changes it.
+		contention: inWorkspace(
+			s.workspaceId,
+			() => b.overlay.availabilityOf(CONTENDED.productId)?.tag === 'contention'
+		),
 		byAgent,
 		diet,
 		origin: origin ?? (plan.eventId ? 'event' : null),
@@ -751,7 +755,8 @@ async function shortage(s: Session, value: unknown): Promise<ShortageReplanned> 
 		left?: unknown;
 	};
 	const productId = typeof v.productId === 'string' ? v.productId : CONTENDED.productId;
-	b.overlay.clear();
+	// Only an earlier shortage's override goes; a contention on another product stays (the overlay is per workspace).
+	b.overlay.clearTagged('shortage');
 	const { offers } = await b.ports.catalog.offers([productId], SCENARIO.delivery);
 	const a = offers[0]?.availability;
 	const had = a?.kind === 'known' && a.amount != null ? a.amount : 0;
@@ -759,7 +764,8 @@ async function shortage(s: Session, value: unknown): Promise<ShortageReplanned> 
 	b.overlay.setAvailability({
 		productId,
 		amount: left,
-		label: `simulated: Valio is short, ${left} of ${had} left`
+		label: `simulated: Valio is short, ${left} of ${had} left`,
+		tag: 'shortage'
 	});
 	const ctx = agent(s);
 	const shortageId = `sh-${++shortages}`;
@@ -855,12 +861,14 @@ async function applyScenario(
 		// The overlay is simulator state of this workspace (one Valio stock for every kitchen in it), not a
 		// view setting; other sandboxes never see it.
 		s.contention = Boolean(value);
-		b.overlay.clear();
+		// Only contention's own override: a shortage another tab ran in this workspace stays.
+		b.overlay.clearTagged('contention');
 		if (s.contention)
 			b.overlay.setAvailability({
 				productId: CONTENDED.productId,
 				amount: CONTENDED.left,
-				label: `simulated: another kitchen took ${CONTENDED.taken} × ${CONTENDED.productId}`
+				label: `simulated: another kitchen took ${CONTENDED.taken} × ${CONTENDED.productId}`,
+				tag: 'contention'
 			});
 		s.contentionRescue = undefined;
 		if (s.contention) {
