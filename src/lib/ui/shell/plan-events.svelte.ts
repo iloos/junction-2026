@@ -17,6 +17,13 @@ export interface Burst {
 }
 type Listener = (b: Burst) => void;
 
+/** A live room or shortage notice (kitchen.created, shortage.replanned): not in the op log, never replayed. */
+export interface Notice {
+	at: string;
+	event: { kind: string; label?: string; detail?: unknown };
+}
+type NoticeListener = (n: Notice) => void;
+
 /** The plan an op touches, if any (a recall names one when it hit a planned line). */
 export function planOf(op: OpEnvelope['op']): string | null {
 	switch (op.type) {
@@ -48,6 +55,8 @@ export class PlanEvents {
 	// Callbacks, not state anything renders: a plain Set on purpose.
 	// eslint-disable-next-line svelte/prefer-svelte-reactivity
 	#listeners = new Set<Listener>();
+	// eslint-disable-next-line svelte/prefer-svelte-reactivity
+	#notices = new Set<NoticeListener>();
 	#es: EventSource | null = null;
 	#last = 0;
 	#batch: OpEnvelope[] = [];
@@ -79,6 +88,17 @@ export class PlanEvents {
 		};
 	}
 
+	/** Calls `fn` with each live notice; keeps the stream open while subscribed; returns the unsubscribe. */
+	notices(fn: NoticeListener): () => void {
+		this.#notices.add(fn);
+		const keep: Listener = () => {};
+		const off = this.subscribe(keep);
+		return () => {
+			this.#notices.delete(fn);
+			off();
+		};
+	}
+
 	#url(after: number, poll = false) {
 		const ws = this.#workspace ? `&ws=${encodeURIComponent(this.#workspace)}` : '';
 		return `/api/events?after=${after}${poll ? '&mode=poll' : ''}${ws}`;
@@ -104,6 +124,14 @@ export class PlanEvents {
 			this.#last = e.seq;
 			this.#batch.push(e.envelope);
 			this.#schedule();
+		});
+		es.addEventListener('notice', (m) => {
+			try {
+				const n = JSON.parse((m as MessageEvent).data) as Notice;
+				for (const fn of this.#notices) fn(n);
+			} catch {
+				/* a malformed notice is dropped; the plans on load still say what happened */
+			}
 		});
 		// A reset elsewhere started a new run: everything on screen is from the old one.
 		es.addEventListener('run', () => {

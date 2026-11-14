@@ -25,6 +25,9 @@
 	import { day as dayLabel, money, readableName } from '$lib/ui/format';
 	import { qtyText } from '$lib/ui/product-card';
 	import Row from '$lib/ui/Row.svelte';
+	import Ledger from '$lib/ui/Ledger.svelte';
+	import { buildLedger, type ShortageNotice } from '$lib/ui/ledger';
+	import { useShell } from '$lib/ui/shell/shell.svelte';
 	import NothingPlanned from './NothingPlanned.svelte';
 
 	let {
@@ -57,6 +60,7 @@
 	$effect(() => {
 		const id = kitchenId;
 		void refresh;
+		void bump;
 		let gone = false;
 		failed = false;
 		void fetch(`/kitchen-api/basket?kitchen=${encodeURIComponent(id)}`, { cache: 'no-store' })
@@ -71,6 +75,22 @@
 	});
 
 	const days = $derived(basket?.days.filter((d) => d.lines.length) ?? []);
+
+	// Live shortage re-plans for this kitchen (moment 1): kept for this page, newest first; each re-reads the basket.
+	const shell = useShell();
+	let shortages = $state.raw<ShortageNotice[]>([]);
+	let bump = $state(0);
+	$effect(() => {
+		if (!shell) return;
+		return shell.events.notices((n) => {
+			if (n.event.kind !== 'shortage.replanned') return;
+			const d = n.event.detail as ShortageNotice;
+			if (!d?.kitchens?.some((k) => k.kitchenId === kitchenId)) return;
+			shortages = [d, ...shortages.filter((x) => x.shortageId !== d.shortageId)];
+			bump++;
+		});
+	});
+	const ledger = $derived(buildLedger(days, shortages, kitchenId));
 	const pickedEmpty = $derived(Boolean(date && basket && !days.some((d) => d.date === date)));
 
 	// Picking a day scrolls to it when it has lines.
@@ -129,6 +149,7 @@
 	</aside>
 
 	<div class="flex min-w-0 flex-col gap-5">
+		{#if basket}<Ledger {ledger} {ondecide} {onorder} />{/if}
 		<div class="flex flex-wrap items-center justify-between gap-2">
 			<h1 class="text-title font-semibold tracking-[-0.015em] text-ink">Basket</h1>
 			<div
@@ -162,7 +183,14 @@
 		{:else if !basket}
 			<div class="h-48 animate-pulse rounded-lg bg-well/60" aria-label="Loading the basket"></div>
 		{:else if !days.length || pickedEmpty}
-			<NothingPlanned {kitchenId} {kitchenName} bind:date onplanned={onopen} {onask} />
+			<NothingPlanned
+				showDays={false}
+				{kitchenId}
+				{kitchenName}
+				bind:date
+				onplanned={onopen}
+				{onask}
+			/>
 		{:else}
 			{#each days as d (d.date)}
 				{@const action = dayAction(d)}
