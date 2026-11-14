@@ -79,7 +79,7 @@ export async function proposeFromRequest(o: {
 
 /** The menu view with what is known so far about each dish's sourced recipes, keyed by dish id. */
 function withGrounding(view: MenuView): MenuView {
-	const known = groundingFor(view.proposal.dishes.map((x) => x.name));
+	const known = groundingFor(view.proposal.dishes);
 	const grounding = Object.fromEntries(
 		view.proposal.dishes.flatMap((x) => (known[x.name] ? [[x.id, known[x.name]]] : []))
 	);

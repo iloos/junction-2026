@@ -5,11 +5,15 @@
  * out. Evidence only: the proposal is never changed; the chef decides. Runs in the background so the proposal is not
  * slowed; cached per dish name for the process (the Exa answers themselves sit in the shared response cache).
  */
+import { createHash } from 'node:crypto';
 import type { Catalog } from '$lib/core/ports';
 import type { FactSearch } from './exa';
 import type { Findings } from './findings';
 import { findOutside, ingredientTerms, slug, type OutsideOption } from './lookup';
 import { evidenceSource, type EvidenceSource } from './evidence';
+import { reportExternal } from '../external/call';
+import { currentScope, scopeFor, withExternalScope } from '../external/scope';
+import { noTrace } from '../adapters/llm/trace';
 
 /** Recipes compared per dish. */
 export const RECIPES_PER_DISH = 2;
@@ -143,10 +147,31 @@ export async function groundDish(
 		title: o.title,
 		host: host(o.sources[0].url)
 	}));
+	const source = evidenceSource(r.mode, r.cached);
+	// One summary per dish in the caller's drawer (the Exa calls behind it are traced on their own).
+	const scope = currentScope();
+	reportExternal(
+		scope?.trace ?? noTrace,
+		'tool',
+		{
+			api: 'exa',
+			purpose: 'menu.grounding',
+			cache: source,
+			ok: true,
+			latencyMs: 0,
+			workspaceId: scope?.workspaceId ?? d.workspaceId
+		},
+		{
+			dish: dish.name,
+			recipes: recipes.length,
+			matched: matchedSources.length,
+			modelOnly: modelOnly.length
+		}
+	);
 	return {
 		dishName: dish.name,
 		state: 'done',
-		source: evidenceSource(r.mode, r.cached),
+		source,
 		at: r.at,
 		matchedSources,
 		compared,
@@ -164,7 +189,22 @@ export async function groundDish(
 
 const g = globalThis as typeof globalThis & { __grounding?: Map<string, GroundingState> };
 const store = (g.__grounding ??= new Map<string, GroundingState>());
-const keyOf = (dishName: string) => slug(dishName);
+type Dish = { name: string; ingredients: ModelIngredient[] };
+/**
+ * The verdict depends on this dish's ingredients, not only its name: keyed by the name and a digest of the sorted
+ * ingredient labels, so two visitors' "Kalakeitto" with different ingredients never share a verdict. The Exa answers
+ * behind it stay shared (the response cache is keyed by the query).
+ */
+const keyOf = (x: Dish) =>
+	`${slug(x.name)}:${createHash('sha256')
+		.update(
+			x.ingredients
+				.map((i) => i.label.trim().toLowerCase())
+				.sort()
+				.join('|')
+		)
+		.digest('hex')
+		.slice(0, 16)}`;
 
 /** Test hook. */
 export function resetGrounding() {
@@ -172,11 +212,11 @@ export function resetGrounding() {
 }
 
 /** What is known for each dish name now: done, pending, failed, or absent (never asked). */
-export function groundingFor(dishNames: string[]): Record<string, GroundingState> {
+export function groundingFor(dishes: Dish[]): Record<string, GroundingState> {
 	return Object.fromEntries(
-		dishNames.flatMap((n) => {
-			const s = store.get(keyOf(n));
-			return s ? [[n, s]] : [];
+		dishes.flatMap((x) => {
+			const s = store.get(keyOf(x));
+			return s ? [[x.name, s]] : [];
 		})
 	);
 }
@@ -189,15 +229,15 @@ export function startGrounding(
 	dishes: { name: string; ingredients: ModelIngredient[] }[],
 	d: GroundDeps
 ): Promise<void> {
-	const todo = dishes.filter((x) => !store.has(keyOf(x.name)));
-	for (const x of todo) store.set(keyOf(x.name), { dishName: x.name, state: 'pending' });
+	const todo = dishes.filter((x) => !store.has(keyOf(x)));
+	for (const x of todo) store.set(keyOf(x), { dishName: x.name, state: 'pending' });
 	const queue = [...todo];
 	const worker = async () => {
 		for (let x = queue.shift(); x; x = queue.shift()) {
 			try {
-				store.set(keyOf(x.name), await groundDish(x, d));
+				store.set(keyOf(x), await groundDish(x, d));
 			} catch (e) {
-				store.set(keyOf(x.name), {
+				store.set(keyOf(x), {
 					dishName: x.name,
 					state: 'failed',
 					error: String((e as Error)?.message ?? e).slice(0, 200)
@@ -221,7 +261,14 @@ export async function groundMenuInBackground(
 	const { findingsFor, webClients, webStateReady } = await import('.');
 	await webStateReady(env);
 	const { exa } = webClients(env, undefined, `visitor:${workspaceId}`);
-	void startGrounding(dishes, { exa, catalog, findings: findingsFor(env), workspaceId }).catch(
-		() => {}
-	);
+	const { currentRun } = await import('../demo/run');
+	// The background work traces into the visitor's drawer and charges its caps, like a tool call.
+	const scope = scopeFor({
+		workspaceId,
+		runId: currentRun(workspaceId),
+		actor: { kind: 'chef', id: 'menu-grounding' }
+	});
+	void withExternalScope({ ...scope, spendKey: `visitor:${workspaceId}` }, () =>
+		startGrounding(dishes, { exa, catalog, findings: findingsFor(env), workspaceId })
+	).catch(() => {});
 }

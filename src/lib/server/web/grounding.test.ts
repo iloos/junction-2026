@@ -56,10 +56,14 @@ describe('grounded menu (recorded answers, no network)', { timeout: 30_000 }, ()
 			findings: createFindings(undefined, true)
 		};
 		const p = startGrounding([tart], deps);
-		expect(groundingFor(['joulutorttu']).joulutorttu?.state).toBe('pending');
+		expect(groundingFor([tart]).joulutorttu?.state).toBe('pending');
 		await p;
-		expect(groundingFor(['joulutorttu']).joulutorttu?.state).toBe('done');
+		expect(groundingFor([tart]).joulutorttu?.state).toBe('done');
 		await startGrounding([tart], deps); // already known: no second lookup
-		expect(groundingFor(['Unknown dish'])).toEqual({});
+		expect(groundingFor([{ name: 'Unknown dish', ingredients: [{ label: 'x' }] }])).toEqual({});
+		// Same name, other ingredients (another visitor's proposal): not the same verdict.
+		expect(
+			groundingFor([{ name: 'joulutorttu', ingredients: [{ label: 'lehtitaikinalevyt' }] }])
+		).toEqual({});
 	});
 });
