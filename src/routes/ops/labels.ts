@@ -8,6 +8,7 @@ import type {
 	Tier
 } from '$lib/core/contracts';
 import { reasonShort } from '$lib/ui/reasons';
+import { day } from '$lib/ui/format';
 import { decisionsOf } from '$lib/ui/decisions';
 
 export const euro = (cents: number | null | undefined) =>
@@ -91,8 +92,8 @@ export function opSummary(env: OpEnvelope, names: Names, plans: Record<string, P
 	switch (op.type) {
 		case 'CreatePlan':
 			return op.plan.lines.length
-				? `Drafted an order of ${lines(op.plan.lines.length)} for delivery ${op.plan.deliverBy}`
-				: `Started an order for delivery ${op.plan.deliverBy}`;
+				? `Drafted an order of ${lines(op.plan.lines.length)} for ${day(op.plan.deliverBy)}`
+				: `Started an order for ${day(op.plan.deliverBy)}`;
 		case 'EditLine':
 			return op.summary;
 		case 'RecordOffer': {

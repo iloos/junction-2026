@@ -324,7 +324,7 @@
 			</nav>
 			<p class="roomline" title="Workspace and run this screen reads">
 				{data.room.label}
-				<span class="mono">{data.workspace}{data.run ? ` · ${data.run}` : ''}</span>
+				<span class="mono sys-only">{data.workspace}{data.run ? ` · ${data.run}` : ''}</span>
 			</p>
 		</div>
 
