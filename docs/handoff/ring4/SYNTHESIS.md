@@ -28,3 +28,6 @@ _Lead, Sat 14 Nov evening. Inputs: [review-code](review-code.md), [review-docs](
 
 ## Before the freeze (must)
 The race smoke with `SMOKE_KEY` (needs the user); the visitor gate on a production build; the three UI e2es against prod; the video from a recorded run on the freeze build; tag; no redeploy in the last 30 minutes.
+
+## Amendment: Round 10 adversarial review
+[ROUND10-ADVERSARIAL](../../review/ROUND10-ADVERSARIAL.md) reproduced 12/12 defects in composed journeys: chat Continue after TERMS_CHANGED and agent-loop key reuse across subsets (R10-01/10), cancellation undone by a reserved Continue (R10-02), a reviewed lactose-free menu losing its requirement before substitution (R10-03), a menu amount edit reviving a superseded original (R10-04), a named-product question answered for a generic default (R10-15), and a browser release gate that is red with two guards not reaching their assertions (R10-13). **New order:** E command identity + cancellation fence → 8d requirement lineage + active-strategy amendments → da exact product identity → D/9c durable web work + seq gap recovery → 91/1f gate guards, certainty copy, a pinned rehearsal of one autonomous line and one exception. New surfaces (Usual order, forecast, memory, new sponsors) wait behind these, as the review advises.
