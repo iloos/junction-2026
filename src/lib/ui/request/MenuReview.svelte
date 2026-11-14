@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { ArrowRight, Check, CircleAlert, OctagonX, Save } from '@lucide/svelte';
+	import { ArrowRight, Check, CircleAlert, CircleHelp, OctagonX, Save } from '@lucide/svelte';
 	import { tick } from 'svelte';
 	import { resolve } from '$app/paths';
 	import SourceTag from '$lib/ui/SourceTag.svelte';
@@ -40,6 +40,13 @@
 			typed = {};
 		}
 	});
+
+	/** The part of a provenance note the chef must act on ("vegan: no allergen record — check"), if any. */
+	const checkNote = (note?: string) =>
+		note
+			?.split('; ')
+			.find((x) => x.endsWith(' check'))
+			?.trim() ?? null;
 
 	const parse = (s: string) => Number(s.replace(',', '.'));
 	const edits = $derived(
@@ -200,6 +207,13 @@
 								{:else}
 									<span class="block text-meta text-signoff"
 										>unresolved: {i.unresolved ?? i.query}</span
+									>
+								{/if}
+								{#if checkNote(i.provenance.note)}
+									<span
+										class="mt-0.5 flex items-center gap-1 text-micro text-signoff"
+										data-testid="ingredient-check"
+										><CircleHelp size={12} aria-hidden="true" />{checkNote(i.provenance.note)}</span
 									>
 								{/if}
 								{#if !accepted}
