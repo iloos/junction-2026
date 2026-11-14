@@ -81,6 +81,16 @@ Gold JSON for each case lives in `evals/nemotron/`.
 
 The write-up gets a table of one row per version, which also serves as the "Quality of AI Output" evidence. Run it on fixtures in CI after a single recorded live pass.
 
+## 6. Request parse: D20 shape and the D12 cascade (measured 14 Nov, 19:20)
+The parse reads a request into the D20 shape (intent; per item what, and how much as exact, range, max_available, for_people or unknown). Held-out paraphrases, 5 per kind in English and Finnish, written apart from the prompt's few-shot examples, plus 5 reported inputs from Rounds 9–11 and the user (`src/lib/server/request/intent.live.test.ts`, live, `INTENT_LIVE=1`):
+
+| Model (job) | exact | range | max_available | for_people | unknown | dish | question | change | reported | total | median latency |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| gemini-3.5-flash-lite, minimal (`request.parse`) | 5 | 5 | 5 | 5 | 4 | 5 | 5 | 5 | 5 | 44/45 | 845 ms |
+| gemini-3.8-flash, low (`request.parse.escalate`) | 5 | 5 | 5 | 5 | 4 | 5 | 5 | 5 | 5 | 44/45 | 2,151 ms |
+
+Both models miss the same case: "lisää sipulia" ("more onions") is read as a change to an open order. That is a fair reading of an ambiguous phrase, not a model gap. Flash-Lite stays the first pass, as D12 chose. The escalate model costs about 2.5× the latency and was not more accurate on this set. It runs only when the first reading is unsure: the request.reading check says revise or block, the model flags doubts, or an amount is unknown. The step says which model answered. The cascade earns its keep on readings the first pass gets wrong; this set has none, so the next measurement should use inputs where Flash-Lite fails.
+
 ## Decisions for ARCHITECTURE
 1. **`LlmPort.generate({ role, messages, tools?, schema?, maxTokens })`** routes by role. `reader` and `critic` go to Nemotron (Verda first, then NVIDIA Build, then fixture). `swarm` goes to `gemma-4-E4B-it` on Featherless, then fixture. `agent` and `decide` go to Gemini or Claude per gemini.md. Every adapter is `createOpenAICompatible`.
 2. **Images enter the port as bytes.** The server downscales to ≤1600 px JPEG. A PDF becomes one page image per call (pdf.js server-side), with page results merged in core.
