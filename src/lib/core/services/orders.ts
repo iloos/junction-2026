@@ -245,7 +245,11 @@ export async function getPlan(
 					planVersion: a.planVersion,
 					termsHash: a.termsHash,
 					lineIds: a.lineIds,
-					tier: a.tier
+					tier: a.tier,
+					mandateVersion: a.mandateVersion,
+					expiresAt: a.expiresAt,
+					requestedBy: a.requestedBy,
+					...(a.decidedBy ? { decidedBy: a.decidedBy } : {})
 				}
 			: null
 	});
