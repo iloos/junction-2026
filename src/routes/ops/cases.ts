@@ -7,6 +7,7 @@ import type { Line, Plan } from '$lib/core/contracts';
 import { SCENARIO } from '$lib/core/scenario';
 import type { WorkspaceState } from '$lib/core/state';
 import { decisionsOf, type Decision } from '$lib/ui/decisions';
+import { dueOf } from '$lib/core/mandate/due';
 import { productName, reasonText, type Names } from './labels';
 
 /** The plan's pending approval, if any (the one decisions are counted from). */
@@ -38,7 +39,7 @@ export interface Case {
 	owner: Owner;
 	next: string;
 	tone: Tone;
-	/** When it must be done by (ISO): the earliest offer closing time of its lines, else the scenario cut-off. */
+	/** When it must be done by (ISO): dueOf over its lines (core/mandate/due.ts), else the scenario cut-off. */
 	deadline: string | null;
 	/** When it became a case (ISO, op time): its longest-waiting line. */
 	since: string | null;
@@ -135,7 +136,7 @@ export function buildCases(
 			const name = productName(names, l.productId);
 			const replaces = l.substituteFor ? `, replaces ${productName(names, l.substituteFor)}` : '';
 			const detail = `${l.qty.value} ${l.qty.unit}${replaces}`;
-			const deadline = l.offer?.availability.closingTime ?? SCENARIO.cutoff;
+			const deadline = dueOf(plan, pendingApprovalOf(s, plan.id), [l]) ?? SCENARIO.cutoff;
 			const since = heldSince[lineKey(plan.id, l.id)] ?? null;
 			const c = groups.get(key);
 			if (c) {

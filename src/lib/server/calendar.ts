@@ -7,10 +7,11 @@ import type { PlanState } from '$lib/core/contracts';
 import { SCENARIO } from '$lib/core/scenario';
 import { liveApprovals } from '$lib/core/services/orders';
 import { withPlanView } from '$lib/core/services/views';
-import { decisionsDue, decisionsOf } from '$lib/ui/decisions';
+import { decisionsOf } from '$lib/ui/decisions';
 import { inWorkspace } from '$lib/server/adapters/simulator/overlay';
 import { ensureRunLoaded } from '$lib/server/demo/reset';
 import { createServerPorts } from '$lib/server/store/server-ports';
+import { dueOf } from '$lib/core/mandate/due';
 import { realHandlers } from '$lib/server/tools/handlers';
 
 /** The feed covers a month before the scenario's start and half a year after it. */
@@ -49,7 +50,7 @@ export async function kitchenCalendar(
 			);
 			if (!approval) continue;
 			const viewed = await withPlanView(ports, plan, state, liveApprovals(state, plan.id));
-			const due = decisionsDue(viewed, approval);
+			const due = dueOf(viewed, approval) ?? SCENARIO.cutoff;
 			for (const d of decisionsOf(viewed, approval))
 				decisions.push({
 					key: d.key,
