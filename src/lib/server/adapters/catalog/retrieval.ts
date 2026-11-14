@@ -139,8 +139,13 @@ export function contentWords(name: string, brand?: string): string[] {
  */
 export function wordSim(a: string, b: string): number {
 	if (a === b) return 1;
+	// The same word in another derivation or inflection: "riistakäristys" ~ "riistakäriste", "kermaa" ~ "kerma".
+	const da = derivationStem(a);
+	if (da.length >= 5 && da === derivationStem(b)) return 0.9;
 	const [s, l] = a.length <= b.length ? [a, b] : [b, a];
 	if (s.length >= 4 && l.endsWith(s)) return 0.8;
+	// The other compound direction: the word is the modifier ("salaatti" in "salaattisekoitus"), weaker than the head.
+	if (s.length >= 5 && l.startsWith(s)) return 0.65;
 	// A three-letter compound head still names the kind (meijerivoi is butter), as weaker evidence.
 	if (s.length === 3 && l.length >= 6 && l.endsWith(s)) return 0.6;
 	let suf = 0;
@@ -150,6 +155,14 @@ export function wordSim(a: string, b: string): number {
 	while (pre < s.length && a[pre] === b[pre]) pre++;
 	if (pre >= 5) return 0.5;
 	return 0;
+}
+
+/** A word without its inflection or derivational ending (-ys/-us/-e, partitive): the stem two forms share. */
+export function derivationStem(w: string): string {
+	const b = baseForm(w);
+	if (b.length >= 7 && /(ys|us|ös)$/.test(b)) return b.slice(0, -2);
+	if (b.length >= 6 && /[^aeiouyäö]e$/.test(b)) return b.slice(0, -1);
+	return b;
 }
 
 const DIET_KEYS: { flag: string; word: RegExp }[] = [
