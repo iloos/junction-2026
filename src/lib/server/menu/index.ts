@@ -16,3 +16,4 @@ export { fixtureMenu, LlmMenu, proposeMenu, type ProposeDeps, type Proposed } fr
 export { blocks, reviewProposal, type Issue } from './rubric';
 export { drizzleMenuStore } from './pg';
 export { memoryMenuStore, MenuStoreError, proposalDigest } from './store';
+export { proposeMenuHandler, type ProposeMenuDeps, type ProposeMenuOutput } from './tool';
