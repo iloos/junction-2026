@@ -39,6 +39,7 @@ import { busTrace } from './watch';
 import { createSpendLedger, spendLimits, type SpendLedger } from './spend';
 import { createPgWebState, type PgWebState, type WebSlot } from './pg-state';
 import { attachStateSink, hydrateSlot, persistedMap } from './persist';
+import { setSharedLedger } from '../external/ledger';
 import type { Finding } from './findings';
 import type { WorkItem } from './queue';
 import type { Application } from './applications';
@@ -85,6 +86,7 @@ export function webStateReady(env: Env): Promise<void> {
 			hydrateSlot(slot, map as Map<string, Record<string, unknown>>, await pg.load(slot), keyOf);
 		attachStateSink(pg);
 		g.__webPg = pg;
+		setSharedLedger(pg);
 	})();
 	g.__webReady.catch((e) => {
 		console.error('[web] Postgres state unavailable; using files', (e as Error)?.message ?? e);

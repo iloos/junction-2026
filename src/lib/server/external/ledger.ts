@@ -81,3 +81,15 @@ export function createSpendLedger(file?: string, clock: () => Date = () => new D
 }
 
 export type SpendLedger = ReturnType<typeof createSpendLedger>;
+
+/** Anything that hands out guards: the file ledger above or the Postgres one (web/pg-state.ts). */
+export interface GuardSource {
+	guard(key: string | null, limits: SpendLimits): SpendGuard;
+}
+
+const shared = globalThis as typeof globalThis & { __sharedLedger?: GuardSource | null };
+/** The instance-shared ledger (Postgres `web_spend`) once the web state is attached; null before. */
+export const sharedLedger = (): GuardSource | null => shared.__sharedLedger ?? null;
+export function setSharedLedger(l: GuardSource | null) {
+	shared.__sharedLedger = l;
+}
