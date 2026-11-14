@@ -1,5 +1,7 @@
 import { classifyRequest, type EventRead } from '$lib/server/request/classify';
 import { parseRules, type ParsedItem } from '$lib/server/request/parse';
+import { readDish } from '$lib/server/request/dish';
+import { readShares } from '$lib/server/request/shares';
 
 /**
  * The one reading of what a chef's words ask for, shared by the agent (chat, MCP goal, REST) and /request, so the
@@ -97,6 +99,15 @@ export function classifyGoal(text: string, today: string): GoalClass {
 	// "6 kg butter for Wednesday?" is a request with a question mark; a question word makes it a read.
 	if (isQuestion(t) && (Q_START.test(t) || !statesAmount(items))) return { kind: 'read' };
 	if (perGuestIn(t)) return { kind: 'adjust' };
+	// Servings of a dish with shares ("500 pizzas no meat 50%") are an event, never 500 packs.
+	if (readShares(t) && !readDish(t)) {
+		const ev = classifyRequest(t, items, '');
+		if (ev)
+			return {
+				kind: 'event',
+				event: { guests: ev.guests, courses: ev.courses, occasion: ev.occasion }
+			};
+	}
 	if (statesAmount(items)) return { kind: 'order', amount: true };
 	// classifyRequest returns null when an item is a purchase: order wins over the occasion words.
 	const ev = classifyRequest(t, items, '');

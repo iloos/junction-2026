@@ -16,6 +16,7 @@ import { addDays, findDate, realDate, weekdayOf } from '../request/dates';
 import { CONSTRAINTS } from '../request/lexicon';
 import { coursesIn, guestsIn } from '../request/classify';
 import { constraintsIn } from '../request/parse';
+import { readShares } from '../request/shares';
 
 const STYLES: { style: ServiceStyleWord; re: RegExp }[] = [
 	{ style: 'buffet', re: /(?<![\p{L}])(buffet|noutopöytä\p{L}*|seisova pöytä)(?![\p{L}])/iu },
@@ -85,7 +86,9 @@ export function dietaryIn(text: string): string[] {
 export function draftBrief(text: string, today: string): BriefDraft {
 	const from: BriefDraft['from'] = {};
 	const notes: string[] = [];
-	const guests = guestsIn(text);
+	// "500 pizzas no meat 50%": the servings are the guests, each share a counted requirement.
+	const shares = readShares(text);
+	const guests = guestsIn(text) ?? shares?.total ?? null;
 	if (guests !== null) from.guests = 'words';
 
 	const d = findDate(text, today);
@@ -102,8 +105,20 @@ export function draftBrief(text: string, today: string): BriefDraft {
 	const serviceStyle = STYLES.find((s) => s.re.test(text))?.style ?? null;
 	if (serviceStyle) from.serviceStyle = 'words';
 
-	const typed = dietaryIn(text);
-	if (typed.length) from.dietary = 'words';
+	let typed = dietaryIn(text);
+	if (shares) {
+		// A counted share replaces the same diet read for every dish ("a third vegan" is not "all vegan").
+		const counted = new Set(shares.dietary.map((d) => d.split(':')[0]));
+		typed = [
+			...typed.filter((d) => !counted.has(d.split(':')[0])),
+			...shares.dietary.filter((d) => !typed.includes(d))
+		];
+		if (shares.parts.length && !shares.ask) notes.push(`read as ${shares.sentence}`);
+	}
+	// A reading that could mean something else is asked first, its likeliest form as one tap.
+	const askShares = !!shares?.ask;
+	if (askShares) typed = typed.filter((d) => !shares!.dietary.includes(d));
+	if (typed.length && !askShares) from.dietary = 'words';
 
 	let budgetCents: number | null = null;
 	const b = text.match(BUDGET);
@@ -131,10 +146,13 @@ export function draftBrief(text: string, today: string): BriefDraft {
 		dateText: d && !d.invalid ? d.text : null,
 		serviceStyle,
 		courses,
-		dietary: typed.length ? typed : null,
+		dietary: typed.length && !askShares ? typed : null,
 		budgetCents,
 		from,
-		notes
+		notes,
+		...(shares?.parts.length
+			? { shares: { sentence: shares.sentence, dietary: shares.dietary, ask: shares.ask } }
+			: {})
 	};
 }
 
@@ -144,11 +162,13 @@ const needsCourses = (s: ServiceStyleWord | null) => s === 'plated' || s === 'fa
 /** The fields still missing, in the order they are asked. */
 export function missing(d: BriefDraft): BriefField[] {
 	const out: BriefField[] = [];
+	// The shares reading is confirmed before anything else: it is how the words were understood.
+	if (d.dietary === null && d.shares?.ask) out.push('dietary');
 	if (d.guests === null) out.push('guests');
 	if (d.date === null) out.push('date');
 	if (d.serviceStyle === null) out.push('serviceStyle');
 	if (d.courses === null && needsCourses(d.serviceStyle)) out.push('courses');
-	if (d.dietary === null) out.push('dietary');
+	if (d.dietary === null && !d.shares?.ask) out.push('dietary');
 	if (d.budgetCents === null) out.push('budget');
 	return out;
 }
@@ -198,6 +218,18 @@ export function nextQuestion(d: BriefDraft, today: string): BriefQuestion | null
 				input: { kind: 'number', placeholder: 'Courses', unit: 'courses' }
 			};
 		case 'dietary':
+			if (d.shares?.ask)
+				return {
+					id,
+					field,
+					text: d.shares.ask.question,
+					why: 'This is how I read your words; one tap confirms it, or pick the other reading.',
+					chips: [
+						chip(d.shares.ask.yes, d.shares.dietary),
+						chip(d.shares.ask.no, [d.shares.ask.noValue])
+					],
+					input: { kind: 'text', placeholder: 'e.g. vegetarian:200, vegan:50' }
+				};
 			return {
 				id,
 				field,
