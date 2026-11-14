@@ -53,6 +53,17 @@ const products = ['100001', '100002', '100003'].map((productId, i) =>
 		dataQualityFlags: []
 	})
 );
+// Cream with both a weight and a volume per pack: Valio's own density converts kg to l, after a confirmation.
+products.push(
+	Product.parse({
+		...products[0],
+		productId: '100004',
+		nameFi: 'Test cream 1 l',
+		nameEn: 'cream 1 l',
+		netPerSalesUnit: { value: { value: 1.031, unit: 'kg' }, provenance: prov },
+		netVolumePerSalesUnit: { value: { value: 1, unit: 'l' }, provenance: prov }
+	})
+);
 const catalog: Catalog = {
 	get: async (ids) =>
 		new Map(products.filter((p) => ids.includes(p.productId)).map((p) => [p.productId, p])),
@@ -263,12 +274,32 @@ describe('suite: chat transitions (round 9)', () => {
 			type: 'done',
 			text: expect.stringMatching(/That need is in litres: how many litres\?/)
 		});
-		const ok = await chatTurn({ taskId: t.id, text: 'make it 6 l' }, s.deps);
+		// The question is the task's open clarify; the answer in the need's unit resizes need and line together.
+		expect((await s.tasks.get(s.ws, t.id))!.pending).toMatchObject({
+			kind: 'clarify',
+			field: 'qty'
+		});
+		const ok = await chatTurn({ taskId: t.id, text: '6' }, s.deps);
 		expect(ok.some((e) => e.type === 'step' && e.tool === 'edit_line' && e.ok)).toBe(true);
 		const plan = must(await s.h.get_plan(s.ctx('chef'), { planId: p.id })).plan;
 		// The need and the purchase move together.
 		expect(plan.lines[0].qty.value).toBe(6);
 		expect(plan.needs[0].amount).toMatchObject({ value: 6, unit: 'l' });
+	});
+
+	it('R9-03: kilograms for a litre need with a known density are confirmed, then applied', async () => {
+		const s = await setup();
+		const p = await s.place(['100004']);
+		const t = await s.task([p]);
+		const q = await chatTurn({ taskId: t.id, text: 'make it 20 kg' }, s.deps);
+		const ask = q.find((e) => e.type === 'clarify');
+		if (ask?.type !== 'clarify') throw new Error('no question');
+		expect(ask.question).toMatch(/That's about 19\.4\d* l by Valio's own pack data/);
+		const use = ask.options[0];
+		await chatTurn({ taskId: t.id, answer: { field: 'qty', value: use.value } }, s.deps);
+		const plan = must(await s.h.get_plan(s.ctx('chef'), { planId: p.id })).plan;
+		expect(plan.needs[0].amount.unit).toBe('l');
+		expect(plan.needs[0].amount.value).toBeCloseTo(19.4, 1);
 	});
 
 	it('R8: a task survives a failed save after its effects; the effect is reconciled onto it', async () => {

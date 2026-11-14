@@ -354,8 +354,35 @@ export async function* runChatTurn(
 		};
 		return;
 	}
-	// "Make it 20 kg": the task's own line is resized, on the same plan.
-	const resize = held && words ? words.match(RESIZE) : null;
+	// "Make it 20 kg": the task's own line is resized, on the same plan. An answer to the amount question ("Use
+	// 20.62 kg", or a number typed in the need's unit) resizes the same way; "keep" leaves it as it is.
+	const amountAnswer =
+		held && task.pending.kind === 'clarify' && task.pending.field === 'qty' && task.plans.length
+			? String((input.answer?.field === 'qty' ? input.answer.value : undefined) ?? words ?? '')
+			: '';
+	if (amountAnswer && /^(keep|no\b)/i.test(amountAnswer.trim())) {
+		task.pending = { kind: 'none' };
+		const saved = await store.put(
+			{ ...task, updatedAt: deps.ports.clock.now().toISOString() },
+			expected
+		);
+		yield {
+			type: 'done',
+			taskId: task.id,
+			state: task.state,
+			text: saved.ok
+				? 'Kept the amount as it was.'
+				: 'This task changed in another window; reload it and try again.',
+			canContinue: false
+		};
+		return;
+	}
+	const resize =
+		held && words && !amountAnswer
+			? words.match(RESIZE)
+			: amountAnswer
+				? `make it ${amountAnswer.replace(/^(use|make it)\s+/i, '')}`.match(RESIZE)
+				: null;
 	// "…too", "and 2 l cream": one more product on this task, for the same delivery day unless the words name one.
 	const addition = !!held && !!words && !resize && ADDITION.test(words);
 	const newRequest =
@@ -454,9 +481,16 @@ export async function* runChatTurn(
 	}
 
 	if (resize && held) {
-		const mismatch: { at?: string } = {};
+		const mismatch: Mismatch = {};
 		steps = await resizeLine(held, resize, mismatch, agentCtx, deps.handlers);
-		if (mismatch.at) refusal = mismatch.at;
+		if (mismatch.ask && mismatch.at)
+			clarify = {
+				kind: 'clarify',
+				field: 'qty',
+				question: mismatch.at,
+				options: mismatch.options ?? []
+			};
+		else if (mismatch.at) refusal = mismatch.at;
 	} else if (input.continue) {
 		if (!task.plans.length) {
 			// Still waiting for an answer: ask the open question again rather than act.
@@ -798,6 +832,13 @@ const ADDITION = /\b(too|also|as well|myös|lisäksi)\b|^\s*(and|ja|plus)\b/i;
 const RESIZE =
 	/^(?:ok\s+|actually\s+|no\s+|sorry\s+)?(?:make (?:it|that)|change (?:it |that )?to|muuta (?:se )?|tee siitä|vaihda (?:se )?)\s*(\d+(?:[.,]\d+)?)\s*(kg|kiloa?|g|l|litraa?|dl)?\b/iu;
 
+/** A resize the turn could not apply: what to say, and whether it is a question about the amount (with chips). */
+interface Mismatch {
+	at?: string;
+	ask?: boolean;
+	options?: { label: string; value: string }[];
+}
+
 /**
  * "Make it 20 l": the task's one direct need takes the new amount and core re-sizes its lines (edit_line
  * {needId, patch: {amount}}), so demand and purchase stay one. An amount in another dimension (kg for a need in
@@ -806,7 +847,7 @@ const RESIZE =
 async function resizeLine(
 	planId: string,
 	m: RegExpMatchArray,
-	mismatch: { at?: string },
+	mismatch: Mismatch,
 	ctx: CallContext,
 	handlers: ToolHandlers
 ): Promise<StepRecord[]> {
@@ -858,11 +899,24 @@ async function resizeLine(
 		ms: 0
 	});
 	if (!e.ok) {
-		const needUnit = (e.error.detail as { needUnit?: string } | undefined)?.needUnit;
+		const d = (e.error.detail ?? {}) as {
+			needUnit?: string;
+			converted?: { value: number; unit: string };
+			source?: string;
+		};
 		const words = (u: string) => (u === 'l' ? 'litres' : u === 'kg' ? 'kilograms' : u);
-		mismatch.at = needUnit
-			? `That need is in ${words(needUnit)}: how many ${words(needUnit)}?`
-			: `Not changed: ${e.error.message}`;
+		if (d.converted) {
+			// Valio's own pack data gives a density: ask to confirm the converted amount, never apply it silently.
+			const amount = `${Math.round(d.converted.value * 100) / 100} ${d.converted.unit}`;
+			mismatch.at = `That's about ${amount} by Valio's own pack data (${d.source}). Use ${amount}?`;
+			mismatch.options = [
+				{ label: `Use ${amount}`, value: amount },
+				{ label: 'No, keep it', value: 'keep' }
+			];
+		} else if (d.needUnit)
+			mismatch.at = `That need is in ${words(d.needUnit)}: how many ${words(d.needUnit)}?`;
+		else mismatch.at = `Not changed: ${e.error.message}`;
+		if (d.needUnit) mismatch.ask = true;
 	}
 	return steps;
 }
