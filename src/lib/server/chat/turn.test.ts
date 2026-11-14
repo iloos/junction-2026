@@ -147,3 +147,42 @@ describe('suite: chat turns (review §5: multi-turn, approval handoff, adversari
 		expect(readAnswer('date', '2026-12-09')).toEqual({ date: '2026-12-09' });
 	});
 });
+
+describe('suite: chat turns · an edit after the approval', () => {
+	it(
+		'continue sees the voided approval, commits nothing and shows the new decision',
+		{ timeout: 120_000 },
+		async () => {
+			const { w, chef, deps } = await setup();
+			const t = await chatTurn({ text: 'Order 60 kg butter for Friday' }, deps);
+			const d = t.find((e) => e.type === 'decision');
+			if (d?.type !== 'decision') throw new Error('no decision');
+			const v = await w.handlers.get_plan(chef, { planId: d.planId });
+			if (!v.ok || !v.value.approval) throw new Error('no approval');
+			const a = v.value.approval;
+			await w.handlers.approve(chef, {
+				approvalId: a.id,
+				planVersion: a.planVersion,
+				termsHash: a.termsHash,
+				decision: 'grant'
+			});
+			// The task read after the approval says so: nothing pending, Continue offered.
+			const read = await w.env.ports.tasks!.get(w.env.workspaceId, d.taskId);
+			expect(read?.pending.kind).toBe('none');
+			const plan = (await w.state()).plans[d.planId];
+			const line = plan.lines[0];
+			const e = await w.handlers.edit_line(chef, {
+				planId: plan.id,
+				version: plan.version,
+				lineId: line.id,
+				patch: { qty: line.qty.value + 1 }
+			});
+			expect(e.ok).toBe(true);
+			const c = await chatTurn({ taskId: d.taskId, continue: true }, deps);
+			expect(c.some((x) => x.type === 'step' && x.tool === 'commit_order')).toBe(false);
+			expect(c.find((x) => x.type === 'decision')).toBeTruthy();
+			expect(c.at(-1)).toMatchObject({ type: 'done', state: 'awaiting_chef' });
+			expect(Object.keys((await w.state()).orders)).toHaveLength(0);
+		}
+	);
+});

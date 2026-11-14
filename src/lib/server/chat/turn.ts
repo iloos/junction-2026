@@ -9,14 +9,13 @@ import {
 	type Planner,
 	type StepRecord
 } from '$lib/server/agent/loop';
-import { nextActionFor } from '$lib/server/agent/next-action';
 import { buildRunPrincipal, principalContext } from '$lib/server/agent/principal';
 import { newAgentRunId, startAgentRun } from '$lib/server/agent/runs';
 import type { Slots } from '$lib/server/agent/types';
 import type { Env } from '$lib/server/auth';
 import { UNITS } from '$lib/server/request/lexicon';
-import { pendingDecision } from '$lib/server/tasks/ledger';
 import { ledgerSummary, readTask } from '$lib/server/tasks/outcome';
+import { project } from '$lib/server/tasks/project';
 import { memoryTaskStore } from '$lib/server/tasks/store';
 import { approvalUrl, presentMeta } from '$lib/server/tools/present';
 import { serveTool } from '$lib/server/tools/serve';
@@ -275,14 +274,12 @@ export async function* runChatTurn(
 			yield fail(task.id, `Could not read the plan: ${read.error.message}`, task.state);
 			return;
 		}
-		const { ledger, plans, approvals } = read.value;
-		const plan = plans[0];
-		task.plans = task.plans.map((p) => ({
-			...p,
-			versionSeen: plans.find((x) => x.id === p.planId)?.version ?? p.versionSeen
-		}));
-		task.ledger = ledger;
-		task.pending = pendingDecision(plan, approvals);
+		// A clarify left over from an earlier turn no longer applies once the task has a plan to act on.
+		if (task.pending.kind === 'clarify') task.pending = { kind: 'none' };
+		const p = project(task, read.value);
+		task = p.task;
+		canContinue = p.canContinue;
+		const ledger = read.value.ledger;
 		if (task.pending.kind === 'decision')
 			yield {
 				type: 'decision',
@@ -295,22 +292,6 @@ export async function* runChatTurn(
 			};
 		const summary = ledgerSummary(ledger);
 		yield { type: 'ledger', taskId: task.id, ledger, summary };
-		const next = nextActionFor(plan, { approvalPending: task.pending.kind === 'decision' });
-		const granted = approvals.some(
-			(a) =>
-				a.state === 'granted' &&
-				a.planVersion === plan.version &&
-				a.lineIds.some((id) => plan.lines.find((l) => l.id === id)?.state !== 'committed')
-		);
-		canContinue = next.kind === 'commit' || granted;
-		task.state =
-			task.pending.kind === 'decision'
-				? 'awaiting_chef'
-				: next.kind === 'await_supplier'
-					? 'awaiting_supplier'
-					: next.kind === 'done' && ledger.receiptIds.length
-						? 'done'
-						: 'open';
 		text = refusal ? `${refusal} ${summary}` : summary;
 	} else {
 		task.pending = { kind: 'none' };
