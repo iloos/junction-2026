@@ -124,3 +124,13 @@ describe('one question at a time, keyed by id', () => {
 		).toEqual([{ id: 'brief.date', value: '2026-12-20' }]);
 	});
 });
+
+describe('counted request constraints', () => {
+	it('keeps the head count of a lactose-free requirement', () => {
+		expect(
+			dietaryIn('Christmas dinner for 50 on 20 December, 4 lactose-free and 2 vegetarians')
+		).toEqual(['lactose-free:4', 'vegetarian:2']);
+		expect(dietaryIn('dinner for 40, 3 lactose free')).toEqual(['lactose-free:3']);
+		expect(dietaryIn('lactose-free dinner for 40')).toEqual(['lactose-free']);
+	});
+});

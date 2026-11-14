@@ -364,7 +364,11 @@ export async function proposeMenu(d: ProposeDeps): Promise<Proposed> {
 	} else menu = fixtureMenu(d.brief);
 
 	const at = d.now.toISOString();
-	const flags = d.brief.dietary.map((x) => RESOLVER_DIET[dietBase(x)]).filter(Boolean);
+	// A whole-menu requirement checks every pick; a counted one ("lactose-free:4") is met by some dishes.
+	const flags = d.brief.dietary
+		.filter((x) => !x.includes(':'))
+		.map((x) => RESOLVER_DIET[dietBase(x)])
+		.filter(Boolean);
 	const dishIds = idsFor(
 		menu.dishes.map((x) => x.name),
 		'd-'

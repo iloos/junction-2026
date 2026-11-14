@@ -44,7 +44,7 @@
 	const EXAMPLES = [
 		'1,000 L lactose-free milk by Monday',
 		'200 kg potatoes Friday',
-		'2 cases of butter tomorrow'
+		'2 cases of butter Thursday'
 	];
 	const PLACEHOLDER = EXAMPLES[0];
 
