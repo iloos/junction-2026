@@ -40,20 +40,28 @@ function contentOf(
 const recipeUnitOf = (u: string | undefined): MeasureUnit =>
 	u === undefined || u === 'kg' ? 'kg' : u === 'l' ? 'l' : 'pcs';
 
-/** Committed line ids → whether the supplier confirmed them (by line id; by product on older receipts). */
+/**
+ * Committed line ids → whether the supplier confirmed them and how many sales units it confirmed (by line id; by
+ * product on older receipts).
+ */
 function receiptsByLine(
 	state: WorkspaceState,
 	planId: string
-): Map<string, 'confirmed' | 'awaiting'> {
-	const out = new Map<string, 'confirmed' | 'awaiting'>();
+): Map<string, { state: 'confirmed' | 'awaiting'; qty?: number }> {
+	const out = new Map<string, { state: 'confirmed' | 'awaiting'; qty?: number }>();
 	for (const o of Object.values(state.orders)) {
 		if (o.planId !== planId) continue;
 		const r = Object.values(state.receipts).find((x) => x.orderId === o.id);
 		for (const ol of o.lines) {
-			const confirmed = r?.confirmed.some((c) =>
+			const mine = (r?.confirmed ?? []).filter((c) =>
 				c.lineId ? c.lineId === ol.lineId : c.productId === ol.productId
 			);
-			out.set(ol.lineId, confirmed ? 'confirmed' : 'awaiting');
+			out.set(
+				ol.lineId,
+				mine.length
+					? { state: 'confirmed', qty: mine.reduce((s, c) => s + c.qty.value, 0) }
+					: { state: 'awaiting' }
+			);
 		}
 	}
 	return out;
@@ -105,7 +113,8 @@ export function factsFor(
 			const g = ingredientOf(l);
 			return g?.per && g?.pack ? g.pack / g.per : undefined;
 		},
-		receipt: (lineId) => receipts.get(lineId)
+		receipt: (lineId) => receipts.get(lineId)?.state,
+		confirmedQty: (lineId) => receipts.get(lineId)?.qty
 	};
 }
 

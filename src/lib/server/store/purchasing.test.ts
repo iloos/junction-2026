@@ -7,6 +7,8 @@ import { describe, expect, it } from 'vitest';
 import { Kitchen, Product, SCOPES_BY_ACTOR, type ActorKind } from '$lib/core/contracts';
 import type { Catalog, CallContext } from '$lib/core/ports';
 import { createHandlers } from '$lib/core/services/handlers';
+import { factsFor } from '$lib/core/services/views';
+import { planFulfilment } from '$lib/core/mandate/fulfilment';
 import { runRequest } from '$lib/server/request/run';
 import { createDbPorts } from './db-ports';
 
@@ -386,5 +388,27 @@ describe('R7-04: a dish edit carries its dependency closure', () => {
 		expect(r.lines.find((l) => l.needId === milkNeed.id)!.qty.value).toBeGreaterThan(
 			milkLine.qty.value
 		);
+	});
+});
+
+describe('R7-11: a receipt confirms what it says', () => {
+	it('1 of 10 units confirmed is 1 confirmed and 9 still awaited', async () => {
+		const { h, b, state } = await harness();
+		const p = must(
+			await h.place_order(ctx(), {
+				kitchenId: 'k-hotel',
+				deliverBy: '2026-12-10',
+				idempotencyKey: 'receipt',
+				lines: [{ productId: '464201', qty: 10, unit: 'ST', amount: { value: 10, unit: 'l' } }]
+			})
+		).plan;
+		must(await h.commit_order(ctx(), { planId: p.id, version: p.version, idempotencyKey: 'r-c' }));
+		const s = structuredClone(await state());
+		Object.values(s.receipts)[0].confirmed[0].qty.value = 1;
+		const plan = must(await h.get_plan(ctx(), { planId: p.id })).plan;
+		const products = await b.ports.catalog.get(['464201']);
+		const [f] = planFulfilment(plan, factsFor(plan, products, undefined, s));
+		expect(f.supplierConfirmed.value).toBe(1);
+		expect(f.awaitingSupplier.value).toBe(9);
 	});
 });
