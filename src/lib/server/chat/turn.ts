@@ -1,6 +1,6 @@
 import { readableName } from '$lib/ui/format';
 import { commandKey } from '$lib/core/command';
-import type { Plan, ToolName, ToolOutput } from '$lib/core/contracts';
+import type { LineState, Plan, ToolName, ToolOutput } from '$lib/core/contracts';
 import { ClarifyField, newTaskId, type Task, type TaskState } from '$lib/core/contracts/task';
 import type { CallContext, Llm, Ports, TaskStore, ToolHandlers } from '$lib/core/ports';
 import { runGoal } from '$lib/server/agent';
@@ -1175,7 +1175,7 @@ async function* turnLines(
 		const summary = ledgerSummary(ledger, { deliverBy: read.value.plans[0]?.deliverBy });
 		if (asked || !sameLedger || !sameDecision)
 			yield { type: 'ledger', taskId: task.id, title: task.title, ledger, summary };
-		const standing = ledgerWords(ledger, read.value.plans[0]?.deliverBy);
+		const standing = ledgerWords(ledger, read.value.plans[0]?.deliverBy, read.value.plans);
 		let answer = standing;
 		const explainer = deps.models?.explain ?? deps.llm;
 		if (!refusal && explainer && !continued) {
@@ -1386,7 +1386,7 @@ export async function taskView(taskId: string, deps: ChatDeps): Promise<ChatEven
 		state: p.task.state,
 		// The same words as the turn's answer, so a re-read never adds a second, different closing line.
 		text:
-			ledgerWords(read.value.ledger, read.value.plans[0]?.deliverBy) +
+			ledgerWords(read.value.ledger, read.value.plans[0]?.deliverBy, read.value.plans) +
 			(read.value.ledger.decisionsLeft ? waitingWords(card) : ''),
 		canContinue: p.canContinue
 	});
@@ -1411,31 +1411,43 @@ function waitingWords(card: ChatEvent | null | undefined): string {
  * Where the task stands, counted in items, not kilos: "For Thu 10 Dec: 11 ingredients. 4 have a product planned,
  * 7 have no product yet; nothing is ordered yet. 1 decision waits for you." The ledger card keeps the numbers.
  */
-export function ledgerWords(l: TaskLedger, deliverBy?: string): string {
+export function ledgerWords(
+	l: TaskLedger,
+	deliverBy?: string,
+	plans: Pick<Plan, 'lines'>[] = []
+): string {
 	const n = l.needs.length;
-	const some = (v: { value: number }) => v.value > 0;
-	const sent = l.needs.filter((x) => some(x.supplierConfirmed) || some(x.awaitingSupplier)).length;
-	const planned = l.needs.filter(
-		(x) =>
-			!some(x.supplierConfirmed) &&
-			!some(x.awaitingSupplier) &&
-			(some(x.plannedKnown) || some(x.plannedUnknown))
-	).length;
-	const none = l.needs.filter(
-		(x) =>
-			some(x.unresolved) &&
-			!some(x.plannedKnown) &&
-			!some(x.plannedUnknown) &&
-			!some(x.supplierConfirmed) &&
-			!some(x.awaitingSupplier)
-	).length;
+	// Each need by the state of the line that serves it: a held line has a product, it waits for a person.
+	const rank: Record<LineState, number> = {
+		committed: 5,
+		eligible: 4,
+		proposed: 4,
+		held: 3,
+		unorderable: 2,
+		rejected: 1
+	};
+	const best = new Map<string, LineState>();
+	for (const p of plans)
+		for (const line of p.lines) {
+			if (!line.needId) continue;
+			const was = best.get(line.needId);
+			if (!was || rank[line.state] > rank[was]) best.set(line.needId, line.state);
+		}
+	const count = (f: (s: LineState | undefined) => boolean) =>
+		l.needs.filter((x) => f(best.get(x.needId))).length;
+	const sent = count((s) => s === 'committed');
+	const ready = count((s) => s === 'eligible' || s === 'proposed');
+	const held = count((s) => s === 'held');
+	const blocked = count((s) => s === 'unorderable' || s === 'rejected');
+	const none = count((s) => s === undefined);
 	const noun = l.needs.some((x) => x.label.includes(' · ')) ? 'ingredient' : 'item';
 	const plural = (k: number, w: string) => `${k} ${w}${k === 1 ? '' : 's'}`;
-	const has = (k: number) => (k === 1 ? 'has' : 'have');
 	const bits: string[] = [];
 	if (sent) bits.push(`${sent} sent to Valio`);
-	if (planned) bits.push(`${planned} ${has(planned)} a product planned`);
-	if (none) bits.push(`${none} ${has(none)} no product yet`);
+	if (ready) bits.push(`${ready} ready to order`);
+	if (held) bits.push(`${held} with a product waiting for your approval`);
+	if (blocked) bits.push(`${blocked} can't be ordered as planned`);
+	if (none && plans.length) bits.push(`${none} without a product yet`);
 	const day = deliverBy ? `For ${dayWords(deliverBy)}: ` : '';
 	const head = n
 		? `${day}${plural(n, noun)}${bits.length ? `. ${bits.join(', ')}` : ''}`

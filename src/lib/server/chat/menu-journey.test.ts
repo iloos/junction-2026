@@ -66,7 +66,8 @@ describe('moment 2: words → menu → plan in the chat', () => {
 		const done = planned.at(-1);
 		expect(done).toMatchObject({ type: 'done' });
 		const text = done?.type === 'done' ? done.text : '';
-		expect(text).toMatch(/\d+ ingredients/);
+		// Held lines have a product: they wait for the chef, never "no product yet".
+		expect(text).toMatch(/\d+ ingredients\. .*waiting for your approval/);
 		expect(text).not.toMatch(/\d kg \+|unresolved/);
 	});
 });
