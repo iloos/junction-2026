@@ -38,6 +38,15 @@
         ],
         "createdAt": "2026-11-14T12:05:40.068Z",
         "reason": "Claude verified: flags are the gate canvas (fills frame, legend inset 18px) and the 38px hold pill (centred text, 18px sides)"
+      },
+      {
+        "rule": "flat-type-hierarchy",
+        "value": "*",
+        "files": [
+          "public/how/index.html"
+        ],
+        "createdAt": "2026-11-14T13:27:32.149Z",
+        "reason": "Claude verified: headings use clamp() sizes the detector can't read; rendered h1/h2 are 40-56px serif vs 15px body (screenshot scratch/how2-1440.png)"
       }
     ]
   }
