@@ -120,6 +120,8 @@ export async function runAgent(o: {
 	allowedTools?: readonly ToolName[];
 	/** Kitchen grant: tool calls naming another kitchen (directly or through a plan) are refused. */
 	kitchenIds?: readonly string[];
+	/** The request this run serves (a task id; else the agent run): scopes its server-owned order keys. */
+	keyScope?: string;
 	/** Called once after the loop to compute the outcome from domain state. */
 	finalize?: (r: { steps: StepRecord[]; stopped: StopReason }) => Promise<GoalOutcome | undefined>;
 	/** Extra fields for the first trace step (intent, initiator). */
@@ -224,7 +226,7 @@ export async function runAgent(o: {
 		if ('done' in action) return finish('done', action.summary);
 
 		// Idempotency keys are the server's, whatever a planner (a model) sent: no double order rests on its keys.
-		action.input = withServerKey(action.tool, action.input, o.intent, o.goal);
+		action.input = withServerKey(action.tool, action.input, o.intent, o.goal, o.keyScope);
 		emit('step', { n, tool: action.tool, why: action.why, input: action.input });
 		const t0 = performance.now();
 		const refusal = await refuse(action, tools, o.kitchenIds, planKitchen, o.ctx, o.handlers);
@@ -280,15 +282,18 @@ function digest(s: string): string {
 
 /**
  * The server's idempotency key for an order-writing call, replacing any the planner sent. place_order: one per
- * resolved intent (kitchen, date, the products and amounts asked for), so the same request never opens a second
- * plan however a model words its lines. commit_order: one per plan version, so a plan is bought at most once per
+ * resolved intent (kitchen, date, the products and amounts asked for) within its request scope (a task, else an
+ * agent run), so a retry of the same request never opens a second plan however a model words its lines, while two
+ * separate requests with the same words stay two orders. commit_order: one per plan version, so a plan is bought at most once per
  * version.
  */
 export function withServerKey(
 	tool: ToolName,
 	input: unknown,
 	intent: Intent | undefined,
-	goal: string
+	goal: string,
+	/** What makes this request its own (its task, else its agent run): two requests never share an order. */
+	scope?: string
 ): unknown {
 	if (tool !== 'place_order' && tool !== 'commit_order') return input;
 	const i = (input ?? {}) as Record<string, unknown>;
@@ -302,7 +307,10 @@ export function withServerKey(
 					lines: routineLines(intent).map((l) => [l.query, l.qty, l.unit, l.item.constraints])
 				}
 			: { intent: intent?.kind ?? 'none', goal: goal.trim().toLowerCase() };
-	return { ...i, idempotencyKey: `agent:place:${digest(JSON.stringify(what))}` };
+	return {
+		...i,
+		idempotencyKey: `agent:place:${scope ? `${digest(scope)}:` : ''}${digest(JSON.stringify(what))}`
+	};
 }
 
 /** Wraps every handler so it refuses to start once the run is stopped. */

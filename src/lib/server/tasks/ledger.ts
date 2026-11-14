@@ -74,11 +74,12 @@ export function computeLedger(i: LedgerInput): TaskLedger {
 		const plan = i.plans.find((p) => p.id === a.planId)!;
 		return n + Math.max(1, decisionGroups(plan, a).length);
 	}, 0);
-	const primary = i.plans[0];
-	const nextAction = primary
-		? nextActionFor(primary, {
-				approvalPending: pending.some((a) => a.planId === primary.id)
-			}).text
+	// The next action of the first plan that still has one: a finished plan never speaks for an open one.
+	const nexts = i.plans.map((p) =>
+		nextActionFor(p, { approvalPending: pending.some((a) => a.planId === p.id) })
+	);
+	const nextAction = nexts.length
+		? (nexts.find((n) => n.kind !== 'done') ?? nexts[0]).text
 		: 'Nothing is planned yet.';
 	const validUntil = i.plans
 		.map((p) => p.view?.validUntil)

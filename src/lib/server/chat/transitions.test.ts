@@ -1,0 +1,300 @@
+/**
+ * Chat/task transition guarantees, each the flipped form of a round-9 adversarial probe (docs/review/ROUND9-ADVERSARIAL.md):
+ * purchase commands per authorised line set (R9-01, R9-05), cancellation as a fence (R9-02), every plan of a task in
+ * its state and its Continue (R9-04), separate requests stay separate and a task is never lost after its effects (R8).
+ */
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { Offer, Product, SCOPES_BY_ACTOR, type Plan } from '$lib/core/contracts';
+import type { Task } from '$lib/core/contracts/task';
+import type { CallContext, Catalog, TaskStore } from '$lib/core/ports';
+import { createHandlers } from '$lib/core/services/handlers';
+import { createFixtureDb } from '$lib/server/db/pglite';
+import { createDbPorts, loadSeedKitchens } from '$lib/server/store/db-ports';
+import { readTask } from '$lib/server/tasks/outcome';
+import { project } from '$lib/server/tasks/project';
+import { memoryTaskStore } from '$lib/server/tasks/store';
+import { scenarioDate } from '$lib/core/scenario';
+import { trialWorkspace } from '../agent/trial-harness';
+import { FIDELITY_NOW } from '../evals/fidelity';
+import { chatTurn } from './turn';
+
+let fx: Awaited<ReturnType<typeof createFixtureDb>>;
+beforeAll(async () => {
+	fx = await createFixtureDb();
+});
+afterAll(async () => {
+	await fx.client.close();
+});
+
+let seq = 0;
+const prov = { source: 'seed' as const };
+const products = ['100001', '100002', '100003'].map((productId, i) =>
+	Product.parse({
+		productId,
+		nameFi: `Test milk ${i} 1 l`,
+		nameEn: `milk ${i} 1 l`,
+		category: '10000',
+		categoryGroup: '10',
+		isFood: true,
+		vendor: 'Test',
+		origin: 'fi',
+		labels: [],
+		temperatureClass: 'chilled',
+		salesUnit: 'ST',
+		baseUnit: 'ST',
+		packs: [{ unit: 'ST', baseUnits: 1 }],
+		lotStep: 1,
+		catchWeight: false,
+		netPerSalesUnit: { value: { value: 1, unit: 'l' }, provenance: prov },
+		allergens: { contains: [], mayContain: [], declared: true },
+		freeFrom: [],
+		diet: [],
+		valioSubstitutes: [],
+		dataQualityFlags: []
+	})
+);
+const catalog: Catalog = {
+	get: async (ids) =>
+		new Map(products.filter((p) => ids.includes(p.productId)).map((p) => [p.productId, p])),
+	search: async () => products,
+	candidates: async () => [],
+	offers: async (ids, date) => ({
+		notFound: [],
+		offers: ids.map((productId) =>
+			Offer.parse({
+				productId,
+				price: { unitCents: 100, comparison: null, taxRate: 14, validTo: null, provenance: prov },
+				availability: {
+					kind: 'known',
+					amount: 10000,
+					logisticModel: 'Stock',
+					availableDate: date,
+					closingTime: `${date}T17:00:00+02:00`,
+					raw: null,
+					provenance: prov
+				}
+			})
+		)
+	})
+};
+
+function must<T>(
+	r: { ok: true; value: T } | { ok: false; error: { code: string; message: string } }
+): T {
+	if (!r.ok) throw new Error(`${r.error.code}: ${r.error.message}`);
+	return r.value;
+}
+
+/** A kitchen where 100001 is a usual product (eligible) and anything new is held for the chef. */
+async function setup(tasks: TaskStore = memoryTaskStore()) {
+	const ws = `ws-transitions-${++seq}`;
+	const k = structuredClone(loadSeedKitchens().find((x) => x.id === 'k-hotel')!);
+	k.usualProducts = ['100001'];
+	k.constraints = {
+		origin: [],
+		allergens: { freeFrom: [], unknownCounts: 'hold' },
+		tenderListOnly: false,
+		labels: []
+	};
+	k.mandate = {
+		...k.mandate,
+		lineCapCents: 100000,
+		orderCapCents: 100000,
+		weeklyCapCents: 1000000,
+		hardLimitCents: 2000000,
+		neverDelegate: ['new_sku']
+	};
+	const b = await createDbPorts({
+		db: fx.db as never,
+		workspaceId: ws,
+		catalog,
+		kitchens: [k],
+		now: '2026-12-07T09:00:00+02:00'
+	});
+	const h = createHandlers(b.ports);
+	const ctx = (kind: keyof typeof SCOPES_BY_ACTOR): CallContext => ({
+		workspaceId: ws,
+		runId: 'run-1',
+		actor: { kind, id: `t-${kind}` },
+		scopes: SCOPES_BY_ACTOR[kind],
+		via: 'test'
+	});
+	const deps = {
+		handlers: h,
+		ctx: ctx('chef'),
+		ports: { ...b.ports, tasks },
+		workspaceId: ws,
+		kitchen: { id: k.id },
+		today: '2026-12-07'
+	};
+	const place = async (ids: string[], key = 'place') =>
+		must(
+			await h.place_order(ctx('kitchen_agent'), {
+				kitchenId: k.id,
+				deliverBy: '2026-12-10',
+				idempotencyKey: key,
+				lines: ids.map((productId) => ({
+					productId,
+					qty: 4,
+					unit: 'ST',
+					amount: { value: 4, unit: 'l' as const }
+				}))
+			})
+		).plan;
+	const task = async (plans: Plan[]) =>
+		must(
+			await tasks.put(
+				{
+					workspaceId: ws,
+					runId: 'run-1',
+					id: `task-transitions-${seq}`,
+					kitchenId: k.id,
+					title: 'milk',
+					createdBy: ctx('chef').actor,
+					createdAt: b.ports.clock.now().toISOString(),
+					updatedAt: b.ports.clock.now().toISOString(),
+					version: 0,
+					requirement: { goal: '4 l milk for Thursday' },
+					slots: {},
+					plans: plans.map((p, i) => ({
+						planId: p.id,
+						versionSeen: p.version,
+						role: i === 0 ? 'primary' : 'touched'
+					})),
+					runs: [],
+					pending: { kind: 'none' },
+					state: 'open'
+				},
+				null
+			)
+		);
+	const grant = async (planId: string, lineIds?: string[]) => {
+		const a = must(await h.get_plan(ctx('chef'), { planId })).approval!;
+		return must(
+			await h.approve(ctx('chef'), {
+				approvalId: a.id,
+				planVersion: a.planVersion,
+				termsHash: a.termsHash,
+				decision: 'grant',
+				...(lineIds ? { lineIds } : {})
+			})
+		);
+	};
+	const state = () => b.store.load(ws, 'run-1');
+	return { b, h, ctx, tasks, deps, place, task, grant, state, ws };
+}
+
+describe('suite: chat transitions (round 9)', () => {
+	it('R9-01: a grant after a partial commit is a new purchase; retries replay their own receipt', async () => {
+		const s = await setup();
+		const p = await s.place(['100001', '100002']);
+		const t = await s.task([p]);
+		await chatTurn({ taskId: t.id, continue: true }, s.deps);
+		expect(Object.values((await s.state()).orders)).toHaveLength(1);
+		await s.grant(p.id);
+		const second = await chatTurn({ taskId: t.id, continue: true }, s.deps);
+		expect(second.some((e) => e.type === 'step' && e.tool === 'commit_order' && e.ok)).toBe(true);
+		let st = await s.state();
+		expect(Object.values(st.orders)).toHaveLength(2);
+		expect(st.plans[p.id].lines.map((l) => l.state)).toEqual(['committed', 'committed']);
+		// Each line in exactly one purchase.
+		const bought = Object.values(st.orders).flatMap((o) => o.lines.map((l) => l.lineId));
+		expect(new Set(bought).size).toBe(bought.length);
+		await chatTurn({ taskId: t.id, continue: true }, s.deps);
+		st = await s.state();
+		expect(Object.values(st.orders)).toHaveLength(2);
+	});
+
+	it('R9-02: a cancelled task orders nothing, even through a stale Continue after a grant', async () => {
+		const s = await setup();
+		const p = await s.place(['100002']);
+		const t = await s.task([p]);
+		await chatTurn({ taskId: t.id, text: 'cancel that' }, s.deps);
+		await s.grant(p.id);
+		const out = await chatTurn({ taskId: t.id, continue: true }, s.deps);
+		expect(Object.values((await s.state()).orders)).toHaveLength(0);
+		expect((await s.tasks.get(s.ws, t.id))!.state).toBe('cancelled');
+		expect(out.at(-1)).toMatchObject({ type: 'done', text: expect.stringMatching(/cancelled/) });
+		const resize = await chatTurn({ taskId: t.id, text: 'make it 6 l' }, s.deps);
+		expect(resize.some((e) => e.type === 'step' && e.tool === 'edit_line')).toBe(false);
+	});
+
+	it('R9-04: a task is not done while another plan waits; Continue buys every authorised plan', async () => {
+		const s = await setup();
+		const p1 = await s.place(['100001'], 'p1');
+		const p2 = await s.place(['100002'], 'p2');
+		must(
+			await s.h.commit_order(s.ctx('kitchen_agent'), {
+				planId: p1.id,
+				version: p1.version,
+				idempotencyKey: 'c1'
+			})
+		);
+		const t = await s.task([p1, p2]);
+		const read = must(await readTask(s.ctx('chef'), s.b.ports, s.h, [p1.id, p2.id]));
+		const projected = project(t as Task, read);
+		expect(projected.task.state).not.toBe('done');
+		expect(projected.task.pending.kind).toBe('decision');
+		expect(projected.task.ledger!.nextAction).not.toMatch(/supplier confirmed/);
+		await s.grant(p2.id);
+		await chatTurn({ taskId: t.id, continue: true }, s.deps);
+		expect((await s.state()).plans[p2.id].lines[0].state).toBe('committed');
+	});
+
+	it('R9-05: one granted reason group is bought while another stays held', async () => {
+		const s = await setup();
+		const p = await s.place(['100002', '100003']);
+		const t = await s.task([p]);
+		await s.grant(p.id, [p.lines[0].id]);
+		const out = await chatTurn({ taskId: t.id, continue: true }, s.deps);
+		expect(out.some((e) => e.type === 'step' && e.tool === 'commit_order' && e.ok)).toBe(true);
+		const st = await s.state();
+		expect(Object.values(st.orders)).toHaveLength(1);
+		expect(st.plans[p.id].lines.map((l) => l.state)).toEqual(['committed', 'held']);
+	});
+
+	it('R8: a task survives a failed save after its effects; the effect is reconciled onto it', async () => {
+		const inner = memoryTaskStore();
+		let puts = 0;
+		// Another window writes the task between this turn's reservation and its final save.
+		const racing: TaskStore = {
+			get: (ws, id) => inner.get(ws, id),
+			list: (ws, o) => inner.list(ws, o),
+			async put(task, expected) {
+				if (++puts === 3) {
+					const now = await inner.get(task.workspaceId, task.id);
+					if (now) await inner.put({ ...now, title: 'renamed elsewhere' }, now.version);
+				}
+				return inner.put(task, expected);
+			}
+		};
+		const s = await setup(racing);
+		const p = await s.place(['100001']);
+		const t = await s.task([p]);
+		const out = await chatTurn({ taskId: t.id, continue: true }, s.deps);
+		expect(Object.values((await s.state()).orders)).toHaveLength(1);
+		expect(out.at(-1)).toMatchObject({ type: 'done', state: expect.not.stringMatching(/failed/) });
+		const saved = await inner.get(s.ws, t.id);
+		expect(saved?.plans.map((x) => x.planId)).toEqual([p.id]);
+		expect(saved?.state).not.toBe('running');
+	});
+});
+
+describe('suite: chat transitions · separate requests', () => {
+	it('R8: two new tasks with the same words are two orders', { timeout: 120_000 }, async () => {
+		const w = await trialWorkspace();
+		w.env.ports.clock = { now: () => FIDELITY_NOW };
+		const deps = {
+			handlers: w.handlers,
+			ctx: w.ctx('chef'),
+			ports: w.env.ports,
+			workspaceId: w.env.workspaceId,
+			kitchen: { id: 'k-hotel' },
+			today: scenarioDate(FIDELITY_NOW)
+		};
+		const a = await chatTurn({ text: 'Order 4 kg butter for Friday' }, deps);
+		const b = await chatTurn({ text: 'Order 4 kg butter for Friday' }, deps);
+		expect(a.at(-1)!.taskId).not.toBe(b.at(-1)!.taskId);
+		expect(Object.keys((await w.state()).plans)).toHaveLength(2);
+	});
+});

@@ -24,7 +24,9 @@ describe('suite: agent goal trials · server-owned idempotency keys', () => {
 					principal: w.principal({ id }),
 					handlers: w.handlers,
 					planner: model,
-					source: w.source
+					source: w.source,
+					// Two runs of the same request (a retry): one plan, one receipt.
+					keyScope: 'request-1'
 				});
 			const a = await go('agent-k1');
 			const b = await go('agent-k2');
@@ -36,6 +38,27 @@ describe('suite: agent goal trials · server-owned idempotency keys', () => {
 			const s = await w.state();
 			expect(Object.keys(s.plans)).toHaveLength(1);
 			expect(Object.keys(s.receipts)).toHaveLength(1);
+		}
+	);
+});
+
+describe('suite: agent goal trials · separate requests stay separate', () => {
+	it(
+		'two runs of the same words without a shared request are two orders',
+		{ timeout: 120_000 },
+		async () => {
+			const w = await trialWorkspace();
+			const go = (id: string) =>
+				runGoal({
+					goal: 'Order 4 kg butter for k-lounas by Monday',
+					principal: w.principal({ id }),
+					handlers: w.handlers,
+					planner: scriptedPlanner(),
+					source: w.source
+				});
+			await go('agent-s1');
+			await go('agent-s2');
+			expect(Object.keys((await w.state()).plans)).toHaveLength(2);
 		}
 	);
 });

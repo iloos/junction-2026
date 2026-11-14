@@ -40,6 +40,8 @@ export async function runGoal(o: {
 	slots?: Slots;
 	/** The plan a task is about; beats anything the words suggest. */
 	planId?: string;
+	/** The request this run serves (a chat task id); a run without one is its own request. */
+	keyScope?: string;
 	/** Tools this run may not use, on top of the intent's list (a chat turn leaves commit_order to Continue). */
 	withhold?: readonly ToolName[];
 }): Promise<AgentRun> {
@@ -79,6 +81,7 @@ export async function runGoal(o: {
 			(t) => toolsFor(ctx).includes(t) && !o.withhold?.includes(t)
 		),
 		kitchenIds: p.kitchenIds,
+		keyScope: o.keyScope ?? p.agentRunId,
 		intro,
 		...(o.review
 			? {
