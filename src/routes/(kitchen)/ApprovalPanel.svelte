@@ -15,6 +15,7 @@
 </script>
 
 <script lang="ts">
+	import { splitNeed } from '$lib/kitchen/menu-plan';
 	import { tick } from 'svelte';
 	import { ChevronDown, CircleCheck, ShieldAlert, TriangleAlert, Hand } from '@lucide/svelte';
 	import type { Approval, Line, Plan } from '$lib/core/contracts';
@@ -225,6 +226,19 @@
 		].filter((r) => r.cents > 0);
 		return { rows, total: Object.values(sums).reduce((a, b) => a + b, 0) };
 	});
+
+	/** Shortfall items by dish ("Dish · ingredient"); a name with no dish is its own group. */
+	function groupByDish(items: Shortfall['items']) {
+		const out: { dish: string; items: (Shortfall['items'][number] & { part: string })[] }[] = [];
+		for (const it of items) {
+			const n = splitNeed(it.name);
+			const dish = n.dish ?? n.part;
+			const g =
+				out.find((x) => x.dish === dish) ?? (out.push({ dish, items: [] }), out[out.length - 1]);
+			g.items.push({ ...it, part: n.dish ? n.part : '' });
+		}
+		return out;
+	}
 </script>
 
 {#if part === 'decide' && rail}
@@ -510,7 +524,22 @@
 					{#each shortfalls as g (g.kind + g.sentence)}
 						<!-- One sentence per reason, the items as chips: the same words never repeat per line. -->
 						<p class="mt-1.5 text-ink-2">{g.sentence}</p>
-						{#if g.items.length}
+						{#if g.items.length && g.items.every((it) => !it.productId)}
+							<!-- Needs without a product: grouped by dish, one row each, the amounts in one column. -->
+							<ul class="mt-1 divide-y divide-rule/60" aria-label={g.sentence}>
+								{#each groupByDish(g.items) as grp (grp.dish)}
+									<li class="py-1">
+										<p class="text-ink">{grp.dish}</p>
+										{#each grp.items as it (it.id)}
+											<p class="grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 pl-3 text-ink-2">
+												<span class="min-w-0 break-words">{it.part}</span>
+												<span class="mono text-right text-ink-3 tabular-nums">{it.qty}</span>
+											</p>
+										{/each}
+									</li>
+								{/each}
+							</ul>
+						{:else if g.items.length}
 							<ul class="mt-1 flex flex-wrap gap-1" aria-label={g.sentence}>
 								{#each g.items as it (it.id)}
 									<li
