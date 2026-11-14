@@ -13,6 +13,13 @@ import type { Catalog } from '$lib/core/ports';
 import type { Offer, Product, ProductId } from '$lib/core/contracts';
 import { normalizeProduct, toOffer } from './normalize';
 import type { SimOverlay } from '../simulator/overlay';
+import {
+	assemble,
+	RetrievalIndex,
+	retrievalModeFromEnv,
+	toRetrievalProduct,
+	type RetrievalMode
+} from './retrieval';
 
 /* eslint-disable @typescript-eslint/no-explicit-any -- raw Valio JSON */
 type Raw = any;
@@ -24,6 +31,8 @@ export interface ValioCatalogOptions {
 	/** Fetch cache misses from the mock API. Without it the adapter is the fixture: cache only. */
 	live?: { apiKey: string; baseUrl?: string; fetch?: typeof fetch };
 	overlay?: SimOverlay;
+	/** Substitute candidate retrieval (default: CATALOG_RETRIEVAL env, else `id`). */
+	retrieval?: RetrievalMode;
 }
 
 const BOM = new RegExp('^\uFEFF');
@@ -155,6 +164,8 @@ export function createValioCatalog(
 	const dir = opts.dir ?? join('data', 'valio');
 	const customer = opts.customer ?? '123';
 	const products = loadCatalogue(dir);
+	const retrieval = opts.retrieval ?? retrievalModeFromEnv();
+	let index: RetrievalIndex | undefined;
 	const cache = new OfferCache(join(dir, 'cache'));
 	let failures = 0;
 
@@ -244,6 +255,16 @@ export function createValioCatalog(
 		async candidates(productId, limit = 12) {
 			const p = products.get(productId);
 			if (!p) return [];
+			if (retrieval === 'hybrid') {
+				index ??= new RetrievalIndex([...products.values()].map(toRetrievalProduct));
+				const ix = index;
+				return assemble(
+					{ ...toRetrievalProduct(p), valioSubstitutes: p.valioSubstitutes },
+					(id) => products.has(id),
+					(exclude, room) => ix.similar(toRetrievalProduct(p), exclude, room),
+					limit
+				);
+			}
 			const rules = p.valioSubstitutes
 				.filter((id) => products.has(id))
 				.map((id) => ({ productId: id, fromValioRule: true }));
