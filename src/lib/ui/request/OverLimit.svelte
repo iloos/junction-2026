@@ -15,6 +15,8 @@
 		busy: boolean;
 		/** Portions of a dish, when the request is one; else amounts are scaled. */
 		portions: number | null;
+		/** The items' amounts, when not a dish: the most allowed is said in them. */
+		amounts?: { qty: number | null; unit: string; what: string }[];
 		/** The delivery date of this order. */
 		date: string;
 		/** Scale every amount by `factor` (≤ 1): the most allowed. */
@@ -25,7 +27,22 @@
 		/** Under the hard limit but unusually large: place it for approval. */
 		onplace: () => void;
 	}
-	let { lookup, held, busy, portions, date, onmax, onsplit, onchange, onplace }: Props = $props();
+	let {
+		lookup,
+		held,
+		busy,
+		portions,
+		amounts = [],
+		date,
+		onmax,
+		onsplit,
+		onchange,
+		onplace
+	}: Props = $props();
+	const most = (q: number, unit: string) => {
+		const step = unit === 'kg' || unit === 'l' ? 10 : 1;
+		return Math.floor(q * factor * step) / step;
+	};
 
 	/** Headroom for rounding up to whole packs, so the scaled order lands under the limit. */
 	const HEADROOM = 0.97;
@@ -62,7 +79,11 @@
 					<span class="text-meta text-ink-2"
 						>{maxPortions !== null
 							? `${num(maxPortions)} portions`
-							: `${num(factor * 100, 0)}% of each amount`}, about {money(
+							: amounts.length && amounts.every((a) => a.qty !== null)
+								? amounts
+										.map((a) => `${num(most(a.qty!, a.unit), 1)} ${a.unit} ${a.what}`)
+										.join(', ')
+								: `${num(factor * 100, 0)}% of each amount`}, about {money(
 							hard.limitCents * HEADROOM,
 							{ whole: true }
 						)}</span

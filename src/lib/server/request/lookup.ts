@@ -7,7 +7,7 @@ import type { Offer, Product } from '$lib/core/contracts';
 import { toLot } from '$lib/core/services/orders';
 import { convert, type Conversion } from './convert';
 import { PRODUCTS } from './lexicon';
-import { animalsAsked, meatAsked, meatContradiction } from './checks';
+import { askOf, clashWith } from './checks';
 import type { ParsedItem } from './parse';
 
 export const SHORTLIST = 5;
@@ -107,8 +107,7 @@ export function filterHits(
 			continue;
 		}
 		// A product that contradicts the words (soy for "cow") is never a match.
-		const said = `${item.text} ${item.query}`;
-		const clash = meatContradiction(p, animalsAsked(said), meatAsked(said));
+		const clash = clashWith(p, askOf(`${item.text} ${item.query}`));
 		if (clash) {
 			reject(clash);
 			continue;

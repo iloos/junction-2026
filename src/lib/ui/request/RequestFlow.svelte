@@ -315,6 +315,11 @@
 			lines: plan?.lines.length ?? 0,
 			tier: approval?.tier ?? null,
 			portions: parsed?.dish?.portions ?? null,
+			amounts: parsed?.dish
+				? []
+				: (parsed?.items ?? []).map(
+						(i) => `${qtyText(i.qty, i.unit).trim()} ${i.product ?? i.query}`
+					),
 			choice: parsed?.dishChoice ?? null
 		};
 	}
@@ -322,6 +327,9 @@
 		const out: string[] = [];
 		if (a.portions !== b.portions && a.portions !== null && b.portions !== null)
 			out.push(`portions ${num(a.portions)} → ${num(b.portions)}`);
+		b.amounts.forEach((x, i) => {
+			if (a.amounts[i] !== undefined && a.amounts[i] !== x) out.push(`${a.amounts[i]} → ${x}`);
+		});
 		if (a.choice !== b.choice && a.choice && b.choice)
 			out.push(b.choice === 'raw' ? 'now cooked from raw' : 'now bought ready-made');
 		if (a.date !== b.date && a.date && b.date) out.push(`delivery ${day(a.date)} → ${day(b.date)}`);
@@ -700,6 +708,11 @@
 		dish = { packs: true };
 		void run({ from: 'request' });
 	}
+	/** An amount scaled down: whole units for packs, pieces and cases, tenths for kg and l. */
+	function scaled(q: number, unit: string | null, factor: number): number {
+		const step = unit === 'kg' || unit === 'l' ? 10 : 1;
+		return Math.max(1 / step, Math.floor(q * factor * step) / step);
+	}
 	/** The most the kitchen allows: every amount (or the dish's portions) scaled down under the hard limit. */
 	function scaleTo(factor: number) {
 		if (parsed?.dish) {
@@ -709,9 +722,7 @@
 			};
 		} else if (parsed) {
 			items = parsed.items.map((i) =>
-				i.qty === null
-					? i
-					: { ...i, qty: Math.max(0.001, Math.floor(i.qty * factor * 1000) / 1000) }
+				i.qty === null ? i : { ...i, qty: scaled(i.qty, i.unit, factor) }
 			);
 		}
 		void run({ from: 'lookup' });
@@ -729,6 +740,16 @@
 		deliverBy = split.dates[split.at];
 		void run({ from: 'lookup' });
 	}
+	/** The items' amounts for the over-limit card, in words. */
+	const overAmounts = $derived(
+		parsed?.dish
+			? []
+			: (parsed?.items ?? []).map((i) => ({
+					qty: i.qty,
+					unit: i.unit ? (UNIT_WORDS[i.unit] ?? i.unit) : '',
+					what: i.product ?? i.query
+				}))
+	);
 	const dishChoiceFrom = $derived.by(() => {
 		if (!parsed?.dish || !parsed.dishChoice) return '';
 		if (dishFrom && dish?.option === parsed.dishChoice) return `Chosen: ${dishFrom}.`;
@@ -1076,6 +1097,7 @@
 						held={needsConfirm}
 						{busy}
 						portions={parsed?.dish?.portions ?? null}
+						amounts={overAmounts}
 						date={parsed?.deliverBy ?? ''}
 						onmax={scaleTo}
 						onsplit={splitDays}

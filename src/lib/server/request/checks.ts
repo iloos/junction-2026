@@ -80,3 +80,22 @@ export function meatContradiction(
 		return `${other.join(' and ')}, not ${asked.join(' or ')}`;
 	return null;
 }
+
+/** What a request's words require of a product, as far as these checks read them. */
+export interface Ask {
+	animals: Animal[];
+	meat: boolean;
+}
+
+/** The words' requirements: "half only cow" → beef. */
+export function askOf(text: string): Ask {
+	return { animals: animalsAsked(text), meat: meatAsked(text) };
+}
+
+/**
+ * The one place a product is checked against what the request asks: lookup's filter and the dish lines both call
+ * it, so a shared evaluator can replace the body without touching either caller.
+ */
+export function clashWith(p: Pick<Product, 'nameFi' | 'diet'>, ask: Ask): string | null {
+	return meatContradiction(p, ask.animals, ask.meat);
+}

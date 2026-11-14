@@ -12,7 +12,7 @@ import type { CallContext, ToolHandlers } from '$lib/core/ports';
 import { num } from '$lib/ui/format';
 import { convert, type Conversion } from './convert';
 import { withLot, unpickable } from './lookup';
-import { animalsIn, meatContradiction, plantBased, type Animal } from './checks';
+import { animalsIn, clashWith, plantBased, type Animal } from './checks';
 import type { ParsedItem } from './parse';
 import type { RequestAnswer } from './workspace';
 import { serveTool } from '$lib/server/tools/serve';
@@ -379,7 +379,7 @@ function fitsLine(p: Product, line: DishRecipeLine, animals: Animal[]): string |
 	if (line.nameHas && !line.nameHas.test(p.nameFi)) return 'off-topic';
 	if (line.categories && !line.categories.includes(p.category)) return 'off-topic';
 	if (line.mince || line.key === 'sauce') {
-		const clash = meatContradiction(p, animals, true);
+		const clash = clashWith(p, { animals, meat: true });
 		if (clash) return clash;
 	}
 	if (line.mince) {
