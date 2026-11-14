@@ -28,7 +28,7 @@
 			'The decisions are plain code you can read. No model and no network call decides what may be ordered; a model can only add a hold.',
 			[
 				['No part packs', 'Every need is rounded up to Valio\'s lot step.', 'eval s3', 'tested'],
-				['Known stock ranks first', 'Hard constraints exclude, then stock Valio states, then the kitchen\'s own weights.', 'core/rank/rank.ts · pool.test.ts', 'tested'],
+				['Known stock ranks first', 'Hard constraints exclude, then stock Valio states, then the kitchen\'s own weights.', 'core/rank/rank.ts · server/store/pool.test.ts', 'tested'],
 				['Unknown stock is never cover', 'A quantity Valio doesn\'t state is never counted as covering a dish.', 'core/mandate/fulfilment.test.ts', 'tested'],
 				['Caps hold even when split', 'Line, order and weekly caps; a hard limit no approval can pass.', 'eval s5 · ceiling.test.ts', 'tested'],
 				['Never delegated', 'An allergen change, a new product or a broken preference always goes to the chef, in its own group.', 'server/store/groups.test.ts', 'tested'],
@@ -45,7 +45,7 @@
 			'Outside services sit behind ports. Each has a fallback, so the app keeps working, labelled, when one is down.',
 			[
 				['Valio Aimo', 'Price and stock fetched only for shortlisted products. Fallback: the cached offer, labelled with its age.', 'Why drawer', 'live'],
-				['Gemini', 'Flash-Lite reads requests; 3.8 Flash proposes menus as estimates; Decisions scores substitute fit. Fallback: rules, templates, a recorded replay.', 'request page · menu', 'live'],
+				['Gemini', 'Flash-Lite reads requests (fallback: rules). 3.8 Flash proposes menus as estimates (fallback: team dish templates). Decisions scores how well each substitute fits the dish, one input to the code\'s ranking, and can flag a constraint risk that holds the line. It never approves or allows anything. Fallback: a recorded replay, then rules.', 'request page · menu', 'live'],
 				['Exa', 'Facts with sources in the Why drawer, as suggestions that never overwrite the catalogue. Fallback: recorded answers.', 'Why drawer', 'live'],
 				['Context.dev', 'Watches Ruokavirasto\'s recall list every 5 minutes; notices become cases in Operations. Fallback: a labelled drill.', '/ops', 'live'],
 				['Aiven', 'Postgres and the app container. Fallback: the same migrations on an in-memory Postgres.', 'deployed app', 'live'],

@@ -9,7 +9,7 @@ Branch `lane/site-design`, worktree `../junc26-lanes/site-design`, off `lane/sit
 - **Content source:** `Junc26/scratch/site-review/SYSTEM-MAP.md` (gitignored; 288 lines, checked against code at `b10cd43`): actors, entities, flows with entry points, mechanisms with tests, partners and fallbacks, built vs planned, coverage gap.
 
 ## Open
-- 91 still to rule on the map's Gemini Decisions wording ("scores substitute fit").
+- Gemini Decisions wording on the map is 91's sentence verbatim (Sat 14 Nov); keep "recipe-aware" away from it.
 - Landing hero right column: option A (recorded request → line → tier) offered; the user likes the existing card deck, so only propose, don't replace.
 - Verify on Safari/iOS: the sticky scroll stages (`/story` checks, `/how` map) and `svh` units.
 - `/how` sections 2–8 (d0) should use the same type scale as `/story` (h2 600, -0.03em; chips by tier only).
