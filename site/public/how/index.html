@@ -4,11 +4,18 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>How Mandate works</title>
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="Mandate" />
+<meta property="og:title" content="How Mandate works" />
+<meta property="og:description" content="A kitchen purchasing agent that orders on its own only inside limits the chef sets." />
+<meta property="og:url" content="https://mandate.kitchen/how/" />
+<meta property="og:image" content="https://mandate.kitchen/og.png" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:image:alt" content="The Mandate mark and the line: a kitchen purchasing agent that orders on its own only inside limits the chef sets." />
+<meta name="twitter:card" content="summary_large_image" />
 <meta name="description" content="When the agent may act alone, the three state machines and the system map behind Mandate: one list of tools for every caller, a pure TypeScript core, one locked transaction, and outside services behind ports with fallbacks.">
-<meta property="og:title" content="How Mandate works">
-<meta property="og:description" content="Every caller goes through one list of tools and the same checks. Only a person approves, and only one function changes state.">
-<meta property="og:url" content="https://mandate.kitchen/how">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23176b70'/%3E%3Cpath d='M8 23V10l8 8 8-8v13' fill='none' stroke='%23fff' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
@@ -32,7 +39,7 @@ code{font:12.5px var(--mono);color:var(--ink)}
 .top{position:sticky;top:0;z-index:40;background:rgba(11,13,14,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
 .top .in{max-width:1360px;margin:0 auto;height:56px;display:flex;align-items:center;gap:28px;padding:0 28px}
 .brand{font-weight:600;display:flex;gap:9px;align-items:center;text-decoration:none}
-.brand i{width:20px;height:20px;border:1.5px solid;border-radius:5px;display:grid;place-items:center;font:normal 600 11px var(--sans)}
+.brand svg{width:24px;height:24px;flex:none;border-radius:6px;box-shadow:0 0 0 1px rgba(255,255,255,.14)}
 .top nav{display:flex;gap:4px;font-size:13.5px}
 .top nav a{text-decoration:none;color:var(--ink2);padding:6px 10px;border-radius:7px}
 .top nav a:hover{color:var(--ink)}
@@ -169,7 +176,7 @@ footer a{color:var(--ink2)}
   <symbol id="i-person" viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c.8-3.6 3.6-5.5 7-5.5s6.2 1.9 7 5.5"/></symbol>
 </svg>
 <header class="top"><div class="in">
-  <a class="brand" href="/"><i>M</i>Mandate</a>
+  <a class="brand" href="/" aria-label="Mandate home"><svg viewBox="0 0 32 32" width="24" height="24" aria-hidden="true"><rect width="32" height="32" rx="7" fill="var(--brand-tile, #161b21)"/><rect x="6.5" y="7" width="5" height="18" rx="2.5" fill="var(--brand-act, #1d9999)"/><rect x="13.5" y="7" width="5" height="11" rx="2.5" fill="var(--brand-propose, #4c88d3)"/><rect x="20.5" y="7" width="5" height="18" rx="2.5" fill="var(--brand-act, #1d9999)"/><circle cx="16" cy="23" r="2.5" fill="var(--brand-signoff, #e5a14b)"/></svg>Mandate</a>
   <nav aria-label="Site"><a href="/story">Story</a><a href="/how" aria-current="page">How it works</a><a href="/proof">Proof</a></nav>
   <a class="cta" href="https://app.mandate.kitchen/">Open the kitchen →</a>
 </div></header>
