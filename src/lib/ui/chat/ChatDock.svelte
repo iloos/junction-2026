@@ -329,7 +329,8 @@
 	 * the needs it holds. The task id is for the System layer.
 	 */
 	const taskTitle = $derived.by(() => {
-		for (const x of entries)
+		// The newest title: after a switch the dock is about the new task.
+		for (const x of entries.toReversed())
 			if (x.kind === 'event' && 'title' in x.e && typeof x.e.title === 'string' && x.e.title)
 				return x.e.title;
 		const said = entries.find((x) => x.kind === 'chef');
@@ -378,8 +379,12 @@
 						continue;
 					}
 					if (e.taskId && e.taskId !== taskId) {
-						// The words started another task: the old task's cards leave with it.
-						if (taskId) entries = entries.filter((x) => x.kind === 'chef').slice(-1);
+						// The words started another task: the conversation stays, the old task's decision, menu and
+						// ledger cards leave with it (they act on the old task).
+						if (taskId)
+							entries = entries.filter(
+								(x) => x.kind !== 'event' || !['decision', 'menu', 'ledger'].includes(x.e.type)
+							);
 						taskId = e.taskId;
 						remember(taskId);
 					}

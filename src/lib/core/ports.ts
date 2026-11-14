@@ -193,6 +193,12 @@ export interface CallContext {
 	initiatedBy?: Actor;
 	/** Kitchens this context may act for; absent = every kitchen in the workspace. */
 	kitchenIds?: readonly string[];
+	/**
+	 * Checked by commit_order under the workspace lock, immediately before the order is written: a reason to refuse
+	 * (the task this purchase serves was cancelled), or null to go on. It reads through `tx`, the transaction holding the
+	 * lock (a read beside it would wait on that lock). Set by the server, never from a request.
+	 */
+	fence?: (tx: Tx) => Promise<string | null>;
 }
 
 /**
@@ -205,6 +211,8 @@ export interface TaskStore {
 		opts?: { kitchenId?: string; open?: boolean; limit?: number }
 	): Promise<Task[]>;
 	put(task: Task, expectedVersion: number | null): Promise<Result<Task>>;
+	/** `get` inside a store transaction (a purchase's fence); absent where reads never wait on a lock (in memory). */
+	getIn?(tx: Tx, workspaceId: string, id: string): Promise<Task | null>;
 }
 
 /**

@@ -439,6 +439,9 @@ export async function commitOrder(
 	const week = isoWeek(plan0.deliverBy);
 
 	return idempotent(ports, ctx, 'commit_order', input.idempotencyKey, input, async (tx, state) => {
+		// The caller's fence, under the lock: a purchase whose task was cancelled meanwhile writes nothing.
+		const stop = ctx.fence ? await ctx.fence(tx) : null;
+		if (stop) return { error: err('FORBIDDEN', stop, { sub: 'cancelled' }).error };
 		let plan = state.plans[input.planId];
 		if (!plan) return { error: err('NOT_FOUND', `plan ${input.planId}`).error };
 		/** Ops recorded before the commit itself (a re-quote that closed lines past their cut-off). */

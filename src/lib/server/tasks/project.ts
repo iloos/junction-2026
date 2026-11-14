@@ -57,7 +57,7 @@ export function projectedTaskStore(
 	inner: TaskStore,
 	ports: Pick<Ports, 'store' | 'clock'>,
 	handlers: Pick<ToolHandlers, 'get_plan'>
-): TaskStore {
+): TaskStore & { inner: TaskStore } {
 	const fresh = async (t: Task | null): Promise<Task | null> => {
 		if (!t || !t.plans.length) return t;
 		const ctx: CallContext = {
@@ -76,6 +76,7 @@ export function projectedTaskStore(
 		return r.ok ? project(t, r.value).task : t;
 	};
 	return {
+		inner,
 		get: async (ws, id) => fresh(await inner.get(ws, id)),
 		// The list projects the same way, then filters on the projected state, so a list and a detail never disagree.
 		list: async (ws, o = {}) => {

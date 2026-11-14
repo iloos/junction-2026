@@ -1,0 +1,15 @@
+{
+	"id": "c6-what-after-a-question",
+	"$comment": "'what' after the chat asked something says that question again, in words about the last turn (for a dish: no product by that name, did you mean portions of the dish), with the same answers; never the generic 'What would you like to do?' menu. No packs then takes the routine order path with the unit given.",
+	"kitchen": "k-hotel",
+	"steps": [
+		{ "chef": { "text": "10000 bolognese pasta" } },
+		{ "chef": { "text": "what" } },
+		{ "chef": { "answer": { "field": "dish", "value": "as-packs" } } }
+	],
+	"expect": {
+		"0": { "asks": "dish", "pending": "clarify", "receipts": 0 },
+		"1": { "asks": "dish", "pending": "clarify", "receipts": 0 },
+		"2": { "receipts": 0, "slots": { "unit": "sales" } }
+	}
+}

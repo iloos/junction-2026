@@ -403,6 +403,32 @@ describe('suite: chat transitions (round 10)', () => {
 		expect(out.at(-1)).toMatchObject({ text: expect.stringMatching(/cancelled/) });
 	});
 
+	it('R10-02b: a cancel that lands after the fence check, inside the purchase, still buys nothing', async () => {
+		const s = await setup();
+		const p = await s.place(['100001']);
+		const t = await s.task([p]);
+		let entered!: () => void;
+		const atCommit = new Promise<void>((r) => (entered = r));
+		let release!: () => void;
+		const hold = new Promise<void>((r) => (release = r));
+		const h = {
+			...s.h,
+			commit_order: async (...args: Parameters<typeof s.h.commit_order>) => {
+				entered();
+				await hold;
+				return s.h.commit_order(...args);
+			}
+		};
+		const running = chatTurn({ taskId: t.id, continue: true }, { ...s.deps, handlers: h });
+		await atCommit;
+		await chatTurn({ taskId: t.id, text: 'cancel that' }, s.deps);
+		release();
+		const out = await running;
+		expect(Object.values((await s.state()).orders)).toHaveLength(0);
+		expect((await s.tasks.get(s.ws, t.id))!.state).toBe('cancelled');
+		expect(out.at(-1)).toMatchObject({ text: expect.stringMatching(/cancelled/) });
+	});
+
 	it('R10-10: the agent loop gives different line subsets of one version different commands', async () => {
 		const s = await setup();
 		const p = await s.place(['100001', '100003']);

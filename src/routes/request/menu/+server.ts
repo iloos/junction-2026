@@ -11,15 +11,25 @@ import {
 	readMenuFor
 } from '$lib/server/menu/server';
 import { visitorWorkspace } from '$lib/server/demo/visitor';
+import { readMenuBody } from '$lib/server/menu/body';
 import type { RequestHandler } from './$types';
 
 /**
  * The /request page's menu steps, in the browser's own workspace: `propose` (from the request words and brief
  * answers), `read`, `edit` (amounts per guest → a new revision), `accept` (the chef's review) and `plan`.
- * Domain refusals come back as 422 with the error code.
+ * A malformed envelope is a 400 with the reason (readMenuBody); domain refusals come back as 422 with the error code.
  */
 export const POST: RequestHandler = async (event) => {
-	const body = (await event.request.json().catch(() => ({}))) as Record<string, unknown>;
+	let raw: unknown;
+	try {
+		raw = await event.request.json();
+	} catch {
+		return json({ error: { code: 'INVALID_INPUT', message: 'body is not JSON' } }, { status: 400 });
+	}
+	const read = readMenuBody(raw);
+	if (!read.ok)
+		return json({ error: { code: 'INVALID_INPUT', message: read.reason } }, { status: 400 });
+	const { body } = read;
 	const str = (k: string) => (typeof body[k] === 'string' ? (body[k] as string) : '');
 	const int = (k: string) => (Number.isInteger(body[k]) ? (body[k] as number) : -1);
 	const { workspaceId } = await visitorWorkspace(event, env, dev);

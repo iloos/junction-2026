@@ -36,6 +36,7 @@ import { serveTool } from '$lib/server/tools/serve';
 import type { ChatEvent, ChatTurnInput } from '$lib/ui/chat/types';
 import { decisionsDue, decisionsOf } from '$lib/ui/decisions';
 import type { ReceiptView } from '$lib/ui/Receipt.svelte';
+import { interpretDish, type InterpretDish } from './dish';
 
 /**
  * One chat turn on a procurement task, in process: the third door onto `runGoal` (after MCP and REST), under the
@@ -68,6 +69,8 @@ export interface ChatDeps {
 	llm?: Llm | null;
 	/** Per-job models (the route's router jobs); each defaults to `llm`. */
 	models?: { understand?: Llm | null; explain?: Llm | null; plan?: Llm | null };
+	/** Reads a dish with a count ("10000 bolognese pasta"); by default ./dish. */
+	dish?: InterpretDish;
 }
 
 /**
@@ -210,25 +213,25 @@ function stepWords(s: StepRecord): string {
 	}
 }
 
-/** What the message was read as, in plain words. */
+/** What the message was read as, in plain words (the dock labels the line "Understood"). */
 function understoodWords(u: { kind: string }, goal: string): string {
 	switch (u.kind) {
 		case 'order':
-			return `Understood an order: ${goal}.`;
+			return `An order: ${goal}.`;
 		case 'read':
-			return 'Understood a question about your order.';
+			return 'A question about your order.';
 		case 'event':
-			return 'Understood an event brief.';
+			return 'An event brief.';
 		case 'adjust':
-			return 'Understood a change to a dish.';
+			return 'A change to a dish.';
 		case 'repair':
-			return 'Understood: find substitutes for what is short.';
+			return 'Find substitutes for what is short.';
 		case 'authority':
-			return 'Understood a request only a chef can make.';
+			return 'A request only a chef can make.';
 		case 'smalltalk':
-			return 'Understood a greeting.';
+			return 'A greeting.';
 		default:
-			return 'Could not tell what you need.';
+			return 'Not clear what you need.';
 	}
 }
 
@@ -354,14 +357,58 @@ export async function* runChatTurn(
 		task = blankTask(deps, text);
 		expected = null;
 	}
+	// The answer to "10,000 portions of pasta bolognese?": plan the dish as an event, or buy that many packs.
+	const dishAsked =
+		expected !== null &&
+		task.pending.kind === 'clarify' &&
+		task.pending.field === 'dish' &&
+		task.pending.options.some((o) => o.value === 'as-dish');
+	const said = input.text?.trim() ?? '';
+	const dishChoice = !dishAsked
+		? null
+		: input.answer?.field === 'dish'
+			? String(input.answer.value)
+			: YES.test(said)
+				? 'as-dish'
+				: NO_PACKS.test(said)
+					? 'as-packs'
+					: null;
+	if (dishChoice === 'as-dish' || dishChoice === 'as-packs') {
+		const goal = String(task.requirement.goal ?? '');
+		const d = await (deps.dish ?? interpretDish)(goal, { today: deps.today });
+		task.pending = { kind: 'none' };
+		if (d && dishChoice === 'as-dish') {
+			// The dish is planned like an event brief: guests, day and style are asked, then a menu is proposed. The
+			// chef's words stay the goal; the brief is ours.
+			task.requirement = {
+				...task.requirement,
+				kind: 'event',
+				brief: `${d.dish[0].toUpperCase()}${d.dish.slice(1)} for ${d.portions} guests`
+			};
+			input = { ...input, text: undefined, answer: undefined, continue: undefined };
+		} else {
+			// Packs of a product named like the dish: the routine order path, with the unit given.
+			task.requirement = {
+				...task.requirement,
+				brief: d ? `${d.portions} packs of ${d.dish}` : goal
+			};
+			input = { ...input, text: undefined, answer: { field: 'unit', value: 'sales' } };
+		}
+	}
 	// Words that are a request of their own (a product with an amount, or an event brief) start a new task, even while
 	// a question is open: they are never squeezed into the open slot, and their quantities are never dropped.
 	const words = input.text?.trim();
 	const reading = words ? classifyGoal(withoutKitchen(words), deps.today) : null;
+	// A dish with a bare count ("10000 bolognese pasta") is a request of its own, even while a question is open.
+	const dishWords =
+		words && !input.answer
+			? await (deps.dish ?? interpretDish)(withoutKitchen(words), { today: deps.today })
+			: null;
 	const ruleOwn =
-		!!reading &&
-		((reading.kind === 'order' && reading.amount) ||
-			['event', 'read', 'authority'].includes(reading.kind));
+		!!dishWords ||
+		(!!reading &&
+			((reading.kind === 'order' && reading.amount) ||
+				['event', 'read', 'authority'].includes(reading.kind)));
 	// A short reply to an open question ("4 kg", "Wednesday") is an answer and needs no model; anything else is read.
 	const answering =
 		!!words && expected !== null && task.pending.kind === 'clarify' && !ruleOwn && !input.answer;
@@ -390,6 +437,46 @@ export async function* runChatTurn(
 			canContinue: false
 		};
 		return;
+	}
+	// "What?" after a question or a refusal: say again what the last turn needs, never a generic menu.
+	if (expected !== null && words && WHAT.test(words)) {
+		const goal = String(task.requirement.brief ?? task.requirement.goal ?? '');
+		if (task.pending.kind === 'clarify') {
+			const q = task.pending;
+			const d =
+				q.field === 'dish'
+					? await (deps.dish ?? interpretDish)(String(task.requirement.goal ?? ''), {
+							today: deps.today
+						})
+					: null;
+			yield {
+				type: 'clarify',
+				taskId: task.id,
+				field: q.field,
+				question: d
+					? `I couldn't find a product called “${productWords(String(task.requirement.goal ?? ''), d)}”. Did you mean ${d.portions.toLocaleString('en-US')} portions of the dish ${d.dish}?`
+					: `I need one more thing for “${goal.slice(0, 80)}”: ${q.question}`,
+				options: q.options
+			};
+			yield {
+				type: 'done',
+				taskId: task.id,
+				state: task.state,
+				text: q.question,
+				canContinue: false
+			};
+			return;
+		}
+		if (!task.plans.length) {
+			yield {
+				type: 'done',
+				taskId: task.id,
+				state: task.state,
+				text: `I could not act on “${goal.slice(0, 80)}”: I need the product and an amount with a unit, for example "4 kg lactose-free butter for Friday", or a dish or event to plan, for example "Dinner for 40 on Saturday".`,
+				canContinue: false
+			};
+			return;
+		}
 	}
 	// "Make it 20 kg": the task's own line is resized, on the same plan. An answer to the amount question ("Use
 	// 20.62 kg", or a number typed in the need's unit) resizes the same way; "keep" leaves it as it is.
@@ -434,7 +521,22 @@ export async function* runChatTurn(
 			(u.kind === 'order' && !!u.items?.some((i) => i.amount !== undefined)) ||
 			(reading?.kind === 'order' && reading.amount) ||
 			reading?.kind === 'event');
-	if (newRequest) {
+	// A dish with a bare count ("10000 bolognese pasta") is asked about before anything is searched: portions of the
+	// dish to plan, or packs of a product. It is a request of its own.
+	const dish =
+		words &&
+		!answering &&
+		!input.answer &&
+		!resize &&
+		!addition &&
+		u?.kind !== 'event' &&
+		u?.kind !== 'read' &&
+		reading?.kind !== 'event' &&
+		reading?.kind !== 'read' &&
+		!(u?.items ?? []).some((i) => i.unit)
+			? dishWords
+			: null;
+	if (newRequest || (dish && expected !== null)) {
 		task = { ...blankTask(deps, words!), kitchenId: task.kitchenId };
 		expected = null;
 	}
@@ -494,6 +596,7 @@ export async function* runChatTurn(
 	if (
 		words &&
 		!answering &&
+		!dish &&
 		(u?.kind === 'other' || (!u && reading?.kind === 'other') || !/[\p{L}\d]/u.test(words)) &&
 		task.pending.kind !== 'clarify'
 	) {
@@ -512,7 +615,8 @@ export async function* runChatTurn(
 		yield {
 			type: 'done',
 			taskId: expected !== null ? task.id : '',
-			state: task.state,
+			// Awaiting the answer: the dock enables the chips and shows the question once, on the card.
+			state: 'awaiting_clarification',
 			text: 'What would you like to do?',
 			canContinue: false
 		};
@@ -556,11 +660,12 @@ export async function* runChatTurn(
 	// An event brief ("7-course meal for 3") is the chat's own flow: ask what the brief lacks, propose a menu, and plan
 	// it once a chef has reviewed it. The seeded buffet keeps the agent's own plan_event path.
 	const eventFlow =
-		task.requirement.kind === 'event' ||
-		(!followUp &&
-			!!words &&
-			(u?.kind === 'event' || reading?.kind === 'event') &&
-			!isSeededEvent(words));
+		!dish &&
+		(task.requirement.kind === 'event' ||
+			(!followUp &&
+				!!words &&
+				(u?.kind === 'event' || reading?.kind === 'event') &&
+				!isSeededEvent(words)));
 	if (eventFlow && task.requirement.kind !== 'event')
 		task.requirement = { ...task.requirement, kind: 'event' };
 
@@ -582,7 +687,20 @@ export async function* runChatTurn(
 		expected = reserved.value.version;
 	}
 
-	if (eventFlow) {
+	if (dish) {
+		steps = [];
+		const n = dish.portions.toLocaleString('en-US');
+		clarify = {
+			kind: 'clarify',
+			field: 'dish',
+			question:
+				dish.question ?? `That reads like a dish, not a product: ${n} portions of ${dish.dish}?`,
+			options: [
+				{ label: 'Yes, plan it as a dish', value: 'as-dish' },
+				{ label: `No, ${n} packs`, value: 'as-packs' }
+			]
+		};
+	} else if (eventFlow) {
 		const r = await eventTurn(task, input, words, agentCtx, deps);
 		steps = r.steps;
 		clarify = r.clarify;
@@ -618,10 +736,30 @@ export async function* runChatTurn(
 			yield fail(task.id, 'Nothing to continue: this task has no plan yet.', task.state);
 			return;
 		}
-		steps = await continueTask(task, agentCtx, deps.handlers, async () => {
-			const now = await store.get(deps.workspaceId, task.id);
-			return now?.state !== 'cancelled';
-		});
+		// The stored task, unprojected: whether it was cancelled is a stored fact.
+		const rawStore = (
+			'inner' in store ? (store as { inner: TaskStore }).inner : store
+		) as TaskStore;
+		const cancelled = async () =>
+			(await rawStore.get(deps.workspaceId, task.id))?.state === 'cancelled';
+		steps = await continueTask(
+			task,
+			{
+				...agentCtx,
+				// Checked by commit_order under the workspace lock, right before the order is written.
+				// The read goes through the purchase's own transaction where the store has one.
+				fence: async (tx) =>
+					(
+						rawStore.getIn
+							? (await rawStore.getIn(tx, deps.workspaceId, task.id))?.state === 'cancelled'
+							: await cancelled()
+					)
+						? 'the task was cancelled; nothing was ordered'
+						: null
+			},
+			deps.handlers,
+			async () => !(await cancelled())
+		);
 		const commits = steps.filter((x) => x.tool === 'commit_order');
 		continued = commits.some((x) => x.ok)
 			? 'ordered'
@@ -639,7 +777,10 @@ export async function* runChatTurn(
 		}
 	} else {
 		// A typed answer to the open question, or words while one is open, fill that field only.
-		let goal = !followUp && understood ? understood.goal : String(task.requirement.goal ?? '');
+		let goal =
+			!followUp && understood
+				? understood.goal
+				: String(task.requirement.brief ?? task.requirement.goal ?? '');
 		let goals = [goal];
 		let slots: Slots = { ...(task.slots as Slots) };
 		const answer =
@@ -744,6 +885,10 @@ export async function* runChatTurn(
 				refusal = `Not ordered: ${why.replace(/\b(\d{4}-\d{2}-\d{2})\b/g, (d) => dayWords(d))}`;
 			else if (o?.planId) touched.push(o.planId);
 		}
+		// Words read as an order that the request parser could not turn into a product and an amount: say so, and the
+		// way on, never "not recognised" after the reading said order.
+		if (refusal?.startsWith('I did not recognise') && (u?.kind === 'order' || dishChoice))
+			refusal = `I read this as an order for “${goal.slice(0, 80)}”, but could not match it to a product and an amount I can buy. Name the product with an amount and unit, for example "4 kg lactose-free butter for Friday", or describe a dish or event and I will plan it.`;
 		planId = touched[0] ?? primary;
 		for (const id of touched.slice(1))
 			if (!task.plans.some((x) => x.planId === id))
@@ -858,9 +1003,18 @@ export async function* runChatTurn(
 	} else {
 		text = refusal ?? run?.outcome?.nextAction ?? 'Nothing was done.';
 		// A side question while this task waits for an answer leaves that question open.
-		if (followUp && task.pending.kind === 'clarify')
-			text = `${text} Still open: ${task.pending.question}`;
-		else {
+		// The dock shows a waiting task's answer on its question card, so the card is sent again with both.
+		if (followUp && task.pending.kind === 'clarify') {
+			const q = task.pending;
+			text = `${text} Still open: ${q.question}`;
+			yield {
+				type: 'clarify',
+				taskId: task.id,
+				field: q.field,
+				question: (await scrub(text, deps)).slice(0, 600),
+				options: q.options
+			};
+		} else {
 			task.pending = { kind: 'none' };
 			task.state = 'open';
 		}
@@ -1005,6 +1159,20 @@ export async function taskView(taskId: string, deps: ChatDeps): Promise<ChatEven
 
 const CANCEL =
 	/^(?:please\s+|ok\s+)?(?:cancel|forget|scrap|drop)\b(?:\s+(?:it|that|this|the order|everything))?\s*[.!]*$|^(?:peru|peruuta|unohda)\b/i;
+/** A bare "what?": the chef did not follow the last turn. */
+const WHAT =
+	/^(what|what\?+|huh|sorry|pardon|eh|mitä|häh|what do you mean|what does that mean)\W*$/i;
+const YES = /^(y|yes|yeah|yep|sure|ok|kyllä|joo|plan it|as a dish)\b/i;
+const NO_PACKS = /^(no|nope|ei)\W*$|\bpacks?\b/i;
+
+/** The product words of a dish request, without the count and the ordering words ("bolongese pasta"). */
+function productWords(goal: string, d: { dish: string }): string {
+	const w = goal
+		.replace(/^.*\b(order|buy|need|want|tilaa)\b\s*/i, '')
+		.replace(/[\d\s,.]*\d\s*/, '')
+		.trim();
+	return (w || d.dish).slice(0, 60);
+}
 const ADDITION = /\b(too|also|as well|myös|lisäksi)\b|^\s*(and|ja|plus)\b/i;
 const RESIZE =
 	/^(?:ok\s+|actually\s+|no\s+|sorry\s+)?(?:make (?:it|that)|change (?:it |that )?to|muuta (?:se )?|tee siitä|vaihda (?:se )?)\s*(\d+(?:[.,]\d+)?)\s*(kg|kiloa?|g|l|litraa?|dl)?\b/iu;
@@ -1188,7 +1356,7 @@ async function eventTurn(
 		});
 		return r;
 	};
-	const goal = String(task.requirement.goal ?? '');
+	const goal = String(task.requirement.brief ?? task.requirement.goal ?? '');
 	const slots = task.slots as Record<string, unknown>;
 
 	// An answer to the open brief question, as a chip or typed.
