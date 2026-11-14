@@ -161,5 +161,5 @@ export async function commitRequest(o: {
 		idempotencyKey
 	});
 	const view = await approvalView(handlers, a.chef, o.planId);
-	return { commit: { ...r, idempotencyKey, attempt: o.attempt }, ...view };
+	return { commit: { ...r, idempotencyKey, version: o.version, attempt: o.attempt }, ...view };
 }

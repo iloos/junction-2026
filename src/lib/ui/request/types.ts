@@ -151,6 +151,8 @@ export interface CommitView {
 	committedLineIds: string[];
 	awaitingSupplier: string[];
 	idempotencyKey: string;
+	/** The plan version this commit was for; a retry sends it again to get the same receipt. */
+	version: number;
 	attempt: number;
 }
 
