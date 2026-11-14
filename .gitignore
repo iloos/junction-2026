@@ -52,3 +52,6 @@ data/s-pankki/
 
 # Roadmap workbench (generated locally, not part of the app)
 docs/roadmap/
+
+# Personal roadmap notes; never part of this repo
+docs/review/ROADMAP-PREPARATION.md
