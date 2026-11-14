@@ -33,6 +33,7 @@ import { GET as agentCard } from '../../../routes/.well-known/agent.json/+server
 const OPEN: Record<string, string> = {
 	'R10-01': 'E',
 	'R10-02': 'E',
+	'R10-02b': 'E',
 	'R10-03': '8d',
 	'R10-04': '8d',
 	'R10-05': '8d',
@@ -319,6 +320,42 @@ describe('suite: adversarial (round 10)', () => {
 			};
 			const running = chatTurn({ taskId: t.id, continue: true }, { ...s.deps, handlers: h });
 			await atRead;
+			await chatTurn({ taskId: t.id, text: 'cancel that' }, s.deps);
+			release();
+			await running;
+			expect(await s.orders()).toHaveLength(0);
+			expect((await s.tasks.get(s.ws, t.id))!.state).toBe('cancelled');
+		}
+	);
+
+	// The cancel fence must hold after it is checked: pause at the purchase itself (past any re-read of the task),
+	// cancel, release. The commit must see the cancellation (under its own lock, or by refusing a cancelled task's
+	// command), not buy on a stale read.
+	probe(
+		'R10-02b',
+		'a cancel that lands after the fence check, before the purchase, still buys nothing',
+		async () => {
+			const s = await setup();
+			const p = await s.place();
+			const t = await s.task([p]);
+			let entered!: () => void;
+			const atCommit = new Promise<void>((r) => {
+				entered = r;
+			});
+			let release!: () => void;
+			const hold = new Promise<void>((r) => {
+				release = r;
+			});
+			const h = {
+				...s.h,
+				commit_order: async (...args: Parameters<typeof s.h.commit_order>) => {
+					entered();
+					await hold;
+					return s.h.commit_order(...args);
+				}
+			};
+			const running = chatTurn({ taskId: t.id, continue: true }, { ...s.deps, handlers: h });
+			await Promise.race([atCommit, running]);
 			await chatTurn({ taskId: t.id, text: 'cancel that' }, s.deps);
 			release();
 			await running;
