@@ -283,12 +283,11 @@ h3 { margin: 0; }
 					<div class="side">
 						<div class="part uses"><h3 class="label">What it uses</h3><ul>
 							<li><b>The event brief:</b> occasion, guests, date and requirements</li>
-							<li><b>Gemini Flash-Lite</b> reads the words into that brief</li>
+							<li><b>Rules</b> read the brief's guests, date and requirements, with no model call; <b>Gemini Flash-Lite</b> reads product requests such as “10 l lactose-free milk for Friday”</li>
 							<li><b>The order cut-off:</b> 17:00 the day before delivery</li>
 						</ul></div>
 						<div class="part rules"><h3 class="label">What it refuses or holds</h3><ul>
 							<li><span class="chip caught"><svg class="ic" aria-hidden="true"><use href="#i-clock"/></svg>Caught</span><span>A date past the cut-off: the cut-off is named and the next delivery day offered, never moved silently<span class="cite"><code>checkLate</code> · evals/check.ts</span></span></li>
-							<li><span class="chip refused"><svg class="ic" aria-hidden="true"><use href="#i-no"/></svg>Refused</span><span>A product that breaks a stated requirement, such as lactose-free, even as a substitute<span class="cite"><code>requirement_unmet</code> · purchasing.test.ts</span></span></li>
 						</ul></div>
 					</div>
 				</div>
@@ -369,6 +368,7 @@ h3 { margin: 0; }
 							<li><span class="chip held"><svg class="ic" aria-hidden="true"><use href="#i-hold"/></svg>Held</span><span>A substitute that breaks the kitchen's origin preference<span class="cite"><code>substitute_breaks_preference</code> · validate.ts</span></span></li>
 							<li><span class="chip held"><svg class="ic" aria-hidden="true"><use href="#i-hold"/></svg>Held</span><span>A product under a recall notice<span class="cite"><code>recall</code> · tier.ts</span></span></li>
 							<li><span class="chip held"><svg class="ic" aria-hidden="true"><use href="#i-hold"/></svg>Held</span><span>A model's caution: a model can hold a line, never allow one<span class="cite"><code>CAUTION.model_*</code> · substitutes.ts</span></span></li>
+							<li><span class="chip refused"><svg class="ic" aria-hidden="true"><use href="#i-no"/></svg>Refused</span><span>On a request, a product that breaks a stated requirement, such as lactose-free, even as a substitute<span class="cite"><code>requirement_unmet</code> · purchasing.test.ts</span></span></li>
 						</ul></div>
 					</div>
 				</div>
@@ -450,7 +450,7 @@ h3 { margin: 0; }
 						<li>Over the hard limit, even split across lines<span class="cite"><code>over_hard_limit</code> · ceiling.test.ts</span></li>
 						<li>After the ordering cut-off<span class="cite"><code>cutoff_passed</code> · cutoff.test.ts · eval r5-f9</span></li>
 						<li>A part pack, off Valio's lot step<span class="cite"><code>BELOW_LOT</code> · eval s3</span></li>
-						<li>A product that breaks a stated requirement, such as lactose-free<span class="cite"><code>requirement_unmet</code> · purchasing.test.ts</span></li>
+						<li>On a request, a product that breaks a stated requirement, such as lactose-free<span class="cite"><code>requirement_unmet</code> · purchasing.test.ts</span></li>
 					</ul>
 				</section>
 			</div>
