@@ -48,3 +48,33 @@ _Lead-owned. The live assignment for the Ring 1 build: tracks, who owns which se
 - [ ] **In-app agent chat and tooling:** the chef talks to the same agent the tools serve, inside the kitchen screen, through the same gate.
 - [ ] **UI/UX pass** over Kitchen, Request, Ops and `/agents` (one vocabulary per [concept/VOCABULARY.md](concept/VOCABULARY.md)).
 - [ ] **Extension scopes later:** GROWTH.md gates (more kitchens, memory, Modal/Gemma jobs) only after the freeze plan is safe.
+
+---
+
+# Ring 2 (from Sat ~13:30): upgrade the app
+
+_Sources: [handoff/ring2/](handoff/ring2/) (agent, sponsors, UI/UX, roadmap reviews). Product promise: help a kitchen keep service possible when plans and supply change, with a precise account of what can be promised. Principles: live sponsor calls over mocks (fixtures only for tests and labelled fallback); one coherent read model on every surface; plain words by default, the System layer shows the mechanics; the gate stays the only authority. Gates to pass (from the roadmap): **isolated task** (one purchase across UI, chat, MCP, Ops), **semantic truth** (quantities and supply certainty agree everywhere), **open menu** (one reviewed arbitrary menu → held plan, no hidden gaps), **source → action** (a sourced incident on the precise plan), **assisted value** (agent beats the scripted baseline on a perturbed task)._
+
+## T1 contracts (lead, first)
+- `Task` + `TaskLedger` (procurement task: requirement, typed slots, plans touched, proposal ref, runs, pending clarify|decision|none, state, ledger from FulfilmentView + receipts + money); table `agent_tasks` (migration 0003); `Plan.taskId?`.
+- `Decision` gains `p`/`probabilities`; `Decide.batch(questions[])`.
+- Tools: `get_outcome{planId|taskId}` (ledger), `propose_menu{brief}`; `place_order` lines may give `amount` without `qty` (server sizes); `find_substitutes.apply` explicit; `commit_order` destructive.
+- `ExternalCall` trace shape `{api, purpose, cache: live|cache|replay|fixture, latencyMs, costUnits, workspaceId}`.
+
+## Tracks
+| Track | Owner | Scope (first deliverable first) | Gate |
+|---|---|---|---|
+| **A** core + live supply | 8d | A3 cut-off at commit + view validity · A4 plan from a reviewed proposal (lineage) · **Valio live cache-through** on the PG catalogue (price + availability on miss, 15 min availability TTL, `valio_live` + fetch time, half-open breaker, traced) · quotes subtract consumed stock (core-current-atp) · one `nextActionFor(plan)` | semantic truth, open menu |
+| **C** UI shell + Kitchen task page | 1f (+ subagents) | **Shell + tokens first** (type scale, D10 state tokens with patterns, Ops dark theme on the same tokens, LabelPill, Sandbox menu, System toggle `?system=1`, 390 px fixes, no `text-[..px]`) → Kitchen task page (TaskHeader "N decisions before <cut-off>", DecisionCard as the unit, Decide/Plan/Order zones, committed state, StrategyCard AND group, compact rows) → vis: demand→packs waterfall, coverage partition, **approval seal**, rescue strip with tier bands → Why drawer web evidence (from D) | isolated task, semantic truth |
+| **G** Ops as explainer + Aiven | 9c | Ops cases close on rescue/commit and group per cause (trust bug first) · plain-word trace labels · Ops on shared tokens + mobile · op-log timeline (vis) · agent run graph (vis, replaces raw JSON) · recall card · **web state into Postgres** (cache, recall queue SKIP LOCKED, spend ledger, findings) · transactional NOTIFY · Infrastructure strip (DB latency, TLS, LISTEN, lag, plan) · staging promote flow | source → action, Aiven proof |
+| **E** agent + chat | lead agent | agent fixes first: runs per workspace + cancel check · one shared classifier (order wins when an amount is stated; read questions allowed) · typed clarify{field,options} + slots · ledger with quantities and money → then `Task` store, `POST /api/chat/turn` (NDJSON: step, clarify, decision, ledger, done), `continue_task`, **chat dock** (uses C's DecisionCard/LineRow; never approves) · schema-constrained Gemini output + one corrective retry · `/agents`: client config snippet + "your calls" | isolated task, assisted value |
+| **B** request → menu | lead agent | after A4: menu proposal on /request → chef review (server-recorded) → `plan_event{proposal}` → task; Request sends physical `amount`; polish (green steps, unit words, friendly dates, approver name, no dead end); Request as the "New request" composer that creates a task | open menu |
+| **D** sponsors: Gemini + web | lead agent | **Gemini Decisions visible**: batch fit + violates + origin per candidate, p/confidence shown in rescue + Why, trace into the drawer, replay book recorded from real calls (tests only), LLM spend ledger per visitor/day · Exa "no allergen record → lookup with citations" data for the Why drawer · Exa unresolved need → recipe → resolve → make-in-house proposal · Context.dev: stored notices + visitor-scoped labelled drill applied on sandbox seed; news search on plan suppliers as Ops leads · shared `ExternalCall` helper (with G) · Gemini embeddings + pgvector hybrid retrieval if retrieval eval improves | source → action, Gemini/Exa proof |
+| **F** evals + claims | 91 | chat evals (clarify, approval handoff, continue, truthful ledger) · paraphrase set EN/FI per intent · REVIEW on/off arms · deployed two-browser + MCP journey recorded · claim ledger for the 22:00 video (each PITCH claim → observed evidence) | all |
+
+## Waves
+- **W1 (to ~18:00):** T1; C shell + tokens; E agent fixes; A3 + Valio live; G Ops trust fix + web state in PG; D Gemini visible; F chat eval scaffolds.
+- **W2 (to ~22:00, video checkpoint):** C Kitchen task page + seal + waterfall; E chat turn + dock v1; A4 → B menu review → plan; D evidence data → C Why drawer; G recall card + run graph; tag + deploy + rough video.
+- **W3 (22:00 → Sun 05:00):** funnel + gate sankey, op-log timeline, Request composer handoff, Infrastructure strip, live k/N agent comparison, polish at 390 px, claim ledger; freeze 06:00.
+
+**Park (Ring 2):** recurring/rhythm, order history/receiving/cancel, inbox beyond the task list, ops administration, agent memory, schema evolution, growth (venue map only if spare), product map, native function calling, LLM planner on prod by default, approving from chat, Kafka/OpenSearch, Gemini Live, Modal.
