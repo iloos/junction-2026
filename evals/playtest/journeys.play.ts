@@ -86,7 +86,7 @@ async function requestPage(page: Page, text: string) {
 		await page.getByRole('button', { name: 'Send' }).first().click();
 		await page.waitForTimeout(1500);
 		await page
-			.getByText(/^Workingb.*…$/)
+			.getByText(/^Working\b.*…$/)
 			.first()
 			.waitFor({ state: 'detached', timeout: 180_000 })
 			.catch(() => undefined);
