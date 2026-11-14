@@ -1,23 +1,25 @@
 <script lang="ts">
 	import { onMount, tick } from 'svelte';
 	import { resolve } from '$app/paths';
-	import { ChevronDown, CornerDownRight, Info, Play, CloudOff, LoaderCircle } from '@lucide/svelte';
+	import { ChevronDown, Play, CloudOff, LoaderCircle } from '@lucide/svelte';
 	import { KitchenStore } from '$lib/kitchen/kitchen.svelte';
 	import { KITCHENS, PRODUCTS } from '$lib/kitchen/catalog';
 	import type { DishView } from '$lib/kitchen/view-model';
 	import type { Line } from '$lib/core/contracts';
 	import { useShell } from '$lib/ui/shell/shell.svelte';
-	import StateChip from '$lib/ui/StateChip.svelte';
+	import TaskHeader from '$lib/ui/TaskHeader.svelte';
+	import LineRow from '$lib/ui/LineRow.svelte';
+	import StrategyCard from '$lib/ui/StrategyCard.svelte';
+	import { decisionCount, decisionsDue, decisionsOf } from '$lib/ui/decisions';
 	import GramsStepper from '$lib/ui/GramsStepper.svelte';
 	import WhyDrawer from '$lib/ui/WhyDrawer.svelte';
-	import CoverageBar from '$lib/ui/CoverageBar.svelte';
+	import CoverageRuler from '$lib/ui/CoverageRuler.svelte';
 	import CoverageLegend from '$lib/ui/CoverageLegend.svelte';
-	import { lineBasis } from '$lib/ui/coverage';
 	import { whyChain } from '$lib/ui/why-chain';
 	import { day, fixed, money, moneyDelta, num, storyTime } from '$lib/ui/format';
 	import { SCENARIO } from '$lib/core/scenario';
 	import { reasonShort } from '$lib/ui/reasons';
-	import RescuePanel from './RescuePanel.svelte';
+	import RescueCompare from '$lib/ui/RescueCompare.svelte';
 	import RulesPanel from './RulesPanel.svelte';
 	import ApprovalPanel from './ApprovalPanel.svelte';
 	import CutoffTimeline from '$lib/ui/viz/CutoffTimeline.svelte';
@@ -137,7 +139,10 @@
 		if (!snap || !plan) return null;
 		const cap = snap.rules.weeklyCapCents;
 		const spent = snap.view.weekSpentCents;
-		const order = plan.totalCents ?? 0;
+		// Week spend already includes what this plan ordered; "this order" is only what is not ordered yet.
+		const order = plan.lines
+			.filter((l) => l.state !== 'committed' && l.state !== 'rejected' && l.state !== 'unorderable')
+			.reduce((a, l) => a + (l.lineCents ?? 0), 0);
 		return {
 			cap,
 			spent,
@@ -185,6 +190,23 @@
 			else if (d.status === 'shortfall') out.push(`${d.nameFi}: no option qualifies`);
 		}
 		return out;
+	});
+
+	/** Decisions: the one count the header, the panel and the phone bar share. */
+	const decisions = $derived(plan ? decisionsOf(plan, approval) : []);
+	const orderable = $derived.by(() => {
+		const ls = (plan?.lines ?? []).filter((l) => l.view?.committable === true);
+		return { lines: ls.length, cents: ls.reduce((a, l) => a + (l.lineCents ?? 0), 0) };
+	});
+	/** Once every orderable line is ordered, the header becomes the order's state. */
+	const orderedState = $derived.by(() => {
+		const done = (plan?.lines ?? []).filter((l) => l.state === 'committed');
+		if (!done.length || orderable.lines > 0 || !k.lastCommit) return null;
+		return {
+			confirmed: k.lastCommit.lines - k.lastCommit.awaiting,
+			awaiting: k.lastCommit.awaiting,
+			cents: done.reduce((a, l) => a + (l.lineCents ?? 0), 0)
+		};
 	});
 
 	/** The header's "what needs you", in D10 terms and on the same basis as the panel and Ops. */
@@ -245,6 +267,25 @@
 			shell.sandbox = null;
 		};
 	});
+
+	/** A make-in-house strategy is one AND group; every other line stands alone. */
+	function groupLines(ls: Line[]): { key: string; make: boolean; lines: Line[] }[] {
+		const out: { key: string; make: boolean; lines: Line[] }[] = [];
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local, rebuilt on every call
+		const make = new Map<string, Line[]>();
+		for (const l of ls) {
+			if (l.strategy?.kind === 'make_in_house') {
+				const g = make.get(l.strategy.id);
+				if (g) g.push(l);
+				else {
+					const lines = [l];
+					make.set(l.strategy.id, lines);
+					out.push({ key: l.strategy.id, make: true, lines });
+				}
+			} else out.push({ key: l.id, make: false, lines: [l] });
+		}
+		return out;
+	}
 </script>
 
 <svelte:head>
@@ -387,61 +428,61 @@
 		<div class="mt-6 h-64 animate-pulse rounded bg-well"></div>
 	</main>
 {:else}
+	{#snippet lineRow(l: Line, d: DishView)}
+		<LineRow
+			line={l}
+			name={names.get(l.productId) ?? l.productId}
+			approved={approvedIds.has(l.id)}
+			flash={k.flash.has(l.id)}
+			replaces={l.substituteFor
+				? {
+						name: names.get(l.substituteFor) ?? l.substituteFor,
+						because:
+							d.outage === 'undeliverable' ? "Valio can't deliver it" : 'out of stock at Valio'
+					}
+				: undefined}
+			onwhy={() => k.openWhy(l.id)}
+		/>
+	{/snippet}
 	<main
 		class="mx-auto grid max-w-[1440px] grid-cols-1 gap-6 px-4 pt-5 pb-28 md:px-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:pb-10"
 	>
 		<div class="min-w-0">
-			<!-- Event as a diff against a normal week -->
-			<section aria-labelledby="event-h">
-				<div class="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1">
-					<h1 id="event-h" class="text-title font-semibold tracking-[-0.015em] text-ink">
-						{view.title}
-					</h1>
-					<p class="text-body text-ink-2">
-						{day(view.date)} · {view.guests} guests · {view.serviceStyle} · delivery {day(
-							plan.deliverBy
-						)}
-					</p>
-				</div>
-				<div
-					class="mt-3 grid grid-cols-2 overflow-hidden rounded-lg border border-rule bg-sheet md:grid-cols-4"
+			<!-- The task: decisions left, by when, cover by certainty; the event as a diff of a normal week -->
+			<section aria-label="This task">
+				<TaskHeader
+					title={view.title}
+					meta="{day(view.date)} · {view.guests} guests · {view.serviceStyle} · delivery {day(
+						plan.deliverBy
+					)}"
+					decisions={decisions.length}
+					due={decisionsDue(plan, approval)}
+					now={k.now}
+					coverage={[...coverage.values()]}
+					cannot={needsYou.cannot}
+					{orderable}
+					ordered={orderedState}
 				>
-					<div class="border-r border-b border-rule px-4 py-3 md:border-b-0">
-						<p class="text-meta text-ink-3">A normal week</p>
-						<p class="mono mt-0.5 text-title text-ink-2">
-							{money(view.normalWeek.cents, { whole: true })}
-						</p>
-						<p class="text-meta text-ink-3">{view.normalWeek.lines} lines</p>
-					</div>
-					<div class="border-b border-rule px-4 py-3 md:border-r md:border-b-0">
-						<p class="text-meta text-ink-3">This week, with the event</p>
-						<p class="mono mt-0.5 text-title font-medium text-ink">
-							{money(view.thisWeek.cents, { whole: true })}
-						</p>
-						<p class="text-meta text-ink-3">{view.thisWeek.lines} lines</p>
-					</div>
-					<div class="border-r border-rule px-4 py-3">
-						<p class="text-meta text-ink-3">The event adds</p>
-						<p class="mono mt-0.5 text-title font-medium text-accent-ink">
-							{moneyDelta(view.thisWeek.cents - view.normalWeek.cents)}
-						</p>
-						<p class="text-meta text-ink-3">
-							<span class="mono">{fixed(view.eventKg)}</span> kg of food
-						</p>
-					</div>
-					<div class="px-4 py-3">
-						<p class="text-meta text-ink-3">What needs you</p>
-						<p class="mt-0.5 text-title font-medium text-ink">
-							{#if needsYou.pendingLines}<span class="mono">{needsYou.pendingLines}</span> lines need
-								your approval{:else}No approval needed{/if}
-						</p>
-						<p class="text-meta text-ink-3">
-							{needsYou.cannot} can't be ordered · {needsYou.unknown} dishes on unknown stock{needsYou.uncovered
-								? ` · ${needsYou.uncovered} not covered`
-								: ''}
-						</p>
-					</div>
-				</div>
+					{#snippet action()}
+						{#if decisions.length}
+							<a
+								href="#approval"
+								class="inline-flex h-10 items-center gap-1.5 rounded-md bg-ink px-4 text-body font-medium text-sheet hover:bg-ink-2"
+								>Review {decisions.length === 1 ? 'the decision' : 'decisions'}</a
+							>
+						{/if}
+					{/snippet}
+				</TaskHeader>
+				<p class="mt-2 text-meta text-ink-2">
+					A normal week <span class="mono">{money(view.normalWeek.cents, { whole: true })}</span>
+					({view.normalWeek.lines} lines) → this week
+					<span class="mono text-ink">{money(view.thisWeek.cents, { whole: true })}</span>
+					({view.thisWeek.lines} lines): the event adds
+					<span class="mono text-ink"
+						>{moneyDelta(view.thisWeek.cents - view.normalWeek.cents)}</span
+					>
+					and <span class="mono">{fixed(view.eventKg)}</span> kg of food.
+				</p>
 				{#if weekMeter}
 					<div class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-meta text-ink-3">
 						<span class="shrink-0">Week budget</span>
@@ -556,70 +597,16 @@
 									</div>
 								</div>
 								<ul class="col-span-2 space-y-2 lg:col-span-1">
-									{#each lines as l (l.id)}
-										{@const rejected = l.state === 'rejected' || l.state === 'unorderable'}
-										{@const sub = !!l.substituteFor}
-										{@const b = lineBasis(l.qty, l.view)}
-										<li
-											class="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3 gap-y-1 rounded-[5px] lg:grid-cols-[minmax(0,1fr)_84px_136px_28px] {k.flash.has(
-												l.id
-											)
-												? 'landed'
-												: ''}"
-										>
-											<div class="min-w-0">
-												<p class="flex min-w-0 items-baseline gap-1.5 text-body">
-													{#if sub}<CornerDownRight
-															size={13}
-															class="shrink-0 translate-y-0.5 text-accent"
-															aria-label="replaces the planned product"
-														/>{/if}
-													<span
-														class="truncate {rejected
-															? 'text-ink-3 line-through decoration-ink-3/60'
-															: 'text-ink'}">{names.get(l.productId) ?? l.productId}</span
-													>
-												</p>
-												<p class="mono text-micro leading-snug text-ink-3">
-													<span class={rejected ? '' : 'text-ink'}>{b.buys}</span>
-													{#if b.physical && !rejected}<span class="text-ink-2">
-															{b.physical}</span
-														>{/if}
-													{#if b.unitPrice && !rejected}<span class="block"
-															>{b.comparison
-																? `${b.unitPrice} · ${b.comparison}`
-																: b.unitPrice}</span
-														>{/if}
-													{#if l.qty.rounding && !rejected}<span class="block font-sans"
-															>{l.qty.rounding}</span
-														>{/if}
-													{#if rejected}<span class="font-sans">
-															· {l.productId} · not ordered</span
-														>{/if}
-												</p>
-											</div>
-											<span
-												class="mono text-right text-body {rejected ? 'text-ink-3' : 'text-ink'}"
-											>
-												{rejected ? '—' : money(l.lineCents)}
-											</span>
-											<span class="col-span-1 lg:col-span-1"
-												><StateChip
-													state={l.state}
-													tier={l.tier}
-													reasons={l.reasons}
-													approved={approvedIds.has(l.id)}
-													view={l.view}
-												/></span
-											>
-											<button
-												type="button"
-												class="grid size-7 place-items-center justify-self-end rounded-md text-ink-3 hover:bg-well hover:text-ink"
-												aria-label="Why this line"
-												title="Why"
-												onclick={() => k.openWhy(l.id)}><Info size={15} /></button
-											>
-										</li>
+									{#each groupLines(lines) as g (g.key)}
+										{#if g.make}
+											<li>
+												<StrategyCard title={d.nameFi} lines={g.lines}>
+													{#snippet row(l)}{@render lineRow(l, d)}{/snippet}
+												</StrategyCard>
+											</li>
+										{:else}
+											<li>{@render lineRow(g.lines[0], d)}</li>
+										{/if}
 									{/each}
 								</ul>
 							</div>
@@ -628,7 +615,7 @@
 									class="px-4 pb-3 lg:grid lg:grid-cols-[minmax(150px,0.7fr)_minmax(210px,0.9fr)_minmax(0,3fr)] lg:gap-x-4"
 								>
 									<div class="lg:col-span-2 lg:col-start-2">
-										<CoverageBar f={coverage.get(d.needId)!} />
+										<CoverageRuler f={coverage.get(d.needId)!} />
 									</div>
 								</div>
 							{/if}
@@ -654,7 +641,7 @@
 									</button>
 									{#if open[d.id]}
 										<div class="mt-2">
-											<RescuePanel
+											<RescueCompare
 												rescue={d.rescue}
 												grams={d.gServed}
 												onfit={(g) => k.setGrams(d.id, g)}
@@ -742,12 +729,13 @@
 		</aside>
 	</main>
 
-	{#if approval?.state === 'pending' && !approvalInView}
+	{#if decisions.length && !approvalInView}
 		<a
 			href="#approval"
 			class="fixed inset-x-3 bottom-3 z-30 flex h-12 items-center justify-between rounded-lg bg-ink px-4 text-body font-medium text-sheet shadow-[0_8px_24px_-8px_oklch(0.2_0.02_255/0.5)] lg:hidden"
 		>
-			<span>{approval.lineIds.length} lines need you</span>
+			<span>{decisionCount(decisions.length)} before {storyTime(decisionsDue(plan, approval))}</span
+			>
 			<span>Review</span>
 		</a>
 	{/if}

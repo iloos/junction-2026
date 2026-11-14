@@ -1,0 +1,90 @@
+/**
+ * A decision is the unit a human acts on: one reason group of the pending approval (D10: "needs your approval" only
+ * where a human can resolve it). The task header, the approval panel, the phone bar and the chat dock all count
+ * decisions from here, so the same plan never reads as "7 lines" in one place and "1 decision" in another.
+ * Same shape as T1 `TaskPending.decision.groups` ({reason, lineIds, totalCents}) plus what a card shows.
+ */
+import type { Approval, Line, Plan } from '$lib/core/contracts';
+import { SCENARIO } from '$lib/core/scenario';
+import { reasonLong, reasonShort } from './reasons';
+
+export interface Decision {
+	/** Stable per approval and reason group. */
+	key: string;
+	/** Short reason, e.g. "New product · Allergen change". */
+	reason: string;
+	/** The reasons in full sentences. */
+	why: string;
+	lineIds: string[];
+	lines: Line[];
+	totalCents: number;
+	/** Needs a deliberate hold: an allergen change or a broken requirement goes to the named approver's tier. */
+	signOff: boolean;
+	/** What happens if the chef keeps these held, in our words. */
+	consequence: string;
+	/** The approval's terms: shown on the card's seal, voided by any edit. */
+	approvalId: string;
+	planVersion: number;
+	termsHash: string;
+}
+
+const IGNORED = new Set(['unknown', 'UNKNOWN_REQUIRED']);
+
+/** The open decisions of a pending approval, in the order the approval lists its lines. */
+export function decisionsOf(plan: Plan, approval: Approval | null | undefined): Decision[] {
+	if (!approval || approval.state !== 'pending') return [];
+	const byId = new Map(plan.lines.map((l) => [l.id, l]));
+	const needLabel = new Map(plan.needs.map((n) => [n.id, n.label]));
+	const groups = new Map<string, { reasons: string[]; lines: Line[]; signOff: boolean }>();
+	for (const id of approval.lineIds) {
+		const l = byId.get(id);
+		if (!l) continue;
+		const reasons = l.reasons.filter((r) => !IGNORED.has(r));
+		const key = reasons.map(reasonShort).join(' · ') || 'Held';
+		const g = groups.get(key) ?? { reasons, lines: [], signOff: false };
+		g.lines.push(l);
+		if (l.tier === 'sign_off') g.signOff = true;
+		groups.set(key, g);
+	}
+	return [...groups].map(([reason, g]) => {
+		const needs = [
+			...new Set(g.lines.map((l) => (l.needId ? needLabel.get(l.needId) : undefined)))
+		].filter((x): x is string => !!x);
+		return {
+			key: `${approval.id}:${reason}`,
+			reason,
+			why: g.reasons.map(reasonLong).join(' '),
+			lineIds: g.lines.map((l) => l.id),
+			lines: g.lines,
+			totalCents: g.lines.reduce((s, l) => s + (l.lineCents ?? 0), 0),
+			signOff: g.signOff,
+			consequence: consequenceOf(needs, g.lines.length),
+			approvalId: approval.id,
+			planVersion: approval.planVersion,
+			termsHash: approval.termsHash
+		};
+	});
+}
+
+function consequenceOf(needs: string[], n: number): string {
+	const what = n === 1 ? 'this line is' : `these ${n} lines are`;
+	if (!needs.length) return `If you keep them held, ${what} not ordered.`;
+	const list =
+		needs.length > 3
+			? `${needs.slice(0, 3).join(', ')} and ${needs.length - 3} more`
+			: needs.join(', ');
+	return `If you keep them held, ${what} not ordered and ${list} ${needs.length === 1 ? 'loses' : 'lose'} that cover.`;
+}
+
+/**
+ * When the decisions are due: the plan view's validity (earliest of the approval's expiry and the offers' cut-off),
+ * else the approval's expiry, else the scenario's order cut-off.
+ */
+export function decisionsDue(plan: Plan | null | undefined, approval?: Approval | null): string {
+	return plan?.view?.validUntil ?? approval?.expiresAt ?? SCENARIO.cutoff;
+}
+
+/** "2 decisions" / "1 decision" / "No decisions". */
+export function decisionCount(n: number): string {
+	return n === 0 ? 'No decisions' : n === 1 ? '1 decision' : `${n} decisions`;
+}
