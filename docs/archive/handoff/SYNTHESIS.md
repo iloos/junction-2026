@@ -1,3 +1,5 @@
+_History; live dispatch is [docs/DISPATCH.md](../../DISPATCH.md). Paths below are as written (reviews now in docs/archive/)._
+
 # SYNTHESIS, Sat 14 Nov ~06:15, main `231e926`
 
 _Lead-owned. Adopted. **§8 Dispatch is the authoritative assignment** (user re-scoped 14 Nov ~08:00; amended by docs/review/FANOUT-READINESS-2026-11-14.md). §5 is the original proposal; where they differ, §8 wins._

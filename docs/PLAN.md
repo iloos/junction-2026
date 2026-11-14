@@ -3,7 +3,7 @@
 The only plan. Markers: `[x]` done · `[~]` in progress · `[ ]` todo · `[!]` blocked/risk. Edit only your own lines; the lead owns the structure.
 
 ## Now: Ring 1 fan-out (Sat 14 Nov from ~08:30)
-**Authoritative assignment: [handoff/SYNTHESIS.md §8 Dispatch](handoff/SYNTHESIS.md).** Tracks: T0 contracts (lead) [x] · A core 8d [~] · G visitor/ops/deploy 9c [~] · B request (lead agent) + retrieval 1f [~] · C kitchen visuals (after A2 fixtures) [ ] · D web (lead agent) [~] · E agent door (lead agent) [~] · F evals 91 [~] (merge gate [x]). The ring list below is history.
+**Authoritative assignment: [DISPATCH.md](DISPATCH.md).** Tracks: T0 contracts (lead) [x] · A core 8d [~] · G visitor/ops/deploy 9c [~] · B request (lead agent) + retrieval 1f [~] · C kitchen visuals (after A2 fixtures) [ ] · D web (lead agent) [~] · E agent door (lead agent) [~] · F evals 91 [~] (merge gate [x]). The ring list below is history.
 - [~] **Review mechanism** (user, Sat ~10:00): a validator pass at each model-output checkpoint (request parse, menu proposal, agent outcome, explanations). It sees the full context and a written rubric and returns pass, revise (one bounded retry with the critique) or block (reason shown). Never authorises, never overrides the gate. Scored through Gemini Decisions; traced and capped. Ships behind a flag until F's evals show it improves the same tasks. Owner E (`src/lib/server/review/`); first users E outcome + request parse, then B's menu. Principle for every track: rubric + eval before merge, so each stage is right on the first pass.
 
 ## Rings (D4), history

@@ -29,6 +29,7 @@
 | File | Who edits | What |
 |---|---|---|
 | [docs/STATUS.md](docs/STATUS.md) | lead | Now: what works, next 3 steps, traps. Rewritten each checkpoint. |
+| [docs/DISPATCH.md](docs/DISPATCH.md) | lead | Live tracks, seam ownership, integration waves, what is merged vs open |
 | [docs/PLAN.md](docs/PLAN.md) | everyone, own lines only | The one plan: phases, roles, shifts, `[x] [~] [ ] [!]` markers |
 | [docs/DECISIONS.md](docs/DECISIONS.md) | anyone | `D#` · choice · why · what would reopen it. Append only. |
 | [docs/concept/](docs/concept/CONCEPT.md) | lead + team | CONCEPT (product), PRODUCT (personas, stories, flows, edge cases), SCORECARD (criteria → evidence), ARCHITECTURE (contracts, lanes) and GROWTH (entities and gates from demo to Finland). Frozen at fan-out; changed only via the lead. |
