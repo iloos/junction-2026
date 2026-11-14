@@ -58,24 +58,15 @@
 				"applied": false
 			}
 		],
-		"rejected": [
-			{
-				"productId": "476768",
-				"reasons": ["origin_required"]
-			}
-		],
 		"lines": [
 			{
 				"productId": "476768",
 				"qty": 13,
-				"unit": "KG",
+				"unit": "ST",
 				"substituteFor": "462490"
 			}
 		],
 		"approvalStates": ["pending", "invalidated", "pending"]
 	},
-	"expectFail": {
-		"NEW-apply-wipe": ["attempts[3]", "lines[476768]"]
-	},
-	"notes": "Unit coverage: store/rescue.test.ts. Gap: substitutes.ts skips an apply only when there is no recommendation AND no saved substitute, so an apply that finds nothing deletes an existing rescue, voids the approval and reports applied: true. rescue.test's 'nothing qualifies' covers only the no-saved case."
+	"notes": "Unit coverage: store/rescue.test.ts ('applying under a rule nothing meets keeps the saved rescue'). An apply with no qualifying candidate writes nothing (no ProposeSubstitute op), so the preview's origin_required rejection of 476768 is not in the end state; step 2's notChosen covers it."
 }
