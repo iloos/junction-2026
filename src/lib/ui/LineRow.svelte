@@ -139,7 +139,7 @@
 	<span class="mono text-right text-body {rejected ? 'text-ink-3' : 'text-ink'}">
 		{rejected ? '—' : money(l.lineCents)}
 	</span>
-	<span class="col-span-2 flex items-center justify-between gap-2 sm:col-span-1 sm:justify-end">
+	<span class="col-span-2 flex flex-wrap items-center gap-2 sm:col-span-1 sm:justify-end">
 		<StateChip state={l.state} tier={l.tier} reasons={l.reasons} {approved} view={l.view} />
 		{#if decide?.state === 'pending' && !decide.signOff}
 			<span class="inline-flex shrink-0 gap-1.5">
