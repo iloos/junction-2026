@@ -229,7 +229,7 @@ describe('suite: adversarial (round 11: purchasing intent)', () => {
 				] as any,
 				offers
 			);
-			expect(order[0]).toBe(1);
+			expect(order?.[0]).toBe(1);
 		}
 	);
 
