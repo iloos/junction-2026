@@ -372,7 +372,7 @@ function renderChain(data) {
 	}
 	const plan = steps.find((s) => s.decides?.kind === 'signoff');
 	if (plan) {
-		// "3 lines ordered now · 15 wait for the chef · 11 of them because …": one item per part, each with its icon.
+		// "5 lines can be ordered now · 4 wait for the chef · 2 of them because …": one item per part, each with its icon.
 		const kinds = ['rule', 'signoff', 'unknown'];
 		plan.decides.text.split(' · ').forEach((part, k) => {
 			const li = el('li', kinds[k] ?? 'signoff');
@@ -387,7 +387,7 @@ function renderChain(data) {
 	const when = new Date(c.recordedAt);
 	if (!isNaN(when)) {
 		const day = when.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'Europe/Helsinki' });
-		document.getElementById('chain-when').textContent = `One line of the demo buffet, from a recorded run on ${day}` + (c.appCommit ? `, version ${String(c.appCommit).slice(0, 7)}.` : '.');
+		document.getElementById('chain-when').textContent = `One line from a demo event, recorded from the app on ${day}` + (c.appCommit ? `, version ${String(c.appCommit).slice(0, 7)}.` : '.');
 	}
 	document.getElementById('chain').hidden = false;
 }

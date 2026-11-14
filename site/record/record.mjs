@@ -423,10 +423,14 @@ const CASES = [
 // The chain: one line of the seeded buffet from the kitchen to its receipt. Every value comes from the scenario
 // response and the commit's answer; the counts in the "decides" markers come from the same plan.
 
+/** The chain's kitchen: the lunch restaurant, so the landing doesn't lean on the hotel buffet the cards already show. */
+const CHAIN_KITCHEN = process.env.CHAIN_KITCHEN ?? 'k-lounas';
+
 async function recordChain() {
 	const go = visitor();
 	await go('/kitchen-api/snapshot');
-	const s = await go('/kitchen-api/scenario', post({ action: 'start' }));
+	// Switching kitchen plans that kitchen's event, as the Kitchen's kitchen picker does.
+	const s = await go('/kitchen-api/scenario', post({ action: 'kitchen', value: CHAIN_KITCHEN }));
 	need(s.status === 200 && s.json?.plan, `scenario start ${s.status}`);
 	const { plan, view, clock, kitchen } = s.json;
 	need(clock?.runId && kitchen?.name, 'scenario start has no run id or kitchen');
@@ -440,25 +444,25 @@ async function recordChain() {
 	// Prefer a line that is one ingredient of a dish ("Rice porridge: rice"), so dish and ingredient are two steps.
 	const candidates = eligible.filter((l) => dishOf(l) && needOf(l)?.dish && l.view?.physical);
 	need(candidates.length > 0, 'no eligible line serves a dish');
+	// Pick first, then order only that line (commit_order's lineIds), so the card never vouches for other lines.
+	const line = [...candidates].sort((a, b) => (isIngredient(a) ? 0 : 1) - (isIngredient(b) ? 0 : 1))[0];
 	const r = await kitchenTool(go, 'commit_order', {
 		planId: plan.id,
 		version: plan.version,
-		idempotencyKey: `record-chain-${plan.id}-v${plan.version}`
+		idempotencyKey: `record-chain-${plan.id}-v${plan.version}`,
+		lineIds: [line.id]
 	}, shown);
 	need(r.status === 200 && r.json?.receiptId, `commit_order ${r.status} ${r.body.slice(0, 120)}`);
 	const committed = new Set(r.json.committedLineIds);
+	need(committed.size === 1 && committed.has(line.id), 'the chosen line was not the one committed');
 	const awaiting = new Set(r.json.awaitingSupplier ?? []);
 	const confirmed = (l) => committed.has(l.id) && !awaiting.has(l.id) && !awaiting.has(l.productId);
-	const rank = (l) => (isIngredient(l) ? 0 : 2) + (confirmed(l) ? 0 : 1);
-	const line = [...candidates].filter((l) => committed.has(l.id)).sort((a, b) => rank(a) - rank(b))[0];
-	need(line, 'the chosen line was not committed');
 
 	const d = dishOf(line);
 	const n = needOf(line);
 	const [dishName, ingredient] = isIngredient(line) ? d.name.split(': ') : [d.name.split(': ')[0], null];
 	const phys = line.view.physical;
 	const pack = phys.value / line.qty.value;
-	const others = committed.size - 1;
 	const held = plan.lines.filter((l) => l.state === 'held');
 	const unknown = held.filter((l) => l.reasons.includes('UNKNOWN_REQUIRED'));
 	// A sibling ingredient of the same dish that waits because Valio doesn't state a quantity (the porridge's milk).
@@ -472,15 +476,17 @@ async function recordChain() {
 	const total = `${num(Math.round(n.amount.value * 100) / 100)} ${n.amount.unit}`;
 	const isConfirmed = confirmed(line);
 	const fictional = / \(fictional\)$/.test(kitchen.name);
-	const kind = { city_hotel: 'city hotel' }[kitchen.kind] ?? 'kitchen';
+	const kind = String(kitchen.kind ?? 'kitchen').replace(/_/g, ' ');
+	// "Wednesday lunch buffet, 320 covers" → the head count as the title states it.
+	const count = view.title.match(/, ([\d,]+ [\p{L}]+)$/u);
 	const dishes = new Set(view.dishes.map((x) => x.name.split(': ')[0])).size;
 	const packs = unit(line.qty.unit) === phys.unit ? '' : `${num(line.qty.value)} ${unit(line.qty.unit)} × `;
 	const size = `${num(unit(line.qty.unit) === phys.unit ? phys.value : pack)} ${phys.unit}`;
 
 	return {
 		recordedAt: new Date().toISOString(),
-		line: { dish: dishName, ingredient, product: line.productName, eur: eur(line.lineCents) },
-		counts: { orderedNow: committed.size, waiting: held.length, unknownQuantity: unknown.length },
+		line: { dish: dishName, ingredient, product: line.productName, eur: eur(line.lineCents), dishes, per },
+		counts: { canOrderNow: eligible.length, waiting: held.length, unknownQuantity: unknown.length },
 		steps: [
 			{
 				key: 'kitchen',
@@ -491,8 +497,8 @@ async function recordChain() {
 			{
 				key: 'event',
 				title: 'The event',
-				value: `${view.guests} guests`,
-				text: `${view.title.replace(/, \d+ guests$/, '')} on ${day(view.date)}.`
+				value: count ? count[1] : `${view.guests} guests`,
+				text: `${count ? view.title.slice(0, count.index) : view.title} on ${day(view.date)}.`
 			},
 			{
 				key: 'dish',
@@ -528,10 +534,10 @@ async function recordChain() {
 				key: 'order',
 				title: 'The order',
 				value: isConfirmed ? 'Supplier confirmed' : 'Ordered, awaiting supplier',
-				text: `Ordered with ${others} other line${others === 1 ? '' : 's'} on one receipt.`,
+				text: 'Ordered on one receipt.',
 				decides: {
 					kind: 'signoff',
-					text: `${committed.size} lines ordered now · ${held.length} wait for the chef · ${unknown.length} of them because Valio doesn't state a quantity`
+					text: `${eligible.length} lines can be ordered now · ${held.length} wait for the chef · ${unknown.length} of them because Valio doesn't state a quantity`
 				}
 			}
 		]

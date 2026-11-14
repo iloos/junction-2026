@@ -286,12 +286,12 @@ h2{font-size:clamp(30px,3.5vw,54px);max-width:27ch}
   <h2 class="reveal d1">Start with what you have. Mandate works it down to the order.</h2>
   <div class="ladder reveal d2">
     <div class="rung entry"><div class="k"><i>1</i>An event</div><div class="v" data-s="chain.steps.#event.value">140 guests</div><div class="t" data-s="chain.steps.#event.text">Christmas dinner buffet on Sat 12 Dec.</div></div>
-    <div class="rung entry"><div class="k"><i>2</i>A menu</div><div class="v">12 dishes</div><div class="t">The booking's menu, or one proposed from your brief.</div></div>
-    <div class="rung entry"><div class="k"><i>3</i>A dish</div><div class="v" data-s="chain.steps.#dish.value">Rice porridge</div><div class="t">100 g a guest.</div></div>
+    <div class="rung entry"><div class="k"><i>2</i>A menu</div><div class="v"><span data-s="chain.line.dishes">12</span> dishes</div><div class="t">The booking's menu, or one proposed from your brief.</div></div>
+    <div class="rung entry"><div class="k"><i>3</i>A dish</div><div class="v" data-s="chain.steps.#dish.value">Rice porridge</div><div class="t"><span data-s="chain.line.per">100 g</span> a guest.</div></div>
     <div class="rung entry"><div class="k"><i>4</i>One item</div><div class="v" data-s="chain.steps.#ingredient.value">1.68 kg rice</div><div class="t" data-s="chain.steps.#product.text">From Valio Aimo's catalogue: 2 bags × 1 kg, €4.60.</div></div>
     <div class="rung done"><div class="k"><i>✓</i>The order</div><div class="v" data-s="chain.steps.#order.value">Supplier confirmed</div><div class="t" data-s="chain.steps.#order.text">Ordered with 2 other lines on one receipt.</div></div>
   </div>
-  <p class="tally reveal d3"><span>The whole buffet:</span><b class="ok"><span data-s="chain.counts.orderedNow">3</span> lines ordered now</b><b class="amber"><span data-s="chain.counts.waiting">15</span> wait for the chef</b><span><span data-s="chain.counts.unknownQuantity">11</span> of them because Valio doesn't state a quantity</span></p>
+  <p class="tally reveal d3"><span>The whole event:</span><b class="ok"><span data-s="chain.counts.canOrderNow">5</span> lines can be ordered now</b><b class="amber"><span data-s="chain.counts.waiting">15</span> wait for the chef</b><span><span data-s="chain.counts.unknownQuantity">11</span> of them because Valio doesn't state a quantity</span></p>
   <p class="direct reveal d3"><span>Or start at one item:</span><q data-s="cases.#within-mandate.request">10 kg salmon fillet for Friday</q><span>→ LOHIFILEE C-LEIKATTU 10KG,</span><span class="chip ok"><span data-s="cases.#within-mandate.outcome.label">Ordered within your mandate</span> · <span data-s="cases.#within-mandate.outcome.eur" data-f="eur">€141.10</span></span></p>
   <p class="label reveal d4">Recorded from the app on Sat 14 Nov. The hotel and its booking are a demo scenario; Valio data is challenge mock data.</p>
 </section>

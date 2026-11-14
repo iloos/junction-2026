@@ -1,53 +1,55 @@
 {
-	"recordedAt": "2026-11-14T15:10:03.832Z",
-	"appCommit": "d9ee3ee8d4a992c57446a00cbdac803f0695f1ae",
+	"recordedAt": "2026-11-14T15:36:33.087Z",
+	"appCommit": "7a45877705b9de3288966882f509bad2debe8366",
 	"chain": {
-		"recordedAt": "2026-11-14T15:10:03.832Z",
+		"recordedAt": "2026-11-14T15:36:33.087Z",
 		"line": {
-			"dish": "Rice porridge",
-			"ingredient": "rice",
-			"product": "Myllyn Paras Puuroriisi 1kg",
-			"eur": 4.6
+			"dish": "Salmon soup",
+			"ingredient": "potatoes",
+			"product": "SPL Raaka annosperuna veitsikuorittu 10kg",
+			"eur": 15.82,
+			"dishes": 6,
+			"per": "100 g"
 		},
 		"counts": {
-			"orderedNow": 3,
-			"waiting": 15,
-			"unknownQuantity": 11
+			"canOrderNow": 5,
+			"waiting": 4,
+			"unknownQuantity": 4
 		},
 		"steps": [
 			{
 				"key": "kitchen",
 				"title": "The kitchen",
-				"value": "Hotel Rautatientori",
-				"text": "A fictional city hotel in Helsinki. The agent may order alone up to €800 a line."
+				"value": "Lounas Ruoholahti",
+				"text": "A fictional lunch restaurant in Helsinki. The agent may order alone up to €400 a line."
 			},
 			{
 				"key": "event",
 				"title": "The event",
-				"value": "140 guests",
-				"text": "Christmas dinner buffet on Sat 12 Dec."
+				"value": "320 covers",
+				"text": "Wednesday lunch buffet on Wed 16 Dec."
 			},
 			{
 				"key": "dish",
 				"title": "The dish",
-				"value": "Rice porridge",
-				"text": "One of 12 dishes on the menu, 100 g a guest.",
+				"value": "Salmon soup",
+				"text": "One of 6 dishes on the menu, 100 g a guest.",
 				"decides": {
 					"kind": "unknown",
-					"text": "Its milk waits for one tap: Valio doesn't state a quantity."
+					"text": "Its cream waits for one tap: Valio doesn't state a quantity."
 				}
 			},
 			{
 				"key": "ingredient",
 				"title": "The ingredient",
-				"value": "1.68 kg rice",
-				"text": "Rice for 140 guests at 100 g of rice porridge each."
+				"value": "11.79 kg potatoes",
+				"text": "Potatoes for 320 guests at 100 g of salmon soup each."
 			},
 			{
 				"key": "product",
 				"title": "The product",
-				"value": "Myllyn Paras Puuroriisi 1kg",
-				"text": "From Valio Aimo's catalogue: 2 bags × 1 kg, €4.60.",
+				"value": "SPL Raaka annosperuna veitsikuorittu 10kg",
+				"text": "From Valio Aimo's catalogue: 2 packs × 10 kg, €15.82.",
 				"decides": {
 					"kind": "rule",
 					"text": "Inside the mandate: ordered without asking."
@@ -57,19 +59,19 @@
 				"key": "order",
 				"title": "The order",
 				"value": "Supplier confirmed",
-				"text": "Ordered with 2 other lines on one receipt.",
+				"text": "Ordered on one receipt.",
 				"decides": {
 					"kind": "signoff",
-					"text": "3 lines ordered now · 15 wait for the chef · 11 of them because Valio doesn't state a quantity"
+					"text": "5 lines can be ordered now · 4 wait for the chef · 4 of them because Valio doesn't state a quantity"
 				}
 			}
 		],
-		"appCommit": "d9ee3ee8d4a992c57446a00cbdac803f0695f1ae"
+		"appCommit": "7a45877705b9de3288966882f509bad2debe8366"
 	},
 	"cases": [
 		{
 			"id": "lactose-free",
-			"recordedAt": "2026-11-14T15:09:56.391Z",
+			"recordedAt": "2026-11-14T15:36:24.232Z",
 			"source": {
 				"app": "https://app.mandate.kitchen",
 				"endpoints": [
@@ -130,7 +132,7 @@
 		},
 		{
 			"id": "within-mandate",
-			"recordedAt": "2026-11-14T15:09:57.732Z",
+			"recordedAt": "2026-11-14T15:36:26.117Z",
 			"source": {
 				"app": "https://app.mandate.kitchen",
 				"endpoints": [
@@ -181,7 +183,7 @@
 		},
 		{
 			"id": "agent-cannot-approve",
-			"recordedAt": "2026-11-14T15:09:58.600Z",
+			"recordedAt": "2026-11-14T15:36:27.370Z",
 			"source": {
 				"app": "https://app.mandate.kitchen",
 				"endpoints": [
@@ -229,7 +231,7 @@
 		},
 		{
 			"id": "cut-off",
-			"recordedAt": "2026-11-14T15:09:59.742Z",
+			"recordedAt": "2026-11-14T15:36:28.496Z",
 			"source": {
 				"app": "https://app.mandate.kitchen",
 				"endpoints": [
@@ -264,7 +266,7 @@
 		},
 		{
 			"id": "one-receipt",
-			"recordedAt": "2026-11-14T15:10:01.351Z",
+			"recordedAt": "2026-11-14T15:36:30.149Z",
 			"source": {
 				"app": "https://app.mandate.kitchen",
 				"endpoints": [
@@ -273,6 +275,7 @@
 					"POST /request/run {action:commit} ×4"
 				]
 			},
+			"via": "Asked · approved by the chef · sent 4 times at once",
 			"request": "10 l lactose-free milk for Friday",
 			"ask": {
 				"qty": "10 l",
@@ -298,12 +301,11 @@
 				"label": "Ordered · 1 receipt",
 				"eur": 15.6
 			},
-			"link": "https://app.mandate.kitchen/request",
-			"via": "Asked · approved by the chef · sent 4 times at once"
+			"link": "https://app.mandate.kitchen/request"
 		},
 		{
 			"id": "out-of-stock",
-			"recordedAt": "2026-11-14T15:10:02.501Z",
+			"recordedAt": "2026-11-14T15:36:31.484Z",
 			"source": {
 				"app": "https://app.mandate.kitchen",
 				"endpoints": [
