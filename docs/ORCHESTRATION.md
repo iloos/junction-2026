@@ -7,7 +7,7 @@ Goal: a concept good enough that a lane agent with no chat history can build its
 
 | Step | Output | Tooling |
 |---|---|---|
-| Diverge | Ideas in `ideas/IDEAS.md` | `superpowers:brainstorming`, the team |
+| Diverge | Ideas (prep: `archive/prep/ideas/IDEAS.md`) | `superpowers:brainstorming`, the team |
 | Research (parallel subagents, one question each) | `docs/research/<topic>.md`: sources, findings, and "what this means for us" in ≤1 page each | Research subagents; Exa/Context.dev/Cala probes |
 | Pick | `D1` in DECISIONS | `idea-pick` skill (+ `judge`) |
 | Concept | `docs/concept/CONCEPT.md`: problem, user, wow ladder, insight, scope in/out | Team plus the lead agent |
@@ -35,7 +35,7 @@ Typical lanes (adjust in ARCHITECTURE.md): `data` (generator, fixtures, sponsor 
 3. **Small, frequent integration.** A lane commits small, then rebases on `main` at least every ~90 min. The lead merges ready lanes in order: data → agent → viz → shell.
 4. **Acceptance = observable.** Each brief has a check that proves it's done (a command, a route, a Playwright screenshot). "Done" without that check isn't done (`superpowers:verification-before-completion`).
 5. **Report in the brief, not in chat.** At the end of each run, the lane agent appends to its brief's **Report** section: what's done, what's stubbed, what's needed. The lead reads the reports, merges, and updates STATUS.md.
-6. **Auto mode safe zone.** A project permission allowlist (see TOOLING.md; it's installed by a human, not by an agent) allows `pnpm`, `git` (no force-push), `npx`, `modal` and Playwright, and asks before `git push`. Lanes never push to `main`, and never touch `.env` or other lanes' worktrees.
+6. **Auto mode safe zone.** A project permission allowlist (see archive/prep/TOOLING.md; it's installed by a human, not by an agent) allows `pnpm`, `git` (no force-push), `npx`, `modal` and Playwright, and asks before `git push`. Lanes never push to `main`, and never touch `.env` or other lanes' worktrees.
 
 ### Sessions: one lead, peer sessions that think
 - **Lead session** (orchestrator): owns the main checkout, contracts, merges, DECISIONS numbering and STATUS. Assigns chunks with owned paths and a "done when".

@@ -13,14 +13,14 @@ _Between the concept (CONCEPT v2.1, SCORECARD) and the lanes. Goal: every servic
 |---|---|---|
 | [gemini.md](gemini.md) | Decisions API (calibrated decisions), Live API, models, SDK | [x] |
 | [models.md](models.md) | Nemotron 3.5 Super VL (Verda / NVIDIA Build), Gemma (Featherless / Verda), one LLM port | [x] |
-| [modal.md](modal.md) | Fan-out batch (catalogue enrichment), swarm runner, Sandboxes, web endpoints | [x] |
+| [modal.md](../archive/prep/foundations/modal.md) | Fan-out batch (catalogue enrichment), swarm runner, Sandboxes, web endpoints | [x] |
 | [data.md](data.md) | Aiven Postgres + pgvector + LISTEN/NOTIFY, Drizzle, PGlite fixture, Aiven Runtime | [x] |
 | [mcp.md](mcp.md) | MCP server (SDK v2) inside SvelteKit, MCP Apps, OpenAPI from zod, testing with Inspector | [x] |
-| web | Context.dev (menus, manufacturer data, recall monitor), Exa, caching | covered by [../research/menu-spike.md](../research/menu-spike.md), [../research/horeca-profiles.md](../research/horeca-profiles.md) and the venue dataset (pending); interface defined in the contracts (Ring 1) |
+| web | Context.dev (menus, manufacturer data, recall monitor), Exa, caching | covered by [menu-spike](../archive/prep/research/menu-spike.md), [../research/horeca-profiles.md](../research/horeca-profiles.md) and the venue dataset (pending); interface defined in the contracts (Ring 1) |
 | media | Cloudinary | dropped for now: Valio data has no product images (D5); a document workflow is a later option |
 | [ux.md](ux.md) | Interaction model, screens, control room, design direction | [x] |
 | [valio-data.md](valio-data.md) | Valio catalogue + API probe, cache, limits, hero products | [x] |
-| [s-pankki.md](s-pankki.md) | S-Pankki brief and dataset (Ring 3) | [x] |
+| [s-pankki.md](../archive/prep/foundations/s-pankki.md) | S-Pankki brief and dataset (Ring 3) | [x] |
 | [deploy.md](deploy.md) | Aiven Runtime service `mandate`, redeploy, smoke, plan B (Verda) | [x] |
 
 ## DevOps for the lane phase

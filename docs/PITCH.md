@@ -1,6 +1,6 @@
 # PITCH
 
-_Lead-owned until a pitch owner exists. Built from docs/review/REVIEW-GPT-6-ROUND2.md and PRODUCT.md; claims only what is wired (CLAUDE.md rule 8)._
+_Lead-owned until a pitch owner exists. Built from docs/archive/review/REVIEW-GPT-6-ROUND2.md and PRODUCT.md; claims only what is wired (CLAUDE.md rule 8)._
 
 ## One-breath opener
 "140 guests on Saturday. The ham and the swede casserole are out. What can an agent actually promise this kitchen, and what must it refuse?"

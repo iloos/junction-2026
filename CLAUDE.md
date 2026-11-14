@@ -38,7 +38,7 @@
 | docs/research/<topic>.md | research agents | ≤1 page: sources, findings, "means for us" |
 | [docs/PITCH.md](docs/PITCH.md) | pitch owner | Opener, demo beats, claim → evidence |
 
-`git log` is the history log. Reference (look up, don't preload): [docs/event/](docs/event/EVENT.md), [docs/strategy/WINNING.md](docs/strategy/WINNING.md), [docs/STACK.md](docs/STACK.md), [docs/BUILDING-BLOCKS.md](docs/BUILDING-BLOCKS.md), [docs/LESSONS.md](docs/LESSONS.md), [docs/TOOLING.md](docs/TOOLING.md), [docs/ideas/](docs/ideas/IDEAS.md).
+`git log` is the history log. Reference (look up, don't preload): [docs/event/](docs/event/EVENT.md), [docs/strategy/WINNING.md](docs/strategy/WINNING.md), [docs/STACK.md](docs/STACK.md), [docs/BUILDING-BLOCKS.md](docs/BUILDING-BLOCKS.md), [docs/LESSONS.md](docs/LESSONS.md), [docs/archive/](docs/archive/README.md).
 
 ## Commands
 `pnpm dev` · `pnpm check` (svelte-check) · `pnpm lint` (prettier + eslint) · `pnpm test:unit` (vitest) · `pnpm test:e2e` (Playwright) · `pnpm build` then `node build`. `pnpm eval` (s1–s5 through the real handlers on PGlite). `pnpm db:migrate` / `pnpm db:seed` (Aiven, from the main checkout: needs `data/valio/`). Routes: `/` kitchen, `/ops` control room, `/api/tools/<name>`, `/mcp` (+ `/mcp/k/<key>`), `/api/openapi.json`, `/api/events`, `/healthz`. Valio probe (cache-through): `python -I scripts/probe/valio_probe.py` with `VALIO_API_KEY` exported; cache in `data/valio/cache/` (gitignored, copy into lane worktrees with `.env` and `data/valio/`).

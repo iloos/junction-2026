@@ -47,7 +47,7 @@ kitchens  id text pk · name · principal jsonb {name, role} · mandate jsonb {w
           · created_at
 products  gtin text pk · name · category · vendor · origin · temp_class · units jsonb (pallet/case/piece, lot size)
           · co2_kg_per_kg real · reliability real · enriched jsonb {field:{value,method,source,confidence,runId}}
-          · search tsvector (generated, 'simple') · embedding vector(1024)   -- Qwen3-Embedding-0.6B per modal.md
+          · search tsvector (generated, 'simple') · embedding vector(1024)   -- Qwen3-Embedding-0.6B per archive/prep/foundations/modal.md
 orders    id uuid pk default uuidv7() · kitchen_id fk · status (draft|proposed|approved|placed) · delivery_date · total_eur · created_at
 order_lines id uuid pk · order_id fk · gtin fk · qty · unit · unit_price · price_fixed_at · substitute_for gtin null · reason text
 approvals id uuid pk · order_id fk · line_ids uuid[] · tier (act|propose|signoff) · decided_by · decision · note · ts

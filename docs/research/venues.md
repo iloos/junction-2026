@@ -72,7 +72,7 @@ Every venue in `venues_enriched.json` has a `sources` object that names the sour
 - Do not imply any venue buys from Valio, and do not show real venue names next to invented order volumes in public material without the label. For the video, consider renaming the demo kitchens ("a Kallio hotel").
 - Profiles come from tags and a heuristic, so expect misfits, such as a lunch-only café filed as `cafe_bakery`.
 - Covers are invented from defaults: 98.8% of venues have no seats or rooms tag.
-- Context.dev extraction varies between runs (menu-spike.md). The cached responses are the fixtures.
+- Context.dev extraction varies between runs (archive/prep/research/menu-spike.md). The cached responses are the fixtures.
 - Exa URLs are marked "unverified". A rerun of `enrich_exa.py` reproduces 28 of the 29 sampled venues (the chain grouping changed after the recorded run).
 
 **Rerun:** run `fetch_osm.py`, then `classify.py`, then `enrich_exa.py` (needs `EXA_API_KEY`), then `pick_menu_targets.py`, then `scrape_menus.py --brand …` (needs `CONTEXT_DEV_API_KEY`, ≤7.5 requests/min, every response cached), then `enrich.py`. Cached steps cost nothing.

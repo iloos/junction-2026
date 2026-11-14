@@ -1,5 +1,7 @@
 # Round 6: a shared purchasing vocabulary
 
+_Adopted by [D10](../DECISIONS.md) as the semantic contract for code and copy (written as the round-6 review)._
+
 14 November 2026. Review proposal, not a rename patch. Read against main `4c6b156` plus the in-progress T0 contracts and SYNTHESIS §8. The lead owns adoption. Keep historical documents intelligible; change active types, semantics and projections deliberately rather than replacing words throughout git.
 
 ## Why this belongs before a UI overhaul
