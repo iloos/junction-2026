@@ -1036,6 +1036,33 @@
 	@media (max-width: 760px) {
 		.room {
 			padding: 16px;
+			min-width: 0;
+		}
+		/* One column: title and rooms, then the figures, then status and actions, all left-aligned. */
+		.room > header {
+			grid-template-columns: minmax(0, 1fr);
+			gap: 16px;
+		}
+		.room > header > * {
+			min-width: 0;
+		}
+		.figures {
+			grid-row: auto;
+			gap: 12px 24px;
+		}
+		.status {
+			text-align: left;
+		}
+		nav {
+			flex-wrap: wrap;
+		}
+		.roomline .mono {
+			white-space: normal;
+			overflow-wrap: anywhere;
+		}
+		.presenter form {
+			justify-content: flex-start;
+			flex-wrap: wrap;
 		}
 		.board {
 			grid-template-columns: 1fr;

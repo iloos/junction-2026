@@ -1,4 +1,5 @@
 import type { ActorKind, Line, OpEnvelope, SimEvent, Tier } from '$lib/core/contracts';
+import { reasonShort } from '$lib/ui/reasons';
 
 export const euro = (cents: number | null | undefined) =>
 	cents == null
@@ -11,43 +12,37 @@ export const TIER: Record<Tier, { word: string; hint: string }> = {
 	sign_off: { word: 'Needs sign-off', hint: 'A named approver must sign' }
 };
 
-const REASON: Record<string, string> = {
-	new_sku: 'New product for this kitchen',
-	substitute_breaks_preference: 'Substitute breaks a preference',
-	origin_required: 'Origin rule not met',
-	off_tender_list: 'Not on the tender list',
-	over_hard_limit: 'Over the hard limit',
-	qty_implausible: 'Check the quantity',
-	allergen_unknown: 'Allergens not declared',
-	allergen_change: 'Allergen change',
-	low_reliability: 'Unreliable delivery record',
-	external_agent_needs_approval: 'Ordered by an outside agent',
-	cutoff_passed: 'Cut-off has passed',
-	unknown: 'Stock quantity unknown',
-	out: 'Out of stock',
-	undeliverable: 'Not deliverable',
-	blocked: 'Blocked by Valio',
-	BELOW_LOT: 'Below one lot',
-	INSUFFICIENT_STOCK: 'Not enough stock',
-	CAP_EXCEEDED: 'Over a spending cap',
-	UNKNOWN_REQUIRED: 'Missing a required value',
-	TERMS_CHANGED: 'Terms changed',
-	STALE_VERSION: 'Plan changed since',
-	PROVIDER_UNAVAILABLE: 'Valio API unavailable',
-	FORBIDDEN: 'Not allowed'
-};
-const CAP_SUB: Record<string, string> = {
-	line: 'Over the line cap',
-	order: 'Over the order cap',
-	weekly: 'Over the weekly cap'
-};
-
+/**
+ * A line reason or error code in the same plain words the kitchen uses (`$lib/ui/reasons.ts`, the one list).
+ * An unlisted `CODE.sub` falls back to its code; anything else to readable words, never a raw enum.
+ */
 export function reasonText(r: string): string {
-	if (REASON[r]) return REASON[r];
-	const [code, sub] = r.split('.');
-	if (code === 'CAP_EXCEEDED' && sub && CAP_SUB[sub]) return CAP_SUB[sub];
-	return REASON[code] ?? r.replaceAll('_', ' ').toLowerCase();
+	const short = reasonShort(r);
+	if (short !== r) return short;
+	const code = r.split('.')[0];
+	const byCode = reasonShort(code);
+	return byCode !== code ? byCode : r.replaceAll('_', ' ').toLowerCase();
 }
+
+/** What each tool does, in words, for the trace drawer. */
+export const TOOL: Record<string, string> = {
+	get_context: 'Read the kitchen context',
+	search_products: 'Searched the catalogue',
+	quote: 'Asked Valio for terms',
+	plan_event: 'Planned the event',
+	place_order: 'Placed an order',
+	edit_line: 'Edited a line',
+	find_substitutes: 'Looked for substitutes',
+	get_plan: 'Read the plan',
+	explain_line: 'Explained a line',
+	approve: 'Approved',
+	commit_order: 'Committed the order',
+	set_mandate: 'Changed the mandate',
+	lookup_facts: 'Looked up product facts',
+	find_outside: 'Searched outside sources',
+	check_recall: 'Checked a recall'
+};
+export const toolText = (name: string) => TOOL[name] ?? name.replaceAll('_', ' ');
 
 export const ACTOR: Record<ActorKind, string> = {
 	chef: 'Chef',

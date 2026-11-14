@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import type { TraceRun } from './stream.svelte';
+	import { reasonText, toolText } from './labels';
 
 	let {
 		runs,
@@ -113,7 +114,7 @@
 							<li class="plan">
 								<span class="n">{num(s.data.n)}</span>
 								<div>
-									<p><b class="mono">{str(s.data.tool)}</b></p>
+									<p><b>{toolText(str(s.data.tool))}</b></p>
 									<p class="why">{str(s.data.why)}</p>
 								</div>
 							</li>
@@ -121,14 +122,10 @@
 							<li class="result" class:bad={s.data.ok === false}>
 								<span class="n"></span>
 								<p>
-									{s.data.ok === false ? `Failed: ${str(s.data.code)}` : 'Done'}
+									{s.data.ok === false ? `Failed: ${reasonText(str(s.data.code))}` : 'Done'}
 									<span class="mono">{num(s.data.ms)} ms</span>
 									{#if str(s.data.result)}<details class="digest">
-											<summary
-												>{str(s.data.result).slice(0, 90)}{str(s.data.result).length > 90
-													? '…'
-													: ''}</summary
-											><code>{str(s.data.result)}</code>
+											<summary>Raw result</summary><code>{str(s.data.result)}</code>
 										</details>{/if}
 								</p>
 							</li>
@@ -141,6 +138,7 @@
 							<li class="model">
 								<span class="n"></span>
 								<p>
+									<span>Model call</span>
 									<span class="mono">{str(s.data.model) || str(s.data.source) || s.step}</span>
 									{#if num(s.data.tokensIn) !== null}
 										<span>{num(s.data.tokensIn)} in, {num(s.data.tokensOut)} out</span>
