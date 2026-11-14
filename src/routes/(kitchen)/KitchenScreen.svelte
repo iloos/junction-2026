@@ -676,17 +676,30 @@
 	);
 	/** This workspace's own kitchens (D25/D26): listed first in the selector, landed on next time. */
 	const ownKey = $derived(shell?.sandbox?.workspace ?? 'this-browser');
-	// Read from this browser per workspace; reassigned when a kitchen is made.
-	let own = $derived<OwnKitchen[]>(typeof localStorage === 'undefined' ? [] : readOwn(ownKey));
+	// The server's list is the truth (it survives Start over and other devices); this browser's list is the cache
+	// until the first snapshot says, and holds a kitchen just made until the next read.
+	let cached = $derived<OwnKitchen[]>(typeof localStorage === 'undefined' ? [] : readOwn(ownKey));
+	const own = $derived.by<OwnKitchen[]>(() => {
+		const server = k.kitchens.filter((x) => x.mine);
+		if (!k.kitchens.length) return cached;
+		const mine: OwnKitchen[] = server.map((x) => ({
+			kitchenId: x.id,
+			name: x.name,
+			mandateWords: x.mandateWords,
+			copiedFrom: x.blank ? '' : 'sample'
+		}));
+		const extra = cached.filter((c) => !server.some((x) => x.id === c.kitchenId));
+		return [...mine, ...extra];
+	});
 	async function created(kc: CreatedKitchen, description?: string) {
-		own = withOwn(own, {
+		cached = withOwn(cached, {
 			kitchenId: kc.kitchenId,
 			name: kc.name,
 			mandateWords: kc.mandateWords,
 			copiedFrom: kc.copiedFrom,
 			...(description ? { description } : {})
 		});
-		saveOwn(ownKey, own);
+		saveOwn(ownKey, cached);
 		await choose(kc.kitchenId, description);
 	}
 	/** The kitchen whose home shows before its first plan: one of ours, else a sample. */

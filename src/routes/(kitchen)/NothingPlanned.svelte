@@ -131,14 +131,16 @@
 	>
 		<div class="flex flex-col gap-3 {showDays ? '' : 'sm:flex-row'}">
 			{#if showDays}<DayPicker {kitchenId} bind:value={date} label="Delivery day" />{/if}
-			<button
-				type="button"
-				class="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-rule-strong bg-sheet px-4 text-body font-medium text-ink hover:border-accent"
-				onclick={() => onask(date)}
-			>
-				<Bot size={16} aria-hidden="true" />
-				{date ? `Ask the agent for ${day(date)}` : 'Ask the agent'}
-			</button>
+			{#if !blank}
+				<button
+					type="button"
+					class="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-rule-strong bg-sheet px-4 text-body font-medium text-ink hover:border-accent"
+					onclick={() => onask(date)}
+				>
+					<Bot size={16} aria-hidden="true" />
+					{date ? `Ask the agent for ${day(date)}` : 'Ask the agent'}
+				</button>
+			{/if}
 		</div>
 		{#if !blank || setUp}
 			{#key `${kitchenId}|${date ?? ''}`}
