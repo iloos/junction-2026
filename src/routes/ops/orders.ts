@@ -4,19 +4,10 @@
  */
 import type { ActorKind } from '$lib/core/contracts';
 import type { OrderStages, Origin } from '$lib/core/services/stages';
-import type { Decision } from '$lib/ui/decisions';
+import { decisionsDue, type Decision } from '$lib/ui/decisions';
 import { day } from '$lib/ui/format';
 import { salesUnitWords } from '$lib/ui/request/words';
 import { dishName } from './problems';
-
-export interface DecisionRow {
-	key: string;
-	reason: string;
-	consequence: string;
-	totalCents: number;
-	signOff: boolean;
-	lines: number;
-}
 
 export interface OrderRow {
 	planId: string;
@@ -41,7 +32,14 @@ export interface OrderRow {
 		unchanged: number;
 	};
 	signed: { seq: number; at: string; text: string; state: string; terms: string }[];
-	decisions: DecisionRow[];
+	/** The open decisions, exactly as the kitchen shows them (DecisionCard). */
+	decisions: Decision[];
+	/** What an approve binds to: the pending approval, its plan version and terms, and the run. */
+	approval: { id: string; planVersion: number; termsHash: string; runId: string } | null;
+	/** When the decisions are due (decisionsDue), for cards without their own time. */
+	due: string;
+	/** Product names by id, for the cards. */
+	names: Record<string, string>;
 	ordered: {
 		orderId: string;
 		at: string;
@@ -174,14 +172,17 @@ export function orderRow(s: OrderStages, decisions: Decision[]): OrderRow {
 			state: a.state,
 			terms: `plan v${a.planVersion} · terms ${a.termsHash.slice(0, 8)}`
 		})),
-		decisions: decisions.map((d) => ({
-			key: d.key,
-			reason: d.reason,
-			consequence: d.consequence,
-			totalCents: d.totalCents,
-			signOff: d.signOff,
-			lines: d.lines.length
-		})),
+		decisions,
+		approval: s.pending
+			? {
+					id: s.pending.id,
+					planVersion: s.pending.planVersion,
+					termsHash: s.pending.termsHash,
+					runId: s.plan.runId
+				}
+			: null,
+		due: decisionsDue(s.plan, s.pending),
+		names: Object.fromEntries(s.plan.lines.map((l) => [l.productId, l.productName ?? l.productId])),
 		ordered: s.ordered.map((o) => ({
 			orderId: o.orderId,
 			at: o.at,

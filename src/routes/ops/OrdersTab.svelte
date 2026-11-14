@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import type { OrderRow } from './orders';
 	import { euro } from './labels';
+	import DecisionCard from '$lib/ui/DecisionCard.svelte';
 
 	/**
 	 * Orders: one row per plan, and for the one opened its four stages as differences only: what was asked, what
@@ -54,6 +55,44 @@
 			if (timer) clearTimeout(timer);
 		};
 	});
+
+	/**
+	 * Approve one decision group: the kitchen's own approve command (its tool route, as the chef's), bound to the
+	 * plan version and terms this tab shows. A person's hold or confirm on the card is the only way in (D13).
+	 */
+	let busy = $state(false);
+	let approveError = $state<string | null>(null);
+	async function approve(o: OrderRow, lineIds: string[]): Promise<boolean> {
+		if (!o.approval) return false;
+		busy = true;
+		approveError = null;
+		try {
+			const r = await fetch('/kitchen-api/tool/approve', {
+				method: 'POST',
+				headers: {
+					'content-type': 'application/json',
+					'x-kitchen-view': JSON.stringify({
+						runId: o.approval.runId,
+						planId: o.planId,
+						version: o.version
+					})
+				},
+				body: JSON.stringify({
+					approvalId: o.approval.id,
+					planVersion: o.approval.planVersion,
+					termsHash: o.approval.termsHash,
+					decision: 'grant',
+					lineIds
+				})
+			});
+			const b = await r.json().catch(() => ({}));
+			if (!r.ok) approveError = b?.error?.message ?? `Not approved (HTTP ${r.status}).`;
+			await load();
+			return r.ok;
+		} finally {
+			busy = false;
+		}
+	}
 
 	const kitchenName = (id: string) => kitchens.find((k) => k.id === id)?.name ?? id;
 	const ORIGIN = {
@@ -186,19 +225,26 @@
 					{:else}
 						<p class="lede">Nothing needed signing.</p>
 					{/if}
-					{#if o.decisions.length}
-						<ul class="decisions">
+					{#if o.decisions.length && o.approval}
+						{@const names = new Map(Object.entries(o.names))}
+						<p class="lede">
+							Signing approves exactly the lines and terms below, at this version of the order.
+						</p>
+						<div class="cards">
 							{#each o.decisions as d (d.key)}
-								<li class:so={d.signOff}>
-									<b>{d.reason}</b>
-									<span>{d.lines} line{d.lines === 1 ? '' : 's'} · {euro(d.totalCents)}</span>
-									<small>{d.consequence}</small>
-								</li>
+								<DecisionCard
+									decision={d}
+									{names}
+									due={o.due}
+									{busy}
+									onapprove={(ids) => approve(o, ids)}
+								/>
 							{/each}
-						</ul>
+						</div>
+						{#if approveError}<p class="err" role="alert">{approveError}</p>{/if}
 						{#if link}
 							<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- kitchen deep link with query -->
-							<a class="go" href={link}>Decide in the kitchen</a>
+							<a class="go" href={link}>Open in the kitchen</a>
 						{/if}
 					{/if}
 				</section>
@@ -352,7 +398,6 @@
 	}
 	.needs,
 	.lines,
-	.decisions,
 	.changes {
 		list-style: none;
 		margin: 0;
@@ -411,25 +456,14 @@
 	[data-state='denied'] p {
 		color: var(--blocked);
 	}
-	.decisions {
+	.cards {
+		display: grid;
+		gap: 10px;
 		margin-top: 8px;
 	}
-	.decisions li {
-		display: grid;
-		gap: 0 12px;
-		grid-template-columns: minmax(0, 1fr) auto;
-		padding: 8px 10px;
-		border-left: 3px solid var(--propose);
-		background: var(--raise);
-		border-radius: 0 6px 6px 0;
-		font-size: 15px;
-	}
-	.decisions li.so {
-		border-left-color: var(--sign-off);
-	}
-	.decisions small {
-		grid-column: 1 / -1;
-		color: var(--muted);
+	.err {
+		margin: 8px 0 0;
+		color: var(--blocked);
 	}
 	.go {
 		display: inline-block;
