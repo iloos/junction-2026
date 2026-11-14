@@ -9,7 +9,7 @@ import { cacheDir, findingsFor, spendLedger, webContext, webMode, webPg } from '
 import { spendLimits, type SpendLimits } from '../web/spend';
 import { createListingFinder } from '../web/listing';
 import { createBrandLookup, type BrandFacts } from '../web/photo';
-import type { WebCall } from '../web/http';
+import { WebError, type WebCall } from '../web/http';
 import { productCard, recordedListing, type ProductCard } from './card';
 import type { Product } from '$lib/core/contracts';
 import type { ProductListing } from '../web/listing';
@@ -42,7 +42,15 @@ export function brandLookup(env: Env, spendKey: string, limits?: SpendLimits) {
 		const id = `brand:${name.trim().toLowerCase()}`;
 		const kept = findings.get(id)?.data as BrandFacts | undefined;
 		if (kept) return kept;
-		const b = await live(name);
+		let b: BrandFacts;
+		try {
+			b = await live(name);
+		} catch (e) {
+			// Context.dev answers 400/404 for a brand it doesn't know: that is an answer ("no brand page"), kept like
+			// any other so the next plan doesn't pay for it again. Outages and caps still throw.
+			if (!(e instanceof WebError) || (e.status !== 400 && e.status !== 404)) throw e;
+			b = { domain: null, logoUrl: null };
+		}
 		findings.put({
 			id,
 			kind: 'listing',
