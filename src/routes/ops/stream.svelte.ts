@@ -27,6 +27,16 @@ export interface TraceRow {
 	data: Record<string, unknown>;
 }
 
+/**
+ * One call's identity across the live stream and the stored traces: the stored row's id isn't on the live event,
+ * so both are keyed by what the call was (time, step, source, model or tool, latency).
+ */
+export function traceKey(e: Extract<ServerEvent, { kind: 'trace' }>): string {
+	const d = e.data;
+	const what = d.model ?? d.tool ?? d.source ?? '';
+	return `${e.at}|${e.step}|${String(d.source ?? '')}|${String(what)}|${String(d.latencyMs ?? '')}`;
+}
+
 export type Status = 'connecting' | 'live' | 'reconnecting' | 'polling' | 'offline';
 
 const LOG_CAP = 200;
@@ -156,14 +166,40 @@ export class OpsStream {
 		this.simClock = null;
 	}
 
+	/** Calls already shown, live or stored, so a call read twice shows once. */
+	private seenTraces = new Set<string>();
+
+	/**
+	 * Stored trace events (GET /api/ops/traces?as=events, oldest first) for this run: what happened before the page
+	 * opened. Merged with the live ones: a stored row and its live twin show once.
+	 */
+	loadHistory(events: Extract<ServerEvent, { kind: 'trace' }>[]): void {
+		for (const e of events) if (!this.state.runId || e.runId === this.state.runId) this.onTrace(e);
+	}
+
 	private onTrace(e: Extract<ServerEvent, { kind: 'trace' }>): void {
-		const id = typeof e.data.agentRun === 'string' ? e.data.agentRun : 'untagged';
+		const key = traceKey(e);
+		if (this.seenTraces.has(key)) return;
+		this.seenTraces.add(key);
+		const d = e.data;
+		// An agent run groups its own steps; any other call groups by the request it served.
+		const id =
+			typeof d.agentRun === 'string'
+				? d.agentRun
+				: typeof d.requestId === 'string'
+					? `req:${d.requestId}`
+					: 'untagged';
 		const runs = [...this.traces];
 		let i = runs.findIndex((r) => r.id === id);
 		if (i < 0) {
 			runs.unshift({
 				id,
-				goal: typeof e.data.goal === 'string' ? e.data.goal : '',
+				goal:
+					typeof d.goal === 'string'
+						? d.goal
+						: typeof d.requestId === 'string'
+							? `Request ${d.requestId.slice(-8)}`
+							: '',
 				startedAt: e.at,
 				steps: []
 			});
