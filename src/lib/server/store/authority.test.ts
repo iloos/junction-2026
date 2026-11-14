@@ -141,7 +141,7 @@ describe('per-line authority', () => {
 		expect(r.ok ? null : r.error.code).toBe('FORBIDDEN');
 	});
 
-	it('a second commit with another key after the lines are bought is a conflict, not bad input', async () => {
+	it('a second commit with another key after the lines are bought replays that receipt, not an error', async () => {
 		const { plan } = await mixedPlan();
 		const first = must(
 			await h.commit_order(ctx('chef'), {
@@ -158,7 +158,11 @@ describe('per-line authority', () => {
 				idempotencyKey: `k2-${lineIds ? 'explicit' : 'default'}`,
 				...(lineIds ? { lineIds } : {})
 			});
-			expect(again.ok ? null : again.error.code).toBe('STALE_VERSION');
+			// Already ordered on the same terms by one order: its receipt answers, and nothing is bought twice.
+			expect(again.ok ? again.value : again.error).toMatchObject({
+				receiptId: first.receiptId,
+				replayed: true
+			});
 		}
 	});
 });

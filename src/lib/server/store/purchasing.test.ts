@@ -833,3 +833,56 @@ describe('D18: lot rounding far over the ask holds for a person', () => {
 		expect(packs.reasons).not.toContain('need_rounding_large');
 	});
 });
+
+describe('a retry of a commit that already went through gets its receipt', () => {
+	it('same lines, another key: the same receipt, replayed, nothing bought twice', async () => {
+		const { h, state } = await harness();
+		const p = must(
+			await h.place_order(ctx(), {
+				kitchenId: 'k-hotel',
+				deliverBy: '2026-12-10',
+				idempotencyKey: 'once',
+				lines: [{ productId: '464201', qty: 4, unit: 'ST', amount: { value: 4, unit: 'l' } }]
+			})
+		).plan;
+		const first = must(
+			await h.commit_order(ctx(), { planId: p.id, version: p.version, idempotencyKey: 'k1' })
+		);
+		const now = must(await h.get_plan(ctx(), { planId: p.id })).plan;
+		const again = must(
+			await h.commit_order(ctx(), {
+				planId: p.id,
+				version: now.version,
+				idempotencyKey: 'k2',
+				lineIds: [p.lines[0].id]
+			})
+		);
+		expect(again).toMatchObject({ receiptId: first.receiptId, replayed: true });
+		expect(Object.keys((await state()).orders)).toHaveLength(1);
+	});
+
+	it('with a held line still open, an unnamed retry is not "already ordered"', async () => {
+		const { h, state } = await harness();
+		const p = must(
+			await h.place_order(ctx(), {
+				kitchenId: 'k-hotel',
+				deliverBy: '2026-12-10',
+				idempotencyKey: 'mixed',
+				lines: [
+					{ productId: '464201', qty: 4, unit: 'ST' },
+					{ productId: '470700', qty: 1, unit: 'KI', amount: { value: 0.25, unit: 'l' } }
+				]
+			})
+		).plan;
+		expect(p.lines[1].state).toBe('held');
+		must(await h.commit_order(ctx(), { planId: p.id, version: p.version, idempotencyKey: 'm1' }));
+		const now = must(await h.get_plan(ctx(), { planId: p.id })).plan;
+		const r = await h.commit_order(ctx(), {
+			planId: p.id,
+			version: now.version,
+			idempotencyKey: 'm2'
+		});
+		expect(r.ok ? r.value.replayed : r.error.code).toBe('FORBIDDEN');
+		expect(Object.keys((await state()).orders)).toHaveLength(1);
+	});
+});
