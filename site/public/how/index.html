@@ -222,6 +222,41 @@ h3 { margin: 0; font: 600 18px/1.25 var(--display); }
 .col li { padding: 10px 0; border-top: 1px solid var(--rule); font-size: 14.5px; line-height: 1.45; color: var(--ink-2); }
 .col li b { color: var(--ink); font-weight: 500; }
 
+/* The architecture diagram: a wide drawing on desktop, a tall one on phones. */
+.arch { border-top: 1px solid var(--rule); padding: 40px 0 44px; }
+@media (min-width: 720px) { .arch { padding: 52px 0 52px; } }
+.archfig { margin: 22px 0 0; }
+.arch svg { display: block; width: 100%; height: auto; }
+.arch .arch-n { display: none; max-width: 480px; }
+@media (max-width: 899px) { .arch .arch-w { display: none; } .arch .arch-n { display: block; } }
+.arch text { font-family: var(--display); fill: var(--ink); }
+.arch .t { font-size: 15px; font-weight: 600; }
+.arch .s { font-size: 12.5px; fill: var(--ink-2); }
+.arch .n { font-size: 13px; font-weight: 600; fill: var(--ink-2); }
+.arch .h { font-size: 12px; font-weight: 600; fill: var(--ink-3); letter-spacing: 0.08em; }
+.arch .o { font-size: 13px; font-weight: 600; }
+.arch .bx { fill: var(--sheet); stroke: var(--rule-strong); }
+.arch .bx.key { stroke: var(--accent); stroke-width: 1.5; }
+.arch .gate { fill: color-mix(in oklab, var(--accent) 7%, transparent); stroke: var(--accent); stroke-width: 1.5; }
+.arch .st { fill: var(--sheet); stroke: var(--rule); }
+.arch .st.dash { fill: none; stroke: var(--rule-strong); stroke-dasharray: 4 4; }
+.arch .ln { fill: none; stroke: var(--ink-3); stroke-width: 1.5; }
+.arch .ln.acc { stroke: var(--accent); }
+.arch .dl { fill: none; stroke: var(--ink-3); stroke-width: 1; stroke-dasharray: 3 4; }
+.arch .ahd { fill: var(--ink-3); }
+.arch .ahd.acc { fill: var(--accent); }
+.arch .dot { fill: var(--ink-3); }
+.arch .bul { fill: var(--accent); }
+.arch .ai { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; color: var(--accent-ink); }
+.arch .c-ok rect { fill: var(--ok-wash); stroke: var(--ok); }
+.arch .c-ok .ai { color: var(--ok); }
+.arch .c-hold rect { fill: var(--auth-wash); stroke: var(--auth); stroke-dasharray: 5 3; }
+.arch .c-hold .ai { color: var(--auth); }
+.arch .c-no rect { fill: var(--out-wash); stroke: var(--out); }
+.arch .c-no .ai { color: var(--out); }
+.archcap { margin: 18px 0 0; font-size: 16px; line-height: 1.5; color: var(--ink-2); max-width: 44em; text-wrap: pretty; }
+.vh { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }
+
 @media (prefers-reduced-motion: reduce) { .toc a, .golive a, .tab { transition: none; } }
 </style>
 </head>
@@ -275,6 +310,7 @@ h3 { margin: 0; font: 600 18px/1.25 var(--display); }
 			</p>
 			<nav aria-label="On this page">
 				<ul class="toc">
+					<li><a href="#arch">The path of a request</a></li>
 					<li><a href="#map">The system map</a></li>
 					<li><a href="#rules">The kitchen's rules</a></li>
 					<li><a href="#agent">The agent</a></li>
@@ -285,6 +321,162 @@ h3 { margin: 0; font: 600 18px/1.25 var(--display); }
 					<li><a href="#status">Built, simulated, planned</a></li>
 				</ul>
 			</nav>
+		</section>
+
+		<!-- The architecture: four ways in, one gate, three outcomes, one log -->
+		<section class="arch" id="arch" aria-labelledby="h-arch">
+			<p class="eyebrow">Architecture</p>
+			<h2 id="h-arch">The path every request takes</h2>
+			<div class="archfig" role="img" aria-labelledby="arch-alt">
+				<svg class="arch-w" viewBox="0 0 960 468" aria-hidden="true" focusable="false">
+					<defs>
+						<marker id="ahw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ahd" d="M0 0L10 5L0 10z"/></marker>
+						<marker id="ahwa" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ahd acc" d="M0 0L10 5L0 10z"/></marker>
+					</defs>
+					<text class="h" x="0" y="14">FOUR WAYS IN</text>
+					<text class="h" x="230" y="14">ONE GATE</text>
+
+					<rect class="bx" x="0.5" y="30" width="176" height="58" rx="10"/>
+					<use class="ai" href="#i-kitchen" x="12" y="49" width="20" height="20"/>
+					<text class="t" x="42" y="54">Kitchen screen</text><text class="s" x="42" y="73">the chef</text>
+					<rect class="bx" x="0.5" y="108" width="176" height="58" rx="10"/>
+					<use class="ai" href="#i-order" x="12" y="127" width="20" height="20"/>
+					<text class="t" x="42" y="132">Request page</text><text class="s" x="42" y="151">the chef</text>
+					<rect class="bx" x="0.5" y="186" width="176" height="58" rx="10"/>
+					<use class="ai" href="#i-ask" x="12" y="205" width="20" height="20"/>
+					<text class="t" x="42" y="210">Chat</text><text class="s" x="42" y="229">the in-app agent</text>
+					<rect class="bx" x="0.5" y="264" width="176" height="58" rx="10"/>
+					<use class="ai" href="#i-plug" x="12" y="283" width="20" height="20"/>
+					<text class="t" x="42" y="288">Your agent</text><text class="s" x="42" y="307">MCP or REST</text>
+
+					<path class="ln" marker-end="url(#ahw)" d="M177 59C206 59 206 77 229 77"/>
+					<path class="ln" marker-end="url(#ahw)" d="M177 137C206 137 206 77 229 77"/>
+					<path class="ln" marker-end="url(#ahw)" d="M177 215C206 215 206 77 229 77"/>
+					<path class="ln" marker-end="url(#ahw)" d="M177 293C206 293 206 77 229 77"/>
+
+					<rect class="gate" x="230" y="30" width="330" height="322" rx="16"/>
+					<rect class="st" x="246" y="44" width="298" height="66" rx="10"/>
+					<text class="t" x="262" y="66">Who is asking</text>
+					<text class="s" x="262" y="86">The caller's key or cookie,</text>
+					<text class="s" x="262" y="102">never the request body</text>
+					<path class="ln" marker-end="url(#ahw)" d="M395 111V123"/>
+					<rect class="st dash" x="246" y="124" width="298" height="50" rx="10"/>
+					<text class="t" x="262" y="146">Reading and lookups</text>
+					<text class="s" x="262" y="164">The request, the products, price and stock</text>
+					<path class="ln" marker-end="url(#ahw)" d="M395 175V187"/>
+					<rect class="st" x="246" y="188" width="298" height="90" rx="10"/>
+					<text class="t" x="262" y="210">The mandate's checks</text>
+					<circle class="bul" cx="265" cy="226" r="2.5"/><text class="s" x="276" y="230">Limits and caps</text>
+					<circle class="bul" cx="265" cy="244" r="2.5"/><text class="s" x="276" y="248">Approvals bound to the exact terms</text>
+					<circle class="bul" cx="265" cy="262" r="2.5"/><text class="s" x="276" y="266">One order per key</text>
+					<path class="ln" marker-end="url(#ahw)" d="M395 279V291"/>
+					<rect class="st" x="246" y="292" width="298" height="48" rx="10"/>
+					<text class="t" x="262" y="312">One state change</text>
+					<text class="s" x="262" y="330">Written to the op log with who asked</text>
+
+					<text class="h" x="590" y="66">OUTSIDE SERVICES</text>
+					<path class="dl" d="M560 149C574 149 574 90 588 90"/>
+					<path class="dl" d="M560 149C574 149 574 138 588 138"/>
+					<path class="dl" d="M560 149C574 149 574 186 588 186"/>
+					<circle class="dot" cx="591" cy="90" r="3"/><circle class="dot" cx="591" cy="138" r="3"/><circle class="dot" cx="591" cy="186" r="3"/>
+					<text class="n" x="602" y="94">Gemini</text><text class="s" x="602" y="111">Reads requests and menus, scores substitute fit</text>
+					<text class="n" x="602" y="142">Valio Aimo</text><text class="s" x="602" y="159">Catalogue, live price and stock</text>
+					<text class="n" x="602" y="190">Exa</text><text class="s" x="602" y="207">Product facts, public listings</text>
+
+					<path class="ln" marker-end="url(#ahw)" d="M560 296C576 296 576 251 590 251"/>
+					<path class="ln" marker-end="url(#ahw)" d="M560 296C576 296 576 295 590 295"/>
+					<path class="ln" marker-end="url(#ahw)" d="M560 296C576 296 576 339 590 339"/>
+					<g class="c-ok"><rect x="592" y="234" width="226" height="34" rx="8"/><use class="ai" href="#i-go" x="602" y="242" width="18" height="18"/><text class="o" x="628" y="255.5">Ordered within the mandate</text></g>
+					<g class="c-hold"><rect x="592" y="278" width="226" height="34" rx="8"/><use class="ai" href="#i-hold" x="602" y="286" width="18" height="18"/><text class="o" x="628" y="299.5">Waits for the chef</text></g>
+					<g class="c-no"><rect x="592" y="322" width="226" height="34" rx="8"/><use class="ai" href="#i-no" x="602" y="330" width="18" height="18"/><text class="o" x="628" y="343.5">Refused, with the reason</text></g>
+
+					<path class="ln" marker-end="url(#ahw)" d="M819 251C832 251 830 295 841 295"/>
+					<path class="ln" marker-end="url(#ahw)" d="M819 295H841"/>
+					<path class="ln" marker-end="url(#ahw)" d="M819 339C832 339 830 295 841 295"/>
+					<rect class="bx key" x="842" y="230" width="117" height="130" rx="12"/>
+					<text class="t" x="856" y="256">Op log</text>
+					<text class="s" x="856" y="276">Every change,</text>
+					<text class="s" x="856" y="292">in order</text>
+					<text class="n" x="856" y="344">Aiven Postgres</text>
+
+					<path class="ln acc" marker-end="url(#ahwa)" d="M900 361V400H88V324"/>
+					<text class="s" x="470" y="392" text-anchor="middle">Streams live to every open screen</text>
+					<path class="ln acc" marker-end="url(#ahwa)" d="M860 400V414"/>
+					<rect class="bx" x="790" y="416" width="169" height="50" rx="10"/>
+					<text class="t" x="806" y="437">Operations</text>
+					<text class="s" x="806" y="456">Held lines, recall cases</text>
+					<path class="dl" marker-end="url(#ahw)" d="M774 441H788"/>
+					<text class="n" x="768" y="437" text-anchor="end">Context.dev</text>
+					<text class="s" x="768" y="456" text-anchor="end">Recall list, every 5 minutes</text>
+				</svg>
+
+				<svg class="arch-n" viewBox="0 0 358 946" aria-hidden="true" focusable="false">
+					<defs>
+						<marker id="ahn" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ahd" d="M0 0L10 5L0 10z"/></marker>
+						<marker id="ahna" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ahd acc" d="M0 0L10 5L0 10z"/></marker>
+					</defs>
+					<text class="h" x="0" y="14">FOUR WAYS IN</text>
+					<rect class="bx" x="0.5" y="26" width="170" height="58" rx="10"/>
+					<use class="ai" href="#i-kitchen" x="12" y="45" width="20" height="20"/>
+					<text class="t" x="40" y="51">Kitchen screen</text><text class="s" x="40" y="69">the chef</text>
+					<rect class="bx" x="187.5" y="26" width="170" height="58" rx="10"/>
+					<use class="ai" href="#i-order" x="199" y="45" width="20" height="20"/>
+					<text class="t" x="227" y="51">Request page</text><text class="s" x="227" y="69">the chef</text>
+					<rect class="bx" x="0.5" y="94" width="170" height="58" rx="10"/>
+					<use class="ai" href="#i-ask" x="12" y="113" width="20" height="20"/>
+					<text class="t" x="40" y="119">Chat</text><text class="s" x="40" y="137">the in-app agent</text>
+					<rect class="bx" x="187.5" y="94" width="170" height="58" rx="10"/>
+					<use class="ai" href="#i-plug" x="199" y="113" width="20" height="20"/>
+					<text class="t" x="227" y="119">Your agent</text><text class="s" x="227" y="137">MCP or REST</text>
+					<path class="ln" d="M85.5 153V164H272.5V153"/>
+					<path class="ln" marker-end="url(#ahn)" d="M179 164V187"/>
+
+					<rect class="gate" x="0.75" y="188" width="356.5" height="436" rx="16"/>
+					<text class="h" x="16" y="210">ONE GATE</text>
+					<rect class="st" x="12" y="220" width="334" height="70" rx="10"/>
+					<text class="t" x="28" y="242">Who is asking</text>
+					<text class="s" x="28" y="262">The caller's key or cookie,</text>
+					<text class="s" x="28" y="279">never the request body</text>
+					<path class="ln" marker-end="url(#ahn)" d="M179 291V303"/>
+					<rect class="st dash" x="12" y="304" width="334" height="134" rx="10"/>
+					<text class="t" x="28" y="326">Reading and lookups</text>
+					<text class="s" x="28" y="344">The request, the products, price and stock</text>
+					<text class="n" x="28" y="370">Gemini</text><text class="s" x="112" y="370">reads requests and menus,</text><text class="s" x="112" y="386">scores substitute fit</text>
+					<text class="n" x="28" y="407">Valio Aimo</text><text class="s" x="112" y="407">catalogue, live price and stock</text>
+					<text class="n" x="28" y="427">Exa</text><text class="s" x="112" y="427">product facts, public listings</text>
+					<path class="ln" marker-end="url(#ahn)" d="M179 439V451"/>
+					<rect class="st" x="12" y="452" width="334" height="92" rx="10"/>
+					<text class="t" x="28" y="474">The mandate's checks</text>
+					<circle class="bul" cx="31" cy="490" r="2.5"/><text class="s" x="42" y="494">Limits and caps</text>
+					<circle class="bul" cx="31" cy="508" r="2.5"/><text class="s" x="42" y="512">Approvals bound to the exact terms</text>
+					<circle class="bul" cx="31" cy="526" r="2.5"/><text class="s" x="42" y="530">One order per key</text>
+					<path class="ln" marker-end="url(#ahn)" d="M179 545V557"/>
+					<rect class="st" x="12" y="558" width="334" height="52" rx="10"/>
+					<text class="t" x="28" y="580">One state change</text>
+					<text class="s" x="28" y="599">Written to the op log with who asked</text>
+
+					<path class="ln" marker-end="url(#ahn)" d="M179 625V641"/>
+					<g class="c-ok"><rect x="0.75" y="642" width="356.5" height="36" rx="8"/><use class="ai" href="#i-go" x="12" y="651" width="18" height="18"/><text class="o" x="38" y="664.5">Ordered within the mandate</text></g>
+					<g class="c-hold"><rect x="0.75" y="686" width="356.5" height="36" rx="8"/><use class="ai" href="#i-hold" x="12" y="695" width="18" height="18"/><text class="o" x="38" y="708.5">Waits for the chef</text></g>
+					<g class="c-no"><rect x="0.75" y="730" width="356.5" height="36" rx="8"/><use class="ai" href="#i-no" x="12" y="739" width="18" height="18"/><text class="o" x="38" y="752.5">Refused, with the reason</text></g>
+					<path class="ln" marker-end="url(#ahn)" d="M179 767V783"/>
+					<rect class="bx key" x="0.75" y="784" width="356.5" height="60" rx="12"/>
+					<text class="t" x="16" y="808">Op log</text>
+					<text class="s" x="16" y="829">Every change, in order, in Aiven Postgres</text>
+
+					<path class="ln acc" marker-end="url(#ahna)" d="M85 845V883"/>
+					<text class="s" x="100" y="868">Streams live to every open screen</text>
+					<rect class="bx" x="0.5" y="884" width="170" height="56" rx="10"/>
+					<text class="t" x="14" y="907">Operations</text>
+					<text class="s" x="14" y="926">Held lines, recall cases</text>
+					<path class="dl" marker-end="url(#ahn)" d="M196 912H173"/>
+					<text class="n" x="204" y="904">Context.dev</text>
+					<text class="s" x="204" y="921">Recall list,</text>
+					<text class="s" x="204" y="937">every 5 minutes</text>
+				</svg>
+			</div>
+			<p class="vh" id="arch-alt">Architecture diagram. Four ways in: the Kitchen screen and the Request page, used by the chef; the chat, used by the in-app agent; and your own agent over MCP or REST. All four pass one gate. First it works out who is asking from the caller's key or signed cookie, never from the request body. Then it reads the request and looks up the products: Gemini reads requests and menus and scores how well a substitute fits; Valio Aimo gives the catalogue and live price and stock; Exa gives product facts and public listings. Then the mandate's checks: limits and caps, approvals bound to the exact terms, and one order per key. Then one state change, written to the op log with who asked. Each line ends one of three ways: ordered within the mandate, waits for the chef, or refused with the reason. The op log is in Aiven Postgres and streams live to every open screen, including Operations, which also shows recall cases from the recall list that Context.dev checks every 5 minutes.</p>
+			<p class="archcap">Every request, from any of the four ways in, passes the same checks before anything is ordered, and every change is written to one log in Postgres.</p>
 		</section>
 
 		<section data-system-map id="map"></section>
