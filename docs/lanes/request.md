@@ -71,6 +71,7 @@ A chef types a purchase request and gets a priced, availability-checked, mandate
 
 ## Report
 - Sat 14 Nov · done: P1/P2 parser fixes + physical `amount` (cd5868c); polish: green steps, unit words, friendly dates, approver name (6e1407d); cut-off at lookup with one-click open date (4e282ad, a88cf30); menu review → accept → plan_event{proposal} → Kitchen link, golden briefs green (c1b1dc4, b5e40c6); propose_menu handler (a001ddd); task per order/menu plan (f7bb8ce) · stubbed: task store (seam until E) · needs: above · ready to merge: yes after gate
+- Sat 14 Nov night (b2) · done: cut-off offers name the day that results, days.ts (b109217); ids and keys only in System (94e77df); dish reading, ratio shares, product checks, `interpretDish` (da63e49); /request as an editable step flow: date chips, item edit in place, incremental re-runs with an "Updated" line, dish card ready-made vs from raw, over-limit choices, remembered choices (7b2f570, 9a4cbe3, 615e564) · stubbed: DayPicker (built to its contract in DeliveryDays.svelte, swap when c3 merges); Exa recipe grounding not wired into the dish card (team recipe is the source) · needs: c3 DayPicker on main; core meets() (D16) to replace checks.clashWith · ready to merge: yes after gate
 
 ## Run
 ```bash
