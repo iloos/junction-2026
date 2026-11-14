@@ -45,7 +45,8 @@
 			'Outside services sit behind ports. Each has a fallback, so the app keeps working, labelled, when one is down.',
 			[
 				['Valio Aimo', 'Price and stock fetched only for shortlisted products. Fallback: the cached offer, labelled with its age.', 'Why drawer', 'live'],
-				['Gemini', 'Flash-Lite reads requests (fallback: rules). 3.8 Flash proposes menus as estimates (fallback: team dish templates). Decisions scores how well each substitute fits the dish, one input to the code\'s ranking, and can flag a constraint risk that holds the line. It never approves or allows anything. Fallback: a recorded replay, then rules.', 'request page · menu', 'live'],
+				['Gemini Flash-Lite and 3.8 Flash', 'Flash-Lite reads requests (fallback: rules). 3.8 Flash proposes menus as estimates (fallback: team dish templates).', 'request page · menu', 'live'],
+				['Gemini Decisions', 'Decisions scores how well each substitute fits the dish, one input to the code\'s ranking, and can flag a constraint risk that holds the line. It never approves or allows anything. Fallback: a recorded replay, then rules.', 'one live call (DECIDE_LIVE=1 pnpm test:live)', 'tested'],
 				['Exa', 'Facts with sources in the Why drawer, as suggestions that never overwrite the catalogue. Fallback: recorded answers.', 'Why drawer', 'live'],
 				['Context.dev', 'Watches Ruokavirasto\'s recall list every 5 minutes; notices become cases in Operations. Fallback: a labelled drill.', '/ops', 'live'],
 				['Aiven', 'Postgres and the app container. Fallback: the same migrations on an in-memory Postgres.', 'deployed app', 'live'],
@@ -61,13 +62,17 @@
 	}).join('')}</div><div class="smap-panel" id="smap-panel" aria-live="polite"><p class="hint">Open a part of the system above.</p></div></div></div>`;
 
 	const panel = root.querySelector('.smap-panel'), zones = [...root.querySelectorAll('.zone')], track = root.querySelector('.smap-track');
+	// A clicked zone stays open until the reader closes it or scrolls past the map; the trace waits meanwhile.
+	let pinned = false, resume = null;
 	function open(k) {
 		const [t, , , lead, mech] = Z[k];
 		zones.forEach((z) => z.setAttribute('aria-pressed', String(z.dataset.z === k)));
-		panel.innerHTML = `<h3>${t}</h3><p class="lead">${esc(lead)}</p><div class="mech">${mech.map(([c, h, test, st]) => `<div><b>${esc(c)}</b><span>${esc(h)} <code>${esc(test)}</code></span><span class="st ${st === 'live' ? 'live' : ''}">${st === 'live' ? 'seen live' : 'tested'}</span></div>`).join('')}</div>`;
+		const back = pinned && resume ? '<button type="button" class="smap-back">Back to the ham line</button>' : '';
+		panel.innerHTML = `<div class="smap-ph"><h3>${t}</h3>${back}</div><p class="lead">${esc(lead)}</p><div class="mech">${mech.map(([c, h, test, st]) => `<div><b>${esc(c)}</b><span>${esc(h)} <code>${esc(test)}</code></span><span class="st ${st === 'live' ? 'live' : ''}">${st === 'live' ? 'seen live' : 'tested'}</span></div>`).join('')}</div>`;
+		const b = panel.querySelector('.smap-back');
+		if (b) b.addEventListener('click', () => { pinned = false; zones.forEach((z) => z.setAttribute('aria-pressed', 'false')); resume(); });
 	}
 	zones.forEach((z) => z.addEventListener('click', () => { pinned = true; root.classList.remove('tracing'); zones.forEach((x) => x.classList.remove('lit')); open(z.dataset.z); }));
-	let pinned = false;
 
 	// The trace: only with recorded values; without them the map stays a static, clickable diagram.
 	fetch('/cases.json').then((r) => (r.ok ? r.json() : null)).then((d) => {
@@ -96,15 +101,17 @@
 		root.querySelector('.smap-head p').insertAdjacentHTML('beforeend', ' Scroll to follow one recorded order line, the Christmas ham, from need to receipt.');
 		let cur = -1;
 		function show(i) {
+			const outside = i < 0 || i >= STEPS.length;
+			if (pinned && !outside) return;
 			if (i === cur) return;
 			cur = i;
-			if (i < 0 || i >= STEPS.length) {
+			if (outside) {
+				pinned = false;
 				root.classList.remove('tracing');
 				zones.forEach((z) => z.classList.remove('lit'));
-				if (!pinned) open(i < 0 ? 'doors' : 'rules');
+				if (!panel.querySelector('.mech')) open(i < 0 ? 'doors' : 'rules');
 				return;
 			}
-			pinned = false;
 			const [zs, col, t, x, chip] = STEPS[i];
 			root.classList.add('tracing');
 			zones.forEach((z) => { z.setAttribute('aria-pressed', 'false'); z.classList.toggle('lit', zs.includes(z.dataset.z)); z.style.setProperty('--c', col); });
@@ -117,6 +124,7 @@
 			const p = -r.top / span;
 			show(p < 0.02 ? -1 : p >= 1 ? STEPS.length : Math.min(STEPS.length - 1, Math.floor(p * STEPS.length)));
 		}
+		resume = () => { cur = -2; onScroll(); };
 		addEventListener('scroll', () => { if (!ticking) { ticking = true; requestAnimationFrame(onScroll); } }, { passive: true });
 		onScroll();
 	}).catch(() => open('rules'));
