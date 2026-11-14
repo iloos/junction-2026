@@ -19,6 +19,11 @@ export interface TermsLine {
 	qty: number;
 	unit: string;
 	unitCents: number;
+	/**
+	 * Supply evidence other than plain known stock (unknown, unlimited…). Absent for known stock, so terms bound
+	 * before this field keep their hash; a line whose supply turns unknown after an approval changes the terms.
+	 */
+	supply?: string;
 }
 
 export function termsHash(t: { deliverBy: string; lines: TermsLine[] }): Promise<string> {

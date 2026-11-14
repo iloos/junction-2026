@@ -52,7 +52,9 @@ export const PolicyReason = z.enum([
 	/** A substitute replaced this line's purchase: it stays visible at quantity 0 and is not bought. */
 	'superseded',
 	/** Gemini says the product may break a hard constraint the catalogue has no record of: held for a human. */
-	'CAUTION.model_constraint'
+	'CAUTION.model_constraint',
+	/** Gemini scored this substitute 0 of 4 for fit in the dish: still the best by the rules, but a person checks it. */
+	'CAUTION.model_fit'
 ]);
 export type PolicyReason = z.infer<typeof PolicyReason>;
 

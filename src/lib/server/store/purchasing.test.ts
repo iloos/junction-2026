@@ -7,6 +7,8 @@ import { describe, expect, it } from 'vitest';
 import { Kitchen, Product, SCOPES_BY_ACTOR, type ActorKind } from '$lib/core/contracts';
 import type { Catalog, CallContext } from '$lib/core/ports';
 import { createHandlers } from '$lib/core/services/handlers';
+import { factsFor } from '$lib/core/services/views';
+import { planFulfilment } from '$lib/core/mandate/fulfilment';
 import { runRequest } from '$lib/server/request/run';
 import { createDbPorts } from './db-ports';
 
@@ -92,6 +94,7 @@ async function harness(o: { deliveryDays?: Kitchen['deliveryDays'] } = {}) {
 		usualProducts: [...products.keys()]
 	});
 	let candidates = ['470418'];
+	let supply: 'known' | 'unknown' = 'known';
 	const catalog: Catalog = {
 		get: async (ids) =>
 			new Map(ids.filter((id) => products.has(id)).map((id) => [id, products.get(id)!])),
@@ -109,9 +112,9 @@ async function harness(o: { deliveryDays?: Kitchen['deliveryDays'] } = {}) {
 					provenance: prov
 				},
 				availability: {
-					kind: 'known' as const,
-					amount: 100,
-					logisticModel: 'Stock',
+					kind: supply,
+					amount: supply === 'known' ? 100 : null,
+					logisticModel: supply === 'known' ? 'Stock' : 'Terminal',
 					availableDate: deliverBy,
 					closingTime: `${deliverBy}T15:00:00+02:00`,
 					raw: 100,
@@ -127,6 +130,7 @@ async function harness(o: { deliveryDays?: Kitchen['deliveryDays'] } = {}) {
 		h,
 		kitchen,
 		setCandidates: (ids: string[]) => (candidates = ids),
+		setSupply: (k: 'known' | 'unknown') => (supply = k),
 		state: () => b.ports.store.load('ws-demo', 'run-1')
 	};
 }
@@ -386,5 +390,60 @@ describe('R7-04: a dish edit carries its dependency closure', () => {
 		expect(r.lines.find((l) => l.needId === milkNeed.id)!.qty.value).toBeGreaterThan(
 			milkLine.qty.value
 		);
+	});
+});
+
+describe('R7-11: a receipt confirms what it says', () => {
+	it('1 of 10 units confirmed is 1 confirmed and 9 still awaited', async () => {
+		const { h, b, state } = await harness();
+		const p = must(
+			await h.place_order(ctx(), {
+				kitchenId: 'k-hotel',
+				deliverBy: '2026-12-10',
+				idempotencyKey: 'receipt',
+				lines: [{ productId: '464201', qty: 10, unit: 'ST', amount: { value: 10, unit: 'l' } }]
+			})
+		).plan;
+		must(await h.commit_order(ctx(), { planId: p.id, version: p.version, idempotencyKey: 'r-c' }));
+		const s = structuredClone(await state());
+		Object.values(s.receipts)[0].confirmed[0].qty.value = 1;
+		const plan = must(await h.get_plan(ctx(), { planId: p.id })).plan;
+		const products = await b.ports.catalog.get(['464201']);
+		const [f] = planFulfilment(plan, factsFor(plan, products, undefined, s));
+		expect(f.supplierConfirmed.value).toBe(1);
+		expect(f.awaitingSupplier.value).toBe(9);
+	});
+});
+
+describe('R7-03: supply that turns unknown after an approval asks again', () => {
+	it('a grant on known stock does not buy a line whose supply is now unknown', async () => {
+		const { h, setSupply } = await harness();
+		const p = must(
+			await h.place_order(ctx('external_agent'), {
+				kitchenId: 'k-hotel',
+				deliverBy: '2026-12-10',
+				idempotencyKey: 'drift',
+				lines: [{ productId: '464201', qty: 10, unit: 'ST', amount: { value: 10, unit: 'l' } }]
+			})
+		).plan;
+		const a = must(await h.get_plan(ctx('chef'), { planId: p.id })).approval!;
+		must(
+			await h.approve(ctx('chef'), {
+				approvalId: a.id,
+				planVersion: a.planVersion,
+				termsHash: a.termsHash,
+				decision: 'grant'
+			})
+		);
+		setSupply('unknown');
+		const c = await h.commit_order(ctx('external_agent'), {
+			planId: p.id,
+			version: p.version,
+			idempotencyKey: 'drift-c'
+		});
+		expect(c.ok ? 'committed' : c.error.code).toBe('TERMS_CHANGED');
+		const now = must(await h.get_plan(ctx('chef'), { planId: p.id }));
+		expect(now.plan.lines[0].offer?.availability.kind).toBe('unknown');
+		expect(now.approval?.state ?? 'none').not.toBe('granted');
 	});
 });

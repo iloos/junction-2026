@@ -35,6 +35,7 @@ const STICKY: ReadonlySet<string> = new Set([
 	'allergen_change',
 	'substitute_breaks_preference',
 	'CAUTION.model_constraint',
+	'CAUTION.model_fit',
 	/** Kept at 0 through re-quotes until someone sets a quantity again. */
 	'superseded'
 ]);
@@ -112,7 +113,8 @@ const TIER_OF: Partial<Record<string, Tier>> = {
 	recall: 'sign_off',
 	price_missing: 'propose',
 	allergen_change: 'sign_off',
-	'CAUTION.model_constraint': 'sign_off'
+	'CAUTION.model_constraint': 'sign_off',
+	'CAUTION.model_fit': 'propose'
 };
 const tierOf = (r: LineReason): Tier =>
 	r.startsWith('CAP_EXCEEDED') ? 'sign_off' : (TIER_OF[r] ?? 'propose');
@@ -296,7 +298,10 @@ export function tierLines(input: TierInput): TierResult {
 				productId: l.productId,
 				qty: l.qty.value,
 				unit: l.qty.unit,
-				unitCents: l.offer!.price!.unitCents
+				unitCents: l.offer!.price!.unitCents,
+				...(l.offer?.availability.kind && l.offer.availability.kind !== 'known'
+					? { supply: l.offer.availability.kind }
+					: {})
 			})),
 		held: approvable.length
 			? {

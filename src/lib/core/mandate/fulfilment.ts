@@ -40,6 +40,8 @@ export interface FulfilmentFacts {
 	recipeUnit?(line: Line): number | undefined;
 	/** For committed lines: did the supplier's receipt confirm it? */
 	receipt(lineId: string): 'confirmed' | 'awaiting' | undefined;
+	/** Sales units the supplier's receipt confirmed for a committed line; absent means the whole line. */
+	confirmedQty?(lineId: string): number | undefined;
 }
 
 type Bucket = FulfilmentView['allocations'][number]['bucket'];
@@ -136,8 +138,23 @@ export function fulfilmentOf(
 	for (const l of own.filter((x) => !isRecipe(x))) {
 		const bucket = bucketOf(l, views.get(l.id), facts);
 		const amount = bucket ? amountIn(l, unit, facts) : null;
-		if (bucket && amount !== null && amount > 0)
-			contributions.push({ lineIds: [l.id], amount, bucket });
+		if (!bucket || amount === null || !(amount > 0)) continue;
+		// A receipt confirms what it says: 1 of 10 units confirmed is 1 confirmed and 9 still awaited.
+		const cq = bucket === 'supplierConfirmed' ? facts.confirmedQty?.(l.id) : undefined;
+		if (cq !== undefined && cq < l.qty.value) {
+			const share = Math.max(0, cq) / l.qty.value;
+			if (share > 0)
+				contributions.push({
+					lineIds: [l.id],
+					amount: amount * share,
+					bucket: 'supplierConfirmed'
+				});
+			contributions.push({
+				lineIds: [l.id],
+				amount: amount * (1 - share),
+				bucket: 'awaitingSupplier'
+			});
+		} else contributions.push({ lineIds: [l.id], amount, bucket });
 	}
 	const recipes = new Map<string, Line[]>();
 	for (const l of own.filter(isRecipe))

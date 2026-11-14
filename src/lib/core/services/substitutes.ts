@@ -421,7 +421,15 @@ export async function findSubstitutes(
 				qty: sized.get(best.productId)!,
 				substituteFor: line.productId,
 				strategy: { id: `${line.needId}:sub:${best.productId}`, kind: 'substitute' },
-				...(flagged.has(best.productId) ? { extraReasons: [MODEL_CAUTION] } : {}),
+				...(() => {
+					// R7-05: the model's fit is evidence, not a rule. A best pick it scored 0/4 for the dish is held for a
+					// person (a rules-only fallback has no fit, so it never trips this).
+					const extra: LineReason[] = [
+						...(flagged.has(best.productId) ? [MODEL_CAUTION] : []),
+						...(fit.get(best.productId)?.score === 0 ? (['CAUTION.model_fit'] as const) : [])
+					];
+					return extra.length ? { extraReasons: extra } : {};
+				})(),
 				provenance: {
 					source: 'valio_static',
 					note: `substitute for ${line.productId}, rank 1 of ${ranked.filter((r) => r.rank).length}${opts.note ? `; ${opts.note}` : ''}`
