@@ -2,7 +2,7 @@
  * Catalog adapter over Valio's static files + the cache-through mock API (docs/foundations/valio-data.md §4–5).
  * - Static catalogue: normalised once into data/valio/normalized/products.json (gitignored), then loaded from there.
  * - Offers: per-product view of data/valio/cache/{price,availability}/*.json (the same layout the Python probe
- *   writes). With `live`, misses are fetched (≤4 concurrent, ≤200 ids per call, backoff) and written back.
+ *   writes). With `live`, misses are fetched through valio-live.ts and written back.
  * - The simulator overlay is applied last, so every offer says whether it is cache, live or simulated.
  */
 import { createHash } from 'node:crypto';
@@ -12,6 +12,7 @@ import { join } from 'node:path';
 import type { Catalog } from '$lib/core/ports';
 import type { Offer, Product, ProductId } from '$lib/core/contracts';
 import { normalizeProduct, toOffer } from './normalize';
+import { createValioLive, type ValioLiveOptions } from './valio-live';
 import type { SimOverlay } from '../simulator/overlay';
 import {
 	assemble,
@@ -32,7 +33,7 @@ export interface ValioCatalogOptions {
 	dir?: string;
 	customer?: string;
 	/** Fetch cache misses from the mock API. Without it the adapter is the fixture: cache only. */
-	live?: { apiKey: string; baseUrl?: string; fetch?: typeof fetch };
+	live?: Omit<ValioLiveOptions, 'customer'>;
 	overlay?: SimOverlay;
 	/** Substitute candidate retrieval (default: CATALOG_RETRIEVAL env, else `hybrid`). */
 	retrieval?: RetrievalMode;
@@ -146,23 +147,6 @@ class OfferCache {
 	}
 }
 
-const chunk = <T>(xs: T[], n: number) =>
-	Array.from({ length: Math.ceil(xs.length / n) }, (_, i) => xs.slice(i * n, i * n + n));
-
-async function pool<T, R>(items: T[], limit: number, fn: (t: T) => Promise<R>): Promise<R[]> {
-	const out: R[] = new Array(items.length);
-	let next = 0;
-	await Promise.all(
-		Array.from({ length: Math.min(limit, items.length) }, async () => {
-			while (next < items.length) {
-				const i = next++;
-				out[i] = await fn(items[i]);
-			}
-		})
-	);
-	return out;
-}
-
 export function createValioCatalog(
 	opts: ValioCatalogOptions = {}
 ): Catalog & Resolver & { products: Map<ProductId, Product> } {
@@ -174,37 +158,24 @@ export function createValioCatalog(
 	let index: RetrievalIndex | undefined;
 	const ix = () => (index ??= new RetrievalIndex([...products.values()].map(toRetrievalProduct)));
 	const cache = new OfferCache(join(dir, 'cache'));
-	let failures = 0;
+	const live = opts.live ? createValioLive({ ...opts.live, customer }) : undefined;
 
+	/** Misses go to Valio (valio-live.ts: batching, retries, half-open breaker) and back into the file cache. */
 	async function fetchMisses(ep: 'price' | 'availability', ids: string[], date: string) {
-		const live = opts.live;
-		if (!live || ids.length === 0 || failures >= 3) return; // breaker: stay on cache after 3 failures
-		const f = live.fetch ?? fetch;
-		const base = live.baseUrl ?? 'https://junction26.valioaimo.fi';
-		await pool(chunk(ids, 200), 4, async (part) => {
-			for (let attempt = 0; attempt < 3; attempt++) {
-				const t0 = Date.now();
-				try {
-					const res = await f(`${base}/api/${ep}`, {
-						method: 'POST',
-						headers: { 'content-type': 'application/json', 'X-API-Key': live.apiKey },
-						body: JSON.stringify({ customer, requestedDate: date, products: part }),
-						// A hung call counts as a failure (retry, then the breaker), never a stuck request.
-						signal: AbortSignal.timeout(10_000)
-					});
-					if (res.status === 429 || res.status === 403 || res.status >= 500)
-						throw new Error(`HTTP ${res.status}`);
-					const body = await res.json();
-					const at = cache.write(ep, customer, date, part, res.status, body, Date.now() - t0);
-					if (res.ok) cache.add(ep, body.products ?? [], at, 'valio_live');
-					failures = 0;
-					return;
-				} catch {
-					failures++;
-					await new Promise((r) => setTimeout(r, 2000 * 2 ** attempt * (0.5 + Math.random())));
-				}
-			}
-		});
+		if (!live || ids.length === 0) return;
+		const got = await live.fetch(ep, ids, date);
+		if (got.length === 0) return;
+		const body = { products: got.map((g) => g.body) };
+		const at = cache.write(
+			ep,
+			customer,
+			date,
+			got.map((g) => g.productId),
+			200,
+			body,
+			0
+		);
+		cache.add(ep, body.products, at, 'valio_live');
 	}
 
 	return {
