@@ -7,7 +7,8 @@ import { readTurnBody } from '$lib/server/chat/body';
 import { runChatTurn } from '$lib/server/chat/turn';
 import { acceptMenuAsChef } from '$lib/server/menu/server';
 import { visitorWorkspace } from '$lib/server/demo/visitor';
-import { visitorKey } from '$lib/server/kitchen/live';
+import { session, visitorKey } from '$lib/server/kitchen/live';
+import { sid } from '$lib/server/kitchen/sid';
 import { onCurrentRun } from '$lib/server/demo/reset';
 import { withCallScope } from '$lib/server/scope';
 import { createServerPorts } from '$lib/server/store/server-ports';
@@ -45,9 +46,13 @@ export const POST: RequestHandler = async (event) => {
 	const handlers = scopedHandlers;
 	const [b, tasks] = await Promise.all([createServerPorts(), serverTasks()]);
 	const kitchens = await b.ports.store.kitchens(v.workspaceId);
+	// The kitchen the dock names, else the visitor's own, else the one the kitchen screen has selected: never a seed by
+	// name (a dock on /request, Ops or /agents sends none).
+	const selected = session(sid(event.cookies), v.workspaceId).kitchenId;
 	const kitchen =
 		kitchens.find((k) => k.id === kitchenId) ??
-		kitchens.find((k) => k.id === 'k-hotel') ??
+		kitchens.find((k) => k.owner === ctx.visitor) ??
+		kitchens.find((k) => k.id === selected) ??
 		kitchens[0];
 	if (!kitchen) return bad('no kitchen in this workspace');
 	// Gemini reads, plans and words the chat whenever a provider is configured; the fixture keeps rules and script.
