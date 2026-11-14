@@ -165,14 +165,19 @@ section.s:last-of-type { padding-bottom: 120px; }
 .fix details p { margin: 10px 0 0; font-size: 15px; color: var(--ink-2); max-width: 64ch; }
 
 /* 5 · the mandate, in the chef's words */
-#mandate .said { font-size: clamp(30px, 3.6vw, 52px); line-height: 1.32; color: var(--ink); margin: 0; max-width: 30ch; text-wrap: pretty; }
-#mandate .said mark { background: none; color: inherit; text-decoration: underline 2px color-mix(in oklab, var(--c) 70%, transparent); text-underline-offset: 0.2em; text-decoration-skip-ink: none; border-radius: 4px; -webkit-box-decoration-break: clone; box-decoration-break: clone; transition: background 0.4s var(--ease), text-decoration-color 0.4s var(--ease); }
+/* quote beside the rules it becomes, as the chef would read it */
+.mandate { display: grid; gap: 28px; align-items: center; }
+@media (min-width: 900px) { .mandate { grid-template-columns: 1.05fr 40px 1fr; gap: 24px; } }
+.mandate .arrow { display: none; color: var(--ink-3); width: 22px; height: 22px; justify-self: center; }
+@media (min-width: 900px) { .mandate .arrow { display: block; } }
+#mandate .said { font-size: clamp(23px, 2.1vw, 30px); line-height: 1.5; color: var(--ink); margin: 0; max-width: 32ch; text-wrap: pretty; }
+#mandate .said mark { background: none; color: inherit; text-decoration: underline 2px color-mix(in oklab, var(--c) 70%, transparent); text-underline-offset: 0.22em; text-decoration-skip-ink: none; border-radius: 4px; -webkit-box-decoration-break: clone; box-decoration-break: clone; transition: background 0.4s var(--ease), text-decoration-color 0.4s var(--ease); }
 #mandate .said mark.hot { background: color-mix(in oklab, var(--c) 16%, transparent); text-decoration-color: var(--c); }
-.rules { display: grid; gap: 12px; margin-top: 48px; }
-@media (min-width: 860px) { .rules { grid-template-columns: repeat(3, 1fr); } }
-.rule { display: grid; gap: 12px; align-content: start; padding: 20px 22px; border: 1px solid var(--rule); border-radius: 14px; background: var(--sheet); transition: border-color 0.4s var(--ease); cursor: default; }
-.rule .chip { justify-self: start; }
-.rule p { margin: 0; font-size: 16px; color: var(--ink); }
+.rules { display: grid; gap: 10px; }
+.rule { display: grid; grid-template-columns: 1fr auto; gap: 6px 16px; align-items: center; padding: 16px 18px; border: 1px solid var(--rule); border-radius: 12px; background: var(--sheet); transition: border-color 0.4s var(--ease); cursor: default; }
+.rule .chip { grid-column: 2; grid-row: 1; justify-self: end; }
+.rule p { margin: 0; font-size: 15.5px; color: var(--ink); }
+@media (max-width: 520px) { .rule { grid-template-columns: 1fr; } .rule .chip { grid-column: 1; justify-self: start; } }
 .rule.hot { border-color: var(--c); }
 
 /* 6 · close */
@@ -250,7 +255,7 @@ section.s:last-of-type { padding-bottom: 120px; }
 			<div class="lane">
 				<div class="name">An event</div>
 				<div class="steps">
-					<div class="step"><b data-s="chain.steps.#event.value">320 covers</b><span data-s="chain.steps.#event.text">Wednesday lunch buffet on Wed 16 Dec.</span></div>
+					<div class="step"><b data-s="chain.steps.#event.value">320 lunches</b><span data-s="chain.steps.#event.text">Wednesday lunch buffet on Wed 16 Dec.</span></div>
 					<svg class="arrow" viewBox="0 0 18 18" aria-hidden="true"><path d="M3 9h11m-4-4 4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
 					<div class="step"><b data-s="chain.steps.#dish.value">Salmon soup</b><span><span data-s="chain.line.per">100 g</span> a guest, one of <span data-s="chain.line.dishes">6</span> dishes.</span></div>
 					<svg class="arrow" viewBox="0 0 18 18" aria-hidden="true"><path d="M3 9h11m-4-4 4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -343,11 +348,14 @@ section.s:last-of-type { padding-bottom: 120px; }
 	<div class="head">
 		<h2 id="h-mandate">The chef writes the limits once. Every order is checked against them.</h2>
 	</div>
+	<div class="mandate">
 	<p class="said" id="words">“Order alone up to <mark style="--c:var(--out)" data-r="0">€800 a line and €1,000 an order, €4,000 a week</mark>. <mark style="--c:var(--warn)" data-r="1">Never change an allergen.</mark> Ask me before <mark style="--c:var(--warn)" data-r="2">any new product or any substitute I haven't seen</mark>.”</p>
-	<div class="rules">
+		<svg class="arrow" viewBox="0 0 22 22" aria-hidden="true"><path d="M4 11h13m-5-5 5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+		<div class="rules">
 		<div class="rule" style="--c:var(--out)" data-r="0"><span class="chip out">Not ordered alone</span><p>Over a cap, even when the order is split.</p></div>
 		<div class="rule" style="--c:var(--warn)" data-r="1"><span class="chip wait">Only the chef</span><p>An allergen change is never delegated: the chef signs off.</p></div>
 		<div class="rule" style="--c:var(--warn)" data-r="2"><span class="chip wait">Waits for the chef</span><p>A new product or a new substitute.</p></div>
+	</div>
 	</div>
 	<p class="foot-note">The demo hotel's mandate. The amounts are team estimates. Each kitchen has its own; see <a href="/how">how it works</a>.</p>
 </section>

@@ -26,26 +26,26 @@
 }
 /* "Cold-store navy", the app's dark theme. Kept in sync with the media-query copy below. */
 :root[data-theme='dark'] {
-	--paper: oklch(0.2 0.032 245);
-	--sheet: oklch(0.235 0.036 245);
-	--well: oklch(0.27 0.038 245);
-	--rule: oklch(0.32 0.036 245);
-	--rule-strong: oklch(0.42 0.04 245);
+	--paper: oklch(0.155 0.022 250);
+	--sheet: oklch(0.19 0.026 250);
+	--well: oklch(0.225 0.03 250);
+	--rule: oklch(0.27 0.03 250);
+	--rule-strong: oklch(0.37 0.035 250);
 	--ink: oklch(0.95 0.01 240);
 	--ink-2: oklch(0.78 0.025 240);
 	--ink-3: oklch(0.68 0.03 240);
 	--accent: oklch(0.75 0.11 185);
 	--accent-ink: oklch(0.82 0.1 185);
-	--accent-wash: oklch(0.3 0.05 200);
+	--accent-wash: oklch(0.26 0.05 200);
 	--ok: oklch(0.78 0.12 165);
-	--ok-wash: oklch(0.29 0.05 165);
+	--ok-wash: oklch(0.25 0.05 165);
 	--auth: oklch(0.74 0.12 252);
-	--auth-wash: oklch(0.3 0.06 252);
+	--auth-wash: oklch(0.26 0.06 252);
 	--out: oklch(0.72 0.16 28);
-	--out-wash: oklch(0.3 0.06 28);
+	--out-wash: oklch(0.26 0.06 28);
 	--warn: oklch(0.82 0.13 75);
-	--warn-wash: oklch(0.31 0.05 75);
-	--on-accent: oklch(0.2 0.03 245);
+	--warn-wash: oklch(0.27 0.05 75);
+	--on-accent: oklch(0.155 0.022 250);
 	color-scheme: dark;
 }
 @media (prefers-color-scheme: dark) {
