@@ -885,7 +885,18 @@
 	/** "Thu 10 Dec · 18 lines · €933.92 · 15 need you". */
 	const daySentence = $derived.by(() => {
 		if (!theDay) return '';
-		if (!dayEntry) return `${day(theDay)} · nothing planned yet`;
+		if (!dayEntry) {
+			// The basket hasn't got the open plan (yet): say the plan's own numbers, never "nothing planned" over it.
+			if (!focusedInDay || !plan) return `${day(theDay)} · nothing planned yet`;
+			const live = plan.lines.filter((l) => l.qty.value > 0);
+			const waits = all.count + all.signOff;
+			return [
+				day(theDay),
+				`${live.length} ${live.length === 1 ? 'line' : 'lines'}`,
+				money(live.reduce((t, l) => t + (l.lineCents ?? 0), 0)),
+				waits ? `${waits} ${waits === 1 ? 'needs' : 'need'} you` : 'nothing needs you'
+			].join(' · ');
+		}
 		const waits = stageCounts.waits;
 		return [
 			day(theDay),
