@@ -24,6 +24,7 @@ import { slug } from '../request/parse';
 import { chooseProducts, type Choice, type ChoiceItem } from './choose';
 import { candidatePool, kitchenPins, pinnedFor, RECENT_MENUS, type PinSource } from './resolve';
 import { dietBase, reviewProposal, type Issue } from './rubric';
+import { includesIn } from './include';
 
 /** Brief requirements the catalogue resolver can enforce, as its product flags. */
 const RESOLVER_DIET: Record<string, string> = {
@@ -282,6 +283,26 @@ const T: Record<string, Template> = {
 			{ label: 'rye bread', query: 'ruisleipä', amountPerCover: 20, unit: 'g' }
 		]
 	},
+	stew: {
+		name: 'Lentil and root vegetable stew',
+		course: 'main',
+		meets: ['lactose-free', 'gluten-free', 'vegetarian', 'vegan', 'dairy-free', 'nut-free'],
+		ingredients: [
+			{ label: 'lentils', query: 'linssi', amountPerCover: 60, unit: 'g' },
+			{ label: 'carrot', query: 'porkkana', amountPerCover: 60, unit: 'g' },
+			{ label: 'potato', query: 'peruna', amountPerCover: 100, unit: 'g' },
+			{ label: 'onion', query: 'sipuli', amountPerCover: 20, unit: 'g' }
+		]
+	},
+	kissel: {
+		name: 'Blueberry kissel',
+		course: 'dessert',
+		meets: ['lactose-free', 'gluten-free', 'vegetarian', 'vegan', 'dairy-free', 'nut-free'],
+		ingredients: [
+			{ label: 'blueberries', query: 'mustikka', amountPerCover: 70, unit: 'g' },
+			{ label: 'sugar', query: 'sokeri', amountPerCover: 10, unit: 'g' }
+		]
+	},
 	salad: {
 		name: 'Green salad',
 		course: 'side',
@@ -321,9 +342,70 @@ export function fixtureMenu(brief: EventBrief): LlmMenu {
 
 	const wants = brief.dietary.map(dietBase);
 	const lactoseFree = wants.includes('lactose-free');
-	// A head-counted vegetarian requirement gets its own main next to the others.
-	if (brief.dietary.some((d) => dietBase(d) === 'vegetarian' && d.includes(':')))
-		chosen.splice(chosen.indexOf(pick.main) + 1, 0, T.risotto);
+	// A diet for every guest swaps each dish that breaks it for one of the same course that keeps it, else drops it
+	// (lactose-free is met by swapping the dairy product instead).
+	// Only diets some template states; any other ("halal") stays open for the chef, never empties the menu.
+	const stated = new Set(Object.values(T).flatMap((t) => t.meets));
+	const every = brief.dietary
+		.filter((d) => !d.includes(':'))
+		.map(dietBase)
+		.filter((w) => stated.has(w));
+	const keeps = (t: Template) =>
+		every.every((w) => w === 'lactose-free' || (t.meets as string[]).includes(w));
+	if (every.some((w) => w !== 'lactose-free')) {
+		const pool = Object.values(T);
+		chosen = chosen
+			.map((t) => (keeps(t) ? t : (pool.find((x) => x.course === t.course && keeps(x)) ?? null)))
+			.filter((t): t is Template => t !== null);
+		chosen = chosen.filter((t, i) => chosen.indexOf(t) === i);
+	}
+	// A head-counted requirement gets its own main next to the others ("vegan:100" → a vegan main).
+	const mainAt = Math.max(
+		0,
+		chosen.findIndex((t) => t.course === 'main')
+	);
+	for (const [diet, t] of [
+		['vegan', T.stew],
+		['vegetarian', T.risotto]
+	] as const) {
+		const counted = brief.dietary.some((d) => dietBase(d) === diet && d.includes(':'));
+		const met = chosen.some((x) => x.course === 'main' && (x.meets as string[]).includes(diet));
+		if (counted && !met) chosen.splice(mainAt + 1, 0, t);
+	}
+	// "with a peach dessert": the named ingredient is the dish of its course (or joins the main).
+	for (const inc of includesIn(`${brief.title}. ${brief.notes ?? ''}`)) {
+		const course = inc.course ?? 'main';
+		const name = inc.word[0].toUpperCase() + inc.word.slice(1);
+		const ing = { label: inc.word, query: inc.query, amountPerCover: 70, unit: 'g' as const };
+		const at = chosen.findIndex((t) => t.course === course);
+		const own: Template =
+			course === 'dessert'
+				? {
+						name: `${name} compote with whipped cream`,
+						course: 'dessert',
+						meets: ['gluten-free', 'vegetarian', 'nut-free'],
+						ingredients: [
+							ing,
+							{
+								label: 'whipping cream',
+								query: 'kuohukerma',
+								amountPerCover: 30,
+								unit: 'ml',
+								dairy: true
+							},
+							{ label: 'sugar', query: 'sokeri', amountPerCover: 10, unit: 'g' }
+						]
+					}
+				: at >= 0
+					? {
+							...chosen[at],
+							name: `${chosen[at].name} with ${inc.word}`,
+							ingredients: [...chosen[at].ingredients, { ...ing, amountPerCover: 40 }]
+						}
+					: { name, course, meets: [], ingredients: [ing] };
+		if (at >= 0) chosen[at] = own;
+		else chosen.push(own);
+	}
 
 	const dishes = chosen.map((t) => {
 		const meets = new Set(t.meets);

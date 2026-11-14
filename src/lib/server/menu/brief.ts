@@ -34,7 +34,10 @@ const STYLES: { style: ServiceStyleWord; re: RegExp }[] = [
 
 /** Requirements beyond the request parser's constraints, with an optional head count ("6 vegetarians"). */
 const DIETS: { label: string; re: RegExp }[] = [
-	{ label: 'vegetarian', re: /vegetarian\p{L}*|kasvis\p{L}*/iu },
+	{
+		label: 'vegetarian',
+		re: /vegetarian\p{L}*|kasvis\p{L}*|veggie|no[- ]meat|meat[- ]?free|meatless|without meat|lihaton\p{L}*/iu
+	},
 	{ label: 'vegan', re: /vegan\p{L}*|vegaan\p{L}*/iu },
 	{ label: 'nut-free', re: /nut[- ]free|no nuts|pähkinätön\p{L}*/iu },
 	{ label: 'dairy-free', re: /dairy[- ]free|maidoton\p{L}*/iu },
@@ -196,7 +199,7 @@ export function nextQuestion(d: BriefDraft, today: string): BriefQuestion | null
 				field,
 				text: 'On which day is the event?',
 				why: 'Delivery is planned for the day before, within the supplier’s cut-offs.',
-				chips: [chip(`Friday ${next(5)}`, next(5)), chip(`Saturday ${next(6)}`, next(6))],
+				chips: [chip(dayChip(next(5)), next(5)), chip(dayChip(next(6)), next(6))],
 				input: { kind: 'date', placeholder: 'YYYY-MM-DD' }
 			};
 		}
@@ -265,6 +268,43 @@ export function nextQuestion(d: BriefDraft, today: string): BriefQuestion | null
 
 const STYLES_SET = new Set(Object.keys(STYLE_WORDS));
 
+/** "Fri 11 Dec": a chip says the day in words, never the ISO date. */
+const dayChip = (iso: string) =>
+	new Date(`${iso}T12:00:00Z`).toLocaleDateString('en-GB', {
+		weekday: 'short',
+		day: 'numeric',
+		month: 'short',
+		timeZone: 'UTC'
+	});
+
+/**
+ * A typed answer to "Any dietary requirements?": the requirements it names, [] for "none", or null when it answers
+ * something else ("no budget", "Saturday"), so the question stays open instead of storing the words as a diet.
+ */
+function typedDietary(v: string): string[] | null {
+	const s = v.trim();
+	if (
+		/^(none|no|nope|nothing|no requirements?|no restrictions?|n\/a|ei|ei mitään|ei ole)\.?$/i.test(
+			s
+		)
+	)
+		return [];
+	const known = dietaryIn(s);
+	if (known.length) return known;
+	const parts = s
+		.split(',')
+		.map((x) => x.trim())
+		.filter(Boolean);
+	const plausible = parts.every(
+		(p) =>
+			p.split(/\s+/).length <= 3 &&
+			!/budget|€|\beur|guest|people|day|date|buffet|plated|course|monday|tuesday|wednesday|thursday|friday|saturday|sunday|\d{3,}/i.test(
+				p
+			)
+	);
+	return plausible ? parts : null;
+}
+
 /** Applies the chef's answers; a malformed one is ignored and the question stays open. */
 export function applyBriefAnswers(
 	d: BriefDraft,
@@ -296,7 +336,7 @@ export function applyBriefAnswers(
 				break;
 			}
 			case 'brief.dietary': {
-				const list = (Array.isArray(v) ? v : typeof v === 'string' ? v.split(',') : null)
+				const list = (Array.isArray(v) ? v : typeof v === 'string' ? typedDietary(v) : null)
 					?.map((s) => String(s).trim().toLowerCase())
 					.filter((s) => s && s !== 'none' && s.length <= 60);
 				if (!list) break;

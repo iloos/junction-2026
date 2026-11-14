@@ -143,8 +143,30 @@ describe('the rubric catches each failure', () => {
 
 	it('a buffet needs enough dishes; a requirement the menu cannot meet must be said open', () => {
 		const brief = goldenBrief('christmas');
-		const menu = fixtureMenu({ ...brief, dietary: ['vegan'] });
-		expect(menu.open.some((o) => o.startsWith('diet:vegan|'))).toBe(true);
+		const menu = fixtureMenu({ ...brief, dietary: ['halal'] });
+		expect(menu.dishes.length).toBeGreaterThanOrEqual(4);
+		expect(menu.open.some((o) => o.startsWith('diet:halal|'))).toBe(true);
+	});
+
+	it('a diet for every guest swaps each dish that breaks it; a counted share gets its own main', () => {
+		const brief = goldenBrief('christmas');
+		const vegan = fixtureMenu({ ...brief, dietary: ['vegan'] });
+		expect(vegan.open.filter((o) => o.startsWith('diet:'))).toEqual([]);
+		expect(vegan.dishes.every((x) => x.claimedCompatible.includes('vegan'))).toBe(true);
+		const veg = fixtureMenu({ ...brief, courses: undefined, dietary: ['vegetarian'] });
+		expect(veg.dishes.map((x) => x.name).join()).not.toMatch(/salmon|gravlax|pike|beef|ham/i);
+		const share = fixtureMenu({ ...brief, dietary: ['vegan:100'] });
+		expect(
+			share.dishes.some((x) => x.course === 'main' && x.claimedCompatible.includes('vegan:100'))
+		).toBe(true);
+	});
+
+	it('"with a peach dessert" puts the peach in the dessert', () => {
+		const brief = goldenBrief('christmas');
+		const m = fixtureMenu({ ...brief, title: 'A no-meat dinner for 120 with a peach dessert' });
+		const dessert = m.dishes.find((x) => x.course === 'dessert')!;
+		expect(dessert.name).toMatch(/peach/i);
+		expect(dessert.ingredients[0]).toMatchObject({ label: 'peach', query: 'persikka' });
 	});
 });
 
