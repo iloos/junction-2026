@@ -1,26 +1,17 @@
 <script lang="ts">
-	import {
-		ArrowRight,
-		Building2,
-		Database,
-		FlaskConical,
-		Receipt,
-		RotateCcw,
-		Sparkles,
-		TriangleAlert,
-		Check,
-		Repeat
-	} from '@lucide/svelte';
+	import { ArrowRight, RotateCcw, TriangleAlert, Check, Repeat } from '@lucide/svelte';
 	import { onMount } from 'svelte';
 	import { resolve } from '$app/paths';
 	import type { Plan } from '$lib/core/contracts';
 	import HoldButton from '$lib/ui/HoldButton.svelte';
 	import SourceTag from '$lib/ui/SourceTag.svelte';
 	import StateChip from '$lib/ui/StateChip.svelte';
-	import { day, money, num, shortHash } from '$lib/ui/format';
+	import { day, money, num, shortHash, storyTime } from '$lib/ui/format';
+	import { useShell } from '$lib/ui/shell/shell.svelte';
 	import Step from '$lib/ui/request/Step.svelte';
 	import Answer from '$lib/ui/request/Answer.svelte';
 	import BriefAsk from '$lib/ui/request/BriefAsk.svelte';
+	import MenuReview from '$lib/ui/request/MenuReview.svelte';
 	import type {
 		ApprovalView,
 		BriefAnswer,
@@ -28,6 +19,8 @@
 		CommitView,
 		EventView,
 		LookupView,
+		MenuPlanResult,
+		MenuView,
 		OrderView,
 		ParsedView,
 		RequestEvent,
@@ -36,8 +29,11 @@
 	} from '$lib/ui/request/types';
 	import {
 		CONSTRAINT_WORDS,
+		APPROVAL_STATE_WORDS,
 		offerSourceWords,
+		quantityWords,
 		reasonWords,
+		unitWord,
 		TIER_WORDS,
 		UNIT_WORDS
 	} from '$lib/ui/request/words';
@@ -112,10 +108,12 @@
 		error = resultMessage = null;
 		needsConfirm = false;
 		event = null;
+		menu = null;
+		menuPlan = null;
 	}
 
 	function approvalStatus(): Status {
-		if (commits.length) return 'done';
+		if (commits.length || approval?.state === 'granted') return 'done';
 		if (!plan) return 'idle';
 		if (!approval && plan.lines.some((l) => l.reasons.includes('over_hard_limit'))) return 'error';
 		if (
@@ -132,6 +130,8 @@
 			resultMessage = e.data.message ?? null;
 			needsConfirm = e.data.needsConfirm === true;
 			event = e.data.event ?? null;
+			// A complete brief goes straight to a menu proposal: the chef reviews it next.
+			if (event?.draft && !event.question) void propose();
 			if (status.lookup === 'running') status.lookup = 'idle';
 			if (status.order === 'running') status.order = 'idle';
 			return;
@@ -164,6 +164,7 @@
 		if (!keepAnswers || req !== text) {
 			answers = [];
 			briefAnswers = [];
+			deliverBy = null;
 		}
 		text = req;
 		reset();
@@ -173,7 +174,15 @@
 			const res = await fetch('/request/run', {
 				method: 'POST',
 				headers: { 'content-type': 'application/json' },
-				body: JSON.stringify({ text: req, kitchenId, nonce, answers, briefAnswers, confirmLarge })
+				body: JSON.stringify({
+					text: req,
+					kitchenId,
+					nonce,
+					answers,
+					briefAnswers,
+					confirmLarge,
+					...(deliverBy ? { deliverBy } : {})
+				})
 			});
 			if (!res.ok || !res.body) {
 				const b = await res.json().catch(() => null);
@@ -212,6 +221,16 @@
 		return b as T;
 	}
 
+	/**
+	 * Once the chef approved or committed, the earlier steps' cautions were part of the terms accepted: their
+	 * "check" marks turn done. A step that needs an answer or failed keeps its mark.
+	 */
+	function settle() {
+		if (approval?.state !== 'granted' && !commits.length) return;
+		for (const k of ['request', 'lookup', 'order'] as const)
+			if (status[k] === 'warn') status[k] = 'done';
+	}
+
 	async function decide(decision: 'grant' | 'deny') {
 		if (!approval || !plan) return;
 		busy = true;
@@ -228,6 +247,7 @@
 			plan = r.plan;
 			approval = r.approval ?? { ...approval, state: r.state };
 			status.approval = approvalStatus();
+			settle();
 		} catch (e) {
 			error = e instanceof Error ? e.message : String(e);
 		} finally {
@@ -251,6 +271,7 @@
 			plan = r.plan;
 			if (r.approval) approval = r.approval;
 			status.approval = approvalStatus();
+			settle();
 		} catch (e) {
 			error = e instanceof Error ? e.message : String(e);
 		} finally {
@@ -272,6 +293,69 @@
 			a.productId ? `product ${a.productId}` : ''
 		].filter(Boolean);
 		return `${what}: ${parts.join(', ')}`;
+	}
+
+	/** The menu proposed from a complete brief, and where planning it stands. */
+	let menu = $state.raw<MenuView | null>(null);
+	let menuPlan = $state.raw<MenuPlanResult | null>(null);
+	let menuBusy = $state(false);
+
+	async function menuCall<T>(body: Record<string, unknown>): Promise<T | null> {
+		menuBusy = true;
+		error = null;
+		try {
+			const res = await fetch('/request/menu', {
+				method: 'POST',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify(body)
+			});
+			const b = await res.json();
+			if (!res.ok)
+				throw new Error(b?.error ? `${b.error.code}: ${b.error.message}` : `HTTP ${res.status}`);
+			return b as T;
+		} catch (e) {
+			error = e instanceof Error ? e.message : String(e);
+			return null;
+		} finally {
+			menuBusy = false;
+		}
+	}
+	async function propose() {
+		menu = await menuCall<MenuView>({ action: 'propose', text, kitchenId, briefAnswers, nonce });
+	}
+	async function editMenu(edits: { ingredientId: string; amountPerCover: number }[]) {
+		if (!menu) return;
+		const r = await menuCall<MenuView>({
+			action: 'edit',
+			id: menu.proposal.id,
+			revision: menu.proposal.revision,
+			edits
+		});
+		if (r) menu = r;
+	}
+	async function acceptMenu() {
+		if (!menu) return;
+		const r = await menuCall<MenuView>({
+			action: 'accept',
+			id: menu.proposal.id,
+			revision: menu.proposal.revision
+		});
+		if (r) menu = r;
+	}
+	async function planMenu() {
+		if (!menu) return;
+		menuPlan = await menuCall<MenuPlanResult>({
+			action: 'plan',
+			id: menu.proposal.id,
+			revision: menu.proposal.revision
+		});
+	}
+
+	/** The chef took the first open delivery date after a cut-off: same words, that date, said in the notes. */
+	let deliverBy = $state<string | null>(null);
+	function chooseDate(date: string) {
+		deliverBy = date;
+		submit(text, true);
 	}
 
 	/** Answer the brief's open question and run the same words again with every brief answer so far. */
@@ -326,6 +410,7 @@
 		reset();
 		answers = [];
 		briefAnswers = [];
+		deliverBy = null;
 		text = '';
 		nonce = newNonce();
 	}
@@ -352,7 +437,43 @@
 		}
 	}
 
-	const sim = $derived(day(data.today));
+	/** What the rounding added, in words; nothing when the line is exactly what was asked for. */
+	function roundingText(l: Plan['lines'][number]): string | null {
+		const need = l.needId ? plan?.needs.find((n) => n.id === l.needId) : null;
+		const ph = l.view?.physical;
+		if (need && ph && need.amount.unit === ph.unit)
+			return ph.value > need.amount.value + 1e-9
+				? `rounded up from ${num(need.amount.value, 3)} ${need.amount.unit}`
+				: null;
+		return l.qty.rounding ?? null;
+	}
+
+	// The shell shows where the data comes from and the sandbox (workspace, run, clock, start over).
+	const shell = useShell();
+	const valioSource = $derived.by(() => {
+		if (!lookup?.quotedIds.length) return null;
+		const at =
+			lookup.items
+				.flatMap((i) => i.shortlist)
+				.map((c) => c.offer?.price?.provenance.at ?? c.offer?.availability.provenance.at)
+				.find((x): x is string => !!x) ?? data.now;
+		return { live: lookup.offerSources.includes('valio_live'), at };
+	});
+	$effect(() => {
+		if (!shell) return;
+		shell.labels = { source: valioSource, offline: false };
+		shell.sandbox = {
+			workspace: data.workspace.id,
+			run: data.workspace.run,
+			clock: storyTime(data.now),
+			busy,
+			onReset: resetSandbox
+		};
+		return () => {
+			shell.labels = null;
+			shell.sandbox = null;
+		};
+	});
 	/** Offers are dated on the scenario clock, so a cut-off before its now has passed. */
 	const cutoffText = (iso: string | null) =>
 		!iso
@@ -377,48 +498,6 @@
 
 <svelte:head><title>Purchase request · Mandate</title></svelte:head>
 
-<div
-	class="border-b border-rule bg-well text-meta text-ink-2"
-	role="note"
-	aria-label="Data sources"
->
-	<div class="mx-auto flex max-w-[820px] flex-wrap items-center gap-x-4 gap-y-1 px-4 py-1.5">
-		<span class="inline-flex items-center gap-1.5"
-			><Database size={13} class="text-accent" aria-hidden="true" /><b class="font-medium text-ink"
-				>Valio challenge mock</b
-			> cached</span
-		>
-		<span class="inline-flex items-center gap-1.5"
-			><FlaskConical size={13} class="text-undeliv" aria-hidden="true" />Sim clock
-			<b class="font-medium text-ink">{sim}</b></span
-		>
-		<span class="inline-flex items-center gap-1.5"
-			><Receipt size={13} class="text-signoff" aria-hidden="true" />Orders:
-			<b class="font-medium text-ink">local simulated commitment</b></span
-		>
-		<span
-			class="inline-flex items-center gap-1.5"
-			title={data.workspace.stage
-				? 'Presenter mode: the stage run everyone watches on /ops.'
-				: data.workspace.kind === 'own'
-					? 'Only this browser works here: other visitors and the stage run never see your orders, approvals or commits.'
-					: 'Shared with every visitor in this room: their edits and resets reach you too.'}
-			><Building2
-				size={13}
-				class={data.workspace.stage ? 'text-accent' : 'text-propose'}
-				aria-hidden="true"
-			/>{data.workspace.label}
-			<b class="mono font-medium text-ink">{data.workspace.id}</b></span
-		>
-		<span class="inline-flex items-center gap-1.5"
-			><Sparkles size={13} aria-hidden="true" />Parser:
-			<b class="font-medium text-ink"
-				>{data.parser === 'fixture' ? 'rules (offline)' : data.parser}</b
-			></span
-		>
-	</div>
-</div>
-
 <main class="mx-auto max-w-[820px] px-4 pt-6 pb-24 sm:pt-10">
 	<header class="mb-5 flex flex-wrap items-end justify-between gap-3">
 		<div>
@@ -439,16 +518,6 @@
 				{#each data.kitchens as k (k.id)}<option value={k.id}>{k.name}</option>{/each}
 			</select>
 		</label>
-		{#if !data.workspace.stage}
-			<button
-				type="button"
-				disabled={busy || !ready}
-				onclick={resetSandbox}
-				class="inline-flex h-9 items-center gap-1.5 rounded-md border border-rule-strong bg-sheet px-3 text-body text-ink-2 hover:text-ink disabled:opacity-50"
-			>
-				<RotateCcw size={14} aria-hidden="true" /> Start over (sandbox)
-			</button>
-		{/if}
 	</header>
 	{#if sandboxNote}
 		<p class="-mt-2 mb-4 text-body text-ink-2" role="status">{sandboxNote}</p>
@@ -622,7 +691,10 @@
 								{/key}
 							{:else if event.draft}
 								<p class="mt-2 text-body font-medium text-ink">
-									Brief complete. Menu proposal: next.
+									Brief complete.
+									<span class="font-normal text-ink-2"
+										>{menu ? 'Review the menu below.' : 'Proposing a menu…'}</span
+									>
 								</p>
 							{/if}
 							{#if event.seeded}
@@ -636,6 +708,16 @@
 								>
 							{/if}
 						</div>
+						{#if menu}
+							<MenuReview
+								view={menu}
+								busy={busy || menuBusy}
+								plan={menuPlan}
+								onedit={editMenu}
+								onaccept={acceptMenu}
+								onplan={planMenu}
+							/>
+						{/if}
 					{/if}
 				{/if}
 			</Step>
@@ -715,12 +797,21 @@
 											<dt class="text-ink-3">Why this one</dt>
 											<dd>{it.pick.reasons.join('; ') || 'best remaining match'}</dd>
 											<dt class="text-ink-3">Quantity</dt>
-											<dd class="num">{it.pick.conversion.explain}</dd>
+											<dd class="num">
+												{quantityWords(
+													it.pick.conversion.salesQty,
+													it.pick.salesUnit,
+													it.pick.amount
+												)}{#if it.pick.amount}<span class="text-ink-2"
+														>{` = ${num(it.pick.amount.value, 3)} ${it.pick.amount.unit}`}</span
+													>{/if}
+												<span class="block text-meta text-ink-3">{it.pick.conversion.explain}</span>
+											</dd>
 											{#each it.pick.conversion.warnings as w (w)}<dt></dt>
 												<dd class="text-signoff">{w}</dd>{/each}
 											<dt class="text-ink-3">Price</dt>
 											<dd class="num">
-												{money(o?.price?.unitCents)} / {it.pick.salesUnit}
+												{money(o?.price?.unitCents)} per {unitWord(it.pick.salesUnit)}
 												<span class="text-ink-3">ex VAT</span>
 											</dd>
 											<dt class="text-ink-3">Availability</dt>
@@ -744,7 +835,12 @@
 											aria-hidden="true"
 										/>{it.question}
 									</p>
-									{#if it.answer}<Answer spec={it.answer} {busy} onanswer={answer} />{/if}
+									{#if it.answer}<Answer
+											spec={it.answer}
+											{busy}
+											onanswer={answer}
+											ondate={chooseDate}
+										/>{/if}
 								{/if}
 								{#each it.valioRules as r (r.to)}
 									<p
@@ -829,9 +925,10 @@
 											{l.productName ?? names.get(l.productId) ?? l.productId}
 										</p>
 										<p class="num text-body text-ink-2">
-											{num(l.qty.value)}
-											{l.qty.unit} × {money(l.offer?.price?.unitCents)}
-											{#if l.qty.rounding}<span class="text-ink-3">({l.qty.rounding})</span>{/if}
+											{quantityWords(l.qty.value, l.qty.unit, l.view?.physical)} × {money(
+												l.offer?.price?.unitCents
+											)}
+											{#if roundingText(l)}<span class="text-ink-3">({roundingText(l)})</span>{/if}
 										</p>
 									</div>
 									<div class="flex items-center gap-2">
@@ -887,6 +984,16 @@
 					<blockquote class="mt-2 border-l-2 border-rule-strong pl-3 text-body text-ink-3 italic">
 						Your mandate: “{order.kitchen.mandateWords}”
 					</blockquote>
+					<!-- eslint-disable svelte/no-navigation-without-resolve -- kitchen deep link with query, built from resolve('/') -->
+					<p class="mt-2 text-body text-ink" data-testid="order-in-kitchen">
+						This order is now in your Kitchen plan.
+						<a
+							href={resolve('/') + order.task.kitchenUrl.slice(1)}
+							class="inline-flex items-center gap-1 font-medium text-accent-ink underline"
+							>Open it in the Kitchen <ArrowRight size={14} aria-hidden="true" /></a
+						>
+					</p>
+					<!-- eslint-enable svelte/no-navigation-without-resolve -->
 				{/if}
 			</Step>
 
@@ -917,9 +1024,8 @@
 								<dd>{expires(approval.expiresAt)} <span class="text-ink-3">(sim clock)</span></dd>
 								<dt class="text-ink-3">State</dt>
 								<dd>
-									<b class="font-medium">{approval.state}</b>{approval.decidedBy
-										? ` by ${approval.decidedBy}`
-										: ''}
+									<b class="font-medium">{APPROVAL_STATE_WORDS[approval.state] ?? approval.state}</b
+									>{approval.decidedBy ? ` by ${approval.decidedBy}` : ''}
 								</dd>
 							</dl>
 						</div>

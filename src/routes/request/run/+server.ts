@@ -75,6 +75,7 @@ export const POST: RequestHandler = async (event) => {
 					answers: readAnswers(body.answers),
 					briefAnswers: readBriefAnswers(body.briefAnswers),
 					confirmLarge: body.confirmLarge === true,
+					deliverBy: /^\d{4}-\d{2}-\d{2}$/.test(str('deliverBy')) ? str('deliverBy') : undefined,
 					workspaceId,
 					env,
 					onEvent: send

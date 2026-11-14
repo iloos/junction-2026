@@ -3,10 +3,12 @@
  * same scopes, validation and idempotency apply as for MCP and REST. Valio is touched only by
  * `quote`, and only for the shortlisted ids (plus Valio's own substitute rule for the pick).
  */
-import type { Kitchen, Offer, Product, ToolName, ToolOutput } from '$lib/core/contracts';
-import { money } from '$lib/ui/format';
+import type { Kitchen, Measure, Offer, Product, ToolName, ToolOutput } from '$lib/core/contracts';
+import { sizeDirect } from '$lib/core/demand/sizing';
+import { day, money } from '$lib/ui/format';
 import { canonicalJson, sha256Hex } from '$lib/core/hash';
-import type { CallContext, Llm, ToolHandlers } from '$lib/core/ports';
+import type { CallContext, Clock, Llm, TaskStore, ToolHandlers } from '$lib/core/ports';
+import { taskForPlan } from './task';
 import { serveTool } from '$lib/server/tools/serve';
 import type {
 	AnswerSpec,
@@ -23,11 +25,20 @@ import type {
 	RequestResult,
 	ValioRuleView
 } from '$lib/ui/request/types';
+import { salesUnitWords } from '$lib/ui/request/words';
 import { weekdayOf } from './dates';
 import { caseBreakdown, caseHeadline, orderAmount } from './convert';
 import { hardLimit, sanityWarnings } from './sanity';
 import { hardLimitCents } from '$lib/core/mandate/validate';
-import { filterHits, SHORTLIST, unpickable, type Ranked } from './lookup';
+import {
+	cutoffPassed,
+	cutoffQuestion,
+	earliestDelivery,
+	filterHits,
+	SHORTLIST,
+	unpickable,
+	type Ranked
+} from './lookup';
 import { parseRequest, type ParsedRequest } from './parse';
 import { requestParseCheckpoint, withReview, type ReviewDeps } from '$lib/server/review';
 import { classifyRequest } from './classify';
@@ -77,7 +88,23 @@ export interface RequestDeps {
 	onEvent?: (e: RequestEvent) => void;
 	/** Set when the parse is reviewed (REVIEW=1): the reviewer's deps (Decide, trace, budget). */
 	review?: ReviewDeps;
+	/**
+	 * The workspace's store clock (ports.clock, the scenario clock on the server): the one "now" for cut-offs and task
+	 * times, the same one place_order and commit judge by. Absent (and no `now`): lookup leaves cut-offs to place_order.
+	 */
+	clock?: Pick<Clock, 'now'>;
+	/** A fixed instant instead of `clock`, for tests. */
+	now?: Date;
+	/** Procurement tasks (ports.tasks); absent: no task is stored and the result still links the plan. */
+	tasks?: TaskStore;
+	/** The chef chose this delivery date instead of the one the words gave (a cut-off answer). Shown, never silent. */
+	deliverBy?: string;
 }
+
+/** The request's one "now": the override, else the workspace's store clock. */
+const nowOf = (d: Pick<RequestDeps, 'now' | 'clock'>): Date | undefined => d.now ?? d.clock?.now();
+
+const cap = (s: string) => s[0].toUpperCase() + s.slice(1);
 
 const DAY_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'] as const;
 
@@ -117,8 +144,12 @@ function candidateView(r: Ranked, offer: Offer | null, quoted: boolean): Candida
 	};
 }
 
-async function lookupItems(parsed: ParsedRequest, d: RequestDeps): Promise<LookupView> {
+async function lookupItems(
+	parsed: ParsedRequest,
+	d: RequestDeps
+): Promise<{ lookup: LookupView; picked: Map<string, Product> }> {
 	let searchCalls = 0;
+	const now = nowOf(d);
 	const prepared: {
 		item: ParsedRequest['items'][number];
 		searches: { query: string; hits: number }[];
@@ -162,6 +193,7 @@ async function lookupItems(parsed: ParsedRequest, d: RequestDeps): Promise<Looku
 		for (const o of q.offers) offers.set(o.productId, o);
 	}
 
+	const picked = new Map<string, Product>();
 	const items: LookupItemView[] = prepared.map((p) => {
 		const short = p.ranked.slice(0, SHORTLIST);
 		const views = short.map((r) =>
@@ -174,25 +206,53 @@ async function lookupItems(parsed: ParsedRequest, d: RequestDeps): Promise<Looku
 		for (const [i, v] of views.entries()) {
 			if (p.item.qty === null) break;
 			if (pin && v.productId !== pin) continue;
-			const why = unpickable(offers.get(v.productId), short[i].conversion);
+			const why = unpickable(offers.get(v.productId), short[i].conversion, now);
 			if (why) v.skipped = why;
 			else if (!pick && !askCase) {
 				v.picked = true;
 				v.amount = v.conversion?.ok ? orderAmount(short[i].product, v.conversion.salesQty) : null;
 				pick = v;
+				picked.set(p.item.id, short[i].product);
 				break;
 			}
 		}
 		let question: string | null = null;
 		let answer: AnswerSpec | null = null;
 		const idx = p.item.id;
+		const closed = short
+			.map((r) => offers.get(r.product.productId))
+			.filter((o): o is Offer => !!o && !!now && cutoffPassed(o, now) !== null)
+			// The latest cut-off that closed first: the one that came closest to this date.
+			.sort((a, b) => b.availability.closingTime!.localeCompare(a.availability.closingTime!));
+		// Nothing on the shortlist can be ordered now, and ordering for this date closed for some of it.
+		const allClosed =
+			closed.length > 0 &&
+			!short.some((r) => !unpickable(offers.get(r.product.productId), r.conversion, now));
 		if (p.item.qty === null) {
 			question = `How much ${p.item.query}?`;
 			answer = { kind: 'qty', item: idx, units: ['l', 'kg', 'pcs', 'case'] };
+		} else if (!pick && allClosed) {
+			// Ordering for this date has closed: say when, offer the first date still open, never move it silently.
+			const earliest = closed
+				.map((o) => earliestDelivery(o, parsed.deliverBy, now!))
+				.filter((x): x is string => x !== null)
+				.sort()[0];
+			question = cutoffQuestion(
+				parsed.deliverBy,
+				closed[0].availability.closingTime!,
+				earliest ?? null
+			);
+			if (earliest)
+				answer = {
+					kind: 'date',
+					item: idx,
+					date: earliest,
+					label: `Deliver ${day(earliest)} instead`
+				};
 		} else if (askCase) {
 			const options = short
 				.map((r, i) => ({ r, v: views[i] }))
-				.filter(({ r, v }) => !unpickable(offers.get(v.productId), r.conversion))
+				.filter(({ r, v }) => !unpickable(offers.get(v.productId), r.conversion, now))
 				.slice(0, 4)
 				.map(({ r, v }) => {
 					// Headline and detail come from the same breakdown, so they can never disagree.
@@ -209,13 +269,13 @@ async function lookupItems(parsed: ParsedRequest, d: RequestDeps): Promise<Looku
 						: '';
 					return {
 						label: caseHeadline(b),
-						detail: `${r.product.nameFi}${oneCase} · ${b.salesQty} ${b.salesUnit} × ${money(unitCents)} = ${money(unitCents === null ? null : unitCents * b.salesQty)}`,
+						detail: `${r.product.nameFi}${oneCase} · ${salesUnitWords(b.salesQty, b.salesUnit)} × ${money(unitCents)} = ${money(unitCents === null ? null : unitCents * b.salesQty)}`,
 						answer: { item: idx, productId: r.product.productId }
 					};
 				});
 			question = options.length
 				? `Which case? Case sizes differ between products, so ${p.item.qty} cases of ${p.item.query} could be very different amounts.`
-				: `None of the matching cases can be delivered for ${parsed.deliverBy}. Give the amount in kg or l?`;
+				: `None of the matching cases can be delivered for ${day(parsed.deliverBy)}. Give the amount in kg or l?`;
 			answer = {
 				kind: 'choice',
 				item: idx,
@@ -232,7 +292,7 @@ async function lookupItems(parsed: ParsedRequest, d: RequestDeps): Promise<Looku
 			question =
 				conv && conv.conversion && !conv.conversion.ok
 					? `${conv.name}: ${conv.conversion.reason}.`
-					: `None of the ${views.length} matches can be ordered for ${parsed.deliverBy}: ${skipSummary(views)}. Pick another product or date?`;
+					: `None of the ${views.length} matches can be ordered for ${day(parsed.deliverBy)}: ${skipSummary(views)}. Pick another product or date?`;
 		}
 
 		// Valio's own substitute rules for the pick (or the leading candidate): shown, never proposed.
@@ -295,7 +355,7 @@ async function lookupItems(parsed: ParsedRequest, d: RequestDeps): Promise<Looku
 				.filter((s): s is NonNullable<typeof s> => !!s)
 		)
 	];
-	return {
+	const lookup: LookupView = {
 		items,
 		searchCalls,
 		quotedIds: [...offers.keys()],
@@ -303,6 +363,7 @@ async function lookupItems(parsed: ParsedRequest, d: RequestDeps): Promise<Looku
 		sanity: sanityWarnings(items, d.kitchen),
 		hardLimit: hardLimit(items, d.kitchen)
 	};
+	return { lookup, picked };
 }
 
 export async function idempotencyKeyFor(
@@ -314,6 +375,22 @@ export async function idempotencyKeyFor(
 	return `rq-${(await sha256Hex(canonicalJson({ kitchenId, deliverBy, lines, nonce }))).slice(0, 20)}`;
 }
 
+const ACTOR_WORDS: Record<string, string> = {
+	chef: 'the chef',
+	approver: 'the head chef',
+	kitchen_agent: 'the kitchen agent',
+	external_agent: 'an outside agent',
+	system: 'the system',
+	job: 'a scheduled job'
+};
+
+/** Who did it, in words: "the head chef" for the page's approver, never a raw actor id. */
+export function actorName(a: { kind: string; id: string }): string {
+	if (a.id === 'head-chef') return 'the head chef';
+	if (a.id === 'request-agent') return 'the kitchen agent';
+	return ACTOR_WORDS[a.kind] ?? a.kind.replace(/_/g, ' ');
+}
+
 /** get_plan's plan and approval, with the approval's total and who asked and decided. */
 export async function approvalView(
 	handlers: ToolHandlers,
@@ -323,7 +400,7 @@ export async function approvalView(
 	const g = await callTool(handlers, ctx, 'get_plan', { planId });
 	const a = g.approval;
 	if (!a) return { plan: g.plan, approval: null };
-	const who = (x?: { kind: string; id: string }) => (x ? `${x.kind}:${x.id}` : undefined);
+	const who = (x?: { kind: string; id: string }) => (x ? actorName(x) : undefined);
 	const ids = new Set(a.lineIds);
 	return {
 		plan: g.plan,
@@ -362,6 +439,51 @@ export function applyAnswers(parsed: ParsedRequest, answers: RequestAnswer[]): P
 	return { ...parsed, items, answered: answers };
 }
 
+/**
+ * One place_order line. A physical amount the chef typed ("2 l", "4 kg") travels as `amount`, so the plan holds a
+ * direct need and a substitute is sized to it, as when the agent orders; the quantity is the server's own sizing of
+ * that amount. Cases, packs and pieces the catalogue can't size go as the sales quantity alone.
+ */
+export function orderLine(
+	i: LookupItemView,
+	product: Product
+): { productId: string; qty: number; unit: string; amount?: Measure } {
+	const base = {
+		productId: i.pick!.productId,
+		qty: (i.pick!.conversion as { salesQty: number }).salesQty,
+		unit: i.pick!.salesUnit
+	};
+	const { qty, unit } = i.item;
+	if (qty === null || (unit !== 'kg' && unit !== 'l' && unit !== 'pcs')) return base;
+	const amount: Measure = { value: qty, unit };
+	const sized = sizeDirect(product, amount);
+	return sized ? { ...base, qty: sized.value, unit: sized.unit, amount } : base;
+}
+
+/** The chef's chosen delivery date over the words' one, said in the request's notes; a past or bad date is ignored. */
+export function withDate(
+	parsed: ParsedRequest,
+	chosen: string | undefined,
+	today: string
+): ParsedRequest {
+	if (
+		!chosen ||
+		!/^\d{4}-\d{2}-\d{2}$/.test(chosen) ||
+		chosen < today ||
+		chosen === parsed.deliverBy
+	)
+		return parsed;
+	return {
+		...parsed,
+		deliverBy: chosen,
+		ambiguities: parsed.ambiguities.filter((a) => !a.startsWith('no delivery date given')),
+		notes: [
+			...parsed.notes,
+			`delivery ${day(chosen)}: your choice; the request said ${day(parsed.deliverBy)}`
+		]
+	};
+}
+
 /** Runs the request flow and reports each step as it finishes. */
 export async function runRequest(text: string, d: RequestDeps): Promise<RequestResult> {
 	const emit = (e: RequestEvent) => d.onEvent?.(e);
@@ -389,7 +511,7 @@ export async function runRequest(text: string, d: RequestDeps): Promise<RequestR
 			read = { ...read, ambiguities: [...read.ambiguities, `review: ${r.verdict.feedback}`] };
 		if (r.verdict.kind === 'block') reviewBlock = r.verdict.reason;
 	} else read = await parse();
-	const parsed = applyAnswers(read, d.answers ?? []);
+	const parsed = withDate(applyAnswers(read, d.answers ?? []), d.deliverBy, d.today);
 	const parsedView = parsed as ParsedView;
 	if (reviewBlock) {
 		emit({ step: 'request', status: 'blocked', ms: ms(), data: parsedView });
@@ -444,7 +566,7 @@ export async function runRequest(text: string, d: RequestDeps): Promise<RequestR
 			message: 'No item found in the request.'
 		};
 
-	const lookup = await lookupItems(parsed, d);
+	const { lookup, picked } = await lookupItems(parsed, d);
 	const picks = lookup.items.filter((i) => i.pick);
 	// An item without a pick holds the whole order: placing the rest now and the answered item
 	// later would place the rest twice (the answer changes the lines, so the key).
@@ -469,7 +591,10 @@ export async function runRequest(text: string, d: RequestDeps): Promise<RequestR
 			lookup,
 			order: null,
 			unplaced,
-			message: 'Nothing to order yet: answer the questions above.'
+			// A passed cut-off is the whole answer: say it, with the date still open.
+			message: lookup.items.every((i) => i.answer?.kind === 'date')
+				? `${lookup.items[0].question} Nothing was ordered; choose that date to order.`
+				: 'Nothing to order yet: answer the questions above.'
 		};
 	if (unplaced.length && d.place !== false)
 		return {
@@ -490,11 +615,7 @@ export async function runRequest(text: string, d: RequestDeps): Promise<RequestR
 	if (d.place === false)
 		return { parsed: parsedView, lookup, order: null, message: 'Lookup only (place=false).' };
 
-	const lines = picks.map((i) => ({
-		productId: i.pick!.productId,
-		qty: (i.pick!.conversion as { salesQty: number }).salesQty,
-		unit: i.pick!.salesUnit
-	}));
+	const lines = picks.map((i) => orderLine(i, picked.get(i.item.id)!));
 	const idempotencyKey = await idempotencyKeyFor(d.kitchen.id, parsed.deliverBy, lines, d.nonce);
 	try {
 		const placed = await callTool(d.handlers, d.ctx, 'place_order', {
@@ -523,7 +644,26 @@ export async function runRequest(text: string, d: RequestDeps): Promise<RequestR
 			},
 			deliveryNote: d.kitchen.deliveryDays.includes(dow)
 				? null
-				: `${d.kitchen.name} takes deliveries on ${d.kitchen.deliveryDays.join(', ')}; ${parsed.deliverBy} is a ${dow}`
+				: `${d.kitchen.name} takes deliveries on ${d.kitchen.deliveryDays.map(cap).join(', ')}; ${day(parsed.deliverBy)} is not one of them`,
+			task: await taskForPlan({
+				tasks: d.tasks,
+				ctx: d.ctx,
+				now: nowOf(d),
+				plan,
+				title: text,
+				requirement: {
+					kind: 'order',
+					text,
+					deliverBy: parsed.deliverBy,
+					items: parsed.items.map((i) => ({
+						query: i.query,
+						qty: i.qty,
+						unit: i.unit,
+						constraints: i.constraints
+					}))
+				},
+				approval: approval?.state === 'pending' ? approval : null
+			})
 		};
 		const held = plan.lines.some((l) => l.state === 'held');
 		const nothingOrderable = plan.lines.every(
@@ -535,7 +675,12 @@ export async function runRequest(text: string, d: RequestDeps): Promise<RequestR
 			ms: ms(),
 			data: order
 		});
-		return { parsed: parsedView, lookup, order };
+		return {
+			parsed: parsedView,
+			lookup,
+			order,
+			message: 'This order is now in your Kitchen plan.'
+		};
 	} catch (e) {
 		const message = e instanceof Error ? e.message : String(e);
 		emit({ step: 'order', status: 'error', ms: ms(), data: null, message });

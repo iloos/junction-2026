@@ -14,6 +14,8 @@ import { applyExpectFail } from '../../../../evals/check';
 import type { CheckResult } from '../../../../evals/types';
 import { trialWorkspace } from '../agent/trial-harness';
 import { runRequest } from '../request/run';
+import { toEventBrief } from '../menu/brief';
+import { acceptMenu, planMenu, proposeForBrief } from '../menu/flow';
 
 interface Brief {
 	id: string;
@@ -110,6 +112,34 @@ describe('golden event briefs', () => {
 						pass: diets.some((x) => x === want || x.startsWith(`${want}:`)),
 						detail: `${JSON.stringify(diets)}`
 					});
+			}
+
+			// The menu track, as /request drives it: propose from the complete brief, the chef accepts, plan_event plans.
+			const brief = d && !r.event?.question ? toEventBrief(d, b.text) : null;
+			if (brief && w.env.ports.menus) {
+				const md = {
+					workspaceId: w.env.workspaceId,
+					store: w.env.ports.menus,
+					catalog: w.env.ports.catalog,
+					now: () => w.env.ports.clock.now()
+				};
+				const chef = w.ctx('chef');
+				const view = await proposeForBrief(md, { kitchenId: b.kitchen, brief });
+				const ref = { id: view.proposal.id, revision: view.proposal.revision };
+				const accepted = await acceptMenu(md, { ...ref, by: chef.actor });
+				results.push({
+					key: 'menu.accepted',
+					pass: accepted.ok,
+					detail: accepted.ok ? `revision ${ref.revision}` : accepted.error.message
+				});
+				if (accepted.ok) {
+					const planned = await planMenu({ ...md, handlers: w.handlers, ctx: chef }, ref);
+					results.push({
+						key: 'menu.planned',
+						pass: planned.ok && planned.value.state === 'planned',
+						detail: planned.ok ? planned.value.state : planned.error.message
+					});
+				}
 			}
 
 			// After the menu track: a held plan for this event, every course a dish, nothing silently dropped.

@@ -4,7 +4,9 @@
  * constraints the chef stated are hard filters, defaults ("semi-skimmed") are preferences and say so.
  */
 import type { Offer, Product } from '$lib/core/contracts';
+import { addDays, onScenario } from '$lib/core/scenario';
 import { toLot } from '$lib/core/services/orders';
+import { day } from '$lib/ui/format';
 import { convert, type Conversion } from './convert';
 import { PRODUCTS } from './lexicon';
 import type { ParsedItem } from './parse';
@@ -135,9 +137,55 @@ export function filterHits(
 	return { ranked, rejected };
 }
 
+const hhmm = new Intl.DateTimeFormat('en-GB', {
+	timeZone: 'Europe/Helsinki',
+	weekday: 'short',
+	hour: '2-digit',
+	minute: '2-digit'
+});
+
+/** "17:00 Mon": when an offer's ordering closes, on the scenario clock's time zone. */
+export function closesWords(iso: string): string {
+	const parts = Object.fromEntries(hhmm.formatToParts(new Date(iso)).map((x) => [x.type, x.value]));
+	return `${parts.hour}:${parts.minute} ${parts.weekday}`;
+}
+
+/** Set when ordering for this offer's date has closed at `now` (Valio's cut-off, D-1 Stock, D-2 Terminal). */
+export function cutoffPassed(offer: Offer, now: Date): string | null {
+	const c = offer.availability.closingTime;
+	if (!c || Date.parse(c) > now.getTime()) return null;
+	return `ordering closed at ${closesWords(c)}`;
+}
+
+/**
+ * The first delivery date after `deliverBy` whose cut-off is still ahead at `now`, from the scenario's own lead
+ * days (onScenario); null when none within two weeks.
+ */
+export function earliestDelivery(offer: Offer, deliverBy: string, now: Date): string | null {
+	for (let k = 1; k <= 14; k++) {
+		const d = addDays(deliverBy, k);
+		const c = onScenario(offer.availability, d).closingTime;
+		if (c && Date.parse(c) > now.getTime()) return d;
+	}
+	return null;
+}
+
+/** "The cut-off for Tue 8 Dec has passed (17:00 Mon); earliest delivery is Wed 9 Dec." */
+export function cutoffQuestion(deliverBy: string, closes: string, earliest: string | null): string {
+	return `The cut-off for ${day(deliverBy)} has passed (${closesWords(closes)}); ${earliest ? `earliest delivery is ${day(earliest)}` : 'no delivery date in the next two weeks is still open'}.`;
+}
+
 /** Why a quoted candidate can't be picked, or null when it can. */
-export function unpickable(offer: Offer | undefined, conversion: Conversion | null): string | null {
+export function unpickable(
+	offer: Offer | undefined,
+	conversion: Conversion | null,
+	now?: Date
+): string | null {
 	if (!offer) return 'no offer returned';
+	if (now) {
+		const closed = cutoffPassed(offer, now);
+		if (closed) return closed;
+	}
 	const k = offer.availability.kind;
 	if (k === 'undeliverable') return "Valio can't deliver it to this kitchen on this date";
 	if (k === 'out') return 'out of stock at Valio';

@@ -337,7 +337,7 @@ describe('request flow on the PGlite fixture', () => {
 			termsHash: plan.termsHash,
 			totalCents: 156000,
 			mandateVersion: kitchen.mandate.version,
-			requestedBy: 'kitchen_agent:request-agent',
+			requestedBy: 'the kitchen agent',
 			decidedBy: null
 		});
 		expect(Date.parse(ap.expiresAt ?? '')).not.toBeNaN();

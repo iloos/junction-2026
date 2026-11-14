@@ -401,3 +401,144 @@ describe('parse review (REVIEW=1)', () => {
 		expect(r.parsed.ambiguities.join()).toMatch(/review: .*"butter"/);
 	}, 60_000);
 });
+
+describe('P1/P2: constraints in their own clause, Finnish cream words', () => {
+	it('gives a constraint-only clause to the item before it', () => {
+		const r = parseRules('We need 2 l milk, lactose free, for Thursday', TODAY);
+		expect(r.items).toHaveLength(1);
+		expect(r.items[0].constraints).toEqual(['lactose_free']);
+		expect(r.items[0].query).toBe('lactose-free milk');
+		expect(r.items[0].search[0]).toBe('maito laktoositon');
+		expect(r.items[0].id).toBe('milk.lactose_free');
+	});
+
+	it('reads "vispikermaa" as cream and a trailing nominative "laktoositon"', () => {
+		const r = parseRules('Vispikermaa 10 litraa perjantaiksi, laktoositon', TODAY);
+		expect(r.items).toHaveLength(1);
+		expect(r.items[0]).toMatchObject({ product: 'cream', qty: 10, unit: 'l' });
+		expect(r.items[0].constraints).toEqual(['lactose_free']);
+	});
+
+	it('gives a leading constraint-only clause to the item after it', () => {
+		const r = parseRules('lactose-free, 2 l milk by Thursday', TODAY);
+		expect(r.items).toHaveLength(1);
+		expect(r.items[0].constraints).toEqual(['lactose_free']);
+	});
+});
+
+describe('core-physical-intent: /request sends the physical amount', () => {
+	it('places a direct need sized by the server from the litres typed', async () => {
+		const { h, ctx, kitchen } = await setup();
+		const r = await runRequest('2 l lactose-free milk by Thursday', {
+			handlers: h,
+			ctx,
+			today: TODAY,
+			kitchen,
+			nonce: 'amount'
+		});
+		expect(r.order).toBeTruthy();
+		const plan = r.order!.plan;
+		expect(plan.needs.map((n) => n.amount)).toEqual([{ value: 2, unit: 'l' }]);
+		expect(plan.lines[0].needId).toBe(plan.needs[0].id);
+		// The preview's quantity is the quantity placed.
+		const pick = r.lookup!.items[0].pick!;
+		expect(plan.lines[0].qty.value).toBe((pick.conversion as { salesQty: number }).salesQty);
+	});
+});
+
+describe('cut-off at lookup: a date whose ordering closed is said and an open one offered', () => {
+	it('"for tomorrow" on Mon 21:40 asks for Wed 9 Dec, then orders for it when chosen', async () => {
+		const { h, ctx, kitchen } = await setup();
+		const base = {
+			handlers: h,
+			ctx,
+			today: '2026-12-07',
+			kitchen,
+			now: new Date('2026-12-07T21:40:00+02:00'),
+			nonce: 'cutoff'
+		};
+		const r = await runRequest('4 kg butter for tomorrow', base);
+		expect(r.order).toBeNull();
+		const it = r.lookup!.items[0];
+		expect(it.pick).toBeNull();
+		expect(it.question).toMatch(
+			/^The cut-off for Tue 8 Dec has passed \(17:00 Mon\); earliest delivery is Wed 9 Dec\./
+		);
+		expect(it.answer).toMatchObject({ kind: 'date', date: '2026-12-09' });
+		expect(r.parsed.deliverBy).toBe('2026-12-08'); // never moved silently
+
+		const again = await runRequest('4 kg butter for tomorrow', {
+			...base,
+			deliverBy: '2026-12-09'
+		});
+		expect(again.order?.plan.deliverBy).toBe('2026-12-09');
+		expect(again.parsed.notes.join()).toMatch(
+			/delivery Wed 9 Dec: your choice; the request said Tue 8 Dec/
+		);
+	});
+});
+
+describe('cut-off before the case question', () => {
+	it('"2 cases of butter tomorrow" after the cut-off offers the open date, not case sizes', async () => {
+		const { h, ctx, kitchen } = await setup();
+		const r = await runRequest('2 cases of butter tomorrow', {
+			handlers: h,
+			ctx,
+			today: '2026-12-07',
+			kitchen,
+			now: new Date('2026-12-07T21:40:00+02:00')
+		});
+		expect(r.lookup!.items[0].answer).toMatchObject({ kind: 'date', date: '2026-12-09' });
+	});
+});
+
+describe('one clock: the workspace store clock judges cut-offs', () => {
+	it('Mon 09:00 on ports.clock: "tomorrow" is orderable and no cut-off is said', async () => {
+		const env = await createDbPorts({ now: '2026-12-07T09:00:00+02:00' });
+		env.overlay.clear();
+		const h = createHandlers(env.ports);
+		const ctx: CallContext = {
+			workspaceId: env.workspaceId,
+			runId: env.runId,
+			actor: { kind: 'kitchen_agent', id: 'a' },
+			scopes: SCOPES_BY_ACTOR.kitchen_agent,
+			via: 'test'
+		};
+		const kitchen = (await env.store.kitchens(env.workspaceId)).find((k) => k.id === 'k-hotel')!;
+		const r = await runRequest('4 kg butter for tomorrow', {
+			handlers: h,
+			ctx,
+			today: '2026-12-07',
+			kitchen,
+			clock: env.ports.clock,
+			nonce: 'clock'
+		});
+		expect(r.lookup!.items[0].pick).toBeTruthy();
+		expect(r.order?.plan.deliverBy).toBe('2026-12-08');
+		const said = [r.message, ...r.lookup!.items.map((i) => i.question)].join(' ');
+		expect(said).not.toMatch(/cut-off/i);
+	});
+
+	it('Mon 21:40 on ports.clock: the same words ask for Wed 9 Dec', async () => {
+		const env = await createDbPorts({ now: '2026-12-07T21:40:00+02:00' });
+		env.overlay.clear();
+		const h = createHandlers(env.ports);
+		const ctx: CallContext = {
+			workspaceId: env.workspaceId,
+			runId: env.runId,
+			actor: { kind: 'kitchen_agent', id: 'a' },
+			scopes: SCOPES_BY_ACTOR.kitchen_agent,
+			via: 'test'
+		};
+		const kitchen = (await env.store.kitchens(env.workspaceId)).find((k) => k.id === 'k-hotel')!;
+		const r = await runRequest('4 kg butter for tomorrow', {
+			handlers: h,
+			ctx,
+			today: '2026-12-07',
+			kitchen,
+			clock: env.ports.clock
+		});
+		expect(r.order).toBeNull();
+		expect(r.lookup!.items[0].answer).toMatchObject({ kind: 'date', date: '2026-12-09' });
+	});
+});

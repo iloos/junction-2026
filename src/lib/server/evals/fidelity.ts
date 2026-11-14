@@ -172,7 +172,8 @@ export async function playText(
 				kitchen: k,
 				llm: null,
 				llmKind: 'fixture',
-				place: true
+				place: true,
+				clock: w.env.ports.clock
 			});
 			const said = [
 				r.message,

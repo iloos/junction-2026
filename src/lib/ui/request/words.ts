@@ -1,6 +1,6 @@
 /** Plain-word reasons for a request's order lines, with the kitchen's own numbers. */
 import type { Line } from '$lib/core/contracts';
-import { money } from '$lib/ui/format';
+import { money, num } from '$lib/ui/format';
 import { reasonLong, reasonShort } from '$lib/ui/reasons';
 
 export interface Caps {
@@ -67,3 +67,63 @@ export function offerSourceWords(sources: string[]): string {
 	};
 	return sources.map((s) => map[s] ?? s).join(' + ') || 'no offers';
 }
+
+/** Valio sales-unit codes in words: (singular, plural). Unknown codes stay as written. */
+const SALES_UNIT: Record<string, [string, string]> = {
+	ST: ['pack', 'packs'],
+	KPL: ['piece', 'pieces'],
+	PCE: ['piece', 'pieces'],
+	KI: ['case', 'cases'],
+	LTK: ['case', 'cases'],
+	PS: ['bag', 'bags'],
+	PSS: ['bag', 'bags'],
+	BAG: ['bag', 'bags'],
+	PKT: ['packet', 'packets'],
+	PAK: ['pack', 'packs'],
+	PRK: ['tub', 'tubs'],
+	RAS: ['tin', 'tins'],
+	SKI: ['crate', 'crates'],
+	LAV: ['pallet', 'pallets']
+};
+
+/** "1 pack" / "1,000 packs"; KG stays "20 kg". */
+export function salesUnitWords(qty: number, unit: string): string {
+	if (unit === 'KG') return `${num(qty, 3)} kg`;
+	const w = SALES_UNIT[unit.toUpperCase()];
+	return `${num(qty, 3)} ${w ? (qty === 1 ? w[0] : w[1]) : unit}`;
+}
+
+/** A physical amount, small ones in g or dl: 0.5 kg → "500 g". */
+export function measureWords(value: number, unit: string): string {
+	if (unit === 'kg' && value < 1) return `${num(value * 1000, 3)} g`;
+	if (unit === 'l' && value < 1) return `${num(value * 10, 3)} dl`;
+	return `${num(value, 3)} ${unit}`;
+}
+
+/**
+ * A sales quantity in words with what one unit holds, when known: "1,000 packs of 1 l", "4 cases of 5 kg",
+ * "20 kg". `physical` is the whole line's physical amount (LineView.physical).
+ */
+export function quantityWords(
+	qty: number,
+	unit: string,
+	physical?: { value: number; unit: string } | null
+): string {
+	const base = salesUnitWords(qty, unit);
+	if (unit === 'KG' || !physical || qty <= 0) return base;
+	return `${base} of ${measureWords(physical.value / qty, physical.unit)}`;
+}
+
+/** One sales unit in words, for prices: "pack", "case", "kg". */
+export function unitWord(unit: string): string {
+	return salesUnitWords(1, unit).replace(/^1 /, '');
+}
+
+/** An approval's state as the chef reads it. */
+export const APPROVAL_STATE_WORDS: Record<string, string> = {
+	pending: 'Waiting for approval',
+	granted: 'Approved',
+	denied: 'Denied',
+	invalidated: 'Voided by a change',
+	expired: 'Expired'
+};

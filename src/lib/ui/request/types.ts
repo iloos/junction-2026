@@ -33,7 +33,9 @@ export type AnswerSpec =
 			options: { label: string; detail: string; answer: RequestAnswer }[];
 			/** Also offer "give the amount instead" in these units. */
 			alsoQty?: { units: ReqUnit[] };
-	  };
+	  }
+	/** Ordering for the date has closed: one click re-runs the request for the first date still open. */
+	| { kind: 'date'; item: string; date: string; label: string };
 
 export interface ParsedView {
 	text: string;
@@ -138,6 +140,8 @@ export interface OrderView {
 		mandateVersion: number;
 	};
 	deliveryNote: string | null;
+	/** The procurement task this order belongs to (null id: no task store yet) and the plan in the Kitchen. */
+	task: TaskLink;
 }
 
 export interface CommitView {
@@ -228,3 +232,7 @@ export interface BriefQuestion {
 	/** Chips may be combined (dietary): the page sends the chosen values together. */
 	multi?: boolean;
 }
+
+export type { MenuPlanResult, MenuView } from '$lib/server/menu/flow';
+import type { TaskLink } from '$lib/server/request/task';
+export type { TaskLink };

@@ -49,7 +49,7 @@ export async function actors(env: Env, workspaceId: string) {
 }
 
 /** Ports built once per process; handlers first so the store is wired to the ops bus. */
-async function ports() {
+export async function ports() {
 	await realHandlers();
 	return createServerPorts();
 }
@@ -82,6 +82,8 @@ export async function submitRequest(o: {
 	answers?: RequestAnswer[];
 	briefAnswers?: BriefAnswer[];
 	confirmLarge?: boolean;
+	/** The chef's chosen delivery date (a cut-off answer). */
+	deliverBy?: string;
 	env: Env;
 	/** The page passes its workspace; the API passes the key's context instead. */
 	workspaceId?: string;
@@ -122,6 +124,9 @@ export async function submitRequest(o: {
 		answers: o.answers,
 		briefAnswers: o.briefAnswers,
 		confirmLarge: o.confirmLarge,
+		deliverBy: o.deliverBy,
+		clock: (await ports()).ports.clock,
+		tasks: (await ports()).ports.tasks,
 		onEvent: o.onEvent,
 		review
 	});

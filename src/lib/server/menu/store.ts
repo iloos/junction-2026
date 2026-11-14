@@ -13,22 +13,14 @@ import {
 	type MenuProposal as MenuProposalT,
 	type Result
 } from '$lib/core/contracts';
-import { canonicalJson, sha256Hex } from '$lib/core/hash';
+import { menuDigest as proposalDigest } from '$lib/core/demand/menu';
 import type { MenuStore } from '$lib/core/ports';
 
 /** Who may review a menu: a chef session, never an agent key or an approver alone. */
 export const REVIEWERS = new Set<Actor['kind']>(['chef']);
 
-/**
- * The digest a review binds to: the canonical proposal without its status and review record, so the chef accepts
- * exactly these dishes, amounts and brief, and any later edit (a new revision) needs a new review.
- */
-export async function proposalDigest(p: MenuProposalT): Promise<string> {
-	// Status and review are what reviewing changes; everything else is what the chef accepted.
-	// eslint-disable-next-line @typescript-eslint/no-unused-vars
-	const { status, review, ...terms } = p;
-	return sha256Hex(canonicalJson(terms));
-}
+/** The digest a review binds to: core's one formula (the canonical proposal without status and review). */
+export { menuDigest as proposalDigest } from '$lib/core/demand/menu';
 
 export class MenuStoreError extends Error {}
 

@@ -17,11 +17,7 @@
 					"Tarvitaan 2 litraa laktoositonta maitoa torstaihin mennessä",
 					"Tilaa 2 l laktoositonta maitoa torstaiksi"
 				]
-			},
-			"expectFail": {
-				"P1-clause-constraint": ["en#2.request.plan"]
-			},
-			"$expectFailNote": "P1 (request parser, B): a constraint between the product and the date (\"2 l milk, lactose free, for Thursday\") is dropped by the rules parser; the item is asked about instead of carrying lactose_free."
+			}
 		},
 		{
 			"id": "order-butter-tomorrow",
@@ -55,16 +51,7 @@
 					"10 l laktoositonta vispikermaa perjantaiksi",
 					"Vispikermaa 10 litraa perjantaiksi, laktoositon"
 				]
-			},
-			"expectFail": {
-				"P2-fi-lexicon": [
-					"fi#1.request.plan",
-					"fi#1.agent.plan",
-					"fi#2.request.plan",
-					"fi#2.agent.plan"
-				]
-			},
-			"$expectFailNote": "P2 (request lexicon, B): \"vispikermaa\" is not in the word list, and the nominative \"laktoositon\" is not read as lactose_free (P1)."
+			}
 		},
 		{
 			"id": "event-brief",
@@ -117,20 +104,7 @@
 			"texts": {
 				"en": ["4 kg lactose-free butter tomorrow", "Order 4 kg lactose-free butter for tomorrow"],
 				"fi": ["4 kg laktoositonta voita huomiseksi", "Tilaa 4 kg laktoositonta voita huomiseksi"]
-			},
-			"expectFail": {
-				"LATE-request-words": [
-					"en#1.request.late.namesCutoff",
-					"en#1.request.late.offersNext",
-					"en#2.request.late.namesCutoff",
-					"en#2.request.late.offersNext",
-					"fi#1.request.late.namesCutoff",
-					"fi#1.request.late.offersNext",
-					"fi#2.request.late.namesCutoff",
-					"fi#2.request.late.offersNext"
-				]
-			},
-			"$expectFailNote": "Today the line is held unorderable with reason cutoff_passed (no commit, no shift), but /request says nothing in words and offers no date (B)."
+			}
 		}
 	]
 }

@@ -66,7 +66,7 @@ export const PRODUCTS: ProductWord[] = [
 	},
 	{
 		key: 'cream',
-		forms: ['cream', 'kerma', 'kermaa', 'kuohukerma', 'kuohukermaa'],
+		forms: ['cream', 'kerma', 'kermaa', 'kuohukerma', 'kuohukermaa', 'vispikerma', 'vispikermaa'],
 		search: 'kerma',
 		categories: ['10401'],
 		prefer: { token: 'kuohukerma', reason: 'no type given: whipping cream (kuohukerma)' }
@@ -139,7 +139,7 @@ export const CONSTRAINTS: {
 			'laktoositon',
 			'laktoositonta',
 			'laktoosittomia',
-			'laktoositonta'
+			'laktoosittoman'
 		],
 		search: 'laktoositon'
 	},
