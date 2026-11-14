@@ -47,10 +47,10 @@ export function lineView(
 	const unknown = l.offer?.availability.kind === 'unknown';
 	const qty = l.qty.value;
 	const covered = (n: number) => ({
-		confirmedCover: measure(l, unknown ? 0 : n),
-		unconfirmedCover: measure(l, unknown ? n : 0)
+		knownStockCover: measure(l, unknown ? 0 : n),
+		unknownStockCover: measure(l, unknown ? n : 0)
 	});
-	const none = { confirmedCover: measure(l, 0), unconfirmedCover: measure(l, 0) };
+	const none = { knownStockCover: measure(l, 0), unknownStockCover: measure(l, 0) };
 
 	if (l.state === 'committed')
 		return {

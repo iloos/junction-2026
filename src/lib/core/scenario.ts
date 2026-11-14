@@ -1,5 +1,5 @@
 /**
- * The one scenario clock (review 01:55, R0-d; dates ruled by the lead). The simulator, the kitchen and /ops
+ * The one scenario clock. The simulator, the kitchen and /ops
  * all read these, so the story is consistent on stage: Monday evening, the cut-off on Tuesday, delivery
  * Thursday, the Christmas buffet on Saturday. Pure: no Svelte, no DOM, no I/O, no reading the wall clock.
  * Terminal (supplier) lead times are not enforced by core, so the demo has one cut-off.
@@ -52,9 +52,10 @@ function helsinkiOffset(date: string): string {
 	return name?.replace('GMT', '') || '+02:00';
 }
 
-function minusDays(date: string, days: number): string {
+/** A calendar date `days` later (negative: earlier), in UTC so the local timezone cannot shift it. */
+export function addDays(date: string, days: number): string {
 	const d = new Date(`${date}T00:00:00Z`);
-	d.setUTCDate(d.getUTCDate() - days);
+	d.setUTCDate(d.getUTCDate() + days);
 	return d.toISOString().slice(0, 10);
 }
 
@@ -63,7 +64,7 @@ function minusDays(date: string, days: number): string {
  * it, the first day whose Terminal cut-off (D-2) is still ahead. Never a date whose ordering already closed.
  */
 export function defaultDeliverBy(today: string): string {
-	const earliest = minusDays(today, -(LEAD_DAYS.Terminal + 1));
+	const earliest = addDays(today, LEAD_DAYS.Terminal + 1);
 	return earliest > SCENARIO.delivery ? earliest : SCENARIO.delivery;
 }
 
@@ -76,7 +77,7 @@ export function defaultDeliverBy(today: string): string {
 export function onScenario(a: Availability, deliverBy: string): Availability {
 	if (!a.availableDate && !a.closingTime) return a;
 	const lead = LEAD_DAYS[a.logisticModel ?? 'Stock'];
-	const day = minusDays(deliverBy, lead);
+	const day = addDays(deliverBy, -lead);
 	const time = a.closingTime?.slice(11, 19) || DEFAULT_CLOSE;
 	const was = [
 		a.availableDate && `available ${a.availableDate}`,

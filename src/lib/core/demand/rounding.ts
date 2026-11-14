@@ -8,6 +8,12 @@ export function ceilSafe(x: number): number {
 	return Math.ceil(x - EPS);
 }
 
+/** Round a quantity up to whole lots of `step`: the one lot rounding (needs, direct amounts, typed quantities). */
+export function roundToLots(x: number, step: number): { lots: number; value: number } {
+	const lots = Math.max(0, ceilSafe(x / step));
+	return { lots, value: +(lots * step).toFixed(3) };
+}
+
 /** What a product is sold as: its sales unit, and either a catch-weight lot step or a pack. */
 export interface SalesSpec {
 	salesUnit: string;
@@ -38,8 +44,7 @@ export function roundToSales(need: Measure, spec: SalesSpec): SalesQty {
 
 	if (spec.lotStep !== undefined && !spec.pack) {
 		if (need.unit !== 'kg') throw new Error(`lot-step rounding needs kg, got ${need.unit}`);
-		const lots = Math.max(0, ceilSafe(v / spec.lotStep));
-		const qty = lots * spec.lotStep;
+		const { lots, value: qty } = roundToLots(v, spec.lotStep);
 		return {
 			value: qty,
 			unit,

@@ -34,14 +34,15 @@ import {
 	type TierResult
 } from '../mandate/tier';
 import type { CallContext, Ports, Tx } from '../ports';
-import { seedNeedQty, sizeDirect, type EventSeed } from '../demand';
+import { roundToLots, seedNeedQty, sizeDirect, type EventSeed } from '../demand';
 import type { WorkspaceState } from '../state';
 
 const APPROVAL_TTL_MS = 24 * 3600 * 1000;
 
 const short = async (s: string) => (await sha256Hex(s)).slice(0, 12);
 
-function pending(ctx: CallContext, op: PendingOp['op'], idempotencyKey?: string): PendingOp {
+/** The one op envelope builder: who, through what, for which agent run (initiatedBy), and the op. */
+export function pending(ctx: CallContext, op: PendingOp['op'], idempotencyKey?: string): PendingOp {
 	return {
 		workspaceId: ctx.workspaceId,
 		runId: ctx.runId,
@@ -53,7 +54,11 @@ function pending(ctx: CallContext, op: PendingOp['op'], idempotencyKey?: string)
 	};
 }
 
-async function kitchenOf(ports: Ports, ctx: CallContext, id: string): Promise<Kitchen | null> {
+export async function kitchenOf(
+	ports: Ports,
+	ctx: CallContext,
+	id: string
+): Promise<Kitchen | null> {
 	return (await ports.store.kitchens(ctx.workspaceId)).find((k) => k.id === id) ?? null;
 }
 
@@ -65,8 +70,7 @@ export function toLot(qty: number, unit: string, p: Product): DraftLine['qty'] {
 	if (qty <= 0) return { value: 0, unit };
 	const step = p.lotStep;
 	if (step <= 0.01) return { value: qty, unit };
-	const lots = Math.max(1, Math.ceil(qty / step - 1e-9));
-	const value = +(lots * step).toFixed(3);
+	const { lots, value } = roundToLots(qty, step);
 	return value === qty
 		? { value, unit }
 		: {

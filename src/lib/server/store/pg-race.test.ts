@@ -1,5 +1,5 @@
 /**
- * R0-e: the commit guarantees under real concurrency on Postgres (Aiven). Opt-in only: `pnpm test:pg`
+ * The commit guarantees under real concurrency on Postgres (Aiven). Opt-in only: `pnpm test:pg`
  * (MANDATE_TEST_PG=1 and DATABASE_URL). Runs in its own fresh workspace and run, never ws-demo, and deletes every
  * row it wrote. Asserts the end state (orders, stock, spend, ops), not just call results:
  *  1. the same plan and key committed twice at once → one receipt, one order;

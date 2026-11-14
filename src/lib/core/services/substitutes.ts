@@ -4,7 +4,7 @@
  * know. Each candidate is sized
  * from the dish's served amount and its own yield and pack, checked by the shared validator, and ranked.
  *
- * Three things are kept apart (review round 3, finding 4):
+ * Three things are kept apart:
  *  - the recommendation (`chosen`): rank 1 under the rules used, never a rejected candidate;
  *  - the plan's current substitute (`saved`): what will be bought until something is applied;
  *  - applying: replaces `saved` with the recommendation, re-quotes, and so voids the approval.
@@ -34,6 +34,7 @@ import { draftFromLine, recalledProducts, type DraftLine } from '../mandate/tier
 import { rankCandidates, supplyOf } from '../rank/rank';
 import type { CallContext } from '../ports';
 import { prefetch, requote, type ServicePorts } from './events';
+import { pending } from './orders';
 
 /* eslint-disable @typescript-eslint/no-explicit-any -- seed candidate/rescue entries are loose JSON */
 type Loose = any;
@@ -246,7 +247,7 @@ export async function findSubstitutes(
 	// The recommendation under these rules. D8: a product whose supply Valio does not confirm loses to the seed's
 	// recipe when every ingredient is known stock for the amount it needs; it stays listed, ranked and labelled.
 	const top = ranked.filter((r) => r.rank !== null).sort((a, b) => a.rank! - b.rank!)[0];
-	const recipeConfirmed =
+	const recipeKnownStock =
 		recipe !== null &&
 		recipeIds.length > 0 &&
 		((recipe.ingredients ?? []) as Loose[]).every((g) => {
@@ -259,7 +260,7 @@ export async function findSubstitutes(
 				(a?.amount == null || a.amount >= qty)
 			);
 		});
-	const best = top && (top.supply === 'known_stock' || !recipeConfirmed) ? top : undefined;
+	const best = top && (top.supply === 'known_stock' || !recipeKnownStock) ? top : undefined;
 	let kind: 'product' | 'make_in_house' | 'none' = 'product';
 	let labourNote: string | undefined;
 	let drafts: DraftLine[] = [];
@@ -332,14 +333,7 @@ export async function findSubstitutes(
 				return {
 					error: err('STALE_VERSION', 'the plan changed while substitutes were ranked').error
 				};
-			const envelope = (op: PendingOp['op']): PendingOp => ({
-				workspaceId: ctx.workspaceId,
-				runId: ctx.runId,
-				actor: ctx.actor,
-				via: ctx.via,
-				...(ctx.initiatedBy ? { initiatedBy: ctx.initiatedBy } : {}),
-				op
-			});
+			const envelope = (op: PendingOp['op']) => pending(ctx, op);
 			const ops: PendingOp[] = [];
 			let version = plan.version;
 			if (old.size) {

@@ -1,4 +1,4 @@
-/** Prod rehearsal: a dish the event seed knows is rescued only from its own candidates and Valio's rules. */
+/** A dish the event seed knows is rescued only from its own candidates and Valio's rules. */
 import { beforeEach, describe, expect, it } from 'vitest';
 import { SCOPES_BY_ACTOR, type Weights } from '$lib/core/contracts';
 import type { CallContext, ToolHandlers } from '$lib/core/ports';

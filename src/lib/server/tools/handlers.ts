@@ -3,7 +3,7 @@ import type { CallContext, ToolHandlers, WebExecutionContext } from '$lib/core/p
 import type { WebToolName } from '$lib/server/web/tools';
 import { createHandlers } from '$lib/core/services/handlers';
 import { createServerPorts } from '$lib/server/store/server-ports';
-import { createOps, drizzleOpsReader, publish, setFixtureOpsReader } from '$lib/server/bus';
+import { createOps, drizzleOpsReader, setFixtureOpsReader } from '$lib/server/bus';
 import { dbMode } from '$lib/server/db/client';
 import type { AnyDb } from '$lib/server/store/drizzle-store';
 import { env } from '$env/dynamic/private';
@@ -57,7 +57,7 @@ export function withStubFallback(real: ToolHandlers, stub: ToolHandlers): ToolHa
  */
 let real: Promise<ToolHandlers> | null = null;
 export function realHandlers(): Promise<ToolHandlers> {
-	real ??= createServerPorts({ publish: (ws, ev) => void publish(ws, ev) }).then((b) => {
+	real ??= createServerPorts().then((b) => {
 		// Fixture mode: the event stream catches up from the same PGlite the tools write to.
 		if (dbMode() === 'fixture') setFixtureOpsReader(drizzleOpsReader(b.db as unknown as AnyDb));
 		// Gemini Decisions (live unless LLM_PROVIDER=fixture) with recorded replay, then rules.

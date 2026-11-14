@@ -1,4 +1,4 @@
-/** Prod rehearsal P1: a December story never shows the November cut-offs of the cached Valio data. */
+/** Quotes are on the scenario's December dates, never the November dates of the cached Valio data. */
 import { describe, expect, it } from 'vitest';
 import { SCOPES_BY_ACTOR } from '$lib/core/contracts';
 import { SCENARIO } from '$lib/core/scenario';

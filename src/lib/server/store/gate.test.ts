@@ -1,5 +1,5 @@
 /**
- * Review round 3, findings 1–3: the gate never buys more than approved, never orders without a price, and the
+ * The gate never buys more than approved, never orders without a price, and the
  * kitchen's hard rules (allergens, origin, sales unit) rule a line out before any approval can see it.
  */
 import { beforeEach, describe, expect, it } from 'vitest';

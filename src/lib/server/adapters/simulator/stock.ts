@@ -1,7 +1,7 @@
 /**
  * Simulator stock truth per run (sim_stock). A product's row is seeded lazily from its current offer (cached Valio
  * amount with any overlay), then commits consume it with one atomic conditional update (D6: no read-then-write).
- * Terminal / unknown supply has no row: it commits as "awaiting supplier", never as confirmed cover.
+ * Terminal / unknown supply has no row: it commits as "awaiting supplier", never as known-stock cover.
  */
 import { and, eq, sql } from 'drizzle-orm';
 import { err, ok } from '$lib/core/contracts';

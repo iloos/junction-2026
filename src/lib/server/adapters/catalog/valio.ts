@@ -188,7 +188,9 @@ export function createValioCatalog(
 					const res = await f(`${base}/api/${ep}`, {
 						method: 'POST',
 						headers: { 'content-type': 'application/json', 'X-API-Key': live.apiKey },
-						body: JSON.stringify({ customer, requestedDate: date, products: part })
+						body: JSON.stringify({ customer, requestedDate: date, products: part }),
+						// A hung call counts as a failure (retry, then the breaker), never a stuck request.
+						signal: AbortSignal.timeout(10_000)
 					});
 					if (res.status === 429 || res.status === 403 || res.status >= 500)
 						throw new Error(`HTTP ${res.status}`);

@@ -1,14 +1,10 @@
 /** Read-only catalogue tools: search the static catalogue, quote live terms for known ids. */
 import { ok, type Result, type ToolInput, type ToolOutput } from '../contracts';
 import type { CallContext, Ports } from '../ports';
-import { defaultDeliverBy } from '../scenario';
+import { defaultDeliverBy, scenarioDate } from '../scenario';
 
 /** Helsinki calendar date of the simulator clock (deliverBy default). */
-export function simToday(ports: Ports): string {
-	return new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Helsinki' }).format(
-		ports.clock.now()
-	);
-}
+export const simToday = (ports: Ports): string => scenarioDate(ports.clock.now());
 
 export async function searchProducts(
 	ports: Ports,

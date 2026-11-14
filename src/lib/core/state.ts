@@ -57,8 +57,8 @@ function invalidateApprovals(state: WorkspaceState, planId: string): Record<stri
 }
 
 /**
- * Who may commit which lines (★5/★7). Every order line is checked against the authority it names (F8; orders
- * stored before per-line authority read the order-level one). `mandate`: only `act`-tier eligible lines, never for
+ * Who may commit which lines (★5/★7). Every order line is checked against the authority it names (an order line
+ * without one names the order's). `mandate`: only `act`-tier eligible lines, never for
  * an external caller or an externally created plan. An approval: granted, bound to this exact plan version and
  * terms, and covering that line.
  */
@@ -91,15 +91,12 @@ function commitAuthority(
 		if (line.state === 'committed') return err('DUPLICATE', `line ${ol.lineId} already committed`);
 		const auth = ol.authority ?? order.authority;
 		if (auth === 'mandate') {
-			// Legacy orders named one approval for all lines; their act-tier lines stood on the mandate.
 			if (!external && line.state === 'eligible' && line.tier === 'act') continue;
 			return err('FORBIDDEN', `line ${ol.lineId} is outside the mandate and needs an approval`);
 		}
 		const a = usable(auth.approvalId);
 		if (!a.ok) return a;
 		if (a.value.lineIds.includes(ol.lineId)) continue;
-		// A legacy order (no per-line authority) may carry act-tier lines under the order's approval.
-		if (!ol.authority && !external && line.state === 'eligible' && line.tier === 'act') continue;
 		return err('FORBIDDEN', `approval ${auth.approvalId} does not cover line ${ol.lineId}`);
 	}
 	return ok(true);

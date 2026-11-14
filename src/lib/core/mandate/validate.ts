@@ -1,5 +1,5 @@
 /**
- * The one deterministic line validator, shared by tiering, ranking and commit (review round 3, finding 3).
+ * The one deterministic line validator, shared by tiering, ranking and commit.
  * Every finding says what it does to the line:
  *  - `forbid`: the kitchen's rules or Valio's facts rule it out; it is unorderable and no approval can pass it.
  *  - `gap`: a fact needed to form an order is missing (price) or not true now (stock); held, never approvable.

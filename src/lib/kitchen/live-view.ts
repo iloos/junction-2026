@@ -91,7 +91,7 @@ function names(label: string): { nameFi: string; name: string } {
 const isOpen = (l: Line) => l.state === 'eligible' || l.state === 'held';
 /** Supply with no stated quantity, and short stock, from the server's read model. */
 const hasUnknown = (l: Line) =>
-	(l.view?.unconfirmedCover.value ?? 0) > 0 || l.view?.blockedReason?.detail === 'qty';
+	(l.view?.unknownStockCover.value ?? 0) > 0 || l.view?.blockedReason?.detail === 'qty';
 const isShort = (l: Line) => l.view?.blockedReason?.detail === 'stock';
 
 function verdict(c: CandidateView): string {

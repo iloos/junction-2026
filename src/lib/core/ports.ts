@@ -124,11 +124,6 @@ export interface Web {
 	): Promise<{ url: string; title: string; text?: string }[]>;
 }
 
-/** Background jobs (Modal). Jobs write back only through scoped APIs, never the DB. */
-export interface Jobs {
-	enqueue(job: { name: string; input: unknown }): Promise<{ jobId: string }>;
-}
-
 /** Opaque transaction handle; the store adapter knows what it is. */
 export type Tx = { readonly __tx: unique symbol };
 
@@ -244,7 +239,6 @@ export interface Ports {
 	decide: Decide;
 	llm: Llm;
 	web: Web;
-	jobs: Jobs;
 	store: Store;
 	ops: Ops;
 	/** Menu proposals (Track B); plan_event{proposal} reads reviewed revisions from it. Absent = menus unsupported. */

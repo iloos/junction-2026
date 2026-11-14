@@ -137,7 +137,7 @@ export const ScoreBreakdown = z.object({
 export type ScoreBreakdown = z.infer<typeof ScoreBreakdown>;
 
 /**
- * Server-derived read model for one line (review round 4, triage #4): what the UI may do with it, so clients never
+ * Server-derived read model for one line: what the UI may do with it, so clients never
  * infer it from state + reasons. Computed at read time (it depends on the live approval), never stored.
  */
 export const LineView = z.object({
@@ -145,10 +145,13 @@ export const LineView = z.object({
 	reviewable: z.boolean(),
 	/** Can be committed now: in the mandate, or covered by a granted approval, and nothing blocks it. */
 	committable: z.boolean(),
-	/** Quantity backed by known stock (sales units; kg for KG-sold products). */
-	confirmedCover: Measure,
+	/**
+	 * Quantity Valio states stock for (sales units; kg for KG-sold products). Known stock is not supplier-confirmed:
+	 * only a receipt confirms (FulfilmentView.supplierConfirmed) (D10).
+	 */
+	knownStockCover: Measure,
 	/** Quantity ordered or to be ordered whose supply is unknown (Terminal), never counted as cover. */
-	unconfirmedCover: Measure,
+	unknownStockCover: Measure,
 	/** What the line's sales quantity is physically (13 ST of ham ≈ 26 kg net), when the pack content is known. */
 	physical: Measure.optional(),
 	/** Price per sales unit, as Valio sells it (€/ST, €/KI, €/KG). */
@@ -212,7 +215,7 @@ export const Line = z.object({
 export type Line = z.infer<typeof Line>;
 
 /**
- * Server-derived coverage of one need (review round 5, F12): the one definition of "covered" that Kitchen, Ops,
+ * Server-derived coverage of one need: the one definition of "covered" that Kitchen, Ops,
  * Request and the agent's outcome all read. An exact partition of `required`, in the need's unit:
  *
  *   required = supplierConfirmed + awaitingSupplier + plannedKnown + plannedUnknown + unresolved
