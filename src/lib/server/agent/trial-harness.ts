@@ -2,6 +2,7 @@ import { SCOPES_BY_ACTOR, type ActorKind, type OpEnvelope } from '$lib/core/cont
 import type { CallContext, ToolHandlers } from '$lib/core/ports';
 import { createHandlers } from '$lib/core/services/handlers';
 import { createDbPorts } from '$lib/server/store/db-ports';
+import { proposeMenuHandler } from '$lib/server/menu/tool';
 import type { AnyDb } from '$lib/server/store/drizzle-store';
 import { projectedTaskStore } from '$lib/server/tasks/project';
 import { drizzleTaskStore } from '$lib/server/tasks/store';
@@ -27,7 +28,11 @@ export async function trialWorkspace() {
 	// unknown), which would hold every routine order for a chef and leave no commit path to test.
 	for (const productId of ['464699', '464411', '464249', '464201'])
 		env.overlay.setAvailability({ productId, amount: 5000, label: 'trial: known stock' });
-	const handlers: ToolHandlers = createHandlers(env.ports);
+	// The core handlers plus propose_menu, which the server layer serves (team templates here: no model).
+	const handlers: ToolHandlers = {
+		...createHandlers(env.ports),
+		propose_menu: proposeMenuHandler({ ports: env.ports, llm: () => null })
+	} as ToolHandlers;
 	// Tasks on the same database (agent_tasks), read with their derived fields fresh, as the server wires them.
 	env.ports.tasks ??= projectedTaskStore(
 		drizzleTaskStore(env.db as unknown as AnyDb),

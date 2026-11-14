@@ -43,7 +43,7 @@ describe('typed intent (finding D)', () => {
 	it('never turns an unsupported event into the seeded Christmas plan', () => {
 		const r = resolveIntent('Plan a birthday party for 30 at k-hotel', ctx());
 		expect(r).toMatchObject({ kind: 'unsupported' });
-		expect((r as { reason: string }).reason).toMatch(/No seeded event/);
+		expect((r as { reason: string }).reason).toMatch(/menu has to be proposed/);
 	});
 
 	it('reads quantity, unit, kitchen and date of a routine order with the request parser', () => {

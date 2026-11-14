@@ -82,7 +82,7 @@ describe('suite: chat turns (review §5: multi-turn, approval handoff, adversari
 				'commit_order'
 			]);
 			const done = c1.at(-1);
-			expect(done?.type === 'done' && done.text).toMatch(/ordered for €/);
+			expect(done?.type === 'done' && done.text).toMatch(/^Ordered: /);
 			const c2 = await chatTurn({ taskId: bigId, continue: true }, deps);
 			expect(c2.some((e) => e.type === 'step' && e.tool === 'commit_order')).toBe(false);
 			const s = await w.state();
@@ -513,3 +513,76 @@ describe('suite: chat turns · same words, same basket', () => {
 			expect(basket(chat)).toEqual(basket(req.plans));
 		});
 });
+
+describe('suite: chat turns · events, unclear words, Continue with nothing new', () => {
+	it(
+		'an event brief is asked, proposed as a menu, reviewed by the chef, then planned from chat',
+		{ timeout: 120_000 },
+		async () => {
+			const { w, deps } = await setup();
+			let r = await chatTurn({ text: 'i want a 7 course meal for 3 ppl' }, deps);
+			const taskId = r.at(-1)!.taskId;
+			expect(JSON.stringify(r)).not.toMatch(/seeded/i);
+			for (let i = 0; i < 6 && r.some((e) => e.type === 'clarify'); i++) {
+				const c = r.find((e) => e.type === 'clarify');
+				if (c?.type !== 'clarify') break;
+				r = await chatTurn({ taskId, answer: { field: c.field, value: c.options[0].value } }, deps);
+			}
+			const menu = r.find((e) => e.type === 'menu');
+			if (menu?.type !== 'menu') throw new Error('no menu');
+			expect(menu.dishes.length).toBeGreaterThan(0);
+			expect(menu.reviewUrl).toContain(menu.proposalId);
+			expect(Object.keys((await w.state()).plans)).toHaveLength(0);
+			// Before the chef's review, planning is refused in words.
+			const early = await chatTurn({ taskId, text: 'plan it' }, deps);
+			expect(early.at(-1)).toMatchObject({ text: expect.stringMatching(/review/i) });
+			must(
+				await w.env.ports.menus!.review(
+					w.env.workspaceId,
+					menu.proposalId,
+					menu.revision,
+					{ kind: 'chef', id: 'c' },
+					FIDELITY_NOW
+				)
+			);
+			const planned = await chatTurn({ taskId, text: 'plan it' }, deps);
+			expect(planned.some((e) => e.type === 'step' && e.tool === 'plan_event' && e.ok)).toBe(true);
+			expect(Object.keys((await w.state()).plans)).toHaveLength(1);
+			expect(planned.at(-1)).toMatchObject({ title: expect.any(String) });
+		}
+	);
+
+	it('"??" gets one short question with three answers, and no plan', async () => {
+		const { deps } = await setup();
+		const r = await chatTurn({ text: '??' }, deps);
+		expect(r[0]).toMatchObject({
+			type: 'clarify',
+			field: 'intent',
+			question: 'What would you like to do?'
+		});
+		expect(r.some((e) => e.type === 'step')).toBe(false);
+		const check = await chatTurn({ answer: { field: 'intent', value: 'order' } }, deps);
+		expect(check.at(-1)).toMatchObject({ text: expect.stringMatching(/what and how much/) });
+	});
+
+	it(
+		'Continue with nothing newly authorised says so once, without repeating cards',
+		{ timeout: 120_000 },
+		async () => {
+			const { deps } = await setup();
+			const t = await chatTurn({ text: 'Order 60 kg butter for Friday' }, deps);
+			const taskId = t.at(-1)!.taskId;
+			const c = await chatTurn({ taskId, continue: true }, deps);
+			expect(c.at(-1)).toMatchObject({
+				text: 'Nothing new to order: 1 decision is still waiting for you.',
+				canContinue: false
+			});
+			expect(c.some((e) => e.type === 'decision')).toBe(false);
+		}
+	);
+});
+
+const must = <T>(r: { ok: true; value: T } | { ok: false; error: { message: string } }): T => {
+	if (!r.ok) throw new Error(r.error.message);
+	return r.value;
+};
