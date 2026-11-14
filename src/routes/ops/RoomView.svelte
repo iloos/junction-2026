@@ -5,6 +5,7 @@
 	import {
 		kindWords,
 		OUTCOME_WORDS,
+		roomOrder,
 		shortageSentence,
 		type FeedOrder,
 		type OpsKitchen,
@@ -34,6 +35,15 @@
 		canShortage: boolean;
 	} = $props();
 
+	/** Sample kitchens shown before the rest fold behind "+N sample kitchens". */
+	const SAMPLES_SHOWN = 5;
+	let allSamples = $state(false);
+	const order = $derived(roomOrder(kitchens, totals));
+	const shown = $derived([
+		...order.active,
+		...(allSamples ? order.samples : order.samples.slice(0, SAMPLES_SHOWN))
+	]);
+	const folded = $derived(allSamples ? 0 : Math.max(0, order.samples.length - SAMPLES_SHOWN));
 	const qr = $derived(joinUrl ? encode(joinUrl, { border: 2 }) : null);
 	const euro = (c: number) =>
 		(c / 100).toLocaleString('en-IE', { style: 'currency', currency: 'EUR' });
@@ -144,7 +154,7 @@
 		<section class="stores" aria-label="Stores">
 			<h3>Stores</h3>
 			<ul>
-				{#each kitchens as k (k.id)}
+				{#each shown as k (k.id)}
 					{@const t = totals[k.id]}
 					<li class:lit={lit === k.id} animate:flip={{ duration: 300 }} in:fly={{ y: 12 }}>
 						<span class="name">{k.name}</span>
@@ -160,6 +170,11 @@
 					</li>
 				{/each}
 			</ul>
+			{#if folded}
+				<button class="more" onclick={() => (allSamples = true)}>
+					+{folded} sample kitchen{folded === 1 ? '' : 's'}
+				</button>
+			{/if}
 		</section>
 
 		<section class="feed" aria-label="Orders arriving" aria-live="polite">
@@ -255,7 +270,9 @@
 		display: grid;
 		grid-template-columns: minmax(0, 1fr) auto;
 		gap: 2px 12px;
+		/* Padded for the lit background, pulled back so names line up with the headings. */
 		padding: 8px;
+		margin-inline: -8px;
 		border-bottom: 1px solid var(--line);
 		border-radius: 4px;
 		transition: background 0.6s;
@@ -358,6 +375,15 @@
 	.rule {
 		color: var(--muted);
 		font-size: 0.875rem;
+	}
+	.more {
+		margin-top: 8px;
+		background: none;
+		border: 0;
+		padding: 4px 0;
+		color: var(--muted);
+		cursor: pointer;
+		text-decoration: underline;
 	}
 	.note {
 		color: var(--muted);

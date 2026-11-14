@@ -222,3 +222,20 @@ export function shortageSentence(s: ShortageReplanned): string {
 	const unit = /^[A-Z]{1,3}$/.test(s.unit) ? '' : ` ${s.unit}`;
 	return `${s.productName}: ${s.had} → ${s.left}${unit} left. ${stores} store${stores === 1 ? '' : 's'} re-planned: ${parts.join(', ') || 'no changes'}.`;
 }
+
+/**
+ * The store list for the big screen: stores made in the room first (newest on top), then any with orders (largest
+ * total first), then the seeded sample kitchens in their own order. `samples` are the quiet seeded ones, for
+ * collapsing past a few.
+ */
+export function roomOrder(
+	kitchens: readonly OpsKitchen[],
+	totals: Record<string, { n: number; cents: number }>
+): { active: OpsKitchen[]; samples: OpsKitchen[] } {
+	const made = kitchens.filter((k) => k.copiedFrom).reverse();
+	const ordered = kitchens
+		.filter((k) => !k.copiedFrom && totals[k.id])
+		.sort((a, b) => totals[b.id].cents - totals[a.id].cents);
+	const samples = kitchens.filter((k) => !k.copiedFrom && !totals[k.id]);
+	return { active: [...made, ...ordered], samples };
+}

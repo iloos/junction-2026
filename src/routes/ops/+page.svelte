@@ -14,7 +14,6 @@
 	import ServiceStatus from './ServiceStatus.svelte';
 	import SponsorsPanel from './SponsorsPanel.svelte';
 	import RoomView from './RoomView.svelte';
-	import { page } from '$app/state';
 	import { lastShortage, orderFeed, roomKitchens, storesCreated, storeTotals } from './room';
 	import OrdersTab from './OrdersTab.svelte';
 	import DemandTab from './DemandTab.svelte';
@@ -78,9 +77,7 @@
 	const kitchenName = (id: string) => kitchens.find((k) => k.id === id)?.name ?? id;
 	/** The shared room shows the room first. */
 	const inRoom = $derived(data.room.kind === 'shared' || data.room.kind === 'full');
-	const joinUrl = $derived(
-		inRoom ? `${page.url.origin}${resolve('/')}?ws=${data.rooms.shared}` : null
-	);
+	const joinUrl = $derived(inRoom ? `${data.origin}${resolve('/')}?ws=${data.rooms.shared}` : null);
 	const plans = $derived(Object.values(stream.state.plans));
 
 	/**

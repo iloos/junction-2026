@@ -4,6 +4,7 @@ import {
 	lastShortage,
 	orderFeed,
 	roomKitchens,
+	roomOrder,
 	shortageCounts,
 	storesCreated,
 	storeTotals,
@@ -65,5 +66,15 @@ describe('room', () => {
 			['a', 'Hotel']
 		]);
 		expect(storeTotals(orders)['k-hotel']).toEqual({ n: 2, cents: 1500 });
+	});
+
+	it('puts made stores first, then stores with orders, then the quiet samples', () => {
+		const all = roomKitchens(
+			[...seeded, { ...seeded[0], id: 'k-cafe', name: 'Cafe' }],
+			storesCreated(sims)
+		);
+		const { active, samples } = roomOrder(all, { 'k-cafe': { n: 1, cents: 900 } });
+		expect(active.map((k) => k.id)).toEqual(['k-v-d4e5f6', 'k-v-a1b2c3', 'k-cafe']);
+		expect(samples.map((k) => k.id)).toEqual(['k-hotel']);
 	});
 });

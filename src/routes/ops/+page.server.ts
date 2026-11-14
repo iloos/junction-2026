@@ -20,6 +20,7 @@ import { roomLabel, roomNotice, visitorWorkspace, ROOM_COOKIE } from '$lib/serve
 import { judgeKeysOn } from '$lib/server/demo/judge-key';
 import { STRESS_WORKSPACE } from '$lib/server/bus/stress';
 import { createServerPorts } from '$lib/server/store/server-ports';
+import { publicOrigin } from '$lib/server/tools/present';
 import type { Actions, PageServerLoad, RequestEvent } from './$types';
 
 import type { OpsKitchen } from './room';
@@ -117,6 +118,8 @@ export const load: PageServerLoad = async (event) => {
 		showPresenterSignIn: event.url.searchParams.get('presenter') === '1',
 		judgeKeys: judgeKeysOn(env) && v.kind === 'own' && !viewOnly,
 		kitchens: await roomKitchens(workspace),
+		/** The public host for links people open on another device (the room's join code). */
+		origin: publicOrigin(env, event.url.href),
 		names,
 		/** Dev load test only: how many synthetic runs ws-stress streams. */
 		copies: dev ? Number(event.url.searchParams.get('copies')) || 0 : 0,

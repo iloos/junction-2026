@@ -137,6 +137,7 @@ export class OpsStream {
 		const onEvent = (m: MessageEvent) => this.enqueue(JSON.parse(m.data) as ServerEvent);
 		es.addEventListener('op', onEvent);
 		es.addEventListener('sim', onEvent);
+		es.addEventListener('notice', (m) => this.onNotice(JSON.parse((m as MessageEvent).data)));
 		es.addEventListener('trace', (m) => this.onTrace(JSON.parse((m as MessageEvent).data)));
 		es.addEventListener('ready', (m) => {
 			this.errors = 0;
@@ -190,6 +191,17 @@ export class OpsStream {
 		this.log = [];
 		this.heldSince = {};
 		this.simClock = null;
+	}
+
+	/** Arrival order of room events: notices carry no seq (they are not in the op log). */
+	private roomN = 0;
+
+	/**
+	 * A room notice (kitchen.created, shortage.replanned): live only, no seq, kept in arrival order.
+	 */
+	private onNotice(e: { kind?: string; event?: SimEvent }): void {
+		if (!e.event || !ROOM_SIMS.has(e.event.kind)) return;
+		this.roomSims = [...this.roomSims, { seq: ++this.roomN, event: e.event }];
 	}
 
 	/** Calls already shown, live or stored, so a call read twice shows once. Bookkeeping only: nothing renders it. */
@@ -279,7 +291,7 @@ export class OpsStream {
 				this.last = e.seq;
 				added.push({ kind: 'sim', seq: e.seq, runId, event: e.event });
 				if (ROOM_SIMS.has(e.event.kind))
-					this.roomSims = [...this.roomSims, { seq: e.seq, event: e.event }];
+					this.roomSims = [...this.roomSims, { seq: ++this.roomN, event: e.event }];
 				else this.simClock = e.event.simAt;
 				continue;
 			}
