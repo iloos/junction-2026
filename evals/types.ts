@@ -14,7 +14,9 @@ export type Action =
 	| 'commit'
 	| 'set_price'
 	| 'set_availability'
-	| 'find_substitutes';
+	| 'find_substitutes'
+	| 'recall'
+	| 'reset';
 
 export interface Step {
 	actor: Actor;
@@ -34,6 +36,12 @@ export interface Scenario {
 	overrides?: { availability?: unknown[]; price?: unknown[] };
 	steps: Step[];
 	expect: Record<string, unknown>;
+	/**
+	 * Known gaps, keyed by SYNTHESIS finding id (e.g. "F5"): result keys (or key prefixes) that must still fail.
+	 * Every other key must pass. When a listed key starts passing the eval goes red: the fix landed, so delete
+	 * the entry. Lanes fixing a finding may edit only this field.
+	 */
+	expectFail?: Record<string, string[]>;
 	notes?: string;
 }
 
@@ -55,6 +63,10 @@ export interface LineView {
 	pickable?: boolean;
 	/** Shown labels (e.g. "simulated: …"). */
 	labels?: string[];
+	/** The product this line replaces (a rescue). */
+	substituteFor?: string;
+	/** Order cut-off for this line (offer availability closingTime, scenario dates). */
+	closingTime?: string;
 }
 
 export interface AttemptOutcome {
@@ -67,6 +79,9 @@ export interface AttemptOutcome {
 	error?: string;
 	retryable?: boolean;
 	receiptId?: string;
+	/** find_substitutes: whether the call changed the plan, and the recommended products. */
+	applied?: boolean;
+	chosen?: string[];
 }
 
 export interface PlanView {
@@ -98,6 +113,10 @@ export interface EndState {
 	/** UI wording per availability kind, e.g. { out: "Out of stock", undeliverable: "Not deliverable" }. */
 	wording: Record<string, string>;
 	recomputeMs?: number;
+	/** The newest plan's current approval (get_plan), as product ids; null when none is open. */
+	approval?: { state: string; productIds: string[] } | null;
+	/** Ops left in runs before the last reset (kept for audit). */
+	previousRunOps?: number;
 }
 
 export interface CheckResult {

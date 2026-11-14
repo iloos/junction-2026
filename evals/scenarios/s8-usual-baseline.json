@@ -1,0 +1,60 @@
+{
+	"id": "s8-usual-baseline",
+	"title": "The standing-order baseline: the hotel's usual products act within the mandate; event-only products the hotel has never bought are held as new_sku",
+	"stories": ["★4"],
+	"edgeCases": [],
+	"seeds": {
+		"kitchen": "k-hotel",
+		"event": "event-xmas-140"
+	},
+	"clock": "2026-12-07T21:40:00+02:00",
+	"steps": [
+		{
+			"actor": "chef",
+			"action": "plan_event",
+			"input": {
+				"eventId": "event-xmas-140"
+			}
+		}
+	],
+	"expect": {
+		"lines": [
+			{
+				"productId": "462150",
+				"state": "eligible",
+				"tier": "act",
+				"notReasons": ["new_sku"]
+			},
+			{
+				"productId": "475214",
+				"state": "eligible",
+				"tier": "act",
+				"notReasons": ["new_sku"]
+			},
+			{
+				"productId": "464201",
+				"state": "eligible",
+				"tier": "act",
+				"notReasons": ["new_sku"]
+			},
+			{
+				"productId": "466964",
+				"state": "eligible",
+				"tier": "act",
+				"notReasons": ["new_sku"]
+			},
+			{
+				"productId": "463876",
+				"state": "held",
+				"tier": "propose",
+				"reasons": ["new_sku"]
+			}
+		],
+		"approval": {
+			"state": "pending",
+			"covers": ["463876"],
+			"excludes": ["462150", "475214", "464201", "466964"]
+		}
+	},
+	"notes": "k-hotel usualProducts = 462150, 475214, 464201, 466964 (fixtures/seeds/kitchens.json). Without the baseline a fresh run would hold the normal week's own products as new."
+}

@@ -23,7 +23,9 @@ const LINE_SCALARS = [
 	'tier',
 	'priceCents',
 	'lineCents',
-	'deliveryDate'
+	'deliveryDate',
+	'substituteFor',
+	'closingTime'
 ] as const;
 
 /** Matches one expected line against the lines with its productId; returns what differed. */
@@ -40,6 +42,8 @@ function matchLine(key: string, want: Obj, lines: LineView[]): CheckResult {
 			p.push(`needKg ${l.needKg} ≠ ${want.needKg}`);
 		for (const r of (want.reasons as string[] | undefined) ?? [])
 			if (!l.reasons.includes(r)) p.push(`missing reason ${r} (has ${show(l.reasons)})`);
+		for (const r of (want.notReasons as string[] | undefined) ?? [])
+			if (l.reasons.includes(r)) p.push(`has reason ${r}`);
 		if (want.historyStates && !subsequence(want.historyStates as string[], l.historyStates ?? []))
 			p.push(`historyStates ${show(l.historyStates)} lacks ${show(want.historyStates)}`);
 		if (
@@ -156,6 +160,8 @@ const CHECKERS: Record<string, Checker> = {
 			const p: string[] = [];
 			if (w.totalCents !== undefined && o.totalCents !== w.totalCents)
 				p.push(`totalCents ${o.totalCents}`);
+			if (w.minTotalCents !== undefined && o.totalCents < Number(w.minTotalCents))
+				p.push(`totalCents ${o.totalCents} < ${w.minTotalCents}`);
 			if (w.state !== undefined && o.state !== w.state) p.push(`state ${o.state}`);
 			if (w.tier !== undefined && o.tier !== w.tier) p.push(`tier ${o.tier}`);
 			if (w.states && !subsequence(w.states as string[], o.states))
@@ -164,6 +170,43 @@ const CHECKERS: Record<string, Checker> = {
 				if (!o.reasons.includes(r)) p.push(`missing ${r}`);
 			return p.length ? fail(key, p.join('; ')) : ok(key);
 		}),
+
+	attempts: (want, end) =>
+		(want as Obj[]).map((w) => {
+			const key = `attempts[${w.step}]`;
+			const a = end.attempts.find((x) => x.step === w.step);
+			if (!a) return fail(key, 'no attempt at that step');
+			const p: string[] = [];
+			for (const f of ['action', 'result', 'error', 'retryable', 'applied'] as const)
+				if (w[f] !== undefined && w[f] !== a[f]) p.push(`${f} ${show(a[f])} ≠ ${show(w[f])}`);
+			for (const id of (w.chosen as string[] | undefined) ?? [])
+				if (!a.chosen?.includes(id)) p.push(`chosen ${show(a.chosen)} lacks ${id}`);
+			for (const id of (w.notChosen as string[] | undefined) ?? [])
+				if (a.chosen?.includes(id)) p.push(`chosen ${show(a.chosen)} has ${id}`);
+			return p.length ? fail(key, p.join('; ')) : ok(key);
+		}),
+
+	approval: (want, end) => {
+		const w = want as { state?: string; covers?: string[]; excludes?: string[] } | null;
+		const a = end.approval ?? null;
+		if (w === null)
+			return [a === null ? ok('approval', 'none open') : fail('approval', `open: ${show(a)}`)];
+		if (!a) return [fail('approval', 'none open')];
+		const p: string[] = [];
+		if (w.state !== undefined && a.state !== w.state) p.push(`state ${a.state} ≠ ${w.state}`);
+		for (const id of w.covers ?? []) if (!a.productIds.includes(id)) p.push(`lacks ${id}`);
+		for (const id of w.excludes ?? []) if (a.productIds.includes(id)) p.push(`binds ${id}`);
+		return [p.length ? fail('approval', p.join('; ')) : ok('approval')];
+	},
+
+	previousRunKept: (want, end) => {
+		const kept = (end.previousRunOps ?? 0) > 0;
+		return [
+			kept === want
+				? ok('previousRunKept', `${end.previousRunOps ?? 0} ops`)
+				: fail('previousRunKept', `${end.previousRunOps ?? 0} ops`)
+		];
+	},
 
 	receipts: exact('receipts', (e) => e.receipts.length),
 	duplicateReceipts: exact('duplicateReceipts', (e) => {
@@ -264,6 +307,32 @@ const CHECKERS: Record<string, Checker> = {
 };
 
 export const KNOWN_KEYS = Object.keys(CHECKERS);
+
+/**
+ * Applies a scenario's `expectFail` (finding id → result keys or key prefixes). A listed result that fails passes
+ * as `expected-fail <id>`; a listed prefix whose results all pass fails, so the marker is removed once the fix
+ * lands; a prefix that matches no result fails, so a typo can't hide a gap.
+ */
+export function applyExpectFail(
+	results: CheckResult[],
+	expectFail: Record<string, string[]> = {}
+): CheckResult[] {
+	const out = results.map((r) => ({ ...r }));
+	const extra: CheckResult[] = [];
+	for (const [finding, prefixes] of Object.entries(expectFail))
+		for (const prefix of prefixes) {
+			const hit = out.filter((r) => r.key === prefix || r.key.startsWith(`${prefix}[`));
+			const key = `expectFail.${finding}[${prefix}]`;
+			if (hit.length === 0) extra.push(fail(key, 'matches no result key'));
+			else if (hit.every((r) => r.pass))
+				extra.push(fail(key, `now passes: ${finding} looks fixed, delete this expectFail entry`));
+			else
+				for (const r of hit)
+					if (!r.pass)
+						Object.assign(r, { pass: true, detail: `expected-fail ${finding}: ${r.detail}` });
+		}
+	return [...out, ...extra];
+}
 
 export function checkExpect(expect: Record<string, unknown>, end: EndState): CheckResult[] {
 	return Object.entries(expect).flatMap(([key, want]) =>

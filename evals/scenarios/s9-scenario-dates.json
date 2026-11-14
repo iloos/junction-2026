@@ -1,0 +1,36 @@
+{
+	"id": "s9-scenario-dates",
+	"title": "Scenario dates: the Christmas order delivers Thu 10 Dec; Terminal lines close Tue 8 Dec 15:00 (D-2), Stock lines Wed 9 Dec at Valio's time (D-1), whatever dates the Valio cache had",
+	"stories": ["★2"],
+	"edgeCases": [],
+	"seeds": {
+		"kitchen": "k-hotel",
+		"event": "event-xmas-140"
+	},
+	"clock": "2026-12-07T21:40:00+02:00",
+	"steps": [
+		{
+			"actor": "chef",
+			"action": "plan_event",
+			"input": {
+				"eventId": "event-xmas-140"
+			}
+		}
+	],
+	"expect": {
+		"lines": [
+			{
+				"productId": "463860",
+				"deliveryDate": "2026-12-10",
+				"closingTime": "2026-12-08T15:00:00+02:00",
+				"reasons": ["UNKNOWN_REQUIRED"]
+			},
+			{
+				"productId": "462150",
+				"deliveryDate": "2026-12-10",
+				"closingTime": "2026-12-09T17:00:00+02:00"
+			}
+		]
+	},
+	"notes": "core/scenario.ts SCENARIO: start Mon 7 Dec 21:40, cutoff Tue 8 Dec 15:00 (earliest = Terminal), delivery Thu 10 Dec, event Sat 12 Dec. Cut-off enforcement at commit is F9 (r5 journeys)."
+}

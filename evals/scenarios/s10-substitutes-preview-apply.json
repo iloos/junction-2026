@@ -1,0 +1,81 @@
+{
+	"id": "s10-substitutes-preview-apply",
+	"title": "Ham is out: the first find_substitutes applies the Stock ham; a preview under a stricter rule (Swedish origin) changes nothing; an apply under that rule, where nothing qualifies, keeps the saved rescue rather than wiping it",
+	"stories": ["★3"],
+	"edgeCases": [],
+	"seeds": {
+		"kitchen": "k-hotel",
+		"event": "event-xmas-140"
+	},
+	"clock": "2026-12-07T21:40:00+02:00",
+	"steps": [
+		{
+			"actor": "chef",
+			"action": "plan_event",
+			"input": {
+				"eventId": "event-xmas-140"
+			}
+		},
+		{
+			"actor": "chef",
+			"action": "find_substitutes",
+			"input": {
+				"productId": "462490"
+			}
+		},
+		{
+			"actor": "chef",
+			"action": "find_substitutes",
+			"input": {
+				"productId": "462490",
+				"requireOrigin": "se"
+			}
+		},
+		{
+			"actor": "chef",
+			"action": "find_substitutes",
+			"input": {
+				"productId": "462490",
+				"requireOrigin": "se",
+				"apply": true
+			}
+		}
+	],
+	"expect": {
+		"attempts": [
+			{
+				"step": 1,
+				"applied": true,
+				"chosen": ["476768"]
+			},
+			{
+				"step": 2,
+				"applied": false,
+				"notChosen": ["476768"]
+			},
+			{
+				"step": 3,
+				"applied": false
+			}
+		],
+		"rejected": [
+			{
+				"productId": "476768",
+				"reasons": ["origin_required"]
+			}
+		],
+		"lines": [
+			{
+				"productId": "476768",
+				"qty": 13,
+				"unit": "KG",
+				"substituteFor": "462490"
+			}
+		],
+		"approvalStates": ["pending", "invalidated", "pending"]
+	},
+	"expectFail": {
+		"NEW-apply-wipe": ["attempts[3]", "lines[476768]"]
+	},
+	"notes": "Unit coverage: store/rescue.test.ts. Gap: substitutes.ts skips an apply only when there is no recommendation AND no saved substitute, so an apply that finds nothing deletes an existing rescue, voids the approval and reports applied: true. rescue.test's 'nothing qualifies' covers only the no-saved case."
+}

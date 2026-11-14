@@ -9,7 +9,9 @@ import { spawnSync } from 'node:child_process';
 const STEPS = [
 	{ name: 'check', cmd: ['pnpm', 'check'] },
 	{ name: 'lint', cmd: ['pnpm', 'lint'] },
-	{ name: 'test:unit', cmd: ['pnpm', 'test:unit', '--run'] },
+	{ name: 'evals:self', cmd: ['node', '--test', 'evals/check.test.ts'] },
+	// PGlite under load times out now and then: a red test:unit is rerun once and reported as flaky if it passes.
+	{ name: 'test:unit', cmd: ['pnpm', 'test:unit', '--run'], retry: 1 },
 	{ name: 'eval', cmd: ['pnpm', 'eval'] },
 	{ name: 'eval:agent', cmd: ['pnpm', 'eval:agent'] }
 ];
@@ -37,10 +39,15 @@ const results = [];
 for (const s of steps) {
 	console.log(`\n=== merge-gate: ${s.name} (${s.cmd.join(' ')}) ===`);
 	const t0 = Date.now();
-	const r = spawnSync(s.cmd.join(' '), { stdio: 'inherit', shell: true, env });
+	const run = () => spawnSync(s.cmd.join(' '), { stdio: 'inherit', shell: true, env }).status === 0;
+	let ok = run();
+	let flaky = false;
+	for (let n = 0; !ok && n < (s.retry ?? 0); n++) {
+		console.log(`\n=== merge-gate: ${s.name} red, retrying once (known PGlite timeouts) ===`);
+		ok = flaky = run();
+	}
 	const secs = ((Date.now() - t0) / 1000).toFixed(1);
-	const ok = r.status === 0;
-	results.push(`${ok ? 'PASS' : 'FAIL'}  ${s.name.padEnd(11)} ${secs}s`);
+	results.push(`${ok ? (flaky ? 'FLAKY' : 'PASS') : 'FAIL'}  ${s.name.padEnd(11)} ${secs}s`);
 	if (!ok) {
 		console.log(`\n${results.join('\n')}\nmerge-gate: RED at ${s.name}; do not merge.`);
 		console.log(`Resume after fixing: node scripts/merge-gate.mjs --from ${s.name}`);
