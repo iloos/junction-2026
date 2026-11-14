@@ -113,6 +113,15 @@ export async function runAgent(o: {
 	finalize?: (r: { steps: StepRecord[]; stopped: StopReason }) => Promise<GoalOutcome | undefined>;
 	/** Extra fields for the first trace step (intent, initiator). */
 	intro?: Record<string, unknown>;
+	/**
+	 * Reviews the planner's summary against the outcome before the `done` event (review module, behind the
+	 * REVIEW flag). Returns the text to keep; it can only reword or withhold, never change the outcome.
+	 */
+	reviewSummary?: (r: {
+		summary: string;
+		outcome: GoalOutcome;
+		steps: StepRecord[];
+	}) => Promise<string>;
 }): Promise<AgentRun> {
 	const maxSteps = Math.min(o.maxSteps ?? MAX_STEPS, MAX_STEPS);
 	const deadline = Date.now() + (o.deadlineMs ?? 60_000);
@@ -138,7 +147,8 @@ export async function runAgent(o: {
 	if (o.context?.currentPlan)
 		planKitchen.set(o.context.currentPlan.id, o.context.currentPlan.kitchenId);
 
-	const finish = async (stopped: StopReason, plannerSummary: string): Promise<AgentRun> => {
+	const finish = async (stopped: StopReason, plannerText: string): Promise<AgentRun> => {
+		let plannerSummary = plannerText;
 		clearTimeout(timer);
 		o.signal?.removeEventListener('abort', onCancel);
 		let outcome: GoalOutcome | undefined;
@@ -149,6 +159,14 @@ export async function runAgent(o: {
 				error: `outcome failed: ${String((e as Error)?.message ?? e).slice(0, 200)}`
 			});
 		}
+		if (outcome && plannerSummary && o.reviewSummary)
+			try {
+				plannerSummary = await o.reviewSummary({ summary: plannerSummary, outcome, steps });
+			} catch (e) {
+				emit('error', {
+					error: `review failed: ${String((e as Error)?.message ?? e).slice(0, 200)}`
+				});
+			}
 		const summary = outcome
 			? `${outcome.status}: ${outcome.nextAction}${plannerSummary ? ` Planner: ${plannerSummary}` : ''}`
 			: plannerSummary;
