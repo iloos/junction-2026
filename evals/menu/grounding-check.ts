@@ -1,97 +1,113 @@
-// Grounded menu checks: each proposed dish is compared with sourced recipes (Exa, via make-in-house), so the chef sees
-// which ingredients a published recipe supports and which the model added. Pure; the driver
-// (src/lib/server/evals/menu-grounding.test.ts) observes the app. Node runs this file directly.
+// Grounded menu checks: each proposed dish's model-written ingredients compared with cited web recipes (Exa, through
+// the make-in-house path; src/lib/server/web/grounding.ts), so the chef sees which sources match and what the model
+// added or left out. Pure; the driver (src/lib/server/evals/menu-grounding.test.ts) observes the app. Node runs this
+// file directly, so the types mirror web/grounding.ts instead of importing it.
 import type { CheckResult } from '../types.ts';
 
-/** The menu as proposed: dish and ingredient ids, which are stable across revisions. */
+/** The menu as proposed. */
 export interface MenuShape {
 	dishes: { id: string; name: string; ingredients: { id: string; label: string }[] }[];
 }
 
-/** One dish's grounding, as the server returns it (contract for `groundMenu` in src/lib/server/menu/grounding.ts). */
-export type DishGrounding =
+/** `GroundingState` from web/grounding.ts. */
+export type GroundingState =
 	| {
-			status: 'sourced';
-			/** The recipes the comparison used, each a cited web page. */
-			recipes: { title: string; url: string; host: string }[];
-			/** Every proposal ingredient id → whether a cited recipe has it. */
-			ingredients: Record<string, 'sourced' | 'unsourced'>;
-			/** Ingredients the sources use that the proposal lacks, in the sources' words. */
-			missing: string[];
+			dishName: string;
+			state: 'done';
+			source: string;
+			matchedSources: { url: string; title: string; host: string; shared: number; of: number }[];
+			compared: { url: string; title: string; host: string }[];
+			modelOnly: string[];
+			sourceOnly: string[];
+			note: string;
 	  }
-	| { status: 'none'; reason: string };
+	| { dishName: string; state: 'pending' }
+	| { dishName: string; state: 'failed'; error: string };
 
-export interface MenuGrounding {
-	/** dish id → grounding. */
-	dishes: Record<string, DishGrounding>;
-}
+/** Share of the model's ingredients a source must use to count as matching (MATCH_SHARE in web/grounding.ts). */
+export const MATCH_SHARE = 0.5;
 
 const hostOf = (url: string) => {
 	try {
-		return new URL(url).hostname.replace(/^www\./, '');
+		const u = new URL(url);
+		return /^https?:$/.test(u.protocol) ? u.host.replace(/^www\./, '') : null;
 	} catch {
 		return null;
 	}
 };
 
 /**
- * Every dish is grounded or says why not; a sourced dish cites real pages and classifies each of its ingredients;
- * nothing is invented (no unknown ids), and grounding never changes the menu (same digest before and after).
+ * Every dish is grounded (`done`) with a note; every recipe compared is a real http(s) page whose host is its url's;
+ * a matched source is one of those compared and really shares at least half of the dish's ingredients; `modelOnly`
+ * names only the dish's own ingredients; a dish with no recipe says so; grounding never changes the menu.
  */
 export function checkGrounding(
 	key: string,
 	menu: MenuShape,
-	g: MenuGrounding,
+	g: Record<string, GroundingState>,
 	digests?: { before: string; after: string }
 ): CheckResult[] {
 	const out: CheckResult[] = [];
 	const add = (k: string, pass: boolean, detail: string) =>
 		out.push({ key: `${key}.${k}`, pass, detail });
 	for (const d of menu.dishes) {
-		const x = g.dishes[d.id];
-		if (!x) {
-			add(`${d.id}.present`, false, `${d.name}: no grounding (a dish is never silently skipped)`);
-			continue;
-		}
-		if (x.status === 'none') {
+		const x = g[d.name];
+		if (!x || x.state !== 'done') {
 			add(
-				`${d.id}.reason`,
-				x.reason.trim().length > 0,
-				`${d.name}: no source, reason "${x.reason}"`
+				`${d.id}.done`,
+				false,
+				`${d.name}: ${!x ? 'no grounding (a dish is never silently skipped)' : x.state === 'failed' ? `failed: ${x.error}` : 'still pending'}`
 			);
 			continue;
 		}
-		const cited = x.recipes.filter((r) => {
-			const h = hostOf(r.url);
-			return h !== null && /^https?:/.test(r.url) && h === r.host.replace(/^www\./, '');
-		});
+		add(`${d.id}.note`, x.note.trim().length > 0, `${d.name}: "${x.note}"`);
+		const badHost = x.compared.filter((c) => hostOf(c.url) !== c.host.replace(/^www\./, ''));
 		add(
 			`${d.id}.cited`,
-			x.recipes.length > 0 && cited.length === x.recipes.length,
-			`${d.name}: ${cited.length}/${x.recipes.length} recipes with a matching http(s) url and host`
+			badHost.length === 0,
+			badHost.length
+				? `recipes whose host is not their url's: ${badHost.map((c) => `${c.host} ≠ ${c.url}`).join('; ')}`
+				: `${x.compared.length} recipes compared (${x.compared.map((c) => c.host).join(', ') || 'none'})`
 		);
-		const ids = new Set(d.ingredients.map((i) => i.id));
-		const unclassified = d.ingredients.filter((i) => !(i.id in x.ingredients)).map((i) => i.label);
-		const unknown = Object.keys(x.ingredients).filter((id) => !ids.has(id));
+		const n = d.ingredients.length;
+		const badMatch = x.matchedSources.filter(
+			(m) =>
+				!x.compared.some((c) => c.url === m.url) ||
+				m.of !== n ||
+				m.shared > m.of ||
+				m.shared / m.of < MATCH_SHARE
+		);
 		add(
-			`${d.id}.classified`,
-			unclassified.length === 0 && unknown.length === 0,
-			unclassified.length || unknown.length
-				? `unclassified ${unclassified.join(', ') || '-'}; ids not in the dish ${unknown.join(', ') || '-'}`
-				: `${d.ingredients.length} ingredients, ${Object.values(x.ingredients).filter((v) => v === 'unsourced').length} unsourced, ${x.missing.length} missing`
+			`${d.id}.matched`,
+			badMatch.length === 0,
+			badMatch.length
+				? `matches that aren't compared recipes sharing ≥ ${MATCH_SHARE} of ${n}: ${badMatch.map((m) => `${m.host} ${m.shared}/${m.of}`).join('; ')}`
+				: `${x.matchedSources.length} matched`
+		);
+		const labels = new Set(d.ingredients.map((i) => i.label));
+		const foreign = x.modelOnly.filter((l) => !labels.has(l));
+		add(
+			`${d.id}.modelOnly`,
+			foreign.length === 0 && (x.compared.length > 0 || x.modelOnly.length === 0),
+			foreign.length
+				? `modelOnly names what the dish doesn't have: ${foreign.join(', ')}`
+				: `${x.modelOnly.length} model-only, ${x.sourceOnly.length} source-only`
 		);
 	}
-	const extra = Object.keys(g.dishes).filter((id) => !menu.dishes.some((d) => d.id === id));
+	const names = new Set(menu.dishes.map((d) => d.name));
+	const extra = Object.keys(g).filter((n) => !names.has(n));
 	add(
 		'noExtraDishes',
 		extra.length === 0,
-		extra.length ? `grounding for unknown dishes ${extra}` : 'ok'
+		extra.length ? `grounding for dishes not on the menu: ${extra.join(', ')}` : 'ok'
 	);
 	if (digests)
 		add(
 			'menuUnchanged',
 			digests.before === digests.after,
-			`proposal digest ${digests.before.slice(0, 8)} → ${digests.after.slice(0, 8)}`
+			digests.before === digests.after
+				? 'proposal unchanged'
+				: 'grounding changed the stored proposal'
 		);
 	return out;
 }
