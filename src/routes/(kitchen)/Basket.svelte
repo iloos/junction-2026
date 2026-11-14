@@ -30,7 +30,6 @@
 	let {
 		kitchenId,
 		kitchenName,
-		mandateWords,
 		refresh = 0,
 		onorder,
 		ondecide,
@@ -39,7 +38,6 @@
 	}: {
 		kitchenId: string;
 		kitchenName: string;
-		mandateWords: string;
 		/** Bumped by the page after any change (a commit, an approval, a new plan) to read the basket again. */
 		refresh?: string | number;
 		/** Order the lines of this plan that can go now (the page's commit for that plan). */
@@ -164,14 +162,7 @@
 		{:else if !basket}
 			<div class="h-48 animate-pulse rounded-lg bg-well/60" aria-label="Loading the basket"></div>
 		{:else if !days.length || pickedEmpty}
-			<NothingPlanned
-				{kitchenId}
-				{kitchenName}
-				{mandateWords}
-				bind:date
-				onplanned={onopen}
-				{onask}
-			/>
+			<NothingPlanned {kitchenId} {kitchenName} bind:date onplanned={onopen} {onask} />
 		{:else}
 			{#each days as d (d.date)}
 				{@const action = dayAction(d)}

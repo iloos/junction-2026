@@ -813,6 +813,13 @@
 				{roomNotice}
 			</p>
 		{/if}
+		{#if !snap && k.started === false && !needsJoin}
+			{@const kit = KITCHENS.find((x) => x.id === k.startKitchen) ?? KITCHENS[0]}
+			<p class="max-w-[95ch] min-w-0 text-meta text-ink-2">
+				<span class="font-medium text-ink">Mandate, in the chef's words:</span>
+				“{kit.mandate.words}”
+			</p>
+		{/if}
 		{#if snap}
 			<!-- One line on a phone, with "more"; the whole quote from sm. -->
 			<p
@@ -927,12 +934,11 @@
 	</main>
 {:else if k.started === false}
 	{@const kit = KITCHENS.find((x) => x.id === k.startKitchen) ?? KITCHENS[0]}
-	<main class="mx-auto max-w-[760px] px-4 py-10 md:px-6 md:py-14">
+	<main class="mx-auto max-w-[1080px] px-4 py-8 md:px-6 md:py-10">
 		<!-- The kitchen's own home comes first; a seeded booking is offered as an example to try, never as the page. -->
 		<NothingPlanned
 			kitchenId={kit.id}
 			kitchenName={kit.name.replace(' (fictional)', '')}
-			mandateWords={kit.mandate.words}
 			notes={joinedAs?.kitchenId === kit.id ? (joinedAs.notes ?? null) : null}
 			onnotes={saveNotes}
 			onplanned={openPlan}
@@ -1019,7 +1025,6 @@
 			<Basket
 				kitchenId={snap.kitchen.id}
 				kitchenName={snap.kitchen.name.replace(' (fictional)', '')}
-				mandateWords={snap.rules.words}
 				refresh={basketRefresh}
 				onorder={basketOrder}
 				ondecide={basketDecide}
