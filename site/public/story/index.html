@@ -190,8 +190,95 @@ section.s:last-of-type { padding-bottom: 120px; }
 .close-links a { color: var(--ink-2); text-underline-offset: 3px; }
 .page-foot { max-width: 1160px; margin: 0 auto; }
 
+/* slides: each section fills the screen and snaps, on wide screens */
+@media (min-width: 900px) {
+	html { scroll-snap-type: y proximity; }
+	main.st > section { min-height: 100svh; scroll-snap-align: start; padding: 72px 0; }
+	main.st > section:not(.hero) { display: flex; flex-direction: column; justify-content: center; }
+	main.st > section.hero { padding: 0; min-height: calc(100svh - 76px); }
+	main.st > section#checks { justify-content: flex-start; padding-top: 120px; }
+	main.st > section:last-of-type { padding-bottom: 72px; }
+}
+.dots { position: fixed; right: 22px; top: 50%; transform: translateY(-50%); display: none; flex-direction: column; gap: 10px; z-index: 20; }
+.dots a { width: 7px; height: 7px; border-radius: 50%; background: var(--rule-strong); display: block; transition: height 0.3s var(--ease), background 0.3s; }
+.dots a.on { background: var(--ink); height: 20px; border-radius: 4px; }
+.counter { position: fixed; left: 24px; bottom: 20px; font: 12.5px 'IBM Plex Mono', ui-monospace, monospace; color: var(--ink-3); z-index: 20; font-variant-numeric: tabular-nums; display: none; }
+@media (min-width: 900px) { .dots { display: flex; } .counter { display: block; } }
+
+/* ask → plan → decision */
+.three { display: grid; gap: 14px; }
+@media (min-width: 960px) { .three { grid-template-columns: repeat(3, 1fr); } }
+.pane { display: flex; flex-direction: column; gap: 12px; padding: 20px; border: 1px solid var(--rule); border-radius: 16px; background: var(--sheet); }
+.ph { display: flex; justify-content: space-between; font-size: 13.5px; font-weight: 600; color: var(--ink-2); }
+.ph span:last-child { font-weight: 400; color: var(--ink-3); }
+.msg { padding: 12px 14px; border-radius: 12px; background: var(--well); font-size: 15px; line-height: 1.5; color: var(--ink); }
+.msg.me { margin-left: 24px; background: color-mix(in oklab, var(--accent) 12%, var(--well)); }
+.pfoot { margin: auto 0 0; padding-top: 10px; border-top: 1px solid var(--rule); font-size: 13.5px; color: var(--ink-3); }
+.plines { display: grid; }
+.pl { display: grid; grid-template-columns: 1fr auto; gap: 6px 12px; padding: 12px 0; border-bottom: 1px solid var(--rule); }
+.pl:first-child { padding-top: 0; }
+.pn { display: grid; gap: 2px; font-size: 15px; color: var(--ink); }
+.pn s { font-size: 13.5px; color: var(--ink-3); }
+.pq { font: 500 13px/1.45 'IBM Plex Mono', ui-monospace, monospace; color: var(--ink-2); text-align: right; font-variant-numeric: tabular-nums; }
+.bar { grid-column: 1 / -1; display: flex; height: 6px; border-radius: 3px; background: var(--well); overflow: hidden; }
+.bar i, .sw { display: block; }
+.confirmed { background: var(--ok); }
+.awaiting { background: repeating-linear-gradient(135deg, var(--ok) 0 4px, transparent 4px 8px); }
+.known { background: var(--accent); }
+.unknown { background: repeating-linear-gradient(135deg, var(--warn) 0 4px, transparent 4px 8px); }
+.none { border: 1.5px dashed var(--out); }
+.dcard { display: grid; gap: 10px; padding: 16px; border: 1px solid var(--warn); border-radius: 12px; background: color-mix(in oklab, var(--warn) 6%, var(--sheet)); }
+.dt { display: flex; justify-content: space-between; gap: 12px; font-weight: 600; font-size: 16px; color: var(--ink); }
+.dcard p { margin: 0; font-size: 14.5px; color: var(--ink-2); }
+.dcard b { color: var(--ink); font-weight: 600; }
+.hold { position: relative; overflow: hidden; height: 42px; border-radius: 999px; background: var(--ink); color: var(--paper); display: grid; place-items: center; font-weight: 600; font-size: 14px; }
+.hold::before { content: ''; position: absolute; inset: 0; background: var(--warn); transform: scaleX(0); transform-origin: left; }
+.hold.fill::before { transform: scaleX(0.82); transition: transform 1.8s cubic-bezier(0.4, 0, 0.2, 1); }
+.hold span { position: relative; }
+
+/* supply states */
+.cert { display: grid; gap: 14px; }
+@media (min-width: 860px) { .cert { grid-template-columns: repeat(5, 1fr); } }
+.cert > div { display: grid; gap: 4px; align-content: start; }
+.cert .sw { height: 72px; border-radius: 10px; margin-bottom: 10px; }
+.cert b { font-weight: 600; font-size: 15.5px; color: var(--ink); }
+.cert span { font-size: 14px; color: var(--ink-2); }
+.cert-sub { margin-top: 32px; }
+@media (max-width: 859px) { .cert > div { grid-template-columns: 56px 1fr; column-gap: 14px; } .cert .sw { height: 40px; margin: 0; grid-row: span 2; } }
+
+/* partners */
+.pt { display: grid; gap: 14px; align-items: start; }
+@media (min-width: 900px) { .pt { grid-template-columns: 260px 1fr; } }
+.pt-list { display: flex; flex-direction: column; gap: 6px; }
+@media (max-width: 899px) { .pt-list { flex-direction: row; overflow-x: auto; padding-bottom: 4px; } .pt-tab { flex: 0 0 auto; } }
+.pt-tab { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; text-align: left; padding: 12px 14px; border: 1px solid var(--rule); border-radius: 12px; background: transparent; color: var(--ink-2); cursor: pointer; font: inherit; transition: border-color 0.2s, background 0.2s; }
+.pt-tab b { display: block; font-size: 17px; font-weight: 600; color: var(--ink); letter-spacing: -0.01em; }
+.pt-tab small { font-size: 13px; color: var(--ink-3); }
+.pt-tab .tg { font-size: 12px; font-weight: 500; padding: 3px 8px; border-radius: 999px; background: var(--ok-wash); color: var(--ok); white-space: nowrap; }
+.pt-tab:hover { border-color: var(--rule-strong); }
+.pt-tab[aria-selected='true'] { border-color: var(--accent); background: color-mix(in oklab, var(--accent) 9%, transparent); }
+.pt-panel { border: 1px solid var(--rule); border-radius: 16px; background: var(--sheet); padding: 22px 24px; }
+.pt-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.pt-head h3 { font-size: 24px; letter-spacing: -0.02em; }
+.pt-head .role { font-size: 13.5px; color: var(--accent-ink); }
+.pt-strip { display: flex; gap: 4px; margin: 16px 0 18px; flex-wrap: wrap; }
+.pt-strip span { flex: 1; min-width: 64px; text-align: center; font-size: 12.5px; padding: 7px 4px; border-radius: 7px; border: 1px solid var(--rule); color: var(--ink-3); }
+.pt-strip span.on { border-color: var(--accent); color: var(--ink); background: color-mix(in oklab, var(--accent) 14%, var(--sheet)); }
+.pt-cols { display: grid; gap: 18px; }
+@media (min-width: 760px) { .pt-cols { grid-template-columns: 1fr 1fr; } }
+.pt-cols h4 { margin: 0 0 6px; font-size: 13.5px; font-weight: 600; color: var(--ink-2); }
+.pt-cols p { margin: 0; font-size: 15px; color: var(--ink-2); }
+.pt-cols b { color: var(--ink); font-weight: 600; }
+.pt-ex { margin-top: 16px; border: 1px solid var(--rule); border-radius: 12px; overflow: hidden; }
+.pt-ex .ebar { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 4px 10px; font-size: 12.5px; color: var(--ink-3); padding: 8px 14px; border-bottom: 1px solid var(--rule); background: var(--well); }
+.pt-ex pre { margin: 0; padding: 12px 14px; font: 13px/1.6 'IBM Plex Mono', ui-monospace, monospace; color: var(--ink); white-space: pre-wrap; overflow-wrap: anywhere; }
+.pt-ex pre i { font-style: normal; color: var(--ink-3); } .pt-ex pre em { font-style: normal; color: var(--ok); } .pt-ex pre u { text-decoration: none; color: var(--warn); }
+.pt-foot { display: flex; gap: 6px 20px; flex-wrap: wrap; margin-top: 14px; font-size: 13.5px; color: var(--ink-3); }
+.pt-foot b { color: var(--ink-2); font-weight: 500; }
+
 @media (prefers-reduced-motion: reduce) {
-	.js .ledger .lrow, .req, .ck, .ck .dot, .outcome, #mandate .said mark, .rule { transition: none; }
+	.js .ledger .lrow, .req, .ck, .ck .dot, .outcome, #mandate .said mark, .rule, .dots a, .pt-tab { transition: none; }
+	.hold.fill::before { transition: none; }
 	.js .ledger .lrow { opacity: 1; transform: none; }
 }
 </style>
@@ -210,12 +297,15 @@ section.s:last-of-type { padding-bottom: 120px; }
 	</nav>
 </header>
 
+<nav class="dots" id="dots" aria-label="Slides"></nav>
+<div class="counter" id="counter" aria-hidden="true"></div>
+
 <main class="st">
 
 <!-- 1 · Bring an event or one item -->
-<section class="hero" aria-labelledby="h-hero">
+<section class="hero" id="hero" aria-labelledby="h-hero">
 	<div>
-		<h1 id="h-hero">Bring an event or one item. <span class="dim">Mandate sorts out the order.</span></h1>
+		<h1 id="h-hero">Tell it what you're cooking. <span class="dim">It orders only what you'd sign.</span></h1>
 		<p class="lede">It drafts the menu when you need one, finds each product in Valio Aimo's catalogue and orders on its own only within the limits the chef sets. Anything else waits for the chef, with the reason.</p>
 		<div class="ctas">
 			<a class="btn primary" href="https://app.mandate.kitchen/request">Try a request</a>
@@ -282,10 +372,44 @@ section.s:last-of-type { padding-bottom: 120px; }
 	<p class="foot-note">Recorded from the app. The restaurant and its booking are a demo scenario; Valio data is challenge mock data.</p>
 </section>
 
-<!-- 3 · The checks -->
+<!-- 3 · Ask, plan, decide -->
+<section class="s" id="flow" aria-labelledby="h-flow">
+	<div class="head">
+		<h2 id="h-flow">You ask. It plans. You decide only the exceptions.</h2>
+	</div>
+	<div class="three">
+		<div class="pane">
+			<div class="ph"><span>The ask</span><span>chat</span></div>
+			<div class="msg me" data-s="plan.ask">Christmas buffet for 140 on the 12th. The usual menu, but the ham is out. Keep it Finnish if you can.</div>
+			<div class="msg" data-s="plan.reply">Planned 14 dishes from your menu. Ham → HK Palvikinkku (known stock, Finnish). Lanttulaatikko made in house from 5 ingredients.</div>
+			<p class="pfoot"><span data-s="plan.counts.lines">60</span> lines planned · <span data-s="plan.counts.decisions">2</span> decisions for you · nothing ordered</p>
+		</div>
+		<div class="pane">
+			<div class="ph"><span>The plan</span><span>ledger</span></div>
+			<div class="plines" id="plines">
+				<div class="pl"><div class="pn"><s>HK Viljaporsaan juhlakinkku</s><span>HK Palvikinkku viipaloitu 1,5 kg</span></div><div class="pq">13 ST<br>€200.59</div><div class="bar"><i class="known" style="width:96%"></i></div></div>
+				<div class="pl"><div class="pn"><span>Rosolli · Atria 2,5 kg</span></div><div class="pq">6 ST<br>€78.18</div><div class="bar"><i class="unknown" style="width:88%"></i></div></div>
+				<div class="pl"><div class="pn"><span>Graavilohi · cured in house</span></div><div class="pq">20 KG<br>€282.20</div><div class="bar"><i class="confirmed" style="width:60%"></i><i class="known" style="width:40%"></i></div></div>
+			</div>
+			<p class="pfoot">Each bar shows how sure the supply is.</p>
+		</div>
+		<div class="pane">
+			<div class="ph"><span>The decision</span><span>you</span></div>
+			<div class="dcard">
+				<div class="dt"><span data-s="plan.decision.title">Make lanttulaatikko in house</span><span class="eur" data-s="plan.decision.eur" data-f="eur">€31.46</span></div>
+				<p><span data-s="plan.decision.newIngredients">5</span> new ingredients · allergen change: <b id="d-allergens">+ milk, + egg, + gluten</b>. Declining leaves <span data-s="plan.decision.uncoveredKg">5.6</span> kg of <span data-s="plan.decision.servings">140</span> servings uncovered.</p>
+				<div class="hold" id="hold"><span>Hold to sign off</span></div>
+			</div>
+			<p class="pfoot">The approval is bound to these exact terms; any edit voids it.</p>
+		</div>
+	</div>
+	<p class="foot-note" id="flow-note">Illustrative values, to be replaced by a recording from the app. Only the chef can sign off; the page never does.</p>
+</section>
+
+<!-- 4 · The checks -->
 <section class="s" id="checks" aria-labelledby="h-checks">
 	<div class="head">
-		<h2 id="h-checks">Every line passes the same checks, whoever sends it.</h2>
+		<h2 id="h-checks">The same checks for every order, whoever sends it.</h2>
 		<p class="sub">Five requests recorded from the app. Scroll to send each one through. Most stop somewhere; each stop and its reason is what the app recorded.</p>
 	</div>
 	<div class="static" id="checks-static">
@@ -308,7 +432,7 @@ section.s:last-of-type { padding-bottom: 120px; }
 	<p class="foot-note">Recorded from the app. The checks are grouped here for reading; in the code they run in one gate before any order is written, and a model can only add a hold, never allow one.</p>
 </section>
 
-<!-- 4 · Out of stock -->
+<!-- 5 · Out of stock -->
 <section class="s" id="stock" aria-labelledby="h-stock">
 	<div class="head">
 		<h2 id="h-stock">Out of stock is where the work starts.</h2>
@@ -343,10 +467,10 @@ section.s:last-of-type { padding-bottom: 120px; }
 	<p class="foot-note">Recorded from the app on Sat 14 Nov; the demo kitchen's clock is Mon 7 Dec. The in-house dish is from the demo buffet plan. Valio data is challenge mock data.</p>
 </section>
 
-<!-- 5 · The mandate -->
+<!-- 6 · The mandate -->
 <section class="s" id="mandate" aria-labelledby="h-mandate">
 	<div class="head">
-		<h2 id="h-mandate">The chef writes the limits once. Every order is checked against them.</h2>
+		<h2 id="h-mandate">Write the limits once. Every order answers to them.</h2>
 	</div>
 	<div class="mandate">
 	<p class="said" id="words">“Order alone up to <mark style="--c:var(--out)" data-r="0">€800 a line and €1,000 an order, €4,000 a week</mark>. <mark style="--c:var(--warn)" data-r="1">Never change an allergen.</mark> Ask me before <mark style="--c:var(--warn)" data-r="2">any new product or any substitute I haven't seen</mark>.”</p>
@@ -360,7 +484,27 @@ section.s:last-of-type { padding-bottom: 120px; }
 	<p class="foot-note">The demo hotel's mandate. The amounts are team estimates. Each kitchen has its own; see <a href="/how">how it works</a>.</p>
 </section>
 
-<!-- 6 · Try it -->
+<!-- 7 · How sure -->
+<section class="s" id="certainty" aria-labelledby="h-cert">
+	<div class="head"><h2 id="h-cert">Every amount says how sure it is.</h2></div>
+	<div class="cert">
+		<div><div class="sw confirmed"></div><b>Supplier confirmed</b><span>backed by a receipt</span></div>
+		<div><div class="sw awaiting"></div><b>Ordered, awaiting supplier</b><span>committed, the supplier has not confirmed yet</span></div>
+		<div><div class="sw known"></div><b>Planned, known stock</b><span>Valio states a quantity. Nothing is reserved.</span></div>
+		<div><div class="sw unknown"></div><b>Planned, unknown stock</b><span>never counted as covering a dish</span></div>
+		<div><div class="sw none"></div><b>Unresolved</b><span>nothing is planned for it yet</span></div>
+	</div>
+	<p class="sub cert-sub">Solid means Valio stated a quantity or the supplier confirmed it. Hatched means planned or ordered without a confirmation. A dashed outline means nothing covers it yet. The patterns read in greyscale too.</p>
+</section>
+
+<!-- 8 · Partners -->
+<section class="s" id="partners" aria-labelledby="h-partners">
+	<div class="head"><h2 id="h-partners">Five partners, each with a fallback.</h2></div>
+	<div data-partners></div>
+	<p class="foot-note">The whole system, part by part: <a href="/how#map">how it works</a>.</p>
+</section>
+
+<!-- 9 · Try it -->
 <section class="s" id="close" aria-labelledby="h-close">
 	<h2 id="h-close">Connect your own agent and try to make it overspend.</h2>
 	<p class="sub">You get a key for your own sandbox. Over MCP or REST your agent can read, plan and place orders that the mandate holds or refuses. It cannot approve them.</p>
@@ -396,6 +540,7 @@ fetch('/cases.json').then((r) => (r.ok ? r.json() : null)).then((d) => {
 		if (v == null || typeof v === 'object') return;
 		el.textContent = el.dataset.f === 'eur' ? eur(v) : el.dataset.f === 'day' ? day(v) : String(v);
 	});
+	fillPlan(d);
 	if (!reduce) buildChecks(d);
 }).catch(() => {});
 
@@ -498,6 +643,84 @@ function buildChecks(d) {
 function shortName(r) {
 	return { 'within-mandate': 'Salmon', 'out-of-stock': 'Ham', 'cut-off': 'Butter', 'lactose-free': 'Milk', 'agent-cannot-approve': 'Outside agent' }[r.id] || r.id;
 }
+
+// Slides: side dots, the counter and keys between sections (wide screens).
+(() => {
+	const secs = [...document.querySelectorAll('main.st > section')], dots = $('dots'), ctr = $('counter');
+	let cur = 0;
+	secs.forEach((s, i) => { const a = document.createElement('a'); a.href = '#' + s.id; a.setAttribute('aria-label', (i + 1) + ': ' + (s.querySelector('h1,h2')?.textContent || s.id)); dots.appendChild(a); });
+	const set = (i) => { cur = i; [...dots.children].forEach((d, j) => d.classList.toggle('on', i === j)); ctr.textContent = String(i + 1).padStart(2, '0') + ' / ' + String(secs.length).padStart(2, '0'); };
+	set(0);
+	const io = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) set(secs.indexOf(e.target)); }), { rootMargin: '-45% 0px -45% 0px' });
+	secs.forEach((s) => io.observe(s));
+	addEventListener('keydown', (e) => {
+		if (e.altKey || e.ctrlKey || e.metaKey || innerWidth < 900) return;
+		const t = e.target; if (t.closest && t.closest('input,textarea,select,button,[role="tab"],summary')) return;
+		const go = (i) => { e.preventDefault(); secs[Math.max(0, Math.min(secs.length - 1, i))].scrollIntoView({ behavior: reduce ? 'auto' : 'smooth' }); };
+		if (e.key === 'PageDown' || (e.key === ' ' && !e.shiftKey)) go(cur + 1);
+		else if (e.key === 'PageUp' || (e.key === ' ' && e.shiftKey)) go(cur - 1);
+	});
+})();
+
+// The decision card: the hold button fills once when seen, to show the gesture. It never signs anything.
+new IntersectionObserver((es, o) => es.forEach((e) => { if (e.isIntersecting && !reduce) { $('hold').classList.add('fill'); o.disconnect(); } }), { threshold: 0.6 }).observe($('hold'));
+
+// The plan slide: recorded values replace the illustrative ones when the recording has them.
+function fillPlan(d) {
+	const pl = d && d.plan;
+	if (!pl) return;
+	$('flow-note').textContent = 'Recorded from the app. Only the chef can sign off; the page never does.';
+	if (pl.decision && Array.isArray(pl.decision.allergens)) $('d-allergens').textContent = pl.decision.allergens.map((a) => '+ ' + a).join(', ');
+	if (Array.isArray(pl.lines) && pl.lines.length) {
+		const W = { confirmed: 'confirmed', awaiting: 'awaiting', known: 'known', unknown: 'unknown', none: 'none' };
+		$('plines').innerHTML = pl.lines.slice(0, 3).map((l) => `<div class="pl"><div class="pn">${l.was ? `<s>${l.was}</s>` : ''}<span>${l.product}</span></div><div class="pq">${l.qty || ''}${l.eur != null ? '<br>' + eur(l.eur) : ''}</div><div class="bar"><i class="${W[l.supply] || 'none'}" style="width:100%"></i></div></div>`).join('');
+	}
+}
+
+// Partners: where each sits in a call, and what happens if it fails.
+(() => {
+const STAGES=['Parse','Authorise','Lookup','Enrich','Decide','Commit','Watch'];
+const P=[
+ {name:'Valio Aimo',role:'Catalogue, price and availability',sub:'catalogue, price, availability',stages:['Lookup'],
+  how:"Every product, pack size and lot rule comes from Valio's catalogue of <b>17,546 products</b>. Price and availability are fetched <b>only for shortlisted products</b>, cached with the time they were fetched.",
+  why:"The agent plans against what Valio states. Products with a stated quantity rank first. A product whose quantity Valio doesn't state is <b>never counted as cover</b>.",
+  ex:{t:'one line in the Christmas plan',n:'values from the demo scenario',b:'<i>→</i> quote: HK Palvikinkku viipaloitu 1,5 kg\n<i>←</i> <em>Valio states 15 packs</em> · €15.43 a pack · 1 pack = 1.5 kg\n   <i>Valio, cached, with the time fetched</i>'},
+  fb:'the cached offer, labelled with its age',proof:'the Why drawer labels each value Valio cached or live'},
+ {name:'Gemini',tag:'live · tested',role:'Reading requests, proposing menus, ranking substitutes',sub:'Flash-Lite and Flash live; Decisions tested',stages:['Parse','Decide'],
+  how:"<b>Flash-Lite</b> reads a buyer's words into a structured request. <b>Gemini 3.8 Flash</b> proposes a menu from an event brief, every amount marked as an estimate. <b>Decisions</b> scores how well each substitute fits the dish, one input to the code's ranking, and can flag a constraint risk that holds the line. It never approves or allows anything.",
+  why:'Words like "lactose-free" survive the parse, so the basket matches what was asked. Every check that decides what may be ordered runs in plain code.',
+  ex:{t:"Valio's own example",n:'illustrative',b:'<i>→</i> "1,000 L lactose-free milk by Monday"\n<i>←</i> 1,000 L milk · <em>lactose-free: required</em> · by Monday'},
+  fb:'rules, team dish templates; Decisions: a recorded replay, then rules',proof:"Valio's milk example keeps lactose-free on the request page"},
+ {name:'Aiven',role:'Postgres and the app runtime',sub:'Postgres, one container',stages:['Commit'],
+  how:'Postgres holds the plans, approvals, orders and order keys. The app runs as <b>one container</b> on Aiven.',
+  why:'The database enforces one order per key. Retries, double clicks and two agents racing all get <b>the same receipt</b>.',
+  ex:{t:'race check after each deploy',n:'seen on the deployed app',b:'<i>→</i> the same order × 4 at once, same key\n<i>←</i> <em>1 order · 1 receipt</em>\n<i>→</i> 3 different keys, same plan\n<i>←</i> <em>1 receipt</em> · the other two refused'},
+  fb:'an in-memory Postgres for tests',proof:'30 visitors at once, 0 errors'},
+ {name:'Exa',role:'Facts from the web',sub:'web evidence in the Why drawer',stages:['Enrich'],
+  how:"When the catalogue lacks a fact, the <b>Why</b> drawer shows what the web says: net content, origin and ingredients, each <b>with its source</b>.",
+  why:"The chef sees where a fact came from. If Valio has no allergen record for a product, the drawer says so.",
+  ex:{t:'Why on the Christmas ham',n:'seen on the deployed app',b:'<i>→</i> Why: HK whole Christmas ham\n<i>←</i> From the web: net content, origin, ingredients\n   <em>each with its product code and source</em>\n   <u>Valio has no allergen record for this product</u>'},
+  fb:'the drawer shows catalogue facts only',proof:'seen in the Why drawer on the deployed app'},
+ {name:'Context.dev',role:'Recall watch',sub:'Ruokavirasto recall list',stages:['Watch'],
+  how:"A monitor checks the <b>Ruokavirasto recall list every 5 minutes</b>. Each notice becomes a case in Operations, matched against the catalogue.",
+  why:'Someone at the supplier sees each recall next to the products it could touch, with the result of the match.',
+  ex:{t:'a recall notice in Operations',n:'seen on the deployed app',b:'<i>→</i> new notice on the Ruokavirasto list\n<i>←</i> a case in Operations\n   <em>No catalogue product matches. Nothing held.</em>'},
+  fb:'a labelled drill',proof:'recall notices shown as cases in Operations'},
+];
+
+document.querySelectorAll('[data-partners]').forEach(root=>{
+ root.classList.add('pt');
+ root.innerHTML=`<div class="pt-list" role="tablist" aria-label="Partners">${P.map((p,i)=>`<button class="pt-tab" role="tab" id="pt-tab-${i}" aria-controls="pt-panel" data-i="${i}" aria-selected="${i===0}" tabindex="${i===0?0:-1}"><span><b>${p.name}</b><small>${p.sub}</small></span><span class="tg">${p.tag||'live'}</span></button>`).join('')}</div><div class="pt-panel" id="pt-panel" role="tabpanel" aria-live="polite"></div>`;
+ const panel=root.querySelector('.pt-panel'),tabs=[...root.querySelectorAll('.pt-tab')];
+ function show(i){const p=P[i];tabs.forEach((t,j)=>{t.setAttribute('aria-selected',j===i);t.tabIndex=j===i?0:-1});panel.setAttribute('aria-labelledby','pt-tab-'+i);
+  panel.innerHTML=`<div class="pt-head"><h3>${p.name}</h3><span class="role">${p.role}</span></div>
+  <div class="pt-strip" aria-label="Where it sits in a call">${STAGES.map(s=>`<span class="${p.stages.includes(s)?'on':''}">${s}</span>`).join('')}</div>
+  <div class="pt-cols"><div><h4>How we use it</h4><p>${p.how}</p></div><div><h4>Why it matters</h4><p>${p.why}</p></div></div>
+  <div class="pt-ex"><div class="ebar"><span>Example · ${p.ex.t}</span><span>${p.ex.n}</span></div><pre>${p.ex.b}</pre></div>
+  <div class="pt-foot"><span>If it fails: <b>${p.fb}</b></span><span>Evidence: <b>${p.proof}</b></span></div>`}
+ tabs.forEach(t=>{t.onclick=()=>show(+t.dataset.i);t.onkeydown=e=>{const d={ArrowDown:1,ArrowRight:1,ArrowUp:-1,ArrowLeft:-1}[e.key];if(!d)return;e.preventDefault();e.stopPropagation();const n=(+t.dataset.i+d+P.length)%P.length;tabs[n].focus();show(n)}});
+ show(0)});
+})();
 
 // The mandate: the phrase and the rule it becomes light together, by hover or as the rules scroll into view.
 (() => {
