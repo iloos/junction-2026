@@ -39,7 +39,7 @@ export function reasonWords(
 
 export const TIER_WORDS = {
 	act: { title: 'Within your mandate', body: 'The agent may commit this alone.' },
-	propose: { title: 'Proposed', body: 'Needs one tap from the chef.' },
+	propose: { title: 'Proposed', body: 'Needs your approval.' },
 	sign_off: { title: 'Sign-off', body: 'Over the limits you set: needs the named approver.' }
 } as const;
 

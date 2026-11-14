@@ -8,7 +8,7 @@ export const euro = (cents: number | null | undefined) =>
 
 export const TIER: Record<Tier, { word: string; hint: string }> = {
 	act: { word: 'Acts alone', hint: 'Inside the mandate' },
-	propose: { word: 'Chef confirms', hint: 'One tap from the chef' },
+	propose: { word: 'Chef confirms', hint: "Needs the chef's approval" },
 	sign_off: { word: 'Needs sign-off', hint: 'A named approver must sign' }
 };
 
