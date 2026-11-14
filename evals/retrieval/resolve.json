@@ -1,5 +1,5 @@
 {
-	"$comment": "Menu ingredient queries through Catalog.resolve (the golden briefs' template ingredients and prod's model menu (suklaakakku, vadelmasorbetti), Finnish as the proposer sends them). `accept`/`reject` are regexes over the top candidate's Finnish name; `unresolved: true` means no product may be pinned (a wrong pin is worse than a visible gap). `diet` passes resolver flags. Runner: src/lib/server/adapters/catalog/retrieval.resolve.eval.test.ts (needs data/valio/).",
+	"$comment": "Menu ingredient queries through Catalog.resolve (the golden briefs' template ingredients and prod's model menu (suklaakakku, vadelmasorbetti), Finnish as the proposer sends them). `accept`/`reject` are regexes over the top candidate's Finnish name; `unresolved: true` means no product may be pinned (a wrong pin is worse than a visible gap). `diet` passes resolver flags (VEGETARIAN/VEGAN: no meat or fish categories). `allowUnresolved`: unresolved also passes, a wrong pin does not. Includes the prod review misses (whitefish → chicken, vanilla → sausage, glögi → fond, celeriac → elk sausage, graavilohi, porkkanasose, luumusose, unasked gluten-free). Runner: src/lib/server/adapters/catalog/retrieval.resolve.eval.test.ts (needs data/valio/).",
 	"cases": [
 		{
 			"q": "lohifilee",
@@ -162,6 +162,107 @@
 		{
 			"q": "myskikurpitsa",
 			"unresolved": true
+		},
+		{
+			"q": "siikafilee",
+			"accept": "siika",
+			"reject": "kana|broiler|paneroitu"
+		},
+		{
+			"q": "vaniljatanko",
+			"diet": ["VEGETARIAN"],
+			"accept": "vanilja",
+			"reject": "makkara|atria|nakki"
+		},
+		{
+			"q": "vanilja",
+			"diet": ["VEGETARIAN"],
+			"accept": "vanilja",
+			"reject": "makkara|soygurt|jogurtti|rahka"
+		},
+		{
+			"q": "glögi",
+			"accept": "glögi|glögg",
+			"reject": "fondi|kana|tee"
+		},
+		{
+			"q": "juuriselleri",
+			"accept": "selleri",
+			"reject": "makkara|grilleri|hirvi",
+			"allowUnresolved": true
+		},
+		{
+			"q": "hirvi",
+			"accept": "hirvi",
+			"reject": "grilleri|makkara|wallenberg",
+			"allowUnresolved": true
+		},
+		{
+			"q": "graavilohi",
+			"accept": "graavi",
+			"reject": "pihvi|mureke|pyörykkä"
+		},
+		{
+			"q": "porkkanasose",
+			"accept": "porkkanasose",
+			"reject": "peruna"
+		},
+		{
+			"q": "luumusose",
+			"accept": "luumu",
+			"reject": "tomaatti|kastike"
+		},
+		{
+			"q": "mustapippuri",
+			"accept": "mustapippuri",
+			"reject": "feta|juusto"
+		},
+		{
+			"q": "leipä",
+			"accept": "leipä",
+			"reject": "gluteeniton|gluten-free"
+		},
+		{
+			"q": "korppujauho",
+			"accept": "korppujauho",
+			"reject": "gluteeniton|gluten-free"
+		},
+		{
+			"q": "kerma",
+			"diet": ["VEGAN"],
+			"accept": "kookos|kaura|soija|kasvi|oat",
+			"reject": "maito"
+		},
+		{
+			"q": "lohi",
+			"diet": ["VEGETARIAN"],
+			"unresolved": true
+		},
+		{
+			"q": "kirjolohifilee",
+			"accept": "kirjolohi",
+			"reject": "porsa|sika|kana|broiler"
+		},
+		{
+			"q": "kirjolohifilee",
+			"diet": ["LACTOSE"],
+			"accept": "kirjolohi",
+			"reject": "porsa|sika|kana|broiler"
+		},
+		{
+			"q": "kirjolohifileet",
+			"accept": "kirjolohi",
+			"reject": "porsa|sika|kana|broiler|sardelli"
+		},
+		{
+			"q": "kinkku",
+			"accept": "kinkku",
+			"reject": "serran|coppa|crudo|viipale|speck|parma"
+		},
+		{
+			"q": "joulukinkku",
+			"accept": "joulukinkku",
+			"reject": "viipal|serran"
 		},
 		{
 			"q": "strutsifilee",

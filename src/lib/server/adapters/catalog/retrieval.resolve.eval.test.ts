@@ -14,6 +14,8 @@ interface Case {
 	accept?: string;
 	reject?: string;
 	unresolved?: boolean;
+	/** Unresolved also passes; a pinned product must still match. */
+	allowUnresolved?: boolean;
 }
 const hasData = existsSync(join('data', 'valio', 'valio_aimo_junction26_product_data.json'));
 const set: { cases: Case[] } = JSON.parse(
@@ -35,7 +37,7 @@ describe.skipIf(!hasData)('resolve eval (menu ingredients)', () => {
 				continue;
 			}
 			if (r.status !== 'resolved') {
-				rows.push({ q: c.q, ok: false, got: `unresolved: ${r.reason}` });
+				rows.push({ q: c.q, ok: Boolean(c.allowUnresolved), got: `unresolved: ${r.reason}` });
 				continue;
 			}
 			const name =

@@ -24,7 +24,7 @@ import type {
 import { serveTool } from '$lib/server/tools/serve';
 import { kitchenUrl, taskForPlan } from '$lib/server/request/task';
 export { kitchenUrl };
-import { proposeMenu } from './proposal';
+import { proposeMenu, type ProposeStep } from './proposal';
 import { blocks, reviewProposal, type Issue } from './rubric';
 
 export interface MenuDeps {
@@ -81,7 +81,7 @@ export async function menuView(
 /** Proposes a menu for a complete brief (revision 0, stored before it is returned). */
 export async function proposeForBrief(
 	d: MenuDeps & { llm?: Llm | null },
-	o: { kitchenId: string; brief: EventBrief; nonce?: string }
+	o: { kitchenId: string; brief: EventBrief; nonce?: string; onStep?: (s: ProposeStep) => void }
 ): Promise<MenuView> {
 	const r = await proposeMenu({
 		kitchenId: o.kitchenId,
@@ -91,7 +91,8 @@ export async function proposeForBrief(
 		catalog: d.catalog,
 		now: d.now(),
 		llm: d.llm,
-		nonce: o.nonce
+		nonce: o.nonce,
+		onStep: o.onStep
 	});
 	// A stored proposal may have newer revisions (the chef edited it): show the latest.
 	const latest = (await d.store.latest(d.workspaceId, r.proposal.id)) ?? r.proposal;

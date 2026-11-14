@@ -397,7 +397,7 @@ export function parseRules(text: string, today: string): Omit<ParsedRequest, 'pa
 		ambiguities.push(`${date.invalid}: using today, ${day(today)}`);
 	} else if (date) {
 		deliverBy = date.iso;
-		if (date.note) ambiguities.push(`"${date.text}": ${date.note}`);
+		if (date.note) notes.push(`"${date.text}": ${date.note}`);
 		if (date.iso < today) ambiguities.push(`"${date.text}" is in the past`);
 	} else ambiguities.push(`no delivery date given: using today, ${day(today)}`);
 	if (weekdayOf(deliverBy) === 0) notes.push(`delivery falls on a Sunday (${day(deliverBy)})`);
