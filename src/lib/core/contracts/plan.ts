@@ -323,7 +323,26 @@ export const Approval = z.object({
 	requestedBy: Actor,
 	decidedBy: Actor.optional(),
 	expiresAt: IsoDateTime,
-	reason: z.string().optional()
+	reason: z.string().optional(),
+	/**
+	 * What the approval was bound to when it was shown: the plan's lines and needs at `planVersion`. Kept so a voided
+	 * approval can say what changed (get_plan.lastVoided) without reading the op log. Absent on older approvals.
+	 */
+	bound: z
+		.object({
+			lines: z.array(
+				z.object({
+					lineId: z.string(),
+					productId: ProductId,
+					productName: z.string().optional(),
+					qty: SalesQty,
+					unitCents: Cents.nullable(),
+					state: LineState
+				})
+			),
+			needs: z.array(z.object({ needId: z.string(), amount: Measure })).optional()
+		})
+		.optional()
 });
 export type Approval = z.infer<typeof Approval>;
 
