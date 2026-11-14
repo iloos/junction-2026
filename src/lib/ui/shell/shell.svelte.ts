@@ -31,6 +31,8 @@ export class Shell {
 	system = $state(false);
 	/** The agent dock, on every page; `?chat=1` opens it. */
 	chatOpen = $state(false);
+	/** Text a page puts in the agent's composer once (e.g. "For Tue 8 Dec: "); the dock takes it and clears it. */
+	chatDraft = $state<string | null>(null);
 	/** What the agent is scoped to on this page: the kitchen and the plan on screen (Kitchen, Request, Ops). */
 	chat = $state<{ kitchenId?: string; planId?: string }>({});
 	/** The agent rail's width on desktop (px): dragged by its left edge, kept per browser. */

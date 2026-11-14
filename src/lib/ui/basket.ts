@@ -5,60 +5,17 @@
  */
 import { day as dayLabel, money, readableName, storyTime } from './format';
 import { salesUnitWords } from './request/words';
+import type { BasketDay, BasketLine, BasketSource, BasketStage } from '$lib/core/services/basket';
+import type { Origin as SourceKind } from '$lib/core/services/stages';
 
-export type BasketStage = 'proposed' | 'held' | 'approved' | 'ordered';
-/** Where a plan came from: `Plan.origin`, set by the server at each entry (never a tool input). */
-export type SourceKind = 'event' | 'usual' | 'request' | 'chat' | 'agent' | 'menu';
-
-export interface BasketSource {
-	planId: string;
-	kind: SourceKind;
-	title: string;
-	label?: string;
-	startedBy: string;
-	version: number;
-	approvalId: string | null;
-}
-export interface BasketLine {
-	planId: string;
-	lineId: string;
-	productId: string;
-	productName: string;
-	qty: { value: number; unit: string };
-	unitCents: number | null;
-	lineCents: number | null;
-	stage: BasketStage;
-	reasons: string[];
-	need?: string;
-	substituteFor?: string;
-	cutoff: string | null;
-	imageUrl?: string;
-}
-export interface BasketDay {
-	date: string;
-	sources: BasketSource[];
-	lines: BasketLine[];
-	totals: Record<BasketStage | 'all', number>;
-	budget: {
-		week: string;
-		capCents: number | null;
-		orderedCents: number;
-		ifAllOrderedCents: number;
-	};
-	due: string | null;
-	counts: {
-		orderableNow: number;
-		waitingOnDecision: number;
-		decisions: number;
-		cannotOrder: number;
-	};
-}
-export interface Basket {
-	kitchenId: string;
-	days: BasketDay[];
-	/** The run was too long to read whole; the basket may miss older plans. */
-	truncated?: boolean;
-}
+export type {
+	Basket,
+	BasketDay,
+	BasketLine,
+	BasketSource,
+	BasketStage
+} from '$lib/core/services/basket';
+export type { Origin as SourceKind } from '$lib/core/services/stages';
 
 /** The order a chef reads stages in: what needs them first, what is done last. */
 export const STAGES: BasketStage[] = ['held', 'proposed', 'approved', 'ordered'];
@@ -75,8 +32,9 @@ const KIND_WORDS: Record<SourceKind, string> = {
 	usual: 'Usual order',
 	request: 'Request',
 	chat: 'Asked in chat',
-	agent: 'Outside agent',
-	menu: 'Menu'
+	outside_agent: 'Outside agent',
+	menu: 'Menu',
+	kitchen: 'Kitchen order'
 };
 
 const WEEKDAY = new Intl.DateTimeFormat('en-GB', { weekday: 'long', timeZone: 'UTC' });
@@ -87,7 +45,7 @@ const WEEKDAY = new Intl.DateTimeFormat('en-GB', { weekday: 'long', timeZone: 'U
  */
 export function sourceChip(s: BasketSource, date?: string): string {
 	if (s.kind === 'usual' && date) return `Usual ${WEEKDAY.format(new Date(`${date}T12:00:00Z`))}`;
-	if (s.kind === 'agent') return KIND_WORDS.agent;
+	if (s.kind === 'outside_agent') return KIND_WORDS.outside_agent;
 	// Long titles ("Christmas dinner buffet, 140 guests") are cut at the first comma for the chip.
 	const short = s.title.split(/,|·/)[0].trim();
 	if (short && short.length <= 28) return short;

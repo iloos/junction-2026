@@ -106,6 +106,13 @@ export async function setKitchen(mode: ApiMode, kitchenId: string): Promise<Answ
 	return null;
 }
 
+/** Choose an establishment (D15): switch kitchen without planning anything (the offline stand-in just switches). */
+export async function joinKitchen(mode: ApiMode, kitchenId: string): Promise<Answer> {
+	if (mode === 'live') return scenario('join', kitchenId);
+	await fx.setKitchen(kitchenId);
+	return null;
+}
+
 export async function setContention(
 	mode: ApiMode,
 	on: boolean,

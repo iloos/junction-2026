@@ -39,7 +39,7 @@
 		kitchenName: string;
 		mandateWords: string;
 		/** Bumped by the page after any change (a commit, an approval, a new plan) to read the basket again. */
-		refresh?: number;
+		refresh?: string | number;
 		/** Order the lines of this plan that can go now (the page's commit for that plan). */
 		onorder: (planId: string) => void;
 		/** Show this plan's decisions (the page's Decide panel for that plan). */
@@ -94,12 +94,7 @@
 		class="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3 gap-y-1 border-t border-rule px-3 py-2.5 first:border-t-0 sm:grid-cols-[minmax(0,1fr)_7rem_auto] sm:items-center"
 	>
 		<div class="min-w-0">
-			<ProductToken
-				productId={l.productId}
-				name={l.productName}
-				qty={tokenQty(l.qty)}
-				imageUrl={l.imageUrl}
-			/>
+			<ProductToken productId={l.productId} name={l.productName} qty={tokenQty(l.qty)} />
 			{#if l.need || l.substituteFor || chip}
 				<p class="mt-0.5 truncate text-meta text-ink-3">
 					{#if chip}<span class="mr-1 rounded-full bg-well px-1.5 py-px text-micro text-ink-2"
@@ -146,7 +141,7 @@
 			</div>
 		</div>
 
-		{#if basket?.truncated}
+		{#if (basket as { truncated?: boolean } | null)?.truncated}
 			<p class="text-meta text-ink-3">
 				This sandbox has a long history; older plans may be missing here.
 			</p>

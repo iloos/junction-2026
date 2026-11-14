@@ -14,8 +14,10 @@
 		LoaderCircle,
 		CircleX,
 		CircleCheck,
-		Info
+		Info,
+		Smartphone
 	} from '@lucide/svelte';
+	import { Popover } from 'bits-ui';
 	import { KitchenStore } from '$lib/kitchen/kitchen.svelte';
 	import { KITCHENS, PRODUCTS, SEED } from '$lib/kitchen/catalog';
 	import { eventFor, type EventSeedFile } from '$lib/kitchen/events';
@@ -59,6 +61,10 @@
 	import ApprovalPanel, { type Shortfall } from './ApprovalPanel.svelte';
 	import ProductToken from '$lib/ui/ProductToken.svelte';
 	import CutoffTimeline from '$lib/ui/viz/CutoffTimeline.svelte';
+	import EstablishmentPicker from '$lib/ui/EstablishmentPicker.svelte';
+	import PairDevice from '$lib/ui/pair/PairDevice.svelte';
+	import Basket from './Basket.svelte';
+	import NothingPlanned from './NothingPlanned.svelte';
 
 	import type { ApiMode } from '$lib/kitchen/api';
 
@@ -601,6 +607,81 @@
 
 	// The shell shows the sandbox (workspace, run, clock, start over) and where the data comes from.
 	const shell = useShell();
+
+	/**
+	 * Establishment first (D15, R12-05): a fresh visitor chooses who they cook for before anything else. Kept per
+	 * sandbox in this browser; a sandbox that already has a plan, an approval link, a shared room or the offline
+	 * stand-in skips it. Choosing switches kitchen and plans nothing (`k.join`).
+	 */
+	const joinKey = $derived(`mandate.joined.${shell?.sandbox?.workspace ?? 'this-browser'}`);
+	let joinedAs = $state<{ kitchenId: string; notes?: string } | null | undefined>(undefined);
+	$effect(() => {
+		if (!joinKey) return;
+		try {
+			const raw = localStorage.getItem(joinKey);
+			joinedAs = raw ? JSON.parse(raw) : null;
+		} catch {
+			joinedAs = { kitchenId: k.startKitchen ?? 'k-hotel' };
+		}
+	});
+	const needsJoin = $derived(
+		mode === 'live' &&
+			joinedAs === null &&
+			k.started === false &&
+			!roomNotice &&
+			!page.url.searchParams.get('plan')
+	);
+	async function choose(kitchenId: string, notes?: string) {
+		joinedAs = { kitchenId, ...(notes ? { notes } : {}) };
+		try {
+			if (joinKey) localStorage.setItem(joinKey, JSON.stringify(joinedAs));
+		} catch {
+			/* storage blocked: the choice lasts for this page */
+		}
+		await k.join(kitchenId);
+	}
+	function saveNotes(notes: string) {
+		if (!joinedAs) return;
+		joinedAs = { ...joinedAs, notes };
+		try {
+			if (joinKey) localStorage.setItem(joinKey, JSON.stringify(joinedAs));
+		} catch {
+			/* storage blocked */
+		}
+	}
+
+	/** A day picked for the chat: the dock opens with the day already said. */
+	function askFor(date: string | null) {
+		if (!shell) return;
+		if (date) shell.chatDraft = `For ${day(date)}: `;
+		shell.chatOpen = true;
+	}
+	/** A plan made from the usual order, or opened from the basket: its own view. */
+	async function openPlan(planId: string) {
+		viewChoice = 'event';
+		await goto(resolve(`/?plan=${encodeURIComponent(planId)}`), { keepFocus: true });
+		await k.load(planId);
+	}
+
+	/** The Kitchen as a basket (every open plan per delivery day) or the plan on screen. */
+	let viewChoice = $state<'basket' | 'event' | null>(null);
+	const kitchenView = $derived(
+		viewChoice ?? ((snap?.others?.length ?? 0) > 0 ? 'basket' : 'event')
+	);
+	/** Read the basket again after anything on the plan changes. */
+	const basketRefresh = $derived(
+		`${k.plan?.id ?? ''}:${k.plan?.version ?? 0}:${k.lastCommit?.key ?? ''}:${snap?.others?.length ?? 0}`
+	);
+	async function basketOrder(planId: string) {
+		if (k.plan?.id !== planId) await k.load(planId);
+		await k.commit();
+	}
+	async function basketDecide(planId: string) {
+		if (k.plan?.id !== planId) await k.load(planId);
+		viewChoice = 'event';
+		if (shell) shell.locate = { planId, at: Date.now(), zone: 'decide' };
+	}
+
 	/**
 	 * With the agent open and decisions waiting, the Decide panel lives at the top of the agent rail (the same panel
 	 * and command), once, instead of beside the plan as well.
@@ -742,8 +823,24 @@
 					class="-mt-1.5 self-start text-meta text-ink-2 underline underline-offset-2 sm:hidden"
 					onclick={() => (mandateOpen = true)}>more</button
 				>{/if}
-			<span class="sm:ml-auto"
-				><CalendarSubscribe kitchenId={snap.kitchen.id} planId={plan?.id ?? null} /></span
+			<span class="flex items-center gap-3 sm:ml-auto"
+				><CalendarSubscribe
+					kitchenId={snap.kitchen.id}
+					planId={plan?.id ?? null}
+				/>{#if mode === 'live' && !roomNotice}<Popover.Root
+						><Popover.Trigger
+							class="inline-flex items-center text-ink-2 hover:text-ink"
+							aria-label="Pair a phone"
+							title="Pair a phone"><Smartphone size={14} aria-hidden="true" /></Popover.Trigger
+						><Popover.Portal
+							><Popover.Content
+								sideOffset={6}
+								align="end"
+								class="z-50 w-[min(320px,calc(100vw-24px))] rounded-lg border border-rule bg-sheet p-3 shadow-lg"
+								><PairDevice /></Popover.Content
+							></Popover.Portal
+						></Popover.Root
+					>{/if}</span
 			>
 		{/if}
 	</div>
@@ -818,32 +915,26 @@
 			>
 		{/if}
 	</main>
+{:else if needsJoin}
+	<main class="pb-10">
+		<EstablishmentPicker onchoose={choose} />
+		{#if k.error}
+			<p class="mx-auto max-w-5xl px-4 text-body text-out" role="alert">{errorWords(k.error)}</p>
+		{/if}
+	</main>
 {:else if k.started === false}
 	{@const kit = KITCHENS.find((x) => x.id === k.startKitchen) ?? KITCHENS[0]}
 	<main class="mx-auto max-w-[760px] px-4 py-10 md:px-6 md:py-14">
 		{#if !preEvent}
-			<!-- A kitchen without a booked event: its first plan comes from what the chef asks for. -->
-			<p class="text-meta text-ink-3">{kit.name.replace(' (fictional)', '')}</p>
-			<h1 class="mt-1 text-title font-semibold tracking-[-0.015em] text-ink">
-				Nothing planned yet
-			</h1>
-			<p class="mt-2 max-w-[60ch] text-body leading-relaxed text-ink-2">
-				This kitchen has no booked event. Its first plan comes from the chat: say what you need and
-				for when, and the agent drafts it within your mandate.
-			</p>
-			<blockquote class="mt-4 border-l-2 border-accent pl-3 text-body text-ink">
-				“{kit.mandate.words}”
-				<footer class="mt-1 text-meta text-ink-3">
-					The chef's mandate: what the agent may do alone.
-				</footer>
-			</blockquote>
-			<button
-				type="button"
-				class="mt-5 inline-flex h-11 items-center gap-2 rounded-md bg-accent px-5 text-body font-medium text-sheet hover:bg-accent-ink"
-				onclick={() => shell && (shell.chatOpen = true)}
-			>
-				<Bot size={16} aria-hidden="true" /> Ask the agent
-			</button>
+			<NothingPlanned
+				kitchenId={kit.id}
+				kitchenName={kit.name.replace(' (fictional)', '')}
+				mandateWords={kit.mandate.words}
+				notes={joinedAs?.kitchenId === kit.id ? (joinedAs.notes ?? null) : null}
+				onnotes={saveNotes}
+				onplanned={openPlan}
+				onask={askFor}
+			/>
 		{:else}
 			<p class="text-meta text-ink-3">
 				{kit.name.replace(' (fictional)', '')} · a booking to buy for
@@ -908,6 +999,23 @@
 				<Play size={16} aria-hidden="true" />
 				{k.busy ? 'Planning…' : 'Plan the event'}
 			</button>
+			<details class="mt-10 border-t border-rule pt-4">
+				<summary class="cursor-pointer text-body font-medium text-ink"
+					>Or plan another day: the usual order, or ask the agent</summary
+				>
+				<div class="mt-4">
+					<NothingPlanned
+						kitchenId={kit.id}
+						kitchenName={kit.name.replace(' (fictional)', '')}
+						mandateWords={kit.mandate.words}
+						notes={joinedAs?.kitchenId === kit.id ? (joinedAs.notes ?? null) : null}
+						onnotes={saveNotes}
+						onplanned={openPlan}
+						onask={askFor}
+						embedded
+					/>
+				</div>
+			</details>
 		{/if}
 		{#if k.progress}
 			<p class="mt-4 flex items-center gap-2 text-body text-ink-2" role="status" aria-live="polite">
@@ -946,645 +1054,687 @@
 			onwhy={() => k.openWhy(l.id)}
 		/>
 	{/snippet}
-	<main
-		class="mx-auto grid max-w-[1440px] grid-cols-1 gap-6 px-4 pt-5 pb-6 md:px-6 {shell?.chatOpen
-			? '2xl:grid-cols-[minmax(0,1fr)_360px]'
-			: 'lg:grid-cols-[minmax(0,1fr)_360px]'}"
-	>
-		<div class="min-w-0">
-			<!-- The task: decisions left, by when, cover by certainty; the event as a diff of a normal week -->
-			<section aria-label="This task">
-				<TaskHeader
-					title={isEvent ? view.title : readableName(view.title)}
-					meta={isEvent
-						? `${day(view.date)} · ${num(view.guests)} guests · ${view.serviceStyle} · delivery ${day(plan.deliverBy)}`
-						: [originWords, `delivery ${day(plan.deliverBy)}`].filter(Boolean).join(' · ')}
-					decisions={decisions.length}
-					due={decisionsDue(plan, approval)}
-					now={k.now}
-					coverage={[...coverage.values()]}
-					cannot={needsYou.cannot}
-					{orderable}
-					ordered={orderedState}
-					onorder={() => k.commit()}
-					busy={k.busy}
-					openLines={(plan?.lines ?? []).filter(
-						(l) => !['committed', 'rejected', 'unorderable'].includes(l.state) && l.qty.value > 0
-					).length}
-					others={(snap?.others ?? [])
-						.filter((o) => !dismissed.has(o.id))
-						.map((o) => ({
-							...o,
-							title: readableName(o.title),
-							href: `${resolve('/')}?kitchen=${snap!.kitchen.id}&plan=${o.id}`
-						}))}
-					ondismiss={dismiss}
-					oncancel={k.mode === 'live'
-						? async (id) => {
-								const o = snap?.others?.find((x) => x.id === id);
-								if (!o?.version) return false;
-								const ok = await k.cancelOther(id, o.version);
-								if (ok) await k.retry();
-								return ok;
-							}
-						: undefined}
-				>
-					{#snippet action()}
-						{#if decisions.length && active !== 'decide'}
-							<button
-								type="button"
-								class="inline-flex h-10 items-center gap-1.5 rounded-md bg-ink px-4 text-body font-medium text-sheet hover:bg-ink-2 lg:hidden"
-								onclick={() => show('decide')}
-								>Review {decisions.length === 1 ? 'the decision' : 'decisions'}</button
-							>
-						{/if}
-					{/snippet}
-				</TaskHeader>
-				{#if isEvent}<p class="mt-2 text-meta text-ink-2">
-						{#if view.thisWeek.cents - view.normalWeek.cents > 0}
-							The event adds
-							<span class="mono text-ink"
-								>{moneyDelta(view.thisWeek.cents - view.normalWeek.cents)}</span
-							>
-							and <span class="mono text-ink">{fixed(view.eventKg)}</span> kg of food to a normal week
-						{:else}
-							<!-- A regular service, not an extra: it is part of the normal week, so it adds nothing to it. -->
-							An ordinary {weekday(view.date)}: inside the normal week
-						{/if}
-						<span class="text-ink-3"
-							>(team estimate: <span class="mono"
-								>{money(view.normalWeek.cents, { whole: true })}</span
-							>, {view.normalWeek.lines} lines)</span
-						>.
-					</p>{/if}
-				{#if weekMeter}
-					<div class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-meta text-ink-3">
-						<span class="shrink-0">Week budget</span>
-						<div
-							class="relative h-1.5 min-w-[120px] flex-1 overflow-hidden rounded-full bg-well"
-							role="img"
-							aria-label="Weekly spend against cap"
-						>
-							<span
-								class="absolute inset-y-0 left-0 bg-ink-3/60"
-								style="width: {weekMeter.spentPct}%"
-							></span>
-							<span
-								class="absolute inset-y-0 transition-[width] duration-300 {weekMeter.over
-									? 'bg-out'
-									: 'bg-accent'}"
-								style="left: {weekMeter.spentPct}%; width: {weekMeter.orderPct}%"
-							></span>
-						</div>
-						<span class="text-ink-2">
-							<span class="mono">{money(weekMeter.spent, { whole: true })}</span> spent +
-							<span class="mono">{money(weekMeter.order, { whole: true })}</span> this order of
-							<span class="mono">{money(weekMeter.cap, { whole: true })}</span>
-						</span>
-					</div>
-				{/if}
-				{#if view.planReasons.length}
-					<p class="mt-2 rounded-md bg-signoff-wash px-3 py-2 text-body text-ink">
-						The whole order is held: {view.planReasons.map(reasonShort).join(', ').toLowerCase()}.
-						Every line needs sign-off.
-					</p>
-				{/if}
-			</section>
-
-			<!-- Phone: one zone at a time, Decide first while anything needs the chef -->
-			<div
-				id="zones"
-				role="tablist"
-				aria-label="Task zones"
-				class="sticky top-0 z-20 -mx-4 mt-4 flex border-b border-rule bg-paper/95 px-4 backdrop-blur lg:hidden"
+	<nav class="mx-auto flex max-w-[1440px] gap-1 px-4 pt-4 md:px-6" aria-label="Kitchen view">
+		{#each [['basket', 'Basket'], ['event', isEvent ? view.title : 'This plan']] as const as [id, label] (id)}
+			<button
+				type="button"
+				aria-pressed={kitchenView === id}
+				class="h-8 max-w-[60vw] truncate rounded-md px-3 text-body {kitchenView === id
+					? 'bg-ink font-medium text-sheet'
+					: 'text-ink-2 hover:bg-well hover:text-ink'}"
+				onclick={() => (viewChoice = id)}>{label}</button
 			>
-				{#each ZONES as z (z.id)}
-					<button
-						type="button"
-						role="tab"
-						aria-selected={active === z.id}
-						class="flex h-11 flex-1 items-center justify-center gap-1.5 border-b-2 text-body {active ===
-						z.id
-							? 'border-ink font-semibold text-ink'
-							: 'border-transparent text-ink-2'}"
-						onclick={() => show(z.id)}
-						>{z.label}{#if z.id === 'decide' && decisions.length}<span
-								class="mono grid size-5 place-items-center rounded-full bg-auth text-micro text-sheet"
-								>{decisions.length}</span
-							>{/if}</button
+		{/each}
+	</nav>
+	{#if kitchenView === 'basket'}
+		<main class="mx-auto max-w-[1440px] px-4 pt-4 pb-24 md:px-6">
+			<Basket
+				kitchenId={snap.kitchen.id}
+				kitchenName={snap.kitchen.name.replace(' (fictional)', '')}
+				mandateWords={snap.rules.words}
+				refresh={basketRefresh}
+				onorder={basketOrder}
+				ondecide={basketDecide}
+				onopen={openPlan}
+				onask={askFor}
+			/>
+		</main>
+	{:else}
+		<main
+			class="mx-auto grid max-w-[1440px] grid-cols-1 gap-6 px-4 pt-5 pb-6 md:px-6 {shell?.chatOpen
+				? '2xl:grid-cols-[minmax(0,1fr)_360px]'
+				: 'lg:grid-cols-[minmax(0,1fr)_360px]'}"
+		>
+			<div class="min-w-0">
+				<!-- The task: decisions left, by when, cover by certainty; the event as a diff of a normal week -->
+				<section aria-label="This task">
+					<TaskHeader
+						title={isEvent ? view.title : readableName(view.title)}
+						meta={isEvent
+							? `${day(view.date)} · ${num(view.guests)} guests · ${view.serviceStyle} · delivery ${day(plan.deliverBy)}`
+							: [originWords, `delivery ${day(plan.deliverBy)}`].filter(Boolean).join(' · ')}
+						decisions={decisions.length}
+						due={decisionsDue(plan, approval)}
+						now={k.now}
+						coverage={[...coverage.values()]}
+						cannot={needsYou.cannot}
+						{orderable}
+						ordered={orderedState}
+						onorder={() => k.commit()}
+						busy={k.busy}
+						openLines={(plan?.lines ?? []).filter(
+							(l) => !['committed', 'rejected', 'unorderable'].includes(l.state) && l.qty.value > 0
+						).length}
+						others={(snap?.others ?? [])
+							.filter((o) => !dismissed.has(o.id))
+							.map((o) => ({
+								...o,
+								title: readableName(o.title),
+								href: `${resolve('/')}?kitchen=${snap!.kitchen.id}&plan=${o.id}`
+							}))}
+						ondismiss={dismiss}
+						oncancel={k.mode === 'live'
+							? async (id) => {
+									const o = snap?.others?.find((x) => x.id === id);
+									if (!o?.version) return false;
+									const ok = await k.cancelOther(id, o.version);
+									if (ok) await k.retry();
+									return ok;
+								}
+							: undefined}
 					>
-				{/each}
-			</div>
-
-			<!-- Plan: dish → need → order -->
-			<section aria-labelledby="dishes-h" class="mt-6 {active === 'plan' ? '' : 'max-lg:hidden'}">
-				<div class="flex items-baseline justify-between gap-4">
-					<h2 id="dishes-h" class="flex items-center gap-1.5 text-heading font-semibold text-ink">
-						{tableTitle}
-						<details class="relative font-normal">
-							<summary
-								class="grid size-6 cursor-pointer list-none place-items-center rounded-full text-ink-3 hover:bg-well hover:text-ink"
-								aria-label="How this table works"><Info size={15} aria-hidden="true" /></summary
-							>
-							<p
-								class="absolute top-7 left-0 z-20 w-72 rounded-md border border-rule bg-sheet px-3 py-2 text-meta text-ink-2 shadow-md"
-							>
-								{#if isEvent}Menu → need → order. Change grams per guest and the need, packs, price
-									and mandate recompute. Open a row for how the amount was worked out and every
-									line; Why shows the sources.{:else}What this order buys, line by line. Open a row
-									for its terms; Why shows where each fact came from and what the mandate says.{/if}
-							</p>
-						</details>
-					</h2>
-				</div>
-				{#if contended}
-					<p
-						class="mt-2 flex items-start gap-2 rounded-lg border border-signoff/50 bg-signoff-wash px-4 py-2.5 text-body text-ink"
-						role="status"
-					>
-						<Bot size={16} class="mt-0.5 shrink-0 text-signoff" aria-hidden="true" />
-						<span>{contended}</span>
-					</p>
-				{/if}
-				{#if k.outsideNote}
-					<p
-						class="mt-2 flex items-start gap-2 rounded-lg border border-accent/40 bg-accent-wash/50 px-4 py-2 text-body text-ink"
-						role="status"
-					>
-						<span class="min-w-0 flex-1"
-							><span class="font-medium">{CHANGE_BY[k.outsideNote.by].replace(/^by/, 'By')}:</span>
-							{k.outsideNote.text}</span
-						>
-						<button
-							type="button"
-							class="shrink-0 text-meta text-ink-2 underline underline-offset-2 hover:text-ink"
-							onclick={() => (k.outsideNote = null)}>Dismiss</button
-						>
-					</p>
-				{/if}
-				{#if changed}
-					<section
-						class="mt-2 rounded-lg border border-accent/40 bg-accent-wash/50 px-4 py-2.5"
-						aria-label="What changed"
-					>
-						<div class="flex items-baseline justify-between gap-3">
-							<p class="text-body font-semibold text-ink">
-								What changed{#if k.changeBy}<span class="font-normal text-ink-2">
-										· {CHANGE_BY[k.changeBy]}</span
-									>{/if}
-								<span class="mono text-meta font-normal text-ink-3"
-									>v{changed.from} → v{changed.to}</span
-								>
-							</p>
-							<button
-								type="button"
-								class="text-meta text-ink-2 underline underline-offset-2 hover:text-ink"
-								onclick={() => (k.changeFrom = null)}>Dismiss</button
-							>
-						</div>
-						<ul class="mt-1 space-y-0.5 text-meta text-ink-2">
-							{#each changed.needs as n (n.label)}
-								<li>
-									<span class="text-ink">{n.label.split(' (')[0]}</span> needs
-									<span class="mono">{amt(n.before)} → {amt(n.after)} {n.unit}</span>
-								</li>
-							{/each}
-							{#each changed.lines.slice(0, 4) as l (l.lineId)}
-								<li>
-									<span class="text-ink">{l.name}</span>
-									{#if l.before === null}<span
-											>added, <span class="mono">{num(l.after!)} {l.unit}</span></span
-										>{:else if l.after === null}<span>dropped</span
-										>{:else if l.before === l.after}<span
-											>stays <span class="mono">{num(l.after)} {l.unit}</span></span
-										>{:else}<span class="mono">{num(l.before)} → {num(l.after)} {l.unit}</span>{/if}
-									{#if l.before !== l.after && snap?.byAgent?.[l.lineId]}
-										· <AgentMark by={snap.byAgent[l.lineId]} />{/if}
-								</li>
-							{/each}
-							{#if changed.lines.length > 4}<li>and {changed.lines.length - 4} more lines</li>{/if}
-							<li>
-								Plan <span class="mono"
-									>{money(changed.cents.before)} → {money(changed.cents.after)}</span
-								>
-								· decisions
-								<span class="mono">{changed.decisions.before} → {changed.decisions.after}</span>
-							</li>
-						</ul>
-					</section>
-				{/if}
-				<div class="mt-2 overflow-hidden rounded-lg border border-rule bg-sheet">
-					<div
-						class="hidden {ROW_COLS} items-center gap-x-3 border-b border-rule bg-well px-4 py-2 text-micro font-medium text-ink-3 lg:grid"
-						aria-hidden="true"
-					>
-						<span>{isEvent ? 'Dish' : 'Item'}</span>
-						<span>{isEvent ? 'g per guest' : ''}</span>
-						<span class="text-right">Need</span>
-						<span>Product</span>
-						<span class="text-right">€ ex VAT</span>
-						<span>State</span>
-						<span></span>
-					</div>
-					{#each view.dishes as d (d.id)}
-						{@const lines = linesOf(d)}
-						{@const f = coverage.get(d.needId)}
-						{@const r = rowOf(d, lines)}
-						{@const isOpen = !!expanded[d.id]}
-						{@const lockedDish = lines.some((l) => l.state === 'committed')}
-						{@const isMarked = !!marked && d.lineIds.some((id) => marked!.has(id))}
-						{@const justApproved = d.lineIds.some((id) => approvedNow.has(id))}
-						<div
-							id="need-{d.id}"
-							data-marked={isMarked || undefined}
-							class="scroll-mt-4 border-b border-rule transition-[opacity,background-color] duration-200 last:border-b-0 {focusNeed ===
-							d.needId
-								? 'bg-propose-wash/40 ring-2 ring-propose/50 ring-inset'
-								: isMarked
-									? 'bg-accent-wash/70 shadow-[inset_3px_0_0_var(--color-accent)]'
-									: marked
-										? 'opacity-55'
-										: ''}"
-						>
-							<!-- One line per dish: everything else is in the detail below (expand) or in Why. -->
-							<div
-								class="grid min-h-16 grid-cols-[minmax(0,1fr)_auto_28px] items-center gap-x-3 px-4 py-2 lg:min-h-14 {ROW_COLS} {d.lineIds.some(
-									(id) => k.flash.has(id)
-								)
-									? 'landed'
-									: ''}"
-							>
-								<div class="min-w-0">
-									<p class="flex min-w-0 items-center gap-1.5 text-body font-medium text-ink">
-										<span class="truncate">{d.nameFi}</span>
-										<DietMarks marks={dishMarks(lines)} />
-									</p>
-									<p class="truncate text-meta text-ink-3">
-										<span class="lg:hidden"
-											>{#if r.was}<span class="text-signoff"
-													>{r.cause.replace(/^./, (c) => c.toUpperCase())}</span
-												>
-												→ {r.product}{:else}{r.product}{/if}</span
-										><span class="max-lg:hidden">{d.name !== d.nameFi ? d.name : ''}</span>
-									</p>
-								</div>
-								<div class="hidden lg:block">
-									{#if d.gDefault > 0}<GramsStepper
-											compact
-											value={d.gServed}
-											original={d.gDefault}
-											label={d.nameFi}
-											pending={k.pendingGrams[d.id]}
-											disabled={k.readOnly || !d.editable || lockedDish}
-											onchange={(g) => k.setGrams(d.id, g)}
-										/>{:else}<span class="text-meta text-ink-3">—</span>{/if}
-								</div>
-								<p class="mono hidden text-right text-body text-ink lg:block" title={d.needFormula}>
-									{d.need.unit === 'pcs'
-										? d.need.value
-										: fixed(d.need.value, d.need.value < 10 ? 2 : 1)}
-									<span class="text-meta text-ink-3">{needUnit(d.need.unit)}</span>
-								</p>
-								<!-- A 40 px product thumbnail can sit before the name here without growing the row. -->
-								<div class="hidden min-w-0 lg:block">
-									<p class="flex min-w-0 items-center gap-1.5 text-body">
-										{#if r.kind === 'make'}<ChefHat
-												size={14}
-												class="shrink-0 text-accent"
-												aria-hidden="true"
-											/>{:else if r.kind === 'sub'}<CornerDownRight
-												size={14}
-												class="shrink-0 text-accent"
-												aria-label="Replaces the planned product"
-											/>{:else if r.kind === 'none'}<Ban
-												size={14}
-												class="shrink-0 text-sup-missing"
-												aria-hidden="true"
-											/>{/if}
-										{#if r.productId}
-											<!-- The product opens its card (pack, price, supply in words, the Valio listing). -->
-											<ProductToken
-												productId={r.productId}
-												name={r.product}
-												deliverBy={plan?.deliverBy}
-												class="hover:text-accent-ink"
-											/>
-										{:else}
-											<span class="truncate {r.kind === 'none' ? 'text-ink-3' : 'text-ink'}"
-												>{r.product}</span
-											>
-										{/if}
-										{#if r.more}<span class="shrink-0 text-meta text-ink-3">+{r.more}</span>{/if}
-										{#if r.by}<Bot
-												size={13}
-												class="shrink-0 text-propose"
-												aria-label="by the agent"
-											/>{/if}
-									</p>
-									{#if r.was}
-										<!-- Why this isn't the planned product, on the row: what was replaced, the cause, what changes. -->
-										<p class="truncate text-meta text-ink-2" title="{r.was}: {r.cause}">
-											<span class="text-signoff"
-												>{r.cause.replace(/^./, (c) => c.toUpperCase())}</span
-											>{#if r.changes}
-												&nbsp;· {r.changes}{/if} · replaces {r.was}
-										</p>
-									{/if}
-								</div>
-								<div class="flex flex-col items-end gap-1 lg:contents">
-									<p class="mono text-right text-body text-ink">{r.cents ? money(r.cents) : '—'}</p>
-									<div class="min-w-0">
-										{#if justApproved}
-											<!-- For a moment after the chef approves, the row says so; then its coverage again. -->
-											<span
-												class="inline-flex items-center gap-1 rounded-full bg-ok-wash px-2 py-0.5 text-meta font-medium text-ink"
-												><CircleCheck size={13} class="text-ok" aria-hidden="true" /> Approved</span
-											>
-										{:else if f}<DishChip
-												{f}
-												gate={dishGate(lines)}
-												rescued={r.kind !== 'buy'}
-											/>{/if}
-									</div>
-								</div>
+						{#snippet action()}
+							{#if decisions.length && active !== 'decide'}
 								<button
 									type="button"
-									class="grid size-7 place-items-center rounded-md text-ink-2 hover:bg-well hover:text-ink"
-									aria-expanded={isOpen}
-									aria-controls="detail-{d.id}"
-									aria-label="{isOpen ? 'Hide' : 'Show'} details: {d.nameFi}"
-									onclick={() => (expanded = { ...expanded, [d.id]: !isOpen })}
-									><ChevronDown
-										size={16}
-										class="transition-transform duration-200 {isOpen ? '' : '-rotate-90'}"
-										aria-hidden="true"
-									/></button
+									class="inline-flex h-10 items-center gap-1.5 rounded-md bg-ink px-4 text-body font-medium text-sheet hover:bg-ink-2 lg:hidden"
+									onclick={() => show('decide')}
+									>Review {decisions.length === 1 ? 'the decision' : 'decisions'}</button
+								>
+							{/if}
+						{/snippet}
+					</TaskHeader>
+					{#if isEvent}<p class="mt-2 text-meta text-ink-2">
+							{#if view.thisWeek.cents - view.normalWeek.cents > 0}
+								The event adds
+								<span class="mono text-ink"
+									>{moneyDelta(view.thisWeek.cents - view.normalWeek.cents)}</span
+								>
+								and <span class="mono text-ink">{fixed(view.eventKg)}</span> kg of food to a normal week
+							{:else}
+								<!-- A regular service, not an extra: it is part of the normal week, so it adds nothing to it. -->
+								An ordinary {weekday(view.date)}: inside the normal week
+							{/if}
+							<span class="text-ink-3"
+								>(team estimate: <span class="mono"
+									>{money(view.normalWeek.cents, { whole: true })}</span
+								>, {view.normalWeek.lines} lines)</span
+							>.
+						</p>{/if}
+					{#if weekMeter}
+						<div class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-meta text-ink-3">
+							<span class="shrink-0">Week budget</span>
+							<div
+								class="relative h-1.5 min-w-[120px] flex-1 overflow-hidden rounded-full bg-well"
+								role="img"
+								aria-label="Weekly spend against cap"
+							>
+								<span
+									class="absolute inset-y-0 left-0 bg-ink-3/60"
+									style="width: {weekMeter.spentPct}%"
+								></span>
+								<span
+									class="absolute inset-y-0 transition-[width] duration-300 {weekMeter.over
+										? 'bg-out'
+										: 'bg-accent'}"
+									style="left: {weekMeter.spentPct}%; width: {weekMeter.orderPct}%"
+								></span>
+							</div>
+							<span class="text-ink-2">
+								<span class="mono">{money(weekMeter.spent, { whole: true })}</span> spent +
+								<span class="mono">{money(weekMeter.order, { whole: true })}</span> this order of
+								<span class="mono">{money(weekMeter.cap, { whole: true })}</span>
+							</span>
+						</div>
+					{/if}
+					{#if view.planReasons.length}
+						<p class="mt-2 rounded-md bg-signoff-wash px-3 py-2 text-body text-ink">
+							The whole order is held: {view.planReasons.map(reasonShort).join(', ').toLowerCase()}.
+							Every line needs sign-off.
+						</p>
+					{/if}
+				</section>
+
+				<!-- Phone: one zone at a time, Decide first while anything needs the chef -->
+				<div
+					id="zones"
+					role="tablist"
+					aria-label="Task zones"
+					class="sticky top-0 z-20 -mx-4 mt-4 flex border-b border-rule bg-paper/95 px-4 backdrop-blur lg:hidden"
+				>
+					{#each ZONES as z (z.id)}
+						<button
+							type="button"
+							role="tab"
+							aria-selected={active === z.id}
+							class="flex h-11 flex-1 items-center justify-center gap-1.5 border-b-2 text-body {active ===
+							z.id
+								? 'border-ink font-semibold text-ink'
+								: 'border-transparent text-ink-2'}"
+							onclick={() => show(z.id)}
+							>{z.label}{#if z.id === 'decide' && decisions.length}<span
+									class="mono grid size-5 place-items-center rounded-full bg-auth text-micro text-sheet"
+									>{decisions.length}</span
+								>{/if}</button
+						>
+					{/each}
+				</div>
+
+				<!-- Plan: dish → need → order -->
+				<section aria-labelledby="dishes-h" class="mt-6 {active === 'plan' ? '' : 'max-lg:hidden'}">
+					<div class="flex items-baseline justify-between gap-4">
+						<h2 id="dishes-h" class="flex items-center gap-1.5 text-heading font-semibold text-ink">
+							{tableTitle}
+							<details class="relative font-normal">
+								<summary
+									class="grid size-6 cursor-pointer list-none place-items-center rounded-full text-ink-3 hover:bg-well hover:text-ink"
+									aria-label="How this table works"><Info size={15} aria-hidden="true" /></summary
+								>
+								<p
+									class="absolute top-7 left-0 z-20 w-72 rounded-md border border-rule bg-sheet px-3 py-2 text-meta text-ink-2 shadow-md"
+								>
+									{#if isEvent}Menu → need → order. Change grams per guest and the need, packs,
+										price and mandate recompute. Open a row for how the amount was worked out and
+										every line; Why shows the sources.{:else}What this order buys, line by line.
+										Open a row for its terms; Why shows where each fact came from and what the
+										mandate says.{/if}
+								</p>
+							</details>
+						</h2>
+					</div>
+					{#if contended}
+						<p
+							class="mt-2 flex items-start gap-2 rounded-lg border border-signoff/50 bg-signoff-wash px-4 py-2.5 text-body text-ink"
+							role="status"
+						>
+							<Bot size={16} class="mt-0.5 shrink-0 text-signoff" aria-hidden="true" />
+							<span>{contended}</span>
+						</p>
+					{/if}
+					{#if k.outsideNote}
+						<p
+							class="mt-2 flex items-start gap-2 rounded-lg border border-accent/40 bg-accent-wash/50 px-4 py-2 text-body text-ink"
+							role="status"
+						>
+							<span class="min-w-0 flex-1"
+								><span class="font-medium">{CHANGE_BY[k.outsideNote.by].replace(/^by/, 'By')}:</span
+								>
+								{k.outsideNote.text}</span
+							>
+							<button
+								type="button"
+								class="shrink-0 text-meta text-ink-2 underline underline-offset-2 hover:text-ink"
+								onclick={() => (k.outsideNote = null)}>Dismiss</button
+							>
+						</p>
+					{/if}
+					{#if changed}
+						<section
+							class="mt-2 rounded-lg border border-accent/40 bg-accent-wash/50 px-4 py-2.5"
+							aria-label="What changed"
+						>
+							<div class="flex items-baseline justify-between gap-3">
+								<p class="text-body font-semibold text-ink">
+									What changed{#if k.changeBy}<span class="font-normal text-ink-2">
+											· {CHANGE_BY[k.changeBy]}</span
+										>{/if}
+									<span class="mono text-meta font-normal text-ink-3"
+										>v{changed.from} → v{changed.to}</span
+									>
+								</p>
+								<button
+									type="button"
+									class="text-meta text-ink-2 underline underline-offset-2 hover:text-ink"
+									onclick={() => (k.changeFrom = null)}>Dismiss</button
 								>
 							</div>
-							{#if isOpen}
+							<ul class="mt-1 space-y-0.5 text-meta text-ink-2">
+								{#each changed.needs as n (n.label)}
+									<li>
+										<span class="text-ink">{n.label.split(' (')[0]}</span> needs
+										<span class="mono">{amt(n.before)} → {amt(n.after)} {n.unit}</span>
+									</li>
+								{/each}
+								{#each changed.lines.slice(0, 4) as l (l.lineId)}
+									<li>
+										<span class="text-ink">{l.name}</span>
+										{#if l.before === null}<span
+												>added, <span class="mono">{num(l.after!)} {l.unit}</span></span
+											>{:else if l.after === null}<span>dropped</span
+											>{:else if l.before === l.after}<span
+												>stays <span class="mono">{num(l.after)} {l.unit}</span></span
+											>{:else}<span class="mono">{num(l.before)} → {num(l.after)} {l.unit}</span
+											>{/if}
+										{#if l.before !== l.after && snap?.byAgent?.[l.lineId]}
+											· <AgentMark by={snap.byAgent[l.lineId]} />{/if}
+									</li>
+								{/each}
+								{#if changed.lines.length > 4}<li>
+										and {changed.lines.length - 4} more lines
+									</li>{/if}
+								<li>
+									Plan <span class="mono"
+										>{money(changed.cents.before)} → {money(changed.cents.after)}</span
+									>
+									· decisions
+									<span class="mono">{changed.decisions.before} → {changed.decisions.after}</span>
+								</li>
+							</ul>
+						</section>
+					{/if}
+					<div class="mt-2 overflow-hidden rounded-lg border border-rule bg-sheet">
+						<div
+							class="hidden {ROW_COLS} items-center gap-x-3 border-b border-rule bg-well px-4 py-2 text-micro font-medium text-ink-3 lg:grid"
+							aria-hidden="true"
+						>
+							<span>{isEvent ? 'Dish' : 'Item'}</span>
+							<span>{isEvent ? 'g per guest' : ''}</span>
+							<span class="text-right">Need</span>
+							<span>Product</span>
+							<span class="text-right">€ ex VAT</span>
+							<span>State</span>
+							<span></span>
+						</div>
+						{#each view.dishes as d (d.id)}
+							{@const lines = linesOf(d)}
+							{@const f = coverage.get(d.needId)}
+							{@const r = rowOf(d, lines)}
+							{@const isOpen = !!expanded[d.id]}
+							{@const lockedDish = lines.some((l) => l.state === 'committed')}
+							{@const isMarked = !!marked && d.lineIds.some((id) => marked!.has(id))}
+							{@const justApproved = d.lineIds.some((id) => approvedNow.has(id))}
+							<div
+								id="need-{d.id}"
+								data-marked={isMarked || undefined}
+								class="scroll-mt-4 border-b border-rule transition-[opacity,background-color] duration-200 last:border-b-0 {focusNeed ===
+								d.needId
+									? 'bg-propose-wash/40 ring-2 ring-propose/50 ring-inset'
+									: isMarked
+										? 'bg-accent-wash/70 shadow-[inset_3px_0_0_var(--color-accent)]'
+										: marked
+											? 'opacity-55'
+											: ''}"
+							>
+								<!-- One line per dish: everything else is in the detail below (expand) or in Why. -->
 								<div
-									id="detail-{d.id}"
-									class="space-y-3 border-t border-rule bg-paper/50 px-4 py-3"
+									class="grid min-h-16 grid-cols-[minmax(0,1fr)_auto_28px] items-center gap-x-3 px-4 py-2 lg:min-h-14 {ROW_COLS} {d.lineIds.some(
+										(id) => k.flash.has(id)
+									)
+										? 'landed'
+										: ''}"
 								>
-									<div class="flex flex-wrap items-start gap-x-6 gap-y-2">
-										{#if d.gDefault > 0}<div class="lg:hidden">
-												<GramsStepper
-													value={d.gServed}
-													original={d.gDefault}
-													label={d.nameFi}
-													pending={k.pendingGrams[d.id]}
-													disabled={k.readOnly || !d.editable || lockedDish}
-													onchange={(g) => k.setGrams(d.id, g)}
-												/>
-											</div>{/if}
-										<dl class="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 text-meta">
-											<dt class="text-ink-3">To buy</dt>
-											<dd class="mono text-ink">
-												{fixed(d.need.value, d.need.value < 10 ? 2 : 1)}
-												{needUnit(d.need.unit)}
-											</dd>
-											{#if f?.basis === 'served'}
-												<dt class="text-ink-3">Served</dt>
-												<dd class="mono text-ink">
-													{fixed(f.required.value, f.required.value < 10 ? 2 : 1)}
-													{f.required.unit}
-												</dd>
-											{/if}
-											{#if d.needFormula !== `${d.need.value} ${d.need.unit}`}
-												<dt class="text-ink-3">Worked out</dt>
-												<dd class="mono text-ink-2">{d.needFormula}</dd>
-											{/if}
-											{#if d.gDefault > 0 && d.gServed !== d.gDefault}
-												<dt class="text-ink-3">Planned</dt>
-												<dd class="text-ink-2">{d.gDefault} g per guest</dd>
-											{/if}
-											{#if isEvent}
-												<dt class="text-ink-3">Normal week</dt>
-												<dd class="text-ink-2">
-													{d.usual
-														? `${num(d.usual.qty)} ${d.usual.unit}`
-														: 'none: bought only for this event'}
-												</dd>
-											{/if}
-										</dl>
+									<div class="min-w-0">
+										<p class="flex min-w-0 items-center gap-1.5 text-body font-medium text-ink">
+											<span class="truncate">{d.nameFi}</span>
+											<DietMarks marks={dishMarks(lines)} />
+										</p>
+										<p class="truncate text-meta text-ink-3">
+											<span class="lg:hidden"
+												>{#if r.was}<span class="text-signoff"
+														>{r.cause.replace(/^./, (c) => c.toUpperCase())}</span
+													>
+													→ {r.product}{:else}{r.product}{/if}</span
+											><span class="max-lg:hidden">{d.name !== d.nameFi ? d.name : ''}</span>
+										</p>
 									</div>
-									{#if f}<DishStatus {f} gate={dishGate(lines)} />{/if}
-									<ul class="space-y-2">
-										{#each groupLines(lines) as g (g.key)}
-											{#if g.make}
-												<li>
-													<StrategyCard
-														by={g.lines.map((l) => snap?.byAgent?.[l.id]).find(Boolean)}
-														title={d.nameFi}
-														lines={g.lines}
-														replaces={g.lines[0]?.substituteFor
-															? {
-																	name:
-																		names.get(g.lines[0].substituteFor) ?? g.lines[0].substituteFor,
-																	because:
-																		d.outage === 'undeliverable'
-																			? "Valio can't deliver it"
-																			: 'out of stock at Valio'
-																}
-															: undefined}
-													>
-														{#snippet row(l)}{@render lineRow(l, d, true)}{/snippet}
-													</StrategyCard>
-												</li>
-											{:else}
-												<li>{@render lineRow(g.lines[0], d)}</li>
-											{/if}
-										{/each}
-									</ul>
-									{#if d.rescue}
-										<div>
-											{#if !open[d.id]}
-												<p class="mb-1.5 text-body leading-snug text-ink">
-													<span class="font-medium"
-														>{d.outage === 'out'
-															? 'Out of stock at Valio.'
-															: "Valio can't deliver it."}</span
-													>
-													{contendedIn(d)
-														? 'Another kitchen took some of the rescue; the agent split it (above).'
-														: d.rescue.summary}
-												</p>{/if}
-											<button
-												type="button"
-												class="flex w-full items-center gap-2 text-left text-meta font-medium text-ink-2 hover:text-ink"
-												aria-expanded={!!open[d.id]}
-												onclick={() => (toggled = { ...toggled, [d.id]: !open[d.id] })}
-											>
-												<ChevronDown
+									<div class="hidden lg:block">
+										{#if d.gDefault > 0}<GramsStepper
+												compact
+												value={d.gServed}
+												original={d.gDefault}
+												label={d.nameFi}
+												pending={k.pendingGrams[d.id]}
+												disabled={k.readOnly || !d.editable || lockedDish}
+												onchange={(g) => k.setGrams(d.id, g)}
+											/>{:else}<span class="text-meta text-ink-3">—</span>{/if}
+									</div>
+									<p
+										class="mono hidden text-right text-body text-ink lg:block"
+										title={d.needFormula}
+									>
+										{d.need.unit === 'pcs'
+											? d.need.value
+											: fixed(d.need.value, d.need.value < 10 ? 2 : 1)}
+										<span class="text-meta text-ink-3">{needUnit(d.need.unit)}</span>
+									</p>
+									<!-- A 40 px product thumbnail can sit before the name here without growing the row. -->
+									<div class="hidden min-w-0 lg:block">
+										<p class="flex min-w-0 items-center gap-1.5 text-body">
+											{#if r.kind === 'make'}<ChefHat
 													size={14}
-													class="transition-transform duration-200 {open[d.id] ? '' : '-rotate-90'}"
+													class="shrink-0 text-accent"
 													aria-hidden="true"
+												/>{:else if r.kind === 'sub'}<CornerDownRight
+													size={14}
+													class="shrink-0 text-accent"
+													aria-label="Replaces the planned product"
+												/>{:else if r.kind === 'none'}<Ban
+													size={14}
+													class="shrink-0 text-sup-missing"
+													aria-hidden="true"
+												/>{/if}
+											{#if r.productId}
+												<!-- The product opens its card (pack, price, supply in words, the Valio listing). -->
+												<ProductToken
+													productId={r.productId}
+													name={r.product}
+													deliverBy={plan?.deliverBy}
+													class="hover:text-accent-ink"
 												/>
-												{open[d.id] ? 'Hide the options' : 'See the options'} ·
-												{d.rescue.kind === 'make_in_house'
-													? 'make it in house'
-													: `${d.rescue.candidates.length} substitutes ranked`}
-												{#if d.status === 'partial'}<span class="text-signoff">· partial cover</span
-													>{/if}
-											</button>
-											{#if open[d.id]}
-												<div class="mt-2">
-													<RescueCompare
-														rescue={d.rescue}
-														grams={d.gServed}
-														onfit={(g) => k.setGrams(d.id, g)}
-													/>
-												</div>
+											{:else}
+												<span class="truncate {r.kind === 'none' ? 'text-ink-3' : 'text-ink'}"
+													>{r.product}</span
+												>
 											{/if}
+											{#if r.more}<span class="shrink-0 text-meta text-ink-3">+{r.more}</span>{/if}
+											{#if r.by}<Bot
+													size={13}
+													class="shrink-0 text-propose"
+													aria-label="by the agent"
+												/>{/if}
+										</p>
+										{#if r.was}
+											<!-- Why this isn't the planned product, on the row: what was replaced, the cause, what changes. -->
+											<p class="truncate text-meta text-ink-2" title="{r.was}: {r.cause}">
+												<span class="text-signoff"
+													>{r.cause.replace(/^./, (c) => c.toUpperCase())}</span
+												>{#if r.changes}
+													&nbsp;· {r.changes}{/if} · replaces {r.was}
+											</p>
+										{/if}
+									</div>
+									<div class="flex flex-col items-end gap-1 lg:contents">
+										<p class="mono text-right text-body text-ink">
+											{r.cents ? money(r.cents) : '—'}
+										</p>
+										<div class="min-w-0">
+											{#if justApproved}
+												<!-- For a moment after the chef approves, the row says so; then its coverage again. -->
+												<span
+													class="inline-flex items-center gap-1 rounded-full bg-ok-wash px-2 py-0.5 text-meta font-medium text-ink"
+													><CircleCheck size={13} class="text-ok" aria-hidden="true" /> Approved</span
+												>
+											{:else if f}<DishChip
+													{f}
+													gate={dishGate(lines)}
+													rescued={r.kind !== 'buy'}
+												/>{/if}
 										</div>
-									{/if}
+									</div>
+									<button
+										type="button"
+										class="grid size-7 place-items-center rounded-md text-ink-2 hover:bg-well hover:text-ink"
+										aria-expanded={isOpen}
+										aria-controls="detail-{d.id}"
+										aria-label="{isOpen ? 'Hide' : 'Show'} details: {d.nameFi}"
+										onclick={() => (expanded = { ...expanded, [d.id]: !isOpen })}
+										><ChevronDown
+											size={16}
+											class="transition-transform duration-200 {isOpen ? '' : '-rotate-90'}"
+											aria-hidden="true"
+										/></button
+									>
 								</div>
-							{/if}
-						</div>
-					{/each}
-					{#each looseLines as l (l.id)}
-						<!-- A line with no dish behind it (an outside agent's or a request's order): the line itself is the row. -->
-						<div id="line-{l.id}" class="border-b border-rule px-4 py-2 last:border-b-0">
-							{@render lineRow(l, null)}
-						</div>
-					{/each}
-				</div>
-				{#if k.snap?.diet}
-					<p class="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-meta text-ink-2">
-						<span class="font-medium text-ink">This order:</span>
-						<DietMarks marks={orderMarks} />
-						<span>{marksTitle(orderMarks)}</span>
+								{#if isOpen}
+									<div
+										id="detail-{d.id}"
+										class="space-y-3 border-t border-rule bg-paper/50 px-4 py-3"
+									>
+										<div class="flex flex-wrap items-start gap-x-6 gap-y-2">
+											{#if d.gDefault > 0}<div class="lg:hidden">
+													<GramsStepper
+														value={d.gServed}
+														original={d.gDefault}
+														label={d.nameFi}
+														pending={k.pendingGrams[d.id]}
+														disabled={k.readOnly || !d.editable || lockedDish}
+														onchange={(g) => k.setGrams(d.id, g)}
+													/>
+												</div>{/if}
+											<dl class="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 text-meta">
+												<dt class="text-ink-3">To buy</dt>
+												<dd class="mono text-ink">
+													{fixed(d.need.value, d.need.value < 10 ? 2 : 1)}
+													{needUnit(d.need.unit)}
+												</dd>
+												{#if f?.basis === 'served'}
+													<dt class="text-ink-3">Served</dt>
+													<dd class="mono text-ink">
+														{fixed(f.required.value, f.required.value < 10 ? 2 : 1)}
+														{f.required.unit}
+													</dd>
+												{/if}
+												{#if d.needFormula !== `${d.need.value} ${d.need.unit}`}
+													<dt class="text-ink-3">Worked out</dt>
+													<dd class="mono text-ink-2">{d.needFormula}</dd>
+												{/if}
+												{#if d.gDefault > 0 && d.gServed !== d.gDefault}
+													<dt class="text-ink-3">Planned</dt>
+													<dd class="text-ink-2">{d.gDefault} g per guest</dd>
+												{/if}
+												{#if isEvent}
+													<dt class="text-ink-3">Normal week</dt>
+													<dd class="text-ink-2">
+														{d.usual
+															? `${num(d.usual.qty)} ${d.usual.unit}`
+															: 'none: bought only for this event'}
+													</dd>
+												{/if}
+											</dl>
+										</div>
+										{#if f}<DishStatus {f} gate={dishGate(lines)} />{/if}
+										<ul class="space-y-2">
+											{#each groupLines(lines) as g (g.key)}
+												{#if g.make}
+													<li>
+														<StrategyCard
+															by={g.lines.map((l) => snap?.byAgent?.[l.id]).find(Boolean)}
+															title={d.nameFi}
+															lines={g.lines}
+															replaces={g.lines[0]?.substituteFor
+																? {
+																		name:
+																			names.get(g.lines[0].substituteFor) ??
+																			g.lines[0].substituteFor,
+																		because:
+																			d.outage === 'undeliverable'
+																				? "Valio can't deliver it"
+																				: 'out of stock at Valio'
+																	}
+																: undefined}
+														>
+															{#snippet row(l)}{@render lineRow(l, d, true)}{/snippet}
+														</StrategyCard>
+													</li>
+												{:else}
+													<li>{@render lineRow(g.lines[0], d)}</li>
+												{/if}
+											{/each}
+										</ul>
+										{#if d.rescue}
+											<div>
+												{#if !open[d.id]}
+													<p class="mb-1.5 text-body leading-snug text-ink">
+														<span class="font-medium"
+															>{d.outage === 'out'
+																? 'Out of stock at Valio.'
+																: "Valio can't deliver it."}</span
+														>
+														{contendedIn(d)
+															? 'Another kitchen took some of the rescue; the agent split it (above).'
+															: d.rescue.summary}
+													</p>{/if}
+												<button
+													type="button"
+													class="flex w-full items-center gap-2 text-left text-meta font-medium text-ink-2 hover:text-ink"
+													aria-expanded={!!open[d.id]}
+													onclick={() => (toggled = { ...toggled, [d.id]: !open[d.id] })}
+												>
+													<ChevronDown
+														size={14}
+														class="transition-transform duration-200 {open[d.id]
+															? ''
+															: '-rotate-90'}"
+														aria-hidden="true"
+													/>
+													{open[d.id] ? 'Hide the options' : 'See the options'} ·
+													{d.rescue.kind === 'make_in_house'
+														? 'make it in house'
+														: `${d.rescue.candidates.length} substitutes ranked`}
+													{#if d.status === 'partial'}<span class="text-signoff"
+															>· partial cover</span
+														>{/if}
+												</button>
+												{#if open[d.id]}
+													<div class="mt-2">
+														<RescueCompare
+															rescue={d.rescue}
+															grams={d.gServed}
+															onfit={(g) => k.setGrams(d.id, g)}
+														/>
+													</div>
+												{/if}
+											</div>
+										{/if}
+									</div>
+								{/if}
+							</div>
+						{/each}
+						{#each looseLines as l (l.id)}
+							<!-- A line with no dish behind it (an outside agent's or a request's order): the line itself is the row. -->
+							<div id="line-{l.id}" class="border-b border-rule px-4 py-2 last:border-b-0">
+								{@render lineRow(l, null)}
+							</div>
+						{/each}
+					</div>
+					{#if k.snap?.diet}
+						<p class="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-meta text-ink-2">
+							<span class="font-medium text-ink">This order:</span>
+							<DietMarks marks={orderMarks} />
+							<span>{marksTitle(orderMarks)}</span>
+						</p>
+						<p class="mt-1 text-meta text-ink-3" aria-label="Diet marks legend">
+							{CODES.map((c) => `${c} ${CODE_WORDS[c]}`).join(' · ')} · ? no allergen record (allergens
+							unknown, never read as free from)
+						</p>
+					{/if}
+					<p class="mt-2 text-meta leading-snug text-ink-3">
+						{#if isEvent}Grams per guest, yields and recipes are team estimates.{/if} Prices are Valio
+						catalogue prices ex VAT; lines where Valio doesn't state a quantity are ordered, but never
+						counted as cover.
 					</p>
-					<p class="mt-1 text-meta text-ink-3" aria-label="Diet marks legend">
-						{CODES.map((c) => `${c} ${CODE_WORDS[c]}`).join(' · ')} · ? no allergen record (allergens
-						unknown, never read as free from)
-					</p>
-				{/if}
-				<p class="mt-2 text-meta leading-snug text-ink-3">
-					{#if isEvent}Grams per guest, yields and recipes are team estimates.{/if} Prices are Valio catalogue
-					prices ex VAT; lines where Valio doesn't state a quantity are ordered, but never counted as
-					cover.
-				</p>
-			</section>
-		</div>
+				</section>
+			</div>
 
-		<!-- With the agent rail open the page is narrower: the panels go under the plan until there is room again. -->
-		<aside
-			class="space-y-4 {shell?.chatOpen
-				? 'lg:grid lg:grid-cols-2 lg:gap-4 lg:space-y-0 2xl:sticky 2xl:top-4 2xl:block 2xl:space-y-4 2xl:self-start'
-				: 'lg:sticky lg:top-4 lg:self-start'}"
-			aria-label="Rules and approval"
-		>
-			{#if !inRail}
-				<div class={active === 'decide' ? '' : 'max-lg:hidden'}>
-					{@render decidePanel()}
+			<!-- With the agent rail open the page is narrower: the panels go under the plan until there is room again. -->
+			<aside
+				class="space-y-4 {shell?.chatOpen
+					? 'lg:grid lg:grid-cols-2 lg:gap-4 lg:space-y-0 2xl:sticky 2xl:top-4 2xl:block 2xl:space-y-4 2xl:self-start'
+					: 'lg:sticky lg:top-4 lg:self-start'}"
+				aria-label="Rules and approval"
+			>
+				{#if !inRail}
+					<div class={active === 'decide' ? '' : 'max-lg:hidden'}>
+						{@render decidePanel()}
+					</div>
+				{/if}
+				<div class="space-y-4 {active === 'order' ? '' : 'max-lg:hidden'}">
+					<ApprovalPanel
+						part="order"
+						{plan}
+						{approval}
+						lastInvalidated={null}
+						changes={k.changes}
+						{shortfalls}
+						orders={snap.orders}
+						lastCommit={k.lastCommit}
+						{names}
+						busy={k.busy}
+						onapprove={(ids) => k.approve('grant', ids)}
+						ondeny={(ids) => k.approve('deny', ids)}
+						oncommit={() => k.commit()}
+						onretry={() => k.retryCommit()}
+					/>
+					<!-- The scenario timeline pins the Christmas buffet: only the event plan has it. -->
+					<div class={isEvent ? '' : 'hidden'}>
+						<CutoffTimeline
+							now={k.now}
+							stock={openLines.stock}
+							terminal={openLines.terminal}
+							committed={openLines.stock + openLines.terminal === 0 && view.counts.committed > 0}
+						/>
+					</div>
 				</div>
-			{/if}
-			<div class="space-y-4 {active === 'order' ? '' : 'max-lg:hidden'}">
-				<ApprovalPanel
-					part="order"
-					{plan}
-					{approval}
-					lastInvalidated={null}
-					changes={k.changes}
-					{shortfalls}
-					orders={snap.orders}
-					lastCommit={k.lastCommit}
-					{names}
-					busy={k.busy}
-					onapprove={(ids) => k.approve('grant', ids)}
-					ondeny={(ids) => k.approve('deny', ids)}
-					oncommit={() => k.commit()}
-					onretry={() => k.retryCommit()}
-				/>
-				<!-- The scenario timeline pins the Christmas buffet: only the event plan has it. -->
-				<div class={isEvent ? '' : 'hidden'}>
-					<CutoffTimeline
-						now={k.now}
-						stock={openLines.stock}
-						terminal={openLines.terminal}
-						committed={openLines.stock + openLines.terminal === 0 && view.counts.committed > 0}
+
+				{#if k.error}
+					{#if k.error.detail?.retryInMs}
+						<p class="rounded-md bg-well px-3 py-2 text-meta text-ink" role="status">
+							{k.error.message}
+						</p>
+					{:else}
+						<p class="rounded-md bg-out-wash px-3 py-2 text-meta text-ink" role="alert">
+							{errorWords(k.error)}
+							<span class="sys-only mono block text-micro text-ink-3"
+								>{k.error.code}: {k.error.message}</span
+							>
+						</p>
+					{/if}
+				{/if}
+			</aside>
+		</main>
+		<!-- Under the plan and its panels, on the page's own columns: the rules, ranking and simulator under the plan,
+	     what happened under Order. Outside <main>, so the sticky panels never slide over it. -->
+		<div
+			class="mx-auto grid max-w-[1440px] grid-cols-1 gap-6 px-4 pb-32 md:px-6 lg:pb-10 {shell?.chatOpen
+				? '2xl:grid-cols-[minmax(0,1fr)_360px]'
+				: 'lg:grid-cols-[minmax(0,1fr)_360px]'}"
+		>
+			<div class="min-w-0">
+				<div class="{active === 'plan' ? '' : 'max-lg:hidden'} {isEvent ? '' : 'hidden'}">
+					<RulesPanel
+						rules={snap.rules}
+						preset={snap.preset}
+						contention={snap.contention}
+						busy={k.busy}
+						ordered={view.dishes.filter((d) => linesOf(d).some((l) => l.state === 'committed'))
+							.length}
+						previews={view.dishes
+							.filter(
+								(d) =>
+									d.rescue?.preview?.differs && !linesOf(d).some((l) => l.state === 'committed')
+							)
+							.map((d) => ({
+								dish: d.nameFi,
+								recommended: d.rescue!.preview!.recommended,
+								saved: d.rescue!.preview!.saved
+							}))}
+						onapply={() => k.applyRules()}
+						onpreset={(p) => k.setPreset(p)}
+						oncontention={(on) => k.setContention(on)}
 					/>
 				</div>
 			</div>
-
-			{#if k.error}
-				{#if k.error.detail?.retryInMs}
-					<p class="rounded-md bg-well px-3 py-2 text-meta text-ink" role="status">
-						{k.error.message}
-					</p>
-				{:else}
-					<p class="rounded-md bg-out-wash px-3 py-2 text-meta text-ink" role="alert">
-						{errorWords(k.error)}
-						<span class="sys-only mono block text-micro text-ink-3"
-							>{k.error.code}: {k.error.message}</span
-						>
-					</p>
+			<div class="min-w-0">
+				{#if k.activity.length}
+					<section
+						aria-labelledby="log-h"
+						class="{active === 'order'
+							? ''
+							: 'max-lg:hidden'} rounded-lg border border-rule bg-sheet px-4 py-3"
+					>
+						<h2 id="log-h" class="text-body font-semibold text-ink">What happened</h2>
+						<ol class="mt-1.5 space-y-1 text-meta text-ink-2">
+							{#each k.activity as a (a.id)}
+								<li class="flex gap-2">
+									<span class="sys-only mono w-7 shrink-0 text-ink-3">v{a.version}</span>
+									<span
+										class={a.kind === 'error'
+											? 'text-out'
+											: a.kind === 'retry'
+												? 'text-accent-ink'
+												: ''}
+										>{a.text}{#if a.sys}<span class="sys-only mono block text-micro text-ink-3"
+												>{a.sys}</span
+											>{/if}</span
+									>
+								</li>
+							{/each}
+						</ol>
+					</section>
 				{/if}
-			{/if}
-		</aside>
-	</main>
-	<!-- Under the plan and its panels, on the page's own columns: the rules, ranking and simulator under the plan,
-	     what happened under Order. Outside <main>, so the sticky panels never slide over it. -->
-	<div
-		class="mx-auto grid max-w-[1440px] grid-cols-1 gap-6 px-4 pb-32 md:px-6 lg:pb-10 {shell?.chatOpen
-			? '2xl:grid-cols-[minmax(0,1fr)_360px]'
-			: 'lg:grid-cols-[minmax(0,1fr)_360px]'}"
-	>
-		<div class="min-w-0">
-			<div class="{active === 'plan' ? '' : 'max-lg:hidden'} {isEvent ? '' : 'hidden'}">
-				<RulesPanel
-					rules={snap.rules}
-					preset={snap.preset}
-					contention={snap.contention}
-					busy={k.busy}
-					ordered={view.dishes.filter((d) => linesOf(d).some((l) => l.state === 'committed'))
-						.length}
-					previews={view.dishes
-						.filter(
-							(d) => d.rescue?.preview?.differs && !linesOf(d).some((l) => l.state === 'committed')
-						)
-						.map((d) => ({
-							dish: d.nameFi,
-							recommended: d.rescue!.preview!.recommended,
-							saved: d.rescue!.preview!.saved
-						}))}
-					onapply={() => k.applyRules()}
-					onpreset={(p) => k.setPreset(p)}
-					oncontention={(on) => k.setContention(on)}
-				/>
 			</div>
 		</div>
-		<div class="min-w-0">
-			{#if k.activity.length}
-				<section
-					aria-labelledby="log-h"
-					class="{active === 'order'
-						? ''
-						: 'max-lg:hidden'} rounded-lg border border-rule bg-sheet px-4 py-3"
-				>
-					<h2 id="log-h" class="text-body font-semibold text-ink">What happened</h2>
-					<ol class="mt-1.5 space-y-1 text-meta text-ink-2">
-						{#each k.activity as a (a.id)}
-							<li class="flex gap-2">
-								<span class="sys-only mono w-7 shrink-0 text-ink-3">v{a.version}</span>
-								<span
-									class={a.kind === 'error'
-										? 'text-out'
-										: a.kind === 'retry'
-											? 'text-accent-ink'
-											: ''}
-									>{a.text}{#if a.sys}<span class="sys-only mono block text-micro text-ink-3"
-											>{a.sys}</span
-										>{/if}</span
-								>
-							</li>
-						{/each}
-					</ol>
-				</section>
-			{/if}
-		</div>
-	</div>
+	{/if}
 
 	{#if decisions.length && active !== 'decide'}
 		<button

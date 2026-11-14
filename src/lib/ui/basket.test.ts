@@ -19,6 +19,7 @@ const day: BasketDay = {
 			planId: 'p-event',
 			kind: 'event',
 			title: 'Christmas dinner buffet, 140 guests',
+			label: 'Event',
 			startedBy: 'chef',
 			version: 3,
 			approvalId: 'ap-1'
@@ -27,6 +28,7 @@ const day: BasketDay = {
 			planId: 'p-usual',
 			kind: 'usual',
 			title: 'Usual order for Thu 10 Dec',
+			label: 'Usual order',
 			startedBy: 'chef',
 			version: 1,
 			approvalId: null
@@ -75,7 +77,8 @@ const day: BasketDay = {
 	totals: { proposed: 28220, held: 20059, approved: 0, ordered: 13080, all: 61359 },
 	budget: { week: '2026-W50', capCents: 400000, orderedCents: 13080, ifAllOrderedCents: 61359 },
 	due: '2026-12-08T15:00:00+02:00',
-	counts: { orderableNow: 1, waitingOnDecision: 1, decisions: 1, cannotOrder: 0 }
+	counts: { orderableNow: 1, waitingOnDecision: 1, decisions: 1, cannotOrder: 0 },
+	cannotOrderNames: []
 };
 
 describe('basket words', () => {
@@ -93,7 +96,7 @@ describe('basket words', () => {
 				label: 'From chat'
 			})
 		).toBe('From chat');
-		expect(sourceChip({ ...day.sources[0], kind: 'agent', title: 'Weekly dairy' })).toBe(
+		expect(sourceChip({ ...day.sources[0], kind: 'outside_agent', title: 'Weekly dairy' })).toBe(
 			'Outside agent'
 		);
 		expect(sourceChip({ ...day.sources[0], label: 'Event' })).toBe('Christmas dinner buffet');
