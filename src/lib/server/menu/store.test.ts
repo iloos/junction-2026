@@ -1,6 +1,27 @@
 import { describe, expect, it } from 'vitest';
 import type { MenuProposal } from '$lib/core/contracts';
+import type { MenuStore } from '$lib/core/ports';
+import { createFixtureDb } from '../db/pglite';
+import { workspaces } from '../db/schema';
+import type { AnyDb } from '../store/drizzle-store';
+import { drizzleMenuStore } from './pg';
 import { memoryMenuStore, proposalDigest } from './store';
+
+/** Both adapters must keep the same rules; the Postgres one runs on PGlite with the real migrations. */
+const ADAPTERS: { name: string; make: () => Promise<MenuStore> }[] = [
+	{ name: 'memory', make: async () => memoryMenuStore() },
+	{
+		name: 'postgres',
+		make: async () => {
+			const db = (await createFixtureDb()).db as unknown as AnyDb;
+			await db
+				.insert(workspaces)
+				.values(['ws', 'ws-a', 'ws-b'].map((id) => ({ id, name: id })))
+				.onConflictDoNothing();
+			return drizzleMenuStore(db);
+		}
+	}
+];
 
 const AT = new Date('2026-12-07T09:00:00Z');
 const chef = { kind: 'chef', id: 'chef' } as const;
@@ -44,9 +65,9 @@ function proposal(revision = 0, amount = 120): MenuProposal {
 	};
 }
 
-describe('memory MenuStore', () => {
+describe.each(ADAPTERS)('$name MenuStore', ({ make }) => {
 	it('stores revisions per workspace, densely, and returns copies', async () => {
-		const s = memoryMenuStore();
+		const s = await make();
 		await s.put('ws-a', proposal(0));
 		await s.put('ws-a', proposal(1, 110));
 		expect((await s.latest('ws-a', 'menu-1'))?.revision).toBe(1);
@@ -58,7 +79,7 @@ describe('memory MenuStore', () => {
 	});
 
 	it('refuses gaps, rewrites and self-reviewed puts; a retried put is a no-op', async () => {
-		const s = memoryMenuStore();
+		const s = await make();
 		await expect(s.put('ws', proposal(1))).rejects.toThrow(/out of order/);
 		await s.put('ws', proposal(0));
 		await s.put('ws', proposal(0));
@@ -72,7 +93,7 @@ describe('memory MenuStore', () => {
 	});
 
 	it('only a chef reviews, only the latest revision, and the record binds the digest', async () => {
-		const s = memoryMenuStore();
+		const s = await make();
 		await s.put('ws', proposal(0));
 		await s.put('ws', proposal(1, 110));
 		const agent = await s.review('ws', 'menu-1', 1, { kind: 'kitchen_agent', id: 'a' }, AT);

@@ -14,4 +14,5 @@ export {
 } from './brief';
 export { fixtureMenu, LlmMenu, proposeMenu, type ProposeDeps, type Proposed } from './proposal';
 export { blocks, reviewProposal, type Issue } from './rubric';
-export { memoryMenuStore, menuStore, MenuStoreError, proposalDigest } from './store';
+export { drizzleMenuStore } from './pg';
+export { memoryMenuStore, MenuStoreError, proposalDigest } from './store';
