@@ -1,8 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any -- the fake SQL driver mimics postgres.js loosely */
 /**
  * Adversarial regression, round 10 transport (R10-09): two post-commit publishers on the real `PgTransport` with a
- * faked NOTIFY that delays seq 1. Every op must still reach a live client once, in sequence, through the same
- * high-water filter /api/events applies. Open under 9c as `it.fails` until fixed; `ADV_SHOW=1` runs it plainly.
+ * faked NOTIFY that delays seq 1, composed with the ordered sender /api/events uses (bus/ordered.ts, gaps read from
+ * the op log). Every op must reach a live client once, in sequence. `ADV_SHOW=1` runs every case plainly.
  */
 import { beforeEach, expect, it, vi } from 'vitest';
 
@@ -27,8 +27,9 @@ vi.mock('$lib/server/db/client', () => ({
 }));
 import { PgTransport } from '$lib/server/bus/pg';
 import { MemoryBus } from '$lib/server/bus/memory';
+import { orderedSender } from '$lib/server/bus/ordered';
 
-const OPEN: Record<string, string> = { 'R10-09': '9c' };
+const OPEN: Record<string, string> = {};
 function probe(id: string, title: string, fn: () => Promise<void>) {
 	const owner = OPEN[id];
 	if (owner && !process.env.ADV_SHOW) it.fails(`${id} [open · ${owner}] ${title}`, fn);
@@ -52,12 +53,18 @@ probe(
 		const local = new MemoryBus();
 		const transport = new PgTransport(local);
 		const streamed: number[] = [];
-		let last = 0;
-		local.subscribe('ws', (e: any) => {
-			if ('seq' in e && e.seq > last) {
-				last = e.seq;
-				streamed.push(e.seq);
+		// As /api/events: live events go through the ordered sender; a gap is read from the op log (here: 1 and 2).
+		const log = [1, 2].map((seq) => ({ kind: 'op', seq, envelope: { seq, runId: 'run' } }) as any);
+		const ordered = orderedSender<{ seq: number }>({
+			after: 0,
+			deliver: (e) => streamed.push(e.seq),
+			readAfter: async (from) => ({ events: log.filter((e) => e.seq > from), complete: true }),
+			onLost: (err) => {
+				throw err;
 			}
+		});
+		local.subscribe('ws', (e: any) => {
+			if ('seq' in e) ordered.push(e);
 		});
 		await transport.start();
 		const a = transport.publish('ws', [
@@ -69,7 +76,7 @@ probe(
 		release();
 		await a;
 		await vi.waitFor(() => expect(fake.sent).toHaveLength(2));
-		await new Promise((r) => setTimeout(r, 50));
+		await ordered.idle();
 		expect(streamed).toEqual([1, 2]);
 	}
 );
