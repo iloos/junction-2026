@@ -12,6 +12,7 @@ import { logTrace } from '../adapters/llm/trace';
 import { SimOverlay } from '../adapters/simulator/overlay';
 import { createPgDb, dbMode } from '../db/client';
 import { createDbPorts } from './db-ports';
+import { registerBreaker } from '$lib/server/external/status';
 import type { AnyDb } from './drizzle-store';
 
 type Built = Awaited<ReturnType<typeof createDbPorts>>;
@@ -50,6 +51,7 @@ async function build(): Promise<Built> {
 					onCall: (t) => logTrace({ source: t.api, model: t.purpose, ...t })
 				})
 			: undefined;
+	if (live) registerBreaker('valio', () => live.breaker());
 	return createDbPorts({
 		db,
 		overlay,

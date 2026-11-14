@@ -11,6 +11,7 @@
 	import Queue from './Queue.svelte';
 	import ProblemCard from './ProblemCard.svelte';
 	import StoryPanel from './StoryPanel.svelte';
+	import ServiceStatus from './ServiceStatus.svelte';
 	import { storyOf } from './story';
 	import type { OpEnvelope } from '$lib/core/contracts';
 	import { buildCases, coverage, kitchenHref, openDecisions, openLines } from './cases';
@@ -426,6 +427,7 @@
 				</details>
 			{/if}
 		</div>
+		<div class="services"><ServiceStatus /></div>
 	</header>
 
 	<TraceDrawer
@@ -950,6 +952,11 @@
 		grid-template-columns: minmax(0, 1.6fr) minmax(360px, 1fr);
 	}
 
+	.services {
+		grid-column: 1 / -1;
+		margin-top: -22px;
+	}
+
 	/* Problems: the cards, then the selected one's story beside them. */
 	.problems {
 		display: grid;
@@ -1247,6 +1254,9 @@
 		}
 	}
 	@media (max-width: 760px) {
+		.services {
+			margin-top: 0;
+		}
 		.room {
 			padding: 16px;
 			min-width: 0;
