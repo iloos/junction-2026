@@ -4,7 +4,7 @@
  * with its reason in words. The validator (quote and commit), ranking, substitutes, the request filter and the UI's
  * diet marks all ask here, so a vegetarian dish can never be bought as meatballs through any door.
  */
-import type { Kitchen, NeedRequirements, Product } from '../contracts';
+import type { Kitchen, NeedRequirements, Product, RequirementCheck } from '../contracts';
 import { inCategoryGroup } from './categories';
 
 export type Verdict = 'ok' | 'unknown' | 'no';
@@ -17,12 +17,16 @@ export interface TermResult {
 	verdict: Verdict;
 	/** Why this verdict, from which record: "allergens list AM (milk)", "no diet or allergen record". */
 	why: string;
+	/** Stable "term:value" code: diet:vegetarian, excludes:meat, freeFrom:LACTOSE, origin:fi, kitchen:AM. */
+	code?: string;
 }
 
 export interface MeetsResult {
 	verdict: Verdict;
 	/** Every term that is not ok, worst first. */
 	failing: TermResult[];
+	/** The same, as the contract's RequirementCheck (requirement "term:value", from, verdict, fact). */
+	checks: RequirementCheck[];
 }
 
 /** Words in Valio's name that state a free-from claim the structured data may lack. */
@@ -44,8 +48,25 @@ const CODES: Record<string, string[]> = {
 	MILK: ['AM', 'ML', 'MILK', 'LACTOSE'],
 	GLUTEN: ['AW', 'GLUTEN', 'WHEAT']
 };
-/** The same allergens by name, as kitchen rules and some records write them. */
-const CODE_WORD: Record<string, string> = {
+/**
+ * Allergen codes (Valio's GS1 codes, and the names some records and kitchen rules use) to readable names: one list for
+ * the agent door, the dock and the UI.
+ */
+export const ALLERGEN_NAMES: Record<string, string> = {
+	AN: 'nuts',
+	AP: 'peanuts',
+	AS: 'sesame',
+	AU: 'sulphites',
+	AY: 'soy',
+	AF: 'fish',
+	BC: 'celery',
+	BM: 'mustard',
+	GB: 'barley',
+	GO: 'oats',
+	NR: 'rye',
+	SA: 'almond',
+	SH: 'hazelnut',
+	UW: 'wheat',
 	AM: 'milk',
 	ML: 'lactose',
 	AW: 'gluten cereals',
@@ -86,12 +107,15 @@ function byAllergens(p: Product, term: RequirementTerm, text: string, codes: str
 	const hit = codes.find(
 		(c) => p.allergens.contains.includes(c) || p.allergens.mayContain.includes(c)
 	);
-	if (hit) return no(term, text, `allergens list ${hit} (${CODE_WORD[hit] ?? hit})`);
+	if (hit) return no(term, text, `allergens list ${hit} (${ALLERGEN_NAMES[hit] ?? hit})`);
 	if (!p.allergens.declared) return unknown(term, text, 'no allergen record');
 	return ok(term, text, 'declared allergens do not include it');
 }
 
 function freeFrom(p: Product, x: string): TermResult {
+	return { ...freeFromTerm(p, x), code: `freeFrom:${x}` };
+}
+function freeFromTerm(p: Product, x: string): TermResult {
 	const text = `free from ${x}`;
 	if (p.freeFrom.includes(x)) return ok('freeFrom', text, `claims free from ${x}`);
 	if (named(p, x)) return ok('freeFrom', text, `the name says ${NAME_CLAIMS[x]}`);
@@ -114,6 +138,12 @@ const plantRecord = (p: Product) => p.diet.includes('vegan') || p.diet.includes(
 const PREPARED = ['173', '417', '219'];
 
 function excludes(p: Product, x: NonNullable<NeedRequirements['excludes']>[number]): TermResult {
+	return { ...excludesTerm(p, x), code: `excludes:${x}` };
+}
+function excludesTerm(
+	p: Product,
+	x: NonNullable<NeedRequirements['excludes']>[number]
+): TermResult {
 	const text = x === 'gluten_cereals' ? 'no gluten cereals' : `no ${x}`;
 	switch (x) {
 		case 'milk':
@@ -149,13 +179,17 @@ function excludes(p: Product, x: NonNullable<NeedRequirements['excludes']>[numbe
  * refused); anything else (raw potatoes, flour, cream) is ok. Vegan also excludes listed milk, lactose and egg.
  */
 function diet(p: Product, d: 'vegetarian' | 'vegan'): TermResult {
+	return { ...dietTerm(p, d), code: `diet:${d}` };
+}
+function dietTerm(p: Product, d: 'vegetarian' | 'vegan'): TermResult {
 	if (meatLike(p)) return no('diet', d, 'a meat product (category or name)');
 	if (fishLike(p)) return no('diet', d, 'a fish product (category or name)');
 	if (d === 'vegan') {
 		const animal = ['AM', 'ML', 'AE', 'MILK', 'LACTOSE', 'EGG'].find((c) =>
 			p.allergens.contains.includes(c)
 		);
-		if (animal) return no('diet', d, `allergens list ${animal} (${CODE_WORD[animal] ?? 'egg'})`);
+		if (animal)
+			return no('diet', d, `allergens list ${animal} (${ALLERGEN_NAMES[animal] ?? 'egg'})`);
 		if (p.diet.includes('vegan')) return ok('diet', d, 'diet record: vegan');
 	} else if (plantRecord(p)) return ok('diet', d, `diet record: ${p.diet.join(', ')}`);
 	if (PREPARED.some((c) => p.category.startsWith(c)))
@@ -181,13 +215,16 @@ export function meets(
 		...(r?.diet ?? []).map((d) => diet(p, d)),
 		...(r?.origin
 			? [
-					p.origin === r.origin
-						? ok('origin', `origin ${r.origin.toUpperCase()}`, `origin ${p.origin}`)
-						: no(
-								'origin',
-								`origin ${r.origin.toUpperCase()}`,
-								p.origin ? `origin ${p.origin.toUpperCase()}` : 'no origin on record'
-							)
+					{
+						...(p.origin === r.origin
+							? ok('origin', `origin ${r.origin.toUpperCase()}`, `origin ${p.origin}`)
+							: no(
+									'origin',
+									`origin ${r.origin.toUpperCase()}`,
+									p.origin ? `origin ${p.origin}` : 'no origin on record'
+								)),
+						code: `origin:${r.origin}`
+					}
 				]
 			: []),
 		// A diet named as a label ("vegetarian", as some seeds and requests write it) is the diet requirement.
@@ -196,18 +233,21 @@ export function meets(
 			.map((x) => diet(p, x as 'vegetarian' | 'vegan')),
 		...(r?.labels ?? [])
 			.filter((x) => x !== 'vegetarian' && x !== 'vegan')
-			.map((x) =>
-				p.labels.includes(x) || named(p, x)
+			.map((x) => ({
+				...(p.labels.includes(x) || named(p, x)
 					? ok('labels', `label ${x}`, `labelled ${x}`)
-					: no('labels', `label ${x}`, `no ${x} label`)
-			),
-		...(kitchen?.allergens.freeFrom ?? []).map((code) =>
-			byAllergens(p, 'kitchen', `kitchen excludes ${code}`, [code])
-		),
+					: no('labels', `label ${x}`, `no ${x} label`)),
+				code: `labels:${x}`
+			})),
+		// Kitchen terms in readable codes (an outside agent can't decode AM); the fact keeps the raw code.
+		...(kitchen?.allergens.freeFrom ?? []).map((code) => ({
+			...byAllergens(p, 'kitchen', `kitchen excludes ${ALLERGEN_NAMES[code] ?? code}`, [code]),
+			code: `kitchen:allergen:${(ALLERGEN_NAMES[code] ?? code).replace(/\s+/g, '_')}`
+		})),
 		...(kitchen?.origin ?? [])
 			.filter((o) => o.rule === 'require' && inCategoryGroup(p.category, o.categoryGroup))
-			.map((o) =>
-				p.origin === o.country
+			.map((o) => ({
+				...(p.origin === o.country
 					? ok(
 							'kitchen',
 							`${o.categoryGroup} from ${o.country.toUpperCase()}`,
@@ -217,13 +257,20 @@ export function meets(
 							'kitchen',
 							`${o.categoryGroup} from ${o.country.toUpperCase()}`,
 							`origin ${p.origin ?? 'unknown'}`
-						)
-			)
+						)),
+				code: `kitchen:origin:${o.categoryGroup}:${o.country}`
+			}))
 	];
 	const failing = terms
 		.filter((t) => t.verdict !== 'ok')
 		.sort((a, b) => RANK[a.verdict] - RANK[b.verdict]);
-	return { verdict: failing[0]?.verdict ?? 'ok', failing };
+	const checks: RequirementCheck[] = failing.map((t) => ({
+		requirement: t.code ?? `${t.term}:${t.text}`,
+		from: t.term === 'kitchen' ? 'kitchen' : 'need',
+		verdict: t.verdict as 'no' | 'unknown',
+		fact: t.why
+	}));
+	return { verdict: failing[0]?.verdict ?? 'ok', failing, checks };
 }
 
 /**

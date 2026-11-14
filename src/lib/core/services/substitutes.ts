@@ -244,7 +244,9 @@ export async function findSubstitutes(
 	);
 	if (saved.some((l) => l.state === 'committed') && input.apply)
 		return err('STALE_VERSION', 'the substitute for this dish is already committed');
-	const apply = input.apply ?? (!input.weights && !input.requireOrigin && saved.length === 0);
+	const apply =
+		input.apply ??
+		(!input.weights && !input.requireOrigin && !input.requirements && saved.length === 0);
 	const rankKitchen = input.weights ? { ...kitchen, weights: input.weights } : kitchen;
 
 	const seed = plan0.eventId ? ports.events?.[plan0.eventId] : undefined;
@@ -304,7 +306,10 @@ export async function findSubstitutes(
 		else unsized.push(id);
 	}
 	// The order's requirements and the need's own, together: they only tighten.
-	const req = mergeRequirements(plan0.requirements, need?.requirements);
+	// The plan's and the need's own requirements bind; a per-call `requirements` tightens this ranking only (a
+	// preview by default, never written onto the need). requireOrigin keeps its own origin_required rejection below.
+	const stored = mergeRequirements(plan0.requirements, need?.requirements);
+	const req = mergeRequirements(stored, input.requirements);
 	const ranked = rankCandidates({
 		kitchen: rankKitchen,
 		candidates: [...sized].map(([productId, qty]) => ({
@@ -588,7 +593,15 @@ export async function findSubstitutes(
 	// it would delete the saved rescue (and void its approval) without covering the dish, or bump the version for
 	// nothing, and a caller that retries on a version change loops.
 	// Strict requirements leave nothing to buy: the need says so (and stays visible), once.
-	if (apply && drafts.length === 0 && req && need) {
+	if (
+		apply &&
+		drafts.length === 0 &&
+		stored &&
+		need &&
+		!input.requirements &&
+		!input.requireOrigin
+	) {
+		const req = stored;
 		const why = `no product meets ${describeRequirements(req)}`;
 		if (need.unresolved !== why) {
 			const w = await ports.store.transact<Plan>(ctx.workspaceId, async (_tx, state) => {

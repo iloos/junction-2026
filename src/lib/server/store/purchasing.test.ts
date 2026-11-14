@@ -636,6 +636,26 @@ describe('D16: a vegetarian dish is never bought as meat', () => {
 		).plan;
 		expect(swapped.lines[0].state).toBe('unorderable');
 		expect(swapped.lines[0].reasons).toContain('requirement_unmet');
+		// Which requirement and which product fact, for the Why drawer and an outside agent alike.
+		expect(swapped.lines[0].unmet).toEqual([
+			expect.objectContaining({
+				requirement: 'diet:vegetarian',
+				from: 'need',
+				verdict: 'no',
+				fact: expect.stringContaining('meat')
+			})
+		]);
+		const refused = await h.commit_order(ctx('chef'), {
+			planId: p.id,
+			version: swapped.version,
+			idempotencyKey: 'veg-commit',
+			lineIds: [swapped.lines[0].id]
+		});
+		expect(refused.ok ? null : refused.error).toMatchObject({
+			code: 'FORBIDDEN',
+			sub: 'requirement_unmet',
+			detail: { lines: [expect.objectContaining({ productId: '470601' })] }
+		});
 		const back = must(
 			await h.edit_line(ctx('chef'), {
 				planId: p.id,

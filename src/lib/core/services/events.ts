@@ -85,7 +85,7 @@ function demandLines(planId: string, seed: EventSeed, overrides: Record<string, 
 			withNote.requirements,
 			requirementsFromDiet((dish?.dietCodes as string[] | undefined) ?? [])
 		);
-		if (req) Object.assign(withNote, { requirements: req });
+		if (req) Object.assign(withNote, { requirements: req, requirementsFrom: 'dish' });
 		if (dish?.gServed === undefined) return withNote;
 		const g = overrides[n.id] ?? dish.gServed;
 		const y = dish.yield ?? 1;
@@ -302,7 +302,9 @@ function menuLine(
 		...(proposal?.brief.dietary ?? []),
 		...(dish?.claimedCompatible ?? [])
 	]);
-	const need = req ? { ...item.need, requirements: req } : item.need;
+	const need: Need = req
+		? { ...item.need, requirements: req, requirementsFrom: 'dish' }
+		: item.need;
 	if (item.unresolved || !item.productId) return { need };
 	const p = products.get(item.productId);
 	if (!p)

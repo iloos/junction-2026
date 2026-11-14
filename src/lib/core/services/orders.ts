@@ -226,7 +226,9 @@ export async function placeOrder(
 						label: `${l.amount.value} ${l.amount.unit} ${products.get(l.productId)!.nameFi}`,
 						kind: 'direct' as const,
 						amount: l.amount,
-						...(l.requirements ? { requirements: l.requirements } : {}),
+						...(l.requirements
+							? { requirements: l.requirements, requirementsFrom: 'request' as const }
+							: {}),
 						provenance: { source: 'user' as const, note: `${ctx.actor.kind} via ${ctx.via}` }
 					}
 				]
@@ -518,6 +520,41 @@ export async function commitOrder(
 			prefix = q.ops;
 			plan = q.plan;
 		}
+		// D16: a line whose product breaks a hard requirement is never bought. Named, or with nothing else to buy, the
+		// commit is refused with which requirement and which product fact, so a caller can repair it.
+		const unmet = t.lines.filter(
+			(l) =>
+				l.state !== 'committed' &&
+				l.reasons.includes('requirement_unmet') &&
+				(input.lineIds ? input.lineIds.includes(l.id) : true)
+		);
+		const buyable = t.lines.some(
+			(l) =>
+				(l.state === 'eligible' || l.state === 'held') && !l.reasons.includes('requirement_unmet')
+		);
+		if (unmet.length && (input.lineIds || !buyable))
+			return fail(
+				err(
+					'FORBIDDEN',
+					`${unmet.map((l) => l.productName ?? l.productId).join(', ')} ${unmet.length === 1 ? 'does' : 'do'} not meet ${
+						unmet
+							.flatMap((l) => (l.unmet ?? []).map((c) => c.requirement))
+							.filter((v, i, a) => a.indexOf(v) === i)
+							.join(', ') || 'a hard requirement'
+					}`,
+					{
+						sub: 'requirement_unmet',
+						detail: {
+							lines: unmet.map((l) => ({
+								lineId: l.id,
+								productId: l.productId,
+								unmet: l.unmet ?? []
+							}))
+						}
+					}
+				).error,
+				prefix
+			);
 		const fresh = await termsHash({ deliverBy: plan.deliverBy, lines: t.termsLines });
 		if (fresh !== plan.termsHash) {
 			const q = await quoteOps(ctx, ports, plan, kitchen, t, offers);

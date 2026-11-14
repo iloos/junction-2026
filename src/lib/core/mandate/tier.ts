@@ -16,6 +16,7 @@ import type {
 	Tier
 } from '../contracts';
 import type { TermsLine } from '../hash';
+import { meets } from './meets';
 import { forbidden, hardLimitCents, mergeRequirements, validateLine } from './validate';
 
 export interface DraftLine {
@@ -255,6 +256,18 @@ export function tierLines(input: TierInput): TierResult {
 		if (external) w.reasons.push('external_agent_needs_approval');
 	}
 
+	// Which requirements a line's product misses, with the fact behind each (D16), whenever a reason says so.
+	const unmetOf = (draft: DraftLine, reasons: LineReason[]) => {
+		if (!reasons.some((r) => r === 'requirement_unmet' || r === 'requirement_unknown')) return {};
+		const product = products.get(draft.productId);
+		const need = input.needs?.find((n) => n.id === draft.needId);
+		const req = mergeRequirements(input.orderRequirements, need?.requirements);
+		if (!product || !req) return {};
+		const checks = meets(product, req).checks.map((c) =>
+			need?.requirementsFrom === 'dish' && c.from === 'need' ? { ...c, from: 'dish' as const } : c
+		);
+		return checks.length ? { unmet: checks } : {};
+	};
 	const lines: Line[] = work.map((w) => {
 		const tier = w.orderable
 			? w.gap
@@ -277,6 +290,7 @@ export function tierLines(input: TierInput): TierResult {
 			state,
 			tier,
 			reasons: w.reasons,
+			...unmetOf(w.draft, w.reasons),
 			offer: w.offer,
 			lineCents: w.lineCents,
 			substituteFor: w.draft.substituteFor,
