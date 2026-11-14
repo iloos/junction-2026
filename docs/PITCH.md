@@ -37,17 +37,22 @@ Valio's own example ("1,000 L lactose-free milk by Monday") runs as its own rout
 | Each committed line names what allowed it: the mandate or a specific approval | `server/store/authority.test.ts` |
 | Edit after a rescue resizes the substitute and re-plans; any edit voids the approval | `server/store/rescue.test.ts` (resize, replace, commit only the new product); `core/state.test.ts` (approval invalidated on edit) |
 | Physical amounts, not pack counts: 10 L of milk is sized in litres | `server/store/direct.test.ts`; `fixtures/views/milk-direct.json` |
-| The same words give the same basket through `/request`, the agent and REST | `evals/fidelity/cases.json` (`pnpm eval`) |
+| For the cases we test, the same words give the same basket through `/request`, the agent and REST | `evals/fidelity/cases.json` (`pnpm eval`); paraphrase gaps open in `evals/paraphrase` |
+| Decide per reason group: an allergen change never rides with routine lines | `server/store/groups.test.ts` |
+| Cut-off enforced at commit (F9) | `server/store/cutoff.test.ts`; eval r5-f9 |
+| A voided approval shows what changed | eval r6-5 (`get_plan.lastVoided`) |
+| Each visitor mints a judge key on `/agents`; it reads but cannot approve | `server/demo/judge-key.test.ts`; observed on prod: `approve`/`set_mandate` → 403 |
 | Outside agents get the same tools over MCP and REST and can never approve | `SCOPES_BY_ACTOR` (`core/contracts/tools.ts`); `agent/adversarial.test.ts` (`pnpm eval:agent`); eval s5 `tools.externalAgentMustNotHave` |
 | Every visitor gets their own sandbox; a judge key works only there | `server/demo/{visitor,judge-key,sandbox}.test.ts`; two-browser gate `src/routes/ops/visitor-gate.e2e.ts` (production build) |
 | Gemini Decisions scores recipe fit in ranking, with replay and rules fallbacks | `server/adapters/decide`; `DECIDE_LIVE=1 pnpm test:live` (one live call) |
 | Valio's milk example runs on `/request`, keeping "lactose-free" | `server/request/fixes.test.ts`, `request.test.ts`; seen deployed with the Gemini parser |
 
+Every claim's observed status and verdict: [CLAIMS.md](CLAIMS.md).
+
 ## Not yet claimable
 - **Open menus** ("Christmas dinner for 50 on 20 December" → a plan): brief questions are live; the menu proposal is in progress and `plan_event` from a reviewed proposal (A4) is not built.
-- **Decide per reason group** (an allergen change never rides with routine lines): typed, on a branch (A2b).
-- **Cut-off enforced at commit** (F9) and the **before → after diff** of a voided approval: typed, not served.
-- **Agent door page** (`/agents`) and the **review mechanism**: on `lane/e-agent`, not on main.
+- **Review mechanism**: on main behind `REVIEW=1`, off until the on/off arms run.
+- **Ops coverage numbers**: not until Ops cases close per cause (Track G, F12-ops).
 - **Recipe-aware**: no labelled fit set has run; say "ranks by the kitchen's rules" instead.
 - **"Ordered the buffet"**: the default agent goal commits nothing; it plans and holds.
 - **Exa**: tools exist (`lookup_facts`, `find_outside`) but no judge-facing UI yet; decide at the Sat 22:00 checkpoint.
