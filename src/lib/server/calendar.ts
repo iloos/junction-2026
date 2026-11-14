@@ -1,9 +1,20 @@
 /**
- * A kitchen's calendar feed from its workspace's current run: open decisions at their due time, each plan's
- * delivery day, the kitchen's receiving days and Finnish holidays (core/calendar.ts). Read-only; one workspace.
+ * A kitchen's calendar from its workspace's current run: open decisions at their due time, each plan's delivery
+ * day, the kitchen's receiving days, Finnish holidays and festivities (core/calendar.ts). One input feeds both the
+ * iCalendar feed and the day picker's days. Read-only; one workspace.
  */
-import { buildCalendar } from '$lib/core/calendar';
+import factorsSeed from '../../../fixtures/seeds/calendar-factors.json';
+import {
+	buildCalendar,
+	calendarDays,
+	type CalendarDay,
+	type CalendarInput,
+	type DaysInput,
+	helsinkiDate,
+	type LogisticModel
+} from '$lib/core/calendar';
 import type { PlanState } from '$lib/core/contracts';
+import type { ServicePorts } from '$lib/core/services/events';
 import { SCENARIO } from '$lib/core/scenario';
 import { liveApprovals } from '$lib/core/services/orders';
 import { withPlanView } from '$lib/core/services/views';
@@ -28,12 +39,10 @@ const STATE_WORDS: Record<PlanState, string> = {
 
 const day = (d: Date) => d.toISOString().slice(0, 10);
 
-/** The ICS text, or null when the workspace has no such kitchen. */
-export async function kitchenCalendar(
-	workspaceId: string,
-	kitchenId: string,
-	now = new Date()
-): Promise<string | null> {
+type Loaded = Omit<CalendarInput, 'window' | 'stamp'> & Omit<DaysInput, 'decisions' | 'deliveries'>;
+
+/** Everything the feed and the picker read for one kitchen, or null when the workspace has no such kitchen. */
+async function load(workspaceId: string, kitchenId: string): Promise<Loaded | null> {
 	const runId = await ensureRunLoaded(workspaceId);
 	await realHandlers();
 	const { ports } = await createServerPorts();
@@ -44,7 +53,19 @@ export async function kitchenCalendar(
 		const state = await ports.store.load(workspaceId, runId);
 		const plans = Object.values(state.plans).filter((p) => p.kitchenId === kitchenId);
 		const decisions = [];
+		const offerCutoffs: NonNullable<DaysInput['offerCutoffs']> = [];
+		const closeTimes: Partial<Record<LogisticModel, string>> = {};
 		for (const plan of plans) {
+			// Valio's own cut-off per offer: the earliest per delivery date and model, and its time of day.
+			for (const l of plan.lines) {
+				const a = l.offer?.availability;
+				if (!a?.closingTime) continue;
+				const model = a.logisticModel ?? 'Stock';
+				const prev = offerCutoffs.find((o) => o.date === plan.deliverBy && o.model === model);
+				if (!prev) offerCutoffs.push({ date: plan.deliverBy, model, at: a.closingTime });
+				else if (new Date(a.closingTime) < new Date(prev.at)) prev.at = a.closingTime;
+				closeTimes[model] ??= a.closingTime.slice(11, 16);
+			}
 			const approval = Object.values(state.approvals).find(
 				(a) => a.planId === plan.id && a.state === 'pending'
 			);
@@ -59,8 +80,8 @@ export async function kitchenCalendar(
 					due
 				});
 		}
-		const start = new Date(SCENARIO.start);
-		return buildCalendar({
+		const seeds = Object.values((ports as ServicePorts).events ?? {});
+		return {
 			kitchen: { id: kitchen.id, name: kitchen.name, deliveryDays: kitchen.deliveryDays },
 			decisions,
 			deliveries: plans.map((p) => ({
@@ -68,13 +89,61 @@ export async function kitchenCalendar(
 				date: p.deliverBy,
 				title: `${kitchen.name}, ${p.lines.length} lines, ${STATE_WORDS[p.state]}`
 			})),
-			window: {
-				from: day(new Date(start.getTime() - WINDOW_BEFORE_DAYS * 86_400_000)),
-				to: day(new Date(start.getTime() + WINDOW_AFTER_DAYS * 86_400_000))
-			},
-			stamp: now.toISOString()
-		});
+			now: ports.clock.now().toISOString(),
+			closeTimes,
+			offerCutoffs,
+			closedDays: factorsSeed.holidays.days,
+			// Only the factors this kitchen feels, at its own strength (1 + (value − 1) × sensitivity, as in demand).
+			factors: factorsSeed.factors.flatMap((f) => {
+				const k = kitchen.factorSensitivity?.[f.kind] ?? 0;
+				return k > 0 ? [{ ...f, value: 1 + (f.value - 1) * k }] : [];
+			}),
+			events: seeds
+				.filter((e) => e.kitchenId === kitchenId)
+				.map((e) => ({ id: e.id, date: e.date, title: e.title }))
+		};
 	});
+}
+
+/** The ICS text, or null when the workspace has no such kitchen. */
+export async function kitchenCalendar(
+	workspaceId: string,
+	kitchenId: string,
+	now = new Date()
+): Promise<string | null> {
+	const c = await load(workspaceId, kitchenId);
+	if (!c) return null;
+	const start = new Date(SCENARIO.start);
+	return buildCalendar({
+		...c,
+		window: {
+			from: day(new Date(start.getTime() - WINDOW_BEFORE_DAYS * 86_400_000)),
+			to: day(new Date(start.getTime() + WINDOW_AFTER_DAYS * 86_400_000))
+		},
+		stamp: now.toISOString()
+	});
+}
+
+/** The longest range one request may ask for. */
+export const MAX_DAYS = 120;
+
+/**
+ * The picker's days for [from, to] (default: from the scenario's today, 21 days), or null when the workspace has
+ * no such kitchen. `from`/`to` are YYYY-MM-DD; the range is capped at MAX_DAYS.
+ */
+export async function kitchenDays(
+	workspaceId: string,
+	kitchenId: string,
+	from?: string,
+	to?: string
+): Promise<{ now: string; from: string; to: string; days: CalendarDay[] } | null> {
+	const c = await load(workspaceId, kitchenId);
+	if (!c) return null;
+	const start = from ?? helsinkiDate(c.now);
+	const startMs = new Date(`${start}T00:00:00Z`).getTime();
+	const cap = day(new Date(startMs + (MAX_DAYS - 1) * 86_400_000));
+	const end = !to ? day(new Date(startMs + 20 * 86_400_000)) : to > cap ? cap : to;
+	return { now: c.now, from: start, to: end, days: calendarDays(c, start, end) };
 }
 
 export const ICS_HEADERS = {
