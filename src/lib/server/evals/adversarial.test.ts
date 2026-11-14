@@ -37,21 +37,13 @@ import { coverage } from '../../../routes/ops/cases';
  * with that deletion). Owners: E = agent/chat, 8d = core, 9c = runtime/transport, D = web, lead = contracts.
  */
 const OPEN: Record<string, string> = {
-	'R9-01': 'E',
-	'R9-02': 'E',
-	'R9-03': 'E',
-	'R9-04': 'E',
-	'R9-05': 'E',
 	'R9-08': '9c',
 	'R7-03': '8d',
 	'R7-05': '8d',
 	'R7-11': '8d',
-	'R8-task-intent': 'E',
-	'R8-task-write': 'E',
 	'R8-web-write': 'D',
 	'R8-queue-claim': 'D',
-	'R8-next-action': 'E',
-	'R8-task-read': 'E'
+	'R8-next-action': 'E'
 };
 /**
  * `it` for a guarded case, `it.fails` for an open one, named with its owner. `ADV_SHOW=1` runs every case as a plain

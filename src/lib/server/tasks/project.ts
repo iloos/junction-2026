@@ -78,7 +78,17 @@ export function projectedTaskStore(
 	};
 	return {
 		get: async (ws, id) => fresh(await inner.get(ws, id)),
-		list: (ws, o) => inner.list(ws, o),
+		// The list projects the same way, then filters on the projected state, so a list and a detail never disagree.
+		list: async (ws, o = {}) => {
+			const rows = await inner.list(ws, { ...o, open: undefined });
+			const done = new Set(['done', 'cancelled', 'failed']);
+			const out: Task[] = [];
+			for (const t of rows) {
+				const f = (await fresh(t))!;
+				if (o.open === undefined || o.open !== done.has(f.state)) out.push(f);
+			}
+			return out;
+		},
 		put: (task, expected) => inner.put(task, expected)
 	};
 }
