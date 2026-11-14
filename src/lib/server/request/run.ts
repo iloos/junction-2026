@@ -37,13 +37,13 @@ import type {
 } from '$lib/ui/request/types';
 import { salesUnitWords } from '$lib/ui/request/words';
 import { weekdayOf } from './dates';
+import { cutoffSentence, deliveryDays, firstOpenDay, itemOnDate, type DayCandidate } from './days';
 import { caseBreakdown, caseHeadline, orderAmount } from './convert';
 import { hardLimit, sanityWarnings } from './sanity';
 import { hardLimitCents } from '$lib/core/mandate/validate';
 import {
+	closesWords,
 	cutoffPassed,
-	cutoffQuestion,
-	earliestDelivery,
 	filterHits,
 	SHORTLIST,
 	unpickable,
@@ -125,6 +125,21 @@ export function nextReceivingDay(date: string, days: readonly string[]): string 
 	return null;
 }
 
+/**
+ * The first receiving day after `date` whose cut-off is still open for the picked products at `now`; without a
+ * clock, the first receiving day.
+ */
+export function nextOpenReceivingDay(
+	date: string,
+	days: readonly string[],
+	cands: readonly (readonly DayCandidate[])[],
+	now: Date | undefined
+): string | null {
+	if (!now) return nextReceivingDay(date, days);
+	const d = firstOpenDay(cands, date, now, days);
+	return d && d.receiving ? d.date : null;
+}
+
 const cap = (s: string) => s[0].toUpperCase() + s.slice(1);
 
 const DAY_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'] as const;
@@ -168,7 +183,7 @@ function candidateView(r: Ranked, offer: Offer | null, quoted: boolean): Candida
 async function lookupItems(
 	parsed: ParsedRequest,
 	d: RequestDeps
-): Promise<{ lookup: LookupView; picked: Map<string, Product> }> {
+): Promise<{ lookup: LookupView; picked: Map<string, Product>; cands: DayCandidate[][] }> {
 	let searchCalls = 0;
 	const now = nowOf(d);
 	const rankBy = d.rankBy ?? 'kitchen';
@@ -216,7 +231,15 @@ async function lookupItems(
 	}
 
 	const picked = new Map<string, Product>();
-	const items: LookupItemView[] = prepared.map((p) => {
+	// What each item could be ordered as: the one input to every date the page offers or names.
+	const cands: DayCandidate[][] = prepared.map((p) =>
+		p.ranked.slice(0, SHORTLIST).map((r) => ({
+			product: r.product,
+			offer: offers.get(r.product.productId),
+			conversion: r.conversion
+		}))
+	);
+	const items: LookupItemView[] = prepared.map((p, pi) => {
 		const short = p.ranked.slice(0, SHORTLIST);
 		const views = short.map((r) =>
 			candidateView(r, offers.get(r.product.productId) ?? null, offers.has(r.product.productId))
@@ -286,22 +309,21 @@ async function lookupItems(
 			question = `How much ${p.item.query}?`;
 			answer = { kind: 'qty', item: idx, units: ['l', 'kg', 'pcs', 'case'] };
 		} else if (!pick && allClosed) {
-			// Ordering for this date has closed: say when, offer the first date still open, never move it silently.
-			const earliest = closed
-				.map((o) => earliestDelivery(o, parsed.deliverBy, now!))
-				.filter((x): x is string => x !== null)
-				.sort()[0];
-			question = cutoffQuestion(
+			// Ordering for this date has closed: say why, offer the first date that is open for every item (and a
+			// receiving day), so the button's day is the day that results. Never moved silently.
+			const here = itemOnDate(cands[pi], parsed.deliverBy, now!);
+			const first = firstOpenDay(cands, parsed.deliverBy, now!, d.kitchen.deliveryDays);
+			question = cutoffSentence(
 				parsed.deliverBy,
-				closed[0].availability.closingTime!,
-				earliest ?? null
+				here.reason ?? `past its cut-off (${closesWords(closed[0].availability.closingTime!)})`,
+				first?.date ?? null
 			);
-			if (earliest)
+			if (first)
 				answer = {
 					kind: 'date',
 					item: idx,
-					date: earliest,
-					label: `Deliver ${day(earliest)} instead`
+					date: first.date,
+					label: `Deliver ${day(first.date)} instead`
 				};
 		} else if (askCase) {
 			const options = short
@@ -412,13 +434,14 @@ async function lookupItems(
 	];
 	const lookup: LookupView = {
 		items,
+		...(now ? { days: deliveryDays(cands, d.today, now, d.kitchen.deliveryDays, 10) } : {}),
 		searchCalls,
 		quotedIds: [...offers.keys()],
 		offerSources,
 		sanity: sanityWarnings(items, d.kitchen),
 		hardLimit: hardLimit(items, d.kitchen)
 	};
-	return { lookup, picked };
+	return { lookup, picked, cands };
 }
 
 export async function idempotencyKeyFor(
@@ -560,6 +583,7 @@ export function withDate(
 	return {
 		...parsed,
 		deliverBy: chosen,
+		deliverByChosen: true,
 		ambiguities: parsed.ambiguities.filter((a) => !a.startsWith('no delivery date given')),
 		notes: [
 			...parsed.notes,
@@ -650,7 +674,7 @@ export async function runRequest(text: string, d: RequestDeps): Promise<RequestR
 			message: 'No item found in the request.'
 		};
 
-	const { lookup, picked } = await lookupItems(parsed, d);
+	const { lookup, picked, cands } = await lookupItems(parsed, d);
 	const picks = lookup.items.filter((i) => i.pick);
 	// An item without a pick holds the whole order: placing the rest now and the answered item
 	// later would place the rest twice (the answer changes the lines, so the key).
@@ -700,6 +724,9 @@ export async function runRequest(text: string, d: RequestDeps): Promise<RequestR
 		return { parsed: parsedView, lookup, order: null, message: 'Lookup only (place=false).' };
 
 	const lines = picks.map((i) => orderLine(i, picked.get(i.item.id)!));
+	const pickedCands = lookup.items.map((it, k) =>
+		cands[k].filter((c) => !it.pick || c.product.productId === it.pick.productId)
+	);
 	const idempotencyKey = await idempotencyKeyFor(d.kitchen.id, parsed.deliverBy, lines, d.nonce);
 	try {
 		const placed = await callTool(d.handlers, d.ctx, 'place_order', {
@@ -730,9 +757,10 @@ export async function runRequest(text: string, d: RequestDeps): Promise<RequestR
 			deliveryNote: d.kitchen.deliveryDays.includes(dow)
 				? null
 				: `${d.kitchen.name} takes deliveries on ${d.kitchen.deliveryDays.map(cap).join(', ')}; ${day(parsed.deliverBy)} is not one of them`,
+			// The next receiving day that is still open for what was picked: the day the button names is the day it gives.
 			nextDeliveryDay: d.kitchen.deliveryDays.includes(dow)
 				? null
-				: nextReceivingDay(parsed.deliverBy, d.kitchen.deliveryDays),
+				: nextOpenReceivingDay(parsed.deliverBy, d.kitchen.deliveryDays, pickedCands, nowOf(d)),
 			task: await taskForPlan({
 				tasks: d.tasks,
 				ctx: d.ctx,

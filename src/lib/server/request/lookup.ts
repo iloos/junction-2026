@@ -4,9 +4,7 @@
  * constraints the chef stated are hard filters, defaults ("semi-skimmed") are preferences and say so.
  */
 import type { Offer, Product } from '$lib/core/contracts';
-import { addDays, onScenario } from '$lib/core/scenario';
 import { toLot } from '$lib/core/services/orders';
-import { day } from '$lib/ui/format';
 import { convert, type Conversion } from './convert';
 import { PRODUCTS } from './lexicon';
 import type { ParsedItem } from './parse';
@@ -155,24 +153,6 @@ export function cutoffPassed(offer: Offer, now: Date): string | null {
 	const c = offer.availability.closingTime;
 	if (!c || Date.parse(c) > now.getTime()) return null;
 	return `ordering closed at ${closesWords(c)}`;
-}
-
-/**
- * The first delivery date after `deliverBy` whose cut-off is still ahead at `now`, from the scenario's own lead
- * days (onScenario); null when none within two weeks.
- */
-export function earliestDelivery(offer: Offer, deliverBy: string, now: Date): string | null {
-	for (let k = 1; k <= 14; k++) {
-		const d = addDays(deliverBy, k);
-		const c = onScenario(offer.availability, d).closingTime;
-		if (c && Date.parse(c) > now.getTime()) return d;
-	}
-	return null;
-}
-
-/** "The cut-off for Tue 8 Dec has passed (17:00 Mon); earliest delivery is Wed 9 Dec." */
-export function cutoffQuestion(deliverBy: string, closes: string, earliest: string | null): string {
-	return `The cut-off for ${day(deliverBy)} has passed (${closesWords(closes)}); ${earliest ? `earliest delivery is ${day(earliest)}` : 'no delivery date in the next two weeks is still open'}.`;
 }
 
 /** Why a quoted candidate can't be picked, or null when it can. */

@@ -462,10 +462,18 @@ describe('cut-off at lookup: a date whose ordering closed is said and an open on
 		const it = r.lookup!.items[0];
 		expect(it.pick).toBeNull();
 		expect(it.question).toMatch(
-			/^The cut-off for Tue 8 Dec has passed \(17:00 Mon\); earliest delivery is Wed 9 Dec\./
+			/^Tue 8 Dec is past (this product's|every match's) cut-off \(Stock, 17:00 Mon\): earliest Wed 9 Dec\./
 		);
-		expect(it.answer).toMatchObject({ kind: 'date', date: '2026-12-09' });
+		expect(it.answer).toMatchObject({
+			kind: 'date',
+			date: '2026-12-09',
+			label: 'Deliver Wed 9 Dec instead'
+		});
 		expect(r.parsed.deliverBy).toBe('2026-12-08'); // never moved silently
+		// The date control says the same: Tue closed with its reason, Wed open.
+		const days = r.lookup!.days!;
+		expect(days.find((d) => d.date === '2026-12-08')).toMatchObject({ open: false });
+		expect(days.find((d) => d.date === '2026-12-09')).toMatchObject({ open: true });
 
 		const again = await runRequest('4 kg butter for tomorrow', {
 			...base,

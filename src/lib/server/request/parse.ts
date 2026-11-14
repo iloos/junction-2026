@@ -48,6 +48,8 @@ export interface ParsedRequest {
 	deliverBy: string;
 	deliverByText: string | null;
 	deliverBySource: 'request' | 'default';
+	/** The chef chose this date on the page (date control or a cut-off answer), over the words' one. */
+	deliverByChosen?: boolean;
 	notes: string[];
 	/** Request-level questions (date, disagreements); item questions live on the item. */
 	ambiguities: string[];

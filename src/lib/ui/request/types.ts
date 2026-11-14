@@ -43,6 +43,8 @@ export interface ParsedView {
 	deliverBy: string;
 	deliverByText: string | null;
 	deliverBySource: 'request' | 'default';
+	/** The chef chose this date on the page, over the words' one. */
+	deliverByChosen?: boolean;
 	notes: string[];
 	ambiguities: string[];
 	/** Inline answers applied on top of the words. */
@@ -109,6 +111,17 @@ export interface LookupView {
 	sanity: string[];
 	/** Set when the order is over the mandate's hard limit: placing it gives an unorderable line. */
 	hardLimit: { totalCents: number; limitCents: number } | null;
+	/** The next delivery dates from today: open or closed for this request's products, and why. */
+	days?: DayOptionView[];
+}
+
+/** One delivery date in the date control. */
+export interface DayOptionView {
+	date: string;
+	receiving: boolean;
+	open: boolean;
+	closes: string | null;
+	reason: string | null;
 }
 
 export interface ApprovalView {
