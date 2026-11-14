@@ -56,7 +56,7 @@ export interface RoutineFacts {
 /** The request parser's item for a routine intent, so ranking and conversion are the request page's own. */
 export function routineItem(i: RoutineLine): ParsedItem {
 	const item = {
-		text: i.query,
+		text: i.item.text || i.query,
 		query: i.query,
 		product: i.item.product,
 		search: i.item.search,
@@ -64,7 +64,10 @@ export function routineItem(i: RoutineLine): ParsedItem {
 		unit: i.unit,
 		constraints: i.item.constraints,
 		variant: i.item.variant,
-		ambiguities: []
+		ambiguities: [],
+		// Hard asks the request page filters on: never dropped between the reading and the order.
+		...(i.item.diet?.length ? { diet: i.item.diet } : {}),
+		...(i.item.brand ? { brand: i.item.brand } : {})
 	};
 	return { ...item, id: baseId(item) };
 }

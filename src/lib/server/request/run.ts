@@ -3,17 +3,8 @@
  * same scopes, validation and idempotency apply as for MCP and REST. Valio is touched only by
  * `quote`, and only for the shortlisted ids (plus Valio's own substitute rule for the pick).
  */
-import type {
-	Kitchen,
-	Measure,
-	NeedAsk,
-	NeedRequirements,
-	Offer,
-	Product,
-	ToolName,
-	ToolOutput
-} from '$lib/core/contracts';
-import { sizeDirect } from '$lib/core/demand/sizing';
+import type { Kitchen, Offer, Product, ToolName, ToolOutput } from '$lib/core/contracts';
+import { orderLineFor, type OrderLine } from './order-line';
 import { addDays } from '$lib/core/scenario';
 import { day, money, num, readableName } from '$lib/ui/format';
 import { canonicalJson, sha256Hex } from '$lib/core/hash';
@@ -647,59 +638,18 @@ export { requirementsOf };
  * direct need and a substitute is sized to it, as when the agent orders; the quantity is the server's own sizing of
  * that amount. Cases, packs and pieces the catalogue can't size go as the sales quantity alone.
  */
-export function orderLine(
-	i: LookupItemView,
-	product: Product
-): {
-	productId: string;
-	qty: number;
-	unit: string;
-	amount?: Measure;
-	requirements?: NeedRequirements;
-	ask?: NeedAsk;
-} {
-	const base = {
-		productId: i.pick!.productId,
-		qty: (i.pick!.conversion as { salesQty: number }).salesQty,
-		unit: i.pick!.salesUnit
-	};
-	const { qty, unit } = i.item;
-	const requirements = requirementsOf(i.item.constraints, i.item.diet);
-	// A physical ask (kg, l, pcs) is the need's amount as typed. Packs and cases become one through what the picked
-	// product states one sales unit holds (never invented): the need then carries the requirements too.
-	const amount: Measure | null =
-		qty === null
-			? null
-			: unit === 'kg' || unit === 'l' || unit === 'pcs'
-				? { value: qty, unit }
-				: i.pick!.amount
-					? { value: i.pick!.amount.value, unit: i.pick!.amount.unit }
-					: null;
-	const sized = amount ? sizeDirect(product, amount) : null;
-	// D18: the ask as stated travels on every line; without a physical size the line makes a sales-kind need that
-	// still carries the ask and the requirements.
-	const ask: NeedAsk | undefined =
-		qty === null || unit === null ? undefined : { words: i.item.text, qty, unit: ASK_UNIT[unit] };
-	return amount && sized
-		? {
-				...base,
-				qty: sized.value,
-				unit: sized.unit,
-				amount,
-				...(requirements ? { requirements } : {}),
-				...(ask ? { ask } : {})
-			}
-		: { ...base, ...(requirements ? { requirements } : {}), ...(ask ? { ask } : {}) };
+export function orderLine(i: LookupItemView, product: Product): OrderLine {
+	return orderLineFor(
+		i.item,
+		{
+			productId: i.pick!.productId,
+			salesQty: (i.pick!.conversion as { salesQty: number }).salesQty,
+			salesUnit: i.pick!.salesUnit,
+			amount: i.pick!.amount ?? null
+		},
+		product
+	);
 }
-
-/** The request's units in the ask's words: packs and an unstated unit are the product's own sales units. */
-const ASK_UNIT: Record<string, NeedAsk['unit']> = {
-	kg: 'kg',
-	l: 'l',
-	pcs: 'pcs',
-	case: 'case',
-	sales: 'pack'
-};
 
 /** The chef's chosen delivery date over the words' one, said in the request's notes; a past or bad date is ignored. */
 export function withDate(

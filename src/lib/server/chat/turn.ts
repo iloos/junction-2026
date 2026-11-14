@@ -1675,11 +1675,15 @@ function briefValue(field: BriefField, raw: unknown): BriefAnswer['value'] | nul
 		}
 		const t = raw.trim();
 		if (!t) return null;
+		if (field === 'budget' && /^(no|none|no budget|ei)\b/i.test(t)) return 0;
 		if (field === 'guests' || field === 'courses' || field === 'budget') {
 			const n = Number(t.replace(/[^\d.,]/g, '').replace(',', '.'));
-			return Number.isFinite(n) && n >= 0 ? n : null;
+			return /\d/.test(t) && Number.isFinite(n) && n >= 0 ? n : null;
 		}
-		if (field === 'dietary') return /^(none|no|ei)$/i.test(t) ? [] : t.split(/\s*,\s*/);
+		// Typed words are read by the brief ("gluten free please"; "no budget" is not a diet).
+		if (field === 'dietary') return /^(none|no|ei)$/i.test(t) ? [] : t;
+		// "a buffet please", "plated": the style the words name, never "plan it" as a style.
+		if (field === 'serviceStyle') return draftBrief(t, '2000-01-01').serviceStyle;
 		return t;
 	}
 	if (typeof raw === 'number' || Array.isArray(raw)) return raw as BriefAnswer['value'];
@@ -1794,7 +1798,30 @@ async function eventTurn(
 		};
 	}
 
-	const draft = applyBriefAnswers(draftBrief(goal, deps.today), briefAnswers(task), deps.today);
+	let draft = applyBriefAnswers(draftBrief(goal, deps.today), briefAnswers(task), deps.today);
+	// "plan it" with only optional questions open: plan with stated defaults, never ask the same question again.
+	const assumed: string[] = [];
+	if ((input.continue || (words && PLAN_IT.test(words))) && draft.guests !== null && draft.date) {
+		const fill: Partial<Record<BriefField, BriefAnswer['value']>> = {};
+		if (draft.serviceStyle === null) {
+			fill.serviceStyle = 'buffet';
+			assumed.push('served as a buffet');
+		} else if (draft.courses === null && ['plated', 'family'].includes(draft.serviceStyle)) {
+			fill.courses = 3;
+			assumed.push('3 courses');
+		}
+		if (draft.dietary === null) {
+			fill.dietary = [];
+			assumed.push('no extra dietary requirements');
+		}
+		if (draft.budgetCents === null) {
+			fill.budget = 0;
+			assumed.push('no set budget');
+		}
+		for (const [f, v] of Object.entries(fill)) slots[f] = v;
+		task.slots = slots as Task['slots'];
+		draft = applyBriefAnswers(draftBrief(goal, deps.today), briefAnswers(task), deps.today);
+	}
 	// The title says what the event is as far as the brief knows it ("Menu for 3, 7 courses").
 	task.title = [
 		draft.guests ? `Menu for ${draft.guests}` : 'Event menu',
@@ -1865,7 +1892,9 @@ async function eventTurn(
 		say:
 			`A menu for ${brief.guests} guests on ${dayWords(brief.date)}: ${proposal.dishes.length} dishes` +
 			(unresolved ? `, ${unresolved} ingredients without a product yet` : '') +
-			'. Amounts are estimates. Review it, then say "plan it".'
+			'. Amounts are estimates.' +
+			(assumed.length ? ` I assumed ${assumed.join(', ')}; say if not.` : '') +
+			' Review it, then say "plan it".'
 	};
 }
 

@@ -108,7 +108,15 @@ export function session(id: string, workspaceId: string): Session {
 }
 
 /** The commands the screen may send through the helper. Planning and resets go through `scenario`. */
-const ALLOWED = new Set(['get_plan', 'edit_line', 'explain_line', 'approve', 'commit_order']);
+const ALLOWED = new Set([
+	'get_plan',
+	'edit_line',
+	'explain_line',
+	'approve',
+	'commit_order',
+	'find_substitutes',
+	'search_products'
+]);
 
 const asVisitor = <C extends object>(c: C, s: Session) =>
 	s.visitor ? { ...c, visitor: s.visitor } : c;

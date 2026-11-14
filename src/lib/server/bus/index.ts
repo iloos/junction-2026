@@ -12,7 +12,7 @@ import { and, asc, eq, gt } from 'drizzle-orm';
 import { dbMode } from '$lib/server/db/client';
 import * as schema from '$lib/server/db/schema';
 import type { AnyDb } from '$lib/server/store/drizzle-store';
-import { log } from '$lib/server/obs/log';
+import { errMsg, log } from '$lib/server/obs/log';
 import { hasSeq, MemoryBus } from './memory';
 import { PgTransport, readOps } from './pg';
 import { simDone, simTraces, SYNTH_WORKSPACE, syntheticRun } from './synthetic';
@@ -60,10 +60,40 @@ const viaPg = (workspaceId: string) => !isMemoryOnly(workspaceId) && bus().pg;
 /** Deliver events to every subscriber of the workspace (across processes in Postgres mode). */
 export async function publish(workspaceId: string, events: ServerEvent[]): Promise<void> {
 	if (!events.length) return;
-	if (!isMemoryOnly(workspaceId)) logOps(workspaceId, events);
+	if (!isMemoryOnly(workspaceId)) {
+		logOps(workspaceId, events);
+		warmPlanPhotos(workspaceId, events);
+	}
 	const pg = viaPg(workspaceId);
 	if (pg) await pg.publish(workspaceId, events);
 	else bus().local.deliver(workspaceId, events);
+}
+
+/**
+ * A plan created or re-priced: warm its products' photos in the background (live web mode only, the workspace's web
+ * cap), so the rows show them when they render. Fire and forget; never delays or fails the write.
+ */
+function warmPlanPhotos(workspaceId: string, events: ServerEvent[]) {
+	if (process.env.VITEST) return;
+	const ids = new Set<string>();
+	for (const e of events) {
+		if (e.kind !== 'op') continue;
+		const op = e.envelope.op;
+		if (op.type === 'CreatePlan') for (const l of op.plan.lines) ids.add(l.productId);
+		else if (op.type === 'RecordOffer') for (const l of op.lines) ids.add(l.productId);
+	}
+	if (!ids.size) return;
+	void (async () => {
+		const { webMode } = await import('../web');
+		if (webMode(process.env) !== 'live') return;
+		const [{ createServerPorts }, { warmPhotos }] = await Promise.all([
+			import('../store/server-ports'),
+			import('../products/photos')
+		]);
+		const { ports } = await createServerPorts();
+		const products = await ports.catalog.get([...ids]);
+		await warmPhotos(process.env, `visitor:${workspaceId}`, [...products.values()]);
+	})().catch((err) => log.warn('photos.warm_failed', { workspaceId, error: errMsg(err) }));
 }
 
 /** One line per op written (type, seq) and a warning line per refusal; the simulated runs stay quiet. */

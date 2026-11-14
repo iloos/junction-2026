@@ -177,7 +177,10 @@ function routineOrder(
 					product: i.product,
 					search: i.search,
 					constraints: i.constraints,
-					variant: i.variant
+					variant: i.variant,
+					text: i.text,
+					...(i.diet?.length ? { diet: i.diet } : {}),
+					...(i.brand ? { brand: i.brand } : {})
 				}
 			}))
 		: [];
@@ -259,7 +262,10 @@ function routineOrder(
 			product: item.product,
 			search: item.search,
 			constraints: item.constraints,
-			variant: item.variant
+			variant: item.variant,
+			text: item.text,
+			...(item.diet?.length ? { diet: item.diet } : {}),
+			...(item.brand ? { brand: item.brand } : {})
 		},
 		deliverBy,
 		deliverByText,

@@ -54,6 +54,17 @@ const res = spawnSync(
 	{ stdio: 'inherit', env: { ...process.env, PLAYTEST_DIR: dir } }
 );
 
+// A deploy that lands mid-run mixes two builds: say so at the top of RUN.md, and keep it out of later diffs.
+let mixed = '';
+if (process.env.KITCHEN_URL)
+	try {
+		const after = String((await (await fetch(`${base}/healthz`)).json()).commit ?? '').slice(0, 7);
+		if (after && after !== commit)
+			mixed = `**MIXED RUN: the deploy changed from ${commit} to ${after} during it. Discard it and run again.**\n\n`;
+	} catch {
+		/* keep the run */
+	}
+
 const journeys = [];
 for (const vp of readdirSync(dir).filter((d) => statSync(join(dir, d)).isDirectory()))
 	for (const id of readdirSync(join(dir, vp))) {
@@ -64,7 +75,10 @@ journeys.sort((a, b) => `${a.id}${a.viewport}`.localeCompare(`${b.id}${b.viewpor
 const steps = journeys.flatMap((j) =>
 	j.steps.map((s) => ({ key: `${j.id}/${j.viewport}/${s.step}`, ok: s.ok, error: s.error ?? null }))
 );
-writeFileSync(join(dir, 'steps.json'), JSON.stringify({ base, commit, steps }, null, '\t'));
+writeFileSync(
+	join(dir, mixed ? 'steps.mixed.json' : 'steps.json'),
+	JSON.stringify({ base, commit, steps }, null, '\t')
+);
 
 let diff = '';
 if (previous) {
@@ -85,7 +99,7 @@ const lines = journeys.map((j) => {
 });
 writeFileSync(
 	join(dir, 'RUN.md'),
-	`# Playtest ${stamp}\n\nTarget ${base} · commit ${commit} · ${Math.round((Date.now() - t0) / 1000)} s · playwright exit ${res.status}\n\n| journey | viewport | title | steps ok | stuck at |\n|---|---|---|---|---|\n${lines.join('\n')}\n${diff}\nBeats: \`<viewport>/<journey>/NN-<step>.png\` (full page), \`.fold.png\` (first screen), \`.txt\` (DOM text). Chat turns, request ids, receipts and notes in each \`journey.json\`. Judge with the \`playtest\` skill; findings go to \`FINDINGS.md\` here.\n`
+	`# Playtest ${stamp}\n\n${mixed}Target ${base} · commit ${commit} · ${Math.round((Date.now() - t0) / 1000)} s · playwright exit ${res.status}\n\n| journey | viewport | title | steps ok | stuck at |\n|---|---|---|---|---|\n${lines.join('\n')}\n${diff}\nBeats: \`<viewport>/<journey>/NN-<step>.png\` (full page), \`.fold.png\` (first screen), \`.txt\` (DOM text). Chat turns, request ids, receipts and notes in each \`journey.json\`. Judge with the \`playtest\` skill; findings go to \`FINDINGS.md\` here.\n`
 );
 console.log(
 	`\nplaytest: ${dir}\n${steps.filter((s) => !s.ok).length} stuck steps of ${steps.length}`
