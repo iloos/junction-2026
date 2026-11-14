@@ -90,3 +90,52 @@ describe('recipe fit in the substitute ranking', () => {
 		expect(top.score?.fit).toBeUndefined();
 	});
 });
+
+describe('rescue batch (Decide.batch): fit, constraint check and origin in one call per line', () => {
+	const batchDecide = (calls: number[], violatesP: number | undefined): Decide => ({
+		yesNo: async () => {
+			throw new Error('unused');
+		},
+		choice: async () => {
+			throw new Error('unused');
+		},
+		score: async () => {
+			throw new Error('unused');
+		},
+		batch: async (qs) => {
+			calls.push(qs.length);
+			return Object.fromEntries(
+				qs.map((q) => {
+					const palvi = /Palvikinkku/i.test(q.question);
+					const base = { confidence: 0.9, source: 'gemini' as const, latencyMs: 300 };
+					if (q.id.endsWith('_fit')) return [q.id, { ...base, value: palvi ? 1 : 3 }];
+					if (q.id.endsWith('_violates'))
+						return [
+							q.id,
+							palvi && violatesP !== undefined
+								? { ...base, value: violatesP > 0.5, p: violatesP }
+								: { ...base, value: false, p: 0.02 }
+						];
+					return [q.id, { ...base, value: true, p: 0.93 }];
+				})
+			);
+		}
+	});
+
+	it('asks once, shows confidence and origin, and a calibrated violation rejects the candidate', async () => {
+		const calls: number[] = [];
+		const r = await rescueHam(batchDecide(calls, 0.97));
+		expect(calls).toHaveLength(1);
+		expect(calls[0] % 3).toBe(0);
+		const palvi = r.candidates.find((c) => c.productId === '476768')!;
+		expect(palvi.rank).toBeNull();
+		expect(palvi.rejectedReasons).toEqual(['FORBIDDEN.gemini_constraint_p0.97']);
+		const top = r.candidates.find((c) => c.rank === 1)!;
+		expect(top.score?.fit?.provenance.note).toMatch(/conf 0\.90.*Finnish origin p 0\.93/);
+	});
+
+	it('an answer without p (rules) never rejects', async () => {
+		const r = await rescueHam(batchDecide([], undefined));
+		expect(r.candidates.find((c) => c.productId === '476768')!.rank).not.toBeNull();
+	});
+});

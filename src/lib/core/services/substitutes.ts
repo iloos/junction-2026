@@ -31,19 +31,107 @@ import {
 	type SeedDish
 } from '../demand';
 import { draftFromLine, recalledProducts, type DraftLine } from '../mandate/tier';
-import { rankCandidates, supplyOf } from '../rank/rank';
-import type { CallContext } from '../ports';
+import { rankCandidates, supplyOf, type Fit } from '../rank/rank';
+import type { CallContext, DecideQuestion } from '../ports';
 import { prefetch, requote, type ServicePorts } from './events';
 import { pending } from './orders';
 
 /* eslint-disable @typescript-eslint/no-explicit-any -- seed candidate/rescue entries are loose JSON */
 type Loose = any;
 
-/** How many top-ranked survivors get a recipe-fit question (each one Decide call, in parallel). */
+/** How many top-ranked survivors get a recipe-fit question. */
 const FIT_TOP_N = 3;
+/** With a batching Decide, every survivor up to this many is asked fit, constraint and origin in one call. */
+const BATCH_MAX = 12;
 const FIT_TIMEOUT_MS = 4000;
+/** P(violates) above this, from a calibrated answer, rejects the candidate. A Decide answer never clears a rejection. */
+const VIOLATES_P = 0.5;
 
-type Fit = { score: number; source: string; model?: string; latencyMs?: number };
+type RescueCandidate = { productId: string; name: string; origin?: string };
+type RescueAsk = {
+	dish: string;
+	original: string;
+	/** The kitchen's hard constraints, as words Gemini reads (free-from allergens, labels). */
+	hardConstraints: string[];
+	candidates: RescueCandidate[];
+};
+type Rescue = { fit: Map<string, Fit>; violates: Map<string, number> };
+
+function race<T>(p: Promise<T>): Promise<T> {
+	let timer: ReturnType<typeof setTimeout> | undefined;
+	return Promise.race([
+		p,
+		new Promise<never>(
+			(_, reject) => (timer = setTimeout(() => reject(new Error('fit timeout')), FIT_TIMEOUT_MS))
+		)
+	]).finally(() => clearTimeout(timer));
+}
+
+const FIT_RUBRIC =
+	'4 = the same dish, guests would not notice; 3 = a close variant; 2 = acceptable with a note; 1 = a different dish; 0 = unsuitable';
+
+/** The batch for one rescued line: per candidate `c{i}_fit` (0–4), `c{i}_violates` and `c{i}_fi`, one shared context. */
+export function rescueQuestions(q: RescueAsk): DecideQuestion[] {
+	const context = JSON.stringify({
+		dish: q.dish,
+		planned_product: q.original,
+		hard_constraints: q.hardConstraints,
+		candidates: q.candidates.map((c, i) => ({
+			ref: `c${i}`,
+			name: c.name,
+			origin: c.origin ?? 'unknown'
+		}))
+	});
+	return q.candidates.flatMap((c, i): DecideQuestion[] => [
+		{
+			id: `c${i}_fit`,
+			kind: 'score',
+			question: `How well does candidate c${i} ("${c.name}") work for the dish "${q.dish}" on a Finnish Christmas buffet, in place of "${q.original}"?`,
+			rubric: FIT_RUBRIC,
+			max: 4,
+			context
+		},
+		{
+			id: `c${i}_violates`,
+			kind: 'yes_no',
+			question: `Does candidate c${i} ("${c.name}") break any of the kitchen's hard constraints listed in hard_constraints?`,
+			context
+		},
+		{
+			id: `c${i}_fi`,
+			kind: 'yes_no',
+			question: `Is candidate c${i} ("${c.name}") a product of Finnish origin?`,
+			context
+		}
+	]);
+}
+
+async function rescueDecide(ports: ServicePorts, q: RescueAsk): Promise<Rescue> {
+	const out: Rescue = { fit: new Map(), violates: new Map() };
+	if (!ports.decide.batch || q.candidates.length === 0) return out;
+	try {
+		const a = await race(ports.decide.batch(rescueQuestions(q)));
+		q.candidates.forEach((c, i) => {
+			const fit = a[`c${i}_fit`];
+			const v = a[`c${i}_violates`];
+			const fi = a[`c${i}_fi`];
+			if (fit)
+				out.fit.set(c.productId, {
+					score: Math.max(0, Math.min(4, Number(fit.value))),
+					source: fit.source,
+					model: fit.model,
+					latencyMs: fit.latencyMs,
+					confidence: fit.source === 'rules' ? undefined : fit.confidence,
+					note: fi?.p !== undefined ? `Finnish origin p ${fi.p.toFixed(2)}` : undefined
+				});
+			// Only a calibrated answer (Gemini or its recorded replay) carries p; a rules guess never rejects.
+			if (v?.p !== undefined) out.violates.set(c.productId, v.p);
+		});
+	} catch {
+		// No answer: the deterministic ranking stands.
+	}
+	return out;
+}
 
 async function recipeFit(
 	ports: ServicePorts,
@@ -52,21 +140,15 @@ async function recipeFit(
 	const out = new Map<string, Fit>();
 	await Promise.all(
 		q.candidates.map(async (c) => {
-			let timer: ReturnType<typeof setTimeout> | undefined;
 			try {
-				const d = await Promise.race([
+				const d = await race(
 					ports.decide.score({
 						question: `How well does "${c.name}" work for the dish "${q.dish}" on a Finnish Christmas buffet, in place of "${q.original}"?`,
-						rubric:
-							'4 = the same dish, guests would not notice; 3 = a close variant; 2 = acceptable with a note; 1 = a different dish; 0 = unsuitable',
+						rubric: FIT_RUBRIC,
 						context: `Dish: ${q.dish}. Planned product: ${q.original}. Candidate: ${c.name}.`,
 						max: 4
-					}),
-					new Promise<never>(
-						(_, reject) =>
-							(timer = setTimeout(() => reject(new Error('fit timeout')), FIT_TIMEOUT_MS))
-					)
-				]);
+					})
+				);
 				out.set(c.productId, {
 					score: Math.max(0, Math.min(4, d.value)),
 					source: d.source,
@@ -75,8 +157,6 @@ async function recipeFit(
 				});
 			} catch {
 				// No fit for this candidate: it is ranked on the criteria alone.
-			} finally {
-				clearTimeout(timer);
 			}
 		})
 	);
@@ -180,22 +260,36 @@ export async function findSubstitutes(
 		offers: new Map(offers.map((o) => [o.productId, o])),
 		recalled
 	});
-	// Recipe fit (0–4) from Decide for the top survivors, then rank again with it (D6 w_fit). Outside the lock;
-	// a provider failure leaves the deterministic ranking in place.
-	// Fit only reorders survivors: with fewer than two there is nothing to reorder, so no call is made.
-	const survivors = ranked.filter((r) => r.rank !== null).length;
-	const fit = await recipeFit(ports, {
-		dish: need?.label ?? line.productId,
-		original: line.productName ?? line.productId,
-		candidates: ranked
-			.filter((r) => r.rank !== null && survivors > 1)
-			.sort((a, b) => a.rank! - b.rank!)
-			.slice(0, FIT_TOP_N)
-			.map((r) => ({
-				productId: r.productId,
-				name: products.get(r.productId)?.nameFi ?? r.productId
-			}))
-	});
+	// Gemini judges what code can't, outside the lock. Recipe fit (0–4, D6 w_fit) reorders survivors. With a batching
+	// Decide, one call per rescued line also asks each survivor's hard-constraint check (a calibrated "violates"
+	// rejects it and never un-rejects anything) and Finnish origin (shown as evidence). A failure leaves the code
+	// ranking. Without batching, fit only reorders survivors, so fewer than two means no call.
+	const survivorsRanked = ranked.filter((r) => r.rank !== null).sort((a, b) => a.rank! - b.rank!);
+	const asked = (n: number) =>
+		survivorsRanked.slice(0, n).map((r) => ({
+			productId: r.productId,
+			name: products.get(r.productId)?.nameFi ?? r.productId,
+			origin: products.get(r.productId)?.origin ?? undefined
+		}));
+	const judged: Rescue = ports.decide.batch
+		? await rescueDecide(ports, {
+				dish: need?.label ?? line.productId,
+				original: line.productName ?? line.productId,
+				hardConstraints: [
+					...kitchen.constraints.allergens.freeFrom.map((a) => `free from ${a}`),
+					...kitchen.constraints.labels.map((l) => `label ${l}`)
+				],
+				candidates: asked(BATCH_MAX)
+			})
+		: {
+				fit: await recipeFit(ports, {
+					dish: need?.label ?? line.productId,
+					original: line.productName ?? line.productId,
+					candidates: survivorsRanked.length > 1 ? asked(FIT_TOP_N) : []
+				}),
+				violates: new Map()
+			};
+	const fit = judged.fit;
 	if (fit.size)
 		ranked.splice(
 			0,
@@ -213,6 +307,21 @@ export async function findSubstitutes(
 				fit
 			})
 		);
+	const vetoed = ranked.filter(
+		(r) => r.rank !== null && (judged.violates.get(r.productId) ?? 0) > VIOLATES_P
+	);
+	for (const r of vetoed) {
+		r.rank = null;
+		r.score = undefined;
+		r.rejectedReasons = [
+			`FORBIDDEN.gemini_constraint_p${judged.violates.get(r.productId)!.toFixed(2)}` as const
+		];
+	}
+	if (vetoed.length) {
+		let n = 1;
+		for (const r of ranked.filter((x) => x.rank !== null).sort((a, b) => a.rank! - b.rank!))
+			r.rank = n++;
+	}
 	if (input.requireOrigin) {
 		for (const r of ranked)
 			if (r.rank !== null && products.get(r.productId)?.origin !== input.requireOrigin) {

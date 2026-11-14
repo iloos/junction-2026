@@ -10,13 +10,24 @@
 import type { Kitchen, LineReason, Offer, Product, ScoreBreakdown, SupplyTier } from '../contracts';
 import { blocking, validateLine } from '../mandate/validate';
 
+/** Recipe fit from Decide: score 0–4, its source, and Gemini's confidence when calibrated. */
+export interface Fit {
+	score: number;
+	source: string;
+	model?: string;
+	latencyMs?: number;
+	confidence?: number;
+	/** Extra evidence shown with the fit (e.g. "Finnish origin p 0.93"). */
+	note?: string;
+}
+
 export interface RankInput {
 	kitchen: Kitchen;
 	candidates: { productId: string; fromValioRule: boolean; qty: number }[];
 	products: Map<string, Product>;
 	offers: Map<string, Offer>;
 	/** Recipe-fit 0–4 from Decide, when it answered. */
-	fit?: Map<string, { score: number; source: string; model?: string; latencyMs?: number }>;
+	fit?: Map<string, Fit>;
 	/** Products under a recall notice: never recommended. */
 	recalled?: Set<string>;
 	/** Weight of the fit term relative to the criteria (D6 w_fit). */
@@ -124,9 +135,17 @@ export function rankCandidates(input: RankInput): Ranked[] {
 						fit: {
 							score: fit.score,
 							provenance: {
-								source: fit.source === 'gemini' ? 'llm' : 'team_estimate',
+								source:
+									fit.source === 'gemini' || fit.source === 'replay' ? 'llm' : 'team_estimate',
 								ref: fit.model,
-								note: `recipe fit via ${fit.source}${fit.latencyMs !== undefined ? `, ${Math.round(fit.latencyMs)} ms` : ''}`
+								note: [
+									`recipe fit ${fit.score.toFixed(1)}/4 via ${fit.source}`,
+									fit.confidence !== undefined ? `conf ${fit.confidence.toFixed(2)}` : '',
+									fit.latencyMs !== undefined ? `${Math.round(fit.latencyMs)} ms` : '',
+									fit.note ?? ''
+								]
+									.filter(Boolean)
+									.join(', ')
 							}
 						}
 					}
