@@ -109,9 +109,13 @@
 			{:else if by}<p><AgentMark {by} /></p>
 			{/if}
 			<p class="mono text-micro text-ink-3">
-				{#if rejected}<span class="font-sans">{l.productId} · not ordered</span>{:else}<span
-						class="text-ink">{b.buys}</span
-					>{#if b.physical && !expanded}<span class="text-ink-2"> {b.physical}</span>{/if}{/if}
+				{#if rejected}<span class="font-sans"
+						><span class="sys-only mono">{l.productId} · </span>Not ordered</span
+					>{:else}<span class="text-ink">{b.buys}</span>{#if b.physical && !expanded}<span
+							class="text-ink-2"
+						>
+							{b.physical}</span
+						>{/if}{/if}
 			</p>
 			{#if lot && !rejected}<p class="text-meta text-ink-2">{lot}</p>{/if}
 			{#if decide?.state === 'denied'}
