@@ -44,11 +44,15 @@ export interface Catalog {
 
 /** Simulator: stock truth and scenario overlays (contention, split delivery, cut-off). */
 export interface Simulator {
-	/** Atomic conditional consume at commit (`… where available >= qty`). Runs inside the store transaction. */
+	/**
+	 * Atomic conditional consume at commit (`… where available >= qty`). Runs inside the store transaction, so it
+	 * reads only through `tx`: the caller passes the offer it fetched beforehand, used to seed the stock row.
+	 */
 	consume(
 		tx: Tx,
 		productId: ProductId,
-		qty: number
+		qty: number,
+		offer?: Offer
 	): Promise<Result<{ lotId: string | null; confirmed: boolean }>>;
 	events(sinceSimTime?: string): SimEvent[];
 }
