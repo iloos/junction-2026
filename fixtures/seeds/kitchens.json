@@ -1,6 +1,6 @@
 {
-	"$comment": "Three demo kitchen profiles (horeca-profiles.md §2, ★P1–P3). Fictional kitchens. Weights sum to 1 per kitchen. Money is EUR ex VAT. Mandate caps are team estimates, chosen so Ring 0 scenarios exercise each cap; replace with a chef's words when we have them (PRODUCT §7).",
-	"source": "docs/research/horeca-profiles.md §2 (profiles, weights, constraints); docs/concept/PRODUCT.md ★4 (mandate); caps = team estimate",
+	"$comment": "Seven kitchen profiles (horeca-profiles.md §2): ★P1–P3 carry the demo; P4 à la carte, P5 care home, P6 café and P8 ski resort show the same shortage getting a different answer. Fictional kitchens. Weights sum to 1 per kitchen and come from the research table. Money is EUR ex VAT. Mandate caps (sized so a normal order runs alone and only real exceptions go to a person: roughly one day's order and one week's spend), sizes, delivery days and the care home's lactose-free house menu are team estimates; replace with a chef's words when we have them (PRODUCT §7).",
+	"source": "docs/research/horeca-profiles.md §2 (profiles, weights, constraints); docs/concept/PRODUCT.md ★4 (mandate); caps, sizes and delivery days = team estimate",
 	"kitchens": [
 		{
 			"id": "k-hotel",
@@ -144,15 +144,17 @@
 					"475214",
 					"466964",
 					"463437",
-					"472186"
+					"472186",
+					"469477",
+					"461747"
 				],
 				"labels": ["tender list only", "special diets per child", "budget per meal"]
 			},
 			"mandate": {
-				"words": "Only tender-list products, Finnish meat, fish and milk. Alone up to €300 a line, €2,500 an order, €8,000 a week. Anything off the list comes to me.",
-				"lineCapCents": 30000,
-				"orderCapCents": 250000,
-				"weeklyCapCents": 800000,
+				"words": "Only tender-list products, Finnish meat, fish and milk. Alone up to €2,500 a line, €8,000 an order, €20,000 a week. Anything off the list comes to me.",
+				"lineCapCents": 250000,
+				"orderCapCents": 800000,
+				"weeklyCapCents": 2000000,
 				"neverDelegate": ["allergen_change", "off_tender_list", "origin_requirement"]
 			},
 			"factorSensitivity": {
@@ -162,6 +164,199 @@
 				"schoolHoliday": 1.0,
 				"weather": 0
 			}
+		},
+		{
+			"id": "k-alacarte",
+			"profile": "P4",
+			"name": "Ravintola Pöytä Kallio (fictional)",
+			"kind": "a_la_carte_restaurant",
+			"city": "Helsinki",
+			"size": {
+				"dinnerCovers": 120
+			},
+			"deliveryDays": ["tue", "wed", "thu", "fri", "sat"],
+			"weights": {
+				"carbon": 0.3,
+				"finnish": 0.3,
+				"price": 0.2,
+				"organic": 0.2,
+				"reliability": 0
+			},
+			"constraints": {
+				"origin": [
+					{
+						"categoryGroup": "fish",
+						"rule": "prefer",
+						"country": "fi"
+					}
+				],
+				"allergens": {
+					"freeFrom": [],
+					"unknownCounts": "hold"
+				},
+				"tenderListOnly": false,
+				"labels": ["fish and meat by the kilo (catch-weight lot steps)", "small storage"]
+			},
+			"mandate": {
+				"words": "Order alone up to €600 a line, €2,000 an order and €6,000 a week. Ask me before any new product or a substitute I haven't seen.",
+				"lineCapCents": 60000,
+				"orderCapCents": 200000,
+				"weeklyCapCents": 600000,
+				"neverDelegate": ["allergen_change", "new_sku", "substitute_breaks_preference"]
+			},
+			"factorSensitivity": {
+				"event": 0.6,
+				"month": 0.8,
+				"holiday": 0.5,
+				"schoolHoliday": 0,
+				"weather": 0.3
+			},
+			"$usualProducts": "Scenario: the normal week's products (salmon fillet, potatoes, lactose-free cooking cream, butter); team estimate from the profile's typical basket.",
+			"usualProducts": ["462150", "475214", "464249", "464205"]
+		},
+		{
+			"id": "k-carehome",
+			"profile": "P5",
+			"name": "Kotikallio Care Home (fictional)",
+			"kind": "care_home_kitchen",
+			"city": "Vantaa",
+			"size": {
+				"residents": 140,
+				"mealsPerDay": 560
+			},
+			"deliveryDays": ["mon", "tue", "wed", "thu", "fri", "sat"],
+			"weights": {
+				"reliability": 0.5,
+				"price": 0.3,
+				"finnish": 0.2,
+				"carbon": 0,
+				"organic": 0
+			},
+			"constraints": {
+				"origin": [],
+				"allergens": {
+					"freeFrom": ["LACTOSE"],
+					"unknownCounts": "reject",
+					"traces": "hold"
+				},
+				"tenderListOnly": false,
+				"labels": [
+					"clinical diets (texture-modified, lactose-free house menu)",
+					"allergens declared for every resident",
+					"no missed delivery"
+				]
+			},
+			"mandate": {
+				"words": "Never leave us short. Order alone up to €800 a line, €2,500 an order and €8,000 a week. Never change an allergen, and ask me before any new product or a substitute I haven't seen.",
+				"lineCapCents": 80000,
+				"orderCapCents": 250000,
+				"weeklyCapCents": 800000,
+				"neverDelegate": ["allergen_change", "new_sku", "substitute_breaks_preference"]
+			},
+			"factorSensitivity": {
+				"event": 0,
+				"month": 0.3,
+				"holiday": 1.0,
+				"schoolHoliday": 0,
+				"weather": 0
+			},
+			"$usualProducts": "Scenario: the normal week's products (lactose-free milk, yoghurt and quark, rye bread); team estimate from the profile's typical basket.",
+			"usualProducts": ["464201", "462718", "461571", "461578"]
+		},
+		{
+			"id": "k-cafe",
+			"profile": "P6",
+			"name": "Kahvila Kruununhaka (fictional)",
+			"kind": "cafe",
+			"city": "Helsinki",
+			"size": {
+				"seats": 40,
+				"coffeesPerDay": 400
+			},
+			"deliveryDays": ["mon", "tue", "wed", "thu", "fri", "sat"],
+			"weights": {
+				"price": 0.4,
+				"organic": 0.3,
+				"carbon": 0.3,
+				"reliability": 0,
+				"finnish": 0
+			},
+			"constraints": {
+				"origin": [],
+				"allergens": {
+					"freeFrom": [],
+					"unknownCounts": "hold"
+				},
+				"tenderListOnly": false,
+				"labels": ["small fridge"]
+			},
+			"mandate": {
+				"words": "Keep the par levels topped up alone, up to €150 a line, €400 an order and €2,500 a week. Ask me before any new product.",
+				"lineCapCents": 15000,
+				"orderCapCents": 40000,
+				"weeklyCapCents": 250000,
+				"neverDelegate": ["allergen_change", "new_sku"]
+			},
+			"factorSensitivity": {
+				"event": 0.2,
+				"month": 0.5,
+				"holiday": 0.5,
+				"schoolHoliday": 0.3,
+				"weather": 1.0
+			},
+			"$usualProducts": "Scenario: the normal week's products (lactose-free coffee milk, barista oat drink, butter, filter coffee); team estimate from the profile's typical basket.",
+			"usualProducts": ["464237", "469512", "463798", "460588"]
+		},
+		{
+			"id": "k-skiresort",
+			"profile": "P8",
+			"name": "Levi Fell Hotel (fictional)",
+			"kind": "ski_resort_hotel",
+			"city": "Kittilä",
+			"size": {
+				"rooms": 300,
+				"breakfastCovers": 550,
+				"restaurantCovers": 200
+			},
+			"deliveryDays": ["tue", "fri"],
+			"weights": {
+				"reliability": 0.5,
+				"price": 0.3,
+				"finnish": 0.2,
+				"carbon": 0,
+				"organic": 0
+			},
+			"constraints": {
+				"origin": [
+					{
+						"categoryGroup": "meat",
+						"rule": "prefer",
+						"country": "fi"
+					}
+				],
+				"allergens": {
+					"freeFrom": [],
+					"unknownCounts": "hold"
+				},
+				"tenderListOnly": false,
+				"labels": ["long lead: two deliveries a week", "season December–April"]
+			},
+			"mandate": {
+				"words": "Few deliveries, so order ahead. Alone up to €3,000 a line, €18,000 an order and €40,000 a week. Ask me before any new product or a substitute I haven't seen.",
+				"lineCapCents": 300000,
+				"orderCapCents": 1800000,
+				"weeklyCapCents": 4000000,
+				"neverDelegate": ["allergen_change", "new_sku", "substitute_breaks_preference"]
+			},
+			"factorSensitivity": {
+				"event": 0.8,
+				"month": 1.0,
+				"holiday": 1.0,
+				"schoolHoliday": 0.6,
+				"weather": 0.5
+			},
+			"$usualProducts": "Scenario: the normal week's products (lactose-free milk, eggs, cheese slices, potatoes); team estimate from the profile's typical basket.",
+			"usualProducts": ["464201", "463982", "462584", "475214"]
 		}
 	]
 }

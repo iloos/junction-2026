@@ -29,6 +29,13 @@ export const SeedDish = z.looseObject({
 	gServed: z.number().nonnegative().optional(),
 	/** Served weight ÷ purchased weight; 1 when absent. */
 	yield: z.number().positive().optional(),
+	/**
+	 * Share of the guests this entry serves, 0–1; all of them when absent. A choice of mains, or a special diet
+	 * (60 gluten-free of 2,000 pupils = 0.03). Scales with the guest count, so an edited count moves it too.
+	 */
+	share: z.number().positive().max(1).optional(),
+	/** Diet codes shown on the dish (L lactose-free, G gluten-free, M milk-free, VEG); informational. */
+	dietCodes: z.array(z.string()).optional(),
 	perKgDish: PerKgDish.optional(),
 	productId: ProductId,
 	salesUnit: UnitCode,

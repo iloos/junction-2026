@@ -14,7 +14,7 @@ import { createFixturePorts } from './fixture-ports';
 import { createDrizzleStore, type AnyDb } from './drizzle-store';
 import { drizzleMenuStore } from '../menu/pg';
 import seedKitchens from '../../../../fixtures/seeds/kitchens.json';
-import buffetSeed from '../../../../fixtures/seeds/christmas-buffet-140.json';
+import { EVENT_SEEDS } from '$lib/kitchen/events';
 import { EventSeed } from '$lib/core/demand';
 import type { ServicePorts } from '$lib/core/services/events';
 import { SCENARIO, scenarioClock, scenarioDate } from '$lib/core/scenario';
@@ -24,10 +24,9 @@ import { DEMO_WORKSPACE } from '../demo/workspaces';
 export { DEMO_WORKSPACE };
 export const DEMO_RUN = 'run-1';
 
-/** Event seeds by id (core reads no files; handlers get them through ports.events). */
+/** Event seeds by id, one per kitchen that has one (core reads no files; handlers get them through ports.events). */
 export function loadSeedEvents(): Record<string, EventSeed> {
-	const e = EventSeed.parse(buffetSeed);
-	return { [String(buffetSeed.id)]: e };
+	return Object.fromEntries(EVENT_SEEDS.map((e) => [e.id, EventSeed.parse(e)]));
 }
 
 export function loadSeedKitchens(): Kitchen[] {

@@ -1,0 +1,226 @@
+{
+	"$comment": "One school day at a public central kitchen, ~2,000 meals: the main and the vegetarian main (Helsinki schools offer two mains daily), milk, bread, and the special diets as their own lines (share = part of the pupils). The constraint opposite of the hotel: tender list only, Finnish origin required for meat, fish and milk. The gluten-free bread is deliberately off the tender list, so it goes to the named approver. need = pupils × share × gServed ÷ yield, rounded up to the pack or lot. Every number is a team estimate until a chef checks it. Prices (catalogPrice ex VAT) and availability are copied from the local mock-API cache (14 Nov) where it had them; the rest are quoted live by the app.",
+	"id": "event-school-day-2000",
+	"title": "School lunch, 2,000 meals",
+	"kitchenId": "k-central",
+	"date": "2026-12-17",
+	"guests": {
+		"estimate": 2000,
+		"guarantee": null,
+		"guaranteeDueHoursBefore": 72,
+		"oversetPct": 0
+	},
+	"serviceStyle": "school lunch line",
+	"provenance": {
+		"kind": "estimate",
+		"label": "team estimate, not yet reviewed by a chef",
+		"sources": [
+			{
+				"what": "profile, priorities and hard constraints",
+				"ref": "docs/research/horeca-profiles.md §2"
+			},
+			{
+				"what": "published lunch menus list portion grams and diet codes (e.g. soup 110 g, G, M)",
+				"ref": "docs/research/horeca-profiles.md §4 (Jamix menu service)"
+			},
+			{
+				"what": "pack sizes and lot steps",
+				"ref": "Valio catalogue (data/valio/normalized/products.json)"
+			},
+			{
+				"what": "two mains daily, 6-week cycle",
+				"url": "https://www.hel.fi/fi/kasvatus-ja-koulutus/koulujen-ja-oppilaitosten-ruokalistat"
+			}
+		]
+	},
+	"dishes": [
+		{
+			"dish": "Uunikirjolohi (oven rainbow trout)",
+			"dietCodes": ["L", "G", "M"],
+			"share": 0.7,
+			"gServed": 70,
+			"yield": 0.8,
+			"yieldNote": "fillet → oven-baked, portioned (team estimate)",
+			"productId": "462016",
+			"productName": "KIRJOLOHIFILEE C-LEIKATTU 10KG",
+			"salesUnit": "KG",
+			"lotStep": 10,
+			"needKg": 122.5,
+			"order": {
+				"qty": 130,
+				"unit": "KG",
+				"rounding": "122.5 kg → 13 × 10 kg lot = 130 kg"
+			},
+			"priceCents": 1577,
+			"lineCents": 205010,
+			"availability": {
+				"amount": 40.0,
+				"kind": "known",
+				"logisticModel": "Stock"
+			}
+		},
+		{
+			"dish": "Keitetyt perunat (boiled potatoes)",
+			"dietCodes": ["VEG", "L", "G", "M"],
+			"share": 0.7,
+			"gServed": 150,
+			"yield": 1.0,
+			"yieldNote": "peeled portion potatoes",
+			"productId": "475214",
+			"productName": "SPL Raaka annosperuna veitsikuorittu 10kg",
+			"salesUnit": "ST",
+			"pack": {
+				"netKg": 10
+			},
+			"needKg": 210.0,
+			"order": {
+				"qty": 21,
+				"unit": "ST",
+				"rounding": "210 kg / 10 = 21 ST"
+			},
+			"priceCents": 791,
+			"lineCents": 16611,
+			"availability": {
+				"amount": 1029.0,
+				"kind": "known",
+				"logisticModel": "Stock"
+			}
+		},
+		{
+			"dish": "Kasvis-perunavuoka (vegetable and potato bake, vegetarian main)",
+			"dietCodes": ["VEG", "G"],
+			"share": 0.3,
+			"gServed": 200,
+			"yield": 1.0,
+			"yieldNote": "ready bake: heated only",
+			"productId": "472186",
+			"productName": "Feelia ERV Kasvis-perunalaatikko 600g",
+			"salesUnit": "ST",
+			"pack": {
+				"netKg": 0.6
+			},
+			"needKg": 120.0,
+			"order": {
+				"qty": 200,
+				"unit": "ST",
+				"rounding": "120 kg / 0.6 = 200 ST"
+			},
+			"priceCents": 263,
+			"lineCents": 52600,
+			"availability": {
+				"amount": 999999,
+				"kind": "unknown",
+				"logisticModel": "Stock"
+			}
+		},
+		{
+			"dish": "Maito (skimmed milk)",
+			"dietCodes": ["G"],
+			"share": 0.92,
+			"gServed": 200,
+			"productId": "469477",
+			"productName": "Valio rasvaton maito 1 l ESL",
+			"salesUnit": "ST",
+			"pack": {
+				"netL": 1
+			},
+			"needL": 368.0,
+			"order": {
+				"qty": 368,
+				"unit": "ST",
+				"rounding": "368 l / 1 = 368 ST"
+			}
+		},
+		{
+			"dish": "Laktoositon maito (lactose-free milk, special diet: 160 pupils)",
+			"dietCodes": ["L", "G"],
+			"share": 0.08,
+			"gServed": 200,
+			"productId": "464201",
+			"productName": "Valio kevytmaito 1 l laktoositon UHT",
+			"salesUnit": "ST",
+			"pack": {
+				"netL": 1
+			},
+			"needL": 32.0,
+			"order": {
+				"qty": 32,
+				"unit": "ST",
+				"rounding": "32 l / 1 = 32 ST"
+			},
+			"priceCents": 156,
+			"lineCents": 4992,
+			"availability": {
+				"amount": 999999,
+				"kind": "unknown",
+				"logisticModel": "Stock"
+			}
+		},
+		{
+			"dish": "Ruisleipä (rye bread)",
+			"dietCodes": ["L", "M"],
+			"share": 0.97,
+			"gServed": 38,
+			"yield": 1.0,
+			"productId": "461747",
+			"productName": "Vaasan Pieni Ruisruutu 100x38g",
+			"salesUnit": "KI",
+			"pack": {
+				"pieces": 100,
+				"netKg": 3.8
+			},
+			"needKg": 73.72,
+			"order": {
+				"qty": 20,
+				"unit": "KI",
+				"rounding": "1940 pcs / 100 → 20 KI (2000 pcs)"
+			}
+		},
+		{
+			"dish": "Gluteeniton leipä (gluten-free bread, special diet: 60 pupils)",
+			"dietCodes": ["G", "L"],
+			"share": 0.03,
+			"gServed": 38,
+			"yield": 1.0,
+			"yieldNote": "sliced 600 g loaves, 8 per case",
+			"productId": "461765",
+			"productName": "Moilas Gluten-Free Tumma leipä 600g viipaloitu pakaste",
+			"salesUnit": "KI",
+			"pack": {
+				"pieces": 8,
+				"netKg": 4.8
+			},
+			"needKg": 2.28,
+			"order": {
+				"qty": 1,
+				"unit": "KI",
+				"rounding": "3.8 pcs / 8 → 1 KI (8 pcs)"
+			}
+		},
+		{
+			"dish": "Levite (lactose-free butter)",
+			"dietCodes": ["L", "G"],
+			"gServed": 5,
+			"yield": 1.0,
+			"productId": "463437",
+			"productName": "Valio Eila® voi 500 g laktoositon",
+			"salesUnit": "ST",
+			"pack": {
+				"netKg": 0.5
+			},
+			"needKg": 10.0,
+			"order": {
+				"qty": 20,
+				"unit": "ST",
+				"rounding": "10 kg / 0.5 = 20 ST"
+			},
+			"priceCents": 331,
+			"lineCents": 6620,
+			"availability": {
+				"amount": 999999,
+				"kind": "unknown",
+				"logisticModel": "Stock"
+			}
+		}
+	]
+}

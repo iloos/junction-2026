@@ -14,6 +14,7 @@ import type {
 import { termsHash } from '$lib/core/hash';
 import { SCENARIO, scenarioClock } from '$lib/core/scenario';
 import { KITCHENS } from './catalog';
+import { eventFor } from './events';
 import {
 	buildEvent,
 	rulesFor,
@@ -77,7 +78,7 @@ function initial(kitchenId = 'k-hotel'): State {
 		preset: 'kitchen',
 		rules,
 		grams: {},
-		guests: 140,
+		guests: eventFor(kitchen.id)?.guests.estimate ?? 140,
 		contention: false,
 		weekSpentCents: 248_000,
 		version: 1,
@@ -99,6 +100,7 @@ async function rebuild(bump: boolean, summary?: string) {
 	if (bump) s.version += 1;
 	s.built = buildEvent({
 		kitchen: s.kitchen,
+		eventId: eventFor(s.kitchen.id)?.id,
 		rules: s.rules,
 		grams: s.grams,
 		scenario: { guests: s.guests, contention: s.contention, weekSpentCents: s.weekSpentCents },
