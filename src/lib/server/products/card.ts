@@ -4,8 +4,8 @@
  * public page (Valio Aimo, else Open Food Facts) when its barcode matches. Read-only. Valio terms come from the catalogue port (live or
  * cached, as it says); the listing from web/listing.ts (live or recorded).
  */
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
+// Bundled into the build, so the served image has it (src/ is not shipped).
+import listingsFile from '../web/fixtures/listings.json';
 import type { Offer, Product } from '$lib/core/contracts';
 import type { Catalog } from '$lib/core/ports';
 import type { ProductListing } from '../web/listing';
@@ -93,11 +93,7 @@ let recorded: Record<string, ProductListing | null> | null = null;
  * call for them. undefined = not prewarmed.
  */
 export function recordedListing(productId: string): ProductListing | null | undefined {
-	recorded ??= (
-		JSON.parse(
-			readFileSync(join(process.cwd(), 'src/lib/server/web/fixtures/listings.json'), 'utf-8')
-		) as { listings: Record<string, ProductListing | null> }
-	).listings;
+	recorded ??= (listingsFile as { listings: Record<string, ProductListing | null> }).listings;
 	return productId in recorded ? recorded[productId] : undefined;
 }
 
