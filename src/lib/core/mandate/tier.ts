@@ -216,27 +216,32 @@ export function tierLines(input: TierInput): TierResult {
 			boundTo?.ask?.qty != null && typeof askUnit === 'string' && askUnit in PHYSICAL
 				? toMeasure(boundTo.ask.qty, askUnit as keyof typeof PHYSICAL)
 				: undefined;
-		const bound = boundTo && (boundTo.kind === 'direct' || boundTo.source) ? boundTo.amount : asked;
+		// R12-01: a line is bound to every physical statement of its need: the need's own amount (direct or menu) AND
+		// the ask, so "250 ml" with an amount of 250 l can't buy 250 l. An edit's new amount is the new ask.
+		const bounds = [
+			...(boundTo && (boundTo.kind === 'direct' || boundTo.source) ? [boundTo.amount] : []),
+			...(asked ? [asked] : [])
+		];
 		if (typeof askUnit === 'object')
 			findings.push({ reason: 'need_size_unknown', effect: 'waive', tier: 'propose' });
-		else if (product && bound && !draft.extraReasons?.includes('superseded')) {
-			const most = sizeDirect(product, bound);
-			if (!most) findings.push({ reason: 'need_size_unknown', effect: 'waive', tier: 'propose' });
-			// One lot step of slack over the need rounded to lots: a pack more is a chef's call, ten times more is not.
-			else if (
-				draft.qty.unit === most.unit &&
-				draft.qty.value >
-					most.value +
-						(product.lotStep > 0.01 ? product.lotStep : product.salesUnit === 'KG' ? 0.01 : 1) +
-						1e-9
-			)
-				findings.push({ reason: 'exceeds_need', effect: 'forbid' });
-			else {
+		else if (product && bounds.length && !draft.extraReasons?.includes('superseded')) {
+			const lot = product.lotStep > 0.01 ? product.lotStep : product.salesUnit === 'KG' ? 0.01 : 1;
+			const verdicts = bounds.map((bound) => {
+				const most = sizeDirect(product, bound);
+				if (!most || draft.qty.unit !== most.unit) return 'unknown' as const;
+				// One lot step of slack over the need rounded to lots: a pack more is a chef's call, ten times more is not.
+				if (draft.qty.value > most.value + lot + 1e-9) return 'exceeds' as const;
 				// Within one lot, but the smallest pack is far bigger than the ask: a person confirms the case.
 				const per = product.salesUnit === 'KG' ? 1 : contentValue(product, bound.unit);
-				if (per && bound.value > 0 && draft.qty.value * per > 2 * bound.value + 1e-9)
-					findings.push({ reason: 'need_rounding_large', effect: 'waive', tier: 'propose' });
-			}
+				return per && bound.value > 0 && draft.qty.value * per > 2 * bound.value + 1e-9
+					? ('large' as const)
+					: ('ok' as const);
+			});
+			if (verdicts.includes('exceeds')) findings.push({ reason: 'exceeds_need', effect: 'forbid' });
+			else if (verdicts.includes('unknown'))
+				findings.push({ reason: 'need_size_unknown', effect: 'waive', tier: 'propose' });
+			else if (verdicts.includes('large'))
+				findings.push({ reason: 'need_rounding_large', effect: 'waive', tier: 'propose' });
 		}
 		// The kitchen's calendar is a receiving constraint: another day is an explicit exception a person signs off.
 		if (input.deliverBy && !receivesOn(kitchen, input.deliverBy))

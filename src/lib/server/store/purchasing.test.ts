@@ -886,3 +886,64 @@ describe('a retry of a commit that already went through gets its receipt', () =>
 		expect(Object.keys((await state()).orders)).toHaveLength(1);
 	});
 });
+
+describe('R12-01: the ask binds, beside the amount', () => {
+	it('ask 250 ml with amount 250 l: the line is forbidden and nothing is bought', async () => {
+		const { h, state } = await harness();
+		const p = must(
+			await h.place_order(ctx('kitchen_agent'), {
+				kitchenId: 'k-hotel',
+				deliverBy: '2026-12-10',
+				idempotencyKey: 'ask250',
+				lines: [
+					{
+						productId: '464201',
+						qty: 250,
+						unit: 'ST',
+						amount: { value: 250, unit: 'l' },
+						ask: { words: '250 ml milk', qty: 250, unit: 'ml' }
+					}
+				]
+			})
+		).plan;
+		expect(p.lines[0].reasons).toContain('exceeds_need');
+		const c = await h.commit_order(ctx('kitchen_agent'), {
+			planId: p.id,
+			version: p.version,
+			idempotencyKey: 'ask250-buy'
+		});
+		expect(c.ok).toBe(false);
+		expect(Object.keys((await state()).orders)).toHaveLength(0);
+	});
+
+	it('an amount edit is the new ask: 4 l → 8 l buys 8', async () => {
+		const { h } = await harness();
+		const p = must(
+			await h.place_order(ctx('chef'), {
+				kitchenId: 'k-hotel',
+				deliverBy: '2026-12-10',
+				idempotencyKey: 'ask4',
+				lines: [
+					{
+						productId: '464201',
+						qty: 4,
+						unit: 'ST',
+						amount: { value: 4, unit: 'l' },
+						ask: { words: '4 l milk', qty: 4, unit: 'l' }
+					}
+				]
+			})
+		).plan;
+		const e = must(
+			await h.edit_line(ctx('chef'), {
+				planId: p.id,
+				version: p.version,
+				needId: p.needs[0].id,
+				patch: { amount: { value: 8, unit: 'l' } }
+			})
+		).plan;
+		expect(e.needs[0].ask).toMatchObject({ qty: 8, unit: 'l' });
+		expect(e.lines[0]).toMatchObject({ qty: { value: 8 } });
+		expect(e.lines[0].reasons).not.toContain('exceeds_need');
+	});
+});
