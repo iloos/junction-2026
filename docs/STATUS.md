@@ -2,23 +2,13 @@
 
 _The lead rewrites this at each checkpoint. It is the "now": what works, what's next, what bites._
 
-**Updated:** Sat 14 Nov ~02:05 (lead session).
-**State:** Ring 0 backbone on main (`fc98e0c`): contracts (D6 + review fixes), core-db slices 1–3 (quote, place_order/approve/commit, plan_event/edit_line/explain_line, Postgres catalog), agent lane (bearer auth, one `serveTool` gate, REST `/api/tools/<name>`, MCP `/mcp` + `/mcp/k/<key>`, OpenAPI, Decide/Llm adapters, routine agent), kitchen lane (full PITCH table demo on fixture tools), ops lane (bus, SSE `/api/events`, `/ops` control room), deploy (`/healthz`, Dockerfile). 101 server tests, `pnpm eval` s1–s5 all gate (slice 4 merged). Server tests always run on PGlite.
-**Works end to end (seen, local dev against Aiven):** `/healthz` db ok + TLS verified; REST quote (real cached Valio terms, unknown id → notFound); plan_event → 13 lines held; op stream returns the ops; `/` and `/ops` render. **Aiven:** pg-1dfeeeed migrated (`pnpm db:migrate`) + seeded (`pnpm db:seed`: 17,546 products, 11,269 offers). **Deployed URL:** https://widely-many-scorpion.eur-1.aiven.app (Aiven Runtime `mandate`, Postgres mode; /healthz ok + TLS verified; tool API keys being set as secrets; redeploy: push main → `aiven_application_redeploy` → `scripts/deploy/smoke.sh`).
+**Updated:** Sat 14 Nov ~07:00 (lead session). **Tag `ring0`** = main 4b030a4 (code identical to deployed f2edb21).
+**State:** Ring 0 stable and deployed. Checkpoint done: 8 internal reviews + 5 outside (round 5) → [handoff/SYNTHESIS.md](handoff/SYNTHESIS.md) (32 ranked findings F1–F32, rulings, tracks T0/A–G, owners' replies in §7). Handoffs in `docs/lanes/{core-db,ops,baseline,kitchen,request,agent2,web}.md`. 252 server tests, `pnpm eval` 5/5, `pnpm eval:agent` 9/9, `pnpm test:pg` 4/4 on Aiven (opt-in), `pnpm test:live` 3/3 (Gemini, opt-in).
+**Deployed:** https://widely-many-scorpion.eur-1.aiven.app (Aiven Runtime `mandate`, Postgres, TLS verified, `LLM_PROVIDER=gemini`, web keys set). Warm up before judging (deploy.md). Redeploy: push main → `aiven_application_redeploy` → `scripts/deploy/smoke.sh`.
+**Works end to end on prod:** Christmas plan with real outages, curated rescues, edit-after-rescue voids and re-binds approval, commit, same receipt on retry; `/request` Valio milk flow (Gemini parse) with case questions and a size check; hard ceiling; MCP judge key can't approve; Ops urgency queue + wallboard + agent traces; recall drill; sandbox self-reset.
+**Biggest open (SYNTHESIS P0s):** F1 shared sandbox · F2 Ops on another workspace · F3 parse can drop "lactose-free" · F4 agent units/dates · F5 rescue with unknown supply · F6 no agent door · F7 open event requests.
 
-**Tracks now (review: docs/reviews/2026-11-14-0155.md; PLAN.md R0-a…g):**
-| Track | Who | State |
-|---|---|---|
-| R0-a rank + make_in_house | junc26-8d | [x] merged; all 5 evals gate |
-| R0-b kitchen live flip (+ date mismatch, fonts, favicon) | junc26-8d | [~] |
-| R0-e Postgres double-commit race (`pnpm test:pg`) | junc26-8d | [ ] after R0-b |
-| Deployed URL (Aiven Runtime `mandate`) + smoke | junc26-9c | [~] building |
-| R0-d scenario clock, reset/new run, deployed smoke | junc26-9c | [ ] |
-| R0-f `/api/agent/run` + trace drawer | junc26-9c | [ ] |
-| R0-c Request box (Valio's Request → Lookup → Order → Approval) | lead's background agent, `lane/request` | [~] |
-| R0-g outside agent on stage (MCP client with a judge key) | lead | [ ] needs the URL |
-
-**Open questions for the user:** none blocking. Before public: history squash (secrets redacted in files at `d332715`, still in history), rotate the Valio key, fix "Data stays in Finland" in platform drafts.
+**Next:** user re-scopes SYNTHESIS §5 → lead lands T0 contracts → fan out A (8d), G (9c), B (request agent + 1f retrieval), C (kitchen agent), D (web agent), E (agent), F evals (new session). Pitch/submission held until the next stable tag.
 
 **Read these, in order:**
 1. [DECISIONS.md](DECISIONS.md): D1 (Valio), D3 (one container on Aiven, Aiven Postgres), D4 (big scope on the real stack, built in rings 0→3).
