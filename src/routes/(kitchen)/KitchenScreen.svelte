@@ -40,7 +40,16 @@
 	import { describeOps } from '$lib/ui/chat/turn-view';
 	import { dishGate } from '$lib/ui/coverage';
 	import { whyChain } from '$lib/ui/why-chain';
-	import { day, fixed, money, moneyDelta, num, readableName, storyTime } from '$lib/ui/format';
+	import {
+		day,
+		fixed,
+		money,
+		moneyDelta,
+		num,
+		qtyWords,
+		readableName,
+		storyTime
+	} from '$lib/ui/format';
 	import { SCENARIO } from '$lib/core/scenario';
 	import { reasonShort } from '$lib/ui/reasons';
 	import RescueCompare from '$lib/ui/RescueCompare.svelte';
@@ -432,7 +441,7 @@
 				items: lines.map((l) => ({
 					id: l.id,
 					name: names.get(l.productId) ?? l.productId,
-					qty: `${num(l.qty.value)} ${l.qty.unit}`
+					qty: qtyWords(l.qty)
 				})),
 				approve: oneTap ? lines.map((l) => l.id) : undefined
 			});

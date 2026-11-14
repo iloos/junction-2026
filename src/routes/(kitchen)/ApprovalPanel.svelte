@@ -18,7 +18,7 @@
 	import BillLines, { BILL_COLS, type BillRow } from '$lib/ui/BillLines.svelte';
 	import Receipt from '$lib/ui/Receipt.svelte';
 	import { decisionsDue, decisionsOf } from '$lib/ui/decisions';
-	import { money, num, shortHash, day, storyTime, unitWord } from '$lib/ui/format';
+	import { money, num, shortHash, day, storyTime, unitWord, qtyWords } from '$lib/ui/format';
 
 	interface Props {
 		plan: Plan;
@@ -184,7 +184,7 @@
 		lines.map((l) => ({
 			id: l.id,
 			name: nameOf(l.productId),
-			qty: `${num(l.qty.value)} ${unitWord(l.qty.unit)}`,
+			qty: qtyWords(l.qty),
 			cents: l.lineCents ?? null
 		}));
 	const centsOf = (lines: Line[]) => lines.reduce((s, l) => s + (l.lineCents ?? 0), 0);
@@ -333,7 +333,7 @@
 									<span class="mono"
 										>{num(c.before.qty)} →
 										<mark class="bg-signoff/25 px-0.5 text-ink"
-											>{num(c.after.qty)} {c.after.unit}</mark
+											>{num(c.after.qty)} {unitWord(c.after.unit, c.after.qty)}</mark
 										>, {money(c.before.lineCents)} →
 										<mark class="bg-signoff/25 px-0.5 text-ink">{money(c.after.lineCents)}</mark
 										></span
@@ -341,12 +341,14 @@
 								{:else if c.after}
 									<span class="text-ink-2"
 										>added: <span class="mono"
-											>{num(c.after.qty)} {c.after.unit} · {money(c.after.lineCents)}</span
+											>{num(c.after.qty)}
+											{unitWord(c.after.unit, c.after.qty)} · {money(c.after.lineCents)}</span
 										></span
 									>
 								{:else if c.before}
 									<span class="text-ink-2"
-										>removed (was <span class="mono">{num(c.before.qty)} {c.before.unit}</span
+										>removed (was <span class="mono"
+											>{num(c.before.qty)} {unitWord(c.before.unit, c.before.qty)}</span
 										>)</span
 									>
 								{/if}
@@ -414,8 +416,8 @@
 						{#each decided as d (d.key)}
 							<li>
 								<!-- Grouped by why it needed the chef, with the count and the group's total on the bill's grid. -->
-								<p class="{BILL_COLS} items-baseline text-meta font-medium text-ink">
-									<span class="min-w-0 truncate"
+								<p class="{BILL_COLS} items-start text-meta font-medium text-ink">
+									<span class="min-w-0"
 										>{ordered || granted ? 'Approved' : 'Needed you'}: {d.reason.toLowerCase()}</span
 									>
 									<span class="mono text-right text-ink-3 tabular-nums"

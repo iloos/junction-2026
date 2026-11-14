@@ -6,7 +6,7 @@
 	import { neededVsBuying } from './coverage';
 	import SourceTag from './SourceTag.svelte';
 	import StateChip from './StateChip.svelte';
-	import { humanDates, money, num } from './format';
+	import { humanDates, money, num, qtyWords } from './format';
 	import type { WhyChain } from './why-chain';
 	import { page } from '$app/state';
 	import SourceChip from './SourceChip.svelte';
@@ -117,7 +117,7 @@
 							reasons={line.reasons}
 							view={line.view}
 						/>
-						<span class="mono text-ink">{num(line.qty.value)} {line.qty.unit}</span>
+						<span class="mono text-ink">{qtyWords(line.qty)}</span>
 						<span class="mono text-ink">{money(line.lineCents)}</span>
 					</div>
 				</header>

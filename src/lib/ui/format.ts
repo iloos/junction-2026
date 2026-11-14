@@ -105,9 +105,33 @@ export function readableName(raw: string, short?: string | null): string {
 		.join('');
 }
 
-/** A sales unit in words: Valio's ST and KPL are pieces, KG and L lower case; a unit we don't know stays as written. */
-export function unitWord(u: string): string {
+/** Valio's sales-unit codes as words (docs/foundations/valio-data.md: KI case, ST piece, PAK pack, BAG bag…). */
+const UNIT_WORDS: Record<string, [string, string]> = {
+	KI: ['case', 'cases'],
+	CS: ['case', 'cases'],
+	PAK: ['pack', 'packs'],
+	PKT: ['pack', 'packs'],
+	BAG: ['bag', 'bags'],
+	SK: ['sack', 'sacks'],
+	RAS: ['box', 'boxes'],
+	PRK: ['tub', 'tubs'],
+	BOT: ['bottle', 'bottles'],
+	PAL: ['pallet', 'pallets'],
+	KRS: ['layer', 'layers']
+};
+
+/**
+ * A sales unit in words, for anything a person reads: ST and KPL are pieces, KG and L lower case, the case and pack
+ * codes as words (plural when `n` isn't 1). A code we don't know stays as Valio writes it.
+ */
+export function unitWord(u: string, n?: number): string {
 	if (/^(st|kpl|pcs)$/i.test(u)) return 'pcs';
 	if (/^(kg|l|g|ml|dl|cl)$/i.test(u)) return u.toLowerCase();
+	const w = UNIT_WORDS[u.toUpperCase()];
+	if (w) return n === 1 ? w[0] : w[1];
 	return u;
 }
+
+/** A line quantity as a person reads it: "3 cases", "2 pcs", "5.95 kg". */
+export const qtyWords = (q: { value: number; unit: string }) =>
+	`${num(q.value)} ${unitWord(q.unit, q.value)}`;

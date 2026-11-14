@@ -6,7 +6,7 @@
  */
 import type { FulfilmentView, Line, LineView, Need } from '$lib/core/contracts';
 import { BUCKETS } from './coverage';
-import { money, num } from './format';
+import { money, num, qtyWords, unitWord } from './format';
 import { reasonShort } from './reasons';
 
 export interface ChainNode {
@@ -157,7 +157,7 @@ export function whyChain(i: {
 	const b = i.basis(line);
 	const perUnit =
 		b?.physical && line.qty.value > 0 && b.physical.unit !== line.qty.unit.toLowerCase()
-			? `${amt(b.physical.value / line.qty.value, b.physical.unit)} per ${line.qty.unit}`
+			? `${amt(b.physical.value / line.qty.value, b.physical.unit)} per ${unitWord(line.qty.unit, 1)}`
 			: undefined;
 	nodes.push({
 		label: 'Product',
@@ -174,7 +174,7 @@ export function whyChain(i: {
 	nodes.push({
 		label: 'Packs',
 		numeric: true,
-		value: `${num(line.qty.value)} ${line.qty.unit}${phys}`,
+		value: `${qtyWords(line.qty)}${phys}`,
 		detail: line.qty.rounding,
 		source: 'valio_static'
 	});
@@ -236,7 +236,7 @@ export function whyChain(i: {
 				return {
 					lineId: s.id,
 					name: s.productName ?? i.name(s.productId),
-					buys: `${num(s.qty.value)} ${s.qty.unit}`,
+					buys: qtyWords(s.qty),
 					rounding: s.qty.rounding,
 					cover: weakest
 						? BUCKET_LABEL[weakest.bucket]

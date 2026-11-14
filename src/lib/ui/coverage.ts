@@ -4,7 +4,7 @@
  * Pure, so the bar, the Why chain and tests read one definition.
  */
 import type { FulfilmentView, LineView } from '$lib/core/contracts';
-import { money, num } from './format';
+import { money, num, qtyWords } from './format';
 
 export type Bucket =
 	'supplierConfirmed' | 'awaitingSupplier' | 'plannedKnown' | 'plannedUnknown' | 'unresolved';
@@ -134,7 +134,7 @@ export function lineBasis(
 	qty: { value: number; unit: string },
 	view: Pick<LineView, 'physical' | 'unitPrice' | 'comparisonPrice'> | undefined
 ): { buys: string; physical: string | null; unitPrice: string | null; comparison: string | null } {
-	const buys = `${num(qty.value)} ${qty.unit}`;
+	const buys = qtyWords(qty);
 	const p = view?.physical;
 	const sameAsSales =
 		p && p.unit === qty.unit.toLowerCase() && Math.abs(p.value - qty.value) < 1e-9;

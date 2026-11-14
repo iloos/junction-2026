@@ -27,7 +27,7 @@ import { inWorkspace } from '$lib/server/adapters/simulator/overlay';
 import { rescueContention } from '$lib/core/services/contention';
 import { catchUp } from '$lib/server/bus';
 import type { DietFacts } from '$lib/ui/diet';
-import { num, readableName, unitWord } from '$lib/ui/format';
+import { qtyWords, readableName } from '$lib/ui/format';
 
 /** The palvikinkku the ham rescue relies on (13 of 15 in stock): the contention preset takes 4 of them. */
 const CONTENDED = { productId: '476768', left: 11, taken: 4 };
@@ -397,10 +397,7 @@ function titleOf(plan: Plan): string {
 	if (!labels.length) {
 		const bought = plan.lines
 			.filter((l) => l.qty.value > 0)
-			.map(
-				(l) =>
-					`${num(l.qty.value)} ${unitWord(l.qty.unit)} ${readableName(l.productName ?? l.productId)}`
-			);
+			.map((l) => `${qtyWords(l.qty)} ${readableName(l.productName ?? l.productId)}`);
 		if (!bought.length) return 'Order';
 		return bought.length <= 2
 			? bought.join(', ')

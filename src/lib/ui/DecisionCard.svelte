@@ -10,7 +10,7 @@
 	import HoldButton from './HoldButton.svelte';
 	import BillLines from './BillLines.svelte';
 	import type { Decision } from './decisions';
-	import { money, num, shortHash, storyTime, unitWord } from './format';
+	import { money, num, shortHash, storyTime, qtyWords } from './format';
 
 	interface Props {
 		decision: Decision;
@@ -128,7 +128,7 @@
 					rows={d.lines.map((l) => ({
 						id: l.id,
 						name: `${changed?.has(l.id) ? 'Changed: ' : ''}${names.get(l.productId) ?? l.productId}`,
-						qty: `${num(l.qty.value)} ${unitWord(l.qty.unit)}`,
+						qty: qtyWords(l.qty),
 						cents: l.lineCents ?? null
 					}))}
 				/>
