@@ -467,27 +467,28 @@ async function recordChain() {
 				key: 'dish',
 				title: 'The dish',
 				value: dishName,
-				text: `One of ${dishes} dishes on the menu, ${per} a guest.`
-			},
-			{
-				key: 'ingredient',
-				title: 'The ingredient',
-				value: ingredient ? `${total} ${ingredient}` : total,
-				text: `${ingredient ? `${ingredient[0].toUpperCase()}${ingredient.slice(1)}` : 'What to buy'} for ${view.guests} guests at ${per} of ${dishName.toLowerCase()} each.`,
+				text: `One of ${dishes} dishes on the menu, ${per} a guest.`,
+				// A held ingredient of the same dish, so the marker sits on the dish, not on the line shown.
 				...(sibling
 					? {
 							decides: {
 								kind: 'unknown',
-								text: `The ${siblingName} waits for one tap: Valio doesn't state a quantity.`
+								text: `Its ${siblingName} waits for one tap: Valio doesn't state a quantity.`
 							}
 						}
 					: {})
 			},
 			{
+				key: 'ingredient',
+				title: 'The ingredient',
+				value: ingredient ? `${total} ${ingredient}` : total,
+				text: `${ingredient ? `${ingredient[0].toUpperCase()}${ingredient.slice(1)}` : 'What to buy'} for ${view.guests} guests at ${per} of ${dishName.toLowerCase()} each.`
+			},
+			{
 				key: 'product',
-				title: "Valio's product",
+				title: 'The product',
 				value: line.productName,
-				text: `${packs}${size}, €${eur(line.lineCents).toFixed(2)}.`,
+				text: `From Valio Aimo's catalogue: ${packs}${size}, €${eur(line.lineCents).toFixed(2)}.`,
 				...(line.tier === 'act' && line.reasons.length === 0
 					? { decides: { kind: 'rule', text: 'Inside the mandate: ordered without asking.' } }
 					: {})

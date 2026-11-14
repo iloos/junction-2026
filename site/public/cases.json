@@ -31,23 +31,23 @@
 				"key": "dish",
 				"title": "The dish",
 				"value": "Rice porridge",
-				"text": "One of 12 dishes on the menu, 100 g a guest."
+				"text": "One of 12 dishes on the menu, 100 g a guest.",
+				"decides": {
+					"kind": "unknown",
+					"text": "Its milk waits for one tap: Valio doesn't state a quantity."
+				}
 			},
 			{
 				"key": "ingredient",
 				"title": "The ingredient",
 				"value": "1.68 kg rice",
-				"text": "Rice for 140 guests at 100 g of rice porridge each.",
-				"decides": {
-					"kind": "unknown",
-					"text": "The milk waits for one tap: Valio doesn't state a quantity."
-				}
+				"text": "Rice for 140 guests at 100 g of rice porridge each."
 			},
 			{
 				"key": "product",
-				"title": "Valio's product",
+				"title": "The product",
 				"value": "Myllyn Paras Puuroriisi 1kg",
-				"text": "2 bags × 1 kg, €4.60.",
+				"text": "From Valio Aimo's catalogue: 2 bags × 1 kg, €4.60.",
 				"decides": {
 					"kind": "rule",
 					"text": "Inside the mandate: ordered without asking."
