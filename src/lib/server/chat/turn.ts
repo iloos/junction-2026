@@ -1,11 +1,12 @@
 import type { Plan, ToolName, ToolOutput } from '$lib/core/contracts';
 import { ClarifyField, type Task, type TaskState } from '$lib/core/contracts/task';
-import type { CallContext, Ports, TaskStore, ToolHandlers } from '$lib/core/ports';
+import type { CallContext, Llm, Ports, TaskStore, ToolHandlers } from '$lib/core/ports';
 import { runGoal } from '$lib/server/agent';
 import { classifyGoal } from '$lib/server/agent/classify';
 import type { ContextSource } from '$lib/server/agent/context';
 import { withoutKitchen } from '$lib/server/agent/intent';
 import {
+	llmPlanner,
 	scriptedPlanner,
 	type AgentRun,
 	type Planner,
@@ -16,7 +17,10 @@ import { newAgentRunId, startAgentRun } from '$lib/server/agent/runs';
 import type { Slots } from '$lib/server/agent/types';
 import type { Env } from '$lib/server/auth';
 import { UNITS } from '$lib/server/request/lexicon';
+import { parseRules } from '$lib/server/request/parse';
 import { ledgerSummary, readTask } from '$lib/server/tasks/outcome';
+import { explain } from './explain';
+import { itemWords, understand, type Understanding } from './understand';
 import { project } from '$lib/server/tasks/project';
 import { memoryTaskStore } from '$lib/server/tasks/store';
 import { approvalUrl, presentMeta } from '$lib/server/tools/present';
@@ -47,8 +51,27 @@ export interface ChatDeps {
 	/** Scenario date, YYYY-MM-DD. */
 	today: string;
 	env?: Env;
-	/** The planner for new goals; the deterministic script by default. */
+	/** The planner for new goals; by default the schema-constrained model on `llm` (the script on its failures), else the script. */
 	planner?: Planner;
+	/**
+	 * The chat's model: understanding a message and wording answers from the ledger go through it (record and replay
+	 * wrap it at this port). Absent: rules, script and template sentences.
+	 */
+	llm?: Llm | null;
+	/** Per-job models (the route's router jobs); each defaults to `llm`. */
+	models?: { understand?: Llm | null; explain?: Llm | null; plan?: Llm | null };
+}
+
+/** The model plans each step; when it fails (bad reply twice, provider down) the script takes that step. */
+export function withFallback(model: Planner, script: Planner): Planner {
+	return async (s, signal) => {
+		try {
+			return await model(s, signal);
+		} catch (e) {
+			if (signal.aborted) throw e;
+			return script(s, signal);
+		}
+	};
 }
 
 /** Without a TaskStore on the ports, tasks live in memory per ports object (tests, a store without agent_tasks). */
@@ -72,7 +95,14 @@ export function readAnswer(field: ClarifyField, value: unknown): Slots {
 	if (!raw) return {};
 	if (field === 'qty' || field === 'guests') {
 		const m = raw.match(/^(\d+(?:[.,]\d+)?)\s*([\p{L}.]*)/u);
-		if (!m) return {};
+		if (!m) {
+			// Words ("make it four kilos", "neljä kiloa"): the request parser's own number and unit reading.
+			const item = parseRules(raw, '2000-01-01').items.find((i) => i.qty !== null);
+			if (!item || item.qty === null) return {};
+			if (field === 'guests') return { guests: Math.round(item.qty) };
+			const stated = item.unit && !item.ambiguities.some((a) => a.startsWith('no unit given'));
+			return stated ? { qty: item.qty, unit: item.unit! } : { qty: item.qty };
+		}
 		const n = Number(m[1].replace(',', '.'));
 		if (field === 'guests') return { guests: Math.round(n) };
 		const u = UNITS.find((x) => x.forms.includes(m[2].toLowerCase()));
@@ -202,18 +232,84 @@ export async function* runChatTurn(
 	// a question is open: they are never squeezed into the open slot, and their quantities are never dropped.
 	const words = input.text?.trim();
 	const reading = words ? classifyGoal(withoutKitchen(words), deps.today) : null;
-	const newRequest =
-		expected !== null &&
+	const ruleOwn =
 		!!reading &&
-		((reading.kind === 'order' && reading.amount) || reading.kind === 'event');
+		((reading.kind === 'order' && reading.amount) ||
+			['event', 'read', 'authority'].includes(reading.kind));
+	// A short reply to an open question ("4 kg", "Wednesday") is an answer and needs no model; anything else is read.
+	const answering =
+		!!words && expected !== null && task.pending.kind === 'clarify' && !ruleOwn && !input.answer;
+	const understood =
+		words && !answering && !input.answer
+			? await understand(words, {
+					today: deps.today,
+					llm: deps.models?.understand ?? deps.llm ?? null
+				})
+			: null;
+	const u = understood?.understanding;
+	const held = expected !== null ? task.plans.find((p) => p.role === 'primary')?.planId : undefined;
+	// "Cancel that": the task stops here; orders already placed stay as they are.
+	if (expected !== null && words && CANCEL.test(words)) {
+		task.state = 'cancelled';
+		task.pending = { kind: 'none' };
+		task.updatedAt = deps.ports.clock.now().toISOString();
+		const saved = await store.put(task, expected);
+		yield {
+			type: 'done',
+			taskId: task.id,
+			state: saved.ok ? 'cancelled' : task.state,
+			text: saved.ok
+				? 'Cancelled this task: nothing more will be ordered for it. Anything already ordered stays as it is.'
+				: 'This task changed in another window; reload it and try again.',
+			canContinue: false
+		};
+		return;
+	}
+	// "Make it 20 kg": the task's own line is resized, on the same plan.
+	const resize = held && words ? words.match(RESIZE) : null;
+	// "…too", "and 2 l cream": one more product on this task, for the same delivery day unless the words name one.
+	const addition = !!held && !!words && !resize && ADDITION.test(words);
+	const newRequest =
+		!resize &&
+		!addition &&
+		expected !== null &&
+		!!words &&
+		!!u &&
+		(u.kind === 'event' ||
+			(u.kind === 'order' && !!u.items?.some((i) => i.amount !== undefined)) ||
+			(reading?.kind === 'order' && reading.amount) ||
+			reading?.kind === 'event');
 	if (newRequest) {
 		task = { ...blankTask(deps, words!), kitchenId: task.kitchenId };
 		expected = null;
 	}
 	/** The task existed before this turn's words (a follow-up), rather than being started by them. */
 	const followUp = expected !== null || (!!input.planId && !newRequest);
-	/** A question or an authority request while a clarify is open is its own goal, not the answer. */
-	const ownGoal = reading?.kind === 'read' || reading?.kind === 'authority';
+	/** A question, an authority request or small talk while a clarify is open is its own goal, not the answer. */
+	const ownGoal = !answering;
+	// The reading shows when a model made it (or a guard overrode one); the rules' own reading needs no line.
+	if (understood && (understood.source !== 'rules' || understood.guard))
+		yield {
+			type: 'step',
+			taskId: task.id,
+			n: 0,
+			tool: 'understand',
+			ok: true,
+			summary:
+				`Read as ${u!.kind}${u!.items?.length ? `: ${understood.goal}` : ''}` +
+				(understood.source === 'gemini' ? ` · via Gemini · ${understood.ms} ms` : ' · by rules') +
+				(understood.guard ? ` (${understood.guard})` : '')
+		};
+	if (u?.kind === 'smalltalk' && !followUp) {
+		yield {
+			type: 'done',
+			taskId: '',
+			state: 'open',
+			text: 'Hello! Tell me what you need, for example "4 kg lactose-free butter for Wednesday", or ask "what needs my decision?".',
+			canContinue: false
+		};
+		return;
+	}
 	const principal = buildRunPrincipal({
 		initiator: deps.ctx,
 		agentRunId: newAgentRunId(),
@@ -232,7 +328,9 @@ export async function* runChatTurn(
 	let planId: string | undefined = primary;
 	let run: AgentRun | null = null;
 
-	if (input.continue) {
+	if (resize && held) {
+		steps = await resizeLine(held, resize, agentCtx, deps.handlers);
+	} else if (input.continue) {
 		if (!primary) {
 			// Still waiting for an answer: ask the open question again rather than act.
 			if (task.pending.kind === 'clarify') {
@@ -253,7 +351,16 @@ export async function* runChatTurn(
 		steps = await continueTask(task, primary, agentCtx, deps.handlers);
 	} else {
 		// A typed answer to the open question, or words while one is open, fill that field only.
-		let goal = String(task.requirement.goal ?? '');
+		let goal = !followUp && understood ? understood.goal : String(task.requirement.goal ?? '');
+		// Several products in one message run as one routine order each, on this task; the split is kept on the
+		// requirement so an answer later re-runs the same items.
+		let goals: string[] =
+			!followUp && expected === null
+				? splitGoals(goal, understood?.understanding, deps.today)
+				: Array.isArray(task.requirement.goals)
+					? (task.requirement.goals as string[])
+					: [goal];
+		if (expected === null && goals.length > 1) task.requirement = { ...task.requirement, goals };
 		let slots: Slots = { ...(task.slots as Slots) };
 		const answer =
 			input.answer ??
@@ -274,52 +381,92 @@ export async function* runChatTurn(
 			slots = { ...slots, ...filled };
 		} else if (followUp && input.text) {
 			// A follow-up question on the task's plan; the task's requirement stays as it was.
-			goal = input.text.trim();
+			goal = understood?.goal ?? input.text.trim();
+			if (addition && held && parseRules(goal, deps.today).deliverBySource === 'default') {
+				const r = await deps.handlers.get_plan(deps.ctx, { planId: held });
+				if (r.ok) goal = `${goal} ${r.value.plan.deliverBy}`;
+			}
 			slots = {};
 		}
 
-		const started = startAgentRun({
-			env: deps.env ?? {},
-			principal,
-			goal,
-			run: ({ signal, onEvent }) =>
-				runGoal({
-					goal,
-					principal,
-					handlers: deps.handlers,
-					planner: deps.planner ?? scriptedPlanner(),
-					source: contextSource(deps),
-					signal,
-					onEvent,
-					slots,
-					planId: primary
-				})
-		});
-		if (!started.ok) {
-			yield fail(
-				task.id,
-				'The agent is busy in this workspace; try again in a moment.',
-				task.state
-			);
-			return;
+		if (followUp && input.text && !answer) goals = [goal];
+		const planner =
+			deps.planner ??
+			((deps.models?.plan ?? deps.llm)
+				? withFallback(llmPlanner((deps.models?.plan ?? deps.llm)!), scriptedPlanner())
+				: scriptedPlanner());
+		steps = [];
+		const touched: string[] = [];
+		for (const g of goals) {
+			const p =
+				goals.length > 1
+					? buildRunPrincipal({
+							initiator: deps.ctx,
+							agentRunId: newAgentRunId(),
+							kitchenIds: [task.kitchenId]
+						})!
+					: principal;
+			const started = startAgentRun({
+				env: deps.env ?? {},
+				principal: p,
+				goal: g,
+				run: ({ signal, onEvent }) =>
+					runGoal({
+						goal: g,
+						principal: p,
+						handlers: deps.handlers,
+						planner,
+						source: contextSource(deps),
+						signal,
+						onEvent,
+						slots,
+						planId: primary
+					})
+			});
+			if (!started.ok) {
+				yield fail(
+					task.id,
+					'The agent is busy in this workspace; try again in a moment.',
+					task.state
+				);
+				return;
+			}
+			run = await started.done;
+			steps.push(...run.steps);
+			task.runs = [
+				...task.runs,
+				{
+					agentRunId: p.agentRunId,
+					turn: task.runs.length,
+					intent: run.outcome?.intent ?? 'unsupported',
+					stopped: run.stopped,
+					at: deps.ports.clock.now().toISOString()
+				}
+			].slice(-20);
+			const o = run.outcome;
+			if (o?.clarify) {
+				// Never ask again for a field the task already holds: a refused answer is cleared first.
+				if (o.clarify.field in slots) delete slots[o.clarify.field];
+				clarify = { kind: 'clarify', ...o.clarify };
+				break;
+			} else if (o && !o.planId) refusal ??= o.reason ?? o.nextAction;
+			if (o?.planId) touched.push(o.planId);
 		}
-		run = await started.done;
-		steps = run.steps;
-		const o = run.outcome;
-		if (o?.clarify) {
-			// Never ask again for a field the task already holds: a refused answer is cleared first.
-			if (o.clarify.field in slots) delete slots[o.clarify.field];
-			clarify = { kind: 'clarify', ...o.clarify };
-		} else if (o && !o.planId) refusal = o.reason ?? o.nextAction;
-		planId = o?.planId ?? primary;
+		planId = touched[0] ?? primary;
+		for (const id of touched.slice(1))
+			if (!task.plans.some((x) => x.planId === id))
+				task.plans.push({ planId: id, versionSeen: 0, role: 'touched' });
 		if (!(followUp && input.text && !answer)) task.slots = slots;
 	}
 
 	for (const e of stepEvents(task.id, steps)) yield e;
 
 	// Plans this task touched: the first one is primary; reads never add plans of their own.
-	if (planId && !task.plans.some((p) => p.planId === planId))
-		task.plans.push({ planId, versionSeen: 0, role: task.plans.length ? 'touched' : 'primary' });
+	if (planId && !task.plans.some((p) => p.planId === planId)) {
+		const primaryHeld = task.plans.some((p) => p.role === 'primary');
+		if (primaryHeld) task.plans.push({ planId, versionSeen: 0, role: 'touched' });
+		else task.plans.unshift({ planId, versionSeen: 0, role: 'primary' });
+	}
 
 	let canContinue = false;
 	let text: string;
@@ -355,24 +502,41 @@ export async function* runChatTurn(
 		if (card) yield card;
 		const summary = ledgerSummary(ledger);
 		yield { type: 'ledger', taskId: task.id, ledger, summary };
-		text = refusal ? `${refusal} ${summary}` : summary;
+		let answer = summary;
+		const explainer = deps.models?.explain ?? deps.llm;
+		if (!refusal && explainer) {
+			// Gemini words the answer from the ledger; a claim the ledger doesn't back falls back to the template.
+			const ex = await explain(
+				words ?? (input.continue ? 'What happened with my order?' : 'Where does this stand?'),
+				ledger,
+				summary,
+				{ llm: explainer }
+			);
+			answer = ex.text;
+			yield {
+				type: 'step',
+				taskId: task.id,
+				n: steps.length + 1,
+				tool: 'explain',
+				ok: ex.source === 'gemini',
+				summary:
+					ex.source === 'gemini'
+						? `Answer written from the ledger · via Gemini · ${ex.ms} ms`
+						: `Answer from the ledger template${ex.rejected ? ` (model reply not used: ${ex.rejected})` : ''}`
+			};
+		}
+		text = refusal ? `${refusal} ${summary}` : answer;
 	} else {
-		task.pending = { kind: 'none' };
-		task.state = 'open';
 		text = refusal ?? run?.outcome?.nextAction ?? 'Nothing was done.';
+		// A side question while this task waits for an answer leaves that question open.
+		if (followUp && task.pending.kind === 'clarify')
+			text = `${text} Still open: ${task.pending.question}`;
+		else {
+			task.pending = { kind: 'none' };
+			task.state = 'open';
+		}
 	}
 
-	if (run)
-		task.runs = [
-			...task.runs,
-			{
-				agentRunId: principal.agentRunId,
-				turn: task.runs.length,
-				intent: run.outcome?.intent ?? 'unsupported',
-				stopped: run.stopped,
-				at: deps.ports.clock.now().toISOString()
-			}
-		].slice(-20);
 	task.updatedAt = deps.ports.clock.now().toISOString();
 	const saved = await store.put(task, expected);
 	if (!saved.ok) {
@@ -472,6 +636,79 @@ export async function taskView(taskId: string, deps: ChatDeps): Promise<ChatEven
 		canContinue: p.canContinue
 	});
 	return out;
+}
+
+/**
+ * The routine orders one message asks for: one per product with its own amount (the model's items, else the
+ * request parser's), sharing a stated date; a single product, or anything else, is the message itself.
+ */
+export function splitGoals(goal: string, u: Understanding | undefined, today: string): string[] {
+	if (u?.kind === 'order' && (u.items?.length ?? 0) > 1) {
+		const date = u.items!.find((i) => i.date)?.date;
+		return u.items!.slice(0, 5).map((i) => itemWords({ ...i, date: i.date ?? date }));
+	}
+	if (u && u.kind !== 'order') return [goal];
+	const parsed = parseRules(goal, today);
+	if (parsed.items.length > 1 && parsed.items.every((i) => i.qty !== null && i.unit !== null))
+		return parsed.items
+			.slice(0, 5)
+			.map((i) => `${i.text.trim()}${parsed.deliverByText ? ` ${parsed.deliverByText}` : ''}`);
+	return [goal];
+}
+
+const CANCEL =
+	/^(?:please\s+|ok\s+)?(?:cancel|forget|scrap|drop)\b(?:\s+(?:it|that|this|the order|everything))?\s*[.!]*$|^(?:peru|peruuta|unohda)\b/i;
+const ADDITION = /\b(too|also|as well|myös|lisäksi)\b|^\s*(and|ja|plus)\b/i;
+const RESIZE =
+	/^(?:ok\s+|actually\s+|no\s+|sorry\s+)?(?:make (?:it|that)|change (?:it |that )?to|muuta (?:se )?|tee siitä|vaihda (?:se )?)\s*(\d+(?:[.,]\d+)?)\s*(kg|kiloa?|g|l|litraa?|dl)?\b/iu;
+
+/**
+ * "Make it 20 kg" on a task with one purchase line: the line's sales quantity for the new physical amount, from the
+ * line's own physical content per sales unit, through edit_line (the same gate as the Kitchen's edit).
+ */
+async function resizeLine(
+	planId: string,
+	m: RegExpMatchArray,
+	ctx: CallContext,
+	handlers: ToolHandlers
+): Promise<StepRecord[]> {
+	const steps: StepRecord[] = [];
+	const r = await serveTool('get_plan', ctx, { planId }, handlers);
+	steps.push({
+		n: 1,
+		tool: 'get_plan',
+		input: { planId },
+		why: 'read the line to resize',
+		ok: r.ok,
+		...(r.ok ? { value: r.value } : { error: r.error }),
+		ms: 0
+	});
+	if (!r.ok) return steps;
+	const plan = (r.value as ToolOutput<'get_plan'>).plan;
+	const lines = plan.lines.filter(
+		(l) => !['rejected', 'unorderable', 'committed'].includes(l.state)
+	);
+	const line = lines.length === 1 ? lines[0] : undefined;
+	const phys = line?.view?.physical;
+	if (!line || !phys || !(line.qty.value > 0)) return steps;
+	const unit = (m[2] ?? '').toLowerCase();
+	let amount = Number(m[1].replace(',', '.'));
+	if (unit === 'g') amount /= 1000;
+	if (unit === 'dl') amount /= 10;
+	const per = phys.value / line.qty.value;
+	const qty = Math.max(1, Math.ceil(amount / per - 1e-9));
+	const input = { planId, version: plan.version, lineId: line.id, patch: { qty } };
+	const e = await serveTool('edit_line', ctx, input, handlers);
+	steps.push({
+		n: 2,
+		tool: 'edit_line',
+		input,
+		why: `${amount} ${phys.unit} ≈ ${qty} ${line.qty.unit}`,
+		ok: e.ok,
+		...(e.ok ? { value: e.value } : { error: e.error }),
+		ms: 0
+	});
+	return steps;
 }
 
 /** Collects a turn's lines (tests, callers without streaming). */

@@ -3,7 +3,6 @@ import { env } from '$env/dynamic/private';
 import { scenarioDate } from '$lib/core/scenario';
 import { ClarifyField } from '$lib/core/contracts/task';
 import { inWorkspace } from '$lib/server/adapters/simulator/overlay';
-import { llmPlanner, scriptedPlanner } from '$lib/server/agent/loop';
 import { createLlmRouter } from '$lib/server/adapters/llm/router';
 import { contextFor } from '$lib/server/auth';
 import { runChatTurn } from '$lib/server/chat/turn';
@@ -63,7 +62,18 @@ export const POST: RequestHandler = async (event) => {
 		kitchens.find((k) => k.id === 'k-hotel') ??
 		kitchens[0];
 	if (!kitchen) return bad('no kitchen in this workspace');
-	const live = (env.LLM_PROVIDER ?? 'fixture') !== 'fixture' && env.AGENT_PLANNER === 'llm';
+	// Gemini reads, plans and words the chat whenever a provider is configured; the fixture keeps rules and script.
+	const live = (env.LLM_PROVIDER ?? 'fixture') !== 'fixture';
+	const router = createLlmRouter(env, (step, data) => {
+		if (step === 'error') console.warn('[chat] model', data);
+	});
+	const models = live
+		? {
+				understand: router.for('chat.understand'),
+				explain: router.for('explain'),
+				plan: router.for('agent.plan')
+			}
+		: undefined;
 
 	const enc = new TextEncoder();
 	const stream = new ReadableStream<Uint8Array>({
@@ -89,9 +99,7 @@ export const POST: RequestHandler = async (event) => {
 						kitchen,
 						today,
 						env,
-						planner: live
-							? llmPlanner(createLlmRouter(env, () => {}).for('agent.plan'))
-							: scriptedPlanner()
+						models
 					}))
 						push(e);
 				} catch (e) {

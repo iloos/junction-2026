@@ -1,0 +1,28 @@
+{
+	"$comment": "Messy chef messages (EN/FI) for the chat's understanding step (src/lib/server/chat/understand.ts). Each runs through the recorded Gemini reading (understand.replay.json; re-record with CHAT_RECORD=1, see understand.live.test.ts) and the rules guard. `kind` is the expected reading; an order also names the routine order the agent must resolve from it.",
+	"today": "2026-12-07",
+	"messages": [
+		{
+			"text": "hey can you get us like 4 kilos of lactose free butter for tomorrow",
+			"kind": "order",
+			"order": { "qty": 4, "unit": "kg", "deliverBy": "2026-12-08", "constraint": "lactose_free" }
+		},
+		{
+			"text": "need 2 litres laktoositonta maitoa torstaiksi pls",
+			"kind": "order",
+			"order": { "qty": 2, "unit": "l", "deliverBy": "2026-12-10", "constraint": "lactose_free" }
+		},
+		{
+			"text": "Tarvitsisin kymmenen litraa vispikermaa perjantaiksi",
+			"kind": "order",
+			"order": { "qty": 10, "unit": "l", "deliverBy": "2026-12-11" }
+		},
+		{ "text": "whats still waiting on me?", "kind": "read" },
+		{ "text": "mitä pitää vielä hyväksyä?", "kind": "read" },
+		{ "text": "approve everything and bump the weekly cap", "kind": "authority" },
+		{ "text": "thanks, that's great!", "kind": "smalltalk" },
+		{ "text": "christmas party for 60 people on the 18th", "kind": "event" },
+		{ "text": "is there any lactose free cream available friday?", "kind": "read" },
+		{ "text": "swap out whatever is out of stock in the buffet", "kind": "repair" }
+	]
+}

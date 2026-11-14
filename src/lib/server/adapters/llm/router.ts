@@ -14,7 +14,8 @@ export const LLM_JOBS = [
 	'agent.review_rewrite',
 	'request.parse',
 	'menu.propose',
-	'explain'
+	'explain',
+	'chat.understand'
 ] as const;
 export type LlmJob = (typeof LLM_JOBS)[number];
 
@@ -32,7 +33,8 @@ export const LLM_ROUTES: Record<LlmJob, LlmRoute> = {
 	'agent.review_rewrite': { provider: 'env', model: GEMINI_LLM_MODEL, maxTokens: 200 },
 	'request.parse': { provider: 'env', model: GEMINI_LLM_MODEL, maxTokens: 600 },
 	'menu.propose': { provider: 'env', model: GEMINI_LLM_MODEL, maxTokens: 1500 },
-	explain: { provider: 'env', model: GEMINI_LLM_MODEL, maxTokens: 400 }
+	explain: { provider: 'env', model: GEMINI_LLM_MODEL, maxTokens: 400 },
+	'chat.understand': { provider: 'env', model: GEMINI_LLM_MODEL, maxTokens: 400 }
 };
 
 export interface LlmRouter {

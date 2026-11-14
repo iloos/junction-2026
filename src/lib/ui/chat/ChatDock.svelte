@@ -27,8 +27,16 @@
 		pinned?: boolean;
 		/** The plan the screen has open: a turn without a task joins the task that holds it. */
 		planId?: string;
+		/** Open this task (a link to it); otherwise the task remembered for this kitchen. */
+		taskId?: string;
 	}
-	let { kitchenId = 'k-hotel', open = $bindable(false), pinned = true, planId }: Props = $props();
+	let {
+		kitchenId = 'k-hotel',
+		open = $bindable(false),
+		pinned = true,
+		planId,
+		taskId: openTask
+	}: Props = $props();
 
 	type Entry = { kind: 'chef'; text: string } | { kind: 'event'; e: ChatEvent };
 	/** The dock's task is remembered per kitchen for this browser tab. */
@@ -61,11 +69,12 @@
 	 */
 	let loadedFor: string | null = null;
 	$effect(() => {
-		const k = kitchenId;
+		const k = `${kitchenId}:${openTask ?? ''}`;
 		if (!open && !pinned) return;
 		if (loadedFor === k) return;
 		loadedFor = k;
-		taskId = read();
+		taskId = openTask ?? read();
+		if (openTask) remember(openTask);
 		entries = [];
 		if (taskId) void restore(taskId);
 	});
@@ -167,6 +176,8 @@
 	}
 
 	const TOOL: Record<string, string> = {
+		understand: 'Understood',
+		explain: 'Answered',
 		search_products: 'Searched the catalogue',
 		quote: 'Checked price and delivery',
 		place_order: 'Drafted the order',
