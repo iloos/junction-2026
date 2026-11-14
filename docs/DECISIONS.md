@@ -203,3 +203,10 @@ A QR or link puts a visitor in the shared room (`ws-judges`) as **their own stor
 **Why:** the user: the seeded kitchens are mock profiles; a blank kitchen of your own could even be the default.
 
 **Reopen if:** a blank kitchen's first screen is empty or dead-ends, or judges skip the samples and never see prediction from history.
+
+### D26 · Your workspace persists: your kitchens, baskets, phone and agent key all point at it (user + lead, 14 Nov 23:30)
+A visitor's own sandbox is a durable workspace, not a demo session. What they create stays: kitchens (D25), plans and baskets (one per kitchen per delivery day), orders and receipts. They come back to it on the same browser (signed cookie, 14 days), on their phone through pairing, and from their own agent through their MCP key, which acts in the same workspace. Runs are already stored in Postgres, so a deploy keeps them. "Start over" (System) clears plans and orders but keeps the kitchens the visitor made, re-seeding only the sample kitchens. The kitchen selector lists "Your kitchens" first. Every door (page, chat, phone, MCP) sees the same kitchens and the same baskets.
+
+**Why:** the user: let people create something that stays, jump back into their workspace, make more baskets and order; it also makes the mobile link and the MCP link mean something.
+
+**Reopen if:** a deploy, a reset or the visitor cap loses a visitor's own kitchens, or one door shows kitchens another door doesn't.
