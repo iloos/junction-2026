@@ -13,6 +13,15 @@ export interface ActivityItem {
 	version: number;
 }
 
+/** The event a kitchen would plan, as the not-started snapshot names it. */
+export interface StartEvent {
+	id: string;
+	title: string;
+	date: string;
+	guests: number;
+	serviceStyle: string;
+}
+
 export interface CommitNote {
 	key: string;
 	orderId: string;
@@ -54,6 +63,8 @@ export class KitchenStore {
 	snap = $state.raw<Snapshot | null>(null);
 	/** Live: false until the chef starts the demo (planning is an explicit command, never a side effect of viewing). */
 	started = $state<boolean | null>(null);
+	/** Before the first plan: the event the server would plan; null when the kitchen has none; undefined when not said. */
+	startEvent = $state<StartEvent | null | undefined>(undefined);
 	/** Before the first plan: the kitchen the server would plan for (the pre-plan card reads its mandate). */
 	startKitchen = $state<string | null>(null);
 	busy = $state(false);
@@ -421,6 +432,9 @@ export class KitchenStore {
 			} else {
 				this.started = false;
 				this.startKitchen = next.kitchenId;
+				// The server says which event this kitchen would plan (null: its first plan comes from the chat).
+				const ev = (next as { event?: StartEvent | null }).event;
+				this.startEvent = ev === undefined ? undefined : ev;
 				this.snap = null;
 			}
 		} catch (e) {
