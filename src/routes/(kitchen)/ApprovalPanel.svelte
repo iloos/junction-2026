@@ -55,11 +55,13 @@
 	const approvalCents = $derived(approvalLines.reduce((s, l) => s + (l.lineCents ?? 0), 0));
 	// Committable: in-mandate lines, plus held lines a granted approval covers (core keeps them `held`;
 	// the approval is their authority).
+	// Committable comes from the server's read model; the state/approval rule is the fallback for old outputs.
 	const eligible = $derived(
-		plan.lines.filter(
-			(l) =>
-				l.state === 'eligible' ||
-				(l.state === 'held' && approval?.state === 'granted' && approval.lineIds.includes(l.id))
+		plan.lines.filter((l) =>
+			l.view
+				? l.view.committable
+				: l.state === 'eligible' ||
+					(l.state === 'held' && approval?.state === 'granted' && approval.lineIds.includes(l.id))
 		)
 	);
 	const eligibleCents = $derived(eligible.reduce((s, l) => s + (l.lineCents ?? 0), 0));

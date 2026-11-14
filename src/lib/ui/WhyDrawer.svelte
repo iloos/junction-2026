@@ -51,7 +51,12 @@
 						>
 					</div>
 					<div class="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-[13px]">
-						<StateChip state={line.state} tier={line.tier} reasons={line.reasons} />
+						<StateChip
+							state={line.state}
+							tier={line.tier}
+							reasons={line.reasons}
+							view={line.view}
+						/>
 						<span class="mono text-ink">{num(line.qty.value)} {line.qty.unit}</span>
 						<span class="mono text-ink">{money(line.lineCents)}</span>
 					</div>

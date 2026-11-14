@@ -89,7 +89,13 @@ function names(label: string): { nameFi: string; name: string } {
 }
 
 const isOpen = (l: Line) => l.state === 'eligible' || l.state === 'held';
-const hasUnknown = (l: Line) => l.reasons.includes('UNKNOWN_REQUIRED');
+/** Supply the server cannot confirm (read model), with the reason code as the fallback for older outputs. */
+const hasUnknown = (l: Line) =>
+	l.view
+		? l.view.unconfirmedCover.value > 0 || l.view.blockedReason?.detail === 'qty'
+		: l.reasons.includes('UNKNOWN_REQUIRED');
+const isShort = (l: Line) =>
+	l.view ? l.view.blockedReason?.detail === 'stock' : l.reasons.includes('INSUFFICIENT_STOCK');
 
 function verdict(c: CandidateView): string {
 	if (c.rejected.includes('out')) return 'Rejected: out of stock (0)';
@@ -239,7 +245,7 @@ export function buildLiveView(input: LiveInput): EventView {
 		let status: DishStatus = 'ok';
 		if (outage) {
 			if (!subs.length) status = 'shortfall';
-			else if (subs.some((l) => l.reasons.includes('INSUFFICIENT_STOCK'))) status = 'partial';
+			else if (subs.some(isShort)) status = 'partial';
 			else status = 'rescued';
 		} else if (dishLines.some((l) => isOpen(l) && hasUnknown(l))) status = 'unknown';
 

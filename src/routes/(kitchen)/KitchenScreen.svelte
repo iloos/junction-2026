@@ -445,6 +445,7 @@
 													tier={l.tier}
 													reasons={l.reasons}
 													approved={approvedIds.has(l.id)}
+													view={l.view}
 												/></span
 											>
 											<button

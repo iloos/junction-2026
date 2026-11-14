@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { LineState, Tier } from '$lib/core/contracts';
+	import type { LineState, LineView, Tier } from '$lib/core/contracts';
 	import {
 		CircleCheck,
 		Hand,
@@ -17,8 +17,10 @@
 		tier?: Tier;
 		reasons?: string[];
 		approved?: boolean;
+		/** The server's read model: when present, authority and the gap come from it, not from reasons. */
+		view?: LineView;
 	}
-	let { state, tier, reasons = [], approved = false }: Props = $props();
+	let { state, tier, reasons = [], approved = false, view }: Props = $props();
 
 	const kind = $derived.by(() => {
 		if (state === 'committed') return 'committed';
@@ -28,6 +30,11 @@
 		if (outage && reasons.includes('out')) return 'out';
 		if (state === 'rejected') return 'out';
 		if (state === 'unorderable') return 'unorderable';
+		if (view) {
+			if (view.committable) return tier && tier !== 'act' ? 'approved' : 'eligible';
+			if (view.blockedReason?.effect === 'forbid' && !view.reviewable) return 'blocked';
+			if (view.reviewable) return tier === 'sign_off' ? 'sign_off' : 'propose';
+		}
 		// A granted approval is the line's authority even though core keeps it `held`.
 		if (approved) return 'approved';
 		if (state === 'held') return tier === 'sign_off' ? 'sign_off' : 'propose';
@@ -68,14 +75,46 @@
 			icon: CircleCheck,
 			cls: 'text-ok bg-ok-wash border-ok/25'
 		},
+		blocked: { label: 'Blocked', icon: Ban, cls: 'text-out bg-out-wash border-out/30' },
 		proposed: { label: 'Draft', icon: CircleDashed, cls: 'text-ink-2 bg-well border-rule' }
 	} as const;
 
 	const m = $derived(META[kind]);
-	const short = $derived(reasons.includes('INSUFFICIENT_STOCK'));
-	// UNKNOWN_REQUIRED can mean a missing quantity, price or dietary fact; until the read model splits the
-	// cause, the chip says "unconfirmed" rather than claiming which one.
-	const unknown = $derived(reasons.includes('unknown') || reasons.includes('UNKNOWN_REQUIRED'));
+	/** The gap, in words that match its cause (the read model splits UNKNOWN_REQUIRED by detail). */
+	const GAP: Record<string, { label: string; title: string }> = {
+		qty: {
+			label: 'Qty unknown',
+			title:
+				'Terminal item: Valio does not state a quantity. It can be ordered, but never counts as cover.'
+		},
+		price: {
+			label: 'Price unknown',
+			title: 'No price in the offer. Approval cannot fix a missing price: re-quote first.'
+		},
+		dietary_evidence: {
+			label: 'Allergens unverified',
+			title:
+				'No allergen record for this product. The kitchen never delegates an allergen decision.'
+		},
+		origin: { label: 'Origin unknown', title: 'Origin is not stated; your rules require it.' },
+		unit: { label: 'Unit unclear', title: 'The pack size or unit could not be verified.' },
+		stock: {
+			label: 'Short stock',
+			title:
+				'Not enough in stock for this quantity at the last quote. Held until covered or replaced.'
+		}
+	};
+	const gap = $derived.by(() => {
+		if (state === 'committed' || state === 'rejected' || state === 'unorderable') return null;
+		const d = view?.blockedReason?.detail;
+		if (d) return GAP[d] ?? null;
+		if (view) return null;
+		if (reasons.includes('INSUFFICIENT_STOCK')) return GAP.stock;
+		if (reasons.includes('unknown')) return GAP.qty;
+		if (reasons.includes('UNKNOWN_REQUIRED'))
+			return { label: 'Unconfirmed', title: 'A required fact is not stated; not confirmed cover.' };
+		return null;
+	});
 </script>
 
 <span class="inline-flex flex-wrap items-center gap-1">
@@ -85,22 +124,20 @@
 		<m.icon size={13} strokeWidth={2.2} aria-hidden="true" />
 		{m.label}
 	</span>
-	{#if unknown && state !== 'rejected' && state !== 'unorderable'}
+	{#if gap}
 		<span
-			class="inline-flex h-6 items-center gap-1 rounded-[5px] border border-dashed border-ink-3/50 px-1.5 text-[12px] leading-none whitespace-nowrap text-ink-2"
-			title={reasons.includes('unknown') ? 'Terminal item: Valio does not state a quantity. It is ordered, but never counted as cover.' : 'A required fact (supplier quantity, price or dietary evidence) is not stated. Approval cannot make it known; it is not counted as confirmed cover.'}
+			class="inline-flex h-6 items-center gap-1 rounded-[5px] border border-dashed px-1.5 text-[12px] leading-none whitespace-nowrap {gap ===
+			GAP.stock
+				? 'border-out/40 text-out'
+				: 'border-ink-3/50 text-ink-2'}"
+			title={gap.title}
 		>
-			<CircleHelp size={13} strokeWidth={2.2} aria-hidden="true" />
-			{reasons.includes('unknown') ? 'Qty unknown' : 'Unconfirmed'}
-		</span>
-	{/if}
-	{#if short && state !== 'committed'}
-		<span
-			class="inline-flex h-6 items-center gap-1 rounded-[5px] border border-out/40 px-1.5 text-[12px] leading-none whitespace-nowrap text-out"
-			title="Not enough in stock for this quantity at the last quote. Held until covered or replaced."
-		>
-			<PackageX size={13} strokeWidth={2.2} aria-hidden="true" />
-			Short stock
+			{#if gap === GAP.stock}<PackageX
+					size={13}
+					strokeWidth={2.2}
+					aria-hidden="true"
+				/>{:else}<CircleHelp size={13} strokeWidth={2.2} aria-hidden="true" />{/if}
+			{gap.label}
 		</span>
 	{/if}
 </span>
