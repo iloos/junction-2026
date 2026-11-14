@@ -346,6 +346,8 @@ async function buildSnapshot(s: Session): Promise<LiveSnapshot> {
 		b.ports.catalog.get(ids),
 		b.ports.catalog.offers(ids, plan.deliverBy)
 	]);
+	const shortNames: Record<string, string> = {};
+	for (const [id, p] of products) if (p.nameShort?.value) shortNames[id] = p.nameShort.value;
 	const facts: Record<string, ProductFacts> = {};
 	for (const id of ids) {
 		const p = products.get(id);
@@ -442,6 +444,7 @@ async function buildSnapshot(s: Session): Promise<LiveSnapshot> {
 		preset: s.preset,
 		contention: s.contention,
 		byAgent,
+		shortNames,
 		contentionRescue:
 			s.contentionRescue?.planId === plan.id
 				? {

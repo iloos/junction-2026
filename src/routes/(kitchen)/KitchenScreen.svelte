@@ -3,7 +3,18 @@
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
-	import { Bot, ChevronDown, Play, CloudOff, LoaderCircle, CircleX } from '@lucide/svelte';
+	import {
+		Ban,
+		Bot,
+		ChefHat,
+		ChevronDown,
+		CornerDownRight,
+		Play,
+		CloudOff,
+		LoaderCircle,
+		CircleX,
+		Info
+	} from '@lucide/svelte';
 	import { KitchenStore } from '$lib/kitchen/kitchen.svelte';
 	import { KITCHENS, PRODUCTS, SEED } from '$lib/kitchen/catalog';
 	import type { DishView } from '$lib/kitchen/view-model';
@@ -16,11 +27,12 @@
 	import GramsStepper from '$lib/ui/GramsStepper.svelte';
 	import WhyDrawer from '$lib/ui/WhyDrawer.svelte';
 	import DishStatus from '$lib/ui/DishStatus.svelte';
+	import DishChip from '$lib/ui/DishChip.svelte';
 	import AgentMark from '$lib/ui/AgentMark.svelte';
 	import { planDiff } from '$lib/ui/plan-diff';
 	import { dishGate } from '$lib/ui/coverage';
 	import { whyChain } from '$lib/ui/why-chain';
-	import { day, fixed, money, moneyDelta, num, storyTime } from '$lib/ui/format';
+	import { day, fixed, money, moneyDelta, num, readableName, storyTime } from '$lib/ui/format';
 	import { SCENARIO } from '$lib/core/scenario';
 	import { reasonShort } from '$lib/ui/reasons';
 	import RescueCompare from '$lib/ui/RescueCompare.svelte';
@@ -65,6 +77,7 @@
 		const dish = k.view?.dishes.find((d) => d.needId === fromOps!.need);
 		if (!dish) return;
 		toggled = { ...toggled, [dish.id]: true };
+		expanded = { ...expanded, [dish.id]: true };
 		focusNeed = dish.needId;
 		await tick();
 		document
@@ -99,14 +112,17 @@
 		return () => clearInterval(t);
 	});
 
-	// Names from the server's lines first, the fixture catalogue as a fallback.
+	// Names from the server's lines first, the fixture catalogue as a fallback; as people read them (the catalogue's
+	// normalised short name, else Valio's ALL-CAPS name in sentence case). The raw name stays in Why.
 	const names = $derived(
-		new Map([
-			...Object.values(PRODUCTS).map((p) => [p.productId, p.name] as const),
-			...(k.plan?.lines ?? [])
-				.filter((l) => l.productName)
-				.map((l) => [l.productId, l.productName!] as const)
-		])
+		new Map(
+			[
+				...Object.values(PRODUCTS).map((p) => [p.productId, p.name] as const),
+				...(k.plan?.lines ?? [])
+					.filter((l) => l.productName)
+					.map((l) => [l.productId, l.productName!] as const)
+			].map(([id, raw]) => [id, readableName(raw, k.snap?.shortNames?.[id])] as const)
+		)
 	);
 	let toggled = $state<Record<string, boolean>>({});
 	// Rescues start collapsed: one sentence on the row, the ranked options behind "See the options".
@@ -126,6 +142,15 @@
 	}
 
 	const snap = $derived(k.snap);
+	/** The table names what it is: the event, its dishes, guests and day (the flow is behind the ⓘ). */
+	const tableTitle = $derived.by(() => {
+		const v = k.view;
+		if (!v) return 'Dishes';
+		const dishes = new Set(v.dishes.map((d) => d.nameFi.split(':')[0])).size;
+		return k.snap?.plan.eventId
+			? `${v.title.split(',')[0]} · ${dishes} dishes · ${v.guests} guests · ${day(v.date)}`
+			: `${v.title} · ${v.dishes.length} ${v.dishes.length === 1 ? 'item' : 'items'}`;
+	});
 	/** A shared demo room: others see what is typed here (the loader says so; null in your own sandbox). */
 	const roomNotice = $derived(
 		(page.data as { room?: { notice?: string | null } }).room?.notice ?? null
@@ -355,6 +380,43 @@
 
 	/** Server-derived coverage per need (Plan.view.fulfilment); absent on plans without a read model. */
 	const coverage = $derived(new Map((plan?.view?.fulfilment ?? []).map((f) => [f.needId, f])));
+
+	/** Fixed columns so €, state and the expand control line up across rows (desktop). */
+	const ROW_COLS = 'lg:grid-cols-[minmax(0,1fr)_112px_84px_minmax(0,1.5fr)_88px_172px_28px]';
+	let expanded = $state<Record<string, boolean>>({});
+	/** One row's product cell: what the dish buys now, in one line, and what it costs. */
+	function rowOf(d: DishView, lines: Line[]) {
+		const live = lines.filter(
+			(l) => l.state !== 'rejected' && l.state !== 'unorderable' && l.qty.value > 0
+		);
+		const cents = live.reduce((t, l) => t + (l.lineCents ?? 0), 0);
+		const made = live.filter((l) => l.strategy?.kind === 'make_in_house');
+		const by = live.map((l) => snap?.byAgent?.[l.id]).find(Boolean);
+		if (made.length)
+			return {
+				kind: 'make' as const,
+				product: `Make in house · ${made.length} ingredients`,
+				more: 0,
+				cents,
+				by
+			};
+		const main = live.find((l) => l.substituteFor) ?? live[0];
+		if (!main)
+			return {
+				kind: 'none' as const,
+				product: `${names.get(lines[0]?.productId ?? '') ?? d.nameFi} · not orderable`,
+				more: 0,
+				cents,
+				by
+			};
+		return {
+			kind: main.substituteFor ? ('sub' as const) : ('buy' as const),
+			product: names.get(main.productId) ?? main.productId,
+			more: live.length - 1,
+			cents,
+			by
+		};
+	}
 
 	function linesOf(d: DishView): Line[] {
 		return d.lineIds.map((id) => k.lineById.get(id)).filter((l): l is Line => !!l);
@@ -721,10 +783,22 @@
 			<!-- Plan: dish → need → order -->
 			<section aria-labelledby="dishes-h" class="mt-6 {active === 'plan' ? '' : 'max-lg:hidden'}">
 				<div class="flex items-baseline justify-between gap-4">
-					<h2 id="dishes-h" class="text-heading font-semibold text-ink">Menu → need → order</h2>
-					<p class="hidden text-meta text-ink-3 md:block">
-						Change grams per guest and the order recomputes: need, lots, price, mandate.
-					</p>
+					<h2 id="dishes-h" class="flex items-center gap-1.5 text-heading font-semibold text-ink">
+						{tableTitle}
+						<details class="relative font-normal">
+							<summary
+								class="grid size-6 cursor-pointer list-none place-items-center rounded-full text-ink-3 hover:bg-well hover:text-ink"
+								aria-label="How this table works"><Info size={15} aria-hidden="true" /></summary
+							>
+							<p
+								class="absolute top-7 left-0 z-20 w-72 rounded-md border border-rule bg-sheet px-3 py-2 text-meta text-ink-2 shadow-md"
+							>
+								Menu → need → order. Change grams per guest and the need, packs, price and mandate
+								recompute. Open a row for how the amount was worked out and every line; Why shows
+								the sources.
+							</p>
+						</details>
+					</h2>
 				</div>
 				{#if contended}
 					<p
@@ -786,159 +860,222 @@
 				{/if}
 				<div class="mt-2 overflow-hidden rounded-lg border border-rule bg-sheet">
 					<div
-						class="hidden grid-cols-[minmax(150px,0.7fr)_minmax(210px,0.9fr)_minmax(0,3fr)] gap-x-4 border-b border-rule bg-well px-4 py-2 text-micro font-medium text-ink-3 lg:grid"
+						class="hidden {ROW_COLS} items-center gap-x-3 border-b border-rule bg-well px-4 py-2 text-micro font-medium text-ink-3 lg:grid"
+						aria-hidden="true"
 					>
 						<span>Dish</span>
-						<span>g per guest → need</span>
-						<div class="grid grid-cols-[minmax(0,1fr)_84px_136px_28px] gap-3">
-							<span>Order · rounding</span>
-							<span class="text-right">€ ex VAT</span>
-							<span>State</span>
-							<span></span>
-						</div>
+						<span>g per guest</span>
+						<span class="text-right">Need</span>
+						<span>Product</span>
+						<span class="text-right">€ ex VAT</span>
+						<span>State</span>
+						<span></span>
 					</div>
 					{#each view.dishes as d (d.id)}
 						{@const lines = linesOf(d)}
+						{@const f = coverage.get(d.needId)}
+						{@const r = rowOf(d, lines)}
+						{@const isOpen = !!expanded[d.id]}
+						{@const lockedDish = lines.some((l) => l.state === 'committed')}
 						<div
 							id="need-{d.id}"
 							class="scroll-mt-4 border-b border-rule last:border-b-0 {focusNeed === d.needId
 								? 'bg-propose-wash/40 ring-2 ring-propose/50 ring-inset'
 								: ''}"
 						>
+							<!-- One line per dish: everything else is in the detail below (expand) or in Why. -->
 							<div
-								class="grid grid-cols-[minmax(0,1fr)_auto] gap-x-4 gap-y-2 px-4 py-3 lg:grid-cols-[minmax(150px,0.7fr)_minmax(210px,0.9fr)_minmax(0,3fr)] lg:gap-y-0"
+								class="grid min-h-16 grid-cols-[minmax(0,1fr)_auto_28px] items-center gap-x-3 px-4 py-2 lg:min-h-14 {ROW_COLS} {k.flash.has(
+									d.plannedLineId
+								) || k.flash.has(d.lineIds[1] ?? '')
+									? 'landed'
+									: ''}"
 							>
 								<div class="min-w-0">
-									<p class="text-body leading-tight font-medium text-ink">{d.nameFi}</p>
-									{#if d.name !== d.nameFi}<p class="text-meta text-ink-3">{d.name}</p>{/if}
+									<p class="truncate text-body font-medium text-ink">{d.nameFi}</p>
+									<p class="truncate text-meta text-ink-3">
+										<span class="lg:hidden">{r.product}</span><span class="max-lg:hidden"
+											>{d.name !== d.nameFi ? d.name : ''}</span
+										>
+									</p>
 								</div>
-								<div class="col-span-2 flex items-start gap-3 lg:col-span-1">
-									<!-- A direct need (an amount someone asked for) has no grams per guest to step. -->
+								<div class="hidden lg:block">
 									{#if d.gDefault > 0}<GramsStepper
+											compact
 											value={d.gServed}
 											original={d.gDefault}
 											label={d.nameFi}
 											pending={k.pendingGrams[d.id]}
-											disabled={k.readOnly ||
-												!d.editable ||
-												lines.some((l) => l.state === 'committed')}
+											disabled={k.readOnly || !d.editable || lockedDish}
 											onchange={(g) => k.setGrams(d.id, g)}
-										/>{/if}
-									<div class="min-w-0 pt-1">
-										<p
-											class="text-body text-ink {k.flash.has(d.plannedLineId) ||
-											k.flash.has(d.lineIds[1] ?? '')
-												? 'landed'
-												: ''}"
-										>
-											<span class="mono"
-												>{d.need.unit === 'pcs'
-													? d.need.value
-													: fixed(d.need.value, d.need.value < 10 ? 2 : 1)}</span
-											>
-											{needUnit(d.need.unit)}{coverage.get(d.needId)?.basis === 'served'
-												? ' to buy'
-												: ''}
-										</p>
-										{#if coverage.get(d.needId)?.basis === 'served'}
-											{@const fv = coverage.get(d.needId)!}
-											<!-- What reaches the plate (bought × yield): the amount rescues and cover are compared on. -->
-											<p class="text-meta text-ink-2">
-												<span class="mono"
-													>{fixed(fv.required.value, fv.required.value < 10 ? 2 : 1)}</span
-												>
-												{fv.required.unit} served
-											</p>
-										{/if}
-										{#if d.needFormula !== `${d.need.value} ${d.need.unit}`}<p
-												class="text-micro leading-snug text-ink-3"
-											>
-												{d.needFormula}
-											</p>{/if}
-										<p class="mt-0.5 text-micro text-ink-3 {isEvent ? '' : 'hidden'}">
-											{#if d.usual}normal week {num(d.usual.qty)} {d.usual.unit}{:else}<span
-													class="rounded-sm bg-well px-1 text-ink-2"
-													title="Bought only for this event: the kitchen's normal week has none of it"
-													>event only · not in a normal week</span
-												>{/if}
-										</p>
-									</div>
+										/>{:else}<span class="text-meta text-ink-3">—</span>{/if}
 								</div>
-								<ul class="col-span-2 space-y-2 lg:col-span-1">
-									{#each groupLines(lines) as g (g.key)}
-										{#if g.make}
-											<li>
-												<StrategyCard
-													by={g.lines.map((l) => snap?.byAgent?.[l.id]).find(Boolean)}
-													title={d.nameFi}
-													lines={g.lines}
-													replaces={g.lines[0]?.substituteFor
-														? {
-																name:
-																	names.get(g.lines[0].substituteFor) ?? g.lines[0].substituteFor,
-																because:
-																	d.outage === 'undeliverable'
-																		? "Valio can't deliver it"
-																		: 'out of stock at Valio'
-															}
-														: undefined}
-												>
-													{#snippet row(l)}{@render lineRow(l, d, true)}{/snippet}
-												</StrategyCard>
-											</li>
-										{:else}
-											<li>{@render lineRow(g.lines[0], d)}</li>
-										{/if}
-									{/each}
-								</ul>
-							</div>
-							{#if coverage.get(d.needId)}
-								<div
-									class="px-4 pb-3 lg:grid lg:grid-cols-[minmax(150px,0.7fr)_minmax(210px,0.9fr)_minmax(0,3fr)] lg:gap-x-4"
-								>
-									<div class="lg:col-span-2 lg:col-start-2">
-										<DishStatus f={coverage.get(d.needId)!} gate={dishGate(lines)} />
-									</div>
-								</div>
-							{/if}
-							{#if d.rescue}
-								<div class="px-4 pb-3">
-									{#if !open[d.id]}
-										<p class="mb-1.5 text-body leading-snug text-ink">
-											<span class="font-medium"
-												>{d.outage === 'out'
-													? 'Out of stock at Valio.'
-													: "Valio can't deliver it."}</span
-											>
-											{contendedIn(d)
-												? 'Another kitchen took some of the rescue; the agent split it (above).'
-												: d.rescue.summary}
-										</p>{/if}
-									<button
-										type="button"
-										class="flex w-full items-center gap-2 text-left text-meta font-medium text-ink-2 hover:text-ink"
-										aria-expanded={!!open[d.id]}
-										onclick={() => (toggled = { ...toggled, [d.id]: !open[d.id] })}
-									>
-										<ChevronDown
+								<p class="mono hidden text-right text-body text-ink lg:block" title={d.needFormula}>
+									{d.need.unit === 'pcs'
+										? d.need.value
+										: fixed(d.need.value, d.need.value < 10 ? 2 : 1)}
+									<span class="text-meta text-ink-3">{needUnit(d.need.unit)}</span>
+								</p>
+								<!-- A 40 px product thumbnail can sit before the name here without growing the row. -->
+								<p class="hidden min-w-0 items-center gap-1.5 text-body lg:flex">
+									{#if r.kind === 'make'}<ChefHat
 											size={14}
-											class="transition-transform duration-200 {open[d.id] ? '' : '-rotate-90'}"
+											class="shrink-0 text-accent"
 											aria-hidden="true"
-										/>
-										{open[d.id] ? 'Hide the options' : 'See the options'} ·
-										{d.rescue.kind === 'make_in_house'
-											? 'make it in house'
-											: `${d.rescue.candidates.length} substitutes ranked`}
-										{#if d.status === 'partial'}<span class="text-signoff">· partial cover</span
-											>{/if}
-									</button>
-									{#if open[d.id]}
-										<div class="mt-2">
-											<RescueCompare
-												rescue={d.rescue}
-												grams={d.gServed}
-												onfit={(g) => k.setGrams(d.id, g)}
-											/>
+										/>{:else if r.kind === 'sub'}<CornerDownRight
+											size={14}
+											class="shrink-0 text-accent"
+											aria-label="Replaces the planned product"
+										/>{:else if r.kind === 'none'}<Ban
+											size={14}
+											class="shrink-0 text-sup-missing"
+											aria-hidden="true"
+										/>{/if}
+									<span class="truncate {r.kind === 'none' ? 'text-ink-3' : 'text-ink'}"
+										>{r.product}</span
+									>
+									{#if r.more}<span class="shrink-0 text-meta text-ink-3">+{r.more}</span>{/if}
+									{#if r.by}<Bot
+											size={13}
+											class="shrink-0 text-propose"
+											aria-label="by the agent"
+										/>{/if}
+								</p>
+								<div class="flex flex-col items-end gap-1 lg:contents">
+									<p class="mono text-right text-body text-ink">{r.cents ? money(r.cents) : '—'}</p>
+									<div class="min-w-0">
+										{#if f}<DishChip {f} gate={dishGate(lines)} rescued={r.kind !== 'buy'} />{/if}
+									</div>
+								</div>
+								<button
+									type="button"
+									class="grid size-7 place-items-center rounded-md text-ink-2 hover:bg-well hover:text-ink"
+									aria-expanded={isOpen}
+									aria-controls="detail-{d.id}"
+									aria-label="{isOpen ? 'Hide' : 'Show'} details: {d.nameFi}"
+									onclick={() => (expanded = { ...expanded, [d.id]: !isOpen })}
+									><ChevronDown
+										size={16}
+										class="transition-transform duration-200 {isOpen ? '' : '-rotate-90'}"
+										aria-hidden="true"
+									/></button
+								>
+							</div>
+							{#if isOpen}
+								<div
+									id="detail-{d.id}"
+									class="space-y-3 border-t border-rule bg-paper/50 px-4 py-3"
+								>
+									<div class="flex flex-wrap items-start gap-x-6 gap-y-2">
+										{#if d.gDefault > 0}<div class="lg:hidden">
+												<GramsStepper
+													value={d.gServed}
+													original={d.gDefault}
+													label={d.nameFi}
+													pending={k.pendingGrams[d.id]}
+													disabled={k.readOnly || !d.editable || lockedDish}
+													onchange={(g) => k.setGrams(d.id, g)}
+												/>
+											</div>{/if}
+										<dl class="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 text-meta">
+											<dt class="text-ink-3">To buy</dt>
+											<dd class="mono text-ink">
+												{fixed(d.need.value, d.need.value < 10 ? 2 : 1)}
+												{needUnit(d.need.unit)}
+											</dd>
+											{#if f?.basis === 'served'}
+												<dt class="text-ink-3">Served</dt>
+												<dd class="mono text-ink">
+													{fixed(f.required.value, f.required.value < 10 ? 2 : 1)}
+													{f.required.unit}
+												</dd>
+											{/if}
+											{#if d.needFormula !== `${d.need.value} ${d.need.unit}`}
+												<dt class="text-ink-3">Worked out</dt>
+												<dd class="mono text-ink-2">{d.needFormula}</dd>
+											{/if}
+											{#if d.gDefault > 0 && d.gServed !== d.gDefault}
+												<dt class="text-ink-3">Planned</dt>
+												<dd class="text-ink-2">{d.gDefault} g per guest</dd>
+											{/if}
+											{#if isEvent}
+												<dt class="text-ink-3">Normal week</dt>
+												<dd class="text-ink-2">
+													{d.usual
+														? `${num(d.usual.qty)} ${d.usual.unit}`
+														: 'none: bought only for this event'}
+												</dd>
+											{/if}
+										</dl>
+									</div>
+									{#if f}<DishStatus {f} gate={dishGate(lines)} />{/if}
+									<ul class="space-y-2">
+										{#each groupLines(lines) as g (g.key)}
+											{#if g.make}
+												<li>
+													<StrategyCard
+														by={g.lines.map((l) => snap?.byAgent?.[l.id]).find(Boolean)}
+														title={d.nameFi}
+														lines={g.lines}
+														replaces={g.lines[0]?.substituteFor
+															? {
+																	name:
+																		names.get(g.lines[0].substituteFor) ?? g.lines[0].substituteFor,
+																	because:
+																		d.outage === 'undeliverable'
+																			? "Valio can't deliver it"
+																			: 'out of stock at Valio'
+																}
+															: undefined}
+													>
+														{#snippet row(l)}{@render lineRow(l, d, true)}{/snippet}
+													</StrategyCard>
+												</li>
+											{:else}
+												<li>{@render lineRow(g.lines[0], d)}</li>
+											{/if}
+										{/each}
+									</ul>
+									{#if d.rescue}
+										<div>
+											{#if !open[d.id]}
+												<p class="mb-1.5 text-body leading-snug text-ink">
+													<span class="font-medium"
+														>{d.outage === 'out'
+															? 'Out of stock at Valio.'
+															: "Valio can't deliver it."}</span
+													>
+													{contendedIn(d)
+														? 'Another kitchen took some of the rescue; the agent split it (above).'
+														: d.rescue.summary}
+												</p>{/if}
+											<button
+												type="button"
+												class="flex w-full items-center gap-2 text-left text-meta font-medium text-ink-2 hover:text-ink"
+												aria-expanded={!!open[d.id]}
+												onclick={() => (toggled = { ...toggled, [d.id]: !open[d.id] })}
+											>
+												<ChevronDown
+													size={14}
+													class="transition-transform duration-200 {open[d.id] ? '' : '-rotate-90'}"
+													aria-hidden="true"
+												/>
+												{open[d.id] ? 'Hide the options' : 'See the options'} ·
+												{d.rescue.kind === 'make_in_house'
+													? 'make it in house'
+													: `${d.rescue.candidates.length} substitutes ranked`}
+												{#if d.status === 'partial'}<span class="text-signoff">· partial cover</span
+													>{/if}
+											</button>
+											{#if open[d.id]}
+												<div class="mt-2">
+													<RescueCompare
+														rescue={d.rescue}
+														grams={d.gServed}
+														onfit={(g) => k.setGrams(d.id, g)}
+													/>
+												</div>
+											{/if}
 										</div>
 									{/if}
 								</div>

@@ -76,7 +76,7 @@
 		{#if replaces}
 			<p class="text-meta text-ink-2">
 				Replaces <span class="text-ink">{replaces.name}</span>: {replaces.because}{#if by}
-					· <AgentMark {by} />{/if}
+					&nbsp;· <AgentMark {by} />{/if}
 			</p>
 		{:else if by}<p><AgentMark {by} /></p>
 		{/if}

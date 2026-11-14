@@ -396,6 +396,8 @@ export interface FixtureSnapshot {
 	 * the page marks them "by the agent" so the agent's work reads in the same place as the chef's.
 	 */
 	byAgent?: Record<string, 'kitchen_agent' | 'external_agent'>;
+	/** Readable product names where the catalogue has a normalised one (Product.nameShort), by product id. */
+	shortNames?: Record<string, string>;
 	/** The kitchen's other plans in this sandbox (an agent's order, the event), for the task switcher. */
 	others?: { id: string; title: string; open: number; ordered: number }[];
 }

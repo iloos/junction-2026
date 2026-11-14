@@ -250,3 +250,24 @@ export function lotSentence(rounding: string | undefined): string | null {
 	if (Number(total) - Number(need) < Number(need) * 0.1) return null;
 	return `Valio sells ${step} ${unit} lots: ${need} ${unit} needed → ${total} ${unit}`;
 }
+
+/** The status chip's word for a dish: one per row, short; the sentence (dishStatus) is its tooltip and detail. */
+export function dishChipWord(tone: DishTone, rescued = false): string {
+	switch (tone) {
+		case 'confirmed':
+			return 'Ordered';
+		case 'awaiting':
+			return 'Ordered · awaiting';
+		case 'covered':
+			return rescued ? 'Rescued · in stock' : 'In stock';
+		case 'approve':
+			return 'Needs approval';
+		case 'signoff':
+			return 'Needs sign-off';
+		case 'unknown':
+			// Never reads as covered: a rescue on stock Valio doesn't state is still unstated stock.
+			return rescued ? 'Rescued · stock unstated' : 'Stock unstated';
+		case 'missing':
+			return 'Not covered';
+	}
+}
