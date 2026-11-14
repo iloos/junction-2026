@@ -36,8 +36,11 @@
 	} from '$lib/ui/request/types';
 	import {
 		CONSTRAINT_WORDS,
+		APPROVAL_STATE_WORDS,
 		offerSourceWords,
+		quantityWords,
 		reasonWords,
+		unitWord,
 		TIER_WORDS,
 		UNIT_WORDS
 	} from '$lib/ui/request/words';
@@ -115,7 +118,7 @@
 	}
 
 	function approvalStatus(): Status {
-		if (commits.length) return 'done';
+		if (commits.length || approval?.state === 'granted') return 'done';
 		if (!plan) return 'idle';
 		if (!approval && plan.lines.some((l) => l.reasons.includes('over_hard_limit'))) return 'error';
 		if (
@@ -212,6 +215,16 @@
 		return b as T;
 	}
 
+	/**
+	 * Once the chef approved or committed, the earlier steps' cautions were part of the terms accepted: their
+	 * "check" marks turn done. A step that needs an answer or failed keeps its mark.
+	 */
+	function settle() {
+		if (approval?.state !== 'granted' && !commits.length) return;
+		for (const k of ['request', 'lookup', 'order'] as const)
+			if (status[k] === 'warn') status[k] = 'done';
+	}
+
 	async function decide(decision: 'grant' | 'deny') {
 		if (!approval || !plan) return;
 		busy = true;
@@ -228,6 +241,7 @@
 			plan = r.plan;
 			approval = r.approval ?? { ...approval, state: r.state };
 			status.approval = approvalStatus();
+			settle();
 		} catch (e) {
 			error = e instanceof Error ? e.message : String(e);
 		} finally {
@@ -251,6 +265,7 @@
 			plan = r.plan;
 			if (r.approval) approval = r.approval;
 			status.approval = approvalStatus();
+			settle();
 		} catch (e) {
 			error = e instanceof Error ? e.message : String(e);
 		} finally {
@@ -350,6 +365,17 @@
 		} finally {
 			busy = false;
 		}
+	}
+
+	/** What the rounding added, in words; nothing when the line is exactly what was asked for. */
+	function roundingText(l: Plan['lines'][number]): string | null {
+		const need = l.needId ? plan?.needs.find((n) => n.id === l.needId) : null;
+		const ph = l.view?.physical;
+		if (need && ph && need.amount.unit === ph.unit)
+			return ph.value > need.amount.value + 1e-9
+				? `rounded up from ${num(need.amount.value, 3)} ${need.amount.unit}`
+				: null;
+		return l.qty.rounding ?? null;
 	}
 
 	const sim = $derived(day(data.today));
@@ -715,12 +741,21 @@
 											<dt class="text-ink-3">Why this one</dt>
 											<dd>{it.pick.reasons.join('; ') || 'best remaining match'}</dd>
 											<dt class="text-ink-3">Quantity</dt>
-											<dd class="num">{it.pick.conversion.explain}</dd>
+											<dd class="num">
+												{quantityWords(
+													it.pick.conversion.salesQty,
+													it.pick.salesUnit,
+													it.pick.amount
+												)}{#if it.pick.amount}<span class="text-ink-2"
+														>{` = ${num(it.pick.amount.value, 3)} ${it.pick.amount.unit}`}</span
+													>{/if}
+												<span class="block text-meta text-ink-3">{it.pick.conversion.explain}</span>
+											</dd>
 											{#each it.pick.conversion.warnings as w (w)}<dt></dt>
 												<dd class="text-signoff">{w}</dd>{/each}
 											<dt class="text-ink-3">Price</dt>
 											<dd class="num">
-												{money(o?.price?.unitCents)} / {it.pick.salesUnit}
+												{money(o?.price?.unitCents)} per {unitWord(it.pick.salesUnit)}
 												<span class="text-ink-3">ex VAT</span>
 											</dd>
 											<dt class="text-ink-3">Availability</dt>
@@ -829,9 +864,10 @@
 											{l.productName ?? names.get(l.productId) ?? l.productId}
 										</p>
 										<p class="num text-body text-ink-2">
-											{num(l.qty.value)}
-											{l.qty.unit} × {money(l.offer?.price?.unitCents)}
-											{#if l.qty.rounding}<span class="text-ink-3">({l.qty.rounding})</span>{/if}
+											{quantityWords(l.qty.value, l.qty.unit, l.view?.physical)} × {money(
+												l.offer?.price?.unitCents
+											)}
+											{#if roundingText(l)}<span class="text-ink-3">({roundingText(l)})</span>{/if}
 										</p>
 									</div>
 									<div class="flex items-center gap-2">
@@ -917,9 +953,8 @@
 								<dd>{expires(approval.expiresAt)} <span class="text-ink-3">(sim clock)</span></dd>
 								<dt class="text-ink-3">State</dt>
 								<dd>
-									<b class="font-medium">{approval.state}</b>{approval.decidedBy
-										? ` by ${approval.decidedBy}`
-										: ''}
+									<b class="font-medium">{APPROVAL_STATE_WORDS[approval.state] ?? approval.state}</b
+									>{approval.decidedBy ? ` by ${approval.decidedBy}` : ''}
 								</dd>
 							</dl>
 						</div>

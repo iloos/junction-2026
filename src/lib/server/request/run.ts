@@ -5,7 +5,7 @@
  */
 import type { Kitchen, Measure, Offer, Product, ToolName, ToolOutput } from '$lib/core/contracts';
 import { sizeDirect } from '$lib/core/demand/sizing';
-import { money } from '$lib/ui/format';
+import { day, money } from '$lib/ui/format';
 import { canonicalJson, sha256Hex } from '$lib/core/hash';
 import type { CallContext, Llm, ToolHandlers } from '$lib/core/ports';
 import { serveTool } from '$lib/server/tools/serve';
@@ -24,6 +24,7 @@ import type {
 	RequestResult,
 	ValioRuleView
 } from '$lib/ui/request/types';
+import { salesUnitWords } from '$lib/ui/request/words';
 import { weekdayOf } from './dates';
 import { caseBreakdown, caseHeadline, orderAmount } from './convert';
 import { hardLimit, sanityWarnings } from './sanity';
@@ -79,6 +80,8 @@ export interface RequestDeps {
 	/** Set when the parse is reviewed (REVIEW=1): the reviewer's deps (Decide, trace, budget). */
 	review?: ReviewDeps;
 }
+
+const cap = (s: string) => s[0].toUpperCase() + s.slice(1);
 
 const DAY_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'] as const;
 
@@ -215,13 +218,13 @@ async function lookupItems(
 						: '';
 					return {
 						label: caseHeadline(b),
-						detail: `${r.product.nameFi}${oneCase} · ${b.salesQty} ${b.salesUnit} × ${money(unitCents)} = ${money(unitCents === null ? null : unitCents * b.salesQty)}`,
+						detail: `${r.product.nameFi}${oneCase} · ${salesUnitWords(b.salesQty, b.salesUnit)} × ${money(unitCents)} = ${money(unitCents === null ? null : unitCents * b.salesQty)}`,
 						answer: { item: idx, productId: r.product.productId }
 					};
 				});
 			question = options.length
 				? `Which case? Case sizes differ between products, so ${p.item.qty} cases of ${p.item.query} could be very different amounts.`
-				: `None of the matching cases can be delivered for ${parsed.deliverBy}. Give the amount in kg or l?`;
+				: `None of the matching cases can be delivered for ${day(parsed.deliverBy)}. Give the amount in kg or l?`;
 			answer = {
 				kind: 'choice',
 				item: idx,
@@ -238,7 +241,7 @@ async function lookupItems(
 			question =
 				conv && conv.conversion && !conv.conversion.ok
 					? `${conv.name}: ${conv.conversion.reason}.`
-					: `None of the ${views.length} matches can be ordered for ${parsed.deliverBy}: ${skipSummary(views)}. Pick another product or date?`;
+					: `None of the ${views.length} matches can be ordered for ${day(parsed.deliverBy)}: ${skipSummary(views)}. Pick another product or date?`;
 		}
 
 		// Valio's own substitute rules for the pick (or the leading candidate): shown, never proposed.
@@ -321,6 +324,22 @@ export async function idempotencyKeyFor(
 	return `rq-${(await sha256Hex(canonicalJson({ kitchenId, deliverBy, lines, nonce }))).slice(0, 20)}`;
 }
 
+const ACTOR_WORDS: Record<string, string> = {
+	chef: 'the chef',
+	approver: 'the head chef',
+	kitchen_agent: 'the kitchen agent',
+	external_agent: 'an outside agent',
+	system: 'the system',
+	job: 'a scheduled job'
+};
+
+/** Who did it, in words: "the head chef" for the page's approver, never a raw actor id. */
+export function actorName(a: { kind: string; id: string }): string {
+	if (a.id === 'head-chef') return 'the head chef';
+	if (a.id === 'request-agent') return 'the kitchen agent';
+	return ACTOR_WORDS[a.kind] ?? a.kind.replace(/_/g, ' ');
+}
+
 /** get_plan's plan and approval, with the approval's total and who asked and decided. */
 export async function approvalView(
 	handlers: ToolHandlers,
@@ -330,7 +349,7 @@ export async function approvalView(
 	const g = await callTool(handlers, ctx, 'get_plan', { planId });
 	const a = g.approval;
 	if (!a) return { plan: g.plan, approval: null };
-	const who = (x?: { kind: string; id: string }) => (x ? `${x.kind}:${x.id}` : undefined);
+	const who = (x?: { kind: string; id: string }) => (x ? actorName(x) : undefined);
 	const ids = new Set(a.lineIds);
 	return {
 		plan: g.plan,
@@ -547,7 +566,7 @@ export async function runRequest(text: string, d: RequestDeps): Promise<RequestR
 			},
 			deliveryNote: d.kitchen.deliveryDays.includes(dow)
 				? null
-				: `${d.kitchen.name} takes deliveries on ${d.kitchen.deliveryDays.join(', ')}; ${parsed.deliverBy} is a ${dow}`
+				: `${d.kitchen.name} takes deliveries on ${d.kitchen.deliveryDays.map(cap).join(', ')}; ${day(parsed.deliverBy)} is not one of them`
 		};
 		const held = plan.lines.some((l) => l.state === 'held');
 		const nothingOrderable = plan.lines.every(
