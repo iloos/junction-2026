@@ -28,6 +28,15 @@ The user's read: many small nudges, often the same ones, because the foundations
    - **Laws to check against:** Hick, Fitts, proximity and common region, Jakob, Miller, the five-second rule (CLAUDE.md rule 12).
    - **A check every UI change passes:** screenshots at 1440 and 390 plus the impeccable critique, with the checklist in the PR message.
 
+## Also before fan-out (user, Sat late): lines you can manage, and every request in view
+- **Per-line control, nested.**
+  - Every line can be managed on its own: change the amount, swap the product (compare), remove, hold, approve just this line, see why. A dish line opens into its ingredient sub-lines, each with the same controls; a change to one sub-line re-plans only that ingredient.
+  - Bulk actions are a selection over the same per-line actions (select lines → approve, hold, swap), not separate bulk-only buttons.
+  - The same actions exist as tools for the agent (Foundations 2: parity), and the same nested row primitive serves the Kitchen, Basket, /request and the dock cards (Foundations 3).
+  - Acceptance: on the hotel event, change one ingredient of one dish, approve one line alone, and select three lines and hold them, at 1440 and 390; the agent does the same through tools.
+- **Every request in view.** One list of all requests and plans for this kitchen, whatever door they came through (event, usual, /request, chat, outside agent), with their state (asked → proposed → held → approved → ordered), date and origin. Open any one in place. This is the Basket's other axis (by request rather than by delivery day).
+- **A full UI/UX pass in the new swarm:** after the three foundations land, one design session walks every surface (Kitchen, Basket, /request, chat dock, Ops, /agents, the site) with the impeccable critique against DESIGN.md. Its findings become the lanes' first batch.
+
 ## Queued at restart (from the lead's routing; lanes confirm in their Next)
 - **Core:** R12-01 (the ask binds quote and commit), R12-02 (one cereal/allergen fact table), R12-04 = R10-05 (contention adds only the residual); then R11-04, R11-10, R10-06, R10-08; every place_order line makes a need; the "Valio suggests" contract (K7).
 - **Conversation:** first check E's f8964e5 against D21 (a yes acts only on one named offer and the shown revision; trials for a bare "ok" with a stale or unnamed offer), then the rest of the chat menu flow (TOP in SYNTHESIS: menu card contents, "Show on the page", the chat-only e2e), the prod dock-sync failure ("You approved N lines"), R12-03 (vegan stays a requirement), unknown units ask (R12-01 upstream), R12-10 (no Continue after cancel), menu-ask routing, the text-heavy request page → one-line rows + comparison table + one bill-style line component, choice quality, D15 stage 2, pin persistence, the dinner-replay eval, `/request?text=` prefill for site CTAs.
