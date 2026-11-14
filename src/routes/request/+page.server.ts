@@ -1,7 +1,7 @@
 import { dev } from '$app/environment';
 import { env } from '$env/dynamic/private';
 import { actors, DEFAULT_KITCHEN, kitchens, llmKind, simNow, simToday } from '$lib/server/request';
-import { roomLabel, visitorWorkspace } from '$lib/server/demo/visitor';
+import { roomLabel, roomNotice, visitorWorkspace } from '$lib/server/demo/visitor';
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async (event) => {
@@ -17,6 +17,7 @@ export const load: PageServerLoad = async (event) => {
 			stage: v.kind === 'stage',
 			kind: v.kind,
 			label: roomLabel(v),
+			notice: roomNotice(v),
 			run: ctx.runId
 		},
 		defaultKitchen: DEFAULT_KITCHEN,

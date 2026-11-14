@@ -3,7 +3,7 @@ import type { Cookies } from '@sveltejs/kit';
 import { currentRun, currentRunStartedAt } from './run';
 import { presenterToken, PRESENTER_COOKIE } from './presenter';
 import { isVisitorWorkspace } from './visitor-id';
-import { ROOM_COOKIE, VISITOR_COOKIE, visitorWorkspace } from './visitor';
+import { ROOM_COOKIE, roomNotice, VISITOR_COOKIE, visitorWorkspace } from './visitor';
 
 /** A cookie jar standing in for one browser. */
 function browser(): Cookies {
@@ -96,5 +96,21 @@ describe('visitor workspace', () => {
 		const q = browser();
 		q.set(ROOM_COOKIE, 'ws-demo', {} as never);
 		expect((await visitorWorkspace({ cookies: q }, PROD, false)).kind).toBe('own');
+	}, 30_000);
+
+	it('past the sandbox cap a visitor shares the judges room, and is told so; a private room says nothing', async () => {
+		const own = await visitorWorkspace({ cookies: browser() }, PROD, false);
+		expect(roomNotice(own)).toBeNull();
+		// A cap of 1, already reached by the sandboxes seeded above.
+		const full = await visitorWorkspace({ cookies: browser() }, { VISITOR_CAP: '1' }, false);
+		expect(full.kind).toBe('full');
+		expect(full.workspaceId).toBe('ws-judges');
+		expect(roomNotice(full)).toBe("You're in a shared demo room: others can see what you type.");
+		const a = browser();
+		const shared = await visitorWorkspace({ cookies: a, url: at('?ws=ws-judges') }, PROD, false, {
+			follow: true
+		});
+		expect(shared.kind).toBe('shared');
+		expect(roomNotice(shared)).not.toBeNull();
 	}, 30_000);
 });
