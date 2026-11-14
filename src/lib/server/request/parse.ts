@@ -521,6 +521,8 @@ export interface ParseOptions {
 	/** Absent or fixture: rules only. */
 	llm?: Llm | null;
 	llmKind?: ParsedRequest['parser']['kind'];
+	/** A reviewer's critique of the previous parse, for the model's one retry (the rules ignore it). */
+	feedback?: string;
 }
 
 /** Parses with the model when one is configured, else (or on failure) with the rules. */
@@ -541,7 +543,7 @@ export async function parseRequest(text: string, o: ParseOptions): Promise<Parse
 	try {
 		const r = await o.llm.generate({
 			system: SYSTEM,
-			prompt: `Today is ${weekdayName(o.today)} ${o.today} (Europe/Helsinki).\nRequest: ${text}`,
+			prompt: `Today is ${weekdayName(o.today)} ${o.today} (Europe/Helsinki).\nRequest: ${text}${o.feedback ? `\nA reviewer found this in your previous parse; fix it: ${o.feedback.slice(0, 600)}` : ''}`,
 			maxTokens: 600,
 			json: true
 		});

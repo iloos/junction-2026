@@ -239,14 +239,12 @@
 		if (!plan) return;
 		busy = true;
 		error = null;
-		const version = committed
-			? (commits.at(-1)!.idempotencyKey.match(/-v(\d+)$/)?.[1] ?? plan.version)
-			: plan.version;
+		const version = committed ? commits.at(-1)!.version : plan.version;
 		try {
 			const r = await post<{ commit: CommitView; plan: Plan; approval: ApprovalView | null }>({
 				action: 'commit',
 				planId: plan.id,
-				version: Number(version),
+				version,
 				attempt: commits.length + 1
 			});
 			commits = [...commits, r.commit];

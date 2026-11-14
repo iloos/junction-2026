@@ -27,8 +27,9 @@ import { weekdayOf } from './dates';
 import { caseBreakdown, caseHeadline, orderAmount } from './convert';
 import { hardLimit, sanityWarnings } from './sanity';
 import { hardLimitCents } from '$lib/core/mandate/validate';
-import { rankCandidates, SHORTLIST, unpickable, type Ranked } from './lookup';
+import { filterHits, SHORTLIST, unpickable, type Ranked } from './lookup';
 import { parseRequest, type ParsedRequest } from './parse';
+import { requestParseCheckpoint, withReview, type ReviewDeps } from '$lib/server/review';
 import { classifyRequest } from './classify';
 import { applyBriefAnswers, draftBrief, nextQuestion } from '../menu/brief';
 
@@ -74,6 +75,8 @@ export interface RequestDeps {
 	/** The chef saw the size warnings and wants the order placed anyway. */
 	confirmLarge?: boolean;
 	onEvent?: (e: RequestEvent) => void;
+	/** Set when the parse is reviewed (REVIEW=1): the reviewer's deps (Decide, trace, budget). */
+	review?: ReviewDeps;
 }
 
 const DAY_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'] as const;
@@ -133,7 +136,7 @@ async function lookupItems(parsed: ParsedRequest, d: RequestDeps): Promise<Looku
 			searches.push({ query: q, hits: r.products.length });
 			hits.push(...r.products);
 		}
-		const { ranked, rejected } = rankCandidates(item, hits);
+		const { ranked, rejected } = filterHits(item, hits);
 		const pin = d.answers?.find((a) => a.item === item.id)?.productId ?? null;
 		// The chosen product leads the shortlist, with the chef named as the reason.
 		const at = pin ? ranked.findIndex((r) => r.product.productId === pin) : -1;
@@ -369,11 +372,34 @@ export async function runRequest(text: string, d: RequestDeps): Promise<RequestR
 		return n;
 	};
 
-	const parsed = applyAnswers(
-		await parseRequest(text, { today: d.today, llm: d.llm, llmKind: d.llmKind }),
-		d.answers ?? []
-	);
+	const parse = (feedback?: string) =>
+		parseRequest(text, { today: d.today, llm: d.llm, llmKind: d.llmKind, feedback });
+	let read: ParsedRequest;
+	let reviewBlock: string | null = null;
+	if (d.review) {
+		// The parse checkpoint: on revise the parser runs once more with the critique; what is still
+		// wrong is shown as an ambiguity; a block stops before any catalogue call.
+		const r = await withReview(
+			requestParseCheckpoint,
+			{ input: { text }, facts: null, produce: parse },
+			d.review
+		);
+		read = r.output;
+		if (r.verdict.kind === 'revise')
+			read = { ...read, ambiguities: [...read.ambiguities, `review: ${r.verdict.feedback}`] };
+		if (r.verdict.kind === 'block') reviewBlock = r.verdict.reason;
+	} else read = await parse();
+	const parsed = applyAnswers(read, d.answers ?? []);
 	const parsedView = parsed as ParsedView;
+	if (reviewBlock) {
+		emit({ step: 'request', status: 'blocked', ms: ms(), data: parsedView });
+		return {
+			parsed: parsedView,
+			lookup: null,
+			order: null,
+			message: `The reading of this request did not pass review: ${reviewBlock}`
+		};
+	}
 
 	// An event brief is never a catalogue query: say what it is, and where a seeded plan lives.
 	const brief = classifyRequest(text, parsed.items, d.kitchen.id);

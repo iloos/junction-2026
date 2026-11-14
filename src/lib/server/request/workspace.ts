@@ -1,5 +1,13 @@
 /** The inline answers the key-less /request page accepts. No I/O. Its workspace comes from server/demo/visitor.ts. */
-import type { RequestAnswer } from '$lib/ui/request/types';
+import type { ReqUnit } from './lexicon';
+
+/** The chef's inline answer to a question, by item id: a quantity, a product, or both. */
+export interface RequestAnswer {
+	item: string;
+	qty?: number;
+	unit?: ReqUnit;
+	productId?: string;
+}
 
 const UNITS = new Set(['l', 'kg', 'pcs', 'case', 'sales']);
 

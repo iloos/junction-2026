@@ -4,16 +4,13 @@
  */
 import type { Kitchen } from '$lib/core/contracts';
 import { hardLimitCents } from '$lib/core/mandate/validate';
-import { money } from '$lib/ui/format';
+import { money, num } from '$lib/ui/format';
 import type { LookupItemView } from '$lib/ui/request/types';
 
 /** Most kg or l of one product one order may plausibly need per daily cover (team estimate). */
 export const PER_COVER_LIMIT = 10;
 /** An order over this many weeks of the kitchen's weekly limit is flagged. */
 export const WEEKLY_MULTIPLE = 2;
-
-const fmt = (n: number, max = 0) =>
-	new Intl.NumberFormat('en-IE', { maximumFractionDigits: max }).format(n);
 
 /** Daily covers from the kitchen's size: every *Covers figure added up (300 breakfast + 80 bistro). */
 export function dailyCovers(k: Kitchen): number {
@@ -49,7 +46,7 @@ export function sanityWarnings(items: LookupItemView[], k: Kitchen): string[] {
 		const perCover = a.value / covers;
 		if (perCover > PER_COVER_LIMIT)
 			out.push(
-				`${fmt(a.value)} ${a.unit} of ${it.item.query} is ${fmt(perCover, 1)} ${a.unit} per daily cover (${k.name} serves ${fmt(covers)} covers a day): ${fmt(perCover / PER_COVER_LIMIT, 1)}× the ${PER_COVER_LIMIT} ${a.unit} per cover we treat as plausible for one order`
+				`${num(a.value, 0)} ${a.unit} of ${it.item.query} is ${num(perCover, 1)} ${a.unit} per daily cover (${k.name} serves ${num(covers, 0)} covers a day): ${num(perCover / PER_COVER_LIMIT, 1)}× the ${PER_COVER_LIMIT} ${a.unit} per cover we treat as plausible for one order`
 			);
 	}
 	const hard = hardLimit(items, k);
@@ -60,7 +57,7 @@ export function sanityWarnings(items: LookupItemView[], k: Kitchen): string[] {
 	const cap = k.mandate.weeklyCapCents;
 	if (cap > 0 && totalCents > cap * WEEKLY_MULTIPLE)
 		out.push(
-			`${money(totalCents, { whole: true })} is ${fmt(totalCents / cap, 1)}× your ${money(cap, { whole: true })} weekly limit`
+			`${money(totalCents, { whole: true })} is ${num(totalCents / cap, 1)}× your ${money(cap, { whole: true })} weekly limit`
 		);
 	return out;
 }

@@ -1,6 +1,6 @@
 import type { Product } from '$lib/core/contracts';
 import { orderAmount } from '$lib/server/request/convert';
-import { rankCandidates } from '$lib/server/request/lookup';
+import { filterHits } from '$lib/server/request/lookup';
 import { baseId, type ParsedItem } from '$lib/server/request/parse';
 import { shortText } from './facts';
 import type { Intent } from './types';
@@ -56,7 +56,7 @@ export function routineItem(i: RoutineIntent): ParsedItem {
  * reason, so nothing downstream falls back to "N sales units".
  */
 export function routineCandidates(intent: RoutineIntent, hits: Product[]): RoutineFacts {
-	const { ranked, rejected } = rankCandidates(routineItem(intent), hits);
+	const { ranked, rejected } = filterHits(routineItem(intent), hits);
 	const out: RoutineFacts = {
 		products: ranked.slice(0, ROUTINE_SHORTLIST).map((r) => ({
 			productId: r.product.productId,

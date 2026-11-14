@@ -6,6 +6,7 @@
  */
 import type { Product } from '$lib/core/contracts';
 import type { ReqUnit } from './lexicon';
+import { num } from '$lib/ui/format';
 
 export {
 	baseUnitsPerSales,
@@ -34,8 +35,6 @@ export type Conversion =
 	  }
 	| { ok: false; reason: string };
 
-const fmt = (n: number, max = 3) =>
-	new Intl.NumberFormat('en-IE', { maximumFractionDigits: max }).format(n);
 
 /** The stated content of one sales unit: what the name says first, Valio net weight last. */
 function bestContent(p: Product): Content | null {
@@ -47,10 +46,10 @@ function bestContent(p: Product): Content | null {
 
 const small = (v: number, dim: Dim) =>
 	dim === 'kg' && v < 1
-		? `${fmt(v * 1000)} g`
+		? `${num(v * 1000, 3)} g`
 		: dim === 'l' && v < 1
-			? `${fmt(v * 10)} dl`
-			: `${fmt(v)} ${dim}`;
+			? `${num(v * 10, 3)} dl`
+			: `${num(v, 3)} ${dim}`;
 
 /**
  * N cases of a product, worked out once: how many sales units, what one case holds and what the
@@ -100,9 +99,10 @@ export function caseBreakdown(p: Product, cases: number): CaseBreakdown | { erro
 
 /** "2 × (20 × 500 g) = 20 kg": the headline of a case answer card. */
 export function caseHeadline(b: CaseBreakdown): string {
-	if (!b.perCase) return `${fmt(b.cases)} cases, size not stated`;
-	const one = b.perCase.count > 1 ? `${fmt(b.perCase.count)} × ${b.perCase.each}` : b.perCase.total;
-	return `${fmt(b.cases)} × (${one}) = ${b.orderTotal}`;
+	if (!b.perCase) return `${num(b.cases, 3)} cases, size not stated`;
+	const one =
+		b.perCase.count > 1 ? `${num(b.perCase.count, 3)} × ${b.perCase.each}` : b.perCase.total;
+	return `${num(b.cases, 3)} × (${one}) = ${b.orderTotal}`;
 }
 
 /** What one case (KI) holds, e.g. "20 × 200 g = 4 kg". */
@@ -110,7 +110,7 @@ export function caseDescription(p: Product): string | null {
 	const b = caseBreakdown(p, 1);
 	if ('error' in b || !b.perCase) return null;
 	return b.perCase.count > 1
-		? `${fmt(b.perCase.count)} × ${b.perCase.each} = ${b.perCase.total}`
+		? `${num(b.perCase.count, 3)} × ${b.perCase.each} = ${b.perCase.total}`
 		: `${b.perCase.total} per case`;
 }
 
@@ -121,7 +121,9 @@ function caseNote(p: Product, salesQty: number): string {
 	const perSales = baseUnitsPerSales(p);
 	if (!ki || !perSales) return '';
 	const cases = (salesQty * perSales) / ki.baseUnits;
-	return Number.isInteger(+cases.toFixed(6)) ? ` (= ${fmt(cases)} KI)` : ` (≈ ${fmt(cases, 1)} KI)`;
+	return Number.isInteger(+cases.toFixed(6))
+		? ` (= ${num(cases, 3)} KI)`
+		: ` (≈ ${num(cases, 1)} KI)`;
 }
 
 /** Converts a request quantity into the product's sales units. Rounds up to whole sales units and says so. */
@@ -133,7 +135,7 @@ export function convert(qty: number, unit: ReqUnit, p: Product): Conversion {
 			ok: true,
 			salesQty: qty,
 			salesUnit: su,
-			explain: `${fmt(qty)} ${su} as asked${caseNote(p, qty)}`,
+			explain: `${num(qty, 3)} ${su} as asked${caseNote(p, qty)}`,
 			exact: true,
 			perSalesUnit: null,
 			warnings: [`no unit in the request: read as ${su}, the product's sales unit`]
@@ -149,8 +151,8 @@ export function convert(qty: number, unit: ReqUnit, p: Product): Conversion {
 		);
 		const explain =
 			su === 'KI'
-				? `${fmt(qty)} cases = ${fmt(b.salesQty)} KI`
-				: `${fmt(qty)} KI × ${fmt(b.salesPerCase)} ${su} per KI = ${fmt(b.salesQty)} ${su}`;
+				? `${num(qty, 3)} cases = ${num(b.salesQty, 3)} KI`
+				: `${num(qty, 3)} KI × ${num(b.salesPerCase, 3)} ${su} per KI = ${num(b.salesQty, 3)} ${su}`;
 		return {
 			ok: true,
 			salesQty: b.salesQty,
@@ -169,7 +171,7 @@ export function convert(qty: number, unit: ReqUnit, p: Product): Conversion {
 				ok: true,
 				salesQty: qty,
 				salesUnit: su,
-				explain: `${fmt(qty)} pcs = ${fmt(qty)} ${su}${caseNote(p, qty)}`,
+				explain: `${num(qty, 3)} pcs = ${num(qty, 3)} ${su}${caseNote(p, qty)}`,
 				exact: true,
 				perSalesUnit: null,
 				warnings
@@ -180,7 +182,7 @@ export function convert(qty: number, unit: ReqUnit, p: Product): Conversion {
 				ok: true,
 				salesQty,
 				salesUnit: su,
-				explain: `${fmt(qty)} ${p.baseUnit} ÷ ${fmt(perSales)} per ${su} = ${fmt(salesQty)} ${su}${salesQty * perSales !== qty ? ` (rounded up from ${fmt(qty / perSales, 2)})` : ''}`,
+				explain: `${num(qty, 3)} ${p.baseUnit} ÷ ${num(perSales, 3)} per ${su} = ${num(salesQty, 3)} ${su}${salesQty * perSales !== qty ? ` (rounded up from ${num(qty / perSales, 2)})` : ''}`,
 				exact: salesQty * perSales === qty,
 				perSalesUnit: null,
 				warnings
@@ -202,14 +204,14 @@ export function convert(qty: number, unit: ReqUnit, p: Product): Conversion {
 			ok: true,
 			salesQty: qty,
 			salesUnit: su,
-			explain: `${fmt(qty)} kg, sold per kg`,
+			explain: `${num(qty, 3)} kg, sold per kg`,
 			exact: true,
 			perSalesUnit: c,
 			warnings
 		};
 	const explain =
-		`${fmt(qty)} ${unit} ÷ ${fmt(c.value)} ${unit} per ${su} = ${fmt(salesQty)} ${su}` +
-		(exact ? '' : ` (rounded up from ${fmt(raw, 2)})`) +
+		`${num(qty, 3)} ${unit} ÷ ${num(c.value, 3)} ${unit} per ${su} = ${num(salesQty, 3)} ${su}` +
+		(exact ? '' : ` (rounded up from ${num(raw, 2)})`) +
 		caseNote(p, salesQty);
 	if (c.source === 'net') warnings.push(`content from Valio's net weight, not the name`);
 	return { ok: true, salesQty, salesUnit: su, explain, exact, perSalesUnit: c, warnings };

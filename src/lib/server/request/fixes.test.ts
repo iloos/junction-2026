@@ -9,7 +9,7 @@ import { createHandlers } from '$lib/core/services/handlers';
 import { createDbPorts } from '../store/db-ports';
 import { classifyRequest } from './classify';
 import { findDate } from './dates';
-import { rankCandidates, withLot } from './lookup';
+import { filterHits, withLot } from './lookup';
 import { convert } from './convert';
 import { parseRequest, parseRules } from './parse';
 import { runRequest, skipSummary } from './run';
@@ -276,14 +276,14 @@ describe('F17: parser defects', () => {
 		expect(item.search[0]).toBe('lohifilee');
 		const hits: Product[] = [];
 		for (const q of item.search) hits.push(...(await catalog.search(q, { limit: 50 })));
-		const { ranked } = rankCandidates(item, hits);
+		const { ranked } = filterHits(item, hits);
 		expect(ranked.length).toBeGreaterThan(0);
 		for (const r of ranked.slice(0, 5)) expect(r.product.nameFi.toLowerCase()).toMatch(/lohi/);
 		expect(ranked[0].product.nameFi.toLowerCase()).toMatch(/filee/);
 		expect(ranked.some((r) => /juustotorttu/i.test(r.product.nameFi))).toBe(false);
 		// The tart (462463, a ready meal) is out of the fish categories even when searched directly.
 		const tart = (await catalog.get(['462463'])).get('462463')!;
-		expect(rankCandidates(item, [tart]).rejected[0].reason).toMatch(/not in the salmon category/);
+		expect(filterHits(item, [tart]).rejected[0].reason).toMatch(/not in the salmon category/);
 	}, 60_000);
 
 	it('the preview rounds to the lot step the order will use', () => {
@@ -334,5 +334,70 @@ describe('F17: parser defects', () => {
 		expect(r.order).toBeNull();
 		expect(r.unplaced?.map((u) => u.id)).toEqual(['cream']);
 		expect(r.message).toMatch(/Nothing placed yet: cream still needs an answer/);
+	}, 60_000);
+});
+
+describe('parse review (REVIEW=1)', () => {
+	const milk = {
+		query: 'lactose-free milk',
+		qty: 1000,
+		unit: 'l',
+		constraints: ['lactose_free'],
+		searchFi: ['maito']
+	};
+	const butter = { query: 'butter', qty: 5, unit: 'kg', constraints: [], searchFi: ['voi'] };
+
+	it('a parse that drops a product is redone once with the critique', async () => {
+		const { h, ctx, kitchen } = await setup();
+		const prompts: string[] = [];
+		const outs = [{ items: [milk] }, { items: [milk, butter] }];
+		const llm: Llm = {
+			generate: async (req) => {
+				prompts.push(req.prompt);
+				return {
+					text: JSON.stringify(outs[prompts.length - 1]),
+					model: 'gemini-test',
+					tokens: { in: 1, out: 1 },
+					latencyMs: 1
+				};
+			}
+		};
+		const r = await runRequest('1,000 L lactose-free milk and 5 kg butter by Monday', {
+			handlers: h,
+			ctx,
+			today: TODAY,
+			kitchen,
+			place: false,
+			llm,
+			llmKind: 'gemini',
+			review: {}
+		});
+		expect(prompts).toHaveLength(2);
+		expect(prompts[1]).toMatch(/A reviewer found this.*"butter"/);
+		expect(r.parsed.items.map((i) => i.product)).toEqual(['milk', 'butter']);
+		expect(r.parsed.ambiguities.join()).not.toMatch(/review:/);
+	}, 60_000);
+
+	it('what is still wrong after the retry is shown, not hidden', async () => {
+		const { h, ctx, kitchen } = await setup();
+		const llm: Llm = {
+			generate: async () => ({
+				text: JSON.stringify({ items: [milk] }),
+				model: 'gemini-test',
+				tokens: { in: 1, out: 1 },
+				latencyMs: 1
+			})
+		};
+		const r = await runRequest('1,000 L lactose-free milk and 5 kg butter by Monday', {
+			handlers: h,
+			ctx,
+			today: TODAY,
+			kitchen,
+			place: false,
+			llm,
+			llmKind: 'gemini',
+			review: {}
+		});
+		expect(r.parsed.ambiguities.join()).toMatch(/review: .*"butter"/);
 	}, 60_000);
 });

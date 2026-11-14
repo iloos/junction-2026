@@ -65,8 +65,12 @@ function constraintFails(item: ParsedItem, p: Product): string | null {
 	return null;
 }
 
-/** Ranks search hits for one item. Pure: the same hits always give the same order. */
-export function rankCandidates(
+/**
+ * Filters one item's search hits (category, product word, stated constraints) and orders the rest by the
+ * request's hand-set scores. Pure: the same hits always give the same order. Not core/rank, which ranks
+ * substitutes by the kitchen's weights.
+ */
+export function filterHits(
 	item: ParsedItem,
 	hits: Product[]
 ): { ranked: Ranked[]; rejected: Rejected[] } {

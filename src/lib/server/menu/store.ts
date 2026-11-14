@@ -3,8 +3,7 @@
  * any URL that names it is returned. Only `review()` writes the review record, and only for a chef: `put` never
  * accepts `chef_reviewed` or a review, so a client cannot mark its own edit as reviewed.
  *
- * The memory adapter serves the fixture path and tests; a Postgres adapter replaces it once the `menu_proposals`
- * table exists (docs/lanes/request.md, Needs).
+ * The memory adapter serves tests; `drizzleMenuStore` (pg.ts) applies the same rules to the `menu_proposals` table.
  */
 import {
 	err,
@@ -18,7 +17,7 @@ import { canonicalJson, sha256Hex } from '$lib/core/hash';
 import type { MenuStore } from '$lib/core/ports';
 
 /** Who may review a menu: a chef session, never an agent key or an approver alone. */
-const REVIEWERS = new Set<Actor['kind']>(['chef']);
+export const REVIEWERS = new Set<Actor['kind']>(['chef']);
 
 /**
  * The digest a review binds to: the canonical proposal without its status and review record, so the chef accepts
@@ -92,13 +91,4 @@ export function memoryMenuStore(): MenuStore {
 			return ok(structuredClone(reviewed));
 		}
 	};
-}
-
-const stores = new Map<string, MenuStore>();
-
-/** The process's menu store (one per process; the workspace is a key inside it). */
-export function menuStore(kind = 'memory'): MenuStore {
-	let s = stores.get(kind);
-	if (!s) stores.set(kind, (s = memoryMenuStore()));
-	return s;
 }

@@ -15,11 +15,12 @@ A chef types a purchase request and gets a priced, availability-checked, mandate
 - Tools through `serveTool` (no direct store access); `hardLimitCents`; `toLot` (`core/services/orders`); `scenarioDate`.
 - `EventBrief`, `MenuProposal`, `MenuStore`, `Catalog.resolve` (`core/contracts/event.ts`, `core/ports.ts`).
 - The page's workspace comes from `visitorWorkspace` / `roomLabel` (`server/demo/visitor.ts`, Track G).
-- Others import from this lane: the agent (`parseRules`, `baseId`, `rankCandidates`, `ParsedItem`, `ReqUnit`), evals (`runRequest`, `contentPerSalesUnit`, `orderAmount`). Keep those signatures stable.
+- Others import from this lane: the agent (`parseRules`, `baseId`, `filterHits`, `ParsedItem`, `ReqUnit`), evals (`runRequest`, `contentPerSalesUnit`, `orderAmount`). Keep those signatures stable.
 
 ## State
 **Purchase requests (`server/request`).**
-- `parse.ts`: two parsers, one shape. Rules (EN and FI) always run. The model path (Gemini, JSON) is used when `LLM_PROVIDER` is set, and every disagreement with the rules is shown as an item ambiguity. Constraints the chef typed ("lactose-free") are read from the raw words and restored if the model drops one, with a note.
+- `parse.ts`: two parsers, one shape. Rules (EN and FI) always run. The model path (`createLlmRouter(env).for('request.parse')`, JSON) is used when `LLM_PROVIDER` is set, and every disagreement with the rules is shown as an item ambiguity. Constraints the chef typed ("lactose-free") are read from the raw words and restored if the model drops one, with a note.
+- With `REVIEW=1` the parse runs through `withReview(requestParseCheckpoint)`: one retry with the critique, any remaining finding shown as an ambiguity, a block stops before lookup.
 - Items have stable ids (product key or typed words, plus constraints and variant, `~2` when repeated). Inline answers are keyed by id.
 - Units and numbers: "2 x 10 kg" is 20 kg; "for 300 breakfasts" is a cover count, not a quantity.
 - `dates.ts`: weekdays, relative words, ISO dates, `16.11.`, "20 December" and "20. joulukuuta", all against the sim clock. Impossible dates are refused, and the model cannot fill them.
@@ -35,7 +36,7 @@ A chef types a purchase request and gets a priced, availability-checked, mandate
 
 **Events (`server/menu`).**
 - `brief.ts`: the words fill guests, date, style, courses, dietary requirements (with counts, such as `vegetarian:6`) and budget. Then one question at a time asks for what is missing, keyed `brief.<field>`. An answer can add requirements but never removes a typed one. `toEventBrief` validates against the contract.
-- `store.ts`: an in-memory `MenuStore`.
+- `store.ts` (memory) and `pg.ts` (`menu_proposals`): two `MenuStore` adapters with one test suite.
   - Revisions are numbered from 0 with no gaps and never change.
   - `put` stores `proposed` revisions only.
   - `review()` accepts chef sessions only and binds `proposalDigest`; the review record is server-written.
@@ -59,17 +60,12 @@ A chef types a purchase request and gets a priced, availability-checked, mandate
 
 ## Next
 1. Chef review UI: show the proposal and rubric issues, allow amount edits (each edit a new revision with `user` provenance), then `review()` from the chef actor. After review, show "planning from a menu: next" until A4's `plan_event{proposal:{id, revision}}` lands, then call it.
-2. A Postgres `MenuStore` on the `menu_proposals` table (applied on Aiven), and wire `Ports.menus`.
-3. Rank /request candidates through `find_substitutes`, so the kitchen's `weights` apply; today `lookup.ts` uses hand-set scores and ignores them.
-4. Still open: one delivery date for several items; URL recovery for a review on reload (F16); hard-limit copy "split the order or raise the mandate" (F32).
+2. Rank /request candidates through `find_substitutes`, so the kitchen's `weights` apply; today `lookup.ts` uses hand-set scores and ignores them.
+3. Still open: one delivery date for several items; URL recovery for a review on reload (F16); hard-limit copy "split the order or raise the mandate" (F32).
 
 ## Needs
-- **`Ports.menus`**: wire `menuStore()` (memory now; the pg adapter after Next 2) into the server ports, so `plan_event` reads the store /request writes.
-- **One home for pack content.** `core/demand/sizing.ts contentPerSalesUnit` and `request/convert.ts contentPerSalesUnit` parse differently:
-  - Core trusts a net weight in the asked unit.
-  - Request reads "NxM" packs and cross-checks the net weight.
-  - For 464076 ("4x5 kg", net 20 kg, KI of 4), core says 20 kg per ST and request says 5 kg; the price (€37.33/ST) supports 5.
-  - Proposal: core adopts the request rules (the case reading and the cross-check), and request's `convert` calls core.
+- **`Ports.menus`**: set it to `drizzleMenuStore(db)` (`server/menu/pg.ts`) in `createDbPorts`, on the same Drizzle handle as the store, so `plan_event` reads what /request writes.
+- **One home for pack content.** With 8d: core adopts the cross-checked rules, then `request/convert` re-exports core.
 
 ## Run
 ```bash
