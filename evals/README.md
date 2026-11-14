@@ -4,12 +4,14 @@ Every eval plays through the **same gate the app uses** (tool handlers on PGlite
 
 | Folder | What | Runner | Command |
 |---|---|---|---|
-| `scenarios/` | one journey per JSON file: `s*` (product stories), `r5-*` and `r6-*` (one per review finding) | `src/lib/server/evals/evals.test.ts` with `run.ts` + `check.ts` | `pnpm eval` |
+| `scenarios/` | one journey per JSON file: s1–s5 and s7 (product stories), r5-f9, r5-f10 and r6-1…r6-5 (one per review finding) | `src/lib/server/evals/evals.test.ts` with `check.ts`; `node evals/run.ts` validates the files alone | `pnpm eval` |
 | `fidelity/cases.json` | the same words through `/request`, the agent and REST `place_order` must give the same basket (properties, not first hits) | `src/lib/server/evals/fidelity.test.ts` | `pnpm eval` |
+| (in code) | one plan, three surfaces: `get_plan` FulfilmentView, the kitchen dish status and the Ops coverage count agree per need | `src/lib/server/evals/surfaces.test.ts` | `pnpm eval` |
+| `briefs/golden.json` | open event briefs through `/request`, every brief question answered, ending in a held plan with every course and diet | `src/lib/server/evals/briefs.test.ts` | `pnpm eval` |
 | `agent/goals.json` | free-text goals played by the agent on a fresh workspace; expectations on domain state and the outcome | `src/lib/server/agent/goals.test.ts` | `pnpm eval:agent` |
 | `retrieval/{substitutes,queries}.json` | labelled substitute targets (recall@12) and ingredient queries (precision@5) | `src/lib/server/adapters/catalog/retrieval*.eval.test.ts` | `pnpm test:unit` (skipped without `data/valio/`) |
 
-`pnpm gate` runs all of the above in order (plus check, lint and the checker's own tests, `node --test evals/check.test.ts`) and stops on the first red; it is the merge gate. Live-model diagnostics over the same goals are opt-in: `pnpm eval:live` (CLAUDE.md Commands).
+`pnpm gate` runs all of the above in order (plus check, lint and the checker's own tests, `node --test evals/check.test.ts`) and stops on the first red; it is the merge gate. Live-model diagnostics over the agent goals and the fidelity cases are opt-in: `pnpm eval:live` (`src/lib/server/evals/live-planner.test.ts`, `AGENT_PLANNER=llm`). An eval here earns its place by crossing steps, entry points or surfaces; one module's behaviour belongs in that module's unit tests.
 
 Vocabulary follows [D6](../docs/DECISIONS.md) and [VOCABULARY](../docs/concept/VOCABULARY.md): the six-digit Valio `productId` is the key; money is **integer cents** ex VAT (`catalogPrice.value` from the mock API, fetched 14 Nov 2026); quantities carry an explicit `unit`. Seeds are in [`fixtures/seeds/`](../fixtures/README.md).
 
@@ -27,7 +29,7 @@ Vocabulary follows [D6](../docs/DECISIONS.md) and [VOCABULARY](../docs/concept/V
     "availability": [{ "productId": "462150", "amount": 9, "label": "simulated: 34 kg committed by other kitchens" }],
     "price": []
   },
-  "steps": [ { "actor": "chef", "action": "request", "input": { … } } ],
+  "steps": [ { "actor": "chef", "action": "plan_event", "input": { "eventId": "event-xmas-140" } } ],
   "expect": { … }
 }
 ```
@@ -38,18 +40,16 @@ Vocabulary follows [D6](../docs/DECISIONS.md) and [VOCABULARY](../docs/concept/V
 ### Actions
 | action | input | meaning |
 |---|---|---|
-| `request` | `text`, `deliverBy` | natural-language order request |
 | `plan_event` | `eventId` or `proposal` (a MenuProposal) | expand an event seed into lines |
 | `edit_line` | `dish`, `ingredientId` (a proposal's stable id) or `lineId`, field, value | chef edits (e.g. g/guest); invalidates the quote and approvals |
-| `search` / `quote` | `query` / `productIds[]` | read-only lookups |
-| `place_order` | `lines[]`, `idempotencyKey` | creates a plan through the gate |
-| `approve` | `ref` (line or order), `terms` | approval bound to the exact terms shown |
-| `commit` | `ref`, `idempotencyKey` | commit approved or in-mandate lines into an order and receipt |
+| `search` / `quote` | `query` / `productIds[]` (optional `deliverBy`) | read-only lookups |
+| `place_order` | `lines[]` (optional physical `amount`), `deliverBy`, `idempotencyKey` | creates a plan through the gate |
+| `approve` | `ref` (`plan:<key>` or `{productId}`) | grants the plan's current approval on the terms `get_plan` shows |
+| `commit` | `ref`, `idempotencyKey` | commits approved or in-mandate lines; a `{productId}` ref commits that product's lines only |
 | `set_price` / `set_availability` | `productId`, value, `label` | simulator change after a step |
 | `find_substitutes` | `productId`, optional `apply`, `requireOrigin`, `weights` | ranked substitutes for that product's line in the scenario's plan; preview or apply |
 | `recall` | `productId` | system: a recall notice names the product (one RecordAnomaly, as the web lane's ingest writes it) |
 | `set_clock` | `at` (ISO) | system: move the simulator clock (cut-offs, expiry) |
-| `reset` | none | system: a fresh run on the same workspace and database, as the sandbox reset does |
 
 ### Line states (D6)
 `proposed → eligible | held{tier: propose|sign_off, reasons} | rejected | unorderable → committed`. "Acted" = committed by the agent within the mandate (tier `act`). `rejected` is a candidate refused by a rule (never a pickable option); `unorderable` means this product cannot be bought for this need at all.
@@ -65,13 +65,15 @@ Vocabulary follows [D6](../docs/DECISIONS.md) and [VOCABULARY](../docs/concept/V
 ### `expect` keys
 | key | checked how |
 |---|---|
-| `lines[]` | each listed `{productId, qty, unit, state, tier?, reasons?}` must exist; `reasons` must include (not equal) the listed codes; `qty`/`unit`/cents exact |
+| `lines[]` | each `{productId, qty?, unit?, state?, tier?, reasons?, substituteFor?, notState?, historyStates?, historyReasons?}` must match one line; `reasons` must include (not equal) the listed codes; `qty`/`unit`/cents exact |
 | `rejected[]` / `unorderable[]` | products that must appear in that state with the reasons |
 | `notProposed[]` | products that must not appear as a pickable option |
 | `rank` | `{need, first}`: the top-ranked valid candidate for that need |
 | `availabilityKinds` | productId → D6 kind as shown |
+| `wordingMustDiffer` | availability kinds whose UI words must differ |
 | `approvalStates` | the approval's state sequence |
 | `commitResults[]` / `errors[]` | per attempt: `receipt`, or `error` with the D6 code and `retryable` |
+| `plans[]` | per plan key: `totalCents`, `state`, `tier`, `states`, `reasons` |
 | `receipts` | exact count of receipts at the end |
 | `duplicateReceipts` | always `0` |
 | `sameReceiptOnRetry` | the retried commit (same key, same payload) returns the earlier receipt |
@@ -83,17 +85,26 @@ Vocabulary follows [D6](../docs/DECISIONS.md) and [VOCABULARY](../docs/concept/V
 | `why` | for one line, the ordered steps the Why drawer must show |
 | `tools.externalAgentMustNotHave[]` | tool names absent from the external agent's scope |
 | `timing.recomputeMs` | upper bound for an edit → recompute |
-| `attempts[]` | per `step` index: `action`, `result`, `error`, `retryable`, `applied`, `kind`; `chosen`/`notChosen` product ids; `closingNotBefore` (quote cut-offs) |
+| `attempts[]` | per `step` index: `action`, `result`, `error`, `retryable`, `applied`; `chosen`/`notChosen` product ids |
 | `approval` | the newest plan's open approval: `{state, covers[], excludes[]}` by product id, or `null` for none |
-| `orderLines[]` | committed order lines `{productId, authority: mandate \| approval}` |
 | `qtys[]` | `{productId, qty[]}`: the exact multiset of quantities across that product's lines (two dishes sharing a SKU) |
 | `fulfilment[]` | per need label from `get_plan` `plan.view.fulfilment`: `status` (one or a list), `unresolvedMin`, `confirmedMax`, `partition` (the five buckets sum to `required`) |
 | `lastVoided` | `get_plan` `lastVoided.diff`: `includes[{productId, change}]`, `excludes[productId]` |
-| `previousRunKept` | ops of runs before the last `reset` are still in the database |
-
-Line matchers also take `notState`, `notReasons` and `substituteFor`, `closingTime`; plan matchers take `minTotalCents`.
+| `labels[]` | `{productId, mustSay}`: a shown label contains the text (e.g. "simulated") |
 
 ### Known gaps: `expectFail`
 `"expectFail": {"F9": ["lines[463860]", "attempts[3]"]}` names result keys (or a key prefix such as `lines`) that must **still fail**, keyed by the finding id (`F<n>` from [SYNTHESIS](../docs/archive/handoff/SYNTHESIS.md) §2, or a review tag such as `R6-diff`). Everything else must pass. When a listed key starts passing the eval goes red ("F9 looks fixed, delete this expectFail entry"), and a prefix that matches no result is red too. A lane that fixes a finding deletes its entry in the same merge; that is the one part of `evals/` other lanes may edit. An `expectFail` entry also hides any other mistake in the same expectation (a wrong unit stays invisible until the fix lands), so check expectations under a marker against a probe of today's state first. Expected facts never depend on a search order: assert the property (`notChosen`, `kind`, `excludes`) rather than the current first result where retrieval may change it.
 
-The runner reports pass/fail per key, so a partial build shows exactly which guarantee holds. The fidelity cases take the same `expectFail` per case.
+The runner reports pass/fail per key, so a partial build shows exactly which guarantee holds. The fidelity cases and the briefs take the same `expectFail` per case; `surfaces.test.ts` keeps its list in code.
+
+### Open gaps
+| id | where | owner | what is missing |
+|---|---|---|---|
+| F9 | `r5-f9-cutoff-at-commit` | core (8d) | a commit after a line's cut-off still commits it |
+| R6-lineage | `r6-1-lineage` | menu track (A4/B) | `plan_event{proposal}`; need ids that carry the ingredient id |
+| R6-diff | `r6-5-perturbed-requirement` | core (8d) | `get_plan` `lastVoided` (TermsDiff) |
+| F12-ops | `surfaces.test.ts` | Ops (9c) | Ops counts coverage from line states instead of reading `plan.view.fulfilment` |
+| F4-pack | fidelity `butter-grams-weekday` | agent (E) | the scripted planner buys one 4 kg case for 500 g |
+| A4 | `briefs/golden.json` (both) | menu track (A4) | proposal → review → `plan_event{proposal}` → held plan |
+
+F4-pack and F12-ops are sub-cases of SYNTHESIS F4 and F12; R6-* are ROUND6-FOUNDATIONS §1–5.
