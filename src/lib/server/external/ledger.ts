@@ -28,7 +28,8 @@ export class LimitError extends Error {
 
 /** Called before every network call; throws `LimitError` instead of spending. */
 export interface SpendGuard {
-	charge(api: string): void;
+	/** Throws (or rejects with) `LimitError` at a cap; the Postgres ledger is async. */
+	charge(api: string): void | Promise<void>;
 }
 
 export interface Day {

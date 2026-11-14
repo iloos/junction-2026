@@ -36,7 +36,12 @@ import { createWorkQueue } from './queue';
 import { createApplications } from './applications';
 import { createWebTools } from './tools';
 import { busTrace } from './watch';
-import { createSpendLedger, spendLimits } from './spend';
+import { createSpendLedger, spendLimits, type SpendLedger } from './spend';
+import { createPgWebState, type PgWebState, type WebSlot } from './pg-state';
+import { attachStateSink, hydrateSlot, persistedMap } from './persist';
+import type { Finding } from './findings';
+import type { WorkItem } from './queue';
+import type { Application } from './applications';
 import { hasWords, memoryIndex, type CatalogIndex } from './recall';
 
 type Env = Record<string, string | undefined>;
@@ -56,10 +61,43 @@ export function cacheDir(env: Env): string {
 
 const g = globalThis as typeof globalThis & {
 	__webSpend?: ReturnType<typeof createSpendLedger>;
+	__webPg?: PgWebState;
+	__webReady?: Promise<void>;
 };
+
+/**
+ * Loads the web state from Postgres (migration 0004) once per process and writes every later change through:
+ * findings, applications and the recall queue hydrate their maps; the response cache and the spend caps read
+ * and charge the shared tables. Routes and tools await it before reading web state. Without a database (unit
+ * tests that never call it), the JSON files under `WEB_CACHE_DIR` stay the store.
+ */
+export function webStateReady(env: Env): Promise<void> {
+	if (process.env.VITEST && !env.WEB_STATE_PG) return Promise.resolve();
+	g.__webReady ??= (async () => {
+		const { db } = await served();
+		const pg = createPgWebState(db as unknown as AnyDb);
+		const slots: [WebSlot, Map<string, unknown>, (x: Record<string, unknown>) => string][] = [
+			['__webFindings', findingsMap(env), (x) => String(x.id)],
+			['__webApplications', applicationsMap(env), (x) => String(x.key)],
+			['__webQueue', queueMap(env), (x) => String(x.id)]
+		];
+		for (const [slot, map, keyOf] of slots)
+			hydrateSlot(slot, map as Map<string, Record<string, unknown>>, await pg.load(slot), keyOf);
+		attachStateSink(pg);
+		g.__webPg = pg;
+	})();
+	g.__webReady.catch((e) => {
+		console.error('[web] Postgres state unavailable; using files', (e as Error)?.message ?? e);
+		g.__webReady = undefined;
+	});
+	return g.__webReady.catch(() => {});
+}
+
+/** The Postgres web state once `webStateReady` has run, else null (files). */
+export const webPg = (): PgWebState | null => g.__webPg ?? null;
 /** One spend ledger per process, persisted next to the cache so a restart keeps the day's counts. */
-export const spendLedger = (env: Env) =>
-	(g.__webSpend ??= createSpendLedger(join(cacheDir(env), 'spend.json')));
+export const spendLedger = (env: Env): Pick<SpendLedger, 'guard'> =>
+	g.__webPg ?? (g.__webSpend ??= createSpendLedger(join(cacheDir(env), 'spend.json')));
 
 /**
  * Who a paid call is charged to: `<actor kind>:<key label>` for a keyed caller, null for the monitor
@@ -87,6 +125,7 @@ export function webClients(
 						api: 'context.dev',
 						apiKey: env.CONTEXT_DEV_API_KEY,
 						cacheDir: join(dir, 'context-dev'),
+						store: g.__webPg?.cache,
 						trace,
 						guard
 					})
@@ -99,6 +138,7 @@ export function webClients(
 						api: 'exa',
 						apiKey: env.EXA_API_KEY,
 						cacheDir: join(dir, 'exa'),
+						store: g.__webPg?.cache,
 						trace,
 						guard
 					})
@@ -111,6 +151,7 @@ export function webClients(
 						api: 'context.dev',
 						apiKey: env.CONTEXT_DEV_API_KEY,
 						cacheDir: join(dir, 'context-dev'),
+						store: g.__webPg?.cache,
 						trace,
 						guard
 					})
@@ -119,10 +160,26 @@ export function webClients(
 	return { recalls, exa, news };
 }
 
-export const findingsFor = (env: Env) => createFindings(join(cacheDir(env), 'findings.json'));
-export const queueFor = (env: Env) => createWorkQueue(join(cacheDir(env), 'recall-queue.json'));
+const FILES = {
+	findings: 'findings.json',
+	queue: 'recall-queue.json',
+	applications: 'recall-applications.json'
+} as const;
+const findingsMap = (env: Env) =>
+	persistedMap<Finding>('__webFindings', join(cacheDir(env), FILES.findings), (f) => f.id).map;
+const queueMap = (env: Env) =>
+	persistedMap<WorkItem>('__webQueue', join(cacheDir(env), FILES.queue), (w) => w.id).map;
+const applicationsMap = (env: Env) =>
+	persistedMap<Application>(
+		'__webApplications',
+		join(cacheDir(env), FILES.applications),
+		(a) => a.key
+	).map;
+
+export const findingsFor = (env: Env) => createFindings(join(cacheDir(env), FILES.findings));
+export const queueFor = (env: Env) => createWorkQueue(join(cacheDir(env), FILES.queue));
 export const applicationsFor = (env: Env) =>
-	createApplications(join(cacheDir(env), 'recall-applications.json'));
+	createApplications(join(cacheDir(env), FILES.applications));
 
 /** Catalogue reads for recall matching: the file catalogue in memory, or the products table. */
 export function catalogIndex(catalog: Catalog, db: AnyDb): CatalogIndex {
@@ -174,6 +231,7 @@ export type WebRun = WebExecutionContext & { index: CatalogIndex };
  */
 export async function webContext(ctx: CallContext): Promise<WebRun> {
 	const b = await served();
+	await webStateReady(process.env);
 	return {
 		ctx,
 		ports: { clock: b.ports.clock, catalog: b.ports.catalog, store: b.store, web: b.ports.web },

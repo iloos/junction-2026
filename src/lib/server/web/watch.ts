@@ -12,7 +12,7 @@ import { recordedNotice, EGG_RECALL_URL } from './fixture';
 import type { Findings } from './findings';
 import { createApplications, MAX_APPLY_ATTEMPTS } from './applications';
 import { ingestRecall, type IngestDeps, type IngestResult, type RecallFindingData } from './ingest';
-import type { WorkQueue } from './queue';
+import type { WorkItem, WorkQueue } from './queue';
 import { noticeIdentity, noticeKey } from './recall';
 
 /** At most this many notices are read per pass (credits, and the stage). */
@@ -112,6 +112,12 @@ export type DrainDeps = IngestDeps & {
 	queue: WorkQueue;
 	/** `run.completed`: re-read the list (cached up to an hour) even with nothing queued. */
 	heal?: boolean;
+	/**
+	 * Shared queue (Postgres): claims the due item ids this instance may work on; items another instance holds
+	 * are skipped. `release` drops this pass's leases. Without it every due item is this process's.
+	 */
+	claim?: () => Promise<string[]>;
+	release?: () => Promise<void>;
 };
 
 let tail: Promise<unknown> = Promise.resolve();
@@ -127,7 +133,19 @@ export function drain(d: DrainDeps): Promise<DrainResult> {
 }
 
 async function drainOnce(d: DrainDeps): Promise<DrainResult> {
-	const due = d.queue.due();
+	if (!d.claim) return drainClaimed(d, d.queue.due());
+	const mine = new Set(await d.claim());
+	try {
+		return await drainClaimed(
+			d,
+			d.queue.due().filter((w) => mine.has(w.id))
+		);
+	} finally {
+		await d.release?.().catch(() => {});
+	}
+}
+
+async function drainClaimed(d: DrainDeps, due: WorkItem[]): Promise<DrainResult> {
 	const listQueued = due.some((w) => w.kind === 'list');
 	const pending = due.flatMap((w) => (w.kind === 'notice' && w.url ? [w.url] : []));
 	let candidates: { url: string; date: string | null }[] = [];

@@ -33,8 +33,10 @@ export interface ExternalCallOptions {
 	name?: string;
 	/** false = never store answers (the caller keeps its own record, e.g. the Decide replay book). */
 	cache?: boolean;
-	/** Directory for the response cache; memory only when absent. */
+	/** Directory for the response cache; memory only when absent and no `store`. */
 	cacheDir?: string;
+	/** Shared cache read on a memory miss and written on every accepted answer. */
+	store?: CacheStore;
 	/** Charged before every network call; a function picks the guard for the caller's scope. */
 	guard?: SpendGuard | ((scope: ExternalScope | undefined) => SpendGuard | undefined);
 	/** Where traces go. Default: the caller's scope (`withExternalScope`), else nowhere. */
@@ -76,10 +78,17 @@ export interface CallResult<T> {
 	costUnits?: number;
 }
 
-interface Entry {
+export interface CacheEntry {
 	at: string;
 	value: unknown;
 	costUnits?: number;
+}
+type Entry = CacheEntry;
+
+/** A shared response cache behind memory (Postgres `web_cache`): survives a redeploy, shared by instances. */
+export interface CacheStore {
+	get(key: string): Promise<CacheEntry | undefined>;
+	put(key: string, api: string, e: CacheEntry): Promise<void>;
 }
 
 const mem = new Map<string, Entry>();
@@ -112,16 +121,21 @@ export function createExternalCall(o: ExternalCallOptions) {
 	const breaker = o.breaker ?? breakerFor(name);
 	const step = o.step ?? 'tool';
 
-	function readCache(k: string): Entry | undefined {
+	async function readCache(k: string): Promise<Entry | undefined> {
 		const hit = mem.get(k);
-		if (hit || !o.cacheDir) return hit;
-		const e = readJson<Entry | undefined>(join(o.cacheDir, `${k}.json`), undefined);
+		if (hit) return hit;
+		let e: Entry | undefined;
+		if (o.store) e = await o.store.get(k).catch(() => undefined);
+		if (!e && o.cacheDir) e = readJson<Entry | undefined>(join(o.cacheDir, `${k}.json`), undefined);
 		if (e) mem.set(k, e);
 		return e;
 	}
 	function writeCache(k: string, e: Entry) {
 		mem.set(k, e);
 		if (o.cacheDir) writeJson(join(o.cacheDir, `${k}.json`), e);
+		o.store
+			?.put(k, name, e)
+			.catch((err) => console.error('[external] cache write failed', name, err?.message ?? err));
 	}
 
 	return async function call<T>(
@@ -133,7 +147,7 @@ export function createExternalCall(o: ExternalCallOptions) {
 		const base = { api: o.api, purpose: req.purpose.slice(0, 80), workspaceId: scope?.workspaceId };
 		const k = externalKey(name, req.key);
 		const maxAge = req.maxAgeMs ?? 0;
-		const entry = o.cache === false ? undefined : readCache(k);
+		const entry = o.cache === false ? undefined : await readCache(k);
 
 		const fromCache = (e: Entry, stale: boolean): CallResult<T> => {
 			reportExternal(
@@ -159,7 +173,7 @@ export function createExternalCall(o: ExternalCallOptions) {
 			throw new LimitError('rate-limit', name, wait);
 		}
 		try {
-			(typeof o.guard === 'function' ? o.guard(scope) : o.guard)?.charge(name);
+			await (typeof o.guard === 'function' ? o.guard(scope) : o.guard)?.charge(name);
 		} catch (e) {
 			breaker.success(); // nothing was sent: release a half-open probe slot
 			throw e;

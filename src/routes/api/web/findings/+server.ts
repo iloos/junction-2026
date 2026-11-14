@@ -1,7 +1,7 @@
 import { dev } from '$app/environment';
 import { env } from '$env/dynamic/private';
 import { json } from '$lib/server/tools/http';
-import { applicationsFor, findingsFor, queueFor, webMode } from '$lib/server/web';
+import { applicationsFor, findingsFor, queueFor, webMode, webStateReady } from '$lib/server/web';
 import type { Finding } from '$lib/server/web/findings';
 import { authed } from '$lib/server/web/route';
 import type { RequestHandler } from './$types';
@@ -15,6 +15,7 @@ export const GET: RequestHandler = async ({ request, url }) => {
 	const ctx = authed(request, env, dev, 'web:findings');
 	if (ctx instanceof Response) return ctx;
 	const kind = url.searchParams.get('kind') as Finding['kind'] | null;
+	await webStateReady(env);
 	return json({
 		mode: webMode(env),
 		workspaceId: ctx.workspaceId,

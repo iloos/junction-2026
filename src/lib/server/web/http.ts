@@ -8,7 +8,12 @@
  */
 import type { Trace } from '../adapters/llm/trace';
 import { resetBreakers } from '../external/breaker';
-import { createExternalCall, RateLimited, resetExternalCache } from '../external/call';
+import {
+	createExternalCall,
+	RateLimited,
+	resetExternalCache,
+	type CacheStore
+} from '../external/call';
 import type { SpendGuard } from './spend';
 
 export type WebApi = 'context.dev' | 'exa';
@@ -28,6 +33,8 @@ export interface WebHttpOptions {
 	timeoutMs?: number;
 	/** Charged before every network call (never for cache hits). */
 	guard?: SpendGuard;
+	/** Shared response cache (Postgres `web_cache`) behind memory. */
+	store?: CacheStore;
 }
 
 /** Cached answers older than this are read again unless the caller says otherwise. */
@@ -90,6 +97,7 @@ export function createWebHttp(o: WebHttpOptions) {
 		api: o.api === 'exa' ? 'exa' : 'contextdev',
 		name: o.api,
 		cacheDir: o.cacheDir,
+		store: o.store,
 		guard: o.guard,
 		trace: o.trace,
 		// A 4xx is our request's fault, not an outage.
