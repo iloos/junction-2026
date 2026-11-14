@@ -345,7 +345,7 @@
 				<dd>{totals.unresolved}</dd>
 			</div>
 			<div class="ok">
-				<dt>committed</dt>
+				<dt>ordered</dt>
 				<dd>{euro(totals.committed)}</dd>
 			</div>
 			<div class:bad={totals.refused > 0}>
@@ -567,7 +567,7 @@
 
 							{#each c.orders as o (o.id)}
 								<p class="order">
-									<span>Order committed, {o.lines.length} lines</span>
+									<span>Ordered, {o.lines.length} lines</span>
 									<span class="conf"
 										>supplier confirmed {confirmedOf(o.id)} of {o.lines.length}</span
 									>
@@ -582,9 +582,9 @@
 									>
 								{/if}
 								{#if c.committed}
-									<span>Committed <b>{euro(c.committed)}</b></span>
+									<span>Ordered <b>{euro(c.committed)}</b></span>
 								{:else}
-									<span>Nothing committed yet</span>
+									<span>Nothing ordered yet</span>
 								{/if}
 							</footer>
 						</div>

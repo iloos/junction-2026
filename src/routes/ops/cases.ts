@@ -198,7 +198,7 @@ export function buildCases(
 			kitchenId: plan.kitchenId,
 			planId: plan.id,
 			version: plan.version,
-			title: 'Commit refused',
+			title: 'Order refused',
 			lines: [],
 			causes: [reasonText(f.code)],
 			state: 'Refused',

@@ -253,7 +253,7 @@ export function storyOf(
 				if (o.result === 'failed') {
 					steps.push({
 						...base,
-						what: `A commit was refused: ${reasonText(o.error.code).toLowerCase()}.`,
+						what: `An order was refused: ${reasonText(o.error.code).toLowerCase()}.`,
 						then: 'Nothing was ordered and nothing changed.',
 						tone: 'bad'
 					});

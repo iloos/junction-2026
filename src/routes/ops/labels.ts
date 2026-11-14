@@ -45,7 +45,7 @@ export const TOOL: Record<string, string> = {
 	get_plan: 'Read the plan',
 	explain_line: 'Explained a line',
 	approve: 'Approved',
-	commit_order: 'Committed the order',
+	commit_order: 'Ordered',
 	set_mandate: 'Changed the mandate',
 	lookup_facts: 'Looked up product facts',
 	find_outside: 'Searched outside sources',
@@ -132,9 +132,9 @@ export function opSummary(env: OpEnvelope, names: Names, plans: Record<string, P
 		}
 		case 'CommitOrder': {
 			const o = op.outcome;
-			if (o.result === 'failed') return `Commit refused (${o.error.code}): ${o.error.message}`;
+			if (o.result === 'failed') return `Order refused (${o.error.code}): ${o.error.message}`;
 			const confirmed = o.receipt.confirmed.length;
-			return `Committed ${euro(o.order.totalCents)}, supplier confirmed ${confirmed} of ${o.order.lines.length} lines`;
+			return `Ordered ${euro(o.order.totalCents)}, supplier confirmed ${confirmed} of ${o.order.lines.length} lines`;
 		}
 		case 'RecordAnomaly':
 			return op.anomaly.message;
