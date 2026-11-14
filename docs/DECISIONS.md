@@ -174,3 +174,10 @@ Prompts use a few short, varied few-shot examples that teach the shape. They don
 **Why:** patching each reported phrase (a word list here, a regex there) passes the reported case and fails its neighbours, and examples copied from tests bias the model toward them. The user asked for the agent to understand intention, with examples as few-shot rather than lookup.
 
 **Reopen if:** a held-out paraphrase eval shows a kind of the shape the model can't fill reliably. Then improve the shape or the model (D12's cascade), not the phrase list.
+
+### D21 · A yes in chat takes only the action just offered, on the version just shown (lead, 14 Nov night)
+An affirmative reply ("great lets do it", "ok") counts as the chef's act only when the agent's previous turn offered exactly one named action, and only for the plan version or menu revision that turn showed: "plan it" accepts that menu revision (the chef's review, D13) and plans it, and "order these" commits the lines the offer named. If the shown version is stale, or there is an open question, or more than one action was offered, the yes asks which. A yes never widens the mandate, never approves lines that need sign-off unless the offer named them, and never acts for an outside agent (D17).
+
+**Why:** the user's chat test showed "great lets do it" acting on another task's plan. The chef typing in their own dock is the person D13 requires, so a named offer plus a yes is consent; an unnamed or stale one is not.
+
+**Reopen if:** a trial shows a bare yes buying something the previous turn didn't name, or the menu accepted differs from the revision the card showed.
