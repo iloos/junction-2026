@@ -14,22 +14,34 @@
 - Removed today as unit-test duplicates: s6, s8, s9, s10, s11, r5-f5, r5-f8, r5-f11, r5-f22 (covered by store tests ceiling, baseline, dates, rescue, reset, pool, authority, zero).
 
 ## Open
-No open `expectFail` (all retired by their lanes). Prod defects: `docs/BUGS.md` (bug bash of 825874d; re-test after each deploy, mark fixed with the /healthz commit).
+| expectFail | where | owner |
+|---|---|---|
+| CHAT-add-item: "and 2 l of whipping cream too" adds no line | `evals/chat/free/sessions.json` f1 | E |
+| CHAT-two-items: the milk in "perunoita ja maitoa" is dropped | `evals/chat/free/sessions.json` f2 | E |
 
-- Claim ledger `docs/CLAIMS.md` (owned): first pass done, deployed two-browser + MCP journey recorded on ab3a557; rerun before the 22:00 video with prod screenshots per demo beat.
-- Review on/off comparison: waits for E's `REVIEW=1`; then the same trials both ways via `eval:live` (pass rate and tokens per arm).
-- Ring 2 chat evals: **scaffolded** on T1 (`evals/chat/check.ts` + 8 self-tests in evals:self; trials c1 clarify, c2 approval handoff + continue, c3 edit voids approval; driver `chat.test.ts` skips until E's `src/lib/server/chat/turn.ts` exports `runChatTurn(input, deps)` yielding the turn's NDJSON events with `taskId`). On wiring: probe, then expectFail with owners. `evals/chat/*.json`: scripted turns through the real chat entry point, judged on the task record and the op log, never on the model's prose:
-  - **clarification**: a turn missing a fact (kitchen, date, amount) gets exactly one question about that field; an answered field is never asked again; a typed requirement survives every later turn.
-  - **approval handoff**: held lines stop the agent with a pending approval and an approval link; the agent never approves; the human approves out of band.
-  - **continuation**: "go ahead" resumes the same task id and plan (no new plan, no repeated order); a turn after an edit sees the voided approval.
-  - **truthful ledger**: every number and claim in the task's ledger and final message is backed by state (receipts, held lines, FulfilmentView unresolved); "ordered" only with a receipt.
-  - Gate runs the scripted planner; `eval:live` runs the same files with `LIVE_REPEATS`, with REVIEW on and off as two arms (pass rate, tokens, latency per arm).
+- Prod defects: `docs/BUGS.md` (bug bash of 825874d, re-tested on eefe4db and f3591fd; #1, #2 and the cut-off dead end fixed on prod; #5, #6 and #9 fixed on main, prod re-test pending).
+- BUG-1 regression: an agent's approvalUrl fails on a fresh local PGlite build of main ("not in this browser's sandbox", `snapshot?plan` 404) and passes on prod. 1f is bisecting with `scratch/bugbash/link-main.mjs <base>`; `gate --full` stays red on BUG-1 until it's fixed.
+- Claims pass before the 22:00 video: `docs/CLAIMS.md`, a prod screenshot per demo beat.
+- Review on/off arms: wait for `REVIEW=1` on prod paths; the same trials both ways via `eval:live`.
 
 ## Traps
-- An `expectFail` entry hides any other mistake in the same expectation; probe today's state before writing one.
-- Expectations are properties (category, `notChosen`, `excludes`), never today's first search hit.
-- Gate gaps: e2e runs only with `--full`; the client (browser) project has no tests. `test:pg`, `test:live`, `eval:live` are opt-in by design. Evals also run inside `test:unit`, so they run twice per gate.
-- Running the app locally on PGlite: `pnpm build`, then `node build` with `DATABASE_URL` unset (the worktree `.env` points at Aiven).
+- An `expectFail` entry hides any other mistake in the same expectation; probe today's state before writing one (the chat items probe found two wrong expectations of mine).
+- Expectations are properties (category, `notChosen`, `excludes`), never today's first search hit. Catalogue free-from codes are upper case (`LACTOSE`).
+- `evals/ui` `KNOWN` tracks main's build (`gate --full`), not prod. Against prod use `KITCHEN_URL=<url> npx playwright test -c evals/ui/pw-prod.config.ts`: the root config's webServer builds and previews the worktree with its `.env`, which is the prod `DATABASE_URL`.
+- Dev, preview and tests run with `DATABASE_URL=` blank. Kill local servers you start.
+- Chat replay: `evals/chat/free/replay.json` is keyed by the normalised request. A prompt change in chat v2 makes the gate miss (it fails, it doesn't fall back); re-record with `CHAT_LIVE=1 CHAT_RECORD=1 LLM_PROVIDER=gemini node --env-file=.env node_modules/vitest/vitest.mjs run --project server src/lib/server/evals/chat-free.test.ts`.
+- Gate gaps: e2e only with `--full`; `test:pg`, `test:live`, `eval:live` are opt-in; evals run twice per gate (inside `test:unit` too).
 
 ## Resume
-Rebase on main, `pnpm gate`. When a lane lands, its flipped `expectFail` keys go red: delete the entry (or ask the lane to) and check what else the merge needs an eval for.
+- **Branch** `lane/f-evals`, head `HEADSHA` (rebased on origin/main 70c30e2; eb9e03b merged).
+- **Own:**
+  - `scripts/merge-gate.mjs`, `scripts/smoke-race.mjs`;
+  - `evals/**` (not `retrieval/`) and `src/lib/server/evals/**`;
+  - `docs/CLAIMS.md`, `docs/BUGS.md`;
+  - `evals/ui/*.e2e.ts` (the Kitchen order and clock prod checks);
+  - the chat suites: scripted c1–c4, free-text plus `replay-llm.ts`.
+- **Next:**
+  1. After each deploy (watch `/healthz` commit), run `evals/ui` against prod with `pw-prod.config.ts` and mark BUGS rows fixed with that commit.
+  2. Follow up the BUG-1 local regression with 1f.
+  3. Do a claims pass with prod screenshots before the video.
+  4. When E fixes CHAT-add-item or CHAT-two-items, re-record and delete the entries.
