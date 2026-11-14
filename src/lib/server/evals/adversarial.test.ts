@@ -50,7 +50,7 @@ const OPEN: Record<string, string> = {
 	'R8-task-write': 'E',
 	'R8-web-write': 'D',
 	'R8-queue-claim': 'D',
-	'R8-next-action': '8d',
+	'R8-next-action': 'E',
 	'R8-task-read': 'E'
 };
 /**
@@ -325,6 +325,19 @@ describe('suite: adversarial (round 9: tasks, commands, transport)', () => {
 				idempotencyKey: 'c'
 			});
 			expect(c.ok && c.value.committedLineIds.length > 0).toBe(false);
+			// Held for the calendar, not for some other reason; and the same order on a receiving day commits.
+			const held = must(await s.h.get_plan(s.ctx('chef'), { planId: p.id })).plan.lines[0];
+			expect(held.reasons ?? []).toContain('off_delivery_day');
+			const ok = await chatSetup(['mon', 'thu']);
+			const q = await ok.place(['100001']);
+			const control = must(
+				await ok.h.commit_order(ok.ctx('kitchen_agent'), {
+					planId: q.id,
+					version: q.version,
+					idempotencyKey: 'c'
+				})
+			);
+			expect(control.committedLineIds).toHaveLength(1);
 		}
 	);
 
@@ -345,9 +358,13 @@ describe('suite: adversarial (round 9: tasks, commands, transport)', () => {
 				});
 			}
 		} as any);
+		// Twelve different ids, so coalescing identical misses can't be what keeps the count down.
 		await Promise.all(
-			Array.from({ length: 12 }, () => live.fetch('availability', ['100001'], '2026-12-10'))
+			Array.from({ length: 12 }, (_, i) =>
+				live.fetch('availability', [String(200001 + i)], '2026-12-10')
+			)
 		);
+		expect(max).toBeGreaterThan(0);
 		expect(max).toBeLessThanOrEqual(4);
 	});
 
@@ -533,18 +550,31 @@ describe('suite: adversarial (round 7: the purchase the chef asked for)', () => 
 		});
 		// The need keeps the request's requirement, whatever happens to its lines.
 		expect(p.needs[0].requirements?.freeFrom).toContain('LACTOSE');
-		if (!sub.ok) return; // refusing the substitution is correct
-		const wrong = sub.value.chosen.filter(
-			(c: any) => !products.get(c.productId)!.freeFrom.includes('LACTOSE')
-		);
-		if (!wrong.length) return;
-		const c = await h.commit_order(rctx(), {
+		// Refusing the substitution is correct; choosing ordinary milk must not survive to a commit either way.
+		if (sub.ok) {
+			const wrong = sub.value.chosen.filter(
+				(c: any) => !products.get(c.productId)!.freeFrom.includes('LACTOSE')
+			);
+			if (wrong.length) {
+				const c = await h.commit_order(rctx(), {
+					planId: p.id,
+					version: sub.value.plan.version,
+					idempotencyKey: 'diet-lost-commit',
+					lineIds: wrong.map((w: any) => w.id)
+				});
+				expect(c.ok && c.value.committedLineIds.length > 0).toBe(false);
+			}
+		}
+		// Whatever the plan holds now, committing all of it buys only lactose-free milk.
+		const now = must(await h.get_plan(rctx(), { planId: p.id })).plan;
+		await h.commit_order(rctx(), {
 			planId: p.id,
-			version: sub.value.plan.version,
-			idempotencyKey: 'diet-lost-commit',
-			lineIds: wrong.map((w: any) => w.id)
+			version: now.version,
+			idempotencyKey: 'diet-all'
 		});
-		expect(c.ok && c.value.committedLineIds.length > 0).toBe(false);
+		const final = must(await h.get_plan(rctx(), { planId: p.id })).plan;
+		const bought = final.lines.filter((l: any) => l.state === 'committed');
+		for (const l of bought) expect(products.get(l.productId)!.freeFrom).toContain('LACTOSE');
 	});
 
 	probe(
@@ -569,7 +599,11 @@ describe('suite: adversarial (round 7: the purchase the chef asked for)', () => 
 				})
 			);
 			const final = must(await h.get_plan(rctx(), { planId: p.id })).plan;
-			expect(final.view.fulfilment[0].excess.value).toBe(0);
+			const f = final.view.fulfilment[0];
+			expect(f.excess.value).toBe(0);
+			// The 10 l is still bought, once: by one line, not zero and not two.
+			expect(f.supplierConfirmed.value + f.awaitingSupplier.value).toBe(10);
+			expect(final.lines.filter((l: any) => l.state === 'committed')).toHaveLength(1);
 		}
 	);
 
@@ -619,6 +653,7 @@ describe('suite: adversarial (round 7: the purchase the chef asked for)', () => 
 			})
 		).plan;
 		const ratio = r.needs.find((n: any) => n.id === rice.id).amount.value / rice.amount.value;
+		expect(ratio).toBeGreaterThan(1.2); // the edit took: milk following an unchanged rice proves nothing
 		expect(r.needs.find((n: any) => n.id === milkNeed.id).amount.value).toBeCloseTo(
 			milkNeed.amount.value * ratio
 		);
@@ -798,7 +833,7 @@ describe('suite: adversarial (round 8: identity, durability, reads)', () => {
 		const p = must(
 			await w.handlers.place_order(chef, {
 				kitchenId: 'k-lounas',
-				deliverBy: '2026-12-10',
+				deliverBy: '2026-12-11',
 				idempotencyKey: 'grant-initial',
 				lines: [{ productId: '464201', qty: 2, unit: 'ST' }]
 			})
@@ -809,7 +844,7 @@ describe('suite: adversarial (round 8: identity, durability, reads)', () => {
 		);
 		const placed = await w.handlers.place_order(restricted, {
 			kitchenId: 'k-lounas',
-			deliverBy: '2026-12-10',
+			deliverBy: '2026-12-11',
 			idempotencyKey: 'grant-disallowed',
 			lines: [{ productId: '464201', qty: 2, unit: 'ST' }]
 		});
