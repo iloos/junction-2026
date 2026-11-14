@@ -1,116 +1,87 @@
 # Lane: request
 
-**Branch:** `lane/request` · **Worktree:** `../junc26-lanes/request` · **Dev port:** 5185 (5175 is taken by the ops lane) · **Owner:** lead / request lane agent (track R0-c)
+**Branch:** `lane/b-request` · **Worktree:** `../junc26-lanes/request` · **Dev port:** 5173 or 5185 · **Owner:** request lane agent (Track B: request UI and menu module)
 
-## Goal (one sentence, user-visible)
-A chef types a short purchase request ("1,000 L lactose-free milk by Monday") and gets a priced, availability-checked, mandate-tiered order to approve: Valio's Request → Lookup → Order → Approval.
+## Goal
+A chef types a purchase request and gets a priced, availability-checked, mandate-tiered order to approve (Valio's Request → Lookup → Order → Approval). When the request is an event ("Christmas dinner for 50 on 20 December"), it becomes a brief, then a menu proposal the chef reviews, then a plan.
 
-## Context to read first (≤4 files)
-- docs/event/challenges/main/valio-aimo--trusted-trade-agents.md (the flow they score)
-- evals/scenarios/s1-milk-over-cap.json
-- src/lib/core/contracts/tools.ts (search_products, quote, place_order, get_plan, approve, commit_order)
-- docs/handoff/review-request.md, docs/handoff/SYNTHESIS.md (F3, F7, F16, F17, F32)
-
-## Owned paths (only these may be edited)
-- src/lib/server/request/**
-- src/routes/request/**, src/routes/api/request/**
-- src/lib/ui/request/**
+## Owned paths
+- `src/lib/server/request/**`, `src/lib/server/menu/**`
+- `src/routes/request/**`, `src/routes/api/request/**`
+- `src/lib/ui/request/**`
 - tests beside them
 
 ## Contracts used (read-only)
-- The tool registry through `serveTool` (no direct store access).
-- `presenterOpen` (`server/demo/presenter.ts`), `POST /api/demo/sandbox/reset`, `hardLimitCents` (`core/mandate/validate.ts`).
+- Tools through `serveTool` (no direct store access); `hardLimitCents`; `toLot` (`core/services/orders`); `scenarioDate`.
+- `EventBrief`, `MenuProposal`, `MenuStore`, `Catalog.resolve` (`core/contracts/event.ts`, `core/ports.ts`).
+- The page's workspace comes from `visitorWorkspace` / `roomLabel` (`server/demo/visitor.ts`, Track G).
+- Others import from this lane: the agent (`parseRules`, `baseId`, `rankCandidates`, `ParsedItem`, `ReqUnit`), evals (`runRequest`, `contentPerSalesUnit`, `orderAmount`). Keep those signatures stable.
+
+## State
+**Purchase requests (`server/request`).**
+- `parse.ts`: two parsers, one shape. Rules (EN and FI) always run. The model path (Gemini, JSON) is used when `LLM_PROVIDER` is set, and every disagreement with the rules is shown as an item ambiguity. Constraints the chef typed ("lactose-free") are read from the raw words and restored if the model drops one, with a note.
+- Items have stable ids (product key or typed words, plus constraints and variant, `~2` when repeated). Inline answers are keyed by id.
+- Units and numbers: "2 x 10 kg" is 20 kg; "for 300 breakfasts" is a cover count, not a quantity.
+- `dates.ts`: weekdays, relative words, ISO dates, `16.11.`, "20 December" and "20. joulukuuta", all against the sim clock. Impossible dates are refused, and the model cannot fill them.
+- `classify.ts`: occasion words with no named product or physical amount make an event; it also says when a kitchen's seeded event matches.
+- `lexicon.ts`: 16 products. `categories` are hard filters; `compound` lets Finnish compounds count (lohi → lohifilee); variants can carry their own search word (salmon fillet → lohifilee).
+- `lookup.ts`: hand-set scores (preferred variant, convertible, exact, unit size, reliability). Conversions are rounded to the product's lot step, as `place_order` rounds them.
+- `run.ts`:
+  - Nothing is placed while any item lacks a pick (`unplaced`).
+  - Skip reasons are named.
+  - "N cases" asks which case.
+  - The size check (`sanity.ts`) holds large orders until `confirmLarge`.
+- Idempotency: the place key hashes kitchen, date, lines and page nonce; the commit key is `rq-commit-<planId>-v<version>`.
+
+**Events (`server/menu`).**
+- `brief.ts`: the words fill guests, date, style, courses, dietary requirements (with counts, such as `vegetarian:6`) and budget. Then one question at a time asks for what is missing, keyed `brief.<field>`. An answer can add requirements but never removes a typed one. `toEventBrief` validates against the contract.
+- `store.ts`: an in-memory `MenuStore`.
+  - Revisions are numbered from 0 with no gaps and never change.
+  - `put` stores `proposed` revisions only.
+  - `review()` accepts chef sessions only and binds `proposalDigest`; the review record is server-written.
+- `rubric.ts`: `reviewProposal(brief, proposal, previous?) → Issue[]`, the seam for E's shared reviewer. It blocks on:
+  - covers or date differing from the brief
+  - missing courses, or too few dishes for a buffet
+  - a typed requirement dropped or not claimed, unless the proposal says it is open
+  - an implausible ingredient amount
+  - dish or ingredient ids dropped by a model revision
+
+  It warns on grams per guest outside 250–1500 and on unresolved ingredients.
+- `proposal.ts`: `proposeMenu` takes dishes from Gemini (zod with bounds, `llm` provenance) or the team templates (`team_estimate`), with yield always absent. Every ingredient goes through `catalog.resolve(query, {diet})`: a resolved one is pinned to the best product, an unresolved one keeps the reason. Revision 0 is stored before it is returned.
+- `golden.ts`: the two golden briefs, "5-star 5-course dinner for 50" and "Christmas dinner for 50 on 20 December", each built from its words plus answers.
+
+**Page (`/request`).** Steps Request → Lookup → Order → Approval. An event shows the brief card with question chips (`BriefAsk.svelte`) and ends at "Brief complete. Menu proposal: next." The workspace label and tooltip come from G's resolver.
+
+**Tests.**
+- `request.test.ts`, `answers.test.ts`, `cases.test.ts`, `fixes.test.ts`
+- `menu/brief.test.ts`, `menu/store.test.ts`, `menu/rubric.test.ts`
+- Opt-in live tests: `request/live.test.ts` and `menu/live.test.ts`, run with `DECIDE_LIVE=1 node --env-file=.env node_modules/vitest/vitest.mjs run --project server <file>`. The last menu run returned 402 from Gemini (billing) and fell back to templates.
+
+## Next
+1. Chef review UI: show the proposal and rubric issues, allow amount edits (each edit a new revision with `user` provenance), then `review()` from the chef actor. After review, show "planning from a menu: next" until A4's `plan_event{proposal:{id, revision}}` lands, then call it.
+2. A Postgres `MenuStore` on the `menu_proposals` table (applied on Aiven), and wire `Ports.menus`.
+3. Rank /request candidates through `find_substitutes`, so the kitchen's `weights` apply; today `lookup.ts` uses hand-set scores and ignores them.
+4. Still open: one delivery date for several items; URL recovery for a review on reload (F16); hard-limit copy "split the order or raise the mandate" (F32).
 
 ## Needs
-- **Migration `menu_proposals`** (for a pg MenuStore; memory adapter in `src/lib/server/menu/store.ts` until then). One row per revision, immutable except the review columns:
-  - `workspace_id text not null`, `id text not null`, `revision int not null`, primary key `(workspace_id, id, revision)`
-  - `kitchen_id text not null`, `status text not null check (status in ('proposed','chef_reviewed','planned'))`
-  - `body jsonb not null` (the whole `MenuProposal` as validated; status and review are mirrored in columns)
-  - `digest text not null` (`proposalDigest`: sha256 of the canonical proposal without status and review)
-  - `reviewed_by_kind text`, `reviewed_by_id text`, `reviewed_at timestamptz`, `review_digest text` (all null until `review()`)
-  - `created_at timestamptz not null default now()`; index `(workspace_id, id, revision desc)` for `latest`.
-- **`Ports.menus: MenuStore`** wired from `menuStore()` in `src/lib/server/menu` (server ports), so A4's `plan_event{proposal}` reads the same store the /request page writes.
+- **`Ports.menus`**: wire `menuStore()` (memory now; the pg adapter after Next 2) into the server ports, so `plan_event` reads the store /request writes.
+- **One home for pack content.** `core/demand/sizing.ts contentPerSalesUnit` and `request/convert.ts contentPerSalesUnit` parse differently:
+  - Core trusts a net weight in the asked unit.
+  - Request reads "NxM" packs and cross-checks the net weight.
+  - For 464076 ("4x5 kg", net 20 kg, KI of 4), core says 20 kg per ST and request says 5 kg; the price (€37.33/ST) supports 5.
+  - Proposal: core adopts the request rules (the case reading and the cross-check), and request's `convert` calls core.
 
-## Report
-- Sat 02:00–05:30 · rounds 1–5 merged (6a1a00b … 6ba72e5) · review 8c4cf37.
-- Sat 14 Nov · done: F3 (typed constraints unioned into the model item, flagged; `sameItem` compares constraints), answers keyed by stable item id, F7 guard (event brief → "Event planning: coming", or a link to the seeded Christmas buffet on k-hotel; nothing searched), F17 (salmon categories + fillet variant, "2 x 10 kg" = 20 kg, cover phrases are not quantities, month-name dates EN/FI, impossible dates refused, an unpicked item holds the whole order, skip reasons named, preview rounded to lot step), "Shared sandbox" tooltip · tests `fixes.test.ts` (18) · stubbed: menu module · needs: none · ready to merge yes.
-- Sat 14 Nov · menu increment 1: `src/lib/server/menu/` memory MenuStore (dense immutable revisions, chef-only `review()` bound to `proposalDigest`, retried put is a no-op) and the brief (words → one question at a time by id `brief.<field>`, typed requirements never dropped, `toEventBrief` validates against the contract). /request asks the questions as chips (`BriefAsk.svelte`) and ends at "Brief complete. Menu proposal: next." · tests `menu/store.test.ts`, `menu/brief.test.ts`, 3 in `fixes.test.ts` · stubbed: proposal, review UI, plan_event · needs: migration + Ports.menus (above) · ready to merge yes.
-- Known: /request ranking ignores the kitchen's `weights` (hand-set scores in `lookup.ts`); ruling 1's `find_substitutes` route replaces them with the menu work. Open from F17: one date for many items. `src/lib/ui/request/types.ts` changed (`RequestAnswer.item` is now a string id; `EventView`, `unplaced`): request-lane types only.
-
-## Handoff (Sat 14 Nov)
-
-**Owned paths and branch.** As above. Last code commit 6ba72e5; review 8c4cf37; main 5615a58 merged in.
-
-**State.**
-- *Works deployed:* Valio's example in EN and FI → 1,000 ST of 464201 → sign-off (line + order cap + new_sku) → approve as head chef → commit as chef → retry gives the same receipt.
-- *Questions answered inline:* case questions (cards) and "how much?" (an amount box).
-- *Size check:* runs before placing; the hard limit gives an unorderable line and no approval.
-- *Workspaces:* ws-judges on prod and ws-demo in presenter mode, with a sandbox reset and a 429 cooldown.
-- *Tests:* 36 lane tests in `request.test.ts`, `answers.test.ts`, `cases.test.ts`, plus `live.test.ts` (opt-in).
-
-**How it is built (non-obvious).**
-- *Two parsers, one shape* (`parse.ts`).
-  - `parseRules` is deterministic, EN + FI. `parseRequest` uses the Llm port with JSON output when `LLM_PROVIDER` is gemini or featherless.
-  - Dates are always resolved by the rules against the sim clock (`dates.ts`). The model only fills a missing date.
-  - Every disagreement between the model and the rules becomes an item ambiguity. Bad model JSON falls back to the rules with `parser.fallback` set.
-- *Lexicon* (`lexicon.ts`).
-  - 16 products. An English word maps to a Finnish catalogue word, because the catalogue is Finnish.
-  - `categories` are hard filters; only 5 products have them. `prefer` is a visible default ("semi-skimmed, the usual kitchen default"), not a constraint.
-  - A word not in the lexicon is "searched as typed" and flagged.
-- *Ranking* (`lookup.ts`).
-  - Hand-set scores: +3 preferred variant, +2 convertible, +1 exact, +0.5 for content ≥ 1 per unit, + reliability × 0.5. The kitchen's `weights` are **not** used.
-  - The shortlist is 5. One `quote` call covers every shortlist plus Valio's rule targets.
-  - The pick is the first candidate that is priced, deliverable and convertible.
-- *Conversion* (`convert.ts`).
-  - Content comes from the name ("1 l", "0,5 l", "4x5 kg", "20 x … 500 g") × the pack hierarchy, cross-checked against Valio's net weight within 10 %. Net weight is the last resort.
-  - "NxM" where N equals the KI pack's count is the case: one base unit holds M. Valio's net weight on such products is often the whole case (464076).
-  - A disagreement refuses the conversion and asks (464205: name gives 20 kg, net weight says 80).
-  - Milk's net weight is in kg (1.031), so litres always come from the name.
-- *Case cards* (`run.ts` askCase, `convert.ts` caseBreakdown).
-  - "N cases" never auto-picks. Up to 4 deliverable candidates become cards.
-  - The headline (`caseHeadline`) and the conversion line come from one `caseBreakdown`, and `cases.test.ts` checks that they agree.
-- *Size check* (`sanity.ts`).
-  - Flags more than 10 kg/l per daily cover, where covers are the sum of the `*Covers` size keys (380 for k-hotel). The 10 is a team estimate.
-  - Also flags more than 2× the weekly cap, and anything over `hardLimitCents`.
-  - When flagged, nothing is placed until `confirmLarge`.
-- *Idempotency.* The place key is `rq-` + hash(kitchen, date, lines, page nonce): same words on the same page load replay the same plan. The commit key is `rq-commit-<planId>-v<version>`.
-- *Actors.* All are server-side contexts (`index.ts` `actors`). The browser never holds a key.
-  - The kitchen agent places, `approver:head-chef` approves, the chef commits.
-  - `/api/request` instead runs as the bearer key's actor.
-
-**Open threads (from SYNTHESIS, owner req).**
-1. **F3 (P0).** On the model path, constraints come only from model output, and `sameItem` (parse.ts ~360) doesn't compare them. Fix: union the rules' constraints into the model item, and flag any constraint the model dropped.
-2. **F7 guard.** Classify event or menu requests ("dinner for 50", "courses", "menu") before item parsing, and answer "this is an event: plan it?" instead of searching the catalogue.
-3. **F17, top 3 bugs.**
-   - "salmon fillets" → cheese tart: add categories to every lexicon entry, and let leftover words narrow the search.
-   - "2 x 10 kg": add multipack parsing in `parseItem`.
-   - "for 300 breakfasts": recognise covers phrases.
-   - Then: the specific skip reason in run.ts:216, "20 December" dates, and rejecting impossible ISO dates.
-4. **F16.** Review state lives only in component state. Add URL recovery (`?plan=`) with ops/kit.
-5. **F32.** Hard-limit copy should offer "split the order or raise the mandate".
-6. **Track B, menu module (ruling 1).** `src/lib/server/menu/**` sits behind `plan_event{brief,dishes}`. /request becomes classify → `AnswerSpec` question chips → menu → plan. Rank ingredients through `find_substitutes`, so the kitchen's weights apply.
-
-**Traps.**
-- Inline answers are keyed by **item index**. If the model parser splits items differently between runs, an answer lands on the wrong item. Key them by item text before the menu work.
-- `search_products` is capped at 50 per query and ordered differently on pg (productId) than in the fixture (file order), so local and prod shortlists can differ.
-- The sim clock is Mon 7 Dec in all modes now, so Valio's "by Monday" means 14 Dec (flagged: "today is Monday").
-- Cached `closingTime`s are November dates. The page hides any earlier than the sim clock (`cutoffText` in +page.svelte); remove that once offers are re-dated.
-- The ws-judges tooltip says "Your own sandbox". That is false until the per-visitor workspace (F1, track G) lands.
-- Edits with sed or Python in Git Bash mangled ` ` and backslashes in regexes; JS `\s` already covers nbsp. Use node scripts or the Edit tool.
-
-**How to resume.**
+## Run
 ```bash
-cd ../junc26-lanes/request && git merge main && pnpm i
-DATABASE_URL= LLM_PROVIDER=fixture pnpm dev --port 5185 --strictPort   # PGlite, ws-demo (dev = presenter)
-DATABASE_URL= pnpm vitest run --project server src/lib/server/request
-node scratch/request-e2e.mjs http://localhost:5185            # milk: approve, commit, retry
-node scratch/request-answers.mjs http://localhost:5185 dev    # case cards and inline amount
-# prod-mode check (ws-judges): pnpm build; PORT=5187 HOST=127.0.0.1 node build; scripts against http://127.0.0.1:5187
-DECIDE_LIVE=1 node --env-file=.env node_modules/vitest/vitest.mjs run --project server src/lib/server/request/live.test.ts   # one Gemini call
+cd ../junc26-lanes/request && git rebase main && pnpm i
+DATABASE_URL= LLM_PROVIDER=fixture pnpm dev --port 5173 --strictPort   # open http://[::1]:5173 (another process may hold 0.0.0.0:5173)
+DATABASE_URL= pnpm vitest run --project server src/lib/server/request src/lib/server/menu
+node scratch/request-e2e.mjs http://[::1]:5173      # milk: approve, commit, retry
+node scratch/request-brief.mjs http://[::1]:5173    # event brief questions
+node scripts/merge-gate.mjs                          # before handing a SHA
 ```
-`localhost:5186` resolves to IPv6 and the web lane's vite, so use 127.0.0.1 for prod builds. Never read `.env` values.
 
-**Only this lane knows.**
-- The judge probe results (review §1): salmon, multipack, covers, chicken.
-- 464076's case reading is backed by price: €37.33 per ST is plausible for 5 kg of butter, not for 20 kg.
-- The 402 "prepayment credits depleted" from Gemini in round 3 was a billing failure, not a code failure.
+## Traps
+- `search_products` is capped at 50 per query and is ordered differently on pg (productId) and in the fixture (file order), so shortlists can differ.
+- Shell edits (sed, heredocs) mangle `\s`, `\p{L}` and `\b` in regexes; use the Edit tool or a node script written with the Write tool.
+- Milk's net weight is in kg (1.031), so litres always come from the name.

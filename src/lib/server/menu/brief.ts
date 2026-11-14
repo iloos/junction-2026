@@ -14,13 +14,8 @@ import type {
 } from '$lib/ui/request/types';
 import { addDays, findDate, realDate, weekdayOf } from '../request/dates';
 import { CONSTRAINTS } from '../request/lexicon';
+import { coursesIn, guestsIn } from '../request/classify';
 import { constraintsIn } from '../request/parse';
-
-const GUESTS = [
-	/(?<![\p{L}\d-])for\s+(\d{1,5})(?:\s+(?:people|guests|persons|pax|covers|diners))?(?![\p{L}\d-])/iu,
-	/(?<![\p{L}\d-])(\d{1,5})\s+(?:people|guests|persons|pax|diners|covers|hengelle|henkeä|hengen|vierasta|vieraalle)(?![\p{L}])/iu
-];
-const COURSES = /(\d{1,2})[\s-]*(?:course|courses|ruokalajia|ruokalajin)(?![\p{L}])/iu;
 
 const STYLES: { style: ServiceStyleWord; re: RegExp }[] = [
 	{ style: 'buffet', re: /(?<![\p{L}])(buffet|noutopöytä\p{L}*|seisova pöytä)(?![\p{L}])/iu },
@@ -83,8 +78,7 @@ export function dietaryIn(text: string): string[] {
 export function draftBrief(text: string, today: string): BriefDraft {
 	const from: BriefDraft['from'] = {};
 	const notes: string[] = [];
-	const g = GUESTS.map((re) => text.match(re)).find(Boolean);
-	const guests = g ? Number(g[1]) : null;
+	const guests = guestsIn(text);
 	if (guests !== null) from.guests = 'words';
 
 	const d = findDate(text, today);
@@ -96,8 +90,7 @@ export function draftBrief(text: string, today: string): BriefDraft {
 		from.date = 'words';
 	}
 
-	const c = text.match(COURSES);
-	const courses = c ? Number(c[1]) : null;
+	const courses = coursesIn(text);
 	if (courses !== null) from.courses = 'words';
 	const serviceStyle = STYLES.find((s) => s.re.test(text))?.style ?? null;
 	if (serviceStyle) from.serviceStyle = 'words';

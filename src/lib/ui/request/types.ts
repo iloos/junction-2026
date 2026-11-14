@@ -154,7 +154,6 @@ export interface CommitView {
 	attempt: number;
 }
 
-export type StepKey = 'request' | 'lookup' | 'order' | 'approval';
 export type StepStatus = 'done' | 'warn' | 'blocked' | 'error';
 
 export type RequestEvent =

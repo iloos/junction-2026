@@ -19,6 +19,7 @@ import {
 } from '$lib/core/contracts';
 import { canonicalJson, sha256Hex } from '$lib/core/hash';
 import type { Catalog, Llm, MenuStore } from '$lib/core/ports';
+import { slug } from '../request/parse';
 import { dietBase, reviewProposal, type Issue } from './rubric';
 
 /** Brief requirements the catalogue resolver can enforce, as its product flags. */
@@ -252,19 +253,11 @@ export function fixtureMenu(brief: EventBrief): LlmMenu {
 
 /* ── Proposal ─────────────────────────────────────────────────────────────── */
 
-const slug = (s: string) =>
-	s
-		.toLowerCase()
-		.normalize('NFKD')
-		.replace(/[^\p{L}\d]+/gu, '-')
-		.replace(/^-+|-+$/g, '')
-		.slice(0, 40) || 'x';
-
-/** Stable ids from names, numbered when repeated. */
+/** Stable ids from names, numbered when repeated; short enough that dish + ingredient fit a 64-character id. */
 function idsFor(names: string[], prefix: string): string[] {
 	const seen = new Map<string, number>();
 	return names.map((n) => {
-		const b = `${prefix}${slug(n)}`;
+		const b = `${prefix}${slug(n, 24)}`;
 		const k = (seen.get(b) ?? 0) + 1;
 		seen.set(b, k);
 		return k === 1 ? b : `${b}-${k}`;
