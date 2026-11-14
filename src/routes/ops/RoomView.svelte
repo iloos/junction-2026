@@ -1,8 +1,11 @@
 <script lang="ts">
 	import { encode } from 'uqr';
+	import { onMount } from 'svelte';
 	import { flip } from 'svelte/animate';
-	import { fly } from 'svelte/transition';
+	import { fade, fly } from 'svelte/transition';
 	import {
+		firstOrders,
+		isVisitorStore,
 		kindWords,
 		OUTCOME_WORDS,
 		roomOrder,
@@ -54,6 +57,41 @@
 	/** The store whose order landed last, lit for a moment. */
 	const lit = $derived(feed[0]?.kitchenId ?? null);
 
+	/**
+	 * Stores whose first order just landed: lit with "First order" for a few seconds, and named in one line over the
+	 * room. Orders already there when the page opened (the catch-up) don't count.
+	 */
+	const FIRST_MS = 8000;
+	let firsts = $state.raw<Record<string, number>>({});
+	let lastFirst = $state<{ name: string; cents: number } | null>(null);
+	let seen: Record<string, { n: number }> = {};
+	let ready = false;
+	onMount(() => {
+		const t = setTimeout(() => (ready = true), 3000);
+		return () => clearTimeout(t);
+	});
+	$effect(() => {
+		const now = totals;
+		const fresh = firstOrders(seen, now);
+		seen = now;
+		if (!ready || !fresh.length) return;
+		const until = Date.now() + FIRST_MS;
+		firsts = { ...firsts, ...Object.fromEntries(fresh.map((id) => [id, until])) };
+		const k = kitchens.find((x) => x.id === fresh[0]);
+		lastFirst = k ? { name: k.name, cents: now[fresh[0]].cents } : null;
+		setTimeout(() => {
+			const t = Date.now();
+			firsts = Object.fromEntries(Object.entries(firsts).filter(([, u]) => u > t));
+			if (!Object.keys(firsts).length) lastFirst = null;
+		}, FIRST_MS + 50);
+	});
+
+	/** The join code full screen, for the projector: Escape or a click closes it. */
+	let big = $state(false);
+	function onKey(e: KeyboardEvent) {
+		if (e.key === 'Escape') big = false;
+	}
+
 	let running = $state(false);
 	let failed = $state<string | null>(null);
 	async function runShortage() {
@@ -77,7 +115,58 @@
 	}
 </script>
 
+<svelte:window onkeydown={onKey} />
+
+{#snippet code()}
+	{#if qr}
+		<svg
+			viewBox="0 0 {qr.size} {qr.size}"
+			shape-rendering="crispEdges"
+			role="img"
+			aria-label="QR code to join this room"
+		>
+			{#each qr.data as row, y (y)}
+				{#each row as on, x (x)}
+					{#if on}<rect {x} {y} width="1" height="1" fill="#000" />{/if}
+				{/each}
+			{/each}
+		</svg>
+	{/if}
+{/snippet}
+
+{#if big && joinUrl}
+	<div
+		class="bigscreen"
+		role="dialog"
+		aria-modal="true"
+		aria-label="Join code"
+		transition:fade={{ duration: 150 }}
+	>
+		<button class="close" onclick={() => (big = false)}>Close</button>
+		<div class="bigcode">{@render code()}</div>
+		<p class="big-h">Join as your own store</p>
+		<p class="big-url">{joinUrl.replace(/^https?:\/\//, '')}</p>
+		<p class="big-sum">
+			{kitchens.length} store{kitchens.length === 1 ? '' : 's'} in the room · {orderCount} order{orderCount ===
+			1
+				? ''
+				: 's'} placed
+		</p>
+		{#if lastFirst}
+			<p class="big-first" in:fly={{ y: 12 }}>
+				{lastFirst.name} placed its first order: {euro(lastFirst.cents)}
+			</p>
+		{/if}
+	</div>
+{/if}
+
 <section class="room" aria-label="The room">
+	{#if lastFirst}
+		<p class="first-line" role="status" in:fly={{ y: -8 }} out:fade>
+			<b>{lastFirst.name}</b> placed its first order:
+			<span class="num">{euro(lastFirst.cents)}</span>
+		</p>
+	{/if}
 	<header class="head">
 		<div class="sum">
 			<h2>
@@ -90,21 +179,11 @@
 		</div>
 		{#if joinUrl && qr}
 			<div class="join">
-				<svg
-					viewBox="0 0 {qr.size} {qr.size}"
-					shape-rendering="crispEdges"
-					role="img"
-					aria-label="QR code to join this room"
-				>
-					{#each qr.data as row, y (y)}
-						{#each row as on, x (x)}
-							{#if on}<rect {x} {y} width="1" height="1" fill="#000" />{/if}
-						{/each}
-					{/each}
-				</svg>
+				{@render code()}
 				<div>
 					<p class="join-h">Join as your own store</p>
 					<p class="join-t">Scan, name your store, pick its type. Others in the room see it.</p>
+					<button class="bigbtn" onclick={() => (big = true)}>Show the code full screen</button>
 					<!-- An absolute link for another device (the QR's target), built from resolve('/') by the page. -->
 					<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
 					<a href={joinUrl} class="join-link">{joinUrl.replace(/^https?:\/\//, '')}</a>
@@ -156,13 +235,20 @@
 			<ul>
 				{#each shown as k (k.id)}
 					{@const t = totals[k.id]}
-					<li class:lit={lit === k.id} animate:flip={{ duration: 300 }} in:fly={{ y: 12 }}>
-						<span class="name">{k.name}</span>
+					<li
+						class:lit={lit === k.id}
+						class:first={!!firsts[k.id]}
+						animate:flip={{ duration: 300 }}
+						in:fly={{ y: 12 }}
+					>
+						<span class="name"
+							>{k.name}{#if firsts[k.id]}<span class="firstbadge">First order</span>{/if}</span
+						>
 						<span class="value num">{t ? euro(t.cents) : ''}</span>
 						<span class="meta">
 							{kindWords(k.kind)}{k.city ? `, ${k.city}` : ''}
 							{#if k.copiedFrom}<span class="new">new, rules from {seedName(k.copiedFrom)}</span
-								>{/if}
+								>{:else if isVisitorStore(k)}<span class="new">new store</span>{/if}
 						</span>
 						<span class="count num"
 							>{t ? `${t.n} order${t.n === 1 ? '' : 's'}` : 'Nothing ordered yet'}</span
@@ -388,6 +474,98 @@
 	.note {
 		color: var(--muted);
 		margin: 0;
+	}
+	.bigbtn {
+		margin-top: 6px;
+		background: none;
+		border: 0;
+		padding: 0;
+		color: var(--muted);
+		text-decoration: underline;
+		cursor: pointer;
+		font-size: 0.875rem;
+	}
+	.first-line {
+		margin: 0;
+		padding: 10px 14px;
+		border-radius: 8px;
+		background: color-mix(in srgb, var(--done) 20%, transparent);
+		font-size: 1.125rem;
+	}
+	.stores li.first {
+		background: color-mix(in srgb, var(--done) 28%, transparent);
+		animation: pulse 1.2s ease-in-out 3;
+	}
+	.firstbadge {
+		margin-left: 8px;
+		padding: 1px 8px;
+		border-radius: 999px;
+		font-size: 0.75rem;
+		font-weight: 600;
+		background: var(--done);
+		color: var(--bg, #000);
+		vertical-align: middle;
+	}
+	@keyframes pulse {
+		50% {
+			background: color-mix(in srgb, var(--done) 45%, transparent);
+		}
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.stores li.first {
+			animation: none;
+		}
+	}
+	.bigscreen {
+		position: fixed;
+		inset: 0;
+		z-index: 100;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		gap: 12px;
+		padding: 24px;
+		background: var(--bg, #0b1724);
+		text-align: center;
+	}
+	.bigcode svg {
+		width: min(62vh, 80vw);
+		height: min(62vh, 80vw);
+		background: #fff;
+		border-radius: 12px;
+	}
+	.big-h {
+		margin: 8px 0 0;
+		font-size: clamp(1.5rem, 4vw, 3rem);
+		font-weight: 700;
+	}
+	.big-url {
+		margin: 0;
+		font-size: clamp(1rem, 2.4vw, 1.75rem);
+		color: var(--muted);
+		word-break: break-all;
+	}
+	.big-sum {
+		margin: 0;
+		font-size: clamp(1rem, 2vw, 1.5rem);
+	}
+	.big-first {
+		margin: 0;
+		font-size: clamp(1rem, 2vw, 1.5rem);
+		color: var(--done);
+		font-weight: 600;
+	}
+	.close {
+		position: absolute;
+		top: 16px;
+		right: 16px;
+		padding: 8px 14px;
+		border-radius: 6px;
+		border: 1px solid var(--line);
+		background: none;
+		color: var(--text);
+		cursor: pointer;
 	}
 	.note.bad {
 		color: var(--blocked);

@@ -15,18 +15,19 @@ The only plan. Markers: `[x]` done · `[~]` in progress · `[ ]` todo · `[!]` b
 - [ ] Next scope: **UI/UX pass** over Kitchen, Request, Ops and `/agents`, one vocabulary ([concept/VOCABULARY.md](concept/VOCABULARY.md))
 - [ ] Later: extension scopes from [concept/GROWTH.md](concept/GROWTH.md), only once the freeze plan is safe
 
-## Land (Sunday)
-- [ ] **Feature freeze Sun 06:00**; tag `demo-good`; deploy the tag untouched (experiments on branches only)
-- [ ] Polish pass: seeded demo state, no empty states, labels (real / cached / simulated) visible
-- [ ] Final video ≤ 2:00 (1080p, voice-over, burned-in captions; unlisted YouTube, public at submission) · deck PDF (6 slides) · README
-- [ ] Platform: set the real drafts (Valio Aimo, Context.dev, Exa, AfterQuery, S-Pankki as decided) to **Final** by 09:30; leave placeholders as drafts; hard deadline Sun 10:00
-- [ ] Platform descriptions: drop "data stays in Finland"; claim only what [PITCH.md](PITCH.md) lists as provable
-- [ ] **Public repo scrub** before flipping to public:
-  - [ ] Valio API key and redeem codes out of `docs/event/challenges/` (and anywhere else: `git grep` for the key and codes)
-  - [ ] Squash history so removed secrets are not in any commit
-  - [ ] Trim hallway quotes in `docs/research/mcpcon.md`
-  - [ ] No Valio dataset files committed (only `fixtures/seeds/` samples); confirm redistribution of the samples
-  - [ ] `.env.example` names only; no keys in docs, fixtures or tests
-  - [ ] A clean public clone runs the fixture path (independent review F11): a small licensed or synthetic public catalogue (offers, allergens, units, an outage, recipes) that `store/fixture-ports.ts` falls back to when `data/valio/` is absent, plus one clean-clone smoke (`pnpm build && node build` with `LLM_PROVIDER=fixture`, one journey); private-catalogue retrieval evals stay opt-in (S5 with S1)
+## Land (Sunday) — ring 6 timetable
+- [~] Waves every ~1.5 h until 05:00 (gate → push → S4 deploys → lead smokes → S5 playtests); 05:00–06:00 fixes only
+- [ ] **Feature freeze Sun 06:00**: tag `demo-good` on the last green, smoked deploy; no redeploy after 09:30
+- [ ] **Demo state before judges:** presenter resets the shared room `ws-judges` (smokes and playtests leave "Playtest Room …" stores there); check the room's QR shows app.mandate.kitchen; seed nothing else
+- [ ] **06:00–09:00 (no features):** public-clone fixture + clean-clone smoke (F11, S5+S1) · CLAIMS → SUBMISSION → PITCH truth pass on the tagged SHA (S5) · README tour · comment sweep
+- [ ] Final video ≤ 2:00 (1080p, voice-over, burned-in captions; unlisted YouTube, public at submission), shot list from S5: hero journey first, then the room + shortage, then an outside agent stopped · deck PDF (6 slides) · README
+- [ ] Platform: real drafts to **Final** by 09:30 (Valio Aimo, Gemini, Aiven, Context.dev, Exa as decided); hard deadline Sun 10:00
+- [ ] Claims: never "live warehouse stock" (Valio's API is a static snapshot; movement is simulated and labelled); never "data stays in Finland"
+- [ ] **Public repo scrub** before flipping to public (user):
+  - [ ] rotate the judge keys and SMOKE_KEY (pasted in lane chats)
+  - [ ] Valio API key and redeem codes out of `docs/event/challenges/`; `git grep` for keys and codes
+  - [ ] squash history so removed secrets are in no commit; placeholder Valio prices
+  - [ ] trim hallway quotes in `docs/research/mcpcon.md`; no Valio dataset files beyond `fixtures/seeds/`
+  - [ ] `.env.example` names only
 - [ ] Rehearse the 3:00 pitch ×5; QR card for the peer-review table (Sun 10:30)
 - [ ] Demo safety: phone hotspot; `pnpm build && node build` with `LLM_PROVIDER=fixture`; a recorded demo video on the laptop

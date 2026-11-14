@@ -60,6 +60,21 @@ export function overshoot(
 const fitRank = (o: number | null | undefined) =>
 	o === null || o === undefined ? 0.5 : o <= 1.25 ? 0 : Math.log2(o);
 
+/**
+ * The one candidate order of every door (/request, the chat's routine run): best fit of the smallest order to the ask
+ * first, then the hand-set score, then the id. Candidates merged from several searches are sorted with it again.
+ */
+export function rankOrder(
+	a: { overshoot?: number | null; score?: number; productId: string },
+	b: { overshoot?: number | null; score?: number; productId: string }
+): number {
+	return (
+		fitRank(a.overshoot) - fitRank(b.overshoot) ||
+		(b.score ?? 0) - (a.score ?? 0) ||
+		(a.productId < b.productId ? -1 : 1)
+	);
+}
+
 export interface Rejected {
 	productId: string;
 	name: string;
@@ -205,11 +220,11 @@ export function filterHits(
 	}
 	// The candidate whose smallest order best fits the ask comes first; the scores (and the kitchen's weights) order
 	// the rest.
-	ranked.sort(
-		(a, b) =>
-			fitRank(a.overshoot) - fitRank(b.overshoot) ||
-			b.score - a.score ||
-			(a.product.productId < b.product.productId ? -1 : 1)
+	ranked.sort((a, b) =>
+		rankOrder(
+			{ overshoot: a.overshoot, score: a.score, productId: a.product.productId },
+			{ overshoot: b.overshoot, score: b.score, productId: b.product.productId }
+		)
 	);
 	return { ranked, rejected };
 }

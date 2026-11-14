@@ -75,6 +75,52 @@ describe('applyOps', () => {
 		if (r.ok) expect(r.value.approvals.a1.state).toBe('invalidated');
 	});
 
+	it('a same-terms re-quote supersedes the older pending approval and keeps a grant (OM-6)', async () => {
+		seq = 0;
+		const plan = await quotedPlan(2920);
+		const base: Approval = {
+			...scope,
+			id: 'a-pending',
+			planId: 'p1',
+			planVersion: 0,
+			termsHash: plan.termsHash!,
+			mandateVersion: 1,
+			lineIds: [],
+			tier: 'propose',
+			state: 'pending',
+			requestedBy: { kind: 'kitchen_agent', id: 'agent' },
+			expiresAt: '2026-12-18T10:00:00+02:00'
+		};
+		const granted: Approval = {
+			...base,
+			id: 'a-granted',
+			state: 'granted',
+			decidedBy: { kind: 'approver', id: 'chef-phone' }
+		};
+		const r = applyOps(emptyState('ws', 'run'), [
+			env({ type: 'CreatePlan', plan }),
+			env({ type: 'RecordApproval', approval: base }),
+			env({ type: 'RecordApproval', approval: granted }),
+			env({
+				type: 'RecordOffer',
+				planId: 'p1',
+				baseVersion: 0,
+				offers: [],
+				lines: [],
+				planState: 'held',
+				totalCents: 23360,
+				termsHash: plan.termsHash!
+			})
+		]);
+		expect(r.ok).toBe(true);
+		if (!r.ok) return;
+		expect(r.value.approvals['a-pending']).toMatchObject({
+			state: 'invalidated',
+			reason: 'superseded by a re-quote'
+		});
+		expect(r.value.approvals['a-granted'].state).toBe('granted');
+	});
+
 	it('refuses an approval granted by an external agent (eval s5)', async () => {
 		seq = 0;
 		const plan = await quotedPlan(2920);

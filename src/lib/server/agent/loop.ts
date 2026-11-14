@@ -27,7 +27,7 @@ import {
 	type RoutineCandidate,
 	type RoutineFacts
 } from './routine';
-import { SHORTLIST } from '$lib/server/request/lookup';
+import { rankOrder, SHORTLIST } from '$lib/server/request/lookup';
 import { orderLineFor } from '$lib/server/request/order-line';
 import type { AgentContext, GoalOutcome, Intent, RoutineLine } from './types';
 
@@ -723,25 +723,31 @@ export function scriptedPlanner(): Planner {
 							routineQueries(l).includes(String((h.input as { query?: unknown }).query))
 					);
 				// /request's own choice, so the same words give the same basket on every door: every search word of a
-				// product searched, the hits ranked together (filterHits' score, then id), the top SHORTLIST quoted, and
+				// product searched, the hits ranked together (rankOrder: fit to the ask, score, id), the top SHORTLIST quoted, and
 				// the first that can be bought (priced, deliverable, enough stock, cut-off ahead) picked in rank order.
 				const candidatesFor = (l: RoutineLine) => {
 					const seen = new Set<string>();
 					return searchesFor(l)
 						.flatMap((h) => (h.ok ? ((h.facts as RoutineFacts | undefined)?.products ?? []) : []))
 						.filter((c) => !seen.has(c.productId) && seen.add(c.productId))
-						.sort((x, y) => (y.score ?? 0) - (x.score ?? 0) || (x.productId < y.productId ? -1 : 1))
+						.sort(rankOrder)
 						.slice(0, SHORTLIST);
 				};
-				for (const l of lines) {
-					const done = searchesFor(l).length;
-					if (done < Math.min(routineQueries(l).length, 2))
-						return {
-							tool: 'search_products',
-							input: { query: routineQueries(l)[done], limit: 50 },
-							why: `find "${l.query}" in the catalogue`
-						};
-				}
+				// Searches are budgeted so the order always fits the step cap: every product gets its first search,
+				// then second search words only while room is left for the quote, the order and one spare step.
+				const searched = lines.reduce((n, l) => n + searchesFor(l).length, 0);
+				const searchBudget = MAX_STEPS - 3;
+				const next =
+					lines.find((l) => searchesFor(l).length === 0) ??
+					(searched < searchBudget
+						? lines.find((l) => searchesFor(l).length < Math.min(routineQueries(l).length, 2))
+						: undefined);
+				if (next)
+					return {
+						tool: 'search_products',
+						input: { query: routineQueries(next)[searchesFor(next).length], limit: 50 },
+						why: `find "${next.query}" in the catalogue`
+					};
 				const found: (RoutineCandidate | null)[] = lines.map(
 					(l) => candidatesFor(l).find((c) => c.salesQty !== null) ?? null
 				);

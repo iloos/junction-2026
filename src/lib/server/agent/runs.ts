@@ -22,7 +22,10 @@ interface Running {
 	cancelledBy?: Actor;
 }
 
-/** Runs in progress, one per workspace: a visitor's run never blocks another visitor's. */
+/**
+ * Runs in progress, one per visitor in a workspace (`workspace|visitor`): in a shared room one visitor's run never
+ * blocks another's. A run without a visitor (a key, the presenter) is one per workspace.
+ */
 const g = globalThis as typeof globalThis & { __mandateAgentRuns?: Map<string, Running> };
 const runs = (g.__mandateAgentRuns ??= new Map<string, Running>());
 
@@ -56,7 +59,8 @@ export function startAgentRun(o: {
 			presenter: true
 		})!;
 	const workspaceId = principal.workspaceId;
-	const busy = runs.get(workspaceId);
+	const slot = runSlot(workspaceId, principal.visitor);
+	const busy = runs.get(slot);
 	if (busy) return { ok: false, busyWith: busy.id };
 	if (runs.size >= MAX_CONCURRENT_RUNS) return { ok: false, busyWith: 'capacity' };
 	const id = principal.agentRunId;
@@ -75,9 +79,9 @@ export function startAgentRun(o: {
 			? o.run({ signal: controller.signal, onEvent })
 			: runRoutineAgent({ goal, env: o.env, principal, signal: controller.signal, onEvent })
 	).finally(() => {
-		if (runs.get(workspaceId)?.id === id) runs.delete(workspaceId);
+		if (runs.get(slot)?.id === id) runs.delete(slot);
 	});
-	runs.set(workspaceId, { id, workspaceId, done, controller, principal });
+	runs.set(slot, { id, workspaceId, done, controller, principal });
 	return { ok: true, id, done };
 }
 
@@ -100,8 +104,11 @@ export function cancelAgentRun(
 	return { ok: true, done: r.done };
 }
 
-/** The run in progress in a workspace, or (no workspace) any run in this process. */
-export function agentRunning(workspaceId?: string): string | null {
-	if (workspaceId) return runs.get(workspaceId)?.id ?? null;
+const runSlot = (workspaceId: string, visitor?: string) =>
+	visitor ? `${workspaceId}|${visitor}` : workspaceId;
+
+/** The run in progress for a workspace (and visitor), or (no workspace) any run in this process. */
+export function agentRunning(workspaceId?: string, visitor?: string): string | null {
+	if (workspaceId) return runs.get(runSlot(workspaceId, visitor))?.id ?? null;
 	return runs.values().next().value?.id ?? null;
 }

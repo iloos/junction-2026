@@ -14,14 +14,24 @@ export const POST: RequestHandler = async (event) => {
 		action?: string;
 		value?: unknown;
 		plan?: string;
+		/** The kitchen and preset this tab shows (OM-3/OM-4). */
+		kitchenId?: unknown;
+		preset?: unknown;
 	};
 	try {
 		return json(
-			await scenario(sid(cookies), workspaceId, body.action ?? '', body.value, body.plan, {
-				own,
-				kind,
-				presenter
-			})
+			await scenario(
+				sid(cookies),
+				workspaceId,
+				body.action ?? '',
+				body.value,
+				body.plan,
+				{ own, kind, presenter },
+				{
+					...(typeof body.kitchenId === 'string' ? { kitchenId: body.kitchenId } : {}),
+					...(typeof body.preset === 'string' ? { preset: body.preset } : {})
+				}
+			)
 		);
 	} catch (e) {
 		if (e instanceof Cooldown)

@@ -6,13 +6,17 @@
 import type { Line, Plan } from '$lib/core/contracts';
 import { SCENARIO } from '$lib/core/scenario';
 import type { WorkspaceState } from '$lib/core/state';
+import { liveApprovals } from '$lib/core/services/orders';
 import { decisionsOf, type Decision } from '$lib/ui/decisions';
 import { dueOf } from '$lib/core/mandate/due';
 import { productName, reasonText, type Names } from './labels';
 
-/** The plan's pending approval, if any (the one decisions are counted from). */
+/**
+ * The plan's pending approval for its current version, if any (the one decisions are counted from). An older version's
+ * approval left pending by a same-terms re-quote is stale: its id, due date and lines no longer apply.
+ */
 export function pendingApprovalOf(s: WorkspaceState, planId: string) {
-	return Object.values(s.approvals).find((a) => a.planId === planId && a.state === 'pending');
+	return liveApprovals(s, planId).find((a) => a.state === 'pending');
 }
 
 /**
@@ -139,8 +143,10 @@ export function buildCases(
 	heldSince: Record<string, string>
 ): Case[] {
 	const pendingLines = new Set<string>();
-	for (const a of Object.values(s.approvals))
-		if (a.state === 'pending') for (const id of a.lineIds) pendingLines.add(lineKey(a.planId, id));
+	for (const planId of Object.keys(s.plans)) {
+		const a = pendingApprovalOf(s, planId);
+		if (a) for (const id of a.lineIds) pendingLines.add(lineKey(planId, id));
+	}
 
 	// Lines in a pending approval are cases per decision, exactly as the kitchen counts them (decisionsOf):
 	// one reason group of the approval, in the same words. Other open lines group by state and reasons.

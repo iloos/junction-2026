@@ -1,5 +1,6 @@
 import { expect, type Page } from '@playwright/test';
 import { BASE, journey, isMobile, type Recorder } from './harness';
+import { approveAll as approveAllShared, orderNow } from '../ui/flow';
 
 /**
  * The four north-star moments (docs/handoff/ring6/RESTART.md) and the nine Round 12 journeys
@@ -59,7 +60,7 @@ async function say(r: Recorder, page: Page, text: string) {
 	await dock.getByRole('button', { name: 'Send' }).click();
 	await page.waitForTimeout(1500);
 	await page
-		.getByText(/^Working( · step \d+)?…/)
+		.getByText(/^Working\b.*…$/)
 		.first()
 		.waitFor({ state: 'detached', timeout: 180_000 })
 		.catch(() => undefined);
@@ -72,7 +73,33 @@ async function say(r: Recorder, page: Page, text: string) {
 
 async function requestPage(page: Page, text: string) {
 	await page.goto(`${BASE}/request`);
-	await page.locator('#req').fill(text);
+	const form = page.locator('#req');
+	const composer = page.locator('#chat-text');
+	await form.or(composer).first().waitFor({ timeout: 30_000 });
+	if (!(await form.isVisible().catch(() => false))) {
+		// From wave K (D23 UI) /request is the conversation, full width: the same composer as the dock.
+		const before = await page
+			.locator('main')
+			.innerText()
+			.catch(() => '');
+		await composer.fill(text);
+		await page.getByRole('button', { name: 'Send' }).first().click();
+		await page.waitForTimeout(1500);
+		await page
+			.getByText(/^Working\b.*…$/)
+			.first()
+			.waitFor({ state: 'detached', timeout: 180_000 })
+			.catch(() => undefined);
+		const after = await page
+			.locator('main')
+			.innerText()
+			.catch(() => '');
+		if (after.length <= before.length + text.length)
+			throw new Error('the conversation gave no answer');
+		await page.waitForTimeout(1500);
+		return;
+	}
+	await form.fill(text);
 	await page.getByRole('button', { name: /Find and price/ }).click();
 	await page
 		.getByText(
@@ -84,27 +111,9 @@ async function requestPage(page: Page, text: string) {
 }
 
 async function approveAll(page: Page) {
-	let lines = 0;
-	for (let round = 0; round < 6; round++) {
-		const review = page.getByRole('button', { name: /^Review \d+ lines?/ }).first();
-		const confirm = page.getByRole('button', { name: /Confirm exact terms/ }).first();
-		const hold = page.getByRole('button', { name: /Hold to sign off \d+ lines?/ }).first();
-		if (await review.isVisible().catch(() => false)) {
-			lines += Number(((await review.innerText()).match(/(\d+)/) ?? [])[1] ?? 0);
-			await review.click();
-			await confirm.click();
-		} else if (await hold.isVisible().catch(() => false)) {
-			lines += Number(((await hold.innerText()).match(/(\d+) lines?/) ?? [])[1] ?? 0);
-			const b = (await hold.boundingBox())!;
-			await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2);
-			await page.mouse.down();
-			await page.waitForTimeout(4000);
-			await page.mouse.up();
-		} else break;
-		await page.waitForLoadState('networkidle').catch(() => {});
-		await page.waitForTimeout(1000);
-	}
-	if (!lines) throw new Error('no Review / Hold to sign off control found');
+	const lines = await approveAllShared(page);
+	if (!lines)
+		throw new Error('no Accept all / Accept these / Review / Hold to sign off control found');
 	return lines;
 }
 
@@ -178,6 +187,14 @@ journey(
 	async (r, page) => {
 		let planId: string | null = null;
 		let lines: HeroLine[] = [];
+		// The dock names its plan in the chat events (a decision's planId), not always as a link: collect them.
+		const seen: string[] = [];
+		page.on('response', async (res) => {
+			if (!/\/api\/chat\//.test(res.url())) return;
+			const t = await res.text().catch(() => '');
+			for (const m of t.matchAll(/"planId":"(pl-[^"]+)"/g))
+				if (!seen.includes(m[1])) seen.push(m[1]);
+		});
 		await r.step('home', () => home(page));
 		await r.step('ask the agent for the dinner', () => say(r, page, HERO));
 		await r.step('answer what it asks, then "plan it"', async () => {
@@ -195,7 +212,7 @@ journey(
 				await chip.click({ timeout: 5_000 });
 				await page.waitForTimeout(1500);
 				await page
-					.getByText(/^Working( · step \d+)?…/)
+					.getByText(/^Working\b.*…$/)
 					.first()
 					.waitFor({ state: 'detached', timeout: 180_000 })
 					.catch(() => undefined);
@@ -216,14 +233,20 @@ journey(
 				await say(r, page, 'plan it');
 			}
 		});
-		await r.step('a plan exists (a plan link in the dock)', async () => {
+		await r.step('a plan exists (named by the dock)', async () => {
 			const dock = await openDock(page);
+			await dock
+				.getByText(/decisions? (for a chef|wait)|nothing ordered|Ordered/)
+				.first()
+				.waitFor({ timeout: 120_000 });
 			const href = await dock
 				.locator('a[href*="plan="]')
 				.last()
-				.getAttribute('href', { timeout: 120_000 });
-			planId = href ? new URL(href, BASE).searchParams.get('plan') : null;
-			if (!planId) throw new Error('no plan link after "plan it"');
+				.getAttribute('href', { timeout: 2_000 })
+				.catch(() => null);
+			planId = seen.at(-1) ?? (href ? new URL(href, BASE).searchParams.get('plan') : null);
+			r.note('planIdsSeen', seen);
+			if (!planId) throw new Error('no plan named after "plan it"');
 			const snap = (await (
 				await page.request.get(`${BASE}/kitchen-api/snapshot?plan=${planId}&peek=1`)
 			).json()) as { plan?: { lines?: HeroLine[]; totalCents?: number } };
@@ -271,35 +294,88 @@ journey(
 			if (held !== inDecisions)
 				throw new Error(`${held} held lines, ${inDecisions} lines across the decisions`);
 		});
-		await r.step('approve in the dock', async () => {
+		await r.step('approve (dock, or the page when the dock defers to it)', async () => {
 			const dock = await openDock(page);
-			const here = dock.getByLabel('Decide here');
-			await here.waitFor({ timeout: 60_000 });
+			// The dock's decisions sit under "Decide", one Review button each; on the plan's own Kitchen page the dock
+			// says "decisions wait above" and the page holds them. Either is the chef's act (D13); note which.
+			const inDock = dock.getByRole('button', { name: /^Review\b|Hold to sign off/ }).first();
+			await inDock.waitFor({ timeout: 10_000 }).catch(() => undefined);
+			if (!(await inDock.isVisible().catch(() => false))) {
+				// The dock's "Decide · N decisions before …" bar may be a collapsed toggle: open it as a visitor would.
+				const show = dock.getByRole('button', { name: /^Show\b/ }).first();
+				const bar = dock.getByText(/^Decide\b/).first();
+				const toggle = (await show.isVisible().catch(() => false)) ? show : bar;
+				if (await toggle.isVisible().catch(() => false)) {
+					await toggle.click({ timeout: 5_000 }).catch(() => undefined);
+					r.note('openedDecideBar', true);
+					await inDock.waitFor({ timeout: 5_000 }).catch(() => undefined);
+				}
+			}
+			const viaDock = await inDock.isVisible().catch(() => false);
+			// S2 508db7d: beside the open dock the page keeps "Accept all N · €X" for the plan's decisions.
+			const acceptAll = page.getByRole('button', { name: /^Accept all/ }).first();
+			if (!viaDock && (await acceptAll.isVisible().catch(() => false))) {
+				r.note('approvedOn', 'page: Accept all, dock open');
+				await acceptAll.click();
+				await page.waitForTimeout(2000);
+				r.note('approvedDecisions', 'all');
+				return;
+			}
+			if (!viaDock) {
+				// Hero finding when this fires: the dock is open on the plan, says the decisions "wait above", and neither
+				// the dock nor the page offers a Review. Close the dock (the page's Decide rail returns) to go on.
+				r.note('noApproveWithDockOpen', true);
+				await dock
+					.getByRole('button', { name: /Close chat|Minimi[sz]e|Hide/i })
+					.first()
+					.click({ timeout: 5_000 })
+					.catch(() => page.keyboard.press('Escape'));
+				await page.waitForTimeout(1000);
+			}
+			r.note('approvedOn', viaDock ? 'dock' : 'page');
+			const here = viaDock ? dock : page.locator('body');
+			await here
+				.getByRole('button', { name: /^Review\b|Hold to sign off/ })
+				.first()
+				.waitFor({ timeout: 30_000 });
+			let approved = 0;
 			for (let i = 0; i < 6; i++) {
-				const review = here.getByRole('button', { name: /^Review \d+ lines?/ }).first();
+				const review = here.getByRole('button', { name: /^Review\b/ }).first();
 				const hold = here.getByRole('button', { name: /Hold to sign off/ }).first();
 				if (await review.isVisible().catch(() => false)) {
 					await review.click();
-					await here.getByRole('button', { name: 'Confirm exact terms' }).click();
+					await here
+						.getByRole('button', { name: /Confirm exact terms/ })
+						.first()
+						.click();
+					approved++;
 				} else if (await hold.isVisible().catch(() => false)) {
 					const b = (await hold.boundingBox())!;
 					await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2);
 					await page.mouse.down();
 					await page.waitForTimeout(4000);
 					await page.mouse.up();
+					approved++;
 				} else break;
 				await page.waitForTimeout(1500);
 			}
+			r.note('approvedDecisions', approved);
+			if (!approved) throw new Error('no decision approved in the dock');
 		});
 		await r.step('ordered, with a receipt', async () => {
 			const dock = await openDock(page);
-			const order = dock.getByRole('button', { name: /^Order/ }).first();
+			const inDock = dock.getByRole('button', { name: /^Order/ }).first();
+			const order = (await inDock.isVisible().catch(() => false))
+				? inDock
+				: page
+						.getByRole('button', { name: /^(Order \d+ lines? now|Order the|Place order)/ })
+						.first();
 			await order.click({ timeout: 30_000 });
-			await dock
+			await page
 				.getByText(/Ordered\s*·\s*\d+\s+lines?/)
 				.first()
-				.waitFor({ timeout: 60_000 });
-			const t = await dock.innerText();
+				.waitFor({ state: 'attached', timeout: 60_000 }); // on a phone it can sit in an unselected zone tab
+			const t = await page.locator('body').innerText();
 			const rc = t.match(/rc-[a-z0-9]+/);
 			if (rc) r.j.receipts.push(rc[0]);
 		});
@@ -498,6 +574,14 @@ journey('j4', 'Diet and hard requirements', async (r, page) => {
 journey('j5', 'Usual order and history', async (r, page) => {
 	await r.step('home', () => home(page));
 	await r.step('find the usual order', async () => {
+		if (
+			await page
+				.getByText(/usual (Mon|Tue|Wed|Thu|Fri|Sat|Sun)\w* order|usual is ready|^Usual order$/i)
+				.first()
+				.isVisible()
+				.catch(() => false)
+		)
+			return;
 		await page
 			.getByRole('link', { name: /usual/i })
 			.or(page.getByRole('button', { name: /usual/i }))
@@ -644,7 +728,10 @@ journey(
 		const ops = page;
 		await r.step('Ops on the big screen joins the room', async () => {
 			await ops.goto(`${BASE}/ops?ws=ws-judges`);
-			await ops.waitForTimeout(3000);
+			const room = ops.getByRole('tab', { name: /^Room/ });
+			if (await room.isVisible().catch(() => false)) await room.click();
+			// Orders already there when the page loads don't light up for the first 3 s (S4 50ad21f).
+			await ops.waitForTimeout(4000);
 		});
 		const stores = ['Playtest Bistro', 'Playtest Canteen', 'Playtest Hotel'];
 		const ctxs = await Promise.all(
@@ -678,11 +765,19 @@ journey(
 						`${name}: orders`,
 						async () => {
 							await say(r, p, '10 l milk for friday, order it');
+							// Approve on the page (the dock closed so the Decide rail shows), then order.
+							const close = p.getByRole('button', { name: 'Close chat' });
+							if (await close.isVisible().catch(() => false)) await close.click();
 							await approveAll(p).catch(() => 0);
+							await p.waitForTimeout(1500);
+							await orderNow(p);
 						},
 						{ beat: false }
 					);
 					await p.screenshot({ path: `${r.dir}/store-${i + 1}-ordered.png`, fullPage: true });
+					// The big screen within a second of this store's order: a "First order" badge and the room line.
+					await ops.waitForTimeout(800);
+					await ops.screenshot({ path: `${r.dir}/ops-after-store-${i + 1}.png` });
 				})
 			);
 		} finally {
@@ -694,6 +789,29 @@ journey(
 			const seen = stores.filter((s) => text.includes(s));
 			r.note('opsSeesStores', seen);
 			if (seen.length < 3) throw new Error(`Ops names ${seen.length}/3 stores: ${seen.join(', ')}`);
+		});
+		await r.step('Ops lit up a first order', async () => {
+			const lit = await ops
+				.getByText(/First order|placed its first order/)
+				.first()
+				.isVisible()
+				.catch(() => false);
+			r.note('firstOrderLightUp', lit);
+			if (!lit)
+				throw new Error(
+					'no "First order" badge or room line on Ops (it fades after 8 s; see ops-after-store-*.png)'
+				);
+		});
+		await r.step('the room QR full screen shows the public link', async () => {
+			await ops
+				.getByRole('button', { name: /Show the code full screen/ })
+				.click({ timeout: 10_000 });
+			await ops.waitForTimeout(1000);
+			const text = await ops.locator('body').innerText();
+			r.note('qrLink', /app\.mandate\.kitchen\/\?ws=ws-judges/.test(text));
+			if (!/app\.mandate\.kitchen\/\?ws=ws-judges/.test(text))
+				throw new Error('the full-screen code does not show app.mandate.kitchen/?ws=ws-judges');
+			await ops.keyboard.press('Escape');
 		});
 	},
 	420_000
@@ -736,8 +854,12 @@ journey(
 		)
 			return;
 		await r.step('a first basket in my kitchen', async () => {
-			const res = await page.request.post(`${BASE}/kitchen-api/tool/place_order`, {
-				headers: origin,
+			// The Kitchen screen never sends place_order: the visitor's own agent key does (the agent door).
+			const k = await page.request.get(`${BASE}/api/demo/judge-key`);
+			const key = ((await k.json().catch(() => ({}))) as { key?: string }).key;
+			if (!key) throw new Error(`judge key ${k.status()}`);
+			const res = await page.request.post(`${BASE}/api/tools/place_order`, {
+				headers: { authorization: `Bearer ${key}` },
 				data: {
 					kitchenId,
 					deliverBy: '2026-12-11',
@@ -746,7 +868,11 @@ journey(
 				}
 			});
 			const body = (await res.json().catch(() => ({}))) as { plan?: { id: string } };
-			r.note('placeOrder', { status: res.status(), plan: body.plan?.id });
+			r.note('placeOrder', {
+				status: res.status(),
+				plan: body.plan?.id,
+				error: res.ok() ? undefined : (await res.text()).slice(0, 300)
+			});
 			if (!body.plan?.id) throw new Error(`place_order ${res.status()}`);
 			planId = body.plan.id;
 			await page.goto(`${BASE}/?plan=${planId}`);
@@ -856,7 +982,7 @@ journey('f1', 'The dock keeps the ask: "4 kg lactose-free butter tomorrow"', asy
 			await day.click({ timeout: 5_000 });
 			await page.waitForTimeout(1500);
 			await page
-				.getByText(/^Working( · step \d+)?…/)
+				.getByText(/^Working\b.*…$/)
 				.first()
 				.waitFor({ state: 'detached', timeout: 180_000 })
 				.catch(() => undefined);

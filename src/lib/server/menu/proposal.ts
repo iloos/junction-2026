@@ -466,12 +466,55 @@ function idsFor(names: string[], prefix: string): string[] {
 	});
 }
 
+/** Lower is better: stock stated, then unknown, then nothing heard, then out, can't deliver, blocked. */
+const supplyRank = (k: string | undefined) =>
+	({ known: 0, unknown: 1, missing: 2, out: 3, undeliverable: 4, blocked: 5 })[k ?? 'missing'] ?? 2;
+const SUPPLY_WORDS: Record<string, string> = {
+	out: 'is out of stock',
+	undeliverable: "can't be delivered that day",
+	blocked: 'is blocked by Valio',
+	unknown: 'has no stock figure',
+	known: 'is in stock',
+	missing: 'has no offer'
+};
+/** What the chooser sees beside a candidate's name. */
+const SUPPLY_NOTE: Record<string, string> = {
+	out: ' [out of stock]',
+	undeliverable: " [Valio can't deliver it that day]",
+	blocked: ' [blocked]'
+};
+const dayBefore = (iso: string) => {
+	const t = new Date(`${iso}T12:00:00Z`);
+	t.setUTCDate(t.getUTCDate() - 1);
+	return t.toISOString().slice(0, 10);
+};
+/** Availability kind per product for a delivery day; empty without an offers port or when the call fails. */
+async function supplyOf(
+	catalog: Partial<Pick<Catalog, 'offers'>>,
+	ids: string[],
+	deliverBy: string
+): Promise<Map<string, string>> {
+	const out = new Map<string, string>();
+	if (!catalog.offers || !ids.length) return out;
+	try {
+		const r = await catalog.offers(ids, deliverBy);
+		for (const o of r.offers) {
+			const a = o.availability;
+			out.set(o.productId, a.kind === 'known' && (a.amount ?? 1) <= 0 ? 'out' : a.kind);
+		}
+	} catch {
+		/* no supply view: the resolver's order stands */
+	}
+	return out;
+}
+
 export interface ProposeDeps {
 	kitchenId: string;
 	workspaceId: string;
 	brief: EventBrief;
 	store: MenuStore;
-	catalog: Pick<Catalog, 'resolve' | 'get'>;
+	/** `offers`, when the catalogue has it, ranks same-food candidates by what Valio can deliver. */
+	catalog: Pick<Catalog, 'resolve' | 'get'> & Partial<Pick<Catalog, 'offers'>>;
 	now: Date;
 	/** Absent: the fixture templates. */
 	llm?: Llm | null;
@@ -604,6 +647,19 @@ export async function proposeMenu(d: ProposeDeps): Promise<Proposed> {
 		});
 	}
 
+	// What Valio can deliver for the day before the event, per candidate: the pick prefers what can come.
+	const supply = await supplyOf(
+		d.catalog,
+		[
+			...new Set(
+				work.flatMap((w) => [
+					...w.pool,
+					...(w.det?.status === 'resolved' ? w.det.candidates.map((c) => c.productId) : [])
+				])
+			)
+		],
+		dayBefore(d.brief.date)
+	);
 	// One judgement per menu: for each ingredient, the candidate that is it as its dish needs it, or none.
 	const names = new Map(
 		[...(await d.catalog.get([...new Set(work.flatMap((w) => w.pool))]))].map(([k, p]) => [
@@ -623,13 +679,14 @@ export async function proposeMenu(d: ProposeDeps): Promise<Proposed> {
 						amount: `${w.i.amountPerCover} ${w.i.unit} per guest`,
 						candidates: w.pool.map((productId) => ({
 							productId,
-							name: names.get(productId) ?? productId
+							name: `${names.get(productId) ?? productId}${SUPPLY_NOTE[supply.get(productId) ?? 'unknown'] ?? ''}`
 						}))
 					}))
 			)
 		: new Map();
 
 	const concerns: { id: string; text: string }[] = [];
+	const swaps: { id: string; text: string }[] = [];
 	for (const w of work) {
 		const base = { id: w.id, label: w.i.label, amountPerCover: w.i.amountPerCover, unit: w.i.unit };
 		const c = choices.get(w.id);
@@ -647,8 +704,23 @@ export async function proposeMenu(d: ProposeDeps): Promise<Proposed> {
 				pinnedBy = 'model';
 			} else unresolved = `none of ${w.pool.length} candidates is ${w.i.label}: ${c.reason}`;
 		} else if (w.det?.status === 'resolved' && w.det.candidates.length) {
-			productId = w.det.candidates[0].productId;
+			// The best match that can come: an undeliverable or sold-out first match gives way to the next that can.
+			const first = w.det.candidates[0].productId;
+			const ranked = [...w.det.candidates].sort(
+				(a, b) => supplyRank(supply.get(a.productId)) - supplyRank(supply.get(b.productId))
+			);
+			productId = ranked[0].productId;
 			how = `best of ${w.det.candidates.length} for "${w.i.query}"`;
+			if (productId !== first && supplyRank(supply.get(first)) >= 3) {
+				const was = (await d.catalog.get([first])).get(first)?.nameFi ?? first;
+				const now = (await d.catalog.get([productId])).get(productId)?.nameFi ?? productId;
+				const why = SUPPLY_WORDS[supply.get(first) ?? 'unknown'];
+				how += `; ${was} ${why}, so ${now} instead`;
+				swaps.push({
+					id: `supply:${w.id}`,
+					text: `${w.i.label}: ${was} ${why}; ${now} instead`.slice(0, 300)
+				});
+			}
 		} else unresolved = w.det?.status === 'unresolved' ? w.det.reason : 'no catalogue resolver';
 
 		let ing: DishIngredient;
@@ -692,7 +764,8 @@ export async function proposeMenu(d: ProposeDeps): Promise<Proposed> {
 				const [k, rest] = text.includes('|') ? text.split('|', 2) : [`open-${i + 1}`, text];
 				return { id: k, text: rest.slice(0, 300) };
 			}),
-			...concerns
+			...concerns,
+			...swaps
 		],
 		provenance: { source, at, ref: model, ...(fallback ? { note: fallback } : {}) }
 	});

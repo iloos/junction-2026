@@ -41,15 +41,25 @@ export function scenarioDate(d: Date): string {
 export const LEAD_DAYS = { Stock: 1, Terminal: 2 } as const;
 const DEFAULT_CLOSE = '17:00:00';
 
+const OFFSET_FORMAT = new Intl.DateTimeFormat('en-US', {
+	timeZone: SCENARIO.timeZone,
+	timeZoneName: 'longOffset'
+});
+/** Offsets per calendar date: a pure function of the date, asked for on every line of every quote. */
+const offsets = new Map<string, string>();
+
 /** UTC offset of Helsinki on a calendar date, as "+02:00". */
 function helsinkiOffset(date: string): string {
-	const name = new Intl.DateTimeFormat('en-US', {
-		timeZone: SCENARIO.timeZone,
-		timeZoneName: 'longOffset'
-	})
-		.formatToParts(new Date(`${date}T12:00:00Z`))
-		.find((p) => p.type === 'timeZoneName')?.value;
-	return name?.replace('GMT', '') || '+02:00';
+	let o = offsets.get(date);
+	if (o === undefined) {
+		const name = OFFSET_FORMAT.formatToParts(new Date(`${date}T12:00:00Z`)).find(
+			(p) => p.type === 'timeZoneName'
+		)?.value;
+		o = name?.replace('GMT', '') || '+02:00';
+		if (offsets.size > 5000) offsets.clear();
+		offsets.set(date, o);
+	}
+	return o;
 }
 
 /** A calendar date `days` later (negative: earlier), in UTC so the local timezone cannot shift it. */

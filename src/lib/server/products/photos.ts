@@ -21,10 +21,13 @@ type Env = Record<string, string | undefined>;
 /** A listing already known: prewarmed for the demo, else kept by a live lookup. Never a call. */
 export function knownListing(env: Env, productId: string): ProductListing | null | undefined {
 	const r = recordedListing(productId);
-	if (r !== undefined) return r;
+	if (r?.imageUrl) return r;
+	// A live lookup (the brand's site, a retailer) can find what the recording didn't: a kept page wins over a
+	// recorded "none".
 	const kept = findingsFor(env).get(`listing:${productId}`)?.data as
 		{ listing?: ProductListing | null } | undefined;
-	return kept ? (kept.listing ?? null) : undefined;
+	if (kept?.listing) return kept.listing;
+	return r !== undefined ? r : kept ? null : undefined;
 }
 
 /** Every known listing with a photo, by product id. */
@@ -133,6 +136,13 @@ export function pageFactsSuggestions(l: ProductListing): Suggestion[] {
 	return out;
 }
 
+/**
+ * Prefetch spends from its own key and stops early: per workspace 24 calls a day per API, and none once the instance
+ * has sent 300 calls of that API today (of the 1000 global default), so warming photos for a full room never takes
+ * the budget that live lookups, the recall monitor and judges need.
+ */
+export const PREFETCH_LIMITS = { perKey: 24, global: 300 } as const;
+
 /** Products already warmed in this process, so a re-plan doesn't repeat them. */
 const warmed = new Set<string>();
 const WARM_CAP = 2000;
@@ -147,14 +157,16 @@ export async function warmPhotos(
 	products: readonly Product[],
 	max = 12
 ): Promise<number> {
-	const find = listingFinder(env, spendKey);
+	const find = listingFinder(env, spendKey, PREFETCH_LIMITS);
 	if (!find) return 0;
-	const brand = brandLookup(env, spendKey);
+	const brand = brandLookup(env, spendKey, PREFETCH_LIMITS);
 	const findings = findingsFor(env);
 	let n = 0;
 	for (const p of products) {
 		if (n >= max || warmed.size >= WARM_CAP) break;
-		if (warmed.has(p.productId) || recordedListing(p.productId) !== undefined) continue;
+		// The recording has a photo: nothing to warm. A recorded "none" predates the brand and retailer search, so it
+		// is looked up again (and the brand logo fetched when that finds nothing).
+		if (warmed.has(p.productId) || recordedListing(p.productId)?.imageUrl) continue;
 		warmed.add(p.productId);
 		n += 1;
 		const listing = await find(p).catch(() => null);

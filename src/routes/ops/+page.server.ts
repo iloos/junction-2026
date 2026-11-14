@@ -66,7 +66,8 @@ async function roomKitchens(workspace: string): Promise<OpsKitchen[]> {
 			city: k.city,
 			mandateWords: k.mandate.words,
 			weeklyCapCents: k.mandate.weeklyCapCents ?? 0,
-			copiedFrom: (k as { copiedFrom?: string }).copiedFrom
+			copiedFrom: k.copiedFrom,
+			visitor: !!k.owner || k.id.startsWith('k-v-')
 		}));
 	} catch {
 		return seedKitchens;

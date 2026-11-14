@@ -14,6 +14,8 @@ export interface RoutineCandidate {
 	productId: string;
 	/** The request page's ranking score for this product and item (filterHits). */
 	score?: number;
+	/** The smallest order's amount over the ask (filterHits), for the shared candidate order (rankOrder). */
+	overshoot?: number | null;
 	name?: string;
 	/** The product's sales unit, the unit `place_order` takes. */
 	unit: string;
@@ -83,6 +85,7 @@ export function routineCandidates(intent: RoutineLine, hits: Product[]): Routine
 		products: ranked.slice(0, ROUTINE_SHORTLIST).map((r) => ({
 			productId: r.product.productId,
 			score: r.score,
+			overshoot: r.overshoot ?? null,
 			name: shortText(r.product.nameShort?.value ?? r.product.nameFi),
 			unit: r.product.salesUnit,
 			lotStep: r.product.lotStep,

@@ -13,8 +13,10 @@ export type OpsKitchen = {
 	city: string;
 	mandateWords: string;
 	weeklyCapCents: number;
-	/** The seeded profile a visitor's store was copied from; absent on seeded kitchens. */
+	/** The seeded profile a visitor's store was copied from; absent on seeded kitchens and blank stores. */
 	copiedFrom?: string;
+	/** A store a visitor made in the room (create_kitchen), copied from a sample or blank; false for the samples. */
+	visitor?: boolean;
 };
 
 export interface StoreCreated {
@@ -105,7 +107,8 @@ export function roomKitchens(loaded: readonly OpsKitchen[], created: readonly St
 			city: c.city,
 			mandateWords: c.mandateWords,
 			weeklyCapCents: c.weeklyCapCents,
-			copiedFrom: c.copiedFrom || undefined
+			copiedFrom: c.copiedFrom || undefined,
+			visitor: true
 		}));
 	return [...loaded, ...added];
 }
@@ -223,6 +226,10 @@ export function shortageSentence(s: ShortageReplanned): string {
 	return `${s.productName}: ${s.had} → ${s.left}${unit} left. ${stores} store${stores === 1 ? '' : 's'} re-planned: ${parts.join(', ') || 'no changes'}.`;
 }
 
+/** A visitor's store: flagged, copied from a sample, or with create_kitchen's `k-v-` id (a blank store has no sample). */
+export const isVisitorStore = (k: OpsKitchen) =>
+	!!k.visitor || !!k.copiedFrom || k.id.startsWith('k-v-');
+
 /**
  * The store list for the big screen: stores made in the room first (newest on top), then any with orders (largest
  * total first), then the seeded sample kitchens in their own order. `samples` are the quiet seeded ones, for
@@ -232,11 +239,11 @@ export function roomOrder(
 	kitchens: readonly OpsKitchen[],
 	totals: Record<string, { n: number; cents: number }>
 ): { active: OpsKitchen[]; samples: OpsKitchen[] } {
-	const made = kitchens.filter((k) => k.copiedFrom).reverse();
+	const made = kitchens.filter(isVisitorStore).reverse();
 	const ordered = kitchens
-		.filter((k) => !k.copiedFrom && totals[k.id])
+		.filter((k) => !isVisitorStore(k) && totals[k.id])
 		.sort((a, b) => totals[b.id].cents - totals[a.id].cents);
-	const samples = kitchens.filter((k) => !k.copiedFrom && !totals[k.id]);
+	const samples = kitchens.filter((k) => !isVisitorStore(k) && !totals[k.id]);
 	return { active: [...made, ...ordered], samples };
 }
 

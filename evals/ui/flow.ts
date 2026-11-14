@@ -18,11 +18,25 @@ export async function enterKitchen(page: Page, path = '/', kitchenId = 'k-hotel'
 	const picker = page.getByTestId('establishment-picker');
 	const views = page.getByRole('navigation', { name: 'Kitchen view' });
 	const canvas = page.locator('#task-h').or(page.getByRole('button', { name: /^Plan the event/ }));
-	await picker.or(views).or(canvas).first().waitFor({ timeout: 60_000 });
+	// A store or kitchen with no plan yet opens on its own home (an h1 such as "Your kitchen is set up…").
+	const home = page.locator('main h1');
+	await picker.or(views).or(canvas).or(home).first().waitFor({ timeout: 60_000 });
 	if (await picker.isVisible().catch(() => false)) {
-		await picker.locator(`[data-kitchen-id="${kitchenId}"]`).click();
+		const sample = picker.locator(`[data-kitchen-id="${kitchenId}"]`);
+		if (await sample.count()) await sample.click();
+		else {
+			// The shared room (D24) offers no sample kitchens: a visitor joins as their own store.
+			await picker
+				.getByLabel(/Store name|Kitchen name/)
+				.fill(`Playtest Room ${Date.now().toString(36)}`);
+			await picker.getByRole('button', { name: /Start my (store|kitchen)/ }).click();
+		}
 		await picker.waitFor({ state: 'hidden', timeout: 60_000 });
-		await views.or(canvas).first().waitFor({ timeout: 60_000 });
+		await views
+			.or(canvas)
+			.or(page.getByRole('button', { name: /Ask the agent/ }))
+			.first()
+			.waitFor({ timeout: 60_000 });
 	}
 	await eventView(page);
 	await page.waitForLoadState('networkidle').catch(() => undefined);
@@ -53,14 +67,31 @@ export async function planBuffet(page: Page) {
 	await page.waitForLoadState('networkidle');
 }
 
-/** Approves every decision as the chef (Review → Confirm, or a held sign-off); returns the lines signed off. */
+/**
+ * Approves every decision as the chef; returns the lines signed off. D29 (S2): the plan's sticky bar "Accept all N"
+ * and the table's group headers "Accept these N"; before D29: Review → Confirm exact terms, or a held sign-off.
+ * Both shapes are handled so the checks hold across the change.
+ */
 export async function approveAll(page: Page): Promise<number> {
 	let lines = 0;
+	const confirm = page.getByRole('button', { name: /Confirm exact terms/ }).first();
+	const confirmIfAsked = async () => {
+		if (await confirm.isVisible({ timeout: 1500 }).catch(() => false)) await confirm.click();
+	};
 	for (let round = 0; round < 6; round++) {
+		const all = page.getByRole('button', { name: /^Accept all \d+/ }).first();
+		const group = page.getByRole('button', { name: /^Accept these \d+/ }).first();
 		const review = page.getByRole('button', { name: /^Review \d+ lines?/ }).first();
-		const confirm = page.getByRole('button', { name: /Confirm exact terms/ }).first();
 		const hold = page.getByRole('button', { name: /Hold to sign off \d+ lines?/ }).first();
-		if (await review.isVisible().catch(() => false)) {
+		if (await all.isVisible().catch(() => false)) {
+			lines += Number(((await all.innerText()).match(/Accept all (\d+)/) ?? [])[1] ?? 0);
+			await all.click();
+			await confirmIfAsked();
+		} else if (await group.isVisible().catch(() => false)) {
+			lines += Number(((await group.innerText()).match(/Accept these (\d+)/) ?? [])[1] ?? 0);
+			await group.click();
+			await confirmIfAsked();
+		} else if (await review.isVisible().catch(() => false)) {
 			lines += Number(((await review.innerText()).match(/(\d+)/) ?? [])[1] ?? 0);
 			await review.click();
 			await confirm.click();
@@ -76,6 +107,22 @@ export async function approveAll(page: Page): Promise<number> {
 		await page.waitForTimeout(1000);
 	}
 	return lines;
+}
+
+/**
+ * Orders what the plan allows now and waits for "Ordered · N lines". D29: the sticky bar's "Order K lines now";
+ * before: "Order N lines now" in the header, "Order the N lines you can now", or "Place order: N lines". Never the
+ * phone's "Order" zone tab (a bare "Order").
+ */
+export async function orderNow(page: Page) {
+	await page
+		.getByRole('button', { name: /^(Order \d+ lines? now|Order the|Place order)/ })
+		.first()
+		.click({ timeout: 30_000 });
+	await page
+		.getByText(/Ordered\s*·\s*\d+\s+lines?/)
+		.first()
+		.waitFor({ state: 'attached', timeout: 60_000 }); // on a phone it can sit in an unselected zone tab
 }
 
 /** Opens the first line's Why drawer: the line rows sit inside each dish's details, collapsed by default. */
@@ -96,13 +143,28 @@ export async function openWhy(page: Page) {
 export async function request(page: Page, text: string, kitchen?: string) {
 	await page.goto(`${BASE}/request`);
 	if (kitchen) await page.locator('select').first().selectOption({ label: kitchen });
-	await page.locator('#req').fill(text);
-	await page.getByRole('button', { name: /Find and price/ }).click();
-	await page
-		.getByText(/Prepared by the kitchen agent|Nothing was ordered|Event brief|nothing quoted/)
-		.first()
-		.waitFor({ timeout: 60_000 })
-		.catch(() => undefined);
+	// /request is either the step page (#req + "Find and price") or, from wave K (D23 UI), the full-width conversation.
+	const form = page.locator('#req');
+	const composer = page.locator('#chat-text');
+	await form.or(composer).first().waitFor({ timeout: 30_000 });
+	if (await form.isVisible().catch(() => false)) {
+		await form.fill(text);
+		await page.getByRole('button', { name: /Find and price/ }).click();
+		await page
+			.getByText(/Prepared by the kitchen agent|Nothing was ordered|Event brief|nothing quoted/)
+			.first()
+			.waitFor({ timeout: 60_000 })
+			.catch(() => undefined);
+	} else {
+		await composer.fill(text);
+		await page.getByRole('button', { name: 'Send' }).first().click();
+		await page.waitForTimeout(1500);
+		await page
+			.getByText(/^Working\b.*…$/)
+			.first()
+			.waitFor({ state: 'detached', timeout: 180_000 })
+			.catch(() => undefined);
+	}
 	await page.waitForTimeout(1500);
 }
 

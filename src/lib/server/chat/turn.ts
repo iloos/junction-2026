@@ -439,7 +439,9 @@ async function* turnLines(
 	let expected: number | null;
 	let remembered: Task | null = null;
 	if (input.taskId) {
-		const t = await store.get(deps.workspaceId, input.taskId);
+		// A task from before a reset (another run of this room) is gone too: never reopened (OM-9).
+		const got = await store.get(deps.workspaceId, input.taskId);
+		const t = got && got.runId === deps.ctx.runId ? got : null;
 		if (!t && input.text === undefined) {
 			// An answer or a continue for a conversation this sandbox no longer has (reset, another browser).
 			yield fail(
@@ -1351,7 +1353,9 @@ export async function planView(
  */
 export async function taskView(taskId: string, deps: ChatDeps): Promise<ChatEvent[]> {
 	const store = storeOf(deps.ports);
-	const t = await store.get(deps.workspaceId, taskId);
+	const got = await store.get(deps.workspaceId, taskId);
+	// A task of an earlier run (a reset since) is not this room's any more.
+	const t = got && got.runId === deps.ctx.runId ? got : null;
 	if (!t)
 		return [
 			{ type: 'done', taskId, state: 'failed', text: `No task ${taskId} here.`, canContinue: false }
@@ -1408,14 +1412,21 @@ function waitingWords(card: ChatEvent | null | undefined): string {
 			names.length <= 3
 				? names.join(', ')
 				: `${names.slice(0, 3).join(', ')} and ${names.length - 3} more`;
-		return `${d.title} (${listed}). ${d.why}`;
+		// One short reason per decision: its first sentence, never a reason code.
+		const why = d.why
+			.replace(/\b[a-z]+(?:_[a-z]+)+\b/g, '')
+			.replace(/\s+/g, ' ')
+			.trim()
+			.split(/(?<=\.)\s/)[0];
+		return `• ${d.title} (${listed})${why ? `: ${why.replace(/\.$/, '')}` : ''}`;
 	});
-	return ` Waiting on you: ${waits.join(' ')}`;
+	return `\nWaiting on you:\n${waits.join('\n')}`;
 }
 
 /**
- * Where the task stands, counted in items, not kilos: "For Thu 10 Dec: 11 ingredients. 4 have a product planned,
- * 7 have no product yet; nothing is ordered yet. 1 decision waits for you." The ledger card keeps the numbers.
+ * Where the task stands, counted in items, not kilos, one fact per line: "For Thu 10 Dec: 11 ingredients." /
+ * "8 waiting for your approval · 3 can't be ordered as planned." / "Nothing is ordered yet. 1 decision waits for
+ * you." The ledger card keeps the numbers.
  */
 export function ledgerWords(
 	l: TaskLedger,
@@ -1451,20 +1462,22 @@ export function ledgerWords(
 	const bits: string[] = [];
 	if (sent) bits.push(`${sent} sent to Valio`);
 	if (ready) bits.push(`${ready} ready to order`);
-	if (held) bits.push(`${held} with a product waiting for your approval`);
+	if (held) bits.push(`${held} waiting for your approval`);
 	if (blocked) bits.push(`${blocked} can't be ordered as planned`);
 	if (none && plans.length) bits.push(`${none} without a product yet`);
 	const day = deliverBy ? `For ${dayWords(deliverBy)}: ` : '';
-	const head = n
-		? `${day}${plural(n, noun)}${bits.length ? `. ${bits.join(', ')}` : ''}`
-		: `${day}nothing planned`;
+	// Short lines, one fact each: the dock keeps line breaks.
+	const head = n ? `${day}${plural(n, noun)}.` : `${day}nothing planned.`;
 	const order = l.receiptIds.length
-		? `ordered for €${(l.committedCents / 100).toFixed(2)}`
-		: 'nothing is ordered yet';
+		? `Ordered for €${(l.committedCents / 100).toFixed(2)}.`
+		: 'Nothing is ordered yet.';
 	const wait = l.decisionsLeft
-		? ` ${l.decisionsLeft} ${l.decisionsLeft === 1 ? 'decision waits' : 'decisions wait'} for you.`
-		: ` ${l.nextAction}`;
-	return `${head}; ${order}.${wait}`.slice(0, 400);
+		? `${l.decisionsLeft} ${l.decisionsLeft === 1 ? 'decision waits' : 'decisions wait'} for you.`
+		: l.nextAction;
+	return [head, bits.length ? `${bits.join(' · ')}.` : '', `${order} ${wait}`]
+		.filter(Boolean)
+		.join('\n')
+		.slice(0, 400);
 }
 
 const CANCEL =

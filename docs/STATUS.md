@@ -2,24 +2,23 @@
 
 _The lead rewrites this at each checkpoint. It is the "now": what works, what's next, what bites._
 
-**Ring 6 (Sat 22:30):** five lanes S1–S5 plus the lead, merge waves at 00:30, 03:00, 05:00, freeze 06:00: [handoff/ring6/SESSIONS.md](handoff/ring6/SESSIONS.md).
+**Updated:** Sun 15 Nov 01:00, ring 6 (lead junc26-52). Five lanes S1–S5 plus a user-run canvas lane S6: [handoff/ring6/SESSIONS.md](handoff/ring6/SESSIONS.md). Freeze 06:00, submission 10:00.
 
-**Updated:** Sat 14 Nov late, end of ring 5 (lead junc26-fd). **All lanes closed for a restart.** Next ring starts from [handoff/ring6/RESTART.md](handoff/ring6/RESTART.md) (sessions, foundations first, queued work, final SHAs). The ring 5 picture and Round 12 routing: [handoff/ring5/SYNTHESIS.md](handoff/ring5/SYNTHESIS.md). Every user steer with owner and state: [handoff/ring4/USER-DIRECTIVES.md](handoff/ring4/USER-DIRECTIVES.md). Latest adversarial review: [review/ROUND12-ADVERSARIAL.md](review/ROUND12-ADVERSARIAL.md). Decisions through D21: [DECISIONS.md](DECISIONS.md).
+**Deployed:** https://app.mandate.kitchen runs wave F `ed20a82` (smoke: race OK, UI 13/14; the one fail is a stale room test, S5 fixing); wave G `4de483a` deploying; wave H gating. Every wave: full gate → push → S4 deploys (the user's standing OK) → the lead smokes with SMOKE_KEY from the main checkout → S5 playtests.
 
-**Deployed:** https://app.mandate.kitchen (Aiven Runtime `mandate`, Postgres `pg-1dfeeeed`, project `junction26jq`); landing https://mandate.kitchen (Cloudflare Worker, `site/`, served `dfff213`). Prod runs `a9f06ee` (smoke: 13 pass, 13 skipped without SMOKE_KEY, 1 fail: dock-sync "You approved N lines"). Migrations through 0005 (traces) applied. Main is ahead of prod; see RESTART for the last landed SHA and what still needs a deploy. Redeploy: merge to main, gate GREEN, push, the Ops session deploys and runs `scripts/deploy/warm.sh` + `smoke.sh` (procedure in [lanes/ops.md](lanes/ops.md)).
+**Works on prod (ring 6):**
+- **Hero journey** (moment 2): "a no-meat dinner for 120 with a peach dessert" → menu → plan (20 lines, all priced or labelled) → every held line in a decision → approve → ordered → on Ops. Passed 10/10 on 4ad27c0 with one workaround (dock open hides Review; S2+S3 fixing).
+- **Own kitchens and the room** (D24–D26): "Your own kitchen" first on the picker, sample kitchens below; your kitchen persists across tabs and reloads; the room's "Join as your own store", full-screen QR, live orders and first-order light-up on Ops; a store-owner gate that fails closed.
+- **Shortage cascade** (moment 1): one shortage re-plans every kitchen inside its own rules; Ops Room shows the per-store outcome.
+- **Valio's view** (moment 4): Ops Forecast from the D27 stock model (seeded, labelled simulated, every estimate sourced).
+- **Kitchen:** "your week, handled" ledger, per-line Accept · Reject · Swap with one "Accept all", the D28 compare panel, photos with a labelled fallback ladder (exact → pack may differ → brand → category).
+- **Trust fixes:** the chat can't execute a model rewrite of the order (F1); diet and brand survive every door (F2); one ranking for chat and /request (D23); vegan milk never becomes sorbet; gluten cereal codes.
 
-**Works end to end (prod or main, gate green):**
-- **Kitchen:** seven joinable seeded kitchens, each with its own event, profile, rules and labelled simulated history; plan → decisions in the right rail (Decide on top, lines highlighted) → approve (page or dock, D13) → order → receipt; retries keep one receipt; System → "Start over" resets only this sandbox; diet and allergen marks; product cards with barcode-verified Valio Aimo photos (Kitchen rows, bills, chips; Request).
-- **Request:** editable steps, delivery-date control, dish path (ready-made vs raw, meat-ratio reasoning), over-limit options, remembered choices; the ask is a first-class need (D18); diet asks become requirements (R12-03); unknown units ask (R12-01).
-- **Core:** one requirement vocabulary and `meets()` (D16); every line bound to its need's ask at quote and commit (D18, R12-01); one `commandKey`; cancellation fence inside the commit transaction.
-- **Chat:** follows the page's plan, narrates work, a yes acts on the offered action only (D21), no raw ids.
-- **Agent door:** MCP/REST with judge keys, absolute links, pairing, named refusals, `revise_menu` (R12-08).
-- **Ops:** Orders, Demand per day, refusal causes; live via `/api/events` within one browser's sandbox (an order shows in another tab in 0.6 s).
-- **Observability:** persisted traces (Postgres, 7 days) with request ids, JSON logs. No OpenSearch (Aiven refuses Runtime log shipping on our project).
+**Known open:** the dock-open approve path (hero), photo fallbacks on rows (wave H), OM-3/OM-4 (kitchen and preset per tab, S1), D28 steer chips beyond Cheaper/Finnish/In stock (S1), the public-clone fixture (S5, 06:00–09:00), the submission texts and video plan (S5).
 
-**Known open (top):** R12-02 cereal codes in `meets()`, R12-04 contention adds the full need (8d's Next); Ops doesn't follow a reset in another tab; dock approval status missing on prod; Ops rework not started; UI foundations (RESTART "Foundations first").
+**Decisions tonight:** D23 one conversation two views · D24 room mode · D25 your own kitchen first · D26 the workspace persists · D27 stock model (+ the Valio twin and incident deck, held) · D28 steerable alternatives, the chef has the last word. Reviews: [independent repo review](review/INDEPENDENT-REPO-2026-11-14.md), [one-of-many audit](review/ONE-OF-MANY-2026-11-15.md). Valio's API is a static snapshot (valio-data.md re-probe).
 
-**Waiting on the user:** (PUBLIC_ORIGIN is set, user Sat 22:40; the lead runs the SMOKE_KEY smoke from the main checkout, OK to push main after a green gate) · the Nemotron deployment name (current 404) · SMOKE_KEY · history rewrite and placeholder Valio prices before going public (also fixes the public Source 404) · OK for 91 and da to push their branches · the Ops brainstorm with the site session · whether to review the three foundation docs before fan-out.
+**Waiting on the user:** D22 (OAuth approve from an outside client) · Verda/Featherless · rotate judge keys and SMOKE_KEY before public · history rewrite and placeholder prices before public.
 
 **Rules learned (keep):**
 - The main checkout is lead-only; lanes work in `../junc26-lanes/<lane>`; stage exact paths; push only after `merge-gate: GREEN`.

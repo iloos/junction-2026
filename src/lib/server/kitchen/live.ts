@@ -35,7 +35,7 @@ import { inWorkspace } from '$lib/server/adapters/simulator/overlay';
 import { rescueContention } from '$lib/core/services/contention';
 import { catchUp, publish } from '$lib/server/bus';
 import { replanShortage } from '$lib/core/services/shortage';
-import { createHash } from 'node:crypto';
+import { visitorKey } from '$lib/server/auth/visitor-key';
 import { JUDGES_WORKSPACE } from '$lib/server/demo/workspaces';
 import type { RoomKind } from '$lib/server/demo/visitor';
 import type { ShortageReplanned } from '$lib/core/contracts';
@@ -70,9 +70,7 @@ export interface VisitorRef {
 	presenter?: boolean;
 }
 
-/** A visitor's owner id: a hash of its own sandbox id, so the sandbox id itself never lands in a kitchen doc. */
-export const visitorKey = (own: string) =>
-	createHash('sha256').update(`visitor:${own}`).digest('hex').slice(0, 24);
+export { visitorKey };
 
 function withVisitor(s: Session, v: VisitorRef | undefined): Session {
 	if (v?.own) s.visitor = visitorKey(v.own);
@@ -197,8 +195,11 @@ export function callTool(
 		if (name === 'approve' && ws0.approvals[i.approvalId ?? '']?.planId !== plan.id)
 			return deny("that approval is not for this session's plan");
 		const via = tab ? `${surface}#${tab}` : surface;
+		// Every surface acts as this browser's visitor, so the kitchens it made take its approve, commit and edits.
 		const ctx =
-			via === 'kitchen' ? chef(s) : contextFor('chef', 'kitchen-ui', via, env, s.workspaceId);
+			via === 'kitchen'
+				? chef(s)
+				: asVisitor(contextFor('chef', 'kitchen-ui', via, env, s.workspaceId), s);
 		return serveTool(name, ctx, input, handlers);
 	});
 }
@@ -348,9 +349,19 @@ function notStarted(kitchenId: string): NotStarted {
 export function snapshot(
 	sid: string,
 	workspaceId: string,
-	visitor?: VisitorRef
+	visitor?: VisitorRef,
+	/** The kitchen the asking tab shows (OM-3): its snapshot, whatever another tab chose. */
+	kitchenId?: string
 ): Promise<LiveSnapshot> {
-	return serial(workspaceId, () => buildSnapshot(withVisitor(session(sid, workspaceId), visitor)));
+	return serial(workspaceId, () =>
+		buildSnapshot(
+			pinned(
+				withVisitor(session(sid, workspaceId), visitor),
+				'plan',
+				kitchenId ? { kitchenId } : undefined
+			)
+		)
+	);
 }
 
 /**
@@ -636,7 +647,11 @@ async function snapshotBody(s: Session): Promise<FixtureSnapshot | NotStarted> {
 		kitchen,
 		rules,
 		preset: s.preset,
-		contention: s.contention,
+		// From the workspace's overlay, not this browser's toggle: another tab's shortage or reset changes it.
+		contention: inWorkspace(
+			s.workspaceId,
+			() => b.overlay.availabilityOf(CONTENDED.productId)?.tag === 'contention'
+		),
 		byAgent,
 		diet,
 		origin: origin ?? (plan.eventId ? 'event' : null),
@@ -689,10 +704,12 @@ async function applyRules(s: Session) {
 	const kitchens = await b.ports.store.kitchens(chef(s).workspaceId);
 	const kitchen = kitchens.find((k) => k.id === s.kitchenId) ?? kitchens[0];
 	// A dish already ordered keeps what was ordered: its rescue is not re-picked (the screen says so up front).
-	const ordered = (id: string) =>
-		plan0.lines.some((l) => l.substituteFor === id && l.state === 'committed');
+	const ordered = (o: (typeof plan0.lines)[number]) =>
+		plan0.lines.some(
+			(l) => l.substituteFor === o.productId && l.needId === o.needId && l.state === 'committed'
+		);
 	const outages = plan0.lines.filter(
-		(l) => l.state === 'unorderable' && !l.substituteFor && !ordered(l.id)
+		(l) => l.state === 'unorderable' && !l.substituteFor && !ordered(l)
 	);
 	for (const line of outages) {
 		const plan = (await findPlan(s))!;
@@ -721,10 +738,12 @@ export function scenario(
 	/** The plan the screen shows: the command acts on it, not on whatever this browser's session last opened. */
 	planId?: string,
 	/** Who the browser is: owner of the kitchens it makes; presenter rights for the shared room's shortage. */
-	visitor?: VisitorRef
+	visitor?: VisitorRef,
+	/** The kitchen and rules preset the sending tab shows: the command acts for them, not another tab's choice. */
+	pin?: TabPin
 ): Promise<LiveSnapshot | PlanProgress | ShortageSnapshot> {
 	return serial(workspaceId, async () => {
-		const s = withVisitor(session(sid, workspaceId), visitor);
+		const s = pinned(withVisitor(session(sid, workspaceId), visitor), action, pin);
 		// A shortage hits every store in the room: in the shared room only a presenter triggers it (fails closed).
 		if (action === 'shortage' && workspaceId === JUDGES_WORKSPACE && !visitor?.presenter)
 			throw new Error('only the presenter can start a shortage in the shared room');
@@ -740,7 +759,28 @@ export function scenario(
 		return applyScenario(s, action, value);
 	});
 }
-let shortages = 0;
+/** What a tab shows: its kitchen and its rules preset (OM-3, OM-4). */
+export interface TabPin {
+	kitchenId?: string;
+	preset?: string;
+}
+const PRESETS: readonly PresetId[] = ['kitchen', 'price', 'finnish', 'carbon', 'reliable'];
+/** Commands that act for a kitchen and its preset: with a pin they run on a copy, so other tabs keep their own. */
+const PINNABLE = new Set(['start', 'plan', 'rescue', 'apply']);
+
+function pinned(s: Session, action: string, pin: TabPin | undefined): Session {
+	if (!pin || !PINNABLE.has(action)) return s;
+	const kitchenId = pin.kitchenId ?? s.kitchenId;
+	const preset = PRESETS.find((p) => p === pin.preset) ?? s.preset;
+	if (kitchenId === s.kitchenId && preset === s.preset) return s;
+	// Another kitchen than the session's: its own plan, not the one the session last opened.
+	return {
+		...s,
+		kitchenId,
+		preset,
+		...(kitchenId !== s.kitchenId ? { planId: null, contentionRescue: undefined } : {})
+	};
+}
 
 /**
  * Moment 1: Valio runs short of one product (default: the contended palvikinkku) and every kitchen in the workspace
@@ -754,7 +794,8 @@ async function shortage(s: Session, value: unknown): Promise<ShortageReplanned> 
 		left?: unknown;
 	};
 	const productId = typeof v.productId === 'string' ? v.productId : CONTENDED.productId;
-	b.overlay.clear();
+	// Only an earlier shortage's override goes; a contention on another product stays (the overlay is per workspace).
+	b.overlay.clearTagged('shortage');
 	const { offers } = await b.ports.catalog.offers([productId], SCENARIO.delivery);
 	const a = offers[0]?.availability;
 	const had = a?.kind === 'known' && a.amount != null ? a.amount : 0;
@@ -762,10 +803,12 @@ async function shortage(s: Session, value: unknown): Promise<ShortageReplanned> 
 	b.overlay.setAvailability({
 		productId,
 		amount: left,
-		label: `simulated: Valio is short, ${left} of ${had} left`
+		label: `simulated: Valio is short, ${left} of ${had} left`,
+		tag: 'shortage'
 	});
 	const ctx = agent(s);
-	const shortageId = `sh-${++shortages}`;
+	// Unique across restarts and processes (OM-9): a counter would repeat after a deploy.
+	const shortageId = `sh-${crypto.randomUUID().slice(0, 8)}`;
 	const r = await replanShortage(b.ports, ctx, {
 		productId,
 		had,
@@ -858,12 +901,14 @@ async function applyScenario(
 		// The overlay is simulator state of this workspace (one Valio stock for every kitchen in it), not a
 		// view setting; other sandboxes never see it.
 		s.contention = Boolean(value);
-		b.overlay.clear();
+		// Only contention's own override: a shortage another tab ran in this workspace stays.
+		b.overlay.clearTagged('contention');
 		if (s.contention)
 			b.overlay.setAvailability({
 				productId: CONTENDED.productId,
 				amount: CONTENDED.left,
-				label: `simulated: another kitchen took ${CONTENDED.taken} × ${CONTENDED.productId}`
+				label: `simulated: another kitchen took ${CONTENDED.taken} × ${CONTENDED.productId}`,
+				tag: 'contention'
 			});
 		s.contentionRescue = undefined;
 		if (s.contention) {

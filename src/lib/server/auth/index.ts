@@ -1,4 +1,5 @@
 import { SCOPES_BY_ACTOR, type ActorKind } from '$lib/core/contracts';
+import { visitorKey } from './visitor-key';
 import { DEMO_WORKSPACE, JUDGES_WORKSPACE } from '$lib/server/demo/workspaces';
 import { sameText } from './crypto';
 import { currentRun } from '$lib/server/demo/run';
@@ -100,7 +101,13 @@ export function resolveKey(
 	if (!key) return null;
 	// Judge keys (HMAC of a visitor workspace, JUDGE_KEY_SECRET): an external agent in that sandbox only.
 	const judgeWs = verifyJudgeKey(key, env);
-	if (judgeWs) return contextFor('external_agent', judgeLabel(judgeWs), opts.via, env, judgeWs);
+	// The key was minted for one visitor's sandbox, so it acts as that visitor: it may change the kitchens they made
+	// (D26). An env or static key belongs to no visitor and never gets one.
+	if (judgeWs)
+		return {
+			...contextFor('external_agent', judgeLabel(judgeWs), opts.via, env, judgeWs),
+			visitor: visitorKey(judgeWs)
+		};
 	const entry = keyTable(env, opts).find((e) => sameText(e.key, key));
 	return entry ? contextFor(entry.actor, entry.label, opts.via, env, entry.workspaceId) : null;
 }

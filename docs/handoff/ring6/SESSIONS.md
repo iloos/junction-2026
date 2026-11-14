@@ -3,7 +3,7 @@
 _Lead, Sat 14 Nov 22:30. Replaces the seven-session table in [RESTART](RESTART.md) (read RESTART for the north star, foundations and the full queue; this page says who does what tonight and in what order). Freeze Sun 06:00, submission Sun 10:00. Prod runs a9f06ee; main (8e86190) is ahead and is deployed first._
 
 ## Roster (message by name)
-Lead **junc26-52** · S1 Core **junc26-73** · S2 Kitchen **junc26-c6** · S3 Conversation **junc26-a1** · S4 Ops/deploy **junc26-d5** · S5 Evals/story **junc26-fb**. S6 Basket canvas **(GPT session, user-run)**: worktree `scratch/worktrees/basket-canvas`, branch `lane/basket-canvas`; owns only `src/routes/canvas/**` and `src/lib/canvas/**`; reads state through the existing projections and changes it only through the existing tools; not linked from the nav until the lead merges it after the hero journey is green. Deploys need the user's OK in S4's own session; the lead never deploys on S4's behalf.
+Lead **junc26-52** · S1 Core **junc26-73** · S2 Kitchen **junc26-c6** · S3 Conversation **junc26-a1** · S4 Ops/deploy **junc26-d5** · S5 Evals/story **junc26-fb**. S6 Basket canvas **(GPT session, user-run)**: worktree `scratch/worktrees/basket-canvas`, branch `lane/basket-canvas`; owns only `src/routes/canvas/**` and `src/lib/canvas/**`; reads state through the existing projections and changes it only through the existing tools; not linked from the nav until the lead merges it after the hero journey is green. S7 Pitch and story **(new, 01:55)**: worktree `../junc26-lanes/pitch`, branch `lane/pitch`; owns `docs/PITCH.md` (taken over from S5), `docs/pitch/**` (deck, infographics, video script) and a proposed `docs/concept/SYSTEM-MAP.md`; S5 keeps CLAIMS.md, SUBMISSION.md and the playtest evidence. Deploys need the user's OK in S4's own session; the lead never deploys on S4's behalf.
 
 ## Added at 23:00: one flow (D23) and room mode (D24)
 The user wants one coherent flow from asking to managing items, in chat or on the page, and an IRL demo where everyone runs their own store while Ops shows the orders arriving. Read [DECISIONS D23, D24](../../DECISIONS.md). The priorities below already include them:
@@ -93,3 +93,25 @@ The user's call: moment 2 is the wow, because it shows the whole machine working
 
 ## Lead (this session, main checkout)
 Merges per wave with the full gate; answers Needs; writes the domain shape (RESTART Foundations 1) into ARCHITECTURE §Tenancy; records D22 and the Verda call when the user answers; STATUS and PLAN at each wave; vision-check before the freeze; cleans merged worktrees.
+
+## S7 · Pitch, slides, infographics, and the full map (new 01:55)
+**Worktree** `../junc26-lanes/pitch`, branch `lane/pitch`, docs only (no app code; port 5195 only if rendering pages). Reference images in its `scratch/`: `user-diagrams.png` (the user's three sketches: suppliers → Valio Aimo → mandate.kitchen → establishments; establishment → menu → recipe → ingredients, supplied by Valio through mandate; the architecture with "Food requirements (words, menu, photo)" in and "Ships order" out), the wordmark PNGs, and `SYSTEM-MAP.md` (an older system map to re-check, never copy blind).
+1. **Full map first (by ~03:00):** every capability and feature as it is on main and on prod now, each with where it lives (route/module), how to see it (URL + clicks or tool call), and its evidence (test, playtest journey, trace, CLAIMS row). Read: CONCEPT, ARCHITECTURE, DECISIONS D13–D30, STATUS, SESSIONS, CLAIMS, SUBMISSION, PITCH, the reviews (ROUND12, INDEPENDENT-REPO, ONE-OF-MANY), `/api/openapi.json` on prod. Output `docs/pitch/MAP.md`. Flag stale docs as a list for the lead (don't rewrite lead docs).
+2. **The story (by ~04:30):** a 6-slide deck outline in `docs/pitch/DECK.md`: (1) the case (Valio's challenge: a kitchen's week rarely goes to plan; trust is the blocker); (2) our approach (the user's sketch 3 + agent 1's three-layer diagram below: Understand · Decide · The mandate gate, every step traced); then slices progressively: the hero journey (words → costed, rule-checked plan → approve → order), one shortage across many kitchens (room + Ops), an outside agent stopped (MCP), Valio's view (forecast); then the sponsor round; then the ask/next. Each slide: headline, one visual, the proof (a number or a screenshot from prod).
+3. **Sponsor round:** for Valio Aimo, Gemini, Aiven, Context.dev, Exa (and Verda/Featherless status): why it's not removable from our product, what it does in the hero journey, the observed numbers (`/healthz` `day` 24 h counts), and any finding or opportunity we could still fold in (list them for the lead; don't build).
+4. **Why we beat other teams on the same challenge:** a short, honest comparison against the obvious builds (a chatbot over the catalogue; a cart with an agent), each answered with something only we show live (the gate, approvals bound to terms, one stock across kitchens, outside agents held to the same rules, the evals and adversarial rounds).
+5. **Agent effectiveness evidence:** the numbers we can stand behind: hero 10/10 at both widths, evals counts, the F1 reconcile cases, facets 0 unsafe, load per visitor, adversarial rounds closed. Get them from S5 (junc26-fb); claim nothing CLAIMS doesn't back.
+Agent 1's diagram (for slide 2, to adapt):
+```
+Chef (phone / Kitchen page)
+   words, menu, photo ↓     ↑ approves held lines (only a person can)
+ ┌──────────── mandate.kitchen ────────────┐
+ │ 1 Understand  words → menu → dishes → products (recipe breakdown, sizing, dates) │ ← your AI agent via MCP (scoped key: can order, can't approve)
+ │ 2 Decide      rank, substitutes, re-plan on shortage, best try, labelled         │
+ │ 3 The mandate caps · allergens & diet · never-delegate → act or hold            │
+ │ Trace: every step logged with its "why"                                         │
+ └──────────────────────────────────────────┘
+   stock, price, cut-offs ↑        ↓ order (only what the rules allow)
+                  Valio Aimo ── ships ──→ Kitchen
+```
+Note D22: the chef's own MCP key may now ask the chef to approve through the client (elicitation); outside agents still can't. Word slide 2 accordingly once S1 lands it.

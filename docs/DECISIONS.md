@@ -235,3 +235,38 @@ The agent's own suggestions never cross the product kind (D16, the sorbet fix); 
 **Why:** the user: clean affordance to navigate, specify and steer new alternatives; the agent can't be 100% right, because preference is subjective and people swap illogically.
 
 **Reopen if:** the panel's pick and the tool's pick differ for the same steer, or a chef's choice bypasses a hard rule.
+
+### D29 · One list of lines, one action bar: the Decide rail and the Order panel's lists go (user + lead, 15 Nov 01:20)
+The plan page lists every line once. Today the same lines appear in the table, again in the Decide cards (squeezed into a narrow rail) and again under the Order panel's "Still not covered", each with its own bulk button. The target:
+- **Header:** a short plan title (never a concatenation of lines), the delivery day, and one sentence: "5 items · €269.43 · 2 need you before Wed 9 Dec, 08:50".
+- **One sticky action bar** (top on desktop, bottom on phones): "Accept all N · €X", "M need your sign-off one by one", and "Order K lines now · €Y" as the primary once nothing waits.
+- **The table carries the decisions:** lines that wait are grouped under one header per reason ("New products: your rules say ask first · 4 lines · €211.71 · Accept these 4"); every line has its chip menu (Accept · Reject · Swap · Why) and its amount.
+- **No right rail on the plan page:** the chat dock uses that space when open. Totals live in the bar; the audit detail (what the approval is bound to) goes behind System.
+- **Images load once with the plan** and never shift a row.
+
+**Why:** the user: Decide is congested and duplicates the line items; the right rail is too long; images pop in.
+
+**Reopen if:** a decision that needs a reason (an allergen change, the hard limit) loses its explanation once it's no longer a card.
+
+### D22 · The chef approves from any door they're in; an outside agent asks the chef, it never approves alone (user + lead, 15 Nov 01:30)
+- **In-app chat:** the chef typing in their own dock is the chef (D13). "Approve all", "accept the salmon", "reject the herring" act on the lines the agent just showed, on the shown version (D21), through the same `approve` tool. Lines that need sign-off (an allergen change, never-delegate, the hard limit) show a Confirm-exact-terms card in the dock; a typed yes alone doesn't sign them off. The chat never says "only the chef approves, on the page" to the chef.
+- **MCP / REST, the chef's own client:** a key bound to the chef (paired from /agents, not a judge's outside-agent key) may ask for approval with an MCP elicitation that shows the exact terms (lines, total, reasons); an explicit yes from the client approves those terms, recorded as "approved by the chef via <client>". If the client can't elicit, the agent gets the approval link (D17). Never-delegate lines still need the app.
+- **Outside agents** (judge keys, any key not bound to the chef) still can't approve; their only path is the link for a human. That is moment 3.
+- Risk, stated: we can't prove a human answered an elicitation; the chef's own key is the chef's delegation, so a leaked key can approve routine held lines (never the never-delegate ones). Keys are revocable on /agents.
+
+**Why:** the user: we should be able to manage this from the agent; MCP can prompt the user for an explicit yes to an explicit ask.
+
+**Reopen if:** an elicitation approves terms other than the ones it showed, or a non-chef key reaches approve.
+
+### D30 · One Kitchen view: the delivery day's basket, with plans as groups inside it (user + lead, 15 Nov 01:35)
+The Kitchen shows one thing at a time: **the basket for a delivery day** (Tenancy: one basket per kitchen per day). The "Basket" / "This plan" tabs and the "By source" / "By stage" toggle go.
+- **Header:** the kitchen, the delivery day (the day picker), and one sentence: "Wed 16 Dec · 12 items · €621 · 5 need you".
+- **Plans are groups in the list**, named by where they came from ("Usual Wednesday order", "From the chat: no-meat dinner for 120", "Christmas buffet"), each collapsible, each with its D29 decision headers and per-line chip menus. Opening a plan from a link (`?plan=`) scrolls to and expands its group; there is no separate plan page.
+- **Stage is a filter, not a view:** chips above the list ("Waits for you 5 · Ready to order 4 · Ordered 3") filter the rows.
+- **One sticky action bar** for the day (D29): "Accept all N · €X", "M need your sign-off", "Order K lines now · €Y".
+
+**Why:** the user: "Basket" next to the plan button, and By source / By stage, are confusing; it's unclear which one is the actual order.
+
+**Reopen if:** a kitchen with several plans for one day can't tell which plan a line came from.
+
+**D24 addendum (lead, 15 Nov 01:50, after S5's r1 P0):** in the shared room a visitor writes only to a store they own; the seeded room kitchens are read-only for visitors (the presenter keeps full access). The chat in the room acts only for the visitor's own store and never falls back to a seeded kitchen; with no store it says "Join the room as your own store first". Enforced at the core gate, fail closed.

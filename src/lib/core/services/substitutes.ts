@@ -15,6 +15,7 @@ import {
 	err,
 	ok,
 	type Line,
+	type Product,
 	type LineReason,
 	type NeedRequirements,
 	type PendingOp,
@@ -249,7 +250,11 @@ export async function findSubstitutes(
 		return err('STALE_VERSION', 'the substitute for this dish is already committed');
 	const apply =
 		input.apply ??
-		(!input.weights && !input.requireOrigin && !input.requirements && saved.length === 0);
+		(!input.weights &&
+			!input.requireOrigin &&
+			!input.requirements &&
+			!input.steer &&
+			saved.length === 0);
 	// Explicit weights win; a request's preference (rankBy) reweights for this call only, never a tier or authority.
 	const weights =
 		input.weights ??
@@ -289,6 +294,18 @@ export async function findSubstitutes(
 		if (c.fromValioRule || !dishKnown)
 			add({ productId: c.productId, fromValioRule: c.fromValioRule, yield: dish?.yield });
 	for (const id of seedIds) add(seedEntryFor(seed, need?.label ?? '', line.productId, id));
+	// D28: the chef widens the search. Another kind looks past the dish's own candidates; their words search the
+	// catalogue. The agent never does either by itself.
+	const steer = input.steer;
+	if (steer?.differentKind)
+		for (const c of await ports.catalog.candidates(line.productId, 30))
+			add({ productId: c.productId, fromValioRule: c.fromValioRule, yield: dish?.yield });
+	const byWords = new Set<string>();
+	if (steer?.text)
+		for (const p of await ports.catalog.search(steer.text, { limit: 20, foodOnly: true })) {
+			byWords.add(p.productId);
+			add({ productId: p.productId, fromValioRule: false, yield: dish?.yield });
+		}
 
 	const ids = [...pool.keys()];
 	// The seed's make-in-house recipe, and its ingredients' offers: D8 prefers it to a product of unknown supply.
@@ -301,8 +318,21 @@ export async function findSubstitutes(
 	]);
 	const sized = new Map<string, Line['qty']>();
 	const unsized: string[] = [];
+	// D28: same brand and pack size compare with the planned product; a product they can't be told for is left out.
+	const plannedP = products.get(line.productId);
+	const steeredOut = (p: Product) => {
+		if (steer?.sameBrand && (!plannedP?.brand || p.brand !== plannedP.brand)) return true;
+		if (steer?.pack) {
+			const a = plannedP?.netPerSalesUnit?.value;
+			const b = p.netPerSalesUnit?.value;
+			if (!a || !b || a.unit !== b.unit) return true;
+			return steer.pack === 'bigger' ? !(b.value > a.value) : !(b.value < a.value);
+		}
+		return false;
+	};
 	for (const [id, e] of pool) {
 		const p = products.get(id);
+		if (p && steeredOut(p)) continue;
 		// A direct need ("1 l milk") is sized to its physical amount (F10): 1 l → 2 × 0.5 l, never 1 × 0.5 l.
 		const s = !p
 			? null
@@ -321,7 +351,11 @@ export async function findSubstitutes(
 	// The plan's and the need's own requirements bind; a per-call `requirements` tightens this ranking only (a
 	// preview by default, never written onto the need). requireOrigin keeps its own origin_required rejection below.
 	const stored = mergeRequirements(plan0.requirements, need?.requirements);
-	const req = mergeRequirements(stored, input.requirements);
+	const req = mergeRequirements(
+		stored,
+		input.requirements,
+		steer?.organic ? { labels: ['EU_ORGANIC_FARMING'] } : undefined
+	);
 	const ranked = rankCandidates({
 		kitchen: rankKitchen,
 		candidates: [...sized].map(([productId, qty]) => ({
@@ -599,7 +633,63 @@ export async function findSubstitutes(
 		preferred && pickedProduct
 			? `no ${originWord(preferred.country)} option qualified: picked ${originWord(pickedProduct.origin)}`
 			: undefined;
-	const base = { kind, candidates, labourNote, residual, saved, ...(fallback ? { fallback } : {}) };
+	// D28: the next few after the pick, each with one reason, its supply and its price per kg or l.
+	const steerReason = (p: Product | undefined) =>
+		!p
+			? undefined
+			: steer?.organic
+				? 'organic'
+				: steer?.sameBrand
+					? `same brand (${p.brand})`
+					: steer?.pack && p.netPerSalesUnit
+						? `${steer.pack} pack (${p.netPerSalesUnit.value.value} ${p.netPerSalesUnit.value.unit})`
+						: byWords.has(p.productId)
+							? `matches "${steer?.text}"`
+							: undefined;
+	const perUnit = (id: string) => {
+		const p = products.get(id);
+		const cents = offers.find((o) => o.productId === id)?.price?.unitCents;
+		const content = p?.netPerSalesUnit?.value;
+		if (!p || cents == null) return undefined;
+		// Sold by the kilo: the price already is per kg.
+		if (p.salesUnit === 'KG') return { cents, per: 'kg' as const };
+		if (!content || content.value <= 0) return undefined;
+		return { cents: Math.round(cents / content.value), per: content.unit };
+	};
+	const alternatives = ranked
+		.filter((r) => r.rank !== null && r.productId !== best?.productId)
+		.sort((a, b) => a.rank! - b.rank!)
+		.slice(0, 4)
+		.map((r) => {
+			const p = products.get(r.productId);
+			const rel = relation(r.productId) as { whatChanges?: string };
+			const price = perUnit(r.productId);
+			const reason: string =
+				steerReason(p) ??
+				rel.whatChanges ??
+				(r.fromValioRule ? "Valio's own substitute" : 'next best under your rules');
+			// Sized to the need, so the panel shows what buying it means in total, not only per kg.
+			const qty = sized.get(r.productId);
+			const unitCents = offers.find((o) => o.productId === r.productId)?.price?.unitCents;
+			return {
+				productId: r.productId,
+				productName: nameOf(r.productId),
+				reason: reason.slice(0, 120),
+				supply: r.supply ?? 'unknown',
+				...(price ? { pricePer: price } : {}),
+				...(qty ? { qty: { value: qty.value, unit: qty.unit } } : {}),
+				...(qty && unitCents != null ? { totalCents: Math.round(qty.value * unitCents) } : {})
+			};
+		});
+	const base = {
+		kind,
+		candidates,
+		alternatives,
+		labourNote,
+		residual,
+		saved,
+		...(fallback ? { fallback } : {})
+	};
 
 	// Preview, nothing to propose, or nothing would change: the plan stays as it is. An empty proposal never writes:
 	// it would delete the saved rescue (and void its approval) without covering the dish, or bump the version for
