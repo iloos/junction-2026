@@ -120,7 +120,7 @@ Checked against the live service; each line says how.
 |---|---|
 | The app runs on **Aiven Runtime** | Service `mandate`, built from `main` by Aiven from the Dockerfile; `smoke.sh` passes on every deploy. |
 | Data lives in **Aiven for PostgreSQL** with verified TLS | `pg-1dfeeeed`, PostgreSQL 18.7; `/healthz` returns `"tls":"verified"`. A wrong CA is rejected (tested locally). |
-| Schema by migration | Drizzle migrations through `0002`, run by `pnpm db:migrate`; `0000` creates the `vector` extension (pgvector 0.8.7). |
+| Schema by migration | Drizzle migrations through `0004`, run by `pnpm db:migrate`; `0000` creates the `vector` extension (pgvector 0.8.7). |
 | Real catalogue | `products` holds **17,546** Valio products. Embeddings are not populated, so no vector-search claim. |
 | **No double orders** on Postgres | `smoke.sh` with `SMOKE_KEY` on f2052ca: 4 concurrent commits with one idempotency key → one receipt; 3 with different keys → one receipt, two refused. |
 | Live op stream on **LISTEN/NOTIFY** | Committed ops and agent traces are published with `NOTIFY mandate_events` and fanned out from one `LISTEN` per process to SSE. An SSE client received the routine agent's 8 trace events live during a 1.56 s run. |

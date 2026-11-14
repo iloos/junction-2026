@@ -33,6 +33,8 @@ _Draft texts for the Junction 2026 platform, written for the judges. Every behav
 - **Idempotency:** on the deployed Postgres, four commits with one key gave one receipt.
 - **One gate** for the kitchen UI, the in-app agent, REST and MCP. Each committed line names what allowed it. Outside agents have no `approve` tool and get 403 over REST.
 
+**Bonus: beyond price.** After supply tier, substitutes are scored on the kitchen's own weights over price, carbon (Valio's product-group CO₂e average per kg), delivery reliability (Valio's delivery-reliability data), Finnish origin and organic labels (`core/rank/rank.ts`). The seeded hotel weighs reliability first and a lunch restaurant weighs price first; each candidate's score keeps its parts. Valio's API is queried only when needed: live price and availability only for shortlisted products, through a 15-minute cache.
+
 **Real vs simulated.** Real: Valio's catalogue, and live price and availability calls only for shortlisted products, cached and labelled. Simulated and labelled: the booking, the clock, stock on hand, recipes, and the order itself (Valio's API has no order endpoint, so nothing is sent to Valio).
 
 **Try it.** https://app.mandate.kitchen gives you a private sandbox. `/agents` mints an MCP key for it: connect any MCP client to `/mcp/k/<key>` and start with `get_context`. Your agent can plan and order within the mandate, never approve. Valio's view is `/ops`.
@@ -51,14 +53,14 @@ A purchasing agent for professional kitchens has to make many small judgements a
 **How have you integrated the Gemini API?**
 Each model has one job, chosen through a routing table (D12):
 - **Gemini Decisions (`gemini-decision-1`)** in substitute ranking. For each line that needs a substitute, one batched call asks three questions about each surviving candidate (up to 12 candidates): a 0–4 fit score for the dish, the probability that it breaks the kitchen's hard constraints, and the probability it is Finnish. Fit reorders candidates within the same supply tier. A probability of breaking a constraint above 0.5 adds a caution and holds the line for a person; a model answer never rejects, clears or approves anything. If Gemini is unavailable, a recorded replay answers, then deterministic rules, and every answer says which source produced it. Calls have daily caps per workspace and overall, kept in Postgres.
-- **Gemini 3.5 Flash-Lite** (minimal thinking) for parsing a free-text request into structured items, for understanding chat messages, for planning the in-app agent's tool calls, and for writing short explanations. Explicit constraints such as "lactose-free" are checked after the parse so they survive it.
-- **Gemini 3.8 Flash** (low thinking) proposes a menu from an event brief on `/request`, checked against a rubric, with team templates as a fallback.
+- **Gemini 3.5 Flash-Lite** (minimal thinking) parses a free-text request into structured items on `/request`, understands chat messages (the `chat.understand` job, guarded by a deterministic classifier) and writes short explanations that are checked against the task's ledger. Explicit constraints such as "lactose-free" are checked after the parse so they survive it. The in-app agent's tool calls are chosen by a deterministic scripted planner on the deployed app; a Flash-Lite planner exists behind a switch (`AGENT_PLANNER=llm`) and is not what judges see.
+- **Gemini 3.8 Flash** (low thinking) proposes a menu from an event brief (`propose_menu`, on `/request` and from the chat), checked against a rubric, with team templates as a fallback. Turning an accepted menu into a plan is deterministic and calls no model.
 
 **What makes your use of Gemini innovative or technically impressive?**
-Gemini is used as calibrated evidence, not as an authority. Decisions returns probabilities in one call for many questions (our spike measured 120 questions in about 0.6 s), so every candidate can be checked against the kitchen's own constraints while the chef waits. The model's answers feed a deterministic gate: the mandate, the hard limit and approvals are code, and the model can only make the agent more careful. Model choice was measured rather than assumed: on our own eval inputs, 3.8 Flash matched Flash-Lite on parsing, planning and explaining at about three times the latency, so those stay on Flash-Lite; menu proposals moved to 3.8 Flash because it scored 10/10 against 8/10 on our golden briefs.
+Gemini is used as calibrated evidence, not as an authority. Decisions returns probabilities in one call for many questions (our spike measured 120 questions in about 0.6 s), so every candidate can be checked against the kitchen's own constraints while the chef waits. The model's answers feed a deterministic gate: the mandate, the hard limit and approvals are code, and the model can only make the agent more careful. Model choice was measured rather than assumed: on our own eval inputs, 3.8 Flash matched Flash-Lite on parsing, planning and explaining at about three times the latency, so the interactive jobs stay on Flash-Lite; menu proposals moved to 3.8 Flash because it scored 10/10 against 8/10 on our golden briefs.
 
 **Why is Gemini an important part of your solution?**
-Without Decisions, substitute ranking would rely only on price, supply and keyword rules, and a candidate that might break an allergen rule would not be flagged. Without Flash-Lite, the free-text request on `/request` and the chat would need rigid forms. Every model call sits behind a port with a replay and a rules fallback, so the demo still runs if the API is down, and the trace shows which source answered.
+Without Decisions, substitute ranking would rely only on price, supply and keyword rules, and a candidate that might break an allergen rule would not be flagged. Without Flash-Lite, the free-text request on `/request` and the chat would need rigid forms; without 3.8 Flash, an event brief would get only a team template. Every model call sits behind a port with a replay and a rules fallback, so the demo still runs if the API is down, and the trace shows which source answered.
 
 ### Aiven: Best Use of Aiven
 
@@ -82,7 +84,7 @@ What it enables: a judge can use the deployed app in a private sandbox, and the 
 
 ### Exa: The Internet Butler
 
-**ENTER? (lead decides):** Exa's challenge is a main challenge for a personal assistant, which is not our problem, and CLAIMS still lists "Exa in a judge-facing view" as not yet observed on prod.
+**ENTER? (lead decides):** Exa's challenge is a main challenge for a personal assistant, which is not our problem. The Why drawer's Exa evidence is "say it" in CLAIMS (seen on prod); the recipe bullet below has no CLAIMS row yet.
 
 - **Facts for gaps in the catalogue:** when Valio has no allergen or origin record, the Why drawer asks Exa (`/search` with an output schema) for the missing fields. Each field comes with its source URL and a quote, and fields whose source names the product's GTIN are shown first. Web facts are shown as evidence; they never overwrite catalogue data and never clear a hold.
 - **Make in house from a web recipe:** for a product that is out, Exa finds a sourced recipe, its ingredients are matched to orderable catalogue products, and the proposal is **held for sign-off**; nothing is added to the order by itself.
@@ -93,11 +95,13 @@ What it enables: a judge can use the deployed app in a private sandbox, and the 
 ## 4. Honest limits
 
 - **Orders are simulated.** Valio's API has no order endpoint; a commit is a local simulated commitment, and we never call it "confirmed" without a receipt from the simulated supplier.
-- **The scenario is staged:** the booking, the December clock, the kitchen's stock on hand, recipes and grams per guest are team estimates, labelled on screen. Valio's very large "unlimited" stock figure is treated as an assumption.
+- **The scenario is staged:** the booking, the December clock, the kitchen's stock on hand, recipes and grams per guest are team estimates, labelled on screen.
+- **Unknown supply is held for one tap.** Valio confirmed that availability of 999999 or more means unknown, orderable in any quantity. Such a product is labelled unknown, never counted as cover, and a line that relies on it waits for one approval instead of being ordered alone. Most routine dairy carries that figure, so in the demo few lines go through without a person.
 - **Gemini fit is evidence, not proof.** We have not run a labelled test set, so we don't claim the ranking is recipe-aware; supply tier decides first.
-- **Same words, same basket** holds for the cases we test, in English and Finnish. Known gaps: some word orders drop "lactose free" in the rules parser, and the agent can pick an undeliverable product for a tight next-day request.
-- **A too-late date is caught and refused at commit,** but neither entry yet tells the user which cut-off passed or offers the next delivery day.
-- **Open menus** ("Christmas dinner for 50") produce a proposal, but turning one into an order is not claimed: ingredient matching can still pick the wrong product.
+- **Same words, same basket** holds for the cases we test, in English and Finnish, across `/request`, the agent and REST. The chat reads words with its own model and is not part of that check.
+- **The cut-off is named, never moved silently.** A too-late date is caught before ordering: the user is told which cut-off passed and offered the next delivery day. A passed cut-off is also refused at commit.
+- **Menus to plans:** an event brief gives a proposed menu, and an accepted menu becomes a plan. Amounts per guest and ingredient picks are labelled estimates, and an ingredient with no product is shown as unresolved.
+- **Reading pictures is not live.** A `read_image` tool exists for photos of prep lists, delivery notes and labels (NVIDIA Nemotron VL on Verda), but the vision endpoint isn't deployed, so outside agents aren't offered the tool and we don't claim it.
 - **An outside agent's stale commit being refused** is covered by tests, not yet observed on prod over MCP.
 - **Recalls:** no real recall has hit a Valio product; the held-line case is a labelled drill.
-- **No data-residency claim.** We don't say the data stays in Finland.
+- **No data-residency claim.** The app and database run on Aiven in the EU (Frankfurt); we don't say the data stays in Finland.

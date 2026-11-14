@@ -1,16 +1,17 @@
 # ARCHITECTURE
 
-_Lead-owned. Implements D3–D12. The contracts named here are on `main`. Track code against them and raise **Needs** instead of changing them; who owns which path is in [DISPATCH.md](../DISPATCH.md#seams-one-owner-each)._
+_Lead-owned. Implements D3–D13 (with D8a and the D3/D6 amendments). The contracts named here are on `main`. Track code against them and raise **Needs** instead of changing them; who owns which path is in [DISPATCH.md](../DISPATCH.md#seams-one-owner-each)._
 
 ## Shape
 ```
 browser  /  (kitchen + chat dock) · /request · /ops · /agents ──SSE── /api/events
             │ fetch (/kitchen-api/*, /api/request, /request/{run,menu}, /api/chat/{turn,task}, /api/agent/run, /api/web/*)
-server   /api/tools/<name> · /mcp (+ /mcp/k/<key>) · /api/openapi.json        ▲ NOTIFY / in-memory bus
+server   /api/tools/<name> · /mcp (+ /mcp/k/<key>) · /api/openapi.json · /.well-known/agent.json        ▲ NOTIFY / in-memory bus
+         calendar feeds: /kitchen-api/calendar.ics · /api/calendar/<kitchen>.ics (+ /api/demo/calendar-link)
             │ one tool registry (core/contracts/tools.ts) · one gate (serveTool)
          command handler: authorise (scopes) → idempotency → prepare outside the lock → store.transact(lock ws) → services → applyOps → persist state + ops
             │ ports (core/ports.ts)
-adapters catalog (Valio cache-through, file | Postgres, hybrid retrieval) + simulator · decide (Gemini Decisions → replay → rules) · llm router per job (Gemini | Featherless | fixture) · web (Exa, Context.dev | fixture) · menu store · task store · store (Drizzle: Aiven | PGlite)
+adapters catalog (Valio cache-through, file | Postgres, hybrid retrieval) + simulator · decide (Gemini Decisions → replay → rules) · llm router per job (Gemini | Verda | Featherless | fixture) · web (Exa, Context.dev | fixture) · menu store · task store · store (Drizzle: Aiven | PGlite)
 ```
 `src/lib/core/` is pure TS (lint-enforced: no Svelte, Node built-ins, vendor SDKs or `$lib/server`). Services that need I/O take `Ports`. Browsers never hold a key: pages act server-side through the same handlers REST, MCP and the agent use.
 
@@ -71,8 +72,8 @@ The plumbing per outside call lives in `server/external/`: response cache, spend
 - **Make in house.** `ProposeSubstitute{kind: 'make_in_house', lines[], labourNote}` with team-estimate provenance; sign-off tier; the dish is covered only when every ingredient is (AND).
 - **Menus.** `plan_event{proposal}` plans only a revision whose server-stored review names a chef; planning is deterministic and never calls a model.
 
-## Ranking (D6, D8, D10)
-Lexicographic: **supply tier first** (`known_stock` or `make_in_house` from known ingredients > `unknown_stock` > `none`), then the weighted score. Within a tier: hard constraints first (availability kind, lot, origin `require`, tender list, allergens), candidates from Valio's `substitutions` then hybrid domain retrieval. Score = Σ wⱼ·utilityⱼ (price, carbon, origin, reliability; weights normalised) + w_fit·fit/4 (Decide.score 0–4). Missing value = utility 0. Tie-break on productId. Unknown-stock candidates stay visible and labelled, never recommended over known ones. Returns components, exclusions and residual.
+## Ranking (D6, D8, D8a, D10)
+Lexicographic: **supply tier first** (`known_stock` or `make_in_house` from known ingredients > `unknown_stock` > `none`), then the weighted score. D8a: a recipe whose ingredients are all orderable (known stock or ≥ 999999-unknown) beats a product no better than unknown supply; it reads as unknown supply and is held at propose. Within a tier: hard constraints first (availability kind, lot, origin `require`, tender list, allergens), candidates from Valio's `substitutions` then hybrid domain retrieval. Score = Σ wⱼ·utilityⱼ (price, carbon, Finnish origin, reliability, organic label; the kitchen's weights, normalised) + w_fit·fit/4 (Decide.score 0–4). Missing value = utility 0. Tie-break on productId. Unknown-stock candidates stay visible and labelled, never recommended over known ones. Returns components, exclusions and residual.
 
 ## Demand
 Event needs: (gServed × guests ÷ yield) + target stock − usable stock − confirmed inbound, rounded up to the lot step in sales units (`SalesQty.rounding` says how). Factors from `calendar-factors.json`, `1 + (v − 1) × sensitivity`, clamped [0.5, 2]; a closure is a mask (0). Direct orders (`place_order` with a physical `amount`) become a direct need sized by the product's printed content, so 1 L of milk in 0.5 L packs is 2 packs.
@@ -83,11 +84,14 @@ One routing table (`server/adapters/llm/router.ts`, `llm.for(job)`) picks provid
 | Job | Model | Used by |
 |---|---|---|
 | `request.parse` | `gemini-3.5-flash-lite`, minimal thinking, 600 tokens | `/request` parser after the rules |
-| `agent.plan` | Flash-Lite, minimal, 600 | the agent's planner (scripted planner as fallback) |
+| `agent.plan` | Flash-Lite, minimal, 600 | the agent's LLM planner (opt-in, see below) |
 | `agent.review_rewrite` | Flash-Lite, minimal, 200 | one bounded rewrite of an outcome text that failed review |
 | `menu.propose` | `gemini-3.8-flash`, low, 4,000 | `propose_menu` |
 | `explain` | Flash-Lite, minimal, 400 | the chat's reply about a task, checked against the ledger |
 | `chat.understand` | Flash-Lite, minimal, 400 | reading a chat message, guarded by the deterministic classifier |
+| `image.read` | NVIDIA Nemotron 3.5 Super VL on Verda, 1,500 | `read_image`; not live: the Verda endpoint isn't deployed, so the tool is advertised only with `VISION_LIVE=1` |
+
+`agent.plan` runs only with `AGENT_PLANNER=llm`; otherwise, and on the deployed app, the agent uses the deterministic scripted planner.
 
 Decisions (recipe fit in substitute ranking, rubric scores in review) go through the Decide port: `gemini-decision-1` → recorded replay → rules.
 
@@ -105,12 +109,15 @@ Decisions (recipe fit in substitute ranking, rubric scores in review) go through
 
 ## Agents
 - **Agent loop** (`server/agent/`): at most 8 steps, as the routine agent (`kitchen_agent`) with the intersection of its scopes and the starter's, so it never approves or changes the mandate. The planner reads typed, length-bounded facts about tool results, never raw supplier text; the gate (scopes, intent's tool list, kitchen grant, mandate checks) is what stops damage.
+- **Approval stays with a person (D9, D11, D13).** The chef approves in the Kitchen or from the chat dock's DecisionCard: the same exact terms, hold-to-confirm and Kitchen approve command bound to the rendered plan version. The dock's card is a UI control acting as the signed-in chef, never a chat turn, a model output or an agent tool.
 - **`/api/agent/run`** starts a run with a chef key (`agent:run`), streams traces as NDJSON and to `/ops`; one run per workspace; `/api/agent/run/<id>/cancel` stops it.
-- **Chat** (`server/chat/`, `/api/chat/turn`, `/api/chat/task`): a dock on every page (`ChatDock` in the layout; `/agents/chat` opens it over the Kitchen). One turn on a procurement task runs the agent as the visitor's chef ∩ the agent's scopes: understand the message (rules guard the model), clarify a typed slot, plan and order within the mandate, show the decision left for a chef, report the ledger. The task is written back each turn, so a reconnect reads the task, not a transcript.
+- **Chat** (`server/chat/`, `/api/chat/turn`, `/api/chat/task`): a dock on every page (`ChatDock` in the layout; `/agents/chat` opens it over the Kitchen). One turn on a procurement task runs the agent as the visitor's chef ∩ the agent's scopes: understand the message (rules guard the model), clarify a typed slot, plan and order within the mandate, show the decision left for a chef, report the ledger. An event brief runs its own flow: brief questions as chips → `propose_menu` → a menu card linking to its review on `/request` → `plan_event{proposal}` once a chef has reviewed it. The task is written back each turn, so a reconnect reads the task, not a transcript.
 - **Tasks** (`server/tasks/`): `TaskStore` on `agent_tasks` (compare-and-set), the pure ledger from plans, receipts and approvals, and `get_outcome`.
 - **Review** (`server/review/`): validator passes at model-output checkpoints (request parse, outcome text): deterministic checks always, plus an optional rubric score through Decide. It answers pass, revise or block; it never authorises or changes state.
 
 ## Tools (`core/contracts/tools.ts`)
+18 tools in the registry. An outside agent sees 16 (no `approve`, `set_mandate`), and 15 while `read_image` isn't advertised.
+
 | Tool | Scope | What |
 |---|---|---|
 | `get_context` | read | Start here: who you are, kitchens and events you may plan for, scopes, scenario date and cut-off, open plans with their next action |
@@ -130,21 +137,26 @@ Decisions (recipe fit in substitute ranking, rubric scores in review) go through
 | `lookup_facts` | read | Web facts about a catalogue product (Exa), cited; records nothing; counts against the daily web budget |
 | `find_outside` | read | Options outside the Valio catalogue for an unresolved need, with sources; never ordered |
 | `check_recall` | read | Watched recall notices (Context.dev monitor) against a product: GTIN match, name match or none |
+| `read_image` | read | A photo of a prep list, delivery note or label → its reading (router job `image.read`). Advertised to outside agents only when the vision endpoint is live (`VISION_LIVE=1`) |
 
-Scopes per actor (`SCOPES_BY_ACTOR`): `chef` all six (read, plan, order, approve, mandate:write, agent:run) · `kitchen_agent`, `external_agent`, `system` read, plan, order · `approver` read, approve · `job` read. One registry serves MCP, REST and OpenAPI and feeds the agent loop; MCP lists only the tools inside the caller's scopes (`toolsFor`). Core serves most tools; `get_context` (agent), `get_outcome` (tasks), `propose_menu` (menu) and the three web tools are composed in `server/tools/handlers.ts`.
+Scopes per actor (`SCOPES_BY_ACTOR`): `chef` all six (read, plan, order, approve, mandate:write, agent:run) · `kitchen_agent`, `external_agent`, `system` read, plan, order · `approver` read, approve · `job` read. One registry serves MCP, REST and OpenAPI and feeds the agent loop; MCP lists only the tools inside the caller's scopes (`toolsFor`). Core serves most tools; `get_context` (agent), `get_outcome` (tasks), `propose_menu` (menu), `read_image` (images) and the three web tools are composed in `server/tools/handlers.ts`.
+
+Beside the tools, MCP serves **resources** (`mandate://<kitchen>`: a kitchen's mandate in words and numbers; `decisions://open`: plans waiting on something, with the next step) and **prompts** (`plan_event_in_mandate`, `check_open_before_cutoff`, `order_for_date`), read through the same gate with the caller's scopes and never with an approve affordance (`server/tools/mcp-extras.ts`). Outside-agent keys are metered per minute (120 calls, 30 writes, 20 quotes; `server/tools/key-limits.ts`). `/.well-known/agent.json` describes the agent door (MCP URL, scopes, tools, resources, prompts); it holds no key.
 
 ## Server modules (`src/lib/server/`)
 | Module | What |
 |---|---|
-| `adapters/` | `catalog` (file and Postgres catalogues, shared hybrid retrieval and `resolve`; `valio-live.ts`: Valio's API on a cache miss, ≤ 200 ids per call, retries with backoff, breaker, one trace per call; the Postgres catalogue refetches availability older than 15 min and prices once per product, and stores what comes back in `offer_cache`), `decide` (Gemini Decisions → recorded replay → rules), `llm` (Gemini, Featherless, fixture; the router per job; every call traced), `simulator` (scenario stock, per-workspace overlay) |
+| `adapters/` | `catalog` (file and Postgres catalogues, shared hybrid retrieval and `resolve`; `valio-live.ts`: Valio's API on a cache miss, ≤ 200 ids per call, retries with backoff, breaker, one trace per call; the Postgres catalogue refetches availability older than 15 min and prices once per product, and stores what comes back in `offer_cache`), `decide` (Gemini Decisions → recorded replay → rules), `llm` (Gemini, Verda, Featherless, fixture; the router per job; every call traced), `simulator` (scenario stock, per-workspace overlay) |
 | `agent/` | agent loop (≤ 8 steps), shared intent classifier, planner facts, `get_context`, next-action rule, outcome from `FulfilmentView`, agent runs |
 | `auth/` | bearer key → `CallContext`; env keys, `MCP_KEYS`, judge keys |
 | `bus/` | `ServerEvent` publish and catch-up: in-memory and Postgres NOTIFY, synthetic and stress streams |
+| `calendar.ts` | the kitchen's iCalendar feed: decisions, deliveries, receiving days and holidays, per sandbox; a signed calendar token or an agent key reads one sandbox's feed |
 | `chat/` | one chat turn on a task, message understanding (model + rules guard), ledger-checked replies |
 | `db/` | Drizzle client (Aiven TLS, `SQL_TRACE` tally), schema, PGlite fixture |
 | `demo/` | visitor resolver and signed cookies, judge keys, presenter session, stage reset, sandbox reset, run-scoped idempotency |
 | `evals/` | eval adapter over the real handlers, fidelity suite, chat and live-planner diagnostics |
 | `external/` | one outside call: response cache, daily spend caps per caller and instance, circuit breaker, trace; `withExternalScope`/`scopeFor` carry the caller through async code |
+| `images/` | `read_image`: a picture (JPEG, PNG or WebP, ≤ 4 MB) to the `image.read` job, daily caps per workspace and instance; the picture is never stored |
 | `kitchen/` | the Kitchen screen's server side: acts as the chef through the tool handlers, builds the snapshot |
 | `menu/` | event-brief questions, `propose_menu` (model + rubric), the menu flow for `/request`, and the `MenuStore` (`menu_proposals`) |
 | `request/` | `/request`: classify, parse (rules, then the LLM), convert units, dates, lookup, run |
