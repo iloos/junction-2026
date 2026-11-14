@@ -3,7 +3,7 @@
 ## Dispatch
 
 - **Track:** G: sandboxes, Operations, deploy, Aiven. Session 9c.
-- **Branch / worktree:** `lane/g6` in `../junc26-lanes/ops`. Dev port 5176, run with `DATABASE_URL=` blank (dev uses PGlite anyway unless `DEV_USE_REMOTE_DB=1`).
+- **Branch / worktree:** `lane/g7` (next: `lane/g8`) in `../junc26-lanes/ops`. Dev port 5176, run with `DATABASE_URL=` blank (dev uses PGlite anyway unless `DEV_USE_REMOTE_DB=1`).
 - **Owned paths:**
   - `src/lib/server/demo/**`, `src/lib/server/bus/**`, `src/lib/server/db/client.ts`
   - `src/routes/ops/**`, `src/routes/api/events/**`, `src/routes/api/demo/**`, `src/routes/healthz/**`
@@ -12,33 +12,25 @@
 
 ## State
 
-- **Prod:** `mandate` runs main `70c30e2` (`/healthz` reports `commit`). Plan `startup-100-2048`; Postgres `pg-1dfeeeed` is `startup-4` in `aws-eu-central-1`; staging `mandate-staging` builds branch `staging`. About $0.24/h.
-- **Smoke:** passes on 70c30e2, including the race check. The prod UI checks pass except 91's BUG-9 "looks fixed" (91 removes it from KNOWN).
-- **`lane/g6` @ `f04a722`** (gate GREEN on 70c30e2), not merged:
-  - #10: Ops counts decisions (decisionsOf), products that can't be ordered and unresolved needs the way the kitchen does; log and timeline in decisions.
-  - `SMOKE_UI=1` in `smoke.sh`.
-- **On main already:**
-  - per-visitor signed sandboxes, judge keys, presenter session (`?presenter=1`);
-  - Ops cases per cause, closing on rescue or commit;
-  - timeline, run graph, simulated traces;
-  - stale-run fix (5 s run refresh, live stream filtered by run);
-  - dev DB guard;
-  - `/ops/views` (FulfilmentView coverage);
-  - `/healthz` commit.
+- **Prod:** `mandate` runs main (`/healthz` reports `commit` and, with g7, per-service state). Plan `startup-100-2048`; Postgres `pg-1dfeeeed` is `startup-4` in `aws-eu-central-1`; staging `mandate-staging` builds branch `staging`. About $0.24/h.
+- **Smoke:** green with `SMOKE_UI=1` on every deploy today. The race check needs `SMOKE_KEY`, which this session's permission guard won't read from `.env`; the lead or the user runs it.
+- **On main (g6):**
+  - Ops opens on **Problems** (`problems.ts`, `ProblemCard`): one card per cause across kitchens, consequence first ("Christmas ham: 28 kg short for 1 kitchen"), "Agents already …" from the op log, € waiting, time to cut-off, only the kitchen link as a button.
+  - **Story** per problem (`story.ts`, `StoryPanel`): its ops in seq order with a chip, one sentence and the consequence; ops without a sentence are counted, never vague. "Technical detail" opens the op in `TraceDrawer`.
+  - **Engine room** tab (timeline, op log, agent traces) only with the System toggle.
+  - **RecordRefusal** op: the gate records FORBIDDEN for outside and kitchen agents (REST and MCP, including tools the MCP server doesn't list), one per caller, tool and plan per 60 s; shown as a red story step.
+  - M2 (`onCurrentRun` always follows the newest run), R9-09 (bus delivers in order per workspace), R9-10 (NOTIFY limit in bytes; publish failures logged).
+  - Words: "Ordered", "Order refused", days not ISO dates.
+- **`lane/g7` @ `3826d12`** (merging): service status (`external/status.ts`, `/healthz` `services[]`, `ServiceStatus` in the Ops header), RecordRefusal caps, ids behind System, and the privacy fix (5,000 sandboxes per process, `roomNotice` on every shared room).
+- **Earlier:** per-visitor signed sandboxes, judge keys, presenter session (`?presenter=1`), stale-run fix, dev DB guard, `/ops/views`, `/healthz` commit.
 
 ## Next, in order
 
-1. g6 merged by the lead, then deploy, warm and smoke.
-2. **#3 CaseTicket, consequence first** (`docs/handoff/ui-mockset-to-prod.md`):
-   - the title is the consequence; `decisionsOf` already writes a consequence sentence per decision;
-   - one line of what agents already did (rescues proposed, lines orderable);
-   - € held and time to cut-off;
-   - only wired buttons (the kitchen deep link).
-3. **#5 Engine room:** an Ops tab holding the timeline swimlanes, run graph and traces. The first Ops screen keeps cases and stories only.
-4. **#4 "What happened to this case":** a vertical story of the case's ops from `stream.log` (filter by planId), time, actor chip and `opSummary`, with "Technical detail" opening the run graph or raw op. Only if every op type's sentence holds; test on the seeded run and a perturbed one.
-5. After: #11 stakes chart, #12 gate paths (counted sources only), #9 product sheet with 1f.
+1. Deploy g7 with the lead's next main; check `/healthz` `services` on prod.
+2. **NEEDS from others:** 1f and B render `room.notice` / `workspace.notice` where people type; the lead mounts `ServiceStatus` in the shell for the System layer.
+3. #11 stakes chart (€ waiting by cut-off, from `problems.ts`), #12 gate paths (counted sources only: ops, refusals, idempotency replays), #9 product sheet with 1f.
 
-Mocks are in the main checkout at `scratch/ux-mock/ops.html` and `ops-story.png`. Words follow `docs/concept/VOCABULARY.md`. No new dependencies.
+Mocks are in the main checkout at `scratch/ux-mock/ops.html` and `ops-story.png`; screenshots of what shipped in `scratch/ops-wave1/`. Words follow `docs/concept/VOCABULARY.md`. No new dependencies.
 
 ## Deploy and roll back
 
@@ -63,7 +55,7 @@ Mocks are in the main checkout at `scratch/ux-mock/ops.html` and `ops-story.png`
 
 ## Resume
 
-- **Worktree:** `pnpm i`; `.env` and `data/valio/` copied from the main checkout.
+- **Worktree:** branch `lane/g7` (stacked on g6); `pnpm i`; `.env` and `data/valio/` copied from the main checkout.
 - **Checks:** `pnpm check && pnpm lint && pnpm test:unit --run`, then `pnpm gate` before handing a SHA.
 - **Production build without Aiven:** `pnpm build && scripts/deploy/serve-fixture.sh` (:4177; the test chef key is in the script). Then `GATE_URL=http://localhost:4177 npx playwright test -c scripts/deploy/pw-gate.config.ts`.
 - **Prod UI checks:** `KITCHEN_URL=<url> npx playwright test -c evals/ui/pw-prod.config.ts`, from the worktree root.
