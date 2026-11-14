@@ -6,7 +6,7 @@
 	import { neededVsBuying } from './coverage';
 	import SourceTag from './SourceTag.svelte';
 	import StateChip from './StateChip.svelte';
-	import { money, num } from './format';
+	import { humanDates, money, num } from './format';
 	import type { WhyChain } from './why-chain';
 	import { page } from '$app/state';
 	import SourceChip from './SourceChip.svelte';
@@ -154,7 +154,7 @@
 												<SourceTag source={n.source} compact />
 											</div>
 											{#if n.detail}<p class="mt-0.5 text-meta leading-snug text-ink-3">
-													{n.detail}
+													{humanDates(n.detail)}
 												</p>{/if}
 										</dd>
 									</div>
@@ -305,11 +305,15 @@
 								>
 								<div class="min-w-0">
 									<div class="flex items-start justify-between gap-3">
-										<p class="text-body leading-[1.45] text-pretty text-ink">{step.text}</p>
+										<p class="text-body leading-[1.45] text-pretty text-ink">
+											{humanDates(step.text)}
+										</p>
 										<SourceTag source={step.source} compact />
 									</div>
 									{#if step.detail}
-										<p class="mt-0.5 text-meta leading-snug text-ink-3">{step.detail}</p>
+										<p class="mt-0.5 text-meta leading-snug text-ink-3">
+											{humanDates(step.detail)}
+										</p>
 									{/if}
 								</div>
 							</li>

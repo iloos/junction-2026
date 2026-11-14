@@ -13,6 +13,7 @@
 </script>
 
 <span
+	title={s.note}
 	class="inline-flex shrink-0 items-center rounded-full border px-2 leading-none whitespace-nowrap {compact
 		? 'h-5 text-micro'
 		: 'h-[22px] text-micro'} {CLS[s.family]}">{s.label}</span

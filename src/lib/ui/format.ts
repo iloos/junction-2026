@@ -65,3 +65,14 @@ const hel = new Intl.DateTimeFormat('en-GB', {
 export function storyTime(at: string | Date): string {
 	return hel.format(typeof at === 'string' ? new Date(at) : at);
 }
+
+/**
+ * Text from the core or a provider with ISO dates in it, as a person reads dates: "2026-11-15T17:00:00+02:00" →
+ * "Sun 15 Nov, 17:00", "2026-12-14" → "Mon 14 Dec". Everything else is left as written.
+ */
+export function humanDates(text: string): string {
+	return text.replace(
+		/\b(20\d\d-\d\d-\d\d)(T\d\d:\d\d(?::\d\d(?:\.\d+)?)?(?:Z|[+-]\d\d:\d\d)?)?/g,
+		(_, date: string, time?: string) => (time ? storyTime(`${date}${time}`) : day(date))
+	);
+}
