@@ -71,5 +71,35 @@ describe.skipIf(!existsSync(join(DIR, 'valio_aimo_junction26_product_data.json')
 			expect(meets(bread, { freeFrom: ['GLUTEN'] }).verdict).toBe('no');
 			expect(meets(bread, { excludes: ['gluten_cereals'] }).verdict).toBe('no');
 		});
+
+		it('R12-02: wheat, rye, barley and oats count as gluten; a claim the allergen list contradicts is never ok', () => {
+			// Kikkoman soy sauce lists AY and UW (wheat), no AW.
+			const soy = meets(p('460082'), { excludes: ['gluten_cereals'] });
+			expect(soy.verdict).toBe('no');
+			expect(soy.failing[0].why).toContain('wheat');
+			expect(meets(p('460082'), { freeFrom: ['GLUTEN'] }).verdict).toBe('no');
+			// A kitchen rule on the umbrella code covers the group.
+			const kitchen = { allergens: { freeFrom: ['AW'] }, origin: [] } as never;
+			expect(meets(p('460082'), undefined, kitchen).verdict).toBe('no');
+			const claim = {
+				...p('460082'),
+				nameFi: 'Testi leipä',
+				allergens: { contains: ['UW'], mayContain: [], declared: true },
+				freeFrom: ['GLUTEN']
+			} as Product;
+			for (const r of [{ freeFrom: ['GLUTEN'] }, { excludes: ['gluten_cereals'] as const }]) {
+				const m = meets(claim, r as never);
+				expect(m.verdict).not.toBe('ok');
+				expect(m.failing[0].why).toMatch(/claims free from gluten but lists wheat/);
+			}
+			// Lactose-free milk lists milk (AM) and stays lactose-free; listed lactose contradicts the claim.
+			expect(meets(p('464201'), { freeFrom: ['LACTOSE'] }).verdict).toBe('ok');
+			const lac = {
+				...claim,
+				allergens: { contains: ['ML'], mayContain: [], declared: true },
+				freeFrom: ['LACTOSE']
+			} as Product;
+			expect(meets(lac, { freeFrom: ['LACTOSE'] }).verdict).not.toBe('ok');
+		});
 	}
 );

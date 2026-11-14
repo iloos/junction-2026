@@ -121,6 +121,7 @@ What changes is that hard constraints get **one vocabulary and one evaluator in 
 - One pure `meets(product, requirements, kitchenConstraints) → { ok | unknown | no, why }` serves ranking, the validator (quote and commit), the request lookup filter, the substitutes and the UI's diet marks.
 - A dish's diet codes (G, L, VL, M, VEG, VE) compile into requirements on each of its needs.
 - An unknown answer (no allergen or diet record) is never "ok": it holds per the kitchen's `unknownCounts`.
+- A free-from claim that the record's own allergen list contradicts (claims gluten-free, lists wheat) is unknown: held and named ("claims free from gluten but lists wheat"), never ok and never refused outright, since gluten-free breads on gluten-free wheat starch and gluten-free oats are legal (R12-02, 14 Nov). One allergen table (`core/mandate/allergens.ts`) defines each group's codes; gluten is AW, UW, NR, GB, GO, GS, GK.
 
 **Why:** today three places interpret diet separately: the UI marks (lib/ui/diet.ts), the request filter (server/request filterHits, B's meatContradiction) and the core requirements (freeFrom/origin/labels only). Dish diet codes are display-only, which is how a vegetarian dish was substituted with meatballs on prod. The authority model and the single commit gate are sound. The vocabulary under them was too narrow and was enforced at the edges.
 

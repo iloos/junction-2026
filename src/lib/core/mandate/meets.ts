@@ -6,6 +6,7 @@
  */
 import type { Kitchen, NeedRequirements, Product, RequirementCheck } from '../contracts';
 import { inCategoryGroup } from './categories';
+import { ALLERGEN_GROUPS, ALLERGEN_NAMES, allergenName, codesFor } from './allergens';
 
 export type Verdict = 'ok' | 'unknown' | 'no';
 export type RequirementTerm = 'freeFrom' | 'excludes' | 'diet' | 'origin' | 'labels' | 'kitchen';
@@ -42,40 +43,21 @@ const named = (p: Product, code: string) =>
 		.split(/[^a-zåäö]+/)
 		.some((w) => w.startsWith(NAME_CLAIMS[code]));
 
-/** GS1 allergen codes Valio uses: AM milk, ML lactose, AW cereals containing gluten. */
-const CODES: Record<string, string[]> = {
-	LACTOSE: ['AM', 'ML', 'MILK', 'LACTOSE'],
-	MILK: ['AM', 'ML', 'MILK', 'LACTOSE'],
-	GLUTEN: ['AW', 'GLUTEN', 'WHEAT']
+/** Codes a free-from requirement is read against: a lactose-free need refuses listed milk unless the claim is made. */
+const CODES: Record<string, readonly string[]> = {
+	LACTOSE: ALLERGEN_GROUPS.milk,
+	MILK: ALLERGEN_GROUPS.milk,
+	GLUTEN: ALLERGEN_GROUPS.gluten,
+	WHEAT: ['UW', 'WHEAT'],
+	EGGS: ALLERGEN_GROUPS.egg,
+	SOY: ALLERGEN_GROUPS.soy
 };
-/**
- * Allergen codes (Valio's GS1 codes, and the names some records and kitchen rules use) to readable names: one list for
- * the agent door, the dock and the UI.
- */
-export const ALLERGEN_NAMES: Record<string, string> = {
-	AN: 'nuts',
-	AP: 'peanuts',
-	AS: 'sesame',
-	AU: 'sulphites',
-	AY: 'soy',
-	AF: 'fish',
-	BC: 'celery',
-	BM: 'mustard',
-	GB: 'barley',
-	GO: 'oats',
-	NR: 'rye',
-	SA: 'almond',
-	SH: 'hazelnut',
-	UW: 'wheat',
-	AM: 'milk',
-	ML: 'lactose',
-	AW: 'gluten cereals',
-	AE: 'egg',
-	MILK: 'milk',
-	LACTOSE: 'lactose',
-	GLUTEN: 'gluten',
-	WHEAT: 'wheat'
+/** Codes that contradict a free-from claim: lactose-free milk still lists AM, so only listed lactose does. */
+const CONTRADICTS: Record<string, readonly string[]> = {
+	...CODES,
+	LACTOSE: ALLERGEN_GROUPS.lactose
 };
+export { ALLERGEN_NAMES };
 
 const MEAT_WORD =
 	/liha|kinkku|makkara|nakki|broiler|kana(?!pa|nmun)|kalkkun|naudan|porsa|possu|sian|lammas|poro|hirvi|pekoni|kassler|salami|maksa|chorizo|meetvursti|liivate/;
@@ -103,13 +85,29 @@ const unknown = (term: RequirementTerm, text: string, why: string): TermResult =
 });
 
 /** By allergen codes: listed (contains or may contain) → no; declared without them → ok; undeclared → unknown. */
-function byAllergens(p: Product, term: RequirementTerm, text: string, codes: string[]): TermResult {
+function byAllergens(
+	p: Product,
+	term: RequirementTerm,
+	text: string,
+	codes: readonly string[]
+): TermResult {
 	const hit = codes.find(
 		(c) => p.allergens.contains.includes(c) || p.allergens.mayContain.includes(c)
 	);
-	if (hit) return no(term, text, `allergens list ${hit} (${ALLERGEN_NAMES[hit] ?? hit})`);
+	if (hit) return no(term, text, `allergens list ${hit} (${allergenName(hit)})`);
 	if (!p.allergens.declared) return unknown(term, text, 'no allergen record');
 	return ok(term, text, 'declared allergens do not include it');
+}
+
+/**
+ * A free-from claim the allergen list contradicts (claims gluten-free, lists wheat) is never ok: the chef reads the
+ * label. Gluten-free bread made with gluten-free wheat starch is real, so it is held, not refused.
+ */
+function contradicted(p: Product, x: string): string | undefined {
+	const hit = (CONTRADICTS[x] ?? []).find(
+		(c) => p.allergens.contains.includes(c) || p.allergens.mayContain.includes(c)
+	);
+	return hit && `claims free from ${x.toLowerCase()} but lists ${allergenName(hit)} (${hit})`;
 }
 
 function freeFrom(p: Product, x: string): TermResult {
@@ -117,6 +115,9 @@ function freeFrom(p: Product, x: string): TermResult {
 }
 function freeFromTerm(p: Product, x: string): TermResult {
 	const text = `free from ${x}`;
+	const claimed = p.freeFrom.includes(x) || named(p, x);
+	const clash = claimed ? contradicted(p, x) : undefined;
+	if (clash) return unknown('freeFrom', text, clash);
 	if (p.freeFrom.includes(x)) return ok('freeFrom', text, `claims free from ${x}`);
 	if (named(p, x)) return ok('freeFrom', text, `the name says ${NAME_CLAIMS[x]}`);
 	if ((x === 'LACTOSE' || x === 'MILK') && p.diet.includes('vegan'))
@@ -168,8 +169,12 @@ function excludesTerm(
 			if (p.diet.includes('vegan')) return ok('excludes', text, 'diet record: vegan (no milk)');
 			return byAllergens(p, 'excludes', text, CODES.MILK);
 		case 'gluten_cereals':
-			if (p.freeFrom.includes('GLUTEN') || named(p, 'GLUTEN'))
-				return ok('excludes', text, 'claims gluten-free');
+			if (p.freeFrom.includes('GLUTEN') || named(p, 'GLUTEN')) {
+				const clash = contradicted(p, 'GLUTEN');
+				return clash
+					? unknown('excludes', text, clash)
+					: ok('excludes', text, 'claims gluten-free');
+			}
 			if (glutenLike(p)) return no('excludes', text, 'a gluten grain in the name');
 			return byAllergens(p, 'excludes', text, CODES.GLUTEN);
 		case 'meat':
@@ -207,8 +212,7 @@ function dietTerm(p: Product, d: 'vegetarian' | 'vegan'): TermResult {
 		const animal = ['AM', 'ML', 'AE', 'MILK', 'LACTOSE', 'EGG'].find((c) =>
 			p.allergens.contains.includes(c)
 		);
-		if (animal)
-			return no('diet', d, `allergens list ${animal} (${ALLERGEN_NAMES[animal] ?? 'egg'})`);
+		if (animal) return no('diet', d, `allergens list ${animal} (${allergenName(animal)})`);
 		if (p.diet.includes('vegan')) return ok('diet', d, 'diet record: vegan');
 	} else if (plantRecord(p)) return ok('diet', d, `diet record: ${p.diet.join(', ')}`);
 	if (PREPARED.some((c) => p.category.startsWith(c)))
@@ -260,8 +264,8 @@ export function meets(
 			})),
 		// Kitchen terms in readable codes (an outside agent can't decode AM); the fact keeps the raw code.
 		...(kitchen?.allergens.freeFrom ?? []).map((code) => ({
-			...byAllergens(p, 'kitchen', `kitchen excludes ${ALLERGEN_NAMES[code] ?? code}`, [code]),
-			code: `kitchen:allergen:${(ALLERGEN_NAMES[code] ?? code).replace(/\s+/g, '_')}`
+			...byAllergens(p, 'kitchen', `kitchen excludes ${allergenName(code)}`, codesFor(code)),
+			code: `kitchen:allergen:${allergenName(code).replace(/\s+/g, '_')}`
 		})),
 		...(kitchen?.origin ?? [])
 			.filter((o) => o.rule === 'require' && inCategoryGroup(p.category, o.categoryGroup))

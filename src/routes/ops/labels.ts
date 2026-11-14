@@ -201,5 +201,7 @@ export const SIM_KIND: Record<SimEvent['kind'], string> = {
 	'contention.detected': 'Contention',
 	'cutoff.closed': 'Cut-off',
 	'allocation.decided': 'Allocation',
-	'supply.arrived': 'Supply arrived'
+	'supply.arrived': 'Supply arrived',
+	'kitchen.created': 'New store',
+	'shortage.replanned': 'Shortage re-planned'
 };
