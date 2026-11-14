@@ -1,0 +1,117 @@
+{
+	"id": "s6-hard-ceiling",
+	"title": "An order over the hard limit is forbidden outright: no approval is opened, an approver can't pass it, commit refuses it; a split order whose total is over the limit is forbidden too",
+	"stories": ["★4"],
+	"edgeCases": [],
+	"seeds": {
+		"kitchen": "k-hotel"
+	},
+	"clock": "2026-12-07T21:40:00+02:00",
+	"steps": [
+		{
+			"actor": "kitchen_agent",
+			"action": "place_order",
+			"input": {
+				"deliverBy": "2026-12-10",
+				"idempotencyKey": "juice-2.7m",
+				"lines": [
+					{
+						"productId": "472817",
+						"qty": 200000,
+						"unit": "KI"
+					}
+				]
+			}
+		},
+		{
+			"actor": "approver",
+			"action": "approve",
+			"input": {
+				"ref": "plan:juice-2.7m"
+			}
+		},
+		{
+			"actor": "chef",
+			"action": "commit",
+			"input": {
+				"ref": "plan:juice-2.7m",
+				"idempotencyKey": "juice-commit"
+			}
+		},
+		{
+			"actor": "kitchen_agent",
+			"action": "place_order",
+			"input": {
+				"deliverBy": "2026-12-10",
+				"idempotencyKey": "split",
+				"lines": [
+					{
+						"productId": "472817",
+						"qty": 100,
+						"unit": "KI"
+					},
+					{
+						"productId": "464201",
+						"qty": 4500,
+						"unit": "ST"
+					}
+				]
+			}
+		}
+	],
+	"expect": {
+		"unorderable": [
+			{
+				"productId": "472817",
+				"reasons": ["over_hard_limit"]
+			},
+			{
+				"productId": "464201",
+				"reasons": ["over_hard_limit"]
+			}
+		],
+		"attempts": [
+			{
+				"step": 0,
+				"result": "ok"
+			},
+			{
+				"step": 1,
+				"result": "error",
+				"error": "NOT_FOUND"
+			},
+			{
+				"step": 2,
+				"result": "error"
+			},
+			{
+				"step": 3,
+				"result": "ok"
+			}
+		],
+		"plans": [
+			{
+				"key": "juice-2.7m",
+				"minTotalCents": 800001
+			},
+			{
+				"key": "split",
+				"minTotalCents": 800001
+			}
+		],
+		"approval": null,
+		"receipts": 0,
+		"weekSpentCents": 0,
+		"ops": {
+			"mustNotInclude": [
+				{
+					"op": "RecordApproval"
+				}
+			]
+		}
+	},
+	"expectFail": {
+		"F32-total": ["plans[juice-2.7m]"]
+	},
+	"notes": "k-hotel: order cap €1,000, weekly €4,000 → hard limit €8,000 (larger of 5× order cap and 2× weekly). Juice 472817: KI = 5 × 1 l. Both forbidden plans should report the total that broke the limit; the single-line one reports 0 (F32-total). Unit coverage: store/ceiling.test.ts."
+}

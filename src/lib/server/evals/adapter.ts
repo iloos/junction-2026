@@ -3,7 +3,7 @@
  * (createHandlers), then the end state assembled from the op log. Histories (line/plan/approval states) come from
  * replaying the persisted ops through applyOps, so they show exactly what the store recorded.
  */
-import { asc, eq } from 'drizzle-orm';
+import { and, asc, eq, ne } from 'drizzle-orm';
 import {
 	SCOPES_BY_ACTOR,
 	toolSchemas,
@@ -34,20 +34,26 @@ type ProposeSubstituteOp = Extract<OpEnvelope['op'], { type: 'ProposeSubstitute'
 /* eslint-disable @typescript-eslint/no-explicit-any -- scenario step inputs are free-form JSON */
 
 export async function playScenario(s: Scenario): Promise<EndState> {
-	const env = await createDbPorts();
-	env.overlay.clear();
-	const { ports } = env;
 	const valioCallIds: string[] = [];
-	const offers = ports.catalog.offers.bind(ports.catalog);
-	ports.catalog = {
-		...ports.catalog,
-		offers: async (ids, d) => {
-			const r = await offers(ids, d);
-			valioCallIds.push(...r.offers.map((o) => o.productId));
-			return r;
-		}
+	/** Ports for one run; `reset` builds the next run's on the same database, as the sandbox reset does. */
+	const open = async (o: Parameters<typeof createDbPorts>[0] = {}) => {
+		const e = await createDbPorts({ now: s.clock, ...o });
+		const offers = e.ports.catalog.offers.bind(e.ports.catalog);
+		e.ports.catalog = {
+			...e.ports.catalog,
+			offers: async (ids, d) => {
+				const r = await offers(ids, d);
+				valioCallIds.push(...r.offers.map((x) => x.productId));
+				return r;
+			}
+		};
+		return e;
 	};
-	const h: ToolHandlers = createHandlers(ports);
+	let env = await open();
+	env.overlay.clear();
+	let ports = env.ports;
+	let h: ToolHandlers = createHandlers(ports);
+	let runs = 1;
 	const ctx = (kind: Kind): CallContext => ({
 		workspaceId: env.workspaceId,
 		runId: env.runId,
@@ -75,6 +81,33 @@ export async function playScenario(s: Scenario): Promise<EndState> {
 	const planKeys = new Map<string, string>(); // scenario key (idempotency key / event) → plan id
 	let recomputeMs: number | undefined;
 	const load = () => ports.store.load(env.workspaceId, env.runId);
+	const recall = async (productId: string) => {
+		const r = await ports.store.transact(env.workspaceId, async () => ({
+			ops: [
+				{
+					workspaceId: env.workspaceId,
+					runId: env.runId,
+					actor: { kind: 'system' as const, id: 'recall-watch' },
+					via: 'eval:recall',
+					op: {
+						type: 'RecordAnomaly' as const,
+						anomaly: {
+							workspaceId: env.workspaceId,
+							runId: env.runId,
+							id: `recall-${productId}`,
+							kind: 'recall' as const,
+							productId,
+							message: `Recall notice names ${productId} (simulated)`,
+							detectedAt: s.clock,
+							provenance: { source: 'simulator' as const, note: 'eval recall notice' }
+						}
+					}
+				}
+			],
+			value: null
+		}));
+		if (!r.ok) throw new Error(`recall ${productId}: ${r.error.message}`);
+	};
 	const record = (i: number, step: Step, r: any, extra: Partial<AttemptOutcome> = {}) =>
 		attempts.push({
 			step: i,
@@ -160,10 +193,18 @@ export async function playScenario(s: Scenario): Promise<EndState> {
 						? await h.find_substitutes(c, {
 								planId: plan.id,
 								version: plan.version,
-								lineId: line.id
+								lineId: line.id,
+								apply: inp.apply,
+								weights: inp.weights,
+								requireOrigin: inp.requireOrigin
 							})
-						: { ok: false, error: { code: 'NOT_FOUND', retryable: false } };
-				record(i, step, r, { productId: inp.productId });
+						: { ok: false as const, error: { code: 'NOT_FOUND', retryable: false } };
+				record(i, step, r, {
+					productId: inp.productId,
+					...(r.ok
+						? { applied: r.value.applied, chosen: r.value.chosen.map((l) => l.productId) }
+						: {})
+				});
 				break;
 			}
 			case 'approve': {
@@ -214,6 +255,18 @@ export async function playScenario(s: Scenario): Promise<EndState> {
 					label: inp.label
 				});
 				break;
+			case 'recall':
+				await recall(inp.productId);
+				break;
+			case 'reset': {
+				// A fresh run on the same database and workspace; the old run's ops stay for audit.
+				runs++;
+				env = await open({ db: env.db, runId: `run-eval-${runs}`, overlay: env.overlay });
+				ports = env.ports;
+				h = createHandlers(ports);
+				planKeys.clear();
+				break;
+			}
 			default:
 				attempts.push({
 					step: i,
@@ -284,6 +337,8 @@ export async function playScenario(s: Scenario): Promise<EndState> {
 				historyStates: lineHistory.get(l.id)?.states,
 				historyReasons: lineHistory.get(l.id)?.reasons,
 				pickable: l.state === 'eligible' || l.state === 'held',
+				substituteFor: l.substituteFor,
+				closingTime: l.offer?.availability.closingTime ?? undefined,
 				labels:
 					a?.provenance.source === 'simulator' ? [`simulated: ${a.provenance.note ?? ''}`] : []
 			};
@@ -362,7 +417,7 @@ export async function playScenario(s: Scenario): Promise<EndState> {
 	const budgets = await env.db
 		.select()
 		.from(schema.budgets)
-		.where(eq(schema.budgets.kitchenId, kitchenId));
+		.where(and(eq(schema.budgets.kitchenId, kitchenId), eq(schema.budgets.runId, env.runId)));
 	const whyFor = (s.expect.why as { productId?: string } | undefined)?.productId;
 	const why: Record<string, string[]> = {};
 	if (whyFor) {
@@ -372,6 +427,21 @@ export async function playScenario(s: Scenario): Promise<EndState> {
 		if (r?.ok) why[whyFor] = r.value.steps.map((x) => x.text);
 	}
 	const external = SCOPES_BY_ACTOR.external_agent as readonly string[];
+	const newest = plans[plans.length - 1];
+	const current = newest ? await h.get_plan(ctx('chef'), { planId: newest.id }) : null;
+	const ap = current?.ok ? current.value.approval : null;
+	const approval = ap
+		? {
+				state: ap.state,
+				productIds: newest!.lines.filter((l) => ap.lineIds.includes(l.id)).map((l) => l.productId)
+			}
+		: null;
+	const previousRunOps = (
+		await env.db
+			.select({ seq: schema.ops.seq })
+			.from(schema.ops)
+			.where(and(eq(schema.ops.workspaceId, env.workspaceId), ne(schema.ops.runId, env.runId)))
+	).length;
 
 	return {
 		lines,
@@ -399,6 +469,8 @@ export async function playScenario(s: Scenario): Promise<EndState> {
 			external.includes(toolSchemas[t].scope)
 		),
 		wording: AVAILABILITY_WORDING,
-		recomputeMs
+		recomputeMs,
+		approval,
+		previousRunOps
 	};
 }

@@ -1,0 +1,95 @@
+{
+	"id": "s7-recall-rescue",
+	"title": "A recall notice holds the salmon for sign-off and voids the approval; the rescue replaces it with Finnish trout; the next approval binds the trout, never the recalled salmon; commit buys the trout only",
+	"stories": ["★3", "★5"],
+	"edgeCases": [],
+	"seeds": {
+		"kitchen": "k-hotel",
+		"event": "event-xmas-140"
+	},
+	"clock": "2026-12-07T21:40:00+02:00",
+	"steps": [
+		{
+			"actor": "chef",
+			"action": "plan_event",
+			"input": {
+				"eventId": "event-xmas-140"
+			}
+		},
+		{
+			"actor": "system",
+			"action": "recall",
+			"input": {
+				"productId": "462150"
+			}
+		},
+		{
+			"actor": "chef",
+			"action": "find_substitutes",
+			"input": {
+				"productId": "462150"
+			}
+		},
+		{
+			"actor": "approver",
+			"action": "approve",
+			"input": {
+				"ref": "plan:event-xmas-140"
+			}
+		},
+		{
+			"actor": "chef",
+			"action": "commit",
+			"input": {
+				"ref": "plan:event-xmas-140",
+				"idempotencyKey": "xmas-1"
+			}
+		}
+	],
+	"expect": {
+		"lines": [
+			{
+				"productId": "462150",
+				"state": "held",
+				"tier": "sign_off",
+				"reasons": ["recall"],
+				"historyStates": ["eligible", "held"]
+			},
+			{
+				"productId": "462016",
+				"qty": 20,
+				"unit": "KG",
+				"state": "committed",
+				"substituteFor": "462150"
+			}
+		],
+		"attempts": [
+			{
+				"step": 2,
+				"result": "ok",
+				"applied": true,
+				"chosen": ["462016"]
+			},
+			{
+				"step": 4,
+				"result": "receipt"
+			}
+		],
+		"approvalStates": ["pending", "invalidated", "pending", "granted"],
+		"approval": {
+			"state": "granted",
+			"covers": ["462016"],
+			"excludes": ["462150"]
+		},
+		"receipts": 1,
+		"ops": {
+			"mustInclude": [
+				{
+					"op": "RecordAnomaly",
+					"actor": "system"
+				}
+			]
+		}
+	},
+	"notes": "The recall is injected as the web lane's ingest writes it (one RecordAnomaly by system). Salmon was eligible (a usual product) before the recall."
+}

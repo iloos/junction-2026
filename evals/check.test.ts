@@ -1,7 +1,7 @@
 // Self-test for the checker and the scenario files: node --test evals/
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { checkExpect } from './check.ts';
+import { applyExpectFail, checkExpect } from './check.ts';
 import { loadScenarios, loadSeeds, validate } from './run.ts';
 import type { EndState } from './types.ts';
 
@@ -117,4 +117,20 @@ test('an approval tool in the external agent scope fails s5', () => {
 test('an unknown expect key fails instead of passing silently', () => {
 	const [r] = checkExpect({ recipts: 1 }, base());
 	assert.equal(r.pass, false);
+});
+
+test('expectFail turns a listed failure into a pass and flags one that now passes or matches nothing', () => {
+	const r = (key: string, pass: boolean) => ({ key, pass, detail: pass ? 'ok' : 'bad' });
+	const out = applyExpectFail(
+		[r('attempts[3]', false), r('lines[1]', true), r('receipts', false)],
+		{
+			F9: ['attempts[3]'],
+			F5: ['lines'],
+			F2: ['nope']
+		}
+	);
+	assert.equal(out.find((x) => x.key === 'attempts[3]')?.pass, true);
+	assert.equal(out.find((x) => x.key === 'receipts')?.pass, false);
+	assert.equal(out.find((x) => x.key === 'expectFail.F5[lines]')?.pass, false);
+	assert.equal(out.find((x) => x.key === 'expectFail.F2[nope]')?.pass, false);
 });
