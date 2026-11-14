@@ -267,14 +267,14 @@ h2{font-size:clamp(30px,3.5vw,54px);max-width:27ch}
 <!-- 1 HERO -->
 <section id="hero" aria-label="Mandate">
   <div>
-    <h1 class="reveal d1">Bring an event, a menu, a dish or one item. <em>Mandate sorts out the order.</em></h1>
+    <h1 class="reveal d1">Bring an event, its menu, or one item. <em>Mandate sorts out the order.</em></h1>
     <p class="lede reveal d2">It finds each product in Valio Aimo's catalogue and orders on its own only within the limits the chef sets. Anything else waits for the chef, with the reason.</p>
     <div class="ctas reveal d3">
       <a class="btn primary" href="https://app.mandate.kitchen/request">Try a request</a>
       <a class="btn" href="https://app.mandate.kitchen/">See the Christmas buffet</a>
     </div>
   </div>
-  <div class="gatebox reveal d2" role="img" aria-label="Illustration: order lines from an event, a menu, a dish or a single item pass the same checks and end ordered within the mandate, waiting for the chef, or refused with a reason.">
+  <div class="gatebox reveal d2" role="img" aria-label="Illustration: order lines from an event, its menu or a single item pass the same checks and end ordered within the mandate, waiting for the chef, or refused with a reason.">
     <canvas id="gatecv"></canvas>
     <div class="tick">illustration</div>
     <div class="legend"><span><b style="background:var(--ok)"></b>ordered within the mandate</span><span><b style="background:var(--amber)"></b>waits for the chef</span><span><b style="background:var(--red)"></b>refused, with the reason</span></div>
@@ -449,16 +449,16 @@ const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
  const C={ok:css('--ok'),am:css('--amber'),red:css('--red'),line:css('--line2'),ink3:css('--ink3'),ink:css('--ink')};
  const narrow=()=>W<520;
  const checks=()=>narrow()?['mandate','caps','terms','cut-off','stock']:['mandate','caps','exact terms','cut-off','stock'];
- const doors=()=>['An event','A menu','A dish','One item'];
+ const doors=()=>['An event','Its menu','One item'];
  const names=['HK Palvikinkku viipaloitu 1,5 kg','LOHIFILEE C-LEIKATTU 10KG','Myllyn Paras Puuroriisi 1kg','Valio kevytmaito 1 l laktoositon UHT','Atria Rosolli 2,5 kg'];
  let parts=[],t=0;
  function spawn(x){const fate=Math.random();const f=fate<.62?'ok':fate<.9?'held':'ref';const failAt=f==='ok'?99:f==='held'?2+Math.floor(Math.random()*3):Math.floor(Math.random()*2)+1;
-  parts.push({d:Math.floor(Math.random()*4),x:x||0,f,failAt,name:names[Math.floor(Math.random()*names.length)],sp:.0014+Math.random()*.0004})}
+  parts.push({d:Math.floor(Math.random()*doors().length),x:x||0,f,failAt,name:names[Math.floor(Math.random()*names.length)],sp:.0014+Math.random()*.0004})}
  function geo(){const n=narrow();return{L:n?W*.2:W*.18,R:n?W*.74:W*.78,gx0:W*.28,gx1:W*.66,cy:H*.46}}
  function frame(){
   cx.clearRect(0,0,W,H);const g=geo(),ck=checks(),dr=doors();
   cx.font=(narrow()?'11px':'12px')+' "IBM Plex Mono", monospace';cx.textBaseline='middle';
-  dr.forEach((d,i)=>{const y=H*(.16+i*.16);cx.fillStyle=C.ink3;cx.textAlign='left';cx.fillText(d,14,y);
+  dr.forEach((d,i)=>{const y=H*(.46+(i-(dr.length-1)/2)*.2);cx.fillStyle=C.ink3;cx.textAlign='left';cx.fillText(d,14,y);
    cx.strokeStyle=C.line;cx.beginPath();cx.moveTo(g.L-4,y);cx.bezierCurveTo(g.L+40,y,g.gx0-50,g.cy,g.gx0,g.cy);cx.stroke()});
   cx.strokeStyle=C.line;cx.beginPath();cx.moveTo(g.gx0,g.cy);cx.lineTo(g.gx1,g.cy);cx.stroke();
   ck.forEach((c,i)=>{const x=g.gx0+(g.gx1-g.gx0)*(i+.5)/ck.length;cx.strokeStyle=C.line;cx.beginPath();cx.moveTo(x,g.cy-30);cx.lineTo(x,g.cy+30);cx.stroke();
@@ -466,7 +466,7 @@ const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
   const outs={ok:[g.R,H*.22,'ordered',C.ok],held:[g.R,H*.46,'waits',C.am],ref:[g.R,H*.7,'refused',C.red]};
   Object.values(outs).forEach(([x,y,l,c])=>{cx.strokeStyle=C.line;cx.beginPath();cx.moveTo(g.gx1,g.cy);cx.bezierCurveTo(g.gx1+30,g.cy,x-40,y,x,y);cx.stroke();cx.fillStyle=c;cx.textAlign='left';cx.fillText(l,x+8,y)});
   parts.forEach(p=>{
-   const dy=H*(.16+p.d*.16);
+   const dy=H*(.46+(p.d-(doors().length-1)/2)*.2);
    const pos=u=>{
     if(u<.3){const s=u/.3;return[(1-s)**3*(g.L-4)+3*(1-s)**2*s*(g.L+40)+3*(1-s)*s*s*(g.gx0-50)+s**3*g.gx0,(1-s)**3*dy+3*(1-s)**2*s*dy+3*(1-s)*s*s*g.cy+s**3*g.cy]}
     if(u<.7)return[g.gx0+(g.gx1-g.gx0)*(u-.3)/.4,g.cy];
