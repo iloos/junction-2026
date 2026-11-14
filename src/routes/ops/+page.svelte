@@ -137,10 +137,14 @@
 	});
 
 	const totals = $derived.by(() => {
-		const held = columns.flatMap((c) => c.held);
+		// Same counts as the kitchen screen: "held" is lines waiting for a person; lines that cannot be ordered
+		// at all (outages) are their own figure, and both are cases in the queue.
+		const lines = columns.flatMap((c) => c.held).map((h) => h.line);
+		const held = lines.filter((l) => l.state === 'held');
 		return {
 			held: held.length,
-			signOff: held.filter((h) => h.line.tier === 'sign_off').length,
+			unorderable: lines.filter((l) => l.state === 'unorderable').length,
+			signOff: held.filter((l) => l.tier === 'sign_off').length,
 			committed: Object.values(stream.state.orders).reduce((s, o) => s + o.totalCents, 0),
 			refused: stream.state.failedCommits.length
 		};
@@ -210,6 +214,10 @@
 			<div>
 				<dt>held for a person</dt>
 				<dd>{totals.held}</dd>
+			</div>
+			<div class:bad={totals.unorderable > 0}>
+				<dt>can't be ordered</dt>
+				<dd>{totals.unorderable}</dd>
 			</div>
 			<div class="so">
 				<dt>need sign-off</dt>
