@@ -40,6 +40,8 @@ export class Shell {
 	 * cards and command), so decisions show once, in the rail, with the chat under them.
 	 */
 	railHeader = $state.raw<Snippet | null>(null);
+	/** The chef is typing, or a turn is running: the rail's decisions fold to their summary line. */
+	railFolded = $state(false);
 	setRailWidth(w: number) {
 		this.railWidth = Math.round(Math.min(RAIL.max, Math.max(RAIL.min, w)));
 		try {

@@ -323,6 +323,15 @@
 	let keyboard = $state(0);
 	let visible = $state<number | null>(null);
 	let composing = $state(false);
+	let unfoldTimer: ReturnType<typeof setTimeout> | undefined;
+	// Typing or a running turn folds the rail's decisions to one line, so the conversation keeps the room.
+	$effect(() => {
+		if (!shell) return;
+		shell.railFolded = composing || busy;
+		return () => {
+			if (shell) shell.railFolded = false;
+		};
+	});
 	const sheetH = $derived(
 		visible === null
 			? 'min(75dvh, calc(100dvh - 3rem))'
@@ -555,10 +564,9 @@
 	{#if shell?.railHeader}
 		<!-- The page's own decisions, once, at the top of the rail: the same cards and command as the page. -->
 		<!-- The panel inside is the "Decide" region (its heading names it); this is only its scroll box. -->
+		<!-- At most about a third of the rail: the chat history keeps the rest. -->
 		<div
-			class="max-h-[55%] shrink-0 overflow-y-auto overscroll-contain border-b border-rule bg-paper px-3 py-3 max-lg:max-h-[45%] {composing
-				? 'max-lg:hidden'
-				: ''}"
+			class="max-h-[35%] shrink-0 overflow-y-auto overscroll-contain border-b border-rule bg-paper px-3 py-2"
 		>
 			{@render shell.railHeader()}
 		</div>
@@ -825,8 +833,15 @@
 	<form
 		class="flex shrink-0 items-end gap-2 border-t border-rule p-3"
 		onsubmit={submit}
-		onfocusin={() => (composing = true)}
-		onfocusout={() => (composing = false)}
+		onfocusin={() => {
+			clearTimeout(unfoldTimer);
+			composing = true;
+		}}
+		onfocusout={() => {
+			// Unfold after the click that took focus away has landed, so nothing moves under the pointer.
+			clearTimeout(unfoldTimer);
+			unfoldTimer = setTimeout(() => (composing = false), 300);
+		}}
 	>
 		<label class="sr-only" for="chat-text">Message the agent</label>
 		<textarea

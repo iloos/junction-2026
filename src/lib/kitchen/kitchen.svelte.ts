@@ -532,7 +532,8 @@ export class KitchenStore {
 				p.qty.value !== l.qty.value ||
 				p.state !== l.state ||
 				p.tier !== l.tier ||
-				p.lineCents !== l.lineCents
+				p.lineCents !== l.lineCents ||
+				!!p.view?.committable !== !!l.view?.committable
 			)
 				changed.add(l.id);
 		}

@@ -5,7 +5,7 @@
 	 * Approving one decision never approves another. Rendered by the kitchen panel, the phone sheet and the chat dock.
 	 */
 	import { tick } from 'svelte';
-	import { ArrowRight, ChevronDown, Clock3, Hand, ShieldAlert } from '@lucide/svelte';
+	import { ChevronDown, Clock3, Eye, Hand, ShieldAlert } from '@lucide/svelte';
 
 	import HoldButton from './HoldButton.svelte';
 	import type { Decision } from './decisions';
@@ -28,6 +28,10 @@
 		readonly?: boolean;
 		/** Title, amount and due time only (the chat's card; the full card is in the Kitchen). */
 		compact?: boolean;
+		/** No title row: the rail's accordion row already says it. */
+		headless?: boolean;
+		/** Show this decision's lines on the page (scrolled to, marked). */
+		onsee?: () => void;
 	}
 	let {
 		decision: d,
@@ -38,7 +42,9 @@
 		onapprove,
 		onkeep,
 		readonly = false,
-		compact = false
+		compact = false,
+		headless = false,
+		onsee
 	}: Props = $props();
 	/** One rule everywhere: the decision's own due time (decisionsDue over its lines). */
 	const when = $derived(d.due ?? due);
@@ -75,7 +81,7 @@
 	aria-label="Decision: {d.title ?? d.reason}"
 	data-decision={d.key}
 >
-	<header class="flex items-start justify-between gap-3">
+	<header class="flex items-start justify-between gap-3" class:hidden={headless}>
 		<p class="flex min-w-0 items-start gap-1.5 text-body font-semibold text-ink">
 			{#if d.signOff}<ShieldAlert
 					size={16}
@@ -141,48 +147,61 @@
 	</p>
 
 	{#if !readonly}
-		<div class="mt-3 space-y-1.5">
-			{#if confirming}
-				<p class="text-meta text-ink">
-					Approve exactly these {n}
-					{noun}, {money(d.totalCents)}? Other decisions stay open.
-				</p>
-				<div class="flex gap-2">
+		<!-- One choice: the primary action, then the quieter ways out (keep held, see the lines). -->
+		{#if confirming}
+			<p class="mt-3 text-meta text-ink">
+				Approve exactly these {n}
+				{noun}, {money(d.totalCents)}? Other decisions stay open.
+			</p>
+			<div class="mt-2 flex flex-wrap items-center gap-2">
+				<button
+					bind:this={confirmBtn}
+					type="button"
+					class="h-10 rounded-md bg-accent px-4 text-body font-medium text-sheet hover:bg-accent-ink disabled:opacity-50"
+					disabled={busy}
+					onclick={approve}>Confirm exact terms</button
+				>
+				<button
+					type="button"
+					class="h-10 rounded-md px-3 text-body text-ink-2 hover:bg-well hover:text-ink"
+					onclick={() => (confirming = false)}>Cancel</button
+				>
+			</div>
+		{:else}
+			<div class="mt-3 flex flex-wrap items-center gap-x-1 gap-y-2">
+				{#if d.signOff}
+					<div class="min-w-48 flex-1">
+						<HoldButton
+							label="Hold to sign off {n} {noun}"
+							disabled={busy}
+							onconfirm={() => void approve()}
+						/>
+					</div>
+				{:else}
 					<button
-						bind:this={confirmBtn}
 						type="button"
-						class="h-10 flex-1 rounded-md bg-ink px-3 text-body font-medium text-sheet disabled:opacity-50"
+						class="h-10 rounded-md bg-ink px-4 text-body font-medium text-sheet hover:bg-ink/85 disabled:opacity-50"
 						disabled={busy}
-						onclick={approve}>Confirm exact terms</button
+						onclick={review}
+						>Review {n} {noun} · <span class="mono">{money(d.totalCents)}</span></button
 					>
+				{/if}
+				{#if onkeep}
 					<button
 						type="button"
-						class="h-10 rounded-md border border-rule-strong px-3 text-body text-ink"
-						onclick={() => (confirming = false)}>Cancel</button
+						class="h-10 rounded-md px-3 text-meta text-ink-2 hover:bg-well hover:text-ink"
+						disabled={busy}
+						onclick={() => onkeep(d.lineIds)}>Keep held</button
 					>
-				</div>
-			{:else if d.signOff}
-				<HoldButton
-					label="Hold to sign off {n} {noun}"
-					disabled={busy}
-					onconfirm={() => void approve()}
-				/>
-			{:else}
-				<button
-					type="button"
-					class="flex h-10 w-full items-center justify-center gap-1.5 rounded-md border border-ink/70 text-body font-medium text-ink hover:bg-well disabled:opacity-50"
-					disabled={busy}
-					onclick={review}>Review {n} {noun} <ArrowRight size={14} aria-hidden="true" /></button
-				>
-			{/if}
-			{#if onkeep && !confirming}
-				<button
-					type="button"
-					class="h-8 w-full text-center text-meta text-ink-3 hover:text-ink"
-					disabled={busy}
-					onclick={() => onkeep(d.lineIds)}>Keep these held</button
-				>
-			{/if}
-		</div>
+				{/if}
+				{#if onsee}
+					<button
+						type="button"
+						class="inline-flex h-10 items-center gap-1.5 rounded-md px-3 text-meta text-ink-2 hover:bg-well hover:text-ink"
+						onclick={onsee}><Eye size={14} aria-hidden="true" /> See the lines</button
+					>
+				{/if}
+			</div>
+		{/if}
 	{/if}
 </article>
