@@ -1,0 +1,283 @@
+{
+	"_source": "Exa POST /search with outputSchema + highlights, recorded 2026-11-14 (spike)",
+	"answers": {
+		"facts:460002": {
+			"content": {
+				"origin": "Suomi",
+				"ingredients": "Tomaatti 51% (tomaattimurska, tomaattipyre), vesi, sokeri, oliiviöljy, muunnettu tärkkelys, suola, basilika, valkosipuli, punaviinietikka, timjami, persilja, cayennepippuri.",
+				"mayContain": [],
+				"netContent": "1 l",
+				"allergens": []
+			},
+			"grounding": [
+				{
+					"field": "origin",
+					"citations": [
+						{
+							"url": "https://www.k-ruoka.fi/kauppa/tuote/puljonki-luumutomaattikastike-1l-6416796729140",
+							"title": "Puljonki luumutomaattikastike valmiskastike 1l | K-Ruoka Verkkokauppa"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "ingredients",
+					"citations": [
+						{
+							"url": "https://www.k-ruoka.fi/kauppa/tuote/puljonki-luumutomaattikastike-1l-6416796729140",
+							"title": "Puljonki luumutomaattikastike valmiskastike 1l | K-Ruoka Verkkokauppa"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "mayContain",
+					"citations": [
+						{
+							"url": "https://www.k-ruoka.fi/kauppa/tuote/puljonki-luumutomaattikastike-1l-6416796729140",
+							"title": "Puljonki luumutomaattikastike valmiskastike 1l | K-Ruoka Verkkokauppa"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "netContent",
+					"citations": [
+						{
+							"url": "https://www.k-ruoka.fi/kauppa/tuote/puljonki-luumutomaattikastike-1l-6416796729140",
+							"title": "Puljonki luumutomaattikastike valmiskastike 1l | K-Ruoka Verkkokauppa"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "allergens",
+					"citations": [
+						{
+							"url": "https://www.k-ruoka.fi/kauppa/tuote/puljonki-luumutomaattikastike-1l-6416796729140",
+							"title": "Puljonki luumutomaattikastike valmiskastike 1l | K-Ruoka Verkkokauppa"
+						}
+					],
+					"confidence": "high"
+				}
+			],
+			"results": [
+				{
+					"url": "https://www.k-ruoka.fi/kauppa/tuote/puljonki-luumutomaattikastike-1l-6416796729140",
+					"title": "Puljonki luumutomaattikastike valmiskastike 1l | K-Ruoka Verkkokauppa",
+					"publishedDate": null,
+					"highlights": [
+						"### Ainesosat\n\nTomaatti 51% (tomaattimurska, tomaattipyre), vesi, sokeri, oliiviöljy, muunnettu tärkkelys, suola, basilika, valkosipuli, punaviinietikka, timjami, persilja, cayennepippuri.\n\n### Allergeenit\n\nEi sisällä \n: - Pähkinät\n- Gluteenia sisältävät viljat ja -tuotteet\n- Maapähkinä"
+					]
+				},
+				{
+					"url": "https://www.kespro.com/tuotteet/puljonki-tomaattikastike-valmis-1l-6416796728044",
+					"title": "Puljonki tomaattikastike valmis 1l",
+					"publishedDate": null,
+					"highlights": [
+						"6\n\n...\n\n## Tuotetiedot\n\nAinesosat\n\nTomaatti 60% (tomaattimurska, tomaattipyre), vesi, sipuli, porkkana, SELLERI, rypsiöljy, sokeri, basilika, suola, valkosipuli, oregano, mustapippuri.\n\n...\n\nAllergeenit\n\n- Selleri\n\nTarkista tuotteen allergeenitiedot aina myös pakkauksesta."
+					]
+				},
+				{
+					"url": "https://www.k-ruoka.fi/kauppa/tuote/puljonki-tomaattikastike-1l-6416796728044",
+					"title": "Puljonki tomaattikastike valmis 1l",
+					"publishedDate": null,
+					"highlights": [
+						"### Ainesosat\n\nTomaatti 60% (tomaattimurska, tomaattipyre), vesi, sipuli, porkkana, SELLERI, rypsiöljy, sokeri, basilika, suola, valkosipuli, oregano, mustapippuri.\n\n### Allergeenit\n\nSisältää \n: - Selleri\n\nEi sisällä \n: - Kala\n- Äyriäiset\n- Maapähkinä"
+					]
+				},
+				{
+					"url": "https://www.ruokavirasto.fi/elintarvikkeet/elintarvikeala/ainesosat-ja-sisalto/allergeenit/",
+					"title": "Allergioita ja intoleransseja aiheuttavat aineet - Ruokavirasto",
+					"publishedDate": null,
+					"highlights": [
+						"Tietyt lainsäädännön määrittelemät allergioita tai intoleransseja aiheuttavat ainesosat ja tuotteet tulee ilmoittaa aina omilla nimillään ainesosaluettelossa.\n\nAinesosaluettelossa allergioita ja intoleransseja aiheuttavat aineet tulee ilmoittaa selkeästi muusta ainesosaluettelosta erottuvalla tavalla esimerkiksi kirjasinlajilla, kirjasintyylillä tai taustavärillä.\n\n...\n\nAllergiaa ja intoleransseja aiheuttavista aineista on ilmoitettava sekä pakatuissa että pakkaamattomissa elintarvikkeissa:\n\n- Gluteenia sisältävät viljat eli vehnä, ruis, ohra, kaura ja niistä valmistetut tuotteet\n- Äyriäiset ja äyriäistuotteet\n- Munat ja munatuotteet\n- Kalat ja kalatuotteet\n- Maapähkinät ja maapähkinätuottee"
+					]
+				},
+				{
+					"url": "https://www.s-kaupat.fi/tuote/puljonkir-pippurikastike-1-l-tetra/6416796727559",
+					"title": "Puljonki® Pippurikastike 1 l tetra | S-kaupat ruoan verkkokauppa",
+					"publishedDate": null,
+					"highlights": [
+						"### Ainesosat\n\nVesi, naudanluut, laktoositon KERMA, sipuli, SINAPPI (vesi, SINAPINSIEMEN, glukoosi-fruktoosisiirappi, inverttisokerisiirappi, happamuudensäätöaine (etikkahappo), suola), porkkana, tomaattipyre, muunnettu tärkkelys, hunaja, valkosipuli, palsternakka, suola, karamellisoitu sokeri, mustapippuri, rakuuna, timjami, basilika, sienijauhe, viherpippuri, laakerinlehti, valkopippuri."
+					]
+				}
+			],
+			"at": "2026-11-14T01:10:00.000Z",
+			"costUsd": 0.007
+		},
+		"outside:joulutorttu": {
+			"content": {
+				"options": [
+					{
+						"yield": "10 kpl per annos",
+						"title": "Kermaiset torttutötteröt (10 kpl per annos)",
+						"ingredients": [
+							"1 kg lehtitaikinalevyjä (10 kpl)",
+							"1 kananmuna (voiteluun)",
+							"2 dl vispi- tai kuohukermaa",
+							"100-150 g paistonkestävää marmeladia (esim. luumu tai omena-kaneli)",
+							"1 tl vaniljasokeria",
+							"Tomusokeria koristeluun"
+						],
+						"kind": "recipe",
+						"note": "Resepti on 10 annokselle. 140 hengen buffetia varten määrät tulee kertoa 14:llä. Valmistukseen tarvitaan metallisia tötterömuotteja. Täyte valmistetaan vaahdottamalla kerma ja sekoittamalla siihen marmeladi ja vaniljasokeri."
+					},
+					{
+						"kind": "alternative_dish",
+						"note": "Suuri jättiläistorttu (pellin kokoinen) helpottaa tarjoilua isolle ryhmälle. Yksi iso lehtitaikinalevy kaulitaan kahdeksi neliöksi, väliin levitetään täyte, ja pintaan leikataan oksasuikaleet, jotka kiepautetaan kierteille. Tätä menetelmää voi soveltaa helpompaan suurten määrien valmistukseen perinteisten pikkutorttujen sijaan.",
+						"yield": "Yksi suuri leivonnainen per pelti",
+						"title": "Pellin kokoinen jättitorttu tai viikunakuusi (sovellettu luumutäytteellä)",
+						"ingredients": ["Valmis lehtitaikina", "Paistonkestävä luumumarmeladi (tai muu täyte)"]
+					}
+				]
+			},
+			"grounding": [
+				{
+					"field": "options[0].yield",
+					"citations": [
+						{
+							"url": "https://www.hellapoliisi.fi/reseptit/makeat-leivonnaiset/100-torttua/",
+							"title": "#100 Torttua | Hellapoliisi"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[0].title",
+					"citations": [
+						{
+							"url": "https://www.hellapoliisi.fi/reseptit/makeat-leivonnaiset/100-torttua/",
+							"title": "#100 Torttua | Hellapoliisi"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[0].ingredients",
+					"citations": [
+						{
+							"url": "https://www.hellapoliisi.fi/reseptit/makeat-leivonnaiset/100-torttua/",
+							"title": "#100 Torttua | Hellapoliisi"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[0].kind",
+					"citations": [
+						{
+							"url": "https://www.hellapoliisi.fi/reseptit/makeat-leivonnaiset/100-torttua/",
+							"title": "#100 Torttua | Hellapoliisi"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[0].note",
+					"citations": [
+						{
+							"url": "https://www.hellapoliisi.fi/reseptit/makeat-leivonnaiset/100-torttua/",
+							"title": "#100 Torttua | Hellapoliisi"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[1].kind",
+					"citations": [
+						{
+							"url": "https://www.soppa365.fi/artikkeli/artikkelit/juhlat/pikkujoulujen-jattilaiset",
+							"title": "Pikkujoulujen jättiläiset | Soppa365"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[1].note",
+					"citations": [
+						{
+							"url": "https://www.soppa365.fi/artikkeli/artikkelit/juhlat/pikkujoulujen-jattilaiset",
+							"title": "Pikkujoulujen jättiläiset | Soppa365"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[1].yield",
+					"citations": [
+						{
+							"url": "https://www.soppa365.fi/artikkeli/artikkelit/juhlat/pikkujoulujen-jattilaiset",
+							"title": "Pikkujoulujen jättiläiset | Soppa365"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[1].title",
+					"citations": [
+						{
+							"url": "https://www.soppa365.fi/artikkeli/artikkelit/juhlat/pikkujoulujen-jattilaiset",
+							"title": "Pikkujoulujen jättiläiset | Soppa365"
+						}
+					],
+					"confidence": "high"
+				},
+				{
+					"field": "options[1].ingredients",
+					"citations": [
+						{
+							"url": "https://www.soppa365.fi/artikkeli/artikkelit/juhlat/pikkujoulujen-jattilaiset",
+							"title": "Pikkujoulujen jättiläiset | Soppa365"
+						}
+					],
+					"confidence": "high"
+				}
+			],
+			"results": [
+				{
+					"url": "https://www.hellapoliisi.fi/reseptit/makeat-leivonnaiset/100-torttua/",
+					"title": "#100 Torttua | Hellapoliisi",
+					"publishedDate": "2017-11-24T11:00:10.000Z",
+					"highlights": [
+						"10 kpl annosta \n\n- 10 lehtitaikinalevy\n- 1 kananmuna\n- 2 dl vispikerma\n- (vaihtoehto) kuohukerma\n- 100-150 g Dronningholm Tähtitorttu Omena-kanelimarmeladi\n- (vaihtoehto) Dronningholm Luumumarmeladi\n- 1 tl vaniljasokeri\n\n...\n\nTartuin Dronningholmin haasteeseen ja leivoin sata joulutorttua. Koska itse rakastan täytettä, halusin tortun, johon voi pursottaa reilusti täytettä. Leivoin lehtitaikinatötteröitä, joiden sisälle pursotin osaan Dronningholm Luumumarmeladilla ja osaan Omena-kanelimarmeladilla maustettua kermavaahtoa. Joukkoon laitoin hieman vaniljasokeria. Jos seoksesta haluaa vielä makeampaa, voi joukkoon lisätä tomusokeria tai lisätä marmeladia.\n\n...\n\nKermaiset torttutötteröt 10 kpl\n\n"
+					]
+				},
+				{
+					"url": "https://www.maitokolmio.fi/reseptit/perinteiset-itse-tehdyt-joulutortut-tahtitortut-resepti/",
+					"title": "Perinteiset itse tehdyt joulutortut (tähtitortut) – resepti",
+					"publishedDate": null,
+					"highlights": [
+						"## Raaka-aineet (30 kpl)\n\nTorttutaikina: 5 dl vehnäjauhoja 1 tl leivinjauhetta 250 g Maitokolmion perinteistä meijerivoita 3 dl Maitokolmion kuohukermaa\n\nJoulutorttujen täyte: n. 3 dl luumusosetta tai marmeladia\n\nVoiteluun: Kananmunaa"
+					]
+				},
+				{
+					"url": "https://www.parastapoytaan.fi/recipe-list/joulutorttutaikina",
+					"title": "Joulutortut Lehtitaikinasta - Herkullinen Päärynähilloke Täytteellä",
+					"publishedDate": null,
+					"highlights": [
+						"1 paketti (1 kg) lehtitaikinalevyjä\n\n1 paketti tähtitorttu omena-kanelimarmeladia\n\n1 kananmuna voiteluun\n\n...\n\n4. ... Aseta taikinalevyt leivinpaperilla päällystetylle uunipellille ja levitä pinnalle ohut kerros omena-kanelimarmeladia."
+					]
+				},
+				{
+					"url": "https://anna.fi/ruoka/luumumarmeladi-joulutorttujen-klassikkotayte-joka-hurmaa-myos-9-muussa-jouluherkussa",
+					"title": "Luumumarmeladi – 9 x resepti luumuisiin joululeivonnaisiin",
+					"publishedDate": "2023-12-04T09:29:40.000Z",
+					"highlights": [
+						"Rapea lehtitaikina ja luumumarmeladi kohtaavat myös luumukakussa. Luumu-kermakakku on päältä rapea, mutta sisältä paljastuu pehmeä kermatäyte sekä luumumarmeladia. Kakku sopii hyvin vierastarjottavaksi, sillä lehtitaikinan voi hyvin paistaa etukäteen ja kakun koota vasta tarjoilupäivänä."
+					]
+				},
+				{
+					"url": "https://www.soppa365.fi/artikkeli/artikkelit/juhlat/pikkujoulujen-jattilaiset",
+					"title": "Pikkujoulujen jättiläiset | Soppa365",
+					"publishedDate": "2019-11-14T09:43:32.000Z",
+					"highlights": [
+						"Kuusikaistaleiden väliin levitetään mehevä viikunatäyte. Jos haluat oikaista, voit vaihtaa sen paistonkestävään luumu- tai viikunamarmeladiin. Kuusen herkullisuus piilee kuitenkin pehmeistä viikunoista, glögistä ja maapähkinävoista keitellyssä seoksessa, joten sitä ei kannata ohittaa ihan heppoisin perustein.\n\n...\n\nYksi joulutorttu isolle porukalle? Kyllä, jos torttu on pellin kokoinen! Suolaisen jättijoulutortun keskellä on smetana-piparjuuritäyte, jonka päälle levitetään kylmäsavulohta. Jotta täyte ei pääsisi valahtamaan pellille, se reunustetaan taikinasuikaleella.\n\nPohjaksi valmistetaan perinteinen rahka-voitaikina. Jos omistat monitoimikoneen, taikina kannattaa tehdä sen leikkuuterällä,"
+					]
+				}
+			],
+			"at": "2026-11-14T01:10:00.000Z",
+			"costUsd": 0.007
+		}
+	}
+}
