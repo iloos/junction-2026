@@ -16,6 +16,7 @@ bun.lockb
 /scratch/
 /.impeccable/
 /site/
+/.claude/
 /Misc/
 skills-lock.json
 *.md

@@ -11,7 +11,7 @@ const gitignorePath = path.resolve(import.meta.dirname, '.gitignore');
 export default defineConfig(
 	includeIgnoreFile(gitignorePath),
 	// The static mandate.kitchen site deploys on its own (site/wrangler.jsonc) and has its own checks.
-	{ ignores: ['site/**'] },
+	{ ignores: ['site/**', '.claude/**'] },
 	js.configs.recommended,
 	ts.configs.recommended,
 	svelte.configs.recommended,

@@ -55,3 +55,6 @@ docs/roadmap/
 
 # Personal roadmap notes; never part of this repo
 docs/review/ROADMAP-PREPARATION.md
+
+# Agent tool worktrees
+/.claude/worktrees/
