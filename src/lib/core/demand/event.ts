@@ -94,7 +94,13 @@ export function planEventDemand(
 	for (const d of seed.dishes) {
 		const amount = needAmountFor(d, dinersOf(d), gServedOf(d), cooked.get(familyOf(d.dish)));
 		const id = needIdFor(d.dish);
-		needs.push({ id, label: d.dish, amount, provenance });
+		needs.push({
+			id,
+			label: d.dish,
+			amount,
+			provenance,
+			...(d.requirements ? { requirements: d.requirements } : {})
+		});
 		lines.push({
 			needId: id,
 			dish: d.dish,
