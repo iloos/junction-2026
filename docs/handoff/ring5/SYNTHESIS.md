@@ -25,6 +25,24 @@ _Lead, Sat 14 Nov late. Inputs: every lane's checkpoint (docs/lanes/*.md: core-d
   - Lanes now run `--only check,lint` plus targeted tests, and merge-gate enforces it. The lead's main gate is the only full gate.
   - The gate lock queue had 15 waiters; it is cleared.
 
+## Round 12 (landed; [review](../../review/ROUND12-ADVERSARIAL.md), [handoff](../review-adversarial-r12.md))
+Four P1s, eight P2s, no P0. The hotel journey completes at 1440 and 390: 18 lines, €933.92, 7 confirmed and 11 awaiting, and a retry keeps one receipt. Outside-agent approval is refused, and the human-then-agent commit works. The P1s share a root: the ask and the requirements are stored but not enforced at every boundary.
+| Id | Finding | Owner | Routed |
+|---|---|---|---|
+| R12-01 | Need.ask doesn't bind quote/commit (a 250 ml ask can buy 250 l through the core); "2 buckets" becomes 2 × 10 l | 8d (core), B (unknown units ask) | yes |
+| R12-02 | `meets()` misses UW and the other cereal codes; one fact table shared by the gate, marks and answers | 8d | yes |
+| R12-03 | "vegan milk" becomes cow's milk with only a warning; the diet ask never reaches Need.requirements | B | yes |
+| R12-04 | Contention repair adds the full need, not the residual (6 l for 4 l), = R10-05 | 8d | yes |
+| R12-05 | Establishment choice blocked until the hotel plan; basket not on the canvas | c3 (1f reviews) | yes |
+| R12-06 | Usual order UI dev-only; four profiles have no history | c3, 0d | yes |
+| R12-07 | ProductToken had no consumers at the review's cutoff | closed: Request (RequestFlow, DishCard) and Kitchen (1f 8f48df5) | closed |
+| R12-08 | `revise_menu` not registered | da with 41 | yes |
+| R12-09 | Ops doesn't read stored traces or the summary | 9c | yes |
+| R12-10 | A cancelled task still offers Continue | E | yes |
+| R12-11 | /proof 15/3 vs receipts 7/11; €400 vs €800; generic CTAs; PITCH known-stock line | d0, 91 | yes |
+| R12-12 | Four obsolete test oracles; stale OPEN flags (R11-05, R11-15) | 91 | yes |
+Next batch per the handoff: core binding (R12-01/02/04) and the request reading (R12-03), then the entries (R12-05/06/08/09). Rerun all nine journeys on the deployed build before filming.
+
 ## Open, by owner (from the lane checkpoints)
 - **Core (8d):**
   - `facets()` dairy and gluten by category or name, so "declared but empty" is never lactose-free;
