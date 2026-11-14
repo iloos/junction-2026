@@ -96,7 +96,7 @@ describe('nextActionFor', () => {
 	});
 
 	it('a held line a person approved is ready to commit, not waiting for a chef', () => {
-		const approved = line('a', { state: 'held', tier: 'review', next: 'commit' });
+		const approved = line('a', { state: 'held', tier: 'propose', next: 'commit' });
 		const a = nextActionFor(plan([approved]), MON_2140);
 		expect(a).toMatchObject({ action: 'commit', lineIds: ['a'] });
 	});

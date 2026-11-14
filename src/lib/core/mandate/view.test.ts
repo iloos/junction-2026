@@ -9,7 +9,7 @@ const line = (o: Partial<Line>): Line =>
 		productId: 'p1',
 		qty: { value: 2, unit: 'ST' },
 		state: 'held',
-		tier: 'review',
+		tier: 'propose',
 		reasons: [],
 		offer: null,
 		lineCents: 100,
