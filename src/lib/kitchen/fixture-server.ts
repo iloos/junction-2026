@@ -1,3 +1,4 @@
+import { withFixtureView } from './fixture-view';
 import type {
 	Approval,
 	DomainError,
@@ -200,11 +201,11 @@ const handlers: { [N in ToolName]?: Handler<N> } = {
 			s = initial(input.kitchenId);
 		}
 		if (!s.built) await rebuild(false);
-		return { plan: s.built.plan };
+		return { plan: withFixtureView(s.built.plan) };
 	},
 	get_plan: async () => {
 		if (!s.built) await rebuild(false);
-		return { plan: s.built.plan, approval: approvalOut() };
+		return { plan: withFixtureView(s.built.plan), approval: approvalOut() };
 	},
 	edit_line: async (input) => {
 		checkVersion(input.planId, input.version);
@@ -219,7 +220,7 @@ const handlers: { [N in ToolName]?: Handler<N> } = {
 			s.grams = { ...s.grams, [dish!.id]: g };
 			await rebuild(true, `${dish!.nameFi} ${before} → ${g} g/guest`);
 		}
-		return { plan: s.built.plan };
+		return { plan: withFixtureView(s.built.plan) };
 	},
 	find_substitutes: async (input) => {
 		checkVersion(input.planId, input.version);
@@ -227,7 +228,7 @@ const handlers: { [N in ToolName]?: Handler<N> } = {
 		const chosen =
 			s.built.plan.lines.find((l) => l.substituteFor && l.needId === dish?.needId) ?? null;
 		return {
-			plan: s.built.plan,
+			plan: withFixtureView(s.built.plan),
 			kind: chosen ? ('product' as const) : ('none' as const),
 			chosen: chosen ? [chosen] : [],
 			applied: false,
@@ -345,7 +346,7 @@ export async function snapshot(): Promise<FixtureSnapshot> {
 	if (!s.built) await rebuild(false);
 	const invalid = [...s.approvals].reverse().find((a) => a.state === 'invalidated') ?? null;
 	return {
-		plan: s.built.plan,
+		plan: withFixtureView(s.built.plan),
 		view: s.built.view,
 		approval: current(),
 		lastInvalidated: invalid,
