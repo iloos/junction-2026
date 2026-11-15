@@ -306,6 +306,17 @@
 		(ownSnap?.plan.lines ?? []).filter(
 			(l) => l.state !== 'committed' && l.view?.committable === true
 		)
+	); /** One way on at every door (D23): "Order 1 line now · €9.44", or what may be ordered when the dock can't count it. */
+	const orderWords = $derived(
+		approvedOpen.length
+			? `Order ${approvedOpen.length} ${approvedOpen.length === 1 ? 'line' : 'lines'} now · ${money(
+					approvedOpen.reduce((t, l) => t + (l.lineCents ?? 0), 0)
+				)}`
+			: 'Order what may be ordered now'
+	);
+	/** The dock's own order button is showing for the last decision: no second button below the answer. */
+	const dockOrders = $derived(
+		!!ownSnap && !pendingLines.length && approvedOpen.length > 0 && !own?.lastCommit
 	);
 
 	/**
@@ -543,7 +554,32 @@
 		if (n === newSeen) return;
 		newSeen = n;
 		untrack(newTask);
+		if (full) void tick().then(focusComposer);
 	});
+	/**
+	 * The page mode fills what is left of the screen below the page's intro, so the composer is always in view without
+	 * scrolling (D23 addendum); re-measured on resize. On load the composer takes the focus.
+	 */
+	let fullH = $state<number | null>(null);
+	$effect(() => {
+		if (!full || !dockEl) return;
+		const el = dockEl;
+		const fit = () => {
+			const top = el.getBoundingClientRect().top + window.scrollY;
+			fullH = Math.max(300, Math.round(window.innerHeight - top - 12));
+		};
+		fit();
+		const t = setTimeout(fit, 400);
+		window.addEventListener('resize', fit);
+		void tick().then(focusComposer);
+		return () => {
+			clearTimeout(t);
+			window.removeEventListener('resize', fit);
+		};
+	});
+	function focusComposer() {
+		document.getElementById('chat-text')?.focus({ preventScroll: true });
+	}
 
 	const TOOL: Record<string, string> = {
 		understand: 'Understood',
@@ -578,7 +614,7 @@
 
 <aside
 	class={full
-		? 'mx-auto mb-6 flex h-[max(28rem,calc(100dvh-13rem))] w-full max-w-[880px] flex-col rounded-xl border border-rule-strong bg-sheet max-sm:rounded-none max-sm:border-x-0'
+		? 'mx-auto mb-3 flex w-full max-w-[880px] flex-col rounded-xl border border-rule-strong bg-sheet max-sm:rounded-none max-sm:border-x-0'
 		: [
 				'fixed inset-x-0 bottom-[var(--kb,0px)] z-40 flex h-[var(--sheet-h)] flex-col rounded-t-xl border-t border-rule-strong bg-sheet shadow-lg lg:inset-x-auto lg:top-11 lg:right-0 lg:bottom-0 lg:h-auto lg:w-[var(--rail-w)] lg:rounded-none lg:border-t-0 lg:border-l lg:shadow-none',
 				!open && (pinned ? 'max-lg:hidden' : 'hidden'),
@@ -586,7 +622,10 @@
 			]}
 	aria-label="Agent chat"
 	bind:this={dockEl}
-	style="--rail-w: {shell?.railWidth ?? 384}px; --sheet-h: {sheetH}; --kb: {keyboard}px"
+	style="--rail-w: {shell?.railWidth ?? 384}px; --sheet-h: {sheetH}; --kb: {keyboard}px{full &&
+	fullH
+		? `; height: ${fullH}px`
+		: ''}"
 >
 	<!-- The rail's left edge: drag it, or use the arrow keys, to make the rail wider or narrower (desktop). -->
 	<!-- A focusable separator is the WAI-ARIA window splitter: interactive by design. -->
@@ -831,9 +870,7 @@
 									type="button"
 									class="w-full rounded-md bg-accent px-3 py-2 text-body font-semibold text-sheet hover:bg-accent-ink disabled:opacity-50"
 									disabled={own?.busy}
-									onclick={() => own!.commit()}
-									>Order the approved lines · {approvedOpen.length} ·
-									{money(approvedOpen.reduce((t, l) => t + (l.lineCents ?? 0), 0))}</button
+									onclick={() => own!.commit()}>{orderWords}</button
 								>
 							{/if}
 							{#if own?.lastCommit}
@@ -906,7 +943,7 @@
 								>Order it on the page <ArrowUpRight size={13} aria-hidden="true" /></a
 							>
 						</li>
-					{:else if x === last && !actedHere && x.e.canContinue}
+					{:else if x === last && !actedHere && x.e.canContinue && !dockOrders}
 						<li class="flex flex-wrap gap-2">
 							<button
 								type="button"
@@ -914,9 +951,7 @@
 								disabled={busy}
 								onclick={() => turn({ continue: true }, 'Continue')}
 							>
-								{x.e.state === 'awaiting_chef'
-									? 'I’ve decided: continue'
-									: 'Continue: submit what may be ordered'}
+								{orderWords}
 							</button>
 						</li>
 					{/if}

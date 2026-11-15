@@ -262,7 +262,9 @@
 									>
 								{:else}
 									<span class="block text-meta text-signoff"
-										>unresolved: {i.unresolved ?? i.query}</span
+										>No exact match in Valio's catalogue{#if shell?.system}<span
+												class="block text-ink-3">{i.unresolved ?? i.query}</span
+											>{/if}</span
 									>
 								{/if}
 								{#if checkNote(i.provenance.note)}
