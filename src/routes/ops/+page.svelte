@@ -161,16 +161,7 @@
 	 * Problems (cards and their story, the first screen), queue (work surface), wallboard (one column per kitchen)
 	 * or the engine room (timeline, op log and traces; shown with the System toggle). Remembered.
 	 */
-	type View =
-		| 'room'
-		| 'problems'
-		| 'orders'
-		| 'demand'
-		| 'forecast'
-		| 'flow'
-		| 'queue'
-		| 'wallboard'
-		| 'engine';
+	type View = 'room' | 'problems' | 'orders' | 'demand' | 'flow' | 'queue' | 'wallboard' | 'engine';
 	const shell = useShell();
 	const system = $derived(!!shell?.system);
 	let chosen = $state<View>('problems');
@@ -182,13 +173,13 @@
 				saved === 'room' ||
 				saved === 'orders' ||
 				saved === 'demand' ||
-				saved === 'forecast' ||
 				saved === 'flow' ||
 				saved === 'queue' ||
 				saved === 'wallboard' ||
 				saved === 'engine'
 			)
 				chosen = saved;
+			else if (saved === 'forecast') chosen = 'demand';
 			else if (inRoom) chosen = 'room';
 		} catch {
 			/* storage blocked: keep the default */
@@ -561,23 +552,27 @@
 			<button role="tab" aria-selected={view === 'room'} onclick={() => setView('room')}>
 				Room <b>{kitchens.length}</b>
 			</button>
+			<button
+				role="tab"
+				aria-selected={view === 'queue'}
+				onclick={() => setView('queue')}
+				title="Everything waiting for a person, most urgent first"
+			>
+				Waiting <b class:zero={!cases.length}>{cases.length}</b>
+			</button>
 			<button role="tab" aria-selected={view === 'problems'} onclick={() => setView('problems')}>
-				Problems <b>{problems.filter((p) => p.tone !== 'quiet').length}</b>
+				Problems <b class:zero={!problems.some((p) => p.tone !== 'quiet')}
+					>{problems.filter((p) => p.tone !== 'quiet').length}</b
+				>
 			</button>
 			<button role="tab" aria-selected={view === 'orders'} onclick={() => setView('orders')}>
-				Orders <b>{Object.keys(stream.state.plans).length}</b>
+				Orders <b class:zero={!plans.length}>{plans.length}</b>
 			</button>
 			<button role="tab" aria-selected={view === 'demand'} onclick={() => setView('demand')}>
 				Demand
 			</button>
-			<button role="tab" aria-selected={view === 'forecast'} onclick={() => setView('forecast')}>
-				Forecast
-			</button>
 			<button role="tab" aria-selected={view === 'flow'} onclick={() => setView('flow')}>
 				Flow
-			</button>
-			<button role="tab" aria-selected={view === 'queue'} onclick={() => setView('queue')}>
-				Queue <b>{cases.length}</b>
 			</button>
 			<button role="tab" aria-selected={view === 'wallboard'} onclick={() => setView('wallboard')}>
 				Wallboard
@@ -645,16 +640,16 @@
 							data.simulated ? null : kitchenHref({ planId, kitchenId }, linkAt)}
 					/>
 				{/key}
-			{:else if view === 'forecast'}
-				<ForecastTab
-					ws={stream.state}
-					kinds={kitchens.map((k) => k.kind)}
-					from={scenarioDate(new Date(SCENARIO.start))}
-					shortage={lastShortage(stream.roomSims)}
-				/>
 			{:else if view === 'flow'}
 				<FlowTab ws={stream.state} {kitchenName} productName={(id) => productName(names, id)} />
 			{:else if view === 'demand'}
+				<!-- What Valio Aimo will need to ship: what may run short first, then the demand per day. -->
+				{#if plans.length}<ForecastTab
+						ws={stream.state}
+						kinds={kitchens.map((k) => k.kind)}
+						from={scenarioDate(new Date(SCENARIO.start))}
+						shortage={lastShortage(stream.roomSims)}
+					/>{/if}
 				{#key stream.state.runId}
 					<DemandTab ws={data.workspace} version={stream.last} />
 				{/key}
@@ -1544,5 +1539,9 @@
 		font-size: var(--text-meta);
 		flex-basis: 100%;
 		order: 3;
+	}
+	[role='tab'] b.zero {
+		color: var(--faint);
+		opacity: 0.6;
 	}
 </style>

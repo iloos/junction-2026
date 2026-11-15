@@ -76,7 +76,11 @@
 	{:else if failed && !days.length}
 		<p class="note">Demand could not be loaded ({failed}).</p>
 	{:else if !days.length}
-		<p class="note">No orders in this run yet.</p>
+		<p class="note">
+			No orders yet.
+			<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- the Kitchen in this room -->
+			<a href="/" class="act">Start one in the Kitchen →</a>
+		</p>
 	{/if}
 
 	{#each days as d (d.date)}
@@ -288,5 +292,9 @@
 		.bar {
 			grid-column: 1 / -1;
 		}
+	}
+	.act {
+		color: var(--text);
+		margin-left: 6px;
 	}
 </style>
