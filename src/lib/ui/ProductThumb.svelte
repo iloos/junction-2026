@@ -144,7 +144,7 @@
 					<p class="mt-1.5 text-meta text-ink-2">
 						{exact
 							? "This product's own photo"
-							: (thumb.label ?? 'Pack may differ')}{#if thumb.host}<span class="text-ink-3"
+							: (thumb.label ?? 'Pack may differ')}{#if thumb.host}<span
 								>&nbsp;· from {thumb.host}</span
 							>{/if}
 					</p>

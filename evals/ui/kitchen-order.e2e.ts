@@ -99,18 +99,19 @@ test('the order summary counts what was approved, adds up, and survives a reload
 	);
 	const money = await page
 		.locator('dl[aria-label^="Where the plan"]')
-		.innerText()
-		.catch(() => '');
+		.innerText({ timeout: 10_000 })
+		.catch(() => ''); // D29 removed the Order panel's money table: the check below runs only where it exists
 	const rows = [...money.matchAll(/^(.+?)\s+(€[\d,.]+)$/gm)].map(
 		(m) => [m[1].trim(), euros(m[2])] as const
 	);
 	const total = rows.find(([l]) => /^Plan total/.test(l))?.[1];
 	const parts = rows.filter(([l]) => !/^Plan total/.test(l)).reduce((a, [, v]) => a + v, 0);
-	check(
-		'BUG-5',
-		total !== undefined && Math.abs(parts - total) < 0.01,
-		`money rows ${parts.toFixed(2)} vs plan total ${total}`
-	);
+	if (money)
+		check(
+			'BUG-5',
+			total !== undefined && Math.abs(parts - total) < 0.01,
+			`money rows ${parts.toFixed(2)} vs plan total ${total}`
+		);
 	// The receipt id lives in the System layer (in the DOM, not on screen): read it from there.
 	const receiptOf = async () =>
 		(

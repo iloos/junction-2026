@@ -63,6 +63,30 @@ Both apps build from GitHub (`iloos/junction-2026`, VCS integration `vcs5f404a66
 
 **Plan changes** go through `aiven_service_update` with only `plan` (and `cloud` for a move) set. Never send `user_config` for a plan change. Moving Postgres between clouds is online: on Sat 14 Nov the DigitalOcean → AWS move took 5 minutes, with one redirect seen by prod's health check and the same host, port and CA afterwards.
 
+## Scale-out design (not built)
+
+**What we can say:** the app is designed to scale out on Postgres. Plans, orders, kitchens, the op log and traces live in Postgres, and live updates cross processes through LISTEN/NOTIFY. **What we can't say:** that it runs on several machines today. It runs one container.
+
+**Aiven Runtime has no replicas.** Its docs (deploy, Compose files, scale-apps, 15 Nov) cover changing the plan only; nothing on `deploy.replicas`, instance counts or load balancing, and the public endpoint routes to one container port. So scale-out means two (or more) Runtime apps on the one Postgres, behind a router we add (for example a Cloudflare Worker in front of both URLs). Staging (`mandate-staging`) already shares prod's database, so a second machine on the same Postgres exists; whether a live update made on one reaches the other's Ops is not yet checked.
+
+Process-local state, from the 15 Nov inventory:
+
+| State | Where | With a second instance |
+|---|---|---|
+| Kitchen sessions (kitchen, plan on screen, preset, visitor, presenter) | `kitchen/live.ts` `sessions` | **Must move.** A request served by the other instance shows the default kitchen and loses the open plan. |
+| Simulated overlay (shortage, contention, incidents) | `SimOverlay` in server ports | **Must move.** Scarcity exists only on the instance that set it; the other quotes full stock. |
+| Pairing tokens and codes | `pair/pairing.ts` | **Must move.** A pairing made on one can't be confirmed on the other. |
+| Agent-run registry (status, cancel) | `agent/runs.ts` | **Must move.** The run's ops are in Postgres; its handle isn't. |
+| Visitor cookie secret | `JUDGE_KEY_SECRET` | **Same value on every instance**, or each instance gives visitors a new sandbox. |
+| Run pointers, `ensureRunLoaded` | `demo/run.ts`, `demo/reset.ts` | Cache: re-read from Postgres every 5 s. |
+| Order-stage cache, refusal dedupe, breakers, service status, outside-call memory cache, photo warm set, Decide memo | various | Cache: keyed by data or per process by design. |
+| Visitor `seeded` set, sandbox cooldowns, per-key call limits | `demo/visitor.ts`, `demo/sandbox.ts`, `tools/key-limits.ts` | Cache, but each instance counts on its own: caps and limits effectively multiply by the instance count. |
+| Web findings and caches | files under `WEB_CACHE_DIR` | Cache per container (photos, brands, listings diverge); recall findings are also in the op log; the web spend ledger is in Postgres when attached. |
+
+**Estimate to build:** sessions to a Postgres table with a migration (~45 min); the overlay to Postgres with a cached read and NOTIFY invalidation on the offer path (~60–75 min); pairing (~30 min); a cancel flag for agent runs (~30 min); a second Runtime app with the Postgres integration and the same env, set by the user in the console (~30–45 min); then a ramp and cross-instance checks. About 3.5–4 hours.
+
+**Vertical instead:** the largest Runtime plan in `aws-eu-central-1` is `startup-400-8192` (4 vCPU, 8 GB, $0.29/h by Aiven's catalogue; the console is authoritative). One Node process plans on about one core, so more vCPU buys garbage-collection and I/O headroom, not proportionally more planners.
+
 ## Environment (Aiven console)
 
 **An env update replaces the whole list.** `aiven_service_update` with `environment_variables` drops every variable not re-sent, including `PROJECT_CA_CERT` and the console-added secrets. Add or edit one variable at a time in the console. Agents never read `.env` values; the user pastes secrets.
