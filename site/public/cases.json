@@ -1,6 +1,6 @@
 {
 	"recordedAt": "2026-11-14T18:42:49.962Z",
-	"appCommit": "4752d001f8eaf471f7940a5fe3985952f3cf6bbb",
+	"appCommit": "b151ae0a8edd514f5d2ca422656ef1a6a18c1cb0",
 	"chain": {
 		"recordedAt": "2026-11-14T18:42:42.053Z",
 		"line": {
@@ -66,11 +66,11 @@
 				}
 			}
 		],
-		"appCommit": "4752d001f8eaf471f7940a5fe3985952f3cf6bbb"
+		"appCommit": "b151ae0a8edd514f5d2ca422656ef1a6a18c1cb0"
 	},
 	"plan": {
 		"recordedAt": "2026-11-14T18:42:42.054Z",
-		"appCommit": "4752d001f8eaf471f7940a5fe3985952f3cf6bbb",
+		"appCommit": "b151ae0a8edd514f5d2ca422656ef1a6a18c1cb0",
 		"ask": "Plan the Christmas buffet for 140 on Saturday.",
 		"source": {
 			"app": "https://app.mandate.kitchen",
@@ -570,7 +570,7 @@
 	],
 	"sponsors": {
 		"recordedAt": "2026-11-15T04:48:31.998Z",
-		"appCommit": "04e7e4d8f3d3e400187fb7ee028eb23757a8abf3",
+		"appCommit": "60574eb443135ebdd3a583bb206d040c4bd088f9",
 		"source": {
 			"app": "https://app.mandate.kitchen",
 			"endpoints": [
