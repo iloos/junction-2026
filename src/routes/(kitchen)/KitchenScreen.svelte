@@ -499,10 +499,20 @@
 	const rejectedIds = $derived(new Set(rejectedLines.map((l) => l.id)));
 	/** The only bulk action: accept every pending line that may be accepted together. */
 	const all = $derived(acceptAll(snap?.plan.lines ?? [], decisionsByLine));
+	/** For an ingredient of a dish made in house: the dish, mid-sentence ("lanttulaatikko"); else null. */
+	function madeFor(l: Line): string | null {
+		if (l.strategy?.kind !== 'make_in_house') return null;
+		const label = snap?.plan.needs.find((n) => n.id === l.needId)?.label;
+		if (!label) return 'the dish';
+		const n = label.split(' (')[0];
+		return n[0].toLowerCase() + n.slice(1);
+	}
 	/** What Accept all takes in beyond plain lines: the swaps, named by the dish they serve ("the Christmas ham swap"). */
 	const acceptIncludes = $derived.by(() => {
 		const ids = new Set([...all.byApproval.values()].flatMap((g) => g.lineIds));
-		const subs = (snap?.plan.lines ?? []).filter((l) => ids.has(l.id) && l.substituteFor);
+		const subs = (snap?.plan.lines ?? []).filter(
+			(l) => ids.has(l.id) && l.substituteFor && l.strategy?.kind !== 'make_in_house'
+		);
 		const originals = new Set(subs.map((l) => l.substituteFor));
 		if (!originals.size) return null;
 		if (originals.size > 1) return `${originals.size} swaps`;
@@ -1607,7 +1617,8 @@
 							d?.outage === 'undeliverable' ? "Valio Aimo can't deliver it" : 'out at Valio Aimo',
 						picked: pickedWords(
 							d?.rescue?.candidates.find((c) => c.productId === l.productId) ?? {}
-						)
+						),
+						madeFor: madeFor(l)
 					}
 				: undefined}
 			onwhy={() => k.openWhy(l.id)}

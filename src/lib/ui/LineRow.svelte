@@ -31,7 +31,13 @@
 		flash?: boolean;
 		/** For a substitute: the product it replaces and why, in plain words. */
 		/** For a substitute: the product it replaces and why, and why the agent picked this one (≤3 words). */
-		replaces?: { name: string; because: string; picked?: string | null };
+		replaces?: {
+			name: string;
+			because: string;
+			picked?: string | null;
+			/** An ingredient for making the dish in house (not a swap): the dish, mid-sentence. */
+			madeFor?: string | null;
+		};
 		/** The product's diet and allergen marks (G, L, M…). */
 		diet?: Marks;
 		/** An agent last changed this line (proposed or edited it). */
@@ -128,8 +134,10 @@
 			{#if gloss}<p class="truncate text-meta text-ink-3" title={gloss}>{gloss}</p>{/if}
 			{#if replaces}
 				<p class="text-meta text-ink-2">
-					{#if replaces.picked}<span class="text-ink">Picked: {replaces.picked}</span> · replaces{:else}Replaces{/if}
-					<span class="text-ink">{replaces.name}</span> ({replaces.because}){#if by}
+					{#if replaces.madeFor}For <span class="text-ink">{replaces.madeFor}</span>, made in house{:else}{#if replaces.picked}<span
+								class="text-ink">Picked: {replaces.picked}</span
+							> · replaces{:else}Replaces{/if}
+						<span class="text-ink">{replaces.name}</span> ({replaces.because}){/if}{#if by}
 						&nbsp;· <AgentMark {by} />{/if}
 				</p>
 			{:else if by}<p><AgentMark {by} /></p>
