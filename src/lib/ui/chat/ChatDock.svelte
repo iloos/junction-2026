@@ -14,6 +14,7 @@
 	import { tick, untrack } from 'svelte';
 	import DecisionCard from '$lib/ui/DecisionCard.svelte';
 	import LineRow from '$lib/ui/LineRow.svelte';
+	import Row from '$lib/ui/Row.svelte';
 	import { acceptAll, lineDecisions } from '$lib/kitchen/line-decisions';
 	import { day, money, readableName } from '$lib/ui/format';
 	import { KitchenStore } from '$lib/kitchen/kitchen.svelte';
@@ -379,6 +380,8 @@
 			/* offline: the line still says what happened */
 		}
 		if (taskId !== id) return;
+		// A menu not yet planned changes only through the chat: a re-read has nothing new to add (no second prompt).
+		if (fresh.some((e) => e.type === 'menu')) return;
 		// The lines a decision card showed before and after the re-read: what the page decided, even when the stream
 		// only said to re-read (a reconnect or another instance) and carried no ops to narrate.
 		const pendingIn = (es: readonly ChatEvent[]) =>
@@ -832,13 +835,21 @@
 								? ` · aims at ${money(x.e.budgetCents, { whole: true })}`
 								: ''}
 						</p>
-						<ul class="mt-1.5 space-y-0.5 text-meta text-ink">
-							{#each x.e.dishes.slice(0, 4) as dish, j (j)}
-								<li class="truncate">{dish.name}</li>
+						<ul class="mt-1.5">
+							{#each x.e.dishes as dish, j (j)}
+								<!-- The Kitchen's row: dish · role · diet chips, and what still needs a product. -->
+								<Row icon class="border-t border-rule/60 first:border-t-0">
+									<span class="text-ink">{dish.name}</span>
+									{#snippet sub()}{dish.course ?? 'dish'}{#each dish.diet ?? [] as dt (dt)}<span
+												class="ml-1 rounded border border-accent/30 bg-accent-wash px-1 text-micro text-accent-ink"
+												>{dt}</span
+											>{/each}{/snippet}
+									{#snippet end()}{#if dish.missing}<span class="text-micro text-signoff"
+												>{dish.missing}
+												{dish.missing === 1 ? 'item needs' : 'items need'} a product</span
+											>{/if}{/snippet}
+								</Row>
 							{/each}
-							{#if x.e.dishes.length > 4}
-								<li class="text-ink-3">and {x.e.dishes.length - 4} more</li>
-							{/if}
 						</ul>
 						{#if x.e.unresolved > 0}
 							<p class="mt-1 text-meta text-signoff">
@@ -941,11 +952,10 @@
 										: 'Open'} this decision on the Kitchen page: {d.title ?? d.reason}"
 								>
 									<DecisionCard decision={d} {names} due={x.e.due} readonly compact />
-									<span
-										class="mt-1 inline-flex items-center gap-1 text-meta font-medium text-propose group-hover:underline"
-										>{here ? 'Show on the page' : 'Open the order →'}
-										<ArrowUpRight size={13} aria-hidden="true" /></span
-									>
+									{#if here}<span
+											class="mt-1 inline-flex items-center gap-1 text-meta font-medium text-propose group-hover:underline"
+											>Show on the page <ArrowUpRight size={13} aria-hidden="true" /></span
+										>{/if}
 								</a>
 							{/each}
 							<p class="text-meta text-ink-3">Approve it on its card, or say “approve all” here.</p>
