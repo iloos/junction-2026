@@ -23,6 +23,7 @@ import { findDate } from '$lib/server/request/dates';
 import { parseRules } from '$lib/server/request/parse';
 import { readingOf, reviewReading } from '$lib/server/request/reading';
 import { dayWords, ledgerSummary, readTask } from '$lib/server/tasks/outcome';
+import { DEMO_WORKSPACE, JUDGES_WORKSPACE } from '$lib/server/demo/workspaces';
 import type { TaskLedger } from '$lib/core/contracts/task';
 import { explain } from './explain';
 import { answerInChat } from './question';
@@ -1402,6 +1403,17 @@ export async function planView(
  * anything: the dock calls it when it opens on a remembered task, so its cards come from the plans as they are, not
  * from what the last turn saw.
  */
+/**
+ * The room a link opens in, so it still works after the browser switched rooms in another tab: the shared room by
+ * name, a private sandbox as "mine"; the stage is the presenter's own and keeps the cookie's choice.
+ */
+const roomParam = (workspaceId: string) =>
+	workspaceId === JUDGES_WORKSPACE
+		? `&ws=${JUDGES_WORKSPACE}`
+		: workspaceId === DEMO_WORKSPACE
+			? ''
+			: '&ws=mine';
+
 export async function taskView(taskId: string, deps: ChatDeps): Promise<ChatEvent[]> {
 	const store = storeOf(deps.ports);
 	const got = await store.get(deps.workspaceId, taskId);
@@ -1438,7 +1450,7 @@ export async function taskView(taskId: string, deps: ChatDeps): Promise<ChatEven
 				...(m.brief.budgetCents ? { budgetCents: m.brief.budgetCents } : {}),
 				unresolved,
 				reviewed: m.status !== 'proposed',
-				reviewUrl: `/request?menu=${encodeURIComponent(m.id)}&rev=${m.revision}&task=${encodeURIComponent(taskId)}`
+				reviewUrl: `/request?menu=${encodeURIComponent(m.id)}&rev=${m.revision}&task=${encodeURIComponent(taskId)}${roomParam(deps.workspaceId)}`
 			});
 			out.push({
 				type: 'done',
@@ -1987,7 +1999,7 @@ async function eventTurn(
 		...(brief.budgetCents ? { budgetCents: brief.budgetCents } : {}),
 		unresolved,
 		reviewed: proposal.status !== 'proposed',
-		reviewUrl: `/request?menu=${encodeURIComponent(proposal.id)}&rev=${proposal.revision}&task=${encodeURIComponent(task.id)}`
+		reviewUrl: `/request?menu=${encodeURIComponent(proposal.id)}&rev=${proposal.revision}&task=${encodeURIComponent(task.id)}${roomParam(deps.workspaceId)}`
 	};
 	return {
 		steps,
