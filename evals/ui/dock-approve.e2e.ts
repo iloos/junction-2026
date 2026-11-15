@@ -77,7 +77,13 @@ test('a dock approval on another plan never switches the plan the Kitchen page s
 	// then the page's own next command and a fresh read still act on, and show, the buffet.
 	await page.reload();
 	await expect(
-		page.getByRole('navigation', { name: 'Kitchen view' }).getByRole('button').nth(1),
+		// Pre-D30 the second "Kitchen view" tab names the remembered plan; D30 focuses it (#task-h).
+		page
+			.getByRole('navigation', { name: 'Kitchen view' })
+			.getByRole('button')
+			.nth(1)
+			.or(page.locator('#task-h'))
+			.first(),
 		'the remembered plan is still the buffet'
 	).toContainText('Christmas', { timeout: 60_000 });
 	await eventView(page);
@@ -89,7 +95,13 @@ test('a dock approval on another plan never switches the plan the Kitchen page s
 	await expect(title).toContainText('Christmas');
 	await page.reload();
 	await expect(
-		page.getByRole('navigation', { name: 'Kitchen view' }).getByRole('button').nth(1),
+		// Pre-D30 the second "Kitchen view" tab names the remembered plan; D30 focuses it (#task-h).
+		page
+			.getByRole('navigation', { name: 'Kitchen view' })
+			.getByRole('button')
+			.nth(1)
+			.or(page.locator('#task-h'))
+			.first(),
 		'the remembered plan is still the buffet'
 	).toContainText('Christmas', { timeout: 60_000 });
 	await eventView(page);

@@ -83,11 +83,13 @@ export async function approveAll(page: Page): Promise<number> {
 		const group = page.getByRole('button', { name: /^Accept these \d+/ }).first();
 		const review = page.getByRole('button', { name: /^Review \d+ lines?/ }).first();
 		const hold = page.getByRole('button', { name: /Hold to sign off \d+ lines?/ }).first();
-		if (await all.isVisible().catch(() => false)) {
+		const usable = async (l: typeof all) =>
+			(await l.isVisible().catch(() => false)) && (await l.isEnabled().catch(() => false));
+		if (await usable(all)) {
 			lines += Number(((await all.innerText()).match(/Accept all (\d+)/) ?? [])[1] ?? 0);
 			await all.click();
 			await confirmIfAsked();
-		} else if (await group.isVisible().catch(() => false)) {
+		} else if (await usable(group)) {
 			lines += Number(((await group.innerText()).match(/Accept these (\d+)/) ?? [])[1] ?? 0);
 			await group.click();
 			await confirmIfAsked();
@@ -123,6 +125,25 @@ export async function orderNow(page: Page) {
 		.getByText(/Ordered\s*·\s*\d+\s+lines?/)
 		.first()
 		.waitFor({ state: 'attached', timeout: 60_000 }); // on a phone it can sit in an unselected zone tab
+}
+
+/** The page's decisions: D29's decision-group headers, or the pre-D29 cards in the #approval panel. */
+export function decisionCards(page: Page) {
+	return page
+		.getByTestId('decision-group')
+		.or(page.locator('#approval article[aria-label^="Decision:"]'));
+}
+
+/** Approves the first non-sign-off decision on the page: "Accept these N" (D29) or Review → Confirm exact terms. */
+export async function approveFirstOnPage(page: Page) {
+	const accept = page.getByRole('button', { name: /^Accept these \d+/ }).first();
+	if (await accept.isVisible().catch(() => false)) return accept.click();
+	const panel = page.locator('#approval').first();
+	await panel
+		.getByRole('button', { name: /^Review \d+ lines?/ })
+		.first()
+		.click();
+	await panel.getByRole('button', { name: 'Confirm exact terms' }).click();
 }
 
 /** Opens the first line's Why drawer: the line rows sit inside each dish's details, collapsed by default. */
