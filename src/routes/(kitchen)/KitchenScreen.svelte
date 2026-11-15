@@ -499,6 +499,37 @@
 	const rejectedIds = $derived(new Set(rejectedLines.map((l) => l.id)));
 	/** The only bulk action: accept every pending line that may be accepted together. */
 	const all = $derived(acceptAll(snap?.plan.lines ?? [], decisionsByLine));
+	/** What a row in Needs you is, in words: a swap (with what was asked), a new product, or an unsure match. */
+	function askOf(l: Line, d: DishView | null): { asked?: string; why?: string; tag: string } {
+		const dish = madeFor(l) ?? dishOf(l);
+		if (l.strategy?.kind === 'make_in_house')
+			return { tag: `For ${dish ?? 'the dish'}, made in house` };
+		if (l.substituteFor) {
+			const picked = pickedWords(
+				d?.rescue?.candidates.find((c) => c.productId === l.productId) ?? {}
+			);
+			return {
+				asked: names.get(l.substituteFor) ?? l.substituteFor,
+				why: d?.outage === 'undeliverable' ? "Valio Aimo can't deliver it" : 'out at Valio Aimo',
+				tag: picked ? `Picked: ${picked}` : 'Proposed instead'
+			};
+		}
+		const unsure = l.reasons.find((r) => r === 'requirement_unknown' || r === 'allergen_unknown');
+		if (unsure)
+			return {
+				tag: `Not sure it's right${dish ? ` for ${dish}` : ''}: ${reasonShort(unsure).toLowerCase()}`
+			};
+		if (l.reasons.includes('new_sku'))
+			return { tag: `New to this kitchen${dish ? `, for ${dish}` : ''}` };
+		return { tag: dish ? `For ${dish}` : reasonShort(l.reasons[0] ?? 'Held') };
+	}
+	/** The dish a line serves, mid-sentence ("rosolli"), from its need. */
+	function dishOf(l: Line): string | null {
+		const label = snap?.plan.needs.find((n) => n.id === l.needId)?.label;
+		if (!label) return null;
+		const n = label.split(' (')[0];
+		return n[0].toLowerCase() + n.slice(1);
+	}
 	/** For an ingredient of a dish made in house: the dish, mid-sentence ("lanttulaatikko"); else null. */
 	function madeFor(l: Line): string | null {
 		if (l.strategy?.kind !== 'make_in_house') return null;
@@ -507,6 +538,12 @@
 		const n = label.split(' (')[0];
 		return n[0].toLowerCase() + n.slice(1);
 	}
+	/** Every line the plan buys (rejected and zeroed lines aside), for "The whole order" heading. */
+	const wholeLines = $derived(
+		(plan?.lines ?? []).filter(
+			(l) => l.qty.value > 0 && !rejectedIds.has(l.id) && l.state !== 'unorderable'
+		).length
+	);
 	/** What Accept all takes in beyond plain lines: the swaps, named by the dish they serve ("the Christmas ham swap"). */
 	const acceptIncludes = $derived.by(() => {
 		const ids = new Set([...all.byApproval.values()].flatMap((g) => g.lineIds));
@@ -663,6 +700,8 @@
 		);
 		return pending.flatMap((a) => decisionsOf(plan, a));
 	});
+	/** The full rules (hard limits, preferences, their preview), opened from the header's rules line. */
+	let rulesOpen = $state(false);
 	/** Decide's stock filter (the cover legend as chips): known stock, stock unknown, or every line. */
 	let stockFilter = $state<'known' | 'unknown' | null>(null);
 	const stockOf = (l: Line) =>
@@ -1414,18 +1453,31 @@
 				>{/if}
 		{/if}
 		{#if snap}
-			<!-- One line on a phone, with "more"; the whole quote from sm. -->
-			<p
-				class="max-w-[95ch] min-w-0 text-meta text-ink-2 {mandateOpen ? '' : 'max-sm:line-clamp-1'}"
+			<!-- The chef's words in one line (the whole quote from sm); pressing it opens the full rules under the header. -->
+			<button
+				type="button"
+				class="group flex max-w-[95ch] min-w-0 items-start gap-1 rounded-md text-left text-meta text-ink-2 hover:text-ink {isEvent
+					? ''
+					: 'pointer-events-none'}"
+				aria-expanded={isEvent ? rulesOpen : undefined}
+				aria-controls={isEvent ? 'rules-drawer' : undefined}
+				onclick={() => {
+					rulesOpen = !rulesOpen;
+					mandateOpen = rulesOpen;
+				}}
 			>
-				<span class="font-medium text-ink">Mandate, in the chef's words:</span>
-				“{snap.rules.words}”
-			</p>
-			{#if !mandateOpen}<button
-					type="button"
-					class="-mt-1.5 self-start text-meta text-ink-2 underline underline-offset-2 sm:hidden"
-					onclick={() => (mandateOpen = true)}>more</button
-				>{/if}
+				<span class="min-w-0 {mandateOpen ? '' : 'max-sm:line-clamp-1'}"
+					><span class="font-medium text-ink">Mandate, in the chef's words:</span>
+					“{snap.rules.words}”</span
+				>{#if isEvent}<span
+						class="inline-flex shrink-0 items-center gap-0.5 font-medium text-accent-ink underline-offset-2 group-hover:underline"
+						>Rules<ChevronDown
+							size={13}
+							class="transition-transform {rulesOpen ? 'rotate-180' : ''}"
+							aria-hidden="true"
+						/></span
+					>{/if}
+			</button>
 			<span class="flex items-center gap-3 sm:ml-auto"
 				><CalendarSubscribe
 					kitchenId={snap.kitchen.id}
@@ -1606,6 +1658,7 @@
 			name={names.get(l.productId) ?? l.productId}
 			gloss={englishOf(l.productId, names.get(l.productId))}
 			grouped={inDecide}
+			ask={inDecide ? askOf(l, d) : null}
 			approved={approvedIds.has(l.id)}
 			flash={k.flash.has(l.id)}
 			by={inGroup ? undefined : snap?.byAgent?.[l.id]}
@@ -1648,6 +1701,25 @@
 		/>
 	{/snippet}
 	<main class="mx-auto max-w-[1180px] px-4 pt-5 pb-28 md:px-6 lg:pb-6">
+		{#if rulesOpen && isEvent}
+			<div id="rules-drawer" class="mb-5">
+				<RulesPanel
+					rules={snap.rules}
+					preset={snap.preset}
+					busy={k.busy}
+					previews={view.dishes
+						.filter((d) => d.rescue?.preview?.differs)
+						.map((d) => ({
+							dish: d.nameFi,
+							recommended: d.rescue!.preview!.recommended,
+							saved: d.rescue!.preview!.saved,
+							ordered: linesOf(d).some((l) => l.state === 'committed')
+						}))}
+					onapply={() => k.applyRules()}
+					onpreset={(p) => k.setPreset(p)}
+				/>
+			</div>
+		{/if}
 		<!-- D30: the delivery day is the view: its days, one sentence, the stage filters. -->
 		<section aria-label="Delivery day" class="mb-4">
 			<!-- One labelled control for the day (D30): other orders live in the header's Orders list. -->
@@ -1870,7 +1942,15 @@
 						<!-- Decide (D29): the waiting lines, once, grouped by why they wait; each group decides itself. -->
 						<section aria-labelledby="decide-h" class="mt-6">
 							<div class="flex flex-wrap items-center gap-x-3 gap-y-1.5">
-								<h2 id="decide-h" class="text-heading font-semibold text-ink">Decide</h2>
+								<div>
+									<h2 id="decide-h" class="text-heading font-semibold text-ink">
+										Needs you · <span class="mono"
+											>{decideRows.reduce((n, r) => n + r.lines.length, 0)}</span
+										>
+										{decideRows.reduce((n, r) => n + r.lines.length, 0) === 1 ? 'line' : 'lines'}
+									</h2>
+									<p class="text-meta text-ink-3">Only what waits for your yes.</p>
+								</div>
 								<!-- The cover legend as filters, counted in the lines this table shows. -->
 								<div
 									class="flex flex-wrap items-center gap-1.5"
@@ -1971,7 +2051,9 @@
 																[{ approval: terms, lineIds: pendingIds }],
 																'grant'
 															)}
-														>Accept these {pendingIds.length} ·
+														>{pendingIds.length === 1
+															? 'Accept'
+															: `Accept these ${pendingIds.length}`} ·
 														<span class="mono ml-1"
 															>{money(
 																g.lines
@@ -2010,7 +2092,8 @@
 								id="dishes-h"
 								class="flex items-center gap-1.5 text-heading font-semibold text-ink"
 							>
-								{tableTitle}
+								The whole order · <span class="mono">{wholeLines}</span>
+								{wholeLines === 1 ? 'line' : 'lines'}
 								<details class="relative font-normal">
 									<summary
 										class="grid size-6 cursor-pointer list-none place-items-center rounded-full text-ink-3 hover:bg-well hover:text-ink"
@@ -2028,6 +2111,9 @@
 								</details>
 							</h2>
 						</div>
+						<p class="text-meta text-ink-3">
+							Everything in this plan, including what your rules let the agent order alone · {tableTitle}
+						</p>
 						{#if contended}
 							<p
 								class="mt-2 flex items-start gap-2 rounded-lg border border-signoff/50 bg-signoff-wash px-4 py-2.5 text-body text-ink"
@@ -2596,29 +2682,8 @@
 	</main>
 	<!-- Under the plan and its panels, on the page's own columns: the rules (and, in System, the demo tools) under the plan,
 	     what happened under Order. Outside <main>, so the sticky panels never slide over it. -->
-	<div
-		class="mx-auto grid max-w-[1440px] grid-cols-1 gap-6 px-4 pb-32 md:px-6 lg:pb-10 {shell?.chatOpen
-			? '2xl:grid-cols-[minmax(0,1fr)_360px]'
-			: 'lg:grid-cols-[minmax(0,1fr)_360px]'}"
-	>
+	<div class="mx-auto grid max-w-[1180px] grid-cols-1 gap-6 px-4 pb-32 md:px-6 lg:pb-10">
 		<div class="min-w-0">
-			<div class="{active === 'plan' ? '' : 'max-lg:hidden'} {isEvent ? '' : 'hidden'}">
-				<RulesPanel
-					rules={snap.rules}
-					preset={snap.preset}
-					busy={k.busy}
-					previews={view.dishes
-						.filter((d) => d.rescue?.preview?.differs)
-						.map((d) => ({
-							dish: d.nameFi,
-							recommended: d.rescue!.preview!.recommended,
-							saved: d.rescue!.preview!.saved,
-							ordered: linesOf(d).some((l) => l.state === 'committed')
-						}))}
-					onapply={() => k.applyRules()}
-					onpreset={(p) => k.setPreset(p)}
-				/>
-			</div>
 			<!-- Demo tools, in the System layer: the simulator changes Valio's stock for this run, not a rule. -->
 			<section
 				class="sys-only mt-4 rounded-lg border border-dashed border-rule-strong bg-sheet px-4 py-3 {isEvent

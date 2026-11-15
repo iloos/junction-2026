@@ -32,12 +32,12 @@ test('approving on the page shows in the dock, with the way on', async ({ page }
 	const dock = await openDock(page);
 	await dock.locator('textarea').fill('What still needs my decision?');
 	await dock.locator('textarea').press('Enter');
-	// With the plan on the page, the chat answers about its decisions; they are decided on the page (one "Decide").
+	// With the plan on the page, the chat answers about its decisions; they are decided on the page (one "Needs you").
 	await dock
 		.getByText(/decisions?/)
 		.last()
 		.waitFor();
-	await expect(page.getByRole('region', { name: 'Decide', exact: true })).toHaveCount(1);
+	await expect(page.getByRole('region', { name: /^Needs you/ })).toHaveCount(1);
 	await dock.getByRole('button', { name: 'Close chat' }).click();
 
 	// Approve the first (non sign-off) decision on the page.
