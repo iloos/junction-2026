@@ -23,12 +23,12 @@ Prepare before going on: a fresh browser profile on the laptop, logged into noth
 3. **20–38 s:** the plan appears: about 20 items, each a Valio product with a price. Say: "A new menu means new products, and this hotel's mandate says ask me before any new product. So the agent asks once." Point at one reason line.
 4. **38–50 s:** tap **Accept all**, then the Ops tab: the order has arrived. Say: "One yes covers exactly these items, and it lands on Valio's side."
 
-**B · The usual order (25 s)**: only if S5 has seen it on the submitted deploy (see below)
-5. **50–75 s:** back to the Kitchen: "Tuesday's usual is ready" → **Plan it**. Say: "Products this hotel buys every week go through on their own, inside the caps. Only the exceptions wait. Trust grows from history." Switch back to the deck, slide 8.
+**B · The buffet: what goes alone (25 s)**
+5. **50–75 s:** on the hotel, open the Christmas buffet and **Plan it**. Point at the three colours: "Here, three items are inside the rules and go through alone; three are impossible and say why; the rest is three decisions." Switch back to the deck, slide 8.
 
-If B isn't verified, end after A and give the 25 s to slide 8. If anything hangs for more than 5 seconds, say "here's the same run" and show slide 7.
+Seen on prod b12ba71 (3 alone · 15 in 3 decisions · 3 refused). If the buffet is slow or differs, end after A and give the 25 s to slide 8. If anything hangs for more than 5 seconds, say "here's the same run" and show slide 7.
 
-_To verify before stage (S5):_ on the submitted deploy, the hotel's usual order planned from the Kitchen shows items ordered alone and only exceptions waiting; note the counts.
+**Don't demo the usual order.** On prod 57fc4b4 (S5, 02:08 UTC) the home offers Tuesday's usual after its cut-off (all 5 can't be ordered, yet the bar says "inside your rules"), and Thursday's usual holds all 4 items as new or unconfirmed. Routed to S1 and S2; re-check only if they land before 06:00.
 
 ## Peer review at the table (about 2 min a visitor)
 Laptop open on the deck, phone ready with the app.
