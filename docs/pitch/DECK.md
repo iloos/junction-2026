@@ -103,6 +103,8 @@ Don't say: vector search, schema-constrained, recipe-aware, "a real recall hit o
 
 ---
 
+**Built deck:** the claude.ai Slides artifact (private until the owner shares it) renders these six slides as 11 frames; this file stays the source of truth, so change a line here first, then on the slide. Present from its downloaded `.html` or PDF, never the live link.
+
 ## Open before filming
 - [ ] S5: the numbers for slides 3 and 5 (hero at 390, r1 stores and first order, m1 room cascade, eval counts, facets 0 unsafe, F1 cases, rounds closed).
 - [ ] Re-read `/healthz` `day` on the submitted commit for slide 4.
