@@ -231,7 +231,7 @@ export function nextQuestion(d: BriefDraft, today: string): BriefQuestion | null
 				text: 'On which day is the event?',
 				why: 'Delivery is planned for the day before, within the supplier’s cut-offs.',
 				chips: [chip(dayChip(next(5)), next(5)), chip(dayChip(next(6)), next(6))],
-				input: { kind: 'date', placeholder: 'YYYY-MM-DD' }
+				input: { kind: 'date', placeholder: 'e.g. Saturday' }
 			};
 		}
 		case 'serviceStyle':
