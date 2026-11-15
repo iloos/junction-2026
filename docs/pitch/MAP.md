@@ -148,7 +148,7 @@ See §3 for the sponsor round. Capabilities: Exa facts in the Why drawer, GTIN-c
 | Featherless (Gemma) | selectable provider for parsing | — | — | wired, unused |
 
 ## 4. Numbers we stand behind
-Waiting on S5 (junc26-fb) for the current figures; until then, only the CLAIMS-backed ones: hero m2 10/10 at 1440 on `4ad27c0` (390 pending); 4 commits on one key → 1 receipt on prod; 30 visitors, 0 errors (`68cb2d8`); Flash-Lite 44/45 held-out paraphrases, 845 ms median (offline); 9 of 10 reading defects flagged; outside key: approve 403, 20 quotes/min then 429. Repo: 246 `*.test.ts` files + 12 Playwright specs; evals: 14 scenarios, 5 fidelity cases × 3 entries, 9 chat trials, 7 agent goals, 27 + 69 + 30 retrieval cases.
+Waiting on S5 (junc26-fb) for the current figures; until then, only the CLAIMS-backed ones: hero m2 10/10 at 1440 and 390 on prod `ea9f4d5`; 4 commits on one key → 1 receipt on prod; 30 visitors, 0 errors (`68cb2d8`); Flash-Lite 44/45 held-out paraphrases, 845 ms median (offline); 9 of 10 reading defects flagged; outside key: approve 403, 20 quotes/min then 429. Repo: 246 `*.test.ts` files + 12 Playwright specs; evals: 14 scenarios, 5 fidelity cases × 3 entries, 9 chat trials, 7 agent goals, 27 + 69 + 30 retrieval cases.
 
 ## 5. Never say
 Vector search / pgvector (column exists, never read or written) · schema-constrained output · recipe-aware · "confirmed" without a receipt · data stays in Finland · a real recall hit our orders · "ordered the buffet" by the agent · every sponsor call in the trace drawer · "unlimited" or "in stock" for ≥ 999999.

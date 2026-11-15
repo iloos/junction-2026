@@ -46,7 +46,7 @@ One slide with four frames (or four quick slides in the video). Each frame is a 
 
 | Frame | Headline | Visual | Proof | Status |
 |---|---|---|---|---|
-| **a. Words → a costed, rule-checked plan** (the hero) | "A no-meat dinner for 120 with a peach dessert." | the dock: menu card → plan → every ingredient a Valio product with a price or an honest label → held lines in one decision → "Ordered · 1 receipt" | playtest m2: 10/10 at 1440 (`4ad27c0`); 390 ⏳; one receipt under a 4× race on prod | prod, 390 ⏳ |
+| **a. Words → a costed, rule-checked plan** (the hero) | "A no-meat dinner for 120 with a peach dessert." | the dock: menu card → plan → every ingredient a Valio product with a price or an honest label → held lines in one decision → "Ordered · 1 receipt" | playtest m2: 10/10 at 1440 and 390 on prod `ea9f4d5` (S5); one receipt under a 4× race on prod | prod |
 | **b. One shortage, every kitchen** | "Same shortage. Each kitchen's own rules." | Ops Room on the big screen: stores by name, a shortage fires, per store: kept · swapped · held · short | `812d714`; playtest m1 | ⏳ room cascade on screen (S5 r1/m1) |
 | **c. An outside agent, stopped** | "Your agent can plan and order. It can't approve." | Claude with a judge key: `place_order` over the line cap → held; `approve` → refused; Ops: "An outside agent tried to approve… Nothing changed." | CLAIMS b10 (403, logged); 17 tools over MCP, none approves | prod |
 | **d. Valio's view** | "Valio sees demand before the cut-off." | Ops Forecast: two weeks of stock per product, where it runs short, labelled simulated, every estimate sourced | D27 stock model `5b7154e`; playtest m4 | prod (simulated, labelled) |

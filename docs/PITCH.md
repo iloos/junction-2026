@@ -76,7 +76,7 @@ Deck: [pitch/DECK.md](pitch/DECK.md) (six slides: the case · the approach · th
 Every claim's observed status and verdict: [CLAIMS.md](CLAIMS.md).
 
 ## Not yet claimable
-- **Hero journey at 390 px** and **the room cascade on screen**: wait for the playtest on the submitted commit (m2 at 390, r1, m1).
+- **The room cascade on screen**: waits for wave K's room fix to be playtested (r1, m1). The hero journey is 10/10 at 1440 and 390 on prod `ea9f4d5` (S5).
 - **The menu's product picks up close**: a trout ingredient resolved to pork (BUGS #11); show the menu, not the picks, until fixed.
 - **Every sponsor call in the trace drawer**: Valio live, chat Gemini text and MCP `propose_menu` aren't traced there yet.
 - **Review mechanism**: on main behind `REVIEW=1`, off until the on/off arms run.
