@@ -540,6 +540,9 @@
 	}
 	/** Every line the plan buys (rejected and zeroed lines aside), for "The whole order" heading. */
 	const wholeLines = $derived(
+		(plan?.lines ?? []).filter((l) => l.qty.value > 0 && !rejectedIds.has(l.id)).length
+	);
+	const wholeCan = $derived(
 		(plan?.lines ?? []).filter(
 			(l) => l.qty.value > 0 && !rejectedIds.has(l.id) && l.state !== 'unorderable'
 		).length
@@ -1204,17 +1207,23 @@
 		return decisionsByLine.get(l.id)?.state === 'pending' ? 'waits' : 'ready';
 	}
 	/** "Thu 10 Dec · 18 lines · €933.92 · 15 need you". */
+	/** One line count everywhere: "21 lines · 18 can be ordered", or just "18 lines" when all can. */
+	function lineCount(total: number, can: number): string {
+		const t = `${total} ${total === 1 ? 'line' : 'lines'}`;
+		return can < total ? `${t} · ${can} can be ordered` : t;
+	}
 	const daySentence = $derived.by(() => {
 		if (!theDay) return '';
 		if (!dayEntry) {
 			// The basket hasn't got the open plan (yet): say the plan's own numbers, never "nothing planned" over it.
 			if (!focusedInDay || !plan) return `${day(theDay)} · nothing planned yet`;
-			const live = plan.lines.filter((l) => l.qty.value > 0);
+			const live = plan.lines.filter((l) => l.qty.value > 0 && !rejectedIds.has(l.id));
+			const can = live.filter((l) => l.state !== 'unorderable');
 			const waits = all.count + all.signOff;
 			return [
 				day(theDay),
-				`${live.length} ${live.length === 1 ? 'line' : 'lines'}`,
-				money(live.reduce((t, l) => t + (l.lineCents ?? 0), 0)),
+				lineCount(live.length, can.length),
+				money(can.reduce((t, l) => t + (l.lineCents ?? 0), 0)),
 				waits ? `${waits} ${waits === 1 ? 'needs' : 'need'} you` : 'nothing needs you'
 			].join(' · ');
 		}
@@ -1222,7 +1231,7 @@
 		const live = dayEntry.lines.filter((l) => !rejectedIds.has(l.lineId));
 		return [
 			day(theDay),
-			`${live.length} ${live.length === 1 ? 'line' : 'lines'}`,
+			lineCount(live.length + dayEntry.counts.cannotOrder, live.length),
 			money(live.reduce((t, l) => t + (l.lineCents ?? 0), 0)),
 			stageCounts.waits ? null : 'nothing needs you'
 		]
@@ -2093,8 +2102,7 @@
 								id="dishes-h"
 								class="flex items-center gap-1.5 text-heading font-semibold text-ink"
 							>
-								The whole order · <span class="mono">{wholeLines}</span>
-								{wholeLines === 1 ? 'line' : 'lines'}
+								The whole order · {lineCount(wholeLines, wholeCan)}
 								<details class="relative font-normal">
 									<summary
 										class="grid size-6 cursor-pointer list-none place-items-center rounded-full text-ink-3 hover:bg-well hover:text-ink"
