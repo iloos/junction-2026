@@ -24,8 +24,8 @@ for (const [w, h] of [
 				.click();
 		await start.click();
 		await page.locator('#task-h').waitFor({ timeout: 120_000 });
-		// D30: the day view; another day comes from "Other day…" (its one calendar).
-		await page.getByText('Other day…').click();
+		// D30: the day view; another day comes from the Delivery day control (its one calendar).
+		await page.getByRole('button', { name: /^Delivery day/ }).click();
 		const grids = page.locator('[data-grid]');
 		await expect(grids).toHaveCount(1, { timeout: 30_000 });
 		// Wed 16 Dec: a delivery day with nothing planned in the seeded hotel.

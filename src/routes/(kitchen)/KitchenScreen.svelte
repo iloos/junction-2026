@@ -881,6 +881,7 @@
 			.sort((a, b) => b.date.localeCompare(a.date))
 	);
 	let ordersOpen = $state(false);
+	let dayOpen = $state(false);
 	/** The sign-off group under review (D13): its exact lines and terms, confirmed in one explicit act. */
 	let signGroup = $state<(typeof decisions)[number] | null>(null);
 	async function confirmSignOff() {
@@ -1420,36 +1421,35 @@
 	<main class="mx-auto max-w-[1180px] px-4 pt-5 pb-28 md:px-6 lg:pb-6">
 		<!-- D30: the delivery day is the view: its days, one sentence, the stage filters. -->
 		<section aria-label="Delivery day" class="mb-4">
-			<div class="flex flex-wrap items-center gap-1.5" role="group" aria-label="Delivery days">
-				{#each basketDays as d (d.date)}
-					<button
-						type="button"
-						aria-pressed={d.date === theDay}
-						class="inline-flex h-8 items-center gap-1.5 rounded-md border px-2.5 text-meta {d.date ===
-						theDay
-							? 'border-ink bg-ink font-medium text-sheet'
-							: 'border-rule-strong text-ink-2 hover:text-ink'}"
-						onclick={() => pickDay(d.date)}
-						>{day(d.date)}<span class="mono opacity-80">{d.lines.length}</span></button
-					>
-				{/each}
-				<details class="relative">
-					<summary
-						class="inline-flex h-8 cursor-pointer list-none items-center rounded-md px-2.5 text-meta text-ink-2 underline underline-offset-2 hover:text-ink"
-						>Other day…</summary
-					>
-					<div
-						class="absolute top-9 left-0 z-30 w-[min(340px,calc(100vw-32px))] rounded-lg border border-rule bg-sheet p-3 shadow-lg"
+			<!-- One labelled control for the day (D30): other orders live in the header's Orders list. -->
+			<Popover.Root bind:open={dayOpen}>
+				<Popover.Trigger
+					class="inline-flex h-9 items-center gap-1.5 rounded-md border border-rule-strong bg-sheet px-3 text-body text-ink hover:border-accent"
+					aria-haspopup="dialog"
+					><span class="text-ink-2">Delivery day</span>
+					<span class="font-medium">{theDay ? day(theDay) : 'Pick a day'}</span><ChevronDown
+						size={14}
+						aria-hidden="true"
+					/></Popover.Trigger
+				>
+				<Popover.Portal>
+					<Popover.Content
+						sideOffset={6}
+						align="start"
+						class="z-50 w-[min(340px,calc(100vw-24px))] rounded-lg border border-rule bg-sheet p-3 shadow-lg"
 					>
 						<DayPicker
 							kitchenId={snap.kitchen.id}
 							value={theDay}
-							onselect={(v) => pickDay(v)}
+							onselect={(v) => {
+								pickDay(v);
+								dayOpen = false;
+							}}
 							label="Delivery day"
 						/>
-					</div>
-				</details>
-			</div>
+					</Popover.Content>
+				</Popover.Portal>
+			</Popover.Root>
 			<p class="mt-2 text-body text-ink">{daySentence}</p>
 			{#if agentLine}
 				<details class="mt-1">
