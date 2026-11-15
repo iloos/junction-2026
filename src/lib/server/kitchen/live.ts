@@ -61,6 +61,8 @@ export interface Session {
 	contentionRescue?: FixtureSnapshot['contentionRescue'] & { planId: string };
 	/** The visitor this browser is (a hash of its own sandbox id): the owner of the kitchens it makes (D24). */
 	visitor?: string;
+	/** A presenter acts on every kitchen of the shared room; a visitor only on its own store. */
+	presenter?: boolean;
 }
 
 /** Who the browser is, from demo/visitor.ts: its own sandbox id, the room it is in and presenter rights. */
@@ -74,6 +76,7 @@ export { visitorKey };
 
 function withVisitor(s: Session, v: VisitorRef | undefined): Session {
 	if (v?.own) s.visitor = visitorKey(v.own);
+	if (v) s.presenter = v.presenter === true;
 	return s;
 }
 
@@ -116,8 +119,11 @@ const ALLOWED = new Set([
 	'search_products'
 ]);
 
-const asVisitor = <C extends object>(c: C, s: Session) =>
-	s.visitor ? { ...c, visitor: s.visitor } : c;
+const asVisitor = <C extends object>(c: C, s: Session) => ({
+	...c,
+	...(s.visitor ? { visitor: s.visitor } : {}),
+	...(s.presenter ? { sharedRoom: false } : {})
+});
 const chef = (s: Session) =>
 	asVisitor(contextFor('chef', 'kitchen-ui', 'kitchen', env, s.workspaceId), s);
 const agent = (s: Session) =>

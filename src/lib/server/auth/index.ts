@@ -89,7 +89,9 @@ export function contextFor(
 		runId: env.MANDATE_RUN || currentRun(workspaceId),
 		actor: { kind: actor, id: label },
 		scopes: SCOPES_BY_ACTOR[actor],
-		via
+		via,
+		// Every context in the shared room starts as a visitor's: writes only to its own store (fails closed).
+		...(workspaceId === JUDGES_WORKSPACE ? { sharedRoom: true } : {})
 	};
 }
 
