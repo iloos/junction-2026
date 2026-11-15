@@ -516,7 +516,10 @@ svg.wires .w { fill: none; stroke-width: 4; stroke-linecap: round; }
   }
 
   function play(s) {
-    if (!M || reduce) return;
+    if (!M || reduce) {
+      s.querySelectorAll('svg.wires .w[data-marker]').forEach(function (p) { p.setAttribute('marker-end', p.getAttribute('data-marker')); });
+      return;
+    }
     var animate = M.animate;
     var items = s.querySelectorAll('.a');
     items.forEach(function (el, i) {
@@ -527,8 +530,13 @@ svg.wires .w { fill: none; stroke-width: 4; stroke-linecap: round; }
     s.querySelectorAll('.seg').forEach(function (el, i) { animate(el, { transform: ['scaleX(0)', 'scaleX(1)'] }, { delay: 0.3 + i * 0.25, duration: 0.7, easing: [0.2, 0.7, 0.2, 1] }); });
     s.querySelectorAll('svg.wires .w').forEach(function (p, i) {
       var len = p.getTotalLength();
-      p.style.strokeDasharray = p.getAttribute('stroke-dasharray') || len;
-      if (!p.getAttribute('stroke-dasharray')) animate(p, { strokeDashoffset: [len, 0] }, { delay: 0.5 + i * 0.08, duration: 0.6 });
+      if (p.getAttribute('stroke-dasharray')) return;
+      var delay = 0.5 + i * 0.08, dur = 0.6;
+      var mk = p.getAttribute('marker-end') || p.getAttribute('data-marker');
+      if (mk) { p.setAttribute('data-marker', mk); p.removeAttribute('marker-end'); }
+      p.style.strokeDasharray = len;
+      animate(p, { strokeDashoffset: [len, 0] }, { delay: delay, duration: dur });
+      if (mk) setTimeout(function () { if (p.closest('.slide.on')) p.setAttribute('marker-end', mk); }, (delay + dur) * 1000);
     });
     s.querySelectorAll('.tl').forEach(function (el, i) { animate(el, { opacity: [0, 1] }, { delay: 0.4 + i * 0.32, duration: 0.2 }); });
     s.querySelectorAll('.cnt').forEach(function (el) {
