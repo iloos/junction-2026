@@ -74,7 +74,11 @@ test('the order summary counts what was approved, adds up, and survives a reload
 	const panel = await page.locator('body').innerText();
 
 	// #5: the order summary counts what was ordered, from the receipt, and the money rows add up to the total.
-	const said = panel.match(/Ordered\s*·\s*(\d+)\s+lines/)?.[1];
+	// Wave U: the count is the "Ordered N" stage chip or "· ordered N" in the plan header; before: "Ordered · N lines".
+	const said =
+		panel.match(/Ordered\s*·\s*(\d+)\s+lines/)?.[1] ??
+		panel.match(/\bOrdered\s+(\d+)\b/)?.[1] ??
+		panel.match(/·\s*ordered\s+(\d+)\b/i)?.[1];
 	const confirmed = Number(panel.match(/(\d+)\s+lines? supplier confirmed/)?.[1] ?? 0);
 	const awaiting = Number(panel.match(/(\d+)\s+awaiting the supplier/)?.[1] ?? 0);
 	check(
