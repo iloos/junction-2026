@@ -104,6 +104,8 @@ In priority order, for the Conversation session that takes over B, E and 41 (rin
     6. For a stuck gate on Windows, find its worktree with the scratchpad cwd.ps1 script (it reads a process's cwd). Stopping the shell leaves node alive.
 - Sat 14 Nov 23:55 (S3, ring 6) · done: shares reading on both doors, one-tap likeliest reading (e48dc9e) · stubbed: menu has no per-share dish beyond vegetarian:N · needs: none (BriefDraft.shares added in ui/request/types.ts) · ready to merge: yes
 
+- Sun 15 Nov ~02:40 (S3, ring 6) · done: shares reading e48dc9e; moment 2 brief/menu (diet swaps, named ingredient, counted shares) 67c72be, 08336d4; vegan milk never a sorbet f4478d5; lost tasks ed15d15; visitor at the chat/request doors 564d4d9; hero "plan it" loop 6f70626; F1 reconcile aa4bc21; F6 9be7781; supply-first menu picks 5db260f; one candidate order (D15 st.2) 4df5c9f; chat kitchen fallback 37ede39; OM-8/9 d02d269; short-line replies 57b35a9; D22 approve from the dock fd7d6ae; room P0 8673da2; "order it" 9bd91ad; /request = conversation + ?new=1 e5fdde7 · stubbed: line cards in the transcript (dock store does not load on /request; patch in scratch/dock-linerow.patch) · needs: nav label "Ask the agent" and Kitchen "New order" → /request?new=1 (S2/layout); bold renderer in the dock (S2) · ready to merge: yes
+
 ## Run
 ```bash
 cd ../junc26-lanes/request && git rebase main && pnpm i
