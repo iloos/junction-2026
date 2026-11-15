@@ -21,13 +21,23 @@
 	interface Props {
 		line: Line;
 		name: string;
+		/** The product in English ("oat drink for coffee, 1 l"), when the catalogue has it: a muted second line. */
+		gloss?: string;
+		/** Shown under a Decide group whose header already says what deciding the group means. */
+		grouped?: boolean;
 		/** A granted approval covers this line (core keeps it `held` until ordered). */
 		approved?: boolean;
 		/** The row just changed: tint lands and fades. */
 		flash?: boolean;
 		/** For a substitute: the product it replaces and why, in plain words. */
 		/** For a substitute: the product it replaces and why, and why the agent picked this one (≤3 words). */
-		replaces?: { name: string; because: string; picked?: string | null };
+		replaces?: {
+			name: string;
+			because: string;
+			picked?: string | null;
+			/** An ingredient for making the dish in house (not a swap): the dish, mid-sentence. */
+			madeFor?: string | null;
+		};
 		/** The product's diet and allergen marks (G, L, M…). */
 		diet?: Marks;
 		/** An agent last changed this line (proposed or edited it). */
@@ -39,7 +49,7 @@
 		/** Change this line's amount in its sales units (edit_line); absent when it can't change. */
 		onqty?: (qty: number) => void;
 		/** What the web says about allergens for a product with no record: evidence only, linked to its source. */
-		web?: { text: string; host: string; url: string } | null;
+		web?: { text: string; host: string; url: string; unsure?: boolean } | null;
 		/** Open the compare panel (Swap pressed on the collapsed dish row). */
 		swapOpen?: boolean;
 		/** This line's own decision (D23): Accept / Reject, or a sign-off one by one. */
@@ -58,6 +68,8 @@
 	let {
 		line: l,
 		name,
+		gloss,
+		grouped = false,
 		approved = false,
 		flash = false,
 		replaces,
@@ -116,13 +128,16 @@
 					class="min-w-0 break-words {rejected || denied
 						? 'text-ink-3 line-through decoration-ink-3/60'
 						: 'text-ink'}"
-					title={name}>{name}</span
+					title={gloss ? `${name} · ${gloss}` : name}>{name}</span
 				>{#if diet}<DietMarks marks={diet} />{/if}
 			</button>
+			{#if gloss}<p class="truncate text-meta text-ink-3" title={gloss}>{gloss}</p>{/if}
 			{#if replaces}
 				<p class="text-meta text-ink-2">
-					{#if replaces.picked}<span class="text-ink">Picked: {replaces.picked}</span> · replaces{:else}Replaces{/if}
-					<span class="text-ink">{replaces.name}</span> ({replaces.because}){#if by}
+					{#if replaces.madeFor}For <span class="text-ink">{replaces.madeFor}</span>, made in house{:else}{#if replaces.picked}<span
+								class="text-ink">Picked: {replaces.picked}</span
+							> · replaces{:else}Replaces{/if}
+						<span class="text-ink">{replaces.name}</span> ({replaces.because}){/if}{#if by}
 						&nbsp;· <AgentMark {by} />{/if}
 				</p>
 			{:else if by}<p><AgentMark {by} /></p>
@@ -142,7 +157,7 @@
 			{#if web}
 				<!-- eslint-disable svelte/no-navigation-without-resolve -- an outside source page -->
 				<p class="text-meta text-ink-3">
-					Web: {web.text} ·
+					{web.unsure ? 'Web, may describe another product' : 'Web'}: {web.text} ·
 					<a
 						href={web.url}
 						target="_blank"
@@ -154,7 +169,7 @@
 			{/if}
 			{#if decide?.state === 'denied'}
 				<p class="text-meta text-ink-3">Not ordered: {decide.cost}</p>
-			{:else if decide?.state === 'pending' && decide.signOff}
+			{:else if decide?.state === 'pending' && decide.signOff && !grouped}
 				<p class="mt-0.5 text-meta text-signoff">
 					Needs your sign-off with its group. If rejected: {decide.cost}.
 				</p>

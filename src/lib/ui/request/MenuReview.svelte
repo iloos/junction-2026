@@ -290,7 +290,7 @@
 								: i.amountPerCover}
 						<li
 							id="menu-row-{i.id}"
-							class="grid grid-cols-[36px_minmax(0,1fr)] items-center gap-x-2.5 gap-y-1 rounded-md py-1 sm:grid-cols-[36px_minmax(0,1fr)_auto_auto] {flagged.has(
+							class="grid grid-cols-[36px_minmax(0,1fr)_auto] items-center gap-x-2.5 gap-y-1 rounded-md py-1 sm:grid-cols-[36px_minmax(0,1fr)_auto_auto] {flagged.has(
 								i.id
 							)
 								? '-mx-1.5 bg-out-wash px-1.5'
@@ -306,10 +306,14 @@
 									><CircleHelp size={15} class="text-signoff" aria-hidden="true" /></span
 								>
 							{/if}
-							<div class="min-w-0 text-body">
+							<div class="col-span-2 min-w-0 text-body sm:col-span-1">
 								<span class="block truncate text-ink">{i.label}</span>
 								{#if i.productId}
-									<span class="block truncate text-meta text-ink-3"
+									<span
+										class="block truncate text-meta text-ink-3"
+										title={(view as { englishNames?: Record<string, string> }).englishNames?.[
+											i.productId
+										]}
 										>{readableName(view.products[i.productId] ?? 'a Valio product')}
 										{#if shell?.system}<span class="mono">{i.productId}</span>{/if}</span
 									>
@@ -355,7 +359,9 @@
 								>
 							</div>
 							{#if !accepted}
-								<span class="col-start-2 flex items-center gap-0.5 sm:col-start-auto">
+								<span
+									class="col-start-3 row-start-2 flex items-center gap-0.5 sm:col-start-auto sm:row-start-auto"
+								>
 									{#if i.productId}<button
 											type="button"
 											disabled={busy}

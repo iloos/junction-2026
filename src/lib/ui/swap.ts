@@ -36,6 +36,8 @@ export const STEERS: Steer[] = [
 export interface Candidate {
 	productId: string;
 	productName?: string;
+	/** The catalogue's English name, when it has one. */
+	productNameEn?: string;
 	rank: number | null;
 	rejectedReasons: string[];
 	caution?: string;
@@ -48,6 +50,7 @@ export interface Candidate {
 export interface Alternative {
 	productId: string;
 	productName?: string;
+	productNameEn?: string;
 	reason: string;
 	supply: string;
 	pricePer?: { cents: number; per: string };
@@ -58,6 +61,8 @@ export interface Alternative {
 export interface SwapRow {
 	productId: string;
 	name: string;
+	/** The product in English, a muted second line. */
+	en?: string;
 	/** What it costs for the need, sized ("€52.10 · 4 cases"), when the search sized it. */
 	total?: { cents: number; qty?: { value: number; unit: string } };
 	/** Price per kg, l or piece, when the pack content is known. */
@@ -79,6 +84,7 @@ export function swapRows(cands: readonly Candidate[], currentId: string, n = 4):
 			return {
 				productId: c.productId,
 				name: c.productName ?? c.productId,
+				...(c.productNameEn ? { en: c.productNameEn } : {}),
 				reason:
 					c.whatChanges ??
 					c.caution ??
@@ -121,6 +127,7 @@ export function withAlternatives(
 			? {
 					...r,
 					name: a.productName ?? r.name,
+					...(a.productNameEn ? { en: a.productNameEn } : {}),
 					reason: a.reason || r.reason,
 					...(a.totalCents != null ? { total: { cents: a.totalCents, qty: a.qty } } : {}),
 					...(a.pricePer ? { per: a.pricePer } : {})
@@ -132,6 +139,7 @@ export function withAlternatives(
 			out.push({
 				productId: a.productId,
 				name: a.productName ?? a.productId,
+				...(a.productNameEn ? { en: a.productNameEn } : {}),
 				reason: a.reason,
 				pick: false,
 				refused: null,

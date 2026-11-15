@@ -155,7 +155,10 @@
 		class="border-t border-rule/60"
 	>
 		{#snippet lead()}<ProductThumb productId={r.productId} size={32} />{/snippet}
-		<span class={r.refused ? 'text-ink-3' : 'text-ink'}>{readableName(r.name)}</span>
+		<span
+			class={r.refused ? 'text-ink-3' : 'text-ink'}
+			title={r.en ? `${readableName(r.name)} · ${r.en}` : undefined}>{readableName(r.name)}</span
+		>{#if r.en}<span class="block truncate text-meta text-ink-3">{r.en}</span>{/if}
 		{#snippet sub()}
 			{#if r.total}<span class="mono text-ink-2"
 					>{r.total.qty

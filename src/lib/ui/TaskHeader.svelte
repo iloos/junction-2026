@@ -23,6 +23,8 @@
 		/** Scenario "now", for the time left. */
 		now?: Date | null;
 		coverage: readonly FulfilmentView[];
+		/** More about the cover (the event against a normal week), folded under the cover line. */
+		coverMore?: Snippet;
 		/** Lines that cannot be ordered at all (out, undeliverable), whether or not a substitute covers them. */
 		cannot?: number;
 		/** Lines that can be ordered now and their total. */
@@ -55,6 +57,7 @@
 		due,
 		now = null,
 		coverage,
+		coverMore,
 		cannot = 0,
 		orderable,
 		ordered = null,
@@ -276,27 +279,62 @@
 		</div>{/if}
 
 	{#if coverage.length}
-		<ul
-			class="flex flex-wrap gap-x-4 gap-y-1 border-t border-rule px-4 py-2.5 text-meta text-ink-2 md:px-5"
-			aria-label="Dishes by how certain their cover is"
-		>
-			{#each TALLY as x (x.k)}
-				{#if t[x.k] > 0}
+		{#if coverMore}
+			<details class="group border-t border-rule px-4 py-2 md:px-5">
+				<summary class="flex cursor-pointer list-none items-center gap-2">
+					<ul
+						class="flex flex-wrap gap-x-4 gap-y-1 text-meta text-ink-2"
+						aria-label="Dishes by how certain their cover is"
+					>
+						{#each TALLY as x (x.k)}
+							{#if t[x.k] > 0}
+								<li class="flex items-center gap-1.5">
+									<span class="{x.cls} h-2.5 w-4 rounded-[2px]" aria-hidden="true"></span>
+									<span class="mono text-ink">{t[x.k]}</span>
+									{t[x.k] === 1 ? 'need' : 'needs'}
+									{x.word}
+								</li>
+							{/if}
+						{/each}
+						{#if cannot > 0}
+							<li class="flex items-center gap-1.5">
+								<Ban size={13} class="text-sup-missing" aria-hidden="true" />
+								<span class="mono text-ink">{cannot}</span>
+								{cannot === 1 ? 'product' : 'products'} can't be ordered
+							</li>
+						{/if}
+					</ul>
+					<ChevronDown
+						size={14}
+						class="ml-auto shrink-0 text-ink-3 transition-transform group-open:rotate-180"
+						aria-hidden="true"
+					/><span class="sr-only">More about the cover</span>
+				</summary>
+				<div class="mt-1.5 text-meta text-ink-2">{@render coverMore()}</div>
+			</details>
+		{:else}
+			<ul
+				class="flex flex-wrap gap-x-4 gap-y-1 border-t border-rule px-4 py-2.5 text-meta text-ink-2 md:px-5"
+				aria-label="Dishes by how certain their cover is"
+			>
+				{#each TALLY as x (x.k)}
+					{#if t[x.k] > 0}
+						<li class="flex items-center gap-1.5">
+							<span class="{x.cls} h-2.5 w-4 rounded-[2px]" aria-hidden="true"></span>
+							<span class="mono text-ink">{t[x.k]}</span>
+							{t[x.k] === 1 ? 'need' : 'needs'}
+							{x.word}
+						</li>
+					{/if}
+				{/each}
+				{#if cannot > 0}
 					<li class="flex items-center gap-1.5">
-						<span class="{x.cls} h-2.5 w-4 rounded-[2px]" aria-hidden="true"></span>
-						<span class="mono text-ink">{t[x.k]}</span>
-						{t[x.k] === 1 ? 'need' : 'needs'}
-						{x.word}
+						<Ban size={13} class="text-sup-missing" aria-hidden="true" />
+						<span class="mono text-ink">{cannot}</span>
+						{cannot === 1 ? 'product' : 'products'} can't be ordered
 					</li>
 				{/if}
-			{/each}
-			{#if cannot > 0}
-				<li class="flex items-center gap-1.5">
-					<Ban size={13} class="text-sup-missing" aria-hidden="true" />
-					<span class="mono text-ink">{cannot}</span>
-					{cannot === 1 ? 'product' : 'products'} can't be ordered
-				</li>
-			{/if}
-		</ul>
+			</ul>
+		{/if}
 	{/if}
 </section>
