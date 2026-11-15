@@ -1,0 +1,454 @@
+<title>Mandate Pitch</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<script src="https://cdn.jsdelivr.net/npm/motion@11.11.13/dist/motion.js"></script>
+<style>
+/* Layout: a fixed 1920×1080 stage scaled to the window; one slide visible; keyboard, click and swipe to move. */
+:root {
+  --paper: #f7f5f0; --paper-2: #edeae2; --rule: #d9d5ca; --white: #ffffff;
+  --ink: #1d2430; --ink-2: #474f5c; --ink-3: #5f6672;
+  --night: #12171e; --night-2: #1c232d; --night-ink: #eef1f4; --night-ink-2: #a9b4c0;
+  --go: #1e8f8c; --go-ink: #146663; --go-wash: #d8ecea;
+  --hold: #e6a34f; --hold-ink: #8a5410; --hold-wash: #f6e6cc;
+  --no: #c2452d; --no-ink: #9b3220;
+  --blue: #3d6fb8; --blue-wash: #dfe9f6;
+  --sans: 'IBM Plex Sans', 'Segoe UI', Arial, sans-serif;
+  --mono: 'IBM Plex Mono', Consolas, 'Courier New', monospace;
+  color-scheme: dark;
+}
+html, body { height: 100%; }
+body { margin: 0; background: #0b0e12; color: var(--ink); font-family: var(--sans); overflow: hidden;
+  padding-left: max(0px, env(safe-area-inset-left, 0px)); padding-right: max(0px, env(safe-area-inset-right, 0px)); }
+#viewport { position: fixed; inset: 0; overflow: hidden; }
+#stage { position: absolute; left: 50%; top: 50%; width: 1920px; height: 1080px; transform-origin: center center; transform: translate(-50%, -50%) scale(.5); }
+.slide { position: absolute; inset: 0; box-sizing: border-box; padding: 128px 128px 160px; display: flex; flex-direction: column; gap: 40px;
+  background: var(--paper); visibility: hidden; overflow: hidden; }
+.slide.on { visibility: visible; }
+.slide.night { background: var(--night); color: var(--night-ink); }
+p, h1, h2, h3 { margin: 0; }
+.eyebrow { font-family: var(--mono); font-size: 28px; letter-spacing: 3px; text-transform: uppercase; color: var(--go-ink); }
+.night .eyebrow { color: var(--go); }
+h2 { font-size: 80px; line-height: 1.05; letter-spacing: -1.5px; font-weight: 600; color: var(--ink); }
+.night h2 { color: var(--night-ink); }
+.L { font-size: 40px; line-height: 1.3; }
+.M { font-size: 34px; line-height: 1.35; color: var(--ink-2); }
+.S { font-size: 28px; line-height: 1.35; color: var(--ink-3); }
+.mono { font-family: var(--mono); }
+.lab { font-family: var(--mono); font-size: 26px; letter-spacing: 1px; color: var(--ink-3); }
+.foot { position: absolute; left: 128px; right: 128px; bottom: 60px; display: flex; justify-content: space-between; border-top: 2px solid var(--rule); padding-top: 20px; }
+.foot p { font-size: 26px; color: var(--ink-3); }
+.night .foot { border-color: #2c3540; }
+.night .foot p { color: var(--night-ink-2); }
+.box { background: var(--white); border: 2px solid var(--rule); border-radius: 14px; padding: 24px 28px; display: flex; flex-direction: column; gap: 8px; box-sizing: border-box; }
+.box p { font-size: 32px; line-height: 1.25; color: var(--ink); }
+.box p.lab { font-size: 24px; line-height: 1.3; color: var(--ink-3); }
+.box p.lab.g { color: var(--go-ink); }
+.nw { white-space: nowrap; }
+.abs { position: absolute; }
+.dot { width: 30px; height: 30px; border-radius: 50%; flex: none; }
+.g { color: var(--go-ink); } .h { color: var(--hold-ink); } .r { color: var(--no-ink); }
+svg.wires { position: absolute; left: 0; top: 0; overflow: visible; pointer-events: none; }
+/* chrome */
+#bar { position: fixed; left: 0; bottom: 0; height: 4px; background: var(--go); width: 0; transition: width .3s; z-index: 5; }
+#hint { position: fixed; right: max(16px, env(safe-area-inset-right, 0px)); top: 12px; transition: opacity 1s; font: 13px var(--mono); color: #6b7684; z-index: 5; }
+#notes { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); width: min(900px, calc(100vw - 32px)); background: rgba(18,23,30,.96); color: #dfe6ec;
+  font: 17px/1.5 var(--sans); padding: 18px 22px; border-radius: 12px; border: 1px solid #2c3540; z-index: 6; }
+#notes b { font: 12px var(--mono); letter-spacing: 2px; color: var(--hold); display: block; margin-bottom: 6px; }
+.navbtn { position: fixed; top: 0; bottom: 0; width: 18vw; z-index: 4; background: none; border: 0; cursor: pointer; }
+.navbtn:focus { outline: none; }
+#prev { left: 0; } #next { right: 0; }
+@media (prefers-reduced-motion: reduce) { #bar { transition: none; } }
+</style>
+
+<div id="viewport"><div id="stage">
+
+<!-- 1 COVER -->
+<section class="slide night" data-notes="Every line an agent wants to buy ends in one of three places: it orders it, it holds it for a person, or it refuses. That's the whole product. Mandate is the rulebook that decides which, written by the chef, enforced in code." style="justify-content:space-between">
+  <div class="a" style="display:flex; align-items:center; gap:22px">
+    <svg width="72" height="72" viewBox="0 0 100 100" aria-hidden="true"><rect width="100" height="100" rx="24" fill="#1b2029"/><rect x="20" y="22" width="15" height="56" rx="7.5" fill="#1e9a98"/><rect x="42.5" y="22" width="15" height="34" rx="7.5" fill="#4f87d6"/><circle cx="50" cy="70" r="7.5" fill="#e6a34f"/><rect x="65" y="22" width="15" height="56" rx="7.5" fill="#1e9a98"/></svg>
+    <p style="font-size:52px; font-weight:600; color:var(--night-ink); letter-spacing:-.5px">Mandate</p>
+  </div>
+  <div style="display:flex; flex-direction:column">
+    <p class="a" style="font-size:176px; line-height:1; font-weight:700; letter-spacing:-6px; color:var(--go)">Order it.</p>
+    <p class="a" style="font-size:176px; line-height:1; font-weight:700; letter-spacing:-6px; color:var(--hold)">Hold it.</p>
+    <p class="a" style="font-size:176px; line-height:1; font-weight:700; letter-spacing:-6px; color:var(--no)">Refuse it.</p>
+  </div>
+  <div class="a" style="display:flex; justify-content:space-between; align-items:flex-end">
+    <p style="font-size:38px; line-height:1.35; color:var(--night-ink); width:1150px">A kitchen purchasing agent on Valio Aimo that buys alone<br>only what the chef’s mandate allows.</p>
+    <p class="mono nw" style="font-size:26px; color:var(--night-ink-2)">Junction 2026 · Trusted Trade Agents</p>
+  </div>
+</section>
+
+<!-- 2 CASE -->
+<section class="slide" data-notes="A hotel kitchen. A Christmas buffet for 140 gets booked on Tuesday. On Thursday, Valio is out of the whole ham. The cut-off for Saturday's delivery is Friday at five. An agent could sort this out faster than anyone in a webshop. But Valio's ordering has no approval gate today, so the question is: what may an agent buy without the chef?" style="justify-content:space-between">
+  <div style="display:flex; flex-direction:column; gap:40px">
+    <p class="eyebrow a">The case</p>
+    <h2 class="a">The ham is out, 140 are booked,<br>and the cut-off is 17:00.</h2>
+  </div>
+  <div style="position:relative; height:250px">
+    <div class="rail" style="position:absolute; left:0; right:0; top:76px; height:6px; background:var(--rule); border-radius:3px; transform-origin:left"></div>
+    <div class="dot pop" style="position:absolute; left:176px; top:55px; width:48px; height:48px; background:var(--ink)"></div>
+    <div class="dot pop" style="position:absolute; left:808px; top:55px; width:48px; height:48px; background:var(--no)"></div>
+    <div class="dot pop" style="position:absolute; left:1440px; top:55px; width:48px; height:48px; background:var(--hold)"></div>
+    <p class="lab a" style="position:absolute; left:0; top:0; width:400px; text-align:center">TUESDAY</p>
+    <p class="lab a" style="position:absolute; left:632px; top:0; width:400px; text-align:center">THURSDAY</p>
+    <p class="lab a" style="position:absolute; left:1264px; top:0; width:400px; text-align:center">FRIDAY 17:00</p>
+    <p class="L a" style="position:absolute; left:0; top:130px; width:400px; text-align:center">A buffet for 140<br>is booked</p>
+    <p class="L a" style="position:absolute; left:632px; top:130px; width:400px; text-align:center">Valio is out<br>of the ham</p>
+    <p class="L a" style="position:absolute; left:1264px; top:130px; width:400px; text-align:center">Saturday’s<br>cut-off</p>
+  </div>
+  <p class="a" style="font-size:66px; line-height:1.1; font-weight:600; letter-spacing:-1px">An agent could sort this out.<br>What may it buy <span class="g">without the chef?</span></p>
+  <div class="foot"><p>Valio Aimo’s ordering has no approval gate today · the scenario is staged; products and stock are Valio’s</p><p class="pg"></p></div>
+</section>
+
+<!-- 3 RULES -->
+<section class="slide" data-notes="Before any agent buys anything, the chef sets a mandate. This is the sample hotel's, in the chef's own words. Every product the agent wants to buy is one line, and every line lands in one of three places: inside the rules, ordered alone; outside them, it waits for the chef; impossible, refused with the reason." style="justify-content:space-between">
+  <div style="display:flex; flex-direction:column; gap:40px">
+    <p class="eyebrow a">1 · The rules</p>
+    <h2 class="a">The chef writes the rules once.<br>The agent lives inside them.</h2>
+  </div>
+  <div style="display:flex; gap:72px; align-items:center">
+    <div class="box a" style="width:860px; padding:44px 48px; gap:22px; box-shadow:0 10px 40px rgba(29,36,48,.07)">
+      <p class="lab">THE HOTEL’S MANDATE</p>
+      <p style="font-size:44px; line-height:1.32; font-weight:500">“Order alone up to <mark class="mk">€800 a line</mark> and €1,000 an order, €4,000 a week. <mark class="mk">Never change an allergen.</mark> Ask me before any <mark class="mk">new product</mark> or any substitute I haven’t seen.”</p>
+    </div>
+    <div style="flex:1; display:flex; flex-direction:column; gap:30px">
+      <div class="a" style="display:flex; gap:22px; align-items:center"><div class="dot" style="background:var(--go)"></div><p class="L"><b>Inside the rules:</b> ordered alone</p></div>
+      <div class="a" style="display:flex; gap:22px; align-items:center"><div class="dot" style="background:var(--hold)"></div><p class="L"><b>Outside them:</b> waits for the chef</p></div>
+      <div class="a" style="display:flex; gap:22px; align-items:center"><div class="dot" style="background:var(--no)"></div><p class="L"><b>Impossible:</b> refused, with why</p></div>
+    </div>
+  </div>
+  <div class="foot"><p>Each kitchen has its own mandate; the rules are code, so no model and no agent can bend them</p><p class="pg"></p></div>
+</section>
+
+<!-- 4 UNDERSTAND -->
+<section class="slide" data-notes="An establishment has a menu, the menu has recipes, the recipes have ingredients, and Valio supplies them. For the buffet's ham: 140 guests at 135 grams with a 0.7 yield is 27 kilos. Valio sells it in 7-kilo lots, so it's 4 lots, 28 kilos. Every step shows where its number came from." style="justify-content:space-between">
+  <div style="display:flex; flex-direction:column; gap:40px">
+    <p class="eyebrow a">2 · From menu to products</p>
+    <h2 class="a">It thinks in menus and recipes,<br>then buys in Valio’s units.</h2>
+  </div>
+  <div style="display:flex; align-items:stretch; gap:0">
+    <div class="box a" style="width:288px"><p class="lab">ESTABLISHMENT</p><p>A hotel kitchen</p></div>
+    <div class="arrow a"></div>
+    <div class="box a" style="width:288px"><p class="lab">MENU</p><p>Christmas buffet for 140</p></div>
+    <div class="arrow a"></div>
+    <div class="box a" style="width:288px"><p class="lab">RECIPE</p><p>Ham, 135 g a guest, 0.7 yield</p></div>
+    <div class="arrow a"></div>
+    <div class="box a" style="width:288px"><p class="lab">INGREDIENT</p><p>140 × 135 g ÷ 0.7<br>= <b>27 kg</b></p></div>
+    <div class="arrow a go"></div>
+    <div class="box a" style="width:288px; border-color:var(--go); background:var(--go-wash)"><p class="lab g">VALIO PRODUCT</p><p><b>4 × 7 kg lots</b><br>= 28 kg</p></div>
+  </div>
+  <p class="M a" style="width:1500px">Every step shows its source: the scenario, a team estimate, or Valio’s catalogue. From words, the same chain runs on a menu Gemini proposes, every amount labelled an estimate.</p>
+  <div class="foot"><p>Valio is called only for the products a plan needs</p><p class="pg"></p></div>
+</section>
+
+<!-- 5 GATE -->
+<section class="slide" data-notes="The buffet planned on the deployed app: 21 products to buy. Three are inside the chef's rules, so they're ordered on their own, 302 euros. Three can't be ordered: Valio is out or can't deliver in time. The other fifteen wait for the chef, grouped into just three decisions: swap the ham and buy six new products, one tap; one more new product, one tap; make two dishes in house, which changes the allergens, so the chef signs those line by line." style="justify-content:space-between">
+  <div style="display:flex; flex-direction:column; gap:40px">
+    <p class="eyebrow a">3 · The buffet, on the deployed app</p>
+    <h2 class="a">21 products to buy.<br>The chef decides 3 things.</h2>
+  </div>
+  <div style="display:flex; flex-direction:column; gap:14px">
+    <div style="display:flex; gap:8px; height:90px">
+      <div class="seg" style="width:236px; background:var(--go)"><span class="cnt" data-n="3" style="color:#f4fbfa">3</span></div>
+      <div class="seg" style="width:1176px; background:var(--hold)"><span class="cnt" data-n="15" style="color:#2a1a05">15</span></div>
+      <div class="seg" style="width:236px; background:var(--no)"><span class="cnt" data-n="3" style="color:#fff6f3">3</span></div>
+    </div>
+    <div class="a" style="display:flex; gap:8px">
+      <p class="S g" style="width:236px">ordered alone, €302.62</p>
+      <p class="S h" style="width:1176px; text-align:center">wait for the chef, grouped into 3 decisions</p>
+      <p class="S r" style="width:236px">can’t be ordered</p>
+    </div>
+  </div>
+  <div style="display:flex; gap:24px; align-items:stretch">
+    <div class="card a"><p class="lab h">1 · ONE TAP · 7 LINES</p><p class="ct">Swap the ham,<br>buy 6 new products</p><p class="S" style="color:var(--ink-2)">Valio is out of the whole ham; the swap is new to this kitchen</p></div>
+    <div class="card a"><p class="lab h">2 · ONE TAP · 1 LINE</p><p class="ct">Buy 1 new product</p><p class="S" style="color:var(--ink-2)">€17.16; the chef asked to see anything new</p></div>
+    <div class="card a" style="border:3px solid var(--hold)"><p class="lab h">3 · SIGN EACH · 7 LINES</p><p class="ct">Make two dishes<br>in house</p><p class="S" style="color:var(--ink-2)">lanttulaatikko and joulutorttu; the allergens change</p></div>
+  </div>
+  <div class="foot"><p>Prod b12ba71, Sun 15 Nov 03:05 · the 3 refused: Valio is out or can’t deliver in time · the split varies per run</p><p class="pg"></p></div>
+</section>
+
+<!-- 6 DEMO -->
+<section class="slide night" data-notes="Switch to the app here. Type the sentence into the chat dock, show the menu card, say plan it, show the plan with every line priced or labelled, approve the decisions, and show the order arriving on the Ops view. If the network fails, the next slide is the same run." style="justify-content:space-between">
+  <div style="display:flex; flex-direction:column; gap:40px">
+    <p class="eyebrow a">Live demo</p>
+    <h2 class="a">Now from words, on the live app.</h2>
+  </div>
+  <div style="display:flex; gap:28px; align-items:stretch">
+    <div class="step a" style="--c:#8fc7ff"><p class="lab">1 · SAY IT</p><p>“a no-meat dinner for 120 with a peach dessert”</p></div>
+    <div class="step a" style="--c:#a9b4c0"><p class="lab">2 · THE MENU</p><p>Gemini proposes six dishes; “plan it”</p></div>
+    <div class="step a" style="--c:var(--hold)"><p class="lab">3 · THE PLAN</p><p>Valio products, priced; the rest waits for the chef</p></div>
+    <div class="step a" style="--c:var(--go)"><p class="lab">4 · ORDERED</p><p>The chef approves; it lands on Valio’s Ops view</p></div>
+  </div>
+  <div class="a" style="display:flex; justify-content:space-between; align-items:flex-end">
+    <p style="font-size:44px; color:var(--night-ink)">Try it yourself: <b style="color:var(--go)">app.mandate.kitchen</b></p>
+    <p class="mono" style="font-size:28px; color:var(--night-ink-2)">10/10 runs on prod, desktop and phone</p>
+  </div>
+</section>
+
+<!-- 7 RECORDED RUN -->
+<section class="slide" data-notes="The same run, as a fallback. The chef types one sentence. Gemini proposes six dishes. Plan it turns every ingredient into a Valio product with a price, or says honestly that it can't. What the mandate allows goes through; the rest waits in one decision per reason. The chef approves, it's ordered, one receipt. Ten out of ten runs on the deployed app." style="gap:28px">
+  <p class="eyebrow a">The same run, recorded</p>
+  <h2 class="a">One sentence in, an order out.</h2>
+  <div style="display:flex; gap:72px; align-items:flex-start">
+    <div style="display:flex; flex-direction:column; gap:14px; width:1040px">
+      <p class="me a">a no-meat dinner for 120 with a peach dessert</p>
+      <div class="ag a"><p class="lab">MENU · PROPOSED BY GEMINI · AMOUNTS ARE ESTIMATES</p><p>Six dishes, no meat, a peach dessert. Plan it?</p></div>
+      <p class="me a" style="width:auto">plan it</p>
+      <div class="ag a"><p class="lab">PLAN · ABOUT 20 LINES · HELD LINES GROUPED BY REASON</p><p>Each ingredient a Valio product, priced or labelled</p></div>
+      <div class="ag a done"><p class="lab g">THE CHEF APPROVES</p><p class="g" style="font-weight:600">Ordered · one receipt · shows on Valio’s Ops view</p></div>
+    </div>
+    <div class="a" style="display:flex; flex-direction:column; gap:14px; padding-top:20px">
+      <p style="font-size:180px; font-weight:700; line-height:.95; letter-spacing:-6px"><span class="cnt" data-n="10">10</span>/10</p>
+      <p class="M" style="width:520px">runs passed on the deployed app, at desktop and phone width</p>
+      <p class="S">Playtest, prod ea9f4d5</p>
+    </div>
+  </div>
+  <div class="foot"><p>The same flow works in the chat, on the page, or from your own agent</p><p class="pg"></p></div>
+</section>
+
+<!-- 8 AGENTIC -->
+<section class="slide" data-notes="Today Aimo is a webshop for people. Mandate opens it to agents: the chef's own Claude, a hotel chain's purchasing system, a menu app, each on a scoped key and held to the kitchen's rules. A chef can do most of the work from their personal agent with a human in the loop: when a line needs them, their own agent asks for a yes in the client, showing the exact terms, where the client supports it; otherwise a link. An outside agent never approves. Allergen changes still need the app." style="gap:40px">
+  <p class="eyebrow a">Aimo in the agentic economy</p>
+  <h2 class="a">Any agent can plan on Aimo.<br>Only the chef approves.</h2>
+  <div style="position:relative; width:1664px; height:500px">
+    <svg class="wires" width="1664" height="500" viewBox="0 0 1664 500" aria-hidden="true">
+      <path class="w" d="M480 70 C 560 70, 560 180, 640 180" stroke="#9aa0a8"/>
+      <path class="w" d="M480 250 L 640 250" stroke="#9aa0a8"/>
+      <path class="w" d="M480 430 C 560 430, 560 320, 640 320" stroke="#9aa0a8"/>
+      <path class="w" d="M1140 250 L 1280 250" stroke="#1e8f8c"/>
+    </svg>
+    <div class="box abs a" style="left:0; top:0; width:480px; height:140px; justify-content:center"><p class="lab">PERSONAL AGENT</p><p>the chef’s own Claude</p></div>
+    <div class="box abs a" style="left:0; top:180px; width:480px; height:140px; justify-content:center"><p class="lab">A CHAIN’S SYSTEM</p><p>buying for many hotels</p></div>
+    <div class="box abs a" style="left:0; top:360px; width:480px; height:140px; justify-content:center"><p class="lab">A MENU APP</p><p>a menu becomes an order</p></div>
+    <div class="box abs a" style="left:640px; top:70px; width:500px; height:360px; justify-content:center; background:var(--night); border-color:var(--night); gap:14px">
+      <p class="lab" style="color:#7fd6cf">MANDATE · MCP · REST</p>
+      <p style="font-size:38px; font-weight:600; color:var(--night-ink)">One gate</p>
+      <p style="font-size:30px; color:var(--night-ink-2)">a scoped key per agent</p>
+      <p style="font-size:30px; color:var(--night-ink-2)">the kitchen’s own rules</p>
+      <p style="font-size:30px; color:var(--hold)">held lines: the chef’s yes,<br>in their own agent or by link</p>
+    </div>
+    <div class="box abs a" style="left:1280px; top:180px; width:384px; height:140px; justify-content:center; border-color:var(--go); background:var(--go-wash)"><p class="lab g">VALIO AIMO</p><p>inventory and prices</p></div>
+  </div>
+  <div class="foot"><p>The chef’s own agent asks for a yes in its client, with the exact terms (MCP elicitation; else a link) · outside agents never approve</p><p class="pg"></p></div>
+</section>
+
+<!-- 9 OUTSIDE -->
+<section class="slide" data-notes="A judge's own Claude, on a key from the Agents page. Every line it places waits for the chef, and it gets a link for a person. Over MCP, approve isn't even on its list; calling the REST endpoint anyway gets a 403, nothing changes, and Ops logs the attempt." style="gap:32px">
+  <p class="eyebrow a">Open door, same rules</p>
+  <h2 class="a">An outside agent tries to approve.<br>Nothing changes.</h2>
+  <div style="display:flex; gap:80px; align-items:flex-start">
+    <div class="term a">
+      <p class="tl c">→ place_order  <span style="color:#a9b4c0">30 × lactose-free milk, Fri</span></p>
+      <p class="tl y">← held: an outside agent’s lines wait for the chef</p>
+      <p class="tl y">   approvalUrl for a person to open</p>
+      <p class="tl sp"> </p>
+      <p class="tl c">→ POST /api/tools/approve</p>
+      <p class="tl x">← 403 FORBIDDEN · nothing changed</p>
+      <p class="tl sp"> </p>
+      <p class="tl k">Ops: “An outside agent tried to approve on the</p>
+      <p class="tl k">chef’s behalf. Refused. Nothing changed.”</p>
+    </div>
+    <div style="display:flex; flex-direction:column; gap:30px; flex:1">
+      <div class="a"><p style="font-size:150px; font-weight:700; line-height:1"><span class="cnt" data-n="17">17</span></p><p class="M">tools for an outside key, over MCP and REST</p></div>
+      <div class="a"><p class="r" style="font-size:150px; font-weight:700; line-height:1">0</p><p class="M">can approve. Over MCP, approve isn’t even listed.</p></div>
+    </div>
+  </div>
+  <div class="foot"><p>Per key: 120 calls, 30 writes, 20 quotes a minute · get a key at /agents</p><p class="pg"></p></div>
+</section>
+
+<!-- 10 ARCH -->
+<section class="slide" data-notes="Four kinds of door: the Kitchen page, the chat, a paired phone, and your own AI agent over MCP or REST. All reach the app on Aiven Runtime. Inside, the agent reads words and plans with the same tools anyone else uses; one gate decides who may call what; a pure core holds the mandate, the ranking, the stock model and one change log. Each partner sits behind a port; Aiven Postgres carries the change log and live events back to every door." style="gap:40px">
+  <p class="eyebrow a">How it’s built</p>
+  <h2 class="a">Every door, one gate, one core,<br>each partner behind a port.</h2>
+  <div style="position:relative; width:1664px; height:500px">
+    <svg class="wires" width="1664" height="500" viewBox="0 0 1664 500" aria-hidden="true">
+      <path class="w" d="M300 55 L 380 55" stroke="#5f6672"/><path class="w" d="M300 185 L 380 185" stroke="#5f6672"/>
+      <path class="w" d="M300 315 L 380 315" stroke="#5f6672"/><path class="w" d="M300 445 L 380 445" stroke="#5f6672" stroke-dasharray="8 8"/>
+      <path class="w" d="M1200 55 L 1280 55" stroke="#1e8f8c"/><path class="w" d="M1200 185 L 1280 185" stroke="#5f6672"/>
+      <path class="w" d="M1200 315 L 1280 315" stroke="#5f6672"/><path class="w" d="M1200 445 L 1280 445" stroke="#5f6672"/>
+    </svg>
+    <div class="box abs a" style="left:0; top:0; width:300px; height:110px; justify-content:center"><p style="font-weight:600">Kitchen page</p></div>
+    <div class="box abs a" style="left:0; top:130px; width:300px; height:110px; justify-content:center"><p style="font-weight:600">Chat dock</p></div>
+    <div class="box abs a" style="left:0; top:260px; width:300px; height:110px; justify-content:center"><p style="font-weight:600">Paired phone</p></div>
+    <div class="box abs a" style="left:0; top:390px; width:300px; height:110px; justify-content:center; border-style:dashed"><p style="font-weight:600">Your AI agent</p><p class="lab">MCP · REST</p></div>
+    <div class="abs a" style="left:380px; top:0; width:820px; height:500px; box-sizing:border-box; border:3px solid var(--ink); border-radius:18px; padding:22px 26px; display:flex; flex-direction:column; gap:14px">
+      <p class="lab" style="letter-spacing:2px">MANDATE · ON AIVEN RUNTIME</p>
+      <div class="layer" style="background:var(--blue-wash)"><p class="lt">The agent</p><p class="ld">reads words, plans with the same tools, at most 8 steps</p></div>
+      <div class="layer" style="background:var(--night)"><p class="lt" style="color:var(--night-ink)">One gate</p><p class="ld" style="color:var(--night-ink-2)">20 tools · who may call what · per-key limits</p></div>
+      <div class="layer" style="background:var(--go-wash)"><p class="lt g">Pure core</p><p class="ld">the mandate · ranking · stock model · one change log</p></div>
+    </div>
+    <div class="box abs a" style="left:1280px; top:0; width:384px; height:110px; justify-content:center; border-color:var(--go); background:var(--go-wash)"><p style="font-weight:600">Valio Aimo</p><p class="lab">catalogue · price · stock</p></div>
+    <div class="box abs a" style="left:1280px; top:130px; width:384px; height:110px; justify-content:center"><p style="font-weight:600">Gemini</p><p class="lab">reads, proposes, scores</p></div>
+    <div class="box abs a" style="left:1280px; top:260px; width:384px; height:110px; justify-content:center"><p style="font-weight:600">Exa · Context.dev</p><p class="lab">web facts · recalls</p></div>
+    <div class="box abs a" style="left:1280px; top:390px; width:384px; height:110px; justify-content:center"><p style="font-weight:600">Aiven Postgres</p><p class="lab">change log · live events</p></div>
+  </div>
+  <div class="foot"><p>Every change streams back to every door, live (Postgres NOTIFY → SSE) · every partner has an offline twin</p><p class="pg"></p></div>
+</section>
+
+<!-- 11 WHY US -->
+<section class="slide" data-notes="The obvious builds on this challenge are a chatbot over the catalogue or a cart with an agent. They can find a ham. What they can't show is what the agent was allowed to buy, that the yes covers exactly what was shown, and that a retry orders once. We can, on the deployed app." style="justify-content:space-between">
+  <div style="display:flex; flex-direction:column; gap:40px">
+    <p class="eyebrow a">Why this, not a chatbot</p>
+    <h2 class="a">A chatbot can suggest a ham.<br>Only a mandate lets an agent buy one.</h2>
+  </div>
+  <div style="display:flex; flex-direction:column">
+    <div class="row a"><p class="q">What may the agent buy alone?</p><p class="them">a chatbot: unclear</p><p class="us">the chef’s caps and rules, per line</p></div>
+    <div class="row a"><p class="q">Does the yes cover what was shown?</p><p class="them">a confirm button</p><p class="us">bound to the exact terms</p></div>
+    <div class="row a" style="border-bottom:2px solid var(--rule)"><p class="q">Does a retry order twice?</p><p class="them">a cart: maybe</p><p class="us">4 commits at once → 1 receipt</p></div>
+  </div>
+  <div class="foot"><p>Every adversarial review finding becomes a test on every merge; open ones are tracked until fixed</p><p class="pg"></p></div>
+</section>
+
+<!-- 12 NEXT -->
+<section class="slide" data-notes="What's real: Valio's catalogue and live API, the models, the database, the web sources, the open door. What's simulated, and labelled: the order itself, since Valio's API has no order endpoint, and everything that moves stock. Next: a shadow pilot with one hotel, where the agent proposes and the chef orders as usual, and we measure what would have gone through alone. Those are targets, not results." style="justify-content:space-between">
+  <div style="display:flex; flex-direction:column; gap:40px">
+    <p class="eyebrow a">What’s real, what’s next</p>
+    <h2 class="a">Real data and a real gate today.<br>The order itself is simulated.</h2>
+  </div>
+  <div style="display:flex; gap:64px; align-items:flex-start">
+    <div class="col a" style="--c:var(--go)"><p class="lab g">REAL</p><p>Valio’s catalogue and live API for price and availability · Gemini · Aiven · Exa · Context.dev · an open MCP and OpenAPI door</p></div>
+    <div class="col a" style="--c:var(--hold)"><p class="lab h">SIMULATED, LABELLED</p><p>The order (Valio’s API has no order endpoint) · the supplier’s reply · history · stock movement · the clock</p></div>
+    <div class="col a" style="--c:var(--ink); flex:1.2"><p class="lab" style="color:var(--ink)">NEXT</p><p>A 4-week shadow pilot with one hotel · many app instances behind one router · Valio’s systems subscribe to the op log · the mandate widens as the record earns it</p></div>
+  </div>
+  <div class="foot"><p>Valio’s test API answers from a fixed snapshot; every stock movement on screen is ours, and labelled</p><p class="pg"></p></div>
+</section>
+
+<!-- 13 CLOSE -->
+<section class="slide night" data-notes="Close. Point at the URL. Every visitor gets a private sandbox and their own agent key." style="justify-content:space-between">
+  <div class="a" style="display:flex; align-items:center; gap:22px">
+    <svg width="72" height="72" viewBox="0 0 100 100" aria-hidden="true"><rect width="100" height="100" rx="24" fill="#1b2029"/><rect x="20" y="22" width="15" height="56" rx="7.5" fill="#1e9a98"/><rect x="42.5" y="22" width="15" height="34" rx="7.5" fill="#4f87d6"/><circle cx="50" cy="70" r="7.5" fill="#e6a34f"/><rect x="65" y="22" width="15" height="56" rx="7.5" fill="#1e9a98"/></svg>
+    <p style="font-size:52px; font-weight:600; color:var(--night-ink)">Mandate</p>
+  </div>
+  <div style="display:flex; flex-direction:column; gap:10px">
+    <p class="a" style="font-size:124px; line-height:1.04; font-weight:700; letter-spacing:-4px; color:var(--night-ink)">What do you need?<br>We’ll sort it out.</p>
+    <p class="a" style="font-size:124px; line-height:1.04; font-weight:700; letter-spacing:-4px; color:var(--go)">That’s a mandate.</p>
+  </div>
+  <div class="a" style="display:flex; justify-content:space-between; align-items:flex-end">
+    <p style="font-size:40px; color:var(--night-ink)">Try it: <b>app.mandate.kitchen</b> · your agent: /agents</p>
+    <p class="mono nw" style="font-size:26px; color:var(--night-ink-2)">MIT · Junction 2026</p>
+  </div>
+</section>
+
+</div></div>
+
+<button id="prev" class="navbtn" aria-label="Previous slide"></button>
+<button id="next" class="navbtn" aria-label="Next slide"></button>
+<div id="bar"></div>
+<p id="hint">← → to move · N notes · F fullscreen</p>
+<div id="notes" hidden><b>SPEAKER NOTES</b><span id="notesText"></span></div>
+
+<style>
+.mk { background: linear-gradient(transparent 58%, rgba(230,163,79,.38) 58%); color: inherit; padding: 0 2px; }
+.arrow { width: 56px; align-self: center; height: 4px; background: #9aa0a8; position: relative; margin: 0 8px; border-radius: 2px; }
+.arrow::after { content: ""; position: absolute; right: -2px; top: -8px; border: 10px solid transparent; border-left: 14px solid #9aa0a8; border-right: 0; }
+.arrow.go { background: var(--go); } .arrow.go::after { border-left-color: var(--go); }
+.seg { border-radius: 12px; display: flex; align-items: center; justify-content: center; transform-origin: left center; }
+.seg .cnt { font-size: 52px; font-weight: 700; }
+.card { flex: 1; background: var(--hold-wash); border-radius: 14px; padding: 28px 30px; display: flex; flex-direction: column; gap: 12px; box-sizing: border-box; }
+.card .ct { font-size: 36px; font-weight: 600; line-height: 1.2; color: var(--ink); }
+.step { flex: 1; border-top: 6px solid var(--c); padding-top: 26px; display: flex; flex-direction: column; gap: 14px; }
+.step .lab { color: var(--c); }
+.step p:last-child { font-size: 38px; line-height: 1.3; color: var(--night-ink); }
+.me { align-self: flex-end; background: var(--ink); color: var(--paper); font-size: 32px; line-height: 1.3; padding: 18px 28px; border-radius: 28px 28px 8px 28px; }
+.ag { background: var(--white); border: 2px solid var(--rule); border-radius: 8px 28px 28px 28px; padding: 18px 28px; display: flex; flex-direction: column; gap: 8px; }
+.ag p:last-child { font-size: 32px; line-height: 1.3; color: var(--ink); }
+.ag.done { border-color: var(--go); background: var(--go-wash); }
+.term { background: var(--night); border-radius: 20px; padding: 40px 48px; width: 1080px; box-sizing: border-box; display: flex; flex-direction: column; gap: 6px; }
+.tl { font-family: var(--mono); font-size: 29px; line-height: 1.5; white-space: pre; color: var(--night-ink-2); }
+.tl.c { color: #8fc7ff; } .tl.y { color: var(--hold); } .tl.x { color: #ff8a73; } .tl.k { color: #7fd6cf; } .tl.sp { line-height: .8; }
+.layer { border-radius: 12px; padding: 16px 24px; display: flex; flex-direction: column; gap: 6px; }
+.layer .lt { font-size: 36px; font-weight: 600; color: var(--ink); }
+.layer .ld { font-size: 28px; color: var(--ink-2); }
+.row { display: flex; gap: 48px; align-items: baseline; border-top: 2px solid var(--rule); padding: 40px 0; }
+.row .q { font-size: 42px; font-weight: 600; width: 700px; }
+.row .them { font-size: 34px; color: var(--ink-3); width: 290px; }
+.row .us { font-size: 34px; color: var(--go-ink); font-weight: 600; flex: 1; }
+.col { flex: 1; border-top: 6px solid var(--c); padding-top: 26px; display: flex; flex-direction: column; gap: 16px; }
+.col p:last-child { font-size: 34px; line-height: 1.38; color: var(--ink); }
+svg.wires .w { fill: none; stroke-width: 4; stroke-linecap: round; }
+</style>
+
+<script>
+(function () {
+  var stage = document.getElementById('stage');
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide'));
+  var bar = document.getElementById('bar');
+  var notes = document.getElementById('notes');
+  var notesText = document.getElementById('notesText');
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var M = window.Motion;
+  var cur = -1;
+
+  slides.forEach(function (s, i) { var pg = s.querySelector('.pg'); if (pg) pg.textContent = String(i + 1); });
+
+  function fit() {
+    var k = Math.min(window.innerWidth / 1920, window.innerHeight / 1080);
+    stage.style.transform = 'translate(-50%, -50%) scale(' + k + ')';
+  }
+
+  function play(s) {
+    if (!M || reduce) return;
+    var animate = M.animate;
+    var items = s.querySelectorAll('.a');
+    items.forEach(function (el, i) {
+      animate(el, { opacity: [0, 1], transform: ['translateY(26px)', 'translateY(0px)'] }, { delay: 0.05 + i * 0.07, duration: 0.55, easing: [0.2, 0.7, 0.2, 1] });
+    });
+    s.querySelectorAll('.rail').forEach(function (el) { animate(el, { transform: ['scaleX(0)', 'scaleX(1)'] }, { duration: 0.9, easing: [0.2, 0.7, 0.2, 1] }); });
+    s.querySelectorAll('.pop').forEach(function (el, i) { animate(el, { transform: ['scale(0)', 'scale(1)'] }, { delay: 0.35 + i * 0.3, duration: 0.45, easing: [0.3, 1.6, 0.5, 1] }); });
+    s.querySelectorAll('.seg').forEach(function (el, i) { animate(el, { transform: ['scaleX(0)', 'scaleX(1)'] }, { delay: 0.3 + i * 0.25, duration: 0.7, easing: [0.2, 0.7, 0.2, 1] }); });
+    s.querySelectorAll('svg.wires .w').forEach(function (p, i) {
+      var len = p.getTotalLength();
+      p.style.strokeDasharray = p.getAttribute('stroke-dasharray') || len;
+      if (!p.getAttribute('stroke-dasharray')) animate(p, { strokeDashoffset: [len, 0] }, { delay: 0.5 + i * 0.08, duration: 0.6 });
+    });
+    s.querySelectorAll('.tl').forEach(function (el, i) { animate(el, { opacity: [0, 1] }, { delay: 0.4 + i * 0.32, duration: 0.2 }); });
+    s.querySelectorAll('.cnt').forEach(function (el) {
+      var n = +el.getAttribute('data-n');
+      animate(0, n, { duration: 1.1, delay: 0.4, onUpdate: function (v) { el.textContent = Math.round(v); } });
+    });
+  }
+
+  function go(i) {
+    i = Math.max(0, Math.min(slides.length - 1, i));
+    if (i === cur) return;
+    if (cur >= 0) slides[cur].classList.remove('on');
+    cur = i;
+    slides[cur].classList.add('on');
+    bar.style.width = ((cur + 1) / slides.length * 100) + '%';
+    notesText.textContent = slides[cur].getAttribute('data-notes') || '';
+    var h = '#s' + (cur + 1);
+    if (location.hash !== h) { try { history.replaceState(null, '', h); } catch (e) { location.hash = h; } }
+    play(slides[cur]);
+  }
+
+  function fromHash() { var m = /^#s(\d+)$/.exec(location.hash || ''); return m ? (+m[1] - 1) : 0; }
+
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' ' || e.key === 'Enter') { e.preventDefault(); go(cur + 1); }
+    else if (e.key === 'ArrowLeft' || e.key === 'PageUp' || e.key === 'Backspace') { e.preventDefault(); go(cur - 1); }
+    else if (e.key === 'Home') go(0);
+    else if (e.key === 'End') go(slides.length - 1);
+    else if (e.key === 'n' || e.key === 'N') notes.hidden = !notes.hidden;
+    else if (e.key === 'f' || e.key === 'F') {
+      var d = document.documentElement;
+      if (!document.fullscreenElement && d.requestFullscreen) d.requestFullscreen().catch(function () {});
+      else if (document.exitFullscreen) document.exitFullscreen().catch(function () {});
+    }
+  });
+  document.getElementById('prev').addEventListener('click', function () { go(cur - 1); });
+  document.getElementById('next').addEventListener('click', function () { go(cur + 1); });
+  var tx = null;
+  document.addEventListener('touchstart', function (e) { tx = e.touches[0].clientX; }, { passive: true });
+  document.addEventListener('touchend', function (e) {
+    if (tx === null) return; var dx = e.changedTouches[0].clientX - tx; tx = null;
+    if (Math.abs(dx) > 40) go(cur + (dx < 0 ? 1 : -1));
+  });
+  window.addEventListener('hashchange', function () { go(fromHash()); });
+  window.addEventListener('resize', fit);
+  fit();
+  go(fromHash());
+  setTimeout(function () { var h = document.getElementById('hint'); if (h) h.style.opacity = '0'; }, 5000);
+})();
+</script>
