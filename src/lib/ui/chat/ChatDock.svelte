@@ -418,9 +418,22 @@
 		);
 		const after = pendingIn(fresh);
 		const decided = [...before].filter((l) => !after.has(l)).length;
+		// The ledger's count of waiting decisions too: a split approval can leave the card's lines looking unchanged.
+		const waitedBefore = entries.findLast((x) => x.kind === 'event' && x.e.type === 'ledger');
+		const waitsNow = fresh.findLast((e) => e.type === 'ledger');
+		const fewer =
+			waitedBefore?.kind === 'event' &&
+			waitedBefore.e.type === 'ledger' &&
+			waitsNow?.type === 'ledger'
+				? waitedBefore.e.ledger.decisionsLeft - waitsNow.ledger.decisionsLeft
+				: 0;
 		const said =
 			line ??
-			(decided ? `You decided ${decided} ${decided === 1 ? 'line' : 'lines'} on the page.` : null);
+			(decided
+				? `You decided ${decided} ${decided === 1 ? 'line' : 'lines'} on the page.`
+				: fewer > 0
+					? `You decided on the page: ${fewer} ${fewer === 1 ? 'decision' : 'decisions'} fewer wait.`
+					: null);
 		const add: Entry[] = said ? [{ kind: 'system', text: said, at: Date.now() }] : [];
 		for (const e of fresh)
 			if ((e.type === 'decision' || e.type === 'ledger' || e.type === 'done') && !sameAs(e))
