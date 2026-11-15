@@ -118,6 +118,28 @@ describe('chat harness on a scripted model', () => {
 		expect(agent.prompts[1]).toContain('no tool approve');
 	});
 
+	it('a reply claiming a change no tool made is sent back once', async () => {
+		const { deps } = await setup();
+		const agent = scripted([
+			{ text: "I've placed the cream order.", chips: [] },
+			{ text: 'How much cream, and for which day?', chips: [] }
+		]);
+		const t = await all(runHarnessTurn({ text: '10 l cream instead' }, { ...deps, agent }));
+		expect(agent.prompts[1]).toContain('no tool changed anything this turn');
+		expect(t.at(-1)).toMatchObject({ type: 'done', text: 'How much cream, and for which day?' });
+	});
+
+	it('commit_order runs only when the chef asks to send', async () => {
+		const { deps } = await setup();
+		const agent = scripted([
+			{ tool: 'commit_order', input: { planId: 'x' } },
+			{ text: 'The dill is ready. Send it?', chips: [{ label: 'Send the order', say: 'send it' }] }
+		]);
+		const t = await all(runHarnessTurn({ text: 'fresh dill' }, { ...deps, agent }));
+		expect(t.some((e) => e.type === 'step' && e.tool === 'commit_order')).toBe(false);
+		expect(agent.prompts[1]).toContain('commit_order → not run');
+	});
+
 	it('a model that fails before any step answers through the script', async () => {
 		const { deps } = await setup();
 		const agent = scripted([new Error('provider down')]);

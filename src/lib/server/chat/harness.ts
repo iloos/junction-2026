@@ -18,7 +18,7 @@ import type { StepRecord } from '$lib/server/agent/loop';
 import { createGetContext } from '$lib/server/agent/get-context';
 import { mcpInstructions } from '$lib/server/tools/mcp';
 import { serveTool, toolsFor } from '$lib/server/tools/serve';
-import { readTask } from '$lib/server/tasks/outcome';
+import { dayWords, readTask } from '$lib/server/tasks/outcome';
 import type { ChatEvent, ChatTurnInput } from '$lib/ui/chat/types';
 import { blankTask, runChatTurn, stepEvents, storeOf, taskView, type ChatDeps } from './turn';
 
@@ -152,7 +152,14 @@ function readAction(text: string): Action {
 
 /** What code knows that the model should aim at: held lines, the next action, a menu awaiting the chef. */
 async function steerOf(task: Task, deps: ChatDeps): Promise<Record<string, unknown>> {
-	const steer: Record<string, unknown> = { today: deps.today };
+	// The next two weeks with their weekday, so the model names days right ("Fri 11 Dec") and passes the date code.
+	const days = Array.from({ length: 14 }, (_, i) => {
+		const d = new Date(`${deps.today}T12:00:00Z`);
+		d.setUTCDate(d.getUTCDate() + i);
+		const iso = d.toISOString().slice(0, 10);
+		return `${iso} = ${dayWords(iso)}`;
+	});
+	const steer: Record<string, unknown> = { today: deps.today, days };
 	if (task.proposal)
 		steer.menu = {
 			proposalId: task.proposal.id,
@@ -250,6 +257,52 @@ async function finalReply(agent: Llm, system: string, history: Said[]): Promise<
 	return 'text' in a ? a : null;
 }
 
+/** Tools that change the kitchen's plans: a reply may say something was done only after one of these. */
+const CHANGES: ReadonlySet<string> = new Set([
+	'place_order',
+	'plan_event',
+	'edit_line',
+	'find_substitutes',
+	'commit_order',
+	'propose_menu',
+	'revise_menu'
+]);
+const CLAIM =
+	/\b(is (now )?set|set to|i(?:'ve| have) (placed|ordered|added|planned|changed|updated|switched|replaced|removed|set|sent)|^(added|updated|changed|switched|replaced|removed|ordered|placed)\b|(placed|ordered|added) (it|the)\b)/i;
+/** The chef's words asking to send what is ready ("send it", "order it", "go ahead", "tilaa"). */
+const SEND =
+	/\b(send|order (it|them|now|everything|what)|place (it|the order)|go ahead|commit|confirm the order|tilaa|lähetä)\b/i;
+
+/** place_order lines resized to the server's count: "lines[0]: 5 kg of 469426 is 6 KG, not 5 KG". */
+function resized(input: Record<string, unknown>, message: string): Record<string, unknown> | null {
+	const lines = Array.isArray(input.lines) ? [...(input.lines as Record<string, unknown>[])] : null;
+	if (!lines) return null;
+	let hit = false;
+	for (const m of message.matchAll(
+		/lines\[(\d+)\]: [^;]*? is (\d+(?:\.\d+)?) ([A-Z]{1,4}), not/g
+	)) {
+		const i = Number(m[1]);
+		if (!lines[i]) continue;
+		lines[i] = { ...lines[i], qty: Number(m[2]), unit: m[3] };
+		hit = true;
+	}
+	return hit ? { ...input, lines } : null;
+}
+
+/** What the dock shows while a slow tool runs: what is happening and roughly how long. */
+const WORKING: Partial<Record<ToolName, string>> = {
+	search_products: 'Looking in the Valio Aimo catalogue',
+	quote: 'Checking prices and stock',
+	propose_menu: 'Writing the menu, about 15 s',
+	revise_menu: 'Changing the menu',
+	plan_event: 'Planning every ingredient for the menu, about 10 s',
+	place_order: 'Drafting the order',
+	find_substitutes: 'Looking for alternatives',
+	commit_order: 'Sending what the mandate allows',
+	lookup_facts: 'Looking it up on the web',
+	find_outside: 'Looking outside the catalogue'
+};
+
 /** A chip that only points at what the cards already show ("View plan", "Review menu"): not a chef's answer. */
 const NAVIGATION =
 	/^(view|open|see|get|show|check|review)\b.*\b(plan|card|menu|order|link|price)s?$/i;
@@ -327,6 +380,7 @@ export async function* runHarnessTurn(
 	const system = `${mcpInstructions(tools)}\n\n${TURN_RULES}`;
 	const steps: StepRecord[] = [];
 	const calls = new Set<string>();
+	let checked = false;
 	let memoryKitchen: unknown = kept?.kitchen;
 	let reply: Reply | null = null;
 	try {
@@ -359,7 +413,23 @@ export async function* runHarnessTurn(
 			}
 			if (!action) throw new Error('the model gave no valid action');
 			if ('text' in action) {
-				reply = action;
+				// A reply that claims a change no tool made this turn is sent back once.
+				const changed = steps.some((x) => x.ok && CHANGES.has(x.tool));
+				if (!changed && !checked && CLAIM.test(action.text)) {
+					checked = true;
+					history.push({
+						who: 'tool',
+						text: 'your reply says something was set, placed, ordered or changed, but no tool changed anything this turn: call the tool now, or reply without claiming it'
+					});
+					continue;
+				}
+				// Links live on the cards; a bare review path in the text is noise.
+				reply = {
+					...action,
+					text:
+						action.text.replace(/:?\s*(https?:\/\/\S+|\/(request|kitchen|ops)\?\S+)/g, '').trim() ||
+						action.text
+				};
 				break;
 			}
 			if (steps.length >= MAX_STEPS) {
@@ -394,10 +464,28 @@ export async function* runHarnessTurn(
 				});
 				continue;
 			}
+			// Sending an order is the chef's call: commit_order runs only on a turn whose words ask for it.
+			if (tool === 'commit_order' && !SEND.test(words)) {
+				history.push({
+					who: 'tool',
+					text: 'commit_order → not run: the chef has not asked to send the order this turn. Say what is ready and offer "Send the order" as a chip'
+				});
+				continue;
+			}
+			const doing = WORKING[tool];
+			if (doing) yield { type: 'status', taskId: task.id, text: doing };
 			const t0 = performance.now();
-			const served = tools.includes(tool)
+			let served = tools.includes(tool)
 				? await serveTool(tool, deps.ctx, action.input, deps.handlers)
 				: null;
+			// A line whose sales quantity disagrees with the server's sizing of its amount: take the server's count
+			// (it sizes the chef's amount; nothing is relaxed) and try again, at most three times.
+			for (let fix = 0; fix < 3 && tool === 'place_order' && served && !served.ok; fix++) {
+				const sized = resized(action.input, served.error.message);
+				if (!sized) break;
+				action = { tool, input: sized };
+				served = await serveTool(tool, deps.ctx, sized, deps.handlers);
+			}
 			const s: StepRecord = {
 				n: steps.length + 1,
 				tool,
