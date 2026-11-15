@@ -73,7 +73,7 @@ test('approving in the dock takes the decision off the page and says where', asy
 	const here = dock.getByLabel('Decide here');
 	await here.waitFor({ timeout: 60_000 });
 	const url = await here
-		.getByRole('link', { name: /Open this plan in the Kitchen/ })
+		.getByRole('link', { name: /Open this plan in the Kitchen|Open the order/ })
 		.getAttribute('href');
 
 	// The same plan open on the Kitchen page in another tab of the same browser.

@@ -149,7 +149,9 @@ for (const [i, s] of stores.entries()) {
 			await working(p);
 			// /request is the conversation: the order itself is placed on the Kitchen page.
 			const link = p
-				.getByRole('link', { name: /Order it on the page|Open this plan in the Kitchen/ })
+				.getByRole('link', {
+					name: /Order it on the page|Open this plan in the Kitchen|Open the order/
+				})
 				.last();
 			if (await link.isVisible().catch(() => false)) await link.click();
 			await p
