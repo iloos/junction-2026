@@ -339,6 +339,36 @@ export function currentApproval(state: WorkspaceState, planId: string): Approval
 	);
 }
 
+/**
+ * A plan as an agent reads it with `brief`: each offer keeps its price, stock kind, amount and cut-off, without
+ * Valio's raw stock payload or the price and stock provenance beyond its source (the line's own provenance stays).
+ * For an agent's context; the plan view keeps its totals per need without allocations.
+ */
+export function briefPlan(plan: Plan): Plan {
+	const offer = (o: Offer): Offer => ({
+		...o,
+		price: o.price && { ...o.price, provenance: { source: o.price.provenance.source } },
+		availability: {
+			...o.availability,
+			raw: null,
+			provenance: { source: o.availability.provenance.source }
+		}
+	});
+	return {
+		...plan,
+		lines: plan.lines.map((l) => (l.offer ? { ...l, offer: offer(l.offer) } : l)),
+		// Each need keeps its totals per bucket; which line covers what (allocations) is left out.
+		...(plan.view
+			? {
+					view: {
+						...plan.view,
+						fulfilment: plan.view.fulfilment.map((f) => ({ ...f, allocations: [] }))
+					}
+				}
+			: {})
+	};
+}
+
 export async function getPlan(
 	ports: Ports,
 	ctx: CallContext,
