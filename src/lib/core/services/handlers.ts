@@ -165,10 +165,20 @@ async function notOwner(ports: ServicePorts, ctx: CallContext, scope: string, in
 	if (scope === 'read') return null;
 	const named = await kitchensNamed(ports, ctx, input);
 	if (!named.length) return null;
-	const owned = new Map(
-		(await ports.store.kitchens(ctx.workspaceId)).filter((k) => k.owner).map((k) => [k.id, k])
-	);
-	const k = named.map((id) => owned.get(id)).find((k) => k && k.owner !== ctx.visitor);
+	const kitchens = new Map((await ports.store.kitchens(ctx.workspaceId)).map((k) => [k.id, k]));
+	// In the shared room a visitor writes only to a store they made; the seeded kitchens are everyone's to watch.
+	if (ctx.sharedRoom) {
+		const notMine = named
+			.map((id) => kitchens.get(id))
+			.find((k) => k && (!k.owner || k.owner !== ctx.visitor));
+		if (notMine)
+			return err(
+				'FORBIDDEN',
+				`${notMine.name} is not your store in this shared room. Join the room as your own store to order.`,
+				{ sub: 'room_store' }
+			);
+	}
+	const k = named.map((id) => kitchens.get(id)).find((k) => k?.owner && k.owner !== ctx.visitor);
 	return k
 		? err('FORBIDDEN', `${k.name} belongs to another visitor: only its owner can change it`, {
 				sub: 'store_owner'

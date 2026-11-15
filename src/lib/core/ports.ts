@@ -199,6 +199,12 @@ export interface CallContext {
 	 * request. A kitchen with an `owner` takes writes only from its owner's visitor (D24); absent fails closed.
 	 */
 	visitor?: string;
+	/**
+	 * The shared room (ws-judges) as a visitor, not a presenter: writes are allowed only on kitchens this visitor owns,
+	 * and the seeded room kitchens are read-only (D24). Set by the server for every context in the room; only a
+	 * presenter's Kitchen session clears it.
+	 */
+	sharedRoom?: boolean;
 	/** Kitchens this context may act for; absent = every kitchen in the workspace. */
 	kitchenIds?: readonly string[];
 	/**
