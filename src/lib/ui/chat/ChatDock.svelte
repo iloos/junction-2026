@@ -147,6 +147,8 @@
 		wasOpen = now;
 		if (now) {
 			opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+			// Reopened: catch up on what the page decided while the dock was closed, even if no event reached it.
+			if (taskId && entries.length) untrack(() => void outside([], true));
 			void tick().then(() => {
 				const fields = dockEl?.querySelectorAll<HTMLElement>(
 					'textarea, input[type="text"], input:not([type])'
@@ -330,6 +332,15 @@
 				)}`
 			: 'Order what may be ordered now'
 	);
+	/**
+	 * The chef's order button orders as the chef, with the Kitchen's own command (D13), like the page: the chat only
+	 * narrates what happened. Without the plan's state here yet, the chat's Continue asks the agent to submit what
+	 * the mandate allows.
+	 */
+	function orderNow() {
+		if (ownSnap && own) void own.commit();
+		else void turn({ continue: true }, 'Continue');
+	}
 	/** The dock's own order button is showing for the last decision: no second button below the answer. */
 	const dockOrders = $derived(
 		!!ownSnap && !pendingLines.length && approvedOpen.length > 0 && !own?.lastCommit
@@ -1018,7 +1029,7 @@
 									type="button"
 									class="rounded-md border border-accent px-3 py-1.5 text-meta font-semibold text-accent-ink hover:bg-accent-wash disabled:opacity-50"
 									disabled={busy}
-									onclick={() => turn({ continue: true }, 'Continue')}
+									onclick={orderNow}
 								>
 									{orderWords}
 								</button>
@@ -1030,7 +1041,7 @@
 								type="button"
 								class="rounded-md border border-accent px-3 py-1.5 text-meta font-semibold text-accent-ink hover:bg-accent-wash disabled:opacity-50"
 								disabled={busy}
-								onclick={() => turn({ continue: true }, 'Continue')}
+								onclick={orderNow}
 							>
 								{orderWords}
 							</button>

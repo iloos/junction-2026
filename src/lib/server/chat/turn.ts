@@ -1641,7 +1641,8 @@ export function ledgerWords(
 	const noun = l.needs.some((x) => x.label.includes(' · ')) ? 'ingredient' : 'item';
 	const plural = (k: number, w: string) => `${k} ${w}${k === 1 ? '' : 's'}`;
 	const bits: string[] = [];
-	if (sent) bits.push(`${sent} sent to Valio`);
+	// Orders go to a simulated supplier: "ordered", never "sent to Valio" (the receipt says so).
+	if (sent) bits.push(`${sent} ordered`);
 	if (ready) bits.push(`${ready} ready to order`);
 	if (held) bits.push(`${held} waiting for your approval`);
 	if (blocked) bits.push(`${blocked} can't be ordered as planned`);
@@ -1650,7 +1651,7 @@ export function ledgerWords(
 	// Short lines, one fact each: the dock keeps line breaks.
 	const head = n ? `${day}${plural(n, noun)}.` : `${day}nothing planned.`;
 	const order = l.receiptIds.length
-		? `Ordered for €${(l.committedCents / 100).toFixed(2)}.`
+		? `Ordered for €${(l.committedCents / 100).toFixed(2)} · receipt ${l.receiptIds.at(-1)}.`
 		: 'Nothing is ordered yet.';
 	const wait = l.decisionsLeft
 		? `${l.decisionsLeft} ${l.decisionsLeft === 1 ? 'decision waits' : 'decisions wait'} for you.`
