@@ -67,7 +67,7 @@
 <section class="queue" aria-label="Cases to act on">
 	<header>
 		<h2>
-			To act on <span class="n"
+			Waiting for a person <span class="n"
 				>{shown.length}{shown.length !== cases.length ? ` of ${cases.length}` : ''}</span
 			>
 		</h2>
@@ -122,7 +122,7 @@
 					<span role="cell" class="next">
 						{#if href}
 							<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- kitchen deep link with query -->
-							<a {href}>{c.next}</a>
+							<a class="go" {href}>{c.next} →</a>
 						{:else}{c.next}{/if}
 					</span>
 				</div>
@@ -312,5 +312,31 @@
 		.row.head {
 			display: none;
 		}
+	}
+	/* The whole row opens the case in the Kitchen: the next-step link stretches over it. */
+	.row:not(.head) {
+		position: relative;
+	}
+	.row .go::after {
+		content: '';
+		position: absolute;
+		inset: 0;
+	}
+	.row:has(.go):hover {
+		background: color-mix(in oklab, var(--text) 4%, transparent);
+	}
+	.row .go {
+		color: inherit;
+		text-decoration: none;
+	}
+	.row:has(.go):hover .go {
+		text-decoration: underline;
+	}
+	.row .go:focus-visible {
+		outline: none;
+	}
+	.row:has(.go:focus-visible) {
+		outline: 2px solid var(--propose);
+		outline-offset: -2px;
 	}
 </style>
