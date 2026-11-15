@@ -31,7 +31,7 @@ export interface DemandDay {
 	products: DemandProduct[];
 	/** Substitutes and make-in-house a person accepted (signed or ordered). */
 	swaps: string[];
-	/** Lines ordered or signed while Valio hadn't said how much it has. */
+	/** Lines ordered or signed with no stock info in the catalogue. */
 	waived: string[];
 	/** Why quantities moved: the chef's and the agents' edits, in their words. */
 	reasons: string[];
@@ -120,7 +120,7 @@ export function demandByDay(
 					}
 					if (settled && l.offer?.availability.kind === 'unknown')
 						waived.push(
-							`${kitchen}: ${name(l)}, ${stage === 'ordered' ? 'ordered' : 'signed'} while Valio hadn't said how many it has.`
+							`${kitchen}: ${name(l)}, ${stage === 'ordered' ? 'ordered' : 'signed'} with no stock info in the catalogue.`
 						);
 				}
 				for (const c of s.proposed.changes)

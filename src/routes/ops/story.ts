@@ -10,7 +10,7 @@ import { dishPhrase, type Problem } from './problems';
 /** Who a step is from, as its chip reads. */
 export type Chip = 'valio' | 'kitchen_agent' | 'chef' | 'approver' | 'outside' | 'job' | 'system';
 export const CHIP: Record<Chip, string> = {
-	valio: 'Valio data',
+	valio: 'Catalogue data',
 	kitchen_agent: 'Kitchen agent',
 	chef: 'Chef',
 	approver: 'Approver',
@@ -60,7 +60,7 @@ const sentence = (t: string) => (t ? t.charAt(0).toUpperCase() + t.slice(1) + '.
 
 const AVAIL: Record<string, string> = {
 	known: 'in stock',
-	unknown: "in Valio's range, quantity not stated",
+	unknown: 'in the catalogue, no stock info',
 	supplier: 'delivered by its supplier, quantity not stated'
 };
 
@@ -143,7 +143,9 @@ export function storyOf(
 					...base,
 					what: said(env),
 					then:
-						n === 0 ? 'Lines follow as the menu is worked out.' : 'Next: live terms from Valio.',
+						n === 0
+							? 'Lines follow as the menu is worked out.'
+							: 'Next: live terms from Valio Aimo.',
 					tone: 'plain'
 				});
 				break;
@@ -184,7 +186,7 @@ export function storyOf(
 				steps.push({
 					...base,
 					chip: 'valio',
-					what: `Valio's live terms: ${what.join('; ')}.`,
+					what: `Live terms from Valio Aimo: ${what.join('; ')}.`,
 					then: sentence(then.join('; ')),
 					tone: out.length ? 'bad' : held.length ? 'warn' : 'ok'
 				});

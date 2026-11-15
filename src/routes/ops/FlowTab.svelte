@@ -49,7 +49,7 @@
 		</p>
 	{:else}
 		<p class="lede">
-			{stores} store{stores === 1 ? '' : 's'} put <b class="num">{euro(f.total)}</b> on Valio
+			{stores} store{stores === 1 ? '' : 's'} put <b class="num">{euro(f.total)}</b> on Valio Aimo
 			products: <b class="num">{euro(ordered)}</b> ordered, the rest planned.
 		</p>
 		<div class="chart">

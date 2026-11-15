@@ -1,7 +1,8 @@
 /**
- * Self-service reset for sandboxes: a visitor's own workspace (`ws-j-…`) or the shared judges' room. Anyone in
- * the sandbox may start it over, at most once per SANDBOX_COOLDOWN_MS per workspace. The stage (ws-demo) is
- * never reset from here; it stays presenter-only.
+ * Self-service reset for sandboxes: a visitor's own workspace (`ws-j-…`) or the shared judges' room, at most once
+ * per SANDBOX_COOLDOWN_MS per workspace. A visitor starts their own sandbox over; a room others share is started
+ * over by the presenter only, so one click never wipes everyone's stores. The stage (ws-demo) is never reset from
+ * here; it stays presenter-only.
  */
 import { JUDGES_WORKSPACE } from './workspaces';
 import { resetDemoRun } from './reset';
@@ -23,9 +24,17 @@ type SandboxReset =
 	| { ok: false; retryInMs: number }
 	| { ok: false; forbidden: true };
 
-/** Start a sandbox over: a fresh run, the old one kept for audit. */
-export async function resetSandbox(workspaceId: string, now = Date.now()): Promise<SandboxReset> {
+/** A room others share (anything but a visitor's own sandbox): starting it over needs the presenter. */
+export const isSharedRoom = (ws: string) => !isVisitorWorkspace(ws);
+
+/** Start a sandbox over: a fresh run, the old one kept for audit. A shared room needs `presenter`. */
+export async function resetSandbox(
+	workspaceId: string,
+	now = Date.now(),
+	opts: { presenter?: boolean } = {}
+): Promise<SandboxReset> {
 	if (!isSandbox(workspaceId)) return { ok: false, forbidden: true };
+	if (isSharedRoom(workspaceId) && !opts.presenter) return { ok: false, forbidden: true };
 	const wait = (last.get(workspaceId) ?? 0) + SANDBOX_COOLDOWN_MS - now;
 	if (wait > 0) return { ok: false, retryInMs: wait };
 	last.set(workspaceId, now);

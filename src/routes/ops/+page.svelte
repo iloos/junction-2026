@@ -525,8 +525,8 @@
 
 	{#if data.simulated}
 		<p class="banner">
-			Simulated run. Real Valio products, invented quantities and prices, played on a loop to show
-			how the room reads.
+			Simulated run. Real Valio Aimo products, invented quantities and prices, played on a loop to
+			show how the room reads.
 		</p>
 	{/if}
 	{#if stream.catchupError}
@@ -1339,7 +1339,7 @@
 	}
 	@keyframes arrive {
 		0% {
-			background-color: rgb(90 169 255 / 0.22);
+			background-color: color-mix(in oklab, var(--color-accent) 22%, transparent);
 			transform: translateY(-8px);
 			opacity: 0.4;
 		}

@@ -7,13 +7,15 @@ describe('sandbox reset', () => {
 	it('starts ws-judges over, never ws-demo, and holds a cooldown', async () => {
 		const demoBefore = currentRun('ws-demo');
 		const t = Date.now();
-		const first = await resetSandbox(SANDBOX_WORKSPACE, t);
+		const first = await resetSandbox(SANDBOX_WORKSPACE, t, { presenter: true });
 		expect(first.ok).toBe(true);
 		if (first.ok) expect(currentRun(SANDBOX_WORKSPACE)).toBe(first.runId);
 		expect(currentRun('ws-demo')).toBe(demoBefore);
-		const again = await resetSandbox(SANDBOX_WORKSPACE, t + 1000);
+		const again = await resetSandbox(SANDBOX_WORKSPACE, t + 1000, { presenter: true });
 		expect(again).toEqual({ ok: false, retryInMs: SANDBOX_COOLDOWN_MS - 1000 });
-		expect((await resetSandbox(SANDBOX_WORKSPACE, t + SANDBOX_COOLDOWN_MS + 1)).ok).toBe(true);
+		expect(
+			(await resetSandbox(SANDBOX_WORKSPACE, t + SANDBOX_COOLDOWN_MS + 1, { presenter: true })).ok
+		).toBe(true);
 	}, 30_000);
 
 	it('keeps a cooldown per sandbox, and refuses the stage', async () => {
@@ -29,5 +31,17 @@ describe('sandbox reset', () => {
 		expect(currentRun(b)).not.toBe(runA);
 		expect((await resetSandbox(a, t + 2)).ok).toBe(false);
 		expect(await resetSandbox('ws-demo', t)).toEqual({ ok: false, forbidden: true });
+	}, 30_000);
+
+	it('lets only the presenter start the shared room over', async () => {
+		const before = currentRun(SANDBOX_WORKSPACE);
+		const t = Date.now() + 10 * SANDBOX_COOLDOWN_MS;
+		expect(await resetSandbox(SANDBOX_WORKSPACE, t)).toEqual({ ok: false, forbidden: true });
+		expect(await resetSandbox(SANDBOX_WORKSPACE, t, { presenter: false })).toEqual({
+			ok: false,
+			forbidden: true
+		});
+		expect(currentRun(SANDBOX_WORKSPACE)).toBe(before);
+		expect((await resetSandbox(SANDBOX_WORKSPACE, t, { presenter: true })).ok).toBe(true);
 	}, 30_000);
 });

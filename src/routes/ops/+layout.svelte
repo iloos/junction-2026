@@ -50,6 +50,26 @@
 		font-variant-numeric: tabular-nums;
 		color-scheme: dark;
 	}
+	/*
+	 * Neutral dark surfaces for the control room: the Kitchen's warm paper hue (85) at low chroma, so Ops reads as
+	 * the same product at wall scale and colour is left to state (propose, sign-off, out, ok). Applied to the
+	 * whole page (the shell's header carries data-theme too) only while /ops is open.
+	 */
+	:global(html[data-theme='dark']),
+	:global(html[data-theme='dark'] [data-theme='dark']) {
+		--color-paper: oklch(0.185 0.004 85);
+		--color-sheet: oklch(0.215 0.005 85);
+		--color-well: oklch(0.25 0.006 85);
+		--color-rule: oklch(0.32 0.007 85);
+		--color-rule-strong: oklch(0.42 0.008 85);
+		--color-ink: oklch(0.94 0.006 85);
+		--color-ink-2: oklch(0.78 0.008 85);
+		--color-ink-3: oklch(0.66 0.008 85);
+		--color-accent-wash: oklch(0.3 0.035 195);
+		--color-propose-wash: oklch(0.3 0.04 252);
+		--color-auth-wash: oklch(0.3 0.04 252);
+		--color-sup-excess: oklch(0.55 0.006 85);
+	}
 	.ops-root :global(:focus-visible) {
 		outline: 2px solid var(--propose);
 		outline-offset: 2px;

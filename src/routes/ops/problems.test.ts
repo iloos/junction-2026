@@ -103,7 +103,7 @@ describe('the story of a problem', () => {
 		// No ISO dates or empty counts on the first screen.
 		expect(steps[0].what).toBe('Started an order for Thu 10 Dec.');
 		expect(steps[1]).toMatchObject({ chip: 'valio', tone: 'bad' });
-		expect(steps[1].what).toBe("Valio's live terms: HK Christmas ham is out.");
+		expect(steps[1].what).toBe('Live terms from Valio Aimo: HK Christmas ham is out.');
 		expect(steps[1].then).toBe('The plan lost its Christmas ham.');
 		const propose = steps.find((x) => x.chip === 'kitchen_agent' && x.what.includes('proposed'));
 		expect(propose?.what).toMatch(/proposed HK Palvikinkku instead of HK Christmas ham\.$/);

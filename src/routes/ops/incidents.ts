@@ -20,7 +20,7 @@ export const INCIDENTS: readonly Incident[] = [
 		id: 'drought',
 		title: 'Drought: root vegetables scarce',
 		story:
-			'A dry summer cut the harvest. Valio has a quarter of its usual potatoes and swede for the next deliveries.',
+			'A dry summer cut the harvest. Valio Aimo has a quarter of its usual potatoes and swede for the next deliveries.',
 		products: [
 			{ productId: '475214', name: 'Potatoes, peeled, 10 kg' },
 			{ productId: '460879', name: 'Swede' }
@@ -42,7 +42,7 @@ export const INCIDENTS: readonly Incident[] = [
 		id: 'rush',
 		title: 'Christmas rush: dairy demand up',
 		story:
-			'Every kitchen orders for Christmas at once. Milk, cream and butter run low across Valio’s customers.',
+			'Every kitchen orders for Christmas at once. Milk, cream and butter run low across Valio Aimo’s customers.',
 		products: [
 			{ productId: '464201', name: 'Valio light milk 1 l' },
 			{ productId: '464249', name: 'Valio cooking cream 15 %' },
