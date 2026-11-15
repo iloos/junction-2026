@@ -54,7 +54,7 @@
 		storyTime
 	} from '$lib/ui/format';
 	import { SCENARIO } from '$lib/core/scenario';
-	import { reasonShort } from '$lib/ui/reasons';
+	import { reasonShort, reasonWithCap } from '$lib/ui/reasons';
 	import RescueCompare from '$lib/ui/RescueCompare.svelte';
 	import RulesPanel, { PICKED_BY } from './RulesPanel.svelte';
 	import { errorWords } from '$lib/kitchen/error-words';
@@ -514,6 +514,8 @@
 				tag: picked ? `Picked: ${picked}` : 'Proposed instead'
 			};
 		}
+		const cap = l.reasons.find((r) => r.startsWith('CAP_EXCEEDED.'));
+		if (cap) return { tag: `${reasonWithCap(cap, snap?.rules)}${dish ? `, for ${dish}` : ''}` };
 		const unsure = l.reasons.find((r) => r === 'requirement_unknown' || r === 'allergen_unknown');
 		if (unsure)
 			return {
@@ -701,7 +703,7 @@
 		const pending = (snap?.approvals ?? (approval ? [approval] : [])).filter(
 			(a) => a.state === 'pending'
 		);
-		return pending.flatMap((a) => decisionsOf(plan, a));
+		return pending.flatMap((a) => decisionsOf(plan, a, snap?.rules));
 	});
 	/** The full rules (hard limits, preferences, their preview), opened from the header's rules line. */
 	let rulesOpen = $state(false);
