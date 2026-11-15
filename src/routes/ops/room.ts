@@ -62,7 +62,7 @@ export interface ShortageReplanned {
 	kitchens: ShortageKitchen[];
 }
 
-type Sim = { seq: number; event: Pick<SimEvent, 'detail'> & { kind: string } };
+type Sim = { seq: number; event: Pick<SimEvent, 'detail'> & { kind: string; label?: string } };
 
 const str = (v: unknown) => (typeof v === 'string' ? v : '');
 const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : 0);
@@ -113,13 +113,8 @@ export function roomKitchens(loaded: readonly OpsKitchen[], created: readonly St
 	return [...loaded, ...added];
 }
 
-/** The newest shortage re-plan in the room, or null. */
-export function lastShortage(sims: readonly Sim[]): ShortageReplanned | null {
-	let best: Sim | null = null;
-	for (const s of sims)
-		if (s.event.kind === 'shortage.replanned' && (!best || s.seq > best.seq)) best = s;
-	if (!best) return null;
-	const d = best.event.detail;
+/** A shortage notice's detail as a ShortageReplanned (fields checked). */
+function shortageOf(d: Record<string, unknown>): ShortageReplanned {
 	const kitchens = Array.isArray(d.kitchens) ? (d.kitchens as ShortageKitchen[]) : [];
 	return {
 		shortageId: str(d.shortageId),
@@ -130,6 +125,33 @@ export function lastShortage(sims: readonly Sim[]): ShortageReplanned | null {
 		unit: str(d.unit),
 		kitchens: kitchens.filter((k) => k && typeof k.kitchenId === 'string')
 	};
+}
+
+/** The newest shortage re-plan in the room, or null. */
+export function lastShortage(sims: readonly Sim[]): ShortageReplanned | null {
+	let best: Sim | null = null;
+	for (const s of sims)
+		if (s.event.kind === 'shortage.replanned' && (!best || s.seq > best.seq)) best = s;
+	return best ? shortageOf(best.event.detail) : null;
+}
+
+/**
+ * The newest incident (a run of shortage notices with the same "Simulated incident: …" label), its products in the
+ * order they re-planned; null when the newest shortage wasn't an incident.
+ */
+export function lastIncident(
+	sims: readonly Sim[],
+	prefix: string
+): { label: string; shortages: ShortageReplanned[] } | null {
+	const list = sims
+		.filter((s) => s.event.kind === 'shortage.replanned')
+		.sort((a, b) => a.seq - b.seq);
+	const last = list[list.length - 1];
+	const label = last?.event.label;
+	if (!label || !label.startsWith(prefix)) return null;
+	const run: Sim[] = [];
+	for (let i = list.length - 1; i >= 0 && list[i].event.label === label; i--) run.unshift(list[i]);
+	return { label, shortages: run.map((s) => shortageOf(s.event.detail)) };
 }
 
 /** Counts per outcome, for the one sentence over the shortage table. */

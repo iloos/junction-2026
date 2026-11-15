@@ -16,7 +16,15 @@
 	import RoomView from './RoomView.svelte';
 	import ForecastTab from './ForecastTab.svelte';
 	import FlowTab from './FlowTab.svelte';
-	import { lastShortage, orderFeed, roomKitchens, storesCreated, storeTotals } from './room';
+	import {
+		lastIncident,
+		lastShortage,
+		orderFeed,
+		roomKitchens,
+		storesCreated,
+		storeTotals
+	} from './room';
+	import { INCIDENT_LABEL } from './incidents';
 	import OrdersTab from './OrdersTab.svelte';
 	import DemandTab from './DemandTab.svelte';
 	import GatePanel from './GatePanel.svelte';
@@ -557,10 +565,14 @@
 					{kitchens}
 					totals={storeTotals(stream.state.orders)}
 					feed={orderFeed(stream.state.orders, kitchenName)}
-					shortage={lastShortage(stream.roomSims)}
+					shortage={lastIncident(stream.roomSims, INCIDENT_LABEL)
+						? null
+						: lastShortage(stream.roomSims)}
 					{joinUrl}
 					seedName={(id) => data.kitchens.find((k) => k.id === id)?.name ?? 'a seeded kitchen'}
 					canShortage={!data.simulated && (data.presenter || data.room.kind === 'own')}
+					presenter={data.presenter && data.workspace === data.rooms.shared}
+					incident={lastIncident(stream.roomSims, INCIDENT_LABEL)}
 				/>
 			{:else if view === 'problems'}
 				<section class="problems" aria-label="Problems, biggest first">
