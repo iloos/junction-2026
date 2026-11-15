@@ -490,10 +490,19 @@ function titleOf(plan: Plan): string {
 
 /** The snapshot plus the workspace's kitchens, this visitor's own first; others' stores are left out. */
 async function buildSnapshot(s: Session): Promise<LiveSnapshot> {
-	const [body, all] = await Promise.all([
-		snapshotBody(s),
-		createServerPorts().then((b) => b.ports.store.kitchens(s.workspaceId))
-	]);
+	const all = await createServerPorts().then((b) => b.ports.store.kitchens(s.workspaceId));
+	// In the shared room a visitor works in their own store: the session moves to it, and a visitor with none yet is
+	// asked to join as one (started:false with the kitchens), never shown the room's seeded hotel as theirs. A plan
+	// opened by link is still shown (a read).
+	let room: NotStarted | null = null;
+	if (s.workspaceId === JUDGES_WORKSPACE && !s.presenter && !s.planId) {
+		const own = all.filter((k) => !!s.visitor && k.owner === s.visitor);
+		if (!own.some((k) => k.id === s.kitchenId)) {
+			if (own.length) s.kitchenId = own[0].id;
+			else room = { started: false, kitchenId: s.kitchenId, event: null };
+		}
+	}
+	const body = room ?? (await snapshotBody(s));
 	const kitchens = all
 		.filter((k) => !k.owner || k.owner === s.visitor)
 		.map((k) => ({
@@ -531,11 +540,12 @@ async function snapshotBody(s: Session): Promise<FixtureSnapshot | NotStarted> {
 					...presetInput(kitchen, s),
 					// A preview, said explicitly: it writes nothing, so a room visitor may see the hotel's rankings.
 					apply: false
-				}) as Promise<SubstitutesOut>
+				}).catch(() => null) as Promise<SubstitutesOut | null>
 		)
 	);
+	// A preview that fails leaves that line without rankings; it never fails the snapshot (a read).
 	const rescues: Record<string, SubstitutesOut> = Object.fromEntries(
-		outages.map((l, i) => [l.id, previews[i]])
+		outages.flatMap((l, i) => (previews[i] ? [[l.id, previews[i]]] : []))
 	);
 
 	const ids = [

@@ -76,3 +76,32 @@ describe('per-line decisions', () => {
 		expect(after.approval?.state).toBe('pending');
 	}, 60_000);
 });
+
+describe('the shared room snapshot', () => {
+	it('a visitor with no store gets the join state, never the hotel; with a store, their store', async () => {
+		const W = 'ws-judges';
+		const presenter = {
+			own: 'ws-j-presenter000000000000000',
+			kind: 'shared' as const,
+			presenter: true
+		};
+		// The room's hotel has a plan with outages (what made the snapshot 500 on prod).
+		await scenario(`p-${Date.now()}`, W, 'start', undefined, undefined, presenter);
+
+		const visitor = {
+			own: `ws-j-${Date.now().toString(16).padStart(24, '0')}`,
+			kind: 'shared' as const
+		};
+		const sid = `v-${Date.now()}`;
+		const fresh = await snapshot(sid, W, visitor);
+		expect('started' in fresh && fresh.started === false).toBe(true);
+		expect(fresh.kitchens?.some((k) => k.mine)).toBe(false);
+
+		const { newKitchen } = await import('./live');
+		const made = await newKitchen(sid, W, visitor, { name: 'Room café', profile: 'cafe' }, null);
+		if (!made.ok) throw new Error(made.error.message);
+		const mine = await snapshot(sid, W, visitor);
+		expect(mine.kitchens?.[0]).toMatchObject({ id: made.value.kitchen.kitchenId, mine: true });
+		expect('kitchenId' in mine && mine.kitchenId).toBe(made.value.kitchen.kitchenId);
+	}, 120_000);
+});
