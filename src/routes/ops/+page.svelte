@@ -1496,4 +1496,54 @@
 	.figures .zero dt {
 		color: var(--faint);
 	}
+	/*
+	 * Compact header on a desktop or wall: the title and rooms on one line, the figures one short row, status and
+	 * actions in one line, so every tab starts high on the screen.
+	 */
+	@media (min-width: 761px) {
+		.room {
+			gap: 12px;
+			padding-top: 16px;
+		}
+		.room > header {
+			gap: 12px 32px;
+			align-items: center;
+			padding-bottom: 12px;
+		}
+		.title {
+			display: flex;
+			flex-wrap: wrap;
+			align-items: center;
+			gap: 8px 20px;
+		}
+		h1 {
+			font-size: 34px;
+		}
+		nav {
+			margin-top: 0;
+		}
+		.roomline {
+			display: none;
+		}
+		.status {
+			display: flex;
+			flex-wrap: wrap;
+			align-items: center;
+			justify-content: flex-end;
+			gap: 8px 18px;
+		}
+		.status .clock {
+			margin: 0;
+		}
+		.figures div {
+			padding: 10px 14px;
+			gap: 4px;
+		}
+		.figures dd {
+			font-size: 34px;
+		}
+		.figures dt {
+			font-size: 15px;
+		}
+	}
 </style>
