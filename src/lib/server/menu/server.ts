@@ -23,7 +23,7 @@ import {
 	type MenuPlanResult,
 	type MenuView
 } from './flow';
-import type { ProposeStep } from './proposal';
+import { sharedModelMenus, type ProposeStep } from './proposal';
 import { memoryMenuStore } from './store';
 import { groundingFor, groundMenuInBackground, needsGrounding } from '$lib/server/web/grounding';
 import { env } from '$env/dynamic/private';
@@ -66,7 +66,7 @@ export async function proposeFromRequest(o: {
 		llmKind(o.env) === 'fixture' ? null : createLlmRouter(o.env, trace).for('menu.propose');
 	const d = await deps(o.workspaceId);
 	const view = await proposeForBrief(
-		{ ...d, llm },
+		{ ...d, llm, modelMenus: sharedModelMenus },
 		{ kitchenId: o.kitchenId, brief, nonce: o.nonce, onStep: o.onStep }
 	);
 	// Each dish's ingredients against cited web recipes, in the background: evidence for the chef, never applied.
