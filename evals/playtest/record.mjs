@@ -228,13 +228,15 @@ for (let t = 1; ONLY.includes('A') && t <= TAKES; t++) {
 		n.order = (await order.innerText()).replace(/\s+/g, ' ');
 		await click(p, order);
 		await p
-			.getByText(/Ordered\s*·\s*\d+\s+lines?|Ordered: receipt|^Ordered \d+$/)
+			.getByText(/Ordered\s*·\s*\d+\s+lines?|Ordered: receipt/)
+			.or(p.getByRole('button', { name: /^Ordered \d+/ }))
 			.first()
 			.waitFor({ state: 'attached', timeout: 60_000 });
 		await pause(p, 1500);
 		n.ordered = (
 			(await p
-				.getByText(/Ordered\s*·\s*\d+\s+lines?|Ordered: receipt|^Ordered \d+$/)
+				.getByText(/Ordered\s*·\s*\d+\s+lines?|Ordered: receipt/)
+				.or(p.getByRole('button', { name: /^Ordered \d+/ }))
 				.first()
 				.innerText()
 				.catch(() => '')) || ''

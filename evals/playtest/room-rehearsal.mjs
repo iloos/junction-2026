@@ -159,7 +159,8 @@ for (const [i, s] of stores.entries()) {
 				.click({ timeout: 30_000 });
 		}
 		await p
-			.getByText(/Ordered\s*·\s*\d+\s+lines?|Ordered: receipt|^Ordered \d+$/)
+			.getByText(/Ordered\s*·\s*\d+\s+lines?|Ordered: receipt/)
+			.or(p.getByRole('button', { name: /^Ordered \d+/ }))
 			.first()
 			.waitFor({ state: 'attached', timeout: 60_000 });
 		await p.screenshot({ path: join(dir, `1${i}-store-${i + 1}-ordered.png`), fullPage: true });
