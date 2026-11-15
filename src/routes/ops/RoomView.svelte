@@ -342,8 +342,8 @@
 		</section>
 	{/if}
 
-	<!-- The presenter starts it from the panel above; the section appears with its outcome. -->
-	{#if !presenter || shortage || failed}
+	<!-- Shown with an outcome, or with its button for whoever may run one here; never as prose alone. -->
+	{#if (canShortage && !presenter) || shortage || failed}
 		<section class="shortage" aria-label="Shortage">
 			<div class="sh-head">
 				<h3>One shortage, every store</h3>
