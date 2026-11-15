@@ -60,7 +60,7 @@
 <section class="demand" aria-label="Demand, as the supplier sees it">
 	<header class="intro">
 		<h2>Demand, as Valio Aimo sees it</h2>
-		<p class="legend">
+		<p class="legend" hidden={!days.length}>
 			<span><i class="ordered"></i>ordered</span>
 			<span><i class="signed"></i>signed, not yet ordered</span>
 			<span><i class="proposed"></i>proposed</span>
