@@ -13,6 +13,15 @@ export interface AvailabilityOverride {
 	/** Who set it ('contention', 'shortage'), so a scenario clears only its own and the screen reads its state here. */
 	tag?: string;
 }
+/** One overlay change, as it travels between processes: the workspace it is for (null = the base layer) and what. */
+export type OverlayOp = { ws: string | null } & (
+	| { op: 'availability'; o: AvailabilityOverride }
+	| { op: 'price'; o: PriceOverride }
+	| { op: 'noPrice'; productId: string; label: string }
+	| { op: 'clearTagged'; tag: string }
+	| { op: 'clear' }
+);
+
 export interface PriceOverride {
 	productId: string;
 	unitCents: number;
@@ -56,15 +65,62 @@ export class SimOverlay {
 		return l;
 	}
 
+	/** Changes, for other processes on the same database (bus/overlay-sync.ts); remote changes are not re-sent. */
+	private listeners: ((op: OverlayOp) => void)[] = [];
+	onChange(fn: (op: OverlayOp) => void): () => void {
+		this.listeners.push(fn);
+		return () => (this.listeners = this.listeners.filter((f) => f !== fn));
+	}
+	private emit(op: OverlayOp) {
+		for (const f of this.listeners) f(op);
+	}
+	/** Apply a change another process made, to the workspace it names, without sending it on. */
+	applyRemote(op: OverlayOp) {
+		const run = () => this.change(op);
+		if (op.ws) inWorkspace(op.ws, run);
+		else run();
+	}
+	private change(op: OverlayOp) {
+		switch (op.op) {
+			case 'availability':
+				this.target().availability.set(op.o.productId, op.o);
+				return;
+			case 'price':
+				this.target().price.set(op.o.productId, op.o);
+				return;
+			case 'noPrice':
+				this.target().noPrice.set(op.productId, op.label);
+				return;
+			case 'clearTagged': {
+				const ws = scope.getStore();
+				const l = ws ? this.scoped.get(ws) : this.base;
+				if (l)
+					for (const [id, o] of l.availability) if (o.tag === op.tag) l.availability.delete(id);
+				return;
+			}
+			case 'clear': {
+				const ws = scope.getStore();
+				if (ws) this.scoped.delete(ws);
+				else this.base = new Layer();
+				return;
+			}
+		}
+	}
+	private local(op: OverlayOp) {
+		this.change(op);
+		this.emit(op);
+	}
+	private ws = () => scope.getStore() ?? null;
+
 	setAvailability(o: AvailabilityOverride) {
-		this.target().availability.set(o.productId, o);
+		this.local({ ws: this.ws(), op: 'availability', o });
 	}
 	setPrice(o: PriceOverride) {
-		this.target().price.set(o.productId, o);
+		this.local({ ws: this.ws(), op: 'price', o });
 	}
 	/** Valio returns no price for this product (a fact gap the gate must not paper over). */
 	setPriceMissing(productId: string, label: string) {
-		this.target().noPrice.set(productId, label);
+		this.local({ ws: this.ws(), op: 'noPrice', productId, label });
 	}
 	/** The current workspace's availability override for a product, if any (read, not applied). */
 	availabilityOf(productId: string): AvailabilityOverride | undefined {
@@ -73,16 +129,11 @@ export class SimOverlay {
 	}
 	/** Remove the current workspace's availability overrides that carry `tag`; others stay. */
 	clearTagged(tag: string) {
-		const ws = scope.getStore();
-		const l = ws ? this.scoped.get(ws) : this.base;
-		if (!l) return;
-		for (const [id, o] of l.availability) if (o.tag === tag) l.availability.delete(id);
+		this.local({ ws: this.ws(), op: 'clearTagged', tag });
 	}
 	/** Clear the current workspace's overrides (or, outside a scope, the base layer). */
 	clear() {
-		const ws = scope.getStore();
-		if (ws) this.scoped.delete(ws);
-		else this.base = new Layer();
+		this.local({ ws: this.ws(), op: 'clear' });
 	}
 
 	apply(offer: Offer): Offer {
