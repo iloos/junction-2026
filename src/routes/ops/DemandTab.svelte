@@ -80,6 +80,7 @@
 	{/if}
 
 	{#each days as d (d.date)}
+		{@const maxCents = Math.max(1, ...d.products.map((x) => x.cents))}
 		<article class="day" aria-label={d.day}>
 			<h3>{d.sentence}</h3>
 			<ul class="products">
@@ -88,8 +89,10 @@
 					<li>
 						<span class="name">{p.name}</span>
 						<span class="qty">{amount(total, p.unit)}</span>
+						<!-- Length is the product's euros against the day's largest; the fill splits it by stage. -->
 						<span
 							class="bar"
+							style:width={`${Math.max(3, (p.cents / maxCents) * 100)}%`}
 							role="img"
 							aria-label={split(p)}
 							title={`${split(p)} · ${p.kitchens} kitchen${p.kitchens === 1 ? '' : 's'}`}
