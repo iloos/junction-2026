@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { encode } from 'uqr';
+	import { enhance } from '$app/forms';
+	import { INCIDENT_LABEL, INCIDENTS } from './incidents';
 	import { onMount } from 'svelte';
 	import { flip } from 'svelte/animate';
 	import { fade, fly } from 'svelte/transition';
@@ -26,7 +28,9 @@
 		shortage,
 		joinUrl,
 		seedName,
-		canShortage
+		canShortage,
+		presenter = false,
+		incident = null
 	}: {
 		kitchens: OpsKitchen[];
 		totals: Record<string, { n: number; cents: number }>;
@@ -36,7 +40,20 @@
 		joinUrl: string | null;
 		seedName: (id: string) => string;
 		canShortage: boolean;
+		/** The presenter in the shared room: incidents and the room reset. */
+		presenter?: boolean;
+		/** The newest incident's re-plans, one per product (stream notices labelled "Simulated incident: …"). */
+		incident?: { label: string; shortages: ShortageReplanned[] } | null;
 	} = $props();
+
+	const story = $derived(
+		incident ? INCIDENTS.find((i) => incident.label.endsWith(i.title)) : undefined
+	);
+	/** Seed names carry "(fictional)" for the data's sake; the room shows the store's name alone. */
+	const plainName = (n: string) => n.replace(/\s*\(fictional\)$/, '');
+	let deckBusy = $state<string | null>(null);
+	let deckNote = $state<string | null>(null);
+	let confirmReset = $state(false);
 
 	/** Sample kitchens shown before the rest fold behind "+N sample kitchens". */
 	const SAMPLES_SHOWN = 5;
@@ -192,6 +209,93 @@
 		{/if}
 	</header>
 
+	{#if presenter}
+		<section class="deck" aria-label="Incidents">
+			<h3>Run an incident</h3>
+			<div class="deck-row">
+				{#each INCIDENTS as inc (inc.id)}
+					<form
+						method="POST"
+						action="?/incident"
+						use:enhance={() => {
+							deckBusy = inc.id;
+							deckNote = null;
+							return async ({ result, update }) => {
+								deckBusy = null;
+								if (result.type === 'failure')
+									deckNote = String(result.data?.message ?? 'The incident could not run.');
+								await update({ reset: false, invalidateAll: false });
+							};
+						}}
+					>
+						<input type="hidden" name="id" value={inc.id} />
+						<button class="incident" disabled={!!deckBusy}>
+							{deckBusy === inc.id ? 'Re-planning every store…' : inc.title}
+						</button>
+					</form>
+				{/each}
+			</div>
+			{#if deckNote}<p class="note bad">{deckNote}</p>{/if}
+			<div class="reset-row">
+				{#if !confirmReset}
+					<button class="linkish" onclick={() => (confirmReset = true)}>Reset the room…</button>
+				{:else}
+					<form
+						method="POST"
+						action="?/resetRoom"
+						use:enhance={() => {
+							return async ({ result, update }) => {
+								confirmReset = false;
+								if (result.type === 'failure')
+									deckNote = String(result.data?.message ?? 'The room could not be reset.');
+								else
+									deckNote = `Room reset: ${String(result.type === 'success' ? (result.data?.removed ?? 0) : 0)} visitor stores removed, a fresh run started.`;
+								await update({ reset: false });
+							};
+						}}
+					>
+						<input type="hidden" name="confirm" value="yes" />
+						<span class="warn-text">Removes every visitor store, plan and order in this room.</span>
+						<button class="danger">Reset the room</button>
+						<button type="button" class="linkish" onclick={() => (confirmReset = false)}
+							>Cancel</button
+						>
+					</form>
+				{/if}
+			</div>
+		</section>
+	{/if}
+
+	{#if incident}
+		<section class="incident-view" aria-label="Simulated incident">
+			<p class="sim-label">{INCIDENT_LABEL}</p>
+			<h3>{story?.title ?? incident.label.replace(`${INCIDENT_LABEL}: `, '')}</h3>
+			{#if story}<p class="story">{story.story}</p>{/if}
+			{#each incident.shortages as sh (sh.shortageId)}
+				<p class="sentence">{shortageSentence(sh)}</p>
+				<ul>
+					{#each sh.kitchens.filter((k) => k.outcome !== 'unaffected') as k (k.kitchenId)}
+						<li class="o-{k.outcome}">
+							<span class="name">{plainName(k.kitchenName)}</span>
+							<span class="chip">{OUTCOME_WORDS[k.outcome] ?? k.outcome}</span>
+							<span class="why">
+								{k.why}
+								{#if k.swaps.length}
+									<span class="swap"
+										>{k.swaps.map((x) => `${x.fromName} → ${x.toName}`).join('; ')}</span
+									>
+								{/if}
+								{#if k.allowedBy}<span class="rule">{k.allowedBy}</span>{/if}
+							</span>
+						</li>
+					{:else}
+						<li class="o-unaffected"><span class="why">No store's open plan uses it.</span></li>
+					{/each}
+				</ul>
+			{/each}
+		</section>
+	{/if}
+
 	<section class="shortage" aria-label="Shortage">
 		<div class="sh-head">
 			<h3>One shortage, every store</h3>
@@ -207,7 +311,7 @@
 			<ul>
 				{#each shortage.kitchens as k (k.kitchenId)}
 					<li class="o-{k.outcome}" in:fly={{ x: -12 }}>
-						<span class="name">{k.kitchenName}</span>
+						<span class="name">{plainName(k.kitchenName)}</span>
 						<span class="chip">{OUTCOME_WORDS[k.outcome] ?? k.outcome}</span>
 						<span class="why">
 							{k.why}
@@ -474,6 +578,93 @@
 	.note {
 		color: var(--muted);
 		margin: 0;
+	}
+	.deck {
+		display: grid;
+		gap: 8px;
+		padding: 12px 16px;
+		border: 1px dashed var(--line);
+		border-radius: 8px;
+	}
+	.deck-row {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 8px;
+	}
+	.incident {
+		padding: 8px 14px;
+		border-radius: 6px;
+		border: 1px solid var(--sign-off);
+		background: none;
+		color: var(--text);
+		cursor: pointer;
+	}
+	.incident:disabled {
+		opacity: 0.6;
+		cursor: progress;
+	}
+	.reset-row form {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 8px;
+		align-items: center;
+	}
+	.warn-text {
+		color: var(--blocked);
+		font-size: 0.875rem;
+	}
+	.danger {
+		padding: 6px 12px;
+		border-radius: 6px;
+		border: 0;
+		background: var(--blocked);
+		color: #fff;
+		font-weight: 600;
+		cursor: pointer;
+	}
+	.linkish {
+		background: none;
+		border: 0;
+		padding: 0;
+		color: var(--muted);
+		text-decoration: underline;
+		cursor: pointer;
+		font-size: 0.875rem;
+	}
+	.incident-view {
+		display: grid;
+		gap: 4px;
+		padding: 12px 16px;
+		border-left: 4px solid var(--sign-off);
+		background: color-mix(in srgb, var(--sign-off) 8%, transparent);
+		border-radius: 4px;
+	}
+	.incident-view h3 {
+		margin: 0;
+		font-size: 1.25rem;
+	}
+	.sim-label {
+		margin: 0;
+		font-size: 0.75rem;
+		font-weight: 700;
+		letter-spacing: 0.04em;
+		text-transform: uppercase;
+		color: var(--sign-off);
+	}
+	.story {
+		margin: 0 0 8px;
+		font-size: 1.0625rem;
+	}
+	.incident-view ul {
+		margin-bottom: 8px;
+	}
+	.incident-view li {
+		display: grid;
+		grid-template-columns: minmax(8rem, 14rem) 11rem minmax(0, 1fr);
+		gap: 4px 12px;
+		padding: 6px 0;
+		border-bottom: 1px solid var(--line);
+		align-items: baseline;
 	}
 	.bigbtn {
 		margin-top: 6px;

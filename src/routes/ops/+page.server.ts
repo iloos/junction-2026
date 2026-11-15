@@ -14,6 +14,8 @@ import {
 } from '$lib/server/demo/presenter';
 import { ensureRunLoaded, resetDemo } from '$lib/server/demo/reset';
 import { DEMO_WORKSPACE, JUDGES_WORKSPACE } from '$lib/server/demo/workspaces';
+import { resetRoom, runIncident } from '$lib/server/demo/incidents';
+import { INCIDENTS, incidentLabel } from './incidents';
 import { currentRun, currentRunStartedAt } from '$lib/server/demo/run';
 import { isSandbox, resetSandbox } from '$lib/server/demo/sandbox';
 import { roomLabel, roomNotice, visitorWorkspace, ROOM_COOKIE } from '$lib/server/demo/visitor';
@@ -140,6 +142,7 @@ const agentWorkspace = () => env.MANDATE_WORKSPACE || DEMO_WORKSPACE;
  */
 const COOLDOWN_MS = 20_000;
 let lastReset = 0;
+let lastIncident = 0;
 let lastStart = 0;
 
 const formField = async (request: Request, name: string) => {
@@ -188,6 +191,34 @@ export const actions: Actions = {
 		if (!r.ok) return fail(404, { message: 'That run is no longer in progress.' });
 		await r.done;
 		return { cancelled: id };
+	},
+	/** Presenter only, in the shared room: run one canned incident through the shortage cascade. */
+	incident: async (event) => {
+		const { v, workspace } = await opsWorkspace(event);
+		if (!v.presenter || workspace !== JUDGES_WORKSPACE)
+			return fail(403, { message: 'Only the presenter runs incidents, in the shared room.' });
+		const id = await formField(event.request, 'id');
+		const inc = INCIDENTS.find((i) => i.id === id);
+		if (!inc) return fail(400, { message: 'Which incident? The form named none we know.' });
+		if (Date.now() - lastIncident < COOLDOWN_MS)
+			return fail(429, { message: 'An incident just ran; wait a moment.' });
+		lastIncident = Date.now();
+		try {
+			const results = await runIncident(workspace, { ...inc, label: incidentLabel(inc) });
+			return { incident: inc.id, stores: results.reduce((n, r) => n + r.kitchens.length, 0) };
+		} catch (e) {
+			return fail(500, { message: e instanceof Error ? e.message : String(e) });
+		}
+	},
+	/** Presenter only: start the shared room over (visitors' stores, plans and orders go; samples stay). */
+	resetRoom: async (event) => {
+		const { v, workspace } = await opsWorkspace(event);
+		if (!v.presenter || workspace !== JUDGES_WORKSPACE)
+			return fail(403, { message: 'Only the presenter resets the shared room.' });
+		if ((await formField(event.request, 'confirm')) !== 'yes')
+			return fail(400, { message: 'Confirm the reset first.' });
+		const r = await resetRoom(workspace);
+		return { roomReset: r.runId, removed: r.removed, startedAt: currentRunStartedAt(workspace) };
 	},
 	resetRun: async (event) => {
 		const { v, workspace, viewOnly } = await opsWorkspace(event);
