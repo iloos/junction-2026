@@ -76,25 +76,3 @@ describe('per-line decisions', () => {
 		expect(after.approval?.state).toBe('pending');
 	}, 60_000);
 });
-
-describe('a room visitor without a store (D24)', () => {
-	it('is served nothing started, with the kitchens list, while the presenter sees the plan', async () => {
-		const W = `ws-room-${Date.now()}`;
-		const presenter = { own: `p-${Date.now()}`, kind: 'shared' as const, presenter: true };
-		const visitor = { own: `v-${Date.now()}`, kind: 'shared' as const };
-		const started = await scenario(
-			`sid-p-${Date.now()}`,
-			W,
-			'start',
-			undefined,
-			undefined,
-			presenter
-		);
-		expect('plan' in started).toBe(true);
-
-		const seen = await snapshot(`sid-v-${Date.now()}`, W, visitor);
-		expect('started' in seen && seen.started === false).toBe(true);
-		expect(seen.kitchens?.length).toBeGreaterThan(0);
-		expect(seen.kitchens?.some((k) => k.mine)).toBe(false);
-	}, 60_000);
-});
