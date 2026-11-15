@@ -286,10 +286,13 @@ journey(
 			const held = lines.filter((l) => l.state === 'held').length;
 			let inDecisions = 0;
 			for (const b of await page
-				.getByRole('button', { name: /^(Review|Hold to sign off) \d+ lines?/ })
+				.getByRole('button', {
+					name: /^(Accept these|Review and sign off|Review|Hold to sign off) \d+/
+				})
 				.all())
 				if (await b.isVisible().catch(() => false))
-					inDecisions += Number(((await b.innerText()).match(/(\d+) lines?/) ?? [])[1] ?? 0);
+					// D29's "Accept these N" names no "lines": take the first number on the button.
+					inDecisions += Number(((await b.innerText()).match(/^\D*(\d+)/) ?? [])[1] ?? 0);
 			r.note('decisionCover', { held, inDecisions });
 			if (held !== inDecisions)
 				throw new Error(`${held} held lines, ${inDecisions} lines across the decisions`);
