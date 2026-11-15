@@ -17,6 +17,10 @@ const KNOWN: { test: (e: ErrorLike) => boolean; words: string }[] = [
 		words: "That line is already ordered, so it can't change now."
 	},
 	{
+		test: (e) => e.code === 'TERMS_CHANGED' || /TERMS_CHANGED/.test(e.message),
+		words: 'The plan changed since you rejected it: decide this line again.'
+	},
+	{
 		test: (e) => e.code === 'STALE_VERSION' || /STALE_VERSION/.test(e.message),
 		words: 'The plan changed in the meantime. The page now shows the latest version: try again.'
 	},
