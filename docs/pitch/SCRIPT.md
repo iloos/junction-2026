@@ -20,6 +20,7 @@ Prepare before going on: a fresh browser profile on the laptop, logged into noth
 1. **0–10 s:** open the chat dock and type "a no-meat dinner for 120 with a peach dessert". Say: "One sentence."
 2. **10–25 s:** the menu card appears. Say: "Gemini proposes six dishes; every amount is an estimate." Type "plan it".
 3. **25–50 s:** the plan appears. Point at one item ordered alone, one waiting for the chef (with its reason), and one refused. Say: "Every ingredient is a Valio product with a price, or it says why not."
+   - If the plan shows no refused item: point at one ordered alone and one waiting, and say "Anything impossible would be refused with its reason; the buffet slide showed three." (S5 is confirming the three outcomes on the submitted deploy.)
 4. **50–65 s:** tap Accept on the decision. Say: "The chef's yes covers exactly these items."
 5. **65–75 s:** switch to the Ops tab: the order has arrived. Say: "And it lands on Valio's side." Switch back to the deck, slide 8.
 
