@@ -161,7 +161,8 @@
 		},
 		{
 			"q": "myskikurpitsa",
-			"unresolved": true
+			"accept": "myskikurpitsakuutio|butternut",
+			"reject": "keitto|pyree|sose"
 		},
 		{
 			"q": "siikafilee",

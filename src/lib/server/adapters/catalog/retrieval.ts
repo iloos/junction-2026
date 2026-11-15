@@ -289,6 +289,32 @@ interface Indexed {
 const FORM_WORD =
 	/^(?:\w+(?:ttu|tty|ttuja|ttyjä|nut|nyt))$|^(?:pakaste|pakasteet|kypsä|raaka|tuore|premium|vapaa|vapaan|luomu|irto|frozen|froze|fresh|fried|prefried|smoked|sliced|diced|cooked|organic|barn|free|range|pre|kpl|pcs|pkt|ltk|psv|ras|quick)$/;
 
+/**
+ * Recipe words the catalogue names differently: a menu's "myskikurpitsa" is sold as butternut or diced squash, a
+ * "metsäsieni" (forest mushroom) as chanterelle or funnel chanterelle.
+ */
+const INGREDIENT_ALIASES: [RegExp, string[]][] = [
+	[/myskikurpitsa\S*/, ['myskikurpitsakuutio', 'butternut']],
+	[/metsäsien\S*/, ['kantarelli', 'suppilovahvero']]
+];
+
+/**
+ * Other ways to read a recipe line that found nothing: without the packing liquid ("persikanpuolikkaat
+ * sokeriliemessä" is the halves, whatever they are packed in), then the aliases above. "tuore" stays: without it
+ * "tuore timjami" finds dried thyme, and unresolved is the honest answer.
+ */
+export function rewordings(raw: string): string[] {
+	const s = raw.toLowerCase().replace(/\s+/g, ' ').trim();
+	const plain = s
+		.replace(/\s\S*(?:liemessä|mehussa|siirapissa|öljyssä|vedessä)(?=\s|$).*$/, '')
+		.replace(/\s+/g, ' ')
+		.trim();
+	const out = plain && plain !== s ? [plain] : [];
+	for (const [w, alts] of INGREDIENT_ALIASES)
+		if (w.test(plain)) for (const a of alts) out.push(plain.replace(w, a));
+	return out;
+}
+
 const PORTION = /annos|portion|sachet|stick|pussi(?:t|a)?\b/i;
 /** Many small units sold together: "500x5g", "4,5g x 800kpl", or a portion word in either name. */
 function isPortionPack(p: RetrievalProduct | undefined): boolean {
@@ -510,6 +536,18 @@ export class RetrievalIndex {
 	 * `diet` (e.g. ['LACTOSE'] for a lactose-free menu). Unresolved results say which bar was not cleared.
 	 */
 	resolve(raw: string, o: { limit?: number; diet?: string[] } = {}): Resolution {
+		const first = this.resolveOne(raw, o);
+		if (first.status === 'resolved') return first;
+		// A recipe's wording the catalogue doesn't use: tried only when the line as written finds nothing, each through
+		// the same diet and guard, so a rewording never loosens what the line must meet.
+		for (const alt of rewordings(raw)) {
+			const r = this.resolveOne(alt, o);
+			if (r.status === 'resolved') return r;
+		}
+		return first;
+	}
+
+	private resolveOne(raw: string, o: { limit?: number; diet?: string[] }): Resolution {
 		// A recipe line reads as its ingredient: notes in brackets go; of alternatives the named one stays ("voi tai
 		// margariini" is butter; the prefix form "vispi- tai kuohukermaa" is the full word, kuohukerma); plural fillets
 		// read as the fillet ("kirjolohifileet"). Quantities and units are not content words anyway.
