@@ -207,7 +207,9 @@
 	<header class="head">
 		<div class="sum">
 			<h2>
-				{kitchens.length} store{kitchens.length === 1 ? '' : 's'} in this room
+				{kitchens.length} store{kitchens.length === 1 ? '' : 's'} in this room<span class="rules"
+					>&nbsp;· each orders under its own rules</span
+				>
 			</h2>
 			<p class="counts">
 				<!-- Only what is happening: a zero says nothing on a wall. -->
@@ -223,7 +225,6 @@
 				{#if !orderCount && !nWaiting && !nPlanning}<span>No orders yet</span>{/if}
 			</p>
 			{#if byKind}<p class="kinds">{byKind}</p>{/if}
-			<p>Every store orders under its own rules.</p>
 		</div>
 		{#if joinUrl && qr}
 			<div class="join">
@@ -274,8 +275,19 @@
 	{/if}
 
 	{#if presenter}
-		<section class="deck" aria-label="Incidents">
-			<h3>Run an incident</h3>
+		<section class="deck" aria-label="Make something happen">
+			<h3>Make something happen</h3>
+			{#if canShortage}
+				<div class="deck-main">
+					<button class="primary" onclick={runShortage} disabled={running}>
+						{running ? 'Re-planning every store…' : 'Run a shortage'}
+					</button>
+					<span class="deck-hint"
+						>One product runs short; every store re-plans inside its own rules.</span
+					>
+				</div>
+			{/if}
+			<p class="deck-sub">Or a simulated incident:</p>
 			<div class="deck-row">
 				{#each INCIDENTS as inc (inc.id)}
 					<form
@@ -330,42 +342,48 @@
 		</section>
 	{/if}
 
-	<section class="shortage" aria-label="Shortage">
-		<div class="sh-head">
-			<h3>One shortage, every store</h3>
-			{#if canShortage}
-				<button class="primary" onclick={runShortage} disabled={running}>
-					{running ? 'Re-planning every store…' : 'Run a shortage'}
-				</button>
+	<!-- The presenter starts it from the panel above; the section appears with its outcome. -->
+	{#if !presenter || shortage || failed}
+		<section class="shortage" aria-label="Shortage">
+			<div class="sh-head">
+				<h3>One shortage, every store</h3>
+				{#if canShortage && !presenter}
+					<button class="primary" onclick={runShortage} disabled={running}>
+						{running ? 'Re-planning every store…' : 'Run a shortage'}
+					</button>
+				{/if}
+			</div>
+			{#if failed}<p class="note bad">{failed}</p>{/if}
+			{#if shortage}
+				<p class="sentence">{shortageSentence(shortage)}</p>
+				<ul>
+					{#each affectedFirst(shortage.kitchens) as k, i (k.kitchenId)}
+						<li
+							class="o-{k.outcome}"
+							in:fly={{ y: 10, delay: Math.min(i, 12) * 60, duration: 320 }}
+						>
+							<span class="name">{plainName(k.kitchenName)}</span>
+							<span class="chip">{OUTCOME_WORDS[k.outcome] ?? k.outcome}</span>
+							<span class="why">
+								{k.why}
+								{#if k.swaps.length}
+									<span class="swap"
+										>{k.swaps.map((s) => `${s.fromName} → ${s.toName}`).join('; ')}</span
+									>
+								{/if}
+								{#if k.allowedBy}<span class="rule">{k.allowedBy}</span>{/if}
+							</span>
+						</li>
+					{/each}
+				</ul>
+			{:else if !presenter}
+				<p class="note">
+					When a product runs short, each store re-plans inside its own rules. The answer differs
+					per store.
+				</p>
 			{/if}
-		</div>
-		{#if failed}<p class="note bad">{failed}</p>{/if}
-		{#if shortage}
-			<p class="sentence">{shortageSentence(shortage)}</p>
-			<ul>
-				{#each affectedFirst(shortage.kitchens) as k, i (k.kitchenId)}
-					<li class="o-{k.outcome}" in:fly={{ y: 10, delay: Math.min(i, 12) * 60, duration: 320 }}>
-						<span class="name">{plainName(k.kitchenName)}</span>
-						<span class="chip">{OUTCOME_WORDS[k.outcome] ?? k.outcome}</span>
-						<span class="why">
-							{k.why}
-							{#if k.swaps.length}
-								<span class="swap"
-									>{k.swaps.map((s) => `${s.fromName} → ${s.toName}`).join('; ')}</span
-								>
-							{/if}
-							{#if k.allowedBy}<span class="rule">{k.allowedBy}</span>{/if}
-						</span>
-					</li>
-				{/each}
-			</ul>
-		{:else}
-			<p class="note">
-				When a product runs short, each store re-plans inside its own rules. The answer differs per
-				store.
-			</p>
-		{/if}
-	</section>
+		</section>
+	{/if}
 
 	<div class="cols">
 		<section class="stores" aria-label="Stores">
@@ -968,5 +986,43 @@
 	.shortage li.o-unaffected .why {
 		font-size: var(--text-meta);
 		line-height: var(--text-meta--line-height);
+	}
+	.head {
+		align-items: center;
+	}
+	.head h2 .rules {
+		color: var(--muted);
+		font-weight: 400;
+		font-size: var(--text-title);
+	}
+	.join svg {
+		width: 96px;
+		height: 96px;
+	}
+	.deck {
+		border-style: solid;
+		background: var(--panel);
+	}
+	.deck-main {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 8px 16px;
+	}
+	.deck-hint,
+	.deck-sub {
+		margin: 0;
+		color: var(--muted);
+		font-size: var(--text-meta);
+	}
+	.deck-sub {
+		margin-top: 4px;
+	}
+	.deck .incident {
+		border-color: var(--line);
+		font-size: var(--text-meta);
+	}
+	.deck .incident:hover {
+		border-color: var(--sign-off);
 	}
 </style>
