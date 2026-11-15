@@ -144,7 +144,8 @@
 					<p class="mt-1.5 text-meta text-ink-2">
 						{exact
 							? "This product's own photo"
-							: (thumb.label ?? 'Pack may differ')}&nbsp;· from {thumb.host}</span
+							: (thumb.label ?? 'Pack may differ')}{#if thumb.host}<span
+								>&nbsp;· from {thumb.host}</span
 							>{/if}
 					</p>
 				</Popover.Content>
