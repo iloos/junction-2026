@@ -26,7 +26,8 @@
 		/** The row just changed: tint lands and fades. */
 		flash?: boolean;
 		/** For a substitute: the product it replaces and why, in plain words. */
-		replaces?: { name: string; because: string };
+		/** For a substitute: the product it replaces and why, and why the agent picked this one (≤3 words). */
+		replaces?: { name: string; because: string; picked?: string | null };
 		/** The product's diet and allergen marks (G, L, M…). */
 		diet?: Marks;
 		/** An agent last changed this line (proposed or edited it). */
@@ -113,7 +114,8 @@
 			</button>
 			{#if replaces}
 				<p class="text-meta text-ink-2">
-					Replaces <span class="text-ink">{replaces.name}</span>: {replaces.because}{#if by}
+					{#if replaces.picked}<span class="text-ink">Picked: {replaces.picked}</span> · replaces{:else}Replaces{/if}
+					<span class="text-ink">{replaces.name}</span> ({replaces.because}){#if by}
 						&nbsp;· <AgentMark {by} />{/if}
 				</p>
 			{:else if by}<p><AgentMark {by} /></p>
