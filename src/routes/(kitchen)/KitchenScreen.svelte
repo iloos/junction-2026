@@ -1221,10 +1221,34 @@
 				{/if}
 			</span>
 		{/if}
-		{#if roomNotice}
-			<p class="min-w-0 rounded-md bg-signoff-wash px-2 py-1 text-meta text-ink" role="note">
-				{roomNotice}
+		{#if mode === 'live'}
+			<!-- Where you are (D24/D26): your own sandbox or the live room, and the way to the other. -->
+			<!-- eslint-disable svelte/no-navigation-without-resolve -- room switches are full loads with a query -->
+			<p
+				class="flex min-w-0 flex-wrap items-center gap-x-1.5 text-meta text-ink-2"
+				aria-label="Where you are"
+			>
+				{#if roomNotice}
+					<span class="rounded bg-signoff-wash px-1.5 py-px font-medium text-ink" title={roomNotice}
+						>Live room</span
+					>
+					<span>· You: <span class="text-ink">{own[0]?.name ?? 'no store yet'}</span></span>
+					<span class="text-ink-3">· others see what you type ·</span>
+					<a
+						href="/?ws=mine"
+						data-sveltekit-reload
+						class="underline underline-offset-2 hover:text-ink">Leave</a
+					>
+				{:else}
+					<span>Your sandbox ·</span>
+					<a
+						href="/?ws=ws-judges"
+						data-sveltekit-reload
+						class="underline underline-offset-2 hover:text-ink">Join the live room →</a
+					>
+				{/if}
 			</p>
+			<!-- eslint-enable svelte/no-navigation-without-resolve -->
 		{/if}
 		{#if !snap && k.started === false && !needsJoin}
 			<p
