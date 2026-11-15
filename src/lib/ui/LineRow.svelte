@@ -99,6 +99,27 @@
 	/** The chef rejected it (a denied decision): it stays in place, struck, until undone. */
 	const denied = $derived(decide?.state === 'denied');
 	const b = $derived(lineBasis(l.qty, l.view));
+	/** A stepper press shows at once (pending style) and settles when the plan comes back with the new amount. */
+	let pending = $state<number | null>(null);
+	$effect(() => {
+		void l.qty.value;
+		void l.lineCents;
+		pending = null;
+	});
+	const qtyNow = $derived(pending ?? l.qty.value);
+	const centsNow = $derived(
+		pending != null && l.lineCents != null && l.qty.value > 0
+			? Math.round((l.lineCents / l.qty.value) * pending)
+			: l.lineCents
+	);
+	let settle: ReturnType<typeof setTimeout> | undefined;
+	function step(to: number) {
+		pending = Math.max(0, to);
+		onqty?.(pending);
+		// A refused edit leaves the line as it was: the pending figure falls back to it.
+		clearTimeout(settle);
+		settle = setTimeout(() => (pending = null), 8000);
+	}
 	/** A lot step that buys well over the need is said on the row, not only in the detail. */
 	const lot = $derived(lotSentence(l.qty.rounding));
 	const hasDetail = $derived(!rejected && !!(b.physical || b.unitPrice || l.qty.rounding));
@@ -204,8 +225,14 @@
 			{/if}
 		</div>
 	</div>
-	<span class="mono text-right text-body {rejected ? 'text-ink-3' : 'text-ink'}">
-		{rejected ? '—' : money(l.lineCents)}
+	<span
+		class="mono text-right text-body {rejected
+			? 'text-ink-3'
+			: pending != null
+				? 'text-ink-3 italic'
+				: 'text-ink'}"
+	>
+		{rejected ? '—' : money(centsNow)}
 	</span>
 	<span
 		class="col-span-2 flex flex-wrap items-center gap-2 sm:col-span-1 sm:justify-end lg:justify-start"
@@ -221,18 +248,22 @@
 					type="button"
 					class="grid h-full w-7 place-items-center rounded-l-md text-ink-2 hover:bg-well hover:text-ink disabled:opacity-40"
 					aria-label="One less"
-					disabled={l.qty.value <= 0}
-					onclick={() => onqty(Math.max(0, l.qty.value - 1))}>−</button
+					disabled={qtyNow <= 0}
+					onclick={() => step(qtyNow - 1)}>−</button
 				>
-				<span class="mono px-1 whitespace-nowrap text-ink tabular-nums"
-					>{l.qty.value}
-					<span class="font-sans text-ink-2">{unitWord(l.qty.unit, l.qty.value)}</span></span
+				<span
+					class="mono px-1 whitespace-nowrap tabular-nums {pending != null
+						? 'text-ink-3 italic'
+						: 'text-ink'}"
+					aria-live="polite"
+					>{qtyNow}
+					<span class="font-sans text-ink-2">{unitWord(l.qty.unit, qtyNow)}</span></span
 				>
 				<button
 					type="button"
 					class="grid h-full w-7 place-items-center rounded-r-md text-ink-2 hover:bg-well hover:text-ink"
 					aria-label="One more"
-					onclick={() => onqty(l.qty.value + 1)}>+</button
+					onclick={() => step(qtyNow + 1)}>+</button
 				>
 			</span>
 		{/if}
