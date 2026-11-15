@@ -49,6 +49,7 @@ import { decisionsDue, decisionsOf } from '$lib/ui/decisions';
 import type { ReceiptView } from '$lib/ui/Receipt.svelte';
 import { interpretDish, type InterpretDish } from './dish';
 import { decideAsChef, decisionWords } from './decide';
+import { steerLine, steerWords } from './steer';
 import { planName } from '$lib/server/agent/plan-name';
 
 /**
@@ -578,6 +579,23 @@ async function* turnLines(
 			text: d.text,
 			canContinue: d.acted && chefDecision.decision === 'grant'
 		};
+		return;
+	}
+	// D28: the chef steers a line of this conversation's order ("something cheaper", "a Finnish one").
+	const steerAsk =
+		words && deps.ctx.actor.kind === 'chef' && task.plans.length && expected !== null
+			? steerWords(withoutKitchen(words))
+			: null;
+	if (steerAsk) {
+		const planId =
+			task.pending.kind === 'decision'
+				? task.pending.planId
+				: (task.plans.find((x) => x.role === 'primary')?.planId ?? task.plans[0].planId);
+		const s = await steerLine(steerAsk, planId, deps.ctx, deps.handlers);
+		if (s.changed)
+			for (const e of await taskView(task.id, deps))
+				if (e.type === 'decision' || e.type === 'ledger') yield e;
+		yield { type: 'done', taskId: task.id, state: task.state, text: s.text, canContinue: false };
 		return;
 	}
 	const reading = words ? classifyGoal(withoutKitchen(words), deps.today) : null;

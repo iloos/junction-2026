@@ -106,6 +106,20 @@ In priority order, for the Conversation session that takes over B, E and 41 (rin
 
 - Sun 15 Nov ~02:40 (S3, ring 6) · done: shares reading e48dc9e; moment 2 brief/menu (diet swaps, named ingredient, counted shares) 67c72be, 08336d4; vegan milk never a sorbet f4478d5; lost tasks ed15d15; visitor at the chat/request doors 564d4d9; hero "plan it" loop 6f70626; F1 reconcile aa4bc21; F6 9be7781; supply-first menu picks 5db260f; one candidate order (D15 st.2) 4df5c9f; chat kitchen fallback 37ede39; OM-8/9 d02d269; short-line replies 57b35a9; D22 approve from the dock fd7d6ae; room P0 8673da2; "order it" 9bd91ad; /request = conversation + ?new=1 e5fdde7 · stubbed: line cards in the transcript (dock store does not load on /request; patch in scratch/dock-linerow.patch) · needs: nav label "Ask the agent" and Kitchen "New order" → /request?new=1 (S2/layout); bold renderer in the dock (S2) · ready to merge: yes
 
+- **Checkpoint, Sun 15 Nov ~02:50 (S3, ring 6).** Branch `lane/b2-request` at the commit that adds this line, rebased on main 0332013; lane gate (`--only check,lint`) GREEN; request+chat+evals+agent 562 pass.
+  - **Open, in order:**
+    1. Line cards in the transcript (D23 (2)): the dock's own KitchenStore doesn't load on /request, so the decision card is read-only there; typed "approve all" works (D22). Patch offered to S2: `scratch/dock-linerow.patch` (LineRow `decide` + Accept all).
+    2. Bold in replies: needs a `**x**`-only renderer in the dock (S2); emit markup only after it lands.
+    3. D28 steer words ("something cheaper", "no, a Finnish one", "if no ham then salmon") → find_substitutes `steer` / edit_line, same reading in chat and on the page.
+    4. Per-share dishes beyond vegan/vegetarian mains (gluten-free:N etc.) in the template menu.
+  - **Traps:**
+    - Shell edits and node heredocs mangle `\n`, `\s`, `\b` in TS: use the Edit tool, or write the replacement to a file and splice it.
+    - Vitest's server project hides console output on passing tests: probes write to `scratch/*.txt`.
+    - Dev here: every browser is a presenter, and the blank-DB store can't add kitchens (`/kitchen-api/kitchen` → PROVIDER_UNAVAILABLE).
+    - The chat's decision memory is `task.shown.decision` (what was shown); `task.pending` is refreshed by a listener when the plan moves.
+    - Stopping the dev server on Windows can leave node on :5185 (find the PID with netstat and stop it).
+  - **How to resume:** `cd ../junc26-lanes/request && git rebase main && pnpm i --frozen-lockfile`; `DATABASE_URL= LLM_PROVIDER=fixture pnpm dev --port 5185 --strictPort`; tests `DATABASE_URL= LLM_PROVIDER=fixture npx vitest run --project server src/lib/server/request src/lib/server/menu src/lib/server/chat src/lib/server/agent src/lib/server/evals`; browser checks `node scratch/s3-hero.mjs <base> 1440|390`, `scratch/s3-d23.mjs`, `scratch/s3-new.mjs`, `scratch/s3-room.mjs`; gate `pnpm gate --only check,lint`.
+
 ## Run
 ```bash
 cd ../junc26-lanes/request && git rebase main && pnpm i
