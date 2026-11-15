@@ -65,7 +65,7 @@ svg.wires { position: absolute; left: 0; top: 0; overflow: visible; pointer-even
 <div id="viewport"><div id="stage">
 
 <!-- 1 COVER -->
-<section class="slide night" data-notes="Mandate. Every item an agent wants to buy ends in one of three places: ordered, held for the chef, or refused." style="justify-content:space-between">
+<section class="slide night" data-notes="Mandate decides what a kitchen's buying agent may order by itself, and what has to wait for the chef." style="justify-content:space-between">
   <div class="a" style="display:flex; align-items:center; gap:22px">
     <svg width="72" height="72" viewBox="0 0 100 100" aria-hidden="true"><rect width="100" height="100" rx="24" fill="#1b2029"/><rect x="20" y="22" width="15" height="56" rx="7.5" fill="#1e9a98"/><rect x="42.5" y="22" width="15" height="34" rx="7.5" fill="#4f87d6"/><circle cx="50" cy="70" r="7.5" fill="#e6a34f"/><rect x="65" y="22" width="15" height="56" rx="7.5" fill="#1e9a98"/></svg>
     <p style="font-size:52px; font-weight:600; color:var(--night-ink); letter-spacing:-.5px">Mandate</p>
@@ -115,7 +115,7 @@ svg.wires { position: absolute; left: 0; top: 0; overflow: visible; pointer-even
 </section>
 
 <!-- 2 CASE -->
-<section class="slide" data-notes="A hotel kitchen. A Christmas buffet for 140 on Saturday: 21 items to buy. Valio Aimo is out of the ham, and the cut-off is Friday at five. An agent could order all of it, but the chef should only have to decide three things. So what may the agent buy alone?" style="justify-content:space-between">
+<section class="slide" data-notes="A hotel kitchen has a Christmas buffet for 140 on Saturday. That's 21 items to buy from Valio Aimo. The ham is out of stock, and orders close Friday at five. The chef should only have to make three decisions here. Which of the rest can an agent buy alone?" style="justify-content:space-between">
   <div style="display:flex; flex-direction:column; gap:40px">
     <p class="eyebrow a">The case</p>
     <h2 class="a">The ham is out, 140 are booked,<br>and the cut-off is 17:00.</h2>
@@ -137,7 +137,7 @@ svg.wires { position: absolute; left: 0; top: 0; overflow: visible; pointer-even
 </section>
 
 <!-- 3 RULES -->
-<section class="slide night" data-notes="The chef writes the rules once: 800 euros an item, never change an allergen, ask before anything new. The rules are code, and every item records which rule, or which yes, let it through. A chatbot can suggest a ham; only a mandate lets an agent buy one." style="justify-content:space-between">
+<section class="slide night" data-notes="The chef sets the rules once. Here the agent may spend up to 800 euros an item. It may never swap in a different allergen, and it asks before buying anything new. The rules run as code, and each item keeps a record of the rule or the approval behind it." style="justify-content:space-between">
   <div style="display:flex; flex-direction:column; gap:28px">
     <p class="eyebrow a">1 · The rules</p>
     <h2 class="a">The chef writes the rules once.<br>The code checks every item.</h2>
@@ -159,7 +159,7 @@ svg.wires { position: absolute; left: 0; top: 0; overflow: visible; pointer-even
 </section>
 
 <!-- 5 GATE -->
-<section class="slide" data-notes="The buffet on the live app: 21 items. 3 ordered alone, 302 euros. 3 impossible, each with the reason, and anything past the cut-off is caught and offered the next delivery day. The other 15 come down to three decisions for the chef: swap the ham, one new product, and two dishes made in house, which changes the allergens." style="justify-content:space-between">
+<section class="slide" data-notes="Of the 21 items, the agent orders 3 by itself, 302 euros. Another 3 can't be ordered, and each says why; anything past the cut-off is offered the next delivery day. The other 15 wait for the chef, grouped into three decisions." style="justify-content:space-between">
   <div style="display:flex; flex-direction:column; gap:40px">
     <p class="eyebrow a">2 · The buffet, on the live app</p>
     <h2 class="a">21 items to buy.<br>The chef decides 3 things.</h2>
@@ -185,7 +185,7 @@ svg.wires { position: absolute; left: 0; top: 0; overflow: visible; pointer-even
 </section>
 
 <!-- 6 DEMO -->
-<section class="slide night" data-notes="Live, 75 seconds: type the sentence, let Gemini propose the menu, say plan it, point at one waiting item and one refused, tap Accept, show the order arriving on Valio's screen. If the network fails, go to the next slide." style="justify-content:space-between">
+<section class="slide night" data-notes="Live, 75 seconds: type the sentence, let Gemini propose the menu, say plan it, point at one waiting item and one refused, tap Accept, show the order arriving on Valio Aimo's screen. If the network fails, go to the next slide." style="justify-content:space-between">
   <div style="display:flex; flex-direction:column; gap:40px">
     <p class="eyebrow a">Live demo</p>
     <h2 class="a">Now from words, on the live app.</h2>
@@ -217,7 +217,7 @@ svg.wires { position: absolute; left: 0; top: 0; overflow: visible; pointer-even
 </section>
 
 <!-- 9 OUTSIDE -->
-<section class="slide" data-notes="Any agent can plan: the chef's own Claude, a hotel chain's system. Only the chef can say yes, in the app or when their own assistant asks them. Any other agent that tries to approve is refused and logged." style="justify-content:space-between">
+<section class="slide" data-notes="Other agents can plan with Mandate too: the chef's own Claude, or a hotel chain's system. Only the chef approves, in the app or when their own assistant asks them. If an outside agent tries to approve, it's refused and logged." style="justify-content:space-between">
   <div style="display:flex; flex-direction:column; gap:40px">
     <p class="eyebrow a">Who can say yes</p>
     <h2 class="a">Any agent can plan.<br>Only the chef can say yes.</h2>
@@ -246,7 +246,7 @@ svg.wires { position: absolute; left: 0; top: 0; overflow: visible; pointer-even
 </section>
 
 <!-- 12 NEXT -->
-<section class="slide" data-notes="Real Valio catalogue, Gemini and Aiven. The order itself is simulated and labelled, because Valio's API has no order endpoint yet. For Valio Aimo: every kitchen's demand and exceptions arrive before the cut-off, through one open door any agent can use. Next: a four-week shadow pilot with one hotel. Those are targets, not results." style="justify-content:space-between">
+<section class="slide" data-notes="Valio Aimo's catalogue and prices are real, and it runs on Gemini and Aiven. The order itself is simulated, and the app says so, because Valio Aimo's API has no order endpoint yet. Valio Aimo gets each kitchen's demand and exceptions before the cut-off. Next, a four-week shadow pilot with one hotel." style="justify-content:space-between">
   <div style="display:flex; flex-direction:column; gap:40px">
     <p class="eyebrow a">What’s real, what’s next</p>
     <h2 class="a">Real data and real rules today.<br>The order itself is simulated.</h2>
