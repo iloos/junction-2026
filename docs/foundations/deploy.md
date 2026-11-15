@@ -63,6 +63,20 @@ Both apps build from GitHub (`iloos/junction-2026`, VCS integration `vcs5f404a66
 
 **Plan changes** go through `aiven_service_update` with only `plan` (and `cloud` for a move) set. Never send `user_config` for a plan change. Moving Postgres between clouds is online: on Sat 14 Nov the DigitalOcean → AWS move took 5 minutes, with one redirect seen by prod's health check and the same host, port and CA afterwards.
 
+## State at 06:00 (Sun 15 Nov)
+
+The serving setup is left stable; no infra changes after this without the lead.
+
+| Piece | State |
+|---|---|
+| Prod `mandate` (app.mandate.kitchen) | main `d28f43d`, `startup-200-4096` (2 vCPU, 4 GB). Pool 3 (code default); no `PG_POOL_MAX` or `WARM_OFF` set. Background photo and facts lookups on, at most one plan warming at a time. |
+| `mandate-b` | Same SHA and plan, the same env as prod (same `JUDGE_KEY_SECRET`: one visitor cookie, one sandbox). Healthy, serves no public traffic: reachable only through the router URL. The two-machines-one-Postgres proof. |
+| `mandate-staging` | **Stopped** (powered off, not deleted, 15 Nov 03:15 UTC). It shared prod's database, so it was a second writer, not a staging; the merge gate tests what prod runs, and `mandate-b` is the second machine. Power it on in the console to bring it back. |
+| Postgres `pg-1dfeeeed` | `business-16`: primary and a hot standby in two availability zones, 2 vCPU and 15.6 GB per node, 400 connections. Healthy; the upgrade's failover went unnoticed by both apps. |
+| Router `mandate-router` | Cloudflare Worker on the personal account, `mandate-router.example.workers.dev`, upstreams prod and `mandate-b`, sticky by cookie. Deployed, **not bound** to app.mandate.kitchen. |
+
+Parked until after peer review: scaling out (it adds no capacity while Postgres is the limit; see below) and the warm-up worker offload. The git branch `staging` is stale and unused (staging built from main before it was stopped). Load scripts live in `scratch/` (not committed).
+
 ## Scale-out design (not built)
 
 **What we can say:** the app is designed to scale out on Postgres. Plans, orders, kitchens, the op log and traces live in Postgres, and live updates cross processes through LISTEN/NOTIFY. **What we can't say:** that it runs on several machines today. It runs one container.
