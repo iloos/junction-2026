@@ -788,8 +788,8 @@ journey(
 							await say(r, p, '10 l milk for friday');
 							// Open the dock's plan on the page, approve there (the dock closed), then order.
 							const open = p
-								.getByRole('link', { name: /Open this plan in the Kitchen/ })
-								.or(p.getByRole('button', { name: /Open this plan in the Kitchen/ }))
+								.getByRole('link', { name: /Open this plan in the Kitchen|Open the order/ })
+								.or(p.getByRole('button', { name: /Open this plan in the Kitchen|Open the order/ }))
 								.last();
 							if (await open.isVisible().catch(() => false)) {
 								await open.click();
