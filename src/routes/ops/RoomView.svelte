@@ -422,7 +422,8 @@
 		margin: 0 0 4px;
 	}
 	h3 {
-		font-size: 1rem;
+		font-size: 1.125rem;
+		font-weight: 600;
 		margin: 0 0 8px;
 	}
 	.head {
@@ -467,8 +468,12 @@
 		font-size: 0.875rem;
 	}
 	.join-link {
+		display: block;
+		margin-top: 4px;
 		font-size: 0.875rem;
-		word-break: break-all;
+		/* The host and the room as two readable pieces, never broken mid-word. */
+		overflow-wrap: anywhere;
+		word-break: normal;
 	}
 	.cols {
 		display: grid;
@@ -484,7 +489,7 @@
 	/* Room scale: a dense grid of small tiles in a fixed panel that scrolls inside, so the page never grows. */
 	.grid {
 		display: grid;
-		grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+		grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
 		gap: 6px;
 		max-height: min(60vh, 560px);
 		overflow-y: auto;
@@ -503,10 +508,10 @@
 		font-size: 0.875rem;
 		transition: background 0.6s;
 	}
+	/* Names wrap to two lines rather than being cut ("no truncated chips"). */
 	.tile .name {
-		overflow: hidden;
-		text-overflow: ellipsis;
-		white-space: nowrap;
+		overflow-wrap: anywhere;
+		line-height: 1.25;
 	}
 	.tile .kind,
 	.tile .firstbadge {
