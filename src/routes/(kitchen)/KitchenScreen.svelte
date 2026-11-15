@@ -499,6 +499,37 @@
 	const rejectedIds = $derived(new Set(rejectedLines.map((l) => l.id)));
 	/** The only bulk action: accept every pending line that may be accepted together. */
 	const all = $derived(acceptAll(snap?.plan.lines ?? [], decisionsByLine));
+	/** What a row in Needs you is, in words: a swap (with what was asked), a new product, or an unsure match. */
+	function askOf(l: Line, d: DishView | null): { asked?: string; why?: string; tag: string } {
+		const dish = madeFor(l) ?? dishOf(l);
+		if (l.strategy?.kind === 'make_in_house')
+			return { tag: `For ${dish ?? 'the dish'}, made in house` };
+		if (l.substituteFor) {
+			const picked = pickedWords(
+				d?.rescue?.candidates.find((c) => c.productId === l.productId) ?? {}
+			);
+			return {
+				asked: names.get(l.substituteFor) ?? l.substituteFor,
+				why: d?.outage === 'undeliverable' ? "Valio Aimo can't deliver it" : 'out at Valio Aimo',
+				tag: picked ? `Picked: ${picked}` : 'Proposed instead'
+			};
+		}
+		const unsure = l.reasons.find((r) => r === 'requirement_unknown' || r === 'allergen_unknown');
+		if (unsure)
+			return {
+				tag: `Not sure it's right${dish ? ` for ${dish}` : ''}: ${reasonShort(unsure).toLowerCase()}`
+			};
+		if (l.reasons.includes('new_sku'))
+			return { tag: `New to this kitchen${dish ? `, for ${dish}` : ''}` };
+		return { tag: dish ? `For ${dish}` : reasonShort(l.reasons[0] ?? 'Held') };
+	}
+	/** The dish a line serves, mid-sentence ("rosolli"), from its need. */
+	function dishOf(l: Line): string | null {
+		const label = snap?.plan.needs.find((n) => n.id === l.needId)?.label;
+		if (!label) return null;
+		const n = label.split(' (')[0];
+		return n[0].toLowerCase() + n.slice(1);
+	}
 	/** For an ingredient of a dish made in house: the dish, mid-sentence ("lanttulaatikko"); else null. */
 	function madeFor(l: Line): string | null {
 		if (l.strategy?.kind !== 'make_in_house') return null;
@@ -507,6 +538,12 @@
 		const n = label.split(' (')[0];
 		return n[0].toLowerCase() + n.slice(1);
 	}
+	/** Every line the plan buys (rejected and zeroed lines aside), for "The whole order" heading. */
+	const wholeLines = $derived(
+		(plan?.lines ?? []).filter(
+			(l) => l.qty.value > 0 && !rejectedIds.has(l.id) && l.state !== 'unorderable'
+		).length
+	);
 	/** What Accept all takes in beyond plain lines: the swaps, named by the dish they serve ("the Christmas ham swap"). */
 	const acceptIncludes = $derived.by(() => {
 		const ids = new Set([...all.byApproval.values()].flatMap((g) => g.lineIds));
@@ -1606,6 +1643,7 @@
 			name={names.get(l.productId) ?? l.productId}
 			gloss={englishOf(l.productId, names.get(l.productId))}
 			grouped={inDecide}
+			ask={inDecide ? askOf(l, d) : null}
 			approved={approvedIds.has(l.id)}
 			flash={k.flash.has(l.id)}
 			by={inGroup ? undefined : snap?.byAgent?.[l.id]}
@@ -1870,7 +1908,15 @@
 						<!-- Decide (D29): the waiting lines, once, grouped by why they wait; each group decides itself. -->
 						<section aria-labelledby="decide-h" class="mt-6">
 							<div class="flex flex-wrap items-center gap-x-3 gap-y-1.5">
-								<h2 id="decide-h" class="text-heading font-semibold text-ink">Decide</h2>
+								<div>
+									<h2 id="decide-h" class="text-heading font-semibold text-ink">
+										Needs you · <span class="mono"
+											>{decideRows.reduce((n, r) => n + r.lines.length, 0)}</span
+										>
+										{decideRows.reduce((n, r) => n + r.lines.length, 0) === 1 ? 'line' : 'lines'}
+									</h2>
+									<p class="text-meta text-ink-3">Only what waits for your yes.</p>
+								</div>
 								<!-- The cover legend as filters, counted in the lines this table shows. -->
 								<div
 									class="flex flex-wrap items-center gap-1.5"
@@ -2010,7 +2056,8 @@
 								id="dishes-h"
 								class="flex items-center gap-1.5 text-heading font-semibold text-ink"
 							>
-								{tableTitle}
+								The whole order · <span class="mono">{wholeLines}</span>
+								{wholeLines === 1 ? 'line' : 'lines'}
 								<details class="relative font-normal">
 									<summary
 										class="grid size-6 cursor-pointer list-none place-items-center rounded-full text-ink-3 hover:bg-well hover:text-ink"
@@ -2028,6 +2075,9 @@
 								</details>
 							</h2>
 						</div>
+						<p class="text-meta text-ink-3">
+							Everything in this plan, including what your rules let the agent order alone · {tableTitle}
+						</p>
 						{#if contended}
 							<p
 								class="mt-2 flex items-start gap-2 rounded-lg border border-signoff/50 bg-signoff-wash px-4 py-2.5 text-body text-ink"

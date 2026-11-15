@@ -45,18 +45,21 @@ export function decisionsOf(plan: Plan, approval: Approval | null | undefined): 
 		const l = byId.get(id);
 		if (!l) continue;
 		const reasons = l.reasons.filter((r) => !IGNORED.has(r));
-		const key = reasons.map(reasonShort).join(' · ') || 'Held';
+		// A swap is its own decision, never lumped with new products for other dishes that share its reasons.
+		const swap = !!l.substituteFor && l.strategy?.kind !== 'make_in_house';
+		const key = (swap ? 'swap|' : '') + (reasons.map(reasonShort).join(' · ') || 'Held');
 		const g = groups.get(key) ?? { reasons, lines: [], signOff: false };
 		g.lines.push(l);
 		if (l.tier === 'sign_off') g.signOff = true;
 		groups.set(key, g);
 	}
-	return [...groups].map(([reason, g]) => {
+	return [...groups].map(([group, g]) => {
+		const reason = group.replace(/^swap\|/, '');
 		const needs = [
 			...new Set(g.lines.map((l) => (l.needId ? needLabel.get(l.needId) : undefined)))
 		].filter((x): x is string => !!x);
 		return {
-			key: `${approval.id}:${reason}`,
+			key: `${approval.id}:${group}`,
 			title: titleOf(g.lines, g.reasons, needLabel),
 			reason,
 			why: g.reasons.map(reasonLong).join(' '),

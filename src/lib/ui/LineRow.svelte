@@ -25,6 +25,11 @@
 		gloss?: string;
 		/** Shown under a Decide group whose header already says what deciding the group means. */
 		grouped?: boolean;
+		/**
+		 * In Needs you: what this row is, said outright. A swap shows the product asked for (struck) above the proposal;
+		 * `tag` says the rest ("New to this kitchen, for rosolli", "Not sure it's right for …").
+		 */
+		ask?: { asked?: string; why?: string; tag: string } | null;
 		/** A granted approval covers this line (core keeps it `held` until ordered). */
 		approved?: boolean;
 		/** The row just changed: tint lands and fades. */
@@ -70,6 +75,7 @@
 		name,
 		gloss,
 		grouped = false,
+		ask = null,
 		approved = false,
 		flash = false,
 		replaces,
@@ -106,6 +112,12 @@
 	<div class="flex min-w-0 items-start gap-2">
 		<ProductThumb productId={l.productId} size={32} />
 		<div class="min-w-0 flex-1">
+			{#if ask?.asked}
+				<p class="text-meta text-ink-3">
+					Asked: <span class="line-through decoration-ink-3/60">{ask.asked}</span
+					>{#if ask.why}&nbsp;· {ask.why}{/if}
+				</p>
+			{/if}
 			<button
 				type="button"
 				class="flex w-full min-w-0 items-baseline gap-1.5 text-left text-body disabled:cursor-default"
@@ -124,6 +136,8 @@
 							: ''}"
 						aria-hidden="true"
 					/>{/if}
+				{#if ask?.asked}<span class="shrink-0 text-meta font-medium text-accent-ink">Proposed:</span
+					>{/if}
 				<span
 					class="min-w-0 break-words {rejected || denied
 						? 'text-ink-3 line-through decoration-ink-3/60'
@@ -132,7 +146,11 @@
 				>{#if diet}<DietMarks marks={diet} />{/if}
 			</button>
 			{#if gloss}<p class="truncate text-meta text-ink-3" title={gloss}>{gloss}</p>{/if}
-			{#if replaces}
+			{#if ask}
+				<p class="text-meta text-ink-2">
+					{ask.tag}{#if by}&nbsp;· <AgentMark {by} />{/if}
+				</p>
+			{:else if replaces}
 				<p class="text-meta text-ink-2">
 					{#if replaces.madeFor}For <span class="text-ink">{replaces.madeFor}</span>, made in house{:else}{#if replaces.picked}<span
 								class="text-ink">Picked: {replaces.picked}</span
