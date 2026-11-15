@@ -20,6 +20,9 @@
 	const POLL_MS = 15_000;
 	const NAME = { valio: 'Valio', gemini: 'Gemini', exa: 'Exa', contextdev: 'Context.dev' } as const;
 
+	/** Calls in the last 24 hours from the stored traces (/healthz `day`): survives restarts, counts every process. */
+	type Day = Record<string, { calls: number; live: number; liveOk: number; cache: number }>;
+	let day = $state.raw<Day>({});
 	let services = $state.raw<Svc[]>([]);
 	let db = $state<string | null>(null);
 	let failed = $state(false);
@@ -27,8 +30,9 @@
 	async function load() {
 		try {
 			const r = await fetch('/healthz', { cache: 'no-store' });
-			const b = (await r.json()) as { db?: string; services?: Svc[] };
+			const b = (await r.json()) as { db?: string; services?: Svc[]; day?: Day | null };
 			services = b.services ?? [];
+			day = b.day ?? {};
 			db = b.db ?? null;
 			failed = false;
 		} catch {
@@ -48,6 +52,13 @@
 	}
 	/** The one phrase per service, and the tone it reads in. */
 	function said(s: Svc): { text: string; tone: 'ok' | 'warn' | 'bad' | 'off' } {
+		const d = day[s.service];
+		// This process hasn't called it since it started, but the app has today: say what happened, not "not called".
+		if (s.mode === 'idle' && d?.calls)
+			return {
+				text: `${d.calls} call${d.calls === 1 ? '' : 's'} today${d.liveOk ? `, ${d.liveOk} live` : ', from stored answers'}`,
+				tone: d.liveOk ? 'ok' : 'warn'
+			};
 		const live = s.lastLive ? `, last live ${ago(s.lastLive.ageS)}` : '';
 		switch (s.mode) {
 			case 'live':

@@ -12,6 +12,7 @@ import { noTrace } from '../adapters/llm/trace';
 import { reportExternal } from '../external/call';
 import { currentScope } from '../external/scope';
 import { SimOverlay } from '../adapters/simulator/overlay';
+import { syncOverlay } from '../bus/overlay-sync';
 import { createPgDb, dbMode } from '../db/client';
 import { createDbPorts } from './db-ports';
 import { registerBreaker } from '$lib/server/external/status';
@@ -43,6 +44,8 @@ async function build(): Promise<Built> {
 	if (dbMode() === 'fixture') return createDbPorts({ publish, followCurrentRun: true });
 	const db = (await createPgDb({ runMigrations: false })) as unknown as AnyDb;
 	const overlay = new SimOverlay();
+	// Shortages and incidents reach every app process on this database (two machines behind one router).
+	syncOverlay(overlay);
 	const live =
 		env.VALIO_API_KEY && env.VALIO_LIVE !== '0'
 			? createValioLive({

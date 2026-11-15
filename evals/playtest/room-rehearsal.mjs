@@ -126,8 +126,15 @@ for (const [i, s] of stores.entries()) {
 			await dock.locator('textarea').press('Enter');
 			await p.waitForTimeout(1500);
 			await working(p);
+			// On a phone the dock covers the page: its "Order it on the page" link is the way on.
+			const link = dock.getByRole('link', { name: /Order it on the page/ }).last();
+			if (await link.isVisible().catch(() => false)) {
+				await link.click();
+				await p.waitForLoadState('networkidle').catch(() => {});
+			}
 			const order = p
 				.getByRole('button', { name: /^(Order \d+ lines? now|Order the|Place order)/ })
+				.filter({ visible: true })
 				.first();
 			await order.click({ timeout: 30_000 });
 		} else {
@@ -140,8 +147,14 @@ for (const [i, s] of stores.entries()) {
 			await p.getByRole('button', { name: 'Send' }).first().click();
 			await p.waitForTimeout(1500);
 			await working(p);
+			// /request is the conversation: the order itself is placed on the Kitchen page.
+			const link = p
+				.getByRole('link', { name: /Order it on the page|Open this plan in the Kitchen/ })
+				.last();
+			if (await link.isVisible().catch(() => false)) await link.click();
 			await p
 				.getByRole('button', { name: /^(Order \d+ lines? now|Order the|Place order)/ })
+				.filter({ visible: true })
 				.first()
 				.click({ timeout: 30_000 });
 		}
@@ -171,23 +184,23 @@ await timed('Ops names all three stores', async () => {
 });
 
 await timed(`${stores[0].name}: trying the room's hotel is refused`, async () => {
+	// In the room a visitor key is refused by design (409: not a sandbox); a stranger's door to the hotel is the
+	// page: switching the Kitchen to it, which the room gate must refuse.
 	const p = phones[0];
-	const k = await p.request.get(`${BASE}/api/demo/judge-key`);
-	const key = (await k.json().catch(() => ({}))).key;
-	if (!key) throw new Error(`no visitor key (${k.status()})`);
-	const r = await p.request.post(`${BASE}/api/tools/place_order`, {
-		headers: { authorization: `Bearer ${key}` },
-		data: {
-			kitchenId: 'k-hotel',
-			deliverBy: '2026-12-11',
-			idempotencyKey: `rehearsal-${at}`,
-			lines: [{ productId: '464201', qty: 1, unit: 'ST' }]
-		}
+	const r = await p.request.post(`${BASE}/kitchen-api/scenario`, {
+		headers: { origin: BASE },
+		data: { action: 'kitchen', value: 'k-hotel' }
 	});
-	const body = await r.text();
-	if (r.status() !== 403 || !/room_store/.test(body))
-		throw new Error(`expected 403 room_store, got ${r.status()} ${body.slice(0, 160)}`);
-	return JSON.parse(body).error?.message ?? 'refused';
+	await r.text();
+	// Viewing the room's hotel is allowed (read-only, S1's gate); planning it must be refused.
+	const plan = await p.request.post(`${BASE}/kitchen-api/scenario`, {
+		headers: { origin: BASE },
+		data: { action: 'start' }
+	});
+	const body = await plan.text();
+	if (plan.ok() || !/not your store|room_store/i.test(body))
+		throw new Error(`planning the hotel was allowed: ${plan.status()} ${body.slice(0, 160)}`);
+	return `${plan.status()} ${(body.match(/"message":"([^"]+)"/) ?? [])[1] ?? body.slice(0, 120)}`;
 });
 note(
 	'presenter steps (shortage, reset)',

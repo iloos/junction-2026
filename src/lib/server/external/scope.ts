@@ -27,12 +27,24 @@ export function currentScope(): ExternalScope | undefined {
 	return als.getStore();
 }
 
+/**
+ * The key a call's model and Decide spend counts against: its workspace, or in the shared room (many visitors in one
+ * workspace) the visitor within it, so one visitor can't use up the room. The global caps bound the total either way.
+ */
+export function spendKeyFor(
+	ctx: Pick<CallContext, 'workspaceId' | 'visitor' | 'sharedRoom'>
+): string {
+	return ctx.sharedRoom && ctx.visitor ? `${ctx.workspaceId}:${ctx.visitor}` : ctx.workspaceId;
+}
+
 /** The scope for a tool call: traces go to the caller's workspace event stream (the trace drawer). */
-export function scopeFor(ctx: Pick<CallContext, 'workspaceId' | 'runId' | 'actor'>): ExternalScope {
+export function scopeFor(
+	ctx: Pick<CallContext, 'workspaceId' | 'runId' | 'actor' | 'visitor' | 'sharedRoom'>
+): ExternalScope {
 	return {
 		workspaceId: ctx.workspaceId,
 		runId: ctx.runId,
-		spendKey: ctx.workspaceId,
+		spendKey: spendKeyFor(ctx),
 		...(ctx.actor ? { actor: { kind: ctx.actor.kind, id: ctx.actor.id } } : {}),
 		trace: (step, data) => {
 			// The bus pulls in the database client; loaded on first trace only.

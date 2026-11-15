@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { TriangleAlert, Info } from '@lucide/svelte';
 	import { onMount } from 'svelte';
+	import { resolve } from '$app/paths';
 	import { storyTime } from '$lib/ui/format';
 	import { useShell } from '$lib/ui/shell/shell.svelte';
 	import MenuReview from '$lib/ui/request/MenuReview.svelte';
@@ -29,7 +30,10 @@
 	onMount(() => {
 		ready = true;
 		if (shell) {
-			shell.chatFull = true;
+			// A menu or plan on screen takes the main panel; the conversation continues as the side dock (D23 addendum).
+			const reviewing = new URL(location.href).searchParams.has('menu');
+			shell.chatFull = !reviewing;
+			if (reviewing) shell.chatOpen = true;
 			const t = new URL(location.href).searchParams.get('text');
 			if (t) shell.chatDraft = t.slice(0, 500);
 			// "New order" (D31): a fresh conversation; earlier orders keep their own threads.
@@ -183,8 +187,8 @@
 
 <svelte:head><title>Ask the agent · Mandate</title></svelte:head>
 
-<main class="mx-auto max-w-[880px] px-4 pt-6 sm:pt-10">
-	<header class="mb-4 flex flex-wrap items-end justify-between gap-3">
+<main class="mx-auto max-w-[880px] px-4 pt-4 sm:pt-6">
+	<header class="mb-3 flex flex-wrap items-end justify-between gap-x-3 gap-y-2">
 		<div>
 			<p class="text-meta font-medium tracking-[0.08em] text-ink-3 uppercase">
 				Mandate · ask the agent
@@ -192,21 +196,21 @@
 			<h1 class="mt-1 text-title leading-tight font-semibold tracking-[-0.01em] sm:text-display">
 				What does the kitchen need?
 			</h1>
-			<p class="mt-1 text-body text-ink-2">
+			<p class="mt-1 text-body text-ink-2 max-sm:hidden">
 				Say it in your words, English or Finnish. The agent plans and prices it within your mandate;
 				anything over it waits for you.
 			</p>
 		</div>
-		<label class="flex items-center gap-2 text-body text-ink-2">
-			<span>Kitchen</span>
-			<select
-				bind:value={kitchenId}
-				onchange={startOver}
-				class="h-9 max-w-[15rem] rounded-md border border-rule-strong bg-sheet px-2 text-body text-ink"
-			>
-				{#each data.kitchens as k (k.id)}<option value={k.id}>{k.name}</option>{/each}
-			</select>
-		</label>
+		{#if data.kitchens.length}<label class="flex items-center gap-2 text-body text-ink-2">
+				<span>Kitchen</span>
+				<select
+					bind:value={kitchenId}
+					onchange={startOver}
+					class="h-9 max-w-[15rem] rounded-md border border-rule-strong bg-sheet px-2 text-body text-ink"
+				>
+					{#each data.kitchens as k (k.id)}<option value={k.id}>{k.name}</option>{/each}
+				</select>
+			</label>{/if}
 	</header>
 	{#if sandboxNote}
 		<p class="-mt-2 mb-4 text-body text-ink-2" role="status">{sandboxNote}</p>
@@ -222,14 +226,29 @@
 		</p>
 	{/if}
 
-	<div class="mb-3 flex flex-wrap items-center gap-2" aria-label="Examples">
+	{#if data.needsStore}
+		<p
+			class="mb-2 rounded-md border border-rule-strong bg-sheet px-3 py-2 text-body text-ink"
+			role="note"
+		>
+			In this room the agent buys for your own store. <a
+				class="font-medium text-accent-ink underline"
+				href={resolve('/')}>Start your store</a
+			> on the Kitchen page first.
+		</p>
+	{/if}
+	<!-- One swipeable row on a phone, so the conversation keeps the screen. -->
+	<div
+		class="mb-2 flex items-center gap-2 overflow-x-auto pb-1 whitespace-nowrap sm:flex-wrap"
+		aria-label="Examples"
+	>
 		<span class="text-meta text-ink-3">Try</span>
 		{#each EXAMPLES as ex (ex)}
 			<button
 				type="button"
 				disabled={!ready}
 				onclick={() => ask(ex)}
-				class="h-8 rounded-full border border-rule-strong bg-sheet px-3 text-body text-ink-2 hover:border-accent/50 hover:text-accent-ink disabled:opacity-50"
+				class="h-8 shrink-0 rounded-full border border-rule-strong bg-sheet px-3 text-body text-ink-2 hover:border-accent/50 hover:text-accent-ink disabled:opacity-50"
 				>{ex}</button
 			>
 		{/each}

@@ -1,4 +1,4 @@
-import { expect, type Page } from '@playwright/test';
+import { expect, type Locator, type Page } from '@playwright/test';
 
 /**
  * Every entry step the UI checks take, in one place (D15 stages the entry flow: establishment picker → chat-first
@@ -83,6 +83,7 @@ export async function approveAll(page: Page): Promise<number> {
 		const group = page.getByRole('button', { name: /^Accept these \d+/ }).first();
 		const review = page.getByRole('button', { name: /^Review \d+ lines?/ }).first();
 		const hold = page.getByRole('button', { name: /Hold to sign off \d+ lines?/ }).first();
+		const signOff = page.getByRole('button', { name: /^Review and sign off \d+ lines?/ }).first();
 		const usable = async (l: typeof all) =>
 			(await l.isVisible().catch(() => false)) && (await l.isEnabled().catch(() => false));
 		if (await usable(all)) {
@@ -93,6 +94,14 @@ export async function approveAll(page: Page): Promise<number> {
 			lines += Number(((await group.innerText()).match(/Accept these (\d+)/) ?? [])[1] ?? 0);
 			await group.click();
 			await confirmIfAsked();
+		} else if (await usable(signOff)) {
+			// S2, Sun 05:00: one group action opens a dialog whose "Confirm exact terms" signs the group off.
+			lines += Number(((await signOff.innerText()).match(/sign off (\d+)/) ?? [])[1] ?? 0);
+			await signOff.click();
+			await page
+				.getByRole('dialog')
+				.getByRole('button', { name: /Confirm exact terms/ })
+				.click({ timeout: 10_000 });
 		} else if (await review.isVisible().catch(() => false)) {
 			lines += Number(((await review.innerText()).match(/(\d+)/) ?? [])[1] ?? 0);
 			await review.click();
@@ -126,6 +135,23 @@ export async function orderNow(page: Page) {
 		.first()
 		.waitFor({ state: 'attached', timeout: 60_000 }); // on a phone it can sit in an unselected zone tab
 }
+
+/**
+ * Approves the decisions shown in the dock's "Decide here": S2's line rows with "Accept all N · €X" (one tap, no
+ * confirmation), or the older card's Review N lines → Confirm exact terms.
+ */
+export async function approveInDock(here: Locator) {
+	const all = here.getByRole('button', { name: /^Accept all \d+/ }).first();
+	if (await all.isVisible({ timeout: 5_000 }).catch(() => false)) return all.click();
+	await here
+		.getByRole('button', { name: /^Review \d+ lines?/ })
+		.first()
+		.click();
+	await here.getByRole('button', { name: 'Confirm exact terms' }).click();
+}
+
+/** The dock's order button after approving: "Order the approved lines", or "Order N lines now". */
+export const DOCK_ORDER = /^Order (the approved lines|\d+ lines?)/;
 
 /** The page's decisions: D29's decision-group headers, or the pre-D29 cards in the #approval panel. */
 export function decisionCards(page: Page) {

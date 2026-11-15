@@ -36,7 +36,7 @@ import { createWorkQueue } from './queue';
 import { createApplications } from './applications';
 import { createWebTools } from './tools';
 import { busTrace } from './watch';
-import { createSpendLedger, spendLimits, type SpendLedger } from './spend';
+import { createSpendLedger, spendLimits, type SpendLedger, type SpendLimits } from './spend';
 import { createPgWebState, type PgWebState, type WebSlot } from './pg-state';
 import { attachStateSink, hydrateSlot, persistedMap } from './persist';
 import { setSharedLedger } from '../external/ledger';
@@ -109,17 +109,28 @@ export const spendLedger = (env: Env): Pick<SpendLedger, 'guard'> =>
 export const callerKey = (actor?: { kind: string; id: string } | null) =>
 	actor && actor.kind !== 'system' ? `${actor.kind}:${actor.id}` : null;
 
+/**
+ * The web cap key for a call: a browser's visitor in its workspace (the kitchen UI's actor id is the same for every
+ * browser, so keying by actor would make every visitor share one cap), else the caller's key, else the system.
+ */
+export function webSpendKey(ctx: Pick<CallContext, 'workspaceId' | 'visitor' | 'actor'>): string {
+	if (ctx.visitor) return `visitor:${ctx.workspaceId}:${ctx.visitor}`;
+	return callerKey(ctx.actor) ?? `system:${ctx.actor.id}`;
+}
+
 export function webClients(
 	env: Env,
 	trace?: Trace,
-	caller: string | null = null
+	caller: string | null = null,
+	/** Tighter limits for background work (prefetch); the env's caps otherwise. */
+	limits?: SpendLimits
 ): { recalls: RecallSource; exa: FactSearch; news: NewsSource } {
 	const mode = webMode(env);
 	const dir = cacheDir(env);
 	// Internal callers (the monitor) are bound by the global cap only.
 	const guard = spendLedger(env).guard(
 		caller?.startsWith('system:') ? null : caller,
-		spendLimits(env)
+		limits ?? spendLimits(env)
 	);
 	const recalls =
 		mode === 'live' && env.CONTEXT_DEV_API_KEY
@@ -238,7 +249,7 @@ export async function webContext(ctx: CallContext): Promise<WebRun> {
 	return {
 		ctx,
 		ports: { clock: b.ports.clock, catalog: b.ports.catalog, store: b.store, web: b.ports.web },
-		spendKey: callerKey(ctx.actor) ?? `system:${ctx.actor.id}`,
+		spendKey: webSpendKey(ctx),
 		index: catalogIndex(b.ports.catalog, b.db as unknown as AnyDb)
 	};
 }

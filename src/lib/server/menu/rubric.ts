@@ -120,7 +120,8 @@ export function reviewProposal(
 					{ targets: [i.id], fixes: ['amount', 'removeIngredient'] }
 				);
 			if (i.unresolved !== undefined)
-				warn(`unresolved:${i.id}`, `${i.label}: no product yet (${i.unresolved})`, {
+				// The reason (a model's or the resolver's) stays on the ingredient, behind System: the warning says what it means.
+				warn(`unresolved:${i.id}`, `${i.label}: no exact match in Valio's catalogue`, {
 					targets: [i.id]
 				});
 		}

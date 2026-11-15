@@ -7,6 +7,10 @@ import { absolutize, publicOrigin } from './present';
 import { registerExtras } from './mcp-extras';
 import { isToolName, offered, serveTool, toolsFor } from './serve';
 import { errMsg, log } from '$lib/server/obs/log';
+import { env as privateEnv } from '$env/dynamic/private';
+import { approveViaElicitation, type ElicitReq } from './elicit-approve';
+import { approvalUrl } from './present';
+import { createServerPorts } from '$lib/server/store/server-ports';
 
 /**
  * Stateless MCP (streamable HTTP, SDK v2): a fresh server per request, built for the caller's context.
@@ -164,6 +168,36 @@ export function buildMcpServer(
 	);
 	for (const name of toolsFor(ctx)) {
 		const t = toolSchemas[name];
+		// D22: the chef's own client approves by elicitation, showing the exact terms; nothing else approves here.
+		if (name === 'approve' && ctx.approveBy === 'elicitation') {
+			server.registerTool(
+				name,
+				{
+					title: 'Approve held lines (shows you the exact terms first)',
+					description:
+						'Approve a pending decision for the chef. Your client shows the chef the exact lines, amounts and total; only their explicit accept approves, and only those terms. Sign-off decisions need the app.',
+					inputSchema: t.input,
+					annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false }
+				},
+				async (args: unknown, sctx: { mcpReq: unknown }) =>
+					approveViaElicitation(
+						ctx,
+						args,
+						sctx.mcpReq as ElicitReq,
+						handlers,
+						privateEnv,
+						async (kitchenId) => {
+							const { ports } = await createServerPorts();
+							const k = (await ports.store.kitchens(ctx.workspaceId)).find(
+								(x) => x.id === kitchenId
+							);
+							return k?.mandate.neverDelegate ?? [];
+						},
+						origin
+					)
+			);
+			continue;
+		}
 		server.registerTool(
 			name,
 			{
@@ -232,6 +266,14 @@ export function createMcpEndpoint(handlers: ToolHandlers, opts: { env: Env; dev:
 				);
 			}
 			await gateUnlisted(parsedBody, ctx, handlers);
+			// Moment 3: an outside agent reaching for approve gets the rule by name and the chef's link, not "not found".
+			const named = await namedApproveRefusal(
+				parsedBody,
+				ctx,
+				handlers,
+				publicOrigin(opts.env, request.url)
+			);
+			if (named) return withCors(Response.json(named));
 		}
 		const res = await mcp.fetch(request, {
 			authInfo: {
@@ -260,4 +302,46 @@ async function gateUnlisted(body: unknown, ctx: CallContext, handlers: ToolHandl
 		if (!offered(ctx, name)) continue;
 		await serveTool(name, ctx, msg.params?.arguments ?? {}, handlers);
 	}
+}
+
+/** A single `tools/call` of `approve` by a key that may not approve: a tool error naming the rule, with the link. */
+async function namedApproveRefusal(
+	body: unknown,
+	ctx: CallContext,
+	handlers: ToolHandlers,
+	origin: string | undefined
+) {
+	const msg = body as {
+		jsonrpc?: string;
+		id?: unknown;
+		method?: unknown;
+		params?: { name?: unknown; arguments?: { approvalId?: unknown } };
+	};
+	if (Array.isArray(body) || msg?.method !== 'tools/call' || msg.params?.name !== 'approve')
+		return null;
+	if (toolsFor(ctx).includes('approve')) return null;
+	const approvalId = msg.params?.arguments?.approvalId;
+	const planId =
+		typeof approvalId === 'string' ? /^ap-(.+)-v\d+$/.exec(approvalId)?.[1] : undefined;
+	const got = planId ? await handlers.get_plan(ctx, { planId }) : null;
+	const link =
+		got?.ok && (got.value as { plan?: { id: string; kitchenId: string; version: number } }).plan
+			? `${origin ?? ''}${approvalUrl((got.value as { plan: { id: string; kitchenId: string; version: number } }).plan)}`
+			: null;
+	const text = link
+		? `Only the chef approves. Give them this link: ${link}`
+		: 'Only the chef approves. Give them the approval link from the plan (meta.approvalUrl).';
+	return {
+		jsonrpc: '2.0',
+		id: msg.id ?? null,
+		result: {
+			isError: true,
+			content: [
+				{
+					type: 'text',
+					text: JSON.stringify({ error: { code: 'FORBIDDEN', sub: 'scope', message: text } })
+				}
+			]
+		}
+	};
 }
