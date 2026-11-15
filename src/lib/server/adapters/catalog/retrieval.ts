@@ -289,6 +289,32 @@ interface Indexed {
 const FORM_WORD =
 	/^(?:\w+(?:ttu|tty|ttuja|ttyjä|nut|nyt))$|^(?:pakaste|pakasteet|kypsä|raaka|tuore|premium|vapaa|vapaan|luomu|irto|frozen|froze|fresh|fried|prefried|smoked|sliced|diced|cooked|organic|barn|free|range|pre|kpl|pcs|pkt|ltk|psv|ras|quick)$/;
 
+/**
+ * Recipe words the catalogue names differently: a menu's "myskikurpitsa" is sold as butternut or diced squash, a
+ * "metsäsieni" (forest mushroom) as chanterelle or funnel chanterelle.
+ */
+const INGREDIENT_ALIASES: [RegExp, string[]][] = [
+	[/myskikurpitsa\S*/, ['myskikurpitsakuutio', 'butternut']],
+	[/metsäsien\S*/, ['kantarelli', 'suppilovahvero']]
+];
+
+/**
+ * Other ways to read a recipe line that found nothing: without the packing liquid ("persikanpuolikkaat
+ * sokeriliemessä" is the halves, whatever they are packed in), then the aliases above. "tuore" stays: without it
+ * "tuore timjami" finds dried thyme, and unresolved is the honest answer.
+ */
+export function rewordings(raw: string): string[] {
+	const s = raw.toLowerCase().replace(/\s+/g, ' ').trim();
+	const plain = s
+		.replace(/\s\S*(?:liemessä|mehussa|siirapissa|öljyssä|vedessä)(?=\s|$).*$/, '')
+		.replace(/\s+/g, ' ')
+		.trim();
+	const out = plain && plain !== s ? [plain] : [];
+	for (const [w, alts] of INGREDIENT_ALIASES)
+		if (w.test(plain)) for (const a of alts) out.push(plain.replace(w, a));
+	return out;
+}
+
 const PORTION = /annos|portion|sachet|stick|pussi(?:t|a)?\b/i;
 /** Many small units sold together: "500x5g", "4,5g x 800kpl", or a portion word in either name. */
 function isPortionPack(p: RetrievalProduct | undefined): boolean {
@@ -303,6 +329,94 @@ function isPortionPack(p: RetrievalProduct | undefined): boolean {
 	const grams = Math.min(a, b);
 	const count = Math.max(a, b);
 	return grams <= 25 && count >= 20;
+}
+
+/**
+ * Words a chef types that the catalogue (Finnish names, English translations) does not use: English and colloquial
+ * terms to the catalogue's own words. Each entry is a list of alternatives, searched one at a time; a cut ("steak")
+ * names beef cuts, never bare "pihvi" (that is also a beef tomato and a burger patty).
+ */
+export const SEARCH_WORDS: Record<string, string[]> = {
+	cow: ['naudan', 'nauta', 'beef'],
+	beef: ['naudan', 'nauta', 'beef'],
+	cattle: ['naudan', 'nauta'],
+	steak: ['naudan pihvi', 'entrecote', 'naudan ulkofile', 'naudan sisäfile', 'steak'],
+	sirloin: ['ulkofile', 'sirloin'],
+	tenderloin: ['sisäfile', 'tenderloin'],
+	pork: ['porsaan', 'sian', 'pork'],
+	pig: ['porsaan', 'sian'],
+	chicken: ['broileri', 'broilerin', 'kana', 'chicken'],
+	hen: ['kana', 'broileri'],
+	turkey: ['kalkkuna', 'turkey'],
+	lamb: ['lammas', 'karitsa', 'lamb'],
+	reindeer: ['poro', 'reindeer'],
+	minced: ['jauheliha', 'minced'],
+	mince: ['jauheliha', 'minced'],
+	ground: ['jauheliha'],
+	ham: ['kinkku', 'ham'],
+	bacon: ['pekoni', 'bacon'],
+	sausage: ['makkara', 'nakki', 'sausage'],
+	meat: ['liha', 'meat'],
+	fish: ['kala', 'fish'],
+	salmon: ['lohi', 'salmon'],
+	tuna: ['tonnikala', 'tuna'],
+	shrimp: ['katkarapu', 'shrimp'],
+	prawn: ['katkarapu', 'prawn'],
+	milk: ['maito', 'milk'],
+	cream: ['kerma', 'cream'],
+	butter: ['voi', 'butter'],
+	cheese: ['juusto', 'cheese'],
+	egg: ['kananmuna', 'muna', 'egg'],
+	yogurt: ['jogurtti', 'yoghurt'],
+	yoghurt: ['jogurtti', 'yoghurt'],
+	potato: ['peruna', 'potato'],
+	carrot: ['porkkana', 'carrot'],
+	onion: ['sipuli', 'onion'],
+	tomato: ['tomaatti', 'tomato'],
+	cucumber: ['kurkku', 'cucumber'],
+	lettuce: ['salaatti', 'lettuce'],
+	mushroom: ['herkkusieni', 'sieni', 'mushroom'],
+	flour: ['vehnäjauho', 'jauho', 'flour'],
+	sugar: ['sokeri', 'sugar'],
+	salt: ['suola', 'salt'],
+	rice: ['riisi', 'rice'],
+	pasta: ['pasta', 'makaroni', 'spagetti'],
+	bread: ['leipä', 'bread'],
+	coffee: ['kahvi', 'coffee'],
+	tea: ['tee', 'tea'],
+	oil: ['öljy', 'oil'],
+	apple: ['omena', 'apple'],
+	berries: ['marja', 'berry'],
+	strawberry: ['mansikka', 'strawberry'],
+	blueberry: ['mustikka', 'blueberry']
+};
+
+/** Amounts, units and filler a request carries that are not product words ("100", "2kg", "pcs", "of"). */
+const NOT_A_PRODUCT =
+	/^(?:\d+(?:[.,]\d+)?(?:kg|g|l|dl|cl|ml|pcs|kpl|x)?|kg|g|l|dl|ml|pcs|kpl|pieces?|of|some|the|a|an|and|please|for|kilo|kilos|litre|litres|liter|liters|pack|packs)$/;
+
+/** Edit distance between two short words, stopping once it passes `max`. */
+function editDistance(a: string, b: string, max: number): number {
+	if (Math.abs(a.length - b.length) > max) return max + 1;
+	let prev = Array.from({ length: b.length + 1 }, (_, j) => j);
+	for (let i = 1; i <= a.length; i++) {
+		const cur = [i];
+		let best = i;
+		for (let j = 1; j <= b.length; j++) {
+			cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+			best = Math.min(best, cur[j]);
+		}
+		if (best > max) return max + 1;
+		prev = cur;
+	}
+	return prev[b.length];
+}
+
+/** A tolerant search hit: how sure, and what was searched for. */
+export interface ScoredHit {
+	productId: ProductId;
+	confidence: number;
+	readAs: string;
 }
 
 export class RetrievalIndex {
@@ -347,10 +461,93 @@ export class RetrievalIndex {
 	}
 
 	/**
+	 * Search as a chef types: amounts and fillers dropped, English and colloquial words read as the catalogue's
+	 * (SEARCH_WORDS), plurals singular, and a typo corrected to the nearest known word (edit distance 1, or 2 for
+	 * longer words). Each reading is searched on its own and a product keeps its best score; the confidence is that
+	 * score, lowered when a word was corrected.
+	 */
+	searchTolerant(
+		query: string,
+		limit: number
+	): { hits: ScoredHit[]; readAs: string; corrected?: string } {
+		const raw = query
+			.toLowerCase()
+			.split(/[^a-zåäöéèüô0-9.,]+/)
+			.filter((w) => w && !NOT_A_PRODUCT.test(w));
+		const fixes: string[] = [];
+		// Words neither the catalogue nor the table knows, even after a typo fix ("flurbleberry"): the rest of the
+		// query alone ("jam") is a guess, so it is never confident.
+		let unread = 0;
+		const keys = Object.keys(SEARCH_WORDS);
+		const known = (w: string) => SEARCH_WORDS[w] ?? (this.df.has(w) ? [w] : undefined);
+		const groups: string[][] = [];
+		for (const w0 of raw) {
+			const sing = w0.length > 4 && /[^s]s$/.test(w0) ? w0.slice(0, -1) : w0;
+			let alts = known(w0) ?? known(sing);
+			if (!alts && sing.length >= 4) {
+				const max = sing.length >= 7 ? 2 : 1;
+				const near = (cands: Iterable<string>) => {
+					let best: { w: string; d: number } | undefined;
+					for (const c of cands) {
+						const d = editDistance(sing, c, max);
+						if (d <= max && (!best || d < best.d)) best = { w: c, d };
+					}
+					return best;
+				};
+				const hit = near(keys) ?? near([...this.df.keys()].filter((k) => k.length >= 4));
+				if (hit) {
+					fixes.push(`${w0} → ${hit.w}`);
+					alts = known(hit.w);
+				}
+			}
+			if (!alts) unread++;
+			groups.push(alts ?? [w0]);
+		}
+		if (!groups.length) return { hits: [], readAs: '' };
+		// One alternative per word, every combination (capped): "cow meat" → "naudan liha", "nauta meat", …
+		let combos: string[][] = [[]];
+		for (const g of groups) combos = combos.flatMap((c) => g.map((a) => [...c, a])).slice(0, 24);
+		const best = new Map<ProductId, ScoredHit>();
+		for (const c of combos) {
+			const q = c.join(' ');
+			for (const r of this.similar(this.queryTarget(q), new Set(), limit, { minLex: 0.5 })) {
+				const confidence = Math.max(
+					0,
+					Math.min(1, (r.score ?? 0) * (fixes.length ? 0.85 : 1) * (unread ? 0.5 : 1))
+				);
+				const prev = best.get(r.productId);
+				if (!prev || confidence > prev.confidence)
+					best.set(r.productId, { productId: r.productId, confidence, readAs: q });
+			}
+		}
+		const hits = [...best.values()]
+			.sort((a, b) => b.confidence - a.confidence || (a.productId < b.productId ? -1 : 1))
+			.slice(0, limit)
+			.map((h) => ({ ...h, confidence: Math.round(h.confidence * 100) / 100 }));
+		return {
+			hits,
+			readAs: groups.map((g) => g.join('/')).join(' '),
+			...(fixes.length ? { corrected: fixes.join(', ') } : {})
+		};
+	}
+
+	/**
 	 * Resolve an ingredient query. Dietary requirements come from the query's words ("laktoositon kerma") and from
 	 * `diet` (e.g. ['LACTOSE'] for a lactose-free menu). Unresolved results say which bar was not cleared.
 	 */
 	resolve(raw: string, o: { limit?: number; diet?: string[] } = {}): Resolution {
+		const first = this.resolveOne(raw, o);
+		if (first.status === 'resolved') return first;
+		// A recipe's wording the catalogue doesn't use: tried only when the line as written finds nothing, each through
+		// the same diet and guard, so a rewording never loosens what the line must meet.
+		for (const alt of rewordings(raw)) {
+			const r = this.resolveOne(alt, o);
+			if (r.status === 'resolved') return r;
+		}
+		return first;
+	}
+
+	private resolveOne(raw: string, o: { limit?: number; diet?: string[] }): Resolution {
 		// A recipe line reads as its ingredient: notes in brackets go; of alternatives the named one stays ("voi tai
 		// margariini" is butter; the prefix form "vispi- tai kuohukermaa" is the full word, kuohukerma); plural fillets
 		// read as the fillet ("kirjolohifileet"). Quantities and units are not content words anyway.
@@ -672,3 +869,57 @@ export const toRetrievalProduct = (p: Product): RetrievalProduct => ({
 	netUnit: p.netPerSalesUnit?.value.unit,
 	allergens: { contains: p.allergens.contains, declared: p.allergens.declared }
 });
+
+/** Whether a query uses a word only SEARCH_WORDS can read (English or colloquial): it searches tolerantly first. */
+export const usesSearchWords = (query: string) =>
+	query
+		.toLowerCase()
+		.split(/[^a-zåäö]+/)
+		.some(
+			(w) =>
+				w in SEARCH_WORDS || (w.length > 4 && w.endsWith('s') && w.slice(0, -1) in SEARCH_WORDS)
+		);
+
+/** Below this a tolerant hit is a guess, not a match (S3 asks "Did you mean…?" from 0.45 to 0.75). */
+export const ASK_BAR = 0.45;
+
+export interface ScoredSearch {
+	products: Product[];
+	hits: ScoredHit[];
+	readAs: string;
+	corrected?: string;
+}
+
+/**
+ * search_products for a chef's words, shared by both catalogue adapters: an exact query keeps today's search; a
+ * query in English or colloquial words, or one that finds nothing, goes through the tolerant search, with the best
+ * few and how sure each is.
+ */
+export async function scoredSearch(
+	query: string,
+	limit: number,
+	exact: () => Promise<Product[]>,
+	index: () => Promise<RetrievalIndex> | RetrievalIndex,
+	get: (ids: ProductId[]) => Promise<Map<ProductId, Product>>
+): Promise<ScoredSearch> {
+	if (!usesSearchWords(query)) {
+		const found = await exact();
+		if (found.length)
+			return {
+				products: found,
+				hits: found.map((p) => ({ productId: p.productId, confidence: 1, readAs: query })),
+				readAs: query
+			};
+	}
+	const t = (await index()).searchTolerant(query, Math.min(limit, 5));
+	const docs = await get(t.hits.map((h) => h.productId));
+	const hits = t.hits.filter((h) => docs.has(h.productId));
+	// Below the asking bar nothing matched: no products (callers keep their "nothing found" path), the closest few
+	// stay in hits for a labelled "closest we have".
+	return {
+		products: hits.filter((h) => h.confidence >= ASK_BAR).map((h) => docs.get(h.productId)!),
+		hits,
+		readAs: t.readAs,
+		...(t.corrected ? { corrected: t.corrected } : {})
+	};
+}

@@ -57,6 +57,17 @@ function leadingTimes(name: string): number | null {
 	return m ? Number(m[1]) : null;
 }
 
+/** "JÄÄSALAATTI 100G SUOMI 12KPL": a trailing piece count means the sales unit holds that many of the stated size. */
+function trailingCount(name: string, after = ''): number | null {
+	// Only a count after the stated size ("100G … 12KPL"); "30kpl 1,8kg" gives the total, not the piece.
+	const at = after ? name.toLowerCase().indexOf(after.toLowerCase()) : -1;
+	const m = (at >= 0 ? name.slice(at + after.length) : name).match(
+		/(\d+)\s*(?:kpl|st|pcs)(?![\p{L}])/iu
+	);
+	const n = m ? Number(m[1]) : null;
+	return n && n > 1 ? n : null;
+}
+
 /** Base units in one sales unit (KI = 10 ST → 10). Null when the hierarchy does not say. */
 export function baseUnitsPerSales(p: Product): number | null {
 	if (p.salesUnit === p.baseUnit) return 1;
@@ -123,6 +134,13 @@ export function contentPerSalesUnit(p: Product, dim: Dim): Content | { error: st
 				readings.push({ value: m.value * m.times, why: `one ${p.salesUnit} = ${m.raw}` });
 				readings.push({ value: m.value, why: `one ${p.salesUnit} = ${fmt(m.value)} ${dim}` });
 			}
+		} else if (
+			trailingCount(p.nameFi, m.raw) !== null &&
+			perSales !== null &&
+			(perSales === 1 || perSales === trailingCount(p.nameFi, m.raw))
+		) {
+			const n = trailingCount(p.nameFi, m.raw)!;
+			readings.push({ value: m.value * n, why: `${p.salesUnit} = ${n} × ${fmt(m.value)} ${dim}` });
 		} else if (lead !== null && perSales !== null && (perSales === lead || perSales === 1)) {
 			readings.push({
 				value: m.value * lead,
