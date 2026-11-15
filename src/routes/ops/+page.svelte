@@ -820,8 +820,8 @@
 	/* Header: title + switch, the four figures that matter, connection state. */
 	.room > header {
 		display: grid;
-		grid-template-columns: auto minmax(0, 1fr) auto;
-		gap: 40px;
+		grid-template-columns: minmax(0, 1fr) auto;
+		gap: 20px 40px;
 		align-items: end;
 		padding-bottom: 18px;
 		border-bottom: 1px solid var(--line);
@@ -854,22 +854,30 @@
 		color: var(--text);
 	}
 
+	/* One even row: every figure the same cell, number over its label. */
 	.figures {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 12px 28px;
+		grid-column: 1 / -1;
+		grid-row: 2;
+		display: grid;
+		grid-template-columns: repeat(5, minmax(0, 1fr));
+		gap: 12px;
 		min-width: 0;
 		margin: 0;
-		justify-content: center;
 	}
 	.figures div {
 		display: flex;
 		flex-direction: column-reverse;
+		justify-content: flex-end;
+		gap: 6px;
+		padding: 14px 16px;
+		border: 1px solid var(--line);
+		border-radius: 6px;
+		background: var(--panel);
 	}
 	.figures dt {
-		white-space: nowrap;
 		color: var(--muted);
 		font-size: 16px;
+		line-height: 1.3;
 	}
 	.figures dd {
 		margin: 0;
@@ -1110,7 +1118,6 @@
 
 	.services {
 		grid-column: 1 / -1;
-		margin-top: -22px;
 	}
 
 	/* Problems: the cards, then the selected one's story beside them. */
@@ -1398,15 +1405,8 @@
 		.log {
 			max-height: none;
 		}
-		.room > header {
-			grid-template-columns: 1fr auto;
-		}
 		.figures {
-			grid-column: 1 / -1;
-			grid-row: 2;
-			justify-content: flex-start;
-			flex-wrap: wrap;
-			gap: 28px;
+			grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
 		}
 	}
 	@media (max-width: 760px) {
