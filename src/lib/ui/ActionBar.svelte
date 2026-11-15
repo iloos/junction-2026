@@ -5,7 +5,7 @@
 	 * sign-offs (decided one by one in their group), and "Order K lines now · €Y", primary once nothing waits. After an
 	 * order it says what was ordered.
 	 */
-	import { CircleCheck, Info } from '@lucide/svelte';
+	import { CircleCheck, Info, LoaderCircle } from '@lucide/svelte';
 	import { money } from './format';
 
 	let {
@@ -16,6 +16,7 @@
 		ordered = null,
 		due = null,
 		busy = false,
+		locked = false,
 		note,
 		blocked = null
 	}: {
@@ -29,6 +30,8 @@
 		/** "Tue 8 Dec, 15:00": when the decisions are due. */
 		due?: string | null;
 		busy?: boolean;
+		/** Viewing only (someone else's room store): the buttons show, disabled, with no spinner. */
+		locked?: boolean;
 		/** The price and stock note, behind ⓘ. */
 		note?: string;
 		/** Nothing can be ordered (e.g. the cut-off passed): said instead of "inside your rules". */
@@ -68,23 +71,30 @@
 		{/if}
 	</p>
 	<span class="flex flex-wrap gap-2">
-		{#if acceptAll.count}
+		{#if busy && (acceptAll.count || order.lines)}
+			<!-- While the plan updates, the buttons wait: said, with a spinner, so a press in the wait isn't lost. -->
+			<span
+				class="inline-flex h-10 items-center gap-2 rounded-md border border-rule-strong px-4 text-body text-ink-2"
+				role="status"
+				><LoaderCircle size={15} class="animate-spin" aria-hidden="true" />Updating the plan…</span
+			>
+		{:else if acceptAll.count}
 			<button
 				type="button"
 				class="inline-block min-h-10 rounded-md bg-accent px-4 py-2 text-left text-body font-medium text-sheet hover:bg-accent-ink disabled:opacity-50 sm:inline-flex sm:items-center sm:py-1.5 sm:whitespace-nowrap"
-				disabled={busy}
+				disabled={busy || locked}
 				onclick={acceptAll.onaccept}
 				>Accept all {acceptAll.count}{acceptAll.includes ? `, incl. ${acceptAll.includes}` : ''} ·
 				<span class="mono ml-1">{money(acceptAll.cents)}</span></button
 			>
 		{/if}
-		{#if order.lines}
+		{#if order.lines && !busy}
 			<button
 				type="button"
 				class="inline-flex h-10 items-center rounded-md px-4 text-body font-medium whitespace-nowrap disabled:opacity-50 {waiting
 					? 'border border-accent text-accent-ink hover:bg-accent-wash'
 					: 'bg-accent text-sheet hover:bg-accent-ink'}"
-				disabled={busy}
+				disabled={busy || locked}
 				onclick={order.onorder}
 				>Order {order.lines}
 				{order.lines === 1 ? 'line' : 'lines'} now ·

@@ -1925,7 +1925,8 @@
 									}
 								: null}
 							due={decisions.length ? storyTime(decisionsDue(plan, approval)) : null}
-							busy={k.busy || k.readOnly}
+							busy={k.busy}
+							locked={k.readOnly}
 							note={PRICE_NOTE}
 							blocked={plan.lines.some((l) => l.qty.value > 0) &&
 							plan.lines.every((l) => l.qty.value <= 0 || l.state === 'unorderable')
