@@ -1430,6 +1430,18 @@ export async function planView(
  * The room a link opens in, so it still works after the browser switched rooms in another tab: the shared room by
  * name, a private sandbox as "mine"; the stage is the presenter's own and keeps the cookie's choice.
  */
+/** One dish of a menu card: its role, the diets it claims (not head counts) and how many ingredients lack a product. */
+const dishRow = (x: MenuProposal['dishes'][number]) => {
+	const missing = x.ingredients.filter((i) => i.unresolved !== undefined).length;
+	const diet = x.claimedCompatible.filter((d) => !d.includes(':'));
+	return {
+		name: x.name,
+		...(x.course ? { course: x.course } : {}),
+		...(diet.length ? { diet } : {}),
+		...(missing ? { missing } : {})
+	};
+};
+
 const roomParam = (workspaceId: string) =>
 	workspaceId === JUDGES_WORKSPACE
 		? `&ws=${JUDGES_WORKSPACE}`
@@ -1469,7 +1481,7 @@ export async function taskView(taskId: string, deps: ChatDeps): Promise<ChatEven
 				title: m.brief.title,
 				guests: m.brief.guests,
 				date: m.brief.date,
-				dishes: m.dishes.map((x) => ({ name: x.name, ...(x.course ? { course: x.course } : {}) })),
+				dishes: m.dishes.map(dishRow),
 				...(m.brief.budgetCents ? { budgetCents: m.brief.budgetCents } : {}),
 				unresolved,
 				reviewed: m.status !== 'proposed',
@@ -2015,10 +2027,7 @@ async function eventTurn(
 		title: brief.title,
 		guests: brief.guests,
 		date: brief.date,
-		dishes: proposal.dishes.map((x) => ({
-			name: x.name,
-			...(x.course ? { course: x.course } : {})
-		})),
+		dishes: proposal.dishes.map(dishRow),
 		...(brief.budgetCents ? { budgetCents: brief.budgetCents } : {}),
 		unresolved,
 		reviewed: proposal.status !== 'proposed',

@@ -66,7 +66,8 @@ export type ChatEvent =
 			title: string;
 			guests: number;
 			date: string;
-			dishes: { name: string; course?: string }[];
+			/** One row per dish: role, the diets it claims, and how many ingredients have no product yet. */
+			dishes: { name: string; course?: string; diet?: string[]; missing?: number }[];
 			/** The brief's food budget, when one was given (the menu aims at it). */
 			budgetCents?: number;
 			/** Ingredients that have no catalogue product yet: shown as gaps, never guessed. */
