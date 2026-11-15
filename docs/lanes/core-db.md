@@ -57,32 +57,33 @@
 - A recipe's allocation appears on each ingredient line; sum the FulfilmentView buckets, never the allocations.
 - Under parallel gates PGlite hooks slow down; the server project's timeout is 120 s. Rerun before debugging a timeout.
 
-## Resume (lane restart, 14–15 Nov night)
-- **Worktree:** `c:\Users\jiaqi\Documents\.ai\hackathon\junc26-lanes\core-db`, branch `lane/a-atp`, pushed. Final SHA is in the lead message. Everything up to 6570a75 is on main; f882939 (R12-01) and this brief are on the branch. Dev port 5172.
-- **Commands:**
-  - `pnpm i --frozen-lockfile`.
-  - `DATABASE_URL= LLM_PROVIDER=fixture pnpm dev --port 5172`: the worktree `.env` holds the prod DATABASE_URL, so always blank it.
-  - Tests: `DATABASE_URL= LLM_PROVIDER=fixture npx vitest run src/lib/server src/lib/core`.
-  - Light gate (lanes don't run the full gate): `DATABASE_URL= node scripts/merge-gate.mjs --only check,lint`.
-- **Local state:** `.env` (copied from the main checkout; keys used: VALIO_API_KEY, the Gemini/LLM keys, DATABASE_URL — never read values) and `data/valio/` (raw catalogue and normalised cache, normaliser v4).
-- **Done tonight (SHAs on main unless noted):**
-  - D16 meets() as the one evaluator, RequirementCheck, Line.unmet, refusal detail, dish codes on needs: 6643b30, 0a248d1, dc855e9.
-  - D18: Need.ask, sales-unit needs, line binding, commandKey: 362edd4, 1afb1b5, 7256982. need_rounding_large: 241f1ef.
-  - Commit replay of a completed command: 10929f5. Dairy and gluten by product identity: 6570a75.
-  - Facets eval at 0 unsafe: f31e4d2. R12-01 ask binds: f882939 (branch).
-- **In flight:** nothing; no WIP.
-- **Handed off:**
-  - B: request orderLine sends `ask`/requirements without amount; reason `need_rounding_large`.
-  - E/B/Kitchen: switch to core `commandKey`.
-  - da: get_context, refusals and dock answers on RequirementCheck and ALLERGEN_NAMES.
-  - 1f: reason labels (requirement_unknown, exceeds_need, need_size_unknown, need_rounding_large, requirement_relaxed.*, CAUTION.model_fit, superseded, off_delivery_day); ui/diet.ts to read core's allergen table.
-  - lead: re-seed prod's catalogue (normaliser v4).
-- **Traps:**
-  - Any tool *input* schema change misses the recorded free-text chat replays. Re-record with `CHAT_LIVE=1 CHAT_RECORD=1 LIVE_ONLY=f LLM_PROVIDER=gemini DATABASE_URL= node --env-file=.env node_modules/vitest/vitest.mjs run --project server src/lib/server/evals/chat-free.test.ts`.
-  - Never edit files while this worktree's gate runs.
-  - In Python heredocs a regex `\b` can land as a backspace byte: fix by byte replacement.
-  - `cat >` without a heredoc waits on stdin and looks like a hang.
-  - Tests under src/lib/core run in a project without `node:fs`; put catalogue probes under src/lib/server.
+## Report (ring 6, S1 · Core and agent door, 14–15 Nov night)
+One line per item: time · done · needs · SHA · ready.
+- 23:30 · R12-02 one allergen table (core/mandate/allergens.ts); gluten = AW, UW, NR, GB, GO, GS, GK; a contradicted free-from claim is held (D16 line) · — · ae6e9c0, e12857a · merged
+- 23:50 · contracts: Kitchen.copiedFrom/owner/description; notice ServerEvent; KitchenCreated, ShortageReplanned · — · 7b0131d, db3a313 · merged
+- 00:10 · R12-04 contention residual in the need's own unit (probe R10-05 closed) · — · ed72c5d · merged
+- 00:30 · moment 1: replanShortage over one shared stock; scenario action `shortage` (presenter-only in ws-judges) · — · 812d714 · merged
+- 01:00 · create_kitchen (copy a sample or blank, D24/D25), owner gate failing closed, POST /kitchen-api/kitchen, snapshot `kitchens` · — · e2842bd, ff8c1a0, 6fd8718 · merged
+- 01:30 · moment 2 core: 'kana' in 'porkkana'; produce is plant food by category; held ⇒ in a decision (fact gaps unorderable) · — · e91fb9d, 1c4e6b8 · merged
+- 02:00 · review F2 (one order-line constructor, diet/brand/ask through the routine agent), F7 (search budget under the 8-step cap) · — · 8a7c374, 2c3742d, 22bf351 · merged
+- 02:15 · CPU: similar() memoized, stems, offsets; 10 concurrent starts ~5.5 → ~1.9 s each · — · b984527 · merged
+- 02:40 · D26 judge keys carry their visitor; get_context own kitchens first · — · 46e2669 · merged
+- 02:50 · audit OM-1/3/4/5/6/9 (visitor on every surface, tab pin, re-quote supersedes pending, random shortage ids) · S2: send kitchenId/preset · 6eca87e, 61b986b, aa74a3a · merged
+- 03:20 · D28 steer + alternatives (+ pick) with totals; swap re-size; head-food kind gate · S2 wires chips · bc52e98, 52d5a83, e0f5210, 787e448 · wave L/M
+- 03:40 · room gate (ws-judges: write only to own store; presenter exempt); basket keeps unorderable days; planUsual as visitor; wording (not-ordered reason, dish-level rescue) · — · f76d42f, 9dc7586, 6a509d7, 6ee92c4 · wave L/M
+
+## Resume (post-freeze)
+- **Worktree** `c:\Users\jiaqi\Documents\.ai\hackathon\junc26-lanes\core-db`, branch `lane/a-atp`, port 5172. Everything above is on the branch; the lead merges by wave. No WIP.
+- **Next 1: D22 MCP approval by elicitation (parked, ~2 h).** A chef-paired key kind in server/auth (not a judge key) → `approve` registered on MCP only for it → the tool returns the SDK's `inputRequired(...)` elicitation with the exact terms (lines, total, reasons, plan version, termsHash); the client's re-call carries accept/decline; accept approves exactly those terms, recorded "approved by the chef via <client>". Our server is stateless per request on @modelcontextprotocol/server 2.4: push `elicitInput` only works on the legacy session path, so use the 2026-07-28 multi-round-trip form. No elicitation support → return approvalUrl (D17). Never-delegate lines refused. Tests: accept, decline, stale version, outside key refused, never-delegate refused.
+- **Next 2: set_mandate for a visitor's own kitchen** ("default rules the chef can edit", D25): serve it only when the kitchen's owner is ctx.visitor, never for seeded kitchens in the room, never for agents (they lack mandate:write).
+- **Next 3: product kind by model judgement** (lane Ideas): one Gemini Decisions batch over the 13.5k foods, stored as an enrichment, read by meets() before the name words.
+- **Seams other lanes own:** S2 sends `kitchenId`/`preset` on scenario and `?kitchen=` on snapshot (OM-3/4); S2 titles 'usual' plans from `sources[].kind`; S3's chat must send a kitchenId (the hotel fall-back now fails closed in the room); S4's presenter actions through handlers need `sharedRoom: false`.
+- **Traps (new tonight):**
+  - `git commit` after `… | tail` loses the gate's exit code; capture `$?` before piping.
+  - Python on Windows writes CRLF in text mode; open files with `newline=''`.
+  - `/?ws=ws-judges` is a client-rendered shell: the room cookie is set by `__data.json`, so curl probes must load it.
+  - A built server under `--cpu-prof` writes nothing when killed on Windows; profile over the inspector (scratch/prof/profile.mjs pattern).
+  - Every ws-judges context is `sharedRoom` by default; a presenter path must clear it explicitly.
 
 ## Self-review (checkpoint)
 - **Solid:** one evaluator (meets) for every hard requirement, at rank, quote and commit, with the fact behind each refusal. Lines are bound to their need's amount. Each R9–R11 fix has a test that flips its probe.
