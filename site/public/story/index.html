@@ -611,7 +611,7 @@ const CHECKS = [
 	['The mandate', 'A new product, an allergen change or a broken preference goes to the chef.'],
 	['Spend caps', 'Over a line, order or weekly cap, nothing is ordered alone, even when split.'],
 	['Cut-off and pack size', 'No order after Valio\'s closing time, and no part packs.'],
-	['Stock Valio states', 'Stock Valio doesn\'t state is never counted as covered.'],
+	['Stock the catalogue states', 'Stock with no quantity in the catalogue is never counted as covered.'],
 ];
 // Which recorded case stops where. stop -1 = passes every check; passed = checks the recording backs as passed
 // (the chef sent it, so "Who is asking" passed); why = the recorded step that says so.
@@ -738,7 +738,7 @@ function fillPlan(d) {
 	}
 	if (Array.isArray(pl.steps)) $('p-steps').innerHTML = pl.steps.map((st) => `<li><b>${H(TOOL[st.tool] || st.tool)}</b><span>${H(st.summary)}</span></li>`).join('');
 	$('p-guard').textContent = pl.modelGuard ? 'The model\'s own reply didn\'t name the open need, so a sentence built from the order\'s numbers was used.' : 'The reply is checked against the order\'s numbers, or built from them, before it is shown.';
-	const SL = { known: (l) => (l.stated != null ? `Valio states ${l.stated} in stock` : 'Valio states a quantity'), unknown: () => 'Valio doesn\'t state a quantity', confirmed: () => 'Supplier confirmed', awaiting: () => 'Ordered, awaiting supplier', none: () => 'Nothing covers it yet' };
+	const SL = { known: (l) => (l.stated != null ? `${l.stated} in stock in the catalogue` : 'Stock stated in the catalogue'), unknown: () => 'No quantity in the catalogue', confirmed: () => 'Supplier confirmed', awaiting: () => 'Ordered, awaiting supplier', none: () => 'Nothing covers it yet' };
 	if (Array.isArray(pl.lines) && pl.lines.length) {
 		$('plines').innerHTML = pl.lines.slice(0, 3).map((l) => {
 			const top = l.was ? `<s>${H(readable(l.was))}</s>` : l.dish ? `<s class="nos">${H(l.dish)}, made in house</s>` : '';
