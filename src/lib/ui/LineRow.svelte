@@ -21,6 +21,8 @@
 	interface Props {
 		line: Line;
 		name: string;
+		/** The product in English ("oat drink for coffee, 1 l"), when the catalogue has it: a muted second line. */
+		gloss?: string;
 		/** A granted approval covers this line (core keeps it `held` until ordered). */
 		approved?: boolean;
 		/** The row just changed: tint lands and fades. */
@@ -39,7 +41,7 @@
 		/** Change this line's amount in its sales units (edit_line); absent when it can't change. */
 		onqty?: (qty: number) => void;
 		/** What the web says about allergens for a product with no record: evidence only, linked to its source. */
-		web?: { text: string; host: string; url: string } | null;
+		web?: { text: string; host: string; url: string; unsure?: boolean } | null;
 		/** Open the compare panel (Swap pressed on the collapsed dish row). */
 		swapOpen?: boolean;
 		/** This line's own decision (D23): Accept / Reject, or a sign-off one by one. */
@@ -58,6 +60,7 @@
 	let {
 		line: l,
 		name,
+		gloss,
 		approved = false,
 		flash = false,
 		replaces,
@@ -116,9 +119,10 @@
 					class="min-w-0 break-words {rejected || denied
 						? 'text-ink-3 line-through decoration-ink-3/60'
 						: 'text-ink'}"
-					title={name}>{name}</span
+					title={gloss ? `${name} · ${gloss}` : name}>{name}</span
 				>{#if diet}<DietMarks marks={diet} />{/if}
 			</button>
+			{#if gloss}<p class="truncate text-meta text-ink-3" title={gloss}>{gloss}</p>{/if}
 			{#if replaces}
 				<p class="text-meta text-ink-2">
 					{#if replaces.picked}<span class="text-ink">Picked: {replaces.picked}</span> · replaces{:else}Replaces{/if}
@@ -142,7 +146,7 @@
 			{#if web}
 				<!-- eslint-disable svelte/no-navigation-without-resolve -- an outside source page -->
 				<p class="text-meta text-ink-3">
-					Web: {web.text} ·
+					{web.unsure ? 'Web, may describe another product' : 'Web'}: {web.text} ·
 					<a
 						href={web.url}
 						target="_blank"

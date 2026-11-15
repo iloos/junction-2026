@@ -180,6 +180,18 @@
 
 	// Names from the server's lines first, the fixture catalogue as a fallback; as people read them (the catalogue's
 	// normalised short name, else Valio's ALL-CAPS name in sentence case). The raw name stays in Why.
+	/** A product's English name (the catalogue's nameEn), when it says more than the Finnish one already shown. */
+	function englishOf(productId: string, shown?: string): string | undefined {
+		const en =
+			(k.snap as { englishNames?: Record<string, string> } | null)?.englishNames?.[productId] ??
+			(
+				k.plan?.lines.find((l) => l.productId === productId) as
+					{ productNameEn?: string } | undefined
+			)?.productNameEn;
+		return en && en.trim() && en.trim().toLowerCase() !== shown?.trim().toLowerCase()
+			? en.trim()
+			: undefined;
+	}
 	const names = $derived(
 		new Map(
 			[
@@ -259,7 +271,11 @@
 	let webFacts = $state.raw<
 		Record<
 			string,
-			{ contains: string[]; mayContain: string[]; source: { host: string; url: string } }
+			{
+				contains: string[];
+				mayContain: string[];
+				source: { host: string; url: string; eanVerified?: boolean };
+			}
 		>
 	>({});
 	$effect(() => {
@@ -283,7 +299,15 @@
 			f.contains.length ? `contains ${f.contains.join(', ')}` : null,
 			f.mayContain.length ? `may contain ${f.mayContain.join(', ')}` : null
 		].filter(Boolean);
-		return parts.length ? { text: parts.join('; '), host: f.source.host, url: f.source.url } : null;
+		return parts.length
+			? {
+					text: parts.join('; '),
+					host: f.source.host,
+					url: f.source.url,
+					// A page whose barcode was not matched may be about another product: said, never hidden.
+					unsure: f.source.eanVerified === false
+				}
+			: null;
 	}
 	// Every row, the Decide panel and the swap panel read one photo cache, filled in one batch when the plan arrives.
 	$effect(() => {
@@ -1542,6 +1566,7 @@
 		<LineRow
 			line={l}
 			name={names.get(l.productId) ?? l.productId}
+			gloss={englishOf(l.productId, names.get(l.productId))}
 			approved={approvedIds.has(l.id)}
 			flash={k.flash.has(l.id)}
 			by={inGroup ? undefined : snap?.byAgent?.[l.id]}
