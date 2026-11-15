@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { TriangleAlert, Info } from '@lucide/svelte';
 	import { onMount } from 'svelte';
+	import { resolve } from '$app/paths';
 	import { storyTime } from '$lib/ui/format';
 	import { useShell } from '$lib/ui/shell/shell.svelte';
 	import MenuReview from '$lib/ui/request/MenuReview.svelte';
@@ -29,7 +30,10 @@
 	onMount(() => {
 		ready = true;
 		if (shell) {
-			shell.chatFull = true;
+			// A menu or plan on screen takes the main panel; the conversation continues as the side dock (D23 addendum).
+			const reviewing = new URL(location.href).searchParams.has('menu');
+			shell.chatFull = !reviewing;
+			if (reviewing) shell.chatOpen = true;
 			const t = new URL(location.href).searchParams.get('text');
 			if (t) shell.chatDraft = t.slice(0, 500);
 			// "New order" (D31): a fresh conversation; earlier orders keep their own threads.
@@ -229,7 +233,7 @@
 		>
 			In this room the agent buys for your own store. <a
 				class="font-medium text-accent-ink underline"
-				href="/">Start your store</a
+				href={resolve('/')}>Start your store</a
 			> on the Kitchen page first.
 		</p>
 	{/if}
