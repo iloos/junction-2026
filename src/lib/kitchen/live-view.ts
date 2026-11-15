@@ -64,7 +64,7 @@ type LooseRescue = any;
 
 const AVAIL_TEXT: Record<AvailabilityKind, string> = {
 	known: 'in stock',
-	unknown: "Valio doesn't state a quantity",
+	unknown: 'no quantity in the catalogue',
 	out: 'out of stock',
 	undeliverable: 'not deliverable',
 	blocked: 'not orderable yet'
@@ -77,7 +77,7 @@ export function availText(o?: Offer): string {
 	const a = o?.availability;
 	if (!a) return 'no availability data';
 	if (a.kind === 'known')
-		return a.amount === null ? "Valio doesn't state a quantity" : `${a.amount} in stock`;
+		return a.amount === null ? 'no quantity in the catalogue' : `${a.amount} in stock`;
 	return AVAIL_TEXT[a.kind];
 }
 
@@ -100,10 +100,10 @@ const isShort = (l: Line) => l.view?.blockedReason?.detail === 'stock';
 
 function verdict(c: CandidateView): string {
 	if (c.rejected.includes('out')) return 'Rejected: out of stock (0)';
-	if (c.rejected.includes('undeliverable')) return "Rejected: Valio can't deliver it here";
+	if (c.rejected.includes('undeliverable')) return "Rejected: Valio Aimo can't deliver it here";
 	if (c.rejected.includes('origin_required'))
 		return `Rejected: origin ${c.origin?.toUpperCase() ?? '?'}, your rules require FI`;
-	if (c.rejected.includes('BELOW_LOT')) return "Rejected: less than one of Valio's lots left";
+	if (c.rejected.includes('BELOW_LOT')) return "Rejected: less than one of Valio Aimo's lots left";
 	if (c.rejected.includes('INSUFFICIENT_STOCK'))
 		return 'Rejected: not enough in stock for the need';
 	if (c.rejected.includes('low_reliability')) return 'Rejected: delivery reliability below 0.7';
@@ -297,8 +297,8 @@ function shortCause(l: Line | undefined): { short: string; long: string } {
 			long: 'part of the stock is already ordered in this run'
 		};
 	return {
-		short: `Valio's stock`,
-		long: `Valio has only ${a?.amount ?? '?'} ${unit} in stock; ${need ?? '?'} needed`
+		short: `Valio Aimo's stock`,
+		long: `Valio Aimo has only ${a?.amount ?? '?'} ${unit} in stock; ${need ?? '?'} needed`
 	};
 }
 
@@ -375,7 +375,7 @@ export function buildLiveView(input: LiveInput): EventView {
 							: short
 								? `${productSub?.productName ?? productSub?.productId} no longer covers the need: ${why.long}.`
 								: productSub && hasUnknown(productSub)
-									? `${productSub.productName ?? productSub.productId} is the pick under these rules, but Valio states no quantity for it: ${f1(served.value)} ${served.unit} stays unconfirmed, not cover.`
+									? `${productSub.productName ?? productSub.productId} is the pick under these rules, but the catalogue has no quantity for it: ${f1(served.value)} ${served.unit} stays unconfirmed, not cover.`
 									: `${productSub?.productName ?? productSub?.productId} has known stock for the full ${f1(served.value)} ${served.unit} served (planned, not reserved).`
 			};
 		}

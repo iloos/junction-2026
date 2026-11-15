@@ -25,11 +25,12 @@
 		{
 			href: resolve('/request'),
 			label: 'Ask the agent',
+			short: 'Ask',
 			match: (p: string) => p.startsWith('/request')
 		},
 		{
 			href: resolve('/ops'),
-			label: 'Operations',
+			label: 'Ops',
 			short: 'Ops',
 			match: (p: string) => p.startsWith('/ops')
 		},
@@ -132,7 +133,9 @@
 </svelte:head>
 
 <header data-theme={theme} class="border-b border-rule bg-sheet text-ink">
-	<div class="mx-auto flex h-11 max-w-[1440px] items-center gap-2 px-3 sm:gap-4 md:px-6">
+	<div
+		class="mx-auto flex h-11 max-w-[1440px] items-center gap-1.5 px-2.5 sm:gap-4 sm:px-3 md:px-6"
+	>
 		<!-- The logo opens the landing page on a second click; the first only says so (no surprise navigation). -->
 		<!-- eslint-disable svelte/no-navigation-without-resolve -->
 		<a
@@ -171,7 +174,7 @@
 						<a
 							href={item.href}
 							aria-current={current ? 'page' : undefined}
-							class="flex items-center border-b-2 px-1.5 sm:px-2 {current
+							class="flex items-center border-b-2 px-1 whitespace-nowrap min-[380px]:px-1.5 sm:px-2 {current
 								? 'border-accent font-medium text-ink'
 								: 'border-transparent text-ink-2 hover:text-ink'}"
 							>{#if item.short}<span class="sm:hidden">{item.short}</span><span
@@ -182,15 +185,15 @@
 				{/each}
 			</ul>
 		</nav>
-		<div class="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2">
+		<div class="ml-auto flex shrink-0 items-center gap-1 min-[380px]:gap-1.5 sm:gap-2">
 			<LabelPill labels={shell.labels} />
 			{#if shell.sandbox}<SandboxMenu sandbox={shell.sandbox} />{/if}
 			<SystemToggle on={shell.system} ontoggle={toggleSystem} />
 			<button
 				type="button"
-				class="inline-flex h-7 items-center gap-1.5 rounded-full px-2.5 text-meta font-medium {shell.chatOpen
-					? 'bg-ink text-sheet'
-					: 'bg-accent text-sheet hover:bg-accent-ink'}"
+				class="inline-flex h-7 items-center gap-1.5 rounded-full bg-accent px-2.5 text-meta font-medium text-sheet hover:bg-accent-ink {shell.chatOpen
+					? 'ring-2 ring-accent/40 ring-offset-1 ring-offset-sheet'
+					: ''}"
 				aria-pressed={shell.chatOpen}
 				aria-label="Ask the agent"
 				onclick={() => (shell.chatOpen = !shell.chatOpen)}

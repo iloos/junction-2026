@@ -105,8 +105,8 @@
 	</h1>
 	{#if room}
 		<p class="mt-1 max-w-2xl text-body text-ink-2">
-			Everyone here runs their own store on the same Valio stock. Name yours, then order by chat or
-			on the page; the big screen shows every order as it comes in.
+			Everyone here runs their own store on the same Valio Aimo stock. Name yours, then order by
+			chat or on the page; the big screen shows every order as it comes in.
 		</p>
 	{/if}
 
