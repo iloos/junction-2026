@@ -2007,6 +2007,8 @@ function briefValue(field: BriefField, raw: unknown): BriefAnswer['value'] | nul
 			return /\d/.test(t) && Number.isFinite(n) && n >= 0 ? n : null;
 		}
 		// Typed words are read by the brief ("gluten free please"; "no budget" is not a diet).
+		// A command ("plan it", "go ahead") is never a diet: it applies the stated defaults instead.
+		if (field === 'dietary' && PLAN_IT.test(t)) return null;
 		if (field === 'dietary') return /^(none|no|ei)$/i.test(t) ? [] : t;
 		// "a buffet please", "plated": the style the words name, never "plan it" as a style.
 		if (field === 'serviceStyle') return draftBrief(t, '2000-01-01').serviceStyle;

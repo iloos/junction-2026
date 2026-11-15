@@ -19,6 +19,8 @@ const SYNONYMS: {
 	words: RegExp;
 	said: string;
 	search: string[];
+	/** Names that only look like the food (a beefsteak tomato for "steak", baby food for "beef"). */
+	not?: RegExp;
 	dish?: true;
 	/** Grams per portion as bought, to say what N portions come to. */
 	gPerPortion?: number;
@@ -26,14 +28,16 @@ const SYNONYMS: {
 	{
 		words: /\b(st(?:r)?e?aks?|stakes?|streaks?|pihvi\p{L}*|entrecote|sirloin|ribeye)\b/iu,
 		said: 'steaks',
-		search: ['pihvi', 'naudan pihvi', 'entrecote', 'sisäfile'],
+		search: ['naudan pihvi', 'entrecote', 'sisäfile', 'pihvi'],
+		not: /tomaatti|kalkkuna|broileri|kana|kasvis|soija|kala|lohi|piltti/i,
 		dish: true,
 		gPerPortion: 200
 	},
 	{
 		words: /\b(cow(?: meat)?|beef|nauta\p{L}*|naudan\p{L}*)\b/iu,
 		said: 'beef',
-		search: ['naudan', 'nauta', 'naudan jauheliha']
+		search: ['naudan', 'nauta', 'naudan jauheliha'],
+		not: /piltti|lastenateria|kasvis|kebab|ateria/i
 	},
 	{ words: /\b(pork|pig|porsa\p{L}*|sian\p{L}*)\b/iu, said: 'pork', search: ['porsaan', 'sian'] },
 	{
@@ -91,7 +95,7 @@ export async function rescueOrder(
 		const r = await handlers.search_products(ctx, { query: q, limit: 8 }).catch(() => null);
 		if (r && r.ok) {
 			const out = r.value as { products?: Product[] };
-			hits = (out.products ?? []).slice(0, 3);
+			hits = (out.products ?? []).filter((p) => !syn?.not?.test(p.nameFi)).slice(0, 3);
 		}
 		if (hits.length) break;
 	}

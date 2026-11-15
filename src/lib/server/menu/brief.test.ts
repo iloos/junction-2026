@@ -185,3 +185,19 @@ describe('several dishes with "some vegan": asked, never one vegan dish', () => 
 		expect(applyBriefAnswers(d, [q.chips[0].answer], today).dietary).toEqual(['vegan:500']);
 	});
 });
+
+describe('a diet on one dish is not a diet for the menu', () => {
+	const today = '2026-12-07';
+	it('"Lunch for 80 on Friday: salmon soup, a vegetarian main and rye bread" → vegetarian for the main only', () => {
+		const d = draftBrief(
+			'Lunch for 80 on Friday: salmon soup, a vegetarian main and rye bread',
+			today
+		);
+		expect(d.dietary).toEqual(['vegetarian:main']);
+	});
+	it('"a vegetarian lunch for 40" stays a menu-wide requirement', () => {
+		expect(draftBrief('a vegetarian lunch for 40 on Friday', today).dietary).toEqual([
+			'vegetarian'
+		]);
+	});
+});
