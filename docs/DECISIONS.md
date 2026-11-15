@@ -280,3 +280,5 @@ The Kitchen shows one thing at a time: **the basket for a delivery day** (Tenanc
 **Why:** the user: clean basket and order logistics; create a new order while the previous stays saved, a new slate (canvas, items, chat); users join a kitchen, only they have access, more could join.
 
 **Reopen if:** a new order's chat thread shows lines of an earlier order, or a member sees a kitchen they don't belong to.
+
+**D23 addendum (user, 15 Nov 03:20): start full page, move to the side when there's something to look at.** A conversation starts full page (`/request`, "Ask the agent"): every "Tell the agent what you need" and "New order" goes there, the composer is focused and visible without scrolling at 1440 and 390. When the agent produces a plan (or the chef opens an order), the conversation moves to the side dock beside that order on the Kitchen, and the transcript continues there. The side dock alone, over a page with nothing to show, is not the starting point.
