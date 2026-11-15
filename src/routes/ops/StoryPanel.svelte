@@ -43,7 +43,7 @@
 			{/each}
 		</ol>
 	{:else}
-		<p class="none">No op of this run touches it yet.</p>
+		<p class="none">No order in this run uses it yet.</p>
 	{/if}
 	{#if hidden}
 		<p class="hidden">

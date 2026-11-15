@@ -189,7 +189,7 @@
 									<span class="n"></span>
 									<p>
 										{s.data.ok === false ? `Failed: ${reasonText(str(s.data.code))}` : 'Done'}
-										<span class="mono">{num(s.data.ms)} ms</span>
+										{#if num(s.data.ms) !== null}<span class="mono">{num(s.data.ms)} ms</span>{/if}
 										{#if str(s.data.result)}<details class="digest">
 												<summary>Raw result</summary><code>{str(s.data.result)}</code>
 											</details>{/if}

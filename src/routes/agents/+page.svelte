@@ -58,14 +58,29 @@
 		};
 	});
 
+	/** Copy with feedback; where the clipboard API is refused (an insecure origin, a blocked permission), fall back. */
 	async function copy(what: string, text: string) {
+		let ok: boolean;
 		try {
 			await navigator.clipboard.writeText(text);
-			copied = what;
-			setTimeout(() => (copied = copied === what ? null : copied), 1500);
+			ok = true;
 		} catch {
-			copied = null;
+			const t = document.createElement('textarea');
+			t.value = text;
+			t.setAttribute('readonly', '');
+			t.style.position = 'fixed';
+			t.style.opacity = '0';
+			document.body.appendChild(t);
+			t.select();
+			try {
+				ok = document.execCommand('copy');
+			} catch {
+				ok = false;
+			}
+			t.remove();
 		}
+		copied = ok ? what : null;
+		if (ok) setTimeout(() => (copied = copied === what ? null : copied), 1500);
 	}
 
 	const transcript = [

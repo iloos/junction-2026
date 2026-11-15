@@ -63,13 +63,13 @@ Both apps build from GitHub (`iloos/junction-2026`, VCS integration `vcs5f404a66
 
 **Plan changes** go through `aiven_service_update` with only `plan` (and `cloud` for a move) set. Never send `user_config` for a plan change. Moving Postgres between clouds is online: on Sat 14 Nov the DigitalOcean → AWS move took 5 minutes, with one redirect seen by prod's health check and the same host, port and CA afterwards.
 
-## State at 06:00 (Sun 15 Nov)
+## State at submission (Sun 15 Nov, 09:30)
 
-The serving setup is left stable; no infra changes after this without the lead.
+The serving setup has not changed since 06:00; no infra changes without the lead. The deployed commit is whatever `/healthz` reports (`commit`, and `day` for the last 24 h of outside calls).
 
 | Piece | State |
 |---|---|
-| Prod `mandate` (app.mandate.kitchen) | main `d28f43d`, `startup-200-4096` (2 vCPU, 4 GB). Pool 3 (code default); no `PG_POOL_MAX` or `WARM_OFF` set. Background photo and facts lookups on, at most one plan warming at a time. |
+| Prod `mandate` (app.mandate.kitchen) | main (the submission cut), `startup-200-4096` (2 vCPU, 4 GB). Pool 3 (code default); no `PG_POOL_MAX` or `WARM_OFF` set. Background photo and facts lookups start 4 s after a plan goes quiet, one at a time. A warm plan starts in about 1.3 s; the first after a deploy in 2.5 to 3.3 s, so the deployer runs one plan right after each deploy. |
 | `mandate-b` | Same SHA and plan, the same env as prod (same `JUDGE_KEY_SECRET`: one visitor cookie, one sandbox). Healthy, serves no public traffic: reachable only through the router URL. The two-machines-one-Postgres proof. |
 | `mandate-staging` | **Stopped** (powered off, not deleted, 15 Nov 03:15 UTC). It shared prod's database, so it was a second writer, not a staging; the merge gate tests what prod runs, and `mandate-b` is the second machine. Power it on in the console to bring it back. |
 | Postgres `pg-1dfeeeed` | `business-16`: primary and a hot standby in two availability zones, 2 vCPU and 15.6 GB per node, 400 connections. Healthy; the upgrade's failover went unnoticed by both apps. |
