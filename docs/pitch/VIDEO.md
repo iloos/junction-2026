@@ -13,9 +13,9 @@ _S7, Sun 15 Nov 05:30. Recording slot 07:30–09:00, after the final deploy (~07
 | # | Time | Shot | Source | What must be on screen | Voice |
 |---|---|---|---|---|---|
 | 1 | 0:00–0:06 | Cover | deck slide 1 | "Order it. Hold it. Refuse it." animating in | "Mandate. Every item an agent wants to buy is ordered, held for the chef, or refused." |
-| 2 | 0:06–0:20 | The case | deck slide 3 | the Tue / Thu / Fri timeline, then the question | "A hotel kitchen: 140 booked, Valio is out of the ham, the cut-off is Friday at five. What may an agent buy without the chef?" |
+| 2 | 0:06–0:20 | The case | deck slide 3 | the Tue / Thu / Fri timeline, then the question | "A hotel kitchen: 140 booked, Valio Aimo is out of the ham, the cut-off is Friday at five. What may an agent buy without the chef?" |
 | 3 | 0:20–0:34 | The rules | deck slide 4 | the chef's mandate, teal and amber highlights, three dots | "The chef writes the rules once: 800 euros an item, never change an allergen, ask before anything new. The rules are code." |
-| 4 | 0:34–1:12 | **From words, live** | screen, tab 2 | see shot A below | "One sentence… Gemini proposes the menu… a new menu means new products, so the agent asks once… one yes, and it lands on Valio's side." |
+| 4 | 0:34–1:12 | **From words, live** | screen, tab 2 | see shot A below | "One sentence… Gemini proposes the menu… a new menu means new products, so the agent asks once… one yes, and it lands on Valio Aimo's side." |
 | 5 | 1:12–1:30 | **The buffet** | screen, tab 2 | see shot B below | "On the buffet: three items go through alone, three are impossible and say why, the rest is three decisions." |
 | 6 | 1:30–1:44 | Who can say yes | deck slide 8 (or the MCP consent screenshot, if the user captures one) | the three cards | "Any agent can plan. Only the chef can say yes: in the app, or when their own assistant asks." |
 | 7 | 1:44–1:54 | Real and next | deck slide 9 | the three lists | "Real Valio data, Gemini and Aiven; the order itself is simulated and labelled. Next: a pilot with one hotel." |
@@ -57,9 +57,9 @@ S5 records every clip automatically (Playwright, 1080p, fresh profile) from [sho
 | Clip | Length | Say |
 |---|---|---|
 | d1-cover | 0:06 | "Mandate. Every item an agent wants to buy is ordered, held for the chef, or refused." |
-| d3-case | 0:14 | "A hotel kitchen. A buffet for 140 is booked, Valio is out of the ham, and the cut-off is Friday at five. An agent could sort this out. But what may it buy without the chef?" |
+| d3-case | 0:14 | "A hotel kitchen. A buffet for 140 is booked, Valio Aimo is out of the ham, and the cut-off is Friday at five. An agent could sort this out. But what may it buy without the chef?" |
 | d4-rules | 0:14 | "The chef writes the rules once: up to 800 euros an item, never change an allergen, ask before anything new. The rules are code, so no model and no agent can bend them." |
-| A-words-live | 0:38 | "Now from words. One sentence: a no-meat dinner for 120 with a peach dessert. Gemini proposes the menu. Plan it: every ingredient becomes a Valio product with a price. A new menu means new products, and this hotel's rules say ask me first, so the agent asks once. One yes covers exactly these items, and the order lands on Valio's side." |
+| A-words-live | 0:38 | "Now from words. One sentence: a no-meat dinner for 120 with a peach dessert. Gemini proposes the menu. Plan it: every ingredient becomes a Valio product with a price. A new menu means new products, and this hotel's rules say ask me first, so the agent asks once. One yes covers exactly these items, and the order lands on Valio Aimo's side." |
 | B-buffet-live | 0:18 | "On the buffet, the same rules sort the order: three items go through alone, three are impossible and say why, and the rest come down to three decisions for the chef." |
 | d8-consent → C-consent (ba's Claude-client take, 4.3–18.3 s) | 0:14 | "Any agent can plan through the same door. Here, Claude plans a dinner with Mandate. Nothing is ordered until the chef says yes; an agent that tries to approve is refused." |
 | d9-next | 0:10 | "Real Valio data, Gemini and Aiven. The order itself is simulated and labelled. Next: a pilot with one hotel." |

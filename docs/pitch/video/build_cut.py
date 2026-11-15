@@ -17,12 +17,12 @@ for f in os.listdir(V + "/stills-deck"):
 # (clip id, slot seconds, visual: still or live clip with still fallback)
 PLAN = [
     ("d1-cover", 7, "s1.png", None),
-    ("d3-case", 14, "s3.png", None),
-    ("d4-rules", 14, "s4.png", None),
-    ("A-words-live", 36, "s7.png", "A-words-live.mp4"),
-    ("B-buffet-live", 18, "s5.png", "B-buffet-live.mp4"),
+    ("d3-case", 16, "s3.png", None),
+    ("d4-rules", 16, "s4.png", None),
+    ("A-words-live", 32, "s7.png", "A-words-live.mp4"),
+    ("B-buffet-live", 16, "s5.png", "B-buffet-live.mp4"),
     ("d8-consent", 14, "s8.png", "C-consent.mp4"),
-    ("d9-next", 10, "s9.png", None),
+    ("d9-next", 12, "s9.png", None),
     ("d10-close", 7, "s10.png", None),
 ]
 LEAD = 0.4  # voice starts after the picture
