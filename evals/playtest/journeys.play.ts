@@ -318,8 +318,19 @@ journey(
 			// S2 508db7d: beside the open dock the page keeps "Accept all N · €X" for the plan's decisions.
 			const acceptAll = page.getByRole('button', { name: /^Accept all/ }).first();
 			if (!viaDock && (await acceptAll.isVisible().catch(() => false))) {
-				r.note('approvedOn', 'page: Accept all, dock open');
-				await acceptAll.click();
+				// On a phone the open dock covers the page: a visitor closes it first.
+				if (isMobile(page)) {
+					await dock
+						.getByRole('button', { name: 'Close chat' })
+						.click({ timeout: 5_000 })
+						.catch(() => undefined);
+					await page.waitForTimeout(800);
+				}
+				r.note(
+					'approvedOn',
+					isMobile(page) ? 'page: Accept all, dock closed' : 'page: Accept all, dock open'
+				);
+				await acceptAll.click({ timeout: 15_000 });
 				await page.waitForTimeout(2000);
 				r.note('approvedDecisions', 'all');
 				return;
