@@ -109,6 +109,35 @@ export function draftBrief(text: string, today: string): BriefDraft {
 	if (serviceStyle) from.serviceStyle = 'words';
 
 	let typed = dietaryIn(text);
+	let someShare: NonNullable<BriefDraft['shares']> | null = null;
+	// "some vegan and some regular" for 1000: a share without a number. Never a diet for everyone: the likeliest
+	// reading (half) is asked as one tap.
+	const some = text.match(
+		/\b(?:some|a few|part(?: of them)?|osa)\s+(vegan\p{L}*|vegetarian\p{L}*|veggie|gluten[- ]?free|lactose[- ]?free|kasvis\p{L}*)/iu
+	);
+	if (some && guests !== null && !shares) {
+		const w = some[1].toLowerCase();
+		const label = /^veg(an|aan)/.test(w)
+			? 'vegan'
+			: /^(vegetarian|veggie|kasvis)/.test(w)
+				? 'vegetarian'
+				: /^gluten/.test(w)
+					? 'gluten-free'
+					: 'lactose-free';
+		const half = Math.round(guests / 2);
+		const sentence = `${half} ${label} and ${guests - half} regular servings`;
+		typed = typed.filter((d) => d.split(':')[0] !== label);
+		someShare = {
+			sentence,
+			dietary: [`${label}:${half}`],
+			ask: {
+				question: `${sentence}?`,
+				yes: `Yes, ${sentence}`,
+				no: `No, all ${guests} ${label}`,
+				noValue: label
+			}
+		};
+	}
 	if (shares) {
 		// A counted share replaces the same diet read for every dish ("a third vegan" is not "all vegan").
 		const counted = new Set(shares.dietary.map((d) => d.split(':')[0]));
@@ -119,8 +148,8 @@ export function draftBrief(text: string, today: string): BriefDraft {
 		if (shares.parts.length && !shares.ask) notes.push(`read as ${shares.sentence}`);
 	}
 	// A reading that could mean something else is asked first, its likeliest form as one tap.
-	const askShares = !!shares?.ask;
-	if (askShares) typed = typed.filter((d) => !shares!.dietary.includes(d));
+	const askShares = !!shares?.ask || !!someShare;
+	if (askShares) typed = typed.filter((d) => !shares?.dietary.includes(d));
 	if (typed.length && !askShares) from.dietary = 'words';
 
 	let budgetCents: number | null = null;
@@ -153,9 +182,11 @@ export function draftBrief(text: string, today: string): BriefDraft {
 		budgetCents,
 		from,
 		notes,
-		...(shares?.parts.length
-			? { shares: { sentence: shares.sentence, dietary: shares.dietary, ask: shares.ask } }
-			: {})
+		...(someShare
+			? { shares: someShare }
+			: shares?.parts.length
+				? { shares: { sentence: shares.sentence, dietary: shares.dietary, ask: shares.ask } }
+				: {})
 	};
 }
 

@@ -4,7 +4,7 @@
  * never see it as a query. Deterministic and cheap: it runs before lookup, on both parser paths.
  */
 import type { ParsedItem } from './parse';
-import { readDish } from './dish';
+import { OTHER_DISHES, readDish } from './dish';
 import { readShares } from './shares';
 
 /** What the words of an event request state; the full brief is built in the menu module. */
@@ -77,6 +77,17 @@ export function classifyRequest(
 			seeded: s ? { eventId: s.eventId, title: s.title } : null
 		};
 	}
+	// Two dishes or more for a number of people ("carbonara and bolognese for 1000"): a menu to plan.
+	const dishes = new Set(
+		[...text.matchAll(new RegExp(OTHER_DISHES.source, 'giu'))].map((m) => m[1].toLowerCase())
+	);
+	if (dishes.size >= 2 && guestsIn(text) !== null && !purchase)
+		return {
+			guests: guestsIn(text),
+			courses: coursesIn(text),
+			occasion: [...dishes].join(' and '),
+			seeded: null
+		};
 	if (!occasion.length) return null;
 	if (purchase) return null;
 	const s = SEEDED.find((e) => e.kitchenId === kitchenId && e.words.test(text));

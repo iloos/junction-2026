@@ -229,11 +229,20 @@ const NUMBER = /(\d{1,3}(?:[ ,]\d{3})+|\d+(?:[.,]\d+)?)(\s*k\b)?/;
  * The dish a request names with a count: no unit (or "portions") → portions. A word that names a product ("sauce")
  * or a physical unit ("kg") makes it a product order instead (null). A small count with no unit is asked.
  */
+/** Dish names besides the one read: their presence makes the request a menu (brief), not one dish's portions. */
+export const OTHER_DISHES =
+	/(?<![\p{L}])(carbonara|bolognese|lasagne|lasagna|pizzas?|burgers?|risotto|curry|soup|keitto|salad|salaatti|stew|casserole|laatikko|tacos?|wraps?)(?![\p{L}])/iu;
+
 export function readDish(text: string): DishRead | null {
 	for (const dish of DISHES) {
 		const m = text.match(dish.words);
 		if (!m) continue;
 		if (dish.productWords.test(text)) return null;
+		// Another dish named too ("carbonara and bolognese for 1000"): a menu of several dishes, never just this one.
+		const others = [...text.matchAll(new RegExp(OTHER_DISHES.source, 'giu'))].filter(
+			(x) => !dish.words.test(x[1])
+		);
+		if (others.length) return null;
 		const n = text.match(NUMBER);
 		if (!n) return null;
 		let portions = Number(n[1].replace(/[ ,]/g, '').replace(',', '.'));
