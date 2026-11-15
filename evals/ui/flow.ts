@@ -83,6 +83,7 @@ export async function approveAll(page: Page): Promise<number> {
 		const group = page.getByRole('button', { name: /^Accept these \d+/ }).first();
 		const review = page.getByRole('button', { name: /^Review \d+ lines?/ }).first();
 		const hold = page.getByRole('button', { name: /Hold to sign off \d+ lines?/ }).first();
+		const signOff = page.getByRole('button', { name: /^Review and sign off \d+ lines?/ }).first();
 		const usable = async (l: typeof all) =>
 			(await l.isVisible().catch(() => false)) && (await l.isEnabled().catch(() => false));
 		if (await usable(all)) {
@@ -93,6 +94,14 @@ export async function approveAll(page: Page): Promise<number> {
 			lines += Number(((await group.innerText()).match(/Accept these (\d+)/) ?? [])[1] ?? 0);
 			await group.click();
 			await confirmIfAsked();
+		} else if (await usable(signOff)) {
+			// S2, Sun 05:00: one group action opens a dialog whose "Confirm exact terms" signs the group off.
+			lines += Number(((await signOff.innerText()).match(/sign off (\d+)/) ?? [])[1] ?? 0);
+			await signOff.click();
+			await page
+				.getByRole('dialog')
+				.getByRole('button', { name: /Confirm exact terms/ })
+				.click({ timeout: 10_000 });
 		} else if (await review.isVisible().catch(() => false)) {
 			lines += Number(((await review.innerText()).match(/(\d+)/) ?? [])[1] ?? 0);
 			await review.click();
