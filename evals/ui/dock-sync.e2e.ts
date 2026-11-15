@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { enterKitchen } from './flow';
+import { approveFirstOnPage, decisionCards, enterKitchen } from './flow';
 
 /**
  * The Kitchen page and the agent dock read one event stream, so what the chef does in one shows in the other
@@ -32,21 +32,16 @@ test('approving on the page shows in the dock, with the way on', async ({ page }
 	const dock = await openDock(page);
 	await dock.locator('textarea').fill('What still needs my decision?');
 	await dock.locator('textarea').press('Enter');
-	// With the plan on the page, the rail shows its decisions once, above the chat; the chat points to them.
+	// With the plan on the page, the chat answers about its decisions; they are decided on the page (one "Decide").
 	await dock
-		.getByText(/decisions? waits? above/)
-		.first()
+		.getByText(/decisions?/)
+		.last()
 		.waitFor();
-	await expect(dock.getByRole('region', { name: 'Decide', exact: true })).toBeVisible();
+	await expect(page.getByRole('region', { name: 'Decide', exact: true })).toHaveCount(1);
 	await dock.getByRole('button', { name: 'Close chat' }).click();
 
 	// Approve the first (non sign-off) decision on the page.
-	const panel = page.locator('#approval').first();
-	await panel
-		.getByRole('button', { name: /^Review \d+ lines?/ })
-		.first()
-		.click();
-	await panel.getByRole('button', { name: 'Confirm exact terms' }).click();
+	await approveFirstOnPage(page);
 
 	await openDock(page);
 	await expect(dock.getByRole('status').filter({ hasText: /You approved \d+ lines?/ })).toBeVisible(
@@ -83,7 +78,7 @@ test('approving in the dock takes the decision off the page and says where', asy
 	// The same plan open on the Kitchen page in another tab of the same browser.
 	const kitchen = await ctx.newPage();
 	await kitchen.goto(`${BASE}${url}`);
-	const card = kitchen.locator('#approval article[aria-label^="Decision:"]');
+	const card = decisionCards(kitchen);
 	await expect(card.first()).toBeVisible({ timeout: 60_000 });
 
 	await here

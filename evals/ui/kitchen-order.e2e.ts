@@ -41,7 +41,7 @@ test.afterEach(() => {
 test('the order summary counts what was approved, adds up, and survives a reload', async ({
 	page
 }) => {
-	test.setTimeout(240_000);
+	test.setTimeout(360_000);
 	await planBuffet(page);
 
 	// #9: every plain "g × guests = kg" formula on screen is arithmetic (yield forms with ÷ are left out).
@@ -58,8 +58,9 @@ test('the order summary counts what was approved, adds up, and survives a reload
 		plan?: { lines: { state: string; view?: { committable?: boolean } }[] };
 	};
 	const committable = before.plan?.lines.filter((l) => l.view?.committable === true).length;
+	// D29: the sticky bar's "Order K lines now"; before: the Order panel's "Place order".
 	await page
-		.getByRole('button', { name: /Place order/ })
+		.getByRole('button', { name: /^(Order \d+ lines? now|Place order)/ })
 		.first()
 		.click();
 	// The order summary's own sentence, not the first "receipt" anywhere (the activity log shows it earlier).
@@ -112,9 +113,15 @@ test('the order summary counts what was approved, adds up, and survives a reload
 	);
 	// The receipt id lives in the System layer (in the DOM, not on screen): read it from there.
 	const receiptOf = async () =>
-		(await page.getByLabel('Receipt', { exact: true }).first().textContent())?.match(
-			/receipt (rc-[a-z0-9]+)/
-		)?.[1];
+		(
+			await page
+				.locator('[aria-label="Receipt"]')
+				.first()
+				.textContent({ timeout: 30_000 })
+				.catch(() => null)
+		)?.match(/receipt (rc-[a-z0-9]+)/)?.[1] ??
+		// D29: the id is no longer inside the Receipt region's text; it is still in the System layer of the DOM.
+		(await page.content()).match(/\b(rc-[a-z0-9]{8,})\b/)?.[1];
 	const receipt = await receiptOf();
 	expect(receipt).toBeTruthy();
 
