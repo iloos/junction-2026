@@ -60,7 +60,7 @@
 	import { errorWords } from '$lib/kitchen/error-words';
 	import ApprovalPanel, { type Shortfall } from './ApprovalPanel.svelte';
 	import ProductToken from '$lib/ui/ProductToken.svelte';
-	import CutoffTimeline from '$lib/ui/viz/CutoffTimeline.svelte';
+	import TimelineLine from '$lib/ui/TimelineLine.svelte';
 	import EstablishmentPicker from '$lib/ui/EstablishmentPicker.svelte';
 	import PairDevice from '$lib/ui/pair/PairDevice.svelte';
 	import NothingPlanned from './NothingPlanned.svelte';
@@ -464,7 +464,7 @@
 	);
 	/** The only bulk action: accept every pending line that may be accepted together. */
 	const all = $derived(acceptAll(snap?.plan.lines ?? [], decisionsByLine));
-	function decideOne(lineId: string, decision: 'grant' | 'deny') {
+	function decideOne(lineId: string, decision: 'grant' | 'deny' | 'reopen') {
 		const d = decisionsByLine.get(lineId);
 		if (d) void k.decideLines([{ approval: d.approval, lineIds: [lineId] }], decision);
 	}
@@ -1447,7 +1447,8 @@
 						cost: d ? `${d.nameFi} loses cover` : 'this line is not ordered',
 						busy: k.busy,
 						onaccept: () => decideOne(l.id, 'grant'),
-						onreject: () => decideOne(l.id, 'deny')
+						onreject: () => decideOne(l.id, 'deny'),
+						onundo: () => decideOne(l.id, 'reopen')
 					}
 				: undefined}
 			swapOpen={swapAsk === l.id}
@@ -1578,6 +1579,17 @@
 								}
 							: undefined}
 					></TaskHeader>
+					<div class="mt-2">
+						<TimelineLine
+							orderBy={decisionsDue(plan, approval) || null}
+							delivery={plan.deliverBy}
+							event={isEvent ? { label: view.serviceStyle || 'event', date: view.date } : null}
+							now={k.now}
+							note={openLines.stock || openLines.terminal
+								? `${openLines.stock} lines from Valio's stock, ${openLines.terminal} through the terminal: each has its own cut-off.`
+								: null}
+						/>
+					</div>
 					{#if isEvent}<p class="mt-2 text-meta text-ink-2">
 							{#if view.thisWeek.cents - view.normalWeek.cents > 0}
 								The event adds
@@ -2338,14 +2350,6 @@
 					orders={snap.orders.length}
 					busy={k.busy}
 					onretry={k.lastCommit.key ? () => k.retryCommit() : undefined}
-				/>
-			{/if}
-			{#if isEvent}
-				<CutoffTimeline
-					now={k.now}
-					stock={openLines.stock}
-					terminal={openLines.terminal}
-					committed={openLines.stock + openLines.terminal === 0 && view.counts.committed > 0}
 				/>
 			{/if}
 			{#if k.error}
