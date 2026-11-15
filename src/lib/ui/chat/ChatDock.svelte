@@ -19,6 +19,7 @@
 	import { KitchenStore } from '$lib/kitchen/kitchen.svelte';
 	import Receipt from '$lib/ui/Receipt.svelte';
 	import type { ChatEvent, ChatTurnInput } from './types';
+	import MicButton from './MicButton.svelte';
 	import {
 		describeOps,
 		foldRows,
@@ -572,8 +573,11 @@
 		}
 	}
 
+	let mic = $state<MicButton | null>(null);
 	function submit(ev: SubmitEvent) {
 		ev.preventDefault();
+		// Dictation stops at Send: what was heard is in the box, and nothing more is added after it.
+		mic?.stop();
 		const t = text.trim();
 		if (!t) return;
 		text = '';
@@ -1047,7 +1051,7 @@
 		<label class="sr-only" for="chat-text">Message the agent</label>
 		<textarea
 			id="chat-text"
-			class="min-h-10 flex-1 resize-none rounded-md border border-rule-strong bg-paper px-3 py-2 text-body"
+			class="field-sizing-content max-h-32 min-h-10 flex-1 resize-none rounded-md border border-rule-strong bg-paper px-3 py-2 text-body"
 			rows="1"
 			maxlength="500"
 			placeholder={doneLine?.state === 'awaiting_clarification'
@@ -1060,6 +1064,12 @@
 					(e.currentTarget.form as HTMLFormElement).requestSubmit();
 				}
 			}}></textarea>
+		<MicButton
+			bind:this={mic}
+			text={() => text}
+			onchange={(t) => (text = t.slice(0, 500))}
+			disabled={busy}
+		/>
 		<button
 			type="submit"
 			class="rounded-md bg-ink p-2 text-sheet disabled:opacity-40"
