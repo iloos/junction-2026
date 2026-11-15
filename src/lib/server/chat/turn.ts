@@ -1229,7 +1229,12 @@ async function* turnLines(
 		const summary = ledgerSummary(ledger, { deliverBy: read.value.plans[0]?.deliverBy });
 		if (asked || !sameLedger || !sameDecision)
 			yield { type: 'ledger', taskId: task.id, title: task.title, ledger, summary };
-		const standing = ledgerWords(ledger, read.value.plans[0]?.deliverBy, read.value.plans);
+		const standing = ledgerWords(
+			ledger,
+			read.value.plans[0]?.deliverBy,
+			read.value.plans,
+			read.value.approvals
+		);
 		let answer = standing;
 		const explainer = deps.models?.explain ?? deps.llm;
 		if (!refusal && explainer && !continued) {
@@ -1442,8 +1447,12 @@ export async function taskView(taskId: string, deps: ChatDeps): Promise<ChatEven
 		state: p.task.state,
 		// The same words as the turn's answer, so a re-read never adds a second, different closing line.
 		text:
-			ledgerWords(read.value.ledger, read.value.plans[0]?.deliverBy, read.value.plans) +
-			(read.value.ledger.decisionsLeft ? waitingWords(card) : ''),
+			ledgerWords(
+				read.value.ledger,
+				read.value.plans[0]?.deliverBy,
+				read.value.plans,
+				read.value.approvals
+			) + (read.value.ledger.decisionsLeft ? waitingWords(card) : ''),
 		canContinue: p.canContinue
 	});
 	return out;
@@ -1477,7 +1486,9 @@ function waitingWords(card: ChatEvent | null | undefined): string {
 export function ledgerWords(
 	l: TaskLedger,
 	deliverBy?: string,
-	plans: Pick<Plan, 'lines'>[] = []
+	plans: Pick<Plan, 'lines'>[] = [],
+	/** Granted approvals: a held line they cover is approved and ready to order (core keeps it held until then). */
+	approvals: { state: string; lineIds: string[] }[] = []
 ): string {
 	const n = l.needs.length;
 	// Each need by the state of the line that serves it: a held line has a product, it waits for a person.
@@ -1489,12 +1500,14 @@ export function ledgerWords(
 		unorderable: 2,
 		rejected: 1
 	};
+	const granted = new Set(approvals.filter((a) => a.state === 'granted').flatMap((a) => a.lineIds));
 	const best = new Map<string, LineState>();
 	for (const p of plans)
 		for (const line of p.lines) {
 			if (!line.needId) continue;
+			const st: LineState = line.state === 'held' && granted.has(line.id) ? 'eligible' : line.state;
 			const was = best.get(line.needId);
-			if (!was || rank[line.state] > rank[was]) best.set(line.needId, line.state);
+			if (!was || rank[st] > rank[was]) best.set(line.needId, st);
 		}
 	const count = (f: (s: LineState | undefined) => boolean) =>
 		l.needs.filter((x) => f(best.get(x.needId))).length;

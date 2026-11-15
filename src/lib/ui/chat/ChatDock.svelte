@@ -13,7 +13,8 @@
 	} from '@lucide/svelte';
 	import { tick, untrack } from 'svelte';
 	import DecisionCard from '$lib/ui/DecisionCard.svelte';
-	import { decisionsOf } from '$lib/ui/decisions';
+	import LineRow from '$lib/ui/LineRow.svelte';
+	import { acceptAll, lineDecisions } from '$lib/kitchen/line-decisions';
 	import { day, money, readableName } from '$lib/ui/format';
 	import { KitchenStore } from '$lib/kitchen/kitchen.svelte';
 	import Receipt from '$lib/ui/Receipt.svelte';
@@ -279,7 +280,6 @@
 	const actedHere = $derived(!!own?.lastCommit);
 	const lastDecisionAt = $derived(lastDecision ? entries.indexOf(lastDecision) : -1);
 	const ownSnap = $derived(own?.snap && own.snap.plan.id === actPlan ? own.snap : null);
-	const liveDecisions = $derived(ownSnap ? decisionsOf(ownSnap.plan, ownSnap.approval) : []);
 	const ownNames = $derived(
 		new Map(
 			(ownSnap?.plan.lines ?? []).map((l) => [
@@ -288,6 +288,14 @@
 			])
 		)
 	);
+	/** Each line's own decision (D23), as the page reads it: Accept / Reject per pending line, Accept all. */
+	const lineDecided = $derived(
+		lineDecisions(ownSnap?.plan.lines ?? [], ownSnap?.approvals, ownSnap?.approval ?? null)
+	);
+	const pendingLines = $derived(
+		(ownSnap?.plan.lines ?? []).filter((l) => lineDecided.get(l.id)?.state === 'pending')
+	);
+	const dockAll = $derived(acceptAll(ownSnap?.plan.lines ?? [], lineDecided));
 	const approvedOpen = $derived(
 		(ownSnap?.plan.lines ?? []).filter(
 			(l) => l.state !== 'committed' && l.view?.committable === true
@@ -777,16 +785,41 @@
 					{:else if x === lastDecision && !here && ownSnap}
 						<!-- D13: the chef decides here, with the page's own card and command. -->
 						<li class="space-y-2" aria-label="Decide here">
-							{#each liveDecisions as d (d.key)}
-								<DecisionCard
-									decision={d}
-									names={ownNames}
-									busy={own?.busy}
-									onapprove={(ids) => own!.approve('grant', ids)}
-									onkeep={(ids) => void own!.approve('deny', ids)}
-								/>
-							{/each}
-							{#if !liveDecisions.length && approvedOpen.length && !own?.lastCommit}
+							{#if pendingLines.length}
+								<!-- D23: line by line, the page's own rows and command; sign-off lines confirm their terms. -->
+								<ul class="divide-y divide-rule rounded-md border border-rule bg-sheet">
+									{#each pendingLines as l (l.id)}
+										{@const d = lineDecided.get(l.id)!}
+										<LineRow
+											line={l}
+											name={ownNames.get(l.productId) ?? readableName(l.productId)}
+											decide={{
+												...d,
+												cost: 'this line is not ordered',
+												busy: own?.busy,
+												onaccept: () =>
+													void own!.decideLines(
+														[{ approval: d.approval, lineIds: [l.id] }],
+														'grant'
+													),
+												onreject: () =>
+													void own!.decideLines([{ approval: d.approval, lineIds: [l.id] }], 'deny')
+											}}
+										/>
+									{/each}
+								</ul>
+								{#if dockAll.count}
+									<button
+										type="button"
+										class="w-full rounded-md bg-accent px-3 py-2 text-body font-semibold text-sheet hover:bg-accent-ink disabled:opacity-50"
+										disabled={own?.busy}
+										onclick={() => void own!.decideLines([...dockAll.byApproval.values()], 'grant')}
+										>Accept all {dockAll.count} ·
+										<span class="mono">{money(dockAll.cents)}</span></button
+									>
+								{/if}
+							{/if}
+							{#if !pendingLines.length && approvedOpen.length && !own?.lastCommit}
 								<button
 									type="button"
 									class="w-full rounded-md bg-accent px-3 py-2 text-body font-semibold text-sheet hover:bg-accent-ink disabled:opacity-50"

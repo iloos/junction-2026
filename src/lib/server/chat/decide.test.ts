@@ -115,3 +115,15 @@ describe('D22: the chef decides in the dock', () => {
 		expect(granted()).toBe(0);
 	});
 });
+
+describe('after "approve all", the standing says ready, not waiting', () => {
+	it('a granted held line reads as ready to order', { timeout: 120_000 }, async () => {
+		const { deps } = await setup();
+		const big = await chatTurn({ text: 'Order 60 kg butter for Friday' }, deps);
+		const taskId = big[0].taskId;
+		await chatTurn({ taskId, text: 'approve all' }, deps);
+		const now = await chatTurn({ taskId, text: 'where does this stand?' }, deps);
+		expect(text(now)).toMatch(/1 ready to order/);
+		expect(text(now)).not.toMatch(/waiting for your approval/);
+	});
+});
