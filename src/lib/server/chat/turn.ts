@@ -51,6 +51,7 @@ import type { ReceiptView } from '$lib/ui/Receipt.svelte';
 import { interpretDish, type InterpretDish } from './dish';
 import { decideAsChef, decisionWords } from './decide';
 import { steerLine, steerWords } from './steer';
+import { halfAsk } from './half';
 import { planName } from '$lib/server/agent/plan-name';
 
 /**
@@ -401,6 +402,9 @@ async function* turnLines(
 	});
 	// The answer to "What would you like to do?": a question reads, the others say what to type.
 	// A pick from "Which one?" after a product question: answer for exactly that product, read-only, nothing saved.
+	// A proposal chip ("say:<words>") is the chef's next words: one tap continues a half-formed ask.
+	if (input.answer && String(input.answer.value).startsWith('say:'))
+		input = { ...input, answer: undefined, text: String(input.answer.value).slice(4) };
 	const choice = input.answer?.field === 'product' ? readChoice(String(input.answer.value)) : null;
 	if (choice) {
 		yield* answerInChat(
@@ -824,6 +828,25 @@ async function* turnLines(
 		(u?.kind === 'other' || (!u && reading?.kind === 'other') || !/[\p{L}\d]/u.test(words)) &&
 		task.pending.kind !== 'clarify'
 	) {
+		// A half-formed ask ("1000 x", "for friday") is read as far as it goes, its likeliest endings as chips.
+		const half = halfAsk(withoutKitchen(words), deps.today);
+		if (half) {
+			yield {
+				type: 'clarify',
+				taskId: expected !== null ? task.id : '',
+				field: 'intent',
+				question: half.question,
+				options: half.options
+			};
+			yield {
+				type: 'done',
+				taskId: expected !== null ? task.id : '',
+				state: 'awaiting_clarification',
+				text: half.question,
+				canContinue: false
+			};
+			return;
+		}
 		yield {
 			type: 'clarify',
 			taskId: expected !== null ? task.id : '',
