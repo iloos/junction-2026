@@ -32,6 +32,7 @@ import {
 	plantDiet,
 	proposeMenu,
 	resolveIngredient,
+	type ModelMenus,
 	type ProposeStep
 } from './proposal';
 import { blocks, reviewProposal, type Issue } from './rubric';
@@ -101,10 +102,11 @@ export async function menuView(
 
 /** Proposes a menu for a complete brief (revision 0, stored before it is returned). */
 export async function proposeForBrief(
-	d: MenuDeps & { llm?: Llm | null },
+	d: MenuDeps & { llm?: Llm | null; modelMenus?: ModelMenus },
 	o: { kitchenId: string; brief: EventBrief; nonce?: string; onStep?: (s: ProposeStep) => void }
 ): Promise<MenuView> {
 	const r = await proposeMenu({
+		modelMenus: d.modelMenus,
 		kitchenId: o.kitchenId,
 		workspaceId: d.workspaceId,
 		brief: o.brief,

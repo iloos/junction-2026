@@ -8,7 +8,7 @@ import { err, ok, type MenuProposal, type Result } from '$lib/core/contracts';
 import { toolSchemas } from '$lib/core/contracts';
 import type { CallContext, Catalog, Clock, Llm, MenuStore } from '$lib/core/ports';
 import { editMenu } from './flow';
-import { proposeMenu } from './proposal';
+import { proposeMenu, type ModelMenus } from './proposal';
 import type { Issue } from './rubric';
 
 type Input = (typeof toolSchemas)['propose_menu']['input'];
@@ -23,6 +23,8 @@ export interface ProposeMenuDeps {
 	ports: { menus?: MenuStore; catalog: Pick<Catalog, 'resolve' | 'get'>; clock: Clock };
 	/** The model for this caller, or null for the team templates. */
 	llm?: (ctx: CallContext) => Llm | null;
+	/** The process's model menus (`sharedModelMenus`): one menu per kitchen and brief. */
+	modelMenus?: ModelMenus;
 }
 
 /** `revise_menu` input: the registry's (core/contracts toolSchemas.revise_menu). keepOpen stays the chef's. */
@@ -120,7 +122,8 @@ export function proposeMenuHandler(d: ProposeMenuDeps) {
 			catalog: d.ports.catalog,
 			now: d.ports.clock.now(),
 			llm: d.llm?.(ctx) ?? null,
-			by: ctx.actor
+			by: ctx.actor,
+			modelMenus: d.modelMenus
 		});
 		const blocks = r.issues.filter((i) => i.severity === 'block').length;
 		const unresolved = r.proposal.dishes

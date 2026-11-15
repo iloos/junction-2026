@@ -157,6 +157,8 @@ const LlmDish = z.object({
 		'other'
 	]),
 	claimedCompatible: z.array(z.string().max(60)).max(20).default([]),
+	/** Only for a dish that serves some of the guests (a split course). */
+	guests: z.int().positive().optional(),
 	ingredients: z.array(LlmIngredient).min(1).max(20)
 });
 export const LlmMenu = z.object({
@@ -166,7 +168,7 @@ export const LlmMenu = z.object({
 export type LlmMenu = z.infer<typeof LlmMenu>;
 
 const SYSTEM = `You propose a menu for a professional kitchen in Finland, as JSON for a Finnish food wholesaler's catalogue.
-Return only JSON: {"dishes":[{"name":string,"course":"starter"|"soup"|"fish"|"main"|"side"|"dessert"|"bread"|"cheese"|"drink"|"other","claimedCompatible":string[],"ingredients":[{"label":string,"query":string,"amountPerCover":number,"unit":"g"|"ml"|"pcs"}]}],"open":string[]}.
+Return only JSON: {"dishes":[{"name":string,"course":"starter"|"soup"|"fish"|"main"|"side"|"dessert"|"bread"|"cheese"|"drink"|"other","claimedCompatible":string[],"guests"?:number,"ingredients":[{"label":string,"query":string,"amountPerCover":number,"unit":"g"|"ml"|"pcs"}]}],"open":string[]}.
 - One dish per requested course; a buffet has 5-8 dishes.
 - amountPerCover is the served amount per guest; 250-1500 g of food per guest in total.
 - query: 1-3 Finnish catalogue words in base form (lohifilee, peruna, kerma laktoositon).
@@ -174,7 +176,11 @@ Return only JSON: {"dishes":[{"name":string,"course":"starter"|"soup"|"fish"|"ma
 - A requested course is never "side": a dish that is one of the requested courses gets that course (a second main is "main").
 - claimedCompatible: the brief requirements this dish meets, exactly as written in the brief.
 - Every requirement in the brief must hold for every dish; one with a head count ("vegetarian:6") needs at least one dish for those guests.
-- Never drop a requirement. Put anything you cannot meet, or would ask the chef, in open.`;
+- Never drop a requirement. Put anything you cannot meet, or would ask the chef, in open.
+- guests: only on a dish for some of the guests. A counted requirement ("vegetarian:60" of 120) or a split ("half meat, half fish") gets one dish per part in that course, each with its guests; a course's guests add up to the brief's.
+- query names what a wholesaler sells, singular: herkkusieni (not herkkusienet), lohifilee (not lohi), kalaliemi or kasvisliemi for stock.
+- No alcohol: the wholesaler sells none. A recipe's wine becomes stock or a splash of vinegar; say so in open.
+- Write the classic version of each dish, ingredients in recipe order, amountPerCover rounded to 5 g or 5 ml.`;
 
 /* ── Fixture: the team's dish templates ───────────────────────────────────── */
 
@@ -529,6 +535,40 @@ export interface ProposeDeps {
 	nonce?: string;
 	/** Progress for a waiting page: the dishes once written, then products matched so far. */
 	onStep?: (s: ProposeStep) => void;
+	/** The model's menus per kitchen and brief, shared across workspaces (`sharedModelMenus` on the server). */
+	modelMenus?: ModelMenus;
+}
+
+/** The model's dishes for a kitchen and brief, before resolution: the same brief gets the same menu. */
+export type ModelMenus = Map<string, { menu: LlmMenu; model: string }>;
+const MODEL_MENUS_CAP = 200;
+/**
+ * One per server process. Gemini 3.x takes no sampling parameters (temperature is ignored), so a brief asked twice,
+ * by two visitors or a resubmission with a new nonce, would get two different menus and two different totals. The
+ * first answer is kept per kitchen and normalised brief; a chef changes it through revise_menu, never by asking again.
+ */
+export const sharedModelMenus: ModelMenus = new Map();
+
+const normText = (s: string | undefined | null) =>
+	(s ?? '')
+		.toLowerCase()
+		.replace(/[^\p{L}\p{N}:]+/gu, ' ')
+		.trim();
+/** The brief as the model reads it, with wording noise removed: case, punctuation, spacing and requirement order. */
+async function modelMenuKey(kitchenId: string, b: EventBrief): Promise<string> {
+	return sha256Hex(
+		canonicalJson({
+			k: kitchenId,
+			title: normText(b.title),
+			date: b.date,
+			guests: b.guests,
+			style: b.serviceStyle,
+			courses: b.courses ?? null,
+			dietary: b.dietary.map(normText).sort(),
+			budget: b.budgetCents ?? null,
+			notes: normText(b.notes)
+		})
+	);
 }
 
 export type ProposeStep =
@@ -580,7 +620,14 @@ export async function proposeMenu(d: ProposeDeps): Promise<Proposed> {
 	let source: Provenance['source'] = 'team_estimate';
 	if (d.llm) {
 		try {
-			({ menu, model } = await fromModel(d.llm, d.brief));
+			const key = d.modelMenus ? await modelMenuKey(d.kitchenId, d.brief) : '';
+			const kept = d.modelMenus?.get(key);
+			({ menu, model } = kept ?? (await fromModel(d.llm, d.brief)));
+			if (d.modelMenus && !kept) {
+				if (d.modelMenus.size >= MODEL_MENUS_CAP)
+					d.modelMenus.delete(d.modelMenus.keys().next().value!);
+				d.modelMenus.set(key, { menu, model });
+			}
 			source = 'llm';
 		} catch (e) {
 			fallback = `model proposal failed: ${String((e as Error)?.message ?? e).slice(0, 160)}`;
@@ -647,6 +694,7 @@ export async function proposeMenu(d: ProposeDeps): Promise<Proposed> {
 			name: dish.name,
 			course: dish.course,
 			claimedCompatible: dish.claimedCompatible,
+			...(dish.guests ? { guests: dish.guests } : {}),
 			ingredients: [],
 			provenance: { source, at }
 		});

@@ -63,6 +63,21 @@ export function reviewProposal(
 	if (p.brief.date !== brief.date)
 		block('date', `the menu is for ${p.brief.date}, the brief for ${brief.date}`);
 
+	// A split course: when a dish serves only some guests, the course's dishes together serve every guest once.
+	const byCourse = new Map<string, typeof p.dishes>();
+	for (const d of p.dishes)
+		byCourse.set(d.course ?? '', [...(byCourse.get(d.course ?? '') ?? []), d]);
+	for (const [course, ds] of byCourse) {
+		if (!ds.some((d) => d.guests !== undefined)) continue;
+		const sum = ds.reduce((n, d) => n + (d.guests ?? brief.guests), 0);
+		if (sum !== brief.guests)
+			block(
+				`split:${course || 'other'}`,
+				`the ${course || 'other'} dishes serve ${sum} guests together, the brief has ${brief.guests}`,
+				{ targets: ds.map((d) => d.id) }
+			);
+	}
+
 	// Courses: every requested course has a dish.
 	const meal = p.dishes.filter((d) => !d.course || MEAL_COURSES.has(d.course));
 	if (brief.courses !== undefined && meal.length < brief.courses)

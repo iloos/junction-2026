@@ -11,6 +11,7 @@ import { createDecide } from '$lib/server/adapters/decide';
 import { createGetContext } from '$lib/server/agent/get-context';
 import { readImageHandler } from '$lib/server/images/tool';
 import { createGetOutcome } from '$lib/server/tasks/outcome';
+import { sharedModelMenus } from '$lib/server/menu/proposal';
 import { proposeMenuHandler, reviseMenuHandler } from '$lib/server/menu/tool';
 import { createLlmRouter } from '$lib/server/adapters/llm/router';
 import { projectedTaskStore } from '$lib/server/tasks/project';
@@ -63,6 +64,7 @@ export function realHandlers(): Promise<ToolHandlers> {
 			// Menus come from Gemini when it is configured, else the team templates; a chef reviews either.
 			propose_menu: proposeMenuHandler({
 				ports: b.ports,
+				modelMenus: sharedModelMenus,
 				llm: () =>
 					(process.env.VITEST ? 'fixture' : (env.LLM_PROVIDER ?? 'fixture')) === 'fixture'
 						? null
