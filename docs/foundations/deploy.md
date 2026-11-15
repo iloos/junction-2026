@@ -110,7 +110,9 @@ It does not add capacity. Postgres is the shared limit: with 10 to 50 planners a
 | 25 | 12.1 s |
 | 50 | 23.2 s |
 
-**Background warm-ups, and offloading them (not built):** when a plan is created, photos and allergen web facts are looked up in the background (`bus/index.ts` → `products/photos.ts`, `products/facts-warm.ts`). In one process they compete with planning, so at most one plan warms at a time, and `WARM_OFF=1` turns them off (lookups then happen only when a card or the Why drawer is opened). **Next: offload them to a worker**, so the process that plans stays free for the visitors waiting on it:
+**Background warm-ups, and offloading them (not built):** when a plan is created, photos and allergen web facts are looked up in the background (`bus/index.ts` → `products/photos.ts`, `products/facts-warm.ts`). In one process they compete with planning, so at most one plan warms at a time, and `WARM_OFF=1` turns them off (lookups then happen only when a card or the Why drawer is opened). **Profiled 15 Nov 05:30:** one plan start took ~2.0 s on prod against ~0.3 s for the same code locally (a production build on PGlite, fixture models, warm-ups idle). In prod's log for one start (1.8 s): `plan_event` 203 ms, then three `find_substitutes` at 578, 617 and 231 ms, with nine allergen-facts lookups running beside them on the same event loop. Since `6890bca` the warm-ups start 4 s after a workspace's last plan op, one plan at a time, facts then photos, so they no longer run inside the planning request. The rest of the gap is live data (Valio, Postgres round trips).
+
+**Next: offload them to a worker**, so the process that plans stays free for the visitors waiting on it:
 
 1. Prod reads findings from the `web_findings` table by id (a batch `where id = any(…)`) instead of its in-memory map, which is loaded once at start; otherwise another process's results never reach it.
 2. Plan creation enqueues a warm job in a Postgres queue claimed with `FOR UPDATE SKIP LOCKED` and a lease, like the recall queue (`web/pg-state.ts`), instead of warming in-process.
