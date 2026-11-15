@@ -172,6 +172,7 @@
 		if (loadedFor === k) return;
 		loadedFor = k;
 		untrack(() => {
+			const was = { taskId, entries };
 			taskId = openTask ?? read();
 			if (openTask) remember(openTask);
 			entries = [];
@@ -179,7 +180,7 @@
 			fresh = false;
 			const before = read(kitchenKey());
 			earlier = planId && !openTask && before && before !== taskId ? before : null;
-			if (taskId) void restore(taskId);
+			if (taskId) void restore(taskId, was.taskId === taskId ? was.entries : []);
 			else if (planId) void forPlan(planId);
 		});
 	});
@@ -212,7 +213,7 @@
 		void restore(taskId);
 	}
 
-	async function restore(id: string) {
+	async function restore(id: string, kept: Entry[] = []) {
 		try {
 			const res = await fetch(`/api/chat/task?id=${encodeURIComponent(id)}`);
 			if (!res.ok) return;
@@ -222,7 +223,12 @@
 				newTask();
 				return;
 			}
-			if (taskId === id) entries = events.map((e) => ({ kind: 'event', e }));
+			// What happened on the page while the dock was closed ("You approved 7 lines.") stays: it is not in the task.
+			if (taskId === id)
+				entries = [
+					...events.map((e): Entry => ({ kind: 'event', e })),
+					...kept.filter((x) => x.kind === 'system')
+				];
 		} catch {
 			/* offline: the next turn reads the task */
 		}
