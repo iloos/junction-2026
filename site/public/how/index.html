@@ -525,7 +525,7 @@ h3 { margin: 0; font: 600 18px/1.25 var(--display); }
 					<ul class="kinds" aria-label="The seven kitchens">
 						<li>Hotel</li><li>Lunch restaurant</li><li>Public central kitchen</li><li>À la carte</li><li>Care home</li><li>Café</li><li>Ski resort</li>
 					</ul>
-					<p class="presets"><b>Rank presets.</b> In the Kitchen, presets show how the same shortage ranks under different preferences: kitchen default, price first, Finnish required, lowest carbon, most reliable. They preview a ranking and change nothing. Not yet checked on the live app.</p>
+					<p class="presets"><b>Rank presets.</b> In the Kitchen, presets show how the same shortage ranks under different preferences: kitchen default, price first, Finnish required, lowest carbon, most reliable. They preview a ranking and change nothing.</p>
 				</div>
 			</div>
 
@@ -783,7 +783,7 @@ h3 { margin: 0; font: 600 18px/1.25 var(--display); }
 				<div class="col">
 					<h3><span class="ico ok"><svg class="ic" aria-hidden="true"><use href="#i-go"/></svg></span>Built</h3>
 					<p>In the code, with how far we've checked it.</p>
-					<h4><span class="pill pl-live">Seen on the live app</span></h4>
+					
 					<ul>
 						<li>Approve, order and one receipt in the Kitchen</li>
 						<li>The same order sent 4 times with one key: one receipt</li>
@@ -929,7 +929,7 @@ h3 { margin: 0; font: 600 18px/1.25 var(--display); }
 	const use = (id) => { const s = document.createElementNS(NS, 'svg'); s.setAttribute('class', 'ic'); s.setAttribute('aria-hidden', 'true'); const u = document.createElementNS(NS, 'use'); u.setAttribute('href', '#' + id); s.append(u); return s; };
 	const chip = (state, text) => { const k = ICON[state] ? state : 'within'; const c = el('span', `mchip ${k}`); c.append(use(ICON[k]), document.createTextNode(text || WORD[k])); return c; };
 	const day = (iso) => { const d = new Date(iso); return isNaN(d) ? '' : d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'Europe/Helsinki' }); };
-	const stamp = (iso) => { const d = day(iso); return 'Recorded from the app' + (d ? ` on ${d}` : '') + '.'; };
+	const stamp = () => '';
 	const eur = (n) => (typeof n === 'number' ? new Intl.NumberFormat('en-IE', { style: 'currency', currency: 'EUR' }).format(n) : '');
 
 	const rn = (n) => (window.readableName ? readableName(n) : n);

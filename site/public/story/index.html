@@ -377,7 +377,7 @@ section.s .sub.big { font-size: clamp(20px, 1.8vw, 24px); line-height: 1.35; col
 				<div class="end"><span class="chip out" data-s="cases.#agent-cannot-approve.outcome.label">Refused</span><span class="why">Nothing changed</span></div>
 			</div>
 		</div>
-		<p class="ledger-note">Three requests recorded from the app on <span data-s="recordedAt" data-f="day">Sat 14 Nov</span>; the demo kitchen's clock is Mon 7 Dec. Valio data is challenge mock data.</p>
+		<p class="ledger-note">Three requests recorded from the app on <span data-s="recordedAt" data-f="day">Sat 14 Nov</span>; the demo kitchen's clock is Mon 7 Dec. Valio Aimo data is challenge mock data.</p>
 	</div>
 </section>
 
@@ -415,7 +415,7 @@ section.s .sub.big { font-size: clamp(20px, 1.8vw, 24px); line-height: 1.35; col
 			</div>
 		</div>
 	</div>
-	<p class="foot-note">Recorded from the app. The restaurant and its booking are a demo scenario; Valio data is challenge mock data.</p>
+	<p class="foot-note">The restaurant and its booking are a demo scenario; Valio Aimo data is challenge mock data.</p>
 </section>
 
 <!-- 3 · Ask, plan, decide -->
@@ -458,7 +458,7 @@ section.s .sub.big { font-size: clamp(20px, 1.8vw, 24px); line-height: 1.35; col
 			<p class="pfoot">One of <span data-s="plan.counts.decisions">3</span> decisions. The approval is bound to these exact terms; any edit voids it.</p>
 		</div>
 	</div>
-	<p class="foot-note"><span id="flow-note">Recorded from one chat turn in the app on Sat 14 Nov: the demo buffet is on Sat 12 Dec, delivered Thu 10 Dec. Everything here is planned, not yet submitted. Only the chef can sign off; the page never does.</span> <span id="p-guard">The model's own reply didn't name the open need, so a sentence built from the order's numbers was used.</span></p>
+	<p class="foot-note"><span id="flow-note">From one chat turn in the app: the demo buffet is on Sat 12 Dec, delivered Thu 10 Dec. Everything here is planned, not yet submitted. Only the chef can sign off; the page never does.</span> <span id="p-guard">The model's own reply didn't name the open need, so a sentence built from the order's numbers was used.</span></p>
 </section>
 
 <!-- 4 · The checks -->
@@ -485,7 +485,7 @@ section.s .sub.big { font-size: clamp(20px, 1.8vw, 24px); line-height: 1.35; col
 			</div>
 		</div>
 	</div>
-	<p class="foot-note">Recorded from the app. The checks are grouped here for reading; in the code they run in one gate before any order is written, and a model can only add a hold, never allow one.</p>
+	<p class="foot-note">The checks are grouped here for reading; in the code they run in one gate before any order is written, and a model can only add a hold, never allow one.</p>
 </section>
 
 <!-- 5 · Out of stock -->
@@ -516,7 +516,7 @@ section.s .sub.big { font-size: clamp(20px, 1.8vw, 24px); line-height: 1.35; col
 			<div class="out"><span class="chip wait" data-s="cases.#lactose-free.outcome.label">Needs your approval</span><span class="reason">Valio states no quantity</span></div>
 		</div>
 	</div>
-	<p class="foot-note">Recorded from the app on Sat 14 Nov; the demo kitchen's clock is Mon 7 Dec. The in-house dish is from the demo buffet plan. Valio data is challenge mock data.</p>
+	<p class="foot-note">The demo kitchen's clock is Mon 7 Dec. The in-house dish is from the demo buffet plan. Valio Aimo data is challenge mock data.</p>
 </section>
 
 <!-- 6 · The mandate -->
@@ -575,7 +575,7 @@ section.s .sub.big { font-size: clamp(20px, 1.8vw, 24px); line-height: 1.35; col
 
 <div class="st page-foot">
 	<footer>
-		<span>Mandate · built at Junction 2026, Espoo · MIT licensed · Valio data is challenge mock data; orders are local simulated commitments</span>
+		<span>Mandate · built at Junction 2026, Espoo · MIT licensed · Valio Aimo data is challenge mock data; orders are local simulated commitments</span>
 		<nav><a href="https://app.mandate.kitchen/">Open the app</a><a href="/proof">Proof</a><a href="https://github.com/iloos/junction-2026">Source</a></nav>
 	</footer>
 </div>
@@ -756,7 +756,7 @@ function fillPlan(d) {
 		const m = note && note.match(/allergens:\s*([^;]+)/);
 		if (m) $('d-allergens').textContent = `Allergens: ${m[1].trim()}. A team estimate; a chef checks the label.`;
 	}
-	if (pl.recordedAt && pl.event) $('flow-note').textContent = `Recorded from one chat turn in the app on ${day(pl.recordedAt)}: the demo buffet is on ${pl.event.date}, delivered ${pl.event.deliverBy}. Everything here is planned, not yet submitted. Only the chef can sign off; the page never does.`;
+	if (pl.recordedAt && pl.event) $('flow-note').textContent = `From one chat turn in the app: the demo buffet is on ${pl.event.date}, delivered ${pl.event.deliverBy}. Everything here is planned, not yet submitted. Only the chef can sign off; the page never does.`;
 }
 
 // Partners: where each sits in a call, and what happens if it fails.

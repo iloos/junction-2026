@@ -118,11 +118,13 @@
 
 /* Problem strip */
 .facts { display: grid; gap: 1px; background: var(--rule); border: 1px solid var(--rule); border-radius: 12px; overflow: hidden; }
-@media (min-width: 720px) { .facts { grid-template-columns: repeat(3, 1fr); } }
+@media (min-width: 560px) { .facts { grid-template-columns: repeat(2, 1fr); } }
+@media (min-width: 960px) { .facts { grid-template-columns: repeat(4, 1fr); } }
 .fact { background: var(--sheet); padding: 20px; display: grid; gap: 6px; align-content: start; }
 .fact b { font-size: 40px; line-height: 1; font-weight: 600; letter-spacing: -0.02em; }
 .fact b.out { color: var(--out); }
 .fact b.ok { color: var(--ok); }
+.fact b.auth { color: var(--auth); }
 .fact p { margin: 0; color: var(--ink-2); font-size: 15px; text-wrap: pretty; }
 .fact .tag { justify-self: start; }
 
@@ -163,6 +165,9 @@
 .partners { display: grid; gap: 14px; }
 @media (min-width: 720px) { .partners { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (min-width: 960px) { .partners { grid-template-columns: repeat(3, minmax(0, 1fr)); } .partner.wide { grid-column: span 2; } }
+.partners { align-items: start; }
+.partners-more-h { margin: 40px 0 14px; font-size: 15px; font-weight: 600; color: var(--ink-2); }
+@media (min-width: 960px) { .partners.more { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
 .partner { display: flex; flex-direction: column; min-width: 0; background: var(--sheet); border: 1px solid var(--rule); border-radius: 14px; overflow: hidden; }
 .partner-hd { display: flex; align-items: center; gap: 10px; padding: 16px 18px 0; }
 .pico { display: inline-flex; color: var(--accent); }
@@ -248,30 +253,31 @@
 		</section>
 
 		<section class="band chain-band" id="chain" aria-labelledby="chain-h" hidden>
-			<h2 id="chain-h">From a menu to a Valio order</h2>
-			<p class="chain-when" id="chain-when">One line of the demo buffet, from a recorded run.</p>
+			<h2 id="chain-h">From a menu to a Valio Aimo order</h2>
+			<p class="chain-when" id="chain-when">Start from wherever you are: a dish, a full menu, an event or one missing item. Mandate turns it into an order your rules allow.</p>
 			<ol class="chain" id="chain-steps"></ol>
 			<ul class="tally" id="chain-tally" aria-label="Where the mandate decided, across the same plan"></ul>
 		</section>
 
 		<section class="band" id="problem">
-			<h2>A buffet for 140, and Valio Aimo is out of two products</h2>
-			<p class="sub">In Valio Aimo's webshop today, the chef moves order templates to the cart by hand, and an out-of-stock product shows similar products with no reason. An agent can propose a replacement, but the kitchen also has to set what the agent may buy without asking.</p>
+			<h2>Saturday: a Christmas buffet for 140, and two items are short</h2>
+			<p class="sub">The ham and the swede casserole can't be bought as listed, and the order has to go in before the cut-off. Today the chef copies order templates into a cart by hand. An agent can find replacements, but the kitchen also has to set what the agent may buy without asking.</p>
 			<div class="facts">
 				<div class="fact">
-					<b>140</b>
-					<p>guests at a hotel's Christmas buffet on Saturday</p>
-					<span class="tag plain">Demo scenario</span>
+					<b>21</b>
+					<p>lines planned for 140 guests, €933.92 in all</p>
 				</div>
 				<div class="fact">
-					<b class="out">2</b>
-					<p>products out of stock in Valio Aimo's own data: the whole ham and the swede casserole</p>
-					<span class="tag plain">Valio Aimo challenge data</span>
+					<b class="ok">3</b>
+					<p>ordered alone, inside the chef's mandate</p>
 				</div>
 				<div class="fact">
-					<b class="ok">1</b>
-					<p>receipt when the same order is sent four times</p>
-					<span class="tag ok">Seen on the live app</span>
+					<b class="auth">15</b>
+					<p>wait for the chef, in 3 decisions, each with its reason</p>
+				</div>
+				<div class="fact">
+					<b class="out">3</b>
+					<p>can't be ordered as listed, and say why</p>
 				</div>
 			</div>
 		</section>
@@ -329,8 +335,8 @@
 		</section>
 
 		<section class="band" id="partners" aria-labelledby="partners-h">
-			<h2 id="partners-h">What each partner service does in Mandate</h2>
-			<p class="sub">Five outside services, each behind a port with a labelled fallback. The number on each tile was recorded from the live app.</p>
+			<h2 id="partners-h">What each partner does in Mandate</h2>
+			<p class="sub">Each service sits behind a port with a labelled fallback, so the demo survives a dead API.</p>
 			<p class="partners-when" id="partners-when" hidden></p>
 			<div class="partners">
 				<article class="partner wide" data-partner="aiven">
@@ -339,7 +345,8 @@
 						<li>Postgres holds the data: kitchens, mandates, plans, orders and receipts.</li>
 						<li>An operational event log: every change is one logged event, and open screens get it live through LISTEN/NOTIFY over SSE.</li>
 						<li>A workspace lock and a stored receipt per order key mean an order sent more than once is placed once.</li>
-						<li>A stored trace of every model and Valio call.</li>
+						<li>A stored trace of every model and Valio Aimo call.</li>
+						<li>A second Runtime app runs the same build on the same Postgres: a store or an order made on one shows on the other's Ops in a fraction of a second.</li>
 						<li>Aiven Runtime runs the whole app as one container; Postgres runs on one node with daily backups. A standby node for high availability is a plan change on Aiven.</li>
 					</ul>
 					<div class="measures"></div>
@@ -350,7 +357,7 @@
 					<ul>
 						<li>The agent searches Valio Aimo's product catalogue.</li>
 						<li>Price and stock for each shortlisted product come live from Valio Aimo, cached with the time fetched.</li>
-						<li>Valio's closing time is the order cut-off; a late date is caught before ordering.</li>
+						<li>Valio Aimo's closing time is the order cut-off; a late date is caught before ordering.</li>
 						<li>A photo and the public Valio Aimo page, verified by barcode, for 25 of the 54 demo products (5 more from Open Food Facts).</li>
 					</ul>
 					<figure class="listing" hidden></figure>
@@ -360,7 +367,8 @@
 				<article class="partner" data-partner="gemini">
 					<div class="partner-hd"><span class="pico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3c.6 4.5 2.5 6.4 7 7-4.5.6-6.4 2.5-7 7-.6-4.5-2.5-6.4-7-7 4.5-.6 6.4-2.5 7-7Z"/><path d="M19 16v4M17 18h4"/></svg></span><h3>Gemini</h3></div>
 					<ul>
-						<li>One model per job: Flash-Lite reads requests (845 ms median, measured offline), and 3.8 Flash only escalates an unsure reading.</li>
+						<li>Flash-Lite reads each request and chat message and chooses the chat's next step; the chef's own words keep the final say.</li>
+						<li>3.8 Flash writes a menu from an event brief, with products picked from what can be delivered.</li>
 						<li>Both read 44 of 45 held-out paraphrases, measured offline on our set.</li>
 						<li>Decisions scores how well each substitute fits the dish, one input to the code's ranking. <em>Tested.</em></li>
 					</ul>
@@ -370,7 +378,7 @@
 				<article class="partner" data-partner="exa">
 					<div class="partner-hd"><span class="pico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></span><h3>Exa</h3></div>
 					<ul>
-						<li>The Why drawer shows a product's net content, origin and ingredients from the web, each with its source.</li>
+						<li>When the catalogue lacks a fact, the Why drawer shows the product's allergens, origin and ingredients from the web, each with its source.</li>
 						<li>Every call goes through a response cache and daily caps.</li>
 					</ul>
 					<div class="measures"></div>
@@ -381,9 +389,40 @@
 					<ul>
 						<li>Checks Ruokavirasto's recall list every 5 minutes and matches each notice against the catalogue.</li>
 						<li>A recall that affects an order is a drill, labelled as one.</li>
+						<li>A product photo when the catalogue has none.</li>
 					</ul>
 					<div class="measures"></div>
 					<a class="partner-link" href="https://app.mandate.kitchen/ops">Recall cases in Ops →</a>
+				</article>
+			</div>
+			<h3 class="partners-more-h">Also in the build</h3>
+			<div class="partners more">
+				<article class="partner small" data-partner="verda">
+					<div class="partner-hd"><span class="pico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="12" cy="12" r="3"/></svg></span><h3>Verda</h3></div>
+					<ul>
+						<li>Reads photos of prep lists, delivery notes and labels with NVIDIA Nemotron VL on a Verda GPU.</li>
+						<li><em>Wired, not live:</em> the vision endpoint isn't deployed, so the tool isn't offered yet. Scale-out machines are next.</li>
+					</ul>
+				</article>
+				<article class="partner small" data-partner="featherless">
+					<div class="partner-hd"><span class="pico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 4C10 4 4 10 4 20"/><path d="M4 20c4-8 9-12 16-16"/></svg></span><h3>Featherless</h3></div>
+					<ul>
+						<li>An open model (Gemma) behind the same model port, chosen by one setting.</li>
+						<li><em>Optional:</em> wired and tested, not used on the deployed app.</li>
+					</ul>
+				</article>
+				<article class="partner small" data-partner="soniox">
+					<div class="partner-hd"><span class="pico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12h2M8 8v8M12 5v14M16 8v8M20 12h-2"/></svg></span><h3>Soniox</h3></div>
+					<ul>
+						<li>The voice of our demo video.</li>
+					</ul>
+				</article>
+				<article class="partner small" data-partner="cloudflare">
+					<div class="partner-hd"><span class="pico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 18h11a4 4 0 0 0 0-8 6 6 0 0 0-11.5 1.5A3.5 3.5 0 0 0 7 18Z"/></svg></span><h3>Cloudflare</h3></div>
+					<ul>
+						<li>This site runs on a Cloudflare Worker.</li>
+						<li>A Worker routes visitors to the app machines and keeps each browser on one.</li>
+					</ul>
 				</article>
 			</div>
 		</section>
@@ -557,7 +596,7 @@ function renderPartners(data) {
 	put(
 		'aiven',
 		db?.ok && db.latencyMs != null ? measure(`${db.latencyMs} ms`, `Postgres answered the app's health check${db.tls === 'verified' ? ' over verified TLS' : ''}, at ${at}`) : null,
-		race && sends ? measure(`${sends} sends, 1 receipt`, `the same approved order sent at once, at ${when(race.recordedAt)}`) : null
+		null
 	);
 	put('valio', service('valio', 'Valio Aimo'), day24('valio', 'Valio Aimo'));
 	// One barcode-verified listing from the app's product card: the photo is hotlinked from Valio Aimo, never copied.
@@ -583,7 +622,7 @@ function renderPartners(data) {
 	} else put('contextdev', service('contextdev', 'Context.dev'));
 	const w = document.getElementById('partners-when');
 	if (at) {
-		w.textContent = `Recorded from the live app's health check on ${at}` + (sp.appCommit ? `, version ${String(sp.appCommit).slice(0, 7)}.` : '.');
+		w.textContent = '';
 		w.hidden = false;
 	}
 }
@@ -868,7 +907,7 @@ function renderPartners(data) {
 			const when = new Date(data.recordedAt);
 			if (!isNaN(when)) {
 				const day = when.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'Europe/Helsinki' });
-				document.getElementById('cases-when').textContent = `Recorded from the app on ${day}` + (data.appCommit ? `, version ${String(data.appCommit).slice(0, 7)}.` : '.');
+				document.getElementById('cases-when').textContent = '';
 			}
 			prev.addEventListener('click', () => show(current - 1));
 			next.addEventListener('click', () => show(current + 1));
