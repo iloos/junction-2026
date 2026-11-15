@@ -289,6 +289,22 @@ interface Indexed {
 const FORM_WORD =
 	/^(?:\w+(?:ttu|tty|ttuja|ttyjä|nut|nyt))$|^(?:pakaste|pakasteet|kypsä|raaka|tuore|premium|vapaa|vapaan|luomu|irto|frozen|froze|fresh|fried|prefried|smoked|sliced|diced|cooked|organic|barn|free|range|pre|kpl|pcs|pkt|ltk|psv|ras|quick)$/;
 
+const PORTION = /annos|portion|sachet|stick|pussi(?:t|a)?\b/i;
+/** Many small units sold together: "500x5g", "4,5g x 800kpl", or a portion word in either name. */
+function isPortionPack(p: RetrievalProduct | undefined): boolean {
+	if (!p) return false;
+	const name = `${p.nameFi} ${p.nameEn ?? ''}`.toLowerCase();
+	if (/annospakkaus|annospussi|portion|sachet|stick/.test(name)) return true;
+	const many =
+		/(\d{2,4})\s*x\s*(\d+(?:[.,]\d+)?)\s*g\b/.exec(name) ??
+		/(\d+(?:[.,]\d+)?)\s*g\s*x\s*(\d{2,4})/.exec(name);
+	if (!many) return false;
+	const [a, b] = [Number(many[1].replace(',', '.')), Number(many[2].replace(',', '.'))];
+	const grams = Math.min(a, b);
+	const count = Math.max(a, b);
+	return grams <= 25 && count >= 20;
+}
+
 export class RetrievalIndex {
 	private items: Indexed[];
 	private byId = new Map<ProductId, Indexed>();
@@ -359,7 +375,17 @@ export class RetrievalIndex {
 		const diet = new Set([...all].filter((f) => !PLANT_FLAGS.has(f)));
 		const pool = this.similar(t, new Set(), 60, { minLex: 0.5, diet, strict: true });
 		const guarded = this.guard(query, pool, plant, [...diet]);
-		const hits = guarded.kept.slice(0, limit);
+		// An ingredient for a kitchen is bought in kitchen packs: portion sachets (500 × 5 g) go after them, unless the
+		// query asks for portions. A stable sort, so the score order holds within each group.
+		const wantsPortions = PORTION.test(query);
+		const kept = wantsPortions
+			? guarded.kept
+			: [...guarded.kept].sort(
+					(a, b) =>
+						Number(isPortionPack(this.byId.get(a.productId)?.p)) -
+						Number(isPortionPack(this.byId.get(b.productId)?.p))
+				);
+		const hits = kept.slice(0, limit);
 		if (hits.length)
 			return {
 				status: 'resolved',
