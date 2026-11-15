@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { TriangleAlert, Info } from '@lucide/svelte';
+	import { TriangleAlert } from '@lucide/svelte';
 	import { onMount } from 'svelte';
 	import { resolve } from '$app/paths';
 	import { storyTime } from '$lib/ui/format';
@@ -259,15 +259,7 @@
 		<p class="-mt-2 mb-4 text-body text-ink-2" role="status">{sandboxNote}</p>
 	{/if}
 
-	{#if data.workspace.notice}
-		<p
-			class="mb-2 flex items-center gap-2 rounded-md border border-signoff/40 bg-signoff-wash px-3 py-2 text-body text-ink"
-			role="note"
-			data-testid="room-notice"
-		>
-			<Info size={15} class="shrink-0 text-signoff" aria-hidden="true" />{data.workspace.notice}
-		</p>
-	{/if}
+	<!-- The room is said once, in the layout's "Where you are" line. -->
 
 	{#if data.needsStore}
 		<p

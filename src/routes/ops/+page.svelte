@@ -397,7 +397,7 @@
 						: ''}</span
 				>
 			</p>
-			{#if data.room.notice}<p class="room-notice" role="note">{data.room.notice}</p>{/if}
+			<!-- The room is said once, in the layout's "Where you are" line. -->
 		</div>
 
 		<dl class="figures">
@@ -1086,13 +1086,6 @@
 		grid-template-columns: minmax(0, 1.6fr) minmax(360px, 1fr);
 	}
 
-	.room-notice {
-		margin: 6px 0 0;
-		padding: 4px 10px;
-		border-left: 3px solid var(--sign-off);
-		background: color-mix(in oklab, var(--sign-off) 12%, transparent);
-		font-size: 15px;
-	}
 	.services {
 		grid-column: 1 / -1;
 		margin-top: -22px;

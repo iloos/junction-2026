@@ -807,6 +807,19 @@
 		void switchKitchen(mine[0]).finally(() => (roomMoving = false));
 	});
 
+	// The layout's "Where you are" names the visitor's store in the room.
+	$effect(() => {
+		const name = own[0]?.name ?? null;
+		if (shell) shell.roomStore = name;
+		const ws = (page.data as { room?: { workspaceId?: string } }).room?.workspaceId;
+		if (!ws || !name) return;
+		try {
+			localStorage.setItem(`mandate.store.${ws}`, name);
+		} catch {
+			/* storage blocked: other pages say "no store yet" */
+		}
+	});
+
 	async function created(kc: CreatedKitchen, description?: string) {
 		cached = withOwn(cached, {
 			kitchenId: kc.kitchenId,
@@ -1220,35 +1233,6 @@
 					</Popover.Root>
 				{/if}
 			</span>
-		{/if}
-		{#if mode === 'live'}
-			<!-- Where you are (D24/D26): your own sandbox or the live room, and the way to the other. -->
-			<!-- eslint-disable svelte/no-navigation-without-resolve -- room switches are full loads with a query -->
-			<p
-				class="flex min-w-0 flex-wrap items-center gap-x-1.5 text-meta text-ink-2"
-				aria-label="Where you are"
-			>
-				{#if roomNotice}
-					<span class="rounded bg-signoff-wash px-1.5 py-px font-medium text-ink" title={roomNotice}
-						>Live room</span
-					>
-					<span>· You: <span class="text-ink">{own[0]?.name ?? 'no store yet'}</span></span>
-					<span class="text-ink-3">· others see what you type ·</span>
-					<a
-						href="/?ws=mine"
-						data-sveltekit-reload
-						class="underline underline-offset-2 hover:text-ink">Leave</a
-					>
-				{:else}
-					<span>Your sandbox ·</span>
-					<a
-						href="/?ws=ws-judges"
-						data-sveltekit-reload
-						class="underline underline-offset-2 hover:text-ink">Join the live room →</a
-					>
-				{/if}
-			</p>
-			<!-- eslint-enable svelte/no-navigation-without-resolve -->
 		{/if}
 		{#if !snap && k.started === false && !needsJoin}
 			<p

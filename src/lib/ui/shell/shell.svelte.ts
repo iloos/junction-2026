@@ -37,6 +37,8 @@ export class Shell {
 	chatFull = $state(false);
 	/** Bumped to start a new conversation ("New order", `/request?new=1`, D31); earlier tasks keep their threads. */
 	chatNew = $state(0);
+	/** The visitor's own store in the room the page shows (the Kitchen keeps it from the server's list). */
+	roomStore = $state<string | null>(null);
 	/** What the agent is scoped to on this page: the kitchen and the plan on screen (Kitchen, Request, Ops). */
 	chat = $state<{ kitchenId?: string; planId?: string }>({});
 	/** The agent rail's width on desktop (px): dragged by its left edge, kept per browser. */
