@@ -151,8 +151,11 @@
 	{/if}
 	{#if when}
 		<p class="mt-1 flex items-center gap-1.5 text-meta text-ink-2">
-			<Clock3 size={13} aria-hidden="true" /> Decide before
-			<span class="mono text-ink">{storyTime(when)}</span>
+			<!-- The day reads at a glance; the exact time is behind the hover (five-second rule). -->
+			<Clock3 size={13} aria-hidden="true" /> Decide by
+			<span class="text-ink" title={storyTime(when)}
+				>{storyTime(when).replace(/,\s*\d{1,2}:\d{2}$/, '')}</span
+			>
 		</p>
 	{/if}
 	<p class="sys-only mono mt-1 text-micro text-ink-3">
