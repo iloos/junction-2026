@@ -340,3 +340,32 @@ export function byActivity(
 export function ordersLastMinute(feed: readonly FeedOrder[], now: number): number {
 	return feed.filter((o) => now - Date.parse(o.committedAt) <= 60_000).length;
 }
+
+const KIND_PLURAL: Record<string, string> = {
+	city_hotel: 'city hotels',
+	lunch_restaurant: 'lunch places',
+	public_central_kitchen: 'central kitchens',
+	a_la_carte_restaurant: 'à la carte restaurants',
+	care_home_kitchen: 'care homes',
+	cafe: 'cafés',
+	ski_resort_hotel: 'ski resort hotels'
+};
+
+/**
+ * The room's visitor stores by kind (the sample each was copied from), biggest first, as one line: "212 lunch
+ * places · 98 cafés". Blank stores and the seeded samples are not counted.
+ */
+export function kindCounts(kitchens: readonly OpsKitchen[]): string {
+	const n = new Map<string, number>();
+	for (const k of kitchens)
+		if (isVisitorStore(k) && k.copiedFrom && k.kind && k.kind !== 'blank')
+			n.set(k.kind, (n.get(k.kind) ?? 0) + 1);
+	return [...n]
+		.sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+		.map(([kind, c]) =>
+			c === 1
+				? `1 ${kindWords(kind).toLowerCase()}`
+				: `${c} ${KIND_PLURAL[kind] ?? `${kindWords(kind).toLowerCase()}s`}`
+		)
+		.join(' · ');
+}

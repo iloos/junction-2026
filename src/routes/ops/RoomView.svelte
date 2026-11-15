@@ -9,6 +9,7 @@
 		byActivity,
 		firstOrders,
 		isVisitorStore,
+		kindCounts,
 		kindWords,
 		ordersLastMinute,
 		OUTCOME_WORDS,
@@ -76,6 +77,7 @@
 		return () => clearInterval(t);
 	});
 	const perMinute = $derived(ordersLastMinute(feed, now));
+	const byKind = $derived(kindCounts(kitchens));
 	const qr = $derived(joinUrl ? encode(joinUrl, { border: 2 }) : null);
 	const euro = (c: number) =>
 		(c / 100).toLocaleString('en-IE', { style: 'currency', currency: 'EUR' });
@@ -212,6 +214,7 @@
 				>
 				<span><b class="num">{perMinute}</b> in the last minute</span>
 			</p>
+			{#if byKind}<p class="kinds">{byKind}</p>{/if}
 			<p>Every store orders under its own rules.</p>
 		</div>
 		{#if joinUrl && qr}
@@ -219,7 +222,7 @@
 				{@render code()}
 				<div>
 					<p class="join-h">Join as your own store</p>
-					<p class="join-t">Scan and name your store. Others in the room see it.</p>
+					<p class="join-t">Scan, name your store and pick its kind. Others in the room see it.</p>
 					<button class="bigbtn" onclick={() => (big = true)}>Show the code full screen</button>
 					<!-- An absolute link for another device (the QR's target), built from resolve('/') by the page. -->
 					<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
@@ -372,8 +375,8 @@
 						<span class="name">{plainName(k.name)}</span>
 						{#if t}<span class="value num">{euro(t.cents)}</span>{/if}
 						{#if firsts[k.id]}<span class="firstbadge">First order</span
-							>{:else if k.kind && k.kind !== 'blank' && !isVisitorStore(k)}<span class="kind"
-								>{kindWords(k.kind)}</span
+							>{:else if k.kind && k.kind !== 'blank' && (k.copiedFrom || !isVisitorStore(k))}<span
+								class="kind">{kindWords(k.kind)}</span
 							>{:else if st === 'waiting'}<span class="kind">Waits for a person</span>{/if}
 						<span class="sr">{STATE_WORDS[st]}</span>
 					</li>

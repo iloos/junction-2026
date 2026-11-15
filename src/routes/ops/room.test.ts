@@ -13,6 +13,7 @@ import {
 	storeStates,
 	byActivity,
 	ordersLastMinute,
+	kindCounts,
 	type OpsKitchen
 } from './room';
 import type { Order } from '$lib/core/contracts';
@@ -174,5 +175,20 @@ describe('room at scale', () => {
 			deliverBy: ''
 		});
 		expect(ordersLastMinute([at('2026-12-07T10:00:30Z'), at('2026-12-07T09:59:00Z')], now)).toBe(1);
+	});
+});
+
+describe('kinds in the room', () => {
+	const v = (id: string, kind: string, copiedFrom?: string) =>
+		({ id, name: id, kind, city: '', ...(copiedFrom ? { copiedFrom } : {}) }) as OpsKitchen;
+	it('counts visitor stores by kind, biggest first; blank and samples left out', () => {
+		const ks = [
+			v('k-v-1', 'cafe', 'k-cafe'),
+			v('k-v-2', 'lunch_restaurant', 'k-lounas'),
+			v('k-v-3', 'lunch_restaurant', 'k-lounas'),
+			v('k-v-4', 'blank'),
+			v('k-hotel', 'city_hotel')
+		];
+		expect(kindCounts(ks)).toBe('2 lunch places · 1 café');
 	});
 });
