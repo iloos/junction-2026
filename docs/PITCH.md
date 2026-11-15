@@ -91,6 +91,7 @@ Every claim's observed status and verdict: [CLAIMS.md](CLAIMS.md).
 - Parked by D7, never in the pitch: Gemini Live voice, photo input, a 500-kitchen swarm, Nemotron, Modal jobs.
 
 ## Next (say as next, never as built)
+- **Your own agent can ask you to approve in its client** (MCP elicitation, D22), showing the exact terms; outside agents still never approve.
 - **Valio's systems subscribe to the op log (Aiven Kafka + Debezium).** The op log stays the source of truth. Aiven's Debezium connector streams it into Kafka topics, so Valio's ERP, warehouse, forecasting and recall systems can subscribe to held lines, orders and shortfalls with no app change and no dual writes.
 - **Usual orders across many kitchens** (D14): detected standing orders make demand dependable for Valio; the app has detection over a simulated history.
 - **Margin-aware suggestions**: the "Valio suggests" slot ranks by a stated reason today; with Valio's margin data it could weigh margin, still inside the mandate and never the default.
@@ -102,6 +103,7 @@ Every claim's observed status and verdict: [CLAIMS.md](CLAIMS.md).
 - Numbers (cite on a slide, docs/research/pitch-numbers-and-viz.md): Finnish food services waste ~61 Mkg of edible food a year (Luke); ~1 plate in 6 on a serving line is never eaten (Luke field study); EU law requires a 30% per-person cut by 2030; public kitchens serve ~380 M meals a year; buyers beat the algorithm only where they know something it doesn't (Kesavan & Kushwaha 2020), so we ask only at the exceptions. No Finnish online-order or fill-rate figures (none found).
 
 ## Q&A crib
+- **Can my agent approve?** No. The chef approves on the page or in the in-app chat. Any MCP agent, an outside one or your own, gets an approval link you open on any device, including a phone paired from `/agents`; the link points and grants nothing.
 - **Why won't Valio's own A.I.mo do this?** We asked it Valio's own example (1,000 L lactose-free milk by Monday); it said it can't confirm availability or price and pointed to sales service. That is right for a knowledge assistant. The missing layer is transactional: stock, price and authority. We built that layer and an open gate A.I.mo could sit on; we don't replace A.I.mo or the webshop. (Say the date we asked.)
 - **Isn't this Choco's OrderAgent Autopilot?** Choco claims "only genuine exceptions reach a person" as a vendor feature inside its own app. Ours: the exception rule is the customer's own mandate, enforced in an open interface any agent can use, with approval bound to exact terms.
 - **What breaks it?** Unknown supply: we hold and say so, and never call it covered.

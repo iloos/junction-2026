@@ -37,7 +37,7 @@ Chef (phone or Kitchen page)
 **Proof:** one gate for every door (Kitchen page, chat, `/request`, REST, MCP): `core/contracts/tools.ts` + `server/tools/serve.ts`; every change through `applyOps`. Approval is bound to the exact terms by a hash, and any edit voids it (tests: `gate.test.ts`, eval s4).
 
 **Say:** "The model reads and proposes. Code decides what's allowed. A model can make a line more careful, never less."
-**D22 wording:** the chef can approve from their own chat ("approve all" on the lines just shown; allergen changes still need the confirm card). Outside agents never approve. Say "from the chef's own phone or MCP client" **only if** S1 lands the elicitation and it is seen on prod; otherwise say "from the dock or the page".
+**Who approves (D22 as built):** the chef approves on the page or in the in-app chat ("approve all" on the lines just shown; an allergen change still needs the confirm card). Any MCP agent, an outside one or the chef's own, gets an approval link that the chef opens on any device, including a phone paired from `/agents`. The link only points; it grants nothing (D17). Never say an agent can approve.
 
 ---
 
@@ -97,7 +97,7 @@ Don't say: vector search, schema-constrained, recipe-aware, "a real recall hit o
 1. A 4-week shadow pilot with one hotel: the agent proposes, the chef orders as usual, and we measure how many lines would have gone through alone. These are targets, not results.
 2. Valio's systems subscribe to the op log (Aiven Kafka + Debezium): held lines, orders and shortfalls with no app change.
 3. Usual orders (Valio's *tilauspohjat*) as the baseline the mandate widens over, line type by line type, as the record earns it.
-4. The chef approves from their own agent client (MCP elicitation), never the outside agent.
+4. Your own agent can ask you to approve in its client (MCP elicitation), bound to the exact terms; an outside agent still never approves.
 
 **Close:** "What do you need? We'll sort it out. That's a mandate." Then `mandate.kitchen` and the QR.
 
@@ -107,4 +107,3 @@ Don't say: vector search, schema-constrained, recipe-aware, "a real recall hit o
 - [ ] S5: the numbers for slides 3 and 5 (hero at 390, r1 stores and first order, m1 room cascade, eval counts, facets 0 unsafe, F1 cases, rounds closed).
 - [ ] Re-read `/healthz` `day` on the submitted commit for slide 4.
 - [ ] Screenshots on the submitted commit: m2 plan, m2 receipt, Room with stores, Forecast, the m3 refusal in Ops.
-- [ ] D22 wording on slide 2 after S1's decision on elicitation.
