@@ -148,7 +148,9 @@ for (const [i, s] of stores.entries()) {
 			await p.waitForTimeout(1500);
 			await working(p);
 			// /request is the conversation: the order itself is placed on the Kitchen page.
-			const link = p.getByRole('link', { name: /Order it on the page/ }).last();
+			const link = p
+				.getByRole('link', { name: /Order it on the page|Open this plan in the Kitchen/ })
+				.last();
 			if (await link.isVisible().catch(() => false)) await link.click();
 			await p
 				.getByRole('button', { name: /^(Order \d+ lines? now|Order the|Place order)/ })
@@ -189,10 +191,16 @@ await timed(`${stores[0].name}: trying the room's hotel is refused`, async () =>
 		headers: { origin: BASE },
 		data: { action: 'kitchen', value: 'k-hotel' }
 	});
-	const body = await r.text();
-	if (r.ok() && !/room_store|not your store/i.test(body))
-		throw new Error(`switching to the hotel was allowed: ${r.status()} ${body.slice(0, 160)}`);
-	return `${r.status()} ${(body.match(/"message":"([^"]+)"/) ?? [])[1] ?? body.slice(0, 120)}`;
+	await r.text();
+	// Viewing the room's hotel is allowed (read-only, S1's gate); planning it must be refused.
+	const plan = await p.request.post(`${BASE}/kitchen-api/scenario`, {
+		headers: { origin: BASE },
+		data: { action: 'start' }
+	});
+	const body = await plan.text();
+	if (plan.ok() || !/not your store|room_store/i.test(body))
+		throw new Error(`planning the hotel was allowed: ${plan.status()} ${body.slice(0, 160)}`);
+	return `${plan.status()} ${(body.match(/"message":"([^"]+)"/) ?? [])[1] ?? body.slice(0, 120)}`;
 });
 note(
 	'presenter steps (shortage, reset)',
