@@ -82,7 +82,7 @@ The user's three sketches map onto this (`scratch/user-diagrams.png` in the pitc
 | Chef approves in the dock (DecisionCard, hold-to-confirm) (D13) | dock | dock → Review → Confirm | `dock-approve.e2e.ts` 2/2 on prod `b2dfe9c` | prod |
 | Chef approves shown lines by a typed yes in their own dock (D22); sign-off lines still need the Confirm card | `fd7d6ae` | dock "approve all" | — | main |
 | Chef's own MCP key asks the chef by elicitation (D22) | — | — | not in code | planned |
-| Approve → order → one receipt; survives a reload | Kitchen | Place order | `kitchen-order.e2e.ts` on prod `70c30e2`; hero m2 10/10 on `4ad27c0` | prod |
+| Approve → order → one receipt; survives a reload | Kitchen | Place order | `kitchen-order.e2e.ts` on prod `70c30e2`; hero m2 10/10 at 1440 and 390 on prod `ea9f4d5` | prod |
 | Product photos with a labelled ladder (exact → pack may differ → brand → category), loaded once per plan | `6c08d11`, `73ecd36`, `server/web/photo.ts` | Kitchen rows | — | prod\* |
 | Product card: Valio Aimo public page and photo, verified by barcode | `server/products/card.ts` | tap a product | CLAIMS (prod `ff7f6c3`) | prod |
 | Calendar feed (.ics): decisions with deadlines, deliveries, receiving days | `core/calendar.ts`, `/api/calendar/[kitchen].ics` | — | CLAIMS b11 | prod |
