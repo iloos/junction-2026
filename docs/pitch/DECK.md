@@ -11,7 +11,7 @@ _S7, Sun 15 Nov 02:30. The outline for the stage deck and the video's frames. Ea
 
 **Proof (one line each):**
 - Valio's mentor, on the event Discord (Sat 14 Nov): "Currently there are no approval gates… in an agentic scenario a human approval would be required." That is our brief, in their words.
-- Finnish food services waste ~61 Mkg of edible food a year (Luke). The EU requires a 30% per-person cut by 2030.
+- Food services cause 17% of the Finnish food chain's edible food loss (Luke, 2021). The EU requires a 30% per-person cut at retail and consumption by 2030 (European Commission). Both checked against the source on Sun 15 Nov; cite them in small type on the slide.
 - Field experiments: buyers beat the algorithm only where they know something it doesn't (Kesavan & Kushwaha 2020). So the agent should **ask at the exceptions, not on every line**.
 
 **Say:** "The hard part isn't finding the product. It's knowing what the agent may buy alone."
