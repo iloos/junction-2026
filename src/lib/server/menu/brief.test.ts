@@ -166,3 +166,22 @@ describe('moment 2: the words of a menu ask', () => {
 		expect(q.chips.map((c) => c.label)).toEqual(['Fri 11 Dec', 'Sat 12 Dec']);
 	});
 });
+
+describe('several dishes with "some vegan": asked, never one vegan dish', () => {
+	const today = '2026-12-07';
+	const t = 'pasta carbonara and bolognese for 1000 people, some vegan and some regular';
+	it('is an event brief for 1000 that keeps both dishes in its words', async () => {
+		const { classifyGoal } = await import('../agent/classify');
+		expect(classifyGoal(t, today)).toMatchObject({ kind: 'event' });
+		const d = draftBrief(t, today);
+		expect(d.guests).toBe(1000);
+		expect(d.title).toMatch(/carbonara and bolognese/i);
+	});
+	it('asks "500 vegan and 500 regular servings?" first, never all vegan', () => {
+		const d = draftBrief(t, today);
+		expect(d.dietary).toBeNull();
+		const q = nextQuestion(d, today)!;
+		expect(q.text).toBe('500 vegan and 500 regular servings?');
+		expect(applyBriefAnswers(d, [q.chips[0].answer], today).dietary).toEqual(['vegan:500']);
+	});
+});
