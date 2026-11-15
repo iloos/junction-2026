@@ -20,7 +20,7 @@ Prepare before going on: a fresh browser profile on the laptop, logged into noth
 **A · A new menu from words (50 s)**
 1. **0–8 s:** open the chat dock and type "a no-meat dinner for 120 with a peach dessert". Say: "One sentence."
 2. **8–20 s:** the menu card appears. Say: "Gemini proposes six dishes." Type "plan it".
-3. **20–38 s:** the plan appears: about 20 items, each a Valio product with a price. Say: "A new menu means new products, and this hotel's mandate says ask me before any new product. So the agent asks once." Point at one reason line.
+3. **20–38 s:** the plan appears: about 20 items, each a Valio product with a price. Say: "A new menu means new products, and this hotel's mandate says ask me before any new product. So the agent asks once." Point at one reason line. If asked about the items marked not covered: "Some ingredients have no product the agent can order yet; each is shown as not covered, never silently dropped." (On prod d28f43d: 20 lines, 8 not covered; the button reads "Accept all 19".)
 4. **38–50 s:** tap **Accept all**, then the Ops tab: the order has arrived. Say: "One yes covers exactly these items, and it lands on Valio's side."
 
 **B · The buffet: what goes alone (25 s)**
@@ -33,9 +33,9 @@ Seen on prod b12ba71 (3 alone · 15 in 3 decisions · 3 refused). If the buffet 
 ## The room (only if the room playtest is green on the submitted deploy)
 For a live room with the audience: Ops on the big screen, the join QR full screen.
 1. **Joining is unlimited:** "Scan the code and name your store." Wait until stores appear on Ops.
-2. **Planning goes in waves of 10 at most:** "Rows one and two: plan now." Wait about 5 seconds until those orders land, then call the next wave. Never ask the whole room to plan at once: Postgres is the shared limit, and in waves of 10 the test ran with 0 errors.
+2. **Planning goes in waves of 10 at most:** "Rows one and two: plan now." Wait about 5 seconds until those orders land, then call the next wave. The room plans one order at a time by design, so never ask the whole room to plan at once.
 3. **The shortage:** the presenter fires it on Ops, and every store re-plans inside its own rules.
-Say on stage: "Two Aiven machines on one Postgres: a store made on one shows on the other in well under a second." Don't claim more capacity from more machines.
+Make no capacity or scaling claim on stage; scaling out is a roadmap line only.
 
 ## Peer review at the table (about 2 min a visitor)
 Laptop open on the deck, phone ready with the app.
