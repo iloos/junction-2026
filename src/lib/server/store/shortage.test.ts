@@ -83,4 +83,24 @@ describe('one shortage, every kitchen re-plans', () => {
 		expect(kept.reduce((a, b) => a + b, 0)).toBeLessThanOrEqual(4);
 		for (const k of mine) expect(k.why.length).toBeGreaterThan(10);
 	}, 120_000);
+
+	it('a rescue at the dish says so at the dish, not as a product swap', async () => {
+		const r = await h.plan_event(ctx('chef'), { kitchenId: 'k-hotel', eventId: 'event-xmas-140' });
+		if (!r.ok) throw new Error(r.error.message);
+		const READY_SWEDE = '462482'; // Saarioinen Lanttulaatikko 700 g
+		env.overlay.setAvailability({ productId: READY_SWEDE, amount: 0, label: 'simulated shortage' });
+		const s = must(
+			await replanShortage(env.ports, ctx('kitchen_agent'), {
+				productId: READY_SWEDE,
+				had: 50,
+				left: 0,
+				shortageId: 'sh-dish',
+				note: 'Valio is short'
+			})
+		);
+		const hotel = s.kitchens.find((k) => k.kitchenId === 'k-hotel')!;
+		expect(hotel.why).toMatch(
+			/^Lanttulaatikko.*: making it in house .* instead of buying it ready-made/
+		);
+	}, 120_000);
 });
