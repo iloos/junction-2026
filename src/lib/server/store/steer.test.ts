@@ -53,6 +53,9 @@ describe('find_substitutes steer (D28)', () => {
 			if (a.qty) expect(a.qty.value).toBeGreaterThan(0);
 		}
 		expect(out.alternatives!.some((a) => a.totalCents !== undefined)).toBe(true);
+		// The agent's pick has its total too, and is not repeated among the alternatives.
+		expect(out.pick?.totalCents).toBeGreaterThan(0);
+		expect(out.alternatives!.map((a) => a.productId)).not.toContain(out.pick!.productId);
 	});
 
 	it('same brand keeps the planned brand; bigger pack keeps bigger packs', async () => {

@@ -3,6 +3,7 @@
  * for a kitchen and day, search the catalogue for a top-up, and plan the chef's confirmed lines. Planning acts as
  * the chef through `place_order` and the shared gate (serveTool), like the screen's other tool calls.
  */
+import { visitorKey } from '$lib/server/auth/visitor-key';
 import { z } from 'zod';
 import { env } from '$env/dynamic/private';
 import type { Kitchen } from '$lib/core/contracts';
@@ -121,7 +122,12 @@ export type PlanResult =
 	| { ok: false; status: number; error: { code: string; message: string } };
 
 /** Plan the chef's confirmed usual order: `place_order` as the chef, through the gate. */
-export async function planUsual(workspaceId: string, body: unknown): Promise<PlanResult> {
+export async function planUsual(
+	workspaceId: string,
+	body: unknown,
+	/** The browser's visitor: the kitchens it made take its writes; in the shared room only those (D24). */
+	visitor?: { own: string; presenter?: boolean }
+): Promise<PlanResult> {
 	const parsed = PlanBody.safeParse(body);
 	if (!parsed.success)
 		return {
@@ -135,7 +141,9 @@ export async function planUsual(workspaceId: string, body: unknown): Promise<Pla
 			// The usual-order door: the plan records it (Plan.origin, server-set, never from the request).
 			const ctx = {
 				...contextFor('chef', 'kitchen-ui', 'kitchen', env, workspaceId),
-				origin: 'usual' as const
+				origin: 'usual' as const,
+				...(visitor ? { visitor: visitorKey(visitor.own) } : {}),
+				...(visitor?.presenter ? { sharedRoom: false } : {})
 			};
 			return planUsualOrder(
 				handlers,
