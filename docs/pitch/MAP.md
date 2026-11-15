@@ -128,7 +128,7 @@ See §3 for the sponsor round. Capabilities: Exa facts in the Why drawer, GTIN-c
 |---|---|---|---|
 | Pure core, lint-enforced; 9 op types through `applyOps` | `core/state.ts`, `eslint.config.js` | CLAIMS "How" row | prod |
 | Op log on Postgres, LISTEN/NOTIFY → SSE to every open screen | `server/bus/pg.ts`, `/api/events` | CLAIMS Aiven row | prod |
-| Every model and Valio call traced (model, tokens, latency), stored 7 days | `server/obs/traces.ts` | `services.e2e.ts` strict | prod (not every call yet: chat text, MCP `propose_menu`) |
+| Every model and Valio call traced (model, tokens, latency), stored 7 days | `server/obs/traces.ts` | `services.e2e.ts` strict; `traced.test.ts` (S3 `01cccb6`: chat, `/request` and every scoped tool incl. MCP `propose_menu` trace through the caller's scope) | prod for Valio and `/request`; chat and MCP model calls once `01cccb6` (wave O) is merged and deployed |
 | Breaker + fallback per port; fixture path for every flow; `/offline` | `server/external/`, `routes/(kitchen)/offline` | gate runs on fixtures | prod |
 | Per-visitor sandbox; a judge key works only there; forged cookies select nothing | `server/demo/` | two-browser gate on prod `ab3a557` | prod |
 | 30 visitors at once, 0 errors | `scripts/deploy/visitors.mjs` | prod `68cb2d8` | prod (planning ran one at a time) |
