@@ -231,7 +231,7 @@ export const actions: Actions = {
 		if (workspace === JUDGES_WORKSPACE && !v.presenter)
 			return fail(403, { message: 'Only the presenter starts the shared room over.' });
 		if (isSandbox(workspace)) {
-			const r = await resetSandbox(workspace);
+			const r = await resetSandbox(workspace, Date.now(), { presenter: v.presenter });
 			if (r.ok) return { reset: r.runId, startedAt: currentRunStartedAt(workspace) };
 			if ('retryInMs' in r)
 				return fail(429, {

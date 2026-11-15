@@ -11,15 +11,15 @@ import type { RequestHandler } from './$types';
  * shared judges' room (where it lands when sandboxes are full). The stage (ws-demo) is not reachable from here (403).
  */
 export const POST: RequestHandler = async (event) => {
-	const { workspaceId } = await visitorWorkspace(event, env, dev);
-	const r = await resetSandbox(workspaceId);
+	const { workspaceId, presenter } = await visitorWorkspace(event, env, dev);
+	const r = await resetSandbox(workspaceId, Date.now(), { presenter });
 	if (r.ok) return json({ workspaceId, runId: r.runId, previous: r.previous });
 	if ('forbidden' in r)
 		return json(
 			{
 				error: {
 					code: 'FORBIDDEN',
-					message: 'The stage run is reset by the presenter only.',
+					message: 'Only the presenter starts a shared room or the stage over.',
 					retryable: false
 				}
 			},

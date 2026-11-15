@@ -30,7 +30,7 @@ import { EVENT_SEED_BY_ID, eventFor } from '$lib/kitchen/events';
 import { scenarioClock } from '$lib/core/scenario';
 import { currentRun, currentRunStartedAt } from '$lib/server/demo/run';
 import { reloadRunNow, resetDemoRun } from '$lib/server/demo/reset';
-import { isSandbox, resetSandbox } from '$lib/server/demo/sandbox';
+import { isSandbox, isSharedRoom, resetSandbox } from '$lib/server/demo/sandbox';
 import { inWorkspace } from '$lib/server/adapters/simulator/overlay';
 import { rescueContention } from '$lib/core/services/contention';
 import { catchUp, publish } from '$lib/server/bus';
@@ -967,8 +967,15 @@ async function applyScenario(
 	} else if (action === 'reset') {
 		// A fresh run server-side: no plan, orders or spend; the old run stays in the op log. Sandboxes go
 		// through the self-service reset (cooldown per sandbox); the stage only reaches here for a presenter.
+		// In a room others share, a visitor's reset starts only their own screen over (no plan open, their store
+		// kept); the room's run, the other stores and its incidents stay. The presenter starts the room over.
+		if (isSandbox(s.workspaceId) && isSharedRoom(s.workspaceId) && !s.presenter) {
+			s.planId = null;
+			s.contention = false;
+			return buildSnapshot(s);
+		}
 		if (isSandbox(s.workspaceId)) {
-			const r = await resetSandbox(s.workspaceId);
+			const r = await resetSandbox(s.workspaceId, Date.now(), { presenter: s.presenter });
 			if (!r.ok && 'retryInMs' in r) throw new Cooldown(r.retryInMs);
 		} else await resetDemoRun(s.workspaceId);
 		s.kitchenId = 'k-hotel';
