@@ -362,14 +362,14 @@ export const SEARCH_WORDS: Record<string, string[]> = {
 	tuna: ['tonnikala', 'tuna'],
 	shrimp: ['katkarapu', 'shrimp'],
 	prawn: ['katkarapu', 'prawn'],
-	milk: ['maito', 'milk'],
+	milk: ['maito', 'kevytmaito', 'täysmaito', 'milk'],
 	cream: ['kerma', 'cream'],
 	butter: ['voi', 'butter'],
 	cheese: ['juusto', 'cheese'],
 	egg: ['kananmuna', 'muna', 'egg'],
 	yogurt: ['jogurtti', 'yoghurt'],
 	yoghurt: ['jogurtti', 'yoghurt'],
-	potato: ['peruna', 'potato'],
+	potato: ['peruna', 'kiinteä peruna', 'jauhoinen peruna'],
 	carrot: ['porkkana', 'carrot'],
 	onion: ['sipuli', 'onion'],
 	tomato: ['tomaatti', 'tomato'],
@@ -390,6 +390,34 @@ export const SEARCH_WORDS: Record<string, string[]> = {
 	strawberry: ['mansikka', 'strawberry'],
 	blueberry: ['mustikka', 'blueberry']
 };
+
+/**
+ * English phrases whose words alone read wrong: "oat milk" is an oat drink, not milk; "lactose free milk" is not
+ * lactose-free milk chocolate; "coffee cream" is not a coffee-flavoured ice cream. Read before the words.
+ */
+const SEARCH_PHRASES: [RegExp, string][] = [
+	[/\boat[- ]?(?:milk|drink)s?\b/g, 'kaurajuoma'],
+	[/\blactose[- ]?free\b/g, 'laktoositon'],
+	[/\bcoffee (?:cream|creamer)\b/g, 'kahvikerma'],
+	[/\bcoffee milk\b/g, 'kahvimaito'],
+	[/\bfor (?:the )?coffee\b/g, ''],
+	[/\bwhipping cream\b/g, 'kuohukerma'],
+	[/\bcooking cream\b/g, 'ruokakerma'],
+	[/\bsour cream\b/g, 'smetana'],
+	[/\bcream cheese\b/g, 'tuorejuusto'],
+	[/\bice cream\b/g, 'jäätelö'],
+	[/\bskim(?:med)? milk\b/g, 'rasvaton maito'],
+	[/\b(?:light|semi[- ]skimmed) milk\b/g, 'kevytmaito'],
+	[/\bwhole milk\b/g, 'täysmaito'],
+	[/\bminced meat\b/g, 'jauheliha']
+];
+
+/** An English plural to its singular: berries → berry, potatoes → potato, steaks → steak (never "glass" → "glas"). */
+function singular(w: string): string {
+	if (w.length > 4 && w.endsWith('ies')) return w.slice(0, -3) + 'y';
+	if (w.length > 4 && w.endsWith('oes')) return w.slice(0, -2);
+	return w.length >= 4 && /[^s]s$/.test(w) ? w.slice(0, -1) : w;
+}
 
 /** Amounts, units and filler a request carries that are not product words ("100", "2kg", "pcs", "of"). */
 const NOT_A_PRODUCT =
@@ -470,8 +498,10 @@ export class RetrievalIndex {
 		query: string,
 		limit: number
 	): { hits: ScoredHit[]; readAs: string; corrected?: string } {
-		const raw = query
-			.toLowerCase()
+		const raw = SEARCH_PHRASES.reduce(
+			(q, [re, fi]) => q.replace(re, ` ${fi} `),
+			query.toLowerCase()
+		)
 			.split(/[^a-zåäöéèüô0-9.,]+/)
 			.filter((w) => w && !NOT_A_PRODUCT.test(w));
 		const fixes: string[] = [];
@@ -482,8 +512,9 @@ export class RetrievalIndex {
 		const known = (w: string) => SEARCH_WORDS[w] ?? (this.df.has(w) ? [w] : undefined);
 		const groups: string[][] = [];
 		for (const w0 of raw) {
-			const sing = w0.length > 4 && /[^s]s$/.test(w0) ? w0.slice(0, -1) : w0;
-			let alts = known(w0) ?? known(sing);
+			const sing = singular(w0);
+			// The table first, plural or not ("potatoes" also appears in English product names, but means peruna).
+			let alts = SEARCH_WORDS[w0] ?? SEARCH_WORDS[sing] ?? known(w0) ?? known(sing);
 			if (!alts && sing.length >= 4) {
 				const max = sing.length >= 7 ? 2 : 1;
 				const near = (cands: Iterable<string>) => {
@@ -872,13 +903,11 @@ export const toRetrievalProduct = (p: Product): RetrievalProduct => ({
 
 /** Whether a query uses a word only SEARCH_WORDS can read (English or colloquial): it searches tolerantly first. */
 export const usesSearchWords = (query: string) =>
+	SEARCH_PHRASES.some(([re]) => re.test(query.toLowerCase())) ||
 	query
 		.toLowerCase()
 		.split(/[^a-zåäö]+/)
-		.some(
-			(w) =>
-				w in SEARCH_WORDS || (w.length > 4 && w.endsWith('s') && w.slice(0, -1) in SEARCH_WORDS)
-		);
+		.some((w) => w in SEARCH_WORDS || singular(w) in SEARCH_WORDS);
 
 /** Below this a tolerant hit is a guess, not a match (S3 asks "Did you mean…?" from 0.45 to 0.75). */
 export const ASK_BAR = 0.45;
