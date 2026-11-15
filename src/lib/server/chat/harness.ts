@@ -50,7 +50,9 @@ const Chip = z.object({
 	label: z.string().min(1).max(80),
 	say: z.string().min(1).max(200),
 	kind: z.enum(['product', 'amount', 'day', 'action', 'other']).optional(),
-	productId: z.string().max(64).optional()
+	productId: z.string().max(64).optional(),
+	/** Price and pack in words, from a tool result ("€12.40 · 2.5 kg"). */
+	price: z.string().max(40).optional()
 });
 const Action = z.union([
 	z.object({ tool: z.string(), input: z.record(z.string(), z.unknown()) }),
@@ -131,7 +133,7 @@ const TURN_RULES = [
 	'Ask only what only the chef knows: how much, for when, which of two real options. One question per reply. Use the steer: it says what the plan still needs and what is held and why.',
 	'Reply in 1–2 short sentences in plain words: no ids, no tool names, no date codes (say "Friday 20 Nov"), no praise, no narrating what you are about to do. Never end on "I could not": say what you did and the way on.',
 	'Chips are what the chef would answer, never navigation ("View plan", "Check price"): the cards show the plan. ',
-	'Chips: up to 6 tappable next messages, best first; "say" is what the chef would type; labels are short words a chef reads (name, pack, price), never a product number or id (put the id in "productId"). Offer them when there is a choice (products with pack and price, amounts, days); add "Something else" when they are alternatives; none after a plain yes.',
+	'Chips: up to 6 tappable next messages, best first; "say" is what the chef would type; a product chip carries its "productId" and "price" (price and pack in words from a quote or search, e.g. "€12.40 · 2.5 kg"); labels are short words a chef reads (name, pack, price), never a product number or id (put the id in "productId"). Offer them when there is a choice (products with pack and price, amounts, days); add "Something else" when they are alternatives; none after a plain yes.',
 	'Name only products a tool result showed you (search_products, quote, a plan): never invent a product, a brand or a "sorted" item. Never treat a chip as chosen unless the chef sent its words.',
 	'Never claim an order was placed or committed unless a tool result says so. Held lines wait for the chef: say in a few words what waits and why; the decision card is shown right under your reply, so say "approve it on the card below" (in this chat, not on another device).',
 	'The kitchen (its name, delivery days, rules and the scenario date) is given to you as "kitchen"; you do not need get_context.',
@@ -310,7 +312,9 @@ const NAVIGATION =
 /** A chip as the dock shows it: the label in words (a product number is never shown), the words it sends. */
 const chipOption = (c: z.infer<typeof Chip>) => ({
 	label: c.label.replace(/\s*\(?\b\d{5,}\b\)?/g, '').trim() || c.say.slice(0, 80),
-	value: `say:${c.say}`
+	value: `say:${c.say}`,
+	...(c.productId ? { productId: c.productId } : {}),
+	...(c.productId && c.price ? { price: c.price } : {})
 });
 
 /** The turn's chef words, from text or a `say:` chip; null for the inputs only the script handles. */
@@ -569,6 +573,9 @@ export async function* runHarnessTurn(
 	if (saved.ok) task = saved.value;
 
 	for (const c of cards) yield c;
+	// The ask so far, for the dock's card above the composer.
+	if (Object.keys(draft).some((k) => k !== 'stage'))
+		yield { type: 'ask', taskId: task.id, ask: draft };
 	const menu = cards.find((c) => c.type === 'menu');
 	const chips = reply.chips.filter((c) => !NAVIGATION.test(c.label.trim())).map(chipOption);
 	if (menu?.type === 'menu' && !menu.reviewed && !task.plans.length)

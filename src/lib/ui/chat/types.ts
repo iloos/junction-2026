@@ -31,7 +31,14 @@ export type ChatEvent =
 			taskId: string;
 			field: ClarifyField;
 			question: string;
-			options: { label: string; value: string }[];
+			/** `productId` (and `price`, in words) when the chip names a catalogue product: shown with its photo. */
+			options: { label: string; value: string; productId?: string; price?: string }[];
+	  }
+	| {
+			/** The chat harness's working memory of the chef's ask (update_draft), shown above the composer. */
+			type: 'ask';
+			taskId: string;
+			ask: AskDraft;
 	  }
 	| {
 			type: 'decision';
@@ -105,4 +112,34 @@ export interface ChatTurnInput {
 	text?: string;
 	answer?: { field: ClarifyField; value: unknown };
 	continue?: true;
+}
+
+/** One part of the ask: a product or ingredient in the chef's words, with what is known about it. */
+export interface AskPart {
+	words: string;
+	amount?: number;
+	unit?: string;
+	quality?: string;
+	productId?: string;
+	status?: 'open' | 'asking' | 'fixed' | 'checked' | 'planned' | 'held' | 'ordered';
+}
+
+/** What the chef intends, gathered before and while it becomes lines (the harness's update_draft). */
+export interface AskDraft {
+	occasion?: string;
+	date?: string;
+	guests?: number;
+	splits?: { guests: number; diet: string }[];
+	dishes?: {
+		name: string;
+		course?: string;
+		guests?: number;
+		diet?: string;
+		ingredients?: AskPart[];
+	}[];
+	items?: AskPart[];
+	restrictions?: string[];
+	fixed?: string[];
+	open?: string[];
+	stage?: 'gathering' | 'converting' | 'placed';
 }
