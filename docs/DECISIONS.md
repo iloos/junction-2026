@@ -296,3 +296,12 @@ Until peer review (Sun 10:30), the work is the demo for a handful of people: cle
 **Why:** the user: focus on fewer users and max quality first; Modal and Verda credits are unused.
 
 **Reopen if:** we advance to the main stage.
+
+**D22 status, updated (lead, 15 Nov 07:25):** MCP approval through an elicitation is no longer parked: it is on prod since efa6345c (the `inputRequired` round trip, chef-bound). An outside agent still never approves; the chef answers the elicitation or opens the approval link (D17).
+
+### D34 · The chat moves to a model-led harness; the rules guard the order (lead + user, 15 Nov 07:25)
+The chat today reads each turn with rules first (`agent/intent.ts`, `request/parse.ts`) and asks fixed slot questions, so meta-talk ("wym", "huh?") and multi-item asks dead-end. Target ([lanes/chat-harness.md](lanes/chat-harness.md)): the model reads every turn first, keeps the order-so-far as a goal through a tool, proposes typed chips (products with pack and price, amounts, days the rules accept), and acts only through the shared tools, so `applyOps` and the mandate gate still decide. Built behind `CHAT_HARNESS=llm`; switched on only when the user's transcripts pass. Waves X/Y carry the deterministic fixes (chips instead of refusals, multi-line orders, meta replies answered).
+
+**Why:** the user: "the agent feels stupid"; leverage the model and give it a harness for UI-like chips that stay in sync with the app. Swapping the model (Kimi via Verda/Featherless) would not help while rules read the turn first.
+
+**Reopen if:** the harness makes the gate's outcome depend on the model (it must not), or latency per turn exceeds ~4 s.
