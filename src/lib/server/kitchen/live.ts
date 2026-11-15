@@ -63,6 +63,8 @@ export interface Session {
 	visitor?: string;
 	/** A presenter acts on every kitchen of the shared room; a visitor only on its own store. */
 	presenter?: boolean;
+	/** The browser is in a shared room (not its own sandbox): it works in its own store there (D24). */
+	room?: boolean;
 }
 
 /** Who the browser is, from demo/visitor.ts: its own sandbox id, the room it is in and presenter rights. */
@@ -77,6 +79,7 @@ export { visitorKey };
 function withVisitor(s: Session, v: VisitorRef | undefined): Session {
 	if (v?.own) s.visitor = visitorKey(v.own);
 	if (v) s.presenter = v.presenter === true;
+	if (v) s.room = !!v.kind && v.kind !== 'own';
 	return s;
 }
 
@@ -490,10 +493,11 @@ function titleOf(plan: Plan): string {
 
 /** The snapshot plus the workspace's kitchens, this visitor's own first; others' stores are left out. */
 async function buildSnapshot(s: Session): Promise<LiveSnapshot> {
-	const [body, all] = await Promise.all([
-		snapshotBody(s),
-		createServerPorts().then((b) => b.ports.store.kitchens(s.workspaceId))
-	]);
+	const all = await createServerPorts().then((b) => b.ports.store.kitchens(s.workspaceId));
+	// A room visitor without a store of their own is shown nothing of the seeded kitchens' plans: the page asks them
+	// to join as their own store first (D24). The presenter sees the room as it is.
+	const storeless = s.room && !s.presenter && !all.some((k) => !!k.owner && k.owner === s.visitor);
+	const body = storeless ? notStarted(s.kitchenId) : await snapshotBody(s);
 	const kitchens = all
 		.filter((k) => !k.owner || k.owner === s.visitor)
 		.map((k) => ({
