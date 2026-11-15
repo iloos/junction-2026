@@ -2,12 +2,17 @@
 	import {
 		ArrowRight,
 		Check,
+		ChevronDown,
 		CircleAlert,
 		CircleHelp,
 		LoaderCircle,
 		OctagonX,
-		Save
+		Repeat,
+		Save,
+		X
 	} from '@lucide/svelte';
+	import { Popover } from 'bits-ui';
+	import ProductThumb from '$lib/ui/ProductThumb.svelte';
 	import SourceChip from '$lib/ui/SourceChip.svelte';
 	import { tick } from 'svelte';
 	import { resolve } from '$app/paths';
@@ -164,9 +169,42 @@
 					{blocks.length} thing{blocks.length === 1 ? '' : 's'} to fix before accepting: listed next to
 					Accept below, each with what you can do.
 				</li>{/if}
-			{#each warns as i (i.id)}<li class="flex gap-2 px-2.5 py-0.5 text-ink-2">
-					<CircleAlert size={14} class="mt-0.5 shrink-0 text-signoff" aria-hidden="true" />{i.text}
-				</li>{/each}
+			{#each warns as w (w.id)}
+				{@const t = (w.targets ?? []).find((x) => ingredientOf(x))}
+				<li class="flex items-center gap-2 px-2.5 py-0.5 text-ink-2">
+					<CircleAlert size={14} class="shrink-0 text-signoff" aria-hidden="true" />
+					<span class="min-w-0 flex-1 truncate" title={w.text}>{w.text}</span>
+					{#if t && !accepted}
+						<Popover.Root>
+							<Popover.Trigger
+								class="inline-flex h-7 shrink-0 items-center gap-0.5 rounded-md border border-rule-strong px-2 text-meta text-ink hover:border-accent"
+								aria-label="Choose for {label(t)}"
+								>Choose<ChevronDown size={13} aria-hidden="true" /></Popover.Trigger
+							>
+							<Popover.Portal>
+								<Popover.Content
+									sideOffset={4}
+									align="end"
+									class="z-50 w-56 rounded-lg border border-rule bg-sheet p-1 text-body shadow-lg"
+								>
+									<button
+										type="button"
+										class="block w-full rounded-md px-2.5 py-1.5 text-left hover:bg-well"
+										onclick={() => show(t, true)}>Show {label(t)}</button
+									>
+									{#if ingredientOf(t)?.productId}<button
+											type="button"
+											disabled={busy}
+											class="block w-full rounded-md px-2.5 py-1.5 text-left hover:bg-well disabled:opacity-40"
+											onclick={() => change([{ kind: 'unresolve', ingredientId: t }])}
+											>Not this product</button
+										>{/if}
+								</Popover.Content>
+							</Popover.Portal>
+						</Popover.Root>
+					{/if}
+				</li>
+			{/each}
 		</ul>
 	{/if}
 
@@ -191,9 +229,9 @@
 					: ''}"
 				data-flagged={flagged.has(d.id) || undefined}
 			>
-				<p class="flex flex-wrap items-baseline gap-x-2">
-					<b class="font-medium">{d.name}</b>
-					{#if d.course}<span class="text-meta text-ink-3">{d.course}</span>{/if}
+				<p class="flex flex-wrap items-center gap-x-2 gap-y-1 border-b border-rule pb-1 text-meta">
+					<b class="text-body font-semibold text-ink">{d.name}</b>
+					{#if d.course}<span class="text-ink-3">· {d.course}</span>{/if}
 					{#each d.claimedCompatible as c (c)}<span
 							class="rounded border border-accent/30 bg-accent-wash px-1.5 text-micro text-accent-ink"
 							title="Claimed by the proposal; the allergen records are checked when planned"
@@ -243,22 +281,37 @@
 						{/if}
 					</div>
 				{/if}
-				<ul class="mt-1.5 space-y-1.5">
+				<ul class="mt-1 space-y-0.5">
 					{#each d.ingredients as i (i.id)}
 						{@const mine = i.provenance.source === 'user'}
+						{@const now =
+							typed[i.id] !== undefined && Number.isFinite(parse(typed[i.id]))
+								? parse(typed[i.id])
+								: i.amountPerCover}
 						<li
 							id="menu-row-{i.id}"
-							class="grid grid-cols-[1fr_auto] items-start gap-x-3 rounded-md {flagged.has(i.id)
+							class="grid grid-cols-[36px_minmax(0,1fr)] items-center gap-x-2.5 gap-y-1 rounded-md py-1 sm:grid-cols-[36px_minmax(0,1fr)_auto_auto] {flagged.has(
+								i.id
+							)
 								? '-mx-1.5 bg-out-wash px-1.5'
 								: ''} {lit === i.id ? 'ring-2 ring-out/50' : ''}"
 							data-flagged={flagged.has(i.id) || undefined}
 						>
+							{#if i.productId}
+								<ProductThumb productId={i.productId} />
+							{:else}
+								<span
+									class="inline-grid size-9 place-items-center rounded-md border border-dashed border-signoff/60 bg-signoff-wash"
+									title="No product yet"
+									><CircleHelp size={15} class="text-signoff" aria-hidden="true" /></span
+								>
+							{/if}
 							<div class="min-w-0 text-body">
-								<span class="text-ink">{i.label}</span>
+								<span class="block truncate text-ink">{i.label}</span>
 								{#if i.productId}
-									<span class="block truncate text-meta text-ink-2"
+									<span class="block truncate text-meta text-ink-3"
 										>{readableName(view.products[i.productId] ?? 'a Valio product')}
-										{#if shell?.system}<span class="mono text-ink-3">{i.productId}</span>{/if}</span
+										{#if shell?.system}<span class="mono">{i.productId}</span>{/if}</span
 									>
 								{:else}
 									<span class="block text-meta text-signoff"
@@ -274,50 +327,55 @@
 										><CircleHelp size={12} aria-hidden="true" />{checkNote(i.provenance.note)}</span
 									>
 								{/if}
-								{#if !accepted}
-									<span class="mt-0.5 flex flex-wrap gap-x-3 text-micro">
-										{#if i.productId}<button
-												type="button"
-												disabled={busy}
-												class="text-ink-3 underline hover:text-ink disabled:opacity-40"
-												onclick={() => change([{ kind: 'unresolve', ingredientId: i.id }])}
-												>Not this product</button
-											>{/if}
-										<button
-											type="button"
-											disabled={busy}
-											class="text-ink-3 underline hover:text-out disabled:opacity-40"
-											onclick={() => change([{ kind: 'removeIngredient', ingredientId: i.id }])}
-											>Remove</button
-										>
-									</span>
-								{/if}
 							</div>
-							<div class="flex items-center gap-1.5 text-body">
+							<div
+								class="col-start-2 flex items-center gap-1.5 text-body sm:col-start-auto"
+								title="{mine ? 'Your amount' : 'Estimate'} · {total(now, i.unit)} in all"
+							>
 								<label class="sr-only" for="amt-{i.id}">{i.label}, {i.unit} per guest</label>
-								<input
-									id="amt-{i.id}"
-									inputmode="decimal"
-									disabled={busy || accepted}
-									value={typed[i.id] ?? String(i.amountPerCover)}
-									oninput={(e) => (typed = { ...typed, [i.id]: e.currentTarget.value })}
-									class="num h-8 w-16 rounded-md border bg-sheet px-1.5 text-right {typed[i.id] !==
+								<span
+									class="inline-flex h-8 items-center rounded-md border bg-sheet {typed[i.id] !==
 										undefined && parse(typed[i.id]) !== i.amountPerCover
 										? 'border-accent'
-										: 'border-rule-strong'} disabled:bg-well"
-								/>
-								<span class="w-24 text-ink-2"
-									>{i.unit}/guest
-									<span class="block text-micro text-ink-3"
-										>{mine ? 'your amount' : 'estimate'} · {total(
-											typed[i.id] !== undefined && Number.isFinite(parse(typed[i.id]))
-												? parse(typed[i.id])
-												: i.amountPerCover,
-											i.unit
-										)}</span
-									></span
+										: 'border-rule-strong'} {busy || accepted ? 'bg-well' : ''}"
+								>
+									<input
+										id="amt-{i.id}"
+										inputmode="decimal"
+										disabled={busy || accepted}
+										value={typed[i.id] ?? String(i.amountPerCover)}
+										oninput={(e) => (typed = { ...typed, [i.id]: e.currentTarget.value })}
+										class="num h-full w-12 rounded-l-md bg-transparent px-1.5 text-right outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:text-ink-2"
+									/>
+									<span class="pr-2 text-meta text-ink-3">{i.unit}/guest</span>
+								</span>
+								<span class="w-16 text-meta text-ink-3"
+									><span class="mono text-ink-2">{total(now, i.unit)}</span>
+									<span class="block text-micro">{mine ? 'yours' : 'estimate'}</span></span
 								>
 							</div>
+							{#if !accepted}
+								<span class="col-start-2 flex items-center gap-0.5 sm:col-start-auto">
+									{#if i.productId}<button
+											type="button"
+											disabled={busy}
+											class="inline-grid size-8 place-items-center rounded-md text-ink-3 hover:bg-well hover:text-ink disabled:opacity-40"
+											title="Not this product"
+											onclick={() => change([{ kind: 'unresolve', ingredientId: i.id }])}
+											><Repeat size={15} aria-hidden="true" /><span class="sr-only"
+												>Not this product</span
+											></button
+										>{/if}
+									<button
+										type="button"
+										disabled={busy}
+										class="inline-grid size-8 place-items-center rounded-md text-ink-3 hover:bg-out-wash hover:text-out disabled:opacity-40"
+										title="Remove {i.label}"
+										onclick={() => change([{ kind: 'removeIngredient', ingredientId: i.id }])}
+										><X size={15} aria-hidden="true" /><span class="sr-only">Remove</span></button
+									>
+								</span>
+							{/if}
 						</li>
 					{/each}
 				</ul>

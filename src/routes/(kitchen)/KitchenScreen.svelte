@@ -462,6 +462,8 @@
 	const rejectedLines = $derived(
 		(snap?.plan.lines ?? []).filter((l) => decisionsByLine.get(l.id)?.state === 'denied')
 	);
+	/** Rejected lines are not bought: left out of every waiting count, the day's total and the week budget. */
+	const rejectedIds = $derived(new Set(rejectedLines.map((l) => l.id)));
 	/** The only bulk action: accept every pending line that may be accepted together. */
 	const all = $derived(acceptAll(snap?.plan.lines ?? [], decisionsByLine));
 	function decideOne(lineId: string, decision: 'grant' | 'deny' | 'reopen') {
@@ -502,7 +504,13 @@
 		const spent = snap.view.weekSpentCents;
 		// Week spend already includes what this plan ordered; "this order" is only what is not ordered yet.
 		const order = plan.lines
-			.filter((l) => l.state !== 'committed' && l.state !== 'rejected' && l.state !== 'unorderable')
+			.filter(
+				(l) =>
+					l.state !== 'committed' &&
+					l.state !== 'rejected' &&
+					l.state !== 'unorderable' &&
+					!rejectedIds.has(l.id)
+			)
 			.reduce((a, l) => a + (l.lineCents ?? 0), 0);
 		return {
 			cap,
@@ -600,6 +608,52 @@
 		);
 		return pending.flatMap((a) => decisionsOf(plan, a));
 	});
+	/** Where each line sat in Decide while it waited: a rejected line stays there, struck, with Undo. */
+	let placed = $state.raw(new Map<string, { reason: string; title: string; at: number }>());
+	$effect.pre(() => {
+		const ds = decisions;
+		untrack(() => {
+			// eslint-disable-next-line svelte/prefer-svelte-reactivity -- built here, then reassigned whole
+			const next = new Map(placed);
+			let changed = false;
+			ds.forEach((g, gi) =>
+				g.lines.forEach((l, li) => {
+					const at = gi * 1000 + li;
+					const cur = next.get(l.id);
+					if (cur?.reason === g.reason && cur.at === at) return;
+					next.set(l.id, { reason: g.reason, title: g.title, at });
+					changed = true;
+				})
+			);
+			if (changed) placed = next;
+		});
+	});
+	/** Decide's groups in place: each open group with its rejected lines back where they were. */
+	const decideRows = $derived.by(() => {
+		const at = (l: Line) => placed.get(l.id)?.at ?? 1e9;
+		const rows: {
+			key: string;
+			g: (typeof decisions)[number] | null;
+			title: string;
+			lines: Line[];
+		}[] = decisions.map((g) => ({ key: g.key, g, title: g.title, lines: [...g.lines] }));
+		for (const l of rejectedLines) {
+			const p = placed.get(l.id);
+			const row =
+				rows.find((r) => r.g && p && r.g.reason === p.reason) ??
+				rows.find((r) => !r.g && r.title === (p?.title ?? 'Rejected · not ordered'));
+			if (row) row.lines.push(l);
+			else
+				rows.push({
+					key: `rejected:${p?.title ?? ''}`,
+					g: null,
+					title: p?.title ?? 'Rejected · not ordered',
+					lines: [l]
+				});
+		}
+		for (const r of rows) r.lines.sort((a, b) => at(a) - at(b));
+		return rows.sort((a, b) => Math.min(...a.lines.map(at)) - Math.min(...b.lines.map(at)));
+	});
 	/**
 	 * The plan's short title (D29): the event's name, the menu's dishes, else where it came from ("Usual Wednesday
 	 * order", "Order from the chat"); never a list of products.
@@ -607,7 +661,9 @@
 	const planTitle = $derived.by(() => {
 		if (!plan || !view) return '';
 		if (plan.eventId) return view.title;
-		if (menuName) return menuName;
+		// A menu plan is named short ("Menu for 120 · Fri 11 Dec"); its dishes are the table's rows.
+		if (menuName)
+			return `Menu${view.guests ? ` for ${num(view.guests)}` : ''} · ${day(plan.deliverBy)}`;
 		const o = snap?.origin;
 		if (/^usual/i.test(view.title)) return `Usual ${weekday(plan.deliverBy)} order`;
 		if (o === 'chat') return 'Order from the chat';
@@ -619,15 +675,16 @@
 	const planSentence = $derived.by(() => {
 		if (!plan || !view) return '';
 		const items = view.dishes.length + looseLines.length;
-		const cents = plan.lines.reduce((t, l) => t + (l.qty.value > 0 ? (l.lineCents ?? 0) : 0), 0);
+		const cents = plan.lines.reduce(
+			(t, l) => t + (l.qty.value > 0 && !rejectedIds.has(l.id) ? (l.lineCents ?? 0) : 0),
+			0
+		);
 		const waiting = all.count + all.signOff;
 		return [
 			plan.eventId ? `${day(view.date)} · ${num(view.guests)} guests · ${view.serviceStyle}` : null,
 			`${items} ${items === 1 ? 'item' : 'items'}`,
 			money(cents),
-			waiting
-				? `${waiting} ${waiting === 1 ? 'needs' : 'need'} you before ${storyTime(decisionsDue(plan, approval))}`
-				: null,
+			waiting ? `decide before ${storyTime(decisionsDue(plan, approval))}` : null,
 			rejectedLines.length ? `${rejectedLines.length} rejected` : null,
 			`delivery ${day(plan.deliverBy)}`
 		]
@@ -662,7 +719,10 @@
 
 	/** The header's "what needs you", in D10 terms and on the same basis as the panel and Ops. */
 	const needsYou = $derived.by(() => {
-		const pendingLines = approval?.state === 'pending' ? approval.lineIds.length : 0;
+		const pendingLines =
+			approval?.state === 'pending'
+				? approval.lineIds.filter((id) => !rejectedIds.has(id)).length
+				: 0;
 		const cannot = (plan?.lines ?? []).filter((l) => l.state === 'unorderable').length;
 		const fs = [...coverage.values()];
 		return {
@@ -814,7 +874,8 @@
 
 	// The layout's "Where you are" names the visitor's store in the room.
 	$effect(() => {
-		const name = own[0]?.name ?? null;
+		const here = own.find((o) => o.kitchenId === snap?.kitchen.id);
+		const name = (here ?? own[0])?.name ?? null;
 		if (shell) shell.roomStore = name;
 		const ws = (page.data as { room?: { workspaceId?: string } }).room?.workspaceId;
 		if (!ws || !name) return;
@@ -834,7 +895,25 @@
 			...(description ? { description } : {})
 		});
 		saveOwn(ownKey, cached);
+		making = false;
 		await choose(kc.kitchenId, description);
+	}
+	/** Making another store or kitchen from the selector: the picker shows until one is made or the chef goes back. */
+	let making = $state(false);
+	let picker = $state<HTMLSelectElement | null>(null);
+	function pickKitchen(sel: HTMLSelectElement) {
+		const v = sel.value;
+		if (v === '__new') {
+			sel.value = needsJoin ? '' : (snap?.kitchen.id ?? homeKit.id);
+			making = true;
+			return;
+		}
+		if (v === '__leave') {
+			location.assign(resolve('/') + '?ws=mine');
+			return;
+		}
+		making = false;
+		void (needsJoin ? choose(v) : switchKitchen(v)).then(() => picker?.focus());
 	}
 	/** The kitchen whose home shows before its first plan: one of ours, else a sample. */
 	const homeKit = $derived.by(() => {
@@ -857,6 +936,7 @@
 	});
 
 	async function choose(kitchenId: string, notes?: string) {
+		making = false;
 		joinedAs = { kitchenId, ...(notes ? { notes } : {}) };
 		try {
 			if (joinKey) localStorage.setItem(joinKey, JSON.stringify(joinedAs));
@@ -984,7 +1064,7 @@
 		ordered: 'Ordered'
 	};
 	const stageCounts = $derived.by(() => {
-		const ls = dayEntry?.lines ?? [];
+		const ls = (dayEntry?.lines ?? []).filter((l) => !rejectedIds.has(l.lineId));
 		return {
 			waits: ls.filter((l) => l.stage === 'held').length,
 			ready: ls.filter((l) => l.stage === 'proposed' || l.stage === 'approved').length,
@@ -1000,11 +1080,9 @@
 		const swaps = new Set(dayEntry.lines.filter((l) => l.substituteFor).map((l) => l.substituteFor))
 			.size;
 		const replans = dayLedger.done.filter((e) => e.kind === 'shortage').length;
-		const held = stageCounts.waits;
 		const parts = [
 			swaps ? `found ${swaps} ${swaps === 1 ? 'replacement' : 'replacements'}` : null,
 			replans ? `re-planned ${replans} ${replans === 1 ? 'shortage' : 'shortages'}` : null,
-			held ? `holds ${held} ${held === 1 ? 'line' : 'lines'} for you` : null,
 			stageCounts.ordered ? `ordered ${stageCounts.ordered}` : null
 		].filter(Boolean);
 		return parts.length ? `Your agent ${parts.join(' · ')}` : '';
@@ -1029,13 +1107,16 @@
 				waits ? `${waits} ${waits === 1 ? 'needs' : 'need'} you` : 'nothing needs you'
 			].join(' · ');
 		}
-		const waits = stageCounts.waits;
+		// What waits is said once, on the stage chip and the action bar, not here as well.
+		const live = dayEntry.lines.filter((l) => !rejectedIds.has(l.lineId));
 		return [
 			day(theDay),
-			`${dayEntry.lines.length} ${dayEntry.lines.length === 1 ? 'line' : 'lines'}`,
-			money(dayEntry.totals.all),
-			waits ? `${waits} ${waits === 1 ? 'needs' : 'need'} you` : 'nothing needs you'
-		].join(' · ');
+			`${live.length} ${live.length === 1 ? 'line' : 'lines'}`,
+			money(live.reduce((t, l) => t + (l.lineCents ?? 0), 0)),
+			stageCounts.waits ? null : 'nothing needs you'
+		]
+			.filter(Boolean)
+			.join(' · ');
 	});
 	function pickDay(date: string) {
 		dayChoice = date === k.plan?.deliverBy ? null : date;
@@ -1158,13 +1239,19 @@
 			<select
 				class="h-8 rounded-md border border-rule-strong bg-sheet px-2 text-body font-medium text-ink"
 				value={needsJoin ? '' : (snap?.kitchen.id ?? homeKit.id)}
-				disabled={k.readOnly || (!snap && !needsJoin)}
-				onchange={(e) =>
-					needsJoin ? choose(e.currentTarget.value) : switchKitchen(e.currentTarget.value)}
+				disabled={k.readOnly || (!snap && !needsJoin && !own.length)}
+				bind:this={picker}
+				onchange={(e) => pickKitchen(e.currentTarget)}
 			>
 				{#if needsJoin}<option value="" disabled>Choose a kitchen</option>{/if}
-				{#if roomNotice && own.length}
-					{#each own as o (o.kitchenId)}<option value={o.kitchenId}>{o.name}</option>{/each}
+				{#if roomNotice}
+					{#if own.length}
+						<optgroup label="Your stores in this room">
+							{#each own as o (o.kitchenId)}<option value={o.kitchenId}>{o.name}</option>{/each}
+						</optgroup>
+					{/if}
+					<option value="__new">+ New store…</option>
+					<option value="__leave">Leave the room → my sandbox</option>
 				{:else if own.length}
 					<optgroup label="Your kitchens">
 						{#each own as o (o.kitchenId)}<option value={o.kitchenId}>{o.name}</option>{/each}
@@ -1174,10 +1261,12 @@
 							<option value={kit.id}>{kit.name.replace(' (fictional)', '')}</option>
 						{/each}
 					</optgroup>
+					<option value="__new">+ New kitchen…</option>
 				{:else}
 					{#each KITCHENS as kit (kit.id)}
 						<option value={kit.id}>{kit.name.replace(' (fictional)', '')}</option>
 					{/each}
+					{#if !needsJoin}<option value="__new">+ New kitchen…</option>{/if}
 				{/if}
 			</select>
 		</label>
@@ -1357,8 +1446,24 @@
 			>
 		{/if}
 	</main>
-{:else if needsJoin}
+{:else if needsJoin || making}
 	<main class="pb-10">
+		{#if making && !needsJoin}
+			<p class="mx-auto max-w-5xl px-4 pt-4">
+				<button
+					type="button"
+					class="inline-flex h-9 items-center gap-1 rounded-md border border-rule-strong px-3 text-meta text-ink hover:border-accent"
+					onclick={() => {
+						making = false;
+						picker?.focus();
+					}}
+					><ChevronDown size={14} class="rotate-90" aria-hidden="true" />Back to {snap?.kitchen.name.replace(
+						' (fictional)',
+						''
+					) ?? homeKit.name}</button
+				>
+			</p>
+		{/if}
 		<EstablishmentPicker onchoose={choose} oncreated={created} room={!!roomNotice} />
 		{#if k.error}
 			<p class="mx-auto max-w-5xl px-4 text-body text-out" role="alert">{errorWords(k.error)}</p>
@@ -1633,7 +1738,7 @@
 							</span>
 						</div>
 					{/if}
-					{#if view.planReasons.length}
+					{#if view.planReasons.length && all.count + all.signOff > 0}
 						<p class="mt-2 rounded-md bg-signoff-wash px-3 py-2 text-body text-ink">
 							The whole order is held: {view.planReasons.map(reasonShort).join(', ').toLowerCase()}.
 							Every line needs sign-off.
@@ -1685,60 +1790,76 @@
 									<span class="w-[88px] text-right">€ ex VAT</span>
 									<span class="w-[37.5rem]">Amount · state · actions</span>
 								</div>
-								{#each decisions as g (g.key)}
-									{@const pendingIds = g.lineIds.filter(
-										(id) => decisionsByLine.get(id)?.state === 'pending'
-									)}
-									{@const terms = {
-										id: g.approvalId,
-										planVersion: g.planVersion,
-										termsHash: g.termsHash
-									}}
+								{#each decideRows as row (row.key)}
+									{@const g = row.g}
 									<div class="border-t border-rule first:border-t-0">
-										<div
-											data-testid="decision-group"
-											class="flex flex-wrap items-center gap-x-3 gap-y-1.5 border-b border-rule bg-well/70 px-4 py-1.5"
-										>
-											<!-- A group header is a thin row, like the table's own header (D29 B). -->
-											<div class="min-w-0 flex-1 text-meta">
-												<p class="text-ink">
-													<span class="font-semibold">{g.title}</span><span class="text-ink-2">
-														· {g.lines.length}
-														{g.lines.length === 1 ? 'line' : 'lines'} ·
-														<span class="mono">{money(g.totalCents)}</span></span
-													>
-												</p>
-												<p class="text-ink-3" title={g.why}>{g.consequence}</p>
+										{#if !g}
+											<div
+												class="border-b border-rule bg-well/70 px-4 py-1.5 text-meta text-ink-2"
+												data-testid="rejected-group"
+											>
+												<span class="font-semibold text-ink">{row.title}</span>
+												· {row.lines.length} rejected, not ordered
 											</div>
-											{#if g.signOff}
-												<button
-													type="button"
-													class="inline-flex h-9 items-center rounded-md border border-signoff px-3 text-meta font-medium whitespace-nowrap text-ink hover:bg-signoff-wash disabled:opacity-50"
-													disabled={k.busy || k.readOnly}
-													onclick={() => (signGroup = g)}
-													>Review and sign off {g.lines.length}
-													{g.lines.length === 1 ? 'line' : 'lines'}</button
-												>
-											{:else if pendingIds.length}
-												<button
-													type="button"
-													class="inline-flex h-9 items-center rounded-md border border-accent px-3 text-meta font-medium whitespace-nowrap text-accent-ink hover:bg-accent-wash disabled:opacity-50"
-													disabled={k.busy || k.readOnly}
-													onclick={() =>
-														void k.decideLines([{ approval: terms, lineIds: pendingIds }], 'grant')}
-													>Accept these {pendingIds.length} ·
-													<span class="mono ml-1"
-														>{money(
-															g.lines
-																.filter((l) => pendingIds.includes(l.id))
-																.reduce((t, l) => t + (l.lineCents ?? 0), 0)
-														)}</span
-													></button
-												>
-											{/if}
-										</div>
+										{:else}
+											{@const pendingIds = g.lineIds.filter(
+												(id) => decisionsByLine.get(id)?.state === 'pending'
+											)}
+											{@const terms = {
+												id: g.approvalId,
+												planVersion: g.planVersion,
+												termsHash: g.termsHash
+											}}
+											<div
+												data-testid="decision-group"
+												class="flex flex-wrap items-center gap-x-3 gap-y-1.5 border-b border-rule bg-well/70 px-4 py-1.5"
+											>
+												<!-- A group header is a thin row, like the table's own header (D29 B). -->
+												<div class="min-w-0 flex-1 text-meta">
+													<p class="text-ink">
+														<span class="font-semibold">{g.title}</span><span class="text-ink-2">
+															· {g.lines.length}
+															{g.lines.length === 1 ? 'line' : 'lines'} ·
+															<span class="mono">{money(g.totalCents)}</span></span
+														>
+													</p>
+													<p class="line-clamp-2 text-ink-3 lg:line-clamp-none" title={g.why}>
+														{g.consequence}
+													</p>
+												</div>
+												{#if g.signOff}
+													<button
+														type="button"
+														class="inline-flex h-9 items-center rounded-md border border-signoff px-3 text-meta font-medium whitespace-nowrap text-ink hover:bg-signoff-wash disabled:opacity-50"
+														disabled={k.busy || k.readOnly}
+														onclick={() => (signGroup = g)}
+														>Review and sign off {g.lines.length}
+														{g.lines.length === 1 ? 'line' : 'lines'}</button
+													>
+												{:else if pendingIds.length}
+													<button
+														type="button"
+														class="inline-flex h-9 items-center rounded-md border border-accent px-3 text-meta font-medium whitespace-nowrap text-accent-ink hover:bg-accent-wash disabled:opacity-50"
+														disabled={k.busy || k.readOnly}
+														onclick={() =>
+															void k.decideLines(
+																[{ approval: terms, lineIds: pendingIds }],
+																'grant'
+															)}
+														>Accept these {pendingIds.length} ·
+														<span class="mono ml-1"
+															>{money(
+																g.lines
+																	.filter((l) => pendingIds.includes(l.id))
+																	.reduce((t, l) => t + (l.lineCents ?? 0), 0)
+															)}</span
+														></button
+													>
+												{/if}
+											</div>
+										{/if}
 										<ul class="divide-y divide-rule">
-											{#each g.lines as l (l.id)}
+											{#each row.lines as l (l.id)}
 												<li class="px-4 py-2">
 													{@render lineRow(
 														l,
@@ -1749,28 +1870,6 @@
 										</ul>
 									</div>
 								{/each}
-								{#if rejectedLines.length}
-									<div class="border-t border-rule">
-										<div
-											class="border-b border-rule bg-well/70 px-4 py-1.5 text-meta text-ink-2"
-											data-testid="rejected-group"
-										>
-											<span class="font-semibold text-ink">Rejected · not ordered</span>
-											· {rejectedLines.length}
-											{rejectedLines.length === 1 ? 'line' : 'lines'}
-										</div>
-										<ul class="divide-y divide-rule">
-											{#each rejectedLines as l (l.id)}
-												<li class="px-4 py-2">
-													{@render lineRow(
-														l,
-														view.dishes.find((d) => d.lineIds.includes(l.id)) ?? null
-													)}
-												</li>
-											{/each}
-										</ul>
-									</div>
-								{/if}
 							</div>
 						</section>
 					{/if}
