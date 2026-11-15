@@ -48,6 +48,8 @@
 	interface Line {
 		productId: string;
 		name: string;
+		/** The catalogue's English name, when it differs. */
+		nameEn?: string;
 		unit: string;
 		lotStep: number;
 		qty: number;
@@ -62,6 +64,7 @@
 	interface Change {
 		productId: string;
 		name: string;
+		nameEn?: string;
 		unit: string;
 		qty: number;
 		dueOnDay: boolean;
@@ -78,10 +81,13 @@
 		joined: Change[];
 		dropped: Change[];
 		notSettled: Change[];
+		/** English names by product id, when they differ from the Finnish ones. */
+		englishNames?: Record<string, string>;
 	}
 	interface Row {
 		productId: string;
 		name: string;
+		nameEn?: string;
 		unit: string;
 		lotStep: number;
 		qty: number;
@@ -92,6 +98,7 @@
 	interface Hit {
 		productId: string;
 		name: string;
+		nameEn?: string;
 		unit: string;
 		lotStep: number;
 	}
@@ -164,6 +171,21 @@
 		load();
 	});
 
+	/** A product's English name, a muted second line under the Finnish one; only when it says something else. */
+	function englishOf(productId: string, name: string): string | undefined {
+		const en =
+			data?.englishNames?.[productId] ??
+			[
+				...(data?.lines ?? []),
+				...(data?.joined ?? []),
+				...(data?.dropped ?? []),
+				...(data?.notSettled ?? []),
+				...topups
+			].find((l) => l.productId === productId && l.nameEn)?.nameEn;
+		return en?.trim() && en.trim().toLowerCase() !== readableName(name).toLowerCase()
+			? en.trim()
+			: undefined;
+	}
 	const rows = $derived.by<Row[]>(() => {
 		const usual: Row[] = (data?.lines ?? []).map((l) => ({
 			productId: l.productId,
@@ -222,7 +244,7 @@
 		edits = { ...edits, [r.productId]: { qty: r.qty, on: !r.on } };
 	}
 	function addTopUp(
-		h: { productId: string; name: string; unit: string; lotStep?: number },
+		h: { productId: string; name: string; nameEn?: string; unit: string; lotStep?: number },
 		qty?: number
 	) {
 		if (rows.some((r) => r.productId === h.productId)) return;
@@ -232,6 +254,7 @@
 			{
 				productId: h.productId,
 				name: h.name,
+				...(h.nameEn ? { nameEn: h.nameEn } : {}),
 				unit: h.unit,
 				lotStep: step,
 				qty: qty ?? step,
@@ -388,7 +411,12 @@
 												: ''}"
 											aria-hidden="true"
 										/>{/if}
-									<span class="min-w-0">{readableName(r.name)}</span>
+									<span class="min-w-0"
+										>{readableName(r.name)}{#if englishOf(r.productId, r.name)}<span
+												class="block truncate text-meta text-ink-3"
+												>{englishOf(r.productId, r.name)}</span
+											>{/if}</span
+									>
 								</button>
 								{#if st}
 									{@const Icon = st.icon}
@@ -473,6 +501,9 @@
 							{#each data.joined as c (c.productId)}
 								<li class="text-meta">
 									<span class="text-body text-ink">{readableName(c.name)}</span>
+									{#if englishOf(c.productId, c.name)}<span class="block truncate text-ink-3"
+											>{englishOf(c.productId, c.name)}</span
+										>{/if}
 									<span class="block text-ink-2">{c.sentence}</span>
 									{#if !rows.some((r) => r.productId === c.productId)}
 										<button
@@ -499,6 +530,9 @@
 							{#each data.dropped as c (c.productId)}
 								<li class="text-meta">
 									<span class="text-body text-ink">{readableName(c.name)}</span>
+									{#if englishOf(c.productId, c.name)}<span class="block truncate text-ink-3"
+											>{englishOf(c.productId, c.name)}</span
+										>{/if}
 									<span class="block text-ink-2">{c.sentence}</span>
 									{#if !rows.some((r) => r.productId === c.productId)}
 										<button
@@ -538,7 +572,11 @@
 								class="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-body hover:bg-well"
 								onclick={() => addTopUp(h)}
 							>
-								<span class="truncate">{readableName(h.name)}</span>
+								<span class="min-w-0 truncate" title={h.nameEn}
+									>{readableName(h.name)}{#if h.nameEn}<span class="text-ink-3">
+											· {h.nameEn}</span
+										>{/if}</span
+								>
 								<span class="shrink-0 text-meta text-ink-3">per {unitWord(h.unit)}</span>
 							</button>
 						</li>

@@ -309,7 +309,11 @@
 							<div class="col-span-2 min-w-0 text-body sm:col-span-1">
 								<span class="block truncate text-ink">{i.label}</span>
 								{#if i.productId}
-									<span class="block truncate text-meta text-ink-3"
+									<span
+										class="block truncate text-meta text-ink-3"
+										title={(view as { englishNames?: Record<string, string> }).englishNames?.[
+											i.productId
+										]}
 										>{readableName(view.products[i.productId] ?? 'a Valio product')}
 										{#if shell?.system}<span class="mono">{i.productId}</span>{/if}</span
 									>
