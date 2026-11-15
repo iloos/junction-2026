@@ -57,16 +57,16 @@ test('Valio and Gemini answer live on the deployed app', async ({ page, request 
 			.filter((x) => x !== null);
 	/** One request with a sentence no one has sent before, so no parse cache can answer it. */
 	const ask = async () => {
-		streamed = '';
-		await page.goto(`${BASE}/request`);
+		// The request stream itself (since wave K the /request page is the conversation; /request/run is unchanged).
+		await page.goto(`${BASE}/`);
 		const litres = 11 + Math.floor(Math.random() * 80);
-		await page.locator('#req').fill(`${litres} l lactose-free milk for Friday`);
-		await page.getByRole('button', { name: /Find and price/ }).click();
-		await page
-			.getByText(/1 quote for|nothing quoted/)
-			.first()
-			.waitFor({ timeout: 60_000 });
-		await page.waitForTimeout(500);
+		const res = await page.request.post(`${BASE}/request/run`, {
+			headers: { origin: BASE!, 'x-request-id': requestId },
+			data: { text: `${litres} l lactose-free milk for Friday` },
+			timeout: 90_000
+		});
+		echoed = res.headers()['x-request-id'] ?? null;
+		streamed = await res.text();
 		return lines().findLast((l) => l.step === 'request' && l.data?.parser)?.data?.parser;
 	};
 	// This request was read by a live Gemini call: its own result names the model, the latency and the tokens. A run
