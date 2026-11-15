@@ -254,7 +254,7 @@ svg.wires { position: absolute; left: 0; top: 0; overflow: visible; pointer-even
   <div style="display:flex; gap:64px; align-items:flex-start">
     <div class="col a" style="--c:var(--go)"><p class="lab g">REAL</p><ul><li>Valio’s catalogue and live API</li><li>Gemini</li><li>Aiven</li><li>Exa and Context.dev</li><li>An open MCP and OpenAPI door</li></ul></div>
     <div class="col a" style="--c:var(--hold)"><p class="lab h">SIMULATED, LABELLED</p><ul><li>The order: Valio’s API has no order endpoint</li><li>The supplier’s reply</li><li>Order history</li><li>Stock movement</li><li>The clock</li></ul></div>
-    <div class="col a" style="--c:var(--ink); flex:1.2"><p class="lab" style="color:var(--ink)">NEXT</p><ul><li>A 4-week shadow pilot with one hotel</li><li>Valio’s systems subscribe to the change log</li><li>The mandate widens as the record earns it</li></ul></div>
+    <div class="col a" style="--c:var(--ink); flex:1.2"><p class="lab" style="color:var(--ink)">NEXT</p><ul><li>A 4-week shadow pilot with one hotel</li><li>Valio’s systems subscribe to the change log</li><li>Scale out: planning workers as serverless jobs (Verda / Modal), one Postgres event bus across machines</li><li>The mandate widens as the record earns it</li></ul></div>
   </div>
   <div class="foot"><p>Valio’s test API answers from a fixed snapshot; every stock movement on screen is ours, and labelled</p><p class="pg"></p></div>
 </section>
@@ -587,7 +587,7 @@ svg.wires .w { fill: none; stroke-width: 4; stroke-linecap: round; }
   });
   window.addEventListener('hashchange', function () { go(fromHash()); });
   window.addEventListener('resize', fit);
-  if (/(^|[?&])still/.test(location.search)) { ['hint','bar'].forEach(function (id) { var e = document.getElementById(id); if (e) e.hidden = true; }); }
+  if (/(^|[?&])still/.test(location.search)) { ['hint','bar'].forEach(function (id) { var e = document.getElementById(id); if (e) e.style.display = 'none'; }); }
   fit();
   go(fromHash());
   setTimeout(function () { var h = document.getElementById('hint'); if (h) h.style.opacity = '0'; }, 5000);
