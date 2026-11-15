@@ -51,6 +51,8 @@
 			busy?: boolean;
 			onaccept: () => void;
 			onreject: () => void;
+			/** Put a rejected line back to waiting (absent until the core can reopen a decision). */
+			onundo?: () => void;
 		};
 	}
 	let {
@@ -76,6 +78,8 @@
 	});
 
 	const rejected = $derived(l.state === 'rejected' || l.state === 'unorderable');
+	/** The chef rejected it (a denied decision): it stays in place, struck, until undone. */
+	const denied = $derived(decide?.state === 'denied');
 	const b = $derived(lineBasis(l.qty, l.view));
 	/** A lot step that buys well over the need is said on the row, not only in the detail. */
 	const lot = $derived(lotSentence(l.qty.rounding));
@@ -109,7 +113,7 @@
 						aria-hidden="true"
 					/>{/if}
 				<span
-					class="min-w-0 break-words {rejected
+					class="min-w-0 break-words {rejected || denied
 						? 'text-ink-3 line-through decoration-ink-3/60'
 						: 'text-ink'}"
 					title={name}>{name}</span
@@ -149,7 +153,7 @@
 				<!-- eslint-enable svelte/no-navigation-without-resolve -->
 			{/if}
 			{#if decide?.state === 'denied'}
-				<p class="text-meta text-out">Not ordered: {decide.cost}</p>
+				<p class="text-meta text-ink-3">Not ordered: {decide.cost}</p>
 			{:else if decide?.state === 'pending' && decide.signOff}
 				<p class="mt-0.5 text-meta text-signoff">
 					Needs your sign-off with its group. If rejected: {decide.cost}.
@@ -173,7 +177,7 @@
 	<span
 		class="col-span-2 flex flex-wrap items-center gap-2 sm:col-span-1 sm:justify-end lg:justify-start"
 	>
-		{#if onqty && !rejected && l.state !== 'committed'}
+		{#if onqty && !rejected && !denied && l.state !== 'committed'}
 			<!-- The line's amount (D23): one compact control, the unit as its suffix. -->
 			<span
 				class="inline-flex h-8 w-[7.5rem] shrink-0 items-center justify-between rounded-md border border-rule-strong bg-sheet text-meta"
@@ -264,7 +268,7 @@
 					</Popover.Content>
 				</Popover.Portal>
 			</Popover.Root>
-		{:else}
+		{:else if !denied}
 			<StateChip state={l.state} tier={l.tier} reasons={l.reasons} {approved} view={l.view} />
 		{/if}
 		{#if decide?.state === 'pending' && decide.signOff}
@@ -294,9 +298,20 @@
 				>
 			</span>
 		{:else if decide?.state === 'denied'}
-			<span class="shrink-0 text-meta text-ink-2">Rejected</span>
+			<span
+				class="inline-flex shrink-0 items-center rounded-full border border-rule-strong bg-well px-2 py-0.5 text-micro font-medium text-ink-2"
+				>Rejected · not ordered</span
+			>
+			{#if decide.onundo}
+				<button
+					type="button"
+					class="inline-flex h-8 shrink-0 items-center rounded-md px-2 text-meta text-ink-2 underline underline-offset-2 hover:text-ink disabled:opacity-50"
+					disabled={decide.busy}
+					onclick={decide.onundo}>Undo</button
+				>
+			{/if}
 		{/if}
-		{#if swap && !rejected && l.state !== 'committed'}
+		{#if swap && !rejected && !denied && l.state !== 'committed'}
 			<button
 				type="button"
 				class="inline-flex h-7 shrink-0 items-center gap-1 rounded-md px-2 text-meta text-ink-2 hover:bg-well hover:text-ink"

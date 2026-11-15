@@ -458,6 +458,10 @@
 	);
 	/** A Swap pressed on a collapsed dish row: that line opens with its compare panel. */
 	let swapAsk = $state<string | null>(null);
+	/** Lines the chef rejected: they stay on the page, struck, in their own group (not counted as waiting). */
+	const rejectedLines = $derived(
+		(snap?.plan.lines ?? []).filter((l) => decisionsByLine.get(l.id)?.state === 'denied')
+	);
 	/** The only bulk action: accept every pending line that may be accepted together. */
 	const all = $derived(acceptAll(snap?.plan.lines ?? [], decisionsByLine));
 	function decideOne(lineId: string, decision: 'grant' | 'deny') {
@@ -624,6 +628,7 @@
 			waiting
 				? `${waiting} ${waiting === 1 ? 'needs' : 'need'} you before ${storyTime(decisionsDue(plan, approval))}`
 				: null,
+			rejectedLines.length ? `${rejectedLines.length} rejected` : null,
 			`delivery ${day(plan.deliverBy)}`
 		]
 			.filter(Boolean)
@@ -1646,7 +1651,7 @@
 						/>
 					</div>
 
-					{#if decisions.length && (!stage || stage === 'waits')}
+					{#if (decisions.length || rejectedLines.length) && (!stage || stage === 'waits')}
 						<!-- Decide (D29): the waiting lines, once, grouped by why they wait; each group decides itself. -->
 						<section aria-labelledby="decide-h" class="mt-6">
 							<h2 id="decide-h" class="text-heading font-semibold text-ink">Decide</h2>
@@ -1724,6 +1729,28 @@
 										</ul>
 									</div>
 								{/each}
+								{#if rejectedLines.length}
+									<div class="border-t border-rule">
+										<div
+											class="border-b border-rule bg-well/70 px-4 py-1.5 text-meta text-ink-2"
+											data-testid="rejected-group"
+										>
+											<span class="font-semibold text-ink">Rejected · not ordered</span>
+											· {rejectedLines.length}
+											{rejectedLines.length === 1 ? 'line' : 'lines'}
+										</div>
+										<ul class="divide-y divide-rule">
+											{#each rejectedLines as l (l.id)}
+												<li class="px-4 py-2">
+													{@render lineRow(
+														l,
+														view.dishes.find((d) => d.lineIds.includes(l.id)) ?? null
+													)}
+												</li>
+											{/each}
+										</ul>
+									</div>
+								{/if}
 							</div>
 						</section>
 					{/if}
