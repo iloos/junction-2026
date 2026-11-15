@@ -57,7 +57,7 @@
 			</li>
 		{/if}
 	</ul>
-	<p class="mt-1.5 text-ink-3">The supplier is simulated; nothing is sent to Valio.</p>
+	<p class="mt-1.5 text-ink-3">The supplier is simulated; nothing is sent to Valio Aimo.</p>
 	{#if r.replayed}
 		<p class="mt-2 font-medium text-ink">
 			Same key, same receipt. No second order: {orders}

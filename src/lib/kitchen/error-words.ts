@@ -37,6 +37,8 @@ const KNOWN: { test: (e: ErrorLike) => boolean; words: string }[] = [
 
 /** One plain sentence for a tool error; never a code, a tool name or an id. */
 export function errorWords(e: ErrorLike): string {
+	// A commit that ordered nothing new already says it in the chef's words, with the counts.
+	if (e.code === 'DUPLICATE' && /^Already ordered:/.test(e.message)) return e.message;
 	const hit = KNOWN.find((k) => k.test(e));
 	if (hit) return hit.words;
 	const text = e.message

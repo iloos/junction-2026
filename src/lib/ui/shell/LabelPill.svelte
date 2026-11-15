@@ -53,7 +53,7 @@
 					<Receipt size={15} class="mt-px shrink-0 text-ink-3" aria-hidden="true" />
 					<span
 						><b class="font-medium text-ink">Simulated:</b> orders are a local commitment; nothing is
-						sent to Valio.</span
+						sent to Valio Aimo.</span
 					>
 				</li>
 				{#if offline}

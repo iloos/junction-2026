@@ -415,7 +415,14 @@ export class KitchenStore {
 
 	async commit() {
 		if (!this.plan || this.readOnly) return;
-		const key = `commit-${this.plan.id}-v${this.plan.version}`;
+		// Deciding lines doesn't bump the plan version, so a second order on the same version needs its own key: the
+		// counts of lines ordered and granted tell the presses apart, and a double press still sends the same key.
+		const done = this.plan.lines.filter((l) => l.state === 'committed').length;
+		// Granting moves the key too: a press refused before a sign-off is a new command after it.
+		const granted = (this.snap?.approvals ?? (this.snap?.approval ? [this.snap.approval] : []))
+			.filter((a) => a.state === 'granted')
+			.reduce((n, a) => n + a.lineIds.length, 0);
+		const key = `commit-${this.plan.id}-v${this.plan.version}-c${done}-g${granted}`;
 		await this.#commitWith(key, false);
 	}
 
@@ -426,12 +433,27 @@ export class KitchenStore {
 	}
 
 	async #commitWith(key: string, replay: boolean) {
+		const before = new Set(
+			(this.plan?.lines ?? []).filter((l) => l.state === 'committed').map((l) => l.id)
+		);
 		await this.#run(async () => {
 			const out = await this.#call('commit_order', {
 				planId: this.plan!.id,
 				version: this.plan!.version,
 				idempotencyKey: key
 			});
+			// A press that ordered nothing new must say so, never look like it worked.
+			if (!replay && !out.committedLineIds.some((id: string) => !before.has(id))) {
+				const open = (this.plan?.lines ?? []).filter(
+					(l) => l.state !== 'committed' && l.qty.value > 0 && !before.has(l.id)
+				).length;
+				const n = out.committedLineIds.length;
+				throw new ToolError({
+					code: 'DUPLICATE',
+					message: `Already ordered: ${n} ${n === 1 ? 'line' : 'lines'}; ${open} still ${open === 1 ? 'needs' : 'need'} ordering. Nothing new was sent.`,
+					retryable: false
+				});
+			}
 			this.lastCommit = {
 				key,
 				orderId: out.orderId,
