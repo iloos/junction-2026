@@ -255,6 +255,36 @@
 			void k.refreshFrom(by, describeOps(mine));
 		});
 	});
+	// Web allergen evidence for lines without an allergen record (S4's webFactsFor): one read per plan version.
+	let webFacts = $state.raw<
+		Record<
+			string,
+			{ contains: string[]; mayContain: string[]; source: { host: string; url: string } }
+		>
+	>({});
+	$effect(() => {
+		const ids = (snap?.plan.lines ?? [])
+			.filter((l) => l.qty.value > 0 && !lineMarks(l).recorded)
+			.map((l) => l.productId);
+		if (!ids.length || k.mode !== 'live') return;
+		let gone = false;
+		void fetch(`/kitchen-api/webfacts?ids=${[...new Set(ids)].join(',')}`)
+			.then((r) => (r.ok ? r.json() : {}))
+			.then((f) => {
+				if (!gone) webFacts = f;
+			})
+			.catch(() => {});
+		return () => (gone = true);
+	});
+	function webOf(productId: string) {
+		const f = webFacts[productId];
+		if (!f) return null;
+		const parts = [
+			f.contains.length ? `contains ${f.contains.join(', ')}` : null,
+			f.mayContain.length ? `may contain ${f.mayContain.join(', ')}` : null
+		].filter(Boolean);
+		return parts.length ? { text: parts.join('; '), host: f.source.host, url: f.source.url } : null;
+	}
 	// Every row, the Decide panel and the swap panel read one photo cache, filled in one batch when the plan arrives.
 	$effect(() => {
 		const ids = snap?.plan.lines.map((l) => l.productId);
@@ -1408,6 +1438,7 @@
 					}
 				: undefined}
 			swapOpen={swapAsk === l.id}
+			web={webOf(l.productId)}
 			onqty={k.readOnly || l.strategy?.kind === 'make_in_house'
 				? undefined
 				: (q) => void k.setLineQty(l.id, q)}
