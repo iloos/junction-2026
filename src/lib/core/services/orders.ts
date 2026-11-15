@@ -274,7 +274,7 @@ export async function placeOrder(
 			weekSpentCents: spent,
 			actor: ctx.actor.kind,
 			createdBy: ctx.actor.kind,
-			orderedBefore: orderedBefore(state, kitchen),
+			orderedBefore: orderedBefore(state, kitchen, ctx.origin),
 			recalled: recalledProducts(state),
 			needs,
 			orderRequirements: input.requirements,
@@ -383,6 +383,30 @@ export async function approve(
 		const a = state.approvals[input.approvalId];
 		if (!a) return { error: err('NOT_FOUND', `approval ${input.approvalId}`).error };
 		const plan = state.plans[a.planId];
+		// Undo a deny: the same approval waits again, on the same plan version and terms. A person's act only.
+		if (input.decision === 'reopen') {
+			if (ctx.actor.kind !== 'chef' && ctx.actor.kind !== 'approver')
+				return {
+					error: err('FORBIDDEN', 'only a person can take back a decision', { sub: 'scope' }).error
+				};
+			if (a.state !== 'denied')
+				return { error: err('STALE_VERSION', `approval is ${a.state}, not denied`).error };
+			if (
+				input.planVersion !== a.planVersion ||
+				input.termsHash !== a.termsHash ||
+				plan?.version !== a.planVersion ||
+				plan?.termsHash !== a.termsHash
+			)
+				return {
+					error: err('TERMS_CHANGED', 'the plan changed since this decision').error
+				};
+			const reopened: Approval = { ...a, state: 'pending' };
+			delete reopened.decidedBy;
+			return {
+				ops: [pending(ctx, { type: 'RecordApproval', approval: reopened })],
+				value: { state: 'pending' as const, remainingApprovalId: null }
+			};
+		}
 		if (a.state !== 'pending')
 			return { error: err('STALE_VERSION', `approval is ${a.state}`).error };
 		if (
@@ -507,7 +531,7 @@ export async function commitOrder(
 			weekSpentCents: spent,
 			actor: ctx.actor.kind,
 			createdBy: plan.createdBy.kind,
-			orderedBefore: orderedBefore(state, kitchen),
+			orderedBefore: orderedBefore(state, kitchen, plan.origin),
 			recalled: recalledProducts(state),
 			committed,
 			// The same yardstick as the quote, so a line held for its quantity stays held here.

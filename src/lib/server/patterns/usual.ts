@@ -10,7 +10,7 @@
 import recipesJson from '../../../../fixtures/seeds/usual-history.json';
 import type { Availability, Kitchen } from '$lib/core/contracts';
 import type { CallContext, Catalog, ToolHandlers } from '$lib/core/ports';
-import { scenarioDate } from '$lib/core/scenario';
+import { addDays, earliestDelivery, scenarioDate } from '$lib/core/scenario';
 import {
 	simulateHistory,
 	SIMULATED_HISTORY,
@@ -47,11 +47,18 @@ export interface UsualOptions {
 	asOf?: string;
 	window?: HistoryWindow;
 	overrides?: PeriodOverrides;
+	/** The scenario clock: the default day is the first receiving day still orderable now, never a closed one. */
+	now?: Date;
 }
 
 /** The usual order (core) for a kitchen and day, over its simulated history. Pure given `asOf`. */
 export function usualFor(k: Kitchen, asOf: string, o: Omit<UsualOptions, 'asOf'> = {}): UsualOrder {
-	const deliveryDate = o.deliveryDate ?? nextDeliveryDate(asOf, k.deliveryDays);
+	const deliveryDate =
+		o.deliveryDate ??
+		(o.now
+			? // The first receiving day whose order hasn't closed (Valio's D-1 cut-off for stock items).
+				nextDeliveryDate(addDays(earliestDelivery(o.now, 'Stock'), -1), k.deliveryDays)
+			: nextDeliveryDate(asOf, k.deliveryDays));
 	return usualOrder({
 		lines: kitchenHistory(k, asOf).lines,
 		deliveryDate,
@@ -106,7 +113,7 @@ export async function readUsualOrder(
 	o: UsualOptions = {}
 ): Promise<UsualOrderView> {
 	const asOf = o.asOf ?? scenarioDate(ports.clock.now());
-	const u = usualFor(k, asOf, o);
+	const u = usualFor(k, asOf, { ...o, now: o.now ?? ports.clock.now() });
 	const ids = [
 		...new Set([...u.lines, ...u.joined, ...u.dropped, ...u.notSettled].map((l) => l.productId))
 	];
@@ -172,8 +179,8 @@ export interface UsualSlice {
 	dropped: { productId: string; sentence: string }[];
 }
 
-export function usualSlice(k: Kitchen, asOf: string): UsualSlice {
-	const u = usualFor(k, asOf);
+export function usualSlice(k: Kitchen, asOf: string, now?: Date): UsualSlice {
+	const u = usualFor(k, asOf, now ? { now } : {});
 	return {
 		label: SIMULATED_HISTORY,
 		deliveryDate: u.deliveryDate,
