@@ -230,6 +230,43 @@
 		margin: 8px 0 0;
 		padding-left: 16px;
 	}
+	/* Desktop: one line per product, a table to scan: name, why, two weeks of stock, when it runs short. */
+	@media (min-width: 761px) {
+		.rows {
+			border: 1px solid var(--line);
+			border-radius: 8px;
+			background: var(--panel);
+			overflow: hidden;
+		}
+		.rows li {
+			grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) 140px 11rem;
+			grid-template-areas: 'name why spark when';
+			padding: 6px 14px;
+		}
+		.rows li:last-child {
+			border-bottom: 0;
+		}
+		.name {
+			grid-area: name;
+			font-weight: 500;
+			overflow: hidden;
+			text-overflow: ellipsis;
+			white-space: nowrap;
+		}
+		.why {
+			grid-area: why;
+			grid-column: auto;
+			overflow: hidden;
+			text-overflow: ellipsis;
+			white-space: nowrap;
+		}
+		.rows svg {
+			grid-area: spark;
+		}
+		.when {
+			grid-area: when;
+		}
+	}
 	@media (max-width: 480px) {
 		.rows li {
 			grid-template-columns: minmax(0, 1fr) auto;
