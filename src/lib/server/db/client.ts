@@ -65,8 +65,11 @@ function connect(url: string) {
 	u.searchParams.delete('sslmode');
 	const ca = caCert();
 	return postgres(u.toString(), {
-		// The free Aiven plan allows 15 connections in total, shared by every instance and dev server.
-		max: 3,
+		// Concurrent visitors queue on this pool (each plan holds a connection per transaction, ~80–120 round trips
+		// per start), so it is sized for the room, not the minimum. The Aiven plan is startup-4 (about 100
+		// connections), shared by prod, mandate-b and staging at 10 each plus dev servers. PG_POOL_MAX overrides it.
+		// The bus's LISTEN is one more connection per process: postgres.js opens it apart from this pool.
+		max: Number(env.PG_POOL_MAX) || 10,
 		idle_timeout: 20,
 		connect_timeout: 10,
 		ssl: ca ? { ca, rejectUnauthorized: true } : 'require',
