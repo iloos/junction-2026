@@ -8,7 +8,7 @@ os.makedirs(A + "/stills", exist_ok=True)
 os.makedirs(A + "/vo", exist_ok=True)
 os.makedirs(A + "/clips", exist_ok=True)
 
-vo = {c["clip"]: c for c in json.load(open(V + "/vo/vo.json", encoding="utf-8"))["clips"]}
+vo = {c["clip"]: c for c in json.load(open(os.environ.get("VO_DIR", V + "/vo") + "/vo.json", encoding="utf-8"))["clips"]}
 for c in vo.values():
     shutil.copy(c["file"], A + "/vo/" + os.path.basename(c["file"]))
 for f in os.listdir(V + "/stills-deck"):
@@ -17,12 +17,12 @@ for f in os.listdir(V + "/stills-deck"):
 # (clip id, slot seconds, visual: still or live clip with still fallback)
 PLAN = [
     ("d1-cover", 7, "s1.png", None),
-    ("d3-case", 14, "s3.png", None),
-    ("d4-rules", 14, "s4.png", None),
-    ("A-words-live", 36, "s7.png", "A-words-live.mp4"),
-    ("B-buffet-live", 18, "s5.png", "B-buffet-live.mp4"),
-    ("d8-consent", 14, "s8.png", "C-consent.mp4"),
-    ("d9-next", 10, "s9.png", None),
+    ("d3-case", 18.5, "s3.png", None),
+    ("d4-rules", 18.5, "s4.png", None),
+    ("A-words-live", 26, "s7.png", "A-words-live.mp4"),
+    ("B-buffet-live", 14, "s5.png", "B-buffet-live.mp4"),
+    ("d8-consent", 13, "s8.png", "C-consent.mp4"),
+    ("d9-next", 16, "s9.png", None),
     ("d10-close", 7, "s10.png", None),
 ]
 LEAD = 0.4  # voice starts after the picture

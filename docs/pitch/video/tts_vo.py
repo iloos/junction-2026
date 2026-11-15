@@ -5,7 +5,7 @@ Reads only SONIOX_API_KEY from the main checkout's .env inside this process; the
 import json, os, re, sys, urllib.request, wave, io
 
 ENV = r"C:/Users/jiaqi/Documents/.ai/hackathon/Junc26/.env"
-OUT = r"C:/Users/jiaqi/Documents/.ai/hackathon/Junc26/scratch/video/vo"
+OUT = os.environ.get("VO_OUT", r"C:/Users/jiaqi/Documents/.ai/hackathon/Junc26/scratch/video/vo")
 VOICE = sys.argv[1] if len(sys.argv) > 1 else "Adrian"
 SPEED = float(sys.argv[2]) if len(sys.argv) > 2 else 1.0
 
@@ -17,14 +17,14 @@ def key():
     raise SystemExit("SONIOX_API_KEY not found")
 
 CLIPS = [
-    ("d1-cover", 6, "Mandate. Every item an agent wants to buy is ordered, held for the chef, or refused."),
-    ("d3-case", 14, "A hotel kitchen. A buffet for 140 is booked, Valio is out of the ham, and the cut-off is Friday at five. An agent could sort this out. But what may it buy without the chef?"),
-    ("d4-rules", 14, "The chef writes the rules once: up to 800 euros an item, never change an allergen, ask before anything new. The rules are code, so no model and no agent can bend them."),
-    ("A-words-live", 38, "Now from words. One sentence: a no-meat dinner for 120 with a peach dessert. Gemini proposes the menu. Plan it: every ingredient becomes a Valio product with a price. A new menu means new products, and this hotel's rules say ask me first, so the agent asks once. One yes covers exactly these items, and the order lands on Valio's side."),
-    ("B-buffet-live", 18, "On the buffet, the same rules sort the order: three items go through alone, three are impossible and say why, and the rest come down to three decisions for the chef."),
-    ("d8-consent", 14, "Any agent can plan through the same door. Here, Claude plans a dinner with Mandate. Nothing is ordered until the chef says yes; an agent that tries to approve is refused."),
-    ("d9-next", 10, "Real Valio data, Gemini and Aiven. The order itself is simulated and labelled. Next: a pilot with one hotel."),
-    ("d10-close", 6, "Your agent does the buying. Your rules decide what. app dot mandate dot kitchen."),
+    ("d1-cover", 7, "Mandate decides what a kitchen's buying agent may order by itself, and what has to wait for the chef."),
+    ("d3-case", 18.5, "A hotel kitchen has a Christmas buffet for 140 on Saturday. That's 21 items to buy from Valio Aimo. The ham is out of stock, and orders close Friday at five. The chef should only have to make three decisions here. Which of the rest can an agent buy alone?"),
+    ("d4-rules", 18.5, "The chef sets the rules once. Here the agent may spend up to 800 euros an item. It may never swap in a different allergen, and it asks before buying anything new. The rules run as code, and each item keeps a record of the rule or the approval behind it."),
+    ("A-words-live", 26, "Now a new menu, from one sentence: a no-meat dinner for 120 with a peach dessert. Gemini drafts the menu, and the plan turns each ingredient into a Valio product with a price. All of them are new to this kitchen, and the rules say to ask first, so the agent asks once. The chef's yes covers exactly these items, and the order goes to Valio Aimo."),
+    ("B-buffet-live", 14, "Back to the buffet. Three items fit the rules, so the agent orders them. Another three can't be ordered, and each one says why. The other fifteen wait for the chef, grouped into three decisions."),
+    ("d8-consent", 13, "Other agents can use Mandate too. Here Claude plans a dinner through it. Nothing gets ordered until the chef says yes, and an outside agent that tries to approve is refused."),
+    ("d9-next", 16, "Valio Aimo's catalogue and prices are real, and it runs on Gemini and Aiven. The order is simulated, and the app says so. Valio Aimo gets each kitchen's demand before the cut-off. Next, a pilot with one hotel."),
+    ("d10-close", 7, "Your agent does the buying. Your rules decide what. app dot mandate dot kitchen."),
 ]
 
 REGION = os.environ.get("SONIOX_REGION", "eu")
@@ -45,6 +45,27 @@ def pick_model(k):
     MODEL["silence"] = bool(best.get("supports_silence_reduction"))
     print("using", MODEL)
 
+ELEVEN = {"George": "JBFqnCBsd6RMkjVDRZzb", "Charlotte": "XB0fDUnXU5powFXDhCwa"}
+
+def eleven_key():
+    with open(ENV, encoding="utf-8") as f:
+        for line in f:
+            if line.startswith("ELEVENLABS_API_KEY="):
+                return line.split("=", 1)[1].strip().strip('"').strip("'")
+    raise SystemExit("ELEVENLABS_API_KEY not found")
+
+def tts_eleven(k, text):
+    """PCM 24 kHz from ElevenLabs v4, wrapped as WAV so the rest of the pipeline is unchanged."""
+    body = {"text": text, "model_id": "eleven_v4", "voice_settings": {"stability": 0.5, "similarity_boost": 0.75, "speed": SPEED}}
+    req = urllib.request.Request("https://api.elevenlabs.io/v1/text-to-speech/%s?output_format=pcm_24000" % ELEVEN[VOICE.split(":")[1]],
+                                 data=json.dumps(body).encode(), method="POST", headers=dict(UA, **{"xi-api-key": k, "Content-Type": "application/json"}))
+    with urllib.request.urlopen(req, timeout=120) as r:
+        pcm = r.read()
+    buf = io.BytesIO()
+    with wave.open(buf, "wb") as w:
+        w.setnchannels(1); w.setsampwidth(2); w.setframerate(24000); w.writeframes(pcm)
+    return buf.getvalue()
+
 def tts(k, text):
     payload = {"model": MODEL["id"], "language": "en", "voice": VOICE, "audio_format": "wav", "sample_rate": 24000, "speed": SPEED, "text": text}
     if MODEL["silence"]:
@@ -57,15 +78,18 @@ def tts(k, text):
 
 def main():
     os.makedirs(OUT, exist_ok=True)
-    k = key()
-    try:
-        pick_model(k)
-    except urllib.error.HTTPError as e:
-        raise SystemExit("Soniox models HTTP %s: %s" % (e.code, e.read()[:300].decode("utf-8", "replace")))
+    if VOICE.startswith("eleven:"):
+        k = eleven_key(); say = tts_eleven
+    else:
+        k = key(); say = tts
+        try:
+            pick_model(k)
+        except urllib.error.HTTPError as e:
+            raise SystemExit("Soniox models HTTP %s: %s" % (e.code, e.read()[:300].decode("utf-8", "replace")))
     report = []
     for cid, slot, text in CLIPS:
         try:
-            audio = tts(k, text)
+            audio = say(k, text)
         except urllib.error.HTTPError as e:
             raise SystemExit("Soniox HTTP %s on %s: %s" % (e.code, cid, e.read()[:300].decode("utf-8", "replace")))
         path = os.path.join(OUT, cid + ".wav")
@@ -84,7 +108,7 @@ def main():
             caps.append({"start": round(t, 2), "end": round(t + d, 2), "text": s})
             t += d
         report.append({"clip": cid, "slotS": slot, "audioS": round(dur, 2), "fits": dur <= slot, "file": path, "captions": caps})
-        print("%-14s audio %5.1fs  slot %2ds  %s" % (cid, dur, slot, "ok" if dur <= slot else "OVER"))
+        print("%-14s audio %5.1fs  slot %4.1fs  %s" % (cid, dur, slot, "ok" if dur <= slot else "OVER"))
     with open(os.path.join(OUT, "vo.json"), "w", encoding="utf-8") as f:
         json.dump({"voice": VOICE, "speed": SPEED, "clips": report}, f, indent=1)
     print("total audio %.1fs" % sum(r["audioS"] for r in report))

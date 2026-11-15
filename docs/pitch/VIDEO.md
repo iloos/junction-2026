@@ -13,9 +13,9 @@ _S7, Sun 15 Nov 05:30. Recording slot 07:30–09:00, after the final deploy (~07
 | # | Time | Shot | Source | What must be on screen | Voice |
 |---|---|---|---|---|---|
 | 1 | 0:00–0:06 | Cover | deck slide 1 | "Order it. Hold it. Refuse it." animating in | "Mandate. Every item an agent wants to buy is ordered, held for the chef, or refused." |
-| 2 | 0:06–0:20 | The case | deck slide 3 | the Tue / Thu / Fri timeline, then the question | "A hotel kitchen: 140 booked, Valio is out of the ham, the cut-off is Friday at five. What may an agent buy without the chef?" |
+| 2 | 0:06–0:20 | The case | deck slide 3 | the Tue / Thu / Fri timeline, then the question | "A hotel kitchen: 140 booked, Valio Aimo is out of the ham, the cut-off is Friday at five. What may an agent buy without the chef?" |
 | 3 | 0:20–0:34 | The rules | deck slide 4 | the chef's mandate, teal and amber highlights, three dots | "The chef writes the rules once: 800 euros an item, never change an allergen, ask before anything new. The rules are code." |
-| 4 | 0:34–1:12 | **From words, live** | screen, tab 2 | see shot A below | "One sentence… Gemini proposes the menu… a new menu means new products, so the agent asks once… one yes, and it lands on Valio's side." |
+| 4 | 0:34–1:12 | **From words, live** | screen, tab 2 | see shot A below | "One sentence… Gemini proposes the menu… a new menu means new products, so the agent asks once… one yes, and it lands on Valio Aimo's side." |
 | 5 | 1:12–1:30 | **The buffet** | screen, tab 2 | see shot B below | "On the buffet: three items go through alone, three are impossible and say why, the rest is three decisions." |
 | 6 | 1:30–1:44 | Who can say yes | deck slide 8 (or the MCP consent screenshot, if the user captures one) | the three cards | "Any agent can plan. Only the chef can say yes: in the app, or when their own assistant asks." |
 | 7 | 1:44–1:54 | Real and next | deck slide 9 | the three lists | "Real Valio data, Gemini and Aiven; the order itself is simulated and labelled. Next: a pilot with one hotel." |
@@ -51,18 +51,18 @@ In the edit, speed up the model waits (2×, with a small "sped up" label) and ho
 3. **Stills from the final deploy,** for the deck's recorded slide and for the submission: the menu card, the plan with reasons, the Accept all moment, "Ordered" with its receipt, the Ops tab with the order, and the buffet's three colours. Save them to `scratch/video/stills/`, and I'll swap them into the deck.
 
 ## Who does what
-S5 records every clip automatically (Playwright, 1080p, fresh profile) from [shots.json](shots.json). The user records the voice-over and assembles the cut. S7 swaps the stills into the deck after the 07:20 take.
+S5 records every clip automatically (Playwright, 1080p, fresh profile) from [shots.json](shots.json). The voice-over is ElevenLabs v4, voice George (Charlotte is the alternate); S7 assembles the cut. S7 swaps the stills into the deck after the 07:20 take.
 
 ## Voice-over, timed to the clips (about 280 words; read at a calm pace)
 | Clip | Length | Say |
 |---|---|---|
-| d1-cover | 0:06 | "Mandate. Every item an agent wants to buy is ordered, held for the chef, or refused." |
-| d3-case | 0:14 | "A hotel kitchen. A buffet for 140 is booked, Valio is out of the ham, and the cut-off is Friday at five. An agent could sort this out. But what may it buy without the chef?" |
-| d4-rules | 0:14 | "The chef writes the rules once: up to 800 euros an item, never change an allergen, ask before anything new. The rules are code, so no model and no agent can bend them." |
-| A-words-live | 0:38 | "Now from words. One sentence: a no-meat dinner for 120 with a peach dessert. Gemini proposes the menu. Plan it: every ingredient becomes a Valio product with a price. A new menu means new products, and this hotel's rules say ask me first, so the agent asks once. One yes covers exactly these items, and the order lands on Valio's side." |
-| B-buffet-live | 0:18 | "On the buffet, the same rules sort the order: three items go through alone, three are impossible and say why, and the rest come down to three decisions for the chef." |
-| d8-consent → C-consent (ba's Claude-client take, 4.3–18.3 s) | 0:14 | "Any agent can plan through the same door. Here, Claude plans a dinner with Mandate. Nothing is ordered until the chef says yes; an agent that tries to approve is refused." |
-| d9-next | 0:10 | "Real Valio data, Gemini and Aiven. The order itself is simulated and labelled. Next: a pilot with one hotel." |
+| d1-cover | 0:06 | "Mandate decides what a kitchen's buying agent may order by itself, and what has to wait for the chef." |
+| d3-case | 0:14 | "A hotel kitchen has a Christmas buffet for 140 on Saturday. That's 21 items to buy from Valio Aimo. The ham is out of stock, and orders close Friday at five. The chef should only have to make three decisions here. Which of the rest can an agent buy alone?" |
+| d4-rules | 0:14 | "The chef sets the rules once. Here the agent may spend up to 800 euros an item. It may never swap in a different allergen, and it asks before buying anything new. The rules run as code, and each item keeps a record of the rule or the approval behind it." |
+| A-words-live | 0:38 | "Now a new menu, from one sentence: a no-meat dinner for 120 with a peach dessert. Gemini drafts the menu, and the plan turns each ingredient into a Valio product with a price. All of them are new to this kitchen, and the rules say to ask first, so the agent asks once. The chef's yes covers exactly these items, and the order goes to Valio Aimo." |
+| B-buffet-live | 0:18 | "Back to the buffet. Three items fit the rules, so the agent orders them. Another three can't be ordered, and each one says why. The other fifteen wait for the chef, grouped into three decisions." |
+| d8-consent → C-consent (ba's Claude-client take, 4.3–18.3 s) | 0:14 | "Other agents can use Mandate too. Here Claude plans a dinner through it. Nothing gets ordered until the chef says yes, and an outside agent that tries to approve is refused." |
+| d9-next | 0:10 | "Valio Aimo's catalogue and prices are real, and it runs on Gemini and Aiven. The order is simulated, and the app says so. Valio Aimo gets each kitchen's demand before the cut-off. Next, a pilot with one hotel." |
 | d10-close | 0:06 | "Your agent does the buying. Your rules decide what. app.mandate.kitchen." |
 
 ## Assemble (one pass)
