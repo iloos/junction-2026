@@ -170,7 +170,9 @@ test("an agent's approval link opens a plan the chef can approve", async ({ page
 	await page.waitForLoadState('networkidle');
 	await page.waitForTimeout(2000);
 	const approve = page
-		.getByRole('button', { name: /Hold to sign off|Confirm exact terms|Review \d+ lines?|Approve/ })
+		.getByRole('button', {
+			name: /Review and sign off|Accept (all|these) \d+|Hold to sign off|Confirm exact terms|Review \d+ lines?|Approve/
+		})
 		.first();
 	const shown = await approve
 		.waitFor({ timeout: 30_000 })
