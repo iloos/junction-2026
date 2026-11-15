@@ -74,6 +74,8 @@ export function readUsual(
 export interface TopUpHit {
 	productId: string;
 	name: string;
+	/** Valio's English name, when it differs from the Finnish one. */
+	nameEn?: string;
 	unit: string;
 	lotStep: number;
 }
@@ -89,6 +91,7 @@ export async function searchTopUp(workspaceId: string, q: string): Promise<TopUp
 	return found.map((p) => ({
 		productId: p.productId,
 		name: p.nameShort?.value ?? p.nameFi,
+		...(p.nameEn && p.nameEn !== p.nameFi ? { nameEn: p.nameEn } : {}),
 		unit: p.salesUnit,
 		lotStep: p.lotStep
 	}));

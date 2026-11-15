@@ -51,6 +51,8 @@ export interface MenuView {
 	issues: Issue[];
 	/** productId → catalogue name, for pinned ingredients. */
 	products: Record<string, string>;
+	/** productId → Valio's English name, where it differs from the Finnish one. */
+	englishNames?: Record<string, string>;
 	/** What wrote the dishes: a model id or "templates". */
 	model: string;
 	/** Set when the model failed and the team templates answered. */
@@ -89,6 +91,9 @@ export async function menuView(
 		proposal,
 		issues: reviewProposal(proposal.brief, proposal, previous),
 		products: Object.fromEntries([...got].map(([id, p]) => [id, p.nameFi])),
+		englishNames: Object.fromEntries(
+			[...got].filter(([, p]) => p.nameEn && p.nameEn !== p.nameFi).map(([id, p]) => [id, p.nameEn])
+		),
 		model: extra.model ?? proposal.provenance.ref ?? '',
 		...(extra.fallback ? { fallback: extra.fallback } : {})
 	};

@@ -48,6 +48,8 @@ export const SCOPES_BY_ACTOR = {
 export const Alternative = z.object({
 	productId: ProductId,
 	productName: z.string().optional(),
+	/** Valio's English name, when it differs from the Finnish one. */
+	productNameEn: z.string().optional(),
 	reason: z.string().max(120),
 	supply: z.string(),
 	pricePer: z.object({ cents: Cents, per: MeasureUnit }).optional(),
@@ -403,6 +405,7 @@ export const toolSchemas = {
 				z.object({
 					productId: ProductId,
 					productName: z.string().optional(),
+					productNameEn: z.string().optional(),
 					rank: z.int().positive().nullable(),
 					score: ScoreBreakdown.optional(),
 					rejectedReasons: z.array(z.string()),
