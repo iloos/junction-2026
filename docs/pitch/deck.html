@@ -183,29 +183,22 @@ svg.wires { position: absolute; left: 0; top: 0; overflow: visible; pointer-even
   </div>
   <div class="a" style="display:flex; justify-content:space-between; align-items:flex-end">
     <p style="font-size:44px; color:var(--night-ink)">Try it yourself: <b style="color:var(--go)">app.mandate.kitchen</b></p>
-    <p class="mono" style="font-size:28px; color:var(--night-ink-2)">10/10 runs on prod, desktop and phone</p>
+    <p class="mono" style="font-size:28px; color:var(--night-ink-2)">no network? the next slide is the same run</p>
   </div>
 </section>
 
 <!-- 7 RECORDED RUN -->
-<section class="slide" data-notes="The same run, as a fallback. The chef types one sentence. Gemini proposes six dishes. Plan it turns every ingredient into a Valio product with a price, or says honestly that it can't. What the mandate allows goes through; the rest waits in one decision per reason. The chef approves, it's ordered, one receipt. Ten out of ten runs on the deployed app." style="gap:28px">
+<section class="slide" data-notes="The same run, as a fallback. The chef types one sentence. Gemini proposes six dishes. Plan it turns every ingredient into a Valio product with a price, or says honestly that it can't. What the mandate allows goes through; the rest waits in one decision per reason. The chef approves, it's ordered, one receipt." style="gap:28px">
   <p class="eyebrow a">The same run, recorded</p>
   <h2 class="a">One sentence in, an order out.</h2>
-  <div style="display:flex; gap:72px; align-items:flex-start">
-    <div style="display:flex; flex-direction:column; gap:14px; width:1040px">
-      <p class="me a">a no-meat dinner for 120 with a peach dessert</p>
-      <div class="ag a"><p class="lab">MENU · PROPOSED BY GEMINI · AMOUNTS ARE ESTIMATES</p><p>Six dishes, no meat, a peach dessert. Plan it?</p></div>
-      <p class="me a" style="width:auto">plan it</p>
-      <div class="ag a"><p class="lab">PLAN · ABOUT 20 LINES · HELD LINES GROUPED BY REASON</p><p>Each ingredient a Valio product, priced or labelled</p></div>
-      <div class="ag a done"><p class="lab g">THE CHEF APPROVES</p><p class="g" style="font-weight:600">Ordered · one receipt · shows on Valio’s Ops view</p></div>
-    </div>
-    <div class="a" style="display:flex; flex-direction:column; gap:14px; padding-top:20px">
-      <p style="font-size:180px; font-weight:700; line-height:.95; letter-spacing:-6px"><span class="cnt" data-n="10">10</span>/10</p>
-      <p class="M" style="width:520px">runs passed on the deployed app, at desktop and phone width</p>
-      <p class="S">Playtest, prod ea9f4d5</p>
-    </div>
+  <div class="chatwide" style="display:flex; flex-direction:column; gap:16px; width:1664px">
+    <p class="me a">a no-meat dinner for 120 with a peach dessert</p>
+    <div class="ag a"><p class="lab">MENU · PROPOSED BY GEMINI · AMOUNTS ARE ESTIMATES</p><p>Six dishes, no meat, a peach dessert. Plan it?</p></div>
+    <p class="me a">plan it</p>
+    <div class="ag a"><p class="lab">PLAN · ABOUT 20 LINES · HELD LINES GROUPED BY REASON</p><p>Each ingredient a Valio product, priced or labelled</p></div>
+    <div class="ag a done"><p class="lab g">THE CHEF APPROVES</p><p class="g" style="font-weight:600">Ordered · one receipt · shows on Valio’s Ops view</p></div>
   </div>
-  <div class="foot"><p>The same flow works in the chat, on the page, or from your own agent</p><p class="pg"></p></div>
+  <div class="foot"><p>Recorded on the deployed app · the same flow works in the chat, on the page, or from your own agent</p><p class="pg"></p></div>
 </section>
 
 <!-- 8 AGENTIC -->
@@ -357,6 +350,9 @@ svg.wires { position: absolute; left: 0; top: 0; overflow: visible; pointer-even
 .ag { background: var(--white); border: 2px solid var(--rule); border-radius: 8px 28px 28px 28px; padding: 18px 28px; display: flex; flex-direction: column; gap: 8px; }
 .ag p:last-child { font-size: 32px; line-height: 1.3; color: var(--ink); }
 .ag.done { border-color: var(--go); background: var(--go-wash); }
+.chatwide .me { font-size: 38px; padding: 20px 34px; }
+.chatwide .ag { width: 1240px; box-sizing: border-box; }
+.chatwide .ag p:last-child { font-size: 38px; }
 .term { background: var(--night); border-radius: 20px; padding: 40px 48px; width: 1080px; box-sizing: border-box; display: flex; flex-direction: column; gap: 6px; }
 .tl { font-family: var(--mono); font-size: 29px; line-height: 1.5; white-space: pre; color: var(--night-ink-2); }
 .tl.c { color: #8fc7ff; } .tl.y { color: var(--hold); } .tl.x { color: #ff8a73; } .tl.k { color: #7fd6cf; } .tl.sp { line-height: .8; }
