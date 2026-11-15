@@ -6,7 +6,7 @@ _Adopted by [D10](../DECISIONS.md) as the semantic contract for code and copy (w
 
 ## Why this belongs before a UI overhaul
 
-Names encode business promises. `FulfilmentView.supplierConfirmed` now correctly distinguishes receipt-backed supply from planned stock, but `SupplyTier.confirmed` and `LineView.confirmedCover` still refer to known stock before commitment ([contracts](../../src/lib/core/contracts/plan.ts)). The agent has `confirmedNeeds` and `fulfilled`; Request has its own order/approval views. These are different certainty levels using similar names.
+Names encode business promises. `FulfilmentView.supplierConfirmed` now correctly distinguishes receipt-backed supply from planned stock, and the ranking tier is now `SupplyTier.known_stock` (it was `confirmed`; `LineView.confirmedCover` is gone) ([contracts](../../src/lib/core/contracts/plan.ts)). The agent has `confirmedNeeds` and `fulfilled`; Request has its own order/approval views. These are different certainty levels using similar names.
 
 T0's new partition is a substantive fix. Finish the language around it so a model, a UI component and an operator cannot accidentally make a stronger claim than the domain evidence supports.
 
@@ -49,7 +49,7 @@ A single status may summarize a task, but it must not erase these axes. For exam
 
 ## Naming and copy decisions to adopt
 
-- Reserve **supplier confirmed** for quantities backed by receipt evidence. Prefer **known-stock candidate** for the ranking tier currently named `confirmed`, and **planned against known stock** for pre-commit coverage. Existing wire fields can remain temporarily with explicit adapters/deprecation; no broad rename in the middle of parallel implementation.
+- Reserve **supplier confirmed** for quantities backed by receipt evidence. Prefer **known-stock candidate** for the ranking tier (`known_stock` in code), and **planned against known stock** for pre-commit coverage. Existing wire fields can remain temporarily with explicit adapters/deprecation; no broad rename in the middle of parallel implementation.
 - Use **planned**, **ordered—awaiting supplier**, and **supplier confirmed** as distinct labels. Use **delivered** only if delivery evidence exists; the hackathon receipt is not delivery evidence.
 - Use **needs your approval** only when human authorization can resolve the blocker. Use **missing product evidence**, **no sufficient stock**, **offer expired**, or **requirement unmet** for other causes. “Held” is too broad to be the whole explanation.
 - Use **can submit now** for `committable`, with as-of/expiry and the actual permitted action. Do not call it “safe” or “ready for service.”

@@ -68,7 +68,7 @@ A kitchen tells its agent what it cooks and what it cares about (price, carbon, 
 | **Context.dev** | Food-recall watch (Finnish Food Authority) → an anomaly that holds the affected lines | Recorded drill |
 | **Exa** | Facts for missing allergen/pack data and options outside the catalogue, always suggestions with sources | Cached results |
 
-Parked by D7: Nemotron, Modal, Verda, Cloudinary, Gemma (Featherless adapter exists, not in the demo).
+Parked by D7: Nemotron, Modal, Verda, Cloudinary, Gemma (Featherless adapter exists, not in the demo). Since D12, Nemotron on Verda is wired for `read_image` but not live (advertised only with `VISION_LIVE=1`).
 
 ## Multi-challenge map
 - **Valio Aimo (main, €4k):** end-to-end 30 (menu → order → anomaly → resolution), user need 20 (the stand's own list), autonomy and controls 20 (priorities as mandate, act-or-ask), robustness to exceptions 15 (anomalies, substitutes, cut-offs), openness 15 (MCP + OpenAPI, provenance).
@@ -78,7 +78,7 @@ Parked by D7: Nemotron, Modal, Verda, Cloudinary, Gemma (Featherless adapter exi
 ## Data
 - **Catalogue (in `data/valio/`, gitignored; copy into lane worktrees like `.env`):** 17,546 products with real GTINs, category, vendor, origin, temperature class, **pack units (pallet / case / piece with sizes) and allowed lot size**, so the vending lesson's physical constraints are in the data. Plus Synkka product data: names, ingredients, nutrition, storage, brand (media ids only, **no image URLs**). Net weight for 56% of products (89% with name parsing). 349 category codes without names. Facts: [foundations/valio-data.md](../foundations/valio-data.md). Also carbon footprint for 11,033 products (kg CO2e/kg) and delivery reliability for 4,425.
 - **Mock API** (`data/valio/openapi.json`): `GET /api/ping`, `POST /api/availability`, `POST /api/price`, and download links for the three datasets. **There is no order endpoint**, so ordering is ours to store.
-- **Kitchens:** the demo runs on three fictional seed kitchens (`fixtures/seeds/kitchens.json`); Helsinki venue data ([research/venues.md](../research/venues.md)) is background for GROWTH.
+- **Kitchens:** seven fictional sample kitchens (`fixtures/seeds/kitchens.json`), plus any kitchen a visitor makes with `create_kitchen` (D25); Helsinki venue data ([research/venues.md](../research/venues.md)) is background for GROWTH.
 - **Planted insights:** a big reservation that triggers a shortfall; a product out of stock with good and bad substitutes; a pack size that doesn't fit; a product recall; one adversarial agent that tries prompt injection through a product description.
 
 ## Risks and the spike that kills each one

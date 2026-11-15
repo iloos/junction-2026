@@ -2,6 +2,8 @@
 
 _Sat 14 Nov. Interaction model, key screens, visual direction, demo scripts, viz choices and a cut list for the UI lane. Builds on [CONCEPT](../concept/CONCEPT.md), [SCORECARD](../concept/SCORECARD.md), [horeca](../research/horeca.md), [agent-harness](../research/agent-harness.md), [mcpcon](../research/mcpcon.md). Sources at the end. **(?)** = our judgement or a single source._
 
+_As built (ring 6): the Kitchen is one view per delivery day's basket with plans as groups and one action bar (D29, D30); Swap opens a compare panel with steer chips (D28); Ops is tabbed (room, problems, orders, demand, forecast, flow, queue, wallboard, engine). There are no Cloudinary thumbnails: photos come from a ladder of recorded listings, findings and brand logos (`src/lib/server/products/photos.ts`). Read §2–§3 as the Sat design intent._
+
 ## 0. The one idea: the order is the interface
 Valio's sheet says "it is not a chatbot", and the flow it requires is Request → Lookup → Order → Approval. So the screen's main object is **the plan**: order lines grouped by delivery day, in layers (base week + event + anomaly fixes). The agent edits the plan through ops (`applyOps`), and every op animates on the line it touches. Chat, voice and photo are one **input strip** at the bottom, never the main view. Every line carries three things: a **tier chip** (act / propose / sign-off), a **why** (one line, expandable into the provenance chain) and a **source** (menu, booking, API price at time T, estimate).
 
