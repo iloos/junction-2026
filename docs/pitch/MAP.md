@@ -94,7 +94,7 @@ The user's three sketches map onto this (`scratch/user-diagrams.png` in the pitc
 | "Your own kitchen" first; seven sample profiles below, simulated history (D25) | `f21db02`, `create_kitchen` (`e2842bd`) | `/` fresh browser | playtest j1 | prod\* |
 | Workspace persists: kitchens, baskets, phone, agent key (D26) | `2fde6d1`, `server/demo/visitor.ts` | reload, new tab, `/pair` | D26 persistence journey `926dc28` | prod\* |
 | Room: QR full-screen, join as your own store, live orders, first-order light-up (D24) | `routes/ops/RoomView.svelte`, `3512380`, `50ad21f` | `/ops?ws=ws-judges` → Room | playtest r1 (stores named and first order: check with S5) | prod\* |
-| Room is fail-closed: a visitor writes only to their own store | `0332013`, `0fae82a`, `8673da2` | — | test | main |
+| Room is fail-closed: a visitor writes only to a store they own, seeded room kitchens included, at the core gate for every door (judge keys too) | `core/services/handlers.ts` `ctx.sharedRoom` (S1 `f76d42f`); selector `0fae82a`; chat `8673da2` | — | `room-gate.test.ts` | fixed in wave L, not yet on prod |
 | One shortage re-plans every kitchen inside its own rules | `812d714`, `core/services/shortage.ts` | presenter `shortage` → Room tab | playtest m1 | prod\* (room cascade on screen: check with S5) |
 | Usual orders detected from history (D14) | `core/patterns/`, `get_context` | — | tests; simulated history | wired (no Week view) |
 
