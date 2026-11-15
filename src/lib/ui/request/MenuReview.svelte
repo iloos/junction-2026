@@ -311,9 +311,11 @@
 								{#if i.productId}
 									<span
 										class="block truncate text-meta text-ink-3"
-										title={(view as { englishNames?: Record<string, string> }).englishNames?.[
-											i.productId
-										]}
+										title={readableName(
+											(view as { englishNames?: Record<string, string> }).englishNames?.[
+												i.productId
+											] ?? ''
+										) || undefined}
 										>{readableName(view.products[i.productId] ?? 'a Valio product')}
 										{#if shell?.system}<span class="mono">{i.productId}</span>{/if}</span
 									>

@@ -157,8 +157,9 @@
 		{#snippet lead()}<ProductThumb productId={r.productId} size={32} />{/snippet}
 		<span
 			class={r.refused ? 'text-ink-3' : 'text-ink'}
-			title={r.en ? `${readableName(r.name)} · ${r.en}` : undefined}>{readableName(r.name)}</span
-		>{#if r.en}<span class="block truncate text-meta text-ink-3">{r.en}</span>{/if}
+			title={r.en ? `${readableName(r.name)} · ${readableName(r.en)}` : undefined}
+			>{readableName(r.name)}</span
+		>{#if r.en}<span class="block truncate text-meta text-ink-3">{readableName(r.en)}</span>{/if}
 		{#snippet sub()}
 			{#if r.total}<span class="mono text-ink-2"
 					>{r.total.qty

@@ -189,7 +189,7 @@
 					{ productNameEn?: string } | undefined
 			)?.productNameEn;
 		return en && en.trim() && en.trim().toLowerCase() !== shown?.trim().toLowerCase()
-			? en.trim()
+			? readableName(en.trim())
 			: undefined;
 	}
 	const names = $derived(
