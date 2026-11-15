@@ -191,8 +191,11 @@ await timed(`${stores[0].name}: trying the room's hotel is refused`, async () =>
 		headers: { origin: BASE },
 		data: { action: 'kitchen', value: 'k-hotel' }
 	});
-	await r.text();
-	// Viewing the room's hotel is allowed (read-only, S1's gate); planning it must be refused.
+	const switched = await r.json().catch(() => ({}));
+	const now = switched.kitchenId ?? switched.kitchen?.id ?? null;
+	// Either the switch is refused outright (the page stays on the visitor's own store), or the hotel is shown
+	// read-only (S1's gate) and planning it is refused. Both keep a stranger off the hotel.
+	if (now && now !== 'k-hotel') return `${r.status()}: stays on its own store ${now}`;
 	const plan = await p.request.post(`${BASE}/kitchen-api/scenario`, {
 		headers: { origin: BASE },
 		data: { action: 'start' }
