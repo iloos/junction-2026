@@ -8,7 +8,7 @@ _S7, the pitch lane, keeps this list of what turns up while mapping and sends ea
 - No secrets in other docs: the only key-shaped strings are judge-key format placeholders (`jk_<ws>.<exp>.<hmac>`, `jk_ws-j-0e74…` in design mocks) · P3 · none · sent
 
 ## Stale docs
-- `concept/SYSTEM-MAP.md` (written at `b10cd43`) lists D15, D16 `meets()` and D18 `commandKey` as planned, but they are on main (`core/mandate/meets.ts`, `core/command.ts`). It predates ring 6 (room, own kitchens, Forecast, compare panel, photos) · P2 · S7 (folding it into `pitch/MAP.md`) · sent
+- `concept/SYSTEM-MAP.md` (written at `b10cd43`) lists D15, D16 `meets()` and D18 `commandKey` as planned, but they are on main (`core/mandate/meets.ts`, `core/command.ts`). It predates ring 6 (room, own kitchens, Forecast, compare panel, photos) · P2 · S7 · done (archived)
 
 - `CLAIMS.md`: outside keys now see 17 tools (20 registered, minus approve, set_mandate and read_image), not 15. Rows also cite `/agents/chat` as a page, but it now opens the dock over the Kitchen · P2 · S5 · sent
 - `PITCH.md` "Not yet claimable: new events from chat" no longer holds: the hero journey plans a new event from the dock · P3 · S7 · done in PITCH rewrite

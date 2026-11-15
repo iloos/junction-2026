@@ -1,6 +1,6 @@
 # MAP: every capability, where it lives, how to see it, what proves it
 
-_S7 (pitch lane), Sun 15 Nov 02:00. Read from `main` at `815a689` plus the wave K commits after it, and from prod `/healthz` (commit `5ed5bdf`, 23:55 UTC). This map supersedes [concept/SYSTEM-MAP.md](../concept/SYSTEM-MAP.md) (written at `b10cd43`, before ring 6). Paths: `core/` = `src/lib/core/`, `server/` = `src/lib/server/`, `routes/` = `src/routes/`. Claim wording follows [CLAIMS.md](../CLAIMS.md): **nothing here widens a CLAIMS verdict.**_
+_S7 (pitch lane), Sun 15 Nov 02:00. Read from `main` at `815a689` plus the wave K commits after it, and from prod `/healthz` (commit `5ed5bdf`, 23:55 UTC). This map supersedes [archive/concept/SYSTEM-MAP.md](../archive/concept/SYSTEM-MAP.md) (written at `b10cd43`, before ring 6). Paths: `core/` = `src/lib/core/`, `server/` = `src/lib/server/`, `routes/` = `src/routes/`. Claim wording follows [CLAIMS.md](../CLAIMS.md): **nothing here widens a CLAIMS verdict.**_
 
 **Status legend.** **prod**: seen on the deployed app (CLAIMS row or playtest). **prod\***: the code is on prod `5ed5bdf`, but not yet observed on prod in CLAIMS. **main**: merged but not on prod yet (wave J deploying, wave K gating). **tested**: a test or eval green on main, not observed deployed. **wired**: in code, off or not reachable. **held / never**: a decision keeps it out.
 
@@ -155,7 +155,7 @@ Vector search / pgvector (column exists, never read or written) · schema-constr
 
 ## 6. Stale docs (for the lead)
 - `CLAIMS.md`: outside agents see **17** tools now, not 15 or 13 (create_kitchen, get_outcome, revise_menu and others added). It also cites `/agents/chat` as a page, but `/agents/chat` now opens the dock over the Kitchen.
-- `concept/SYSTEM-MAP.md`: pre-ring-6; D15/D16/D18 marked planned but landed. Proposed: archive it, with a pointer to this MAP.
+- `concept/SYSTEM-MAP.md`: pre-ring-6 (D15/D16/D18 shown as planned); archived to `archive/concept/`.
 - `PITCH.md` "Not yet claimable": "new events from chat" is out of date (the hero journey plans a new event from the dock, m2). Deck outline replaced by `pitch/DECK.md`.
 - `SUBMISSION.md`: Gemini says "the in-app agent's tool calls are chosen by a deterministic scripted planner": re-check against the chat path (S3). It doesn't mention the room, own kitchens, Forecast or the compare panel (S5).
 - More in [FINDINGS.md](FINDINGS.md).
