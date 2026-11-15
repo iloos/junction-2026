@@ -38,6 +38,8 @@
 		swap?: { planId: string; version: number; deliverBy?: string; onchanged: () => void };
 		/** Change this line's amount in its sales units (edit_line); absent when it can't change. */
 		onqty?: (qty: number) => void;
+		/** What the web says about allergens for a product with no record: evidence only, linked to its source. */
+		web?: { text: string; host: string; url: string } | null;
 		/** Open the compare panel (Swap pressed on the collapsed dish row). */
 		swapOpen?: boolean;
 		/** This line's own decision (D23): Accept / Reject, or a sign-off one by one. */
@@ -64,7 +66,8 @@
 		swap,
 		decide,
 		swapOpen = false,
-		onqty
+		onqty,
+		web = null
 	}: Props = $props();
 	let swapping = $state(false);
 	let chipMenu = $state(false);
@@ -132,6 +135,19 @@
 						>{/if}{/if}
 			</p>
 			{#if lot && !rejected}<p class="text-meta text-ink-2">{lot}</p>{/if}
+			{#if web}
+				<!-- eslint-disable svelte/no-navigation-without-resolve -- an outside source page -->
+				<p class="text-meta text-ink-3">
+					Web: {web.text} ·
+					<a
+						href={web.url}
+						target="_blank"
+						rel="noopener noreferrer"
+						class="underline underline-offset-2">{web.host}</a
+					>
+				</p>
+				<!-- eslint-enable svelte/no-navigation-without-resolve -->
+			{/if}
 			{#if decide?.state === 'denied'}
 				<p class="text-meta text-out">Not ordered: {decide.cost}</p>
 			{:else if decide?.state === 'pending' && decide.signOff}

@@ -255,6 +255,36 @@
 			void k.refreshFrom(by, describeOps(mine));
 		});
 	});
+	// Web allergen evidence for lines without an allergen record (S4's webFactsFor): one read per plan version.
+	let webFacts = $state.raw<
+		Record<
+			string,
+			{ contains: string[]; mayContain: string[]; source: { host: string; url: string } }
+		>
+	>({});
+	$effect(() => {
+		const ids = (snap?.plan.lines ?? [])
+			.filter((l) => l.qty.value > 0 && !lineMarks(l).recorded)
+			.map((l) => l.productId);
+		if (!ids.length || k.mode !== 'live') return;
+		let gone = false;
+		void fetch(`/kitchen-api/webfacts?ids=${[...new Set(ids)].join(',')}`)
+			.then((r) => (r.ok ? r.json() : {}))
+			.then((f) => {
+				if (!gone) webFacts = f;
+			})
+			.catch(() => {});
+		return () => (gone = true);
+	});
+	function webOf(productId: string) {
+		const f = webFacts[productId];
+		if (!f) return null;
+		const parts = [
+			f.contains.length ? `contains ${f.contains.join(', ')}` : null,
+			f.mayContain.length ? `may contain ${f.mayContain.join(', ')}` : null
+		].filter(Boolean);
+		return parts.length ? { text: parts.join('; '), host: f.source.host, url: f.source.url } : null;
+	}
 	// Every row, the Decide panel and the swap panel read one photo cache, filled in one batch when the plan arrives.
 	$effect(() => {
 		const ids = snap?.plan.lines.map((l) => l.productId);
@@ -1191,10 +1221,34 @@
 				{/if}
 			</span>
 		{/if}
-		{#if roomNotice}
-			<p class="min-w-0 rounded-md bg-signoff-wash px-2 py-1 text-meta text-ink" role="note">
-				{roomNotice}
+		{#if mode === 'live'}
+			<!-- Where you are (D24/D26): your own sandbox or the live room, and the way to the other. -->
+			<!-- eslint-disable svelte/no-navigation-without-resolve -- room switches are full loads with a query -->
+			<p
+				class="flex min-w-0 flex-wrap items-center gap-x-1.5 text-meta text-ink-2"
+				aria-label="Where you are"
+			>
+				{#if roomNotice}
+					<span class="rounded bg-signoff-wash px-1.5 py-px font-medium text-ink" title={roomNotice}
+						>Live room</span
+					>
+					<span>· You: <span class="text-ink">{own[0]?.name ?? 'no store yet'}</span></span>
+					<span class="text-ink-3">· others see what you type ·</span>
+					<a
+						href="/?ws=mine"
+						data-sveltekit-reload
+						class="underline underline-offset-2 hover:text-ink">Leave</a
+					>
+				{:else}
+					<span>Your sandbox ·</span>
+					<a
+						href="/?ws=ws-judges"
+						data-sveltekit-reload
+						class="underline underline-offset-2 hover:text-ink">Join the live room →</a
+					>
+				{/if}
 			</p>
+			<!-- eslint-enable svelte/no-navigation-without-resolve -->
 		{/if}
 		{#if !snap && k.started === false && !needsJoin}
 			<p
@@ -1408,6 +1462,7 @@
 					}
 				: undefined}
 			swapOpen={swapAsk === l.id}
+			web={webOf(l.productId)}
 			onqty={k.readOnly || l.strategy?.kind === 'make_in_house'
 				? undefined
 				: (q) => void k.setLineQty(l.id, q)}
