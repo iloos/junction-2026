@@ -380,6 +380,7 @@
 	<header>
 		<div class="title">
 			<h1>Operations</h1>
+			<p class="purpose">Valio Aimo's view: every store's orders and what waits, live.</p>
 			<nav aria-label="Workspace">
 				<a
 					data-sveltekit-reload
@@ -585,8 +586,6 @@
 				<button role="tab" aria-selected={view === 'engine'} onclick={() => setView('engine')}>
 					Engine room
 				</button>
-			{:else}
-				<p class="engine-hint">Turn on System for the engine room.</p>
 			{/if}
 		</div>
 		<main class:split={view === 'problems' || view === 'engine'}>
@@ -1150,13 +1149,6 @@
 		font-size: 28px;
 		font-weight: 600;
 	}
-	.engine-hint {
-		margin: 0 0 0 auto;
-		align-self: center;
-		color: var(--faint);
-		font-size: 14px;
-	}
-
 	/* Board: one column per kitchen, held lines as tickets. */
 	.board {
 		display: grid;
@@ -1545,5 +1537,12 @@
 		.figures dt {
 			font-size: 15px;
 		}
+	}
+	.purpose {
+		margin: 0;
+		color: var(--muted);
+		font-size: var(--text-meta);
+		flex-basis: 100%;
+		order: 3;
 	}
 </style>
