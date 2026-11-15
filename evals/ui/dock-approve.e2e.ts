@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { enterKitchen, eventView } from './flow';
+import { enterKitchen, eventView, approveInDock, DOCK_ORDER } from './flow';
 
 /**
  * D13: the chef may approve from the agent dock when the plan is not on the page. The dock's decision card uses the
@@ -28,12 +28,8 @@ test('the chef approves and orders from the dock, never through a chat turn', as
 	await here.waitFor({ timeout: 60_000 });
 
 	const before = posts.length;
-	await here
-		.getByRole('button', { name: /^Review \d+ lines?/ })
-		.first()
-		.click();
-	await here.getByRole('button', { name: 'Confirm exact terms' }).click();
-	const order = here.getByRole('button', { name: /^Order the approved lines/ });
+	await approveInDock(here);
+	const order = here.getByRole('button', { name: DOCK_ORDER });
 	await order.waitFor({ timeout: 30_000 });
 	const during = posts.slice(before);
 	expect(during, 'the approval is the Kitchen command').toContain('/kitchen-api/tool/approve');
@@ -65,12 +61,8 @@ test('a dock approval on another plan never switches the plan the Kitchen page s
 	await dock.locator('textarea').press('Enter');
 	const here = dock.getByLabel('Decide here');
 	await here.waitFor({ timeout: 60_000 });
-	await here
-		.getByRole('button', { name: /^Review \d+ lines?/ })
-		.first()
-		.click();
-	await here.getByRole('button', { name: 'Confirm exact terms' }).click();
-	await here.getByRole('button', { name: /^Order the approved lines/ }).click();
+	await approveInDock(here);
+	await here.getByRole('button', { name: DOCK_ORDER }).click();
 	await expect(here.getByText(/Ordered\s*·\s*\d+\s+lines?/)).toBeVisible({ timeout: 30_000 });
 
 	// A reload straight after the dock's order still opens the buffet (the dock never moves the remembered plan);

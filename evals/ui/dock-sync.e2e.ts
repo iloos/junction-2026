@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { approveFirstOnPage, decisionCards, enterKitchen } from './flow';
+import { approveFirstOnPage, decisionCards, enterKitchen, approveInDock, DOCK_ORDER } from './flow';
 
 /**
  * The Kitchen page and the agent dock read one event stream, so what the chef does in one shows in the other
@@ -81,17 +81,11 @@ test('approving in the dock takes the decision off the page and says where', asy
 	const card = decisionCards(kitchen);
 	await expect(card.first()).toBeVisible({ timeout: 60_000 });
 
-	await here
-		.getByRole('button', { name: /^Review \d+ lines?/ })
-		.first()
-		.click();
-	await here.getByRole('button', { name: 'Confirm exact terms' }).click();
-	await here
-		.getByRole('button', { name: /^Order the approved lines/ })
-		.waitFor({ timeout: 30_000 });
+	await approveInDock(here);
+	await here.getByRole('button', { name: DOCK_ORDER }).waitFor({ timeout: 30_000 });
 
 	await expect(card).toHaveCount(0, { timeout: 20_000 });
-	await here.getByRole('button', { name: /^Order the approved lines/ }).click();
+	await here.getByRole('button', { name: DOCK_ORDER }).click();
 	await expect(kitchen.getByText(/by you in the agent dock/i)).toBeVisible({ timeout: 20_000 });
 	await ctx.close();
 });
