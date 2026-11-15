@@ -108,6 +108,15 @@
 	const inRoom = $derived(data.room.kind === 'shared' || data.room.kind === 'full');
 	const joinUrl = $derived(inRoom ? `${data.origin}${resolve('/')}?ws=${data.rooms.shared}` : null);
 	const plans = $derived(Object.values(stream.state.plans));
+	/** A store in the room opens in the Kitchen, in this room, on its latest plan when it has one. */
+	function storeHref(kitchenId: string): string {
+		const latest = plans.filter((p) => p.kitchenId === kitchenId).at(-1);
+		const at = { ws: data.workspace, run: stream.state.runId || data.run || null };
+		return (
+			kitchenHref({ kitchenId, planId: latest?.id, version: latest?.version }, at) ??
+			`${resolve('/')}?${new URLSearchParams({ ws: data.workspace, kitchen: kitchenId })}`
+		);
+	}
 
 	/**
 	 * Plan views (fulfilment per need) from the server: the op stream carries plans, not their read model. Fetched
@@ -408,7 +417,7 @@
 		</div>
 
 		<dl class="figures">
-			<div class:so={totals.signOff > 0}>
+			<div class:so={totals.signOff > 0} class:zero={!totals.decisions}>
 				<dt>
 					{totals.decisions === 1 ? 'decision' : 'decisions'} for a person{totals.signOff
 						? `, ${totals.signOff} sign-off`
@@ -416,19 +425,19 @@
 				</dt>
 				<dd>{totals.decisions}</dd>
 			</div>
-			<div class:bad={totals.cannot > 0}>
+			<div class:bad={totals.cannot > 0} class:zero={!totals.cannot}>
 				<dt>{totals.cannot === 1 ? 'item' : 'items'} can't be ordered</dt>
 				<dd>{totals.cannot}</dd>
 			</div>
-			<div class:bad={totals.unresolved > 0}>
+			<div class:bad={totals.unresolved > 0} class:zero={!totals.unresolved}>
 				<dt>{totals.needs ? `of ${totals.needs} needs unresolved` : 'needs unresolved'}</dt>
 				<dd>{totals.unresolved}</dd>
 			</div>
-			<div class="ok">
+			<div class="ok" class:zero={!totals.committed}>
 				<dt>ordered</dt>
 				<dd>{euro(totals.committed)}</dd>
 			</div>
-			<div class:bad={totals.refused > 0}>
+			<div class:bad={totals.refused > 0} class:zero={!totals.refused}>
 				<dt>refused by the rules</dt>
 				<dd>{totals.refused}</dd>
 			</div>
@@ -595,6 +604,7 @@
 					presenter={data.presenter && data.workspace === data.rooms.shared}
 					incident={lastIncident(stream.roomSims, INCIDENT_LABEL)}
 					states={roomStates}
+					hrefOf={storeHref}
 				/>
 			{:else if view === 'problems'}
 				<section class="problems" aria-label="Problems, biggest first">
@@ -1477,5 +1487,13 @@
 		margin: 0 20px 8px;
 		color: var(--faint);
 		font-size: 15px;
+	}
+	/* A zero is context, not news: it steps back so the numbers that moved lead. */
+	.figures .zero dd {
+		color: var(--faint);
+		opacity: 0.55;
+	}
+	.figures .zero dt {
+		color: var(--faint);
 	}
 </style>

@@ -35,7 +35,8 @@
 		canShortage,
 		presenter = false,
 		incident = null,
-		states = {}
+		states = {},
+		hrefOf = () => null
 	}: {
 		kitchens: OpsKitchen[];
 		totals: Record<string, { n: number; cents: number }>;
@@ -51,6 +52,8 @@
 		incident?: { label: string; shortages: ShortageReplanned[] } | null;
 		/** Each store's state for its tile's dot (room.ts storeStates). */
 		states?: Record<string, StoreState>;
+		/** Where a store opens: the Kitchen on that store and its latest plan. */
+		hrefOf?: (kitchenId: string) => string | null;
 	} = $props();
 
 	const story = $derived(
@@ -204,15 +207,17 @@
 				{kitchens.length} store{kitchens.length === 1 ? '' : 's'} in this room
 			</h2>
 			<p class="counts">
-				<span><b class="num">{nOrdered}</b> ordered</span>
-				<span><b class="num">{nWaiting}</b> waiting for a person</span>
-				<span><b class="num">{nPlanning}</b> planning</span>
-				<span
-					><b class="num">{euro(ordered)}</b> in {orderCount} order{orderCount === 1
-						? ''
-						: 's'}</span
-				>
-				<span><b class="num">{perMinute}</b> in the last minute</span>
+				<!-- Only what is happening: a zero says nothing on a wall. -->
+				{#if orderCount}<span
+						><b class="num">{euro(ordered)}</b> in {orderCount} order{orderCount === 1
+							? ''
+							: 's'}</span
+					>{/if}
+				{#if nOrdered}<span><b class="num">{nOrdered}</b> ordered</span>{/if}
+				{#if nWaiting}<span><b class="num">{nWaiting}</b> waiting for a person</span>{/if}
+				{#if nPlanning}<span><b class="num">{nPlanning}</b> planning</span>{/if}
+				{#if perMinute}<span><b class="num">{perMinute}</b> in the last minute</span>{/if}
+				{#if !orderCount && !nWaiting && !nPlanning}<span>No orders yet</span>{/if}
 			</p>
 			{#if byKind}<p class="kinds">{byKind}</p>{/if}
 			<p>Every store orders under its own rules.</p>
@@ -363,6 +368,7 @@
 				{#each tiles as k (k.id)}
 					{@const t = totals[k.id]}
 					{@const st = states[k.id] ?? 'joined'}
+					{@const href = hrefOf(k.id)}
 					<li
 						class="tile s-{st}"
 						class:lit={lit === k.id}
@@ -372,7 +378,12 @@
 							: ''}"
 					>
 						<span class="dot" aria-hidden="true"></span>
-						<span class="name">{plainName(k.name)}</span>
+						{#if href}
+							<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- built from resolve('/') with the room's query -->
+							<a class="name open" {href}>{plainName(k.name)}</a>
+						{:else}
+							<span class="name">{plainName(k.name)}</span>
+						{/if}
 						{#if t}<span class="value num">{euro(t.cents)}</span>{/if}
 						{#if firsts[k.id]}<span class="firstbadge">First order</span
 							>{:else if k.kind && k.kind !== 'blank' && (k.copiedFrom || !isVisitorStore(k))}<span
@@ -867,5 +878,29 @@
 		.why {
 			grid-column: 1 / -1;
 		}
+	}
+	.tile {
+		position: relative;
+	}
+	.tile .open {
+		color: inherit;
+		text-decoration: none;
+	}
+	.tile .open::after {
+		content: '';
+		position: absolute;
+		inset: 0;
+		border-radius: inherit;
+	}
+	.tile:has(.open):hover {
+		border-color: var(--color-rule-strong);
+		background: var(--raise);
+	}
+	.tile .open:focus-visible {
+		outline: none;
+	}
+	.tile:has(.open:focus-visible) {
+		outline: 2px solid var(--propose);
+		outline-offset: 2px;
 	}
 </style>
