@@ -44,6 +44,7 @@ h2 { font-size: 80px; line-height: 1.05; letter-spacing: -1.5px; font-weight: 60
 .box p { font-size: 32px; line-height: 1.25; color: var(--ink); }
 .box p.lab { font-size: 24px; line-height: 1.3; color: var(--ink-3); }
 .box p.lab.g { color: var(--go-ink); }
+.box p.sub { font-size: 26px; line-height: 1.3; color: var(--ink-3); }
 .nw { white-space: nowrap; }
 .abs { position: absolute; }
 .dot { width: 30px; height: 30px; border-radius: 50%; flex: none; }
@@ -228,33 +229,38 @@ svg.wires { position: absolute; left: 0; top: 0; overflow: visible; pointer-even
 </section>
 
 <!-- 9 OUTSIDE -->
-<section class="slide" data-notes="A judge's own Claude, on a key from the Agents page. Every line it places waits for the chef, and it gets a link for a person. Over MCP, approve isn't even on its list; calling the REST endpoint anyway gets a 403, nothing changes, and Ops logs the attempt." style="gap:32px">
-  <p class="eyebrow a">Open door, same rules</p>
-  <h2 class="a">An outside agent tries to approve.<br>Nothing changes.</h2>
-  <div style="display:flex; gap:80px; align-items:flex-start">
-    <div class="term a">
-      <p class="tl c">→ place_order  <span style="color:#a9b4c0">30 × lactose-free milk, Fri</span></p>
-      <p class="tl y">← held: an outside agent’s lines wait for the chef</p>
-      <p class="tl y">   approvalUrl for a person to open</p>
-      <p class="tl sp"> </p>
-      <p class="tl c">→ POST /api/tools/approve</p>
-      <p class="tl x">← 403 FORBIDDEN · nothing changed</p>
-      <p class="tl sp"> </p>
-      <p class="tl k">Ops: “An outside agent tried to approve on the</p>
-      <p class="tl k">chef’s behalf. Refused. Nothing changed.”</p>
+<section class="slide" data-notes="Human in the loop, everywhere. The mandate is the chef's standing yes: inside it, lines go alone. Outside it, nothing is ordered without the chef's explicit yes. In the app, the chef sees the exact lines, total and reasons and taps Accept; an allergen change is signed line by line. In the chef's own AI agent, the agent pauses and its client asks the chef, showing the exact terms; a yes approves exactly those terms, recorded as approved by the chef via that client. Where a client can't ask, it hands over a link. Any other agent can plan and place orders but never approve: it's told only the chef approves, and given the link to pass on. Over REST that's a 403, and Ops logs the attempt." style="justify-content:space-between">
+  <div style="display:flex; flex-direction:column; gap:40px">
+    <p class="eyebrow a">Human in the loop, everywhere</p>
+    <h2 class="a">Outside the rules, nothing is ordered<br>without the chef’s explicit yes.</h2>
+  </div>
+  <div style="display:flex; gap:28px; align-items:stretch">
+    <div class="consent a" style="--c:var(--go); --w:var(--go-wash)">
+      <p class="lab g">IN THE APP</p>
+      <p class="ct">The chef taps Accept</p>
+      <p class="S" style="color:var(--ink-2)">on the exact lines, total and reasons; allergen changes are signed line by line</p>
+      <div class="ask"><p class="mono" style="font-size:24px; color:var(--ink-3)">Accept these 8 · €549.47</p><span class="btn">Accept</span></div>
     </div>
-    <div style="display:flex; flex-direction:column; gap:30px; flex:1">
-      <div class="a"><p style="font-size:150px; font-weight:700; line-height:1"><span class="cnt" data-n="17">17</span></p><p class="M">tools for an outside key, over MCP and REST</p></div>
-      <div class="a"><p class="r" style="font-size:150px; font-weight:700; line-height:1">0</p><p class="M">can approve. Over MCP, approve isn’t even listed.</p></div>
+    <div class="consent a" style="--c:var(--blue); --w:var(--blue-wash)">
+      <p class="lab" style="color:var(--blue)">IN YOUR OWN AGENT · MCP</p>
+      <p class="ct">The agent asks, the chef says yes</p>
+      <p class="S" style="color:var(--ink-2)">its client shows the exact terms; a yes approves only those, recorded as the chef’s</p>
+      <div class="ask"><p class="mono" style="font-size:24px; color:var(--ink-3)">the client asks for consent</p><span class="btn" style="background:var(--blue)">Yes</span></div>
+    </div>
+    <div class="consent a" style="--c:var(--no); --w:#f4dcd5">
+      <p class="lab r">ANY OTHER AGENT</p>
+      <p class="ct">Plans and places, never approves</p>
+      <p class="S" style="color:var(--ink-2)">“Only the chef approves. Give them this link.” Over REST: 403, logged on Ops</p>
+      <div class="ask"><p class="mono" style="font-size:24px; color:var(--ink-3)">approve</p><span class="btn" style="background:var(--no)">refused</span></div>
     </div>
   </div>
-  <div class="foot"><p>Per key: 120 calls, 30 writes, 20 quotes a minute · get a key at /agents</p><p class="pg"></p></div>
+  <div class="foot"><p>The mandate is the chef’s standing yes: inside it, lines go alone · in MCP clients without consent prompts, a link</p><p class="pg"></p></div>
 </section>
 
 <!-- 10 ARCH -->
-<section class="slide" data-notes="Four kinds of door: the Kitchen page, the chat, a paired phone, and your own AI agent over MCP or REST. All reach the app on Aiven Runtime. Inside, the agent reads words and plans with the same tools anyone else uses; one gate decides who may call what; a pure core holds the mandate, the ranking, the stock model and one change log. Each partner sits behind a port; Aiven Postgres carries the change log and live events back to every door." style="gap:40px">
+<section class="slide" data-notes="Four kinds of door: the Kitchen page, the chat, a paired phone, and your own AI agent over MCP or REST. All reach the app on Aiven Runtime. Inside, the agent reads words and plans with the same tools anyone else uses; one gate decides who may call what; the rules engine holds the mandate, the ranking, the stock model and one change log. Each partner sits behind a port; Aiven Postgres carries the change log and live events back to every door." style="gap:40px">
   <p class="eyebrow a">How it’s built</p>
-  <h2 class="a">Every door, one gate, one core,<br>each partner behind a port.</h2>
+  <h2 class="a">Every door goes through one gate,<br>each partner behind a port.</h2>
   <div style="position:relative; width:1664px; height:500px">
     <svg class="wires" width="1664" height="500" viewBox="0 0 1664 500" aria-hidden="true">
       <path class="w" d="M300 55 L 380 55" stroke="#5f6672"/><path class="w" d="M300 185 L 380 185" stroke="#5f6672"/>
@@ -265,17 +271,17 @@ svg.wires { position: absolute; left: 0; top: 0; overflow: visible; pointer-even
     <div class="box abs a" style="left:0; top:0; width:300px; height:110px; justify-content:center"><p style="font-weight:600">Kitchen page</p></div>
     <div class="box abs a" style="left:0; top:130px; width:300px; height:110px; justify-content:center"><p style="font-weight:600">Chat dock</p></div>
     <div class="box abs a" style="left:0; top:260px; width:300px; height:110px; justify-content:center"><p style="font-weight:600">Paired phone</p></div>
-    <div class="box abs a" style="left:0; top:390px; width:300px; height:110px; justify-content:center; border-style:dashed"><p style="font-weight:600">Your AI agent</p><p class="lab">MCP · REST</p></div>
+    <div class="box abs a" style="left:0; top:390px; width:300px; height:110px; justify-content:center; border-style:dashed"><p style="font-weight:600">Your AI agent</p><p class="sub">MCP, REST</p></div>
     <div class="abs a" style="left:380px; top:0; width:820px; height:500px; box-sizing:border-box; border:3px solid var(--ink); border-radius:18px; padding:22px 26px; display:flex; flex-direction:column; gap:14px">
       <p class="lab" style="letter-spacing:2px">MANDATE · ON AIVEN RUNTIME</p>
       <div class="layer" style="background:var(--blue-wash)"><p class="lt">The agent</p><p class="ld">reads words, plans with the same tools, at most 8 steps</p></div>
       <div class="layer" style="background:var(--night)"><p class="lt" style="color:var(--night-ink)">One gate</p><p class="ld" style="color:var(--night-ink-2)">20 tools · who may call what · per-key limits</p></div>
-      <div class="layer" style="background:var(--go-wash)"><p class="lt g">Pure core</p><p class="ld">the mandate · ranking · stock model · one change log</p></div>
+      <div class="layer" style="background:var(--go-wash)"><p class="lt g">The rules engine</p><p class="ld">the mandate · ranking · stock model · one change log</p></div>
     </div>
-    <div class="box abs a" style="left:1280px; top:0; width:384px; height:110px; justify-content:center; border-color:var(--go); background:var(--go-wash)"><p style="font-weight:600">Valio Aimo</p><p class="lab">catalogue · price · stock</p></div>
-    <div class="box abs a" style="left:1280px; top:130px; width:384px; height:110px; justify-content:center"><p style="font-weight:600">Gemini</p><p class="lab">reads, proposes, scores</p></div>
-    <div class="box abs a" style="left:1280px; top:260px; width:384px; height:110px; justify-content:center"><p style="font-weight:600">Exa · Context.dev</p><p class="lab">web facts · recalls</p></div>
-    <div class="box abs a" style="left:1280px; top:390px; width:384px; height:110px; justify-content:center"><p style="font-weight:600">Aiven Postgres</p><p class="lab">change log · live events</p></div>
+    <div class="box abs a" style="left:1280px; top:0; width:384px; height:110px; justify-content:center; border-color:var(--go); background:var(--go-wash)"><p style="font-weight:600">Valio Aimo</p><p class="sub">catalogue, price, stock</p></div>
+    <div class="box abs a" style="left:1280px; top:130px; width:384px; height:110px; justify-content:center"><p style="font-weight:600">Gemini</p><p class="sub">reads, proposes, scores</p></div>
+    <div class="box abs a" style="left:1280px; top:260px; width:384px; height:110px; justify-content:center"><p style="font-weight:600">Exa · Context.dev</p><p class="sub">web facts, recalls</p></div>
+    <div class="box abs a" style="left:1280px; top:390px; width:384px; height:110px; justify-content:center"><p style="font-weight:600">Aiven Postgres</p><p class="sub">change log, live events</p></div>
   </div>
   <div class="foot"><p>Every change streams back to every door, live (Postgres NOTIFY → SSE) · every partner has an offline twin</p><p class="pg"></p></div>
 </section>
@@ -301,9 +307,9 @@ svg.wires { position: absolute; left: 0; top: 0; overflow: visible; pointer-even
     <h2 class="a">Real data and a real gate today.<br>The order itself is simulated.</h2>
   </div>
   <div style="display:flex; gap:64px; align-items:flex-start">
-    <div class="col a" style="--c:var(--go)"><p class="lab g">REAL</p><p>Valio’s catalogue and live API for price and availability · Gemini · Aiven · Exa · Context.dev · an open MCP and OpenAPI door</p></div>
-    <div class="col a" style="--c:var(--hold)"><p class="lab h">SIMULATED, LABELLED</p><p>The order (Valio’s API has no order endpoint) · the supplier’s reply · history · stock movement · the clock</p></div>
-    <div class="col a" style="--c:var(--ink); flex:1.2"><p class="lab" style="color:var(--ink)">NEXT</p><p>A 4-week shadow pilot with one hotel · many app instances behind one router · Valio’s systems subscribe to the op log · the mandate widens as the record earns it</p></div>
+    <div class="col a" style="--c:var(--go)"><p class="lab g">REAL</p><ul><li>Valio’s catalogue and live API</li><li>Gemini</li><li>Aiven</li><li>Exa and Context.dev</li><li>An open MCP and OpenAPI door</li></ul></div>
+    <div class="col a" style="--c:var(--hold)"><p class="lab h">SIMULATED, LABELLED</p><ul><li>The order: Valio’s API has no order endpoint</li><li>The supplier’s reply</li><li>Order history</li><li>Stock movement</li><li>The clock</li></ul></div>
+    <div class="col a" style="--c:var(--ink); flex:1.2"><p class="lab" style="color:var(--ink)">NEXT</p><ul><li>A 4-week shadow pilot with one hotel</li><li>Many app instances behind one router</li><li>Valio’s systems subscribe to the change log</li><li>The mandate widens as the record earns it</li></ul></div>
   </div>
   <div class="foot"><p>Valio’s test API answers from a fixed snapshot; every stock movement on screen is ours, and labelled</p><p class="pg"></p></div>
 </section>
@@ -350,6 +356,10 @@ svg.wires { position: absolute; left: 0; top: 0; overflow: visible; pointer-even
 .ag { background: var(--white); border: 2px solid var(--rule); border-radius: 8px 28px 28px 28px; padding: 18px 28px; display: flex; flex-direction: column; gap: 8px; }
 .ag p:last-child { font-size: 32px; line-height: 1.3; color: var(--ink); }
 .ag.done { border-color: var(--go); background: var(--go-wash); }
+.consent { flex: 1; background: var(--white); border: 2px solid var(--rule); border-top: 8px solid var(--c); border-radius: 14px; padding: 30px 32px; display: flex; flex-direction: column; gap: 14px; box-sizing: border-box; }
+.consent .ct { font-size: 38px; font-weight: 600; line-height: 1.2; color: var(--ink); }
+.consent .ask { margin-top: auto; background: var(--w); border-radius: 12px; padding: 18px 20px; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.btn { font: 600 26px var(--sans); color: #fff; background: var(--go); border-radius: 10px; padding: 10px 20px; white-space: nowrap; }
 .chatwide .me { font-size: 38px; padding: 20px 34px; }
 .chatwide .ag { width: 1240px; box-sizing: border-box; }
 .chatwide .ag p:last-child { font-size: 38px; }
@@ -364,7 +374,9 @@ svg.wires { position: absolute; left: 0; top: 0; overflow: visible; pointer-even
 .row .them { font-size: 34px; color: var(--ink-3); width: 290px; }
 .row .us { font-size: 34px; color: var(--go-ink); font-weight: 600; flex: 1; }
 .col { flex: 1; border-top: 6px solid var(--c); padding-top: 26px; display: flex; flex-direction: column; gap: 16px; }
-.col p:last-child { font-size: 34px; line-height: 1.38; color: var(--ink); }
+.col ul { margin: 0; padding-left: 1.1em; display: flex; flex-direction: column; gap: 10px; }
+.col li { font-size: 34px; line-height: 1.3; color: var(--ink); }
+.col li::marker { color: var(--c); }
 svg.wires .w { fill: none; stroke-width: 4; stroke-linecap: round; }
 </style>
 
