@@ -1,11 +1,10 @@
 <script lang="ts">
-	import { ArrowRight, TriangleAlert, Info } from '@lucide/svelte';
+	import { TriangleAlert, Info } from '@lucide/svelte';
 	import { onMount } from 'svelte';
 	import { storyTime } from '$lib/ui/format';
 	import { useShell } from '$lib/ui/shell/shell.svelte';
 	import MenuReview from '$lib/ui/request/MenuReview.svelte';
-	import RequestFlow from '$lib/ui/request/RequestFlow.svelte';
-	import type { MenuChange, MenuPlanResult, MenuView, RequestResult } from '$lib/ui/request/types';
+	import type { MenuChange, MenuPlanResult, MenuView } from '$lib/ui/request/types';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
@@ -16,36 +15,38 @@
 		'2 cases of butter Thursday',
 		'200 portions of pasta bolognese, half beef and the other half mixed'
 	];
-	const PLACEHOLDER = EXAMPLES[0];
-
-	let text = $state('');
 	let kitchenId = $state('');
 	$effect.pre(() => {
 		if (!kitchenId) kitchenId = data.defaultKitchen;
 	});
-	const newNonce = () => (crypto.randomUUID?.() ?? String(Math.random())).slice(0, 12);
-	/** The request being worked: new words mount a new flow; edits happen inside it. */
-	let submitted = $state.raw<{ text: string; nonce: string; key: number } | null>(null);
-	let result = $state.raw<RequestResult | null>(null);
 	let error = $state<string | null>(null);
-	/** Until hydration the form would submit natively and lose the text. */
+	/** Until hydration an example can't reach the composer. */
 	let ready = $state(false);
+	/**
+	 * D23: /request is the conversation, full width: the same agent, transcript and cards as the dock on every page.
+	 * `?text=` puts words in its composer; an example does the same. A menu the chat proposed (`?menu=`) opens above.
+	 */
 	onMount(() => {
 		ready = true;
+		if (shell) {
+			shell.chatFull = true;
+			const t = new URL(location.href).searchParams.get('text');
+			if (t) shell.chatDraft = t.slice(0, 500);
+			// "New order" (D31): a fresh conversation; earlier orders keep their own threads.
+			if (new URL(location.href).searchParams.get('new') === '1') shell.chatNew++;
+		}
 		void openLinkedMenu();
+		return () => {
+			if (shell) shell.chatFull = false;
+		};
 	});
-
-	function submit(t: string) {
-		const req = t.trim() || PLACEHOLDER;
-		text = req;
-		result = null;
-		submitted = { text: req, nonce: newNonce(), key: (submitted?.key ?? 0) + 1 };
+	function ask(t: string) {
+		if (shell) shell.chatDraft = t;
 	}
-
 	function startOver() {
-		submitted = null;
-		result = null;
-		text = '';
+		menu = null;
+		menuPlan = null;
+		linkedMenu = null;
 	}
 
 	/**
@@ -160,19 +161,9 @@
 
 	// The shell shows where the data comes from and the sandbox (workspace, run, clock, start over).
 	const shell = useShell();
-	const valioSource = $derived.by(() => {
-		const lookup = result?.lookup;
-		if (!lookup?.quotedIds.length) return null;
-		const at =
-			lookup.items
-				.flatMap((i) => i.shortlist)
-				.map((c) => c.offer?.price?.provenance.at ?? c.offer?.availability.provenance.at)
-				.find((x): x is string => !!x) ?? data.now;
-		return { live: lookup.offerSources.includes('valio_live'), at };
-	});
 	$effect(() => {
 		if (!shell) return;
-		shell.labels = { source: valioSource, offline: false };
+		shell.labels = { source: null, offline: false };
 		shell.sandbox = {
 			workspace: data.workspace.id,
 			run: data.workspace.run,
@@ -180,11 +171,8 @@
 			busy: resetting,
 			onReset: resetSandbox
 		};
-		// The agent dock follows this request: its kitchen, and the plan it produced once there is one.
-		shell.chat = {
-			kitchenId: result?.order?.plan.kitchenId ?? (kitchenId || undefined),
-			planId: result?.order?.plan.id
-		};
+		// The conversation acts for the kitchen chosen here.
+		shell.chat = { kitchenId: kitchenId || undefined };
 		return () => {
 			shell.labels = null;
 			shell.sandbox = null;
@@ -193,17 +181,21 @@
 	});
 </script>
 
-<svelte:head><title>Purchase request · Mandate</title></svelte:head>
+<svelte:head><title>Ask the agent · Mandate</title></svelte:head>
 
-<main class="mx-auto max-w-[820px] px-4 pt-6 pb-24 sm:pt-10">
-	<header class="mb-5 flex flex-wrap items-end justify-between gap-3">
+<main class="mx-auto max-w-[880px] px-4 pt-6 sm:pt-10">
+	<header class="mb-4 flex flex-wrap items-end justify-between gap-3">
 		<div>
 			<p class="text-meta font-medium tracking-[0.08em] text-ink-3 uppercase">
-				Mandate · purchase request
+				Mandate · ask the agent
 			</p>
 			<h1 class="mt-1 text-title leading-tight font-semibold tracking-[-0.01em] sm:text-display">
 				What does the kitchen need?
 			</h1>
+			<p class="mt-1 text-body text-ink-2">
+				Say it in your words, English or Finnish. The agent plans and prices it within your mandate;
+				anything over it waits for you.
+			</p>
 		</div>
 		<label class="flex items-center gap-2 text-body text-ink-2">
 			<span>Kitchen</span>
@@ -229,48 +221,14 @@
 			<Info size={15} class="shrink-0 text-signoff" aria-hidden="true" />{data.workspace.notice}
 		</p>
 	{/if}
-	<form
-		class="rounded-xl border border-rule-strong bg-sheet p-2 shadow-[0_1px_0_oklch(0.9_0.01_85)] focus-within:border-accent/60"
-		onsubmit={(e) => {
-			e.preventDefault();
-			submit(text);
-		}}
-	>
-		<label for="req" class="sr-only">Purchase request</label>
-		<textarea
-			id="req"
-			bind:value={text}
-			rows="2"
-			maxlength="500"
-			placeholder={PLACEHOLDER}
-			class="block w-full resize-none bg-transparent px-2.5 pt-2 text-title leading-snug text-ink placeholder:text-ink-3 focus:outline-none"
-			onkeydown={(e) => {
-				if (e.key === 'Enter' && !e.shiftKey) {
-					e.preventDefault();
-					submit(text);
-				}
-			}}></textarea>
-		<div class="flex items-center justify-between gap-2 px-1 pt-1">
-			<span class="hidden px-1.5 text-meta text-ink-3 sm:inline"
-				>English or Finnish. Quantity, product, day.</span
-			>
-			<button
-				type="submit"
-				disabled={!ready}
-				class="ml-auto inline-flex h-10 items-center gap-1.5 rounded-lg bg-accent px-4 text-body font-medium whitespace-nowrap text-sheet hover:bg-accent-ink disabled:opacity-50"
-			>
-				Find and price <ArrowRight size={16} aria-hidden="true" />
-			</button>
-		</div>
-	</form>
 
-	<div class="mt-3 flex flex-wrap items-center gap-2" aria-label="Examples">
+	<div class="mb-3 flex flex-wrap items-center gap-2" aria-label="Examples">
 		<span class="text-meta text-ink-3">Try</span>
 		{#each EXAMPLES as ex (ex)}
 			<button
 				type="button"
 				disabled={!ready}
-				onclick={() => submit(ex)}
+				onclick={() => ask(ex)}
 				class="h-8 rounded-full border border-rule-strong bg-sheet px-3 text-body text-ink-2 hover:border-accent/50 hover:text-accent-ink disabled:opacity-50"
 				>{ex}</button
 			>
@@ -279,15 +237,15 @@
 
 	{#if error}
 		<p
-			class="mt-4 flex items-start gap-2 rounded-lg border border-out/30 bg-out-wash px-3 py-2 text-body text-out"
+			class="mb-3 flex items-start gap-2 rounded-lg border border-out/30 bg-out-wash px-3 py-2 text-body text-out"
 			role="alert"
 		>
 			<TriangleAlert size={16} class="mt-0.5 shrink-0" aria-hidden="true" />{error}
 		</p>
 	{/if}
 
-	{#if linkedMenu && !submitted}
-		<section class="mt-8" aria-label="Menu from the chat" data-testid="linked-menu">
+	{#if linkedMenu}
+		<section class="mb-6" aria-label="Menu from the chat" data-testid="linked-menu">
 			<h2 class="text-heading font-semibold">Menu from the chat</h2>
 			{#if linkedMenu.note}<p class="mt-1 text-body text-ink-2" role="status">
 					{linkedMenu.note}
@@ -306,17 +264,5 @@
 			{/if}
 		</section>
 	{/if}
-
-	{#if submitted}
-		{#key submitted.key}
-			<RequestFlow
-				text={submitted.text}
-				{kitchenId}
-				nonce={submitted.nonce}
-				now={data.now}
-				onresult={(r) => (result = r)}
-				onnew={startOver}
-			/>
-		{/key}
-	{/if}
+	<!-- The conversation itself is the app shell's agent, rendered below in the page's flow (shell.chatFull). -->
 </main>
