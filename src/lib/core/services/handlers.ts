@@ -205,6 +205,12 @@ export function createHandlers(ports: ServicePorts): ToolHandlers {
 				});
 			const parsed = schema.input.safeParse(input);
 			if (!parsed.success) return invalid(parsed.error.issues);
+			if (name === 'approve' && ctx.approveBy === 'elicitation' && !ctx.elicited)
+				return err(
+					'FORBIDDEN',
+					'this client approves only after you accept the exact terms it shows you',
+					{ sub: 'elicitation_required' }
+				);
 			try {
 				const denied =
 					(await outsideGrant(ports, ctx, parsed.data)) ??

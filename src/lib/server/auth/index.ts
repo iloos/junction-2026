@@ -1,4 +1,5 @@
 import { SCOPES_BY_ACTOR, type ActorKind } from '$lib/core/contracts';
+import { chefLabel, verifyChefKey } from '$lib/server/demo/chef-key';
 import { visitorKey } from './visitor-key';
 import { DEMO_WORKSPACE, JUDGES_WORKSPACE } from '$lib/server/demo/workspaces';
 import { sameText } from './crypto';
@@ -102,6 +103,15 @@ export function resolveKey(
 ): CallContext | null {
 	if (!key) return null;
 	// Judge keys (HMAC of a visitor workspace, JUDGE_KEY_SECRET): an external agent in that sandbox only.
+	// Chef keys (D22): the visitor's own AI client, as their chef; it approves only through an accepted elicitation.
+	const chefWs = verifyChefKey(key, env);
+	if (chefWs)
+		return {
+			...contextFor('chef', chefLabel(chefWs), opts.via, env, chefWs),
+			scopes: ['read', 'plan', 'order', 'approve'],
+			visitor: visitorKey(chefWs),
+			approveBy: 'elicitation' as const
+		};
 	const judgeWs = verifyJudgeKey(key, env);
 	// The key was minted for one visitor's sandbox, so it acts as that visitor: it may change the kitchens they made
 	// (D26). An env or static key belongs to no visitor and never gets one.
