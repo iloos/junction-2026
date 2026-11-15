@@ -48,9 +48,10 @@ export function menuOverrides(needs: readonly Need[]): Record<string, number> {
 
 /** `overrides` are chef edits of an ingredient's amount per guest, by need id. */
 export function menuDemand(p: MenuProposal, overrides: Record<string, number> = {}): MenuNeed[] {
-	const guests = p.brief.guests;
 	const out: MenuNeed[] = [];
-	for (const dish of p.dishes)
+	for (const dish of p.dishes) {
+		// A dish for some of the guests (a split course) is sized for them only.
+		const guests = dish.guests ?? p.brief.guests;
 		for (const g of dish.ingredients) {
 			const id = menuNeedId(dish.id, g.id);
 			const per = overrides[id] ?? g.amountPerCover;
@@ -88,5 +89,6 @@ export function menuDemand(p: MenuProposal, overrides: Record<string, number> = 
 				...(unresolved ? { unresolved } : {})
 			});
 		}
+	}
 	return out;
 }

@@ -99,6 +99,11 @@ export const DishTemplate = z.object({
 	 * resolved product's allergen record, and an unknown record is held, never approved away.
 	 */
 	claimedCompatible: z.array(z.string()).default([]),
+	/**
+	 * The guests this dish is for, when it serves only some of them ("120 guests, half vegetarian": a vegetarian main
+	 * for 60 and a meat main for 60). Absent: every guest. Its ingredients are sized for these guests only.
+	 */
+	guests: z.int().positive().optional(),
 	ingredients: z.array(DishIngredient).min(1).max(20),
 	provenance: Provenance
 });
