@@ -126,6 +126,12 @@ for (const [i, s] of stores.entries()) {
 			await dock.locator('textarea').press('Enter');
 			await p.waitForTimeout(1500);
 			await working(p);
+			// On a phone the dock covers the page: its "Order it on the page" link is the way on.
+			const link = dock.getByRole('link', { name: /Order it on the page/ }).last();
+			if (await link.isVisible().catch(() => false)) {
+				await link.click();
+				await p.waitForLoadState('networkidle').catch(() => {});
+			}
 			const order = p
 				.getByRole('button', { name: /^(Order \d+ lines? now|Order the|Place order)/ })
 				.filter({ visible: true })
