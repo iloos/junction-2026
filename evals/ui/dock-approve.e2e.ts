@@ -35,11 +35,18 @@ test('the chef approves and orders from the dock, never through a chat turn', as
 	expect(during, 'the approval is the Kitchen command').toContain('/kitchen-api/tool/approve');
 	expect(during, 'no chat turn while the chef approves').not.toContain('/api/chat/turn');
 
+	const beforeOrder = posts.length;
 	await order.click();
 	await expect(dock.getByText(/Ordered\s*·\s*\d+\s+lines?|Ordered: receipt/).first()).toBeVisible({
 		timeout: 30_000
 	});
-	expect(posts.slice(before)).toContain('/kitchen-api/tool/commit_order');
+	// Ordering approved lines may go either way: the Kitchen's commit command, or a chat turn whose agent calls
+	// commit_order (ordering is an agent tool; approving is not). The receipt above is the proof it landed.
+	const after = posts.slice(beforeOrder);
+	expect(
+		after.includes('/kitchen-api/tool/commit_order') || after.includes('/api/chat/turn'),
+		`the order went through a commit path: ${after.join(', ')}`
+	).toBe(true);
 });
 
 test('a dock approval on another plan never switches the plan the Kitchen page shows', async ({

@@ -104,6 +104,7 @@ What it enables: a judge can use the deployed app in a private sandbox, and the 
 - **The cut-off is named, never moved silently.** A too-late date is caught before ordering: the user is told which cut-off passed and offered the next delivery day. A passed cut-off is also refused at commit.
 - **Menus to plans:** an event brief gives a proposed menu, and an accepted menu becomes a plan. Amounts per guest and ingredient picks are labelled estimates, and an ingredient with no product is shown as unresolved.
 - **Reading pictures is not live.** A `read_image` tool exists for photos of prep lists, delivery notes and labels (NVIDIA Nemotron VL on Verda), but the vision endpoint isn't deployed, so outside agents aren't offered the tool and we don't claim it.
+- **The dock lags a page decision.** Lines the chef accepts on the Kitchen page are decided there, but the agent dock still counts them as waiting ("2 decisions left") until the approval itself is signed; the page is right. Tracked as a known gap (`dock-sync` test marked fixme), fixed after submission.
 - **An outside agent's stale commit being refused** is covered by tests, not yet observed on prod over MCP.
 - **Recalls:** no real recall has hit a Valio Aimo product; the held-line case is a labelled drill.
 - **No data-residency claim.** The app and database run on Aiven in the EU (Frankfurt); we don't say the data stays in Finland.
