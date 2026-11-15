@@ -2,6 +2,7 @@
  * Mandate tiering (PRODUCT ★4, D6): every quoted line becomes eligible (act), held (propose | sign_off, with
  * reasons) or unorderable. Caps gate the act tier only; an external caller always needs a human approval.
  */
+import historyRecipes from '../../../../fixtures/seeds/usual-history.json';
 import type {
 	ActorKind,
 	Kitchen,
@@ -136,16 +137,24 @@ const tierOf = (r: LineReason): Tier =>
 const maxTier = (rs: LineReason[]): Tier =>
 	rs.map(tierOf).reduce<Tier>((a, b) => (RANK[b] > RANK[a] ? b : a), 'act');
 
+const HISTORY = historyRecipes as { profiles: Record<string, { items: { productId: string }[] }> };
+/** Every product a kitchen profile's order history holds. */
+export const historyProducts = (profile: string | undefined): string[] =>
+	(profile && HISTORY.profiles[profile]?.items.map((i) => i.productId)) || [];
+
 /**
  * Products this kitchen counts as known for the never-delegate `new_sku` rule: anything it committed in this run plus
  * its standing-order baseline. Without the baseline a fresh run would treat the normal week's own products as new.
  */
 export function orderedBefore(
 	state: { orders: Record<string, { kitchenId: string; lines: { productId: string }[] }> },
-	kitchen: Pick<Kitchen, 'id' | 'usualProducts'>
+	kitchen: Pick<Kitchen, 'id' | 'usualProducts'> & { profile?: string },
+	/** The plan's door: a usual order is the kitchen's own history, so its staples aren't new products. */
+	origin?: string
 ): Set<string> {
 	return new Set([
 		...(kitchen.usualProducts ?? []),
+		...(origin === 'usual' ? historyProducts(kitchen.profile) : []),
 		...Object.values(state.orders)
 			.filter((o) => o.kitchenId === kitchen.id)
 			.flatMap((o) => o.lines.map((l) => l.productId))

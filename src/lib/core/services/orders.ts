@@ -274,7 +274,7 @@ export async function placeOrder(
 			weekSpentCents: spent,
 			actor: ctx.actor.kind,
 			createdBy: ctx.actor.kind,
-			orderedBefore: orderedBefore(state, kitchen),
+			orderedBefore: orderedBefore(state, kitchen, ctx.origin),
 			recalled: recalledProducts(state),
 			needs,
 			orderRequirements: input.requirements,
@@ -507,7 +507,7 @@ export async function commitOrder(
 			weekSpentCents: spent,
 			actor: ctx.actor.kind,
 			createdBy: plan.createdBy.kind,
-			orderedBefore: orderedBefore(state, kitchen),
+			orderedBefore: orderedBefore(state, kitchen, plan.origin),
 			recalled: recalledProducts(state),
 			committed,
 			// The same yardstick as the quote, so a line held for its quantity stays held here.
