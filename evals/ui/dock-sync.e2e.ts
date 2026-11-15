@@ -27,7 +27,6 @@ async function planBuffet(page: Page) {
 }
 
 test('approving on the page shows in the dock, with the way on', async ({ page }) => {
-	test.fixme(true, "D23 per-line accepts aren't reflected in the dock count; post-submission");
 	test.setTimeout(180_000);
 	await planBuffet(page);
 	const dock = await openDock(page);

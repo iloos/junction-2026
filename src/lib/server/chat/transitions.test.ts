@@ -18,7 +18,7 @@ import { trialWorkspace } from '../agent/trial-harness';
 import { FIDELITY_NOW } from '../evals/fidelity';
 import { withServerKey } from '../agent/loop';
 import { readTurnBody } from './body';
-import { chatTurn } from './turn';
+import { chatTurn, taskView } from './turn';
 
 let fx: Awaited<ReturnType<typeof createFixtureDb>>;
 beforeAll(async () => {
@@ -267,6 +267,23 @@ describe('suite: chat transitions (round 9)', () => {
 		const st = await s.state();
 		expect(Object.values(st.orders)).toHaveLength(1);
 		expect(st.plans[p.id].lines.map((l) => l.state)).toEqual(['committed', 'held']);
+	});
+
+	it('dock-sync: a line accepted on the page leaves the card and the count', async () => {
+		const s = await setup();
+		const p = await s.place(['100002', '100003']);
+		const t = await s.task([p]);
+		const before = await taskView(t.id, s.deps);
+		const card0 = before.find((e) => e.type === 'decision');
+		const lines0 = card0?.type === 'decision' ? card0.decisions.flatMap((d) => d.lineIds) : [];
+		expect(lines0).toHaveLength(2);
+		await s.grant(p.id, [p.lines[0].id]);
+		const after = await taskView(t.id, s.deps);
+		const card = after.find((e) => e.type === 'decision');
+		const lines = card?.type === 'decision' ? card.decisions.flatMap((d) => d.lineIds) : [];
+		expect(lines).toEqual([p.lines[1].id]);
+		const ledger = after.find((e) => e.type === 'ledger');
+		expect(ledger?.type === 'ledger' && ledger.ledger.decisionsLeft).toBe(1);
 	});
 
 	it('R9-03: kilograms for a line bought in litres are asked about, never applied', async () => {
