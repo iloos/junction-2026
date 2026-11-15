@@ -656,34 +656,39 @@ export async function findSubstitutes(
 		if (!content || content.value <= 0) return undefined;
 		return { cents: Math.round(cents / content.value), per: content.unit };
 	};
+	const panelRow = (r: (typeof ranked)[number], pickReason?: string) => {
+		const p = products.get(r.productId);
+		const rel = relation(r.productId) as { whatChanges?: string };
+		const price = perUnit(r.productId);
+		const reason: string =
+			steerReason(p) ??
+			rel.whatChanges ??
+			pickReason ??
+			(r.fromValioRule ? "Valio's own substitute" : 'next best under your rules');
+		// Sized to the need, so the panel shows what buying it means in total, not only per kg.
+		const qty = sized.get(r.productId);
+		const unitCents = offers.find((o) => o.productId === r.productId)?.price?.unitCents;
+		return {
+			productId: r.productId,
+			productName: nameOf(r.productId),
+			reason: reason.slice(0, 120),
+			supply: r.supply ?? 'unknown',
+			...(price ? { pricePer: price } : {}),
+			...(qty ? { qty: { value: qty.value, unit: qty.unit } } : {}),
+			...(qty && unitCents != null ? { totalCents: Math.round(qty.value * unitCents) } : {})
+		};
+	};
 	const alternatives = ranked
 		.filter((r) => r.rank !== null && r.productId !== best?.productId)
 		.sort((a, b) => a.rank! - b.rank!)
 		.slice(0, 4)
-		.map((r) => {
-			const p = products.get(r.productId);
-			const rel = relation(r.productId) as { whatChanges?: string };
-			const price = perUnit(r.productId);
-			const reason: string =
-				steerReason(p) ??
-				rel.whatChanges ??
-				(r.fromValioRule ? "Valio's own substitute" : 'next best under your rules');
-			// Sized to the need, so the panel shows what buying it means in total, not only per kg.
-			const qty = sized.get(r.productId);
-			const unitCents = offers.find((o) => o.productId === r.productId)?.price?.unitCents;
-			return {
-				productId: r.productId,
-				productName: nameOf(r.productId),
-				reason: reason.slice(0, 120),
-				supply: r.supply ?? 'unknown',
-				...(price ? { pricePer: price } : {}),
-				...(qty ? { qty: { value: qty.value, unit: qty.unit } } : {}),
-				...(qty && unitCents != null ? { totalCents: Math.round(qty.value * unitCents) } : {})
-			};
-		});
+		.map((r) => panelRow(r));
+	// The agent's pick, priced and sized the same way, for the panel's top row.
+	const pick = best ? panelRow(best, 'best under your rules') : undefined;
 	const base = {
 		kind,
 		candidates,
+		...(pick ? { pick } : {}),
 		alternatives,
 		labourNote,
 		residual,

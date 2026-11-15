@@ -41,6 +41,21 @@ export const SCOPES_BY_ACTOR = {
 	job: ['read']
 } as const satisfies Record<string, readonly ToolScope[]>;
 
+/**
+ * D28: one product in the compare panel (the agent's pick or an alternative): one reason, its supply, its price per kg,
+ * l or piece, and the quantity and total sized to the line's need.
+ */
+export const Alternative = z.object({
+	productId: ProductId,
+	productName: z.string().optional(),
+	reason: z.string().max(120),
+	supply: z.string(),
+	pricePer: z.object({ cents: Cents, per: MeasureUnit }).optional(),
+	/** Sized to the line's need, in the product's sales units, and what that costs. */
+	qty: z.object({ value: z.number(), unit: z.string() }).optional(),
+	totalCents: Cents.optional()
+});
+
 const PlanRef = z.object({ planId: z.string(), version: z.int().nonnegative() });
 
 /**
@@ -393,20 +408,9 @@ export const toolSchemas = {
 			 * D28: up to four ranked alternatives after the pick, each with one reason, its supply and its price per kg
 			 * or l (when the pack content is known), for the compare panel.
 			 */
-			alternatives: z
-				.array(
-					z.object({
-						productId: ProductId,
-						productName: z.string().optional(),
-						reason: z.string().max(120),
-						supply: z.string(),
-						pricePer: z.object({ cents: Cents, per: MeasureUnit }).optional(),
-						/** Sized to the line's need, in the product's sales units, and what that costs. */
-						qty: z.object({ value: z.number(), unit: z.string() }).optional(),
-						totalCents: Cents.optional()
-					})
-				)
-				.optional(),
+			/** D28: the agent's pick in the same shape as an alternative, so the panel's top row has its total too. */
+			pick: Alternative.optional(),
+			alternatives: z.array(Alternative).optional(),
 			labourNote: z.string().optional(),
 			residual: Measure.optional(),
 			/** Why the pick is not what the kitchen prefers, in words ("no Finnish in stock: picked Swedish"). */
