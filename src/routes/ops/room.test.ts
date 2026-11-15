@@ -10,6 +10,9 @@ import {
 	shortageCounts,
 	storesCreated,
 	storeTotals,
+	storeStates,
+	byActivity,
+	ordersLastMinute,
 	type OpsKitchen
 } from './room';
 import type { Order } from '$lib/core/contracts';
@@ -111,5 +114,65 @@ describe('room', () => {
 		expect(
 			lastIncident([...run, n(4, 'simulated: Valio is short', 'z')], 'Simulated incident')
 		).toBeNull();
+	});
+});
+
+describe('room at scale', () => {
+	const k = (id: string, extra: Partial<OpsKitchen> = {}) =>
+		({ id, name: id, kind: 'blank', city: '', ...extra }) as OpsKitchen;
+	it('one state per store: ordered, waiting, planning, joined', () => {
+		const ks = [k('k-v-a'), k('k-v-b'), k('k-v-c'), k('k-v-d')];
+		const s = storeStates(
+			ks,
+			{ 'k-v-a': { n: 1 } },
+			[{ kitchenId: 'k-v-b' }, { kitchenId: 'k-v-c' }],
+			new Set(['k-v-b'])
+		);
+		expect(s).toEqual({
+			'k-v-a': 'ordered',
+			'k-v-b': 'waiting',
+			'k-v-c': 'planning',
+			'k-v-d': 'joined'
+		});
+	});
+	it('latest order first, then waiting, planning, the newest joiners, samples last', () => {
+		const ks = [k('k-hotel'), k('k-v-1'), k('k-v-2'), k('k-v-3'), k('k-v-4')];
+		const states = storeStates(
+			ks,
+			{ 'k-v-1': { n: 1 } },
+			[{ kitchenId: 'k-v-2' }],
+			new Set(['k-v-2'])
+		);
+		const feed = [
+			{
+				id: 'o',
+				kitchenId: 'k-v-1',
+				kitchenName: '',
+				lines: 1,
+				totalCents: 1,
+				committedAt: '2026-12-07T10:00:00Z',
+				deliverBy: ''
+			}
+		];
+		expect(byActivity(ks, states, feed).map((x) => x.id)).toEqual([
+			'k-v-1',
+			'k-v-2',
+			'k-v-4',
+			'k-v-3',
+			'k-hotel'
+		]);
+	});
+	it('counts the orders of the last minute', () => {
+		const now = Date.parse('2026-12-07T10:01:00Z');
+		const at = (s: string) => ({
+			id: s,
+			kitchenId: 'x',
+			kitchenName: '',
+			lines: 1,
+			totalCents: 1,
+			committedAt: s,
+			deliverBy: ''
+		});
+		expect(ordersLastMinute([at('2026-12-07T10:00:30Z'), at('2026-12-07T09:59:00Z')], now)).toBe(1);
 	});
 });
