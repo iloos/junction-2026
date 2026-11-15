@@ -302,7 +302,7 @@ h3 { margin: 0; font: 600 18px/1.25 var(--display); }
 	<main>
 		<section class="intro" aria-labelledby="h-intro">
 			<p class="eyebrow">How it works</p>
-			<h1 id="h-intro">From a kitchen's rules to one Valio order</h1>
+			<h1 id="h-intro">From a kitchen's rules to one Valio Aimo order</h1>
 			<p class="lede">Mandate is a purchasing agent for a kitchen. It orders from Valio on its own only what the kitchen's mandate allows, and a person decides the rest.</p>
 			<p class="outcomes">Every line it prepares either
 				<span class="mchip within"><svg class="ic" aria-hidden="true"><use href="#i-shield"/></svg>goes through</span>
@@ -690,48 +690,14 @@ h3 { margin: 0; font: 600 18px/1.25 var(--display); }
 
 		<!-- Trust -->
 		<section class="band" id="trust" aria-labelledby="h-trust">
-			<p class="eyebrow">Checks behind each claim</p>
-			<h2 id="h-trust">The code and the test behind each claim</h2>
-			<p class="slead">Each row is a claim, the code that enforces it, and the test that checks it.</p>
-			<table class="tbl">
-				<thead><tr><th scope="col">Claim</th><th scope="col">How</th><th scope="col">Test</th></tr></thead>
-				<tbody>
-					<tr><th scope="row">Every caller passes the same checks</th><td data-h="How">One gate: known tool, scope, checked input. The caller comes from its key or cookie.</td><td class="t" data-h="Test">adversarial.test.ts · eval s5 · visitor-gate.e2e.ts</td></tr>
-					<tr><th scope="row">Every change goes through one function and is logged</th><td data-h="How"><code>applyOps</code> over 9 op types, each with a sequence number, who acted and the door it came through.</td><td class="t" data-h="Test">core/state.test.ts</td></tr>
-					<tr><th scope="row">The rules are plain code you can read</th><td data-h="How">The core imports no Svelte, Node, vendor SDK or server code; lint enforces it.</td><td class="t" data-h="Test">eslint rule on <code>src/lib/core</code></td></tr>
-					<tr><th scope="row">A slow API can't block or corrupt an order</th><td data-h="How">Valio, Gemini and web calls finish before the transaction starts.</td><td class="t" data-h="Test">server/store/prepare.test.ts</td></tr>
-					<tr><th scope="row">The same order sent many times gives one receipt</th><td data-h="How">A key per sandbox, caller and tool, with a hash of the request.</td><td class="t" data-h="Test">evals s1, s5 · pg-race.test.ts · smoke-race on the live app</td></tr>
-					<tr><th scope="row">A yes covers the exact price, quantity and date</th><td data-h="How">Terms hash, plan version, mandate version and expiry; the order re-checks them.</td><td class="t" data-h="Test">gate.test.ts · view.test.ts · eval s4</td></tr>
-					<tr><th scope="row">A voided approval shows what changed</th><td data-h="How">The plan keeps the difference from the terms that were approved.</td><td class="t" data-h="Test">eval r6-5</td></tr>
-					<tr><th scope="row">An allergen change never rides with routine lines</th><td data-h="How">One approval per reason group; the rest is re-bound.</td><td class="t" data-h="Test">server/store/groups.test.ts</td></tr>
-					<tr><th scope="row">Unknown supply never counts as cover</th><td data-h="How">Valio's “no quantity” figure is unknown supply, and known stock ranks first.</td><td class="t" data-h="Test">fulfilment.test.ts · server/store/pool.test.ts</td></tr>
-					<tr><th scope="row">Every ordered line names what allowed it</th><td data-h="How">The mandate or a named approval. An outside agent's line always needs the approval.</td><td class="t" data-h="Test">server/store/authority.test.ts</td></tr>
-					<tr><th scope="row">A model's caution can only add a hold</th><td data-h="How">Model cautions are reasons that hold a line.</td><td class="t" data-h="Test">core/services/substitutes.ts</td></tr>
-					<tr><th scope="row">Product text can't steer the agent</th><td data-h="How">The planner gets typed, length-bounded facts.</td><td class="t" data-h="Test">facts.test.ts · adversarial.test.ts</td></tr>
-					<tr><th scope="row">The chat never approves</th><td data-h="How">A rules guard refuses “approve it”.</td><td class="t" data-h="Test">evals/chat · dock-approve.e2e.ts</td></tr>
-					<tr><th scope="row">Amounts stay physical</th><td data-h="How">10 l of milk is sized in litres, then in packs.</td><td class="t" data-h="Test">server/store/direct.test.ts</td></tr>
-					<tr><th scope="row">A stated requirement survives</th><td data-h="How">A vegetarian or lactose-free need keeps its requirement through substitutes and edits.</td><td class="t" data-h="Test">vegetarian.test.ts · request/fixes.test.ts</td></tr>
-					<tr><th scope="row">Each visitor's world is their own</th><td data-h="How">A signed cookie per visitor and keys that work only in that sandbox.</td><td class="t" data-h="Test">server/demo/{visitor,judge-key,sandbox}.test.ts</td></tr>
-					<tr><th scope="row">The same words give the same basket</th><td data-h="How">For the cases we test, in English and Finnish, through Request, the agent and REST. Chat reads words with its own model.</td><td class="t" data-h="Test">evals/fidelity · evals/paraphrase</td></tr>
-				</tbody>
-			</table>
-			<p class="more">Each claim checked on the live app, with where it was seen: <a href="/proof">Proof</a>.</p>
-
-			<div class="sm">
-				<h3>The three state machines</h3>
-				<p class="smhint">Each diagram scrolls sideways.</p>
-				<div class="smc"><div class="svgw"><svg viewBox="0 0 540 190" id="smPlan" role="img" aria-label="Plan states: draft, quoted, ready or held, committed"></svg></div><div><h4>Plan</h4><p>Green is the usual path. Any edit sends the plan back to draft and clears its terms, so an earlier approval no longer applies.</p></div></div>
-				<div class="smc"><div class="svgw"><svg viewBox="0 0 540 190" id="smLine" role="img" aria-label="Line states: proposed, eligible, held, rejected, unorderable, committed"></svg></div><div><h4>Line</h4><p>A line inside the mandate is ordered without asking. Any other line waits for the chef with its reasons. A line below Valio's lot step can't be ordered at all.</p></div></div>
-				<div class="smc"><div class="svgw"><svg viewBox="0 0 540 190" id="smAppr" role="img" aria-label="Approval states: pending, granted, denied, invalidated, expired"></svg></div><div><h4>Approval</h4><p>An approval is tied to the plan version, the exact terms, the mandate version and an expiry. If any of them changes, the order is refused.</p></div></div>
-				<div class="smleg"><span><i style="border-color:var(--ok)"></i>usual path</span><span><i style="border-color:var(--auth);border-style:dashed"></i>waits for a person</span><span><i style="border-color:var(--out);border-style:dashed"></i>sends it back</span><span><i style="border-color:var(--out);border-width:2px"></i>final</span></div>
-				<p class="src">Each rule with its test: <a href="/proof">Proof</a>.</p>
-			</div>
+			<h2 id="h-trust">Every claim has a test behind it</h2>
+			<p class="slead">Each claim on this page links to its code and the test that checks it. <a href="/proof">See the proof →</a></p>
 		</section>
 
 		<!-- What Valio sees -->
 		<section class="band" id="ops" aria-labelledby="h-ops">
 			<p class="eyebrow">What Valio sees</p>
-			<h2 id="h-ops">Valio's control room shows every held line, by cause, across kitchens</h2>
+			<h2 id="h-ops">Valio Aimo's control room shows every held line, by cause, across kitchens</h2>
 			<p class="slead">Ops reads the same records the kitchens write, so Valio sees why a line is waiting and can open the exact kitchen plan.</p>
 			<div class="cards c3">
 				<div class="card"><div class="hd"><svg class="ic" aria-hidden="true"><use href="#i-hold"/></svg><h3>Problems</h3></div><p>Held lines and recall cases grouped by cause, biggest first, each with what happened.</p></div>
@@ -764,7 +730,7 @@ h3 { margin: 0; font: 600 18px/1.25 var(--display); }
 					<tr><th scope="row">Valio Aimo</th><td data-h="Job">The catalogue of 17,546 products; live price and availability for shortlisted products only, at most 200 per call, availability fetched again after 15 minutes.</td><td data-h="Fallback">The cached offer, labelled with its age; the file catalogue; scenario stock.</td><td><span class="pill pl-live">Seen live</span></td></tr>
 					<tr><th scope="row">Gemini 3.5 Flash-Lite</th><td data-h="Job">Reads product requests and chat messages, and writes the chat's reply from the ledger. The agent planner job is opt-in and off on the live app.</td><td data-h="Fallback">The rules parser, the rules classifier, the ledger's own text.</td><td><span class="pill pl-live">Seen live</span></td></tr>
 					<tr><th scope="row">Gemini 3.8 Flash</th><td data-h="Job">Proposes a menu from a brief; every amount is an estimate.</td><td data-h="Fallback">The team's dish templates.</td><td><span class="pill pl-live">Seen live</span></td></tr>
-					<tr><th scope="row">Gemini Decisions</th><td data-h="Job">Scores how well each substitute fits the dish, one input to the code's ranking, and can flag a constraint risk that holds the line. It never approves or allows anything.</td><td data-h="Fallback">A recorded replay, then rules.</td><td><span class="pill pl-test">Tested, one live call</span></td></tr>
+					<tr><th scope="row">Gemini Decisions</th><td data-h="Job">Scores how well each substitute fits the dish, one input to the code's ranking, and can flag a constraint risk that holds the line. It never approves or allows anything.</td><td data-h="Fallback">A recorded replay, then rules.</td><td><span class="pill pl-test">Every shortage; falls back, labelled</span></td></tr>
 					<tr><th scope="row">Aiven</th><td data-h="Job">Runs the app as one container; Postgres holds every table and pushes live updates to Ops.</td><td data-h="Fallback">PGlite with the same migrations, for tests and offline.</td><td><span class="pill pl-live">Seen live</span></td></tr>
 					<tr><th scope="row">Exa</th><td data-h="Job">Cited product facts in the Why drawer: net content, origin, ingredients. Options outside the catalogue.</td><td data-h="Fallback">Recorded responses, under daily caps.</td><td><span class="pill pl-live">Seen live, Why drawer</span></td></tr>
 					<tr><th scope="row">Context.dev</th><td data-h="Job">Checks the recall list every 5 minutes and matches each notice against the catalogue. A matching product's line is held.</td><td data-h="Fallback">Recorded notices; a drill, labelled as one.</td><td><span class="pill pl-live">Seen live, no real recall matched</span></td></tr>

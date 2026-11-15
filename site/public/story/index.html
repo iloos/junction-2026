@@ -768,7 +768,7 @@ const P=[
   why:"The agent plans against what Valio states. Products with a stated quantity rank first. A product whose quantity Valio doesn't state is <b>never counted as cover</b>.",
   ex:{t:'one line in the Christmas plan',n:'values from the demo scenario',b:'<i>→</i> quote: HK Palvikinkku viipaloitu 1,5 kg\n<i>←</i> <em>Valio states 15 packs</em> · €15.43 a pack · 1 pack = 1.5 kg\n   <i>Valio, cached, with the time fetched</i>'},
   fb:'the cached offer, labelled with its age',proof:'the Why drawer labels each value Valio cached or live'},
- {name:'Gemini',tag:'live · tested',role:'Reading requests, proposing menus, ranking substitutes',sub:'Flash-Lite and Flash live; Decisions tested',stages:['Parse','Decide'],
+ {name:'Gemini',tag:'live',role:'Reading requests, proposing menus, ranking substitutes',sub:'Flash-Lite and Flash live; Decisions on every shortage, with a labelled fallback',stages:['Parse','Decide'],
   how:"<b>Flash-Lite</b> reads a buyer's words into a structured request. <b>Gemini 3.8 Flash</b> proposes a menu from an event brief, every amount marked as an estimate. <b>Decisions</b> scores how well each substitute fits the dish, one input to the code's ranking, and can flag a constraint risk that holds the line. It never approves or allows anything.",
   why:'Words like "lactose-free" survive the parse, so the basket matches what was asked. Every check that decides what may be ordered runs in plain code.',
   ex:{t:"Valio's own example",n:'illustrative',b:'<i>→</i> "1,000 L lactose-free milk by Monday"\n<i>←</i> 1,000 L milk · <em>lactose-free: required</em> · by Monday'},

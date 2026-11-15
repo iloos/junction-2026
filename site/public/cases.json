@@ -569,8 +569,8 @@
 		}
 	],
 	"sponsors": {
-		"recordedAt": "2026-11-14T23:44:06.423Z",
-		"appCommit": "5ed5bdf5a3c22a5c3b56c09c87524e417a464966",
+		"recordedAt": "2026-11-15T04:48:31.998Z",
+		"appCommit": "04e7e4d8f3d3e400187fb7ee028eb23757a8abf3",
 		"source": {
 			"app": "https://app.mandate.kitchen",
 			"endpoints": [
@@ -581,7 +581,7 @@
 		},
 		"db": {
 			"ok": true,
-			"latencyMs": 1,
+			"latencyMs": 7,
 			"tls": "verified"
 		},
 		"services": {
@@ -590,76 +590,81 @@
 				"breaker": "closed",
 				"configured": true,
 				"last": {
-					"at": "2026-11-14T23:41:41.120Z",
+					"at": "2026-11-15T04:46:12.576Z",
 					"source": "live",
 					"ok": true,
-					"latencyMs": 57
+					"latencyMs": 71
 				},
 				"lastLive": {
-					"at": "2026-11-14T23:41:41.120Z",
+					"at": "2026-11-15T04:46:12.576Z",
 					"ok": true,
-					"ageS": 145
+					"ageS": 139
 				},
 				"recent": {
 					"live": 9
 				},
 				"day": {
-					"calls": 368,
-					"live": 368,
-					"liveOk": 368,
+					"calls": 668,
+					"live": 668,
+					"liveOk": 668,
 					"cache": 0,
 					"replay": 0,
 					"fixture": 0
 				},
-				"liveMs": 57
+				"liveMs": 71
 			},
 			"gemini": {
 				"mode": "live",
 				"breaker": "closed",
 				"configured": true,
 				"last": {
-					"at": "2026-11-14T23:43:14.392Z",
+					"at": "2026-11-15T04:46:21.088Z",
 					"source": "live",
 					"ok": true,
-					"latencyMs": 495
+					"latencyMs": 8477
 				},
 				"lastLive": {
-					"at": "2026-11-14T23:43:14.392Z",
+					"at": "2026-11-15T04:46:21.088Z",
 					"ok": true,
-					"ageS": 52
+					"ageS": 131
 				},
 				"recent": {
-					"live": 30
+					"live": 13
 				},
 				"day": {
-					"calls": 826,
-					"live": 826,
-					"liveOk": 826,
+					"calls": 1476,
+					"live": 1476,
+					"liveOk": 1475,
 					"cache": 0,
 					"replay": 0,
 					"fixture": 0
 				},
-				"liveMs": 495
+				"liveMs": 8477
 			},
 			"exa": {
-				"mode": "cache",
+				"mode": "live",
 				"breaker": "closed",
 				"configured": true,
 				"last": {
-					"at": "2026-11-14T23:42:47.193Z",
-					"source": "cache",
+					"at": "2026-11-15T04:46:57.032Z",
+					"source": "live",
 					"ok": true,
 					"latencyMs": 0
 				},
-				"lastLive": null,
+				"lastLive": {
+					"at": "2026-11-15T04:46:57.032Z",
+					"ok": true,
+					"ageS": 95
+				},
 				"recent": {
-					"cache": 20
+					"cache": 100,
+					"live": 12
 				},
 				"day": {
-					"calls": 408,
-					"live": 222,
-					"liveOk": 222,
-					"cache": 186,
+					"calls": 4083,
+					"live": 528,
+					"liveOk": 528,
+					"cache": 3555,
 					"replay": 0,
 					"fixture": 0
 				},
@@ -670,35 +675,34 @@
 				"breaker": "closed",
 				"configured": true,
 				"last": {
-					"at": "2026-11-14T23:44:06.284Z",
+					"at": "2026-11-15T04:48:31.763Z",
 					"source": "cache",
 					"ok": true,
 					"latencyMs": 0
 				},
 				"lastLive": {
-					"at": "2026-11-14T23:41:43.490Z",
-					"ok": false,
-					"ageS": 143
+					"at": "2026-11-15T04:35:43.026Z",
+					"ok": true,
+					"ageS": 769
 				},
 				"recent": {
-					"failed": 4,
 					"cache": 24,
 					"live": 1
 				},
 				"day": {
-					"calls": 183,
-					"live": 123,
-					"liveOk": 107,
-					"cache": 60,
+					"calls": 831,
+					"live": 211,
+					"liveOk": 187,
+					"cache": 620,
 					"replay": 0,
 					"fixture": 0
 				},
 				"liveMs": null,
 				"recallList": {
-					"readAt": "2026-11-14T23:44:02.335Z",
-					"count": 102,
+					"readAt": "2026-11-15T04:48:27.550Z",
+					"count": 101,
 					"newest": "2026-11-11",
-					"latencyMs": 217,
+					"latencyMs": 147,
 					"endpoint": "POST /api/web/recall {}",
 					"source": "cache"
 				}
