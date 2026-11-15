@@ -10,7 +10,6 @@
 	import StateChip from './StateChip.svelte';
 	import ProductThumb from './ProductThumb.svelte';
 	import SwapPanel from './SwapPanel.svelte';
-	import HoldButton from './HoldButton.svelte';
 	import { ChevronDown, Repeat } from '@lucide/svelte';
 	import { Popover } from 'bits-ui';
 	import AgentMark from './AgentMark.svelte';
@@ -154,12 +153,9 @@
 			{#if decide?.state === 'denied'}
 				<p class="text-meta text-out">Not ordered: {decide.cost}</p>
 			{:else if decide?.state === 'pending' && decide.signOff}
-				<div class="mt-1.5 max-w-72">
-					<p class="mb-1 text-meta text-signoff">
-						Needs your sign-off on its own. If rejected: {decide.cost}.
-					</p>
-					<HoldButton label="Hold to sign off" disabled={decide.busy} onconfirm={decide.onaccept} />
-				</div>
+				<p class="mt-0.5 text-meta text-signoff">
+					Needs your sign-off with its group. If rejected: {decide.cost}.
+				</p>
 			{/if}
 			{#if expanded && hasDetail}
 				<dl class="mono mt-0.5 grid grid-cols-[auto_1fr] gap-x-2 text-micro text-ink-2">
@@ -244,6 +240,15 @@
 			</Popover.Root>
 		{:else}
 			<StateChip state={l.state} tier={l.tier} reasons={l.reasons} {approved} view={l.view} />
+		{/if}
+		{#if decide?.state === 'pending' && decide.signOff}
+			<button
+				type="button"
+				class="inline-flex h-8 shrink-0 items-center rounded-md border border-rule-strong px-3 text-meta text-ink hover:border-out disabled:opacity-50"
+				disabled={decide.busy}
+				title="Not ordered: {decide.cost}"
+				onclick={decide.onreject}>Reject</button
+			>
 		{/if}
 		{#if decide?.state === 'pending' && !decide.signOff}
 			<!-- The separate buttons where they fit; on a phone the chip menu carries them. -->

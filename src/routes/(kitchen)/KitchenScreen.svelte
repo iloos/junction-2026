@@ -17,7 +17,7 @@
 		Smartphone,
 		Plus
 	} from '@lucide/svelte';
-	import { Popover } from 'bits-ui';
+	import { Dialog, Popover } from 'bits-ui';
 	import { KitchenStore } from '$lib/kitchen/kitchen.svelte';
 	import { KITCHENS, PRODUCTS, SEED } from '$lib/kitchen/catalog';
 	import { eventFor, type EventSeedFile } from '$lib/kitchen/events';
@@ -68,7 +68,6 @@
 	import ActionBar from '$lib/ui/ActionBar.svelte';
 	import { sourceChip, type Basket as BasketData } from '$lib/ui/basket';
 	import DayPicker from '$lib/ui/DayPicker.svelte';
-	import HoldButton from '$lib/ui/HoldButton.svelte';
 	import Receipt from '$lib/ui/Receipt.svelte';
 	import ProductThumb from '$lib/ui/ProductThumb.svelte';
 	import { acceptAll, lineDecisions } from '$lib/kitchen/line-decisions';
@@ -882,6 +881,22 @@
 			.sort((a, b) => b.date.localeCompare(a.date))
 	);
 	let ordersOpen = $state(false);
+	/** The sign-off group under review (D13): its exact lines and terms, confirmed in one explicit act. */
+	let signGroup = $state<(typeof decisions)[number] | null>(null);
+	async function confirmSignOff() {
+		const g = signGroup;
+		if (!g) return;
+		await k.decideLines(
+			[
+				{
+					approval: { id: g.approvalId, planVersion: g.planVersion, termsHash: g.termsHash },
+					lineIds: g.lineIds
+				}
+			],
+			'grant'
+		);
+		signGroup = null;
+	}
 	/** D31: a fresh conversation for a new order; the open plan and its thread stay as they were. */
 	/** D31: a new order is a fresh conversation, full width on /request (S3); the open plan stays as it was. */
 	async function newOrder() {
@@ -1618,19 +1633,14 @@
 												<p class="text-meta text-ink-3">{g.consequence}</p>
 											</div>
 											{#if g.signOff}
-												<div class="w-full max-w-72 sm:w-64">
-													<HoldButton
-														label="Hold to sign off {g.lines.length} {g.lines.length === 1
-															? 'line'
-															: 'lines'}"
-														disabled={k.busy || k.readOnly}
-														onconfirm={() =>
-															void k.decideLines(
-																[{ approval: terms, lineIds: g.lineIds }],
-																'grant'
-															)}
-													/>
-												</div>
+												<button
+													type="button"
+													class="inline-flex h-9 items-center rounded-md border border-signoff px-3 text-meta font-medium whitespace-nowrap text-ink hover:bg-signoff-wash disabled:opacity-50"
+													disabled={k.busy || k.readOnly}
+													onclick={() => (signGroup = g)}
+													>Review and sign off {g.lines.length}
+													{g.lines.length === 1 ? 'line' : 'lines'}</button
+												>
 											{:else if pendingIds.length}
 												<button
 													type="button"
@@ -2347,6 +2357,57 @@
 			{/if}
 		</div>
 	</div>
+
+	<Dialog.Root open={!!signGroup} onOpenChange={(v) => !v && (signGroup = null)}>
+		<Dialog.Portal>
+			<Dialog.Overlay class="fixed inset-0 z-50 bg-ink/30" />
+			<Dialog.Content
+				class="fixed top-1/2 left-1/2 z-50 max-h-[85dvh] w-[min(560px,calc(100vw-24px))] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-lg border border-rule bg-sheet p-5 shadow-xl"
+			>
+				{#if signGroup}
+					<Dialog.Title class="text-heading font-semibold text-ink">{signGroup.title}</Dialog.Title>
+					<Dialog.Description class="mt-1 text-body text-ink-2">{signGroup.why}</Dialog.Description>
+					<ul class="mt-3 divide-y divide-rule border-y border-rule" aria-label="What you sign off">
+						{#each signGroup.lines as l (l.id)}
+							<li class="grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 py-2 text-body">
+								<span class="min-w-0 break-words text-ink"
+									>{names.get(l.productId) ?? l.productName ?? l.productId}<span
+										class="block text-meta text-ink-3"
+										>{qtyWords(l.qty)}{l.reasons.length
+											? ` · ${l.reasons
+													.filter((r) => !r.startsWith('CAUTION.'))
+													.map(reasonShort)
+													.join(', ')}`
+											: ''}</span
+									></span
+								>
+								<span class="mono text-right text-ink tabular-nums">{money(l.lineCents ?? 0)}</span>
+							</li>
+						{/each}
+					</ul>
+					<p class="mt-2 flex justify-between text-body font-medium text-ink">
+						<span>Total</span><span class="mono">{money(signGroup.totalCents)}</span>
+					</p>
+					<p class="mt-2 text-meta text-ink-3">
+						Bound to plan v{signGroup.planVersion} and these exact prices; any later change voids it.
+						Signing off does not send the order.
+					</p>
+					<div class="mt-4 flex flex-wrap gap-2">
+						<button
+							type="button"
+							class="inline-flex h-10 items-center rounded-md bg-ink px-4 text-body font-medium text-sheet disabled:opacity-50"
+							disabled={k.busy}
+							onclick={confirmSignOff}>Confirm exact terms</button
+						>
+						<Dialog.Close
+							class="inline-flex h-10 items-center rounded-md border border-rule-strong px-4 text-body text-ink"
+							>Cancel</Dialog.Close
+						>
+					</div>
+				{/if}
+			</Dialog.Content>
+		</Dialog.Portal>
+	</Dialog.Root>
 
 	<WhyDrawer
 		open={!!whyLine}
