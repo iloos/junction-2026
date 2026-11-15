@@ -153,6 +153,11 @@ if (ONLY.includes('deck')) {
 		}
 }
 
+// The brief typed in shot A, and the chips answered when the agent asks (day, service style).
+const BRIEF =
+	process.env.BRIEF ?? 'Lunch for 80 on Friday: salmon soup, a vegetarian main and rye bread';
+const CHIP = /^(Fri\b|Friday|Sat\b|Saturday|Buffet$|Lunch$|None$)/;
+
 // ---------- A: words → menu → plan → Accept all → Ordered → Ops ----------
 for (let t = 1; ONLY.includes('A') && t <= TAKES; t++) {
 	const id = `A-words-live-${t}`;
@@ -171,11 +176,11 @@ for (let t = 1; ONLY.includes('A') && t <= TAKES; t++) {
 			await click(p, p.getByRole('button', { name: /Ask the agent|^Agent$/ }).first());
 		await dock.waitFor({ timeout: 30_000 });
 		const box = dock.locator('textarea').first();
-		await type(p, box, 'a no-meat dinner for 120 with a peach dessert');
+		await type(p, box, BRIEF);
 		await box.press('Enter');
 		await working(p);
 		for (let i = 0; i < 4; i++) {
-			const chip = dock.getByRole('button', { name: /^(Sat\b|Saturday|Buffet$)/ }).last();
+			const chip = dock.getByRole('button', { name: CHIP }).last();
 			if (
 				!(await chip.isVisible().catch(() => false)) ||
 				!(await chip.isEnabled().catch(() => false))
