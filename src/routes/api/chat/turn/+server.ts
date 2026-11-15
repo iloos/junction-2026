@@ -4,7 +4,8 @@ import { scenarioDate } from '$lib/core/scenario';
 import { createLlmRouter } from '$lib/server/adapters/llm/router';
 import { contextFor } from '$lib/server/auth';
 import { readTurnBody } from '$lib/server/chat/body';
-import { runChatTurn } from '$lib/server/chat/turn';
+import { runChatTurn, type ChatDeps } from '$lib/server/chat/turn';
+import { harnessOn, runHarnessTurn } from '$lib/server/chat/harness';
 import { acceptMenuAsChef } from '$lib/server/menu/server';
 import { visitorWorkspace } from '$lib/server/demo/visitor';
 import { session, visitorKey } from '$lib/server/kitchen/live';
@@ -86,7 +87,8 @@ export const POST: RequestHandler = async (event) => {
 		return {
 			understand: router.for('chat.understand'),
 			explain: router.for('explain'),
-			plan: router.for('agent.plan')
+			plan: router.for('agent.plan'),
+			agent: router.for('chat.agent')
 		};
 	};
 
@@ -106,7 +108,8 @@ export const POST: RequestHandler = async (event) => {
 			void withCallScope(ctx, async () => {
 				try {
 					const today = scenarioDate(b.ports.clock.now());
-					for await (const e of runChatTurn(input, {
+					const models = modelsFor();
+					const deps: ChatDeps = {
 						handlers,
 						ctx,
 						ports: { ...b.ports, tasks },
@@ -114,7 +117,7 @@ export const POST: RequestHandler = async (event) => {
 						kitchen,
 						today,
 						env,
-						models: modelsFor(),
+						models,
 						// The chef's "plan it" after the menu card is their review of that revision (D13).
 						acceptMenu: (id, revision) =>
 							acceptMenuAsChef({
@@ -124,8 +127,13 @@ export const POST: RequestHandler = async (event) => {
 								id,
 								revision
 							})
-					}))
-						push(e);
+					};
+					// CHAT_HARNESS=llm: the model leads the turn over the MCP tools; the script answers without a model.
+					const turn =
+						harnessOn(env) && models?.agent
+							? runHarnessTurn(input, { ...deps, agent: models.agent })
+							: runChatTurn(input, deps);
+					for await (const e of turn) push(e);
 				} catch (e) {
 					push({
 						type: 'error',
