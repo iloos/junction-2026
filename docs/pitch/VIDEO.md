@@ -50,6 +50,30 @@ In the edit, speed up the model waits (2×, with a small "sped up" label) and ho
 2. **Shot A and shot B, twice each.**
 3. **Stills from the final deploy,** for the deck's recorded slide and for the submission: the menu card, the plan with reasons, the Accept all moment, "Ordered" with its receipt, the Ops tab with the order, and the buffet's three colours. Save them to `scratch/video/stills/`, and I'll swap them into the deck.
 
+## Who does what
+S5 records every clip automatically (Playwright, 1080p, fresh profile) from [shots.json](shots.json). The user records the voice-over and assembles the cut. S7 swaps the stills into the deck after the 07:20 take.
+
+## Voice-over, timed to the clips (about 280 words; read at a calm pace)
+| Clip | Length | Say |
+|---|---|---|
+| d1-cover | 0:06 | "Mandate. Every item an agent wants to buy is ordered, held for the chef, or refused." |
+| d3-case | 0:14 | "A hotel kitchen. A buffet for 140 is booked, Valio is out of the ham, and the cut-off is Friday at five. An agent could sort this out. But what may it buy without the chef?" |
+| d4-rules | 0:14 | "The chef writes the rules once: up to 800 euros an item, never change an allergen, ask before anything new. The rules are code, so no model and no agent can bend them." |
+| A-words-live | 0:38 | "Now from words. One sentence: a no-meat dinner for 120 with a peach dessert. Gemini proposes the menu. Plan it: every ingredient becomes a Valio product with a price. A new menu means new products, and this hotel's rules say ask me first, so the agent asks once. One yes covers exactly these items, and the order lands on Valio's side." |
+| B-buffet-live | 0:18 | "On the buffet, the same rules sort the order: three items go through alone, three are impossible and say why, and the rest come down to three decisions for the chef." |
+| d8-consent | 0:14 | "Any agent can plan: the chef's own assistant, a hotel chain's system. Only the chef can say yes, in the app or when their own assistant asks. Anything else that tries is refused and logged." |
+| d9-next | 0:10 | "Real Valio data, Gemini and Aiven. The order itself is simulated and labelled. Next: a pilot with one hotel." |
+| d10-close | 0:06 | "Your agent does the buying. Your rules decide what. app.mandate.kitchen." |
+
+## Assemble (one pass)
+1. Lay the voice track first: one file, or one take per row with 0.3 s of air between rows.
+2. Drop the clips in the order above. Trim each to its row's length. In A, speed up the model waits 2× (label "sped up", small, bottom right).
+3. Cuts: a 6-frame crossfade between deck clips; a hard cut into and out of the app clips, so the switch to the live app reads.
+4. If an app clip failed, use its fallback clip (`d7-recorded` for A, `d5-buffet` for B) at the same length.
+5. Captions: the voice line, bottom third, IBM Plex Sans, white on a 60% dark band; skip captions over the deck slides that already show the same words.
+6. Music: none, or very low under the deck clips only.
+7. End on `d10-close`, held 2 s. Export 1080p H.264, under 2:00. Watch once with the sound off.
+
 ## Edit (08:30–09:00)
 - Cut to the timings above. Voice first, then lay the picture to it.
 - Captions: the voice line per shot, bottom third, IBM Plex Sans.
