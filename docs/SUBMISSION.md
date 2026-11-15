@@ -66,7 +66,7 @@ Without Decisions, substitute ranking would rely only on price, supply and keywo
 
 ### Aiven: Best Use of Aiven
 
-- **Aiven Runtime** hosts the whole app as one Node container (SvelteKit `adapter-node`, our Dockerfile). Production is https://app.mandate.kitchen (custom domain on Aiven; https://widely-many-scorpion.eur-1.aiven.app also works); a second Runtime app builds the `staging` branch so changes are checked before prod.
+- **Aiven Runtime** hosts the whole app as one Node container (SvelteKit `adapter-node`, our Dockerfile). Production is https://app.mandate.kitchen (custom domain on Aiven; https://widely-many-scorpion.eur-1.aiven.app also works); a second Runtime app (`mandate-b`) runs the same build on the same Postgres, and a store made on one, or an order, shows on the other's Ops within a fraction of a second (LISTEN/NOTIFY). Every deploy is gated by the full test gate before it ships and a post-deploy smoke on prod (the race check plus the UI checks).
 - **Aiven for PostgreSQL** holds all state: kitchens, plans, approvals, orders, the op log and per-visitor workspaces. TLS is verified against the Aiven project CA.
 - **No double orders, enforced in Postgres.** The idempotency table and per-workspace locking make a retried commit return the same receipt. After each deploy, a race check runs against the production database: four commits with one key give one receipt; three with different keys give one receipt and two refusals.
 - **LISTEN/NOTIFY as the event bus.** Every change is published on one Postgres channel and streamed to browsers over server-sent events, so the Kitchen and Valio's Ops view update from the same source.
