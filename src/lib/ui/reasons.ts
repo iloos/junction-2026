@@ -141,3 +141,38 @@ export function reasonShort(code: string): string {
 export function reasonLong(code: string): string {
 	return TEXT[code]?.long ?? code;
 }
+
+const STATE_WORDS: Record<string, string> = {
+	draft: 'Planned',
+	quoted: 'Inside your rules',
+	proposed: 'Inside your rules',
+	held: 'Waits for you',
+	committed: 'Ordered',
+	rejected: 'Not ordered',
+	unorderable: "Can't be ordered"
+};
+const TIER_WORDS: Record<string, string> = {
+	act: 'the agent may order it',
+	propose: 'needs your approval',
+	sign_off: 'needs your sign-off'
+};
+
+/**
+ * The mandate step of a line's Why ("held (propose): UNKNOWN_REQUIRED, new_sku", as core says it) in words:
+ * "Waits for you: needs your approval · Quantity not stated, New product". Text not in that shape is kept.
+ */
+export function mandateStepWords(text: string): string {
+	const m = /^([a-z_]+)(?: \(([a-z_]+)\))?(?:: (.+))?$/.exec(text.trim());
+	if (!m || !STATE_WORDS[m[1]]) return text;
+	const [, state, tier, reasons] = m;
+	const head = [STATE_WORDS[state], tier ? (TIER_WORDS[tier] ?? tier.replace(/_/g, ' ')) : null]
+		.filter(Boolean)
+		.join(': ');
+	const why = reasons
+		? reasons
+				.split(/,\s*/)
+				.map((r) => reasonShort(r))
+				.join(', ')
+		: '';
+	return why ? `${head} · ${why}` : head;
+}
