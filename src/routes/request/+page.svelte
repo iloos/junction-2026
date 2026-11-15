@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { TriangleAlert } from '@lucide/svelte';
-	import { onMount } from 'svelte';
+	import { onMount, untrack } from 'svelte';
+	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import { storyTime } from '$lib/ui/format';
 	import { useShell } from '$lib/ui/shell/shell.svelte';
@@ -30,19 +31,29 @@
 	onMount(() => {
 		ready = true;
 		if (shell) {
-			// A menu or plan on screen takes the main panel; the conversation continues as the side dock (D23 addendum).
-			const reviewing = new URL(location.href).searchParams.has('menu');
-			shell.chatFull = !reviewing;
-			if (reviewing) shell.chatOpen = true;
 			const t = new URL(location.href).searchParams.get('text');
 			if (t) shell.chatDraft = t.slice(0, 500);
 			// "New order" (D31): a fresh conversation; earlier orders keep their own threads.
 			if (new URL(location.href).searchParams.get('new') === '1') shell.chatNew++;
 		}
-		void openLinkedMenu();
 		return () => {
 			if (shell) shell.chatFull = false;
 		};
+	});
+	/**
+	 * A menu link (?menu=) opens the menu in the main panel with the conversation as the side dock, on load and on a
+	 * client-side navigation from the conversation itself (D23 addendum); without one the conversation is the page.
+	 */
+	const menuParam = $derived(page.url.searchParams.get('menu'));
+	$effect(() => {
+		const id = menuParam;
+		if (!ready || !shell) return;
+		shell.chatFull = !id;
+		if (id) shell.chatOpen = true;
+		untrack(() => {
+			if (id && id !== linkedMenu?.id) void openLinkedMenu();
+			else if (!id) startOver();
+		});
 	});
 	function ask(t: string) {
 		if (shell) shell.chatDraft = t;

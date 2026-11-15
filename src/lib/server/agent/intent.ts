@@ -236,11 +236,7 @@ function routineOrder(
 		deliverBy = d.iso;
 		deliverByText = d.text;
 	} else if (parsed.deliverBySource === 'default' || !parsed.deliverByText)
-		return ask(
-			'date',
-			`When should ${what} arrive? Say "tomorrow", a weekday or a date (YYYY-MM-DD); I will not pick one.`,
-			openDates(c)
-		);
+		return ask('date', `When should ${what} arrive?`, openDates(c));
 	if (!deliverByText || deliverBy < c.today)
 		return ask('date', `"${deliverByText}" (${deliverBy}) is in the past.`, openDates(c));
 	// Ordering for that day may already have closed: say so and offer the first day still open, never shift it.

@@ -52,6 +52,7 @@ import { interpretDish, type InterpretDish } from './dish';
 import { decideAsChef, decisionWords, type DecisionWords } from './decide';
 import { steerLine, steerWords } from './steer';
 import { halfAsk } from './half';
+import { namesFood, rescueOrder, type Rescue } from './rescue';
 import { planName } from '$lib/server/agent/plan-name';
 
 /**
@@ -628,6 +629,13 @@ async function* turnLines(
 			: null;
 	const ruleOwn =
 		!!dishWords ||
+		// A food word while another question is open ("steaks" during "When should beef arrive?") is a new ask.
+		(!!words &&
+			!input.answer &&
+			task.pending.kind === 'clarify' &&
+			['date', 'qty', 'unit'].includes(task.pending.field) &&
+			namesFood(words) &&
+			!/\d/.test(words)) ||
 		(!!reading &&
 			((reading.kind === 'order' && reading.amount) ||
 				['event', 'read', 'authority'].includes(reading.kind)));
@@ -702,11 +710,20 @@ async function* turnLines(
 			return;
 		}
 		{
+			// Never "I could not" (D33): the likeliest reading of the words, and the ways on as chips.
+			const r = await rescueOrder(goal, deps.ctx, deps.handlers, deps.today);
+			yield {
+				type: 'clarify',
+				taskId: task.id,
+				field: 'intent',
+				question: r.text,
+				options: r.options
+			};
 			yield {
 				type: 'done',
 				taskId: task.id,
-				state: task.state,
-				text: `I could not act on “${goal.slice(0, 80)}”: I need the product and an amount with a unit, for example "4 kg lactose-free butter for Friday", or a dish or event to plan, for example "Dinner for 40 on Saturday".`,
+				state: 'awaiting_clarification',
+				text: r.text,
 				canContinue: false
 			};
 			return;
@@ -835,6 +852,35 @@ async function* turnLines(
 		});
 		return;
 	}
+	// A food word on its own ("steaks", "cow meat"), even while another question is open: the closest products
+	// as chips (D33); an order with an amount still takes the order path.
+	if (
+		words &&
+		!answering &&
+		!dish &&
+		!dishWords &&
+		task.pending.kind !== 'clarify' &&
+		namesFood(words) &&
+		!(reading?.kind === 'order' && reading.amount) &&
+		!(expected !== null && task.plans.length)
+	) {
+		const r = await rescueOrder(withoutKitchen(words), deps.ctx, deps.handlers, deps.today);
+		yield {
+			type: 'clarify',
+			taskId: expected !== null ? task.id : '',
+			field: 'intent',
+			question: r.text,
+			options: r.options
+		};
+		yield {
+			type: 'done',
+			taskId: expected !== null ? task.id : '',
+			state: 'awaiting_clarification',
+			text: r.text,
+			canContinue: false
+		};
+		return;
+	}
 	// Words that ask for nothing we can do ("??"): one short question with four answers, never a plan dump.
 	if (
 		words &&
@@ -845,6 +891,26 @@ async function* turnLines(
 		(u?.kind === 'other' || (!u && reading?.kind === 'other') || !/[\p{L}\d]/u.test(words)) &&
 		task.pending.kind !== 'clarify'
 	) {
+		// A food word the model did not read as an order ("100 streaks", "cow meat"): the closest products, never a
+		// generic question (D33).
+		if (namesFood(words)) {
+			const r = await rescueOrder(withoutKitchen(words), deps.ctx, deps.handlers, deps.today);
+			yield {
+				type: 'clarify',
+				taskId: expected !== null ? task.id : '',
+				field: 'intent',
+				question: r.text,
+				options: r.options
+			};
+			yield {
+				type: 'done',
+				taskId: expected !== null ? task.id : '',
+				state: 'awaiting_clarification',
+				text: r.text,
+				canContinue: false
+			};
+			return;
+		}
 		// A half-formed ask ("1000 x", "for friday") is read as far as it goes, its likeliest endings as chips.
 		const half = halfAsk(withoutKitchen(words), deps.today);
 		if (half) {
@@ -911,6 +977,7 @@ async function* turnLines(
 	let steps: StepRecord[];
 	let clarify: Extract<Task['pending'], { kind: 'clarify' }> | null = null;
 	let refusal: string | null = null;
+	let rescued: Rescue | null = null;
 	/** This turn answered the open question: it is closed, whatever the run did next. */
 	let answered = false;
 	let planId: string | undefined = primary;
@@ -1195,6 +1262,13 @@ async function* turnLines(
 		// way on, never "not recognised" after the reading said order.
 		if (refusal?.startsWith('I did not recognise') && (u?.kind === 'order' || dishChoice))
 			refusal = `I read this as an order for “${goal.slice(0, 80)}”, but could not match it to a product and an amount I can buy. Name the product with an amount and unit, for example "4 kg lactose-free butter for Friday", or describe a dish or event and I will plan it.`;
+		// An order that could not go ahead ends with its likeliest reading and chips, never a refusal (D33).
+		if (
+			!touched.length &&
+			refusal &&
+			/^(I couldn't find|I read this as an order|Not ordered: )/.test(refusal)
+		)
+			rescued = await rescueOrder(goal, deps.ctx, deps.handlers, deps.today, refusal);
 		planId = touched[0] ?? primary;
 		for (const id of touched.slice(1))
 			if (!task.plans.some((x) => x.planId === id))
@@ -1350,6 +1424,34 @@ async function* turnLines(
 		text = refusal ?? '';
 	} else {
 		text = refusal ?? run?.outcome?.nextAction ?? 'Nothing was done.';
+		// A confused follow-up ("???? and??") on an order that did not go ahead: where it stands, and the ways on.
+		const original = String(task.requirement.goal ?? '');
+		if (
+			!rescued &&
+			task.pending.kind !== 'clarify' &&
+			/^(There is no plan yet|I did not recognise)/.test(text) &&
+			original &&
+			original !== words
+		) {
+			rescued = await rescueOrder(original, deps.ctx, deps.handlers, deps.today);
+			rescued = { ...rescued, text: `Where “${original.slice(0, 60)}” stands: ${rescued.text}` };
+		}
+		// A new food word while another question waits ("steaks" during "When should cow arrive?"): a new ask with its
+		// closest products, not "I did not recognise" with the old question.
+		if (!rescued && words && namesFood(words) && /^I did not recognise/.test(text)) {
+			rescued = await rescueOrder(withoutKitchen(words), deps.ctx, deps.handlers, deps.today);
+			task.pending = { kind: 'none' };
+		}
+		if (rescued) {
+			text = rescued.text;
+			yield {
+				type: 'clarify',
+				taskId: task.id,
+				field: 'intent',
+				question: rescued.text,
+				options: rescued.options
+			};
+		}
 		// A side question while this task waits for an answer leaves that question open.
 		// The dock shows a waiting task's answer on its question card, so the card is sent again with both.
 		if (followUp && !answered && task.pending.kind === 'clarify') {
