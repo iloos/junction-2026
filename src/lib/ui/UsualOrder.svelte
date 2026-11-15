@@ -300,276 +300,289 @@
 	} as const;
 </script>
 
-<section class="rounded-lg border border-rule bg-sheet text-ink" aria-busy={loading}>
-	<header
-		class="flex flex-wrap items-start justify-between gap-x-4 gap-y-2 border-b border-rule p-4"
-	>
-		<div class="min-w-0">
-			<h2 class="text-title font-semibold">
-				{title}{#if data}<span class="font-normal text-ink-2">{` · ${day(data.deliveryDate)}`}</span
-					>{/if}
-			</h2>
-			<p class="mt-1 text-body text-ink-2">{subline}</p>
-		</div>
-		<span
-			class="inline-flex shrink-0 items-center gap-1 rounded-full border border-dashed border-rule-strong px-2 py-0.5 text-meta text-ink-2"
-			title="Generated from the kitchen's profile: there is no real order history yet"
+{#if data && !data.settled && !topups.length && !data.lines.length}
+	<!-- No history yet: no empty card, one line that says when it will appear. -->
+	<p class="text-meta text-ink-3">Your usual order appears here after a few weeks of orders.</p>
+{:else}
+	<section class="rounded-lg border border-rule bg-sheet text-ink" aria-busy={loading}>
+		<header
+			class="flex flex-wrap items-start justify-between gap-x-4 gap-y-2 border-b border-rule p-4"
 		>
-			<History size={14} aria-hidden="true" /> Simulated history
-		</span>
-	</header>
+			<div class="min-w-0">
+				<h2 class="text-title font-semibold">
+					{title}{#if data}<span class="font-normal text-ink-2"
+							>{` · ${day(data.deliveryDate)}`}</span
+						>{/if}
+				</h2>
+				<p class="mt-1 text-body text-ink-2">{subline}</p>
+			</div>
+			<span
+				class="inline-flex shrink-0 items-center gap-1 rounded-full border border-dashed border-rule-strong px-2 py-0.5 text-meta text-ink-2"
+				title="Generated from the kitchen's profile: there is no real order history yet"
+			>
+				<History size={14} aria-hidden="true" /> Simulated history
+			</span>
+		</header>
 
-	<div
-		class="flex flex-wrap items-center gap-2 border-b border-rule px-4 py-2 text-meta text-ink-2"
-	>
-		<label class="flex items-center gap-1.5">
-			Read the last
-			<select
-				class="rounded-md border border-rule bg-sheet px-1.5 py-1 text-meta text-ink"
-				bind:value={windowV}
-			>
-				{#each WINDOWS as w (w.v)}<option value={w.v}>{w.label}</option>{/each}
-			</select>
-		</label>
-		{#if Object.values(every).some(Boolean)}
-			<button
-				class="ml-auto inline-flex items-center gap-1 rounded-md px-1.5 py-1 hover:bg-well"
-				onclick={() => (every = {})}
-			>
-				<X size={13} aria-hidden="true" /> Clear rhythm changes
-			</button>
+		<div
+			class="flex flex-wrap items-center gap-2 border-b border-rule px-4 py-2 text-meta text-ink-2"
+		>
+			<label class="flex items-center gap-1.5">
+				Read the last
+				<select
+					class="rounded-md border border-rule bg-sheet px-1.5 py-1 text-meta text-ink"
+					bind:value={windowV}
+				>
+					{#each WINDOWS as w (w.v)}<option value={w.v}>{w.label}</option>{/each}
+				</select>
+			</label>
+			{#if Object.values(every).some(Boolean)}
+				<button
+					class="ml-auto inline-flex items-center gap-1 rounded-md px-1.5 py-1 hover:bg-well"
+					onclick={() => (every = {})}
+				>
+					<X size={13} aria-hidden="true" /> Clear rhythm changes
+				</button>
+			{/if}
+		</div>
+
+		{#if loadError}
+			<p class="p-4 text-body text-out">Couldn't read the usual order. {loadError}</p>
+		{:else if data && !data.settled}
+			<p class="p-4 text-body text-ink-2">
+				Too little history to call anything usual yet. Order as you go; patterns show after about
+				four weeks.
+			</p>
 		{/if}
-	</div>
 
-	{#if loadError}
-		<p class="p-4 text-body text-out">Couldn't read the usual order. {loadError}</p>
-	{:else if data && !data.settled}
-		<p class="p-4 text-body text-ink-2">
-			Too little history to call anything usual yet. Order as you go; patterns show after about four
-			weeks.
-		</p>
-	{/if}
-
-	{#if rows.length}
-		<ul class="divide-y divide-rule">
-			{#each rows as r (r.productId)}
-				{@const l = lineOf(r.productId)}
-				{@const st = l ? STATUS[l.status] : null}
-				<li class="px-4 py-2">
-					<div class="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-3">
-						<input
-							type="checkbox"
-							class="size-4 accent-[var(--color-accent)]"
-							checked={r.on}
-							onchange={() => toggle(r)}
-							aria-label={`Include ${readableName(r.name)}`}
-						/>
-						<div class="min-w-0">
-							<button
-								type="button"
-								class="flex w-full min-w-0 items-baseline gap-1.5 text-left text-body break-words {r.on
-									? 'text-ink'
-									: 'text-ink-3 line-through'}"
-								aria-expanded={l ? !!openRow[r.productId] : undefined}
-								disabled={!l}
-								onclick={() => (openRow = { ...openRow, [r.productId]: !openRow[r.productId] })}
-							>
-								{#if l}<ChevronRight
-										size={13}
-										class="shrink-0 translate-y-0.5 text-ink-3 transition-transform {openRow[
-											r.productId
-										]
-											? 'rotate-90'
-											: ''}"
-										aria-hidden="true"
-									/>{/if}
-								<span class="min-w-0">{readableName(r.name)}</span>
-							</button>
-							{#if st}
-								{@const Icon = st.icon}
-								<span class="ml-5 inline-flex items-center gap-1 text-meta {st.cls}">
-									<Icon size={12} aria-hidden="true" />{st.word}
-								</span>
-							{:else}
-								<span class="inline-flex items-center gap-1 text-meta text-accent">
-									<Plus size={12} aria-hidden="true" />Top-up for this order
-								</span>
-							{/if}
+		{#if rows.length}
+			<ul class="divide-y divide-rule">
+				{#each rows as r (r.productId)}
+					{@const l = lineOf(r.productId)}
+					{@const st = l ? STATUS[l.status] : null}
+					<li class="px-4 py-2">
+						<div class="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-3">
+							<input
+								type="checkbox"
+								class="size-4 accent-[var(--color-accent)]"
+								checked={r.on}
+								onchange={() => toggle(r)}
+								aria-label={`Include ${readableName(r.name)}`}
+							/>
+							<div class="min-w-0">
+								<button
+									type="button"
+									class="flex w-full min-w-0 items-baseline gap-1.5 text-left text-body break-words {r.on
+										? 'text-ink'
+										: 'text-ink-3 line-through'}"
+									aria-expanded={l ? !!openRow[r.productId] : undefined}
+									disabled={!l}
+									onclick={() => (openRow = { ...openRow, [r.productId]: !openRow[r.productId] })}
+								>
+									{#if l}<ChevronRight
+											size={13}
+											class="shrink-0 translate-y-0.5 text-ink-3 transition-transform {openRow[
+												r.productId
+											]
+												? 'rotate-90'
+												: ''}"
+											aria-hidden="true"
+										/>{/if}
+									<span class="min-w-0">{readableName(r.name)}</span>
+								</button>
+								{#if st}
+									{@const Icon = st.icon}
+									<span class="ml-5 inline-flex items-center gap-1 text-meta {st.cls}">
+										<Icon size={12} aria-hidden="true" />{st.word}
+									</span>
+								{:else}
+									<span class="inline-flex items-center gap-1 text-meta text-accent">
+										<Plus size={12} aria-hidden="true" />Top-up for this order
+									</span>
+								{/if}
+							</div>
+							<div class="flex flex-col items-end gap-0.5">
+								<label class="flex items-center gap-1.5 text-meta text-ink-2">
+									<input
+										type="number"
+										inputmode="decimal"
+										min="0"
+										step={r.lotStep}
+										class="mono w-14 rounded-md border border-rule bg-sheet px-1.5 py-0.5 text-right text-body text-ink"
+										value={r.qty}
+										onchange={(e) =>
+											setQty(
+												r.productId,
+												Number((e.currentTarget as HTMLInputElement).value),
+												r.on
+											)}
+										aria-label={`Quantity of ${readableName(r.name)}`}
+									/>
+									<span class="whitespace-nowrap">{unitsOnly(r.qty, r.unit)}</span>
+								</label>
+								{#if r.unitCents === null}
+									<span class="text-meta whitespace-nowrap text-ink-3">priced when planned</span>
+								{:else}
+									<span
+										class="mono text-right text-meta tabular-nums {r.on
+											? 'text-ink'
+											: 'text-ink-3'}">{money(r.unitCents * r.qty)}</span
+									>
+								{/if}
+							</div>
 						</div>
-						<div class="flex flex-col items-end gap-0.5">
-							<label class="flex items-center gap-1.5 text-meta text-ink-2">
-								<input
-									type="number"
-									inputmode="decimal"
-									min="0"
-									step={r.lotStep}
-									class="mono w-14 rounded-md border border-rule bg-sheet px-1.5 py-0.5 text-right text-body text-ink"
-									value={r.qty}
-									onchange={(e) =>
-										setQty(r.productId, Number((e.currentTarget as HTMLInputElement).value), r.on)}
-									aria-label={`Quantity of ${readableName(r.name)}`}
-								/>
-								<span class="whitespace-nowrap">{unitsOnly(r.qty, r.unit)}</span>
-							</label>
-							{#if r.unitCents === null}
-								<span class="text-meta whitespace-nowrap text-ink-3">priced when planned</span>
-							{:else}
+						{#if l && openRow[r.productId]}
+							<div class="mt-1 ml-7 flex flex-col gap-1 text-meta text-ink-2">
 								<span
-									class="mono text-right text-meta tabular-nums {r.on ? 'text-ink' : 'text-ink-3'}"
-									>{money(r.unitCents * r.qty)}</span
+									>{l.sentence}{#if l.low !== l.high}<span class="text-ink-3">
+											· usually {num(l.low)}–{num(l.high)}</span
+										>{/if}</span
 								>
-							{/if}
-						</div>
-					</div>
-					{#if l && openRow[r.productId]}
-						<div class="mt-1 ml-7 flex flex-col gap-1 text-meta text-ink-2">
-							<span
-								>{l.sentence}{#if l.low !== l.high}<span class="text-ink-3">
-										· usually {num(l.low)}–{num(l.high)}</span
-									>{/if}</span
-							>
-							<label class="inline-flex items-center gap-1 text-micro text-ink-3">
-								Rhythm
-								<select
-									class="rounded border border-rule bg-sheet px-1 py-0.5 text-micro text-ink-2"
-									value={every[r.productId] ?? ''}
-									onchange={(e) =>
-										(every = {
-											...every,
-											[r.productId]: (e.currentTarget as HTMLSelectElement).value
-										})}
-								>
-									{#each EVERY as o (o.v)}<option value={o.v}>{o.label}</option>{/each}
-								</select>
-								{#if every[r.productId]}<span>· this session only</span>{/if}
-							</label>
-						</div>
-					{/if}
-				</li>
-			{/each}
-		</ul>
-	{:else if data?.settled}
-		<p class="p-4 text-body text-ink-2">Nothing usually comes this day. Add a top-up below.</p>
-	{/if}
-
-	{#if data && (data.joined.length || data.dropped.length)}
-		<div class="grid gap-3 border-t border-rule px-4 py-3 sm:grid-cols-2">
-			{#if data.joined.length}
-				<div>
-					<h3 class="flex items-center gap-1 text-heading font-medium text-accent">
-						<Sparkles size={15} aria-hidden="true" /> Joined recently
-					</h3>
-					<ul class="mt-1 space-y-1.5">
-						{#each data.joined as c (c.productId)}
-							<li class="text-meta">
-								<span class="text-body text-ink">{readableName(c.name)}</span>
-								<span class="block text-ink-2">{c.sentence}</span>
-								{#if !rows.some((r) => r.productId === c.productId)}
-									<button
-										class="mt-0.5 inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-accent-ink hover:bg-accent-wash"
-										onclick={() => addTopUp(c, c.qty)}
+								<label class="inline-flex items-center gap-1 text-micro text-ink-3">
+									Rhythm
+									<select
+										class="rounded border border-rule bg-sheet px-1 py-0.5 text-micro text-ink-2"
+										value={every[r.productId] ?? ''}
+										onchange={(e) =>
+											(every = {
+												...every,
+												[r.productId]: (e.currentTarget as HTMLSelectElement).value
+											})}
 									>
-										<Plus size={13} aria-hidden="true" /> Add {salesUnitWords(
-											c.qty,
-											c.unit
-										)}{c.dueOnDay ? ' (due this day)' : ''}
-									</button>
-								{/if}
-							</li>
-						{/each}
-					</ul>
-				</div>
-			{/if}
-			{#if data.dropped.length}
-				<div>
-					<h3 class="flex items-center gap-1 text-heading font-medium text-ink-2">
-						<CircleMinus size={15} aria-hidden="true" /> Dropped out
-					</h3>
-					<ul class="mt-1 space-y-1.5">
-						{#each data.dropped as c (c.productId)}
-							<li class="text-meta">
-								<span class="text-body text-ink">{readableName(c.name)}</span>
-								<span class="block text-ink-2">{c.sentence}</span>
-								{#if !rows.some((r) => r.productId === c.productId)}
-									<button
-										class="mt-0.5 inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-ink-2 hover:bg-well"
-										onclick={() => addTopUp(c, c.qty)}
-									>
-										<Plus size={13} aria-hidden="true" /> Add back
-									</button>
-								{/if}
-							</li>
-						{/each}
-					</ul>
-				</div>
-			{/if}
-		</div>
-	{/if}
-
-	<div class="relative border-t border-rule px-4 py-3">
-		<label
-			class="flex items-center gap-2 rounded-md border border-rule bg-sheet px-2 py-1.5 text-body"
-		>
-			<Search size={15} class="text-ink-3" aria-hidden="true" />
-			<input
-				class="min-w-0 flex-1 bg-transparent outline-none placeholder:text-ink-3"
-				placeholder="Add a top-up: search products"
-				bind:value={query}
-				oninput={onSearch}
-			/>
-		</label>
-		{#if hits.length}
-			<ul
-				class="absolute inset-x-4 z-10 mt-1 max-h-64 overflow-auto rounded-md border border-rule bg-sheet shadow-lg"
-			>
-				{#each hits as h (h.productId)}
-					<li>
-						<button
-							class="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-body hover:bg-well"
-							onclick={() => addTopUp(h)}
-						>
-							<span class="truncate">{readableName(h.name)}</span>
-							<span class="shrink-0 text-meta text-ink-3">per {unitWord(h.unit)}</span>
-						</button>
+										{#each EVERY as o (o.v)}<option value={o.v}>{o.label}</option>{/each}
+									</select>
+									{#if every[r.productId]}<span>· this session only</span>{/if}
+								</label>
+							</div>
+						{/if}
 					</li>
 				{/each}
 			</ul>
+		{:else if data?.settled}
+			<p class="p-4 text-body text-ink-2">Nothing usually comes this day. Add a top-up below.</p>
 		{/if}
-	</div>
 
-	<footer
-		class="flex flex-wrap items-center justify-between gap-3 border-t border-rule bg-well/50 px-4 py-3"
-	>
-		<div class="text-body">
-			<span class="font-semibold">{chosen.length} {chosen.length === 1 ? 'line' : 'lines'}</span>
-			<span class="mono"> · {money(total, { whole: true })}</span>
-			{#if unpriced}<span class="text-meta text-ink-3"> + {unpriced} priced when planned</span>{/if}
-			<p class="text-meta text-ink-3">
-				A suggestion until you plan it. Your mandate decides what is ordered alone.
-			</p>
-		</div>
-		{#if planned}
-			<!-- eslint-disable svelte/no-navigation-without-resolve -- kitchen deep link with a query, built from resolve('/') -->
-			<a
-				class="inline-flex items-center gap-1.5 rounded-md bg-ok-wash px-3 py-2 text-body text-ok"
-				href={`${resolve('/')}?plan=${encodeURIComponent(planned.planId)}`}
-			>
-				<CircleCheck size={16} aria-hidden="true" /> Planned, {STATE_WORDS[planned.state] ??
-					planned.state}: open it
-				<ArrowRight size={15} aria-hidden="true" />
-			</a>
-			<!-- eslint-enable svelte/no-navigation-without-resolve -->
-		{:else}
-			<button
-				class="inline-flex items-center gap-1.5 rounded-md px-4 py-2 text-body font-medium disabled:opacity-50 {primary
-					? 'bg-accent text-sheet'
-					: 'border border-rule-strong text-ink hover:border-accent'}"
-				disabled={planning || !chosen.length || !data}
-				onclick={plan}
-			>
-				{planning ? 'Planning…' : 'Plan this order'}
-			</button>
+		{#if data && (data.joined.length || data.dropped.length)}
+			<div class="grid gap-3 border-t border-rule px-4 py-3 sm:grid-cols-2">
+				{#if data.joined.length}
+					<div>
+						<h3 class="flex items-center gap-1 text-heading font-medium text-accent">
+							<Sparkles size={15} aria-hidden="true" /> Joined recently
+						</h3>
+						<ul class="mt-1 space-y-1.5">
+							{#each data.joined as c (c.productId)}
+								<li class="text-meta">
+									<span class="text-body text-ink">{readableName(c.name)}</span>
+									<span class="block text-ink-2">{c.sentence}</span>
+									{#if !rows.some((r) => r.productId === c.productId)}
+										<button
+											class="mt-0.5 inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-accent-ink hover:bg-accent-wash"
+											onclick={() => addTopUp(c, c.qty)}
+										>
+											<Plus size={13} aria-hidden="true" /> Add {salesUnitWords(
+												c.qty,
+												c.unit
+											)}{c.dueOnDay ? ' (due this day)' : ''}
+										</button>
+									{/if}
+								</li>
+							{/each}
+						</ul>
+					</div>
+				{/if}
+				{#if data.dropped.length}
+					<div>
+						<h3 class="flex items-center gap-1 text-heading font-medium text-ink-2">
+							<CircleMinus size={15} aria-hidden="true" /> Dropped out
+						</h3>
+						<ul class="mt-1 space-y-1.5">
+							{#each data.dropped as c (c.productId)}
+								<li class="text-meta">
+									<span class="text-body text-ink">{readableName(c.name)}</span>
+									<span class="block text-ink-2">{c.sentence}</span>
+									{#if !rows.some((r) => r.productId === c.productId)}
+										<button
+											class="mt-0.5 inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-ink-2 hover:bg-well"
+											onclick={() => addTopUp(c, c.qty)}
+										>
+											<Plus size={13} aria-hidden="true" /> Add back
+										</button>
+									{/if}
+								</li>
+							{/each}
+						</ul>
+					</div>
+				{/if}
+			</div>
 		{/if}
-		{#if planError}<p class="w-full text-meta text-out">Not planned: {planError}</p>{/if}
-	</footer>
-</section>
+
+		<div class="relative border-t border-rule px-4 py-3">
+			<label
+				class="flex items-center gap-2 rounded-md border border-rule bg-sheet px-2 py-1.5 text-body"
+			>
+				<Search size={15} class="text-ink-3" aria-hidden="true" />
+				<input
+					class="min-w-0 flex-1 bg-transparent outline-none placeholder:text-ink-3"
+					placeholder="Add a top-up: search products"
+					bind:value={query}
+					oninput={onSearch}
+				/>
+			</label>
+			{#if hits.length}
+				<ul
+					class="absolute inset-x-4 z-10 mt-1 max-h-64 overflow-auto rounded-md border border-rule bg-sheet shadow-lg"
+				>
+					{#each hits as h (h.productId)}
+						<li>
+							<button
+								class="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-body hover:bg-well"
+								onclick={() => addTopUp(h)}
+							>
+								<span class="truncate">{readableName(h.name)}</span>
+								<span class="shrink-0 text-meta text-ink-3">per {unitWord(h.unit)}</span>
+							</button>
+						</li>
+					{/each}
+				</ul>
+			{/if}
+		</div>
+
+		<footer
+			class="flex flex-wrap items-center justify-between gap-3 border-t border-rule bg-well/50 px-4 py-3"
+		>
+			<div class="text-body">
+				<span class="font-semibold">{chosen.length} {chosen.length === 1 ? 'line' : 'lines'}</span>
+				<span class="mono"> · {money(total, { whole: true })}</span>
+				{#if unpriced}<span class="text-meta text-ink-3">
+						+ {unpriced} priced when planned</span
+					>{/if}
+				<p class="text-meta text-ink-3">
+					A suggestion until you plan it. Your mandate decides what is ordered alone.
+				</p>
+			</div>
+			{#if planned}
+				<!-- eslint-disable svelte/no-navigation-without-resolve -- kitchen deep link with a query, built from resolve('/') -->
+				<a
+					class="inline-flex items-center gap-1.5 rounded-md bg-ok-wash px-3 py-2 text-body text-ok"
+					href={`${resolve('/')}?plan=${encodeURIComponent(planned.planId)}`}
+				>
+					<CircleCheck size={16} aria-hidden="true" /> Planned, {STATE_WORDS[planned.state] ??
+						planned.state}: open it
+					<ArrowRight size={15} aria-hidden="true" />
+				</a>
+				<!-- eslint-enable svelte/no-navigation-without-resolve -->
+			{:else}
+				<button
+					class="inline-flex items-center gap-1.5 rounded-md px-4 py-2 text-body font-medium disabled:opacity-50 {primary
+						? 'bg-accent text-sheet'
+						: 'border border-rule-strong text-ink hover:border-accent'}"
+					disabled={planning || !chosen.length || !data}
+					onclick={plan}
+				>
+					{planning ? 'Planning…' : 'Plan this order'}
+				</button>
+			{/if}
+			{#if planError}<p class="w-full text-meta text-out">Not planned: {planError}</p>{/if}
+		</footer>
+	</section>
+{/if}

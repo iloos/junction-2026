@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	/**
 	 * A kitchen with nothing planned for the day in view: pick the delivery day, plan its usual order (U's
 	 * UsualOrder, a suggestion until the chef plans it), or ask the agent for that day. Planning opens the new plan.
@@ -41,7 +43,6 @@
 		showDays?: boolean;
 	} = $props();
 	let card = $state<UsualOrder | null>(null);
-	let setUp = $state(false);
 	let editingNotes = $state(false);
 	let draftNotes = $state('');
 	let usual = $state<UsualSummary | null>(null);
@@ -71,16 +72,13 @@
 					<button
 						type="button"
 						class="inline-flex h-10 items-center gap-2 rounded-md bg-accent px-4 text-body font-medium text-sheet hover:bg-accent-ink"
-						onclick={() => onask(date)}
+						onclick={() => goto(resolve('/request?new=1'))}
 						><Bot size={16} aria-hidden="true" />Tell the agent what you need</button
 					>
-					<button
-						type="button"
-						class="inline-flex h-10 items-center rounded-md border border-rule-strong px-4 text-body text-ink hover:border-accent"
-						aria-expanded={setUp}
-						onclick={() => (setUp = !setUp)}>Set up a usual order</button
-					>
 				</div>
+				<p class="mt-2 text-meta text-ink-3">
+					Your usual order appears here after a few weeks of orders.
+				</p>
 			{:else if usual && !usual.planned}
 				<button
 					type="button"
@@ -142,7 +140,7 @@
 				</button>
 			{/if}
 		</div>
-		{#if !blank || setUp}
+		{#if !blank}
 			{#key `${kitchenId}|${date ?? ''}`}
 				<UsualOrder
 					bind:this={card}

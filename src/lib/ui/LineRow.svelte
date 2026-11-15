@@ -16,7 +16,7 @@
 	import DietMarks from './DietMarks.svelte';
 	import type { Marks } from './diet';
 	import { lineBasis, lotSentence } from './coverage';
-	import { money } from './format';
+	import { money, unitWord } from './format';
 
 	interface Props {
 		line: Line;
@@ -79,7 +79,7 @@
 </script>
 
 <div
-	class="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3 gap-y-1 rounded-[5px] py-0.5 sm:grid-cols-[minmax(0,1fr)_88px_minmax(0,auto)] {flash
+	class="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3 gap-y-1 rounded-[5px] py-0.5 sm:grid-cols-[minmax(0,1fr)_88px_minmax(0,auto)] lg:grid-cols-[minmax(0,1fr)_88px_37.5rem] {flash
 		? 'landed'
 		: ''}"
 >
@@ -118,32 +118,12 @@
 				</p>
 			{:else if by}<p><AgentMark {by} /></p>
 			{/if}
-			{#if onqty && !rejected && l.state !== 'committed'}
-				<div
-					class="mt-1 inline-flex items-center gap-1 text-meta"
-					role="group"
-					aria-label="Amount of {name}"
-				>
-					<button
-						type="button"
-						class="grid size-7 place-items-center rounded-md border border-rule-strong text-ink-2 hover:text-ink disabled:opacity-40"
-						aria-label="One less"
-						disabled={l.qty.value <= 0}
-						onclick={() => onqty(Math.max(0, l.qty.value - 1))}>−</button
-					>
-					<span class="mono min-w-10 text-center text-ink tabular-nums">{l.qty.value}</span>
-					<button
-						type="button"
-						class="grid size-7 place-items-center rounded-md border border-rule-strong text-ink-2 hover:text-ink"
-						aria-label="One more"
-						onclick={() => onqty(l.qty.value + 1)}>+</button
-					>
-				</div>
-			{/if}
 			<p class="mono text-micro text-ink-3">
 				{#if rejected}<span class="font-sans"
 						><span class="sys-only mono">{l.productId} · </span>Not ordered</span
-					>{:else}<span class="text-ink">{b.buys}</span>{#if b.physical && !expanded}<span
+					>{:else if onqty && l.state !== 'committed'}{#if b.physical && !expanded}<span
+							class="text-ink-3">{b.physical}</span
+						>{/if}{:else}<span class="text-ink">{b.buys}</span>{#if b.physical && !expanded}<span
 							class="text-ink-2"
 						>
 							{b.physical}</span
@@ -172,7 +152,35 @@
 	<span class="mono text-right text-body {rejected ? 'text-ink-3' : 'text-ink'}">
 		{rejected ? '—' : money(l.lineCents)}
 	</span>
-	<span class="col-span-2 flex flex-wrap items-center gap-2 sm:col-span-1 sm:justify-end">
+	<span
+		class="col-span-2 flex flex-wrap items-center gap-2 sm:col-span-1 sm:justify-end lg:justify-start"
+	>
+		{#if onqty && !rejected && l.state !== 'committed'}
+			<!-- The line's amount (D23): one compact control, the unit as its suffix. -->
+			<span
+				class="inline-flex h-8 w-[7.5rem] shrink-0 items-center justify-between rounded-md border border-rule-strong bg-sheet text-meta"
+				role="group"
+				aria-label="Amount of {name}"
+			>
+				<button
+					type="button"
+					class="grid h-full w-7 place-items-center rounded-l-md text-ink-2 hover:bg-well hover:text-ink disabled:opacity-40"
+					aria-label="One less"
+					disabled={l.qty.value <= 0}
+					onclick={() => onqty(Math.max(0, l.qty.value - 1))}>−</button
+				>
+				<span class="mono px-1 whitespace-nowrap text-ink tabular-nums"
+					>{l.qty.value}
+					<span class="font-sans text-ink-2">{unitWord(l.qty.unit, l.qty.value)}</span></span
+				>
+				<button
+					type="button"
+					class="grid h-full w-7 place-items-center rounded-r-md text-ink-2 hover:bg-well hover:text-ink"
+					aria-label="One more"
+					onclick={() => onqty(l.qty.value + 1)}>+</button
+				>
+			</span>
+		{/if}
 		{#if decide?.state === 'pending' && !decide.signOff}
 			<!-- The chip is the line's control (D29): Accept · Reject · Swap · Why, at the chip, by click or keyboard. -->
 			<Popover.Root bind:open={chipMenu}>
