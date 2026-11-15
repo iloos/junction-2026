@@ -228,7 +228,7 @@
 				<h1>What do you need? We'll sort it out. <span class="dim">That's a <span class="mword">mandate</span>.</span></h1>
 				<p class="lede">Mandate plans a kitchen's order from Valio Aimo's catalogue, finds substitutes when products run out, and orders on its own only within the chef's mandate. Everything else waits for a person, with the reason.</p>
 				<!-- One recorded fact, bound to cases.json plan (event.guests, counts.lines, counts.waiting, counts.ordered). -->
-				<p class="herofact" id="hero-fact" hidden></p>
+				
 				<div class="ctas">
 					<a class="btn primary" href="https://app.mandate.kitchen/">
 						Open the kitchen
@@ -239,7 +239,7 @@
 						Connect your agent
 					</a>
 				</div>
-				<p class="note">Every visitor gets a private sandbox. Nothing is sent to Valio.</p>
+				<p class="note">Every visitor gets a private sandbox. Nothing is sent to Valio Aimo.</p>
 			</div>
 
 			<section class="cases" id="cases" role="region" aria-roledescription="carousel" aria-label="Cases recorded from the app" tabindex="0" hidden>
@@ -445,7 +445,7 @@
 			<p class="sub">Each screen in the app carries the same labels.</p>
 			<ul class="honest">
 				<li><b>Real</b><span>Valio Aimo's catalogue, and live price and availability calls for shortlisted products, cached with the time fetched.</span></li>
-				<li><b>Simulated</b><span>The booking, the clock, stock on hand, recipes, and the order itself. Valio Aimo's API has no order endpoint, so nothing is sent to Valio.</span></li>
+				<li><b>Simulated</b><span>The booking, the clock, stock on hand, recipes, and the order itself. Valio Aimo's API has no order endpoint, so nothing is sent to Valio Aimo.</span></li>
 				<li><b>Models</b><span>Gemini reads requests, proposes menus and scores how well each substitute fits the dish. Every check that decides what may be ordered runs in plain code. A model can add a caution that holds a line, never one that allows it.</span></li>
 			</ul>
 		</section>
@@ -901,11 +901,6 @@ function renderPartners(data) {
 		.then((data) => {
 			try {
 				renderChain(data);
-				const pl = data && data.plan, hf = document.getElementById('hero-fact');
-				if (hf && pl && pl.counts && pl.event) {
-					hf.textContent = `In a recorded chat request, a ${pl.event.guests}-guest buffet became ${pl.counts.lines} lines; ${pl.counts.waiting} waited for the chef.` + (pl.counts.ordered === 0 ? ' Nothing was ordered without the chef.' : '');
-					hf.hidden = false;
-				}
 			} catch {
 				/* the chain stays hidden; the cards still render */
 			}
