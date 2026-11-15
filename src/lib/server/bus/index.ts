@@ -91,8 +91,13 @@ function warmPlanPhotos(workspaceId: string, events: ServerEvent[]) {
 			import('../products/photos')
 		]);
 		const { ports } = await createServerPorts();
-		const products = await ports.catalog.get([...ids]);
-		await warmPhotos(process.env, `prefetch:${workspaceId}`, [...products.values()]);
+		const products = [...(await ports.catalog.get([...ids])).values()];
+		// Lines with no allergen record: the Why drawer's facts lookup, ready before the chef opens the line.
+		const { warmAllergenFacts } = await import('../products/facts-warm');
+		await Promise.all([
+			warmPhotos(process.env, `prefetch:${workspaceId}`, products),
+			warmAllergenFacts(process.env, workspaceId, ports.catalog, products)
+		]);
 	})().catch((err) => log.warn('photos.warm_failed', { workspaceId, error: errMsg(err) }));
 }
 

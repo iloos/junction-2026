@@ -36,7 +36,7 @@ import { createWorkQueue } from './queue';
 import { createApplications } from './applications';
 import { createWebTools } from './tools';
 import { busTrace } from './watch';
-import { createSpendLedger, spendLimits, type SpendLedger } from './spend';
+import { createSpendLedger, spendLimits, type SpendLedger, type SpendLimits } from './spend';
 import { createPgWebState, type PgWebState, type WebSlot } from './pg-state';
 import { attachStateSink, hydrateSlot, persistedMap } from './persist';
 import { setSharedLedger } from '../external/ledger';
@@ -121,14 +121,16 @@ export function webSpendKey(ctx: Pick<CallContext, 'workspaceId' | 'visitor' | '
 export function webClients(
 	env: Env,
 	trace?: Trace,
-	caller: string | null = null
+	caller: string | null = null,
+	/** Tighter limits for background work (prefetch); the env's caps otherwise. */
+	limits?: SpendLimits
 ): { recalls: RecallSource; exa: FactSearch; news: NewsSource } {
 	const mode = webMode(env);
 	const dir = cacheDir(env);
 	// Internal callers (the monitor) are bound by the global cap only.
 	const guard = spendLedger(env).guard(
 		caller?.startsWith('system:') ? null : caller,
-		spendLimits(env)
+		limits ?? spendLimits(env)
 	);
 	const recalls =
 		mode === 'live' && env.CONTEXT_DEV_API_KEY
