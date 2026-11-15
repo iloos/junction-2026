@@ -57,9 +57,9 @@
 	}
 </script>
 
-<section class="demand" aria-label="Demand, Valio's view">
+<section class="demand" aria-label="Demand, as the supplier sees it">
 	<header class="intro">
-		<h2>Demand, as Valio sees it</h2>
+		<h2>Demand, as Valio Aimo sees it</h2>
 		<p class="legend">
 			<span><i class="ordered"></i>ordered</span>
 			<span><i class="signed"></i>signed, not yet ordered</span>

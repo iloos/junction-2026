@@ -108,7 +108,7 @@
 		kitchen: 'Kitchen'
 	} as const;
 	const CHIP = {
-		valio: 'Valio data',
+		valio: 'Catalogue data',
 		rules: 'Kitchen rules',
 		chef: 'Chef',
 		approver: 'Approver',

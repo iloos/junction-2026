@@ -38,7 +38,7 @@ export function reasonText(r: string): string {
 export const TOOL: Record<string, string> = {
 	get_context: 'Read the kitchen context',
 	search_products: 'Searched the catalogue',
-	quote: 'Asked Valio for terms',
+	quote: 'Asked Valio Aimo for terms',
 	plan_event: 'Planned the event',
 	place_order: 'Placed an order',
 	edit_line: 'Edited a line',

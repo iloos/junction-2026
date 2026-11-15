@@ -18,7 +18,12 @@
 	}
 
 	const POLL_MS = 15_000;
-	const NAME = { valio: 'Valio', gemini: 'Gemini', exa: 'Exa', contextdev: 'Context.dev' } as const;
+	const NAME = {
+		valio: 'Valio Aimo',
+		gemini: 'Gemini',
+		exa: 'Exa',
+		contextdev: 'Context.dev'
+	} as const;
 
 	/** Calls in the last 24 hours from the stored traces (/healthz `day`): survives restarts, counts every process. */
 	type Day = Record<string, { calls: number; live: number; liveOk: number; cache: number }>;

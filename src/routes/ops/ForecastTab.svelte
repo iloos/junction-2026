@@ -57,7 +57,7 @@
 			timeZone: 'UTC'
 		});
 	const WHY: Record<Why, string> = {
-		valio: "Valio's answer",
+		valio: 'Catalogue data',
 		demand: 'everyday demand',
 		festive: 'Christmas demand',
 		orders: 'kitchen orders picked',
@@ -97,12 +97,10 @@
 </script>
 
 <section class="forecast" aria-label="Forecast">
-	<p class="label">
-		Simulated: modelled from Valio's answers and stated estimates, not live stock.
-	</p>
+	<p class="label">Simulated: modelled from catalogue data and stated estimates, not live stock.</p>
 	{#if !rows.length}
 		<p class="lede">
-			No forecast yet. It starts once a kitchen's plan has asked Valio about a product.
+			No forecast yet. It starts once a kitchen's plan has asked Valio Aimo about a product.
 		</p>
 	{:else}
 		<p class="lede">

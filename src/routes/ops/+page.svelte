@@ -525,8 +525,8 @@
 
 	{#if data.simulated}
 		<p class="banner">
-			Simulated run. Real Valio products, invented quantities and prices, played on a loop to show
-			how the room reads.
+			Simulated run. Real Valio Aimo products, invented quantities and prices, played on a loop to
+			show how the room reads.
 		</p>
 	{/if}
 	{#if stream.catchupError}

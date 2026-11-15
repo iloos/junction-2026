@@ -50,7 +50,7 @@
 
 	const POLL_MS = 30_000;
 	const NAME: Record<string, string> = {
-		valio: 'Valio',
+		valio: 'Valio Aimo',
 		gemini: 'Gemini',
 		exa: 'Exa',
 		contextdev: 'Context.dev',
@@ -147,15 +147,15 @@
 <section class="sponsors" aria-label="Outside calls, last hour">
 	{#if valioRun && lines}
 		<p class="valio-run">
-			<b>Valio, this run:</b>
+			<b>Valio Aimo, this run:</b>
 			{#if valioRun.live + valioRun.stored}
 				<span class="num">{lines}</span> plan lines priced with
 				<span class="num">{valioRun.live}</span> live call{valioRun.live === 1 ? '' : 's'} and
-				<span class="num">{valioRun.stored}</span> answered from stored copies. Valio is asked only when
-				a plan needs a price or stock it doesn't already have.
+				<span class="num">{valioRun.stored}</span> answered from stored copies. Valio Aimo is asked only
+				when a plan needs a price or stock it doesn't already have.
 			{:else}
-				<span class="num">{lines}</span> plan lines, and no call to Valio in this run: the prices and
-				stock come from the offers the catalogue already holds.
+				<span class="num">{lines}</span> plan lines, and no call to Valio Aimo in this run: the prices
+				and stock come from the offers the catalogue already holds.
 			{/if}
 		</p>
 	{/if}

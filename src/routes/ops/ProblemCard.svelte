@@ -26,7 +26,7 @@
 		chef: 'Waits for the chef',
 		approver: 'Waits for a named approver',
 		agents: 'Agents are on it',
-		operations: 'Valio operations to check'
+		operations: 'Valio Aimo operations to check'
 	} as const;
 </script>
 

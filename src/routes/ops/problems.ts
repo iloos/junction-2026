@@ -94,7 +94,7 @@ const WAITS_WORDS: Record<Waits, string> = {
 	chef: 'the chef',
 	approver: 'a named approver',
 	agents: 'the agents',
-	operations: 'Valio operations'
+	operations: 'Valio Aimo operations'
 };
 
 /** The newest ProposeSubstitute in the log for a plan's outage product. */
@@ -185,7 +185,7 @@ export function buildProblems(
 
 		const what = `${productName(names, productId)} (${productId}) ${
 			undeliverable ? "can't be delivered by the date the kitchens need" : cause.text
-		}${cause.by === 'kitchen' ? ": the kitchen's own rule, not Valio's stock" : ''}.`;
+		}${cause.by === 'kitchen' ? ": the kitchen's own rule, not catalogue stock" : ''}.`;
 		const consequence = held.length
 			? `Unless ${WAITS_WORDS[waits]} decides, ${k === 1 ? 'the kitchen goes' : `${k} kitchens go`} without ${phrase}.`
 			: `No substitute qualifies yet: ${k === 1 ? 'the kitchen goes' : `${k} kitchens go`} without ${phrase}.`;
