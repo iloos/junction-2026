@@ -1609,6 +1609,15 @@
 						<section aria-labelledby="decide-h" class="mt-6">
 							<h2 id="decide-h" class="text-heading font-semibold text-ink">Decide</h2>
 							<div class="mt-2 overflow-hidden rounded-lg border border-rule bg-sheet">
+								<!-- The same column header as the plan's table: item · amount and state · price. -->
+								<div
+									class="hidden items-center gap-x-3 border-b border-rule bg-well px-4 py-2 text-micro font-medium text-ink-3 lg:flex"
+									aria-hidden="true"
+								>
+									<span class="flex-1">Item</span>
+									<span class="w-[88px] text-right">€ ex VAT</span>
+									<span class="w-[37.5rem]">Amount · state · actions</span>
+								</div>
 								{#each decisions as g (g.key)}
 									{@const pendingIds = g.lineIds.filter(
 										(id) => decisionsByLine.get(id)?.state === 'pending'
@@ -1621,16 +1630,18 @@
 									<div class="border-t border-rule first:border-t-0">
 										<div
 											data-testid="decision-group"
-											class="flex flex-wrap items-start gap-x-3 gap-y-2 bg-paper/60 px-4 py-2.5"
+											class="flex flex-wrap items-center gap-x-3 gap-y-1.5 border-b border-rule bg-well/70 px-4 py-1.5"
 										>
-											<div class="min-w-0 flex-1">
-												<p class="text-body font-semibold text-ink">{g.title}</p>
-												<p class="text-meta text-ink-2">
-													{g.why ? `${g.why} · ` : ''}{g.lines.length}
-													{g.lines.length === 1 ? 'line' : 'lines'} ·
-													<span class="mono">{money(g.totalCents)}</span>
+											<!-- A group header is a thin row, like the table's own header (D29 B). -->
+											<div class="min-w-0 flex-1 text-meta">
+												<p class="text-ink">
+													<span class="font-semibold">{g.title}</span><span class="text-ink-2">
+														· {g.lines.length}
+														{g.lines.length === 1 ? 'line' : 'lines'} ·
+														<span class="mono">{money(g.totalCents)}</span></span
+													>
 												</p>
-												<p class="text-meta text-ink-3">{g.consequence}</p>
+												<p class="text-ink-3" title={g.why}>{g.consequence}</p>
 											</div>
 											{#if g.signOff}
 												<button
@@ -1659,9 +1670,9 @@
 												>
 											{/if}
 										</div>
-										<ul class="space-y-1 px-4 py-2">
+										<ul class="divide-y divide-rule">
 											{#each g.lines as l (l.id)}
-												<li>
+												<li class="px-4 py-2">
 													{@render lineRow(
 														l,
 														view.dishes.find((d) => d.lineIds.includes(l.id)) ?? null

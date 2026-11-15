@@ -79,7 +79,7 @@
 </script>
 
 <div
-	class="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3 gap-y-1 rounded-[5px] py-0.5 sm:grid-cols-[minmax(0,1fr)_88px_minmax(0,auto)] {flash
+	class="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3 gap-y-1 rounded-[5px] py-0.5 sm:grid-cols-[minmax(0,1fr)_88px_minmax(0,auto)] lg:grid-cols-[minmax(0,1fr)_88px_37.5rem] {flash
 		? 'landed'
 		: ''}"
 >
@@ -152,11 +152,13 @@
 	<span class="mono text-right text-body {rejected ? 'text-ink-3' : 'text-ink'}">
 		{rejected ? '—' : money(l.lineCents)}
 	</span>
-	<span class="col-span-2 flex flex-wrap items-center gap-2 sm:col-span-1 sm:justify-end">
+	<span
+		class="col-span-2 flex flex-wrap items-center gap-2 sm:col-span-1 sm:justify-end lg:justify-start"
+	>
 		{#if onqty && !rejected && l.state !== 'committed'}
 			<!-- The line's amount (D23): one compact control, the unit as its suffix. -->
 			<span
-				class="inline-flex h-8 shrink-0 items-center rounded-md border border-rule-strong bg-sheet text-meta"
+				class="inline-flex h-8 w-[7.5rem] shrink-0 items-center justify-between rounded-md border border-rule-strong bg-sheet text-meta"
 				role="group"
 				aria-label="Amount of {name}"
 			>
