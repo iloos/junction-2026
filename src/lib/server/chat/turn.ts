@@ -49,7 +49,7 @@ import type { ChatEvent, ChatTurnInput } from '$lib/ui/chat/types';
 import { decisionsDue, decisionsOf } from '$lib/ui/decisions';
 import type { ReceiptView } from '$lib/ui/Receipt.svelte';
 import { interpretDish, type InterpretDish } from './dish';
-import { decideAsChef, decisionWords } from './decide';
+import { decideAsChef, decisionWords, type DecisionWords } from './decide';
 import { steerLine, steerWords } from './steer';
 import { halfAsk } from './half';
 import { planName } from '$lib/server/agent/plan-name';
@@ -403,6 +403,22 @@ async function* turnLines(
 	// The answer to "What would you like to do?": a question reads, the others say what to type.
 	// A pick from "Which one?" after a product question: answer for exactly that product, read-only, nothing saved.
 	// A proposal chip ("say:<words>") is the chef's next words: one tap continues a half-formed ask.
+	// "Order anyway" on a held line: the chef approves exactly those lines (D22); "Keep waiting" leaves them held.
+	let chipDecision: DecisionWords | null = null;
+	if (input.answer && String(input.answer.value).startsWith('approve:')) {
+		const ids = String(input.answer.value).slice(8).split(',').filter(Boolean).slice(0, 50);
+		chipDecision = { decision: 'grant', all: false, lineIds: ids };
+		input = { ...input, answer: undefined, text: 'Order anyway' };
+	} else if (input.answer && String(input.answer.value) === 'wait') {
+		yield {
+			type: 'done',
+			taskId: input.taskId ?? '',
+			state: 'awaiting_chef',
+			text: 'It stays held until Valio states its stock or you decide.',
+			canContinue: false
+		};
+		return;
+	}
 	if (input.answer && String(input.answer.value).startsWith('say:'))
 		input = { ...input, answer: undefined, text: String(input.answer.value).slice(4) };
 	const choice = input.answer?.field === 'product' ? readChoice(String(input.answer.value)) : null;
@@ -561,7 +577,8 @@ async function* turnLines(
 	const words = input.text?.trim();
 	// D22: the chef in their own dock decides the lines the last turn showed ("approve all", "reject the herring").
 	const chefDecision =
-		words && deps.ctx.actor.kind === 'chef' ? decisionWords(withoutKitchen(words)) : null;
+		chipDecision ??
+		(words && deps.ctx.actor.kind === 'chef' ? decisionWords(withoutKitchen(words)) : null);
 	if (chefDecision) {
 		// What the last turn showed (D21), never the decision as it stands now: a plan that moved since is not decided.
 		const [shownId, shownV] = (task.shown?.decision ?? '').split(':');
@@ -1300,6 +1317,32 @@ async function* turnLines(
 			text = ledger.decisionsLeft
 				? `Nothing new to order: ${ledger.decisionsLeft} ${ledger.decisionsLeft === 1 ? 'decision is' : 'decisions are'} still waiting for you.`
 				: 'Nothing new to order.';
+		// Held only because Valio states no stock, for products this kitchen has ordered before: one tap orders them.
+		const known = read.value.plans
+			.flatMap((pl) => pl.lines)
+			.filter(
+				(l) =>
+					l.state === 'held' &&
+					l.reasons.includes('UNKNOWN_REQUIRED') &&
+					!l.reasons.includes('new_sku') &&
+					l.tier !== 'sign_off'
+			);
+		if (known.length && !continued && task.state !== 'cancelled')
+			yield {
+				type: 'clarify',
+				taskId: task.id,
+				field: 'intent',
+				question: `Valio doesn't state stock for ${known
+					.slice(0, 3)
+					.map((l) => readableName(l.productName ?? l.productId))
+					.join(
+						', '
+					)}${known.length > 3 ? ` and ${known.length - 3} more` : ''}; you've ordered ${known.length === 1 ? 'it' : 'them'} before. Order anyway?`,
+				options: [
+					{ label: 'Order anyway', value: `approve:${known.map((l) => l.id).join(',')}` },
+					{ label: 'Keep waiting', value: 'wait' }
+				]
+			};
 	} else if (menuCard) {
 		yield menuCard;
 		task.pending = { kind: 'none' };

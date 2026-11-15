@@ -15,6 +15,8 @@ export interface DecisionWords {
 	all: boolean;
 	/** The words naming the lines ("the salmon", "lohi and the milk"). */
 	target?: string;
+	/** Exactly these lines (a chip that named them, "Order anyway"). */
+	lineIds?: string[];
 }
 
 const ALL =
@@ -106,7 +108,11 @@ export async function decideAsChef(
 	const labels = new Map(
 		pending.map((l) => [l.id, plan.needs.find((n) => n.id === l.needId)?.label ?? ''])
 	);
-	const chosen = words.all ? pending : namedLines(words.target ?? '', pending, labels);
+	const chosen = words.lineIds
+		? pending.filter((l) => words.lineIds!.includes(l.id))
+		: words.all
+			? pending
+			: namedLines(words.target ?? '', pending, labels);
 	if (!chosen.length)
 		return {
 			text: `None of the lines waiting for you is "${words.target}". Name one of: ${pending
