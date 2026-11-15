@@ -7,7 +7,7 @@
 import type { Approval, Line, Plan } from '$lib/core/contracts';
 import { SCENARIO } from '$lib/core/scenario';
 import { dueOf } from '$lib/core/mandate/due';
-import { reasonLong, reasonShort } from './reasons';
+import { reasonLong, reasonShort, type Caps } from './reasons';
 
 export interface Decision {
 	/** Stable per approval and reason group. */
@@ -36,7 +36,12 @@ export interface Decision {
 const IGNORED = new Set(['unknown', 'UNKNOWN_REQUIRED']);
 
 /** The open decisions of a pending approval, in the order the approval lists its lines. */
-export function decisionsOf(plan: Plan, approval: Approval | null | undefined): Decision[] {
+export function decisionsOf(
+	plan: Plan,
+	approval: Approval | null | undefined,
+	/** The kitchen's caps: a cap reason then names the amount ("Over €800 a line"). */
+	caps?: Caps | null
+): Decision[] {
 	if (!approval || approval.state !== 'pending') return [];
 	const byId = new Map(plan.lines.map((l) => [l.id, l]));
 	const needLabel = new Map(plan.needs.map((n) => [n.id, n.label]));
@@ -64,7 +69,7 @@ export function decisionsOf(plan: Plan, approval: Approval | null | undefined): 
 			key: `${approval.id}:${group}`,
 			title: titleOf(g.lines, g.reasons, needLabel),
 			reason,
-			why: g.reasons.map(reasonLong).join(' '),
+			why: g.reasons.map((r) => reasonLong(r, caps)).join(' '),
 			lineIds: g.lines.map((l) => l.id),
 			lines: g.lines,
 			totalCents: g.lines.reduce((s, l) => s + (l.lineCents ?? 0), 0),

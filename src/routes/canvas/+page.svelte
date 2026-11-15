@@ -647,7 +647,7 @@
 											>{/key}
 									</div>
 									{#if candidate.rejected.length}<p class="mt-2 text-meta text-out">
-											{candidate.rejected.map(reasonLong).join(' ')}
+											{candidate.rejected.map((r) => reasonLong(r)).join(' ')}
 										</p>{/if}
 									<p class="mt-2 flex justify-between gap-3 text-meta">
 										<span

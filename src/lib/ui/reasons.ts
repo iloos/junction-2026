@@ -138,8 +138,33 @@ export function reasonShort(code: string): string {
 	return TEXT[code]?.short ?? code;
 }
 
-export function reasonLong(code: string): string {
+/** A cap reason with the cap itself ("Over €800 a line"), when the kitchen's caps are known; else the short words. */
+export function reasonWithCap(code: string, caps?: Caps | null): string {
+	return capOf(code, caps) ?? reasonShort(code);
+}
+
+export function reasonLong(code: string, caps?: Caps | null): string {
+	const cap = capOf(code, caps);
+	if (cap) return `${cap}: over what the agent may spend alone.`;
 	return TEXT[code]?.long ?? code;
+}
+
+/** The kitchen's caps, when known: cap reasons then say the amount. */
+export interface Caps {
+	lineCapCents?: number;
+	orderCapCents?: number;
+	weeklyCapCents?: number;
+}
+function capOf(code: string, caps?: Caps | null): string | null {
+	const eur = (c?: number) =>
+		c == null ? null : `€${Math.round(c / 100).toLocaleString('en-GB')}`;
+	const per: Record<string, [string | null, string]> = {
+		'CAP_EXCEEDED.line': [eur(caps?.lineCapCents), 'a line'],
+		'CAP_EXCEEDED.order': [eur(caps?.orderCapCents), 'an order'],
+		'CAP_EXCEEDED.weekly': [eur(caps?.weeklyCapCents), 'a week']
+	};
+	const p = per[code];
+	return p?.[0] ? `Over ${p[0]} ${p[1]}` : null;
 }
 
 const STATE_WORDS: Record<string, string> = {

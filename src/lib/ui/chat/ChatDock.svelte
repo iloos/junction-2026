@@ -910,13 +910,15 @@
 							{#each x.e.dishes as dish, j (j)}
 								<!-- The Kitchen's row: dish · role · diet chips, and what still needs a product. -->
 								<Row icon class="border-t border-rule/60 first:border-t-0">
-									<span class="text-ink">{dish.name}</span>
+									<!-- Finnish compounds break at syllables, never mid-letter; the gap note sits under the name. -->
+									<span class="[overflow-wrap:normal] hyphens-auto text-ink" lang="fi"
+										>{dish.name}</span
+									>
 									{#snippet sub()}{dish.course ?? 'dish'}{#each dish.diet ?? [] as dt (dt)}<span
 												class="ml-1 rounded border border-accent/30 bg-accent-wash px-1 text-micro text-accent-ink"
 												>{dt}</span
-											>{/each}{/snippet}
-									{#snippet end()}{#if dish.missing}<span class="text-micro text-signoff"
-												>{dish.missing}
+											>{/each}{#if dish.missing}<span class="text-signoff">
+												· {dish.missing}
 												{dish.missing === 1 ? 'item needs' : 'items need'} a product</span
 											>{/if}{/snippet}
 								</Row>

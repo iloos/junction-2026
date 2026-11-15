@@ -183,7 +183,7 @@
 				...topups
 			].find((l) => l.productId === productId && l.nameEn)?.nameEn;
 		return en?.trim() && en.trim().toLowerCase() !== readableName(name).toLowerCase()
-			? en.trim()
+			? readableName(en.trim())
 			: undefined;
 	}
 	const rows = $derived.by<Row[]>(() => {
@@ -572,9 +572,9 @@
 								class="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-body hover:bg-well"
 								onclick={() => addTopUp(h)}
 							>
-								<span class="min-w-0 truncate" title={h.nameEn}
+								<span class="min-w-0 truncate" title={h.nameEn ? readableName(h.nameEn) : undefined}
 									>{readableName(h.name)}{#if h.nameEn}<span class="text-ink-3">
-											· {h.nameEn}</span
+											· {readableName(h.nameEn)}</span
 										>{/if}</span
 								>
 								<span class="shrink-0 text-meta text-ink-3">per {unitWord(h.unit)}</span>

@@ -21,6 +21,8 @@ describe('readableName', () => {
 		expect(readableName('HK Palvikinkku viipaloitu 1,5 kg')).toBe(
 			'HK Palvikinkku viipaloitu 1,5 kg'
 		);
+		// English names from the catalogue read the same way.
+		expect(readableName('AIMO TOMATO HERRING 2,5/1,25KG')).toBe('Aimo tomato herring 2,5/1,25kg');
 		expect(readableName('AIMO X', 'Aimo mustard herring 2.5 kg · MSC')).toBe(
 			'Aimo mustard herring 2.5 kg · MSC'
 		);
