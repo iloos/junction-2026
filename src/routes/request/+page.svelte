@@ -57,7 +57,13 @@
 	 * A menu the chat proposed opens here for the chef's review: /request?menu=<id>&rev=<revision>. It is read from this
 	 * browser's own workspace; a menu from another room or from before a reset is not there, and the page says so.
 	 */
-	let linkedMenu = $state<{ id: string; rev: number | null; note: string | null } | null>(null);
+	let linkedMenu = $state<{
+		id: string;
+		rev: number | null;
+		note: string | null;
+		/** The other room's link, when the menu was not found in this one. */
+		switchTo?: string;
+	} | null>(null);
 	let menu = $state.raw<MenuView | null>(null);
 	let menuPlan = $state.raw<MenuPlanResult | null>(null);
 	let menuBusy = $state(false);
@@ -77,11 +83,16 @@
 				linkedMenu = {
 					id,
 					rev,
-					note: "This menu isn't in this sandbox: it was proposed in another room or before a reset. Ask the chat to propose it again here."
+					note:
+						data.workspace.kind === 'own'
+							? 'This menu is not in your own sandbox: it may be in the live room.'
+							: 'This menu is not in this room: it may be in your own sandbox.',
+					switchTo: `?menu=${encodeURIComponent(id)}${rev !== null ? `&rev=${rev}` : ''}&ws=${data.workspace.kind === 'own' ? 'ws-judges' : 'mine'}`
 				};
 				return;
 			}
 			menu = (await res.json()) as MenuView;
+			void settleGrounding(id);
 			if (rev !== null && menu.proposal.revision !== rev)
 				linkedMenu = {
 					id,
@@ -91,6 +102,38 @@
 		} catch (e) {
 			linkedMenu = { id, rev, note: e instanceof Error ? e.message : String(e) };
 		}
+	}
+	/**
+	 * Sourced recipes per dish arrive in the background: re-read for up to 10 s, then show what was found and nothing
+	 * for the rest (no spinner that never ends, no "not found" noise).
+	 */
+	async function settleGrounding(id: string) {
+		const waiting = () => Object.values(menu?.grounding ?? {}).some((g) => g.state === 'pending');
+		for (let k = 0; k < 5 && waiting(); k++) {
+			await new Promise((r) => setTimeout(r, 2000));
+			try {
+				const res = await fetch('/request/menu', {
+					method: 'POST',
+					headers: { 'content-type': 'application/json' },
+					body: JSON.stringify({ action: 'read', id })
+				});
+				if (res.ok && menu?.proposal.id === id) {
+					const next = (await res.json()) as MenuView;
+					menu = { ...menu, grounding: next.grounding };
+				}
+			} catch {
+				break;
+			}
+		}
+		if (menu?.grounding && menu.proposal.id === id)
+			menu = {
+				...menu,
+				grounding: Object.fromEntries(
+					Object.entries(menu.grounding).filter(
+						([, g]) => g.state !== 'pending' && g.state !== 'failed'
+					)
+				)
+			};
 	}
 	async function menuCall<T>(body: Record<string, unknown>): Promise<T | null> {
 		menuBusy = true;
@@ -268,6 +311,14 @@
 			<h2 class="text-heading font-semibold">Menu from the chat</h2>
 			{#if linkedMenu.note}<p class="mt-1 text-body text-ink-2" role="status">
 					{linkedMenu.note}
+					{#if linkedMenu.switchTo}<button
+							type="button"
+							class="font-medium text-accent-ink underline"
+							onclick={() => location.assign(`${resolve('/request')}${linkedMenu!.switchTo}`)}
+							>{data.workspace.kind === 'own'
+								? 'Switch to the live room?'
+								: 'Switch to your sandbox?'}</button
+						>{/if}
 				</p>{/if}
 			{#if menu}
 				<MenuReview

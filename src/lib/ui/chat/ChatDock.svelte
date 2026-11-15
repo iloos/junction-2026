@@ -173,8 +173,11 @@
 		loadedFor = k;
 		untrack(() => {
 			const was = { taskId, entries };
-			taskId = openTask ?? read();
-			if (openTask) remember(openTask);
+			// A link from the conversation names its task (?task=): the same thread continues here.
+			const linked = new URL(location.href).searchParams.get('task');
+			const fromLink = linked && /^task-[w-]{1,60}$/.test(linked) ? linked : null;
+			taskId = openTask ?? fromLink ?? read();
+			if (openTask ?? fromLink) remember((openTask ?? fromLink)!);
 			entries = [];
 			planTitle = '';
 			fresh = false;
@@ -463,6 +466,19 @@
 	}
 
 	/** The plan the task works on, from its newest ledger or decision. */
+	/** The Kitchen link for this conversation's order, from its decision card when there is one. */
+	function orderUrl(plan: string): string {
+		const d = entries.findLast(
+			(x) => x.kind === 'event' && x.e.type === 'decision' && x.e.planId === plan
+		);
+		if (d?.kind === 'event' && d.e.type === 'decision') return d.e.approvalUrl;
+		return `/?plan=${encodeURIComponent(plan)}${kitchenId ? `&kitchen=${encodeURIComponent(kitchenId)}` : ''}`;
+	}
+	/** A link that keeps this conversation: the dock on the next page opens the same task (D23 addendum). */
+	function withTask(url: string): string {
+		if (!taskId) return url;
+		return `${url}${url.includes('?') ? '&' : '?'}task=${encodeURIComponent(taskId)}`;
+	}
 	const taskPlan = $derived.by(() => {
 		for (let j = entries.length - 1; j >= 0; j--) {
 			const x = entries[j];
@@ -907,8 +923,8 @@
 								</p>
 							{/if}
 							{#if own?.error}<p class="text-meta text-out">{own.error.message}</p>{/if}
-							<a class="text-meta text-ink-2 underline" href={x.e.approvalUrl}
-								>Open this plan in the Kitchen</a
+							<a class="text-meta text-ink-2 underline" href={withTask(x.e.approvalUrl)}
+								>Open the order →</a
 							>
 						</li>
 					{:else}
@@ -927,7 +943,7 @@
 									<DecisionCard decision={d} {names} due={x.e.due} readonly compact />
 									<span
 										class="mt-1 inline-flex items-center gap-1 text-meta font-medium text-propose group-hover:underline"
-										>{here ? 'Show on the page' : 'Open in the Kitchen'}
+										>{here ? 'Show on the page' : 'Open the order →'}
 										<ArrowUpRight size={13} aria-hidden="true" /></span
 									>
 								</a>
@@ -966,6 +982,25 @@
 								onclick={(ev) => locate(ev, taskPlan!, { zone: 'order' })}
 								>Order it on the page <ArrowUpRight size={13} aria-hidden="true" /></a
 							>
+						</li>
+					{:else if x === last && taskPlan && taskPlan !== planId && !dockOrders}
+						<!-- D23: the order this conversation made opens in the Kitchen, the same thread beside it. -->
+						<li class="flex flex-wrap items-center gap-2">
+							<a
+								class="inline-flex items-center gap-1 rounded-md bg-accent px-3 py-1.5 text-meta font-semibold text-sheet hover:bg-accent-ink"
+								href={withTask(orderUrl(taskPlan))}
+								data-testid="open-order">Open the order →</a
+							>
+							{#if !actedHere && x.e.canContinue}
+								<button
+									type="button"
+									class="rounded-md border border-accent px-3 py-1.5 text-meta font-semibold text-accent-ink hover:bg-accent-wash disabled:opacity-50"
+									disabled={busy}
+									onclick={() => turn({ continue: true }, 'Continue')}
+								>
+									{orderWords}
+								</button>
+							{/if}
 						</li>
 					{:else if x === last && !actedHere && x.e.canContinue && !dockOrders}
 						<li class="flex flex-wrap gap-2">
