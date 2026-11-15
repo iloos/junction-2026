@@ -392,8 +392,7 @@ export class KitchenStore {
 					approvalId: g.approval.id,
 					planVersion: g.approval.planVersion,
 					termsHash: g.approval.termsHash,
-					// 'reopen' (Undo a reject) is core's approve decision from S1's 1651098; the contract type lags.
-					decision: decision as 'grant' | 'deny',
+					decision,
 					...(decision === 'reopen' ? {} : { lineIds: g.lineIds })
 				});
 				all &&=

@@ -608,6 +608,52 @@
 		);
 		return pending.flatMap((a) => decisionsOf(plan, a));
 	});
+	/** Where each line sat in Decide while it waited: a rejected line stays there, struck, with Undo. */
+	let placed = $state.raw(new Map<string, { reason: string; title: string; at: number }>());
+	$effect.pre(() => {
+		const ds = decisions;
+		untrack(() => {
+			// eslint-disable-next-line svelte/prefer-svelte-reactivity -- built here, then reassigned whole
+			const next = new Map(placed);
+			let changed = false;
+			ds.forEach((g, gi) =>
+				g.lines.forEach((l, li) => {
+					const at = gi * 1000 + li;
+					const cur = next.get(l.id);
+					if (cur?.reason === g.reason && cur.at === at) return;
+					next.set(l.id, { reason: g.reason, title: g.title, at });
+					changed = true;
+				})
+			);
+			if (changed) placed = next;
+		});
+	});
+	/** Decide's groups in place: each open group with its rejected lines back where they were. */
+	const decideRows = $derived.by(() => {
+		const at = (l: Line) => placed.get(l.id)?.at ?? 1e9;
+		const rows: {
+			key: string;
+			g: (typeof decisions)[number] | null;
+			title: string;
+			lines: Line[];
+		}[] = decisions.map((g) => ({ key: g.key, g, title: g.title, lines: [...g.lines] }));
+		for (const l of rejectedLines) {
+			const p = placed.get(l.id);
+			const row =
+				rows.find((r) => r.g && p && r.g.reason === p.reason) ??
+				rows.find((r) => !r.g && r.title === (p?.title ?? 'Rejected · not ordered'));
+			if (row) row.lines.push(l);
+			else
+				rows.push({
+					key: `rejected:${p?.title ?? ''}`,
+					g: null,
+					title: p?.title ?? 'Rejected · not ordered',
+					lines: [l]
+				});
+		}
+		for (const r of rows) r.lines.sort((a, b) => at(a) - at(b));
+		return rows.sort((a, b) => Math.min(...a.lines.map(at)) - Math.min(...b.lines.map(at)));
+	});
 	/**
 	 * The plan's short title (D29): the event's name, the menu's dishes, else where it came from ("Usual Wednesday
 	 * order", "Order from the chat"); never a list of products.
@@ -1744,60 +1790,74 @@
 									<span class="w-[88px] text-right">€ ex VAT</span>
 									<span class="w-[37.5rem]">Amount · state · actions</span>
 								</div>
-								{#each decisions as g (g.key)}
-									{@const pendingIds = g.lineIds.filter(
-										(id) => decisionsByLine.get(id)?.state === 'pending'
-									)}
-									{@const terms = {
-										id: g.approvalId,
-										planVersion: g.planVersion,
-										termsHash: g.termsHash
-									}}
+								{#each decideRows as row (row.key)}
+									{@const g = row.g}
 									<div class="border-t border-rule first:border-t-0">
-										<div
-											data-testid="decision-group"
-											class="flex flex-wrap items-center gap-x-3 gap-y-1.5 border-b border-rule bg-well/70 px-4 py-1.5"
-										>
-											<!-- A group header is a thin row, like the table's own header (D29 B). -->
-											<div class="min-w-0 flex-1 text-meta">
-												<p class="text-ink">
-													<span class="font-semibold">{g.title}</span><span class="text-ink-2">
-														· {g.lines.length}
-														{g.lines.length === 1 ? 'line' : 'lines'} ·
-														<span class="mono">{money(g.totalCents)}</span></span
-													>
-												</p>
-												<p class="text-ink-3" title={g.why}>{g.consequence}</p>
+										{#if !g}
+											<div
+												class="border-b border-rule bg-well/70 px-4 py-1.5 text-meta text-ink-2"
+												data-testid="rejected-group"
+											>
+												<span class="font-semibold text-ink">{row.title}</span>
+												· {row.lines.length} rejected, not ordered
 											</div>
-											{#if g.signOff}
-												<button
-													type="button"
-													class="inline-flex h-9 items-center rounded-md border border-signoff px-3 text-meta font-medium whitespace-nowrap text-ink hover:bg-signoff-wash disabled:opacity-50"
-													disabled={k.busy || k.readOnly}
-													onclick={() => (signGroup = g)}
-													>Review and sign off {g.lines.length}
-													{g.lines.length === 1 ? 'line' : 'lines'}</button
-												>
-											{:else if pendingIds.length}
-												<button
-													type="button"
-													class="inline-flex h-9 items-center rounded-md border border-accent px-3 text-meta font-medium whitespace-nowrap text-accent-ink hover:bg-accent-wash disabled:opacity-50"
-													disabled={k.busy || k.readOnly}
-													onclick={() =>
-														void k.decideLines([{ approval: terms, lineIds: pendingIds }], 'grant')}
-													>Accept these {pendingIds.length} ·
-													<span class="mono ml-1"
-														>{money(
-															g.lines
-																.filter((l) => pendingIds.includes(l.id))
-																.reduce((t, l) => t + (l.lineCents ?? 0), 0)
-														)}</span
-													></button
-												>
-											{/if}
-										</div>
+										{:else}
+											{@const pendingIds = g.lineIds.filter(
+												(id) => decisionsByLine.get(id)?.state === 'pending'
+											)}
+											{@const terms = {
+												id: g.approvalId,
+												planVersion: g.planVersion,
+												termsHash: g.termsHash
+											}}
+											<div
+												data-testid="decision-group"
+												class="flex flex-wrap items-center gap-x-3 gap-y-1.5 border-b border-rule bg-well/70 px-4 py-1.5"
+											>
+												<!-- A group header is a thin row, like the table's own header (D29 B). -->
+												<div class="min-w-0 flex-1 text-meta">
+													<p class="text-ink">
+														<span class="font-semibold">{g.title}</span><span class="text-ink-2">
+															· {g.lines.length}
+															{g.lines.length === 1 ? 'line' : 'lines'} ·
+															<span class="mono">{money(g.totalCents)}</span></span
+														>
+													</p>
+													<p class="text-ink-3" title={g.why}>{g.consequence}</p>
+												</div>
+												{#if g.signOff}
+													<button
+														type="button"
+														class="inline-flex h-9 items-center rounded-md border border-signoff px-3 text-meta font-medium whitespace-nowrap text-ink hover:bg-signoff-wash disabled:opacity-50"
+														disabled={k.busy || k.readOnly}
+														onclick={() => (signGroup = g)}
+														>Review and sign off {g.lines.length}
+														{g.lines.length === 1 ? 'line' : 'lines'}</button
+													>
+												{:else if pendingIds.length}
+													<button
+														type="button"
+														class="inline-flex h-9 items-center rounded-md border border-accent px-3 text-meta font-medium whitespace-nowrap text-accent-ink hover:bg-accent-wash disabled:opacity-50"
+														disabled={k.busy || k.readOnly}
+														onclick={() =>
+															void k.decideLines(
+																[{ approval: terms, lineIds: pendingIds }],
+																'grant'
+															)}
+														>Accept these {pendingIds.length} ·
+														<span class="mono ml-1"
+															>{money(
+																g.lines
+																	.filter((l) => pendingIds.includes(l.id))
+																	.reduce((t, l) => t + (l.lineCents ?? 0), 0)
+															)}</span
+														></button
+													>
+												{/if}
+											</div>
+										{/if}
 										<ul class="divide-y divide-rule">
-											{#each g.lines as l (l.id)}
+											{#each row.lines as l (l.id)}
 												<li class="px-4 py-2">
 													{@render lineRow(
 														l,
@@ -1808,28 +1868,6 @@
 										</ul>
 									</div>
 								{/each}
-								{#if rejectedLines.length}
-									<div class="border-t border-rule">
-										<div
-											class="border-b border-rule bg-well/70 px-4 py-1.5 text-meta text-ink-2"
-											data-testid="rejected-group"
-										>
-											<span class="font-semibold text-ink">Rejected · not ordered</span>
-											· {rejectedLines.length}
-											{rejectedLines.length === 1 ? 'line' : 'lines'}
-										</div>
-										<ul class="divide-y divide-rule">
-											{#each rejectedLines as l (l.id)}
-												<li class="px-4 py-2">
-													{@render lineRow(
-														l,
-														view.dishes.find((d) => d.lineIds.includes(l.id)) ?? null
-													)}
-												</li>
-											{/each}
-										</ul>
-									</div>
-								{/if}
 							</div>
 						</section>
 					{/if}
