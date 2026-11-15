@@ -85,8 +85,8 @@ Both apps build from GitHub (`iloos/junction-2026`, VCS integration `vcs5f404a66
 
 | Workspace | Who | Reset |
 |---|---|---|
-| `ws-j-<24 hex>` | one per browser, from the signed `mandate_visitor` cookie; seeded with a fresh run on first use | "Start over" (no key, 20 s cooldown per sandbox) |
-| `ws-judges` | shared room (`?ws=ws-judges`); also where new visitors go past 300 sandboxes per process | same as a sandbox |
+| `ws-j-<24 hex>` | one per browser, from the signed `mandate_visitor` cookie; seeded with a fresh run on first use | "Start over" (no key, 20 s cooldown per sandbox); keeps the visitor's own kitchens (D26) |
+| `ws-judges` | shared room (`?ws=ws-judges`); also where new visitors go past 5,000 sandboxes per process (`VISITOR_CAP`) | same as a sandbox |
 | `ws-demo` | the stage: presenters only (`?ws=ws-demo` after signing in on /ops) | presenter on /ops, or `POST /api/demo/reset` with the chef or approver key |
 | `ws-smoke` | the deploy smoke's `MCP_KEYS` key | `POST /api/demo/reset` with that key |
 | `ws-synth` | the simulated run on /ops (memory only) | restarts by itself |
@@ -120,7 +120,7 @@ Checked against the live service; each line says how.
 |---|---|
 | The app runs on **Aiven Runtime** | Service `mandate`, built from `main` by Aiven from the Dockerfile; `smoke.sh` passes on every deploy. |
 | Data lives in **Aiven for PostgreSQL** with verified TLS | `pg-1dfeeeed`, PostgreSQL 18.7; `/healthz` returns `"tls":"verified"`. A wrong CA is rejected (tested locally). |
-| Schema by migration | Drizzle migrations through `0004`, run by `pnpm db:migrate`; `0000` creates the `vector` extension (pgvector 0.8.7). |
+| Schema by migration | Drizzle migrations through `0005` (`traces`), run by `pnpm db:migrate`; `0000` creates the `vector` extension (pgvector 0.8.7). |
 | Real catalogue | `products` holds **17,546** Valio products. Embeddings are not populated, so no vector-search claim. |
 | **No double orders** on Postgres | `smoke.sh` with `SMOKE_KEY` on f2052ca: 4 concurrent commits with one idempotency key → one receipt; 3 with different keys → one receipt, two refused. |
 | Live op stream on **LISTEN/NOTIFY** | Committed ops and agent traces are published with `NOTIFY mandate_events` and fanned out from one `LISTEN` per process to SSE. An SSE client received the routine agent's 8 trace events live during a 1.56 s run. |

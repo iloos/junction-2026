@@ -2,6 +2,8 @@
 
 _Foundation note, Sat 14 Nov. Versions checked with `npm view` today. Spike: `scratch/spikes/mcp/` (`npm i && npm start`, then `npm run client`; `npm test`; `npm run openapi`). Everything below marked **(spiked)** ran there._
 
+_As built: the tool table in §2 and decisions 2–5 below were the pre-build proposal. The registry is 20 tools in `src/lib/core/contracts/tools.ts` (an outside key sees 17; see [ARCHITECTURE § Tools](../concept/ARCHITECTURE.md#tools-corecontractstoolsts)), served by `src/lib/server/tools/mcp.ts` and REST `/api/tools/<name>` + `/api/openapi.json`; scopes are `read · plan · order · approve · mandate:write · agent:run`. The MCP Apps approval card (§3) is not built: approval goes through `approvalUrl` to a human (D17)._
+
 ## Versions
 | Package | Version | Note |
 |---|---|---|

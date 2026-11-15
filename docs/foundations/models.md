@@ -55,6 +55,7 @@ Every model call names a job; `LLM_ROUTES` in `src/lib/server/adapters/llm/route
 | agent.review_rewrite | Flash-Lite | minimal | 200 | the outcome as written |
 | explain | Flash-Lite | minimal | 400 | template |
 | chat.understand | Flash-Lite | minimal | 400 | rules (not yet measured) |
+| request.parse.escalate | `gemini-3.8-flash` | low | 800 | the first reading |
 | menu.propose | `gemini-3.8-flash` | low | 4,000 | team templates |
 | establishment.match | Flash-Lite | minimal | 300 | rules in `core/establishment.ts` (evals/establishment); not yet measured live |
 | image.read | Nemotron 3.5 Super VL (Verda) | off | 1,500 | — |

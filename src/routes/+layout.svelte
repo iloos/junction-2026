@@ -22,7 +22,11 @@
 			short: undefined as string | undefined,
 			match: (p: string) => p === '/' || p === '/offline'
 		},
-		{ href: resolve('/request'), label: 'Request', match: (p: string) => p.startsWith('/request') },
+		{
+			href: resolve('/request'),
+			label: 'Ask the agent',
+			match: (p: string) => p.startsWith('/request')
+		},
 		{
 			href: resolve('/ops'),
 			label: 'Operations',

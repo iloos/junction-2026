@@ -222,5 +222,9 @@ export function basketFor(stages: OrderStages[], kitchenId: string, o: BasketOpt
 			};
 		});
 	// A day with nothing live (every line ordered elsewhere or dead) still shows when it has orders: drop only empty ones.
-	return { kitchenId, days: days.filter((d) => d.lines.length) };
+	// A day whose lines can't be ordered still shows, with what can't be ordered: its plan is the chef's to fix.
+	return {
+		kitchenId,
+		days: days.filter((d) => d.lines.length || d.cannotOrderNames.length)
+	};
 }

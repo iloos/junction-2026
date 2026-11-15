@@ -49,11 +49,32 @@ export const POST: RequestHandler = async (event) => {
 	// The kitchen the dock names, else the visitor's own, else the one the kitchen screen has selected: never a seed by
 	// name (a dock on /request, Ops or /agents sends none).
 	const selected = session(sid(event.cookies), v.workspaceId).kitchenId;
-	const kitchen =
-		kitchens.find((k) => k.id === kitchenId) ??
-		kitchens.find((k) => k.owner === ctx.visitor) ??
-		kitchens.find((k) => k.id === selected) ??
-		kitchens[0];
+	// In a room others share (D24), the chat acts only for this visitor's own store, never a seeded kitchen.
+	// The presenter drives the stage's seeded kitchens; everyone else, the shared room included, only their own store.
+	const shared = v.kind === 'shared' || v.kind === 'full' || (v.kind === 'stage' && !v.presenter);
+	const mine = kitchens.filter((k) => k.owner === ctx.visitor);
+	const kitchen = shared
+		? (mine.find((k) => k.id === kitchenId) ?? mine[0])
+		: (kitchens.find((k) => k.id === kitchenId) ??
+			mine[0] ??
+			kitchens.find((k) => k.id === selected) ??
+			kitchens[0]);
+	if (!kitchen && shared)
+		return new Response(
+			JSON.stringify({
+				type: 'done',
+				taskId: '',
+				state: 'open',
+				text: 'Join the room as your own store first: on the Kitchen page, press "Start my store", then tell me what you need.',
+				canContinue: false
+			}) + '\n',
+			{
+				headers: {
+					'content-type': 'application/x-ndjson; charset=utf-8',
+					'cache-control': 'no-store'
+				}
+			}
+		);
 	if (!kitchen) return bad('no kitchen in this workspace');
 	// Gemini reads, plans and words the chat whenever a provider is configured; the fixture keeps rules and script.
 	const live = (env.LLM_PROVIDER ?? 'fixture') !== 'fixture';

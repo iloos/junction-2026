@@ -282,6 +282,13 @@ interface Indexed {
 }
 
 /** Lazily built word index over the catalogue (document frequency per word). */
+/**
+ * Words that say how a food is made, kept or sold, not what it is: Finnish participles (paistettu, savustettu,
+ * viipaloitu), and form, state and grade words in both languages.
+ */
+const FORM_WORD =
+	/^(?:\w+(?:ttu|tty|ttuja|ttyjä|nut|nyt))$|^(?:pakaste|pakasteet|kypsä|raaka|tuore|premium|vapaa|vapaan|luomu|irto|frozen|froze|fresh|fried|prefried|smoked|sliced|diced|cooked|organic|barn|free|range|pre|kpl|pcs|pkt|ltk|psv|ras|quick)$/;
+
 export class RetrievalIndex {
 	private items: Indexed[];
 	private byId = new Map<ProductId, Indexed>();
@@ -531,6 +538,9 @@ export class RetrievalIndex {
 	): Candidate[] {
 		const minLex = o.minLex ?? 0.25;
 		const tWords = contentWords(`${target.nameFi} ${target.nameEn ?? ''}`, target.brand);
+		// The food itself: the target's words that are not a form or state ("paistettu muna" is an egg, fried). A
+		// substitute must share one, so a fried egg never gets fried onions; the form may differ and is named elsewhere.
+		const heads = tWords.filter((w) => !FORM_WORD.test(w));
 		const weights = tWords.map((w) => this.idf(w));
 		const total = weights.reduce((a, b) => a + b, 0) || 1;
 		const diet = o.diet ?? dietOf(target, true);
@@ -551,6 +561,8 @@ export class RetrievalIndex {
 			}
 			lex /= total;
 			if (lex < minLex) continue;
+			if (!o.strict && heads.length && !heads.some((h) => words.some((w) => wordSim(h, w) >= 0.6)))
+				continue;
 			let cov = 0;
 			let cTotal = 0;
 			for (const w of words) {

@@ -1,6 +1,6 @@
 # PITCH
 
-_Working doc, not final copy. Lead-owned until a pitch owner exists. Claims only what is wired on `main` (CLAUDE.md rule 8); anything unverified sits under "Not yet claimable" until a test, eval or observed deployed run backs it. Words on screen and in speech follow [concept/VOCABULARY.md](concept/VOCABULARY.md) (D10): **supplier confirmed** (receipt-backed only), **ordered, awaiting supplier** (committed, Terminal), **planned**, **known-stock candidate** (Valio states a quantity; not reserved)._
+_Working doc, not final copy. Owner: S7 (pitch lane) since Sun 01:55; the deck is [pitch/DECK.md](pitch/DECK.md), the capability map [pitch/MAP.md](pitch/MAP.md). Claims only what is wired on `main` (CLAUDE.md rule 8); anything unverified sits under "Not yet claimable" until a test, eval or observed deployed run backs it. Words on screen and in speech follow [concept/VOCABULARY.md](concept/VOCABULARY.md) (D10): **supplier confirmed** (receipt-backed only), **ordered, awaiting supplier** (committed, Terminal), **planned**, **known-stock candidate** (Valio states a quantity; not reserved)._
 
 ## One-breath opener
 "140 guests on Saturday. The ham and the swede casserole are out. What can an agent actually promise this kitchen, and what must it refuse?"
@@ -37,7 +37,7 @@ Order (lead, Sun 01:40): the hero journey first, then the room and a shortage, t
 
 Cut list if time is short: Valio sees it (fold into the room shot), then the opener.
 
-Deck outline (6 slides): 1 the problem in Valio's words · 2 the hero journey as one frame (words → menu → priced plan → a person decides → ordered) · 3 the room: many stores, one stock, each under its own mandate (Ops + QR) · 4 a shortage re-plans every store inside its own rules · 5 open door: any agent, same rules (MCP, none of its tools approve) · 6 what's real (Valio data, Gemini, Aiven) vs simulated (orders, supplier, history), and next.
+Deck: [pitch/DECK.md](pitch/DECK.md) (six slides: the case · the approach · the slices · the sponsor round · why us · real and next).
 
 ## Stage pitch (3:00)
 0–20 the problem · 20–105 the Christmas journey · 105–135 an outside agent on the judge's own key plans in the judge's sandbox and cannot approve · 135–160 Operations shows why kitchens are held · 160–180 the 4-week hotel pilot (targets, not results) and close.
@@ -62,7 +62,7 @@ Deck outline (6 slides): 1 the problem in Valio's words · 2 the hero journey as
 | Cut-off enforced at commit (F9) | `server/store/cutoff.test.ts`; eval r5-f9 |
 | Knows the cut-off: "tomorrow" after 17:00 is caught before ordering, the cut-off named and the next day offered | `evals/paraphrase` `late-tomorrow`, chat trials c1/c4; seen on prod `70c30e2` `/request` ("earliest delivery is Wed 9 Dec") |
 | An event in words becomes a plan: brief questions → a menu proposed by Gemini (3.8 Flash), every amount an estimate → the chef accepts → a plan | `core/services/events.ts` `plan_event{proposal}`, `MenuReview.svelte`; seen on prod `70c30e2` (50 guests → 20 lines) |
-| Chat: plain words → a held plan and a decision card; "approve it" is refused; answers come from the task's ledger | `server/chat/`, `evals/chat` (scripted trials + 15 messy EN/FI turns replayed in the gate); seen on prod `70c30e2` `/agents/chat` |
+| Chat: plain words → a held plan and a decision card; "approve it" is refused; answers come from the task's ledger | `server/chat/`, `evals/chat` (scripted trials + 15 messy EN/FI turns replayed in the gate); seen on prod `70c30e2` in the dock (`/agents/chat` now opens the dock over the Kitchen) |
 | The Why drawer cites the web (Exa): net content, origin and ingredients, GTIN-cited, with sources | `server/web/evidence.ts`; seen on prod `70c30e2` (ham `462490`, hk.fi) |
 | Context.dev watches Ruokavirasto's recall list every 5 minutes; each notice becomes an Ops case matched against the catalogue | `foundations/web.md`, `/api/web/contextdev`; recall cases seen in prod Ops |
 | A voided approval shows what changed | eval r6-5 (`get_plan.lastVoided`) |
@@ -76,7 +76,7 @@ Deck outline (6 slides): 1 the problem in Valio's words · 2 the hero journey as
 Every claim's observed status and verdict: [CLAIMS.md](CLAIMS.md).
 
 ## Not yet claimable
-- **New events from chat**: open menus plan on `/request` only; the chat plans only the seeded buffet.
+- **The room cascade on screen**: waits for wave K's room fix to be playtested (r1, m1). The hero journey is 10/10 at 1440 and 390 on prod `ea9f4d5` (S5).
 - **The menu's product picks up close**: a trout ingredient resolved to pork (BUGS #11); show the menu, not the picks, until fixed.
 - **Every sponsor call in the trace drawer**: Valio live, chat Gemini text and MCP `propose_menu` aren't traced there yet.
 - **Review mechanism**: on main behind `REVIEW=1`, off until the on/off arms run.
@@ -91,6 +91,7 @@ Every claim's observed status and verdict: [CLAIMS.md](CLAIMS.md).
 - Parked by D7, never in the pitch: Gemini Live voice, photo input, a 500-kitchen swarm, Nemotron, Modal jobs.
 
 ## Next (say as next, never as built)
+- **Your own agent can ask you to approve in its client** (MCP elicitation, D22), showing the exact terms; outside agents still never approve.
 - **Valio's systems subscribe to the op log (Aiven Kafka + Debezium).** The op log stays the source of truth. Aiven's Debezium connector streams it into Kafka topics, so Valio's ERP, warehouse, forecasting and recall systems can subscribe to held lines, orders and shortfalls with no app change and no dual writes.
 - **Usual orders across many kitchens** (D14): detected standing orders make demand dependable for Valio; the app has detection over a simulated history.
 - **Margin-aware suggestions**: the "Valio suggests" slot ranks by a stated reason today; with Valio's margin data it could weigh margin, still inside the mandate and never the default.
@@ -99,9 +100,10 @@ Every claim's observed status and verdict: [CLAIMS.md](CLAIMS.md).
 
 ## Framing we can say truthfully (docs/research/agentic-commerce.md)
 - "Our mandate is what Google's agent payments protocol (AP2) calls an open mandate; our approval is a closed mandate bound to the exact terms by a hash; the approval surface is not an agent, and every check runs in deterministic code." Don't claim AP2/ACP compliance, payments or signatures.
-- Numbers (cite on a slide, docs/research/pitch-numbers-and-viz.md): Finnish food services waste ~61 Mkg of edible food a year (Luke); ~1 plate in 6 on a serving line is never eaten (Luke field study); EU law requires a 30% per-person cut by 2030; public kitchens serve ~380 M meals a year; buyers beat the algorithm only where they know something it doesn't (Kesavan & Kushwaha 2020), so we ask only at the exceptions. No Finnish online-order or fill-rate figures (none found).
+- Numbers (cite on a slide, docs/research/pitch-numbers-and-viz.md): food services cause 17% of the Finnish food chain's edible food loss (Luke 2021; the release gives no kg figure for them); ~1 plate in 6 on a serving line is never eaten (Luke field study); EU law requires a 30% per-person cut by 2030; public kitchens serve ~380 M meals a year; buyers beat the algorithm only where they know something it doesn't (Kesavan & Kushwaha 2020), so we ask only at the exceptions. No Finnish online-order or fill-rate figures (none found).
 
 ## Q&A crib
+- **Can my agent approve?** No. The chef approves on the page or in the in-app chat. Any MCP agent, an outside one or your own, gets an approval link you open on any device, including a phone paired from `/agents`; the link points and grants nothing.
 - **Why won't Valio's own A.I.mo do this?** We asked it Valio's own example (1,000 L lactose-free milk by Monday); it said it can't confirm availability or price and pointed to sales service. That is right for a knowledge assistant. The missing layer is transactional: stock, price and authority. We built that layer and an open gate A.I.mo could sit on; we don't replace A.I.mo or the webshop. (Say the date we asked.)
 - **Isn't this Choco's OrderAgent Autopilot?** Choco claims "only genuine exceptions reach a person" as a vendor feature inside its own app. Ours: the exception rule is the customer's own mandate, enforced in an open interface any agent can use, with approval bound to exact terms.
 - **What breaks it?** Unknown supply: we hold and say so, and never call it covered.

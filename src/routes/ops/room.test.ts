@@ -5,6 +5,7 @@ import {
 	orderFeed,
 	roomKitchens,
 	roomOrder,
+	lastIncident,
 	firstOrders,
 	shortageCounts,
 	storesCreated,
@@ -90,5 +91,25 @@ describe('room', () => {
 		const { active, samples } = roomOrder([seeded[0], blank, owned], {});
 		expect(active.map((k) => k.id)).toEqual(['k-x', 'k-v-abc123']);
 		expect(samples.map((k) => k.id)).toEqual(['k-hotel']);
+	});
+
+	it('groups the newest incident’s shortage notices, in order, and ignores a plain shortage after it', () => {
+		const n = (seq: number, label: string, productId: string) => ({
+			seq,
+			event: {
+				kind: 'shortage.replanned',
+				label,
+				detail: { shortageId: `s${seq}`, productId, productName: productId, kitchens: [] }
+			}
+		});
+		const inc = 'Simulated incident: Rush';
+		const run = [n(1, 'other', 'x'), n(2, inc, 'a'), n(3, inc, 'b')];
+		const got = lastIncident(run, 'Simulated incident')!;
+		expect(got.label).toBe(inc);
+		expect(got.shortages.map((s) => s.productId)).toEqual(['a', 'b']);
+		// A plain Kitchen shortage after the incident: the incident is no longer the newest.
+		expect(
+			lastIncident([...run, n(4, 'simulated: Valio is short', 'z')], 'Simulated incident')
+		).toBeNull();
 	});
 });

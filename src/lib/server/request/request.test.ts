@@ -447,3 +447,21 @@ describe('request flow on the PGlite fixture', () => {
 		expect(quoted).toEqual([]);
 	}, 60_000);
 });
+
+describe('an instruction is never an item (S5 j3)', () => {
+	for (const t of [
+		'10 l milk for friday, order it',
+		'10 l milk for friday and order it',
+		'10 l milk for friday, please order',
+		'10 l milk for friday. thanks'
+	])
+		it(`"${t}" is one item`, () => {
+			const items = parseRules(t, '2026-12-07').items;
+			expect(items.map((i) => i.product)).toEqual(['milk']);
+		});
+	it('"order 4 kg butter" keeps its item', () => {
+		expect(parseRules('order 4 kg butter', '2026-12-07').items.map((i) => i.product)).toEqual([
+			'butter'
+		]);
+	});
+});

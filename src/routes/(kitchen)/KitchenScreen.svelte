@@ -883,12 +883,9 @@
 	);
 	let ordersOpen = $state(false);
 	/** D31: a fresh conversation for a new order; the open plan and its thread stay as they were. */
+	/** D31: a new order is a fresh conversation, full width on /request (S3); the open plan stays as it was. */
 	async function newOrder() {
-		if (!shell) return;
-		shell.chatOpen = true;
-		// After the dock has opened (and re-read its remembered task), so the fresh task wins.
-		await tick();
-		shell.chatNew += 1;
+		await goto(resolve('/request?new=1'));
 	}
 	/** Read the day's basket again after anything on the plan changes. */
 	let planMade = $state(0);

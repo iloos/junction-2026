@@ -56,26 +56,11 @@
 				...(s?.rankBy ? { rankBy: s.rankBy } : {}),
 				...(s?.steer || text ? { steer: { ...(s?.steer ?? {}), ...(text ? { text } : {}) } } : {})
 			});
-			const ranked = withAlternatives(
+			// The pick (the agent's choice) comes sized like the alternatives, so its row has a total too.
+			rows = withAlternatives(
 				swapRows(r.candidates, current.productId),
-				r.alternatives,
+				[...(r.pick ? [r.pick] : []), ...(r.alternatives ?? [])],
 				current.productId
-			);
-			// The pick's own total for the need, from the lines the search sized for it.
-			const chosen = r.chosen.filter((l) => l.qty.value > 0);
-			rows = ranked.map((row) =>
-				row.pick &&
-				!row.total &&
-				chosen[0]?.productId === row.productId &&
-				chosen.some((l) => (l.lineCents ?? 0) > 0)
-					? {
-							...row,
-							total: {
-								cents: chosen.reduce((t, l) => t + (l.lineCents ?? 0), 0),
-								qty: { value: chosen[0].qty.value, unit: chosen[0].qty.unit }
-							}
-						}
-					: row
 			);
 		} catch (e) {
 			failed =

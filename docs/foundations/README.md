@@ -5,10 +5,10 @@ _One note per service: current API and versions, limits and cost, how it fits ou
 | Note | Covers |
 |---|---|
 | [valio-data.md](valio-data.md) (+ [valio-profile.json](valio-profile.json)) | Valio catalogue and mock API probe: cache, limits, units, hero products |
-| [data.md](data.md) | Aiven Postgres + pgvector + LISTEN/NOTIFY, Drizzle, the PGlite fixture |
+| [data.md](data.md) | Aiven Postgres + LISTEN/NOTIFY, Drizzle, the PGlite fixture (pgvector: extension and `products.embedding` exist, unused; retrieval is lexical, D19) |
 | [deploy.md](deploy.md) | Aiven Runtime service `mandate`: redeploy, smoke, warm-up, plan B (owner: G) |
 | [gemini.md](gemini.md) | Gemini Decisions API (calibrated decisions), Flash-Lite structured output, SDK and key names |
-| [models.md](models.md) | The LLM port and open models (Featherless Gemma); Nemotron parked by D7 |
+| [models.md](models.md) | The LLM port and open models (Featherless Gemma); Nemotron on Verda wired for `read_image`, not live |
 | [mcp.md](mcp.md) | MCP server (SDK v2) inside SvelteKit, OpenAPI from zod, testing with the Inspector |
 | [web.md](web.md) | Context.dev recall watch and Exa lookups: caching, spend caps, webhook (owner: D) |
 | [ux.md](ux.md) | Interaction model, screens, control room, design direction |

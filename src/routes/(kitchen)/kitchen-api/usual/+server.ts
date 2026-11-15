@@ -36,7 +36,10 @@ export const GET: RequestHandler = async (event) => {
 
 /** POST {kitchenId, deliveryDate, lines, nonce?}: plan the chef's confirmed lines through place_order as the chef. */
 export const POST: RequestHandler = async (event) => {
-	const { workspaceId } = await visitorWorkspace(event, env, dev);
-	const r = await planUsual(workspaceId, await event.request.json().catch(() => ({})));
+	const { workspaceId, own, presenter } = await visitorWorkspace(event, env, dev);
+	const r = await planUsual(workspaceId, await event.request.json().catch(() => ({})), {
+		own,
+		presenter
+	});
 	return r.ok ? json(r) : json({ error: r.error }, { status: r.status });
 };
