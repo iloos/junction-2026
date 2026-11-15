@@ -148,10 +148,15 @@
 	{#if valioRun && lines}
 		<p class="valio-run">
 			<b>Valio, this run:</b>
-			<span class="num">{lines}</span> plan lines priced with
-			<span class="num">{valioRun.live}</span> live call{valioRun.live === 1 ? '' : 's'} and
-			<span class="num">{valioRun.stored}</span> answered from stored copies. Valio is asked only when
-			a plan needs a price or stock it doesn't already have.
+			{#if valioRun.live + valioRun.stored}
+				<span class="num">{lines}</span> plan lines priced with
+				<span class="num">{valioRun.live}</span> live call{valioRun.live === 1 ? '' : 's'} and
+				<span class="num">{valioRun.stored}</span> answered from stored copies. Valio is asked only when
+				a plan needs a price or stock it doesn't already have.
+			{:else}
+				<span class="num">{lines}</span> plan lines, and no call to Valio in this run: the prices and
+				stock come from the offers the catalogue already holds.
+			{/if}
 		</p>
 	{/if}
 	<h3>Outside calls, last hour</h3>
