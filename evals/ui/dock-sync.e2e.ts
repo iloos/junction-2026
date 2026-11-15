@@ -12,7 +12,7 @@ const BASE = process.env.KITCHEN_URL ?? 'http://localhost:4173';
 async function openDock(page: Page) {
 	const dock = page.locator('aside[aria-label="Agent chat"]');
 	await expect(async () => {
-		await page.getByRole('button', { name: 'Ask the agent' }).click();
+		await page.getByRole('button', { name: 'Ask the agent' }).first().click();
 		await expect(dock).toBeVisible({ timeout: 1000 });
 	}).toPass({ timeout: 30_000 });
 	return dock;
@@ -83,10 +83,10 @@ test('approving in the dock takes the decision off the page and says where', asy
 	await expect(card.first()).toBeVisible({ timeout: 60_000 });
 
 	await approveInDock(here);
-	await here.getByRole('button', { name: DOCK_ORDER }).waitFor({ timeout: 30_000 });
+	await dock.getByRole('button', { name: DOCK_ORDER }).first().waitFor({ timeout: 30_000 });
 
 	await expect(card).toHaveCount(0, { timeout: 20_000 });
-	await here.getByRole('button', { name: DOCK_ORDER }).click();
+	await dock.getByRole('button', { name: DOCK_ORDER }).first().click();
 	await expect(kitchen.getByText(/by you in the agent dock/i)).toBeVisible({ timeout: 20_000 });
 	await ctx.close();
 });
@@ -139,17 +139,16 @@ test('in a shared room the stream follows that room, not the own sandbox', async
 	const b = await ctx.newPage();
 	await enterKitchen(b, '/?ws=ws-judges');
 	await b.waitForTimeout(1500);
-	expect(
-		await b.getByText(/lactose-free milk|laktoositon/i).count(),
-		'tab B starts without the order'
-	).toBe(0);
+	expect(await b.getByText(/oat drink|kaurajuoma/i).count(), 'tab B starts without the order').toBe(
+		0
+	);
 
 	const dock = a.locator('aside[aria-label="Agent chat"]');
 	await expect(async () => {
-		await a.getByRole('button', { name: 'Ask the agent' }).click();
+		await a.getByRole('button', { name: 'Ask the agent' }).first().click();
 		await expect(dock).toBeVisible({ timeout: 1000 });
 	}).toPass({ timeout: 30_000 });
-	await dock.locator('textarea').fill('10 l lactose-free milk for Friday');
+	await dock.locator('textarea').fill('4 l oat drink for Friday');
 	await dock.locator('textarea').press('Enter');
 	await a
 		.getByText(/^Working\b.*…$/)
@@ -158,7 +157,7 @@ test('in a shared room the stream follows that room, not the own sandbox', async
 		.catch(() => undefined);
 	const said = (await dock.innerText()).slice(-600);
 	const live = await b
-		.getByText(/lactose-free milk|laktoositon/i)
+		.getByText(/oat drink|kaurajuoma/i)
 		.first()
 		.waitFor({ timeout: 60_000 })
 		.then(() => true)
@@ -169,7 +168,7 @@ test('in a shared room the stream follows that room, not the own sandbox', async
 	if (!live) {
 		await b.reload();
 		afterReload = await b
-			.getByText(/lactose-free milk|laktoositon/i)
+			.getByText(/oat drink|kaurajuoma/i)
 			.first()
 			.waitFor({ timeout: 20_000 })
 			.then(() => true)

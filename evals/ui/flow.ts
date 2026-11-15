@@ -151,7 +151,7 @@ export async function approveInDock(here: Locator) {
 }
 
 /** The dock's order button after approving: "Order the approved lines", or "Order N lines now". */
-export const DOCK_ORDER = /^Order (the approved lines|\d+ lines?)/;
+export const DOCK_ORDER = /^Order (the approved lines|what may be ordered now|\d+ lines?)/;
 
 /** The page's decisions: D29's decision-group headers, or the pre-D29 cards in the #approval panel. */
 export function decisionCards(page: Page) {

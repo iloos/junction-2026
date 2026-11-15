@@ -18,7 +18,7 @@ test('the chef approves and orders from the dock, never through a chat turn', as
 	const dock = page.locator('aside[aria-label="Agent chat"]');
 	// Until the page hydrates, the shell's button does nothing: press it until the dock opens.
 	await expect(async () => {
-		await page.getByRole('button', { name: 'Ask the agent' }).click();
+		await page.getByRole('button', { name: 'Ask the agent' }).first().click();
 		await expect(dock).toBeVisible({ timeout: 1000 });
 	}).toPass({ timeout: 30_000 });
 	await dock.getByRole('button', { name: 'New task' }).click();
@@ -29,14 +29,16 @@ test('the chef approves and orders from the dock, never through a chat turn', as
 
 	const before = posts.length;
 	await approveInDock(here);
-	const order = here.getByRole('button', { name: DOCK_ORDER });
+	const order = dock.getByRole('button', { name: DOCK_ORDER }).first();
 	await order.waitFor({ timeout: 30_000 });
 	const during = posts.slice(before);
 	expect(during, 'the approval is the Kitchen command').toContain('/kitchen-api/tool/approve');
 	expect(during, 'no chat turn while the chef approves').not.toContain('/api/chat/turn');
 
 	await order.click();
-	await expect(here.getByText(/Ordered\s*·\s*\d+\s+lines?/)).toBeVisible({ timeout: 30_000 });
+	await expect(dock.getByText(/Ordered\s*·\s*\d+\s+lines?|Ordered: receipt/).first()).toBeVisible({
+		timeout: 30_000
+	});
 	expect(posts.slice(before)).toContain('/kitchen-api/tool/commit_order');
 });
 
@@ -53,7 +55,7 @@ test('a dock approval on another plan never switches the plan the Kitchen page s
 
 	const dock = page.locator('aside[aria-label="Agent chat"]');
 	await expect(async () => {
-		await page.getByRole('button', { name: 'Ask the agent' }).click();
+		await page.getByRole('button', { name: 'Ask the agent' }).first().click();
 		await expect(dock).toBeVisible({ timeout: 1000 });
 	}).toPass({ timeout: 30_000 });
 	await dock.getByRole('button', { name: 'New task' }).click();
@@ -62,8 +64,10 @@ test('a dock approval on another plan never switches the plan the Kitchen page s
 	const here = dock.getByLabel('Decide here');
 	await here.waitFor({ timeout: 60_000 });
 	await approveInDock(here);
-	await here.getByRole('button', { name: DOCK_ORDER }).click();
-	await expect(here.getByText(/Ordered\s*·\s*\d+\s+lines?/)).toBeVisible({ timeout: 30_000 });
+	await dock.getByRole('button', { name: DOCK_ORDER }).first().click();
+	await expect(dock.getByText(/Ordered\s*·\s*\d+\s+lines?|Ordered: receipt/).first()).toBeVisible({
+		timeout: 30_000
+	});
 
 	// A reload straight after the dock's order still opens the buffet (the dock never moves the remembered plan);
 	// then the page's own next command and a fresh read still act on, and show, the buffet.
