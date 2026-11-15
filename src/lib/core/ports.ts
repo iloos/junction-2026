@@ -205,6 +205,12 @@ export interface CallContext {
 	 * presenter's Kitchen session clears it.
 	 */
 	sharedRoom?: boolean;
+	/**
+	 * D22: a chef's own AI client (a chef key) approves only through an elicitation the person accepted, showing the
+	 * exact terms. `elicited` is set by the MCP door after that acceptance, never from a request.
+	 */
+	approveBy?: 'elicitation';
+	elicited?: boolean;
 	/** Kitchens this context may act for; absent = every kitchen in the workspace. */
 	kitchenIds?: readonly string[];
 	/**
