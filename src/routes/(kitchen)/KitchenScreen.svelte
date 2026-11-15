@@ -2051,7 +2051,9 @@
 																[{ approval: terms, lineIds: pendingIds }],
 																'grant'
 															)}
-														>Accept these {pendingIds.length} ·
+														>{pendingIds.length === 1
+															? 'Accept'
+															: `Accept these ${pendingIds.length}`} ·
 														<span class="mono ml-1"
 															>{money(
 																g.lines

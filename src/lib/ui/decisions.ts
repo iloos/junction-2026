@@ -45,16 +45,18 @@ export function decisionsOf(plan: Plan, approval: Approval | null | undefined): 
 		const l = byId.get(id);
 		if (!l) continue;
 		const reasons = l.reasons.filter((r) => !IGNORED.has(r));
-		// A swap is its own decision, never lumped with new products for other dishes that share its reasons.
-		const swap = !!l.substituteFor && l.strategy?.kind !== 'make_in_house';
-		const key = (swap ? 'swap|' : '') + (reasons.map(reasonShort).join(' · ') || 'Held');
-		const g = groups.get(key) ?? { reasons, lines: [], signOff: false };
+		// One group per kind of decision (buy, swap, make in house; signed off or not; allergens changing or not), so
+		// a swap never shares a group with new products, and two "Buy new products" groups never sit side by side.
+		const kind = l.strategy?.kind === 'make_in_house' ? 'make' : l.substituteFor ? 'swap' : 'buy';
+		const key = `${kind}|${l.tier === 'sign_off' ? 'sign' : ''}|${reasons.includes('allergen_change') ? 'allergen' : ''}`;
+		const g = groups.get(key) ?? { reasons: [], lines: [], signOff: false };
+		for (const r of reasons) if (!g.reasons.includes(r)) g.reasons.push(r);
 		g.lines.push(l);
 		if (l.tier === 'sign_off') g.signOff = true;
 		groups.set(key, g);
 	}
 	return [...groups].map(([group, g]) => {
-		const reason = group.replace(/^swap\|/, '');
+		const reason = g.reasons.map(reasonShort).join(' · ') || 'Held';
 		const needs = [
 			...new Set(g.lines.map((l) => (l.needId ? needLabel.get(l.needId) : undefined)))
 		].filter((x): x is string => !!x);
