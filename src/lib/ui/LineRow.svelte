@@ -11,7 +11,8 @@
 	import ProductThumb from './ProductThumb.svelte';
 	import SwapPanel from './SwapPanel.svelte';
 	import HoldButton from './HoldButton.svelte';
-	import { Repeat } from '@lucide/svelte';
+	import { ChevronDown, Repeat } from '@lucide/svelte';
+	import { Popover } from 'bits-ui';
 	import AgentMark from './AgentMark.svelte';
 	import DietMarks from './DietMarks.svelte';
 	import type { Marks } from './diet';
@@ -66,6 +67,7 @@
 		onqty
 	}: Props = $props();
 	let swapping = $state(false);
+	let chipMenu = $state(false);
 	$effect(() => {
 		if (swapOpen) swapping = true;
 	});
@@ -175,9 +177,77 @@
 		{rejected ? '—' : money(l.lineCents)}
 	</span>
 	<span class="col-span-2 flex flex-wrap items-center gap-2 sm:col-span-1 sm:justify-end">
-		<StateChip state={l.state} tier={l.tier} reasons={l.reasons} {approved} view={l.view} />
 		{#if decide?.state === 'pending' && !decide.signOff}
-			<span class="inline-flex shrink-0 gap-1.5">
+			<!-- The chip is the line's control (D29): Accept · Reject · Swap · Why, at the chip, by click or keyboard. -->
+			<Popover.Root bind:open={chipMenu}>
+				<Popover.Trigger
+					class="inline-flex shrink-0 items-center gap-0.5 rounded-full pr-1 hover:bg-auth-wash focus-visible:outline-2 focus-visible:outline-auth"
+					aria-label="Needs approval: Accept, Reject, Swap or Why"
+					><StateChip
+						state={l.state}
+						tier={l.tier}
+						reasons={l.reasons}
+						{approved}
+						view={l.view}
+					/><ChevronDown size={13} class="text-auth" aria-hidden="true" /></Popover.Trigger
+				>
+				<Popover.Portal>
+					<Popover.Content
+						sideOffset={4}
+						align="end"
+						class="z-50 w-44 rounded-lg border border-rule bg-sheet p-1 text-body shadow-lg"
+					>
+						<div role="menu" aria-label="Line actions">
+							<button
+								type="button"
+								role="menuitem"
+								class="block w-full rounded-md px-3 py-1.5 text-left text-accent-ink hover:bg-well"
+								disabled={decide.busy}
+								onclick={() => {
+									chipMenu = false;
+									decide?.onaccept();
+								}}>Accept</button
+							>
+							<button
+								type="button"
+								role="menuitem"
+								class="block w-full rounded-md px-3 py-1.5 text-left hover:bg-well"
+								disabled={decide.busy}
+								onclick={() => {
+									chipMenu = false;
+									decide?.onreject();
+								}}
+								>Reject<span class="block text-micro text-ink-3">Not ordered: {decide.cost}</span
+								></button
+							>
+							{#if swap}<button
+									type="button"
+									role="menuitem"
+									class="block w-full rounded-md px-3 py-1.5 text-left hover:bg-well"
+									onclick={() => {
+										chipMenu = false;
+										swapping = true;
+									}}>Swap…</button
+								>{/if}
+							{#if onwhy}<button
+									type="button"
+									role="menuitem"
+									class="block w-full rounded-md px-3 py-1.5 text-left hover:bg-well"
+									onclick={() => {
+										chipMenu = false;
+										onwhy?.();
+									}}>Why</button
+								>{/if}
+						</div>
+					</Popover.Content>
+				</Popover.Portal>
+			</Popover.Root>
+		{:else}
+			<StateChip state={l.state} tier={l.tier} reasons={l.reasons} {approved} view={l.view} />
+		{/if}
+		{#if decide?.state === 'pending' && !decide.signOff}
+			<!-- The separate buttons where they fit; on a phone the chip menu carries them. -->
+			<span class="hidden shrink-0 gap-1.5 sm:inline-flex">
 				<button
 					type="button"
 					class="inline-flex h-8 items-center rounded-md border border-accent px-3 text-meta font-medium text-accent-ink hover:bg-accent-wash disabled:opacity-50"

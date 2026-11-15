@@ -282,6 +282,12 @@
 		ls.filter((l) => l.state !== 'rejected' && l.state !== 'unorderable' && l.qty.value > 0);
 	const dishMarks = (ls: Line[]) => rollUp(liveLines(ls).map(lineMarks));
 	const orderMarks = $derived(rollUp(liveLines(k.plan?.lines ?? []).map(lineMarks)));
+	/** The legend says only the marks this plan's rows show (and "?" when some product has no allergen record). */
+	const usedMarks = $derived.by(() => {
+		const ms = liveLines(k.plan?.lines ?? []).map(lineMarks);
+		const used = new Set(ms.flatMap((m) => m.codes));
+		return { codes: CODES.filter((c) => used.has(c)), unknown: ms.some((m) => !m.recorded) };
+	});
 
 	/** A plan made from a menu: its needs are "Dish · ingredient", read as dishes → ingredients → products. */
 	const needNames = $derived(k.view?.dishes.map((d) => d.nameFi) ?? []);
@@ -2003,21 +2009,38 @@
 							{/each}
 						</div>
 						{#if k.snap?.diet}
-							<p class="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-meta text-ink-2">
-								<span class="font-medium text-ink">This order:</span>
-								<DietMarks marks={orderMarks} />
-								<span>{marksTitle(orderMarks)}</span>
+							<p class="mt-2 text-meta text-ink-2">
+								<span class="font-medium text-ink">Allergens in this order:</span>
+								{marksTitle(orderMarks)}
 							</p>
-							<p class="mt-1 text-meta text-ink-3" aria-label="Diet marks legend">
-								{CODES.map((c) => `${c} ${CODE_WORDS[c]}`).join(' · ')} · ? no allergen record (allergens
-								unknown, never read as free from)
+							{#if usedMarks.codes.length || usedMarks.unknown}
+								<p
+									class="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-meta text-ink-3"
+									aria-label="Diet marks legend"
+								>
+									{#each usedMarks.codes as c (c)}
+										<span class="inline-flex items-center gap-1"
+											><span class="mono rounded border border-rule px-1 text-micro text-ink-2"
+												>{c}</span
+											>{CODE_WORDS[c]}</span
+										>
+									{/each}
+									{#if usedMarks.unknown}
+										<span class="inline-flex items-center gap-1"
+											><span
+												class="mono rounded border border-dashed border-rule-strong px-1 text-micro text-ink-2"
+												>?</span
+											>no allergen record (never read as free from)</span
+										>
+									{/if}
+								</p>
+							{/if}
+						{/if}
+						{#if isEvent}
+							<p class="mt-2 text-meta text-ink-3">
+								Grams per guest, yields and recipes are team estimates.
 							</p>
 						{/if}
-						<p class="mt-2 text-meta leading-snug text-ink-3">
-							{#if isEvent}Grams per guest, yields and recipes are team estimates.{/if} Prices are Valio
-							catalogue prices ex VAT; lines where Valio doesn't state a quantity are ordered, but never
-							counted as cover.
-						</p>
 					</section>
 				</div>
 			</div>
