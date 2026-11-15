@@ -528,7 +528,9 @@ async function snapshotBody(s: Session): Promise<FixtureSnapshot | NotStarted> {
 					planId: plan.id,
 					version: plan.version,
 					lineId: l.id,
-					...presetInput(kitchen, s)
+					...presetInput(kitchen, s),
+					// A preview, said explicitly: it writes nothing, so a room visitor may see the hotel's rankings.
+					apply: false
 				}) as Promise<SubstitutesOut>
 		)
 	);

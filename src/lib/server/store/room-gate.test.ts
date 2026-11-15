@@ -79,4 +79,29 @@ describe('the shared room', () => {
 		const presenter = await order(h, room(undefined, true), 'k-hotel', 'presenter');
 		expect(presenter.ok).toBe(true);
 	});
+
+	it("a visitor may preview substitutes on the room's hotel plan (the snapshot does), never apply them", async () => {
+		const plan = await h.plan_event(room(undefined, true), {
+			kitchenId: 'k-hotel',
+			eventId: 'event-xmas-140'
+		});
+		if (!plan.ok) throw new Error(plan.error.message);
+		const p = plan.value.plan;
+		const out = p.lines.find((l) => l.state === 'unorderable' && !l.substituteFor)!;
+		const a = room('vis-a');
+		const preview = await h.find_substitutes(a, {
+			planId: p.id,
+			version: p.version,
+			lineId: out.id,
+			apply: false
+		});
+		expect(preview.ok).toBe(true);
+		const apply = await h.find_substitutes(a, {
+			planId: p.id,
+			version: p.version,
+			lineId: out.id,
+			apply: true
+		});
+		expect(!apply.ok && apply.error.sub).toBe('room_store');
+	});
 });

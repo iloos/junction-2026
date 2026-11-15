@@ -163,6 +163,8 @@ async function kitchensNamed(ports: ServicePorts, ctx: CallContext, input: unkno
  */
 async function notOwner(ports: ServicePorts, ctx: CallContext, scope: string, input: unknown) {
 	if (scope === 'read') return null;
+	// A preview writes nothing (find_substitutes with apply: false): anyone who may read the plan may rank for it.
+	if ((input as { apply?: unknown } | null)?.apply === false) return null;
 	const named = await kitchensNamed(ports, ctx, input);
 	if (!named.length) return null;
 	const kitchens = new Map((await ports.store.kitchens(ctx.workspaceId)).map((k) => [k.id, k]));
