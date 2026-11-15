@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { TriangleAlert, Info } from '@lucide/svelte';
+	import { TriangleAlert } from '@lucide/svelte';
 	import { onMount } from 'svelte';
 	import { resolve } from '$app/paths';
 	import { storyTime } from '$lib/ui/format';
