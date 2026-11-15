@@ -55,7 +55,7 @@ _Sat 14 Nov. Uses startup tools (jobs to be done, user stories, forces, riskiest
 
 **F4 Recall / web change (R1).** Monitor (Context.dev) → extracted notice → GTIN match against open orders → "potentially affected" (no batch in orders) → lines held, substitutes proposed, Ops view lights the kitchens. *Fail:* no match → notice kept, inspectable; replayed notice labelled "replay".
 
-**F5 External agent orders (R0).** Judge's Claude → MCP `search` → `quote` (live, shortlisted ids) → `place_order` → **pending**, never committed by the agent → approval link on the phone (agent holds no approval tool) → receipt in both places. *Fail:* stale quote → re-quote; duplicate call → same receipt.
+**F5 External agent orders (R0).** Judge's Claude → MCP `get_context` → `search_products` → `quote` (live, shortlisted ids) → `place_order` → **pending**, never committed by the agent → approval link on the phone (agent holds no approval tool) → receipt in both places. *Fail:* stale quote → re-quote; duplicate call → same receipt.
 
 **F6 Ops oversight (R1).** Stream of ops from Postgres with a cursor → kitchens by state (working / waiting / held / done) → scarce SKUs → drill into a plan. *Decision:* ops can see and message; it cannot approve for the kitchen.
 

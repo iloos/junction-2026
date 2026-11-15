@@ -1,10 +1,10 @@
 # ARCHITECTURE
 
-_Lead-owned. Implements D3–D13 (with D8a and the D3/D6 amendments). The contracts named here are on `main`. Track code against them and raise **Needs** instead of changing them; who owns which path is in [DISPATCH.md](../DISPATCH.md#seams-one-owner-each)._
+_Lead-owned. Implements D3–D30 (with D8a and the D3/D6 amendments; D23 and D22 in part, see Agents). The contracts named here are on `main`. Track code against them and raise **Needs** instead of changing them; who owns which path is in [DISPATCH.md](../DISPATCH.md#seams-one-owner-each)._
 
 ## Shape
 ```
-browser  /  (kitchen + chat dock) · /request · /ops · /agents ──SSE── /api/events
+browser  /  (kitchen + chat dock) · /request · /ops · /agents · /pair ──SSE── /api/events
             │ fetch (/kitchen-api/*, /api/request, /request/{run,menu}, /api/chat/{turn,task}, /api/agent/run, /api/web/*)
 server   /api/tools/<name> · /mcp (+ /mcp/k/<key>) · /api/openapi.json · /.well-known/agent.json        ▲ NOTIFY / in-memory bus
          calendar feeds: /kitchen-api/calendar.ics · /api/calendar/<kitchen>.ics (+ /api/demo/calendar-link)
@@ -25,16 +25,19 @@ adapters catalog (Valio cache-through, file | Postgres, hybrid retrieval) + simu
 | `core/contracts/plan.ts` | `Plan` (optional `taskId`)/`Line`/`Approval`/`Order`/`Receipt`/`Anomaly`, state enums, `Tier`, `LineReason`; `Need` (with `source` lineage and direct physical amounts); `SupplyTier` (D8/D10: `known_stock`, `make_in_house`, `unknown_stock`, `none`); read models `LineView` (`physical`, `unitPrice`, `comparisonPrice`), `FulfilmentView` (exact partition of a need: supplier confirmed, awaiting supplier, planned known, planned unknown, unresolved, plus excess) and `PlanView` (`asOf`, `mandateVersion`, `validUntil`, fulfilment); `TermsDiff`; `LineAuthority` |
 | `core/contracts/event.ts` | `EventBrief`, `DishTemplate`, `DishIngredient` (stable ids, amount per cover, exactly one of productId / query / unresolved), `MenuProposal` (revisions, server-recorded `review`, `open` questions) |
 | `core/contracts/task.ts` | D11 procurement `Task` (requirement, typed `slots`, linked plans, run history, `pending` clarify or decision, `TaskState`), `TaskLedger` (server-computed, never model-written), `ExternalCallTrace` (one shape for every Valio, Gemini, Exa, Context.dev and Featherless call) |
-| `core/contracts/ops.ts` | the closed `Op` union (8 types) and `OpEnvelope` (seq, actor, via, `initiatedBy`) |
+| `core/contracts/ops.ts` | the closed `Op` union (9 types, incl. `RecordRefusal`) and `OpEnvelope` (seq, actor, via, `initiatedBy`) |
 | `core/contracts/events.ts` | `SimEvent`, `ServerEvent` (op · sim · trace) for SSE |
 | `core/contracts/tools.ts` | the tool registry `toolSchemas`, `ResultMeta` (`summary`, `nextAction`, `approvalUrl`, always our own words), `WebFact`, `ToolScope`, `SCOPES_BY_ACTOR` |
 | `core/ports.ts` | `Clock, Catalog` (incl. optional `resolve` for menu queries), `Simulator, Decide, Llm, Web, Store, Ops, MenuStore, TaskStore`, `CallContext`, `WebExecutionContext`, `JudgeKeys`, `ToolHandlers`, `Ports` |
 | `core/state.ts` | `WorkspaceState`, pure `applyOps` (version checks, approval invalidation, external approval refused, commit once) |
 | `core/hash.ts` | canonical JSON, `termsHash` (deliverBy + sorted lines), `requestHash` |
-| `server/db/schema.ts` + `drizzle/*.sql` | tables below; migrations `0000_init`, `0001_enrichments`, `0002_menu_proposals`, `0003_agent_tasks`, `0004_web_state` |
+| `core/command.ts` | D18 `commandKey(plan, version, termsHash, exact line ids)`: the one commit identity for Request, Chat, the agent loop and the Kitchen |
+| `core/mandate/meets.ts` | D16 `meets(product, requirements, kitchenConstraints)` → ok / unknown / no with why: the one evaluator for ranking, the validator, substitutes, the request filter and diet marks |
+| `core/stock/` | D27 pure stock model (Valio's level, simulated drain and restock, scenario), feeding Ops' Forecast |
+| `server/db/schema.ts` + `drizzle/*.sql` | tables below; migrations `0000_init`, `0001_enrichments`, `0002_menu_proposals`, `0003_agent_tasks`, `0004_web_state`, `0005_traces` |
 | `server/db/pglite.ts` | `createFixtureDb()`: PGlite + pgvector + the same migrations |
 
-Registered but not served: `set_mandate` answers `PROVIDER_UNAVAILABLE` (mandates come from the kitchen seed), never a made-up result.
+Registered but not served: `set_mandate` answers `PROVIDER_UNAVAILABLE` (mandates come from the kitchen seed, or the sample `create_kitchen` copies), never a made-up result.
 
 ## State machines (D6, D11)
 - **Plan** `draft → quoted → ready | held → committed`. Edits (`EditLine`, `ProposeSubstitute`) → `draft`, terms hash cleared, approvals `invalidated`.
@@ -89,6 +92,8 @@ One routing table (`server/adapters/llm/router.ts`, `llm.for(job)`) picks provid
 | `menu.propose` | `gemini-3.8-flash`, low, 4,000 | `propose_menu` |
 | `explain` | Flash-Lite, minimal, 400 | the chat's reply about a task, checked against the ledger |
 | `chat.understand` | Flash-Lite, minimal, 400 | reading a chat message, guarded by the deterministic classifier |
+| `request.parse.escalate` | `gemini-3.8-flash`, low, 800 | the parse's second pass when the first reading is unsure |
+| `establishment.match` | Flash-Lite, minimal, 300 | "Describe your kitchen" → the nearest sample kitchen (`server/establishment.ts`, rules fallback) |
 | `image.read` | NVIDIA Nemotron 3.5 Super VL on Verda, 1,500 | `read_image`; not live: the Verda endpoint isn't deployed, so the tool is advertised only with `VISION_LIVE=1` |
 
 `agent.plan` runs only with `AGENT_PLANNER=llm`; otherwise, and on the deployed app, the agent uses the deterministic scripted planner.
@@ -99,8 +104,8 @@ Decisions (recipe fit in substitute ranking, rubric scores in review) go through
 | Workspace | Who | How it is reached |
 |---|---|---|
 | `ws-demo` | the stage and presenters | Presenters only (dev, `DEMO_RESET_OPEN=1`, or a presenter session signed in on `/ops` from `MANDATE_KEY_CHEF`/`MANDATE_KEY_APPROVER`); default for env keys without a workspace |
-| `ws-judges` | shared room | `?ws=ws-judges`; `MCP_KEYS` entries default here; overflow once `MAX_VISITORS` (300) sandboxes are seeded in the process |
-| `ws-j-<id>` | one per browser | signed cookie `mandate_visitor` (HMAC with `JUDGE_KEY_SECRET`), seeded lazily with the seed kitchens and a fresh run; `?ws=mine` returns to it. Another visitor's id in a link, cookie or query never selects it |
+| `ws-judges` | shared room (D24) | `?ws=ws-judges`; `MCP_KEYS` entries default here; overflow once `MAX_VISITORS` (5,000, `VISITOR_CAP`) sandboxes are seeded in the process. Each visitor joins as their own store (`create_kitchen`); writes to an owned kitchen come only from its owner (`notOwner` in `core/services/handlers.ts`, `FORBIDDEN` sub `store_owner`) |
+| `ws-j-<id>` | one per browser | signed cookie `mandate_visitor` (HMAC with `JUDGE_KEY_SECRET`, 14 days), seeded lazily with the seed kitchens and a fresh run; `?ws=mine` returns to it; a phone joins it by pairing (`/pair`, single-use QR or short code, `server/pair/`). Another visitor's id in a link, cookie or query never selects it. Persists (D26): a reset starts a new run and re-seeds the sample kitchens, keeping the visitor's own |
 
 - One resolver (`server/demo/visitor.ts`) serves Kitchen, `/request`, `/ops`, `/agents`, the chat, `/api/events`, web actions and the sandbox reset. A sandbox reset starts a fresh run in that workspace only (cooldown per workspace); the stage resets from presenters only.
 - **Judge keys** (`server/demo/judge-key.ts`): `jk_<ws-j-id>.<expEpochS>.<base64url HMAC-SHA256(JUDGE_KEY_SECRET, "jk|ws|exp")>`, verified in constant time. `/agents` shows the visitor's own key with its MCP URL (`/mcp/k/<key>`), client configs, the tools an external agent sees and that key's recent calls; `/api/demo/judge-key` mints it too. A key acts as `external_agent` (read, plan, order; never approve) in that workspace's current run, so a reset keeps it working; it expires with the event (`JUDGE_KEY_EXPIRES`). No secret, no judge keys.
@@ -117,14 +122,14 @@ Decisions (recipe fit in substitute ranking, rubric scores in review) go through
 
 ## Agents
 - **Agent loop** (`server/agent/`): at most 8 steps, as the routine agent (`kitchen_agent`) with the intersection of its scopes and the starter's, so it never approves or changes the mandate. The planner reads typed, length-bounded facts about tool results, never raw supplier text; the gate (scopes, intent's tool list, kitchen grant, mandate checks) is what stops damage.
-- **Approval stays with a person (D9, D11, D13).** The chef approves in the Kitchen or from the chat dock's DecisionCard: the same exact terms, hold-to-confirm and Kitchen approve command bound to the rendered plan version. The dock's card is a UI control acting as the signed-in chef, never a chat turn, a model output or an agent tool.
+- **Approval stays with a person (D9, D11, D13, D22).** The chef approves in the Kitchen or from the chat dock's DecisionCard: the same exact terms, hold-to-confirm and Kitchen approve command bound to the rendered plan version. In their own dock the chef may also say "approve all" or "reject the herring": it acts on the lines the last turn showed, on that version (D21), through `approve` (`server/chat/turn.ts`); sign-off lines still need the confirm card. An outside agent gets `approvalUrl` (D17); the MCP elicitation for a chef's own key (D22) is not built.
 - **`/api/agent/run`** starts a run with a chef key (`agent:run`), streams traces as NDJSON and to `/ops`; one run per workspace; `/api/agent/run/<id>/cancel` stops it.
-- **Chat** (`server/chat/`, `/api/chat/turn`, `/api/chat/task`): a dock on every page (`ChatDock` in the layout; `/agents/chat` opens it over the Kitchen). One turn on a procurement task runs the agent as the visitor's chef ∩ the agent's scopes: understand the message (rules guard the model), clarify a typed slot, plan and order within the mandate, show the decision left for a chef, report the ledger. An event brief runs its own flow: brief questions as chips → `propose_menu` → a menu card linking to its review on `/request` → `plan_event{proposal}` once a chef has reviewed it. The task is written back each turn, so a reconnect reads the task, not a transcript.
+- **Chat** (`server/chat/`, `/api/chat/turn`, `/api/chat/task`): a dock on every page (`ChatDock` in the layout; `/agents/chat` opens it over the Kitchen). One turn on a procurement task runs the agent as the visitor's chef ∩ the agent's scopes: understand the message (rules guard the model), clarify a typed slot, plan and order within the mandate, show the decision left for a chef, report the ledger. An event brief runs its own flow: brief questions as chips → `propose_menu` → a menu card linking to its review on `/request` → `plan_event{proposal}` once a chef has reviewed it. The task is written back each turn, so a reconnect reads the task, not a transcript. `/request` is still its own step page (`ui/request/RequestFlow.svelte`), with the dock following its kitchen and plan; D23's full-width conversation there is not built.
 - **Tasks** (`server/tasks/`): `TaskStore` on `agent_tasks` (compare-and-set), the pure ledger from plans, receipts and approvals, and `get_outcome`.
 - **Review** (`server/review/`): validator passes at model-output checkpoints (request parse, outcome text): deterministic checks always, plus an optional rubric score through Decide. It answers pass, revise or block; it never authorises or changes state.
 
 ## Tools (`core/contracts/tools.ts`)
-18 tools in the registry. An outside agent sees 16 (no `approve`, `set_mandate`), and 15 while `read_image` isn't advertised.
+20 tools in the registry. An outside agent sees 18 (no `approve`, `set_mandate`), and 17 while `read_image` isn't advertised (`advertised()` in `server/tools/serve.ts`).
 
 | Tool | Scope | What |
 |---|---|---|
@@ -132,6 +137,8 @@ Decisions (recipe fit in substitute ranking, rubric scores in review) go through
 | `search_products` | read | Search the static catalogue (no Valio call), with provenance |
 | `quote` | read | Live price and availability for up to 200 known ids (cache-through); unknown ids → `NOT_FOUND` |
 | `propose_menu` | plan | Propose a menu for an event brief: dishes with amounts per guest, each ingredient resolved or visibly unresolved; estimates labelled; stored as revision 0 for a chef to review |
+| `revise_menu` | plan | One change set on a menu proposal → the next revision (pin an ingredient, change an amount, add or remove); every other ingredient keeps its product; a chef accepts it (`reviewUrl`) before planning |
+| `create_kitchen` | plan | A new kitchen owned by the visitor who asks: copied from the nearest sample of `profile` (rules, usual order, history; copied, never linked) or blank with default rules |
 | `plan_event` | plan | Expand a seeded event, or a chef-reviewed menu proposal revision, into needs, lines, rounding and anomalies |
 | `place_order` | order | Create and quote a plan from explicit lines or physical amounts; idempotent per key |
 | `edit_line` | plan | Change one line or need (qty, g/guest, product); invalidates the quote and approvals |
@@ -147,7 +154,7 @@ Decisions (recipe fit in substitute ranking, rubric scores in review) go through
 | `check_recall` | read | Watched recall notices (Context.dev monitor) against a product: GTIN match, name match or none |
 | `read_image` | read | A photo of a prep list, delivery note or label → its reading (router job `image.read`). Advertised to outside agents only when the vision endpoint is live (`VISION_LIVE=1`) |
 
-Scopes per actor (`SCOPES_BY_ACTOR`): `chef` all six (read, plan, order, approve, mandate:write, agent:run) · `kitchen_agent`, `external_agent`, `system` read, plan, order · `approver` read, approve · `job` read. One registry serves MCP, REST and OpenAPI and feeds the agent loop; MCP lists only the tools inside the caller's scopes (`toolsFor`). Core serves most tools; `get_context` (agent), `get_outcome` (tasks), `propose_menu` (menu), `read_image` (images) and the three web tools are composed in `server/tools/handlers.ts`.
+Scopes per actor (`SCOPES_BY_ACTOR`): `chef` all six (read, plan, order, approve, mandate:write, agent:run) · `kitchen_agent`, `external_agent`, `system` read, plan, order · `approver` read, approve · `job` read. One registry serves MCP, REST and OpenAPI and feeds the agent loop; MCP lists only the tools inside the caller's scopes (`toolsFor`). Core serves most tools; `get_context` (agent), `get_outcome` (tasks), `propose_menu` and `revise_menu` (menu), `read_image` (images) and the three web tools are composed in `server/tools/handlers.ts`.
 
 Beside the tools, MCP serves **resources** (`mandate://<kitchen>`: a kitchen's mandate in words and numbers; `decisions://open`: plans waiting on something, with the next step) and **prompts** (`plan_event_in_mandate`, `check_open_before_cutoff`, `order_for_date`), read through the same gate with the caller's scopes and never with an approve affordance (`server/tools/mcp-extras.ts`). Outside-agent keys are metered per minute (120 calls, 30 writes, 20 quotes; `server/tools/key-limits.ts`). `/.well-known/agent.json` describes the agent door (MCP URL, scopes, tools, resources, prompts); it holds no key.
 
@@ -166,6 +173,11 @@ Beside the tools, MCP serves **resources** (`mandate://<kitchen>`: a kitchen's m
 | `external/` | one outside call: response cache, daily spend caps per caller and instance, circuit breaker, trace; `withExternalScope`/`scopeFor` carry the caller through async code |
 | `images/` | `read_image`: a picture (JPEG, PNG or WebP, ≤ 4 MB) to the `image.read` job, daily caps per workspace and instance; the picture is never stored |
 | `kitchen/` | the Kitchen screen's server side: acts as the chef through the tool handlers, builds the snapshot |
+| `establishment.ts` | "Describe your kitchen" → nearest sample kitchen (`establishment.match`, rules fallback) |
+| `obs/` | structured logs, redaction and the `traces` table store behind the trace drawer and `/api/ops/traces` |
+| `pair/` | device pairing (single-use QR link or short code, 10 min, minted only for the owning browser's cookie) |
+| `patterns/` | usual orders (D14): detected per kitchen and day, planned through `place_order` (`/kitchen-api/usual`) |
+| `products/` | product cards and the photo ladder (recorded listings, findings, brand logos; live warm-up within web caps) |
 | `menu/` | event-brief questions, `propose_menu` (model + rubric), the menu flow for `/request`, and the `MenuStore` (`menu_proposals`) |
 | `request/` | `/request`: classify, parse (rules, then the LLM), convert units, dates, lookup, run |
 | `review/` | validator checkpoints for model output (`request.parse`, `agent.outcome_text`) |
@@ -176,7 +188,7 @@ Beside the tools, MCP serves **resources** (`mandate://<kitchen>`: a kitchen's m
 | `web/` | Exa lookups and evidence, Context.dev recall monitor and webhook, news leads, make-in-house recipes, findings and per-run applications, web state in Postgres |
 
 ## Tables (`server/db/schema.ts`)
-`workspaces` (last_seq) · `runs` · `kitchens` (doc, mandate_version) · `products` (doc, embedding) · `offer_cache` · `sim_stock` (atomic consume) · `plans` (doc, version) · `approvals` · `orders` (unique per plan + idempotency key, receipt) · `budgets` (locked row per kitchen-week) · `idempotency` · `ops` (workspace, seq) · `api_keys` · `enrichments` (web facts, never overwriting catalogue facts) · `menu_proposals` (per workspace and revision, with review) · `agent_tasks` (per workspace, versioned doc) · `web_cache` (outside-call responses) · `web_spend` (calls per UTC day, API and key; `*` is the instance counter) · `web_queue` (recall work, claimed with `FOR UPDATE SKIP LOCKED` and a lease) · `web_findings` · `web_applications`.
+`workspaces` (last_seq) · `runs` · `kitchens` (doc, mandate_version) · `products` (doc, embedding: column only, not populated, D19) · `offer_cache` · `sim_stock` (atomic consume) · `plans` (doc, version) · `approvals` · `orders` (unique per plan + idempotency key, receipt) · `budgets` (locked row per kitchen-week) · `idempotency` · `ops` (workspace, seq) · `api_keys` · `enrichments` (web facts, never overwriting catalogue facts) · `menu_proposals` (per workspace and revision, with review) · `agent_tasks` (per workspace, versioned doc) · `web_cache` (outside-call responses) · `web_spend` (calls per UTC day, API and key; `*` is the instance counter) · `web_queue` (recall work, claimed with `FOR UPDATE SKIP LOCKED` and a lease) · `web_findings` · `web_applications` · `traces` (one row per outside call or step).
 
 Web state lives in Postgres so a redeploy loses nothing and several instances share caps and work; without a database it falls back to JSON files under `WEB_CACHE_DIR`.
 
