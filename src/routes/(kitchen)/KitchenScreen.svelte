@@ -462,6 +462,8 @@
 	const rejectedLines = $derived(
 		(snap?.plan.lines ?? []).filter((l) => decisionsByLine.get(l.id)?.state === 'denied')
 	);
+	/** Rejected lines are not bought: left out of every waiting count, the day's total and the week budget. */
+	const rejectedIds = $derived(new Set(rejectedLines.map((l) => l.id)));
 	/** The only bulk action: accept every pending line that may be accepted together. */
 	const all = $derived(acceptAll(snap?.plan.lines ?? [], decisionsByLine));
 	function decideOne(lineId: string, decision: 'grant' | 'deny' | 'reopen') {
@@ -502,7 +504,13 @@
 		const spent = snap.view.weekSpentCents;
 		// Week spend already includes what this plan ordered; "this order" is only what is not ordered yet.
 		const order = plan.lines
-			.filter((l) => l.state !== 'committed' && l.state !== 'rejected' && l.state !== 'unorderable')
+			.filter(
+				(l) =>
+					l.state !== 'committed' &&
+					l.state !== 'rejected' &&
+					l.state !== 'unorderable' &&
+					!rejectedIds.has(l.id)
+			)
 			.reduce((a, l) => a + (l.lineCents ?? 0), 0);
 		return {
 			cap,
@@ -619,7 +627,10 @@
 	const planSentence = $derived.by(() => {
 		if (!plan || !view) return '';
 		const items = view.dishes.length + looseLines.length;
-		const cents = plan.lines.reduce((t, l) => t + (l.qty.value > 0 ? (l.lineCents ?? 0) : 0), 0);
+		const cents = plan.lines.reduce(
+			(t, l) => t + (l.qty.value > 0 && !rejectedIds.has(l.id) ? (l.lineCents ?? 0) : 0),
+			0
+		);
 		const waiting = all.count + all.signOff;
 		return [
 			plan.eventId ? `${day(view.date)} · ${num(view.guests)} guests · ${view.serviceStyle}` : null,
@@ -662,7 +673,10 @@
 
 	/** The header's "what needs you", in D10 terms and on the same basis as the panel and Ops. */
 	const needsYou = $derived.by(() => {
-		const pendingLines = approval?.state === 'pending' ? approval.lineIds.length : 0;
+		const pendingLines =
+			approval?.state === 'pending'
+				? approval.lineIds.filter((id) => !rejectedIds.has(id)).length
+				: 0;
 		const cannot = (plan?.lines ?? []).filter((l) => l.state === 'unorderable').length;
 		const fs = [...coverage.values()];
 		return {
@@ -814,7 +828,8 @@
 
 	// The layout's "Where you are" names the visitor's store in the room.
 	$effect(() => {
-		const name = own[0]?.name ?? null;
+		const here = own.find((o) => o.kitchenId === snap?.kitchen.id);
+		const name = (here ?? own[0])?.name ?? null;
 		if (shell) shell.roomStore = name;
 		const ws = (page.data as { room?: { workspaceId?: string } }).room?.workspaceId;
 		if (!ws || !name) return;
@@ -834,7 +849,25 @@
 			...(description ? { description } : {})
 		});
 		saveOwn(ownKey, cached);
+		making = false;
 		await choose(kc.kitchenId, description);
+	}
+	/** Making another store or kitchen from the selector: the picker shows until one is made or the chef goes back. */
+	let making = $state(false);
+	let picker = $state<HTMLSelectElement | null>(null);
+	function pickKitchen(sel: HTMLSelectElement) {
+		const v = sel.value;
+		if (v === '__new') {
+			sel.value = needsJoin ? '' : (snap?.kitchen.id ?? homeKit.id);
+			making = true;
+			return;
+		}
+		if (v === '__leave') {
+			location.assign(resolve('/') + '?ws=mine');
+			return;
+		}
+		making = false;
+		void (needsJoin ? choose(v) : switchKitchen(v)).then(() => picker?.focus());
 	}
 	/** The kitchen whose home shows before its first plan: one of ours, else a sample. */
 	const homeKit = $derived.by(() => {
@@ -857,6 +890,7 @@
 	});
 
 	async function choose(kitchenId: string, notes?: string) {
+		making = false;
 		joinedAs = { kitchenId, ...(notes ? { notes } : {}) };
 		try {
 			if (joinKey) localStorage.setItem(joinKey, JSON.stringify(joinedAs));
@@ -984,7 +1018,7 @@
 		ordered: 'Ordered'
 	};
 	const stageCounts = $derived.by(() => {
-		const ls = dayEntry?.lines ?? [];
+		const ls = (dayEntry?.lines ?? []).filter((l) => !rejectedIds.has(l.lineId));
 		return {
 			waits: ls.filter((l) => l.stage === 'held').length,
 			ready: ls.filter((l) => l.stage === 'proposed' || l.stage === 'approved').length,
@@ -1030,10 +1064,11 @@
 			].join(' · ');
 		}
 		const waits = stageCounts.waits;
+		const live = dayEntry.lines.filter((l) => !rejectedIds.has(l.lineId));
 		return [
 			day(theDay),
-			`${dayEntry.lines.length} ${dayEntry.lines.length === 1 ? 'line' : 'lines'}`,
-			money(dayEntry.totals.all),
+			`${live.length} ${live.length === 1 ? 'line' : 'lines'}`,
+			money(live.reduce((t, l) => t + (l.lineCents ?? 0), 0)),
 			waits ? `${waits} ${waits === 1 ? 'needs' : 'need'} you` : 'nothing needs you'
 		].join(' · ');
 	});
@@ -1158,13 +1193,19 @@
 			<select
 				class="h-8 rounded-md border border-rule-strong bg-sheet px-2 text-body font-medium text-ink"
 				value={needsJoin ? '' : (snap?.kitchen.id ?? homeKit.id)}
-				disabled={k.readOnly || (!snap && !needsJoin)}
-				onchange={(e) =>
-					needsJoin ? choose(e.currentTarget.value) : switchKitchen(e.currentTarget.value)}
+				disabled={k.readOnly || (!snap && !needsJoin && !own.length)}
+				bind:this={picker}
+				onchange={(e) => pickKitchen(e.currentTarget)}
 			>
 				{#if needsJoin}<option value="" disabled>Choose a kitchen</option>{/if}
-				{#if roomNotice && own.length}
-					{#each own as o (o.kitchenId)}<option value={o.kitchenId}>{o.name}</option>{/each}
+				{#if roomNotice}
+					{#if own.length}
+						<optgroup label="Your stores in this room">
+							{#each own as o (o.kitchenId)}<option value={o.kitchenId}>{o.name}</option>{/each}
+						</optgroup>
+					{/if}
+					<option value="__new">+ New store…</option>
+					<option value="__leave">Leave the room → my sandbox</option>
 				{:else if own.length}
 					<optgroup label="Your kitchens">
 						{#each own as o (o.kitchenId)}<option value={o.kitchenId}>{o.name}</option>{/each}
@@ -1174,10 +1215,12 @@
 							<option value={kit.id}>{kit.name.replace(' (fictional)', '')}</option>
 						{/each}
 					</optgroup>
+					<option value="__new">+ New kitchen…</option>
 				{:else}
 					{#each KITCHENS as kit (kit.id)}
 						<option value={kit.id}>{kit.name.replace(' (fictional)', '')}</option>
 					{/each}
+					{#if !needsJoin}<option value="__new">+ New kitchen…</option>{/if}
 				{/if}
 			</select>
 		</label>
@@ -1357,8 +1400,24 @@
 			>
 		{/if}
 	</main>
-{:else if needsJoin}
+{:else if needsJoin || making}
 	<main class="pb-10">
+		{#if making && !needsJoin}
+			<p class="mx-auto max-w-5xl px-4 pt-4">
+				<button
+					type="button"
+					class="inline-flex h-9 items-center gap-1 rounded-md border border-rule-strong px-3 text-meta text-ink hover:border-accent"
+					onclick={() => {
+						making = false;
+						picker?.focus();
+					}}
+					><ChevronDown size={14} class="rotate-90" aria-hidden="true" />Back to {snap?.kitchen.name.replace(
+						' (fictional)',
+						''
+					) ?? homeKit.name}</button
+				>
+			</p>
+		{/if}
 		<EstablishmentPicker onchoose={choose} oncreated={created} room={!!roomNotice} />
 		{#if k.error}
 			<p class="mx-auto max-w-5xl px-4 text-body text-out" role="alert">{errorWords(k.error)}</p>
