@@ -283,6 +283,8 @@ export const Line = z.object({
 	productId: ProductId,
 	/** Display name (short Finnish name from the catalogue), so clients don't need a catalogue lookup. */
 	productName: z.string().optional(),
+	/** Valio's English name for the product (Product.nameEn), when it has one that differs. */
+	productNameEn: z.string().optional(),
 	qty: SalesQty,
 	state: LineState,
 	tier: Tier.optional(),
