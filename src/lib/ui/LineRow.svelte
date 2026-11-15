@@ -23,6 +23,8 @@
 		name: string;
 		/** The product in English ("oat drink for coffee, 1 l"), when the catalogue has it: a muted second line. */
 		gloss?: string;
+		/** Shown under a Decide group whose header already says what deciding the group means. */
+		grouped?: boolean;
 		/** A granted approval covers this line (core keeps it `held` until ordered). */
 		approved?: boolean;
 		/** The row just changed: tint lands and fades. */
@@ -61,6 +63,7 @@
 		line: l,
 		name,
 		gloss,
+		grouped = false,
 		approved = false,
 		flash = false,
 		replaces,
@@ -158,7 +161,7 @@
 			{/if}
 			{#if decide?.state === 'denied'}
 				<p class="text-meta text-ink-3">Not ordered: {decide.cost}</p>
-			{:else if decide?.state === 'pending' && decide.signOff}
+			{:else if decide?.state === 'pending' && decide.signOff && !grouped}
 				<p class="mt-0.5 text-meta text-signoff">
 					Needs your sign-off with its group. If rejected: {decide.cost}.
 				</p>

@@ -1590,11 +1590,12 @@
 		<div class="mt-6 h-64 animate-pulse rounded bg-well"></div>
 	</main>
 {:else}
-	{#snippet lineRow(l: Line, d: DishView | null, inGroup = false)}
+	{#snippet lineRow(l: Line, d: DishView | null, inGroup = false, inDecide = false)}
 		<LineRow
 			line={l}
 			name={names.get(l.productId) ?? l.productId}
 			gloss={englishOf(l.productId, names.get(l.productId))}
+			grouped={inDecide}
 			approved={approvedIds.has(l.id)}
 			flash={k.flash.has(l.id)}
 			by={inGroup ? undefined : snap?.byAgent?.[l.id]}
@@ -1976,7 +1977,9 @@
 												<li class="px-4 py-2">
 													{@render lineRow(
 														l,
-														view.dishes.find((d) => d.lineIds.includes(l.id)) ?? null
+														view.dishes.find((d) => d.lineIds.includes(l.id)) ?? null,
+														false,
+														true
 													)}
 												</li>
 											{/each}
