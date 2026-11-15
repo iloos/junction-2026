@@ -131,7 +131,8 @@ export async function orderNow(page: Page) {
 		.first()
 		.click({ timeout: 30_000 });
 	await page
-		.getByText(/Ordered\s*·\s*\d+\s+lines?|Ordered: receipt|^Ordered \d+$/)
+		.getByText(/Ordered\s*·\s*\d+\s+lines?|Ordered: receipt/)
+		.or(page.getByRole('button', { name: /^Ordered \d+/ }))
 		.first()
 		.waitFor({ state: 'attached', timeout: 60_000 }); // on a phone it can sit in an unselected zone tab
 }
