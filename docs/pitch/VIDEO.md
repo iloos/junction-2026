@@ -61,7 +61,7 @@ S5 records every clip automatically (Playwright, 1080p, fresh profile) from [sho
 | d4-rules | 0:14 | "The chef writes the rules once: up to 800 euros an item, never change an allergen, ask before anything new. The rules are code, so no model and no agent can bend them." |
 | A-words-live | 0:38 | "Now from words. One sentence: a no-meat dinner for 120 with a peach dessert. Gemini proposes the menu. Plan it: every ingredient becomes a Valio product with a price. A new menu means new products, and this hotel's rules say ask me first, so the agent asks once. One yes covers exactly these items, and the order lands on Valio's side." |
 | B-buffet-live | 0:18 | "On the buffet, the same rules sort the order: three items go through alone, three are impossible and say why, and the rest come down to three decisions for the chef." |
-| d8-consent | 0:14 | "Any agent can plan: the chef's own assistant, a hotel chain's system. Only the chef can say yes, in the app or when their own assistant asks. Anything else that tries is refused and logged." |
+| d8-consent → C-consent (ba's Claude-client take, 4.3–18.3 s) | 0:14 | "Any agent can plan through the same door. Here, Claude plans a dinner with Mandate. Nothing is ordered until the chef says yes; an agent that tries to approve is refused." |
 | d9-next | 0:10 | "Real Valio data, Gemini and Aiven. The order itself is simulated and labelled. Next: a pilot with one hotel." |
 | d10-close | 0:06 | "Your agent does the buying. Your rules decide what. app.mandate.kitchen." |
 

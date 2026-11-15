@@ -21,7 +21,7 @@ PLAN = [
     ("d4-rules", 14, "s4.png", None),
     ("A-words-live", 36, "s7.png", "A-words-live.mp4"),
     ("B-buffet-live", 18, "s5.png", "B-buffet-live.mp4"),
-    ("d8-consent", 14, "s8.png", None),
+    ("d8-consent", 14, "s8.png", "C-consent.mp4"),
     ("d9-next", 10, "s9.png", None),
     ("d10-close", 7, "s10.png", None),
 ]
