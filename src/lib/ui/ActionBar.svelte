@@ -21,7 +21,8 @@
 	}: {
 		/** Lines waiting for the chef, sign-offs included. */
 		waiting: number;
-		acceptAll: { count: number; cents: number; onaccept: () => void };
+		/** `includes`: what accepting all takes in that a reader might not expect ("the Christmas ham swap"). */
+		acceptAll: { count: number; cents: number; includes?: string | null; onaccept: () => void };
 		signOff: number;
 		order: { lines: number; cents: number; onorder: () => void };
 		ordered?: { lines: number; cents: number } | null;
@@ -70,10 +71,10 @@
 		{#if acceptAll.count}
 			<button
 				type="button"
-				class="inline-flex h-10 items-center rounded-md bg-accent px-4 text-body font-medium whitespace-nowrap text-sheet hover:bg-accent-ink disabled:opacity-50"
+				class="inline-block min-h-10 rounded-md bg-accent px-4 py-2 text-left text-body font-medium text-sheet hover:bg-accent-ink disabled:opacity-50 sm:inline-flex sm:items-center sm:py-1.5 sm:whitespace-nowrap"
 				disabled={busy}
 				onclick={acceptAll.onaccept}
-				>Accept all {acceptAll.count} ·
+				>Accept all {acceptAll.count}{acceptAll.includes ? `, incl. ${acceptAll.includes}` : ''} ·
 				<span class="mono ml-1">{money(acceptAll.cents)}</span></button
 			>
 		{/if}

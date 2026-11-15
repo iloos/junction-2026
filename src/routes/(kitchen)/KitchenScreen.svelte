@@ -499,6 +499,18 @@
 	const rejectedIds = $derived(new Set(rejectedLines.map((l) => l.id)));
 	/** The only bulk action: accept every pending line that may be accepted together. */
 	const all = $derived(acceptAll(snap?.plan.lines ?? [], decisionsByLine));
+	/** What Accept all takes in beyond plain lines: the swaps, named by the dish they serve ("the Christmas ham swap"). */
+	const acceptIncludes = $derived.by(() => {
+		const ids = new Set([...all.byApproval.values()].flatMap((g) => g.lineIds));
+		const subs = (snap?.plan.lines ?? []).filter((l) => ids.has(l.id) && l.substituteFor);
+		const originals = new Set(subs.map((l) => l.substituteFor));
+		if (!originals.size) return null;
+		if (originals.size > 1) return `${originals.size} swaps`;
+		const need = snap?.plan.needs.find((n) => n.id === subs[0].needId)?.label;
+		// "Joulukinkku (Christmas ham)" → "Christmas ham"; else the dish's own name.
+		const dish = need ? (/\(([^)]+)\)/.exec(need)?.[1] ?? need.split(' (')[0]) : null;
+		return dish ? `the ${dish} swap` : 'a swap';
+	});
 	function decideOne(lineId: string, decision: 'grant' | 'deny' | 'reopen') {
 		const d = decisionsByLine.get(lineId);
 		if (d) void k.decideLines([{ approval: d.approval, lineIds: [lineId] }], decision);
@@ -641,6 +653,17 @@
 		);
 		return pending.flatMap((a) => decisionsOf(plan, a));
 	});
+	/** Decide's stock filter (the cover legend as chips): known stock, stock unknown, or every line. */
+	let stockFilter = $state<'known' | 'unknown' | null>(null);
+	const stockOf = (l: Line) =>
+		(l.view?.unknownStockCover.value ?? 0) > 0 ? ('unknown' as const) : ('known' as const);
+	const stockCount = $derived.by(() => {
+		const ls = decisions.flatMap((g) => g.lines);
+		return {
+			known: ls.filter((l) => stockOf(l) === 'known').length,
+			unknown: ls.filter((l) => stockOf(l) === 'unknown').length
+		};
+	});
 	/** Where each line sat in Decide while it waited: a rejected line stays there, struck, with Undo. */
 	let placed = $state.raw(new Map<string, { reason: string; title: string; at: number }>());
 	$effect.pre(() => {
@@ -684,8 +707,13 @@
 					lines: [l]
 				});
 		}
-		for (const r of rows) r.lines.sort((a, b) => at(a) - at(b));
-		return rows.sort((a, b) => Math.min(...a.lines.map(at)) - Math.min(...b.lines.map(at)));
+		for (const r of rows) {
+			r.lines.sort((a, b) => at(a) - at(b));
+			if (stockFilter) r.lines = r.lines.filter((l) => stockOf(l) === stockFilter);
+		}
+		return rows
+			.filter((r) => r.lines.length)
+			.sort((a, b) => Math.min(...a.lines.map(at)) - Math.min(...b.lines.map(at)));
 	});
 	/**
 	 * The plan's short title (D29): the event's name, the menu's dishes, else where it came from ("Usual Wednesday
@@ -1693,7 +1721,7 @@
 						decisions={decisions.length}
 						due={decisionsDue(plan, approval)}
 						now={k.now}
-						coverage={[...coverage.values()]}
+						coverage={[]}
 						cannot={needsYou.cannot}
 						{orderable}
 						ordered={orderedState}
@@ -1719,28 +1747,7 @@
 									return ok;
 								}
 							: undefined}
-					>
-						{#snippet coverMore()}
-							{#if isEvent}
-								{#if view.thisWeek.cents - view.normalWeek.cents > 0}
-									The event adds
-									<span class="mono text-ink"
-										>{moneyDelta(view.thisWeek.cents - view.normalWeek.cents)}</span
-									>
-									and <span class="mono text-ink">{fixed(view.eventKg)}</span> kg of food to a normal
-									week
-								{:else}
-									<!-- A regular service, not an extra: it is part of the normal week, so it adds nothing to it. -->
-									An ordinary {weekday(view.date)}: inside the normal week
-								{/if}
-								<span class="text-ink-3"
-									>(team estimate: <span class="mono"
-										>{money(view.normalWeek.cents, { whole: true })}</span
-									>, {view.normalWeek.lines} lines)</span
-								>.
-							{/if}
-						{/snippet}
-					</TaskHeader>
+					></TaskHeader>
 					<div class="mt-2">
 						<TimelineLine
 							orderBy={decisionsDue(plan, approval) || null}
@@ -1754,7 +1761,37 @@
 					</div>
 					{#if weekMeter}
 						<div class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-meta text-ink-3">
-							<span class="shrink-0">Week budget</span>
+							<span class="flex shrink-0 items-center gap-1"
+								>Week budget{#if isEvent}<details class="relative">
+										<summary
+											class="grid size-5 cursor-pointer list-none place-items-center rounded-full text-ink-3 hover:bg-well hover:text-ink"
+											aria-label="This event against a normal week"
+											><Info size={13} aria-hidden="true" /></summary
+										>
+										<p
+											class="absolute top-6 left-0 z-20 w-72 rounded-md border border-rule bg-sheet px-3 py-2 text-meta text-ink-2 shadow-md"
+										>
+											{#if isEvent}
+												{#if view.thisWeek.cents - view.normalWeek.cents > 0}
+													The event adds
+													<span class="mono text-ink"
+														>{moneyDelta(view.thisWeek.cents - view.normalWeek.cents)}</span
+													>
+													and <span class="mono text-ink">{fixed(view.eventKg)}</span> kg of food to a
+													normal week
+												{:else}
+													<!-- A regular service, not an extra: it is part of the normal week, so it adds nothing to it. -->
+													An ordinary {weekday(view.date)}: inside the normal week
+												{/if}
+												<span class="text-ink-3"
+													>(team estimate: <span class="mono"
+														>{money(view.normalWeek.cents, { whole: true })}</span
+													>, {view.normalWeek.lines} lines)</span
+												>.
+											{/if}
+										</p>
+									</details>{/if}</span
+							>
 							<div
 								class="relative h-1.5 min-w-[120px] flex-1 overflow-hidden rounded-full bg-well"
 								role="img"
@@ -1792,6 +1829,7 @@
 							acceptAll={{
 								count: all.count,
 								cents: all.cents,
+								includes: acceptIncludes,
 								onaccept: () => void k.decideLines([...all.byApproval.values()], 'grant')
 							}}
 							signOff={all.signOff}
@@ -1819,7 +1857,42 @@
 					{#if (decisions.length || rejectedLines.length) && (!stage || stage === 'waits')}
 						<!-- Decide (D29): the waiting lines, once, grouped by why they wait; each group decides itself. -->
 						<section aria-labelledby="decide-h" class="mt-6">
-							<h2 id="decide-h" class="text-heading font-semibold text-ink">Decide</h2>
+							<div class="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+								<h2 id="decide-h" class="text-heading font-semibold text-ink">Decide</h2>
+								<!-- The cover legend as filters, counted in the lines this table shows. -->
+								<div
+									class="flex flex-wrap items-center gap-1.5"
+									role="group"
+									aria-label="Show lines by stock"
+								>
+									{#each [{ k: 'known', cls: 'supply-known', word: 'known stock' }, { k: 'unknown', cls: 'supply-unknown', word: 'stock unknown' }] as const as c (c.k)}
+										{#if stockCount[c.k] && stockCount.known && stockCount.unknown}
+											<button
+												type="button"
+												aria-pressed={stockFilter === c.k}
+												class="inline-flex h-7 items-center gap-1.5 rounded-full border px-2.5 text-meta {stockFilter ===
+												c.k
+													? 'border-ink bg-ink text-sheet'
+													: 'border-rule-strong text-ink-2 hover:text-ink'}"
+												onclick={() => (stockFilter = stockFilter === c.k ? null : c.k)}
+												><span class="{c.cls} h-2.5 w-4 rounded-[2px]" aria-hidden="true"
+												></span><span class="mono">{stockCount[c.k]}</span>
+												{c.word}</button
+											>
+										{/if}
+									{/each}
+									{#if needsYou.cannot}
+										<span class="inline-flex items-center gap-1 text-meta text-ink-3"
+											><Ban
+												size={13}
+												class="text-sup-missing"
+												aria-hidden="true"
+											/>{needsYou.cannot}
+											{needsYou.cannot === 1 ? 'product' : 'products'} can't be ordered</span
+										>
+									{/if}
+								</div>
+							</div>
 							<div class="mt-2 overflow-hidden rounded-lg border border-rule bg-sheet">
 								<!-- The same column header as the plan's table: item · amount and state · price. -->
 								<div
