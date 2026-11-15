@@ -648,7 +648,11 @@
 								></i>{/if}
 						</button>
 					</div>
-					<SponsorsPanel workspace={data.workspace} />
+					<SponsorsPanel
+						workspace={data.workspace}
+						runId={stream.state.runId || data.run || ''}
+						lines={Object.values(stream.state.plans).reduce((n, p) => n + p.lines.length, 0)}
+					/>
 					<OpTimeline log={stream.log} {names} plans={stream.state.plans} />
 				</div>
 			{:else}

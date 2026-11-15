@@ -240,6 +240,30 @@ describe('persisted traces (PGlite)', () => {
 		expect(await store.list({ since: new Date(at + 60_000).toISOString() })).toHaveLength(0);
 	});
 
+	it('summarises one run of a workspace (the Engine room Valio count)', async () => {
+		const store = await pgStore();
+		setTraceStore(store);
+		const at = Date.now();
+		for (const [i, runId] of ['run-a', 'run-a', 'run-b'].entries())
+			enqueue(
+				toTraceRow(
+					'tool',
+					{
+						source: 'valio',
+						cache: i === 1 ? 'cache' : 'live',
+						ok: true,
+						latencyMs: 5,
+						workspaceId: 'ws-r',
+						runId
+					},
+					new Date(at - i * 1000)
+				)
+			);
+		await flushTraces();
+		const [v] = await store.summary({ workspaceId: 'ws-r', runId: 'run-a', source: 'valio' });
+		expect(v).toMatchObject({ count: 2, byMode: { live: 1, cache: 1 } });
+	});
+
 	it('prunes rows older than the retention on a flush', async () => {
 		const store = await pgStore();
 		setTraceStore(store);
