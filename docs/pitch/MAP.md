@@ -81,7 +81,7 @@ The user's three sketches map onto this (`scratch/user-diagrams.png` in the pitc
 | One Kitchen view: the delivery day's basket, plans as groups (D30) | `5844d9b` | Kitchen `?plan=` scrolls to its group | — | main |
 | Chef approves in the dock (DecisionCard, hold-to-confirm) (D13) | dock | dock → Review → Confirm | `dock-approve.e2e.ts` 2/2 on prod `b2dfe9c` | prod |
 | Chef approves shown lines by a typed yes in their own dock (D22); sign-off lines still need the Confirm card | `fd7d6ae` | dock "approve all" | — | main |
-| Chef's own MCP key asks the chef by elicitation (D22) | — | — | parked until after the freeze; MCP agents get the approval link (D17) | next |
+| Chef's own MCP key asks the chef by elicitation (D22) | `server/tools/elicit-approve.ts`, `mcp.ts:171-199` | chef key: approve via elicitation; sign-offs and clients without elicitation get the link (D17) | efa6345c, on prod 804b8927 | prod* |
 | Approve → order → one receipt; survives a reload | Kitchen | Place order | `kitchen-order.e2e.ts` on prod `70c30e2`; hero m2 10/10 at 1440 and 390 on prod `ea9f4d5` | prod |
 | Product photos with a labelled ladder (exact → pack may differ → brand → category), loaded once per plan | `6c08d11`, `73ecd36`, `server/web/photo.ts` | Kitchen rows | — | prod\* |
 | Product card: Valio Aimo public page and photo, verified by barcode | `server/products/card.ts` | tap a product | CLAIMS (prod `ff7f6c3`) | prod |
