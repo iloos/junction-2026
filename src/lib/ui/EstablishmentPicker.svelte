@@ -45,6 +45,19 @@
 	};
 
 	let name = $state('');
+	/** The sample to copy (its mandate, delivery days, weights and usual history), or blank. */
+	const KINDS = [
+		{ v: 'blank', label: 'Blank: default rules, no history' },
+		{ v: 'city_hotel', label: 'Hotel' },
+		{ v: 'lunch_restaurant', label: 'Lunch restaurant' },
+		{ v: 'public_central_kitchen', label: 'Central kitchen (school, public)' },
+		{ v: 'care_home_kitchen', label: 'Care home' },
+		{ v: 'cafe', label: 'Café' },
+		{ v: 'a_la_carte_restaurant', label: 'À la carte restaurant' },
+		{ v: 'ski_resort_hotel', label: 'Ski resort hotel' }
+	] as const;
+	// svelte-ignore state_referenced_locally
+	let kindOf = $state<string>(room ? 'lunch_restaurant' : 'blank');
 	let about = $state('');
 	let busy = $state(false);
 	let error = $state<string | null>(null);
@@ -64,7 +77,11 @@
 		error = null;
 		try {
 			const d = about.trim() || undefined;
-			const r = await createKitchen({ name: n, ...(d ? { description: d } : {}) });
+			const r = await createKitchen({
+				name: n,
+				...(d ? { description: d } : {}),
+				...(kindOf !== 'blank' ? { profile: kindOf } : {})
+			});
 			chosen = true;
 			oncreated?.(r.kitchen, d);
 		} catch (err) {
@@ -117,6 +134,21 @@
 				placeholder="e.g. Pasta Bar Kallio"
 				class="h-10 rounded-md border border-rule-strong bg-sheet px-3 text-body font-normal text-ink placeholder:text-ink-3"
 			/>
+		</label>
+		<label class="flex flex-col gap-1 text-meta font-medium text-ink">
+			Kind of kitchen
+			<select
+				bind:value={kindOf}
+				disabled={chosen}
+				class="h-10 rounded-md border border-rule-strong bg-sheet px-2 text-body font-normal text-ink"
+			>
+				{#each KINDS as k (k.v)}<option value={k.v}>{k.label}</option>{/each}
+			</select>
+			<span class="font-normal text-ink-3"
+				>{kindOf === 'blank'
+					? 'Safe default rules; your usual order builds up as you order.'
+					: "Starts from that sample's rules, delivery days and order history; you can change them."}</span
+			>
 		</label>
 		<label class="flex flex-col gap-1 text-meta font-medium text-ink">
 			<span>About it <span class="font-normal text-ink-3">(optional, one line)</span></span>
