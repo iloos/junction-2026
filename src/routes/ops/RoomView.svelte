@@ -60,6 +60,9 @@
 		incident ? INCIDENTS.find((i) => incident.label.endsWith(i.title)) : undefined
 	);
 	/** Seed names carry "(fictional)" for the data's sake; the room shows the store's name alone. */
+	/** The stores the shortage changed lead; the unaffected follow, quieter. */
+	const affectedFirst = <T extends { outcome: string }>(ks: readonly T[]) =>
+		[...ks].sort((a, b) => +(a.outcome === 'unaffected') - +(b.outcome === 'unaffected'));
 	const plainName = (n: string) => n.replace(/\s*\(fictional\)$/, '');
 	let deckBusy = $state<string | null>(null);
 	let deckNote = $state<string | null>(null);
@@ -237,6 +240,39 @@
 		{/if}
 	</header>
 
+	{#if incident}
+		<section class="incident-view" aria-label="Simulated incident">
+			<p class="sim-label">{INCIDENT_LABEL}</p>
+			<h3>{story?.title ?? incident.label.replace(`${INCIDENT_LABEL}: `, '')}</h3>
+			{#if story}<p class="story">{story.story}</p>{/if}
+			{#each incident.shortages as sh (sh.shortageId)}
+				<p class="sentence">{shortageSentence(sh)}</p>
+				<ul>
+					{#each sh.kitchens.filter((k) => k.outcome !== 'unaffected') as k, i (k.kitchenId)}
+						<li
+							class="o-{k.outcome}"
+							in:fly={{ y: 10, delay: Math.min(i, 12) * 60, duration: 320 }}
+						>
+							<span class="name">{plainName(k.kitchenName)}</span>
+							<span class="chip">{OUTCOME_WORDS[k.outcome] ?? k.outcome}</span>
+							<span class="why">
+								{k.why}
+								{#if k.swaps.length}
+									<span class="swap"
+										>{k.swaps.map((x) => `${x.fromName} → ${x.toName}`).join('; ')}</span
+									>
+								{/if}
+								{#if k.allowedBy}<span class="rule">{k.allowedBy}</span>{/if}
+							</span>
+						</li>
+					{:else}
+						<li class="o-unaffected"><span class="why">No store's open plan uses it.</span></li>
+					{/each}
+				</ul>
+			{/each}
+		</section>
+	{/if}
+
 	{#if presenter}
 		<section class="deck" aria-label="Incidents">
 			<h3>Run an incident</h3>
@@ -294,36 +330,6 @@
 		</section>
 	{/if}
 
-	{#if incident}
-		<section class="incident-view" aria-label="Simulated incident">
-			<p class="sim-label">{INCIDENT_LABEL}</p>
-			<h3>{story?.title ?? incident.label.replace(`${INCIDENT_LABEL}: `, '')}</h3>
-			{#if story}<p class="story">{story.story}</p>{/if}
-			{#each incident.shortages as sh (sh.shortageId)}
-				<p class="sentence">{shortageSentence(sh)}</p>
-				<ul>
-					{#each sh.kitchens.filter((k) => k.outcome !== 'unaffected') as k (k.kitchenId)}
-						<li class="o-{k.outcome}">
-							<span class="name">{plainName(k.kitchenName)}</span>
-							<span class="chip">{OUTCOME_WORDS[k.outcome] ?? k.outcome}</span>
-							<span class="why">
-								{k.why}
-								{#if k.swaps.length}
-									<span class="swap"
-										>{k.swaps.map((x) => `${x.fromName} → ${x.toName}`).join('; ')}</span
-									>
-								{/if}
-								{#if k.allowedBy}<span class="rule">{k.allowedBy}</span>{/if}
-							</span>
-						</li>
-					{:else}
-						<li class="o-unaffected"><span class="why">No store's open plan uses it.</span></li>
-					{/each}
-				</ul>
-			{/each}
-		</section>
-	{/if}
-
 	<section class="shortage" aria-label="Shortage">
 		<div class="sh-head">
 			<h3>One shortage, every store</h3>
@@ -337,8 +343,8 @@
 		{#if shortage}
 			<p class="sentence">{shortageSentence(shortage)}</p>
 			<ul>
-				{#each shortage.kitchens as k (k.kitchenId)}
-					<li class="o-{k.outcome}" in:fly={{ x: -12 }}>
+				{#each affectedFirst(shortage.kitchens) as k, i (k.kitchenId)}
+					<li class="o-{k.outcome}" in:fly={{ y: 10, delay: Math.min(i, 12) * 60, duration: 320 }}>
 						<span class="name">{plainName(k.kitchenName)}</span>
 						<span class="chip">{OUTCOME_WORDS[k.outcome] ?? k.outcome}</span>
 						<span class="why">
@@ -902,5 +908,65 @@
 	.tile:has(.open:focus-visible) {
 		outline: 2px solid var(--propose);
 		outline-offset: 2px;
+	}
+	/*
+	 * The hero moment: one card per store, the outcome word large and coloured by what happened, so the room
+	 * reads at a glance that the same shortage got a different answer in every store.
+	 */
+	.incident-view ul,
+	.shortage ul {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+		gap: 10px;
+		padding: 0;
+		margin: 4px 0 8px;
+		list-style: none;
+	}
+	.incident-view li,
+	.shortage li {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) auto;
+		align-content: start;
+		gap: 6px 10px;
+		padding: 12px 14px;
+		border: 1px solid var(--line);
+		border-left: 4px solid var(--faint);
+		border-radius: 6px;
+		background: var(--panel);
+	}
+	.incident-view li .name,
+	.shortage li .name {
+		font-weight: 600;
+		font-size: var(--text-heading);
+		line-height: var(--text-heading--line-height);
+	}
+	.incident-view li .why,
+	.shortage li .why {
+		grid-column: 1 / -1;
+	}
+	.incident-view li.o-swapped,
+	.incident-view li.o-kept,
+	.shortage li.o-swapped,
+	.shortage li.o-kept {
+		border-left-color: var(--done);
+	}
+	.incident-view li.o-held,
+	.shortage li.o-held {
+		border-left-color: var(--sign-off);
+	}
+	.incident-view li.o-short,
+	.shortage li.o-short {
+		border-left-color: var(--blocked);
+	}
+	.incident-view {
+		background: color-mix(in oklab, var(--sign-off) 5%, transparent);
+	}
+	.shortage li.o-unaffected {
+		opacity: 0.6;
+		background: transparent;
+	}
+	.shortage li.o-unaffected .why {
+		font-size: var(--text-meta);
+		line-height: var(--text-meta--line-height);
 	}
 </style>
