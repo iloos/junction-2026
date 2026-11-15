@@ -17,6 +17,7 @@ import { toolSchemas, type Plan } from '$lib/core/contracts';
 import type { CallContext, ToolHandlers } from '$lib/core/ports';
 import { sameTermsState, termsState } from '$lib/server/demo/chef-key';
 import { approvalUrl } from './present';
+import { reasonShort } from '$lib/ui/reasons';
 
 type Env = Record<string, string | undefined>;
 
@@ -41,7 +42,7 @@ export function termsMessage(plan: Plan, lineIds: string[]): string {
 	const total = held.reduce((s, l) => s + (l.lineCents ?? 0), 0);
 	const rows = held.map(
 		(l) =>
-			`• ${l.productName ?? l.productId}: ${l.qty.value} ${l.qty.unit}, ${eur(l.lineCents)}${l.reasons.length ? ` (${l.reasons.join(', ')})` : ''}`
+			`• ${l.productName ?? l.productId}: ${l.qty.value} ${l.qty.unit}, ${eur(l.lineCents)}${l.reasons.length ? ` (${l.reasons.map(reasonShort).join(', ')})` : ''}`
 	);
 	return [
 		`Approve these ${held.length} line(s) for delivery on ${plan.deliverBy}, plan version ${plan.version}?`,
