@@ -182,7 +182,7 @@
 			const was = { taskId, entries };
 			// A link from the conversation names its task (?task=): the same thread continues here.
 			const linked = new URL(location.href).searchParams.get('task');
-			const fromLink = linked && /^task-[w-]{1,60}$/.test(linked) ? linked : null;
+			const fromLink = linked && /^task-[\w-]{1,60}$/.test(linked) ? linked : null;
 			taskId = openTask ?? fromLink ?? read();
 			if (openTask ?? fromLink) remember((openTask ?? fromLink)!);
 			entries = [];
