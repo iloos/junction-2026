@@ -17,13 +17,18 @@ _S7, Sun 15 Nov 05:00. Run the web deck (`docs/pitch/deck.html`, or the publishe
 
 ## The live demo (75 s)
 Prepare before going on: a fresh browser profile on the laptop, logged into nothing; the app open at `/` on a sample hotel; the Ops screen in a second tab; Wi-Fi checked; the deck in a third tab.
-1. **0–10 s:** open the chat dock and type "a no-meat dinner for 120 with a peach dessert". Say: "One sentence."
-2. **10–25 s:** the menu card appears. Say: "Gemini proposes six dishes; every amount is an estimate." Type "plan it".
-3. **25–50 s:** the plan appears: about 20 items, every one a Valio product with a price. Say: "Every item is new to this hotel, and its mandate says ask me before any new product, so each one waits for the chef, with its reason." Point at one reason line (new product; or a requirement the product's record doesn't confirm).
-4. **50–65 s:** tap **Accept all**. Say: "One yes from the chef covers exactly these items."
-5. **65–75 s:** switch to the Ops tab: the order has arrived. Say: "And it lands on Valio's side." Switch back to the deck, slide 8.
+**A · A new menu from words (50 s)**
+1. **0–8 s:** open the chat dock and type "a no-meat dinner for 120 with a peach dessert". Say: "One sentence."
+2. **8–20 s:** the menu card appears. Say: "Gemini proposes six dishes." Type "plan it".
+3. **20–38 s:** the plan appears: about 20 items, each a Valio product with a price. Say: "A new menu means new products, and this hotel's mandate says ask me before any new product. So the agent asks once." Point at one reason line.
+4. **38–50 s:** tap **Accept all**, then the Ops tab: the order has arrived. Say: "One yes covers exactly these items, and it lands on Valio's side."
 
-If something hangs for more than 5 seconds, say "here's the same run" and show slide 7.
+**B · The usual order (25 s)**: only if S5 has seen it on the submitted deploy (see below)
+5. **50–75 s:** back to the Kitchen: "Tuesday's usual is ready" → **Plan it**. Say: "Products this hotel buys every week go through on their own, inside the caps. Only the exceptions wait. Trust grows from history." Switch back to the deck, slide 8.
+
+If B isn't verified, end after A and give the 25 s to slide 8. If anything hangs for more than 5 seconds, say "here's the same run" and show slide 7.
+
+_To verify before stage (S5):_ on the submitted deploy, the hotel's usual order planned from the Kitchen shows items ordered alone and only exceptions waiting; note the counts.
 
 ## Peer review at the table (about 2 min a visitor)
 Laptop open on the deck, phone ready with the app.
