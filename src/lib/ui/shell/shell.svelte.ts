@@ -33,6 +33,10 @@ export class Shell {
 	chatOpen = $state(false);
 	/** Text a page puts in the agent's composer once (e.g. "For Tue 8 Dec: "); the dock takes it and clears it. */
 	chatDraft = $state<string | null>(null);
+	/** The conversation is the page (/request, D23): the dock renders in the page's flow, full width, always open. */
+	chatFull = $state(false);
+	/** Bumped to start a new conversation ("New order", `/request?new=1`, D31); earlier tasks keep their threads. */
+	chatNew = $state(0);
 	/** What the agent is scoped to on this page: the kitchen and the plan on screen (Kitchen, Request, Ops). */
 	chat = $state<{ kitchenId?: string; planId?: string }>({});
 	/** The agent rail's width on desktop (px): dragged by its left edge, kept per browser. */

@@ -68,6 +68,8 @@
 	 * navigating, which would reload the screen.
 	 */
 	const shell = useShell();
+	/** The conversation is the page (/request): in the page's flow, full width, always open (D23). */
+	const full = $derived(!!shell?.chatFull);
 	function locate(
 		ev: MouseEvent,
 		plan: string,
@@ -165,7 +167,7 @@
 	let loadedFor: string | null = null;
 	$effect(() => {
 		const k = `${kitchenId}:${planId ?? ''}:${openTask ?? ''}`;
-		if (!open && !pinned) return;
+		if (!open && !pinned && !full) return;
 		if (loadedFor === k) return;
 		loadedFor = k;
 		untrack(() => {
@@ -265,7 +267,7 @@
 	let ownFor: string | null = null;
 	$effect(() => {
 		const id = actPlan;
-		if (!id || id === planId || !(open || pinned) || id === ownFor) return;
+		if (!id || id === planId || !(open || pinned || full) || id === ownFor) return;
 		ownFor = id;
 		untrack(() => {
 			const st = new KitchenStore('live', false);
@@ -521,6 +523,15 @@
 		error = null;
 	}
 
+	// "New order" (D31): a page asks for a fresh conversation; the earlier task stays with its plan.
+	let newSeen = 0;
+	$effect(() => {
+		const n = shell?.chatNew ?? 0;
+		if (n === newSeen) return;
+		newSeen = n;
+		untrack(newTask);
+	});
+
 	const TOOL: Record<string, string> = {
 		understand: 'Understood',
 		explain: 'Answered',
@@ -543,7 +554,7 @@
 	class={[
 		'fixed right-4 bottom-4 z-30 flex items-center gap-2 rounded-full border border-rule-strong bg-sheet px-4 py-2 text-body font-medium shadow-md',
 		pinned && 'lg:hidden',
-		(open || !launcher) && 'hidden'
+		(open || !launcher || full) && 'hidden'
 	]}
 	onclick={() => (open = true)}
 >
@@ -553,11 +564,13 @@
 <svelte:window onkeydown={onDockKey} />
 
 <aside
-	class={[
-		'fixed inset-x-0 bottom-[var(--kb,0px)] z-40 flex h-[var(--sheet-h)] flex-col rounded-t-xl border-t border-rule-strong bg-sheet shadow-lg lg:inset-x-auto lg:top-11 lg:right-0 lg:bottom-0 lg:h-auto lg:w-[var(--rail-w)] lg:rounded-none lg:border-t-0 lg:border-l lg:shadow-none',
-		!open && (pinned ? 'max-lg:hidden' : 'hidden'),
-		!pinned && 'lg:shadow-[-12px_0_32px_-16px_oklch(0.2_0.02_255/0.35)]'
-	]}
+	class={full
+		? 'mx-auto mb-6 flex h-[max(28rem,calc(100dvh-13rem))] w-full max-w-[880px] flex-col rounded-xl border border-rule-strong bg-sheet max-sm:rounded-none max-sm:border-x-0'
+		: [
+				'fixed inset-x-0 bottom-[var(--kb,0px)] z-40 flex h-[var(--sheet-h)] flex-col rounded-t-xl border-t border-rule-strong bg-sheet shadow-lg lg:inset-x-auto lg:top-11 lg:right-0 lg:bottom-0 lg:h-auto lg:w-[var(--rail-w)] lg:rounded-none lg:border-t-0 lg:border-l lg:shadow-none',
+				!open && (pinned ? 'max-lg:hidden' : 'hidden'),
+				!pinned && 'lg:shadow-[-12px_0_32px_-16px_oklch(0.2_0.02_255/0.35)]'
+			]}
 	aria-label="Agent chat"
 	bind:this={dockEl}
 	style="--rail-w: {shell?.railWidth ?? 384}px; --sheet-h: {sheetH}; --kb: {keyboard}px"
@@ -566,7 +579,10 @@
 	<!-- A focusable separator is the WAI-ARIA window splitter: interactive by design. -->
 	<!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_noninteractive_element_interactions -->
 	<div
-		class="absolute inset-y-0 -left-1 z-10 hidden w-2 cursor-col-resize hover:bg-accent/20 focus-visible:bg-accent/30 focus-visible:outline-none lg:block"
+		class={[
+			'absolute inset-y-0 -left-1 z-10 hidden w-2 cursor-col-resize hover:bg-accent/20 focus-visible:bg-accent/30 focus-visible:outline-none',
+			!full && 'lg:block'
+		]}
 		role="separator"
 		aria-orientation="vertical"
 		aria-label="Resize the agent rail"
@@ -608,7 +624,7 @@
 		>
 		<button
 			type="button"
-			class={['rounded p-1 text-ink-3 hover:bg-well', pinned && 'lg:hidden']}
+			class={['rounded p-1 text-ink-3 hover:bg-well', pinned && 'lg:hidden', full && 'hidden']}
 			aria-label="Close chat"
 			onclick={() => (open = false)}><ChevronDown size={16} /></button
 		>
@@ -815,9 +831,7 @@
 									>
 								</a>
 							{/each}
-							<p class="text-meta text-ink-3">
-								This decision is on the page: approve it on its card there, then continue here.
-							</p>
+							<p class="text-meta text-ink-3">Approve it on its card, or say “approve all” here.</p>
 						</li>
 					{/if}
 				{:else if x.e.type === 'ledger' && !(actedHere && i > lastDecisionAt)}
