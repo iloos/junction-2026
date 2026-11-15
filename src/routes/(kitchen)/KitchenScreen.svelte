@@ -14,7 +14,8 @@
 		LoaderCircle,
 		CircleCheck,
 		Info,
-		Smartphone
+		Smartphone,
+		Plus
 	} from '@lucide/svelte';
 	import { Popover } from 'bits-ui';
 	import { KitchenStore } from '$lib/kitchen/kitchen.svelte';
@@ -71,7 +72,8 @@
 	import Receipt from '$lib/ui/Receipt.svelte';
 	import ProductThumb from '$lib/ui/ProductThumb.svelte';
 	import { acceptAll, lineDecisions } from '$lib/kitchen/line-decisions';
-	import type { ShortageNotice } from '$lib/ui/ledger';
+	import { buildLedger, type ShortageNotice } from '$lib/ui/ledger';
+	import Ledger from '$lib/ui/Ledger.svelte';
 	import { prefetchThumbs } from '$lib/ui/thumbs';
 	import { menuTitle, splitNeed, startsDish } from '$lib/kitchen/menu-plan';
 	import {
@@ -212,6 +214,8 @@
 				void k.reopen();
 				return;
 			}
+			// Any new plan of this kitchen (another door, the dock) joins the day's basket and the Orders list.
+			if (ops.some((o) => o.op.type === 'CreatePlan')) planMade++;
 			// Moment 2: the dock (or chat) made this kitchen's first plan while the home is open: show it here.
 			if (k.started === false) {
 				const made = ops.find(
@@ -265,6 +269,7 @@
 			const d = n.event.detail as ShortageNotice;
 			const mine = d?.kitchens?.find((x) => x.kitchenId === (snap?.kitchen.id ?? k.startKitchen));
 			if (!mine || mine.outcome === 'unaffected') return;
+			shortages = [d, ...shortages.filter((x) => x.shortageId !== d.shortageId)];
 			const what = `Valio ran short of ${readableName(d.productName)} (${d.had} → ${d.left} ${unitWord(d.unit, d.left)})`;
 			void k.refreshFrom('outside', `${what}. ${mine.why || mine.allowedBy}`);
 		});
@@ -845,9 +850,50 @@
 	let dayChoice = $state<string | null>(null);
 	const theDay = $derived(dayChoice ?? k.plan?.deliverBy ?? null);
 	let dayBasket = $state.raw<BasketData | null>(null);
+	/** D31: every plan of this kitchen (all days), with where it came from, its state and total, newest day first. */
+	const allOrders = $derived.by(() =>
+		(dayBasket?.days ?? [])
+			.flatMap((d) =>
+				d.sources.map((src) => {
+					const ls = d.lines.filter((l) => l.planId === src.planId);
+					const state = ls.some((l) => l.stage === 'held')
+						? 'waits for you'
+						: ls.length && ls.every((l) => l.stage === 'ordered')
+							? 'ordered'
+							: ls.length
+								? 'proposed'
+								: 'asked';
+					return {
+						planId: src.planId,
+						date: d.date,
+						title:
+							src.kind === 'event'
+								? src.title
+								: src.kind === 'usual'
+									? `Usual ${weekday(d.date)} order`
+									: src.kind === 'kitchen' || src.kind === 'chat'
+										? 'Order from the chat'
+										: src.title,
+						state,
+						cents: ls.reduce((t, l) => t + (l.lineCents ?? 0), 0)
+					};
+				})
+			)
+			.sort((a, b) => b.date.localeCompare(a.date))
+	);
+	let ordersOpen = $state(false);
+	/** D31: a fresh conversation for a new order; the open plan and its thread stay as they were. */
+	async function newOrder() {
+		if (!shell) return;
+		shell.chatOpen = true;
+		// After the dock has opened (and re-read its remembered task), so the fresh task wins.
+		await tick();
+		shell.chatNew += 1;
+	}
 	/** Read the day's basket again after anything on the plan changes. */
+	let planMade = $state(0);
 	const basketRefresh = $derived(
-		`${k.plan?.id ?? ''}:${k.plan?.version ?? 0}:${k.lastCommit?.key ?? ''}:${snap?.others?.length ?? 0}`
+		`${k.plan?.id ?? ''}:${k.plan?.version ?? 0}:${k.lastCommit?.key ?? ''}:${snap?.others?.length ?? 0}:${planMade}`
 	);
 	$effect(() => {
 		const id = snap?.kitchen.id;
@@ -882,6 +928,24 @@
 			ready: ls.filter((l) => l.stage === 'proposed' || l.stage === 'approved').length,
 			ordered: ls.filter((l) => l.stage === 'ordered').length
 		};
+	});
+	/** Shortages that re-planned this kitchen while the page was open (moment 1), newest first. */
+	let shortages = $state.raw<ShortageNotice[]>([]);
+	/** The agent's work for the day, in one line (the north star), opening to the full ledger. */
+	const dayLedger = $derived(buildLedger(dayEntry ? [dayEntry] : [], shortages, snap?.kitchen.id));
+	const agentLine = $derived.by(() => {
+		if (!dayEntry) return '';
+		const swaps = new Set(dayEntry.lines.filter((l) => l.substituteFor).map((l) => l.substituteFor))
+			.size;
+		const replans = dayLedger.done.filter((e) => e.kind === 'shortage').length;
+		const held = stageCounts.waits;
+		const parts = [
+			swaps ? `found ${swaps} ${swaps === 1 ? 'replacement' : 'replacements'}` : null,
+			replans ? `re-planned ${replans} ${replans === 1 ? 'shortage' : 'shortages'}` : null,
+			held ? `holds ${held} ${held === 1 ? 'line' : 'lines'} for you` : null,
+			stageCounts.ordered ? `ordered ${stageCounts.ordered}` : null
+		].filter(Boolean);
+		return parts.length ? `Your agent ${parts.join(' · ')}` : '';
 	});
 	/** A line of the open plan by stage, for the filter chips. */
 	function lineStage(l: Line): Stage {
@@ -1055,6 +1119,64 @@
 				{/if}
 			</select>
 		</label>
+		{#if mode === 'live' && !needsJoin}
+			<!-- D31: a new order starts a fresh conversation; Orders lists every plan of this kitchen. -->
+			<span class="flex shrink-0 items-center gap-2">
+				<button
+					type="button"
+					class="inline-flex h-8 items-center gap-1 rounded-md bg-ink px-3 text-meta font-medium text-sheet hover:bg-ink-2"
+					onclick={newOrder}><Plus size={14} aria-hidden="true" />New order</button
+				>
+				{#if allOrders.length}
+					<Popover.Root bind:open={ordersOpen}>
+						<Popover.Trigger
+							class="inline-flex h-8 items-center gap-1 rounded-md border border-rule-strong px-3 text-meta text-ink hover:border-accent"
+							>Orders <span class="mono text-ink-3">{allOrders.length}</span><ChevronDown
+								size={13}
+								aria-hidden="true"
+							/></Popover.Trigger
+						>
+						<Popover.Portal>
+							<Popover.Content
+								sideOffset={6}
+								align="start"
+								class="z-50 w-[min(420px,calc(100vw-24px))] rounded-lg border border-rule bg-sheet p-1 shadow-lg"
+							>
+								<ul aria-label="Orders of this kitchen">
+									{#each allOrders as o (o.planId)}
+										<li>
+											<button
+												type="button"
+												class="grid w-full grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-3 rounded-md px-3 py-2 text-left hover:bg-well {o.planId ===
+												plan?.id
+													? 'bg-well'
+													: ''}"
+												aria-current={o.planId === plan?.id ? 'true' : undefined}
+												onclick={() => {
+													ordersOpen = false;
+													void openPlan(o.planId);
+												}}
+											>
+												<span class="min-w-0">
+													<span class="block text-body text-ink">{o.title}</span>
+													<span class="block text-meta text-ink-3"
+														>{day(o.date)} ·
+														<span class={o.state === 'waits for you' ? 'text-signoff' : ''}
+															>{o.state}</span
+														></span
+													>
+												</span>
+												<span class="mono text-meta text-ink">{money(o.cents)}</span>
+											</button>
+										</li>
+									{/each}
+								</ul>
+							</Popover.Content>
+						</Popover.Portal>
+					</Popover.Root>
+				{/if}
+			</span>
+		{/if}
 		{#if roomNotice}
 			<p class="min-w-0 rounded-md bg-signoff-wash px-2 py-1 text-meta text-ink" role="note">
 				{roomNotice}
@@ -1317,6 +1439,24 @@
 				</details>
 			</div>
 			<p class="mt-2 text-body text-ink">{daySentence}</p>
+			{#if agentLine}
+				<details class="mt-1">
+					<summary class="cursor-pointer text-meta text-ink-2 hover:text-ink">
+						<Bot size={13} class="mr-1 inline text-accent" aria-hidden="true" />{agentLine}
+					</summary>
+					<div class="mt-2">
+						<Ledger
+							ledger={dayLedger}
+							ondecide={(id) => void openPlan(id)}
+							onorder={async (id) => {
+								if (k.plan?.id !== id) await openPlan(id);
+								await k.commit();
+							}}
+							busy={k.busy}
+						/>
+					</div>
+				</details>
+			{/if}
 			{#if dayEntry}
 				<div class="mt-2 flex flex-wrap gap-1.5" role="group" aria-label="Show lines">
 					{#each ['waits', 'ready', 'ordered'] as const as st (st)}

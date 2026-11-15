@@ -520,6 +520,14 @@
 		entries = [];
 		error = null;
 	}
+	// "New order" in the Kitchen header (D31) asks for a fresh task here.
+	let seenNew = 0;
+	$effect(() => {
+		const n = shell?.chatNew ?? 0;
+		if (!n || n === seenNew) return;
+		seenNew = n;
+		untrack(() => newTask());
+	});
 
 	const TOOL: Record<string, string> = {
 		understand: 'Understood',
@@ -588,7 +596,9 @@
 		<div class="min-w-0 flex-1">
 			<p class="text-body font-semibold">Purchasing agent</p>
 			<p class="truncate text-meta text-ink-3">
-				{#if taskId}{taskTitle}<span class="sys-only mono">
+				{#if fresh && !taskId}New order: say what you need{:else if taskId}{taskTitle}<span
+						class="sys-only mono"
+					>
 						· {taskId}</span
 					>{:else if planTitle}{planTitle}{:else}Plans and orders within your mandate. Never
 					approves.{/if}
