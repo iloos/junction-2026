@@ -226,11 +226,17 @@ const looksFinnish = (text: string) =>
 
 /** Splits a request into item phrases: on ";", newlines, "+", ", " and "and"/"ja". */
 export function splitItems(text: string): string[] {
-	return text
-		.split(/\s*(?:;|\n|\+|,\s+|\s+(?:and|ja|&)\s+)\s*/i)
-		.map((s) => s.trim())
-		.filter((s) => s.length > 0);
+	return (
+		text
+			.split(/\s*(?:;|\n|\+|,\s+|\s+(?:and|ja|&)\s+)\s*/i)
+			.map((s) => s.trim())
+			// "order it", "please order", "go ahead": an instruction about the request, never an item of it.
+			.filter((s) => s.length > 0 && !INSTRUCTION.test(s))
+	);
 }
+
+const INSTRUCTION =
+	/^(?:then\s+|and\s+|please\s+|pls\s+)*(?:order|buy|place|send|get|submit|tilaa|osta)(?:\s+(?:it|them|that|this|those|the order|everything|all))?(?:\s+(?:please|pls|now|asap|for me|kiitos))*[.!]*$|^(?:go ahead|just do it|do it|that'?s all|thanks?|thank you|kiitos)[.!]*$/i;
 
 /** Catalogue searches, most specific first; the last one is always the bare product word. */
 export function buildSearch(
