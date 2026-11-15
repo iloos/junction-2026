@@ -425,6 +425,15 @@
 			}))
 	);
 
+	// A plan that opens from the home or the picker starts at its header, not at the scroll the page below it had.
+	let shownStarted: boolean | null | undefined = undefined;
+	$effect(() => {
+		const st = k.started;
+		if (st === true && shownStarted === false && !page.url.searchParams.get('need'))
+			window.scrollTo({ top: 0 });
+		shownStarted = st;
+	});
+
 	// The dock asked to show this plan's decisions: Decide zone on a phone, then the approval panel in view.
 	let locatedAt = 0;
 	$effect(() => {
