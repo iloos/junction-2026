@@ -5,6 +5,7 @@
  */
 import type { Order } from '$lib/core/contracts';
 import type { SimEvent } from '$lib/core/contracts/events';
+import { salesUnitWords } from '$lib/ui/request/words';
 
 export type OpsKitchen = {
 	id: string;
@@ -243,9 +244,7 @@ export function shortageSentence(s: ShortageReplanned): string {
 		c.unaffected && `${c.unaffected} not affected`
 	].filter(Boolean);
 	const stores = s.kitchens.length;
-	// A sales-unit code (KI, PS) is not a word: show the counts alone.
-	const unit = /^[A-Z]{1,3}$/.test(s.unit) ? '' : ` ${s.unit}`;
-	return `${s.productName}: ${s.had} → ${s.left}${unit} left. ${stores} store${stores === 1 ? '' : 's'} re-planned: ${parts.join(', ') || 'no changes'}.`;
+	return `${s.productName}: ${s.had} → ${s.unit ? salesUnitWords(s.left, s.unit) : s.left} left. ${stores} store${stores === 1 ? '' : 's'} re-planned: ${parts.join(', ') || 'no changes'}.`;
 }
 
 /** A visitor's store: flagged, copied from a sample, or with create_kitchen's `k-v-` id (a blank store has no sample). */

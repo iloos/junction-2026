@@ -90,10 +90,14 @@ export function planTitle(s: OrderStages): string {
 		return needs
 			.map((n) => `${amountText(n.amount)} ${dishName(n.label).toLowerCase()}`)
 			.join(' and ');
+	if (!needs.length) return 'An order still being drafted';
 	const guests = s.plan.needs.find((n) => n.dish)?.dish?.guests;
-	return needs.length
-		? `${plural(needs.length, 'dish', 'dishes')}${guests ? ` for ${guests} guests` : ''}`
-		: 'An order still being drafted';
+	const forGuests = guests ? ` for ${guests} guests` : '';
+	// Menu needs are ingredients; the dish count is the distinct dishes they come from.
+	const dishes = new Set(s.plan.needs.flatMap((n) => (n.source ? [n.source.dishId] : []))).size;
+	return dishes
+		? `${plural(dishes, 'dish', 'dishes')}${forGuests} · ${plural(needs.length, 'ingredient')}`
+		: `${plural(needs.length, 'ingredient')}${forGuests}`;
 }
 
 function statusOf(s: OrderStages, decisions: number): { status: string; done: boolean } {

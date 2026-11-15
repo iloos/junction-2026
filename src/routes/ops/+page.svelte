@@ -378,11 +378,14 @@
 					href={resolve('/ops') + `?ws=${data.rooms.shared}`}
 					aria-current={data.workspace === data.rooms.shared ? 'page' : undefined}>Shared room</a
 				>
-				<a
-					data-sveltekit-reload
-					href={resolve('/ops') + `?ws=${data.rooms.stage}`}
-					aria-current={data.workspace === data.rooms.stage ? 'page' : undefined}>Stage</a
-				>
+				{#if data.presenter || data.workspace === data.rooms.stage}
+					<!-- The stage run is the presenter's; a visitor would land on a run they can't move. -->
+					<a
+						data-sveltekit-reload
+						href={resolve('/ops') + `?ws=${data.rooms.stage}`}
+						aria-current={data.workspace === data.rooms.stage ? 'page' : undefined}>Stage</a
+					>
+				{/if}
 				<a
 					data-sveltekit-reload
 					href={resolve('/ops') + `?ws=${data.synthWorkspace}`}
@@ -434,7 +437,10 @@
 				>
 			</p>
 			{#if scenarioNow}
-				<p class="clock"><span>Scenario clock</span>{simTime(scenarioNow)}</p>
+				<p class="clock" title="Each room's story clock starts when its run starts">
+					<span>{inRoom ? 'Room clock' : data.simulated ? 'Simulated clock' : 'Story clock'}</span
+					>{simTime(scenarioNow)}
+				</p>
 			{/if}
 
 			{#if data.canReset}
@@ -463,7 +469,9 @@
 								: 'Click again to clear this sandbox'
 							: data.workspace === data.rooms.stage
 								? 'Start a fresh run'
-								: 'Start this sandbox over'}</button
+								: inRoom
+									? 'Start the room run over'
+									: 'Start this sandbox over'}</button
 					>
 				</form>
 			{/if}
