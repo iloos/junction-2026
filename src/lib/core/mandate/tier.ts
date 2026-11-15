@@ -24,6 +24,10 @@ import { meets } from './meets';
 import { forbidden, hardLimitCents, mergeRequirements, validateLine } from './validate';
 
 /** Units an ask can state physically (D18): such an ask binds the line even on a sales-unit need. */
+/** A line's English name, when Valio's differs from the Finnish one (a non-Finnish reader sees what it is). */
+const englishOf = (p: { nameFi: string; nameEn?: string } | undefined) =>
+	p?.nameEn && p.nameEn !== p.nameFi ? { productNameEn: p.nameEn } : {};
+
 const PHYSICAL = { g: 1, kg: 1, ml: 1, cl: 1, dl: 1, l: 1 } as const;
 
 export interface DraftLine {
@@ -344,6 +348,7 @@ export function tierLines(input: TierInput): TierResult {
 			needId: w.draft.needId,
 			productId: w.draft.productId,
 			productName: products.get(w.draft.productId)?.nameFi,
+			...englishOf(products.get(w.draft.productId)),
 			qty: w.draft.qty,
 			state,
 			tier,

@@ -339,6 +339,52 @@
 		{
 			"q": "xyzzy kvanttikvarkki",
 			"unresolved": true
+		},
+		{
+			"q": "lohi",
+			"accept": "lohi",
+			"reject": "suutarin|savu|graavi"
+		},
+		{
+			"q": "kalaliemi",
+			"accept": "kala ?liemi|kalafondi"
+		},
+		{
+			"q": "risottoriisi",
+			"accept": "risotto|arborio"
+		},
+		{
+			"q": "herkkusienet",
+			"accept": "herkkusieni|sieni"
+		},
+		{
+			"q": "sienet",
+			"accept": "sieni|kantarelli|herkkusieni"
+		},
+		{
+			"q": "kuohukerma",
+			"accept": "kuohukerma"
+		},
+		{
+			"q": "ruisleipä",
+			"accept": "ruisleipä|ruis"
+		},
+		{
+			"q": "ruisjauhot",
+			"accept": "ruisjauho"
+		},
+		{
+			"q": "parmesaani",
+			"accept": "parmesan"
+		},
+		{
+			"q": "purjo",
+			"accept": "purjo"
+		},
+		{
+			"q": "perunat",
+			"accept": "peruna",
+			"reject": "muusi|pyree|lastu"
 		}
 	]
 }

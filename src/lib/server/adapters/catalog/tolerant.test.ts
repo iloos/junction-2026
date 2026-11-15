@@ -45,6 +45,19 @@ describe.skipIf(!existsSync('data/valio/valio_aimo_junction26_product_data.json'
 			for (const h of r.hits) expect(h.confidence).toBeLessThan(0.45);
 		});
 
+		it.each([
+			['oat milk for coffee', /kaurajuoma/i],
+			['coffee cream', /kahvikerma/i],
+			['skimmed milk', /rasvaton maito/i],
+			['sour cream', /smetana/i],
+			['potatoes', /peruna/i],
+			['lactose free milk', /maito(?!suklaa)/i]
+		])('the phrase "%s" reads as the catalogue names it', (q, want) => {
+			const n = names(q).names;
+			expect(n[0]).toMatch(want);
+			expect(n[0]).not.toMatch(/suklaa|sipsi|jäätelö/i);
+		});
+
 		it('English words go to the tolerant search; Finnish ones keep the exact search', () => {
 			expect(usesSearchWords('2kg cow')).toBe(true);
 			expect(usesSearchWords('steaks')).toBe(true);

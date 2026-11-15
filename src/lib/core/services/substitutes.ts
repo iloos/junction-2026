@@ -458,6 +458,10 @@ export async function findSubstitutes(
 			r.rank = n++;
 	}
 	const nameOf = (id: string) => products.get(id)?.nameFi;
+	const englishOf = (id: string) => {
+		const p = products.get(id);
+		return p?.nameEn && p.nameEn !== p.nameFi ? { productNameEn: p.nameEn } : {};
+	};
 	// Best try: nothing meets every strict requirement, so the nearest product that breaks only one relaxable rule
 	// (origin or a label; never an allergen) is marked for a person to accept. It is never applied by itself.
 	const bestTries = new Map<string, 'origin' | 'labels'>();
@@ -498,6 +502,7 @@ export async function findSubstitutes(
 		...ranked.map((r) => ({
 			productId: r.productId,
 			productName: nameOf(r.productId),
+			...englishOf(r.productId),
 			...relation(r.productId),
 			...bestTryOf(r.productId),
 			rank: r.rank,
@@ -509,6 +514,7 @@ export async function findSubstitutes(
 		...unsized.map((productId) => ({
 			productId,
 			productName: nameOf(productId),
+			...englishOf(productId),
 			...relation(productId),
 			rank: null,
 			// Availability is the true reason when it already excludes the product; otherwise it can't be sized.
@@ -614,6 +620,7 @@ export async function findSubstitutes(
 	const proposedOf = (d: DraftLine): Line => ({
 		...d,
 		productName: nameOf(d.productId),
+		...englishOf(d.productId),
 		state: 'proposed',
 		reasons: [],
 		offer: null,
@@ -671,6 +678,7 @@ export async function findSubstitutes(
 		return {
 			productId: r.productId,
 			productName: nameOf(r.productId),
+			...englishOf(r.productId),
 			reason: reason.slice(0, 120),
 			supply: r.supply ?? 'unknown',
 			...(price ? { pricePer: price } : {}),

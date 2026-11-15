@@ -72,6 +72,8 @@ export function usualFor(k: Kitchen, asOf: string, o: Omit<UsualOptions, 'asOf'>
 export interface PricedUsualLine extends UsualLine {
 	/** Catalogue name (short normalised, else Finnish). */
 	name: string;
+	/** Valio's English name, when it differs from the Finnish one. */
+	nameEn?: string;
 	/** The catalogue's lot step in sales units (an edit keeps whole multiples of it). */
 	lotStep: number;
 	/** Price per sales unit ex VAT; null when the catalogue has no live price. */
@@ -84,6 +86,7 @@ export interface PricedUsualLine extends UsualLine {
 }
 export interface NamedChange extends UsualChange {
 	name: string;
+	nameEn?: string;
 	rhythm: string;
 }
 
@@ -134,12 +137,17 @@ export async function readUsualOrder(
 		const p = products.get(id);
 		return p ? (p.nameShort?.value ?? p.nameFi) : id;
 	};
+	const english = (id: string) => {
+		const p = products.get(id);
+		return p?.nameEn && p.nameEn !== p.nameFi ? { nameEn: p.nameEn } : {};
+	};
 	const lines: PricedUsualLine[] = u.lines.map((l) => {
 		const off = offer.get(l.productId);
 		const unitCents = off?.price?.unitCents ?? null;
 		return {
 			...l,
 			name: name(l.productId),
+			...english(l.productId),
 			lotStep: products.get(l.productId)?.lotStep ?? 1,
 			unitCents,
 			lineCents: unitCents === null ? null : Math.round(unitCents * l.qty),
@@ -150,6 +158,7 @@ export async function readUsualOrder(
 	const named = (c: UsualChange): NamedChange => ({
 		...c,
 		name: name(c.productId),
+		...english(c.productId),
 		rhythm: periodText(c.period)
 	});
 	return {

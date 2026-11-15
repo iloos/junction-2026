@@ -567,7 +567,11 @@ async function snapshotBody(s: Session): Promise<FixtureSnapshot | NotStarted> {
 			diet: p.diet
 		};
 	const shortNames: Record<string, string> = {};
-	for (const [id, p] of products) if (p.nameShort?.value) shortNames[id] = p.nameShort.value;
+	const englishNames: Record<string, string> = {};
+	for (const [id, p] of products) {
+		if (p.nameShort?.value) shortNames[id] = p.nameShort.value;
+		if (p.nameEn && p.nameEn !== p.nameFi) englishNames[id] = p.nameEn;
+	}
 	const facts: Record<string, ProductFacts> = {};
 	for (const id of ids) {
 		const p = products.get(id);
@@ -674,6 +678,7 @@ async function snapshotBody(s: Session): Promise<FixtureSnapshot | NotStarted> {
 		diet,
 		origin: origin ?? (plan.eventId ? 'event' : null),
 		shortNames,
+		englishNames,
 		contentionRescue:
 			s.contentionRescue?.planId === plan.id
 				? {

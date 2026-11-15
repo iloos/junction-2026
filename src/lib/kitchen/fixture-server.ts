@@ -416,6 +416,8 @@ export interface FixtureSnapshot {
 	diet?: Record<string, DietFacts>;
 	/** Readable product names where the catalogue has a normalised one (Product.nameShort), by product id. */
 	shortNames?: Record<string, string>;
+	/** Valio's English product name (Product.nameEn), by product id: shown beside the Finnish one for a reader without Finnish. */
+	englishNames?: Record<string, string>;
 	/** The kitchen's other plans in this sandbox (an agent's order, the event), for the task switcher. */
 	others?: { id: string; title: string; open: number; ordered: number; version?: number }[];
 }
