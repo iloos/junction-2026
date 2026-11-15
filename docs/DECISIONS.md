@@ -289,3 +289,10 @@ Room and sandbox are already one app (the same Kitchen, chat and Ops over a diff
 **Why:** the user: why a separate path for the room; unify it.
 
 **Reopen if:** per-kitchen locks can't keep one shared stock consistent across kitchens.
+
+### D33 · Peer review first: quality for a few users now, scale after (user, 15 Nov 05:05)
+Until peer review (Sun 10:30), the work is the demo for a handful of people: clean UI/UX, the presentation and the video. Scaling to a main-stage room (~1000 people) is parked and resumes only if we advance. The plan then: offload the lookups and the CPU-heavy work to serverless on sponsor credits (Verda first, the user's pick as the easiest; Modal as the alternative), coordinated through Aiven Postgres (deploy.md, scale-out design), then a lock per kitchen (D32) for the room.
+
+**Why:** the user: focus on fewer users and max quality first; Modal and Verda credits are unused.
+
+**Reopen if:** we advance to the main stage.
