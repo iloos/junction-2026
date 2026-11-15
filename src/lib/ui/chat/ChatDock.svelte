@@ -522,7 +522,6 @@
 		entries = [];
 		error = null;
 	}
-
 	// "New order" (D31): a page asks for a fresh conversation; the earlier task stays with its plan.
 	let newSeen = 0;
 	$effect(() => {
@@ -604,7 +603,9 @@
 		<div class="min-w-0 flex-1">
 			<p class="text-body font-semibold">Purchasing agent</p>
 			<p class="truncate text-meta text-ink-3">
-				{#if taskId}{taskTitle}<span class="sys-only mono">
+				{#if fresh && !taskId}New order: say what you need{:else if taskId}{taskTitle}<span
+						class="sys-only mono"
+					>
 						· {taskId}</span
 					>{:else if planTitle}{planTitle}{:else}Plans and orders within your mandate. Never
 					approves.{/if}

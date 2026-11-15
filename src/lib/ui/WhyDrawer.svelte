@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { mandateStepWords } from './reasons';
 	import { Dialog } from 'bits-ui';
 	import { X } from '@lucide/svelte';
 	import type { FulfilmentView, Line } from '$lib/core/contracts';
@@ -325,7 +326,9 @@
 								<div class="min-w-0">
 									<div class="flex items-start justify-between gap-3">
 										<p class="text-body leading-[1.45] text-pretty text-ink">
-											{humanDates(step.text)}
+											{#if step.source === 'mandate'}{mandateStepWords(step.text)}<span
+													class="sys-only mono block text-micro text-ink-3">{step.text}</span
+												>{:else}{humanDates(step.text)}{/if}
 										</p>
 										<SourceTag source={step.source} compact />
 									</div>
