@@ -16,7 +16,37 @@
 		liveOk: number;
 	}
 
-	let { workspace }: { workspace: string } = $props();
+	let {
+		workspace,
+		runId = '',
+		lines = 0
+	}: {
+		workspace: string;
+		/** The run on screen: its Valio calls, against its plan lines (Valio's "query only when needed"). */
+		runId?: string;
+		lines?: number;
+	} = $props();
+
+	/** This run's Valio calls: live (the API asked) and answered from a stored copy, all time in the run. */
+	let valioRun = $state<{ live: number; stored: number } | null>(null);
+	async function loadValio() {
+		if (!runId) return;
+		try {
+			const r = await fetch(
+				`/api/ops/traces/summary?ws=${encodeURIComponent(workspace)}&run=${encodeURIComponent(runId)}&source=valio&since=7d`,
+				{ cache: 'no-store' }
+			);
+			if (!r.ok) return;
+			const v = ((await r.json()) as { sources?: Summary[] }).sources?.find(
+				(s) => s.source === 'valio'
+			);
+			valioRun = v
+				? { live: v.byMode.live, stored: v.byMode.cache + v.byMode.replay }
+				: { live: 0, stored: 0 };
+		} catch {
+			/* keep the last count */
+		}
+	}
 
 	const POLL_MS = 30_000;
 	const NAME: Record<string, string> = {
@@ -52,7 +82,11 @@
 	}
 	onMount(() => {
 		void load();
-		const t = setInterval(load, POLL_MS);
+		void loadValio();
+		const t = setInterval(() => {
+			void load();
+			void loadValio();
+		}, POLL_MS);
 		return () => clearInterval(t);
 	});
 
@@ -111,6 +145,15 @@
 </script>
 
 <section class="sponsors" aria-label="Outside calls, last hour">
+	{#if valioRun && lines}
+		<p class="valio-run">
+			<b>Valio, this run:</b>
+			<span class="num">{lines}</span> plan lines priced with
+			<span class="num">{valioRun.live}</span> live call{valioRun.live === 1 ? '' : 's'} and
+			<span class="num">{valioRun.stored}</span> answered from stored copies. Valio is asked only when
+			a plan needs a price or stock it doesn't already have.
+		</p>
+	{/if}
 	<h3>Outside calls, last hour</h3>
 	{#if phase === 'loading'}
 		<p class="note">Reading the stored calls…</p>
@@ -138,6 +181,10 @@
 <style>
 	.sponsors {
 		margin: 0 0 16px;
+	}
+	.valio-run {
+		margin: 0 0 12px;
+		font-size: 0.9375rem;
 	}
 	h3 {
 		font-size: 0.875rem;

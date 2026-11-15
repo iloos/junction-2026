@@ -13,6 +13,8 @@ export interface TraceFilter {
 	/** ISO time; default: the last hour. */
 	since?: string;
 	workspaceId?: string;
+	/** One run of the workspace (a sandbox's current run): what this plan's session cost. */
+	runId?: string;
 	requestId?: string;
 	source?: string;
 	limit?: number;
@@ -62,6 +64,7 @@ export function createTraceStore(db: AnyDb, clock: () => Date = () => new Date()
 		and(
 			gte(traces.at, sinceOf(f.since, clock())),
 			f.workspaceId ? eq(traces.workspaceId, f.workspaceId) : undefined,
+			f.runId ? eq(traces.runId, f.runId) : undefined,
 			f.requestId ? eq(traces.requestId, f.requestId) : undefined,
 			f.source ? eq(traces.source, f.source) : undefined
 		);

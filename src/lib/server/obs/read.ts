@@ -67,10 +67,12 @@ export function readAccess(
 	const q = url.searchParams;
 	const ws = q.get('ws') || q.get('workspace') || undefined;
 	const requestId = q.get('requestId') || undefined;
+	const runId = q.get('run') || undefined;
 	const source = q.get('source') || undefined;
 	for (const [k, v] of [
 		['ws', ws],
 		['requestId', requestId],
+		['run', runId],
 		['source', source]
 	] as const)
 		if (v && !PLAIN.test(v)) return { ok: false, status: 400, message: `bad ${k}` };
@@ -78,6 +80,7 @@ export function readAccess(
 	const filter: TraceFilter = {
 		since: parseSince(q.get('since'), now),
 		requestId,
+		runId,
 		source,
 		limit
 	};
