@@ -43,7 +43,7 @@ export function realHandlers(): Promise<ToolHandlers> {
 		const web =
 			(name: WebToolName) =>
 			async (ctx: CallContext, input: unknown): Promise<Result<unknown>> => {
-				const { webTools } = await import('$lib/server/web');
+				const { webTools, webSpendKey } = await import('$lib/server/web');
 				const w: WebExecutionContext = {
 					ctx,
 					ports: {
@@ -52,7 +52,7 @@ export function realHandlers(): Promise<ToolHandlers> {
 						store: b.store,
 						web: b.ports.web
 					},
-					spendKey: ctx.actor.id
+					spendKey: webSpendKey(ctx)
 				};
 				return webTools(env)[name](w, input);
 			};
