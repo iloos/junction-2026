@@ -96,6 +96,8 @@ It does not add capacity. Postgres is the shared limit: with 10 to 50 planners a
 | 25 | 12.1 s |
 | 50 | 23.2 s |
 
+**Background warm-ups, and offloading them (not built):** when a plan is created, photos and allergen web facts are looked up in the background (`bus/index.ts` → `products/photos.ts`, `products/facts-warm.ts`). In one process they compete with planning, so at most one plan warms at a time, and `WARM_OFF=1` turns them off (lookups then happen only when a card or the Why drawer is opened). Moving them to a second app as a worker needs two things: prod must read findings from the `web_findings` table by id instead of its in-memory map, which is loaded once at start, so another process's results would otherwise never reach it (~30 min); and the worker needs a listener on `mandate_events` for `CreatePlan`/`RecordOffer` across all workspaces, fetching ops sent by reference, behind a `WARM_ROLE=worker` setting (~40 min). With deploys, console env and a re-ramp, about 2 hours.
+
 **Vertical instead:** the largest Runtime plan in `aws-eu-central-1` is `startup-400-8192` (4 vCPU, 8 GB, $0.29/h by Aiven's catalogue; the console is authoritative). One Node process plans on about one core, so more vCPU buys garbage-collection and I/O headroom, not proportionally more planners.
 
 ## Environment (Aiven console)
