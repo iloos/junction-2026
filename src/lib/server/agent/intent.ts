@@ -185,12 +185,29 @@ function routineOrder(
 				}
 			}))
 		: [];
-	if (items.length > 1 && !slot && !several)
-		return ask(
-			'product',
-			`One product per routine order; I read ${items.length} (${items.map((i) => i.query || i.text).join(', ')}). Which one first?`,
-			items.map((i) => ({ label: i.text.trim(), value: i.text.trim() }))
-		);
+	if (items.length > 1 && !slot && !several) {
+		// Several things in one message: one at a time, each offered as the line it would become. A dish ("ingredients
+		// to make 5 kg cheesecake") is planned as a dish; a product without an amount comes with a proposed amount.
+		const isDish = (t: string) => /\b(ingredients?|to make|recipe|ainekset)\b/i.test(t);
+		const offer = items.slice(0, 4).map((i) => {
+			const t = i.text
+				.trim()
+				.replace(/^(?:i (?:want|need|would like)|please|can i (?:get|have)|and)\s+/i, '')
+				.replace(/[.!?]+$/, '');
+			if (isDish(t)) {
+				const dish = t.replace(/^.*?\b(?:to make|for)\s+/i, '').trim();
+				return { label: `plan ${dish}`, value: `say:a menu with ${dish} for 20 guests` };
+			}
+			if (complete(i)) return { label: t, value: t };
+			const what = (i.query || t).replace(/^(some|a few|and)\s+/i, '');
+			return { label: `5 kg ${what}`, value: `say:5 kg ${what}` };
+		});
+		const first = offer.find((o) => !o.value.startsWith('say:a menu')) ?? offer[0];
+		return ask('product', `I'll take them one at a time. Start with ${first.label}?`, [
+			first,
+			...offer.filter((o) => o !== first)
+		]);
+	}
 	let item = several ? items[0] : items.length > 1 || !items[0] ? slot : items[0];
 	if (slot && item && item !== slot)
 		item = { ...item, product: slot.product, search: slot.search, query: slot.query };

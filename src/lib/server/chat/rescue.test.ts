@@ -122,3 +122,35 @@ describe('a fragment reply never reaches the chef', () => {
 		}
 	);
 });
+
+describe('the coffee, cheesecake and biscuits transcript', () => {
+	it(
+		'several things in one message are taken one at a time; "wym", "huh?" restate the question',
+		{
+			timeout: 180_000
+		},
+		async () => {
+			const d = await setup();
+			const t1 = await chatTurn(
+				{
+					text: 'i want 10kg coffee beans, and ingredients to make 5kg cheesecake. And some buscuits'
+				},
+				d
+			);
+			const c1 = chips(t1)!;
+			expect(c1.question).toMatch(
+				/^I'll take them one at a time\. Start with 10kg coffee beans\?$/
+			);
+			expect(c1.options.some((o) => /cheesecake/.test(o.label))).toBe(true);
+			expect(said(t1)).not.toMatch(/One product per routine order/);
+			const taskId = t1[0].taskId;
+			for (const meta of ['wym one product per routine order?', 'huh?', 'where is the 1?']) {
+				const t = await chatTurn({ taskId, text: meta }, d);
+				const c = chips(t);
+				expect(c?.question).toMatch(/^I asked: /);
+				expect(c?.options.length).toBeGreaterThanOrEqual(2);
+				expect(said(t)).not.toMatch(/wym|routine arrive|of what unit/i);
+			}
+		}
+	);
+});

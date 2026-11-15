@@ -582,6 +582,28 @@ async function* turnLines(
 	// Words that are a request of their own (a product with an amount, or an event brief) start a new task, even while
 	// a question is open: they are never squeezed into the open slot, and their quantities are never dropped.
 	const words = input.text?.trim();
+	// "wym?", "huh?", "where is the 1?" while a question is open: the chef asks what we meant. Say the question again
+	// in plain words with the same answers; never read the words as a product (a meta reply is not an order).
+	if (
+		words &&
+		task.pending.kind === 'clarify' &&
+		expected !== null &&
+		/^(?:wym|wdym|what do you mean|what\?*|huh\??|\?+|eh\??|where is|why\b|i don'?t (?:understand|get it)|mitä|häh)/i.test(
+			words
+		)
+	) {
+		const q = task.pending;
+		const plain = `I asked: ${q.question.replace(/\s*Say [^.]*\.?$/, '')} Tap one of the answers below, or type your own.`;
+		yield { type: 'clarify', taskId: task.id, field: q.field, question: plain, options: q.options };
+		yield {
+			type: 'done',
+			taskId: task.id,
+			state: 'awaiting_clarification',
+			text: plain,
+			canContinue: false
+		};
+		return;
+	}
 	// D22: the chef in their own dock decides the lines the last turn showed ("approve all", "reject the herring").
 	const chefDecision =
 		chipDecision ??
