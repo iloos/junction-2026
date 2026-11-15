@@ -99,3 +99,26 @@ describe('N + food and a new noun', () => {
 		}
 	);
 });
+
+describe('a fragment reply never reaches the chef', () => {
+	it(
+		"a model answer of '\".' gives the template sentence instead",
+		{ timeout: 120_000 },
+		async () => {
+			const d = await setup();
+			const fragment = {
+				async generate() {
+					return { text: '".', model: 'gemini-test', tokens: { in: 1, out: 1 }, latencyMs: 1 };
+				}
+			};
+			const t1 = await chatTurn({ text: '4 kg butter for Friday' }, d);
+			const t2 = await chatTurn({ taskId: t1[0].taskId, text: 'where does it stand?' }, {
+				...d,
+				models: { explain: fragment }
+			} as never);
+			const done = t2.at(-1) as { type: string; text?: string };
+			expect(done.text).not.toBe('".');
+			expect(done.text).toMatch(/\p{L}{3}/u);
+		}
+	);
+});

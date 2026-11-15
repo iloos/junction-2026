@@ -313,7 +313,13 @@ export async function* runChatTurn(
 	/** The words of a closing line the dock would not show (a waiting task's). */
 	let hidden = '';
 	for await (const raw of turnLines(turnInput, deps)) {
-		const e = await scrubEvent(raw, deps);
+		let e = await scrubEvent(raw, deps);
+		// A closing line that came out as a fragment ('".', a lone quote) never reaches the chef.
+		if (e.type === 'done' && e.text.trim() && !/\p{L}{2}/u.test(e.text))
+			e = {
+				...e,
+				text: lastStep ? 'Done: the result is above.' : 'Tell me what you need, and for when.'
+			};
 		if (e.taskId) taskId = e.taskId;
 		if (e.type === 'step') lastStep = e;
 		if (e.type === 'done') {
@@ -1360,7 +1366,8 @@ async function* turnLines(
 				summary,
 				{ llm: explainer, deliverBy: read.value.plans[0]?.deliverBy }
 			);
-			answer = ex.text;
+			// A model reply that is a fragment ('".', empty) never reaches the chef: the template sentence stands.
+			answer = ex.text.trim().length >= 8 && /\p{L}{3}/u.test(ex.text) ? ex.text : standing;
 			yield {
 				type: 'step',
 				taskId: task.id,
