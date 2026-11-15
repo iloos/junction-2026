@@ -9,8 +9,8 @@
 
 	// [title, side note, parts, lead, mechanisms: [claim, how, test, status]]
 	const Z = {
-		doors: ['Doors', 'who asks', ['Kitchen screen: the chef', 'Chat: the in-app agent', 'Your agent: MCP or REST', 'Operations: Valio'],
-			'Four ways in. Each acts as someone, and that decides what it may do. Only a person in the kitchen approves.',
+		doors: ['Doors', 'who asks', ['Kitchen screen: the chef', 'Request page: the chef', 'Chat: the in-app agent', 'Your agent: MCP or REST'],
+			'Four ways in. Each acts as someone, and that decides what it may do. Only a person in the kitchen approves; Operations at Valio sees the held lines but cannot grant.',
 			[
 				['The chef approves exact terms', 'On the Kitchen screen or the chat\'s decision card, hold to confirm.', 'server/store/gate.test.ts', 'tested'],
 				['The in-app agent plans and orders inside the mandate', 'It asks at most one question; "approve it" in chat is refused.', 'evals/chat', 'tested'],
@@ -24,7 +24,7 @@
 				['Each visitor has a sandbox', 'A signed cookie or judge key binds every call to its own workspace.', 'server/demo/*.test.ts', 'tested'],
 				['Outside agents are metered', '120 calls, 30 writes and 20 quotes a minute per key.', 'server/tools/key-limits.ts', 'tested'],
 			]],
-		rules: ['Pure rules', 'plain code', ['Demand: guests × amount ÷ yield', 'Ranking: known stock first', 'Mandate: act, ask, or refuse', 'One state change: applyOps'],
+		rules: ['Pure rules', 'plain code', ['Demand: guests × amount ÷ yield', 'Ranking: known stock first', 'Mandate: act, ask, or refuse', 'One logged way to change state'],
 			'The decisions are plain code you can read. No model and no network call decides what may be ordered; a model can only add a hold.',
 			[
 				['No part packs', 'Every need is rounded up to Valio\'s lot step.', 'eval s3', 'tested'],
@@ -55,7 +55,7 @@
 	const ORDER = ['doors', 'gate', 'rules', 'store', 'ports'];
 
 	root.classList.add('smap');
-	root.innerHTML = `<div class="smap-head"><h2>One engine, several doors</h2><p>Every request, from any door, passes one gate and changes state through one function. Open any part to see what it does and the test behind it.</p></div>
+	root.innerHTML = `<div class="smap-head"><h2>The system in five parts</h2><p>Four ways in, one gate, the rules in plain code, one database, and five partners. Open a part to see what it does and the test behind it.</p></div>
 	<div class="smap-track"><div class="smap-stage"><div class="smap-grid">${ORDER.map((k) => {
 		const [t, s, parts] = Z[k];
 		return `<button type="button" class="zone z-${k}" data-z="${k}" aria-pressed="false" aria-controls="smap-panel"><span class="zt"><b>${t}</b><span>${s}</span></span><ul>${parts.map((p) => `<li>${esc(p)}</li>`).join('')}</ul></button>`;
@@ -68,7 +68,7 @@
 		const [t, , , lead, mech] = Z[k];
 		zones.forEach((z) => z.setAttribute('aria-pressed', String(z.dataset.z === k)));
 		const back = pinned && resume ? '<button type="button" class="smap-back">Back to the ham line</button>' : '';
-		panel.innerHTML = `<div class="smap-ph"><h3>${t}</h3>${back}</div><p class="lead">${esc(lead)}</p><div class="mech">${mech.map(([c, h, test, st]) => `<div><b>${esc(c)}</b><span>${esc(h)} <code>${esc(test)}</code></span><span class="st ${st === 'live' ? 'live' : ''}">${st === 'live' ? 'seen live' : 'tested'}</span></div>`).join('')}</div>`;
+		panel.innerHTML = `<div class="smap-ph"><h3>${t}</h3>${back}</div><p class="lead">${esc(lead)}</p><div class="mech">${mech.map(([c, h, , st]) => `<div><b>${esc(c)}</b><span>${esc(h)}</span><span class="st ${st === 'live' ? 'live' : ''}">${st === 'live' ? 'seen live' : 'tested'}</span></div>`).join('')}</div><p class="mech-proof">Each claim with its test: <a href="/proof">Proof</a>.</p>`;
 		const b = panel.querySelector('.smap-back');
 		if (b) b.addEventListener('click', () => { pinned = false; zones.forEach((z) => z.setAttribute('aria-pressed', 'false')); resume(); });
 	}

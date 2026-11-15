@@ -14,12 +14,13 @@
 <meta property="og:image:height" content="630" />
 <meta property="og:image:alt" content="The Mandate mark and the line: a kitchen purchasing agent that orders on its own only inside limits the chef sets." />
 <meta name="twitter:card" content="summary_large_image" />
-<meta name="description" content="How Mandate works: the kitchen's rules, the agent, five flows with recorded examples, the checks behind each claim, what Valio sees, the partners and their fallbacks, and what is built, simulated or planned." />
+<meta name="description" content="How Mandate works: the kitchen's rules, the agent, five flows with recorded examples, the checks behind each claim, what Valio Aimo sees, the partners and their fallbacks, and what is built, simulated or planned." />
 <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="/site.css" />
+<script src="/name.js"></script>
 <link rel="stylesheet" href="/how/map.css">
 <style>
 :root { --display: 'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif; --mono-f: 'IBM Plex Mono', ui-monospace, monospace; }
@@ -68,7 +69,7 @@ h3 { margin: 0; font: 600 18px/1.25 var(--display); }
 .mchip.ordered { color: var(--ok); border-color: var(--ok); }
 
 /* Cards */
-.cards { display: grid; gap: 12px; }
+.cards { display: grid; gap: 12px; align-items: start; }
 @media (min-width: 820px) { .cards.c3 { grid-template-columns: repeat(3, minmax(0, 1fr)); } .cards.c2 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .card { background: var(--sheet); border: 1px solid var(--rule); border-radius: 14px; padding: 18px 20px; min-width: 0; display: grid; gap: 8px; align-content: start; }
 .card .hd { display: flex; align-items: center; gap: 10px; }
@@ -83,16 +84,17 @@ h3 { margin: 0; font: 600 18px/1.25 var(--display); }
 .rec small { display: block; font-size: 12px; color: var(--ink-3); margin-top: 2px; }
 
 /* Seven kitchens */
-.kitchens { margin-top: 28px; display: grid; gap: 12px; }
-@media (min-width: 820px) { .kitchens { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 32px; align-items: start; } }
+.kitchens { margin-top: 56px; display: grid; gap: 12px; }
+
 .kitchens h3 { margin-bottom: 6px; }
 .kitchens p { margin: 0; font-size: 15px; color: var(--ink-2); max-width: 34em; }
 .kinds { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
 .kinds li { padding: 6px 10px; border-radius: 8px; background: var(--well); border: 1px solid var(--rule); font-size: 14px; }
-.presets { margin-top: 10px; }
+.presets { margin-top: 12px; }
+#rules > .rec { margin-top: 12px; max-width: 46em; }
 
 /* Goes through / held / refused */
-.gov { display: grid; gap: 12px; margin-top: 32px; align-items: start; }
+.gov { display: grid; gap: 12px; margin-top: 64px; align-items: start; }
 @media (min-width: 900px) { .gov { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 .oc { background: var(--sheet); border: 1px solid var(--rule); border-radius: 14px; padding: 18px 20px 8px; min-width: 0; }
 .oc.go { --c: var(--ok); --w: var(--ok-wash); }
@@ -127,19 +129,21 @@ h3 { margin: 0; font: 600 18px/1.25 var(--display); }
 .tab:hover { border-color: var(--accent); color: var(--ink); }
 .tab[aria-selected='true'] { background: var(--accent-wash); border-color: var(--accent); color: var(--ink); }
 .panels { display: grid; gap: 14px; }
-.panel { background: var(--sheet); border: 1px solid var(--rule); border-radius: 16px; padding: 22px 22px 24px; display: grid; gap: 20px; min-width: 0; }
-@media (min-width: 900px) { .panel { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 32px; align-items: start; } }
+.panel { background: var(--sheet); border: 1px solid var(--rule); border-radius: 16px; padding: 22px 22px 24px; display: grid; gap: 20px; min-width: 0; font-family: var(--display); }
 .panel[hidden] { display: none; }
-.panel > .hdr { grid-column: 1 / -1; }
 .panel h3 { font: 600 22px/1.2 var(--display); margin-bottom: 6px; }
 .js .panel h3.ph { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-.panel .hdr p { margin: 0; font-size: 16.5px; line-height: 1.5; color: var(--ink); max-width: 40em; text-wrap: pretty; }
-.steps { list-style: none; margin: 0; padding: 0; counter-reset: s; display: grid; min-width: 0; }
-.steps li { counter-increment: s; display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 0 12px; padding: 9px 0; border-top: 1px dashed var(--rule); font-size: 15px; line-height: 1.45; }
-.steps li:first-child { border-top: 0; }
-.steps li::before { content: counter(s); width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; font: 500 12px/1 var(--mono-f); color: var(--accent-ink); border: 1px solid var(--accent); margin-top: 1px; }
-.steps .lim { color: var(--ink-3); font-size: 13.5px; }
-.side { display: grid; gap: 12px; min-width: 0; }
+.panel .hdr p { margin: 0; font-size: 17px; line-height: 1.5; color: var(--ink); max-width: 44em; text-wrap: pretty; }
+/* The stage strip: three or four stages left to right, stacked on phones. */
+.stages { list-style: none; margin: 0; padding: 0; counter-reset: s; display: grid; gap: 10px; min-width: 0; }
+@media (min-width: 860px) { .stages { grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 12px; } }
+.stages li { counter-increment: s; position: relative; display: grid; align-content: start; gap: 6px; padding: 14px 16px 16px; background: var(--well); border: 1px solid var(--rule); border-radius: 12px; min-width: 0; }
+@media (max-width: 859px) { .stages li { padding: 12px 14px 14px; } }
+.stages b { display: flex; align-items: center; gap: 8px; font: 600 16px/1.25 var(--display); color: var(--ink); }
+.stages b::before { content: counter(s); width: 22px; height: 22px; flex: none; border-radius: 50%; display: grid; place-items: center; font: 600 12px/1 var(--display); color: var(--accent-ink); background: var(--accent-wash); }
+.stages span { font-size: 15px; line-height: 1.5; color: var(--ink); text-wrap: pretty; overflow-wrap: anywhere; }
+.foot { display: grid; gap: 12px; min-width: 0; }
+@media (min-width: 860px) { .foot { grid-template-columns: minmax(0, 1fr) auto; gap: 20px; align-items: end; } }
 .golive { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; }
 .golive a { display: inline-flex; align-items: center; gap: 7px; min-height: 40px; padding: 0 14px; border-radius: 10px; border: 1px solid var(--rule); background: var(--paper); font-size: 14.5px; font-weight: 500; text-decoration: none; color: var(--accent-ink); transition: background 0.12s ease, border-color 0.12s ease; }
 .golive a:hover { border-color: var(--accent); background: var(--accent-wash); }
@@ -147,22 +151,20 @@ h3 { margin: 0; font: 600 18px/1.25 var(--display); }
 .limit { margin: 0; padding: 12px 14px; border: 1px solid color-mix(in oklab, var(--warn) 45%, transparent); background: var(--warn-wash); border-radius: 10px; font-size: 14px; color: var(--ink); }
 
 /* A recorded case from /cases.json */
-.ex { background: var(--well); border: 1px solid var(--rule); border-radius: 12px; padding: 14px 16px; display: grid; gap: 8px; min-width: 0; }
+.ex { background: var(--paper); border: 1px solid var(--rule); border-radius: 12px; padding: 14px 16px; display: grid; gap: 8px; min-width: 0; font-family: var(--display); }
 .ex[hidden] { display: none; }
-.ex .label { margin: 0; color: var(--accent-ink); }
-.ex .ask { font: 500 15.5px/1.4 var(--mono-f); color: var(--ink); overflow-wrap: anywhere; }
-.ex ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
-.ex ol li { position: relative; padding-left: 16px; font-size: 14.5px; line-height: 1.45; color: var(--ink-2); overflow-wrap: anywhere; }
-.ex ol li::before { content: ''; position: absolute; left: 2px; top: 9px; width: 5px; height: 5px; border-radius: 50%; background: var(--rule-strong); }
-.ex .out { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; font-size: 14.5px; }
-.ex .eur { font: 500 15px var(--mono-f); color: var(--ink); }
+.ex .label { margin: 0; font: 600 13px/1.3 var(--display); color: var(--accent-ink); text-transform: none; letter-spacing: 0; }
+.ex .ask { font: 500 16px/1.45 var(--display); color: var(--ink); overflow-wrap: anywhere; }
+.ex p { margin: 0; }
+.ex .got { font-size: 15px; line-height: 1.5; color: var(--ink); overflow-wrap: anywhere; }
+.ex .why { margin: 0; font-size: 15px; line-height: 1.5; color: var(--ink); overflow-wrap: anywhere; text-wrap: pretty; }
+/* Only the quantity is mono: "10 kg" as a tabular token; product names read in the body face. */
+.tq { display: inline-block; font: 500 0.9em/1.35 var(--mono-f); font-variant-numeric: tabular-nums; color: var(--ink); background: var(--well); border: 1px solid var(--rule); border-radius: 5px; padding: 0 5px; white-space: nowrap; }
+.tp { color: var(--ink); font-weight: 500; }
+.ex .out { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; font-size: 15px; }
+.ex .out .mchip { white-space: normal; height: auto; padding: 3px 8px; }
+.ex .eur { font-weight: 600; font-variant-numeric: tabular-nums; color: var(--ink); }
 .ex small { font-size: 12.5px; color: var(--ink-3); }
-.ex dl { margin: 0; display: grid; gap: 8px; }
-.ex dl div { display: grid; grid-template-columns: 86px minmax(0, 1fr); gap: 10px; font-size: 14px; }
-.ex dt { font: 500 12px/1.6 var(--mono-f); color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.04em; }
-.ex dd { margin: 0; color: var(--ink-2); overflow-wrap: anywhere; }
-.ex dd b { display: block; color: var(--ink); font-weight: 500; }
-.ex dd .mchip { margin-top: 4px; white-space: normal; height: auto; padding: 3px 8px; }
 
 /* Tables: trust, partners */
 .tbl { width: 100%; border-collapse: collapse; font-size: 14.5px; }
@@ -221,6 +223,41 @@ h3 { margin: 0; font: 600 18px/1.25 var(--display); }
 .col li { padding: 10px 0; border-top: 1px solid var(--rule); font-size: 14.5px; line-height: 1.45; color: var(--ink-2); }
 .col li b { color: var(--ink); font-weight: 500; }
 
+/* The architecture diagram: a wide drawing on desktop, a tall one on phones. */
+.arch { border-top: 1px solid var(--rule); padding: 40px 0 44px; }
+@media (min-width: 720px) { .arch { padding: 52px 0 52px; } }
+.archfig { margin: 22px 0 0; }
+.arch svg { display: block; width: 100%; height: auto; }
+.arch .arch-n { display: none; max-width: 480px; }
+@media (max-width: 899px) { .arch .arch-w { display: none; } .arch .arch-n { display: block; } }
+.arch text { font-family: var(--display); fill: var(--ink); }
+.arch .t { font-size: 15px; font-weight: 600; }
+.arch .s { font-size: 12.5px; fill: var(--ink-2); }
+.arch .n { font-size: 13px; font-weight: 600; fill: var(--ink-2); }
+.arch .h { font-size: 12px; font-weight: 600; fill: var(--ink-3); letter-spacing: 0.08em; }
+.arch .o { font-size: 13px; font-weight: 600; }
+.arch .bx { fill: var(--sheet); stroke: var(--rule-strong); }
+.arch .bx.key { stroke: var(--accent); stroke-width: 1.5; }
+.arch .gate { fill: color-mix(in oklab, var(--accent) 7%, transparent); stroke: var(--accent); stroke-width: 1.5; }
+.arch .st { fill: var(--sheet); stroke: var(--rule); }
+.arch .st.dash { fill: none; stroke: var(--rule-strong); stroke-dasharray: 4 4; }
+.arch .ln { fill: none; stroke: var(--ink-3); stroke-width: 1.5; }
+.arch .ln.acc { stroke: var(--accent); }
+.arch .dl { fill: none; stroke: var(--ink-3); stroke-width: 1; stroke-dasharray: 3 4; }
+.arch .ahd { fill: var(--ink-3); }
+.arch .ahd.acc { fill: var(--accent); }
+.arch .dot { fill: var(--ink-3); }
+.arch .bul { fill: var(--accent); }
+.arch .ai { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; color: var(--accent-ink); }
+.arch .c-ok rect { fill: var(--ok-wash); stroke: var(--ok); }
+.arch .c-ok .ai { color: var(--ok); }
+.arch .c-hold rect { fill: var(--auth-wash); stroke: var(--auth); stroke-dasharray: 5 3; }
+.arch .c-hold .ai { color: var(--auth); }
+.arch .c-no rect { fill: var(--out-wash); stroke: var(--out); }
+.arch .c-no .ai { color: var(--out); }
+.archcap { margin: 18px 0 0; font-size: 16px; line-height: 1.5; color: var(--ink-2); max-width: 44em; text-wrap: pretty; }
+.vh { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }
+
 @media (prefers-reduced-motion: reduce) { .toc a, .golive a, .tab { transition: none; } }
 </style>
 </head>
@@ -265,8 +302,8 @@ h3 { margin: 0; font: 600 18px/1.25 var(--display); }
 	<main>
 		<section class="intro" aria-labelledby="h-intro">
 			<p class="eyebrow">How it works</p>
-			<h1 id="h-intro">From a kitchen's rules to one Valio order</h1>
-			<p class="lede">Mandate is a purchasing agent for a kitchen. It orders from Valio on its own only what the kitchen's mandate allows, and a person decides the rest.</p>
+			<h1 id="h-intro">From a kitchen's rules to one Valio Aimo order</h1>
+			<p class="lede">Mandate is a purchasing agent for a kitchen. It orders from Valio Aimo on its own only what the kitchen's mandate allows, and a person decides the rest.</p>
 			<p class="outcomes">Every line it prepares either
 				<span class="mchip within"><svg class="ic" aria-hidden="true"><use href="#i-shield"/></svg>goes through</span>
 				<span class="mchip held"><svg class="ic" aria-hidden="true"><use href="#i-hold"/></svg>is held for a person</span>or
@@ -274,16 +311,173 @@ h3 { margin: 0; font: 600 18px/1.25 var(--display); }
 			</p>
 			<nav aria-label="On this page">
 				<ul class="toc">
+					<li><a href="#arch">The path of a request</a></li>
 					<li><a href="#map">The system map</a></li>
 					<li><a href="#rules">The kitchen's rules</a></li>
 					<li><a href="#agent">The agent</a></li>
 					<li><a href="#flows">Five flows</a></li>
-					<li><a href="#trust">Checks behind each claim</a></li>
-					<li><a href="#ops">What Valio sees</a></li>
+					<li><a href="#trust">State machines</a></li>
+					<li><a href="#ops">What Valio Aimo sees</a></li>
 					<li><a href="#partners">Partners</a></li>
 					<li><a href="#status">Built, simulated, planned</a></li>
 				</ul>
 			</nav>
+		</section>
+
+		<!-- The architecture: four ways in, one gate, three outcomes, one log -->
+		<section class="arch" id="arch" aria-labelledby="h-arch">
+			<p class="eyebrow">Architecture</p>
+			<h2 id="h-arch">The path every request takes</h2>
+			<div class="archfig" role="img" aria-labelledby="arch-alt">
+				<svg class="arch-w" viewBox="0 0 960 468" aria-hidden="true" focusable="false">
+					<defs>
+						<marker id="ahw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ahd" d="M0 0L10 5L0 10z"/></marker>
+						<marker id="ahwa" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ahd acc" d="M0 0L10 5L0 10z"/></marker>
+					</defs>
+					<text class="h" x="0" y="14">FOUR WAYS IN</text>
+					<text class="h" x="230" y="14">ONE GATE</text>
+
+					<rect class="bx" x="0.5" y="30" width="176" height="58" rx="10"/>
+					<use class="ai" href="#i-kitchen" x="12" y="49" width="20" height="20"/>
+					<text class="t" x="42" y="54">Kitchen screen</text><text class="s" x="42" y="73">the chef</text>
+					<rect class="bx" x="0.5" y="108" width="176" height="58" rx="10"/>
+					<use class="ai" href="#i-order" x="12" y="127" width="20" height="20"/>
+					<text class="t" x="42" y="132">Request page</text><text class="s" x="42" y="151">the chef</text>
+					<rect class="bx" x="0.5" y="186" width="176" height="58" rx="10"/>
+					<use class="ai" href="#i-ask" x="12" y="205" width="20" height="20"/>
+					<text class="t" x="42" y="210">Chat</text><text class="s" x="42" y="229">the in-app agent</text>
+					<rect class="bx" x="0.5" y="264" width="176" height="58" rx="10"/>
+					<use class="ai" href="#i-plug" x="12" y="283" width="20" height="20"/>
+					<text class="t" x="42" y="288">Your agent</text><text class="s" x="42" y="307">MCP or REST</text>
+
+					<path class="ln" marker-end="url(#ahw)" d="M177 59C206 59 206 77 229 77"/>
+					<path class="ln" marker-end="url(#ahw)" d="M177 137C206 137 206 77 229 77"/>
+					<path class="ln" marker-end="url(#ahw)" d="M177 215C206 215 206 77 229 77"/>
+					<path class="ln" marker-end="url(#ahw)" d="M177 293C206 293 206 77 229 77"/>
+
+					<rect class="gate" x="230" y="30" width="330" height="322" rx="16"/>
+					<rect class="st" x="246" y="44" width="298" height="66" rx="10"/>
+					<text class="t" x="262" y="66">Who is asking</text>
+					<text class="s" x="262" y="86">The caller's key or cookie,</text>
+					<text class="s" x="262" y="102">never the request body</text>
+					<path class="ln" marker-end="url(#ahw)" d="M395 111V123"/>
+					<rect class="st dash" x="246" y="124" width="298" height="50" rx="10"/>
+					<text class="t" x="262" y="146">Reading and lookups</text>
+					<text class="s" x="262" y="164">The request, the products, price and stock</text>
+					<path class="ln" marker-end="url(#ahw)" d="M395 175V187"/>
+					<rect class="st" x="246" y="188" width="298" height="90" rx="10"/>
+					<text class="t" x="262" y="210">The mandate's checks</text>
+					<circle class="bul" cx="265" cy="226" r="2.5"/><text class="s" x="276" y="230">Limits and caps</text>
+					<circle class="bul" cx="265" cy="244" r="2.5"/><text class="s" x="276" y="248">Approvals bound to the exact terms</text>
+					<circle class="bul" cx="265" cy="262" r="2.5"/><text class="s" x="276" y="266">One receipt per key</text>
+					<path class="ln" marker-end="url(#ahw)" d="M395 279V291"/>
+					<rect class="st" x="246" y="292" width="298" height="48" rx="10"/>
+					<text class="t" x="262" y="312">One state change</text>
+					<text class="s" x="262" y="330">Written to the op log with who asked</text>
+
+					<text class="h" x="590" y="66">OUTSIDE SERVICES</text>
+					<path class="dl" d="M560 149C574 149 574 90 588 90"/>
+					<path class="dl" d="M560 149C574 149 574 138 588 138"/>
+					<path class="dl" d="M560 149C574 149 574 186 588 186"/>
+					<circle class="dot" cx="591" cy="90" r="3"/><circle class="dot" cx="591" cy="138" r="3"/><circle class="dot" cx="591" cy="186" r="3"/>
+					<text class="n" x="602" y="94">Gemini</text><text class="s" x="602" y="111">Reads requests and menus, scores substitute fit</text>
+					<text class="n" x="602" y="142">Valio Aimo</text><text class="s" x="602" y="159">Catalogue, live price and stock</text>
+					<text class="n" x="602" y="190">Exa</text><text class="s" x="602" y="207">Product facts, public listings</text>
+
+					<path class="ln" marker-end="url(#ahw)" d="M560 296C576 296 576 251 590 251"/>
+					<path class="ln" marker-end="url(#ahw)" d="M560 296C576 296 576 295 590 295"/>
+					<path class="ln" marker-end="url(#ahw)" d="M560 296C576 296 576 339 590 339"/>
+					<g class="c-ok"><rect x="592" y="234" width="226" height="34" rx="8"/><use class="ai" href="#i-go" x="602" y="242" width="18" height="18"/><text class="o" x="628" y="255.5">Ordered within the mandate</text></g>
+					<g class="c-hold"><rect x="592" y="278" width="226" height="34" rx="8"/><use class="ai" href="#i-hold" x="602" y="286" width="18" height="18"/><text class="o" x="628" y="299.5">Waits for the chef</text></g>
+					<g class="c-no"><rect x="592" y="322" width="226" height="34" rx="8"/><use class="ai" href="#i-no" x="602" y="330" width="18" height="18"/><text class="o" x="628" y="343.5">Refused, with the reason</text></g>
+
+					<path class="ln" marker-end="url(#ahw)" d="M819 251C832 251 830 295 841 295"/>
+					<path class="ln" marker-end="url(#ahw)" d="M819 295H841"/>
+					<path class="ln" marker-end="url(#ahw)" d="M819 339C832 339 830 295 841 295"/>
+					<rect class="bx key" x="842" y="230" width="117" height="130" rx="12"/>
+					<text class="t" x="856" y="256">Op log</text>
+					<text class="s" x="856" y="276">Every change,</text>
+					<text class="s" x="856" y="292">in order</text>
+					<text class="n" x="856" y="344">Aiven Postgres</text>
+
+					<path class="ln acc" marker-end="url(#ahwa)" d="M900 361V400H88V324"/>
+					<text class="s" x="470" y="392" text-anchor="middle">Streams live to every open screen</text>
+					<path class="ln acc" marker-end="url(#ahwa)" d="M860 400V414"/>
+					<rect class="bx" x="790" y="416" width="169" height="50" rx="10"/>
+					<text class="t" x="806" y="437">Operations</text>
+					<text class="s" x="806" y="456">Held lines, recall cases</text>
+					<path class="dl" marker-end="url(#ahw)" d="M774 441H788"/>
+					<text class="n" x="768" y="437" text-anchor="end">Context.dev</text>
+					<text class="s" x="768" y="456" text-anchor="end">Recall list, every 5 minutes</text>
+				</svg>
+
+				<svg class="arch-n" viewBox="0 0 358 946" aria-hidden="true" focusable="false">
+					<defs>
+						<marker id="ahn" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ahd" d="M0 0L10 5L0 10z"/></marker>
+						<marker id="ahna" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ahd acc" d="M0 0L10 5L0 10z"/></marker>
+					</defs>
+					<text class="h" x="0" y="14">FOUR WAYS IN</text>
+					<rect class="bx" x="0.5" y="26" width="170" height="58" rx="10"/>
+					<use class="ai" href="#i-kitchen" x="12" y="45" width="20" height="20"/>
+					<text class="t" x="40" y="51">Kitchen screen</text><text class="s" x="40" y="69">the chef</text>
+					<rect class="bx" x="187.5" y="26" width="170" height="58" rx="10"/>
+					<use class="ai" href="#i-order" x="199" y="45" width="20" height="20"/>
+					<text class="t" x="227" y="51">Request page</text><text class="s" x="227" y="69">the chef</text>
+					<rect class="bx" x="0.5" y="94" width="170" height="58" rx="10"/>
+					<use class="ai" href="#i-ask" x="12" y="113" width="20" height="20"/>
+					<text class="t" x="40" y="119">Chat</text><text class="s" x="40" y="137">the in-app agent</text>
+					<rect class="bx" x="187.5" y="94" width="170" height="58" rx="10"/>
+					<use class="ai" href="#i-plug" x="199" y="113" width="20" height="20"/>
+					<text class="t" x="227" y="119">Your agent</text><text class="s" x="227" y="137">MCP or REST</text>
+					<path class="ln" d="M85.5 153V164H272.5V153"/>
+					<path class="ln" marker-end="url(#ahn)" d="M179 164V187"/>
+
+					<rect class="gate" x="0.75" y="188" width="356.5" height="436" rx="16"/>
+					<text class="h" x="16" y="210">ONE GATE</text>
+					<rect class="st" x="12" y="220" width="334" height="70" rx="10"/>
+					<text class="t" x="28" y="242">Who is asking</text>
+					<text class="s" x="28" y="262">The caller's key or cookie,</text>
+					<text class="s" x="28" y="279">never the request body</text>
+					<path class="ln" marker-end="url(#ahn)" d="M179 291V303"/>
+					<rect class="st dash" x="12" y="304" width="334" height="134" rx="10"/>
+					<text class="t" x="28" y="326">Reading and lookups</text>
+					<text class="s" x="28" y="344">The request, the products, price and stock</text>
+					<text class="n" x="28" y="370">Gemini</text><text class="s" x="112" y="370">reads requests and menus,</text><text class="s" x="112" y="386">scores substitute fit</text>
+					<text class="n" x="28" y="407">Valio Aimo</text><text class="s" x="112" y="407">catalogue, live price and stock</text>
+					<text class="n" x="28" y="427">Exa</text><text class="s" x="112" y="427">product facts, public listings</text>
+					<path class="ln" marker-end="url(#ahn)" d="M179 439V451"/>
+					<rect class="st" x="12" y="452" width="334" height="92" rx="10"/>
+					<text class="t" x="28" y="474">The mandate's checks</text>
+					<circle class="bul" cx="31" cy="490" r="2.5"/><text class="s" x="42" y="494">Limits and caps</text>
+					<circle class="bul" cx="31" cy="508" r="2.5"/><text class="s" x="42" y="512">Approvals bound to the exact terms</text>
+					<circle class="bul" cx="31" cy="526" r="2.5"/><text class="s" x="42" y="530">One receipt per key</text>
+					<path class="ln" marker-end="url(#ahn)" d="M179 545V557"/>
+					<rect class="st" x="12" y="558" width="334" height="52" rx="10"/>
+					<text class="t" x="28" y="580">One state change</text>
+					<text class="s" x="28" y="599">Written to the op log with who asked</text>
+
+					<path class="ln" marker-end="url(#ahn)" d="M179 625V641"/>
+					<g class="c-ok"><rect x="0.75" y="642" width="356.5" height="36" rx="8"/><use class="ai" href="#i-go" x="12" y="651" width="18" height="18"/><text class="o" x="38" y="664.5">Ordered within the mandate</text></g>
+					<g class="c-hold"><rect x="0.75" y="686" width="356.5" height="36" rx="8"/><use class="ai" href="#i-hold" x="12" y="695" width="18" height="18"/><text class="o" x="38" y="708.5">Waits for the chef</text></g>
+					<g class="c-no"><rect x="0.75" y="730" width="356.5" height="36" rx="8"/><use class="ai" href="#i-no" x="12" y="739" width="18" height="18"/><text class="o" x="38" y="752.5">Refused, with the reason</text></g>
+					<path class="ln" marker-end="url(#ahn)" d="M179 767V783"/>
+					<rect class="bx key" x="0.75" y="784" width="356.5" height="60" rx="12"/>
+					<text class="t" x="16" y="808">Op log</text>
+					<text class="s" x="16" y="829">Every change, in order, in Aiven Postgres</text>
+
+					<path class="ln acc" marker-end="url(#ahna)" d="M85 845V883"/>
+					<text class="s" x="100" y="868">Streams live to every open screen</text>
+					<rect class="bx" x="0.5" y="884" width="170" height="56" rx="10"/>
+					<text class="t" x="14" y="907">Operations</text>
+					<text class="s" x="14" y="926">Held lines, recall cases</text>
+					<path class="dl" marker-end="url(#ahn)" d="M196 912H173"/>
+					<text class="n" x="204" y="904">Context.dev</text>
+					<text class="s" x="204" y="921">Recall list,</text>
+					<text class="s" x="204" y="937">every 5 minutes</text>
+				</svg>
+			</div>
+			<p class="vh" id="arch-alt">Architecture diagram. Four ways in: the Kitchen screen and the Request page, used by the chef; the chat, used by the in-app agent; and your own agent over MCP or REST. All four pass one gate. First it works out who is asking from the caller's key or signed cookie, never from the request body. Then it reads the request and looks up the products: Gemini reads requests and menus and scores how well a substitute fits; Valio Aimo gives the catalogue and live price and stock; Exa gives product facts and public listings. Then the mandate's checks: limits and caps, approvals bound to the exact terms, and one receipt per key. Then one state change, written to the op log with who asked. Each line ends one of three ways: ordered within the mandate, waits for the chef, or refused with the reason. The op log is in Aiven Postgres and streams live to every open screen, including Operations, which also shows recall cases from the recall list that Context.dev checks every 5 minutes.</p>
+			<p class="archcap">Every request, from any of the four ways in, passes the same checks before anything is ordered, and every change is written to one log in Postgres.</p>
 		</section>
 
 		<section data-system-map id="map"></section>
@@ -292,47 +486,47 @@ h3 { margin: 0; font: 600 18px/1.25 var(--display); }
 		<section class="band" id="rules" aria-labelledby="h-rules">
 			<p class="eyebrow">The kitchen's rules</p>
 			<h2 id="h-rules">Each kitchen's own rules decide what the agent may buy</h2>
-			<p class="slead">Preferences put products in order, requirements rule products out, and the mandate says what the agent may buy without asking.</p>
+			<p class="slead">Each kitchen sets three kinds of rule, one per card below; only the mandate decides what the agent may buy without asking.</p>
 			<div class="cards c3">
 				<div class="card">
 					<div class="hd"><svg class="ic" aria-hidden="true"><use href="#i-rank"/></svg><h3>Preferences</h3></div>
 					<p><b>They only change the order of the list.</b> Weights over price, reliability, Finnish origin, carbon and organic.</p>
-					<span class="cite"><code>Kitchen.weights</code> · core/rank/rank.ts</span>
+					
 				</div>
 				<div class="card">
 					<div class="hd"><svg class="ic" aria-hidden="true"><use href="#i-no"/></svg><h3>Requirements</h3></div>
 					<p><b>A product that breaks one is out, with the reason shown.</b></p>
 					<ul>
-						<li>Origin rules per category: prefer or require</li>
-						<li>Allergens the kitchen must be free from, and what to do when Valio has no record</li>
-						<li>Tender list only, and labels such as vegetarian on a need</li>
+						<li>Origin per category: prefer or require</li>
+						<li>Allergens the kitchen must be free from</li>
+						<li>Tender list only; labels such as vegetarian</li>
 					</ul>
-					<span class="cite"><code>Kitchen.constraints</code> · <code>NeedRequirements</code> · core/mandate/categories.ts</span>
+					
 				</div>
 				<div class="card">
 					<div class="hd"><svg class="ic" aria-hidden="true"><use href="#i-shield"/></svg><h3>The mandate</h3></div>
 					<p><b>The chef's words and the numbers that enforce them.</b></p>
 					<ul>
 						<li>Caps per line, per order and per week</li>
-						<li>A hard limit: by default the larger of five times the order cap and twice the weekly cap</li>
-						<li>Five decisions it never delegates: an allergen change, a new product, a broken preference, a product off the tender list, an origin requirement</li>
+						<li>A hard limit above the caps</li>
+						<li>Never delegated: an allergen change, a new product, and three more</li>
 					</ul>
-					<p class="rec" data-kitchen-rec hidden></p>
-					<span class="cite"><code>Mandate</code> · core/contracts/kitchen.ts · versioned</span>
+					
 				</div>
 			</div>
+			<p class="rec" data-kitchen-rec hidden></p>
 
 			<div class="kitchens">
 				<div>
 					<h3>Seven kitchens, each with its own rules</h3>
 					<p>All seven are fictional seed kitchens, each with its own city, size, receiving days, menu cycle and mandate.</p>
-					<span class="cite">fixtures/seeds/kitchens.json</span>
+					
 				</div>
 				<div>
 					<ul class="kinds" aria-label="The seven kitchens">
 						<li>Hotel</li><li>Lunch restaurant</li><li>Public central kitchen</li><li>À la carte</li><li>Care home</li><li>Café</li><li>Ski resort</li>
 					</ul>
-					<p class="presets"><b>Same shortage. Your rules.</b> In the Kitchen, presets show how the same shortage ranks under different preferences: kitchen default, price first, Finnish required, lowest carbon, most reliable. They preview a ranking and change nothing. Not yet checked on the live app.</p>
+					<p class="presets">Presets preview how one shortage ranks under price first, Finnish required, lowest carbon or most reliable; they change nothing.</p>
 				</div>
 			</div>
 
@@ -341,14 +535,14 @@ h3 { margin: 0; font: 600 18px/1.25 var(--display); }
 					<h3 id="g-go"><span class="ico"><svg class="ic" aria-hidden="true"><use href="#i-go"/></svg></span>Goes through alone</h3>
 					<p class="when">Only when every check passes:</p>
 					<ul>
-						<li>Within the mandate's per-line, per-order and weekly caps<span class="cite"><code>CAP_EXCEEDED</code> · tier.ts · eval s5</span></li>
-						<li>A product this kitchen already buys<span class="cite"><code>new_sku</code> · tier.ts</span></li>
-						<li>No allergen change<span class="cite"><code>allergen_change</code> · tier.ts · groups.test.ts</span></li>
-						<li>Valio states enough stock<span class="cite"><code>UNKNOWN_REQUIRED</code> · validate.ts</span></li>
-						<li>A day the kitchen receives goods<span class="cite"><code>off_delivery_day</code> · purchasing.test.ts</span></li>
-						<li>The exact terms (price, quantity, date) unchanged since the quote<span class="cite"><code>TERMS_CHANGED</code> · state.ts · eval s4</span></li>
-						<li>Before the ordering cut-off<span class="cite"><code>cutoff_passed</code> · cutoff.test.ts</span></li>
-						<li>Whole packs of Valio's lot step<span class="cite"><code>BELOW_LOT</code> · eval s3</span></li>
+						<li>Within the mandate's per-line, per-order and weekly caps</li>
+						<li>A product this kitchen already buys</li>
+						<li>No allergen change</li>
+						<li>Valio Aimo states enough stock</li>
+						<li>A day the kitchen receives goods</li>
+						<li>The exact terms (price, quantity, date) unchanged since the quote</li>
+						<li>Before the ordering cut-off</li>
+						<li>Whole packs of Valio Aimo's lot step</li>
 					</ul>
 					<p class="tail">and nothing in the next column applies.</p>
 				</section>
@@ -356,47 +550,47 @@ h3 { margin: 0; font: 600 18px/1.25 var(--display); }
 					<h3 id="g-hold"><span class="ico"><svg class="ic" aria-hidden="true"><use href="#i-hold"/></svg></span>Held for a person</h3>
 					<p class="when">The line waits, with its reason on screen, when it has:</p>
 					<ul>
-						<li>A cost over a cap, even when the order is split<span class="cite"><code>CAP_EXCEEDED.weekly</code> · tier.ts · eval s5</span></li>
-						<li>A product the kitchen hasn't bought before<span class="cite"><code>new_sku</code> · tier.ts</span></li>
-						<li>An allergen change, decided apart from routine lines<span class="cite"><code>allergen_change</code> · groups.test.ts</span></li>
-						<li>No stock figure from Valio: held for one tap, not counted as cover until the supplier confirms<span class="cite"><code>UNKNOWN_REQUIRED</code> · validate.ts</span></li>
-						<li>A delivery on a day the kitchen doesn't receive goods<span class="cite"><code>off_delivery_day</code> · purchasing.test.ts</span></li>
-						<li>A substitute that breaks the kitchen's origin preference<span class="cite"><code>substitute_breaks_preference</code> · validate.ts</span></li>
-						<li>A product under a recall notice<span class="cite"><code>recall</code> · tier.ts</span></li>
-						<li>An outside agent's order<span class="cite"><code>external_agent_needs_approval</code> · tier.ts · eval s5</span></li>
-						<li>A model's caution. A model can add a caution that holds a line, and no caution can allow one.<span class="cite"><code>CAUTION.model_*</code> · substitutes.ts</span></li>
+						<li>A cost over a cap, even when the order is split</li>
+						<li>A product the kitchen hasn't bought before</li>
+						<li>An allergen change, decided apart from routine lines</li>
+						<li>No stock figure from Valio Aimo: held for one tap, not counted as cover until the supplier confirms</li>
+						<li>A delivery on a day the kitchen doesn't receive goods</li>
+						<li>A substitute that breaks the kitchen's origin preference</li>
+						<li>A product under a recall notice</li>
+						<li>An outside agent's order</li>
+						<li>A model's caution. A model can add a caution that holds a line, and no caution can allow one.</li>
 					</ul>
 				</section>
 				<section class="oc no" aria-labelledby="g-no">
 					<h3 id="g-no"><span class="ico"><svg class="ic" aria-hidden="true"><use href="#i-no"/></svg></span>Refused</h3>
 					<p class="when">No approval passes it:</p>
 					<ul>
-						<li>Over the hard limit, even split across lines<span class="cite"><code>over_hard_limit</code> · ceiling.test.ts</span></li>
-						<li>After the ordering cut-off<span class="cite"><code>cutoff_passed</code> · cutoff.test.ts · eval r5-f9</span></li>
-						<li>A part pack, off Valio's lot step<span class="cite"><code>BELOW_LOT</code> · eval s3</span></li>
-						<li>On a request, a product that breaks a stated requirement, such as lactose-free, even as a substitute<span class="cite"><code>requirement_unmet</code> · purchasing.test.ts</span></li>
+						<li>Over the hard limit, even split across lines</li>
+						<li>After the ordering cut-off</li>
+						<li>A part pack, off Valio Aimo's lot step</li>
+						<li>On a request, a product that breaks a stated requirement, such as lactose-free, even as a substitute</li>
 					</ul>
 				</section>
 			</div>
 			<div class="appr">
 				<span class="ico"><svg class="ic" aria-hidden="true"><use href="#i-hold"/></svg></span>
-				<p><b>Only a person with a chef session approves, and only the exact terms.</b> <span>Our agent and outside agents prepare, summarise and link the decision. A link only finds the decision; the grant happens on the Kitchen screen or the chat's decision card. The core refuses an approval recorded by an outside agent, and any later edit voids the approval.</span></p>
+				<p><b>Only a person in the kitchen approves, and only the exact terms; any later edit voids it.</b></p>
 			</div>
-			<p class="src">Source: <code>core/mandate/tier.ts</code>, <code>core/mandate/validate.ts</code>, <code>core/state.ts</code>; held by <code>core/state.test.ts</code>, <code>server/store/{ceiling,cutoff,groups,purchasing}.test.ts</code> and evals s3, s4, s5.</p>
+			<p class="src">Each rule with its test: <a href="/proof">Proof</a>.</p>
 		</section>
 
 		<!-- The agent -->
 		<section class="band" id="agent" aria-labelledby="h-agent">
 			<p class="eyebrow">The agent</p>
 			<h2 id="h-agent">The agent prepares the order and leaves the approval to the chef</h2>
-			<p class="slead">It reads what the kitchen asks for, works in a few bounded steps, and stops at a decision the chef must make.</p>
+			<p class="slead">It works in at most 8 steps and stops at any decision the chef must make.</p>
 			<ul class="facts">
-				<li><span class="ico"><svg class="ic" aria-hidden="true"><use href="#i-steps"/></svg></span><b>Six kinds of ask, sorted by rules before any model</b><span class="d">A routine order, the seeded event, a shortage repair, a change to a need, a question about a plan, or something it doesn't do.</span><span class="cite">server/agent/intent.ts</span></li>
-				<li><span class="ico"><svg class="ic" aria-hidden="true"><use href="#i-clock"/></svg></span><b>At most 8 steps</b><span class="d">Each run has a step limit, a deadline and a cancel button.</span><span class="cite">server/agent/loop.ts · runs.ts</span></li>
-				<li><span class="ico"><svg class="ic" aria-hidden="true"><use href="#i-agent"/></svg></span><b>A scripted planner on the live app</b><span class="d">The steps follow a fixed script. A Gemini Flash-Lite planner exists as an opt-in and is off on the live app.</span><span class="cite"><code>AGENT_PLANNER=llm</code> · server/adapters/llm/router.ts</span></li>
-				<li><span class="ico"><svg class="ic" aria-hidden="true"><use href="#i-product"/></svg></span><b>Typed facts about each product</b><span class="d">The planner reads short, typed fields. A supplier's product text is data and can't give it instructions.</span><span class="cite">server/agent/facts.test.ts · adversarial.test.ts</span></li>
-				<li><span class="ico"><svg class="ic" aria-hidden="true"><use href="#i-ask"/></svg></span><b>One clarifying question</b><span class="d">When something it needs is missing, such as the day, it asks once and goes on. Its reply uses only numbers from the task's ledger.</span><span class="cite">server/chat/{question,explain}.ts</span></li>
-				<li class="never"><span class="ico"><svg class="ic" aria-hidden="true"><use href="#i-no"/></svg></span><b>It never approves</b><span class="d">“Approve it” in chat is refused, with a pointer to the decision for the chef.</span><span class="cite">server/chat/understand.ts · evals/chat · dock-approve.e2e.ts</span></li>
+				<li><span class="ico"><svg class="ic" aria-hidden="true"><use href="#i-steps"/></svg></span><b>Six kinds of ask, sorted by rules before any model</b><span class="d">A routine order, the seeded event, a shortage repair, a change to a need, a question about a plan, or something it doesn't do.</span></li>
+				<li><span class="ico"><svg class="ic" aria-hidden="true"><use href="#i-clock"/></svg></span><b>At most 8 steps</b><span class="d">Each run has a step limit, a deadline and a cancel button.</span></li>
+				<li><span class="ico"><svg class="ic" aria-hidden="true"><use href="#i-agent"/></svg></span><b>A scripted planner on the live app</b><span class="d">The steps follow a fixed script. A Gemini Flash-Lite planner exists as an opt-in and is off on the live app.</span></li>
+				<li><span class="ico"><svg class="ic" aria-hidden="true"><use href="#i-product"/></svg></span><b>Typed facts about each product</b><span class="d">The planner reads short, typed fields. A supplier's product text is data and can't give it instructions.</span></li>
+				<li><span class="ico"><svg class="ic" aria-hidden="true"><use href="#i-ask"/></svg></span><b>One clarifying question</b><span class="d">When something it needs is missing, such as the day, it asks once and goes on. Its reply uses only numbers from the task's ledger.</span></li>
+				<li class="never"><span class="ico"><svg class="ic" aria-hidden="true"><use href="#i-no"/></svg></span><b>It never approves</b><span class="d">“Approve it” in chat is refused, with a pointer to the decision for the chef.</span></li>
 			</ul>
 			<p class="note2"><b>Limits today:</b> in chat the agent plans only the seeded buffet, so a new event goes through the Request page; and a second item in the same message is dropped.</p>
 		</section>
@@ -405,7 +599,7 @@ h3 { margin: 0; font: 600 18px/1.25 var(--display); }
 		<section class="band" id="flows" aria-labelledby="h-flows">
 			<p class="eyebrow">Five flows</p>
 			<h2 id="h-flows">Five ways an order moves through Mandate</h2>
-			<p class="slead">Each flow is a short list of steps with the code that runs it, and a case recorded from the live app where we have one.</p>
+			<p class="slead">Each flow in four stages, with one case recorded from the live app.</p>
 
 			<div class="tabs">
 				<div class="tablist" role="tablist" aria-label="Flows">
@@ -418,94 +612,76 @@ h3 { margin: 0; font: 600 18px/1.25 var(--display); }
 				<div class="panels">
 					<!-- One item -->
 					<section class="panel" id="p-item" role="tabpanel" aria-labelledby="t-item" tabindex="0">
-						<div class="hdr"><h3 class="ph">One item</h3><p>A request in plain words becomes one checked line, ordered alone or held for the chef.</p></div>
-						<ol class="steps">
-							<li><span>The words come in on the Request page or in chat, such as “10 l lactose-free milk for Friday”.<span class="cite">server/request/run.ts · /api/request</span></span></li>
-							<li><span>Sorted as a purchase, an event, or a dish with a count.<span class="cite">server/request/classify.ts</span></span></li>
-							<li><span>Read by rules first, then Gemini Flash-Lite. The reading is checked so no stated word is lost.<span class="cite">server/request/{parse,reading}.ts</span></span></li>
-							<li><span>The date is checked against the cut-off. A late date is named, and the next delivery day is offered.<span class="cite">server/request/dates.ts · evals/check.ts</span></span></li>
-							<li><span>A catalogue search makes a shortlist of up to 5 with reasons, drops products that contradict the request, and asks Valio live for the shortlist's prices and stock.<span class="cite">server/request/{lookup,checks}.ts · core/services/quote.ts</span></span></li>
-							<li><span>The amount becomes packs by printed content. Conflicting content holds the line.<span class="cite">server/request/convert.ts · core/demand/convert.ts</span></span></li>
-							<li><span>A size check against the kitchen's own numbers.<span class="cite">server/request/sanity.ts</span></span></li>
-							<li><span>The mandate decides: ordered alone, or held for approval.<span class="cite">core/services/orders.ts · core/mandate/tier.ts</span></span></li>
+						<div class="hdr"><h3 class="ph">One item</h3><p>A request in plain words, such as “10 l lactose-free milk for Friday”, becomes one checked line, ordered alone or held for the chef.</p></div>
+						<ol class="stages">
+							<li><b>Read</b><span>Rules read the words first, then Gemini Flash-Lite, and a check compares the reading with the words: every amount, unit and stated requirement must survive, or it asks. A date past the cut-off is named, with the next delivery day.</span></li>
+							<li><b>Find</b><span>A catalogue search shortlists up to 5 products with reasons, drops any that contradict the request, and asks Valio live for their prices and stock.</span></li>
+							<li><b>Size</b><span>The amount becomes packs by printed content and is checked against the kitchen's own numbers. Conflicting content holds the line.</span></li>
+							<li><b>Decide</b><span>The mandate decides: ordered alone, or held for the chef's approval.</span></li>
 						</ol>
-						<div class="side">
-							<div class="ex" data-case="within-mandate" hidden></div>
-							<div class="ex" data-case="lactose-free" hidden></div>
-							<p class="golive"><a href="https://app.mandate.kitchen/request">Try it: Request <svg class="ic" aria-hidden="true"><use href="#i-out"/></svg></a></p>
+						<div class="foot">
+							<div class="ex" data-case="within-mandate" data-reason="1" hidden></div>
+							<p class="golive"><a href="https://app.mandate.kitchen/request">Try it in Request <svg class="ic" aria-hidden="true"><use href="#i-out"/></svg></a></p>
 						</div>
 					</section>
 
 					<!-- Event to menu -->
 					<section class="panel" id="p-event" role="tabpanel" aria-labelledby="t-event" tabindex="0">
-						<div class="hdr"><h3 class="ph">Event to menu</h3><p>An event brief becomes a menu the chef accepts, then needs, then whole packs.</p></div>
-						<ol class="steps">
-							<li><span>A brief in words, such as a Christmas dinner for 50, and questions one at a time as chips: guests, date, diet, budget. Rules read the brief's guests, date and requirements, with no model call; Gemini Flash-Lite reads product requests.<span class="cite">server/menu/brief.ts</span></span></li>
-							<li><span>Gemini 3.8 Flash proposes a menu. Every amount is labelled an estimate; without the model, the team's dish templates stand in.<span class="cite">server/menu/{proposal,rubric}.ts</span></span></li>
-							<li><span>The chef edits amounts and accepts the menu. Nothing is planned before that.<span class="cite">server/menu/flow.ts · MenuReview.svelte</span></span></li>
-							<li><span>Each ingredient becomes a need: guests × amount per guest ÷ yield, with no model.<span class="cite">core/demand/menu.ts · core/services/events.ts</span></span></li>
-							<li><span>Each need is quoted and checked against the mandate; a product that's out goes to the out-of-stock flow.<span class="cite">core/services/{quote,substitutes}.ts</span></span></li>
-							<li><span>Changing the grams per guest recomputes the line in the same call and voids any approval.<span class="cite">core/services/events.ts · edit_line</span></span></li>
-							<li><span>One decision per reason group, then the order and its receipt.<span class="cite">ApprovalPanel.svelte · core/services/orders.ts</span></span></li>
+						<div class="hdr"><h3 class="ph">Event to menu</h3><p>An event brief becomes a menu the chef accepts, then needs, then whole packs. Each line is shown to the chef for review: we don't yet claim the right product for every menu dish.</p></div>
+						<ol class="stages">
+							<li><b>Brief</b><span>Missing guests, date, diet or budget are asked one at a time. Rules read the brief's guests, date and requirements, with no model call; Gemini Flash-Lite reads product requests.</span></li>
+							<li><b>Menu</b><span>Gemini 3.8 Flash proposes dishes with every amount labelled an estimate; without it, the team's dish templates stand in. Nothing is planned until the chef edits and accepts the menu.</span></li>
+							<li><b>Needs</b><span>Each ingredient becomes a need, guests × amount per guest ÷ yield, with no model. Changing the grams per guest recomputes the line and voids any approval.</span></li>
+							<li><b>Order</b><span>Each need is quoted and checked against the mandate, and a product that's out goes to the out-of-stock flow. The chef decides once per reason group, then the order and its receipt.</span></li>
 						</ol>
-						<div class="side">
+						<div class="foot">
 							<div class="ex" data-chain hidden></div>
-							<p class="limit">We don't yet claim the right product for every menu dish: each line is shown to the chef for review.</p>
-							<p class="golive"><a href="https://app.mandate.kitchen/request">Try it: Request <svg class="ic" aria-hidden="true"><use href="#i-out"/></svg></a><a href="https://app.mandate.kitchen/">The buffet in the Kitchen <svg class="ic" aria-hidden="true"><use href="#i-out"/></svg></a></p>
+							<p class="golive"><a href="https://app.mandate.kitchen/request">Try it in Request <svg class="ic" aria-hidden="true"><use href="#i-out"/></svg></a></p>
 						</div>
 					</section>
 
 					<!-- Out of stock -->
 					<section class="panel" id="p-rescue" role="tabpanel" aria-labelledby="t-rescue" tabindex="0">
 						<div class="hdr"><h3 class="ph">Out of stock</h3><p>When Valio is out, the agent finds and sizes substitutes, ranks them by the kitchen's rules, and holds anything new for the chef.</p></div>
-						<ol class="steps">
-							<li><span>A line is quoted out of stock, undeliverable or unknown, each in its own words.<span class="cite">core/services/wording.ts</span></span></li>
-							<li><span>Candidates come from Valio's own substitution rules, then the scenario's hand-checked rescues, then same-category products found by name.<span class="cite">core/services/substitutes.ts · catalog/retrieval.ts</span></span></li>
-							<li><span>Each candidate is sized to the same need.<span class="cite">core/demand/sizing.ts</span></span></li>
-							<li><span>Requirements rule candidates out, each with its reason. Known stock ranks first, then the kitchen's preferences. Gemini Decisions ranks substitutes as one input to the kitchen's ranking; it never approves.<span class="cite">core/rank/rank.ts · server/adapters/decide</span></span></li>
-							<li><span>Making it in house is an option when every ingredient can be ordered.<span class="cite">core/services/substitutes.ts · D8a</span></span></li>
-							<li><span>A new product, an allergen change or a broken preference holds the line for the chef.<span class="cite">RescueCompare.svelte · core/mandate/tier.ts</span></span></li>
-							<li><span>If another kitchen takes the stock, the rest is sized to the next candidate and the approval is voided. <span class="lim">Tested, simulated.</span><span class="cite">core/services/contention.ts</span></span></li>
-							<li><span>Still nothing: options outside the catalogue, for information only. They are never ordered.<span class="cite">server/chat/outside.ts · server/web/lookup.ts</span></span></li>
+						<ol class="stages">
+							<li><b>Spot</b><span>A line quoted out of stock, undeliverable or unknown is named in its own words.</span></li>
+							<li><b>Find</b><span>Candidates come from Valio Aimo's substitution rules, then hand-checked rescues, then same-category products, each sized to the same need. Making it in house is an option when every ingredient can be ordered.</span></li>
+							<li><b>Rank</b><span>Requirements rule candidates out with a reason; known stock ranks first, then the kitchen's preferences. Gemini Decisions scores how well each substitute fits the dish, one input to the code's ranking, and can flag a constraint risk that holds the line. It never approves or allows anything.</span></li>
+							<li><b>Hold</b><span>A new product, an allergen change or a broken preference waits for the chef. If another kitchen takes the stock, the rest moves to the next candidate and the approval is voided (tested, simulated). With no candidate left, options outside the catalogue are shown for information and never ordered.</span></li>
 						</ol>
-						<div class="side">
-							<div class="ex" data-case="out-of-stock" hidden></div>
-							<p class="golive"><a href="https://app.mandate.kitchen/">Try it: Kitchen <svg class="ic" aria-hidden="true"><use href="#i-out"/></svg></a></p>
+						<div class="foot">
+							<div class="ex" data-case="out-of-stock" data-reason="2" hidden></div>
+							<p class="golive"><a href="https://app.mandate.kitchen/">Try it in the Kitchen <svg class="ic" aria-hidden="true"><use href="#i-out"/></svg></a></p>
 						</div>
 					</section>
 
 					<!-- Outside agent -->
 					<section class="panel" id="p-outside" role="tabpanel" aria-labelledby="t-outside" tabindex="0">
 						<div class="hdr"><h3 class="ph">Outside agent</h3><p>Your own agent connects over MCP or REST, uses the same tools through the same checks, and every line it orders waits for the chef.</p></div>
-						<ol class="steps">
-							<li><span>On the Agents page each visitor gets their own key and MCP address, working only in their own sandbox.<span class="cite">routes/agents · /api/demo/judge-key</span></span></li>
-							<li><span>The agent reads its context first: who it is, what it may do, the kitchens, mandates and open plans.<span class="cite">server/agent/get-context.ts</span></span></li>
-							<li><span>It searches, quotes, then places an order or plans an event. An unknown product is refused before any call to Valio.<span class="cite">server/tools/{serve,handlers}.ts</span></span></li>
-							<li><span>Its lines are always held. The result carries a summary, the next action and a link to the decision.<span class="cite">server/tools/present.ts · core/mandate/tier.ts</span></span></li>
-							<li><span>If it tries to approve or change the mandate, it gets 403 and Ops logs the refusal.<span class="cite">server/tools/refusals.ts</span></span></li>
-							<li><span>The chef approves in the Kitchen, and the agent reads the receipt.<span class="cite">server/tasks/outcome.ts</span></span></li>
+						<ol class="stages">
+							<li><b>Connect</b><span>Each visitor gets their own key and MCP address on the Agents page, working only in their own sandbox and metered at 120 calls, 30 writes and 20 quotes a minute.</span></li>
+							<li><b>Read</b><span>The agent reads its context first: who it is, what it may do, the kitchens, mandates and open plans.</span></li>
+							<li><b>Order</b><span>It searches, quotes, then orders or plans an event. An unknown product is refused before any call to Valio Aimo, and every line it orders is held.</span></li>
+							<li><b>Wait</b><span>Trying to approve or change the mandate gets 403, and Ops logs it. The chef approves in the Kitchen, and the agent reads the receipt.</span></li>
 						</ol>
-						<div class="side">
-							<div class="ex" data-case="agent-cannot-approve" hidden></div>
-							<p class="note2">Each key is metered: 120 calls, 30 writes and 20 quotes a minute.<span class="cite">server/tools/key-limits.ts</span></p>
-							<p class="golive"><a href="https://app.mandate.kitchen/agents">Connect yours: Agents <svg class="ic" aria-hidden="true"><use href="#i-out"/></svg></a></p>
+						<div class="foot">
+							<div class="ex" data-case="agent-cannot-approve" data-reason="1" hidden></div>
+							<p class="golive"><a href="https://app.mandate.kitchen/agents">Try it with your agent <svg class="ic" aria-hidden="true"><use href="#i-out"/></svg></a></p>
 						</div>
 					</section>
 
 					<!-- Approval -->
 					<section class="panel" id="p-approval" role="tabpanel" aria-labelledby="t-approval" tabindex="0">
 						<div class="hdr"><h3 class="ph">Approval</h3><p>The chef approves exact terms. Any edit voids the approval, and the order is checked again before it's placed.</p></div>
-						<ol class="steps">
-							<li><span>Held lines are grouped by reason, and the chef decides one group at a time, so an allergen change never rides with routine lines.<span class="cite">core/services/orders.ts · groups.test.ts</span></span></li>
-							<li><span>Press and hold to confirm the exact terms, in the Kitchen or on the chat's decision card.<span class="cite">HoldButton.svelte · DecisionCard.svelte</span></span></li>
-							<li><span>The approval is bound to the plan version, the terms, the mandate version and an expiry.<span class="cite">core/hash.ts · core/state.ts</span></span></li>
-							<li><span>Any edit or substitute sends the plan back to draft and voids the approval, and the plan shows what changed. <span class="lim">Tested; in the app's screens, not yet checked on the live app.</span><span class="cite">core/state.ts · eval r6-5</span></span></li>
-							<li><span>The order re-checks everything under a lock: version, terms, mandate, expiry, cut-off, caps. Any mismatch is refused.<span class="cite">core/services/orders.ts · eval s4</span></span></li>
-							<li><span>One receipt, however many times the order is sent.<span class="cite">evals s1, s5 · pg-race.test.ts · smoke-race</span></span></li>
+						<ol class="stages">
+							<li><b>Group</b><span>Held lines are grouped by reason and decided one group at a time, so an allergen change never rides with routine lines.</span></li>
+							<li><b>Approve</b><span>The chef presses and holds on the exact terms, in the Kitchen or on the chat's decision card. The approval is bound to the plan version, the terms, the mandate version and an expiry.</span></li>
+							<li><b>Edit</b><span>Any edit or substitute sends the plan back to draft, voids the approval and shows what changed. Tested in the app's screens, not yet checked on the live app.</span></li>
+							<li><b>Order</b><span>Under a lock the order re-checks version, terms, mandate, expiry, cut-off and caps, and refuses any mismatch. However many times it's sent, there is one receipt.</span></li>
 						</ol>
-						<div class="side">
-							<div class="ex" data-case="one-receipt" hidden></div>
-							<p class="golive"><a href="https://app.mandate.kitchen/">Approve and order: Kitchen <svg class="ic" aria-hidden="true"><use href="#i-out"/></svg></a></p>
+						<div class="foot">
+							<div class="ex" data-case="one-receipt" data-reason="0,1" hidden></div>
+							<p class="golive"><a href="https://app.mandate.kitchen/">Try it in the Kitchen <svg class="ic" aria-hidden="true"><use href="#i-out"/></svg></a></p>
 						</div>
 					</section>
 				</div>
@@ -514,73 +690,40 @@ h3 { margin: 0; font: 600 18px/1.25 var(--display); }
 
 		<!-- Trust -->
 		<section class="band" id="trust" aria-labelledby="h-trust">
-			<p class="eyebrow">Checks behind each claim</p>
-			<h2 id="h-trust">Every claim has a mechanism and a test you can run</h2>
-			<p class="slead">Each row says what we claim, how the code makes it true, and the test that fails if it stops being true.</p>
-			<table class="tbl">
-				<thead><tr><th scope="col">Claim</th><th scope="col">How</th><th scope="col">Test</th></tr></thead>
-				<tbody>
-					<tr><th scope="row">Every caller passes the same checks</th><td data-h="How">One gate: known tool, scope, checked input. The caller comes from its key or cookie.</td><td class="t" data-h="Test">adversarial.test.ts · eval s5 · visitor-gate.e2e.ts</td></tr>
-					<tr><th scope="row">Every change goes through one function and is logged</th><td data-h="How"><code>applyOps</code> over 9 op types, each with a sequence number, who acted and the door it came through.</td><td class="t" data-h="Test">core/state.test.ts</td></tr>
-					<tr><th scope="row">The rules are plain code you can read</th><td data-h="How">The core imports no Svelte, Node, vendor SDK or server code; lint enforces it.</td><td class="t" data-h="Test">eslint rule on <code>src/lib/core</code></td></tr>
-					<tr><th scope="row">A slow API can't block or corrupt an order</th><td data-h="How">Valio, Gemini and web calls finish before the transaction starts.</td><td class="t" data-h="Test">server/store/prepare.test.ts</td></tr>
-					<tr><th scope="row">The same order sent many times gives one receipt</th><td data-h="How">A key per sandbox, caller and tool, with a hash of the request.</td><td class="t" data-h="Test">evals s1, s5 · pg-race.test.ts · smoke-race on the live app</td></tr>
-					<tr><th scope="row">A yes covers the exact price, quantity and date</th><td data-h="How">Terms hash, plan version, mandate version and expiry; the order re-checks them.</td><td class="t" data-h="Test">gate.test.ts · view.test.ts · eval s4</td></tr>
-					<tr><th scope="row">A voided approval shows what changed</th><td data-h="How">The plan keeps the difference from the terms that were approved.</td><td class="t" data-h="Test">eval r6-5</td></tr>
-					<tr><th scope="row">An allergen change never rides with routine lines</th><td data-h="How">One approval per reason group; the rest is re-bound.</td><td class="t" data-h="Test">server/store/groups.test.ts</td></tr>
-					<tr><th scope="row">Unknown supply never counts as cover</th><td data-h="How">Valio's “no quantity” figure is unknown supply, and known stock ranks first.</td><td class="t" data-h="Test">fulfilment.test.ts · server/store/pool.test.ts</td></tr>
-					<tr><th scope="row">Every ordered line names what allowed it</th><td data-h="How">The mandate or a named approval. An outside agent's line always needs the approval.</td><td class="t" data-h="Test">server/store/authority.test.ts</td></tr>
-					<tr><th scope="row">A model's caution can only add a hold</th><td data-h="How">Model cautions are reasons that hold a line.</td><td class="t" data-h="Test">core/services/substitutes.ts</td></tr>
-					<tr><th scope="row">Product text can't steer the agent</th><td data-h="How">The planner gets typed, length-bounded facts.</td><td class="t" data-h="Test">facts.test.ts · adversarial.test.ts</td></tr>
-					<tr><th scope="row">The chat never approves</th><td data-h="How">A rules guard refuses “approve it”.</td><td class="t" data-h="Test">evals/chat · dock-approve.e2e.ts</td></tr>
-					<tr><th scope="row">Amounts stay physical</th><td data-h="How">10 l of milk is sized in litres, then in packs.</td><td class="t" data-h="Test">server/store/direct.test.ts</td></tr>
-					<tr><th scope="row">A stated requirement survives</th><td data-h="How">A vegetarian or lactose-free need keeps its requirement through substitutes and edits.</td><td class="t" data-h="Test">vegetarian.test.ts · request/fixes.test.ts</td></tr>
-					<tr><th scope="row">Each visitor's world is their own</th><td data-h="How">A signed cookie per visitor and keys that work only in that sandbox.</td><td class="t" data-h="Test">server/demo/{visitor,judge-key,sandbox}.test.ts</td></tr>
-					<tr><th scope="row">The same words give the same basket</th><td data-h="How">For the cases we test, in English and Finnish, through Request, the agent and REST. Chat reads words with its own model.</td><td class="t" data-h="Test">evals/fidelity · evals/paraphrase</td></tr>
-				</tbody>
-			</table>
-			<p class="more">Each claim checked on the live app, with where it was seen: <a href="/proof">Proof</a>.</p>
-
+			<p class="eyebrow">State machines</p>
+			<h2 id="h-trust">Three state machines hold the rules</h2>
+			<p class="slead">A plan, each line and each approval move through fixed states. The checks on this page decide which way they go.</p>
 			<div class="sm">
-				<h3>The three state machines</h3>
 				<p class="smhint">Each diagram scrolls sideways.</p>
 				<div class="smc"><div class="svgw"><svg viewBox="0 0 540 190" id="smPlan" role="img" aria-label="Plan states: draft, quoted, ready or held, committed"></svg></div><div><h4>Plan</h4><p>Green is the usual path. Any edit sends the plan back to draft and clears its terms, so an earlier approval no longer applies.</p></div></div>
-				<div class="smc"><div class="svgw"><svg viewBox="0 0 540 190" id="smLine" role="img" aria-label="Line states: proposed, eligible, held, rejected, unorderable, committed"></svg></div><div><h4>Line</h4><p>A line inside the mandate is ordered without asking. Any other line waits for the chef with its reasons. A line below Valio's lot step can't be ordered at all.</p></div></div>
+				<div class="smc"><div class="svgw"><svg viewBox="0 0 540 190" id="smLine" role="img" aria-label="Line states: proposed, eligible, held, rejected, unorderable, committed"></svg></div><div><h4>Line</h4><p>A line inside the mandate is ordered without asking. Any other line waits for the chef with its reasons. A line below Valio Aimo's lot step can't be ordered at all.</p></div></div>
 				<div class="smc"><div class="svgw"><svg viewBox="0 0 540 190" id="smAppr" role="img" aria-label="Approval states: pending, granted, denied, invalidated, expired"></svg></div><div><h4>Approval</h4><p>An approval is tied to the plan version, the exact terms, the mandate version and an expiry. If any of them changes, the order is refused.</p></div></div>
 				<div class="smleg"><span><i style="border-color:var(--ok)"></i>usual path</span><span><i style="border-color:var(--auth);border-style:dashed"></i>waits for a person</span><span><i style="border-color:var(--out);border-style:dashed"></i>sends it back</span><span><i style="border-color:var(--out);border-width:2px"></i>final</span></div>
-				<p class="src">Source: <code>core/state.ts</code>, <code>core/contracts/plan.ts</code>; held by <code>core/state.test.ts</code> and <code>server/store/gate.test.ts</code>.</p>
+				<p class="src">Each rule with its test: <a href="/proof">Proof</a>.</p>
 			</div>
 		</section>
 
 		<!-- What Valio sees -->
 		<section class="band" id="ops" aria-labelledby="h-ops">
-			<p class="eyebrow">What Valio sees</p>
-			<h2 id="h-ops">Valio's control room shows every held line, by cause, across kitchens</h2>
-			<p class="slead">Ops reads the same records the kitchens write, so Valio sees why a line is waiting and can open the exact kitchen plan.</p>
-			<div class="cards c3">
-				<div class="card"><div class="hd"><svg class="ic" aria-hidden="true"><use href="#i-hold"/></svg><h3>Problems</h3></div><p>Held lines and recall cases grouped by cause, biggest first, each with what happened.</p><span class="cite">routes/ops/ProblemCard.svelte · core/services/cause.ts</span></div>
-				<div class="card"><div class="hd"><svg class="ic" aria-hidden="true"><use href="#i-order"/></svg><h3>Orders</h3></div><p>Each order in four stages read from the op log: what was asked, what was proposed and why, who signed, what was ordered.</p><span class="cite">routes/ops/OrdersTab.svelte · core/services/stages.ts</span></div>
-				<div class="card"><div class="hd"><svg class="ic" aria-hidden="true"><use href="#i-event"/></svg><h3>Demand</h3></div><p>Per delivery day and product, across kitchens: ordered, signed, still proposed.</p><span class="cite">routes/ops/DemandTab.svelte</span></div>
-				<div class="card"><div class="hd"><svg class="ic" aria-hidden="true"><use href="#i-kitchen"/></svg><h3>Queue and wallboard</h3></div><p>Cases per kitchen, each linking to the exact plan in the Kitchen.</p><span class="cite">routes/ops/{Queue,CaseTicket}.svelte</span></div>
-				<div class="card"><div class="hd"><svg class="ic" aria-hidden="true"><use href="#i-eye"/></svg><h3>Engine room</h3></div><p>With System on: the agent's run, traces, the checks a run passed, the op timeline and the outside services' status.</p><span class="cite">routes/ops/{RunGraph,TraceDrawer,GatePanel,OpTimeline,ServiceStatus}.svelte</span></div>
-				<div class="card"><div class="hd"><svg class="ic" aria-hidden="true"><use href="#i-flask"/></svg><h3>Simulated run</h3></div><p>A scripted run across the demo kitchens, labelled simulated: real products, invented quantities.</p><span class="cite">server/bus/synthetic.ts</span></div>
-			</div>
+			<p class="eyebrow">What Valio Aimo sees</p>
+			<h2 id="h-ops">Valio Aimo's control room shows every held line, by cause, across kitchens</h2>
+			<p class="slead">Ops reads the same records the kitchens write, so Valio Aimo sees why a line is waiting and can open the exact kitchen plan.</p>
+			<p class="note2">Each Ops tab, and the forecast, is shown on real data on the <a href="/story#valio">Story page</a>. This section keeps the record underneath them.</p>
 			<div class="card oplog">
-				<h3>The op log: 9 kinds of change, nothing else</h3>
+				<h3>The op log: 9 kinds of change</h3>
 				<p>Every entry has a sequence number, who acted and the door it came through. Open screens update from it after each commit.</p>
 				<ol aria-label="The nine kinds of change">
 					<li>Plan created</li><li>Line edited</li><li>Offer recorded</li><li>Substitute proposed</li><li>Approval recorded</li><li>Order placed</li><li>Incident recorded</li><li>Web finding recorded</li><li>Refusal recorded</li>
 				</ol>
-				<span class="cite">core/contracts/ops.ts · server/bus/{pg,memory,ordered}.ts · /api/events</span>
+				
 			</div>
-			<p class="note2"><b>On main, not yet live:</b> Ops naming the Kitchen page and the agent dock as the doors a change came through, and the typed reason for each line that can't be ordered.</p>
 			<p class="golive" style="margin-top:18px"><a href="https://app.mandate.kitchen/ops">Open Ops <svg class="ic" aria-hidden="true"><use href="#i-out"/></svg></a></p>
 		</section>
 
 		<!-- Partners -->
 		<section class="band" id="partners" aria-labelledby="h-partners">
 			<p class="eyebrow">Partners and fallbacks</p>
-			<h2 id="h-partners">Each partner does one job, and each has a fallback</h2>
+			<h2 id="h-partners">What each partner service does, and its fallback</h2>
 			<p class="slead">Every outside service sits behind a port, so a dead API or Wi-Fi drops to a fallback that the screen labels. The Partners zone of the <a href="#map">system map</a> shows the same five; this table adds each one's status.</p>
 			<table class="tbl">
 				<thead><tr><th scope="col">Partner</th><th scope="col">Job</th><th scope="col">Fallback</th><th scope="col">Status</th></tr></thead>
@@ -588,7 +731,7 @@ h3 { margin: 0; font: 600 18px/1.25 var(--display); }
 					<tr><th scope="row">Valio Aimo</th><td data-h="Job">The catalogue of 17,546 products; live price and availability for shortlisted products only, at most 200 per call, availability fetched again after 15 minutes.</td><td data-h="Fallback">The cached offer, labelled with its age; the file catalogue; scenario stock.</td><td><span class="pill pl-live">Seen live</span></td></tr>
 					<tr><th scope="row">Gemini 3.5 Flash-Lite</th><td data-h="Job">Reads product requests and chat messages, and writes the chat's reply from the ledger. The agent planner job is opt-in and off on the live app.</td><td data-h="Fallback">The rules parser, the rules classifier, the ledger's own text.</td><td><span class="pill pl-live">Seen live</span></td></tr>
 					<tr><th scope="row">Gemini 3.8 Flash</th><td data-h="Job">Proposes a menu from a brief; every amount is an estimate.</td><td data-h="Fallback">The team's dish templates.</td><td><span class="pill pl-live">Seen live</span></td></tr>
-					<tr><th scope="row">Gemini Decisions</th><td data-h="Job">Ranks substitutes as one input to the kitchen's ranking; it never approves.</td><td data-h="Fallback">A recorded replay, then rules.</td><td><span class="pill pl-test">Tested, one live call</span></td></tr>
+					<tr><th scope="row">Gemini Decisions</th><td data-h="Job">Scores how well each substitute fits the dish, one input to the code's ranking, and can flag a constraint risk that holds the line. It never approves or allows anything.</td><td data-h="Fallback">A recorded replay, then rules.</td><td><span class="pill pl-test">Every shortage; falls back, labelled</span></td></tr>
 					<tr><th scope="row">Aiven</th><td data-h="Job">Runs the app as one container; Postgres holds every table and pushes live updates to Ops.</td><td data-h="Fallback">PGlite with the same migrations, for tests and offline.</td><td><span class="pill pl-live">Seen live</span></td></tr>
 					<tr><th scope="row">Exa</th><td data-h="Job">Cited product facts in the Why drawer: net content, origin, ingredients. Options outside the catalogue.</td><td data-h="Fallback">Recorded responses, under daily caps.</td><td><span class="pill pl-live">Seen live, Why drawer</span></td></tr>
 					<tr><th scope="row">Context.dev</th><td data-h="Job">Checks the recall list every 5 minutes and matches each notice against the catalogue. A matching product's line is held.</td><td data-h="Fallback">Recorded notices; a drill, labelled as one.</td><td><span class="pill pl-live">Seen live, no real recall matched</span></td></tr>
@@ -596,19 +739,19 @@ h3 { margin: 0; font: 600 18px/1.25 var(--display); }
 					<tr class="dim"><th scope="row">NVIDIA Nemotron VL on Verda</th><td data-h="Job">Reading a photo of a prep list or delivery note.</td><td data-h="Fallback">The tool stays hidden until it is switched on.</td><td><span class="pill pl-wired">Wired, not live</span></td></tr>
 				</tbody>
 			</table>
-			<p class="note2">Every web call goes through a response cache, daily caps per key and per instance, and a breaker. LLM calls log their model, tokens and latency; only some sponsor calls reach the Ops trace drawer so far.<span class="cite">server/external/{call,ledger,breaker}.ts · server/adapters/llm/trace.ts</span></p>
+			<p class="note2">Every web call goes through a response cache, daily caps per key and per instance, and a breaker. LLM calls log their model, tokens and latency; only some sponsor calls reach the Ops trace drawer so far.</p>
 		</section>
 
 		<!-- Built / simulated / planned -->
 		<section class="band" id="status" aria-labelledby="h-status">
 			<p class="eyebrow">Built, simulated, planned</p>
-			<h2 id="h-status">What is real today, what is simulated, and what is next</h2>
+			<h2 id="h-status">Which parts are built, simulated or planned</h2>
 			<p class="slead">Everything on this page falls in one of three columns, and the app labels the simulated parts on screen.</p>
 			<div class="status">
 				<div class="col">
 					<h3><span class="ico ok"><svg class="ic" aria-hidden="true"><use href="#i-go"/></svg></span>Built</h3>
 					<p>In the code, with how far we've checked it.</p>
-					<h4><span class="pill pl-live">Seen on the live app</span></h4>
+					
 					<ul>
 						<li>Approve, order and one receipt in the Kitchen</li>
 						<li>The same order sent 4 times with one key: one receipt</li>
@@ -754,43 +897,80 @@ h3 { margin: 0; font: 600 18px/1.25 var(--display); }
 	const use = (id) => { const s = document.createElementNS(NS, 'svg'); s.setAttribute('class', 'ic'); s.setAttribute('aria-hidden', 'true'); const u = document.createElementNS(NS, 'use'); u.setAttribute('href', '#' + id); s.append(u); return s; };
 	const chip = (state, text) => { const k = ICON[state] ? state : 'within'; const c = el('span', `mchip ${k}`); c.append(use(ICON[k]), document.createTextNode(text || WORD[k])); return c; };
 	const day = (iso) => { const d = new Date(iso); return isNaN(d) ? '' : d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'Europe/Helsinki' }); };
-	const stamp = (iso) => { const d = day(iso); return 'Recorded from the app' + (d ? ` on ${d}` : '') + '.'; };
+	const stamp = () => '';
 	const eur = (n) => (typeof n === 'number' ? new Intl.NumberFormat('en-IE', { style: 'currency', currency: 'EUR' }).format(n) : '');
 
+	const rn = (n) => (window.readableName ? readableName(n) : n);
+	const outRow = (state, label, n) => {
+		const row = el('div', 'out');
+		row.append(chip(state, label));
+		const v = eur(n);
+		if (v) row.append(el('span', 'eur', v));
+		return row;
+	};
+
+	// One case, compact: the request, the product it became, the outcome, and the reason in one line.
 	function renderCase(box, c) {
 		box.replaceChildren(el('p', 'label', 'Recorded case'));
-		if (c.request) box.append(el(c.ask ? 'span' : 'b', c.ask ? 'ask' : null, c.ask ? `“${c.request}”` : c.request));
-		if (Array.isArray(c.steps) && c.steps.length) {
-			const ol = el('ol');
-			for (const s of c.steps) if (s && s.text) ol.append(el('li', null, s.text));
-			box.append(ol);
+		const steps = (Array.isArray(c.steps) ? c.steps : []).filter(Boolean);
+		const names = steps.flatMap((s) => (s.parts ? s.parts.map((p) => p.product).filter(Boolean) : []));
+		const ask = el('p', 'ask');
+		if (c.ask && c.ask.qty) ask.append('“', el('span', 'tq', c.ask.qty), ' ', c.ask.item, c.ask.rest ? ' ' + c.ask.rest : '', '”');
+		else if (c.request) ask.textContent = c.request;
+		box.append(ask);
+		const picked = [...steps].reverse().find((s) => Array.isArray(s.parts) && s.parts.some((p) => p.product));
+		const pack = c.trace && c.trace.pack;
+		if (pack && pack.qty && pack.product && pack.replaces) {
+			// A substitute: what was proposed, in place of the product Valio is out of.
+			box.append(el('p', 'got'));
+			box.lastChild.append('Proposed ', el('span', 'tq', pack.qty), ' ', el('span', 'tp', rn(pack.product)), ' in place of ', el('span', 'tp', rn(pack.replaces)), ', out of stock at Valio Aimo.');
+		} else if (picked) {
+			const got = el('p', 'got');
+			for (const p of picked.parts) {
+				if (p.qty) got.append(el('span', 'tq', p.qty), ' ');
+				else if (p.product) got.append(el('span', 'tp', rn(p.product)));
+				else if (p.t) got.append(p.t);
+			}
+			box.append(got);
 		}
-		if (c.outcome) {
-			const row = el('div', 'out');
-			row.append(chip(c.outcome.state, c.outcome.label));
-			const v = eur(c.outcome.eur);
-			if (v) row.append(el('span', 'eur', v));
-			box.append(row);
-		}
+		if (c.outcome) box.append(outRow(c.outcome.state, c.outcome.label, c.outcome.eur));
+		const idx = (box.dataset.reason || String(steps.length - 1)).split(',').map(Number);
+		const why = idx.map((i) => steps[i]).filter((s) => s && s.text && s !== picked).map((s) => s.text).join(' ');
+		if (why) box.append(el('p', 'why', window.readableIn ? readableIn(why, names) : why));
 		box.append(el('small', null, stamp(c.recordedAt)));
 		box.hidden = false;
 	}
 
+	// The seeded event, compact: the event, one ingredient and the product it became, its decision, and the plan's count.
 	function renderChain(box, chain) {
 		box.replaceChildren(el('p', 'label', 'Recorded case: a seeded event, from need to order line (no menu step)'));
-		const dl = el('dl');
-		for (const s of chain.steps) {
-			if (!s || typeof s.key !== 'string') continue;
-			const row = el('div');
-			row.append(el('dt', null, s.key));
-			const dd = el('dd');
-			if (s.value != null && s.value !== '') dd.append(el('b', null, String(s.value)));
-			if (s.text) dd.append(document.createTextNode(s.text));
-			if (s.decides && s.decides.text) { dd.append(el('br')); dd.append(chip(KIND[s.decides.kind] || s.decides.kind, s.decides.text)); }
-			row.append(dd);
-			dl.append(row);
+		const at = {};
+		for (const s of chain.steps) if (s && typeof s.key === 'string') at[s.key] = s;
+		const split = (v) => /^([\d.,]+(?:\s?(?:kg|g|l))?)\s+(.+)$/.exec(String(v || ''));
+		if (at.event) {
+			const ask = el('p', 'ask');
+			const m = split(at.event.value);
+			const what = String(at.event.text || '').replace(/\.$/, '');
+			if (m) ask.append(what ? what + ', ' : '', el('span', 'tq', m[1]), ' ' + m[2]);
+			else ask.textContent = [what, at.event.value].filter(Boolean).join(', ');
+			box.append(ask);
 		}
-		box.append(dl, el('small', null, stamp(chain.recordedAt)));
+		if (at.ingredient && at.product) {
+			const got = el('p', 'got');
+			const m = split(at.ingredient.value);
+			const dish = chain.line && chain.line.dish ? ' for ' + String(chain.line.dish).toLowerCase() : '';
+			if (m) got.append(el('span', 'tq', m[1]), ' ' + m[2] + dish + ': ');
+			else got.append(String(at.ingredient.value || '') + dish + ': ');
+			const packs = /(\d+\s+packs?\s+×\s+[\d.,]+\s?(?:kg|g|l))/.exec(String(at.product.text || ''));
+			if (packs) got.append(el('span', 'tq', packs[1]), ' ');
+			got.append(el('span', 'tp', rn(String(at.product.value))));
+			box.append(got);
+			const d = at.product.decides;
+			if (d && d.text) box.append(outRow(KIND[d.kind] || d.kind, d.text, chain.line && chain.line.eur));
+		}
+		const o = at.order && at.order.decides;
+		if (o && o.text) box.append(el('p', 'why', 'The whole menu: ' + o.text + '.'));
+		box.append(el('small', null, stamp(chain.recordedAt)));
 		box.hidden = false;
 	}
 
@@ -811,7 +991,7 @@ h3 { margin: 0; font: 600 18px/1.25 var(--display); }
 				const k = chain.steps.find((s) => s && s.key === 'kitchen');
 				const rec = document.querySelector('[data-kitchen-rec]');
 				if (k && rec && k.value && k.text) {
-					rec.replaceChildren(el('b', null, String(k.value)), document.createTextNode(': ' + k.text), el('small', null, stamp(chain.recordedAt)));
+					rec.replaceChildren(el('b', null, k.key === 'product' && window.readableName ? readableName(String(k.value)) : String(k.value)), document.createTextNode(': ' + k.text), el('small', null, stamp(chain.recordedAt)));
 					rec.hidden = false;
 				}
 			}

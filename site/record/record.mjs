@@ -1,18 +1,22 @@
 // Records the landing page's case cards from the live app: each case drives app.mandate.kitchen through its real
 // HTTP endpoints in a fresh visitor sandbox (its own cookie jar), and every number and product name on a card comes
 // from what the app answered. Plain Node 18+, no dependencies:
-//   node site/record/record.mjs [baseUrl]        → writes site/public/cases.json
+//   node site/record/record.mjs [baseUrl]                  → writes site/public/cases.json
+//   node site/record/record.mjs [baseUrl] --only sponsors  → re-records only `sponsors`, keeping every other key
 // Besides the cards it records the landing's chain (kitchen → event → dish → ingredient → product → order): one line
 // of the seeded buffet, followed from the kitchen to its receipt, in its own sandbox.
 // Spend: at most one Gemini parse per /request/run call (3 here) plus the buffet plan's substitute ranking (once per
 // buffet start: 3 here), and one chat turn for the plan panel (a Gemini parse, a substitute ranking, one explain
-// reply). It only
+// reply), and the sponsors step's one recall-list read (Context.dev, a stored copy under an hour old is reused). It only
 // approves, orders or commits inside the sandboxes it creates, and never calls an admin or reset endpoint.
-import { writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const BASE = (process.argv[2] ?? 'https://app.mandate.kitchen').replace(/\/$/, '');
+const ARGS = process.argv.slice(2);
+const onlyAt = ARGS.indexOf('--only');
+const ONLY = onlyAt >= 0 ? ARGS[onlyAt + 1] : null;
+const BASE = (ARGS.find((a, i) => !a.startsWith('--') && (onlyAt < 0 || i !== onlyAt + 1)) ?? 'https://app.mandate.kitchen').replace(/\/$/, '');
 const OUT = join(dirname(fileURLToPath(import.meta.url)), '..', 'public', 'cases.json');
 
 /** A visitor: one cookie jar, so the app gives it its own sandbox. */
@@ -304,7 +308,9 @@ const CASES = [
 						icon: 'search',
 						text: `Read as ${num(item.qty)} ${item.unit} of lactose-free butter for ${day(r.parsed.deliverBy)}.`
 					},
-					{ icon: 'clock', text: look.question },
+					// The app prints Valio's logistic model in the cut-off ("(Stock, 17:00 Mon)", a BUGS row); keep its words,
+					// trim only that internal label.
+					{ icon: 'clock', text: look.question.replace(/\((?:Stock|Terminal|Direct), /g, '(') },
 					{ icon: 'swap', text: `Offered: ${look.answer.label}.` }
 				],
 				outcome: { state: 'caught', label: 'Nothing ordered' },
@@ -744,55 +750,172 @@ async function recordPlan() {
 }
 
 // ---------------------------------------------------------------------------------------------------------------
+// Sponsors: what the live app's own health check says about each outside service, plus the recall list as the app
+// reads it through Context.dev. Numbers only, as the app reported them; the landing's sponsor tiles print them with
+// their time. `/healthz` counts calls in its process since the last start, over the last 15 minutes (`recent`), so a
+// service with no call says so instead of a number.
 
-const health = await fetch(`${BASE}/healthz`).then((r) => r.json());
-const cases = [];
-const failed = [];
-for (const c of CASES) {
-	if (!c.claimable) {
-		console.log(`skip  ${c.id} (not claimable yet)`);
-		continue;
-	}
-	try {
-		const card = await c.run();
-		cases.push({
-			id: c.id,
-			recordedAt: new Date().toISOString(),
-			source: { app: BASE, endpoints: c.endpoints },
-			...card
+const SPONSOR_SERVICES = ['valio', 'gemini', 'exa', 'contextdev'];
+
+async function recordSponsors() {
+	// The recall list first, with a judge key in a fresh sandbox (read scope; a stored copy under an hour old is reused),
+	// so the health check below includes that read.
+	let recallList = null;
+	{
+		const go = visitor();
+		await go('/agents');
+		const jk = await go('/api/demo/judge-key');
+		need(jk.status === 200 && jk.json?.key, `judge key ${jk.status}`);
+		const t0 = Date.now();
+		const r = await fetch(`${BASE}/api/web/recall`, {
+			method: 'POST',
+			headers: { authorization: `Bearer ${jk.json.key}`, 'content-type': 'application/json' },
+			body: '{}',
+			signal: AbortSignal.timeout(60_000)
 		});
-		console.log(`ok    ${c.id}: ${card.outcome.label}${card.outcome.eur != null ? ` €${card.outcome.eur.toFixed(2)}` : ''}`);
-	} catch (e) {
-		failed.push(c.id);
-		console.log(`FAIL  ${c.id}: ${e instanceof Unrecordable ? e.message : e.stack}`);
+		const j = await r.json().catch(() => null);
+		if (r.status === 200 && Array.isArray(j?.recalls)) {
+			const dates = j.recalls.map((x) => x.date).filter(Boolean).sort();
+			recallList = {
+				readAt: new Date().toISOString(),
+				count: j.recalls.length,
+				newest: dates.at(-1) ?? null,
+				latencyMs: Date.now() - t0,
+				endpoint: 'POST /api/web/recall {}'
+			};
+		}
 	}
+	const h = await fetch(`${BASE}/healthz`, { signal: AbortSignal.timeout(30_000) }).then((r) => r.json());
+	need(h?.commit && Array.isArray(h.services), 'healthz has no commit or services');
+	const services = {};
+	for (const name of SPONSOR_SERVICES) {
+		const s = h.services.find((x) => x.service === name);
+		need(s, `healthz has no ${name}`);
+		services[name] = {
+			mode: s.mode,
+			breaker: s.breaker ?? null,
+			configured: s.configured ?? null,
+			last: s.last ?? null,
+			lastLive: s.lastLive ?? null,
+			recent: s.recent ?? {},
+			// The last 24 hours from the stored traces (survives restarts, all workspaces, counts only): `/healthz` `day`.
+			day: h.day?.[name] ?? null,
+			// The latency of the latest call when that call was sent live and answered with a timed latency; otherwise none
+			// (a live call logged without its timing reports 0 ms, which is not a measurement).
+			liveMs: s.last?.source === 'live' && s.last.ok && s.last.latencyMs > 0 ? s.last.latencyMs : null
+		};
+	}
+	if (recallList) services.contextdev.recallList = { ...recallList, source: services.contextdev.last?.source ?? null };
+	// One barcode-verified Valio Aimo listing, read from the app's own product card (the photo is hotlinked, never copied).
+	// The claims check covers 25 of the 54 demo products (5 more from Open Food Facts); the tile says so, not "every product".
+	let valioListing = null;
+	{
+		const go = visitor();
+		await go('/kitchen-api/snapshot');
+		for (const id of ['466964', '460373']) {
+			const c = await go(`/kitchen-api/product/${id}`);
+			const l = c.json?.listing;
+			if (c.status === 200 && l?.imageUrl && l?.pageUrl && l.source === 'valioaimo') {
+				valioListing = { productId: id, name: c.json.nameFi, pageUrl: l.pageUrl, imageUrl: l.imageUrl, checkedAt: l.checkedAt ?? null };
+				break;
+			}
+		}
+	}
+	return {
+		recordedAt: h.time ?? new Date().toISOString(),
+		appCommit: h.commit,
+		source: { app: BASE, endpoints: ['GET /healthz', 'POST /api/web/recall {} (judge key)', 'GET /kitchen-api/product/<id>'] },
+		db: { ok: h.db === 'ok', latencyMs: h.latencyMs ?? null, tls: h.tls ?? null },
+		services,
+		valioListing
+	};
 }
 
-let chain = null;
-try {
-	chain = { ...(await recordChain()), appCommit: health.commit };
-	console.log(`ok    chain: ${chain.steps.map((s) => s.value).join(' → ')}`);
-} catch (e) {
-	failed.push('chain');
-	console.log(`FAIL  chain: ${e instanceof Unrecordable ? e.message : e.stack}`);
+const sponsorLine = (sp) =>
+	[
+		`db ${sp.db.latencyMs} ms ${sp.db.tls}`,
+		...SPONSOR_SERVICES.map((n) => `${n} ${sp.services[n].mode}${sp.services[n].liveMs != null ? ` ${sp.services[n].liveMs} ms` : ''}`),
+		sp.services.contextdev.recallList ? `${sp.services.contextdev.recallList.count} recall notices` : 'no recall list'
+	].join(' · ');
+
+// ---------------------------------------------------------------------------------------------------------------
+
+if (ONLY && ONLY !== 'sponsors') {
+	console.log(`--only ${ONLY}: only "sponsors" can be recorded on its own`);
+	process.exit(2);
 }
 
-let plan = null;
-try {
-	plan = { recordedAt: new Date().toISOString(), appCommit: health.commit, ...(await recordPlan()) };
-	console.log(`ok    plan: ${plan.counts.lines} lines, ${plan.counts.waiting} waiting, ${plan.counts.decisions} decisions, ${plan.counts.ordered} ordered`);
-} catch (e) {
-	failed.push('plan');
-	console.log(`FAIL  plan: ${e instanceof Unrecordable ? e.message : e.stack}`);
-}
+if (ONLY === 'sponsors') {
+	// Merge into the existing file: every other key stays as it was recorded.
+	const prev = existsSync(OUT) ? JSON.parse(readFileSync(OUT, 'utf8')) : {};
+	try {
+		const sponsors = await recordSponsors();
+		writeFileSync(OUT, JSON.stringify({ ...prev, sponsors }, null, '\t') + '\n');
+		console.log(`ok    sponsors: ${sponsorLine(sponsors)}`);
+		console.log(`wrote sponsors to ${OUT}`);
+	} catch (e) {
+		console.log(`FAIL  sponsors: ${e instanceof Unrecordable ? e.message : e.stack}`);
+		process.exitCode = 1;
+	}
+} else {
+	const health = await fetch(`${BASE}/healthz`).then((r) => r.json());
+	const cases = [];
+	const failed = [];
+	for (const c of CASES) {
+		if (!c.claimable) {
+			console.log(`skip  ${c.id} (not claimable yet)`);
+			continue;
+		}
+		try {
+			const card = await c.run();
+			cases.push({
+				id: c.id,
+				recordedAt: new Date().toISOString(),
+				source: { app: BASE, endpoints: c.endpoints },
+				...card
+			});
+			console.log(`ok    ${c.id}: ${card.outcome.label}${card.outcome.eur != null ? ` €${card.outcome.eur.toFixed(2)}` : ''}`);
+		} catch (e) {
+			failed.push(c.id);
+			console.log(`FAIL  ${c.id}: ${e instanceof Unrecordable ? e.message : e.stack}`);
+		}
+	}
 
-writeFileSync(
-	OUT,
-	JSON.stringify(
-		{ recordedAt: new Date().toISOString(), appCommit: health.commit, chain, plan, cases },
-		null,
-		'\t'
-	) + '\n'
-);
-console.log(`wrote ${cases.length} cases to ${OUT}${failed.length ? `; failed: ${failed.join(', ')}` : ''}`);
-if (failed.length) process.exitCode = 1;
+	let chain = null;
+	try {
+		chain = { ...(await recordChain()), appCommit: health.commit };
+		console.log(`ok    chain: ${chain.steps.map((s) => s.value).join(' → ')}`);
+	} catch (e) {
+		failed.push('chain');
+		console.log(`FAIL  chain: ${e instanceof Unrecordable ? e.message : e.stack}`);
+	}
+
+	let plan = null;
+	try {
+		plan = { recordedAt: new Date().toISOString(), appCommit: health.commit, ...(await recordPlan()) };
+		console.log(`ok    plan: ${plan.counts.lines} lines, ${plan.counts.waiting} waiting, ${plan.counts.decisions} decisions, ${plan.counts.ordered} ordered`);
+	} catch (e) {
+		failed.push('plan');
+		console.log(`FAIL  plan: ${e instanceof Unrecordable ? e.message : e.stack}`);
+	}
+
+	let sponsors = null;
+	try {
+		sponsors = await recordSponsors();
+		console.log(`ok    sponsors: ${sponsorLine(sponsors)}`);
+	} catch (e) {
+		failed.push('sponsors');
+		console.log(`FAIL  sponsors: ${e instanceof Unrecordable ? e.message : e.stack}`);
+	}
+
+	writeFileSync(
+		OUT,
+		JSON.stringify(
+			{ recordedAt: new Date().toISOString(), appCommit: health.commit, chain, plan, cases, sponsors },
+			null,
+			'\t'
+		) + '\n'
+	);
+	console.log(`wrote ${cases.length} cases to ${OUT}${failed.length ? `; failed: ${failed.join(', ')}` : ''}`);
+	if (failed.length) process.exitCode = 1;
+}

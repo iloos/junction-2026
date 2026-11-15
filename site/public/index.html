@@ -20,7 +20,11 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="/site.css" />
+<script src="/name.js"></script>
 <style>
+.hero h1 .dim { color: var(--ink-3); white-space: nowrap; }
+.hero h1 .mword { color: var(--ink); text-decoration: underline 0.07em var(--accent); text-underline-offset: 0.14em; text-decoration-skip-ink: none; }
+.hero .herofact { margin: -12px 0 24px; font-size: 15px; color: var(--ink-2); max-width: 36em; }
 .hero { display: grid; gap: 40px; padding: 40px 0 56px; align-items: center; }
 @media (min-width: 900px) { .hero { grid-template-columns: 1.05fr 1fr; padding: 24px 0 24px; gap: 56px; } }
 
@@ -110,15 +114,19 @@
 .tally .rule svg { color: var(--ok); }
 .tally .signoff svg { color: var(--auth); }
 .tally .unknown svg { color: var(--warn); }
-.chain-when { margin: 0 0 18px; font-size: 13.5px; color: var(--ink-3); }
+.chain-when { margin: 0 0 18px; font-size: 15px; color: var(--ink-2); max-width: 46em; }
+.chain .link-body .val { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font-size: 14px; line-height: 1.35; }
+.chain .link-body p { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 
 /* Problem strip */
 .facts { display: grid; gap: 1px; background: var(--rule); border: 1px solid var(--rule); border-radius: 12px; overflow: hidden; }
-@media (min-width: 720px) { .facts { grid-template-columns: repeat(3, 1fr); } }
+@media (min-width: 560px) { .facts { grid-template-columns: repeat(2, 1fr); } }
+@media (min-width: 960px) { .facts { grid-template-columns: repeat(4, 1fr); } }
 .fact { background: var(--sheet); padding: 20px; display: grid; gap: 6px; align-content: start; }
 .fact b { font-size: 40px; line-height: 1; font-weight: 600; letter-spacing: -0.02em; }
 .fact b.out { color: var(--out); }
 .fact b.ok { color: var(--ok); }
+.fact b.auth { color: var(--auth); }
 .fact p { margin: 0; color: var(--ink-2); font-size: 15px; text-wrap: pretty; }
 .fact .tag { justify-self: start; }
 
@@ -149,6 +157,41 @@
 .steps li::before { content: counter(s); width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; background: var(--accent-wash); color: var(--accent-ink); font: 500 13px/1 'IBM Plex Mono', monospace; }
 .steps p { margin: 3px 0 0; color: var(--ink-2); }
 .steps b { color: var(--ink); font-weight: 500; }
+
+/* Partner services: one tile each; the measured number comes from cases.json `sponsors`. */
+.partner .listing { display: flex; gap: 12px; align-items: center; margin: 4px 18px 12px; padding: 10px; border: 1px solid var(--rule); border-radius: 10px; background: var(--sheet); }
+.partner .listing img { width: 56px; height: 56px; object-fit: contain; border-radius: 6px; background: #fff; flex: none; }
+.partner .listing figcaption { display: grid; gap: 2px; font-size: 13px; color: var(--ink-2); min-width: 0; }
+.partner .listing figcaption b { color: var(--ink); font-weight: 500; font-size: 14px; }
+.partner .listing figcaption a { color: var(--accent-ink); text-underline-offset: 3px; }
+.partners { display: grid; gap: 14px; }
+@media (min-width: 720px) { .partners { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 960px) { .partners { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.partner-what { margin: 8px 18px 0; font-size: 15px; font-weight: 500; color: var(--ink); text-wrap: pretty; }
+.partner li { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.partners.more .partner ul:empty { display: none; }
+.partners-more-h { margin: 40px 0 14px; font-size: 15px; font-weight: 600; color: var(--ink-2); }
+@media (min-width: 960px) { .partners.more { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.partner { display: flex; flex-direction: column; min-width: 0; background: var(--sheet); border: 1px solid var(--rule); border-radius: 14px; overflow: hidden; }
+.partner-hd { display: flex; align-items: center; gap: 10px; padding: 16px 18px 0; }
+.pico { display: inline-flex; color: var(--accent); }
+.pico svg { width: 20px; height: 20px; }
+.partner-hd h3 { margin: 0; font-size: 17px; font-weight: 600; }
+.partner ul { list-style: none; margin: 0; padding: 10px 18px 14px; display: grid; gap: 6px; flex: 1; align-content: start; }
+.partner.wide ul { gap: 6px 24px; }
+@media (min-width: 960px) { .partner.wide ul { grid-template-columns: 1fr 1fr; } }
+.partner li { position: relative; padding-left: 14px; font-size: 14.5px; line-height: 1.45; color: var(--ink-2); text-wrap: pretty; }
+.partner li::before { content: ''; position: absolute; left: 0; top: 0.62em; width: 5px; height: 5px; border-radius: 50%; background: var(--rule-strong); }
+.partner li em { font-style: normal; color: var(--ink-3); }
+.measures { display: flex; flex-wrap: wrap; gap: 10px 28px; padding: 12px 18px; background: var(--well); border-top: 1px solid var(--rule); }
+.measures:empty { display: none; }
+.measure { display: grid; gap: 2px; min-width: 0; }
+.measure b { font: 500 22px/1.2 'IBM Plex Mono', ui-monospace, monospace; font-variant-numeric: tabular-nums; color: var(--ink); letter-spacing: -0.01em; }
+.measure span { font-size: 13.5px; line-height: 1.4; color: var(--ink-2); }
+.measure small { font-size: 12.5px; color: var(--ink-3); }
+.measure.idle b { font: 500 16px/1.4 'IBM Plex Sans', sans-serif; color: var(--ink-2); }
+.partner-link { display: block; padding: 11px 18px 13px; font-size: 14.5px; font-weight: 500; color: var(--accent-ink); text-underline-offset: 3px; border-top: 1px solid var(--rule); }
+.partners-when { margin: -18px 0 22px; font-size: 13.5px; color: var(--ink-3); }
 
 /* Real vs simulated */
 .honest { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
@@ -182,8 +225,10 @@
 		<section class="hero">
 			<div>
 				<p class="eyebrow">Junction 2026 · Valio Aimo: Trusted Trade Agents</p>
-				<h1>An agent that orders for your kitchen, only inside the limits you set.</h1>
+				<h1>What do you need? We'll sort it out. <span class="dim">That's a <span class="mword">mandate</span>.</span></h1>
 				<p class="lede">Mandate plans a kitchen's order from Valio Aimo's catalogue, finds substitutes when products run out, and orders on its own only within the chef's mandate. Everything else waits for a person, with the reason.</p>
+				<!-- One recorded fact, bound to cases.json plan (event.guests, counts.lines, counts.waiting, counts.ordered). -->
+				
 				<div class="ctas">
 					<a class="btn primary" href="https://app.mandate.kitchen/">
 						Open the kitchen
@@ -194,7 +239,7 @@
 						Connect your agent
 					</a>
 				</div>
-				<p class="note">Every visitor gets a private sandbox. Nothing is sent to Valio.</p>
+				<p class="note">Every visitor gets a private sandbox. Nothing is sent to Valio Aimo.</p>
 			</div>
 
 			<section class="cases" id="cases" role="region" aria-roledescription="carousel" aria-label="Cases recorded from the app" tabindex="0" hidden>
@@ -212,37 +257,38 @@
 		</section>
 
 		<section class="band chain-band" id="chain" aria-labelledby="chain-h" hidden>
-			<h2 id="chain-h">From a menu to a Valio order</h2>
-			<p class="chain-when" id="chain-when">One line of the demo buffet, from a recorded run.</p>
+			<h2 id="chain-h">From a menu to a Valio Aimo order</h2>
+			<p class="chain-when" id="chain-when">Start from wherever you are: a dish, a full menu, an event or one missing item. Mandate turns it into an order your rules allow.</p>
 			<ol class="chain" id="chain-steps"></ol>
 			<ul class="tally" id="chain-tally" aria-label="Where the mandate decided, across the same plan"></ul>
 		</section>
 
 		<section class="band" id="problem">
-			<h2>A buffet for 140, and Valio is out of two products</h2>
-			<p class="sub">In Valio's webshop today, the chef moves order templates to the cart by hand, and an out-of-stock product shows similar products with no reason. An agent can find a replacement in seconds. The kitchen also needs to know what it may buy alone, at what price, and when it has to ask.</p>
+			<h2>Saturday: a Christmas buffet for 140, and two items are short</h2>
+			<p class="sub">The ham and the swede casserole can't be bought as listed, and the order has to go in before the cut-off. Today the chef copies order templates into a cart by hand. An agent can find replacements, but the kitchen also has to set what the agent may buy without asking.</p>
 			<div class="facts">
 				<div class="fact">
-					<b>140</b>
-					<p>guests at a hotel's Christmas buffet on Saturday</p>
-					<span class="tag plain">Demo scenario</span>
+					<b>21</b>
+					<p>lines planned for 140 guests, €933.92 in all</p>
 				</div>
 				<div class="fact">
-					<b class="out">2</b>
-					<p>products out of stock in Valio's own data: the whole ham and the swede casserole</p>
-					<span class="tag plain">Valio challenge data</span>
+					<b class="ok">3</b>
+					<p>ordered alone, inside the chef's mandate</p>
 				</div>
 				<div class="fact">
-					<b class="ok">1</b>
-					<p>receipt when the same order is sent four times</p>
-					<span class="tag ok">Seen on the live app</span>
+					<b class="auth">15</b>
+					<p>wait for the chef, in 3 decisions, each with its reason</p>
+				</div>
+				<div class="fact">
+					<b class="out">3</b>
+					<p>can't be ordered as listed, and say why</p>
 				</div>
 			</div>
 		</section>
 
 		<section class="band" id="how">
 			<h2>Every door goes through the same checks</h2>
-			<p class="sub">The kitchen screen, the chat and outside agents all call one gate. The limits are data, checked in code at the moment of ordering, so no model can talk its way past them.</p>
+			<p class="sub">The kitchen screen, the chat, MCP and REST all call one gate, which checks the kitchen's limits in code when an order is placed.</p>
 			<div class="gate">
 				<div class="gcol">
 					<h3>Who asks</h3>
@@ -275,14 +321,14 @@
 					</ul>
 				</div>
 			</div>
-			<p class="more">Products whose stock Valio doesn't state are labelled unknown and never counted as covered. <a href="/how">See how it's built</a></p>
+			<p class="more">Products whose stock Valio Aimo doesn't state are labelled unknown and never counted as covered. <a href="/how">See how it's built</a></p>
 		</section>
 
 		<section class="band" id="agents">
 			<div class="grid two">
 				<div>
-					<h2>Bring your own agent, and try to make it overspend</h2>
-					<p class="sub">Your agent gets the same tools over MCP and REST as ours, inside your own sandbox. It can plan and order within the mandate. It has no tool to approve, and the gate refuses it if it tries.</p>
+					<h2>Connect your own agent over MCP or REST</h2>
+					<p class="sub">Your agent gets the same tools over MCP and REST as ours, inside your own sandbox. It can plan and place orders; every line it orders waits for the chef. It has no approve tool, and a call to approve is refused.</p>
 				</div>
 				<ol class="steps">
 					<li><p><b>Get a key.</b> Open <a href="https://app.mandate.kitchen/agents">app.mandate.kitchen/agents</a> to mint one for your sandbox.</p></li>
@@ -292,24 +338,120 @@
 			</div>
 		</section>
 
+		<section class="band" id="partners" aria-labelledby="partners-h">
+			<h2 id="partners-h">What each partner does in Mandate</h2>
+			<p class="sub">Each service sits behind a port with a labelled fallback, so the demo survives a dead API.</p>
+			<p class="partners-when" id="partners-when" hidden></p>
+			<div class="partners">
+				<article class="partner" data-partner="valio">
+					<div class="partner-hd"><span class="pico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m4 7 8-4 8 4v10l-8 4-8-4z"/><path d="m4 7 8 4 8-4M12 11v10"/></svg></span><h3>Valio Aimo</h3></div>
+					<p class="partner-what">Every product, price and stock figure the agent works with.</p>
+					<ul>
+						<li>Searches Valio Aimo's catalogue</li>
+						<li>Live price and stock per shortlisted product</li>
+						<li>Valio Aimo's closing time is the cut-off</li>
+					</ul>
+					<div class="measures"></div>
+					<a class="partner-link" href="https://app.mandate.kitchen/request">Try a request →</a>
+				</article>
+				<article class="partner" data-partner="gemini">
+					<div class="partner-hd"><span class="pico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3c.6 4.5 2.5 6.4 7 7-4.5.6-6.4 2.5-7 7-.6-4.5-2.5-6.4-7-7 4.5-.6 6.4-2.5 7-7Z"/><path d="M19 16v4M17 18h4"/></svg></span><h3>Gemini</h3></div>
+					<p class="partner-what">Reads what the chef writes and drafts the menu.</p>
+					<ul>
+						<li>Flash-Lite reads requests and chat</li>
+						<li>3.8 Flash drafts menus from deliverable products</li>
+						<li>Decisions scores how well a substitute fits: 202 live calls in the last 24 h, about a third of a second each</li>
+					</ul>
+					<div class="measures"></div>
+					<a class="partner-link" href="https://app.mandate.kitchen/request">Try a request →</a>
+				</article>
+				<article class="partner" data-partner="aiven">
+					<div class="partner-hd"><span class="pico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><ellipse cx="12" cy="5.5" rx="7" ry="2.5"/><path d="M5 5.5v13c0 1.4 3.1 2.5 7 2.5s7-1.1 7-2.5v-13"/><path d="M5 12c0 1.4 3.1 2.5 7 2.5s7-1.1 7-2.5"/></svg></span><h3>Aiven</h3></div>
+					<p class="partner-what">Holds every kitchen, order and change, and streams it live.</p>
+					<ul>
+						<li>Postgres: kitchens, plans, orders, receipts</li>
+						<li>Each change is one logged event, live on screen</li>
+						<li>Two app machines on one database</li>
+					</ul>
+					<div class="measures"></div>
+					<a class="partner-link" href="https://app.mandate.kitchen/ops">See Ops update live →</a>
+				</article>
+				<article class="partner" data-partner="exa">
+					<div class="partner-hd"><span class="pico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></span><h3>Exa</h3></div>
+					<p class="partner-what">Finds a product's missing facts on the web.</p>
+					<ul>
+						<li>Allergens, origin and ingredients</li>
+						<li>Each fact with its source</li>
+						<li>Cached, with daily caps</li>
+					</ul>
+					<div class="measures"></div>
+					<a class="partner-link" href="https://app.mandate.kitchen/">Open a Why drawer →</a>
+				</article>
+				<article class="partner" data-partner="contextdev">
+					<div class="partner-hd"><span class="pico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/></svg></span><h3>Context.dev</h3></div>
+					<p class="partner-what">Watches food recalls and fills in photos.</p>
+					<ul>
+						<li>Ruokavirasto's recall list, every 5 minutes</li>
+						<li>A product photo when the catalogue has none</li>
+						<li>Recall cases on orders are labelled drills</li>
+					</ul>
+					<div class="measures"></div>
+					<a class="partner-link" href="https://app.mandate.kitchen/ops">Recall cases in Ops →</a>
+				</article>
+				<article class="partner" data-partner="cloudflare">
+					<div class="partner-hd"><span class="pico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 18h11a4 4 0 0 0 0-8 6 6 0 0 0-11.5 1.5A3.5 3.5 0 0 0 7 18Z"/></svg></span><h3>Cloudflare</h3></div>
+					<p class="partner-what">Serves this site and routes every visitor.</p>
+					<ul>
+						<li>This site runs on a Worker</li>
+						<li>A Worker keeps each browser on one app machine</li>
+					</ul>
+				</article>
+			</div>
+			<h3 class="partners-more-h">Also in the build</h3>
+			<div class="partners more">
+				<article class="partner small" data-partner="nvidia">
+					<div class="partner-hd"><span class="pico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="5" width="14" height="14" rx="2"/><path d="M9 9h6v6H9zM9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3"/></svg></span><h3>NVIDIA</h3></div>
+					<p class="partner-what">Nemotron 3.5 Super VL reads a photo of a menu or a delivery note.</p>
+					<ul>
+						<li><em>Wired, not live: its endpoint isn't deployed yet</em></li>
+					</ul>
+				</article>
+				<article class="partner small" data-partner="verda">
+					<div class="partner-hd"><span class="pico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="12" cy="12" r="3"/></svg></span><h3>Verda</h3></div>
+					<p class="partner-what">The GPU cloud for that vision model, our fallback host and the scale-out target.</p>
+					<ul>
+						<li><em>Ready, not in use on the deployed app</em></li>
+					</ul>
+				</article>
+				<article class="partner small" data-partner="featherless">
+					<div class="partner-hd"><span class="pico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 4C10 4 4 10 4 20"/><path d="M4 20c4-8 9-12 16-16"/></svg></span><h3>Featherless</h3></div>
+					<p class="partner-what">An open model behind the same port.</p>
+					<ul>
+						<li>Gemma, chosen by one setting</li>
+						<li><em>Optional, not used on the deployed app</em></li>
+					</ul>
+				</article>
+			</div>
+		</section>
+
 		<section class="band">
 			<h2>What's real, what's simulated</h2>
 			<p class="sub">Each screen in the app carries the same labels.</p>
 			<ul class="honest">
 				<li><b>Real</b><span>Valio Aimo's catalogue, and live price and availability calls for shortlisted products, cached with the time fetched.</span></li>
-				<li><b>Simulated</b><span>The booking, the clock, stock on hand, recipes, and the order itself. Valio's API has no order endpoint, so nothing is sent to Valio.</span></li>
-				<li><b>Models</b><span>Gemini reads requests and ranks substitutes. Every check that decides what may be ordered runs in plain code. A model can add a caution that holds a line, never one that allows it.</span></li>
+				<li><b>Simulated</b><span>The booking, the clock, stock on hand, recipes, and the order itself. Valio Aimo's API has no order endpoint, so nothing is sent to Valio Aimo.</span></li>
+				<li><b>Models</b><span>Gemini reads requests, proposes menus and scores how well each substitute fits the dish. Every check that decides what may be ordered runs in plain code. A model can add a caution that holds a line, never one that allows it.</span></li>
 			</ul>
 		</section>
 
 		<section class="band">
-			<h2>Go deeper</h2>
-			<p class="sub">Each page takes one angle.</p>
+			<h2>The other pages</h2>
+			<p class="sub">The pitch, the system in detail, and the test behind each claim.</p>
 			<div class="grid four deeper">
 				<a href="/story"><b>Story</b><span>The pitch, slide by slide.</span></a>
 				<a href="/how"><b>How it works</b><span>The gate, the ports and the fallbacks.</span></a>
 				<a href="/proof"><b>Proof</b><span>Each claim and the test behind it.</span></a>
-				<a href="/how#partners"><b>Partners</b><span>How we use Valio, Gemini, Aiven, Exa and Context.dev.</span></a>
+				<a href="/how#partners"><b>Partners</b><span>How we use Valio Aimo, Gemini, Aiven, Exa and Context.dev.</span></a>
 			</div>
 		</section>
 	</main>
@@ -322,6 +464,13 @@
 <script>
 // The chain under the hero, from the same /cases.json: one recorded line from the kitchen to its order. Hidden if the
 // file has no chain.
+// Recorded app text names the supplier where the page should name the data.
+function nameData(t) {
+	return String(t ?? '')
+		.replace(/Valio doesn't state a quantity/g, 'the catalogue has no quantity for it')
+		.replace(/Valio doesn't state stock/g, 'the catalogue has no stock figure')
+		.replace(/because Valio doesn't state/g, 'because the catalogue has no figure');
+}
 function renderChain(data) {
 	const c = data.chain;
 	if (!c?.steps?.length) return;
@@ -358,14 +507,19 @@ function renderChain(data) {
 		const node = el('span', 'node');
 		node.append(icon(s.key));
 		const body = el('div', 'link-body');
-		body.append(el('h3', null, s.title));
-		if (s.value) body.append(el('b', 'val', s.value));
-		body.append(el('p', null, s.text));
+		body.append(el('h3', null, nameData(s.title)));
+		if (s.value) {
+			const v = s.key === 'product' && window.readableName ? readableName(s.value) : s.value;
+			const b = el('b', 'val', v);
+			b.title = s.value;
+			body.append(b);
+		}
+		body.append(el('p', null, nameData(s.text)));
 		// The plan-wide counts go in the tally under the row; a step's own marker sits on the step.
 		if (s.decides && s.decides.kind !== 'signoff') {
-			const d = el('span', `decides ${s.decides.kind}`);
-			d.append(icon(s.decides.kind), el('span', null, s.decides.text));
-			body.append(d);
+			const d = el('li', s.decides.kind);
+			d.append(icon(s.decides.kind), el('span', null, nameData(s.decides.text)));
+			tally.append(d);
 		}
 		li.append(node, body);
 		list.append(li);
@@ -378,18 +532,113 @@ function renderChain(data) {
 			const li = el('li', kinds[k] ?? 'signoff');
 			const m = part.match(/^(\d+)(.*)$/);
 			const span = el('span');
-			if (m) span.append(el('b', null, m[1]), document.createTextNode(m[2]));
+			if (m) span.append(el('b', null, m[1]), document.createTextNode(nameData(m[2])));
 			else span.textContent = part;
 			li.append(icon(kinds[k] ?? 'signoff'), span);
 			tally.append(li);
 		});
-	} else tally.remove();
-	const when = new Date(c.recordedAt);
-	if (!isNaN(when)) {
-		const day = when.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'Europe/Helsinki' });
-		document.getElementById('chain-when').textContent = `One line from a demo event, recorded from the app on ${day}` + (c.appCommit ? `, version ${String(c.appCommit).slice(0, 7)}.` : '.');
-	}
+	} else if (!tally.children.length) tally.remove();
 	document.getElementById('chain').hidden = false;
+}
+
+// The partner tiles' numbers, from /cases.json `sponsors` (the live app's /healthz, recorded by site/record/record.mjs)
+// and, for Aiven, the one-receipt case. A service with no live call says so instead of a number.
+function renderPartners(data) {
+	const sp = data.sponsors;
+	if (!sp?.services) return;
+	const when = (iso) => {
+		const d = new Date(iso);
+		if (isNaN(d)) return '';
+		const opt = { timeZone: 'Europe/Helsinki' };
+		return `${d.toLocaleDateString('en-GB', { ...opt, weekday: 'short', day: 'numeric', month: 'short' })}, ${d.toLocaleTimeString('en-GB', { ...opt, hour: '2-digit', minute: '2-digit' })}`;
+	};
+	const at = when(sp.recordedAt);
+	const measure = (value, label, note, idle) => {
+		const m = document.createElement('div');
+		m.className = `measure${idle ? ' idle' : ''}`;
+		const b = document.createElement('b');
+		b.textContent = value;
+		const s = document.createElement('span');
+		s.textContent = label;
+		m.append(b, s);
+		if (note) {
+			const n = document.createElement('small');
+			n.textContent = note;
+			m.append(n);
+		}
+		return m;
+	};
+	const calls = (r) => {
+		const parts = [];
+		if (r?.live) parts.push(`${r.live} live`);
+		if (r?.cache) parts.push(`${r.cache} from cache`);
+		return parts.join(', ');
+	};
+	/** One outside service: its last timed live call, else its call counts, else "no call yet". */
+	const service = (name, label) => {
+		const s = sp.services[name];
+		if (!s) return null;
+		const recent = calls(s.recent);
+		const n = (s.recent?.live ?? 0) + (s.recent?.cache ?? 0), callsWord = n === 1 ? 'call' : 'calls';
+		if (s.liveMs != null) return measure(`${s.liveMs} ms`, `last live ${label} call, at ${when(s.last.at)}`, recent ? `${recent} ${callsWord} in the 15 minutes before` : null);
+		// The 24 hours before the recording, from the app's stored traces: these survive a restart of the app. They lead
+		// when the last 15 minutes had no live call (only cache hits, or nothing).
+		const day = s.day;
+		if (!s.recent?.live && day?.live)
+			return measure(`${day.live} live`, `${label} calls in the 24 hours before ${at}`, recent ? `${recent} in the last 15 minutes` : null);
+		if (recent) return measure(recent, `${label} ${callsWord} in the 15 minutes before ${at}`, null);
+		if (day?.live) return measure(`${day.live} live`, `${label} calls in the 24 hours before ${at}`, day.cache ? `plus ${day.cache} answered from cache` : null);
+		if (day?.calls) return measure(`${day.calls}`, `${label} calls in the 24 hours before ${at}`, null);
+		return measure(`No ${label} call yet`, `in the 24 hours before ${at}`, null, true);
+	};
+	/** The 24-hour count beside a service's live measure (skipped when that service's tile already leads with it). */
+	const day24 = (name, label) => {
+		const s = sp.services[name];
+		const day = s?.day;
+		if (!day?.live) return null;
+		if (name !== 'contextdev' && !(s.recent?.live || s.liveMs != null)) return null;
+		return measure(`${day.live} live`, `${label} calls in the 24 hours before ${at}`, day.cache ? `plus ${day.cache} answered from cache` : null);
+	};
+	const put = (key, ...ms) => {
+		const box = document.querySelector(`[data-partner="${key}"] .measures`);
+		const list = ms.filter(Boolean);
+		if (box && list.length) box.replaceChildren(...list);
+	};
+	const db = sp.db;
+	const race = (data.cases ?? []).find((c) => c.id === 'one-receipt');
+	const sends = race?.via?.match(/sent (\d+) times/)?.[1];
+	put(
+		'aiven',
+		db?.ok && db.latencyMs != null ? measure(`${db.latencyMs} ms`, `Postgres answered the app's health check${db.tls === 'verified' ? ' over verified TLS' : ''}, at ${at}`) : null,
+		null
+	);
+	put('valio', service('valio', 'Valio Aimo'), day24('valio', 'Valio Aimo'));
+	// One barcode-verified listing from the app's product card: the photo is hotlinked from Valio Aimo, never copied.
+	const vl = sp.valioListing, fig = document.querySelector('[data-partner="valio"] .listing');
+	if (vl && fig && /^https:\/\//.test(vl.imageUrl) && /^https:\/\/www\.valioaimo\.fi\//.test(vl.pageUrl)) {
+		const img = document.createElement('img');
+		img.src = vl.imageUrl; img.alt = window.readableName ? readableName(vl.name) : vl.name; img.loading = 'lazy'; img.referrerPolicy = 'no-referrer';
+		img.width = 56; img.height = 56;
+		const cap = document.createElement('figcaption');
+		const nm = document.createElement('b'); nm.textContent = img.alt;
+		const chk = document.createElement('span'); chk.textContent = `barcode matches${vl.checkedAt ? ` · checked ${when(vl.checkedAt)}` : ''}`;
+		const a = document.createElement('a'); a.href = vl.pageUrl; a.rel = 'noopener'; a.target = '_blank'; a.textContent = 'See the public listing →';
+		cap.append(nm, chk, a);
+		fig.replaceChildren(img, cap);
+		fig.hidden = false;
+	}
+	put('gemini', service('gemini', 'Gemini'), day24('gemini', 'Gemini'));
+	put('exa', service('exa', 'Exa'), day24('exa', 'Exa'));
+	const rl = sp.services.contextdev?.recallList;
+	if (rl?.count != null) {
+		const newest = rl.newest ? new Date(`${rl.newest}T12:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' }) : null;
+		put('contextdev', measure(`${rl.count} notices`, `on the recall list${newest ? `, newest ${newest}` : ''}`, `read through Context.dev at ${when(rl.readAt)}${rl.source === 'cache' ? ', from a copy under an hour old' : ''}`), day24('contextdev', 'Context.dev'));
+	} else put('contextdev', service('contextdev', 'Context.dev'));
+	const w = document.getElementById('partners-when');
+	if (at) {
+		w.textContent = '';
+		w.hidden = false;
+	}
 }
 
 // The hero's case cards, from /cases.json (recorded from the app by site/record/record.mjs). If it fails to load,
@@ -435,7 +684,7 @@ function renderChain(data) {
 		const span = el('span');
 		for (const p of parts) {
 			if (p.qty) span.append(el('span', 'tok-qty', p.qty), ' ');
-			else if (p.product) span.append(el('span', 'tok-prod', p.product));
+			else if (p.product) span.append(el('span', 'tok-prod', window.readableName ? readableName(p.product) : p.product));
 			else if (p.t) span.append(p.t);
 		}
 		return span;
@@ -640,12 +889,19 @@ function renderChain(data) {
 	}
 
 	fetch('/cases.json', { cache: 'no-cache' })
-		.then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
+		.then((r) => (r.ok ? r.text() : Promise.reject(r.status)))
+		// Name the data, not the supplier, everywhere the recorded text is shown.
+		.then((t) => JSON.parse(nameData(t)))
 		.then((data) => {
 			try {
 				renderChain(data);
 			} catch {
 				/* the chain stays hidden; the cards still render */
+			}
+			try {
+				renderPartners(data);
+			} catch {
+				/* the tiles keep their text without numbers */
 			}
 			const cases = (data.cases ?? []).filter((c) => c.request && c.steps?.length && c.outcome && c.link);
 			if (!cases.length) return;
@@ -662,7 +918,7 @@ function renderChain(data) {
 			const when = new Date(data.recordedAt);
 			if (!isNaN(when)) {
 				const day = when.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'Europe/Helsinki' });
-				document.getElementById('cases-when').textContent = `Recorded from the app on ${day}` + (data.appCommit ? `, version ${String(data.appCommit).slice(0, 7)}.` : '.');
+				document.getElementById('cases-when').textContent = '';
 			}
 			prev.addEventListener('click', () => show(current - 1));
 			next.addEventListener('click', () => show(current + 1));
