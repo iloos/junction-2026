@@ -8,9 +8,9 @@ import { humanDates } from './format';
 export type SourceFamily = 'valio' | 'scenario' | 'estimate' | 'chef' | 'rule';
 
 export const SOURCE_LABEL: Record<Source | 'mandate', { label: string; family: SourceFamily }> = {
-	valio_live: { label: 'Valio live', family: 'valio' },
-	valio_cache: { label: 'Valio cached', family: 'valio' },
-	valio_static: { label: 'Valio catalogue', family: 'valio' },
+	valio_live: { label: 'Valio Aimo live', family: 'valio' },
+	valio_cache: { label: 'Valio Aimo cached', family: 'valio' },
+	valio_static: { label: 'Valio Aimo catalogue', family: 'valio' },
 	simulator: { label: 'Simulated', family: 'scenario' },
 	seed: { label: 'Scenario', family: 'scenario' },
 	parsed: { label: 'Parsed', family: 'estimate' },
