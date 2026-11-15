@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { STEERS, pickWords, swapRows, type Candidate } from './swap';
+import { STEERS, pickWords, swapRows, withAlternatives, type Candidate } from './swap';
 
 const c = (id: string, rank: number | null, extra: Partial<Candidate> = {}): Candidate => ({
 	productId: id,
@@ -38,11 +38,36 @@ describe('swap panel rows', () => {
 		expect(rows).toHaveLength(5);
 	});
 
-	it('has the D28 steers; three run today through rankBy', () => {
+	it('has the D28 steers: three rank, five steer', () => {
 		expect(STEERS.filter((s) => s.rankBy).map((s) => s.label)).toEqual([
 			'Cheaper',
 			'Finnish',
 			'In stock'
 		]);
+		expect(STEERS.filter((s) => s.steer)).toHaveLength(5);
+	});
+
+	it('puts each alternative total for the need and its unit price on the row', () => {
+		const rows = withAlternatives(
+			swapRows([c('1', 1)], 'cur'),
+			[
+				{
+					productId: '1',
+					reason: 'Finnish, in stock',
+					supply: 'known_stock',
+					pricePer: { cents: 301, per: 'kg' },
+					qty: { value: 4, unit: 'cases' },
+					totalCents: 5210
+				},
+				{ productId: '2', productName: 'P2', reason: 'Organic', supply: 'unknown_stock' }
+			],
+			'cur'
+		);
+		expect(rows[0]).toMatchObject({
+			reason: 'Finnish, in stock',
+			total: { cents: 5210, qty: { value: 4, unit: 'cases' } },
+			per: { cents: 301, per: 'kg' }
+		});
+		expect(rows[1]).toMatchObject({ productId: '2', reason: 'Organic', pick: false });
 	});
 });
