@@ -693,7 +693,8 @@
 	 */
 	const planTitle = $derived.by(() => {
 		if (!plan || !view) return '';
-		if (plan.eventId) return view.title;
+		// The guests are on the line under it: the title is the event's name only.
+		if (plan.eventId) return view.title.split(',')[0];
 		// A menu plan is named short ("Menu for 120 · Fri 11 Dec"); its dishes are the table's rows.
 		if (menuName)
 			return `Menu${view.guests ? ` for ${num(view.guests)}` : ''} · ${day(plan.deliverBy)}`;
@@ -712,14 +713,13 @@
 			(t, l) => t + (l.qty.value > 0 && !rejectedIds.has(l.id) ? (l.lineCents ?? 0) : 0),
 			0
 		);
-		const waiting = all.count + all.signOff;
 		return [
-			plan.eventId ? `${day(view.date)} · ${num(view.guests)} guests · ${view.serviceStyle}` : null,
-			`${items} ${items === 1 ? 'item' : 'items'}`,
-			money(cents),
-			waiting ? `decide before ${storyTime(decisionsDue(plan, approval))}` : null,
-			rejectedLines.length ? `${rejectedLines.length} rejected` : null,
-			`delivery ${day(plan.deliverBy)}`
+			plan.eventId ? `${num(view.guests)} guests · ${view.serviceStyle}` : null,
+			plan.eventId
+				? `${view.dishes.length} ${view.dishes.length === 1 ? 'dish' : 'dishes'}`
+				: `${items} ${items === 1 ? 'item' : 'items'}`,
+			weekMeter ? null : money(cents),
+			rejectedLines.length ? `${rejectedLines.length} rejected` : null
 		]
 			.filter(Boolean)
 			.join(' · ');
@@ -1719,7 +1719,28 @@
 									return ok;
 								}
 							: undefined}
-					></TaskHeader>
+					>
+						{#snippet coverMore()}
+							{#if isEvent}
+								{#if view.thisWeek.cents - view.normalWeek.cents > 0}
+									The event adds
+									<span class="mono text-ink"
+										>{moneyDelta(view.thisWeek.cents - view.normalWeek.cents)}</span
+									>
+									and <span class="mono text-ink">{fixed(view.eventKg)}</span> kg of food to a normal
+									week
+								{:else}
+									<!-- A regular service, not an extra: it is part of the normal week, so it adds nothing to it. -->
+									An ordinary {weekday(view.date)}: inside the normal week
+								{/if}
+								<span class="text-ink-3"
+									>(team estimate: <span class="mono"
+										>{money(view.normalWeek.cents, { whole: true })}</span
+									>, {view.normalWeek.lines} lines)</span
+								>.
+							{/if}
+						{/snippet}
+					</TaskHeader>
 					<div class="mt-2">
 						<TimelineLine
 							orderBy={decisionsDue(plan, approval) || null}
@@ -1731,23 +1752,6 @@
 								: null}
 						/>
 					</div>
-					{#if isEvent}<p class="mt-2 text-meta text-ink-2">
-							{#if view.thisWeek.cents - view.normalWeek.cents > 0}
-								The event adds
-								<span class="mono text-ink"
-									>{moneyDelta(view.thisWeek.cents - view.normalWeek.cents)}</span
-								>
-								and <span class="mono text-ink">{fixed(view.eventKg)}</span> kg of food to a normal week
-							{:else}
-								<!-- A regular service, not an extra: it is part of the normal week, so it adds nothing to it. -->
-								An ordinary {weekday(view.date)}: inside the normal week
-							{/if}
-							<span class="text-ink-3"
-								>(team estimate: <span class="mono"
-									>{money(view.normalWeek.cents, { whole: true })}</span
-								>, {view.normalWeek.lines} lines)</span
-							>.
-						</p>{/if}
 					{#if weekMeter}
 						<div class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-meta text-ink-3">
 							<span class="shrink-0">Week budget</span>
