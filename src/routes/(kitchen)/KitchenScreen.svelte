@@ -74,6 +74,7 @@
 	import { buildLedger, type ShortageNotice } from '$lib/ui/ledger';
 	import Ledger from '$lib/ui/Ledger.svelte';
 	import { prefetchThumbs } from '$lib/ui/thumbs';
+	import { pickedWords } from '$lib/ui/picked';
 	import { menuTitle, splitNeed, startsDish } from '$lib/kitchen/menu-plan';
 	import {
 		readOwn,
@@ -1390,8 +1391,10 @@
 			replaces={l.substituteFor && !inGroup
 				? {
 						name: names.get(l.substituteFor) ?? l.substituteFor,
-						because:
-							d?.outage === 'undeliverable' ? "Valio can't deliver it" : 'out of stock at Valio'
+						because: d?.outage === 'undeliverable' ? "Valio can't deliver it" : 'out at Valio',
+						picked: pickedWords(
+							d?.rescue?.candidates.find((c) => c.productId === l.productId) ?? {}
+						)
 					}
 				: undefined}
 			onwhy={() => k.openWhy(l.id)}
