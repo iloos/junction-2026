@@ -1,4 +1,5 @@
 import type { Availability } from '$lib/core/contracts';
+import { amountChips } from '$lib/server/chat/half';
 import type { ClarifyField } from '$lib/core/contracts/task';
 import { onScenario } from '$lib/core/scenario';
 import { addDays, findDate, realDate } from '$lib/server/request/dates';
@@ -199,7 +200,15 @@ function routineOrder(
 	const qty = slots.qty !== undefined ? Number(slots.qty) : item.qty;
 	const unit = (slots.unit as ReqUnit | undefined) ?? item.unit;
 	if (qty === null || !Number.isFinite(qty))
-		return ask('qty', `How much ${what}? Say for example "4 kg ${what}".`);
+		// Never a dead end: three likely amounts as one tap, the product kept.
+		return ask(
+			'qty',
+			`How much ${what}?`,
+			amountChips(
+				what,
+				/milk|cream|maito|kerma|juice|mehu|oil|öljy|drink|juoma/i.test(what) ? 'l' : 'kg'
+			)
+		);
 	const noUnit = item.ambiguities.some((a) => a.startsWith('no unit given'));
 	if (slots.unit === undefined && (noUnit || !unit))
 		return ask(
