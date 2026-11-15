@@ -79,6 +79,18 @@ export const POST: RequestHandler = async (event) => {
 	if (!kitchen) return bad('no kitchen in this workspace');
 	// Gemini reads, plans and words the chat whenever a provider is configured; the fixture keeps rules and script.
 	const live = (env.LLM_PROVIDER ?? 'fixture') !== 'fixture';
+	// The new agent per visitor without the env flag: a page opened with ?agent=llm sets a cookie (?agent=off clears it).
+	const asked = new URL(event.request.headers.get('referer') ?? 'http://x/').searchParams.get(
+		'agent'
+	);
+	if (asked === 'llm' || asked === 'off')
+		event.cookies.set('chat_agent', asked, {
+			path: '/',
+			httpOnly: true,
+			sameSite: 'lax',
+			maxAge: 60 * 60 * 24
+		});
+	const agentOn = harnessOn(env) || (asked ?? event.cookies.get('chat_agent')) === 'llm';
 	// Built inside the call scope with no trace of its own: model calls trace into the visitor's drawer and count
 	// against the visitor's caps.
 	const modelsFor = () => {
@@ -130,7 +142,7 @@ export const POST: RequestHandler = async (event) => {
 					};
 					// CHAT_HARNESS=llm: the model leads the turn over the MCP tools; the script answers without a model.
 					const turn =
-						harnessOn(env) && models?.agent
+						agentOn && models?.agent
 							? runHarnessTurn(input, { ...deps, agent: models.agent })
 							: runChatTurn(input, deps);
 					for await (const e of turn) push(e);
