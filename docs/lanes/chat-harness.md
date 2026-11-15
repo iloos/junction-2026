@@ -19,6 +19,19 @@ Rules read each turn first (`agent/intent.ts` resolveIntent, `request/parse.ts` 
 - Ambiguity is the model's to resolve with one question and proposals, never a refusal.
 - **Mixed diets and splits** are the model's to structure: "120 guests, half vegetarian", "50/50 meat and fish", "20 vegan, 40 vegetarian, 60 the rest", "one gluten-free option", "a vegetarian main". The model turns them into dishes with their own guest counts and diets (a meat main for 60 and a vegetarian main for 60; every dish for the 20 vegans vegan or a vegan alternative), and asks only when the split is unclear. Code checks the arithmetic (the parts add up to the guests) and applies each dish's diet to that dish only. The menu tools must carry a per-dish guest count and per-dish diet (S1: check `propose_menu` / `plan_event` / `revise_menu` and add the fields if they are missing).
 
+## 1b. Two layers: the ask, then the lines
+
+The conversation first gathers **the ask**, a structure of what the chef intends, then turns it into **line items**. They are related but not the same: one dish needs many products, one product can serve several dishes, a quality wish ("Finnish", "organic", "the good butter") may not exist as a product.
+
+- **The ask** (kept by `update_draft`, shown in the dock): the occasion and date, guests and splits; the menu, its dishes and courses, each with guests and diet; recipes and ingredients with amounts or portions; direct products with quantity and unit; qualities (origin, brand, organic, price level); restrictions (allergens, diets, never-delegate items); what is fixed and what is open. Gathering it is requirements work with chip questions: one question per turn about the most important open part, proposals for the rest.
+- **Conversion** to lines: resolve each ingredient or product to catalogue items, size to packs, check stock, price, cut-off and the mandate (`search_products`, `quote`, `plan_event`, `place_order`, `find_substitutes`). It can run early, as a feasibility check while gathering ("salmon is short Friday; Saturday works, or trout?"), so questions are grounded in what can actually be bought.
+- **The web, inside the harness:** for an unfamiliar dish, recipe or ingredient, or missing facts, the agent may call the existing web tools (`lookup_facts`, `find_outside`; Exa and Context.dev behind them, within the per-visitor caps) to learn what a dish needs or what a product contains, and says where a fact came from. Web facts inform; they never relax a restriction.
+- Everything is possible in natural language: plan, change an amount, swap, remove, ask why, approve (the chef), with the page always in step (§5).
+
+## 1c. Voice input
+
+A mic button in the chat input streams speech to text (Soniox, EU endpoint, live partial transcript in the input box, like Claude's), and the chef reviews and presses Send: nothing is sent on voice alone. The browser gets a short-lived Soniox key from a server route (`/api/stt/token`), never the account key; the account key is `SONIOX_API_KEY` in the server env (the user adds it in the Aiven console). Finnish and English. No audio is stored.
+
 ## 2. Context management
 
 Each turn the model sees, in this order:
