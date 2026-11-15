@@ -2,7 +2,7 @@ import { readableName } from '$lib/ui/format';
 import { commandKey } from '$lib/core/command';
 import type { LineState, Plan, ToolName, ToolOutput } from '$lib/core/contracts';
 import { ClarifyField, newTaskId, type Task, type TaskState } from '$lib/core/contracts/task';
-import type { CallContext, Llm, Ports, TaskStore, ToolHandlers } from '$lib/core/ports';
+import type { CallContext, Llm, MenuStore, Ports, TaskStore, ToolHandlers } from '$lib/core/ports';
 import { runGoal } from '$lib/server/agent';
 import { classifyGoal } from '$lib/server/agent/classify';
 import type { ContextSource } from '$lib/server/agent/context';
@@ -1418,6 +1418,38 @@ export async function taskView(taskId: string, deps: ChatDeps): Promise<ChatEven
 		out.push({ type: 'done', taskId, state: t.state, text: q.question, canContinue: false });
 		return out;
 	}
+	// A menu proposed, not planned yet: its card again, so the thread continues on the review page (D23 addendum).
+	const menus = (deps.ports as { menus?: MenuStore }).menus;
+	if (!t.plans.length && t.proposal && menus) {
+		const m = await menus.get(deps.workspaceId, t.proposal.id, t.proposal.revision);
+		if (m) {
+			const unresolved = m.dishes
+				.flatMap((x) => x.ingredients)
+				.filter((i) => i.unresolved !== undefined).length;
+			out.push({
+				type: 'menu',
+				taskId,
+				proposalId: m.id,
+				revision: m.revision,
+				title: m.brief.title,
+				guests: m.brief.guests,
+				date: m.brief.date,
+				dishes: m.dishes.map((x) => ({ name: x.name, ...(x.course ? { course: x.course } : {}) })),
+				...(m.brief.budgetCents ? { budgetCents: m.brief.budgetCents } : {}),
+				unresolved,
+				reviewed: m.status !== 'proposed',
+				reviewUrl: `/request?menu=${encodeURIComponent(m.id)}&rev=${m.revision}&task=${encodeURIComponent(taskId)}`
+			});
+			out.push({
+				type: 'done',
+				taskId,
+				state: t.state,
+				text: `A menu for ${m.brief.guests} guests on ${dayWords(m.brief.date)}: ${m.dishes.length} dishes. Review it, then say "plan it".`,
+				canContinue: false
+			});
+			return out;
+		}
+	}
 	// Nothing planned and nothing asked: there is nothing to show (the next turn says what it does).
 	if (!t.plans.length) return [];
 	const read = await readTask(
@@ -1955,7 +1987,7 @@ async function eventTurn(
 		...(brief.budgetCents ? { budgetCents: brief.budgetCents } : {}),
 		unresolved,
 		reviewed: proposal.status !== 'proposed',
-		reviewUrl: `/request?menu=${encodeURIComponent(proposal.id)}&rev=${proposal.revision}`
+		reviewUrl: `/request?menu=${encodeURIComponent(proposal.id)}&rev=${proposal.revision}&task=${encodeURIComponent(task.id)}`
 	};
 	return {
 		steps,
