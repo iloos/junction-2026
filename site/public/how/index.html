@@ -69,7 +69,7 @@ h3 { margin: 0; font: 600 18px/1.25 var(--display); }
 .mchip.ordered { color: var(--ok); border-color: var(--ok); }
 
 /* Cards */
-.cards { display: grid; gap: 12px; }
+.cards { display: grid; gap: 12px; align-items: start; }
 @media (min-width: 820px) { .cards.c3 { grid-template-columns: repeat(3, minmax(0, 1fr)); } .cards.c2 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .card { background: var(--sheet); border: 1px solid var(--rule); border-radius: 14px; padding: 18px 20px; min-width: 0; display: grid; gap: 8px; align-content: start; }
 .card .hd { display: flex; align-items: center; gap: 10px; }
@@ -84,16 +84,17 @@ h3 { margin: 0; font: 600 18px/1.25 var(--display); }
 .rec small { display: block; font-size: 12px; color: var(--ink-3); margin-top: 2px; }
 
 /* Seven kitchens */
-.kitchens { margin-top: 28px; display: grid; gap: 12px; }
-@media (min-width: 820px) { .kitchens { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 32px; align-items: start; } }
+.kitchens { margin-top: 56px; display: grid; gap: 12px; }
+
 .kitchens h3 { margin-bottom: 6px; }
 .kitchens p { margin: 0; font-size: 15px; color: var(--ink-2); max-width: 34em; }
 .kinds { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
 .kinds li { padding: 6px 10px; border-radius: 8px; background: var(--well); border: 1px solid var(--rule); font-size: 14px; }
-.presets { margin-top: 10px; }
+.presets { margin-top: 12px; }
+#rules > .rec { margin-top: 12px; max-width: 46em; }
 
 /* Goes through / held / refused */
-.gov { display: grid; gap: 12px; margin-top: 32px; align-items: start; }
+.gov { display: grid; gap: 12px; margin-top: 64px; align-items: start; }
 @media (min-width: 900px) { .gov { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 .oc { background: var(--sheet); border: 1px solid var(--rule); border-radius: 14px; padding: 18px 20px 8px; min-width: 0; }
 .oc.go { --c: var(--ok); --w: var(--ok-wash); }
@@ -496,9 +497,9 @@ h3 { margin: 0; font: 600 18px/1.25 var(--display); }
 					<div class="hd"><svg class="ic" aria-hidden="true"><use href="#i-no"/></svg><h3>Requirements</h3></div>
 					<p><b>A product that breaks one is out, with the reason shown.</b></p>
 					<ul>
-						<li>Origin rules per category: prefer or require</li>
-						<li>Allergens the kitchen must be free from, and what to do when Valio has no record</li>
-						<li>Tender list only, and labels such as vegetarian on a need</li>
+						<li>Origin per category: prefer or require</li>
+						<li>Allergens the kitchen must be free from</li>
+						<li>Tender list only; labels such as vegetarian</li>
 					</ul>
 					
 				</div>
@@ -507,13 +508,13 @@ h3 { margin: 0; font: 600 18px/1.25 var(--display); }
 					<p><b>The chef's words and the numbers that enforce them.</b></p>
 					<ul>
 						<li>Caps per line, per order and per week</li>
-						<li>A hard limit: by default the larger of five times the order cap and twice the weekly cap</li>
-						<li>Five decisions it never delegates: an allergen change, a new product, a broken preference, a product off the tender list, an origin requirement</li>
+						<li>A hard limit above the caps</li>
+						<li>Never delegated: an allergen change, a new product, and three more</li>
 					</ul>
-					<p class="rec" data-kitchen-rec hidden></p>
 					
 				</div>
 			</div>
+			<p class="rec" data-kitchen-rec hidden></p>
 
 			<div class="kitchens">
 				<div>
@@ -525,7 +526,7 @@ h3 { margin: 0; font: 600 18px/1.25 var(--display); }
 					<ul class="kinds" aria-label="The seven kitchens">
 						<li>Hotel</li><li>Lunch restaurant</li><li>Public central kitchen</li><li>À la carte</li><li>Care home</li><li>Café</li><li>Ski resort</li>
 					</ul>
-					<p class="presets"><b>Rank presets.</b> In the Kitchen, presets show how the same shortage ranks under different preferences: kitchen default, price first, Finnish required, lowest carbon, most reliable. They preview a ranking and change nothing.</p>
+					<p class="presets">Presets preview how one shortage ranks under price first, Finnish required, lowest carbon or most reliable; they change nothing.</p>
 				</div>
 			</div>
 
@@ -537,11 +538,11 @@ h3 { margin: 0; font: 600 18px/1.25 var(--display); }
 						<li>Within the mandate's per-line, per-order and weekly caps</li>
 						<li>A product this kitchen already buys</li>
 						<li>No allergen change</li>
-						<li>Valio states enough stock</li>
+						<li>Valio Aimo states enough stock</li>
 						<li>A day the kitchen receives goods</li>
 						<li>The exact terms (price, quantity, date) unchanged since the quote</li>
 						<li>Before the ordering cut-off</li>
-						<li>Whole packs of Valio's lot step</li>
+						<li>Whole packs of Valio Aimo's lot step</li>
 					</ul>
 					<p class="tail">and nothing in the next column applies.</p>
 				</section>
@@ -552,7 +553,7 @@ h3 { margin: 0; font: 600 18px/1.25 var(--display); }
 						<li>A cost over a cap, even when the order is split</li>
 						<li>A product the kitchen hasn't bought before</li>
 						<li>An allergen change, decided apart from routine lines</li>
-						<li>No stock figure from Valio: held for one tap, not counted as cover until the supplier confirms</li>
+						<li>No stock figure from Valio Aimo: held for one tap, not counted as cover until the supplier confirms</li>
 						<li>A delivery on a day the kitchen doesn't receive goods</li>
 						<li>A substitute that breaks the kitchen's origin preference</li>
 						<li>A product under a recall notice</li>
@@ -566,7 +567,7 @@ h3 { margin: 0; font: 600 18px/1.25 var(--display); }
 					<ul>
 						<li>Over the hard limit, even split across lines</li>
 						<li>After the ordering cut-off</li>
-						<li>A part pack, off Valio's lot step</li>
+						<li>A part pack, off Valio Aimo's lot step</li>
 						<li>On a request, a product that breaks a stated requirement, such as lactose-free, even as a substitute</li>
 					</ul>
 				</section>
