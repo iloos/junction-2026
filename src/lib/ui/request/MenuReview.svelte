@@ -155,7 +155,7 @@
 		{p.provenance.source === 'llm'
 			? `Dishes and amounts proposed by ${view.model}.`
 			: 'Dishes and amounts from the team’s templates.'}
-		Every amount is an estimate until you change it; products come from the Valio catalogue.
+		Every amount is an estimate until you change it; products come from the Valio Aimo catalogue.
 		{#if view.fallback}<span class="text-signoff">The model was not used: {view.fallback}.</span
 			>{/if}
 	</p>
@@ -315,7 +315,7 @@
 									>
 								{:else}
 									<span class="block text-meta text-signoff"
-										>No exact match in Valio's catalogue{#if shell?.system}<span
+										>No exact match in the Valio Aimo catalogue{#if shell?.system}<span
 												class="block text-ink-3">{i.unresolved ?? i.query}</span
 											>{/if}</span
 									>

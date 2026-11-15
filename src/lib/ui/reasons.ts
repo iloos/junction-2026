@@ -7,11 +7,11 @@ const TEXT: Record<string, { short: string; long: string }> = {
 	},
 	unknown: {
 		short: 'Quantity not stated',
-		long: "Valio doesn't state a quantity: ordered, it is not counted as cover until the supplier confirms."
+		long: 'No quantity in the catalogue: ordered, it is not counted as cover until the supplier confirms.'
 	},
 	UNKNOWN_REQUIRED: {
 		short: 'Quantity not stated',
-		long: "Valio doesn't state a quantity: your mandate asks before buying it. Ordered, it is not counted as cover until the supplier confirms."
+		long: 'No quantity in the catalogue: your mandate asks before buying it. Ordered, it is not counted as cover until the supplier confirms.'
 	},
 	INSUFFICIENT_STOCK: {
 		short: 'Not enough stock',

@@ -300,7 +300,7 @@
 			const mine = d?.kitchens?.find((x) => x.kitchenId === (snap?.kitchen.id ?? k.startKitchen));
 			if (!mine || mine.outcome === 'unaffected') return;
 			shortages = [d, ...shortages.filter((x) => x.shortageId !== d.shortageId)];
-			const what = `Valio ran short of ${readableName(d.productName)} (${d.had} → ${d.left} ${unitWord(d.unit, d.left)})`;
+			const what = `Valio Aimo ran short of ${readableName(d.productName)} (${d.had} → ${d.left} ${unitWord(d.unit, d.left)})`;
 			void k.refreshFrom('outside', `${what}. ${mine.why || mine.allowedBy}`);
 		});
 	});
@@ -574,7 +574,7 @@
 								? 'is approved, not ordered yet'
 								: 'are approved, not ordered yet'
 							: 'wait for a decision'
-				}: Valio doesn't state a quantity, so ${n === 1 ? 'it is' : 'they are'} not counted as cover`,
+				}: no quantity in the catalogue, so ${n === 1 ? 'it is' : 'they are'} not counted as cover`,
 				items: lines.map((l) => ({
 					id: l.id,
 					productId: l.productId,
@@ -701,7 +701,7 @@
 			.join(' · ');
 	});
 	const PRICE_NOTE =
-		"Prices are Valio catalogue prices ex VAT. Lines where Valio doesn't state a quantity are ordered, but never counted as cover.";
+		'Prices are Valio Aimo catalogue prices ex VAT. Lines with no quantity in the catalogue are ordered, but never counted as cover.';
 	/** The seeded event plan (normal-week diff, buffet timeline), or a plan opened by link (an order, a menu). */
 	const isEvent = $derived(!!plan?.eventId);
 	const orderable = $derived.by(() => {
@@ -777,7 +777,8 @@
 		// Why the row isn't the planned product, from the replaced line and the rescue: said on the collapsed row.
 		const replacedId = (made[0] ?? live.find((l) => l.substituteFor))?.substituteFor;
 		const was = replacedId ? (names.get(replacedId) ?? replacedId) : null;
-		const cause = d.outage === 'undeliverable' ? "Valio can't deliver it" : 'out at Valio';
+		const cause =
+			d.outage === 'undeliverable' ? "Valio Aimo can't deliver it" : 'out at Valio Aimo';
 		const changes = (id: string) =>
 			d.rescue?.candidates.find((c) => c.productId === id)?.whatChanges;
 		if (made.length)
@@ -1503,7 +1504,7 @@
 					A sample booking for this kitchen: {day(preEvent.date)} · {num(preEvent.guests)} guests{preMenu.length
 						? ` · ${preMenu.length} dishes`
 						: ''}{preOutages.length
-						? `. Valio can't supply ${preOutages.length} of its products as listed, so you see the agent find replacements within the mandate.`
+						? `. Valio Aimo can't supply ${preOutages.length} of its products as listed, so you see the agent find replacements within the mandate.`
 						: '.'}
 				</p>
 				<button
@@ -1548,7 +1549,8 @@
 			replaces={l.substituteFor && !inGroup
 				? {
 						name: names.get(l.substituteFor) ?? l.substituteFor,
-						because: d?.outage === 'undeliverable' ? "Valio can't deliver it" : 'out at Valio',
+						because:
+							d?.outage === 'undeliverable' ? "Valio Aimo can't deliver it" : 'out at Valio Aimo',
 						picked: pickedWords(
 							d?.rescue?.candidates.find((c) => c.productId === l.productId) ?? {}
 						)
@@ -1700,7 +1702,7 @@
 							event={isEvent ? { label: view.serviceStyle || 'event', date: view.date } : null}
 							now={k.now}
 							note={openLines.stock || openLines.terminal
-								? `${openLines.stock} lines from Valio's stock, ${openLines.terminal} through the terminal: each has its own cut-off.`
+								? `${openLines.stock} lines from Valio Aimo's stock, ${openLines.terminal} through the terminal: each has its own cut-off.`
 								: null}
 						/>
 					</div>
@@ -1779,7 +1781,7 @@
 								? `Nothing can be ordered for ${day(plan.deliverBy)}: ${
 										plan.lines.some((l) => l.reasons.includes('cutoff_passed'))
 											? 'its cut-off passed'
-											: "Valio can't supply these lines"
+											: "Valio Aimo can't supply these lines"
 									}. Pick another delivery day.`
 								: null}
 						/>
@@ -2294,8 +2296,8 @@
 																				g.lines[0].substituteFor,
 																			because:
 																				d.outage === 'undeliverable'
-																					? "Valio can't deliver it"
-																					: 'out of stock at Valio'
+																					? "Valio Aimo can't deliver it"
+																					: 'out of stock at Valio Aimo'
 																		}
 																	: undefined}
 															>
@@ -2313,8 +2315,8 @@
 														<p class="mb-1.5 text-body leading-snug text-ink">
 															<span class="font-medium"
 																>{d.outage === 'out'
-																	? 'Out of stock at Valio.'
-																	: "Valio can't deliver it."}</span
+																	? 'Out of stock at Valio Aimo.'
+																	: "Valio Aimo can't deliver it."}</span
 															>
 															{contendedIn(d)
 																? 'Another kitchen took some of the rescue; the agent split it (above).'

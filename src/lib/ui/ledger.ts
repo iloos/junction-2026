@@ -123,7 +123,7 @@ export function buildLedger(
 				done.push({
 					id: `swap-${s.planId}`,
 					kind: 'swap',
-					text: `Found replacements for ${plural(new Set(swaps.map((l) => l.substituteFor)).size, 'product')} Valio can't supply for ${name}`,
+					text: `Found replacements for ${plural(new Set(swaps.map((l) => l.substituteFor)).size, 'product')} Valio Aimo can't supply for ${name}`,
 					why: [...new Set(swaps.map((l) => readableName(l.substituteFor!)))]
 						.slice(0, 2)
 						.join(', '),
