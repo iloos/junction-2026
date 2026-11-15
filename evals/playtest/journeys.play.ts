@@ -286,10 +286,13 @@ journey(
 			const held = lines.filter((l) => l.state === 'held').length;
 			let inDecisions = 0;
 			for (const b of await page
-				.getByRole('button', { name: /^(Review|Hold to sign off) \d+ lines?/ })
+				.getByRole('button', {
+					name: /^(Accept these|Review and sign off|Review|Hold to sign off) \d+/
+				})
 				.all())
 				if (await b.isVisible().catch(() => false))
-					inDecisions += Number(((await b.innerText()).match(/(\d+) lines?/) ?? [])[1] ?? 0);
+					// D29's "Accept these N" names no "lines": take the first number on the button.
+					inDecisions += Number(((await b.innerText()).match(/^\D*(\d+)/) ?? [])[1] ?? 0);
 			r.note('decisionCover', { held, inDecisions });
 			if (held !== inDecisions)
 				throw new Error(`${held} held lines, ${inDecisions} lines across the decisions`);
@@ -1056,3 +1059,62 @@ journey('f1', 'The dock keeps the ask: "4 kg lactose-free butter tomorrow"', asy
 		{ beat: false }
 	);
 });
+
+// ---------- UX of the per-line controls (lead, Sun 04:30): reject one line, compare a swap, accept, order ----------
+
+journey(
+	'ux',
+	'Per-line control on the buffet: why, reject, swap, accept, order',
+	async (r, page) => {
+		await r.step('the buffet planned', () => planEvent(page));
+		const chip = page
+			.getByRole('button', { name: /^Needs (approval|sign-off)/ })
+			.filter({ visible: true });
+		await r.step("a line's menu: Accept, Reject, Swap, Why", async () => {
+			await chip.first().click({ timeout: 20_000 });
+			await page
+				.getByRole('button', { name: /^(Reject|Swap|Why)$/ })
+				.first()
+				.waitFor({ timeout: 10_000 });
+		});
+		await r.step(
+			'Why this line',
+			async () => {
+				const why = page
+					.getByRole('button', { name: /^Why$/ })
+					.or(page.getByRole('menuitem', { name: /^Why$/ }))
+					.first();
+				await why.click({ timeout: 10_000 });
+				await page.getByRole('dialog').first().waitFor({ timeout: 15_000 });
+				await page.waitForTimeout(800);
+				await r.beat('why-open');
+				await page.keyboard.press('Escape');
+			},
+			{ beat: false }
+		);
+		await r.step('reject one line', async () => {
+			await chip.first().click({ timeout: 20_000 });
+			await page
+				.getByRole('button', { name: /^Reject$/ })
+				.or(page.getByRole('menuitem', { name: /^Reject$/ }))
+				.first()
+				.click({ timeout: 10_000 });
+			await page.waitForTimeout(2000);
+		});
+		await r.step('compare a swap', async () => {
+			await chip.first().click({ timeout: 20_000 });
+			await page
+				.getByRole('button', { name: /^Swap$/ })
+				.or(page.getByRole('menuitem', { name: /^Swap$/ }))
+				.first()
+				.click({ timeout: 10_000 });
+			await page.waitForTimeout(2500);
+		});
+		await r.step('close the swap and accept the rest', async () => {
+			await page.keyboard.press('Escape');
+			await page.waitForTimeout(800);
+			await approveAll(page);
+		});
+		await r.step('order', () => orderNow(page));
+	}
+);

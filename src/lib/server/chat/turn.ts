@@ -2,7 +2,7 @@ import { readableName } from '$lib/ui/format';
 import { commandKey } from '$lib/core/command';
 import type { LineState, Plan, ToolName, ToolOutput } from '$lib/core/contracts';
 import { ClarifyField, newTaskId, type Task, type TaskState } from '$lib/core/contracts/task';
-import type { CallContext, Llm, Ports, TaskStore, ToolHandlers } from '$lib/core/ports';
+import type { CallContext, Llm, MenuStore, Ports, TaskStore, ToolHandlers } from '$lib/core/ports';
 import { runGoal } from '$lib/server/agent';
 import { classifyGoal } from '$lib/server/agent/classify';
 import type { ContextSource } from '$lib/server/agent/context';
@@ -23,6 +23,7 @@ import { findDate } from '$lib/server/request/dates';
 import { parseRules } from '$lib/server/request/parse';
 import { readingOf, reviewReading } from '$lib/server/request/reading';
 import { dayWords, ledgerSummary, readTask } from '$lib/server/tasks/outcome';
+import { DEMO_WORKSPACE, JUDGES_WORKSPACE } from '$lib/server/demo/workspaces';
 import type { TaskLedger } from '$lib/core/contracts/task';
 import { explain } from './explain';
 import { answerInChat } from './question';
@@ -50,6 +51,7 @@ import type { ReceiptView } from '$lib/ui/Receipt.svelte';
 import { interpretDish, type InterpretDish } from './dish';
 import { decideAsChef, decisionWords } from './decide';
 import { steerLine, steerWords } from './steer';
+import { halfAsk } from './half';
 import { planName } from '$lib/server/agent/plan-name';
 
 /**
@@ -400,6 +402,9 @@ async function* turnLines(
 	});
 	// The answer to "What would you like to do?": a question reads, the others say what to type.
 	// A pick from "Which one?" after a product question: answer for exactly that product, read-only, nothing saved.
+	// A proposal chip ("say:<words>") is the chef's next words: one tap continues a half-formed ask.
+	if (input.answer && String(input.answer.value).startsWith('say:'))
+		input = { ...input, answer: undefined, text: String(input.answer.value).slice(4) };
 	const choice = input.answer?.field === 'product' ? readChoice(String(input.answer.value)) : null;
 	if (choice) {
 		yield* answerInChat(
@@ -823,6 +828,25 @@ async function* turnLines(
 		(u?.kind === 'other' || (!u && reading?.kind === 'other') || !/[\p{L}\d]/u.test(words)) &&
 		task.pending.kind !== 'clarify'
 	) {
+		// A half-formed ask ("1000 x", "for friday") is read as far as it goes, its likeliest endings as chips.
+		const half = halfAsk(withoutKitchen(words), deps.today);
+		if (half) {
+			yield {
+				type: 'clarify',
+				taskId: expected !== null ? task.id : '',
+				field: 'intent',
+				question: half.question,
+				options: half.options
+			};
+			yield {
+				type: 'done',
+				taskId: expected !== null ? task.id : '',
+				state: 'awaiting_clarification',
+				text: half.question,
+				canContinue: false
+			};
+			return;
+		}
 		yield {
 			type: 'clarify',
 			taskId: expected !== null ? task.id : '',
@@ -1402,6 +1426,17 @@ export async function planView(
  * anything: the dock calls it when it opens on a remembered task, so its cards come from the plans as they are, not
  * from what the last turn saw.
  */
+/**
+ * The room a link opens in, so it still works after the browser switched rooms in another tab: the shared room by
+ * name, a private sandbox as "mine"; the stage is the presenter's own and keeps the cookie's choice.
+ */
+const roomParam = (workspaceId: string) =>
+	workspaceId === JUDGES_WORKSPACE
+		? `&ws=${JUDGES_WORKSPACE}`
+		: workspaceId === DEMO_WORKSPACE
+			? ''
+			: '&ws=mine';
+
 export async function taskView(taskId: string, deps: ChatDeps): Promise<ChatEvent[]> {
 	const store = storeOf(deps.ports);
 	const got = await store.get(deps.workspaceId, taskId);
@@ -1417,6 +1452,38 @@ export async function taskView(taskId: string, deps: ChatDeps): Promise<ChatEven
 		out.push({ type: 'clarify', taskId, field: q.field, question: q.question, options: q.options });
 		out.push({ type: 'done', taskId, state: t.state, text: q.question, canContinue: false });
 		return out;
+	}
+	// A menu proposed, not planned yet: its card again, so the thread continues on the review page (D23 addendum).
+	const menus = (deps.ports as { menus?: MenuStore }).menus;
+	if (!t.plans.length && t.proposal && menus) {
+		const m = await menus.get(deps.workspaceId, t.proposal.id, t.proposal.revision);
+		if (m) {
+			const unresolved = m.dishes
+				.flatMap((x) => x.ingredients)
+				.filter((i) => i.unresolved !== undefined).length;
+			out.push({
+				type: 'menu',
+				taskId,
+				proposalId: m.id,
+				revision: m.revision,
+				title: m.brief.title,
+				guests: m.brief.guests,
+				date: m.brief.date,
+				dishes: m.dishes.map((x) => ({ name: x.name, ...(x.course ? { course: x.course } : {}) })),
+				...(m.brief.budgetCents ? { budgetCents: m.brief.budgetCents } : {}),
+				unresolved,
+				reviewed: m.status !== 'proposed',
+				reviewUrl: `/request?menu=${encodeURIComponent(m.id)}&rev=${m.revision}&task=${encodeURIComponent(taskId)}${roomParam(deps.workspaceId)}`
+			});
+			out.push({
+				type: 'done',
+				taskId,
+				state: t.state,
+				text: `A menu for ${m.brief.guests} guests on ${dayWords(m.brief.date)}: ${m.dishes.length} dishes. Review it, then say "plan it".`,
+				canContinue: false
+			});
+			return out;
+		}
 	}
 	// Nothing planned and nothing asked: there is nothing to show (the next turn says what it does).
 	if (!t.plans.length) return [];
@@ -1955,7 +2022,7 @@ async function eventTurn(
 		...(brief.budgetCents ? { budgetCents: brief.budgetCents } : {}),
 		unresolved,
 		reviewed: proposal.status !== 'proposed',
-		reviewUrl: `/request?menu=${encodeURIComponent(proposal.id)}&rev=${proposal.revision}`
+		reviewUrl: `/request?menu=${encodeURIComponent(proposal.id)}&rev=${proposal.revision}&task=${encodeURIComponent(task.id)}${roomParam(deps.workspaceId)}`
 	};
 	return {
 		steps,

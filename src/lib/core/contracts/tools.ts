@@ -460,7 +460,8 @@ export const toolSchemas = {
 			approvalId: z.string(),
 			planVersion: z.int().nonnegative(),
 			termsHash: z.string(),
-			decision: z.enum(['grant', 'deny']),
+			/** `reopen`: a person takes back a deny on the current plan version; the lines wait for a decision again. */
+			decision: z.enum(['grant', 'deny', 'reopen']),
 			/**
 			 * Decide only these lines (one reason group, e.g. the allergen change) of a pending approval. Semantics:
 			 * the approval splits: these lines keep this approval id and take the decision; the rest move to a new pending

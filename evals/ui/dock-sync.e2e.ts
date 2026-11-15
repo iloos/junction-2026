@@ -44,16 +44,17 @@ test('approving on the page shows in the dock, with the way on', async ({ page }
 	await approveFirstOnPage(page);
 
 	await openDock(page);
-	await expect(dock.getByRole('status').filter({ hasText: /You approved \d+ lines?/ })).toBeVisible(
-		{
-			timeout: 20_000
-		}
-	);
+	await expect(
+		dock.getByRole('status').filter({ hasText: /You (approved|decided) \d+ lines?/ })
+	).toBeVisible({
+		timeout: 20_000
+	});
 	// The way on: the page's own Order (same plan on screen) or Continue (anywhere else).
 	await expect(
 		dock
 			.getByRole('link', { name: /Order it on the page/ })
-			.or(dock.getByRole('button', { name: /continue/i }))
+			.or(dock.getByRole('button', { name: /continue|^Order \d+ lines? now/i }))
+			.first()
 	).toBeVisible();
 });
 

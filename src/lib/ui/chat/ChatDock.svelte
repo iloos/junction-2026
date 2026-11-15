@@ -173,8 +173,11 @@
 		loadedFor = k;
 		untrack(() => {
 			const was = { taskId, entries };
-			taskId = openTask ?? read();
-			if (openTask) remember(openTask);
+			// A link from the conversation names its task (?task=): the same thread continues here.
+			const linked = new URL(location.href).searchParams.get('task');
+			const fromLink = linked && /^task-[w-]{1,60}$/.test(linked) ? linked : null;
+			taskId = openTask ?? fromLink ?? read();
+			if (openTask ?? fromLink) remember((openTask ?? fromLink)!);
 			entries = [];
 			planTitle = '';
 			fresh = false;
@@ -376,11 +379,35 @@
 			/* offline: the line still says what happened */
 		}
 		if (taskId !== id) return;
-		const add: Entry[] = line ? [{ kind: 'system', text: line, at: Date.now() }] : [];
+		// The lines a decision card showed before and after the re-read: what the page decided, even when the stream
+		// only said to re-read (a reconnect or another instance) and carried no ops to narrate.
+		const pendingIn = (es: readonly ChatEvent[]) =>
+			new Set(
+				es.flatMap((e) =>
+					e.type === 'decision' ? e.decisions.flatMap((d) => d.lines.map((l) => l.id)) : []
+				)
+			);
+		const before = pendingIn(
+			entries.flatMap((x) => (x.kind === 'event' && x === lastDecision ? [x.e] : []))
+		);
+		const after = pendingIn(fresh);
+		const decided = [...before].filter((l) => !after.has(l)).length;
+		const said =
+			line ??
+			(decided ? `You decided ${decided} ${decided === 1 ? 'line' : 'lines'} on the page.` : null);
+		const add: Entry[] = said ? [{ kind: 'system', text: said, at: Date.now() }] : [];
 		for (const e of fresh)
 			if ((e.type === 'decision' || e.type === 'ledger' || e.type === 'done') && !sameAs(e))
 				add.push({ kind: 'event', e, at: Date.now() });
-		if (add.length) entries = [...entries, ...add];
+		// A decided card leaves the dock: only the task's current decision stays (D21 still binds the shown one).
+		const stale = fresh.length > 0 && (decided > 0 || add.some((x) => x.kind === 'event'));
+		if (add.length || stale)
+			entries = [
+				...(stale
+					? entries.filter((x) => !(x.kind === 'event' && x.e.type === 'decision'))
+					: entries),
+				...add
+			];
 	}
 
 	/**
@@ -439,6 +466,19 @@
 	}
 
 	/** The plan the task works on, from its newest ledger or decision. */
+	/** The Kitchen link for this conversation's order, from its decision card when there is one. */
+	function orderUrl(plan: string): string {
+		const d = entries.findLast(
+			(x) => x.kind === 'event' && x.e.type === 'decision' && x.e.planId === plan
+		);
+		if (d?.kind === 'event' && d.e.type === 'decision') return d.e.approvalUrl;
+		return `/?plan=${encodeURIComponent(plan)}${kitchenId ? `&kitchen=${encodeURIComponent(kitchenId)}` : ''}`;
+	}
+	/** A link that keeps this conversation: the dock on the next page opens the same task (D23 addendum). */
+	function withTask(url: string): string {
+		if (!taskId) return url;
+		return `${url}${url.includes('?') ? '&' : '?'}task=${encodeURIComponent(taskId)}`;
+	}
 	const taskPlan = $derived.by(() => {
 		for (let j = entries.length - 1; j >= 0; j--) {
 			const x = entries[j];
@@ -883,8 +923,8 @@
 								</p>
 							{/if}
 							{#if own?.error}<p class="text-meta text-out">{own.error.message}</p>{/if}
-							<a class="text-meta text-ink-2 underline" href={x.e.approvalUrl}
-								>Open this plan in the Kitchen</a
+							<a class="text-meta text-ink-2 underline" href={withTask(x.e.approvalUrl)}
+								>Open the order →</a
 							>
 						</li>
 					{:else}
@@ -903,7 +943,7 @@
 									<DecisionCard decision={d} {names} due={x.e.due} readonly compact />
 									<span
 										class="mt-1 inline-flex items-center gap-1 text-meta font-medium text-propose group-hover:underline"
-										>{here ? 'Show on the page' : 'Open in the Kitchen'}
+										>{here ? 'Show on the page' : 'Open the order →'}
 										<ArrowUpRight size={13} aria-hidden="true" /></span
 									>
 								</a>
@@ -942,6 +982,25 @@
 								onclick={(ev) => locate(ev, taskPlan!, { zone: 'order' })}
 								>Order it on the page <ArrowUpRight size={13} aria-hidden="true" /></a
 							>
+						</li>
+					{:else if x === last && taskPlan && taskPlan !== planId && !dockOrders}
+						<!-- D23: the order this conversation made opens in the Kitchen, the same thread beside it. -->
+						<li class="flex flex-wrap items-center gap-2">
+							<a
+								class="inline-flex items-center gap-1 rounded-md bg-accent px-3 py-1.5 text-meta font-semibold text-sheet hover:bg-accent-ink"
+								href={withTask(orderUrl(taskPlan))}
+								data-testid="open-order">Open the order →</a
+							>
+							{#if !actedHere && x.e.canContinue}
+								<button
+									type="button"
+									class="rounded-md border border-accent px-3 py-1.5 text-meta font-semibold text-accent-ink hover:bg-accent-wash disabled:opacity-50"
+									disabled={busy}
+									onclick={() => turn({ continue: true }, 'Continue')}
+								>
+									{orderWords}
+								</button>
+							{/if}
 						</li>
 					{:else if x === last && !actedHere && x.e.canContinue && !dockOrders}
 						<li class="flex flex-wrap gap-2">

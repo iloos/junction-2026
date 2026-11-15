@@ -22,7 +22,8 @@
 		orderFeed,
 		roomKitchens,
 		storesCreated,
-		storeTotals
+		storeTotals,
+		storeStates
 	} from './room';
 	import { INCIDENT_LABEL } from './incidents';
 	import OrdersTab from './OrdersTab.svelte';
@@ -349,6 +350,14 @@
 			minute: '2-digit',
 			timeZone: 'Europe/Helsinki'
 		});
+	/** Each room store's tile state: ordered, waiting for a person, planning or joined (room.ts storeStates). */
+	const roomStates = $derived.by(() => {
+		const plans = Object.values(stream.state.plans);
+		const waiting = new Set(
+			plans.filter((p) => pendingApprovalOf(stream.state, p.id)).map((p) => p.kitchenId)
+		);
+		return storeStates(kitchens, storeTotals(stream.state.orders), plans, waiting);
+	});
 </script>
 
 <svelte:head><title>Operations · Mandate</title></svelte:head>
@@ -573,6 +582,7 @@
 					canShortage={!data.simulated && (data.presenter || data.room.kind === 'own')}
 					presenter={data.presenter && data.workspace === data.rooms.shared}
 					incident={lastIncident(stream.roomSims, INCIDENT_LABEL)}
+					states={roomStates}
 				/>
 			{:else if view === 'problems'}
 				<section class="problems" aria-label="Problems, biggest first">

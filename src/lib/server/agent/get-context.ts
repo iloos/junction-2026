@@ -69,7 +69,7 @@ export function createGetContext(ports: ServicePorts): GetContextHandler {
 					allergenFreeFrom: [...k.constraints.allergens.freeFrom],
 					tenderListOnly: k.constraints.tenderListOnly
 				},
-				usual: usualSlice(k, scenarioDate(ports.clock.now())),
+				usual: usualSlice(k, scenarioDate(ports.clock.now()), ports.clock.now()),
 				constraints: {
 					freeFrom: k.constraints.allergens.freeFrom.map((code) => ({
 						code,

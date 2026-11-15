@@ -16,8 +16,9 @@ The only plan. Markers: `[x]` done · `[~]` in progress · `[ ]` todo · `[!]` b
 - [ ] Later: extension scopes from [concept/GROWTH.md](concept/GROWTH.md), only once the freeze plan is safe
 
 ## Land (Sunday) — ring 6 timetable
-- [~] Waves every ~1.5 h until 05:00 (gate → push → S4 deploys → lead smokes → S5 playtests); 05:00–06:00 fixes only
-- [ ] **Feature freeze Sun 06:00**: tag `demo-good` on the last green, smoked deploy; no redeploy after 09:30
+- [~] Waves every ~1 h (gate → push → S4 deploys → lead smokes → S5 playtests)
+- [ ] **UI/UX polish runs until 07:00** (user, 04:40: it blocks the demo video). From 06:00 UI only: no core rules, contracts or infra changes
+- [ ] **Final deploy ~07:15**, tag `demo-good` on it after its smoke; record the video 07:30–09:00; no redeploy after 09:30
 - [ ] **Demo state before judges:** presenter resets the shared room `ws-judges` (smokes and playtests leave "Playtest Room …" stores there); check the room's QR shows app.mandate.kitchen; seed nothing else
 - [ ] **06:00–09:00 (no features):** public-clone fixture + clean-clone smoke (F11, S5+S1) · CLAIMS → SUBMISSION → PITCH truth pass on the tagged SHA (S5) · README tour · comment sweep
 - [ ] Final video ≤ 2:00 (1080p, voice-over, burned-in captions; unlisted YouTube, public at submission), shot list from S5: hero journey first, then the room + shortage, then an outside agent stopped · deck PDF (6 slides) · README

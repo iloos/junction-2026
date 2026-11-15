@@ -282,3 +282,10 @@ The Kitchen shows one thing at a time: **the basket for a delivery day** (Tenanc
 **Reopen if:** a new order's chat thread shows lines of an earlier order, or a member sees a kitchen they don't belong to.
 
 **D23 addendum (user, 15 Nov 03:20): start full page, move to the side when there's something to look at.** A conversation starts full page (`/request`, "Ask the agent"): every "Tell the agent what you need" and "New order" goes there, the composer is focused and visible without scrolling at 1440 and 390. When the agent produces a plan (or the chef opens an order), the conversation moves to the side dock beside that order on the Kitchen, and the transcript continues there. The side dock alone, over a page with nothing to show, is not the starting point.
+
+### D32 · Next: one shared world with a lock per kitchen; the sandbox becomes an option (user + lead, 15 Nov 04:10)
+Room and sandbox are already one app (the same Kitchen, chat and Ops over a different workspace); only the join screen, the owner gate, the room notice and Ops' Room tab are room-specific. The target model is one world: everyone lands in it in their own kitchen (owner-only, already enforced), Valio's Ops sees every kitchen, and "try alone / reset freely" is an opt-in sandbox. The blocker is the workspace-wide lock (one op log and one `FOR UPDATE` per workspace), which serialises everyone in a shared workspace (~10 small orders/s). Moving the lock and the op sequence to the kitchen (with the shared stock still consistent through the overlay and the contention check) both unifies the two and lifts the room's ceiling. Not before the freeze; tonight the header label makes the switch visible.
+
+**Why:** the user: why a separate path for the room; unify it.
+
+**Reopen if:** per-kitchen locks can't keep one shared stock consistent across kitchens.

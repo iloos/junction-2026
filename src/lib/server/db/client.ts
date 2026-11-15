@@ -65,8 +65,10 @@ function connect(url: string) {
 	u.searchParams.delete('sslmode');
 	const ca = caCert();
 	return postgres(u.toString(), {
-		// The free Aiven plan allows 15 connections in total, shared by every instance and dev server.
-		max: 3,
+		// The pool throttles how many planning queries reach Postgres at once. Measured on prod (15 Nov): at 3, 25
+		// concurrent plans finish in ~12 s with no errors; at 10, the shared Postgres slows and both apps time out
+		// together. PG_POOL_MAX overrides it. The bus's LISTEN is one more connection, opened apart from this pool.
+		max: Number(env.PG_POOL_MAX) || 3,
 		idle_timeout: 20,
 		connect_timeout: 10,
 		ssl: ca ? { ca, rejectUnauthorized: true } : 'require',

@@ -217,7 +217,12 @@ export function applyOps(state: WorkspaceState, ops: OpEnvelope[]): Result<Works
 			case 'RecordApproval': {
 				const a = op.approval;
 				const prev = s.approvals[a.id];
-				if (prev && prev.state !== 'pending' && prev.state !== a.state)
+				// A deny may be taken back on the same plan version (approve 'reopen'); nothing else leaves a decision.
+				const reopen =
+					prev?.state === 'denied' &&
+					a.state === 'pending' &&
+					s.plans[a.planId]?.version === a.planVersion;
+				if (prev && prev.state !== 'pending' && prev.state !== a.state && !reopen)
 					return err('STALE_VERSION', `approval ${a.id} is already ${prev.state}`);
 				// A decision may narrow an approval to one group of its lines, never widen it.
 				if (prev && a.lineIds.some((id) => !prev.lineIds.includes(id)))

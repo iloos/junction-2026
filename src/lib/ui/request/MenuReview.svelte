@@ -208,7 +208,7 @@
 								sourced recipes…</span
 							>
 						{:else if g.state === 'failed'}
-							No sourced recipe found (the lookup failed).
+							<!-- A failed lookup says nothing: the dish stands on its own. -->
 						{:else}
 							<span class="flex flex-wrap items-center gap-1.5">
 								{#if g.matchedSources.length}

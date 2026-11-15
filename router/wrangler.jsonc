@@ -6,7 +6,7 @@
 	"compatibility_date": "2026-11-01",
 	"workers_dev": true,
 	"vars": {
-		// prod (mandate) and staging for the first test; mandate-b replaces staging once it has its env.
-		"UPSTREAMS": "https://widely-many-scorpion.eur-1.aiven.app,https://ideally-expert-wolf.eur-1.aiven.app"
+		// prod (mandate) and mandate-b: two machines on the one Postgres.
+		"UPSTREAMS": "https://widely-many-scorpion.eur-1.aiven.app,https://pleased-sunny-guinea.eur-1.aiven.app"
 	}
 }
