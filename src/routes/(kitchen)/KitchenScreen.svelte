@@ -661,7 +661,9 @@
 	const planTitle = $derived.by(() => {
 		if (!plan || !view) return '';
 		if (plan.eventId) return view.title;
-		if (menuName) return menuName;
+		// A menu plan is named short ("Menu for 120 · Fri 11 Dec"); its dishes are the table's rows.
+		if (menuName)
+			return `Menu${view.guests ? ` for ${num(view.guests)}` : ''} · ${day(plan.deliverBy)}`;
 		const o = snap?.origin;
 		if (/^usual/i.test(view.title)) return `Usual ${weekday(plan.deliverBy)} order`;
 		if (o === 'chat') return 'Order from the chat';
@@ -682,9 +684,7 @@
 			plan.eventId ? `${day(view.date)} · ${num(view.guests)} guests · ${view.serviceStyle}` : null,
 			`${items} ${items === 1 ? 'item' : 'items'}`,
 			money(cents),
-			waiting
-				? `${waiting} ${waiting === 1 ? 'needs' : 'need'} you before ${storyTime(decisionsDue(plan, approval))}`
-				: null,
+			waiting ? `decide before ${storyTime(decisionsDue(plan, approval))}` : null,
 			rejectedLines.length ? `${rejectedLines.length} rejected` : null,
 			`delivery ${day(plan.deliverBy)}`
 		]
@@ -1080,11 +1080,9 @@
 		const swaps = new Set(dayEntry.lines.filter((l) => l.substituteFor).map((l) => l.substituteFor))
 			.size;
 		const replans = dayLedger.done.filter((e) => e.kind === 'shortage').length;
-		const held = stageCounts.waits;
 		const parts = [
 			swaps ? `found ${swaps} ${swaps === 1 ? 'replacement' : 'replacements'}` : null,
 			replans ? `re-planned ${replans} ${replans === 1 ? 'shortage' : 'shortages'}` : null,
-			held ? `holds ${held} ${held === 1 ? 'line' : 'lines'} for you` : null,
 			stageCounts.ordered ? `ordered ${stageCounts.ordered}` : null
 		].filter(Boolean);
 		return parts.length ? `Your agent ${parts.join(' · ')}` : '';
@@ -1109,14 +1107,16 @@
 				waits ? `${waits} ${waits === 1 ? 'needs' : 'need'} you` : 'nothing needs you'
 			].join(' · ');
 		}
-		const waits = stageCounts.waits;
+		// What waits is said once, on the stage chip and the action bar, not here as well.
 		const live = dayEntry.lines.filter((l) => !rejectedIds.has(l.lineId));
 		return [
 			day(theDay),
 			`${live.length} ${live.length === 1 ? 'line' : 'lines'}`,
 			money(live.reduce((t, l) => t + (l.lineCents ?? 0), 0)),
-			waits ? `${waits} ${waits === 1 ? 'needs' : 'need'} you` : 'nothing needs you'
-		].join(' · ');
+			stageCounts.waits ? null : 'nothing needs you'
+		]
+			.filter(Boolean)
+			.join(' · ');
 	});
 	function pickDay(date: string) {
 		dayChoice = date === k.plan?.deliverBy ? null : date;
@@ -1738,7 +1738,7 @@
 							</span>
 						</div>
 					{/if}
-					{#if view.planReasons.length}
+					{#if view.planReasons.length && all.count + all.signOff > 0}
 						<p class="mt-2 rounded-md bg-signoff-wash px-3 py-2 text-body text-ink">
 							The whole order is held: {view.planReasons.map(reasonShort).join(', ').toLowerCase()}.
 							Every line needs sign-off.
@@ -1823,7 +1823,9 @@
 															<span class="mono">{money(g.totalCents)}</span></span
 														>
 													</p>
-													<p class="text-ink-3" title={g.why}>{g.consequence}</p>
+													<p class="line-clamp-2 text-ink-3 lg:line-clamp-none" title={g.why}>
+														{g.consequence}
+													</p>
 												</div>
 												{#if g.signOff}
 													<button
