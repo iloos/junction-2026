@@ -20,6 +20,9 @@
 	import Receipt from '$lib/ui/Receipt.svelte';
 	import type { ChatEvent, ChatTurnInput } from './types';
 	import MicButton from './MicButton.svelte';
+	import AskCard from './AskCard.svelte';
+	import ProductThumb from '$lib/ui/ProductThumb.svelte';
+	import type { AskDraft } from './types';
 	import {
 		describeOps,
 		foldRows,
@@ -561,6 +564,12 @@
 							);
 						taskId = e.taskId;
 						remember(taskId);
+						ask = null;
+					}
+					// The ask is a card above the composer, replaced each turn, not a transcript entry.
+					if (e.type === 'ask') {
+						ask = e.ask;
+						continue;
 					}
 					entries = [...entries, { kind: 'event', e, at: Date.now() }];
 					fresh = false;
@@ -574,6 +583,8 @@
 	}
 
 	let mic = $state<MicButton | null>(null);
+	/** The agent's working memory of the ask (harness update_draft), shown above the composer. */
+	let ask = $state.raw<AskDraft | null>(null);
 	function submit(ev: SubmitEvent) {
 		ev.preventDefault();
 		// Dictation stops at Send: what was heard is in the box, and nothing more is added after it.
@@ -589,6 +600,7 @@
 		fresh = true;
 		remember(null);
 		entries = [];
+		ask = null;
 		error = null;
 	}
 	// "New order" (D31): a page asks for a fresh conversation; the earlier task stays with its plan.
@@ -809,15 +821,34 @@
 						{#if x.e.options.length}
 							<div class="mt-2 flex flex-wrap gap-1.5">
 								{#each x.e.options as o (o.value)}
-									<button
-										type="button"
-										class="rounded-full border border-accent px-3 py-1 text-meta font-medium text-accent-ink hover:bg-accent-wash disabled:opacity-50"
-										disabled={!active || busy}
-										onclick={() =>
-											x.e.type === 'clarify' &&
-											turn({ answer: { field: x.e.field, value: o.value } }, o.label)}
-										>{o.label}</button
-									>
+									{#if o.productId}
+										<!-- A product chip: its photo, name and price, so the chef picks what they see. -->
+										<button
+											type="button"
+											class="inline-flex max-w-full items-center gap-2 rounded-lg border border-accent py-1 pr-3 pl-1 text-left text-meta text-accent-ink hover:bg-accent-wash disabled:opacity-50"
+											disabled={!active || busy}
+											onclick={() =>
+												x.e.type === 'clarify' &&
+												turn({ answer: { field: x.e.field, value: o.value } }, o.label)}
+										>
+											<ProductThumb productId={o.productId} size={32} />
+											<span class="min-w-0"
+												><span class="block truncate font-medium">{o.label}</span>{#if o.price}<span
+														class="mono block text-micro text-ink-2">{o.price}</span
+													>{/if}</span
+											>
+										</button>
+									{:else}
+										<button
+											type="button"
+											class="rounded-full border border-accent px-3 py-1 text-meta font-medium text-accent-ink hover:bg-accent-wash disabled:opacity-50"
+											disabled={!active || busy}
+											onclick={() =>
+												x.e.type === 'clarify' &&
+												turn({ answer: { field: x.e.field, value: o.value } }, o.label)}
+											>{o.label}</button
+										>
+									{/if}
 								{/each}
 							</div>
 						{:else if active}
@@ -1035,6 +1066,7 @@
 			{notice}
 		</p>
 	{/if}
+	{#if ask}<AskCard {ask} />{/if}
 	<form
 		class="flex shrink-0 items-end gap-2 border-t border-rule p-3"
 		onsubmit={submit}
