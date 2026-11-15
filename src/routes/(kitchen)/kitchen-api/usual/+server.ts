@@ -2,6 +2,7 @@ import { error, json } from '@sveltejs/kit';
 import { dev } from '$app/environment';
 import { env } from '$env/dynamic/private';
 import { visitorWorkspace } from '$lib/server/demo/visitor';
+import { kitchenDays } from '$lib/server/calendar';
 import {
 	parseOverrides,
 	parsePeriod,
@@ -23,8 +24,15 @@ export const GET: RequestHandler = async (event) => {
 	if (q !== null) return json({ hits: await searchTopUp(workspaceId, q) });
 	const kitchen = p.get('kitchen');
 	if (!kitchen) error(400, 'kitchen is required, e.g. ?kitchen=k-hotel');
-	const date = p.get('date') ?? undefined;
+	let date = p.get('date') ?? undefined;
 	if (date && !/^\d{4}-\d{2}-\d{2}$/.test(date)) error(400, 'date is YYYY-MM-DD');
+	// No day asked: the first receiving day that can still be ordered in full, never one whose cut-off passed.
+	if (!date) {
+		const cal = await kitchenDays(workspaceId, kitchen);
+		date =
+			cal?.days.find((d) => d.receiving && d.status === 'open')?.date ??
+			cal?.days.find((d) => d.receiving && d.status !== 'passed')?.date;
+	}
 	const usual = await readUsual(workspaceId, kitchen, {
 		date,
 		window: parsePeriod(p.get('window')) ?? undefined,

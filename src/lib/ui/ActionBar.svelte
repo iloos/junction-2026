@@ -16,7 +16,8 @@
 		ordered = null,
 		due = null,
 		busy = false,
-		note
+		note,
+		blocked = null
 	}: {
 		/** Lines waiting for the chef, sign-offs included. */
 		waiting: number;
@@ -29,6 +30,8 @@
 		busy?: boolean;
 		/** The price and stock note, behind ⓘ. */
 		note?: string;
+		/** Nothing can be ordered (e.g. the cut-off passed): said instead of "inside your rules". */
+		blocked?: string | null;
 	} = $props();
 </script>
 
@@ -52,6 +55,8 @@
 				{ordered.lines === 1 ? 'line' : 'lines'}</span
 			>
 			<span class="mono text-ink-2"> · {money(ordered.cents)}</span>
+		{:else if blocked}
+			<span class="text-ink">{blocked}</span>
 		{:else}
 			<span class="text-ink-2">Nothing waits for you: every line is inside your rules.</span>
 		{/if}

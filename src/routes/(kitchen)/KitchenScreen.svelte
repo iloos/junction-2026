@@ -1648,6 +1648,14 @@
 							due={decisions.length ? storyTime(decisionsDue(plan, approval)) : null}
 							busy={k.busy || k.readOnly}
 							note={PRICE_NOTE}
+							blocked={plan.lines.some((l) => l.qty.value > 0) &&
+							plan.lines.every((l) => l.qty.value <= 0 || l.state === 'unorderable')
+								? `Nothing can be ordered for ${day(plan.deliverBy)}: ${
+										plan.lines.some((l) => l.reasons.includes('cutoff_passed'))
+											? 'its cut-off passed'
+											: "Valio can't supply these lines"
+									}. Pick another delivery day.`
+								: null}
 						/>
 					</div>
 
