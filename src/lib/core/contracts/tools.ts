@@ -435,8 +435,13 @@ export const toolSchemas = {
 	},
 	get_plan: {
 		scope: 'read',
-		description: 'Current plan with lines, states, reasons and the approval state.',
-		input: z.object({ planId: z.string() }),
+		description:
+			'Current plan with lines, states, reasons and the approval state. brief: true leaves out Valio’s raw stock payloads and the offers’ provenance detail (about half the size).',
+		input: z.object({
+			planId: z.string(),
+			/** Leave out Valio's raw stock payloads (raw: null) and the offers' provenance beyond their source. */
+			brief: z.boolean().optional()
+		}),
 		output: out({
 			plan: Plan,
 			/** The current approval for the plan (newest pending/granted), with what it is bound to. */

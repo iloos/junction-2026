@@ -53,7 +53,15 @@ describe('what a kitchen settled (read from its recent menus)', () => {
 		expect(pinnedFor(kitchenPins([newest, older, oldest]), ['sipuli'])?.productId).toBe(
 			'agent-old'
 		);
-		expect(pinnedFor(kitchenPins([newest]), ['sipuli'])?.productId).toBe('model-new');
+		const reviewed = { ...newest, review: { at: 'x' } } as unknown as MenuProposal;
+		expect(pinnedFor(kitchenPins([reviewed]), ['sipuli'])?.productId).toBe('model-new');
+	});
+
+	it('a model pick from a menu nobody reviewed is not remembered (G1)', () => {
+		const unreviewed = menu(['kana', 'Chicken', 'chicken-pick', 'model']);
+		expect(pinnedFor(kitchenPins([unreviewed]), ['kana'])).toBeUndefined();
+		const chef = menu(['kana', 'Chicken', 'chef-chicken', 'chef']);
+		expect(pinnedFor(kitchenPins([chef]), ['kana'])?.productId).toBe('chef-chicken');
 	});
 
 	it('a product the chef turned down later is no longer reused', () => {

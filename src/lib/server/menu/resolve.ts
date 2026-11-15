@@ -73,7 +73,9 @@ const isPerson = (by: PinSource | undefined) => by === 'chef' || by === 'agent';
 /**
  * What a kitchen settled, read from its recent menus (newest first; `MenuStore.recent`). A chef's or agent's pin wins
  * over a model's pick whatever their age; among equals the newest wins; a product a chef turned down (dropped back to
- * unresolved) stops either from being reused. Keys are the ingredient's search words and its label.
+ * unresolved) stops either from being reused. A model's pick counts only from a menu a chef reviewed: an unreviewed
+ * pick is a guess, not the kitchen's choice. Keys are the ingredient's search words and its label. Every pin is still
+ * checked against the new menu's requirements before use (proposal.ts usablePin).
  */
 export function kitchenPins(menus: MenuProposal[]): KitchenPins {
 	const out: KitchenPins = new Map();
@@ -87,7 +89,10 @@ export function kitchenPins(menus: MenuProposal[]): KitchenPins {
 		if (!value && !turnedDown) continue;
 		for (const k of keys(i)) if (!out.has(k)) out.set(k, value);
 	}
-	for (const i of ings)
+	const reviewed = menus
+		.filter((m) => m.review)
+		.flatMap((m) => m.dishes.flatMap((d) => d.ingredients));
+	for (const i of reviewed)
 		if (i.productId && i.pinnedBy === 'model')
 			for (const k of keys(i)) if (!out.has(k)) out.set(k, { productId: i.productId, by: 'model' });
 	return out;

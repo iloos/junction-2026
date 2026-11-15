@@ -20,6 +20,7 @@ import {
 } from '$lib/core/contracts';
 import { canonicalJson, sha256Hex } from '$lib/core/hash';
 import type { Catalog, Llm, MenuStore, Resolution } from '$lib/core/ports';
+import { breaksPlant } from '../adapters/catalog/retrieval';
 import { slug } from '../request/parse';
 import { chooseProducts, type Choice, type ChoiceItem } from './choose';
 import { candidatePool, kitchenPins, pinnedFor, RECENT_MENUS, type PinSource } from './resolve';
@@ -104,9 +105,13 @@ export const menuFlags = (brief: Pick<EventBrief, 'dietary'>) =>
 async function usablePin(
 	catalog: Pick<Catalog, 'get'>,
 	productId: string | undefined,
-	flags: string[]
+	flags: string[],
+	/** VEGETARIAN / VEGAN when the dish is offered as one: a remembered meat or fish product is not reused. */
+	plant: string[]
 ): Promise<string | undefined> {
-	if (!productId || !(await catalog.get([productId])).has(productId)) return undefined;
+	if (!productId) return undefined;
+	const p = (await catalog.get([productId])).get(productId);
+	if (!p || breaksPlant(p, plant)) return undefined;
 	return (await breaksFlags(catalog, [productId], flags)).size ? undefined : productId;
 }
 
@@ -622,11 +627,11 @@ export async function proposeMenu(d: ProposeDeps): Promise<Proposed> {
 			d.onStep?.({ step: 'products', done: done++, total });
 			const words = [i.query, i.label];
 			const plant = plantFor(dish.claimedCompatible);
-			const hint = await usablePin(d.catalog, hintFor(d.brief.hints, words), flags);
+			const hint = await usablePin(d.catalog, hintFor(d.brief.hints, words), flags, plant);
 			const kept = pinnedFor(settled, words);
 			const pin = hint
 				? { productId: hint, how: PIN_WORDS.hint, by: hintBy }
-				: kept && (await usablePin(d.catalog, kept.productId, flags))
+				: kept && (await usablePin(d.catalog, kept.productId, flags, plant))
 					? { productId: kept.productId, how: PIN_WORDS[kept.by], by: kept.by }
 					: undefined;
 			const one = (q: string) => resolveIngredient(d.catalog, q, flags, plant);

@@ -257,6 +257,25 @@ export function foodKind(category: string): FoodKind {
 	return 'other';
 }
 const ANIMAL = new Set<FoodKind>(['fish', 'poultry', 'meat']);
+
+/**
+ * Whether a product breaks a vegetarian or vegan dish, by the resolver's own rule: no meat, poultry or fish; for vegan
+ * also no milk or egg, honey or gelatine. For pins and hints, which skip the resolver.
+ */
+export function breaksPlant(
+	p: Pick<RetrievalProduct, 'category' | 'nameFi' | 'allergens'>,
+	plant: readonly string[]
+): boolean {
+	if (!plant.length) return false;
+	if (ANIMAL.has(foodKind(p.category))) return true;
+	if (!plant.includes('VEGAN')) return false;
+	return (
+		!!p.allergens?.contains.some((a) => a === 'AM' || a === 'AE') ||
+		p.category === '22150' ||
+		p.category === '22670' ||
+		NOT_VEGAN.test(p.nameFi)
+	);
+}
 /** Animal products outside the meat and fish categories: honey (22150) and gelatine (22670) by category, else by name. */
 const NOT_VEGAN = /hunaja|liivate|gelatiini|gelatin/i;
 /** Diet flags that are about the dish, not a free-from label: no meat or fish (and for vegan, no milk or egg). */

@@ -16,7 +16,7 @@ import {
 } from '../contracts';
 import type { CallContext, ToolHandlers } from '../ports';
 import { editLine, explainLine, planEvent, type ServicePorts } from './events';
-import { approve, commitOrder, getPlan, liveApprovals, placeOrder } from './orders';
+import { approve, briefPlan, commitOrder, getPlan, liveApprovals, placeOrder } from './orders';
 import { lineView } from '../mandate/view';
 import { withPlanView } from './views';
 import { quote, searchProducts } from './quote';
@@ -217,7 +217,14 @@ export function createHandlers(ports: ServicePorts): ToolHandlers {
 					(await notOwner(ports, ctx, schema.scope, parsed.data));
 				if (denied) return denied;
 				const r = await impl(ports, ctx, parsed.data as ToolInput<ToolName>);
-				return r.ok ? ok(await withViews(ports, ctx, r.value)) : r;
+				if (!r.ok) return r;
+				const viewed = await withViews(ports, ctx, r.value);
+				// get_plan brief: after the views, so their allocations go too (orders.ts briefPlan).
+				if (name === 'get_plan' && (parsed.data as ToolInput<'get_plan'>).brief) {
+					const v = viewed as ToolOutput<'get_plan'>;
+					return ok({ ...v, plan: briefPlan(v.plan) });
+				}
+				return ok(viewed);
 			} catch (e) {
 				// A throw is a bug on our side, never the caller's: report it as INTERNAL, not a crash.
 				return err('INTERNAL', `${name}: ${e instanceof Error ? e.message : String(e)}`);
