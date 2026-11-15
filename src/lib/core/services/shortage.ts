@@ -23,6 +23,9 @@ export interface ShortageInput {
 
 type KitchenResult = ShortageReplanned['kitchens'][number];
 
+/** Prepared foods: ready meals and salads (173xx), frozen prepared foods (417xx), sauces and soups (219xx). */
+const READY = ['173', '417', '219'];
+
 const eur = (cents: number) => `€${(cents / 100).toLocaleString('en-GB')}`;
 
 /** What a kitchen's rules allow the agent to do about a swap, in words. */
@@ -130,12 +133,32 @@ export async function replanShortage(
 		const held = added.some((l) => l.state === 'held' || l.tier === 'sign_off');
 		const outcome: KitchenResult['outcome'] = !added.length ? 'short' : held ? 'held' : 'swapped';
 		const top = swaps[0];
+		// A rescue that buys the dish itself ready-made (cooking cream short → Saarioinen lanttulaatikko) is a move at the
+		// dish, not a product swap: say it at the dish, or it reads as cream → casserole.
+		const subProduct = top
+			? (await ports.catalog.get([top.toProductId])).get(top.toProductId)
+			: undefined;
+		const isReady = (category: string | undefined) =>
+			READY.some((c) => (category ?? '').startsWith(c));
+		const readyMade = !!subProduct && isReady(subProduct.category) && !isReady(product?.category);
+		const inHouse = !!subProduct && !isReady(subProduct.category) && isReady(product?.category);
+		const dish = x.plan.needs.find(
+			(n) => n.id === added.find((l) => l.productId === top?.toProductId)?.needId
+		)?.label;
+		const move =
+			top && dish && readyMade
+				? `${dish}: buying it ready-made (${top.qty} × ${top.toName}) instead of making it, since ${productName} is short`
+				: top && dish && inHouse
+					? `${dish}: making it in house (${top.qty} × ${top.toName}) instead of buying it ready-made, since ${productName} is short`
+					: undefined;
 		const why =
-			outcome === 'short'
-				? `Kept ${x.left} of ${x.had} ${productName}; nothing its rules allow covers the rest, so a chef decides.`
-				: outcome === 'held'
-					? `Kept ${x.left} of ${x.had} ${productName} and found ${top.toName} for the rest; it waits for a chef.`
-					: `Kept ${x.left} of ${x.had} ${productName} and swapped the rest to ${top.toName}, within its rules.`;
+			move && outcome !== 'short'
+				? `${move}${outcome === 'held' ? '; it waits for a chef.' : ', within its rules.'}`
+				: outcome === 'short'
+					? `Kept ${x.left} of ${x.had} ${productName}; nothing its rules allow covers the rest, so a chef decides.`
+					: outcome === 'held'
+						? `Kept ${x.left} of ${x.had} ${productName} and found ${top.toName} for the rest; it waits for a chef.`
+						: `Kept ${x.left} of ${x.had} ${productName} and swapped the rest to ${top.toName}, within its rules.`;
 		out.push({
 			...base,
 			planId: x.planId,
