@@ -10,7 +10,10 @@ import { RetrievalIndex, rewordings, toRetrievalProduct } from './retrieval';
 describe('rewordings', () => {
 	it('drops the packing liquid, then tries the aliases; "tuore" stays', () => {
 		expect(rewordings('tuore timjami')).toEqual([]);
-		expect(rewordings('persikanpuolikkaat sokeriliemessä')).toEqual(['persikanpuolikkaat']);
+		expect(rewordings('persikanpuolikkaat sokeriliemessä')[0]).toBe('persikanpuolikkaat');
+		expect(rewordings('herkkusienet')).toContain('herkkusieni');
+		expect(rewordings('ruisjauhot')).toContain('ruisjauho');
+		expect(rewordings('parmesaani')).toContain('parmesan');
 		expect(rewordings('myskikurpitsa')).toEqual(['myskikurpitsakuutio', 'butternut']);
 		expect(rewordings('metsäsieniä')).toEqual(['kantarelli', 'suppilovahvero']);
 		expect(rewordings('kevytmaito')).toEqual([]);

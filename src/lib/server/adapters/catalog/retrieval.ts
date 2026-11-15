@@ -295,8 +295,26 @@ const FORM_WORD =
  */
 const INGREDIENT_ALIASES: [RegExp, string[]][] = [
 	[/myskikurpitsa\S*/, ['myskikurpitsakuutio', 'butternut']],
-	[/metsäsien\S*/, ['kantarelli', 'suppilovahvero']]
+	[/metsäsien\S*/, ['kantarelli', 'suppilovahvero']],
+	[/parmesaani\S*/, ['parmesan']]
 ];
+
+/**
+ * A Finnish plural to its base form, for the last word: herkkusienet → herkkusieni, ruisjauhot → ruisjauho, perunat →
+ * peruna. Consonant gradation (tomaatit → tomaatti) is left alone; a wrong base form simply finds nothing.
+ */
+function finnishSingulars(s: string): string[] {
+	const m = /^(.*?)(\S+)$/.exec(s);
+	if (!m) return [];
+	const [, head, w] = m;
+	if (w.length < 5) return [];
+	const bases = w.endsWith('et')
+		? [w.slice(0, -2) + 'i', w.slice(0, -1)]
+		: /[aäoöuyi]t$/.test(w)
+			? [w.slice(0, -1)]
+			: [];
+	return bases.map((b) => head + b);
+}
 
 /**
  * Other ways to read a recipe line that found nothing: without the packing liquid ("persikanpuolikkaat
@@ -310,6 +328,7 @@ export function rewordings(raw: string): string[] {
 		.replace(/\s+/g, ' ')
 		.trim();
 	const out = plain && plain !== s ? [plain] : [];
+	out.push(...finnishSingulars(plain));
 	for (const [w, alts] of INGREDIENT_ALIASES)
 		if (w.test(plain)) for (const a of alts) out.push(plain.replace(w, a));
 	return out;
@@ -613,6 +632,15 @@ export class RetrievalIndex {
 						Number(isPortionPack(this.byId.get(a.productId)?.p)) -
 						Number(isPortionPack(this.byId.get(b.productId)?.p))
 				);
+		// A one-word ingredient prefers products that name it as a word over compounds ending in it: "lohi" is salmon
+		// before suutarinlohi (tench), a different fish. Stable, and only when some candidate names it as a word.
+		const word = query.toLowerCase();
+		const asWord = (id: string) =>
+			new RegExp(`(^|[^a-zåäö])${word}([^a-zåäö]|$)`).test(
+				(this.byId.get(id)?.p.nameFi ?? '').toLowerCase()
+			);
+		if (/^[a-zåäö]{3,}$/.test(word) && kept.some((c) => asWord(c.productId)))
+			kept.sort((a, b) => Number(!asWord(a.productId)) - Number(!asWord(b.productId)));
 		const hits = kept.slice(0, limit);
 		if (hits.length)
 			return {
