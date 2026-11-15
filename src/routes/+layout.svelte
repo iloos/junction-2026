@@ -42,6 +42,33 @@
 	];
 
 	const shell = provideShell();
+	/** The room the page shows: every page's data says it (room.notice, or workspace.notice on Request). */
+	const roomNotice = $derived(
+		(page.data as { room?: { notice?: string | null }; workspace?: { notice?: string | null } })
+			.room?.notice ??
+			(page.data as { workspace?: { notice?: string | null } }).workspace?.notice ??
+			null
+	);
+	/** The room's id, from the page's data (room.workspaceId, or workspace.id on Request). */
+	const roomWs = $derived.by(() => {
+		const d = page.data as {
+			room?: { workspaceId?: string };
+			workspace?: string | { id?: string; workspaceId?: string };
+		};
+		if (d.room?.workspaceId) return d.room.workspaceId;
+		if (typeof d.workspace === 'string') return d.workspace;
+		return d.workspace?.workspaceId ?? d.workspace?.id ?? null;
+	});
+	/** The visitor's own store there: the Kitchen keeps it current and remembers it per room for other pages. */
+	const myStore = $derived.by(() => {
+		if (shell.roomStore) return shell.roomStore;
+		if (!roomWs || typeof localStorage === 'undefined') return null;
+		try {
+			return localStorage.getItem(`mandate.store.${roomWs}`);
+		} catch {
+			return null;
+		}
+	});
 	// A link with ?system=1 turns the System layer on; navigating without it keeps the visitor's choice.
 	$effect.pre(() => {
 		if (page.url.searchParams.get('system') === '1') shell.system = true;
@@ -174,6 +201,34 @@
 		</div>
 	</div>
 </header>
+{#if !page.url.pathname.startsWith('/offline')}
+	<!-- Where you are, on every page (D24/D26): your own sandbox or the live room, and the way to the other. -->
+	<!-- eslint-disable svelte/no-navigation-without-resolve -- room switches are full loads with a query -->
+	<p
+		class="flex flex-wrap items-center gap-x-1.5 border-b border-rule bg-sheet px-4 py-1 text-meta text-ink-2 md:px-6"
+		data-theme={theme}
+		aria-label="Where you are"
+	>
+		{#if roomNotice}
+			<span class="rounded bg-signoff-wash px-1.5 py-px font-medium text-ink" title={roomNotice}
+				>Live room</span
+			>
+			<span>· You: <span class="text-ink">{myStore ?? 'no store yet'}</span></span>
+			<span class="text-ink-3">· others see what you type ·</span>
+			<a href="/?ws=mine" data-sveltekit-reload class="underline underline-offset-2 hover:text-ink"
+				>Leave</a
+			>
+		{:else}
+			<span>Your sandbox ·</span>
+			<a
+				href="/?ws=ws-judges"
+				data-sveltekit-reload
+				class="underline underline-offset-2 hover:text-ink">Join the live room →</a
+			>
+		{/if}
+	</p>
+	<!-- eslint-enable svelte/no-navigation-without-resolve -->
+{/if}
 {#if shell.system && !page.url.pathname.startsWith('/ops')}
 	<!-- System layer: where each outside service's answers come from right now (Ops shows it in its own header). -->
 	<div
