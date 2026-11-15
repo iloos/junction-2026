@@ -85,6 +85,17 @@ Process-local state, from the 15 Nov inventory:
 
 **Estimate to build:** sessions to a Postgres table with a migration (~45 min); the overlay to Postgres with a cached read and NOTIFY invalidation on the offer path (~60–75 min); pairing (~30 min); a cancel flag for agent runs (~30 min); a second Runtime app with the Postgres integration and the same env, set by the user in the console (~30–45 min); then a ramp and cross-instance checks. About 3.5–4 hours.
 
+**Built and measured, 15 Nov (night):** the overlay is shared over LISTEN/NOTIFY (`bus/overlay-sync.ts`), a second app `mandate-b` (startup-200-4096, same env and `JUDGE_KEY_SECRET`) runs on the same Postgres, and a sticky Cloudflare Worker (`router/`, `mandate-router.example.workers.dev`, not bound to the app's domain) pins each browser to one app by cookie. Verified: one visitor cookie opens the same sandbox on both apps; a shortage set on one cut the other's stock in 0.6 s; a store created on one reached the other's live stream in about 0.12 s; a kitchen session stays whole only while pinned (4/4 pinned, 0/4 when forced across).
+
+It does not add capacity. Postgres is the shared limit: with 10 to 50 planners at once, two apps were no faster than one, and a bigger connection pool (10 instead of 3) made it worse (10 planners 14.5 s instead of 5.4 s; 25 and more failed, and both apps went down together for about 30 s while Postgres CPU reached 58–72%). The pool stays at 3 (`PG_POOL_MAX`), the room demo starts plans in waves of at most 10, and the capacity levers are a larger Postgres plan or cheaper planning queries, not more app machines.
+
+| Concurrent planners (pool 3, one app, 2 vCPU) | p50 |
+|---|---|
+| 1 | 0.96 s |
+| 10 | 5.4 s |
+| 25 | 12.1 s |
+| 50 | 23.2 s |
+
 **Vertical instead:** the largest Runtime plan in `aws-eu-central-1` is `startup-400-8192` (4 vCPU, 8 GB, $0.29/h by Aiven's catalogue; the console is authoritative). One Node process plans on about one core, so more vCPU buys garbage-collection and I/O headroom, not proportionally more planners.
 
 ## Environment (Aiven console)
