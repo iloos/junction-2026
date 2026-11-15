@@ -456,7 +456,8 @@ export async function* runHarnessTurn(
 			const call = `${tool} ${JSON.stringify(action.input)}`;
 			const again =
 				calls.has(call) ||
-				(tool === 'propose_menu' && steps.some((x) => x.tool === 'propose_menu' && x.ok));
+				((tool === 'propose_menu' || tool === 'place_order') &&
+					steps.some((x) => x.tool === tool && x.ok));
 			calls.add(call);
 			if (again) {
 				history.push({
@@ -464,7 +465,9 @@ export async function* runHarnessTurn(
 					text:
 						tool === 'propose_menu'
 							? 'propose_menu → already proposed this turn: the chef reviews that menu now; reply to the chef'
-							: `${tool} → the same call was already made this turn: use its result above, or reply to the chef`
+							: tool === 'place_order'
+								? 'place_order → an order was already drafted this turn: change it with edit_line, or reply to the chef'
+								: `${tool} → the same call was already made this turn: use its result above, or reply to the chef`
 				});
 				continue;
 			}
