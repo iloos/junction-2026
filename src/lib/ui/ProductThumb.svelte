@@ -15,6 +15,7 @@
 		SquareSquare
 	} from '@lucide/svelte';
 	import { page } from '$app/state';
+	import { Popover } from 'bits-ui';
 	import { thumbFor, type Thumb } from './thumbs';
 
 	let {
@@ -35,6 +36,7 @@
 	let el = $state<HTMLElement | null>(null);
 	/** The image fades in once decoded; the slot is its fixed size from first paint, so nothing shifts. */
 	let loaded = $state(false);
+	let big = $state(false);
 	const offline = $derived(page.url.pathname.startsWith('/offline'));
 
 	$effect(() => {
@@ -92,12 +94,7 @@
 	const Icon = $derived(ICONS[thumb?.icon ?? 'product'] ?? Package);
 </script>
 
-<span
-	bind:this={el}
-	class="relative inline-grid shrink-0 place-items-center overflow-hidden rounded-md border border-rule bg-well"
-	style="width: {size}px; height: {size}px"
-	title={label || undefined}
->
+{#snippet slot()}
 	{#if thumb?.imageUrl}
 		<img
 			src={thumb.imageUrl}
@@ -121,4 +118,43 @@
 		<Icon size={Math.round(size * 0.45)} class="text-ink-3" aria-hidden="true" />
 	{/if}
 	{#if label}<span class="sr-only">{label}</span>{/if}
+{/snippet}
+
+<span bind:this={el} class="inline-grid shrink-0">
+	{#if thumb?.imageUrl}
+		<!-- A photo opens larger, with where it comes from and how it matches; Escape closes it. -->
+		<Popover.Root bind:open={big}>
+			<Popover.Trigger
+				class="relative inline-grid shrink-0 cursor-zoom-in place-items-center overflow-hidden rounded-md border border-rule bg-well hover:border-accent focus-visible:outline-2 focus-visible:outline-accent"
+				style="width: {size}px; height: {size}px"
+				aria-label="Show the photo larger{label ? `: ${label}` : ''}"
+				>{@render slot()}</Popover.Trigger
+			>
+			<Popover.Portal>
+				<Popover.Content
+					sideOffset={6}
+					align="start"
+					class="z-50 w-[min(320px,calc(100vw-24px))] rounded-lg border border-rule bg-sheet p-2 shadow-lg"
+				>
+					<img
+						src={thumb.imageUrl}
+						alt={label || 'Product photo'}
+						class="aspect-square w-full rounded-md bg-sheet object-contain"
+					/>
+					<p class="mt-1.5 text-meta text-ink-2">
+						{exact
+							? "This product's own photo"
+							: (thumb.label ?? 'Pack may differ')}&nbsp;· from {thumb.host}</span
+							>{/if}
+					</p>
+				</Popover.Content>
+			</Popover.Portal>
+		</Popover.Root>
+	{:else}
+		<span
+			class="relative inline-grid shrink-0 place-items-center overflow-hidden rounded-md border border-rule bg-well"
+			style="width: {size}px; height: {size}px"
+			title={label || undefined}>{@render slot()}</span
+		>
+	{/if}
 </span>
