@@ -10,7 +10,7 @@ _S7, Sun 15 Nov 05:00. Run the web deck (`docs/pitch/deck.html`, or the publishe
 | 0:15–0:32 | 3 The case | "A hotel kitchen. 140 booked for Saturday, Valio is out of the ham, and the cut-off is Friday at five. Today a person places every order. An agent could do it faster. So what may it buy without the chef?" |
 | 0:32–0:50 | 4 The rules | "The chef writes the rules once: 800 euros an item, never change an allergen, ask before anything new. The rules are code. A chatbot can suggest a ham; only a mandate lets an agent buy one." |
 | 0:50–1:10 | 5 The buffet | "21 items. 3 ordered alone, 302 euros. 3 impossible, each with its reason. The other 15 come down to three decisions for the chef." |
-| 1:10–2:25 | 6 Live demo | Switch to the app (see below). If it fails, slide 7 is the same run. |
+| 1:10–2:25 | 6 Live demo | Switch to the app (see below). The three outcomes were the buffet; the demo shows the words-to-plan path and the chef's yes. If it fails, slide 7 is the same run. |
 | 2:25–2:40 | 8 Who can say yes | "Any agent can plan: the chef's own Claude, a hotel chain's system. Only the chef can say yes, in the app or when their own assistant asks. Any other agent that tries is refused and logged." |
 | 2:40–2:52 | 9 Real and next | "Real Valio catalogue, Gemini, Aiven. The order itself is simulated and labelled, since Valio's API has no order endpoint yet. Next: a four-week shadow pilot with one hotel." |
 | 2:52–3:00 | 10 Close | "Your agent does the buying. Your rules decide what. Try it: app.mandate.kitchen." |
@@ -19,9 +19,8 @@ _S7, Sun 15 Nov 05:00. Run the web deck (`docs/pitch/deck.html`, or the publishe
 Prepare before going on: a fresh browser profile on the laptop, logged into nothing; the app open at `/` on a sample hotel; the Ops screen in a second tab; Wi-Fi checked; the deck in a third tab.
 1. **0–10 s:** open the chat dock and type "a no-meat dinner for 120 with a peach dessert". Say: "One sentence."
 2. **10–25 s:** the menu card appears. Say: "Gemini proposes six dishes; every amount is an estimate." Type "plan it".
-3. **25–50 s:** the plan appears. Point at one item ordered alone, one waiting for the chef (with its reason), and one refused. Say: "Every ingredient is a Valio product with a price, or it says why not."
-   - If the plan shows no refused item: point at one ordered alone and one waiting, and say "Anything impossible would be refused with its reason; the buffet slide showed three." (S5 is confirming the three outcomes on the submitted deploy.)
-4. **50–65 s:** tap Accept on the decision. Say: "The chef's yes covers exactly these items."
+3. **25–50 s:** the plan appears: about 20 items, every one a Valio product with a price. Say: "Every item is new to this hotel, and its mandate says ask me before any new product, so each one waits for the chef, with its reason." Point at one reason line (new product; or a requirement the product's record doesn't confirm).
+4. **50–65 s:** tap **Accept all**. Say: "One yes from the chef covers exactly these items."
 5. **65–75 s:** switch to the Ops tab: the order has arrived. Say: "And it lands on Valio's side." Switch back to the deck, slide 8.
 
 If something hangs for more than 5 seconds, say "here's the same run" and show slide 7.
