@@ -73,8 +73,15 @@ export async function publish(workspaceId: string, events: ServerEvent[]): Promi
  * A plan created or re-priced: warm its products' photos in the background (live web mode only, the workspace's web
  * prefetch cap, products/photos PREFETCH_LIMITS), so the rows show them when they render. Fire and forget; never delays or fails the write.
  */
+/**
+ * At most one plan warms at a time in a process: background lookups must never compete with the planning that
+ * visitors are waiting for. A plan created while another warms is skipped (its rows keep their fallbacks, and the
+ * Why drawer still looks up on demand). WARM_OFF=1 turns warming off entirely.
+ */
+let warming = false;
+
 function warmPlanPhotos(workspaceId: string, events: ServerEvent[]) {
-	if (process.env.VITEST) return;
+	if (process.env.VITEST || process.env.WARM_OFF === '1' || warming) return;
 	const ids = new Set<string>();
 	for (const e of events) {
 		if (e.kind !== 'op') continue;
@@ -83,6 +90,7 @@ function warmPlanPhotos(workspaceId: string, events: ServerEvent[]) {
 		else if (op.type === 'RecordOffer') for (const l of op.lines) ids.add(l.productId);
 	}
 	if (!ids.size) return;
+	warming = true;
 	void (async () => {
 		const { webMode } = await import('../web');
 		if (webMode(process.env) !== 'live') return;
@@ -98,7 +106,9 @@ function warmPlanPhotos(workspaceId: string, events: ServerEvent[]) {
 			warmPhotos(process.env, `prefetch:${workspaceId}`, products),
 			warmAllergenFacts(process.env, workspaceId, ports.catalog, products)
 		]);
-	})().catch((err) => log.warn('photos.warm_failed', { workspaceId, error: errMsg(err) }));
+	})()
+		.catch((err) => log.warn('photos.warm_failed', { workspaceId, error: errMsg(err) }))
+		.finally(() => (warming = false));
 }
 
 /** One line per op written (type, seq) and a warning line per refusal; the simulated runs stay quiet. */
