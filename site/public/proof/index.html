@@ -120,7 +120,7 @@
 					<div class="ev"><span class="tag ok">Seen on the live app</span><a href="https://github.com/iloos/junction-2026/blob/main/src/lib/server/store/direct.test.ts">store/direct.test.ts</a></div>
 				</li>
 				<li class="claim">
-					<div><p class="what">An amount that doesn't fit Valio's pack step can't be ordered.</p></div>
+					<div><p class="what">An amount that doesn't fit Valio Aimo's pack step can't be ordered.</p></div>
 					<div class="ev"><span class="tag plain">Tested</span><a href="https://github.com/iloos/junction-2026/tree/main/evals/scenarios">evals/scenarios (s3)</a></div>
 				</li>
 			</ul>
@@ -131,7 +131,7 @@
 			<p>How unknown stock and web facts about a product are labelled.</p>
 			<ul class="claims">
 				<li class="claim">
-					<div><p class="what">Products whose stock Valio doesn't state never count as covered, and products with stated stock rank first.</p><p class="seen">On the live app those lines read "Ordered, awaiting supplier", not counted as cover.</p></div>
+					<div><p class="what">Products whose stock Valio Aimo doesn't state never count as covered, and products with stated stock rank first.</p><p class="seen">On the live app those lines read "Ordered, awaiting supplier", not counted as cover.</p></div>
 					<div class="ev"><span class="tag plain">Tested</span><a href="https://github.com/iloos/junction-2026/blob/main/src/lib/core/rank/rank.ts">core/rank/rank.ts</a><a href="https://github.com/iloos/junction-2026/blob/main/src/lib/server/store/pool.test.ts">store/pool.test.ts</a><a href="https://github.com/iloos/junction-2026/blob/main/src/lib/core/mandate/fulfilment.test.ts">mandate/fulfilment.test.ts</a></div>
 				</li>
 				<li class="claim">
@@ -176,7 +176,7 @@
 			<h2>What we don't claim</h2>
 			<p>Things it would be easy to say and that aren't true yet.</p>
 			<ul class="never">
-				<li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M6.5 17.5l11-11"/></svg><span><b>Real orders.</b> Valio's API has no order endpoint. Orders are simulated and nothing is sent to Valio.</span></li>
+				<li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M6.5 17.5l11-11"/></svg><span><b>Real orders.</b> Valio Aimo's API has no order endpoint. Orders are simulated and nothing is sent to Valio.</span></li>
 				<li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M6.5 17.5l11-11"/></svg><span><b>Recipe-aware ranking.</b> Substitutes are ranked by the kitchen's rules and Gemini Decisions, with a rules fallback. We haven't measured recipe fit.</span></li>
 				<li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M6.5 17.5l11-11"/></svg><span><b>Vector search.</b> Catalogue search is lexical.</span></li>
 				<li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M6.5 17.5l11-11"/></svg><span><b>A live recall hitting our orders.</b> Context.dev checks Ruokavirasto's recall list every 5 minutes and matches each notice against the catalogue. The recall that affects an order is a drill.</span></li>

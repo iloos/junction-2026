@@ -255,8 +255,8 @@
 		</section>
 
 		<section class="band" id="problem">
-			<h2>A buffet for 140, and Valio is out of two products</h2>
-			<p class="sub">In Valio's webshop today, the chef moves order templates to the cart by hand, and an out-of-stock product shows similar products with no reason. An agent can propose a replacement, but the kitchen also has to set what the agent may buy without asking.</p>
+			<h2>A buffet for 140, and Valio Aimo is out of two products</h2>
+			<p class="sub">In Valio Aimo's webshop today, the chef moves order templates to the cart by hand, and an out-of-stock product shows similar products with no reason. An agent can propose a replacement, but the kitchen also has to set what the agent may buy without asking.</p>
 			<div class="facts">
 				<div class="fact">
 					<b>140</b>
@@ -265,8 +265,8 @@
 				</div>
 				<div class="fact">
 					<b class="out">2</b>
-					<p>products out of stock in Valio's own data: the whole ham and the swede casserole</p>
-					<span class="tag plain">Valio challenge data</span>
+					<p>products out of stock in Valio Aimo's own data: the whole ham and the swede casserole</p>
+					<span class="tag plain">Valio Aimo challenge data</span>
 				</div>
 				<div class="fact">
 					<b class="ok">1</b>
@@ -311,7 +311,7 @@
 					</ul>
 				</div>
 			</div>
-			<p class="more">Products whose stock Valio doesn't state are labelled unknown and never counted as covered. <a href="/how">See how it's built</a></p>
+			<p class="more">Products whose stock Valio Aimo doesn't state are labelled unknown and never counted as covered. <a href="/how">See how it's built</a></p>
 		</section>
 
 		<section class="band" id="agents">
@@ -349,7 +349,7 @@
 					<div class="partner-hd"><span class="pico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m4 7 8-4 8 4v10l-8 4-8-4z"/><path d="m4 7 8 4 8-4M12 11v10"/></svg></span><h3>Valio Aimo</h3></div>
 					<ul>
 						<li>The agent searches Valio Aimo's product catalogue.</li>
-						<li>Price and stock for each shortlisted product come live from Valio, cached with the time fetched.</li>
+						<li>Price and stock for each shortlisted product come live from Valio Aimo, cached with the time fetched.</li>
 						<li>Valio's closing time is the order cut-off; a late date is caught before ordering.</li>
 						<li>A photo and the public Valio Aimo page, verified by barcode, for 25 of the 54 demo products (5 more from Open Food Facts).</li>
 					</ul>
@@ -393,7 +393,7 @@
 			<p class="sub">Each screen in the app carries the same labels.</p>
 			<ul class="honest">
 				<li><b>Real</b><span>Valio Aimo's catalogue, and live price and availability calls for shortlisted products, cached with the time fetched.</span></li>
-				<li><b>Simulated</b><span>The booking, the clock, stock on hand, recipes, and the order itself. Valio's API has no order endpoint, so nothing is sent to Valio.</span></li>
+				<li><b>Simulated</b><span>The booking, the clock, stock on hand, recipes, and the order itself. Valio Aimo's API has no order endpoint, so nothing is sent to Valio.</span></li>
 				<li><b>Models</b><span>Gemini reads requests, proposes menus and scores how well each substitute fits the dish. Every check that decides what may be ordered runs in plain code. A model can add a caution that holds a line, never one that allows it.</span></li>
 			</ul>
 		</section>
@@ -405,7 +405,7 @@
 				<a href="/story"><b>Story</b><span>The pitch, slide by slide.</span></a>
 				<a href="/how"><b>How it works</b><span>The gate, the ports and the fallbacks.</span></a>
 				<a href="/proof"><b>Proof</b><span>Each claim and the test behind it.</span></a>
-				<a href="/how#partners"><b>Partners</b><span>How we use Valio, Gemini, Aiven, Exa and Context.dev.</span></a>
+				<a href="/how#partners"><b>Partners</b><span>How we use Valio Aimo, Gemini, Aiven, Exa and Context.dev.</span></a>
 			</div>
 		</section>
 	</main>
@@ -559,7 +559,7 @@ function renderPartners(data) {
 		db?.ok && db.latencyMs != null ? measure(`${db.latencyMs} ms`, `Postgres answered the app's health check${db.tls === 'verified' ? ' over verified TLS' : ''}, at ${at}`) : null,
 		race && sends ? measure(`${sends} sends, 1 receipt`, `the same approved order sent at once, at ${when(race.recordedAt)}`) : null
 	);
-	put('valio', service('valio', 'Valio'), day24('valio', 'Valio'));
+	put('valio', service('valio', 'Valio Aimo'), day24('valio', 'Valio Aimo'));
 	// One barcode-verified listing from the app's product card: the photo is hotlinked from Valio Aimo, never copied.
 	const vl = sp.valioListing, fig = document.querySelector('[data-partner="valio"] .listing');
 	if (vl && fig && /^https:\/\//.test(vl.imageUrl) && /^https:\/\/www\.valioaimo\.fi\//.test(vl.pageUrl)) {
