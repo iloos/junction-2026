@@ -369,7 +369,7 @@ section.s .sub.big { font-size: clamp(20px, 1.8vw, 24px); line-height: 1.35; col
 			<div class="lrow">
 				<div class="ask"><span class="q">10 l</span> lactose-free milk for Friday</div>
 				<div class="to">→ <span class="pname">Valio kevytmaito 1 l laktoositon UHT</span></div>
-				<div class="end"><span class="chip wait" data-s="cases.#lactose-free.outcome.label">Needs your approval</span><span class="why">Valio doesn't state a quantity</span></div>
+				<div class="end"><span class="chip wait" data-s="cases.#lactose-free.outcome.label">Needs your approval</span><span class="why">the catalogue has no quantity for it</span></div>
 			</div>
 			<div class="lrow">
 				<div class="ask">An outside agent tries to approve its own order</div>
@@ -442,8 +442,8 @@ section.s .sub.big { font-size: clamp(20px, 1.8vw, 24px); line-height: 1.35; col
 			<div class="ph">The plan</div>
 			<div class="plines" id="plines">
 				<div class="pl"><div class="pn"><s>HK Viljaporsaan Juhlakinkku potkalla tuoresuolattu 6-8 kg</s><span class="ptok"><span class="q">13 × 1.5 kg</span><span class="pname">HK Palvikinkku viipaloitu 1,5 kg</span></span></div><div class="pe">€200.59</div><div class="bar"><i class="known"></i></div><div class="sl">Valio states 15 in stock</div></div>
-				<div class="pl"><div class="pn"><span class="ptok"><span class="q">11 × 1 l</span><span class="pname">Valio kevytmaito 1 l laktoositon UHT</span></span></div><div class="pe">€17.16</div><div class="bar"><i class="unknown"></i></div><div class="sl">Valio doesn't state a quantity</div></div>
-				<div class="pl"><div class="pn"><s class="nos">Lanttulaatikko, made in house</s><span class="ptok"><span class="q">5.95 kg</span><span class="pname">Lanttu britannia</span></span></div><div class="pe">€13.98</div><div class="bar"><i class="unknown"></i></div><div class="sl">Valio doesn't state a quantity</div></div>
+				<div class="pl"><div class="pn"><span class="ptok"><span class="q">11 × 1 l</span><span class="pname">Valio kevytmaito 1 l laktoositon UHT</span></span></div><div class="pe">€17.16</div><div class="bar"><i class="unknown"></i></div><div class="sl">the catalogue has no quantity for it</div></div>
+				<div class="pl"><div class="pn"><s class="nos">Lanttulaatikko, made in house</s><span class="ptok"><span class="q">5.95 kg</span><span class="pname">Lanttu britannia</span></span></div><div class="pe">€13.98</div><div class="bar"><i class="unknown"></i></div><div class="sl">the catalogue has no quantity for it</div></div>
 			</div>
 			<p class="pfoot" id="p-sum"><span data-s="plan.counts.dishes">12</span> dishes · <span data-s="plan.counts.lines">19</span> lines · <span data-s="plan.eur" data-f="eur">€883.55</span>, planned, not yet submitted. Unresolved: Joulutorttu (prune star tart), 8.4 kg.</p>
 		</div>
@@ -471,7 +471,7 @@ section.s .sub.big { font-size: clamp(20px, 1.8vw, 24px); line-height: 1.35; col
 		<div class="srow"><span class="r" data-s="cases.#within-mandate.request">10 kg salmon fillet for Friday</span><span class="at">passes every check</span><span class="chip ok" data-s="cases.#within-mandate.outcome.label">Ordered within your mandate</span></div>
 		<div class="srow"><span class="r">Ham substitute for the Christmas buffet</span><span class="at">stopped by the mandate: a new product</span><span class="chip wait" data-s="cases.#out-of-stock.outcome.label">Needs your approval</span></div>
 		<div class="srow"><span class="r" data-s="cases.#cut-off.request">4 kg lactose-free butter for tomorrow</span><span class="at">stopped by the cut-off</span><span class="chip wait" data-s="cases.#cut-off.outcome.label">Nothing ordered</span></div>
-		<div class="srow"><span class="r" data-s="cases.#lactose-free.request">10 l lactose-free milk for Friday</span><span class="at">stopped by stock: Valio doesn't state a quantity</span><span class="chip wait" data-s="cases.#lactose-free.outcome.label">Needs your approval</span></div>
+		<div class="srow"><span class="r" data-s="cases.#lactose-free.request">10 l lactose-free milk for Friday</span><span class="at">stopped by stock: the catalogue has no quantity for it</span><span class="chip wait" data-s="cases.#lactose-free.outcome.label">Needs your approval</span></div>
 		<div class="srow"><span class="r">An outside agent tries to approve its own order</span><span class="at">stopped at the door: it may plan, never approve</span><span class="chip out" data-s="cases.#agent-cannot-approve.outcome.label">Refused</span></div>
 	</div>
 	<div class="track" id="track">
@@ -594,7 +594,7 @@ const day = (iso) => new Date(iso).toLocaleDateString('en-GB', { weekday: 'short
 new IntersectionObserver((es, o) => es.forEach((e) => { if (e.isIntersecting) { e.target.classList.add('in'); o.disconnect(); } }), { threshold: 0.2 }).observe($('ledger'));
 
 // Recorded values: every number comes from /cases.json, the app's last recording.
-fetch('/cases.json').then((r) => (r.ok ? r.json() : null)).then((d) => {
+fetch('/cases.json').then((r) => (r.ok ? r.text() : null)).then((t) => (t ? JSON.parse(t.replace(/Valio doesn't state a quantity/g, 'the catalogue has no quantity for it').replace(/Valio doesn't state stock/g, 'the catalogue has no stock figure')) : null)).then((d) => {
 	if (!d) return;
 	document.querySelectorAll('[data-s]').forEach((el) => {
 		const v = at(d, el.dataset.s);
@@ -765,7 +765,7 @@ const STAGES=['Parse','Authorise','Lookup','Enrich','Decide','Commit','Watch'];
 const P=[
  {name:'Valio Aimo',role:'Catalogue, price and availability',sub:'catalogue, price, availability',stages:['Lookup'],
   how:"Every product, pack size and lot rule comes from Valio's catalogue of <b>17,546 products</b>. Price and availability are fetched <b>only for shortlisted products</b>, cached with the time they were fetched.",
-  why:"The agent plans against what Valio states. Products with a stated quantity rank first. A product whose quantity Valio doesn't state is <b>never counted as cover</b>.",
+  why:"The agent plans against what the catalogue states. Products with a stated quantity rank first. A product with no quantity in the catalogue is <b>never counted as cover</b>.",
   ex:{t:'one line in the Christmas plan',n:'values from the demo scenario',b:'<i>→</i> quote: HK Palvikinkku viipaloitu 1,5 kg\n<i>←</i> <em>Valio states 15 packs</em> · €15.43 a pack · 1 pack = 1.5 kg\n   <i>Valio, cached, with the time fetched</i>'},
   fb:'the cached offer, labelled with its age',proof:'the Why drawer labels each value Valio cached or live'},
  {name:'Gemini',tag:'live',role:'Reading requests, proposing menus, ranking substitutes',sub:'Flash-Lite and Flash live; Decisions on every shortage, with a labelled fallback',stages:['Parse','Decide'],
