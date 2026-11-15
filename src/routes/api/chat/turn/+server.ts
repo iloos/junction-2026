@@ -4,7 +4,8 @@ import { scenarioDate } from '$lib/core/scenario';
 import { createLlmRouter } from '$lib/server/adapters/llm/router';
 import { contextFor } from '$lib/server/auth';
 import { readTurnBody } from '$lib/server/chat/body';
-import { runChatTurn } from '$lib/server/chat/turn';
+import { runChatTurn, type ChatDeps } from '$lib/server/chat/turn';
+import { harnessOn, runHarnessTurn } from '$lib/server/chat/harness';
 import { acceptMenuAsChef } from '$lib/server/menu/server';
 import { visitorWorkspace } from '$lib/server/demo/visitor';
 import { session, visitorKey } from '$lib/server/kitchen/live';
@@ -78,6 +79,18 @@ export const POST: RequestHandler = async (event) => {
 	if (!kitchen) return bad('no kitchen in this workspace');
 	// Gemini reads, plans and words the chat whenever a provider is configured; the fixture keeps rules and script.
 	const live = (env.LLM_PROVIDER ?? 'fixture') !== 'fixture';
+	// The new agent per visitor without the env flag: a page opened with ?agent=llm sets a cookie (?agent=off clears it).
+	const asked = new URL(event.request.headers.get('referer') ?? 'http://x/').searchParams.get(
+		'agent'
+	);
+	if (asked === 'llm' || asked === 'off')
+		event.cookies.set('chat_agent', asked, {
+			path: '/',
+			httpOnly: true,
+			sameSite: 'lax',
+			maxAge: 60 * 60 * 24
+		});
+	const agentOn = harnessOn(env) || (asked ?? event.cookies.get('chat_agent')) === 'llm';
 	// Built inside the call scope with no trace of its own: model calls trace into the visitor's drawer and count
 	// against the visitor's caps.
 	const modelsFor = () => {
@@ -86,7 +99,8 @@ export const POST: RequestHandler = async (event) => {
 		return {
 			understand: router.for('chat.understand'),
 			explain: router.for('explain'),
-			plan: router.for('agent.plan')
+			plan: router.for('agent.plan'),
+			agent: router.for('chat.agent')
 		};
 	};
 
@@ -106,7 +120,8 @@ export const POST: RequestHandler = async (event) => {
 			void withCallScope(ctx, async () => {
 				try {
 					const today = scenarioDate(b.ports.clock.now());
-					for await (const e of runChatTurn(input, {
+					const models = modelsFor();
+					const deps: ChatDeps = {
 						handlers,
 						ctx,
 						ports: { ...b.ports, tasks },
@@ -114,7 +129,7 @@ export const POST: RequestHandler = async (event) => {
 						kitchen,
 						today,
 						env,
-						models: modelsFor(),
+						models,
 						// The chef's "plan it" after the menu card is their review of that revision (D13).
 						acceptMenu: (id, revision) =>
 							acceptMenuAsChef({
@@ -124,8 +139,13 @@ export const POST: RequestHandler = async (event) => {
 								id,
 								revision
 							})
-					}))
-						push(e);
+					};
+					// CHAT_HARNESS=llm: the model leads the turn over the MCP tools; the script answers without a model.
+					const turn =
+						agentOn && models?.agent
+							? runHarnessTurn(input, { ...deps, agent: models.agent })
+							: runChatTurn(input, deps);
+					for await (const e of turn) push(e);
 				} catch (e) {
 					push({
 						type: 'error',

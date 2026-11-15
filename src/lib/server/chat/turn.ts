@@ -88,7 +88,13 @@ export interface ChatDeps {
 	 */
 	llm?: Llm | null;
 	/** Per-job models (the route's router jobs); each defaults to `llm`. */
-	models?: { understand?: Llm | null; explain?: Llm | null; plan?: Llm | null };
+	models?: {
+		understand?: Llm | null;
+		explain?: Llm | null;
+		plan?: Llm | null;
+		/** The chat agent's tool loop (CHAT_HARNESS=llm, ./harness). */
+		agent?: Llm | null;
+	};
 	/** Reads a dish with a count ("10000 bolognese pasta"); by default ./dish. */
 	dish?: InterpretDish;
 	/**
@@ -121,7 +127,7 @@ export function withFallback(model: Planner, script: Planner): Planner {
 
 /** Without a TaskStore on the ports, tasks live in memory per ports object (tests, a store without agent_tasks). */
 const fallback = new WeakMap<object, TaskStore>();
-function storeOf(ports: ChatDeps['ports']): TaskStore {
+export function storeOf(ports: ChatDeps['ports']): TaskStore {
 	if (ports.tasks) return ports.tasks;
 	let s = fallback.get(ports);
 	if (!s) fallback.set(ports, (s = memoryTaskStore()));
@@ -157,7 +163,7 @@ export function readAnswer(field: ClarifyField, value: unknown): Slots {
 }
 
 /** Steps as the dock shows them: our summary of each result, a link to the plan it touched. */
-function stepEvents(taskId: string, steps: StepRecord[]): ChatEvent[] {
+export function stepEvents(taskId: string, steps: StepRecord[]): ChatEvent[] {
 	return steps.map((s) => {
 		const plan = s.ok ? (s.value as { plan?: Plan } | undefined)?.plan : undefined;
 		const summary = s.ok
@@ -275,7 +281,7 @@ function receiptView(s: StepRecord): ReceiptView {
 	};
 }
 
-function blankTask(deps: ChatDeps, text: string): Task {
+export function blankTask(deps: ChatDeps, text: string): Task {
 	const now = deps.ports.clock.now().toISOString();
 	return {
 		workspaceId: deps.workspaceId,

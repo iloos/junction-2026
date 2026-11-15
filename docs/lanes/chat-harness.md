@@ -80,3 +80,19 @@ Multi-turn trials with the real key (opt-in) and recorded replays (gate): the us
 
 - Now → ~09:00: S3 builds §2–§5 behind `CHAT_HARNESS=llm` (default off), the transcripts passing locally with the real key, the gate green. S2 renders typed chips and the draft card. S1 keeps tool payloads brief.
 - ~09:00: the lead brings the user the trial results; the user flips the flag in the Aiven console if it is clearly better. Otherwise it ships after submission.
+
+## As built (S3, Sun 08:45): `src/lib/server/chat/harness.ts`
+
+Behind `CHAT_HARNESS=llm` (default off); router job `chat.agent` (Flash-Lite, minimal thinking). The route runs `runHarnessTurn` when the flag is on and a model is configured, else today's script.
+
+Where it differs from the design above, and why:
+- **No approve for the model.** The chef approves on the decision card and accepts a menu with the code-made "Plan this menu" chip (D13, D22). That keeps "the model can make an order more careful, never less" mechanical, not a prompt promise.
+- **commit_order runs only on a turn whose words ask to send** ("send it", "order it", "go ahead", "tilaa"). Live trials showed the model committing after a product chip.
+- **JSON actions, not native function calls.** Each step is one JSON object (a tool call or `{text, chips}`), validated with zod with one corrective retry, the same pattern as `llmPlanner`. The `Llm` port has no tool-call API, so this reuses the traced, capped adapter unchanged. Tool schemas are the registry's, from `toolsFor` ∩ the harness list; calls go through `serveTool` as the chef.
+- **get_context runs in code** once per conversation; its brief is kept on the task, so the model doesn't spend steps on it.
+- **A task the script started stays on the script**, so a thread never switches engines mid-conversation.
+- **Code guards** (they add care, never remove it): one `propose_menu` per turn; a repeated identical call is refused; a reply claiming a change no tool made this turn goes back to the model once; `place_order` lines are resized to the server's count on a sales-unit mismatch; navigation chips ("View plan") and product numbers in labels are dropped; links are stripped from the reply text (the cards carry them).
+- **Memory**: `task.requirement.harness = {said (last 24, old tool results folded to 240 chars), draft (the ask, §1b), kitchen}`. No model-written summary yet. The steer adds the next 14 days with weekdays, held lines and the next action, a menu awaiting review, and "changed on the page" when a plan's version moved past what the chat saw.
+- **Events**: status lines while slow tools run, step lines for tools that changed or failed, the menu/decision/ledger cards from `taskView`, `{type:'ask'}` for the dock's card, then clarify chips (`say:<words>`, with productId/price for products) and done.
+
+Trials: `harness.test.ts` (scripted model, in the gate) and `harness.live.test.ts` (opt-in, `HARNESS_LIVE=1 LLM_PROVIDER=gemini`; transcript in `scratch/harness-live.json`).

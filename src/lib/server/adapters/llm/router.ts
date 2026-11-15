@@ -21,6 +21,7 @@ export const LLM_JOBS = [
 	'menu.propose',
 	'explain',
 	'chat.understand',
+	'chat.agent',
 	'establishment.match',
 	'image.read'
 ] as const;
@@ -71,6 +72,13 @@ export const LLM_ROUTES: Record<LlmJob, LlmRoute> = {
 		model: GEMINI_LLM_MODEL,
 		thinking: 'minimal',
 		maxTokens: 400
+	},
+	// The chat as an agent (CHAT_HARNESS=llm): one step of its tool loop, a tool call or the typed reply.
+	'chat.agent': {
+		provider: 'env',
+		model: GEMINI_LLM_MODEL,
+		thinking: 'minimal',
+		maxTokens: 1200
 	},
 	// Mapping a chef's description to the nearest seeded kitchen (D15): one short JSON answer.
 	'establishment.match': {

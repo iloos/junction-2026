@@ -49,7 +49,17 @@ export const TaskPending = z.discriminatedUnion('kind', [
 		field: ClarifyField,
 		/** Our own words. */
 		question: z.string().max(300),
-		options: z.array(z.object({ label: z.string().max(80), value: z.string().max(200) })).max(6)
+		options: z
+			.array(
+				z.object({
+					label: z.string().max(80),
+					value: z.string().max(200),
+					/** The catalogue product a chip names (shown with its photo), and its price in words. */
+					productId: z.string().max(64).optional(),
+					price: z.string().max(40).optional()
+				})
+			)
+			.max(6)
 	}),
 	z.object({
 		kind: z.literal('decision'),
