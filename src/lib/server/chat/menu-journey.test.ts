@@ -140,3 +140,24 @@ describe('hero: "plan it" never repeats a question', () => {
 		}
 	);
 });
+
+describe('"plan it" at the dietary question is never a diet', () => {
+	it('plans with the stated defaults instead', { timeout: 180_000 }, async () => {
+		const w = await trialWorkspace();
+		w.env.ports.clock = { now: () => FIDELITY_NOW };
+		const deps = {
+			handlers: w.handlers,
+			ctx: w.ctx('chef'),
+			ports: w.env.ports,
+			workspaceId: w.env.workspaceId,
+			kitchen: { id: 'k-hotel' },
+			today: scenarioDate(FIDELITY_NOW)
+		};
+		const t1 = await chatTurn({ text: 'dinner for 40 on Saturday, buffet' }, deps);
+		const taskId = t1[0].taskId;
+		const t2 = await chatTurn({ taskId, text: 'plan it' }, deps);
+		expect(JSON.stringify(t2)).not.toMatch(/plan it is a requirement/);
+		const task = await w.env.ports.tasks!.get(w.env.workspaceId, taskId);
+		expect(JSON.stringify(task?.slots ?? {})).not.toMatch(/plan it/);
+	});
+});

@@ -66,8 +66,20 @@ const euros = (s: string) => {
 };
 
 /** Every requirement the words state, normalised; a count is kept as "vegetarian:6". */
-export function dietaryIn(text: string): string[] {
+export function dietaryIn(raw: string): string[] {
 	const out: string[] = [];
+	// A diet on one dish ("a vegetarian main", "a vegan dessert", "one gluten-free option") constrains that dish only:
+	// it is kept as a counted requirement ("vegetarian:main"), never one for every dish, and taken out of the words.
+	let text = raw;
+	for (const m of raw.matchAll(
+		/\b(?:a|an|one|1)\s+(vegetarian|veggie|vegan|gluten[- ]?free|lactose[- ]?free|dairy[- ]?free)\s+(main(?: course)?|starter|dessert|soup|salad|side|dish|option|course|choice)\b/giu
+	)) {
+		const w = m[1].toLowerCase().replace(/\s/g, '-');
+		const label =
+			w === 'veggie' ? 'vegetarian' : w.replace(/^(gluten|lactose|dairy)-?free$/, '$1-free');
+		out.push(`${label}:${m[2].toLowerCase().split(' ')[0]}`);
+		text = text.replace(m[0], ' ');
+	}
 	// Request constraints ("lactose-free") keep a head count when the words give one ("4 lactose-free").
 	for (const key of constraintsIn(text)) {
 		const c = CONSTRAINTS.find((x) => x.key === key)!;
@@ -320,6 +332,9 @@ function typedDietary(v: string): string[] | null {
 		)
 	)
 		return [];
+	// Commands and chat words are never a diet ("plan it" once became a requirement for every dish).
+	if (/^(plan|order|go ahead|continue|yes|ok(ay)?|sure|thanks?|tilaa|suunnittele|jatka)\b/i.test(s))
+		return null;
 	const known = dietaryIn(s);
 	if (known.length) return known;
 	const parts = s
