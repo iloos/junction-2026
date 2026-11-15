@@ -103,7 +103,7 @@ Don't say: vector search, schema-constrained, recipe-aware, "a real recall hit o
 
 ---
 
-**Built deck:** the claude.ai Slides artifact (private until the owner shares it) renders these six slides as 11 frames; this file stays the source of truth, so change a line here first, then on the slide. Present from its downloaded `.html` or PDF, never the live link.
+**Built deck (v2, after the user's review: "generic and boring"):** built around the user's three sketches and one visual language, the gate's three outcomes (teal = ordered alone, amber = waits for a person, red = can't be ordered), on warm paper with dark bookends. 14 frames: cover ("Order it. Hold it. Refuse it.") · the world (sketch 1: suppliers → Valio Aimo → mandate.kitchen → six kinds of kitchen) · the case · how it works (the architecture diagram: chef, the three layers, your agent via MCP, Valio in, order out) · understand (sketch 2: establishment → menu → recipes → ingredients → Valio products, on the hero ask) · the gate (the buffet's 21 lines as a 3 / 15 / 3 bar, CLAIMS b3) · the hero as a chat transcript with 10/10 · the room (illustration, labelled) · an outside agent as an MCP terminal transcript · Valio's side · the partners along one order's path · why this, not a chatbot · real / simulated / next · close. The artifact this file stays the source of truth, so change a line here first, then on the slide. Present from its downloaded `.html` or PDF, never the live link.
 
 ## Open before filming
 - [ ] S5: the numbers for slides 3 and 5 (hero at 390, r1 stores and first order, m1 room cascade, eval counts, facets 0 unsafe, F1 cases, rounds closed).
