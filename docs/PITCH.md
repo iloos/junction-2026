@@ -11,28 +11,28 @@ _Working doc, not final copy. Owner: S7 (pitch lane) since Sun 01:55; the deck i
 | Time | Beat | What they see | Label on screen | Status |
 |---|---|---|---|---|
 | 0–15 | The problem | Christmas buffet for 140 (`event-xmas-140`); whole ham `462490` and lanttulaatikko `462482` out in Valio's own data | Valio mock data (fetched/cached); booking and the December clock are the scenario | [x] live kitchen |
-| 15–40 | It thinks like a chef | Edit grams per guest; demand → packs with unit bases; the Why drawer shows the arithmetic (135 g × 140 ÷ 0.7 yield → 4 × 7 kg lots) with each step's source | Recipes and stock-on-hand are team estimates | [x] seen on prod `70c30e2` (Why drawer); the edit itself to rehearse |
+| 15–40 | It thinks like a chef | Edit grams per guest; demand → packs with unit bases; the Why drawer shows the arithmetic (135 g × 140 ÷ 0.7 yield → 4 × 7 kg lots) with each step's source | Recipes and stock-on-hand are team estimates | [x] seen on prod `c50a0bc` (Why drawer); the edit itself to rehearse |
 | 40–70 | It refuses | Candidates ranked known stock first; a rejected candidate with its reason; Terminal items labelled unknown stock, never counted as cover | Real data + our rules | [x] in code and tests; see it deployed before saying it |
 | 70–95 | It's honest | Ham → HK Palvikinkku `476768` (known-stock candidate); lanttulaatikko made in house from ingredients in Valio's catalogue (D8a: most have no stated stock, so they wait for the chef with the allergen change); any shortfall shown | Hand-checked rescue in the seed | [x] tests; prod check open |
-| 95–115 | Trust you can test | Approve exact terms → commit → deliberate retry → one receipt; an edit after approval voids it | Local simulated commitment | [x] approve → one receipt seen on prod `70c30e2`; retry on prod via the race smoke; the UI void to rehearse |
-| 115–120 | The other side | The same held lines in Operations, grouped by cause, in the visitor's own workspace | | [x] seen on prod `70c30e2`; don't point at the count tiles until `a5ca1f5` deploys |
+| 95–115 | Trust you can test | Approve exact terms → commit → deliberate retry → one receipt; an edit after approval voids it | Local simulated commitment | [x] approve → one receipt seen on prod `c50a0bc`; retry on prod via the race smoke; the UI void to rehearse |
+| 115–120 | The other side | The same held lines in Operations, grouped by cause, in the visitor's own workspace | | [x] seen on prod `c50a0bc`; don't point at the count tiles until `66560bf` deploys |
 
 Valio's own example ("1,000 L lactose-free milk by Monday") runs as its own route, `/request` (their required flow: request → lookup → order → approval), not inside this story.
 
 **Bold beat ("Same shortage. Your rules."):** the judge flips price-first to Finnish-required or changes a cap; eligible terms, rejections and residuals update; if nothing qualifies, it says so. [~] rehearse on the deployed app first.
 
 ## Video shot list (≤ 2:00, filmed after the freeze on the tagged deploy)
-Order (lead, Sun 01:40): the hero journey first, then the room and a shortage, then an outside agent stopped. Each shot is a URL, the clicks, and what must be on screen. Film a shot only when its playtest journey is green on the deployed commit (`KITCHEN_URL=https://app.mandate.kitchen node evals/playtest/run.mjs --grep <id>`); otherwise cut it or say "next". A fresh browser profile per take (each is a new sandbox); 1440 × 900, plus one 390 phone insert. Status below is from prod 4de483a, Sun 01:30.
+Order (lead, Sun 01:40): the hero journey first, then the room and a shortage, then an outside agent stopped. Each shot is a URL, the clicks, and what must be on screen. Film a shot only when its playtest journey is green on the deployed commit (`KITCHEN_URL=https://app.mandate.kitchen node evals/playtest/run.mjs --grep <id>`); otherwise cut it or say "next". A fresh browser profile per take (each is a new sandbox); 1440 × 900, plus one 390 phone insert. Status below is from prod ac8d7e9, Sun 01:30.
 
 | Time | Shot | URL and clicks | On screen (must) | Journey · status |
 |---|---|---|---|---|
 | 0:00–0:08 | Opener | `/` → "Who are you cooking for?" → Hotel Rautatientori | Seven sample kitchens, each with its rules; "Your own kitchen" form above them | j1 · [x] |
-| 0:08–0:40 | **Hero: words → a costed plan** | Dock: "a no-meat dinner for 120 with a peach dessert" → tap Sat 12 Dec → Buffet → "plan it" → menu card (6 dishes) → "plan it" | The agent's steps as they happen; the menu; then the plan: every ingredient a Valio product with a price, or labelled ("No stock info", "Not covered", swaps) | m2 · [x] 1440 on 4de483a (20–25 lines, 17–24 held, all in decisions) |
-| 0:40–0:55 | The chef decides, the order lands | "Accept all" (D29; until then the page's Review → Confirm) → "Order K lines now" | Held lines in decisions, approved by a person; "Ordered · N lines", one receipt; "supplier simulated" visible | m2 · [x] 1440 (rc-e8b34dbe4396); [ ] 390 after 6cbc89a; [ ] approving from the open dock until S2's 508db7d |
+| 0:08–0:40 | **Hero: words → a costed plan** | Dock: "a no-meat dinner for 120 with a peach dessert" → tap Sat 12 Dec → Buffet → "plan it" → menu card (6 dishes) → "plan it" | The agent's steps as they happen; the menu; then the plan: every ingredient a Valio product with a price, or labelled ("No stock info", "Not covered", swaps) | m2 · [x] 1440 on ac8d7e9 (20–25 lines, 17–24 held, all in decisions) |
+| 0:40–0:55 | The chef decides, the order lands | "Accept all" (D29; until then the page's Review → Confirm) → "Order K lines now" | Held lines in decisions, approved by a person; "Ordered · N lines", one receipt; "supplier simulated" visible | m2 · [x] 1440 (rc-e8b34dbe4396); [ ] 390 after 985fe48; [ ] approving from the open dock until S2's 5a818d5 |
 | 0:55–1:05 | Valio sees it | `/ops` → Orders, then Forecast | The order arrives; demand per delivery day; two weeks of stock, labelled simulated | m2 last step · [x]; m4 Forecast · [x]; Flow (sankey) · [ ] cut |
-| 1:05–1:25 | **The room** | `/ops?ws=ws-judges` → Room tab on the big screen; "Show the code full screen"; two phones scan, name a store, order | The QR with app.mandate.kitchen/?ws=ws-judges; stores appear by name; "First order" lights up | r1 · [x] QR link; [ ] stores named (S4 461a4a8); [ ] first order (needs an order to complete in r1) |
-| 1:25–1:40 | A shortage, every store re-plans | Presenter: scenario `shortage` in the room → Room tab | Per store: kept, swapped, held, short, and what its own mandate allowed | m1 · [x] own sandbox (contention); [ ] room cascade on screen (presenter-only `shortage`, S1 812d714) |
-| 1:40–1:55 | An outside agent is stopped | Claude with the visitor's key: place_order over the €800 line cap, then approve | Held (every outside line waits for the chef); over MCP `approve` isn't listed (the client says tool not found), so show the REST `approve` → 403 and the refusal on Ops; the chef approves on the paired phone (390 insert) | m3 · [x] held + 403; [ ] own-store order by the visitor's key (S1 46e2669, wave H) |
+| 1:05–1:25 | **The room** | `/ops?ws=ws-judges` → Room tab on the big screen; "Show the code full screen"; two phones scan, name a store, order | The QR with app.mandate.kitchen/?ws=ws-judges; stores appear by name; "First order" lights up | r1 · [x] QR link; [ ] stores named (S4 e33db60); [ ] first order (needs an order to complete in r1) |
+| 1:25–1:40 | A shortage, every store re-plans | Presenter: scenario `shortage` in the room → Room tab | Per store: kept, swapped, held, short, and what its own mandate allowed | m1 · [x] own sandbox (contention); [ ] room cascade on screen (presenter-only `shortage`, S1 99a5d20) |
+| 1:40–1:55 | An outside agent is stopped | Claude with the visitor's key: place_order over the €800 line cap, then approve | Held (every outside line waits for the chef); over MCP `approve` isn't listed (the client says tool not found), so show the REST `approve` → 403 and the refusal on Ops; the chef approves on the paired phone (390 insert) | m3 · [x] held + 403; [ ] own-store order by the visitor's key (S1 f7e7fea, wave H) |
 | 1:55–2:00 | Close | `mandate.kitchen` | "What do you need? We'll sort it out. That's a mandate." | j9 · [x] |
 
 Cut list if time is short: Valio sees it (fold into the room shot), then the opener.
@@ -60,10 +60,10 @@ Deck: [pitch/DECK.md](pitch/DECK.md) (six slides: the case · the approach · th
 | For the cases we test, the same words give the same basket through `/request`, the agent and REST | `evals/fidelity/cases.json` (`pnpm eval`); paraphrase gaps open in `evals/paraphrase` |
 | Decide per reason group: an allergen change never rides with routine lines | `server/store/groups.test.ts` |
 | Cut-off enforced at commit (F9) | `server/store/cutoff.test.ts`; eval r5-f9 |
-| Knows the cut-off: "tomorrow" after 17:00 is caught before ordering, the cut-off named and the next day offered | `evals/paraphrase` `late-tomorrow`, chat trials c1/c4; seen on prod `70c30e2` `/request` ("earliest delivery is Wed 9 Dec") |
-| An event in words becomes a plan: brief questions → a menu proposed by Gemini (3.8 Flash), every amount an estimate → the chef accepts → a plan | `core/services/events.ts` `plan_event{proposal}`, `MenuReview.svelte`; seen on prod `70c30e2` (50 guests → 20 lines) |
-| Chat: plain words → a held plan and a decision card; "approve it" is refused; answers come from the task's ledger | `server/chat/`, `evals/chat` (scripted trials + 15 messy EN/FI turns replayed in the gate); seen on prod `70c30e2` in the dock (`/agents/chat` now opens the dock over the Kitchen) |
-| The Why drawer cites the web (Exa): net content, origin and ingredients, GTIN-cited, with sources | `server/web/evidence.ts`; seen on prod `70c30e2` (ham `462490`, hk.fi) |
+| Knows the cut-off: "tomorrow" after 17:00 is caught before ordering, the cut-off named and the next day offered | `evals/paraphrase` `late-tomorrow`, chat trials c1/c4; seen on prod `c50a0bc` `/request` ("earliest delivery is Wed 9 Dec") |
+| An event in words becomes a plan: brief questions → a menu proposed by Gemini (3.8 Flash), every amount an estimate → the chef accepts → a plan | `core/services/events.ts` `plan_event{proposal}`, `MenuReview.svelte`; seen on prod `c50a0bc` (50 guests → 20 lines) |
+| Chat: plain words → a held plan and a decision card; "approve it" is refused; answers come from the task's ledger | `server/chat/`, `evals/chat` (scripted trials + 15 messy EN/FI turns replayed in the gate); seen on prod `c50a0bc` in the dock (`/agents/chat` now opens the dock over the Kitchen) |
+| The Why drawer cites the web (Exa): net content, origin and ingredients, GTIN-cited, with sources | `server/web/evidence.ts`; seen on prod `c50a0bc` (ham `462490`, hk.fi) |
 | Context.dev watches Ruokavirasto's recall list every 5 minutes; each notice becomes an Ops case matched against the catalogue | `foundations/web.md`, `/api/web/contextdev`; recall cases seen in prod Ops |
 | A voided approval shows what changed | eval r6-5 (`get_plan.lastVoided`) |
 | Each visitor mints a judge key on `/agents`; it reads but cannot approve | `server/demo/judge-key.test.ts`; observed on prod: `approve`/`set_mandate` → 403 |
@@ -71,12 +71,12 @@ Deck: [pitch/DECK.md](pitch/DECK.md) (six slides: the case · the approach · th
 | Every visitor gets their own sandbox; a judge key works only there | `server/demo/{visitor,judge-key,sandbox}.test.ts`; two-browser gate `src/routes/ops/visitor-gate.e2e.ts` (production build) |
 | Substitutes are ranked with Gemini Decisions, with replay and rules fallbacks (not "recipe-aware": no labelled fit set has run) | `server/adapters/decide`; `DECIDE_LIVE=1 pnpm test:live` (one live call) |
 | Valio's milk example runs on `/request`, keeping "lactose-free" | `server/request/fixes.test.ts`, `request.test.ts`; seen deployed with the Gemini parser |
-| Approve → order → one receipt, in the Kitchen; the order summary adds up and survives a reload | `evals/ui/kitchen-order.e2e.ts`, green against prod `70c30e2` |
+| Approve → order → one receipt, in the Kitchen; the order summary adds up and survives a reload | `evals/ui/kitchen-order.e2e.ts`, green against prod `c50a0bc` |
 
 Every claim's observed status and verdict: [CLAIMS.md](CLAIMS.md).
 
 ## Not yet claimable
-- **The room cascade on screen**: waits for wave K's room fix to be playtested (r1, m1). The hero journey is 10/10 at 1440 and 390 on prod `ea9f4d5` (S5).
+- **The room cascade on screen**: waits for wave K's room fix to be playtested (r1, m1). The hero journey is 10/10 at 1440 and 390 on prod `897da5d` (S5).
 - **The menu's product picks up close**: a trout ingredient resolved to pork (BUGS #11); show the menu, not the picks, until fixed.
 - **Every sponsor call in the trace drawer**: Valio live, chat Gemini text and MCP `propose_menu` aren't traced there yet.
 - **Review mechanism**: on main behind `REVIEW=1`, off until the on/off arms run.
