@@ -6,11 +6,15 @@
 	import { flip } from 'svelte/animate';
 	import { fade, fly } from 'svelte/transition';
 	import {
+		byActivity,
 		firstOrders,
 		isVisitorStore,
+		kindCounts,
 		kindWords,
+		ordersLastMinute,
 		OUTCOME_WORDS,
-		roomOrder,
+		STATE_WORDS,
+		type StoreState,
 		shortageSentence,
 		type FeedOrder,
 		type OpsKitchen,
@@ -30,7 +34,8 @@
 		seedName,
 		canShortage,
 		presenter = false,
-		incident = null
+		incident = null,
+		states = {}
 	}: {
 		kitchens: OpsKitchen[];
 		totals: Record<string, { n: number; cents: number }>;
@@ -44,6 +49,8 @@
 		presenter?: boolean;
 		/** The newest incident's re-plans, one per product (stream notices labelled "Simulated incident: …"). */
 		incident?: { label: string; shortages: ShortageReplanned[] } | null;
+		/** Each store's state for its tile's dot (room.ts storeStates). */
+		states?: Record<string, StoreState>;
 	} = $props();
 
 	const story = $derived(
@@ -55,15 +62,22 @@
 	let deckNote = $state<string | null>(null);
 	let confirmReset = $state(false);
 
-	/** Sample kitchens shown before the rest fold behind "+N sample kitchens". */
-	const SAMPLES_SHOWN = 5;
-	let allSamples = $state(false);
-	const order = $derived(roomOrder(kitchens, totals));
-	const shown = $derived([
-		...order.active,
-		...(allSamples ? order.samples : order.samples.slice(0, SAMPLES_SHOWN))
-	]);
-	const folded = $derived(allSamples ? 0 : Math.max(0, order.samples.length - SAMPLES_SHOWN));
+	/** Room scale (500+ stores): tiles by latest activity in a fixed panel; repetition only as counts. */
+	const tiles = $derived(byActivity(kitchens, states, feed));
+	const count = (s: StoreState) => kitchens.filter((k) => (states[k.id] ?? 'joined') === s).length;
+	const nOrdered = $derived(count('ordered'));
+	const nWaiting = $derived(count('waiting'));
+	const nPlanning = $derived(count('planning'));
+	const nIdle = $derived(kitchens.length - nOrdered - nWaiting - nPlanning);
+	/** The feed shows the latest few; the rate says how busy the room is. */
+	const FEED_SHOWN = 10;
+	let now = $state(Date.now());
+	onMount(() => {
+		const t = setInterval(() => (now = Date.now()), 5000);
+		return () => clearInterval(t);
+	});
+	const perMinute = $derived(ordersLastMinute(feed, now));
+	const byKind = $derived(kindCounts(kitchens));
 	const qr = $derived(joinUrl ? encode(joinUrl, { border: 2 }) : null);
 	const euro = (c: number) =>
 		(c / 100).toLocaleString('en-IE', { style: 'currency', currency: 'EUR' });
@@ -189,17 +203,26 @@
 			<h2>
 				{kitchens.length} store{kitchens.length === 1 ? '' : 's'} in this room
 			</h2>
-			<p>
-				{orderCount} order{orderCount === 1 ? '' : 's'} placed, <b class="num">{euro(ordered)}</b> in
-				total. Every store orders under its own rules.
+			<p class="counts">
+				<span><b class="num">{nOrdered}</b> ordered</span>
+				<span><b class="num">{nWaiting}</b> waiting for a person</span>
+				<span><b class="num">{nPlanning}</b> planning</span>
+				<span
+					><b class="num">{euro(ordered)}</b> in {orderCount} order{orderCount === 1
+						? ''
+						: 's'}</span
+				>
+				<span><b class="num">{perMinute}</b> in the last minute</span>
 			</p>
+			{#if byKind}<p class="kinds">{byKind}</p>{/if}
+			<p>Every store orders under its own rules.</p>
 		</div>
 		{#if joinUrl && qr}
 			<div class="join">
 				{@render code()}
 				<div>
 					<p class="join-h">Join as your own store</p>
-					<p class="join-t">Scan, name your store, pick its type. Others in the room see it.</p>
+					<p class="join-t">Scan, name your store and pick its kind. Others in the room see it.</p>
 					<button class="bigbtn" onclick={() => (big = true)}>Show the code full screen</button>
 					<!-- An absolute link for another device (the QR's target), built from resolve('/') by the page. -->
 					<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
@@ -336,42 +359,44 @@
 	<div class="cols">
 		<section class="stores" aria-label="Stores">
 			<h3>Stores</h3>
-			<ul>
-				{#each shown as k (k.id)}
+			<ul class="grid">
+				{#each tiles as k (k.id)}
 					{@const t = totals[k.id]}
+					{@const st = states[k.id] ?? 'joined'}
 					<li
+						class="tile s-{st}"
 						class:lit={lit === k.id}
 						class:first={!!firsts[k.id]}
-						animate:flip={{ duration: 300 }}
-						in:fly={{ y: 12 }}
+						title="{k.name}: {STATE_WORDS[st]}{k.copiedFrom
+							? `, rules from ${seedName(k.copiedFrom)}`
+							: ''}"
 					>
-						<span class="name"
-							>{k.name}{#if firsts[k.id]}<span class="firstbadge">First order</span>{/if}</span
-						>
-						<span class="value num">{t ? euro(t.cents) : ''}</span>
-						<span class="meta">
-							{kindWords(k.kind)}{k.city ? `, ${k.city}` : ''}
-							{#if k.copiedFrom}<span class="new">new, rules from {seedName(k.copiedFrom)}</span
-								>{:else if isVisitorStore(k)}<span class="new">new store</span>{/if}
-						</span>
-						<span class="count num"
-							>{t ? `${t.n} order${t.n === 1 ? '' : 's'}` : 'Nothing ordered yet'}</span
-						>
+						<span class="dot" aria-hidden="true"></span>
+						<span class="name">{plainName(k.name)}</span>
+						{#if t}<span class="value num">{euro(t.cents)}</span>{/if}
+						{#if firsts[k.id]}<span class="firstbadge">First order</span
+							>{:else if k.kind && k.kind !== 'blank' && (k.copiedFrom || !isVisitorStore(k))}<span
+								class="kind">{kindWords(k.kind)}</span
+							>{:else if st === 'waiting'}<span class="kind">Waits for a person</span>{/if}
+						<span class="sr">{STATE_WORDS[st]}</span>
 					</li>
 				{/each}
 			</ul>
-			{#if folded}
-				<button class="more" onclick={() => (allSamples = true)}>
-					+{folded} sample kitchen{folded === 1 ? '' : 's'}
-				</button>
+			{#if nIdle}
+				<p class="idle">
+					{nIdle} store{nIdle === 1 ? " hasn't" : "s haven't"} started an order yet.
+				</p>
 			{/if}
 		</section>
 
 		<section class="feed" aria-label="Orders arriving" aria-live="polite">
 			<h3>Orders arriving</h3>
 			{#if feed.length}
+				<p class="rate">
+					<b class="num">{perMinute}</b> order{perMinute === 1 ? '' : 's'} in the last minute
+				</p>
 				<ol>
-					{#each feed as o (o.id)}
+					{#each feed.slice(0, FEED_SHOWN) as o (o.id)}
 						<li animate:flip={{ duration: 300 }} in:fly={{ y: -12, duration: 400 }}>
 							<span class="when num">{clock(o.committedAt)}</span>
 							<span class="name">{o.kitchenName}</span>
@@ -456,16 +481,78 @@
 		margin: 0;
 		padding: 0;
 	}
-	.stores li {
+	/* Room scale: a dense grid of small tiles in a fixed panel that scrolls inside, so the page never grows. */
+	.grid {
 		display: grid;
-		grid-template-columns: minmax(0, 1fr) auto;
-		gap: 2px 12px;
-		/* Padded for the lit background, pulled back so names line up with the headings. */
-		padding: 8px;
-		margin-inline: -8px;
-		border-bottom: 1px solid var(--line);
-		border-radius: 4px;
+		grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+		gap: 6px;
+		max-height: min(60vh, 560px);
+		overflow-y: auto;
+		align-content: start;
+	}
+	.stores li {
+		/* Holds the visually hidden state word, so it never reaches past the scrolling panel. */
+		position: relative;
+		display: grid;
+		grid-template-columns: auto minmax(0, 1fr) auto;
+		align-items: center;
+		gap: 2px 6px;
+		padding: 6px 8px;
+		border: 1px solid var(--line);
+		border-radius: 6px;
+		font-size: 0.875rem;
 		transition: background 0.6s;
+	}
+	.tile .name {
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+	.tile .kind,
+	.tile .firstbadge {
+		grid-column: 2 / -1;
+		margin: 0;
+		font-size: 0.75rem;
+		color: var(--muted);
+	}
+	.tile .firstbadge {
+		justify-self: start;
+	}
+	.dot {
+		width: 9px;
+		height: 9px;
+		border-radius: 50%;
+		background: var(--line);
+	}
+	.s-planning .dot {
+		background: var(--muted);
+	}
+	.s-waiting .dot {
+		background: #d4a017;
+	}
+	.s-ordered .dot {
+		background: var(--done);
+	}
+	.counts {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 4px 16px;
+	}
+	.idle,
+	.rate {
+		margin: 8px 0 0;
+		color: var(--muted);
+		font-size: 0.875rem;
+	}
+	.rate {
+		margin: 0 0 8px;
+	}
+	.sr {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		overflow: hidden;
+		clip: rect(0 0 0 0);
 	}
 	.stores li.lit {
 		background: color-mix(in srgb, var(--done) 18%, transparent);

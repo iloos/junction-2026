@@ -276,3 +276,96 @@ export function firstOrders(
 ): string[] {
 	return Object.keys(after).filter((id) => after[id].n > 0 && !(before[id]?.n > 0));
 }
+
+/** Where a store stands, as one dot on its tile: it joined, is planning, waits for a person, or has ordered. */
+export type StoreState = 'joined' | 'planning' | 'waiting' | 'ordered';
+
+export const STATE_WORDS: Record<StoreState, string> = {
+	joined: 'Joined',
+	planning: 'Planning',
+	waiting: 'Waits for a person',
+	ordered: 'Ordered'
+};
+
+/**
+ * Each store's state: ordered (an order placed) wins over waiting (a decision is pending), then planning (any plan),
+ * else joined. `plans` are the run's plans; `waiting` the kitchens with a pending decision on their current plan.
+ */
+export function storeStates(
+	kitchens: readonly OpsKitchen[],
+	totals: Record<string, { n: number }>,
+	plans: readonly { kitchenId: string }[],
+	waiting: ReadonlySet<string>
+): Record<string, StoreState> {
+	const planning = new Set(plans.map((p) => p.kitchenId));
+	return Object.fromEntries(
+		kitchens.map((k) => [
+			k.id,
+			totals[k.id]?.n
+				? 'ordered'
+				: waiting.has(k.id)
+					? 'waiting'
+					: planning.has(k.id)
+						? 'planning'
+						: 'joined'
+		])
+	);
+}
+
+/**
+ * The store grid at room scale: latest activity first (the newest order's store on top), then stores waiting for a
+ * person, planning, and the rest with the newest joiners first; the seeded samples last.
+ */
+export function byActivity(
+	kitchens: readonly OpsKitchen[],
+	states: Record<string, StoreState>,
+	feed: readonly FeedOrder[]
+): OpsKitchen[] {
+	const lastOrder = new Map<string, number>();
+	feed.forEach((o, i) => lastOrder.has(o.kitchenId) || lastOrder.set(o.kitchenId, i));
+	const rank: Record<StoreState, number> = { ordered: 1, waiting: 2, planning: 3, joined: 4 };
+	const pos = new Map(kitchens.map((k, i) => [k.id, i]));
+	const visitor = (k: OpsKitchen) => (isVisitorStore(k) ? 0 : 1);
+	return [...kitchens].sort(
+		(a, b) =>
+			(lastOrder.get(a.id) ?? Infinity) - (lastOrder.get(b.id) ?? Infinity) ||
+			rank[states[a.id] ?? 'joined'] - rank[states[b.id] ?? 'joined'] ||
+			visitor(a) - visitor(b) ||
+			// Newest joiners first: kitchens arrive in creation order.
+			pos.get(b.id)! - pos.get(a.id)!
+	);
+}
+
+/** Orders committed in the minute before `now` (the feed is newest first). */
+export function ordersLastMinute(feed: readonly FeedOrder[], now: number): number {
+	return feed.filter((o) => now - Date.parse(o.committedAt) <= 60_000).length;
+}
+
+const KIND_PLURAL: Record<string, string> = {
+	city_hotel: 'city hotels',
+	lunch_restaurant: 'lunch places',
+	public_central_kitchen: 'central kitchens',
+	a_la_carte_restaurant: 'à la carte restaurants',
+	care_home_kitchen: 'care homes',
+	cafe: 'cafés',
+	ski_resort_hotel: 'ski resort hotels'
+};
+
+/**
+ * The room's visitor stores by kind (the sample each was copied from), biggest first, as one line: "212 lunch
+ * places · 98 cafés". Blank stores and the seeded samples are not counted.
+ */
+export function kindCounts(kitchens: readonly OpsKitchen[]): string {
+	const n = new Map<string, number>();
+	for (const k of kitchens)
+		if (isVisitorStore(k) && k.copiedFrom && k.kind && k.kind !== 'blank')
+			n.set(k.kind, (n.get(k.kind) ?? 0) + 1);
+	return [...n]
+		.sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+		.map(([kind, c]) =>
+			c === 1
+				? `1 ${kindWords(kind).toLowerCase()}`
+				: `${c} ${KIND_PLURAL[kind] ?? `${kindWords(kind).toLowerCase()}s`}`
+		)
+		.join(' · ');
+}
