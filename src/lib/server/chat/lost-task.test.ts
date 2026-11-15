@@ -65,3 +65,18 @@ describe('OM-9: a task from before a reset is gone', () => {
 		).toMatch(/no longer here/);
 	});
 });
+
+describe('S5 dock-drops-new-ask', () => {
+	it(
+		'"half the 80 lunches gluten-free" after an order is a new task, not the old one\'s status',
+		{ timeout: 120_000 },
+		async () => {
+			const deps = await setup();
+			const first = await chatTurn({ text: '5 l cream for friday' }, deps);
+			const old = first.at(-1)!.taskId;
+			const out = await chatTurn({ taskId: old, text: 'half the 80 lunches gluten-free' }, deps);
+			expect(out.at(-1)!.taskId).not.toBe(old);
+			expect(JSON.stringify(out)).not.toMatch(/If you meant something new/);
+		}
+	);
+});
