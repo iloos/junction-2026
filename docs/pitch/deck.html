@@ -521,7 +521,7 @@ svg.wires .w { fill: none; stroke-width: 4; stroke-linecap: round; }
   }
 
   function play(s) {
-    if (!M || reduce || /(^|[?&])still\b/.test(location.search)) {
+    if (!M || reduce || /still/.test(location.search + location.hash)) {
       s.querySelectorAll('svg.wires .w[data-marker]').forEach(function (p) { p.setAttribute('marker-end', p.getAttribute('data-marker')); });
       return;
     }
@@ -558,12 +558,12 @@ svg.wires .w { fill: none; stroke-width: 4; stroke-linecap: round; }
     slides[cur].classList.add('on');
     bar.style.width = ((cur + 1) / slides.length * 100) + '%';
     notesText.textContent = slides[cur].getAttribute('data-notes') || '';
-    var h = '#s' + (cur + 1);
+    var h = (/still/.test(location.hash) ? '#still-s' : '#s') + (cur + 1);
     if (location.hash !== h) { try { history.replaceState(null, '', h); } catch (e) { location.hash = h; } }
     play(slides[cur]);
   }
 
-  function fromHash() { var m = /^#s(\d+)$/.exec(location.hash || ''); return m ? (+m[1] - 1) : 0; }
+  function fromHash() { var m = /^#(?:still-)?s(\d+)$/.exec(location.hash || ''); return m ? (+m[1] - 1) : 0; }
 
   document.addEventListener('keydown', function (e) {
     if (e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' ' || e.key === 'Enter') { e.preventDefault(); go(cur + 1); }
@@ -587,7 +587,7 @@ svg.wires .w { fill: none; stroke-width: 4; stroke-linecap: round; }
   });
   window.addEventListener('hashchange', function () { go(fromHash()); });
   window.addEventListener('resize', fit);
-  if (/(^|[?&])still/.test(location.search)) { ['hint','bar'].forEach(function (id) { var e = document.getElementById(id); if (e) e.style.display = 'none'; }); }
+  if (/still/.test(location.search + location.hash)) { ['hint','bar'].forEach(function (id) { var e = document.getElementById(id); if (e) e.style.display = 'none'; }); }
   fit();
   go(fromHash());
   setTimeout(function () { var h = document.getElementById('hint'); if (h) h.style.opacity = '0'; }, 5000);
