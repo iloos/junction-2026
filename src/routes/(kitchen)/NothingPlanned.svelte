@@ -141,16 +141,19 @@
 			{/if}
 		</div>
 		{#if !blank}
-			{#key `${kitchenId}|${date ?? ''}`}
-				<UsualOrder
-					bind:this={card}
-					primary={embedded || !usual}
-					{kitchenId}
-					date={date ?? undefined}
-					onplanned={(r) => onplanned(r.planId)}
-					onsummary={(s) => (usual = s)}
-				/>
-			{/key}
+			<!-- On a phone the usual order comes first, under its headline; the calendar to pick another day follows. -->
+			<div class="max-md:order-first">
+				{#key `${kitchenId}|${date ?? ''}`}
+					<UsualOrder
+						bind:this={card}
+						primary={embedded || !usual}
+						{kitchenId}
+						date={date ?? undefined}
+						onplanned={(r) => onplanned(r.planId)}
+						onsummary={(s) => (usual = s)}
+					/>
+				{/key}
+			</div>
 		{/if}
 	</div>
 </div>

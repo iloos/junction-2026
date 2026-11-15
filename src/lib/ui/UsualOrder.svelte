@@ -609,7 +609,7 @@
 					<ArrowRight size={15} aria-hidden="true" />
 				</a>
 				<!-- eslint-enable svelte/no-navigation-without-resolve -->
-			{:else}
+			{:else if primary}
 				<button
 					class="inline-flex items-center gap-1.5 rounded-md px-4 py-2 text-body font-medium disabled:opacity-50 {primary
 						? 'bg-accent text-sheet'
