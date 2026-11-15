@@ -97,6 +97,67 @@ export function dietaryIn(raw: string): string[] {
 	return [...new Set(out)];
 }
 
+const FRACTION: Record<string, number> = {
+	half: 1 / 2,
+	'a third': 1 / 3,
+	'one third': 1 / 3,
+	'a quarter': 1 / 4,
+	'one quarter': 1 / 4,
+	'two thirds': 2 / 3,
+	'three quarters': 3 / 4
+};
+const SHARE_DIET =
+	/(vegetarian|veggie|vegan|gluten[- ]?free|lactose[- ]?free|dairy[- ]?free|meat|fish|chicken|beef|pork)/;
+const dietLabel = (w: string): string | null => {
+	const x = w.toLowerCase();
+	if (x === 'veggie' || x === 'vegetarian') return 'vegetarian';
+	if (x === 'vegan') return 'vegan';
+	const free = /^(gluten|lactose|dairy)[- ]?free$/.exec(x);
+	return free ? `${free[1]}-free` : null;
+};
+
+/**
+ * Shares of the guests that the request's share reader leaves out ("Dinner for 120 guests" is a cover count, not a
+ * dish count): "half vegetarian", "a third vegan", "40% gluten-free" become counted requirements ("vegetarian:60"),
+ * never a diet for every dish; "50/50 meat and fish" or "half meat, half fish" splits the mains, said in a note the
+ * menu model sizes its dishes by (DishTemplate.guests).
+ */
+export function guestShares(text: string, guests: number): { dietary: string[]; notes: string[] } {
+	const dietary: string[] = [];
+	const notes: string[] = [];
+	const t = text.toLowerCase();
+	const frac = new RegExp(
+		String.raw`(?<![\p{L}\d])(half|a third|one third|a quarter|one quarter|two thirds|three quarters|(\d{1,3})\s*(?:%|percent))\s+(?:of\s+(?:them|the guests|the people)\s+)?(?:are\s+|is\s+)?${SHARE_DIET.source}(?![\p{L}])`,
+		'giu'
+	);
+	for (const m of t.matchAll(frac)) {
+		const f = m[2] ? Number(m[2]) / 100 : FRACTION[m[1]];
+		const label = dietLabel(m[3]);
+		if (!label || !(f > 0 && f < 1)) continue;
+		dietary.push(`${label}:${Math.round(guests * f)}`);
+	}
+	const split =
+		/(?<![\p{L}\d])(?:(\d{1,2})\s*\/\s*(\d{1,2})\s+(\p{L}+)\s+(?:and|&|\/|or)\s+(\p{L}+)|half\s+(\p{L}+)\s*,?\s*(?:and\s+)?half\s+(\p{L}+))(?![\p{L}])/iu.exec(
+			t
+		);
+	if (split) {
+		const [p, q] = split[1] ? [Number(split[1]), Number(split[2])] : [1, 1];
+		const [x, y] = split[1] ? [split[3], split[4]] : [split[5], split[6]];
+		if (p > 0 && q > 0 && SHARE_DIET.test(x) && SHARE_DIET.test(y)) {
+			const a = Math.round((guests * p) / (p + q));
+			notes.push(`the mains are split: ${a} ${x} and ${guests - a} ${y}`);
+			for (const [w, n] of [
+				[x, a],
+				[y, guests - a]
+			] as const) {
+				const label = dietLabel(w);
+				if (label && !dietary.some((d) => d.startsWith(`${label}:`))) dietary.push(`${label}:${n}`);
+			}
+		}
+	}
+	return { dietary, notes };
+}
+
 /** The brief as far as the words go. `today` is the simulator's Helsinki date. */
 export function draftBrief(text: string, today: string): BriefDraft {
 	const from: BriefDraft['from'] = {};
@@ -149,6 +210,14 @@ export function draftBrief(text: string, today: string): BriefDraft {
 				noValue: label
 			}
 		};
+	}
+	if (guests !== null && !shares && !someShare) {
+		const part = guestShares(text, guests);
+		if (part.dietary.length) {
+			const counted = new Set(part.dietary.map((d) => d.split(':')[0]));
+			typed = [...typed.filter((d) => !counted.has(d.split(':')[0])), ...part.dietary];
+		}
+		notes.push(...part.notes);
 	}
 	if (shares) {
 		// A counted share replaces the same diet read for every dish ("a third vegan" is not "all vegan").
