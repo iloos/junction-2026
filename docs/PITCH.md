@@ -100,7 +100,7 @@ Every claim's observed status and verdict: [CLAIMS.md](CLAIMS.md).
 
 ## Framing we can say truthfully (docs/research/agentic-commerce.md)
 - "Our mandate is what Google's agent payments protocol (AP2) calls an open mandate; our approval is a closed mandate bound to the exact terms by a hash; the approval surface is not an agent, and every check runs in deterministic code." Don't claim AP2/ACP compliance, payments or signatures.
-- Numbers (cite on a slide, docs/research/pitch-numbers-and-viz.md): Finnish food services waste ~61 Mkg of edible food a year (Luke); ~1 plate in 6 on a serving line is never eaten (Luke field study); EU law requires a 30% per-person cut by 2030; public kitchens serve ~380 M meals a year; buyers beat the algorithm only where they know something it doesn't (Kesavan & Kushwaha 2020), so we ask only at the exceptions. No Finnish online-order or fill-rate figures (none found).
+- Numbers (cite on a slide, docs/research/pitch-numbers-and-viz.md): food services cause 17% of the Finnish food chain's edible food loss (Luke 2021; the release gives no kg figure for them); ~1 plate in 6 on a serving line is never eaten (Luke field study); EU law requires a 30% per-person cut by 2030; public kitchens serve ~380 M meals a year; buyers beat the algorithm only where they know something it doesn't (Kesavan & Kushwaha 2020), so we ask only at the exceptions. No Finnish online-order or fill-rate figures (none found).
 
 ## Q&A crib
 - **Can my agent approve?** No. The chef approves on the page or in the in-app chat. Any MCP agent, an outside one or your own, gets an approval link you open on any device, including a phone paired from `/agents`; the link points and grants nothing.

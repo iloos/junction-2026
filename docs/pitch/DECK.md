@@ -11,7 +11,7 @@ _S7, Sun 15 Nov 02:30. The outline for the stage deck and the video's frames. Ea
 
 **Proof (one line each):**
 - Valio's mentor, on the event Discord (Sat 14 Nov): "Currently there are no approval gates… in an agentic scenario a human approval would be required." That is our brief, in their words.
-- Finnish food services waste ~61 Mkg of edible food a year (Luke). The EU requires a 30% per-person cut by 2030.
+- Food services cause 17% of the Finnish food chain's edible food loss (Luke, 2021). The EU requires a 30% per-person cut at retail and consumption by 2030 (European Commission). Both checked against the source on Sun 15 Nov; cite them in small type on the slide.
 - Field experiments: buyers beat the algorithm only where they know something it doesn't (Kesavan & Kushwaha 2020). So the agent should **ask at the exceptions, not on every line**.
 
 **Say:** "The hard part isn't finding the product. It's knowing what the agent may buy alone."
@@ -102,6 +102,8 @@ Don't say: vector search, schema-constrained, recipe-aware, "a real recall hit o
 **Close:** "What do you need? We'll sort it out. That's a mandate." Then `mandate.kitchen` and the QR.
 
 ---
+
+**Built deck (v2, after the user's review: "generic and boring"):** built around the user's three sketches and one visual language, the gate's three outcomes (teal = ordered alone, amber = waits for a person, red = can't be ordered), on warm paper with dark bookends. 14 frames: cover ("Order it. Hold it. Refuse it.") · the world (sketch 1: suppliers → Valio Aimo → mandate.kitchen → six kinds of kitchen) · the case · how it works (the architecture diagram: chef, the three layers, your agent via MCP, Valio in, order out) · understand (sketch 2: establishment → menu → recipes → ingredients → Valio products, on the hero ask) · the gate (the buffet's 21 lines as a 3 / 15 / 3 bar, CLAIMS b3) · the hero as a chat transcript with 10/10 · the room (illustration, labelled) · an outside agent as an MCP terminal transcript · Valio's side · the partners along one order's path · why this, not a chatbot · real / simulated / next · close. The artifact this file stays the source of truth, so change a line here first, then on the slide. Present from its downloaded `.html` or PDF, never the live link.
 
 ## Open before filming
 - [ ] S5: the numbers for slides 3 and 5 (hero at 390, r1 stores and first order, m1 room cascade, eval counts, facets 0 unsafe, F1 cases, rounds closed).
