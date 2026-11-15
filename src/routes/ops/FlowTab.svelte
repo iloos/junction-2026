@@ -139,19 +139,22 @@
 	.lab .num {
 		color: var(--muted);
 	}
+	/* Each band separated by a hairline of the background so a store's products read as distinct flows. */
 	path {
-		fill: var(--muted);
-		opacity: 0.18;
+		fill: var(--color-accent);
+		opacity: 0.28;
+		stroke: var(--bg);
+		stroke-width: 1.5;
 	}
 	path.ordered {
 		fill: var(--done);
-		opacity: 0.45;
+		opacity: 0.6;
 	}
 	path:hover {
-		opacity: 0.8;
+		opacity: 0.9;
 	}
 	.node {
-		fill: var(--text);
+		fill: var(--muted);
 	}
 	.key {
 		margin: 0;
@@ -166,8 +169,8 @@
 		width: 12px;
 		height: 12px;
 		border-radius: 2px;
-		background: var(--muted);
-		opacity: 0.35;
+		background: var(--color-accent);
+		opacity: 0.4;
 	}
 	.sw.ordered {
 		background: var(--done);
