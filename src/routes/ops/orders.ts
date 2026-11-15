@@ -10,6 +10,7 @@ import { day } from '$lib/ui/format';
 import { salesUnitWords } from '$lib/ui/request/words';
 import { dueOf } from '$lib/core/mandate/due';
 import { dishName } from './problems';
+import { EVENT_SEED_BY_ID } from '$lib/kitchen/events';
 
 export interface OrderRow {
 	planId: string;
@@ -156,7 +157,7 @@ export function orderRow(s: OrderStages, decisions: Decision[]): OrderRow {
 	return {
 		planId: s.planId,
 		kitchenId: s.kitchenId,
-		title: planTitle(s),
+		title: (s.plan.eventId ? EVENT_SEED_BY_ID[s.plan.eventId]?.title : undefined) ?? planTitle(s),
 		origin: s.origin,
 		deliverBy: day(s.deliverBy),
 		...st,

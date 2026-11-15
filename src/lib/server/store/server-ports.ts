@@ -15,20 +15,21 @@ import { SimOverlay } from '../adapters/simulator/overlay';
 import { syncOverlay } from '../bus/overlay-sync';
 import { createPgDb, dbMode } from '../db/client';
 import { createDbPorts } from './db-ports';
+import { retryingOnce } from './singleton';
 import { registerBreaker } from '$lib/server/external/status';
 import type { AnyDb } from './drizzle-store';
 import { errMsg, log } from '$lib/server/obs/log';
 
 type Built = Awaited<ReturnType<typeof createDbPorts>>;
-const g = globalThis as typeof globalThis & { __mandatePorts?: Promise<Built> };
+const g = globalThis as typeof globalThis & { __mandatePortsSlot?: { current?: Promise<Built> } };
 
 /**
  * One instance per process (kept across Vite HMR), whoever asks first. It takes no options, so no caller's
- * wiring is lost to an earlier one: every committed transaction publishes its ops on the bus.
+ * wiring is lost to an earlier one: every committed transaction publishes its ops on the bus. A failed build is
+ * forgotten, so the next request retries instead of every tool failing until a restart.
  */
 export function createServerPorts(): Promise<Built> {
-	g.__mandatePorts ??= build();
-	return g.__mandatePorts;
+	return retryingOnce((g.__mandatePortsSlot ??= {}), build);
 }
 
 /**

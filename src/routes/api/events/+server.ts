@@ -140,12 +140,21 @@ export const GET: RequestHandler = async ({ url, request, cookies }) => {
 				HEARTBEAT_MS
 			);
 			// A reset elsewhere: tell the client to clear the stage for the new run.
+			let tick = 0;
 			const runCheck = setInterval(async () => {
 				if (!followRun) return;
 				// Re-reads the newest run from the database at most every few seconds (demo/reset.ts), so a
 				// reset made by another process reaches this stream too.
 				const now = await ensureRunLoaded(workspaceId).catch(() => currentRun(workspaceId));
-				if (now === runId) return;
+				if (now === runId) {
+					// Reconcile from the op log every other check (~6 s): a notify missed after its commit (publish
+					// runs after the transaction, LISTEN may still be connecting) converges here instead of
+					// waiting for the next write. The ordered sender drops what was already sent.
+					if (live && !closed && ++tick % 2 === 0)
+						for (const e of await catchUp(workspaceId, highest(), PAGE, runId).catch(() => []))
+							send(e);
+					return;
+				}
 				runId = now;
 				write(`event: run
 data: ${JSON.stringify({ workspaceId, runId, startedAt: startedAt() })}

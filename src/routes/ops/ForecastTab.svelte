@@ -97,7 +97,9 @@
 </script>
 
 <section class="forecast" aria-label="Forecast">
-	<p class="label">Simulated: modelled from catalogue data and stated estimates, not live stock.</p>
+	<p class="label" title="Modelled from catalogue data and stated estimates, not live stock.">
+		Simulated forecast
+	</p>
 	{#if !rows.length}
 		<p class="lede">
 			No forecast yet. It starts once a kitchen's plan has asked Valio Aimo about a product.

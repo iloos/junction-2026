@@ -108,6 +108,15 @@
 	const inRoom = $derived(data.room.kind === 'shared' || data.room.kind === 'full');
 	const joinUrl = $derived(inRoom ? `${data.origin}${resolve('/')}?ws=${data.rooms.shared}` : null);
 	const plans = $derived(Object.values(stream.state.plans));
+	/** A store in the room opens in the Kitchen, in this room, on its latest plan when it has one. */
+	function storeHref(kitchenId: string): string {
+		const latest = plans.filter((p) => p.kitchenId === kitchenId).at(-1);
+		const at = { ws: data.workspace, run: stream.state.runId || data.run || null };
+		return (
+			kitchenHref({ kitchenId, planId: latest?.id, version: latest?.version }, at) ??
+			`${resolve('/')}?${new URLSearchParams({ ws: data.workspace, kitchen: kitchenId })}`
+		);
+	}
 
 	/**
 	 * Plan views (fulfilment per need) from the server: the op stream carries plans, not their read model. Fetched
@@ -152,16 +161,7 @@
 	 * Problems (cards and their story, the first screen), queue (work surface), wallboard (one column per kitchen)
 	 * or the engine room (timeline, op log and traces; shown with the System toggle). Remembered.
 	 */
-	type View =
-		| 'room'
-		| 'problems'
-		| 'orders'
-		| 'demand'
-		| 'forecast'
-		| 'flow'
-		| 'queue'
-		| 'wallboard'
-		| 'engine';
+	type View = 'room' | 'problems' | 'orders' | 'demand' | 'flow' | 'queue' | 'wallboard' | 'engine';
 	const shell = useShell();
 	const system = $derived(!!shell?.system);
 	let chosen = $state<View>('problems');
@@ -173,13 +173,13 @@
 				saved === 'room' ||
 				saved === 'orders' ||
 				saved === 'demand' ||
-				saved === 'forecast' ||
 				saved === 'flow' ||
 				saved === 'queue' ||
 				saved === 'wallboard' ||
 				saved === 'engine'
 			)
 				chosen = saved;
+			else if (saved === 'forecast') chosen = 'demand';
 			else if (inRoom) chosen = 'room';
 		} catch {
 			/* storage blocked: keep the default */
@@ -371,6 +371,7 @@
 	<header>
 		<div class="title">
 			<h1>Operations</h1>
+			<p class="purpose">Valio Aimo's view: every store's orders and what waits, live.</p>
 			<nav aria-label="Workspace">
 				<a
 					data-sveltekit-reload
@@ -408,7 +409,7 @@
 		</div>
 
 		<dl class="figures">
-			<div class:so={totals.signOff > 0}>
+			<div class:so={totals.signOff > 0} class:zero={!totals.decisions}>
 				<dt>
 					{totals.decisions === 1 ? 'decision' : 'decisions'} for a person{totals.signOff
 						? `, ${totals.signOff} sign-off`
@@ -416,19 +417,19 @@
 				</dt>
 				<dd>{totals.decisions}</dd>
 			</div>
-			<div class:bad={totals.cannot > 0}>
+			<div class:bad={totals.cannot > 0} class:zero={!totals.cannot}>
 				<dt>{totals.cannot === 1 ? 'item' : 'items'} can't be ordered</dt>
 				<dd>{totals.cannot}</dd>
 			</div>
-			<div class:bad={totals.unresolved > 0}>
+			<div class:bad={totals.unresolved > 0} class:zero={!totals.unresolved}>
 				<dt>{totals.needs ? `of ${totals.needs} needs unresolved` : 'needs unresolved'}</dt>
 				<dd>{totals.unresolved}</dd>
 			</div>
-			<div class="ok">
+			<div class="ok" class:zero={!totals.committed}>
 				<dt>ordered</dt>
 				<dd>{euro(totals.committed)}</dd>
 			</div>
-			<div class:bad={totals.refused > 0}>
+			<div class:bad={totals.refused > 0} class:zero={!totals.refused}>
 				<dt>refused by the rules</dt>
 				<dd>{totals.refused}</dd>
 			</div>
@@ -551,23 +552,27 @@
 			<button role="tab" aria-selected={view === 'room'} onclick={() => setView('room')}>
 				Room <b>{kitchens.length}</b>
 			</button>
+			<button
+				role="tab"
+				aria-selected={view === 'queue'}
+				onclick={() => setView('queue')}
+				title="Everything waiting for a person, most urgent first"
+			>
+				Waiting <b class:zero={!cases.length}>{cases.length}</b>
+			</button>
 			<button role="tab" aria-selected={view === 'problems'} onclick={() => setView('problems')}>
-				Problems <b>{problems.filter((p) => p.tone !== 'quiet').length}</b>
+				Problems <b class:zero={!problems.some((p) => p.tone !== 'quiet')}
+					>{problems.filter((p) => p.tone !== 'quiet').length}</b
+				>
 			</button>
 			<button role="tab" aria-selected={view === 'orders'} onclick={() => setView('orders')}>
-				Orders <b>{Object.keys(stream.state.plans).length}</b>
+				Orders <b class:zero={!plans.length}>{plans.length}</b>
 			</button>
 			<button role="tab" aria-selected={view === 'demand'} onclick={() => setView('demand')}>
 				Demand
 			</button>
-			<button role="tab" aria-selected={view === 'forecast'} onclick={() => setView('forecast')}>
-				Forecast
-			</button>
 			<button role="tab" aria-selected={view === 'flow'} onclick={() => setView('flow')}>
 				Flow
-			</button>
-			<button role="tab" aria-selected={view === 'queue'} onclick={() => setView('queue')}>
-				Queue <b>{cases.length}</b>
 			</button>
 			<button role="tab" aria-selected={view === 'wallboard'} onclick={() => setView('wallboard')}>
 				Wallboard
@@ -576,8 +581,6 @@
 				<button role="tab" aria-selected={view === 'engine'} onclick={() => setView('engine')}>
 					Engine room
 				</button>
-			{:else}
-				<p class="engine-hint">Turn on System for the engine room.</p>
 			{/if}
 		</div>
 		<main class:split={view === 'problems' || view === 'engine'}>
@@ -595,6 +598,7 @@
 					presenter={data.presenter && data.workspace === data.rooms.shared}
 					incident={lastIncident(stream.roomSims, INCIDENT_LABEL)}
 					states={roomStates}
+					hrefOf={storeHref}
 				/>
 			{:else if view === 'problems'}
 				<section class="problems" aria-label="Problems, biggest first">
@@ -636,16 +640,16 @@
 							data.simulated ? null : kitchenHref({ planId, kitchenId }, linkAt)}
 					/>
 				{/key}
-			{:else if view === 'forecast'}
-				<ForecastTab
-					ws={stream.state}
-					kinds={kitchens.map((k) => k.kind)}
-					from={scenarioDate(new Date(SCENARIO.start))}
-					shortage={lastShortage(stream.roomSims)}
-				/>
 			{:else if view === 'flow'}
 				<FlowTab ws={stream.state} {kitchenName} productName={(id) => productName(names, id)} />
 			{:else if view === 'demand'}
+				<!-- What Valio Aimo will need to ship: what may run short first, then the demand per day. -->
+				{#if plans.length}<ForecastTab
+						ws={stream.state}
+						kinds={kitchens.map((k) => k.kind)}
+						from={scenarioDate(new Date(SCENARIO.start))}
+						shortage={lastShortage(stream.roomSims)}
+					/>{/if}
 				{#key stream.state.runId}
 					<DemandTab ws={data.workspace} version={stream.last} />
 				{/key}
@@ -810,8 +814,8 @@
 	/* Header: title + switch, the four figures that matter, connection state. */
 	.room > header {
 		display: grid;
-		grid-template-columns: auto minmax(0, 1fr) auto;
-		gap: 40px;
+		grid-template-columns: minmax(0, 1fr) auto;
+		gap: 20px 40px;
 		align-items: end;
 		padding-bottom: 18px;
 		border-bottom: 1px solid var(--line);
@@ -844,22 +848,30 @@
 		color: var(--text);
 	}
 
+	/* One even row: every figure the same cell, number over its label. */
 	.figures {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 12px 28px;
+		grid-column: 1 / -1;
+		grid-row: 2;
+		display: grid;
+		grid-template-columns: repeat(5, minmax(0, 1fr));
+		gap: 12px;
 		min-width: 0;
 		margin: 0;
-		justify-content: center;
 	}
 	.figures div {
 		display: flex;
 		flex-direction: column-reverse;
+		justify-content: flex-end;
+		gap: 6px;
+		padding: 14px 16px;
+		border: 1px solid var(--line);
+		border-radius: 6px;
+		background: var(--panel);
 	}
 	.figures dt {
-		white-space: nowrap;
 		color: var(--muted);
 		font-size: 16px;
+		line-height: 1.3;
 	}
 	.figures dd {
 		margin: 0;
@@ -1100,7 +1112,6 @@
 
 	.services {
 		grid-column: 1 / -1;
-		margin-top: -22px;
 	}
 
 	/* Problems: the cards, then the selected one's story beside them. */
@@ -1133,13 +1144,6 @@
 		font-size: 28px;
 		font-weight: 600;
 	}
-	.engine-hint {
-		margin: 0 0 0 auto;
-		align-self: center;
-		color: var(--faint);
-		font-size: 14px;
-	}
-
 	/* Board: one column per kitchen, held lines as tickets. */
 	.board {
 		display: grid;
@@ -1388,15 +1392,8 @@
 		.log {
 			max-height: none;
 		}
-		.room > header {
-			grid-template-columns: 1fr auto;
-		}
 		.figures {
-			grid-column: 1 / -1;
-			grid-row: 2;
-			justify-content: flex-start;
-			flex-wrap: wrap;
-			gap: 28px;
+			grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
 		}
 	}
 	@media (max-width: 760px) {
@@ -1477,5 +1474,74 @@
 		margin: 0 20px 8px;
 		color: var(--faint);
 		font-size: 15px;
+	}
+	/* A zero is context, not news: it steps back so the numbers that moved lead. */
+	.figures .zero dd {
+		color: var(--faint);
+		opacity: 0.55;
+	}
+	.figures .zero dt {
+		color: var(--faint);
+	}
+	/*
+	 * Compact header on a desktop or wall: the title and rooms on one line, the figures one short row, status and
+	 * actions in one line, so every tab starts high on the screen.
+	 */
+	@media (min-width: 761px) {
+		.room {
+			gap: 12px;
+			padding-top: 16px;
+		}
+		.room > header {
+			gap: 12px 32px;
+			align-items: center;
+			padding-bottom: 12px;
+		}
+		.title {
+			display: flex;
+			flex-wrap: wrap;
+			align-items: center;
+			gap: 8px 20px;
+		}
+		h1 {
+			font-size: 34px;
+		}
+		nav {
+			margin-top: 0;
+		}
+		.roomline {
+			display: none;
+		}
+		.status {
+			display: flex;
+			flex-wrap: wrap;
+			align-items: center;
+			justify-content: flex-end;
+			gap: 8px 18px;
+		}
+		.status .clock {
+			margin: 0;
+		}
+		.figures div {
+			padding: 10px 14px;
+			gap: 4px;
+		}
+		.figures dd {
+			font-size: 34px;
+		}
+		.figures dt {
+			font-size: 15px;
+		}
+	}
+	.purpose {
+		margin: 0;
+		color: var(--muted);
+		font-size: var(--text-meta);
+		flex-basis: 100%;
+		order: 3;
+	}
+	[role='tab'] b.zero {
+		color: var(--faint);
+		opacity: 0.6;
 	}
 </style>

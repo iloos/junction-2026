@@ -183,8 +183,10 @@ export function buildProblems(
 		const waits: Waits = held.length ? (anySignOff ? 'approver' : 'chef') : 'agents';
 		const tone: ProblemTone = !held.length ? 'blocked' : anySignOff ? 'sign_off' : 'propose';
 
-		const what = `${productName(names, productId)} (${productId}) ${
-			undeliverable ? "can't be delivered by the date the kitchens need" : cause.text
+		// The company is Valio Aimo on screen; the product id stays in the System layer, never in the sentence.
+		const causeText = cause.text.replace(/ at Valio$/, ' at Valio Aimo');
+		const what = `${productName(names, productId)} ${
+			undeliverable ? "can't be delivered by the date the kitchens need" : causeText
 		}${cause.by === 'kitchen' ? ": the kitchen's own rule, not catalogue stock" : ''}.`;
 		const consequence = held.length
 			? `Unless ${WAITS_WORDS[waits]} decides, ${k === 1 ? 'the kitchen goes' : `${k} kitchens go`} without ${phrase}.`

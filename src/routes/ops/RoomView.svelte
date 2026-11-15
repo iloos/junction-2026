@@ -35,7 +35,8 @@
 		canShortage,
 		presenter = false,
 		incident = null,
-		states = {}
+		states = {},
+		hrefOf = () => null
 	}: {
 		kitchens: OpsKitchen[];
 		totals: Record<string, { n: number; cents: number }>;
@@ -51,12 +52,17 @@
 		incident?: { label: string; shortages: ShortageReplanned[] } | null;
 		/** Each store's state for its tile's dot (room.ts storeStates). */
 		states?: Record<string, StoreState>;
+		/** Where a store opens: the Kitchen on that store and its latest plan. */
+		hrefOf?: (kitchenId: string) => string | null;
 	} = $props();
 
 	const story = $derived(
 		incident ? INCIDENTS.find((i) => incident.label.endsWith(i.title)) : undefined
 	);
 	/** Seed names carry "(fictional)" for the data's sake; the room shows the store's name alone. */
+	/** The stores the shortage changed lead; the unaffected follow, quieter. */
+	const affectedFirst = <T extends { outcome: string }>(ks: readonly T[]) =>
+		[...ks].sort((a, b) => +(a.outcome === 'unaffected') - +(b.outcome === 'unaffected'));
 	const plainName = (n: string) => n.replace(/\s*\(fictional\)$/, '');
 	let deckBusy = $state<string | null>(null);
 	let deckNote = $state<string | null>(null);
@@ -201,21 +207,24 @@
 	<header class="head">
 		<div class="sum">
 			<h2>
-				{kitchens.length} store{kitchens.length === 1 ? '' : 's'} in this room
+				{kitchens.length} store{kitchens.length === 1 ? '' : 's'} in this room<span class="rules"
+					>&nbsp;· each orders under its own rules</span
+				>
 			</h2>
 			<p class="counts">
-				<span><b class="num">{nOrdered}</b> ordered</span>
-				<span><b class="num">{nWaiting}</b> waiting for a person</span>
-				<span><b class="num">{nPlanning}</b> planning</span>
-				<span
-					><b class="num">{euro(ordered)}</b> in {orderCount} order{orderCount === 1
-						? ''
-						: 's'}</span
-				>
-				<span><b class="num">{perMinute}</b> in the last minute</span>
+				<!-- Only what is happening: a zero says nothing on a wall. -->
+				{#if orderCount}<span
+						><b class="num">{euro(ordered)}</b> in {orderCount} order{orderCount === 1
+							? ''
+							: 's'}</span
+					>{/if}
+				{#if nOrdered}<span><b class="num">{nOrdered}</b> ordered</span>{/if}
+				{#if nWaiting}<span><b class="num">{nWaiting}</b> waiting for a person</span>{/if}
+				{#if nPlanning}<span><b class="num">{nPlanning}</b> planning</span>{/if}
+				{#if perMinute}<span><b class="num">{perMinute}</b> in the last minute</span>{/if}
+				{#if !orderCount && !nWaiting && !nPlanning}<span>No orders yet</span>{/if}
 			</p>
 			{#if byKind}<p class="kinds">{byKind}</p>{/if}
-			<p>Every store orders under its own rules.</p>
 		</div>
 		{#if joinUrl && qr}
 			<div class="join">
@@ -232,9 +241,53 @@
 		{/if}
 	</header>
 
+	{#if incident}
+		<section class="incident-view" aria-label="Simulated incident">
+			<p class="sim-label">{INCIDENT_LABEL}</p>
+			<h3>{story?.title ?? incident.label.replace(`${INCIDENT_LABEL}: `, '')}</h3>
+			{#if story}<p class="story">{story.story}</p>{/if}
+			{#each incident.shortages as sh (sh.shortageId)}
+				<p class="sentence">{shortageSentence(sh)}</p>
+				<ul>
+					{#each sh.kitchens.filter((k) => k.outcome !== 'unaffected') as k, i (k.kitchenId)}
+						<li
+							class="o-{k.outcome}"
+							in:fly={{ y: 10, delay: Math.min(i, 12) * 60, duration: 320 }}
+						>
+							<span class="name">{plainName(k.kitchenName)}</span>
+							<span class="chip">{OUTCOME_WORDS[k.outcome] ?? k.outcome}</span>
+							<span class="why">
+								{k.why}
+								{#if k.swaps.length}
+									<span class="swap"
+										>{k.swaps.map((x) => `${x.fromName} → ${x.toName}`).join('; ')}</span
+									>
+								{/if}
+								{#if k.allowedBy}<span class="rule">{k.allowedBy}</span>{/if}
+							</span>
+						</li>
+					{:else}
+						<li class="o-unaffected"><span class="why">No store's open plan uses it.</span></li>
+					{/each}
+				</ul>
+			{/each}
+		</section>
+	{/if}
+
 	{#if presenter}
-		<section class="deck" aria-label="Incidents">
-			<h3>Run an incident</h3>
+		<section class="deck" aria-label="Make something happen">
+			<h3>Make something happen</h3>
+			{#if canShortage}
+				<div class="deck-main">
+					<button class="primary" onclick={runShortage} disabled={running}>
+						{running ? 'Re-planning every store…' : 'Run a shortage'}
+					</button>
+					<span class="deck-hint"
+						>One product runs short; every store re-plans inside its own rules.</span
+					>
+				</div>
+			{/if}
+			<p class="deck-sub">Or a simulated incident:</p>
 			<div class="deck-row">
 				{#each INCIDENTS as inc (inc.id)}
 					<form
@@ -289,72 +342,48 @@
 		</section>
 	{/if}
 
-	{#if incident}
-		<section class="incident-view" aria-label="Simulated incident">
-			<p class="sim-label">{INCIDENT_LABEL}</p>
-			<h3>{story?.title ?? incident.label.replace(`${INCIDENT_LABEL}: `, '')}</h3>
-			{#if story}<p class="story">{story.story}</p>{/if}
-			{#each incident.shortages as sh (sh.shortageId)}
-				<p class="sentence">{shortageSentence(sh)}</p>
+	<!-- The presenter starts it from the panel above; the section appears with its outcome. -->
+	{#if !presenter || shortage || failed}
+		<section class="shortage" aria-label="Shortage">
+			<div class="sh-head">
+				<h3>One shortage, every store</h3>
+				{#if canShortage && !presenter}
+					<button class="primary" onclick={runShortage} disabled={running}>
+						{running ? 'Re-planning every store…' : 'Run a shortage'}
+					</button>
+				{/if}
+			</div>
+			{#if failed}<p class="note bad">{failed}</p>{/if}
+			{#if shortage}
+				<p class="sentence">{shortageSentence(shortage)}</p>
 				<ul>
-					{#each sh.kitchens.filter((k) => k.outcome !== 'unaffected') as k (k.kitchenId)}
-						<li class="o-{k.outcome}">
+					{#each affectedFirst(shortage.kitchens) as k, i (k.kitchenId)}
+						<li
+							class="o-{k.outcome}"
+							in:fly={{ y: 10, delay: Math.min(i, 12) * 60, duration: 320 }}
+						>
 							<span class="name">{plainName(k.kitchenName)}</span>
 							<span class="chip">{OUTCOME_WORDS[k.outcome] ?? k.outcome}</span>
 							<span class="why">
 								{k.why}
 								{#if k.swaps.length}
 									<span class="swap"
-										>{k.swaps.map((x) => `${x.fromName} → ${x.toName}`).join('; ')}</span
+										>{k.swaps.map((s) => `${s.fromName} → ${s.toName}`).join('; ')}</span
 									>
 								{/if}
 								{#if k.allowedBy}<span class="rule">{k.allowedBy}</span>{/if}
 							</span>
 						</li>
-					{:else}
-						<li class="o-unaffected"><span class="why">No store's open plan uses it.</span></li>
 					{/each}
 				</ul>
-			{/each}
+			{:else if !presenter}
+				<p class="note">
+					When a product runs short, each store re-plans inside its own rules. The answer differs
+					per store.
+				</p>
+			{/if}
 		</section>
 	{/if}
-
-	<section class="shortage" aria-label="Shortage">
-		<div class="sh-head">
-			<h3>One shortage, every store</h3>
-			{#if canShortage}
-				<button class="primary" onclick={runShortage} disabled={running}>
-					{running ? 'Re-planning every store…' : 'Run a shortage'}
-				</button>
-			{/if}
-		</div>
-		{#if failed}<p class="note bad">{failed}</p>{/if}
-		{#if shortage}
-			<p class="sentence">{shortageSentence(shortage)}</p>
-			<ul>
-				{#each shortage.kitchens as k (k.kitchenId)}
-					<li class="o-{k.outcome}" in:fly={{ x: -12 }}>
-						<span class="name">{plainName(k.kitchenName)}</span>
-						<span class="chip">{OUTCOME_WORDS[k.outcome] ?? k.outcome}</span>
-						<span class="why">
-							{k.why}
-							{#if k.swaps.length}
-								<span class="swap"
-									>{k.swaps.map((s) => `${s.fromName} → ${s.toName}`).join('; ')}</span
-								>
-							{/if}
-							{#if k.allowedBy}<span class="rule">{k.allowedBy}</span>{/if}
-						</span>
-					</li>
-				{/each}
-			</ul>
-		{:else}
-			<p class="note">
-				When a product runs short, each store re-plans inside its own rules. The answer differs per
-				store.
-			</p>
-		{/if}
-	</section>
 
 	<div class="cols">
 		<section class="stores" aria-label="Stores">
@@ -363,6 +392,7 @@
 				{#each tiles as k (k.id)}
 					{@const t = totals[k.id]}
 					{@const st = states[k.id] ?? 'joined'}
+					{@const href = hrefOf(k.id)}
 					<li
 						class="tile s-{st}"
 						class:lit={lit === k.id}
@@ -372,13 +402,19 @@
 							: ''}"
 					>
 						<span class="dot" aria-hidden="true"></span>
-						<span class="name">{plainName(k.name)}</span>
+						{#if href}
+							<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- built from resolve('/') with the room's query -->
+							<a class="name open" {href}>{plainName(k.name)}</a>
+						{:else}
+							<span class="name">{plainName(k.name)}</span>
+						{/if}
 						{#if t}<span class="value num">{euro(t.cents)}</span>{/if}
+						<!-- The tile says what the store is doing first; its kind only while nothing has happened. -->
 						{#if firsts[k.id]}<span class="firstbadge">First order</span
+							>{:else if st !== 'joined'}<span class="kind state">{STATE_WORDS[st]}</span
 							>{:else if k.kind && k.kind !== 'blank' && (k.copiedFrom || !isVisitorStore(k))}<span
-								class="kind">{kindWords(k.kind)}</span
-							>{:else if st === 'waiting'}<span class="kind">Waits for a person</span>{/if}
-						<span class="sr">{STATE_WORDS[st]}</span>
+								class="kind">{kindWords(k.kind)} · nothing yet</span
+							>{:else}<span class="kind">Nothing yet</span>{/if}
 					</li>
 				{/each}
 			</ul>
@@ -867,5 +903,136 @@
 		.why {
 			grid-column: 1 / -1;
 		}
+	}
+	.tile {
+		position: relative;
+	}
+	.tile .open {
+		color: inherit;
+		text-decoration: none;
+	}
+	.tile .open::after {
+		content: '';
+		position: absolute;
+		inset: 0;
+		border-radius: inherit;
+	}
+	.tile:has(.open):hover {
+		border-color: var(--color-rule-strong);
+		background: var(--raise);
+	}
+	.tile .open:focus-visible {
+		outline: none;
+	}
+	.tile:has(.open:focus-visible) {
+		outline: 2px solid var(--propose);
+		outline-offset: 2px;
+	}
+	/*
+	 * The hero moment: one card per store, the outcome word large and coloured by what happened, so the room
+	 * reads at a glance that the same shortage got a different answer in every store.
+	 */
+	.incident-view ul,
+	.shortage ul {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+		gap: 10px;
+		padding: 0;
+		margin: 4px 0 8px;
+		list-style: none;
+	}
+	.incident-view li,
+	.shortage li {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) auto;
+		align-content: start;
+		gap: 6px 10px;
+		padding: 12px 14px;
+		border: 1px solid var(--line);
+		border-left: 4px solid var(--faint);
+		border-radius: 6px;
+		background: var(--panel);
+	}
+	.incident-view li .name,
+	.shortage li .name {
+		font-weight: 600;
+		font-size: var(--text-heading);
+		line-height: var(--text-heading--line-height);
+	}
+	.incident-view li .why,
+	.shortage li .why {
+		grid-column: 1 / -1;
+	}
+	.incident-view li.o-swapped,
+	.incident-view li.o-kept,
+	.shortage li.o-swapped,
+	.shortage li.o-kept {
+		border-left-color: var(--done);
+	}
+	.incident-view li.o-held,
+	.shortage li.o-held {
+		border-left-color: var(--sign-off);
+	}
+	.incident-view li.o-short,
+	.shortage li.o-short {
+		border-left-color: var(--blocked);
+	}
+	.incident-view {
+		background: color-mix(in oklab, var(--sign-off) 5%, transparent);
+	}
+	.shortage li.o-unaffected {
+		opacity: 0.6;
+		background: transparent;
+	}
+	.shortage li.o-unaffected .why {
+		font-size: var(--text-meta);
+		line-height: var(--text-meta--line-height);
+	}
+	.head {
+		align-items: center;
+	}
+	.head h2 .rules {
+		color: var(--muted);
+		font-weight: 400;
+		font-size: var(--text-title);
+	}
+	.join svg {
+		width: 96px;
+		height: 96px;
+	}
+	.deck {
+		border-style: solid;
+		background: var(--panel);
+	}
+	.deck-main {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 8px 16px;
+	}
+	.deck-hint,
+	.deck-sub {
+		margin: 0;
+		color: var(--muted);
+		font-size: var(--text-meta);
+	}
+	.deck-sub {
+		margin-top: 4px;
+	}
+	.deck .incident {
+		border-color: var(--line);
+		font-size: var(--text-meta);
+	}
+	.deck .incident:hover {
+		border-color: var(--sign-off);
+	}
+	.tile.s-waiting .state {
+		color: var(--sign-off);
+	}
+	.tile.s-ordered .state {
+		color: var(--done);
+	}
+	.tile.s-planning .state {
+		color: var(--text);
 	}
 </style>

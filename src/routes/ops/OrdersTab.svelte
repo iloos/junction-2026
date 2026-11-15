@@ -98,6 +98,25 @@
 	}
 
 	const kitchenName = (id: string) => kitchens.find((k) => k.id === id)?.name ?? id;
+
+	/** Filter by store and sort: the table an operator scans, newest first by default. */
+	let store = $state<string>('all');
+	let sortBy = $state<'newest' | 'value' | 'waiting'>('newest');
+	const stores = $derived.by(() => {
+		const n: Record<string, number> = {};
+		for (const o of orders) n[o.kitchenId] = (n[o.kitchenId] ?? 0) + 1;
+		return Object.entries(n).map(([id, count]) => ({ id, count, name: kitchenName(id) }));
+	});
+	const rows = $derived.by(() => {
+		const r = orders.filter((o) => store === 'all' || o.kitchenId === store);
+		if (sortBy === 'value')
+			return [...r].sort(
+				(a, b) => b.orderedCents + b.waitingCents - (a.orderedCents + a.waitingCents)
+			);
+		if (sortBy === 'waiting')
+			return [...r].sort((a, b) => b.decisions.length - a.decisions.length || +a.done - +b.done);
+		return r;
+	});
 	const ORIGIN = {
 		chat: 'Chat',
 		request: 'Request',
@@ -144,30 +163,63 @@
 	{:else if !orders.length}
 		<p class="note">No orders in this run yet.</p>
 	{:else}
-		<ol class="list" aria-label="Orders, newest first">
-			{#each orders as o (o.planId)}
-				<li>
+		<div class="master">
+			{#if stores.length > 1}
+				<div class="chips" role="group" aria-label="Store">
+					<button aria-pressed={store === 'all'} onclick={() => (store = 'all')}
+						>All stores <b>{orders.length}</b></button
+					>
+					{#each stores as k (k.id)}
+						<button aria-pressed={store === k.id} onclick={() => (store = k.id)}
+							>{k.name} <b>{k.count}</b></button
+						>
+					{/each}
+				</div>
+			{/if}
+			<div class="table" role="table" aria-label="Orders">
+				<div class="tr th" role="row">
 					<button
-						class="row"
+						role="columnheader"
+						aria-sort={sortBy === 'newest' ? 'descending' : 'none'}
+						onclick={() => (sortBy = 'newest')}>Order</button
+					>
+					<button
+						role="columnheader"
+						aria-sort={sortBy === 'waiting' ? 'descending' : 'none'}
+						onclick={() => (sortBy = 'waiting')}>Status</button
+					>
+					<button
+						role="columnheader"
+						class="r"
+						aria-sort={sortBy === 'value' ? 'descending' : 'none'}
+						onclick={() => (sortBy = 'value')}>Value</button
+					>
+				</div>
+				{#each rows as o (o.planId)}
+					<button
+						class="tr"
+						role="row"
 						class:sel={selected?.planId === o.planId}
 						aria-current={selected?.planId === o.planId ? 'true' : undefined}
 						onclick={() => (open = o.planId)}
 					>
-						<span class="t">{o.title}</span>
-						<span class="origin" data-origin={o.origin}>{ORIGIN[o.origin]}</span>
-						<span class="k">{kitchenName(o.kitchenId)} · delivery {o.deliverBy}</span>
-						<span class="s" class:done={o.done}>{o.status}</span>
-						<span class="m">
-							{#if o.orderedCents}<b>{euro(o.orderedCents)}</b> ordered{/if}
-							{#if o.orderedCents && o.waitingCents}
-								·
-							{/if}
-							{#if o.waitingCents}<b>{euro(o.waitingCents)}</b> waiting{/if}
+						<span class="c1" role="cell">
+							<span class="t">{o.title}</span>
+							<span class="k">{kitchenName(o.kitchenId)} · {o.deliverBy} · {ORIGIN[o.origin]}</span>
+						</span>
+						<span class="c2" role="cell">
+							<span class="pill" class:done={o.done} class:wait={!o.done && o.decisions.length}
+								>{o.status}</span
+							>
+						</span>
+						<span class="c3 r" role="cell">
+							<b>{euro(o.orderedCents + o.waitingCents)}</b>
+							{#if o.waitingCents}<small>{euro(o.waitingCents)} waiting</small>{/if}
 						</span>
 					</button>
-				</li>
-			{/each}
-		</ol>
+				{/each}
+			</div>
+		</div>
 
 		{#if selected}
 			{@const o = selected}
@@ -309,64 +361,6 @@
 	.wide {
 		grid-column: 1 / -1;
 		margin: 0;
-	}
-	.list {
-		list-style: none;
-		margin: 0;
-		padding: 0;
-		display: grid;
-		gap: 8px;
-	}
-	.row {
-		display: grid;
-		grid-template-columns: 1fr auto;
-		gap: 2px 10px;
-		width: 100%;
-		text-align: left;
-		padding: 12px 14px;
-		background: var(--panel);
-		border: 1px solid var(--line);
-		border-radius: 8px;
-		color: var(--text);
-		font: inherit;
-		cursor: pointer;
-	}
-	.row.sel {
-		border-color: var(--propose);
-		box-shadow: inset 3px 0 0 var(--propose);
-	}
-	.t {
-		font-weight: 600;
-		font-size: 17px;
-	}
-	.origin {
-		align-self: start;
-		padding: 0 8px;
-		border: 1px solid var(--line);
-		border-radius: 999px;
-		font-size: 13px;
-		color: var(--muted);
-	}
-	.origin[data-origin='outside_agent'] {
-		color: var(--outside);
-	}
-	.k,
-	.s,
-	.m {
-		grid-column: 1 / -1;
-		font-size: 14px;
-		color: var(--muted);
-	}
-	.s {
-		color: var(--sign-off);
-	}
-	.s.done {
-		color: var(--done);
-	}
-	.m b {
-		font-family: var(--mono);
-		font-weight: 500;
-		color: var(--text);
 	}
 	.detail {
 		background: var(--panel);
@@ -559,5 +553,133 @@
 		.lines em {
 			grid-column: 1 / -1;
 		}
+	}
+	.master {
+		display: grid;
+		gap: 10px;
+		min-width: 0;
+	}
+	.chips {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 6px;
+	}
+	.chips button {
+		padding: 3px 10px;
+		border: 1px solid var(--line);
+		border-radius: 999px;
+		background: none;
+		color: var(--muted);
+		font: inherit;
+		font-size: var(--text-meta);
+		cursor: pointer;
+	}
+	.chips button[aria-pressed='true'] {
+		border-color: var(--text);
+		color: var(--text);
+	}
+	.chips b {
+		font-weight: 500;
+		margin-left: 4px;
+	}
+	.table {
+		display: grid;
+		border: 1px solid var(--line);
+		border-radius: 8px;
+		overflow: hidden;
+		background: var(--panel);
+	}
+	.tr {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) auto 7.5rem;
+		gap: 12px;
+		align-items: center;
+		width: 100%;
+		padding: 10px 14px;
+		border: 0;
+		border-top: 1px solid var(--line);
+		background: none;
+		color: var(--text);
+		font: inherit;
+		text-align: left;
+		cursor: pointer;
+	}
+	.tr.th {
+		border-top: 0;
+		padding-block: 6px;
+		cursor: default;
+		background: var(--raise);
+	}
+	.tr.th button {
+		padding: 0;
+		border: 0;
+		background: none;
+		color: var(--muted);
+		font: inherit;
+		font-size: var(--text-micro);
+		text-transform: uppercase;
+		letter-spacing: 0.04em;
+		text-align: left;
+		cursor: pointer;
+	}
+	.tr.th button[aria-sort='descending'] {
+		color: var(--text);
+	}
+	.tr.th button[aria-sort='descending']::after {
+		content: ' ↓';
+	}
+	.tr:not(.th):hover {
+		background: var(--raise);
+	}
+	.tr.sel {
+		background: var(--raise);
+		box-shadow: inset 3px 0 0 var(--propose);
+	}
+	.c1 {
+		display: grid;
+		min-width: 0;
+	}
+	.c1 .t {
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+	.c1 .k {
+		font-size: var(--text-meta);
+		color: var(--muted);
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+	.r {
+		text-align: right;
+		justify-self: end;
+	}
+	.c3 {
+		display: grid;
+	}
+	.c3 b {
+		font-family: var(--mono);
+		font-weight: 500;
+	}
+	.c3 small {
+		color: var(--sign-off);
+		font-size: var(--text-micro);
+	}
+	.pill {
+		padding: 1px 8px;
+		border-radius: 999px;
+		border: 1px solid var(--line);
+		font-size: var(--text-meta);
+		color: var(--muted);
+		white-space: nowrap;
+	}
+	.pill.wait {
+		border-color: var(--sign-off);
+		color: var(--sign-off);
+	}
+	.pill.done {
+		border-color: var(--done);
+		color: var(--done);
 	}
 </style>

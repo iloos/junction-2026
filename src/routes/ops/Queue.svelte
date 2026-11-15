@@ -131,10 +131,7 @@
 	{:else if cases.length}
 		<p class="none">Nothing matches these filters.</p>
 	{:else}
-		<p class="none">
-			No held lines, refused commits or unresolved anomalies. Check coverage per kitchen on the
-			wallboard.
-		</p>
+		<p class="none">Nothing waits for a person.</p>
 	{/if}
 </section>
 
