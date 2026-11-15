@@ -32,7 +32,8 @@ export const GET: RequestHandler = async (event) => {
 			{
 				error: {
 					code: 'NOT_A_SANDBOX',
-					message: `${v.workspaceId} is not a visitor sandbox; open your own with ?ws=mine.`,
+					message:
+						'An outside agent gets a key only in your own sandbox, never in a shared room. Open /?ws=mine first.',
 					retryable: false
 				}
 			},

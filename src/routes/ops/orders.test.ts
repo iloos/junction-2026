@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import type { OpEnvelope } from '$lib/core/contracts';
 import { orderStages } from '$lib/core/services/stages';
-import { orderRow } from './orders';
+import { gapSentence, gapsOf, orderRow, planTitle } from './orders';
 
 const ops = readFileSync('src/lib/core/services/fixtures/ordered-ops.ndjson', 'utf8')
 	.trim()
@@ -55,5 +55,38 @@ describe('the door an op came through', () => {
 		expect(viaLabel('mcp:approve')).toBe('MCP');
 		expect(viaLabel('rest')).toBe('API');
 		expect(viaLabel('kitchen')).toBe('Kitchen');
+	});
+});
+
+describe('needs nothing can be bought for', () => {
+	const need = (id: string, label: string, dishId: string, unresolved?: string) => ({
+		id,
+		label,
+		unresolved,
+		source: { proposalId: 'p', revision: 0, dishId, ingredientId: id },
+		dish: { gServed: 1, defaultGServed: 1, guests: 120, yield: 1, formula: '' }
+	});
+	const plan = {
+		needs: [
+			need('n1', 'Butter', 'd1'),
+			need('n2', 'Saffron', 'd1', 'no product'),
+			need('n3', 'Rye bread', 'd2')
+		],
+		lines: [{ needId: 'n1', qty: { value: 2, unit: 'KI' } }]
+	} as unknown as Parameters<typeof gapsOf>[0];
+
+	it('lists unresolved needs and needs no line serves', () => {
+		expect(gapsOf(plan)).toEqual(['Saffron', 'Rye bread']);
+		expect(gapSentence(gapsOf(plan), 3)).toBe(
+			'1 of 3 needs covered; 2 had no product: Saffron, Rye bread.'
+		);
+	});
+
+	it('titles a menu by its dishes, not its ingredients', () => {
+		const s = {
+			asked: { needs: plan.needs.map((n) => ({ needId: n.id, label: n.label })), lines: [] },
+			plan
+		} as unknown as Parameters<typeof planTitle>[0];
+		expect(planTitle(s)).toBe('2 dishes for 120 guests · 3 ingredients');
 	});
 });

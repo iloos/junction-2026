@@ -123,7 +123,15 @@
 				})}. Each key may make 120 calls a minute, 30 of them changes and 20 live price checks.
 			</p>
 		{:else}
-			<p class="mt-1 text-sm text-signoff">{data.keyOff}</p>
+			<p class="mt-1 text-sm text-signoff">
+				{data.keyOff}
+				{#if data.room.notice}
+					<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- a full reload switches the sandbox cookie -->
+					<a href="/agents?ws=mine" data-sveltekit-reload class="ml-1 underline underline-offset-2"
+						>Open your sandbox →</a
+					>
+				{/if}
+			</p>
 		{/if}
 		<div class="mt-3 flex items-stretch gap-2">
 			<code

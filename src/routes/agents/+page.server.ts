@@ -5,11 +5,15 @@ import { opSummary, type Names } from '../ops/labels';
 import { catchUp } from '$lib/server/bus';
 import { currentRun } from '$lib/server/demo/run';
 import { judgeKeyExpiry, judgeKeyFor, judgeKeysOn, judgeLabel } from '$lib/server/demo/judge-key';
-import { visitorWorkspace } from '$lib/server/demo/visitor';
+import { roomNotice, visitorWorkspace } from '$lib/server/demo/visitor';
 import { mcpInstructions, TITLES } from '$lib/server/tools/mcp';
 import { MCP_PROMPTS, MCP_RESOURCES } from '$lib/server/tools/mcp-extras';
 import { toolsFor } from '$lib/server/tools/serve';
 import type { PageServerLoad } from './$types';
+
+/** Why there is no key here: only your own sandbox gets one, so an agent never acts in a room others share. */
+const NO_KEY_HERE =
+	'An outside agent gets a key only in your own sandbox, never in a shared room. Open your sandbox to connect one.';
 
 /**
  * /agents: how an outside agent connects. The judge key is this browser's own (its visitor sandbox), minted by
@@ -38,6 +42,8 @@ export const load: PageServerLoad = async (event) => {
 	const mcpUrl = key ? `${origin}/mcp/k/${key}` : `${origin}/mcp`;
 	return {
 		workspaceId: v.workspaceId,
+		/** For the header: which room this page shows. */
+		room: { notice: roomNotice(v), workspaceId: v.workspaceId },
 		calls: await yourCalls(v.workspaceId),
 		after: await lastSeq(v.workspaceId),
 		configs: clientConfigs(mcpUrl),
@@ -45,7 +51,7 @@ export const load: PageServerLoad = async (event) => {
 		keyOff: !on
 			? 'Judge keys are off on this server (JUDGE_KEY_SECRET is not set).'
 			: !key
-				? `${v.workspaceId} is not a visitor sandbox; open your own with ?ws=mine.`
+				? NO_KEY_HERE
 				: null,
 		expires: key ? judgeKeyExpiry(env).toISOString() : null,
 		mcpUrl,

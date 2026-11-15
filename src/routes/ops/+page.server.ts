@@ -18,6 +18,7 @@ import { resetRoom, runIncident } from '$lib/server/demo/incidents';
 import { INCIDENTS, incidentLabel } from './incidents';
 import { currentRun, currentRunStartedAt } from '$lib/server/demo/run';
 import { isSandbox, resetSandbox } from '$lib/server/demo/sandbox';
+import { isVisitorWorkspace } from '$lib/server/demo/visitor-id';
 import { roomLabel, roomNotice, visitorWorkspace, ROOM_COOKIE } from '$lib/server/demo/visitor';
 import { judgeKeysOn } from '$lib/server/demo/judge-key';
 import { STRESS_WORKSPACE } from '$lib/server/bus/stress';
@@ -129,7 +130,11 @@ export const load: PageServerLoad = async (event) => {
 		/** Wall-clock ms the current run started; the page ticks the scenario clock from it. */
 		runStartedAt: currentRunStartedAt(workspace),
 		canRunAgent: workspace === agentWorkspace() && presenter,
-		canReset: !viewOnly && (isSandbox(workspace) || (workspace === DEMO_WORKSPACE && presenter))
+		// The shared room is everyone's at once: only the presenter starts it over (Room has its own reset).
+		canReset:
+			!viewOnly &&
+			(isVisitorWorkspace(workspace) ||
+				((workspace === DEMO_WORKSPACE || workspace === JUDGES_WORKSPACE) && presenter))
 	};
 };
 
@@ -223,6 +228,8 @@ export const actions: Actions = {
 	resetRun: async (event) => {
 		const { v, workspace, viewOnly } = await opsWorkspace(event);
 		if (viewOnly) return fail(403, { message: 'This view is read-only.' });
+		if (workspace === JUDGES_WORKSPACE && !v.presenter)
+			return fail(403, { message: 'Only the presenter starts the shared room over.' });
 		if (isSandbox(workspace)) {
 			const r = await resetSandbox(workspace);
 			if (r.ok) return { reset: r.runId, startedAt: currentRunStartedAt(workspace) };

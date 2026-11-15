@@ -80,8 +80,13 @@ export async function publish(workspaceId: string, events: ServerEvent[]): Promi
  */
 let warming = false;
 
+/** A workspace's plan products waiting to warm, and when its last plan op was written. */
+const pendingWarm = new Map<string, { ids: Set<string>; timer: ReturnType<typeof setTimeout> }>();
+/** Warming starts this long after a workspace's last plan op, so it never runs inside the planning request. */
+const WARM_DELAY_MS = 4000;
+
 function warmPlanPhotos(workspaceId: string, events: ServerEvent[]) {
-	if (process.env.VITEST || process.env.WARM_OFF === '1' || warming) return;
+	if (process.env.VITEST || process.env.WARM_OFF === '1') return;
 	const ids = new Set<string>();
 	for (const e of events) {
 		if (e.kind !== 'op') continue;
@@ -90,6 +95,25 @@ function warmPlanPhotos(workspaceId: string, events: ServerEvent[]) {
 		else if (op.type === 'RecordOffer') for (const l of op.lines) ids.add(l.productId);
 	}
 	if (!ids.size) return;
+	// Collect the workspace's products and wait until its planning has gone quiet (each new op restarts the wait).
+	const prev = pendingWarm.get(workspaceId);
+	if (prev) clearTimeout(prev.timer);
+	const all = new Set([...(prev?.ids ?? []), ...ids]);
+	pendingWarm.set(workspaceId, {
+		ids: all,
+		timer: setTimeout(() => runWarm(workspaceId), WARM_DELAY_MS)
+	});
+}
+
+function runWarm(workspaceId: string) {
+	const p = pendingWarm.get(workspaceId);
+	if (!p) return;
+	// Another plan is warming: try again later rather than run two at once.
+	if (warming) {
+		p.timer = setTimeout(() => runWarm(workspaceId), WARM_DELAY_MS);
+		return;
+	}
+	pendingWarm.delete(workspaceId);
 	warming = true;
 	void (async () => {
 		const { webMode } = await import('../web');
@@ -99,13 +123,12 @@ function warmPlanPhotos(workspaceId: string, events: ServerEvent[]) {
 			import('../products/photos')
 		]);
 		const { ports } = await createServerPorts();
-		const products = [...(await ports.catalog.get([...ids])).values()];
+		const products = [...(await ports.catalog.get([...p.ids])).values()];
 		// Lines with no allergen record: the Why drawer's facts lookup, ready before the chef opens the line.
 		const { warmAllergenFacts } = await import('../products/facts-warm');
-		await Promise.all([
-			warmPhotos(process.env, `prefetch:${workspaceId}`, products),
-			warmAllergenFacts(process.env, workspaceId, ports.catalog, products)
-		]);
+		// One after the other, not side by side: the warm-up stays a light background trickle.
+		await warmAllergenFacts(process.env, workspaceId, ports.catalog, products);
+		await warmPhotos(process.env, `prefetch:${workspaceId}`, products);
 	})()
 		.catch((err) => log.warn('photos.warm_failed', { workspaceId, error: errMsg(err) }))
 		.finally(() => (warming = false));

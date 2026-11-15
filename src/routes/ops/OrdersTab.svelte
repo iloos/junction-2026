@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import type { OrderRow } from './orders';
+	import { gapSentence, type OrderRow } from './orders';
 	import { euro } from './labels';
 	import DecisionCard from '$lib/ui/DecisionCard.svelte';
 
@@ -209,8 +209,11 @@
 								</li>
 							{/each}
 						</ol>
-					{:else}
+					{:else if !o.gaps.length}
 						<p class="lede">No changes from what was asked.</p>
+					{/if}
+					{#if o.gaps.length}
+						<p class="lede">{gapSentence(o.gaps, o.needCount)}</p>
 					{/if}
 					{#if o.proposed.unchanged}
 						<p class="same">

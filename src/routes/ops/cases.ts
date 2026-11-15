@@ -9,6 +9,7 @@ import type { WorkspaceState } from '$lib/core/state';
 import { liveApprovals } from '$lib/core/services/orders';
 import { decisionsOf, type Decision } from '$lib/ui/decisions';
 import { dueOf } from '$lib/core/mandate/due';
+import { salesUnitWords } from '$lib/ui/request/words';
 import { productName, reasonText, type Names } from './labels';
 
 /**
@@ -167,7 +168,7 @@ export function buildCases(
 			if (d && d.signOff) Object.assign(shape, shapeOf({ ...l, tier: 'sign_off' }, true));
 			const name = productName(names, l.productId);
 			const replaces = l.substituteFor ? `, replaces ${productName(names, l.substituteFor)}` : '';
-			const detail = `${l.qty.value} ${l.qty.unit}${replaces}`;
+			const detail = `${salesUnitWords(l.qty.value, l.qty.unit)}${replaces}`;
 			const deadline = dueOf(plan, pendingApprovalOf(s, plan.id), [l]) ?? SCENARIO.cutoff;
 			const since = heldSince[lineKey(plan.id, l.id)] ?? null;
 			const c = groups.get(key);
@@ -199,9 +200,16 @@ export function buildCases(
 	});
 
 	const linked = new Set(out.map((c) => c.planId));
+	// An anomaly holds something only when an open line has its product; one that holds nothing has no deadline.
+	const heldProducts = new Set(
+		Object.values(s.plans).flatMap((p) =>
+			p.lines.filter((l) => l.state === 'held' || l.state === 'unorderable').map((l) => l.productId)
+		)
+	);
 	for (const a of Object.values(s.anomalies)) {
 		const plan = a.planId ? s.plans[a.planId] : undefined;
 		if (plan && linked.has(plan.id)) continue; // already visible through its open lines
+		const holds = !!a.productId && heldProducts.has(a.productId);
 		out.push({
 			id: `anomaly:${a.id}`,
 			kitchenId: plan?.kitchenId ?? '',
@@ -212,10 +220,11 @@ export function buildCases(
 			causes: [a.kind.replaceAll('_', ' ')],
 			state: 'Detected',
 			owner: 'Operations',
-			next: 'Check which orders it touches',
-			tone: 'blocked',
-			deadline: SCENARIO.cutoff,
-			since: a.detectedAt
+			next: holds ? 'Check which orders it touches' : 'Nothing held; no action needed',
+			tone: holds ? 'blocked' : 'act',
+			deadline: holds ? SCENARIO.cutoff : null,
+			// A real notice's date is weeks before the story's clock: only an anomaly that holds lines gets an age.
+			since: holds ? a.detectedAt : null
 		});
 	}
 

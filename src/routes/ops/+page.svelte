@@ -9,6 +9,7 @@
 	import OpTimeline from './OpTimeline.svelte';
 	import TraceDrawer from './TraceDrawer.svelte';
 	import Queue from './Queue.svelte';
+	import { gapsOf } from './orders';
 	import ProblemCard from './ProblemCard.svelte';
 	import StoryPanel from './StoryPanel.svelte';
 	import ServiceStatus from './ServiceStatus.svelte';
@@ -312,7 +313,10 @@
 		return {
 			decisions: decisions.length,
 			signOff: decisions.filter((d) => d.signOff).length,
-			cannot: all.flatMap((p) => p.lines).filter((l) => l.state === 'unorderable').length,
+			// Lines Valio can't fill plus needs nothing can be bought for: the kitchen's "not orderable" set.
+			cannot:
+				all.flatMap((p) => p.lines).filter((l) => l.state === 'unorderable').length +
+				plans.reduce((n, p) => n + gapsOf(p).length, 0),
 			unresolved: views.filter((f) => f.unresolved.value > 1e-9).length,
 			needs: views.length,
 			committed: Object.values(stream.state.orders).reduce((s, o) => s + o.totalCents, 0),
@@ -378,11 +382,14 @@
 					href={resolve('/ops') + `?ws=${data.rooms.shared}`}
 					aria-current={data.workspace === data.rooms.shared ? 'page' : undefined}>Shared room</a
 				>
-				<a
-					data-sveltekit-reload
-					href={resolve('/ops') + `?ws=${data.rooms.stage}`}
-					aria-current={data.workspace === data.rooms.stage ? 'page' : undefined}>Stage</a
-				>
+				{#if data.presenter || data.workspace === data.rooms.stage}
+					<!-- The stage run is the presenter's; a visitor would land on a run they can't move. -->
+					<a
+						data-sveltekit-reload
+						href={resolve('/ops') + `?ws=${data.rooms.stage}`}
+						aria-current={data.workspace === data.rooms.stage ? 'page' : undefined}>Stage</a
+					>
+				{/if}
 				<a
 					data-sveltekit-reload
 					href={resolve('/ops') + `?ws=${data.synthWorkspace}`}
@@ -410,7 +417,7 @@
 				<dd>{totals.decisions}</dd>
 			</div>
 			<div class:bad={totals.cannot > 0}>
-				<dt>{totals.cannot === 1 ? 'product' : 'products'} can't be ordered</dt>
+				<dt>{totals.cannot === 1 ? 'item' : 'items'} can't be ordered</dt>
 				<dd>{totals.cannot}</dd>
 			</div>
 			<div class:bad={totals.unresolved > 0}>
@@ -434,7 +441,10 @@
 				>
 			</p>
 			{#if scenarioNow}
-				<p class="clock"><span>Scenario clock</span>{simTime(scenarioNow)}</p>
+				<p class="clock" title="Each room's story clock starts when its run starts">
+					<span>{inRoom ? 'Room clock' : data.simulated ? 'Simulated clock' : 'Story clock'}</span
+					>{simTime(scenarioNow)}
+				</p>
 			{/if}
 
 			{#if data.canReset}
@@ -463,7 +473,9 @@
 								: 'Click again to clear this sandbox'
 							: data.workspace === data.rooms.stage
 								? 'Start a fresh run'
-								: 'Start this sandbox over'}</button
+								: inRoom
+									? 'Start the room run over'
+									: 'Start this sandbox over'}</button
 					>
 				</form>
 			{/if}
