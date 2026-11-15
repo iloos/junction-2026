@@ -195,7 +195,6 @@ code, .m { font-family: var(--mono); font-size: 0.86em; color: var(--ink); backg
 	<nav class="toc" aria-label="On this page">
 		<a href="#rules">The chef's words become limits</a>
 		<a href="#gate">Every change goes through one function</a>
-		<a href="#outcomes">Rules decide each line, not models</a>
 		<a href="#line">One line, step by step</a>
 		<a href="#yes">A yes covers the exact terms</a>
 		<a href="#models">What the models are allowed to do</a>
@@ -269,47 +268,10 @@ code, .m { font-family: var(--mono); font-size: 0.86em; color: var(--ink); backg
 	<p class="small note">A retry can't order twice: each commit carries a key built from the plan, its version and its terms, and the same key returns the same receipt.</p>
 </section>
 
-<!-- 3 -->
-<section class="sec" id="outcomes">
-	<div class="head">
-		<p class="eyebrow">03 · Three outcomes</p>
-		<h2>Rules sort every line. Each one ends in one of three places.</h2>
-		<p class="sub">Each line gets reasons from fixed checks, and its reasons decide where it goes. The chef sees each reason in plain words; the codes underneath are what the tests check.</p>
-	</div>
-	<div class="tiers">
-		<div class="tier ok">
-			<span class="chip ok">Ordered alone</span>
-			<ul>
-				<li>Inside every cap, a product the kitchen already buys, all facts known<small>eligible</small></li>
-			</ul>
-		</div>
-		<div class="tier wait">
-			<span class="chip wait">Waits for the chef</span>
-			<ul>
-				<li>Over a line, order or weekly cap<small>CAP_EXCEEDED</small></li>
-				<li>A product the kitchen hasn't bought before<small>new_sku</small></li>
-				<li>An allergen the record doesn't confirm, or traces<small>allergen_unknown · allergen_trace</small></li>
-				<li>Off the delivery days, or on a recall list<small>off_delivery_day · recall</small></li>
-				<li>Asked for by an outside agent<small>external_agent_needs_approval</small></li>
-			</ul>
-		</div>
-		<div class="tier out">
-			<span class="chip out">Can't be ordered</span>
-			<ul>
-				<li>Contains an allergen the kitchen must be free from<small>allergen_declared</small></li>
-				<li>Breaks a required origin<small>origin_required</small></li>
-				<li>Below the smallest pack, or more than the need<small>BELOW_LOT · exceeds_need</small></li>
-				<li>Past its cut-off: the next delivery day is offered<small>cutoff_passed</small></li>
-				<li>Over the hard limit, even with a yes<small>over_hard_limit</small></li>
-			</ul>
-		</div>
-	</div>
-</section>
-
 <!-- 4 -->
 <section class="sec" id="line">
 	<div class="head">
-		<p class="eyebrow">04 · One line</p>
+		<p class="eyebrow">03 · One line</p>
 		<h2>Every line can show its working, with a source for each step.</h2>
 		<p class="sub">The milk for the Christmas buffet's rice porridge, exactly as the Why drawer returned it from the deployed app.</p>
 	</div>
@@ -326,7 +288,7 @@ code, .m { font-family: var(--mono); font-size: 0.86em; color: var(--ink); backg
 <!-- 5 -->
 <section class="sec" id="yes">
 	<div class="head">
-		<p class="eyebrow">05 · The approval</p>
+		<p class="eyebrow">04 · The approval</p>
 		<h2>A yes covers the exact terms the chef saw. Change one, and it's void.</h2>
 		<p class="sub">An approval is tied to a fingerprint of the order: a SHA-256 hash over the delivery date and every line. It's also tied to the plan's version, the mandate's version and an expiry.</p>
 	</div>
@@ -355,7 +317,7 @@ code, .m { font-family: var(--mono); font-size: 0.86em; color: var(--ink); backg
 <!-- 6 -->
 <section class="sec" id="models">
 	<div class="head">
-		<p class="eyebrow">06 · The models</p>
+		<p class="eyebrow">05 · The models</p>
 		<h2>Models read and suggest. Only the rules let a line through.</h2>
 		<p class="sub">Gemini turns words into structure and scores substitutes. Its output can add a reason to hold a line; nothing it returns can release one.</p>
 	</div>
@@ -363,14 +325,14 @@ code, .m { font-family: var(--mono); font-size: 0.86em; color: var(--ink); backg
 		<div class="role"><span class="who">Gemini 3.5 Flash-Lite</span><span class="does">Reads the request, the chat and the explanations: what, how much, for when.</span><span class="can"><span class="chip">reads</span></span></div>
 		<div class="role"><span class="who">Gemini 3.8 Flash</span><span class="does">Proposes a menu from a sentence, and re-reads a request the first pass wasn't sure about.</span><span class="can"><span class="chip">suggests</span></span></div>
 		<div class="role"><span class="who">Gemini Decision 1</span><span class="does">Scores substitutes: how well a swap fits the dish, whether it breaks a hard rule, how likely it's Finnish. Falls back to a recorded replay, then to rules.</span><span class="can"><span class="chip wait">can only hold</span></span></div>
-		<div class="role"><span class="who">The mandate's checks</span><span class="does">Plain code, no model. Decides ordered, waiting or refused for every line.</span><span class="can"><span class="chip ok">decides</span></span></div>
+		<div class="role"><span class="who">The mandate's checks</span><span class="does">Plain code, no model. Decides ordered, waiting or refused for every line; <a href="/how#rules">the full list of checks</a> is on How it works.</span><span class="can"><span class="chip ok">decides</span></span></div>
 	</div>
 </section>
 
 <!-- 7 -->
 <section class="sec" id="find">
 	<div class="head">
-		<p class="eyebrow">07 · Retrieval</p>
+		<p class="eyebrow">06 · Retrieval</p>
 		<h2>From a chef's words to a Valio Aimo product, in Valio Aimo's units.</h2>
 		<p class="sub">The catalogue holds 17,546 products, each named in Finnish and English by Valio Aimo. Search is by words, built to read a chef: English, kitchen slang and typos. There is no vector search.</p>
 	</div>
@@ -412,7 +374,7 @@ code, .m { font-family: var(--mono); font-size: 0.86em; color: var(--ink); backg
 <!-- 8 -->
 <section class="sec" id="door">
 	<div class="head">
-		<p class="eyebrow">08 · The agent door</p>
+		<p class="eyebrow">07 · The agent door</p>
 		<h2>Any agent can plan. Only the chef can say yes.</h2>
 		<p class="sub">Mandate's tools are open over MCP and REST, with a scoped key per agent. Of the <span class="num">20</span> tools, an outside agent's key lists <span class="num">17</span>: approving and changing the mandate need scopes it doesn't have.</p>
 	</div>
@@ -438,7 +400,7 @@ code, .m { font-family: var(--mono); font-size: 0.86em; color: var(--ink); backg
 <!-- 9 -->
 <section class="sec" id="valio">
 	<div class="head">
-		<p class="eyebrow">09 · Valio Aimo's view</p>
+		<p class="eyebrow">08 · Valio Aimo's view</p>
 		<h2>Valio Aimo sees every kitchen's demand and exceptions as they happen.</h2>
 		<p class="sub">The Operations screen reads the same log as the kitchens. Postgres pushes each change to every open screen, so a kitchen's order shows up on Valio Aimo's side within a second.</p>
 	</div>

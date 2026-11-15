@@ -14,7 +14,7 @@
 <meta property="og:image:height" content="630" />
 <meta property="og:image:alt" content="The Mandate mark and the line: a kitchen purchasing agent that orders on its own only inside limits the chef sets." />
 <meta name="twitter:card" content="summary_large_image" />
-<meta name="description" content="How Mandate works: the kitchen's rules, the agent, five flows with recorded examples, the checks behind each claim, what Valio sees, the partners and their fallbacks, and what is built, simulated or planned." />
+<meta name="description" content="How Mandate works: the kitchen's rules, the agent, five flows with recorded examples, the checks behind each claim, what Valio Aimo sees, the partners and their fallbacks, and what is built, simulated or planned." />
 <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -303,7 +303,7 @@ h3 { margin: 0; font: 600 18px/1.25 var(--display); }
 		<section class="intro" aria-labelledby="h-intro">
 			<p class="eyebrow">How it works</p>
 			<h1 id="h-intro">From a kitchen's rules to one Valio Aimo order</h1>
-			<p class="lede">Mandate is a purchasing agent for a kitchen. It orders from Valio on its own only what the kitchen's mandate allows, and a person decides the rest.</p>
+			<p class="lede">Mandate is a purchasing agent for a kitchen. It orders from Valio Aimo on its own only what the kitchen's mandate allows, and a person decides the rest.</p>
 			<p class="outcomes">Every line it prepares either
 				<span class="mchip within"><svg class="ic" aria-hidden="true"><use href="#i-shield"/></svg>goes through</span>
 				<span class="mchip held"><svg class="ic" aria-hidden="true"><use href="#i-hold"/></svg>is held for a person</span>or
@@ -316,8 +316,8 @@ h3 { margin: 0; font: 600 18px/1.25 var(--display); }
 					<li><a href="#rules">The kitchen's rules</a></li>
 					<li><a href="#agent">The agent</a></li>
 					<li><a href="#flows">Five flows</a></li>
-					<li><a href="#trust">Checks behind each claim</a></li>
-					<li><a href="#ops">What Valio sees</a></li>
+					<li><a href="#trust">State machines</a></li>
+					<li><a href="#ops">What Valio Aimo sees</a></li>
 					<li><a href="#partners">Partners</a></li>
 					<li><a href="#status">Built, simulated, planned</a></li>
 				</ul>
@@ -645,7 +645,7 @@ h3 { margin: 0; font: 600 18px/1.25 var(--display); }
 						<div class="hdr"><h3 class="ph">Out of stock</h3><p>When Valio is out, the agent finds and sizes substitutes, ranks them by the kitchen's rules, and holds anything new for the chef.</p></div>
 						<ol class="stages">
 							<li><b>Spot</b><span>A line quoted out of stock, undeliverable or unknown is named in its own words.</span></li>
-							<li><b>Find</b><span>Candidates come from Valio's substitution rules, then hand-checked rescues, then same-category products, each sized to the same need. Making it in house is an option when every ingredient can be ordered.</span></li>
+							<li><b>Find</b><span>Candidates come from Valio Aimo's substitution rules, then hand-checked rescues, then same-category products, each sized to the same need. Making it in house is an option when every ingredient can be ordered.</span></li>
 							<li><b>Rank</b><span>Requirements rule candidates out with a reason; known stock ranks first, then the kitchen's preferences. Gemini Decisions scores how well each substitute fits the dish, one input to the code's ranking, and can flag a constraint risk that holds the line. It never approves or allows anything.</span></li>
 							<li><b>Hold</b><span>A new product, an allergen change or a broken preference waits for the chef. If another kitchen takes the stock, the rest moves to the next candidate and the approval is voided (tested, simulated). With no candidate left, options outside the catalogue are shown for information and never ordered.</span></li>
 						</ol>
@@ -661,7 +661,7 @@ h3 { margin: 0; font: 600 18px/1.25 var(--display); }
 						<ol class="stages">
 							<li><b>Connect</b><span>Each visitor gets their own key and MCP address on the Agents page, working only in their own sandbox and metered at 120 calls, 30 writes and 20 quotes a minute.</span></li>
 							<li><b>Read</b><span>The agent reads its context first: who it is, what it may do, the kitchens, mandates and open plans.</span></li>
-							<li><b>Order</b><span>It searches, quotes, then orders or plans an event. An unknown product is refused before any call to Valio, and every line it orders is held.</span></li>
+							<li><b>Order</b><span>It searches, quotes, then orders or plans an event. An unknown product is refused before any call to Valio Aimo, and every line it orders is held.</span></li>
 							<li><b>Wait</b><span>Trying to approve or change the mandate gets 403, and Ops logs it. The chef approves in the Kitchen, and the agent reads the receipt.</span></li>
 						</ol>
 						<div class="foot">
@@ -690,23 +690,25 @@ h3 { margin: 0; font: 600 18px/1.25 var(--display); }
 
 		<!-- Trust -->
 		<section class="band" id="trust" aria-labelledby="h-trust">
-			<h2 id="h-trust">Every claim has a test behind it</h2>
-			<p class="slead">Each claim on this page links to its code and the test that checks it. <a href="/proof">See the proof →</a></p>
+			<p class="eyebrow">State machines</p>
+			<h2 id="h-trust">Three state machines hold the rules</h2>
+			<p class="slead">A plan, each line and each approval move through fixed states. The checks on this page decide which way they go.</p>
+			<div class="sm">
+				<p class="smhint">Each diagram scrolls sideways.</p>
+				<div class="smc"><div class="svgw"><svg viewBox="0 0 540 190" id="smPlan" role="img" aria-label="Plan states: draft, quoted, ready or held, committed"></svg></div><div><h4>Plan</h4><p>Green is the usual path. Any edit sends the plan back to draft and clears its terms, so an earlier approval no longer applies.</p></div></div>
+				<div class="smc"><div class="svgw"><svg viewBox="0 0 540 190" id="smLine" role="img" aria-label="Line states: proposed, eligible, held, rejected, unorderable, committed"></svg></div><div><h4>Line</h4><p>A line inside the mandate is ordered without asking. Any other line waits for the chef with its reasons. A line below Valio Aimo's lot step can't be ordered at all.</p></div></div>
+				<div class="smc"><div class="svgw"><svg viewBox="0 0 540 190" id="smAppr" role="img" aria-label="Approval states: pending, granted, denied, invalidated, expired"></svg></div><div><h4>Approval</h4><p>An approval is tied to the plan version, the exact terms, the mandate version and an expiry. If any of them changes, the order is refused.</p></div></div>
+				<div class="smleg"><span><i style="border-color:var(--ok)"></i>usual path</span><span><i style="border-color:var(--auth);border-style:dashed"></i>waits for a person</span><span><i style="border-color:var(--out);border-style:dashed"></i>sends it back</span><span><i style="border-color:var(--out);border-width:2px"></i>final</span></div>
+				<p class="src">Each rule with its test: <a href="/proof">Proof</a>.</p>
+			</div>
 		</section>
 
 		<!-- What Valio sees -->
 		<section class="band" id="ops" aria-labelledby="h-ops">
-			<p class="eyebrow">What Valio sees</p>
+			<p class="eyebrow">What Valio Aimo sees</p>
 			<h2 id="h-ops">Valio Aimo's control room shows every held line, by cause, across kitchens</h2>
-			<p class="slead">Ops reads the same records the kitchens write, so Valio sees why a line is waiting and can open the exact kitchen plan.</p>
-			<div class="cards c3">
-				<div class="card"><div class="hd"><svg class="ic" aria-hidden="true"><use href="#i-hold"/></svg><h3>Problems</h3></div><p>Held lines and recall cases grouped by cause, biggest first, each with what happened.</p></div>
-				<div class="card"><div class="hd"><svg class="ic" aria-hidden="true"><use href="#i-order"/></svg><h3>Orders</h3></div><p>Each order in four stages read from the op log: what was asked, what was proposed and why, who signed, what was ordered.</p></div>
-				<div class="card"><div class="hd"><svg class="ic" aria-hidden="true"><use href="#i-event"/></svg><h3>Demand</h3></div><p>Per delivery day and product, across kitchens: ordered, signed, still proposed.</p></div>
-				<div class="card"><div class="hd"><svg class="ic" aria-hidden="true"><use href="#i-kitchen"/></svg><h3>Queue and wallboard</h3></div><p>Cases per kitchen, each linking to the exact plan in the Kitchen.</p></div>
-				<div class="card"><div class="hd"><svg class="ic" aria-hidden="true"><use href="#i-eye"/></svg><h3>Engine room</h3></div><p>With System on: the agent's run, traces, the checks a run passed, the op timeline and the outside services' status.</p></div>
-				<div class="card"><div class="hd"><svg class="ic" aria-hidden="true"><use href="#i-flask"/></svg><h3>Simulated run</h3></div><p>A scripted run across the demo kitchens, labelled simulated: real products, invented quantities.</p></div>
-			</div>
+			<p class="slead">Ops reads the same records the kitchens write, so Valio Aimo sees why a line is waiting and can open the exact kitchen plan.</p>
+			<p class="note2">Each Ops tab, and the forecast, is shown on real data on the <a href="/story#valio">Story page</a>. This section keeps the record underneath them.</p>
 			<div class="card oplog">
 				<h3>The op log: 9 kinds of change</h3>
 				<p>Every entry has a sequence number, who acted and the door it came through. Open screens update from it after each commit.</p>
@@ -922,7 +924,7 @@ h3 { margin: 0; font: 600 18px/1.25 var(--display); }
 		if (pack && pack.qty && pack.product && pack.replaces) {
 			// A substitute: what was proposed, in place of the product Valio is out of.
 			box.append(el('p', 'got'));
-			box.lastChild.append('Proposed ', el('span', 'tq', pack.qty), ' ', el('span', 'tp', rn(pack.product)), ' in place of ', el('span', 'tp', rn(pack.replaces)), ', out of stock at Valio.');
+			box.lastChild.append('Proposed ', el('span', 'tq', pack.qty), ' ', el('span', 'tp', rn(pack.product)), ' in place of ', el('span', 'tp', rn(pack.replaces)), ', out of stock at Valio Aimo.');
 		} else if (picked) {
 			const got = el('p', 'got');
 			for (const p of picked.parts) {
