@@ -272,3 +272,11 @@ The Kitchen shows one thing at a time: **the basket for a delivery day** (Tenanc
 **D24 addendum (lead, 15 Nov 01:50, after S5's r1 P0):** in the shared room a visitor writes only to a store they own; the seeded room kitchens are read-only for visitors (the presenter keeps full access). The chat in the room acts only for the visitor's own store and never falls back to a seeded kitchen; with no store it says "Join the room as your own store first". Enforced at the core gate, fail closed.
 
 **D22 status (lead, 15 Nov 02:20):** the in-app chat approval landed (S3 fd7d6ae). MCP approval through an elicitation is parked: our MCP server is stateless per request, so it needs the multi-round-trip `inputRequired` form plus a chef-bound key kind, about 2 h. Until then an MCP agent hands the chef the approval link (D17).
+
+### D31 · Orders and people in a kitchen: "New order" starts a fresh slate, earlier ones stay; a kitchen has members (user + lead, 15 Nov 02:25)
+- **Orders.** A kitchen holds many orders (plans), each with its own conversation, lines, canvas view and receipt. **New order** starts a fresh slate: a new chat thread with nothing focused, the day picker, and "What do you need?". It's the same conversation as `/request` full width (D23). Earlier orders stay saved: an **Orders** list in the Kitchen header (each with origin, day, state asked → proposed → waits for you → ordered, and total) reopens any of them with its thread. The day's basket (D30) still shows every order delivered that day as a group.
+- **People.** A kitchen has members. A visitor who creates a kitchen is its first and only member (D25, owner-only gate). Tonight, sharing is the phone pairing (same person, another device). **Next:** "Invite a colleague" makes a pairing-style link that adds a member, with roles (chef approves; cook plans and orders within the mandate). The owner gate becomes a member gate.
+
+**Why:** the user: clean basket and order logistics; create a new order while the previous stays saved, a new slate (canvas, items, chat); users join a kitchen, only they have access, more could join.
+
+**Reopen if:** a new order's chat thread shows lines of an earlier order, or a member sees a kitchen they don't belong to.
