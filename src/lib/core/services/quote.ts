@@ -12,6 +12,16 @@ export async function searchProducts(
 	_ctx: CallContext,
 	input: ToolInput<'search_products'>
 ): Promise<Result<ToolOutput<'search_products'>>> {
+	// A chef's words (English, colloquial, a typo) are read as the catalogue's; the best few come with a confidence.
+	if (ports.catalog.searchScored) {
+		const s = await ports.catalog.searchScored(input.query, { limit: input.limit });
+		return ok({
+			products: input.rankBy ? sortByPreference(s.products, input.rankBy) : s.products,
+			matches: s.hits,
+			readAs: s.readAs,
+			...(s.corrected ? { corrected: s.corrected } : {})
+		});
+	}
 	const products = await ports.catalog.search(input.query, { limit: input.limit });
 	return ok({ products: sortByPreference(products, input.rankBy) });
 }

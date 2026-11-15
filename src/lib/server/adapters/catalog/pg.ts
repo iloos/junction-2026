@@ -15,6 +15,7 @@ import type { SimOverlay } from '../simulator/overlay';
 import { toOffer } from './normalize';
 import type { ValioEndpoint, ValioLive } from './valio-live';
 import {
+	scoredSearch,
 	assemble,
 	RetrievalIndex,
 	retrievalModeFromEnv,
@@ -147,6 +148,15 @@ export function createPgCatalog(db: AnyDb, opts: PgCatalogOptions = {}): Catalog
 			return out;
 		},
 
+		async searchScored(query, o = {}) {
+			return scoredSearch(
+				query,
+				o.limit ?? 10,
+				() => this.search(query, { limit: o.limit }),
+				loadIndex,
+				docs
+			);
+		},
 		async search(query, o = {}) {
 			if (searchMode === 'hybrid' && (o.foodOnly ?? true)) {
 				const ids = (await loadIndex()).search(query, o.limit ?? 10);

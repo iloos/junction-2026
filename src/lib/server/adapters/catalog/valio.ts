@@ -15,6 +15,7 @@ import { NORMALIZE_VERSION, normalizeProduct, toOffer } from './normalize';
 import { createValioLive, type ValioLiveOptions } from './valio-live';
 import type { SimOverlay } from '../simulator/overlay';
 import {
+	scoredSearch,
 	assemble,
 	RetrievalIndex,
 	retrievalModeFromEnv,
@@ -193,6 +194,16 @@ export function createValioCatalog(
 				if (p) out.set(id, p);
 			}
 			return out;
+		},
+		async searchScored(query, o = {}) {
+			return scoredSearch(
+				query,
+				o.limit ?? 10,
+				() => this.search(query, { limit: o.limit }),
+				ix,
+				async (ids) =>
+					new Map(ids.flatMap((id) => (products.has(id) ? [[id, products.get(id)!]] : [])))
+			);
 		},
 		async search(query, o = {}) {
 			if (searchMode === 'hybrid' && (o.foodOnly ?? true)) {

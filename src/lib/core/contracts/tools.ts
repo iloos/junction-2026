@@ -255,7 +255,20 @@ export const toolSchemas = {
 			/** Order the hits by this preference (carbon, origin, reliability: static fields; price needs a quote). */
 			rankBy: RankBy.optional()
 		}),
-		output: out({ products: z.array(Product) })
+		output: out({
+			products: z.array(Product),
+			/**
+			 * The best few with how sure each is (0..1) and what was searched for, so a chat can ask "Did you mean…?":
+			 * about 0.75 and up is confident, 0.45 to 0.75 worth asking, below that nothing matched.
+			 */
+			matches: z
+				.array(z.object({ productId: ProductId, confidence: z.number(), readAs: z.string() }))
+				.optional(),
+			/** How the query was read: "steak → naudan pihvi/entrecote/…". */
+			readAs: z.string().optional(),
+			/** A typo that was corrected: "streaks → steak". */
+			corrected: z.string().optional()
+		})
 	},
 	quote: {
 		scope: 'read',

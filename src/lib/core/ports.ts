@@ -36,6 +36,19 @@ export interface Clock {
 export interface Catalog {
 	get(ids: ProductId[]): Promise<Map<ProductId, Product>>;
 	search(query: string, opts?: { limit?: number; foodOnly?: boolean }): Promise<Product[]>;
+	/**
+	 * search_products for a chef's words: English, colloquial words and typos read as the catalogue's, the best few
+	 * with how sure each is (0..1) and what was searched for. Absent: plain search.
+	 */
+	searchScored?(
+		query: string,
+		opts?: { limit?: number }
+	): Promise<{
+		products: Product[];
+		hits: { productId: ProductId; confidence: number; readAs: string }[];
+		readAs: string;
+		corrected?: string;
+	}>;
 	/** Live terms with simulator overlays applied; never throws for a provider outage (stale cache + provenance). */
 	offers(ids: ProductId[], deliverBy: string): Promise<{ offers: Offer[]; notFound: string[] }>;
 	/** Candidate pool for a product: Valio's rules first, then same category/temperature/comparison unit. */
