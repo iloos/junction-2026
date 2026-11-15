@@ -1339,7 +1339,7 @@
 	}
 	@keyframes arrive {
 		0% {
-			background-color: rgb(90 169 255 / 0.22);
+			background-color: color-mix(in oklab, var(--color-accent) 22%, transparent);
 			transform: translateY(-8px);
 			opacity: 0.4;
 		}
