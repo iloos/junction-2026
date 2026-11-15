@@ -168,7 +168,9 @@ export function stepEvents(taskId: string, steps: StepRecord[]): ChatEvent[] {
 		const plan = s.ok ? (s.value as { plan?: Plan } | undefined)?.plan : undefined;
 		const summary = s.ok
 			? stepWords(s)
-			: `Not done: ${(s.error?.message ?? s.error?.code ?? 'error').replace(/\b(pl-run|task|ap|rc|t)-[\w-]+/g, 'the plan')}`;
+			: s.error?.code === 'INTERNAL'
+				? 'Not done: something went wrong on our side. Try again, or ask what is open.'
+				: `Not done: ${(s.error?.message ?? s.error?.code ?? 'error').replace(/\b(pl-run|task|ap|rc|t)-[\w-]+/g, 'the plan')}`;
 		return {
 			type: 'step',
 			taskId,

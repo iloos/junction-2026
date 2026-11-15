@@ -16,6 +16,7 @@ import { createServerPorts } from '$lib/server/store/server-ports';
 import { serverTasks } from '$lib/server/tasks/server';
 import { handlers as scopedHandlers } from '$lib/server/tools/handlers';
 import { json } from '$lib/server/tools/http';
+import { errMsg, log } from '$lib/server/obs/log';
 import type { RequestHandler } from './$types';
 
 const bad = (message: string) =>
@@ -147,9 +148,15 @@ export const POST: RequestHandler = async (event) => {
 							: runChatTurn(input, deps);
 					for await (const e of turn) push(e);
 				} catch (e) {
+					// The cause stays in the server log; the chef reads what happened and the way on, never a query.
+					log.error('chat.turn.threw', { error: errMsg(e) });
 					push({
 						type: 'error',
-						error: { code: 'INTERNAL', message: String((e as Error)?.message ?? e).slice(0, 200) }
+						error: {
+							code: 'INTERNAL',
+							message:
+								'Something went wrong on our side and this answer stopped. What was already done stays; ask again, or open the Kitchen page to see where things stand.'
+						}
 					});
 				} finally {
 					if (open) {
