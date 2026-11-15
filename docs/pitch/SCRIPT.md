@@ -30,6 +30,13 @@ Seen on prod b12ba71 (3 alone · 15 in 3 decisions · 3 refused). If the buffet 
 
 **Don't demo the usual order.** On prod 57fc4b4 (S5, 02:08 UTC) the home offers Tuesday's usual after its cut-off (all 5 can't be ordered, yet the bar says "inside your rules"), and Thursday's usual holds all 4 items as new or unconfirmed. Routed to S1 and S2; re-check only if they land before 06:00.
 
+## The room (only if the room playtest is green on the submitted deploy)
+For a live room with the audience: Ops on the big screen, the join QR full screen.
+1. **Joining is unlimited:** "Scan the code and name your store." Wait until stores appear on Ops.
+2. **Planning goes in waves of 10 at most:** "Rows one and two: plan now." Wait about 5 seconds until those orders land, then call the next wave. Never ask the whole room to plan at once: Postgres is the shared limit, and in waves of 10 the test ran with 0 errors.
+3. **The shortage:** the presenter fires it on Ops, and every store re-plans inside its own rules.
+Say on stage: "Two Aiven machines on one Postgres: a store made on one shows on the other in well under a second." Don't claim more capacity from more machines.
+
 ## Peer review at the table (about 2 min a visitor)
 Laptop open on the deck, phone ready with the app.
 1. Slide 1 (5 s), then slide 3: the ham, 140, the cut-off.
