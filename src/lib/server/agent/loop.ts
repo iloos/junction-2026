@@ -752,6 +752,15 @@ export function scriptedPlanner(): Planner {
 					(l) => candidatesFor(l).find((c) => c.salesQty !== null) ?? null
 				);
 				const closedFor = new Set<number>();
+				const quotedOffers = () =>
+					new Map(
+						(
+							((
+								history.find((h) => h.tool === 'quote' && h.ok)?.facts as
+									{ offers?: OfferFacts[] } | undefined
+							)?.offers ?? []) as OfferFacts[]
+						).map((o) => [o.productId, o])
+					);
 				/** What the request's preference changed, per product line ("Picked X over Y: lower CO₂e"). */
 				const preferred: string[] = [];
 				if (found.some(Boolean) && !has('place_order') && tools.includes('quote')) {
@@ -819,9 +828,11 @@ export function scriptedPlanner(): Planner {
 						const first = candidatesFor(l).at(0);
 						return {
 							done: true,
-							summary: first
-								? `not ordered: ${l.qty} ${l.unit} of ${l.query} can't be put in sales units (${first.productId}: ${first.conversion})`
-								: `not ordered: no catalogue product matches "${l.query}"`
+							summary: !first
+								? `not ordered: no catalogue product matches "${l.query}"`
+								: first.salesQty === null
+									? `not ordered: ${l.qty} ${l.unit} of ${l.query} can't be put in sales units (${first.productId}: ${first.conversion})`
+									: `not ordered: ${whyNotBuyable(l, candidatesFor(l), quotedOffers(), intent.deliverBy)}`
 						};
 					}
 					return {
@@ -984,4 +995,46 @@ export function llmPlanner(llm: Llm, opts: { maxTokens?: number } = {}): Planner
 			}
 		}
 	};
+}
+
+/**
+ * Why none of a product's candidates can be bought for the day, in words: the facts the quote returned (out of stock,
+ * not delivered that day, no price, too little stock), never a formula or a product id.
+ */
+function whyNotBuyable(
+	l: RoutineLine,
+	cands: RoutineCandidate[],
+	offers: Map<string | undefined, OfferFacts>,
+	deliverBy: string
+): string {
+	const day = new Date(`${deliverBy}T12:00:00Z`).toLocaleDateString('en-GB', {
+		weekday: 'short',
+		day: 'numeric',
+		month: 'short',
+		timeZone: 'UTC'
+	});
+	const quoted = cands.map((c) => ({ c, o: offers.get(c.productId) })).filter((x) => x.o);
+	if (!quoted.length) return `Valio didn't confirm any ${l.query} for ${day}.`;
+	const has = (f: (o: OfferFacts, c: RoutineCandidate) => boolean) =>
+		quoted.some(({ o, c }) => f(o!, c));
+	if (has((o) => !!o.availableDate && o.availableDate > deliverBy)) {
+		const next = quoted
+			.map(({ o }) => o!.availableDate)
+			.filter((d): d is string => !!d && d > deliverBy)
+			.sort()[0];
+		const nextDay = new Date(`${next}T12:00:00Z`).toLocaleDateString('en-GB', {
+			weekday: 'short',
+			day: 'numeric',
+			month: 'short',
+			timeZone: 'UTC'
+		});
+		return `no delivery of ${l.query} on ${day}: next possible ${nextDay}.`;
+	}
+	if (quoted.every(({ o }) => ['out', 'blocked', 'undeliverable'].includes(o!.availability ?? '')))
+		return `Valio can't deliver any matching ${l.query} on ${day} (out of stock or not delivered).`;
+	if (quoted.every(({ o }) => o!.unitCents === undefined))
+		return `Valio gave no price for any matching ${l.query} yet; try again shortly.`;
+	if (has((o, c) => o.availability === 'known' && o.amount != null && o.amount < (c.salesQty ?? 0)))
+		return `Valio has too little ${l.query} left for ${l.qty} ${l.unit} on ${day}.`;
+	return `none of the ${quoted.length} matching ${l.query} products can be bought for ${day}.`;
 }
