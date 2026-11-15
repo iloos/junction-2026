@@ -1,0 +1,44 @@
+{
+  "about": "Shot list for the ≤2:00 video (docs/pitch/VIDEO.md). Deck shots open docs/pitch/deck.html locally (file://…/deck.html#sN, needs network for fonts and Motion; without it slides still render). App shots run on the final deploy in a fresh profile at 1920x1080. waitFor strings are the visible text to wait for; where the UI label differs on the final deploy, use the real one and note it. durationS is the length to keep in the cut; record ~2x that and the editor trims.",
+  "viewport": { "width": 1920, "height": 1080 },
+  "shots": [
+    { "id": "d1-cover", "kind": "deck", "url": "deck.html#s1", "steps": ["press F (fullscreen) or hide UI", "wait 2.5 s for the verbs to animate"], "waitFor": "Refuse it.", "durationS": 6 },
+    { "id": "d3-case", "kind": "deck", "url": "deck.html#s3", "steps": ["wait 2.5 s for the timeline to draw"], "waitFor": "without the chef?", "durationS": 14 },
+    { "id": "d4-rules", "kind": "deck", "url": "deck.html#s4", "steps": ["wait 2 s"], "waitFor": "refused, with why", "durationS": 14 },
+    {
+      "id": "A-words-live", "kind": "app", "url": "https://app.mandate.kitchen/", "durationS": 38,
+      "setup": ["fresh profile", "pick the sample hotel (Hotel Rautatientori) if the picker shows", "open /ops in a second tab beforehand"],
+      "steps": [
+        { "do": "open the chat dock", "waitFor": "chat input visible" },
+        { "do": "type 'a no-meat dinner for 120 with a peach dessert' + Enter", "waitFor": "the menu card (six dishes, labelled Gemini / estimate)" },
+        { "do": "if asked for a date or format, pick Sat 12 Dec and Buffet", "waitFor": "the menu card" },
+        { "do": "type 'plan it' + Enter", "waitFor": "the plan with ~20 items, each with a price and a reason" },
+        { "do": "hover one reason line for 2 s", "waitFor": "reason text visible (new product / requirement not confirmed)" },
+        { "do": "click 'Accept all', confirm if asked", "waitFor": "Ordered" },
+        { "do": "switch to the /ops tab", "waitFor": "the new order listed" }
+      ],
+      "check": "Accept all leads to 'Ordered' with one receipt; the order shows on /ops",
+      "fallback": "d7-recorded"
+    },
+    {
+      "id": "B-buffet-live", "kind": "app", "url": "https://app.mandate.kitchen/", "durationS": 18,
+      "setup": ["same fresh sandbox as A, sample hotel"],
+      "steps": [
+        { "do": "open the Christmas buffet for 140 (Sat 12 Dec) and click Plan it", "waitFor": "the plan with ordered-alone, waiting and can't-be-ordered items" },
+        { "do": "scroll slowly: one ordered-alone line, one decision header, one refused line (2 s each)", "waitFor": "each visible" }
+      ],
+      "check": "3 ordered alone (~€302.62), 15 waiting in 3 decisions, 3 can't be ordered; note the real counts if they differ",
+      "fallback": "d5-buffet"
+    },
+    { "id": "d8-consent", "kind": "deck", "url": "deck.html#s8", "steps": ["wait 2 s"], "waitFor": "Only the chef can say yes.", "durationS": 14 },
+    { "id": "d9-next", "kind": "deck", "url": "deck.html#s9", "steps": ["wait 2 s"], "waitFor": "The order itself is simulated.", "durationS": 10 },
+    { "id": "d10-close", "kind": "deck", "url": "deck.html#s10", "steps": ["wait 2 s"], "waitFor": "Your rules decide what.", "durationS": 6 },
+    { "id": "d5-buffet", "kind": "deck-fallback", "url": "deck.html#s5", "steps": ["wait 3 s for the bar and counters"], "waitFor": "The chef decides 3 things.", "durationS": 18 },
+    { "id": "d7-recorded", "kind": "deck-fallback", "url": "deck.html#s7", "steps": ["wait 3 s for the bubbles"], "waitFor": "on Valio’s order screen", "durationS": 20 },
+    { "id": "deck-walkthrough", "kind": "deck-fallback", "url": "deck.html#s1", "steps": ["ArrowRight every 6 s through slide 10"], "waitFor": "Your rules decide what.", "durationS": 60 }
+  ],
+  "stills": [
+    "A: the menu card", "A: the plan with reasons", "A: the Accept all moment", "A: 'Ordered' with its receipt", "A: /ops with the order", "B: the buffet's three outcomes in view"
+  ],
+  "output": "scratch/video/<id>-<take>.mp4 and scratch/video/stills/<n>.png"
+}
