@@ -42,6 +42,9 @@ export interface OrderRow {
 	due: string;
 	/** Product names by id, for the cards. */
 	names: Record<string, string>;
+	/** Needs nothing can be bought for (no product, or no line serves them), by name; and how many needs in all. */
+	gaps: string[];
+	needCount: number;
 	ordered: {
 		orderId: string;
 		at: string;
@@ -134,8 +137,21 @@ function signedText(a: OrderStages['signed'][number]): string {
 	}
 }
 
+/** Needs nothing can be bought for: an `unresolved` gap, or no line serves them. */
+export function gapsOf(plan: OrderStages['plan']): string[] {
+	const served = new Set(plan.lines.filter((l) => l.qty.value > 0).map((l) => l.needId));
+	return plan.needs.filter((n) => n.unresolved || !served.has(n.id)).map((n) => dishName(n.label));
+}
+
+/** "22 of 30 needs ordered; 8 had no product: x, y, z, …". */
+export function gapSentence(gaps: readonly string[], needs: number): string {
+	const names = gaps.slice(0, 4).join(', ') + (gaps.length > 4 ? ', …' : '');
+	return `${needs - gaps.length} of ${needs} needs covered; ${gaps.length} had no product: ${names}.`;
+}
+
 export function orderRow(s: OrderStages, decisions: Decision[]): OrderRow {
 	const st = statusOf(s, decisions.length);
+	const gaps = gapsOf(s.plan);
 	const creator = s.createdBy;
 	return {
 		planId: s.planId,
@@ -193,6 +209,8 @@ export function orderRow(s: OrderStages, decisions: Decision[]): OrderRow {
 			: null,
 		due: dueOf(s.plan, s.pending) ?? SCENARIO.cutoff,
 		names: Object.fromEntries(s.plan.lines.map((l) => [l.productId, l.productName ?? l.productId])),
+		gaps,
+		needCount: s.plan.needs.length,
 		ordered: s.ordered.map((o) => ({
 			orderId: o.orderId,
 			at: o.at,
@@ -218,11 +236,15 @@ function trailOf(s: OrderStages, o: OrderStages['ordered'][number]): string[] {
 	const cap = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
 	const out = [`Asked by ${WHO[s.createdBy]}.`];
 	const changes = s.proposed.changes.filter((c) => c.seq < o.seq);
+	const gaps = gapsOf(s.plan);
 	out.push(
 		changes.length
 			? `${plural(changes.length, 'change')} on the way, each with its reason in Proposed.`
-			: 'Ordered as asked, with no changes.'
+			: gaps.length
+				? 'No line was changed on the way.'
+				: 'Ordered as asked, with no changes.'
 	);
+	if (gaps.length) out.push(gapSentence(gaps, s.plan.needs.length));
 	for (const a of s.signed)
 		if (a.state === 'granted' && a.seq <= o.seq)
 			out.push(

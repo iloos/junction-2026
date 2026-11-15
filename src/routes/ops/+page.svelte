@@ -9,6 +9,7 @@
 	import OpTimeline from './OpTimeline.svelte';
 	import TraceDrawer from './TraceDrawer.svelte';
 	import Queue from './Queue.svelte';
+	import { gapsOf } from './orders';
 	import ProblemCard from './ProblemCard.svelte';
 	import StoryPanel from './StoryPanel.svelte';
 	import ServiceStatus from './ServiceStatus.svelte';
@@ -312,7 +313,10 @@
 		return {
 			decisions: decisions.length,
 			signOff: decisions.filter((d) => d.signOff).length,
-			cannot: all.flatMap((p) => p.lines).filter((l) => l.state === 'unorderable').length,
+			// Lines Valio can't fill plus needs nothing can be bought for: the kitchen's "not orderable" set.
+			cannot:
+				all.flatMap((p) => p.lines).filter((l) => l.state === 'unorderable').length +
+				plans.reduce((n, p) => n + gapsOf(p).length, 0),
 			unresolved: views.filter((f) => f.unresolved.value > 1e-9).length,
 			needs: views.length,
 			committed: Object.values(stream.state.orders).reduce((s, o) => s + o.totalCents, 0),
@@ -413,7 +417,7 @@
 				<dd>{totals.decisions}</dd>
 			</div>
 			<div class:bad={totals.cannot > 0}>
-				<dt>{totals.cannot === 1 ? 'product' : 'products'} can't be ordered</dt>
+				<dt>{totals.cannot === 1 ? 'item' : 'items'} can't be ordered</dt>
 				<dd>{totals.cannot}</dd>
 			</div>
 			<div class:bad={totals.unresolved > 0}>
