@@ -409,11 +409,12 @@
 							<span class="name">{plainName(k.name)}</span>
 						{/if}
 						{#if t}<span class="value num">{euro(t.cents)}</span>{/if}
+						<!-- The tile says what the store is doing first; its kind only while nothing has happened. -->
 						{#if firsts[k.id]}<span class="firstbadge">First order</span
+							>{:else if st !== 'joined'}<span class="kind state">{STATE_WORDS[st]}</span
 							>{:else if k.kind && k.kind !== 'blank' && (k.copiedFrom || !isVisitorStore(k))}<span
-								class="kind">{kindWords(k.kind)}</span
-							>{:else if st === 'waiting'}<span class="kind">Waits for a person</span>{/if}
-						<span class="sr">{STATE_WORDS[st]}</span>
+								class="kind">{kindWords(k.kind)} · nothing yet</span
+							>{:else}<span class="kind">Nothing yet</span>{/if}
 					</li>
 				{/each}
 			</ul>
@@ -1024,5 +1025,14 @@
 	}
 	.deck .incident:hover {
 		border-color: var(--sign-off);
+	}
+	.tile.s-waiting .state {
+		color: var(--sign-off);
+	}
+	.tile.s-ordered .state {
+		color: var(--done);
+	}
+	.tile.s-planning .state {
+		color: var(--text);
 	}
 </style>
