@@ -700,6 +700,8 @@
 		);
 		return pending.flatMap((a) => decisionsOf(plan, a));
 	});
+	/** The full rules (hard limits, preferences, their preview), opened from the header's rules line. */
+	let rulesOpen = $state(false);
 	/** Decide's stock filter (the cover legend as chips): known stock, stock unknown, or every line. */
 	let stockFilter = $state<'known' | 'unknown' | null>(null);
 	const stockOf = (l: Line) =>
@@ -1451,18 +1453,31 @@
 				>{/if}
 		{/if}
 		{#if snap}
-			<!-- One line on a phone, with "more"; the whole quote from sm. -->
-			<p
-				class="max-w-[95ch] min-w-0 text-meta text-ink-2 {mandateOpen ? '' : 'max-sm:line-clamp-1'}"
+			<!-- The chef's words in one line (the whole quote from sm); pressing it opens the full rules under the header. -->
+			<button
+				type="button"
+				class="group flex max-w-[95ch] min-w-0 items-start gap-1 rounded-md text-left text-meta text-ink-2 hover:text-ink {isEvent
+					? ''
+					: 'pointer-events-none'}"
+				aria-expanded={isEvent ? rulesOpen : undefined}
+				aria-controls={isEvent ? 'rules-drawer' : undefined}
+				onclick={() => {
+					rulesOpen = !rulesOpen;
+					mandateOpen = rulesOpen;
+				}}
 			>
-				<span class="font-medium text-ink">Mandate, in the chef's words:</span>
-				“{snap.rules.words}”
-			</p>
-			{#if !mandateOpen}<button
-					type="button"
-					class="-mt-1.5 self-start text-meta text-ink-2 underline underline-offset-2 sm:hidden"
-					onclick={() => (mandateOpen = true)}>more</button
-				>{/if}
+				<span class="min-w-0 {mandateOpen ? '' : 'max-sm:line-clamp-1'}"
+					><span class="font-medium text-ink">Mandate, in the chef's words:</span>
+					“{snap.rules.words}”</span
+				>{#if isEvent}<span
+						class="inline-flex shrink-0 items-center gap-0.5 font-medium text-accent-ink underline-offset-2 group-hover:underline"
+						>Rules<ChevronDown
+							size={13}
+							class="transition-transform {rulesOpen ? 'rotate-180' : ''}"
+							aria-hidden="true"
+						/></span
+					>{/if}
+			</button>
 			<span class="flex items-center gap-3 sm:ml-auto"
 				><CalendarSubscribe
 					kitchenId={snap.kitchen.id}
@@ -1686,6 +1701,25 @@
 		/>
 	{/snippet}
 	<main class="mx-auto max-w-[1180px] px-4 pt-5 pb-28 md:px-6 lg:pb-6">
+		{#if rulesOpen && isEvent}
+			<div id="rules-drawer" class="mb-5">
+				<RulesPanel
+					rules={snap.rules}
+					preset={snap.preset}
+					busy={k.busy}
+					previews={view.dishes
+						.filter((d) => d.rescue?.preview?.differs)
+						.map((d) => ({
+							dish: d.nameFi,
+							recommended: d.rescue!.preview!.recommended,
+							saved: d.rescue!.preview!.saved,
+							ordered: linesOf(d).some((l) => l.state === 'committed')
+						}))}
+					onapply={() => k.applyRules()}
+					onpreset={(p) => k.setPreset(p)}
+				/>
+			</div>
+		{/if}
 		<!-- D30: the delivery day is the view: its days, one sentence, the stage filters. -->
 		<section aria-label="Delivery day" class="mb-4">
 			<!-- One labelled control for the day (D30): other orders live in the header's Orders list. -->
@@ -2646,29 +2680,8 @@
 	</main>
 	<!-- Under the plan and its panels, on the page's own columns: the rules (and, in System, the demo tools) under the plan,
 	     what happened under Order. Outside <main>, so the sticky panels never slide over it. -->
-	<div
-		class="mx-auto grid max-w-[1440px] grid-cols-1 gap-6 px-4 pb-32 md:px-6 lg:pb-10 {shell?.chatOpen
-			? '2xl:grid-cols-[minmax(0,1fr)_360px]'
-			: 'lg:grid-cols-[minmax(0,1fr)_360px]'}"
-	>
+	<div class="mx-auto grid max-w-[1180px] grid-cols-1 gap-6 px-4 pb-32 md:px-6 lg:pb-10">
 		<div class="min-w-0">
-			<div class="{active === 'plan' ? '' : 'max-lg:hidden'} {isEvent ? '' : 'hidden'}">
-				<RulesPanel
-					rules={snap.rules}
-					preset={snap.preset}
-					busy={k.busy}
-					previews={view.dishes
-						.filter((d) => d.rescue?.preview?.differs)
-						.map((d) => ({
-							dish: d.nameFi,
-							recommended: d.rescue!.preview!.recommended,
-							saved: d.rescue!.preview!.saved,
-							ordered: linesOf(d).some((l) => l.state === 'committed')
-						}))}
-					onapply={() => k.applyRules()}
-					onpreset={(p) => k.setPreset(p)}
-				/>
-			</div>
 			<!-- Demo tools, in the System layer: the simulator changes Valio's stock for this run, not a rule. -->
 			<section
 				class="sys-only mt-4 rounded-lg border border-dashed border-rule-strong bg-sheet px-4 py-3 {isEvent
