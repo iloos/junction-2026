@@ -10,9 +10,9 @@
 	import Row from './Row.svelte';
 	import ProductThumb from './ProductThumb.svelte';
 	import { loadCard } from './product-card';
-	import { money, readableName } from './format';
+	import { money, readableName, unitWord } from './format';
 	import { errorWords } from '$lib/kitchen/error-words';
-	import { STEERS, pickWords, swapRows, type Steer, type SwapRow } from './swap';
+	import { STEERS, pickWords, swapRows, withAlternatives, type Steer, type SwapRow } from './swap';
 
 	let {
 		planId,
@@ -44,7 +44,7 @@
 	let refusal = $state<string | null>(null);
 	let prices = $state.raw<Record<string, string>>({});
 
-	async function rank(s: Steer | null) {
+	async function rank(s: Steer | null, text?: string) {
 		loading = true;
 		failed = null;
 		try {
@@ -53,9 +53,30 @@
 				version,
 				lineId,
 				apply: false,
-				...(s?.rankBy ? { rankBy: s.rankBy } : {})
+				...(s?.rankBy ? { rankBy: s.rankBy } : {}),
+				...(s?.steer || text ? { steer: { ...(s?.steer ?? {}), ...(text ? { text } : {}) } } : {})
 			});
-			rows = swapRows(r.candidates, current.productId);
+			const ranked = withAlternatives(
+				swapRows(r.candidates, current.productId),
+				r.alternatives,
+				current.productId
+			);
+			// The pick's own total for the need, from the lines the search sized for it.
+			const chosen = r.chosen.filter((l) => l.qty.value > 0);
+			rows = ranked.map((row) =>
+				row.pick &&
+				!row.total &&
+				chosen[0]?.productId === row.productId &&
+				chosen.some((l) => (l.lineCents ?? 0) > 0)
+					? {
+							...row,
+							total: {
+								cents: chosen.reduce((t, l) => t + (l.lineCents ?? 0), 0),
+								qty: { value: chosen[0].qty.value, unit: chosen[0].qty.unit }
+							}
+						}
+					: row
+			);
 		} catch (e) {
 			failed =
 				e instanceof ToolError && /does not send/.test(e.error.message)
@@ -90,7 +111,6 @@
 	});
 
 	function chip(s: Steer) {
-		if (!s.rankBy) return;
 		steer = steer?.id === s.id ? null : s;
 		void rank(steer);
 	}
@@ -142,10 +162,21 @@
 </script>
 
 {#snippet option(r: SwapRow, mine: boolean)}
-	<Row icon value={prices[r.productId] || null} class="border-t border-rule/60">
+	<Row
+		icon
+		value={r.total
+			? money(r.total.cents)
+			: prices[r.productId] || (r.pick ? 'price on order' : null)}
+		class="border-t border-rule/60"
+	>
 		{#snippet lead()}<ProductThumb productId={r.productId} size={32} />{/snippet}
 		<span class={r.refused ? 'text-ink-3' : 'text-ink'}>{readableName(r.name)}</span>
 		{#snippet sub()}
+			{#if r.total}<span class="mono text-ink-2"
+					>{r.total.qty
+						? `${r.total.qty.value} ${unitWord(r.total.qty.unit, r.total.qty.value)} · `
+						: ''}{r.per ? `${money(r.per.cents)}/${r.per.per}` : prices[r.productId]}</span
+				><br />{/if}
 			{#if r.refused}<span class="text-out">Can't pick: {r.refused}</span>{:else}{r.reason}{/if}
 		{/snippet}
 		{#snippet end()}
@@ -191,8 +222,7 @@
 			<button
 				type="button"
 				aria-pressed={steer?.id === s.id}
-				disabled={!s.rankBy || loading}
-				title={s.rankBy ? undefined : 'Coming with the next search update'}
+				disabled={loading}
 				class="rounded-full border px-2.5 py-0.5 text-meta disabled:opacity-40 {steer?.id === s.id
 					? 'border-ink bg-ink text-sheet'
 					: 'border-rule-strong text-ink-2 hover:text-ink'}"
@@ -226,9 +256,13 @@
 			<Search size={15} class="text-ink-3" aria-hidden="true" />
 			<input
 				class="min-w-0 flex-1 bg-transparent outline-none placeholder:text-ink-3"
-				placeholder="Something else… or browse all products"
+				placeholder="Something else… (Enter steers) or browse all products"
 				bind:value={query}
 				oninput={search}
+				onkeydown={(e) => {
+					// Enter steers the alternatives by the chef's own words; typing alone browses the catalogue.
+					if (e.key === 'Enter' && query.trim().length >= 2) void rank(steer, query.trim());
+				}}
 			/>
 		</label>
 	</div>
