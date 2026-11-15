@@ -111,12 +111,12 @@ svg.wires { position: absolute; left: 0; top: 0; overflow: visible; pointer-even
   <div style="display:flex; gap:72px; align-items:center">
     <div class="box a" style="width:860px; padding:44px 48px; gap:22px; box-shadow:0 10px 40px rgba(29,36,48,.07)">
       <p class="lab">THE HOTEL’S MANDATE</p>
-      <p style="font-size:44px; line-height:1.32; font-weight:500">“Order alone up to <mark class="mk">€800 a line</mark> and €1,000 an order, €4,000 a week. <mark class="mk">Never change an allergen.</mark> Ask me before any <mark class="mk">new product</mark> or any substitute I haven’t seen.”</p>
+      <p style="font-size:44px; line-height:1.32; font-weight:500">“<mark class="mk go">Order alone up to €800 a line and €1,000 an order, €4,000 a week.</mark> <mark class="mk hold">Never change an allergen. Ask me before any new product or any substitute I haven’t seen.</mark>”</p>
     </div>
     <div style="flex:1; display:flex; flex-direction:column; gap:30px">
       <div class="a" style="display:flex; gap:22px; align-items:center"><div class="dot" style="background:var(--go)"></div><p class="L"><b>Inside the rules:</b> ordered alone</p></div>
       <div class="a" style="display:flex; gap:22px; align-items:center"><div class="dot" style="background:var(--hold)"></div><p class="L"><b>Outside them:</b> waits for the chef</p></div>
-      <div class="a" style="display:flex; gap:22px; align-items:center"><div class="dot" style="background:var(--no)"></div><p class="L"><b>Impossible:</b> refused, with why</p></div>
+      <div class="a" style="display:flex; gap:22px; align-items:flex-start"><div class="dot" style="background:var(--no); margin-top:12px"></div><div><p class="L"><b>Impossible:</b> refused, with why</p><p class="S">Valio is out, below a lot step, past the cut-off</p></div></div>
     </div>
   </div>
   <div class="foot"><p>Each kitchen has its own mandate; the rules are code, so no model and no agent can bend them</p><p class="pg"></p></div>
@@ -340,7 +340,9 @@ svg.wires { position: absolute; left: 0; top: 0; overflow: visible; pointer-even
 <div id="notes" hidden><b>SPEAKER NOTES</b><span id="notesText"></span></div>
 
 <style>
-.mk { background: linear-gradient(transparent 58%, rgba(230,163,79,.38) 58%); color: inherit; padding: 0 2px; }
+.mk { color: inherit; padding: 0 2px; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
+.mk.go { background: linear-gradient(transparent 56%, rgba(30,143,140,.26) 56%); }
+.mk.hold { background: linear-gradient(transparent 56%, rgba(230,163,79,.40) 56%); }
 .arrow { width: 56px; align-self: center; height: 4px; background: #9aa0a8; position: relative; margin: 0 8px; border-radius: 2px; }
 .arrow::after { content: ""; position: absolute; right: -2px; top: -8px; border: 10px solid transparent; border-left: 14px solid #9aa0a8; border-right: 0; }
 .arrow.go { background: var(--go); } .arrow.go::after { border-left-color: var(--go); }
